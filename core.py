@@ -1,23 +1,13 @@
-import asyncio
-import logging
-import config
-import logging.handlers
-import os
 import asyncpg
-import random
-import wavelink
-
-from typing import List, Optional
-from aiohttp import ClientSession
-from asyncio import *
-
 import discord
-from discord import Interaction
-from discord.ext import commands, tasks
-from discord.app_commands import AppCommandError
+from discord.ext import commands
+import wavelink
+from tools.config_loader import config_loader
 
-initial_extensions = config.initial_extensions
-
+DEFAULT_PREFIX = config_loader.get('BotInfo', 'DefaultPrefix')
+TOKEN = config_loader.get('Bot_Token', 'Token')
+POSTGRESQL_URI = config_loader.get('Database', 'PostgreSQL')
+EXTENSIONS = config_loader.getlist('Extension', 'Extensions')
 
 class Yasuho(commands.Bot):
     def __init__(self, *args, db_pool: asyncpg.Pool):
@@ -43,9 +33,14 @@ class Yasuho(commands.Bot):
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
         )
 
-        for extension in initial_extensions:
-            print(f"loading {extension}")
-            await self.load_extension(extension)
+        for extension in EXTENSIONS:
+            try:
+                await self.load_extension(extension)
+                print(f"[Loading] {extension}")
+            except commands.ExtensionNotFound:
+                print(f"[Not found]: {extension}")
+            except Exception as e:
+                print(f"[Error] While trying to load {extension}: {e}")
 
         print(f"Prefix count: {len(self.prefixes)}")
 
@@ -59,7 +54,7 @@ class Yasuho(commands.Bot):
 
 async def get_prefix(bot: Yasuho, message: discord.Message):
     if not message.guild:
-        return config.default_prefix
+        return DEFAULT_PREFIX # Using DEFAULT_PREFIX variable here
 
     prefix = bot.prefixes.get(message.guild.id, None)
 
@@ -71,17 +66,17 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
                 ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;"""
 
         await bot.db_pool.execute(
-            query, message.guild.id, config.default_prefix, config.default_prefix
+            query, message.guild.id, DEFAULT_PREFIX, DEFAULT_PREFIX
         )
-        prefix = bot.prefixes[message.guild.id] = config.default_prefix
+        prefix = bot.prefixes[message.guild.id] = DEFAULT_PREFIX
 
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
 async def main():
-    async with asyncpg.create_pool(config.postgresql, command_timeout=60) as pool:
+    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:  # Using POSTGRESQL_URI variable here
         async with Yasuho(commands.when_mentioned, db_pool=pool) as bot:
-            await bot.start(config.token)
+            await bot.start(TOKEN)  # Using TOKEN variable here
 
 
 asyncio.run(main())
