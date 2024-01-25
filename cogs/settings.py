@@ -4,6 +4,7 @@ import asyncio
 import random
 import datetime
 
+
 class Settings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -66,6 +67,7 @@ class Settings(commands.Cog):
         )
         embed.add_field(name="Current server prefix", value=f"`{cprefix}`")
         await ctx.send(embed=embed)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Settings(bot))

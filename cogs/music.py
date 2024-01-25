@@ -16,7 +16,9 @@ import config
 
 class NoChannelProvided(commands.CommandError):
     """Error raised when no suitable voice channel was supplied."""
+
     pass
+
 
 class IncorrectChannelError(commands.CommandError):
     """Error raised when commands are issued outside of the players session channel."""
@@ -41,7 +43,6 @@ class Player(wavelink.Player):
         self.skip_votes = set()
         self.shuffle_votes = set()
         self.stop_votes = set()
-
 
     def clear_votes(self):
         self.pause_votes.clear()
@@ -110,9 +111,13 @@ class Music(commands.Cog):
     async def on_track_exception(self, node: wavelink.Node, payload):
         await payload.player.do_next()
 
-
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
         if member.bot:
             return
 
@@ -141,7 +146,6 @@ class Music(commands.Cog):
             await asyncio.sleep(15)
             if len(channel.members) == 1:
                 await player.disconnect()
-
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(
@@ -208,10 +212,9 @@ class Music(commands.Cog):
             return player.dj == ctx.author or ctx.author.guild_permissions.kick_members
         return False
 
-
     @commands.command()
     async def play(self, ctx: commands.Context, *, query: str) -> None:
-        """Play a song from a query."""    
+        """Play a song from a query."""
         player: Player = cast(Player, ctx.voice_client)
 
         if not player:
@@ -219,12 +222,15 @@ class Music(commands.Cog):
                 player: Player = await ctx.author.voice.channel.connect(cls=Player(ctx=ctx))  # type: ignore
             except AttributeError:
                 print(f"AttributeError : {AttributeError}")
-                await ctx.send("Please join a voice channel first before using this command.")
+                await ctx.send(
+                    "Please join a voice channel first before using this command."
+                )
                 return
             except discord.ClientException:
-                await ctx.send("I was unable to join this voice channel. Please try again.")
+                await ctx.send(
+                    "I was unable to join this voice channel. Please try again."
+                )
                 return
-
 
         await ctx.send(f"player :{player} ")
         player.autoplay = wavelink.AutoPlayMode.disabled
@@ -256,7 +262,6 @@ class Music(commands.Cog):
 
         if not player.playing:
             await player.play(player.queue.get(), volume=30)
-
 
     @commands.command()
     async def stop(self, ctx: commands.Context):
@@ -341,7 +346,9 @@ class Music(commands.Cog):
 
         queue_length = len(player.queue)
         if queue_length == 0:
-            return await ctx.send("There are no more songs in the queue.", delete_after=15)
+            return await ctx.send(
+                "There are no more songs in the queue.", delete_after=15
+            )
 
         # Get up to the next 10 songs
         next_songs = player.queue[:10]
@@ -356,27 +363,33 @@ class Music(commands.Cog):
         player: Player = cast(Player, ctx.voice_client)
         if not player:
             return await ctx.send("The player is not connected to a voice channel.")
-        
+
         queue_length = len(player.queue)
         if queue_length < 3:
-            return await ctx.send("Add more songs to the queue before shuffling.", delete_after=15)
+            return await ctx.send(
+                "Add more songs to the queue before shuffling.", delete_after=15
+            )
 
         if self.is_privileged(ctx):
             await ctx.send("An admin or DJ has shuffled the playlist.", delete_after=10)
             player.shuffle_votes.clear()
             await player.queue.shuffle()
-            
+
         else:
             required = self.required(ctx)
             player.shuffle_votes.add(ctx.author)
 
             if len(player.shuffle_votes) >= required:
-                await ctx.send("Vote to shuffle passed. Shuffling the playlist.", delete_after=10)
+                await ctx.send(
+                    "Vote to shuffle passed. Shuffling the playlist.", delete_after=10
+                )
                 player.shuffle_votes.clear()
                 await player.queue.shuffle()  # Utilisez ici la méthode intégrée de Wavelink pour mélanger
             else:
-                await ctx.send(f"{ctx.author.mention} has voted to shuffle the playlist.", delete_after=15)
-
+                await ctx.send(
+                    f"{ctx.author.mention} has voted to shuffle the playlist.",
+                    delete_after=15,
+                )
 
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.channel)
@@ -394,11 +407,10 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="Now Playing",
             description=f"[{track.title}]({track.uri})\n**`[{position}:{length}]`**",
-            colour=random.randint(0x000000, 0xFFFFFF)
+            colour=random.randint(0x000000, 0xFFFFFF),
         )
 
         await ctx.send(embed=embed, delete_after=15)
-
 
 
 async def setup(bot: commands.Bot):
