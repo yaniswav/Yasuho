@@ -45,6 +45,7 @@ class Player(wavelink.Player):
         self.stop_votes = set()
 
     def clear_votes(self):
+        print("[Function] clear_votes")
         self.pause_votes.clear()
         self.resume_votes.clear()
         self.skip_votes.clear()
@@ -52,6 +53,8 @@ class Player(wavelink.Player):
         self.stop_votes.clear()
 
     async def do_next(self) -> None:
+
+        print("[Function] do_next")
         if self.current or self.waiting:
             return
 
@@ -103,12 +106,13 @@ class Music(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, **payload: dict):
-        print(f'TRACK ENDED: {payload["reason"]}')
+    async def on_wavelink_track_end(self, player: Player, **payload: dict):
+        print(f'[TRACK ENDED] {payload.reason}')
         await payload.player.do_next()
 
     @commands.Cog.listener()
     async def on_track_exception(self, node: wavelink.Node, payload):
+        print(f"[TRACK EXCEPTION] {payload.exception}")
         await payload.player.do_next()
 
     @commands.Cog.listener()
@@ -118,6 +122,7 @@ class Music(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
+        
         if member.bot:
             return
 
@@ -125,6 +130,8 @@ class Music(commands.Cog):
         if not player or not player.connected:
             # Exit if the player does not exist or is not connected
             return
+
+        print(f"[COG LISTENER] Player : {player}")
 
         player.ctx = member
 
@@ -141,6 +148,7 @@ class Music(commands.Cog):
         elif after.channel == channel and player.dj not in channel.members:
             player.dj = member
 
+        print(f"[COG LISTENER] Player.dj : {player.dj}")
         # Disconnect the player if it's the only member left in the channel
         if len(channel.members) == 1:
             await asyncio.sleep(15)
@@ -151,14 +159,19 @@ class Music(commands.Cog):
     async def on_wavelink_track_start(
         self, payload: wavelink.TrackStartEventPayload
     ) -> None:
+        
+
         player: Player | None = payload.player
-        print(f"on_wavelink_track_start !!! player : {player}")
+        print(f"[ON_WAVELINK_TRACK_START] Player: {payload.player}")
+
         if not player:
-            # print("not player")
+            print("[ON_WAVELINK_TRACK_START] Player not found")
+            # Handle edge cases...
             return
 
         original: wavelink.Playable | None = payload.original
         track: wavelink.Playable = payload.track
+        print(f"[ON_WAVELINK_TRACK_START]: {track.title}")
 
         embed: discord.Embed = discord.Embed(title="Now Playing")
         embed.description = f"**{track.title}** by `{track.author}`"
@@ -216,7 +229,7 @@ class Music(commands.Cog):
     async def play(self, ctx: commands.Context, *, query: str) -> None:
         """Play a song from a query."""
         player: Player = cast(Player, ctx.voice_client)
-
+        
         if not player:
             try:
                 player: Player = await ctx.author.voice.channel.connect(cls=Player(ctx=ctx))  # type: ignore
@@ -231,6 +244,8 @@ class Music(commands.Cog):
                     "I was unable to join this voice channel. Please try again."
                 )
                 return
+            
+        print(f"[PLAY] Player : {player}")
 
         await ctx.send(f"player :{player} ")
         player.autoplay = wavelink.AutoPlayMode.disabled
@@ -293,16 +308,32 @@ class Music(commands.Cog):
         if not player:
             return
 
-        print(f"skip player : {player}")
+        print(f"[SKIP] Player : {player}")
 
         if self.is_privileged(ctx):
             await ctx.send("An admin or DJ has skipped the song.", delete_after=10)
             player.skip_votes.clear()
-
+            print(f"[SKIP] Privileged Clearing votes...")
             return await player.skip()
 
-        await player.skip()
-        await ctx.message.add_reaction("\u2705")
+        if ctx.author == player.current.requester:
+            await print(f"[SKIP] Requester has skipped the song.")
+            await ctx.send('The song requester has skipped the song.', delete_after=10)
+            player.skip_votes.clear()
+            return await player.skip()
+
+        required = self.required(ctx)
+        player.skip_votes.add(ctx.author)
+
+        if len(player.skip_votes) >= required:
+            print(f"[SKIP] Vote to skip passed. Skipping song.")
+            await ctx.send('Vote to skip passed. Skipping song.', delete_after=10)
+            player.skip_votes.clear()
+            await player.skip()
+        else:
+            await ctx.send(f'{ctx.author.mention} has voted to skip the song.', delete_after=15)
+
+
 
     @commands.command(name="toggle", aliases=["pause", "resume"])
     async def pause_resume(self, ctx: commands.Context) -> None:
