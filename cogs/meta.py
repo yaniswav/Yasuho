@@ -130,32 +130,6 @@ class Meta(commands.Cog):
                     embed=embed
                 )
 
-
-    @commands.hybrid_command() 
-    async def shorten(self, ctx, url : str):
-        try:
-            r = requests.get(url).status_code
-        except requests.exceptions.RequestException:
-            r = 404
-        if r == 200:
-            params = {
-                "access_token": "757c24db53fac6a6a994439da41bdbbe325dfb99",
-                "longUrl": url
-            }
-            response = requests.get("https://api-ssl.bitly.com/v3/shorten", params=params)
-            if response.status_code == 200:
-                embed = discord.Embed(timestamp=datetime.datetime.utcnow(), color=random.randint(0x000000, 0xFFFFFF))
-                embed.add_field(name='Shorten link:', value="<{}>".format(response.json()["data"]["url"]))
-                if ctx.interaction:
-                    return await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
-                await ctx.send(embed=embed)
-
-            else:
-                await ctx.send("There was an error shortening your URL.")
-        else:
-            await ctx.send("You did not enter a valid URL.")
-
-
     @commands.hybrid_command()
     @commands.guild_only()
     async def weather(self, ctx, city: str):
