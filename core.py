@@ -1,3 +1,4 @@
+import asyncio
 import asyncpg
 import discord
 from discord.ext import commands
@@ -54,7 +55,7 @@ class Yasuho(commands.Bot):
 
 async def get_prefix(bot: Yasuho, message: discord.Message):
     if not message.guild:
-        return DEFAULT_PREFIX # Using DEFAULT_PREFIX variable here
+        return DEFAULT_PREFIX 
 
     prefix = bot.prefixes.get(message.guild.id, None)
 
@@ -74,9 +75,8 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
 
 
 async def main():
-    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:  # Using POSTGRESQL_URI variable here
+    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool: 
         async with Yasuho(commands.when_mentioned, db_pool=pool) as bot:
-            await bot.start(TOKEN)  # Using TOKEN variable here
-
+            await bot.start(TOKEN) 
 
 asyncio.run(main())
