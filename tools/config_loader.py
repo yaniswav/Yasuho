@@ -17,4 +17,4 @@ class ConfigLoader(configparser.ConfigParser):
         return [int(x) for x in self.getlist(section, option)]
 
 # Initialisation avec les noms des fichiers de configuration
-config_loader = ConfigLoader('bot.ini', 'tokens.ini')
+config_loader = ConfigLoader('bot.ini', 'tokens.ini', 'emoji.ini', 'games.ini')
