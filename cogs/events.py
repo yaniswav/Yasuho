@@ -23,7 +23,7 @@ class Events(commands.Cog):
     def cog_unload(self):
         self.change_status.cancel()
 
-    @tasks.loop(seconds=30)
+    @tasks.loop(seconds=15)
     async def change_status(self):
         await self.bot.change_presence(
             status=discord.Status.idle,
@@ -61,6 +61,8 @@ class Events(commands.Cog):
             "arrival",
             "command",
             "bots-commands",
+            "bots",
+            
         ]
 
         general = find(lambda x: x.name in names, guild.text_channels)
@@ -93,7 +95,6 @@ class Events(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-
 
 async def setup(bot):
     await bot.add_cog(Events(bot))
