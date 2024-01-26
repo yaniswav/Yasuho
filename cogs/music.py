@@ -370,7 +370,7 @@ class Music(commands.Cog):
     @commands.command(aliases=["q", "que"])
     async def queue(self, ctx: commands.Context):
         """Display the next 10 songs in the player's queue."""
-        player: wavelink.Player = ctx.voice_client
+        player: Player = ctx.voice_client
 
         if not player.connected:
             return await ctx.send("The player is not connected to a voice channel.")
