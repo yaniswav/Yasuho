@@ -9,81 +9,87 @@ import random
 import Levenshtein as lv
 import requests
 
-class HelpMenu(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Question", value="Question", description='Si tu as une simple question.',
-                                 emoji='❔'),
-            discord.SelectOption(label="Aide", value="Aide", description='Si tu as besoin de notre aide.', emoji='🔧'),
-            discord.SelectOption(label="Report", value="Report", description='Pour signaler un probleme sur le serveur.', emoji='🚫')
-        ]
-        super().__init__(placeholder="Comment puis-je t'aider ?", min_values=1, max_values=1, options=options,
-                         custom_id='menu')
-
-    async def callback(self, interaction: discord.Interaction):
-        await ctx.send("bonjour")
+from tools.config_loader import config_loader
 
 
-class HelpView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
+# class HelpMenu(discord.ui.Select):
+#     def __init__(self):
+#         options = [
+#             discord.SelectOption(label="Question", value="Question", description='Si tu as une simple question.',
+#                                  emoji='❔'),
+#             discord.SelectOption(label="Aide", value="Aide", description='Si tu as besoin de notre aide.', emoji='🔧'),
+#             discord.SelectOption(label="Report", value="Report", description='Pour signaler un probleme sur le serveur.', emoji='🚫')
+#         ]
+#         super().__init__(placeholder="Comment puis-je t'aider ?", min_values=1, max_values=1, options=options,
+#                          custom_id='menu')
 
-        # Adds the dropdown to our view object.
-        self.add_item(HelpMenu())
+#     async def callback(self, interaction: discord.Interaction):
+#         await ctx.send("bonjour")
 
-class HelpCommand(commands.HelpCommand):
-    context: commands.Context
 
-    def __init__(self):
-        super().__init__(
-            command_attrs={
-                'cooldown': commands.CooldownMapping.from_cooldown(1, 3.0, commands.BucketType.member),
-                'help': 'Shows help about the bot, a command, or a category',
-            }
-        )
+# class HelpView(discord.ui.View):
+#     def __init__(self):
+#         super().__init__()
 
-    def get_command_signature(self, command: commands.Command) -> str:
-        parent = command.full_parent_name
-        if len(command.aliases) > 0:
-            aliases = '|'.join(command.aliases)
-            fmt = f'[{command.name}|{aliases}]'
-            if parent:
-                fmt = f'{parent} {fmt}'
-            alias = fmt
-        else:
-            alias = command.name if not parent else f'{parent} {command.name}'
-        return f'{alias} {command.signature}'
+#         # Adds the dropdown to our view object.
+#         self.add_item(HelpMenu())
 
-    async def send_bot_help(self, mapping):
-        channel = self.get_destination()
-        await channel.send("salut", view=HelpView())
+# class HelpCommand(commands.HelpCommand):
+#     context: commands.Context
 
-    async def send_command_help(self, command):
-        embed = discord.Embed(title=self.get_command_signature(command))
-        embed.add_field(name="Help", value=command.help)
-        alias = command.aliases
-        if alias:
-            embed.add_field(name="Aliases", value=", ".join(alias), inline=False)
+#     def __init__(self):
+#         super().__init__(
+#             command_attrs={
+#                 'cooldown': commands.CooldownMapping.from_cooldown(1, 3.0, commands.BucketType.member),
+#                 'help': 'Shows help about the bot, a command, or a category',
+#             }
+#         )
 
-        channel = self.get_destination()
-        await channel.send(embed=embed)
+#     def get_command_signature(self, command: commands.Command) -> str:
+#         parent = command.full_parent_name
+#         if len(command.aliases) > 0:
+#             aliases = '|'.join(command.aliases)
+#             fmt = f'[{command.name}|{aliases}]'
+#             if parent:
+#                 fmt = f'{parent} {fmt}'
+#             alias = fmt
+#         else:
+#             alias = command.name if not parent else f'{parent} {command.name}'
+#         return f'{alias} {command.signature}'
 
-    async def on_help_command_error(self, ctx, error: commands.CommandError):
-        if isinstance(error, commands.CommandInvokeError):
-            # Ignore missing permission errors
-            if isinstance(error.original, discord.HTTPException) and error.original.code == 50013:
-                return
+#     async def send_bot_help(self, mapping):
+#         channel = self.get_destination()
+#         await channel.send("salut", view=HelpView())
 
-            await ctx.send(str(error.original))
+#     async def send_command_help(self, command):
+#         embed = discord.Embed(title=self.get_command_signature(command))
+#         embed.add_field(name="Help", value=command.help)
+#         alias = command.aliases
+#         if alias:
+#             embed.add_field(name="Aliases", value=", ".join(alias), inline=False)
 
+#         channel = self.get_destination()
+#         await channel.send(embed=embed)
+
+#     async def on_help_command_error(self, ctx, error: commands.CommandError):
+#         if isinstance(error, commands.CommandInvokeError):
+#             # Ignore missing permission errors
+#             if isinstance(error.original, discord.HTTPException) and error.original.code == 50013:
+#                 return
+
+#             await ctx.send(str(error.original))
+
+
+NASA_KEY =  config_loader.get('APITokens', 'nasaKey')
+WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
 
 class Meta(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
             
-        help_command = HelpCommand()
-        help_command.cog = self # Instance of YourCog class
-        bot.help_command = help_command
+        # help_command = HelpCommand()
+        # help_command.cog = self # Instance of YourCog class
+        # bot.help_command = help_command
 
     @commands.hybrid_command()
     async def apod(self, ctx):
@@ -91,7 +97,7 @@ class Meta(commands.Cog):
         Shows Astronomy Picture of the Day.
         """
         async with aiohttp.ClientSession() as cs:
-            async with cs.get(f"https://api.nasa.gov/planetary/apod?api_key={config.nasa_key}") as resp:
+            async with cs.get(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}") as resp:
 
                 cont = await resp.json()
 
@@ -134,7 +140,7 @@ class Meta(commands.Cog):
     @commands.guild_only()
     async def weather(self, ctx, city: str):
         async with aiohttp.ClientSession() as cs:
-            async with cs.get(f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={config.weather_key}&units=metric') as r:
+            async with cs.get(f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric') as r:
                 
                 res = await r.json()
                 
