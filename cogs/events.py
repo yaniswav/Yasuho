@@ -50,7 +50,7 @@ class Events(commands.Cog):
             ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;
 
             """
-        await self.bot.pool.execute(
+        await self.bot.db_pool.execute(
             query, guild.id, config.default_prefix, config.default_prefix
         )
         self.bot.cache[guild.id] = config.default_prefix
@@ -95,12 +95,12 @@ class Events(commands.Cog):
                 WHERE guild_id = $1
 
                 """
-        await self.bot.pool.execute(query, guild.id)
+        await self.bot.db_pool.execute(query, guild.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild_id = member.guild.id
-        pool = self.bot.pool
+        pool = self.bot.db_pool
 
         # Verify if the member is blacklisted
         query = "SELECT member_id FROM blbot WHERE member_id = $1;"
