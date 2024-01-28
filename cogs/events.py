@@ -23,7 +23,8 @@ class Events(commands.Cog):
     def cog_unload(self):
         self.change_status.cancel()
 
-    @tasks.loop(seconds=15)
+
+    @tasks.loop(seconds=20)
     async def change_status(self):
         await self.bot.change_presence(
             status=discord.Status.idle,
@@ -33,6 +34,11 @@ class Events(commands.Cog):
                 name=next(self.status),
             ),
         )
+
+    @change_status.before_loop
+    async def before_change_status(self):
+        print("[STATUS] Waiting for bot to be ready to set custom status.")
+        await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -90,6 +96,37 @@ class Events(commands.Cog):
 
                 """
         await self.bot.pool.execute(query, guild.id)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        guild_id = member.guild.id
+        pool = self.bot.pool
+
+        # Verify if the member is blacklisted
+        query = "SELECT member_id FROM blbot WHERE member_id = $1;"
+        blacklisted = await pool.fetchval(query, member.id)
+        if blacklisted:
+            try:
+                await member.guild.ban(member, reason="Blacklisted from bot")
+                try:
+                    await member.send("You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>")
+                except discord.HTTPException:
+                    pass
+            except discord.HTTPException:
+                pass
+            return
+
+        # Attribute a role to the member if the guild has autorole
+        query = "SELECT role_id FROM autorole WHERE guild_id = $1;"
+        role_id = await pool.fetchval(query, guild_id)
+        if role_id:
+            role = member.guild.get_role(role_id)
+            if role:
+                try:
+                    await member.add_roles(role)
+                except discord.HTTPException:
+                    pass
+
 
     @commands.Cog.listener()
     async def on_message(self, message):
