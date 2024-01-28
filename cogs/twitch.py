@@ -6,7 +6,6 @@ import asyncpg
 import random
 import traceback
 
-
 class Twitch(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -30,7 +29,7 @@ class Twitch(commands.Cog):
                         query = (
                             """ SELECT user_id FROM twitch_alert WHERE guild_id = $1"""
                         )
-                        uid = await self.bot.pool.fetchval(query, after.guild.id)
+                        uid = await self.bot.db_pool.fetchval(query, after.guild.id)
 
                         if not (uid):
                             return
@@ -38,7 +37,7 @@ class Twitch(commands.Cog):
                         try:
                             try:
                                 query = """ SELECT channel_id FROM twitch_alert WHERE user_id = $1 and guild_id = $2 """
-                                fetch_msgid = await self.bot.pool.fetchval(
+                                fetch_msgid = await self.bot.db_pool.fetchval(
                                     query, after.id, after.guild.id
                                 )
                                 ch_ = discord.utils.get(
@@ -49,7 +48,7 @@ class Twitch(commands.Cog):
                                 return
 
                             query = """ SELECT message FROM twitch_alert WHERE user_id = $1 and guild_id = $2 """
-                            f = await self.bot.pool.fetchval(
+                            f = await self.bot.db_pool.fetchval(
                                 query, after.id, after.guild.id
                             )
 
@@ -109,11 +108,11 @@ class Twitch(commands.Cog):
 
         member = member or ctx.author
         query = """ 
-                INSERT INTO twitch_alert(guild_id, user_id, channel_id, message) VALUES($1,$2,$3,$4) ON CONFLICT (guild_id, user_id, channel_id) DO UPDATE SET channel_id = $5, message = $6;  
-                """
+				INSERT INTO twitch_alert(guild_id, user_id, channel_id, message) VALUES($1,$2,$3,$4) ON CONFLICT (guild_id, user_id, channel_id) DO UPDATE SET channel_id = $5, message = $6;  
+				"""
 
         try:
-            await self.bot.pool.execute(
+            await self.bot.db_pool.execute(
                 query, ctx.guild.id, member.id, channel.id, message, channel.id, message
             )
             await ctx.send(
@@ -134,10 +133,10 @@ class Twitch(commands.Cog):
         """Remove a member from the Twitch alert DB."""
         member = member or ctx.author
         query = """ 
-                DELETE FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
-                """
+				DELETE FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
+				"""
 
-        await self.bot.pool.execute(query, ctx.guild.id, member.id)
+        await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
         await ctx.send(f"Removed {member.mention} Twitch alerts.")
 
     @twitch.command(aliases=["info-member"])
@@ -147,10 +146,10 @@ class Twitch(commands.Cog):
 
         member = member or ctx.author
         query = """ 
-                SELECT channel_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
-                """
+				SELECT channel_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
+				"""
 
-        channel = await self.bot.pool.fetchval(query, ctx.guild.id, member.id)
+        channel = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
 
         if not (channel):
             embed = discord.Embed(
@@ -215,7 +214,6 @@ class Twitch(commands.Cog):
             )
 
         await ctx.send("Live streamer role was successfully removed.")
-
 
 async def setup(bot):
     await bot.add_cog(Twitch(bot))
