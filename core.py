@@ -5,10 +5,10 @@ from discord.ext import commands
 import wavelink
 from tools.config_loader import config_loader
 
-DEFAULT_PREFIX = config_loader.get('BotInfo', 'DefaultPrefix')
-TOKEN = config_loader.get('Bot_Token', 'Token')
-POSTGRESQL_URI = config_loader.get('Database', 'PostgreSQL')
-EXTENSIONS = config_loader.getlist('Extension', 'Extensions')
+DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
+TOKEN = config_loader.get("Bot_Token", "Token")
+POSTGRESQL_URI = config_loader.get("Database", "PostgreSQL")
+EXTENSIONS = config_loader.getlist("Extension", "Extensions")
 
 class Yasuho(commands.Bot):
     def __init__(self, *args, db_pool: asyncpg.Pool):
@@ -55,7 +55,7 @@ class Yasuho(commands.Bot):
 
 async def get_prefix(bot: Yasuho, message: discord.Message):
     if not message.guild:
-        return DEFAULT_PREFIX 
+        return DEFAULT_PREFIX
 
     prefix = bot.prefixes.get(message.guild.id, None)
 
@@ -75,8 +75,8 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
 
 
 async def main():
-    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool: 
+    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:
         async with Yasuho(commands.when_mentioned, db_pool=pool) as bot:
-            await bot.start(TOKEN) 
+            await bot.start(TOKEN)
 
 asyncio.run(main())
