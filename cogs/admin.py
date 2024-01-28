@@ -52,7 +52,7 @@ class Admin(commands.Cog):
             return f"```py\n{e.__class__.__name__}: {e}\n```"
         return f'```py\n{e.text}{"^":>{e.offset}}\n{e.__class__.__name__}: {e}```'
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(hidden=True)
     @commands.is_owner()
     async def sync(
         self, ctx, guilds=None, spec: Optional[Literal["~", "*", "^"]] = None
@@ -134,12 +134,6 @@ class Admin(commands.Cog):
                 self._last_result = ret
                 await ctx.send(f"```py\n{value}{ret}\n```")
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def test(self, ctx):
-        await ctx.send(self.bot.cogs.keys())
-        for v in self.bot.cogs.keys():
-            await ctx.send(v)
 
     @commands.hybrid_command(
         pass_context=True, hidden=True, name="reload", aliases=["rl"]
@@ -184,7 +178,7 @@ class Admin(commands.Cog):
 
             await ctx.message.add_reaction("\u2705")
 
-    @commands.command(pass_context=True, no_pm=True, hidden=True)
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def load(self, ctx, extension):
         try:
@@ -206,7 +200,7 @@ class Admin(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True, no_pm=True, hidden=True)
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def unload(self, ctx, extension):
         try:
