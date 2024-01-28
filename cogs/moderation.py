@@ -298,7 +298,7 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        con = self.bot.pool
+        con = self.bot.db_pool
 
         query = """
                 
@@ -325,7 +325,7 @@ class Moderation(commands.Cog):
                     mrole = await ctx.guild.create_role(name=role, permissions=perms)
                     await ctx.send(content="Mute role created!", delete_after=5)
                     query = """INSERT INTO muterole (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $3;"""
-                    await self.bot.pool.execute(query, ctx.guild.id, mrole.id, mrole.id)
+                    await self.bot.db_pool.execute(query, ctx.guild.id, mrole.id, mrole.id)
 
                     for channel in ctx.guild.text_channels:
                         await channel.set_permissions(
@@ -361,7 +361,7 @@ class Moderation(commands.Cog):
                     )
 
                     query = """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
-                    await self.bot.pool.execute(query, ctx.guild.id, user.id)
+                    await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
 
                     return await ctx.send(embed=embed)
 
@@ -380,7 +380,7 @@ class Moderation(commands.Cog):
             query = (
                 """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
             )
-            await self.bot.pool.execute(query, ctx.guild.id, user.id)
+            await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
             await ctx.send(embed=embed)
 
             for channel in ctx.guild.text_channels:
@@ -424,7 +424,7 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, user: discord.Member):
         """Un-mutes the specified member."""
 
-        con = self.bot.pool
+        con = self.bot.db_pool
 
         query = """
                 
@@ -446,7 +446,7 @@ class Moderation(commands.Cog):
             query = (
                 """DELETE FROM mutedmembers WHERE mguild_id = $1 AND member_id = $2;"""
             )
-            await self.bot.pool.execute(query, ctx.guild.id, user.id)
+            await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
             await ctx.send(embed=embed)
 
         except Exception as e:
@@ -533,7 +533,7 @@ class Moderation(commands.Cog):
                     
         """
 
-        fetch = await self.bot.pool.fetchval(query, ctx.guild.id, member.id)
+        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
 
         if not fetch:
             return await ctx.send(f"{member.mention} has no warns.")
@@ -556,12 +556,12 @@ class Moderation(commands.Cog):
                     
         """
 
-        fetch = await self.bot.pool.fetchval(query, ctx.guild.id, member.id)
+        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
         await ctx.send(fetch)
 
         if not fetch:
             query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) ON CONFLICT (guild_id, user_id) DO UPDATE SET  = 1;"""
-            await self.bot.pool.execute(query, ctx.guild.id, member.id)
+            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
             return await ctx.send(f"{member.mention} has been warned! [1 warn]")
 
         elif fetch + 1 >= 3:
@@ -570,7 +570,7 @@ class Moderation(commands.Cog):
                         VALUES
                         ($1, $2, 0) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 0;
                         """
-            await self.bot.pool.execute(query, ctx.guild.id, member.id)
+            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
             try:
                 await member.kick()
                 await member.send("You have been kick from the server!")
@@ -585,7 +585,7 @@ class Moderation(commands.Cog):
         else:
             await ctx.send(type(fetch), fetch)
             query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = warns_count + $4;"""
-            await self.bot.pool.execute(
+            await self.bot.db_pool.execute(
                 query, ctx.guild.id, member.id, fetch + 1, fetch + 1
             )
             await ctx.send(f"{member.mention} has been warned! [{fetch + 1} warns]")
@@ -602,18 +602,18 @@ class Moderation(commands.Cog):
         query = (
             """SELECT warns_count FROM warns WHERE guild_id = $1 AND user_id = $2;"""
         )
-        fetch = await self.bot.pool.fetchval(query, ctx.guild.id, member.id)
+        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
 
         if not fetch:
             return await ctx.send(f"{member.mention} has no warns!")
 
         if fetch - num < 0:
             query = f""" UPDATE warns SET warns_count = 0 WHERE guild_id = $1 AND user_id = $2;"""
-            await self.bot.pool.execute(query, ctx.guild.id, member.id)
+            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
             return await ctx.send(f"Removed all warns for {member.mention}.")
 
         query = f""" UPDATE warns SET warns_count = warns_count - {int(num)} WHERE guild_id = $1 AND user_id = $2;"""
-        await self.bot.pool.execute(query, ctx.guild.id, member.id)
+        await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
         await ctx.send(
             f"Removed {num} warn(s) for {member.mention}. [{fetch - 1} warns]"
         )
