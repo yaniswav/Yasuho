@@ -17,13 +17,26 @@ import config
 class NoChannelProvided(commands.CommandError):
     """Error raised when no suitable voice channel was supplied."""
 
-    pass
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print("[NoChannelProvided] No suitable voice channel was supplied")
 
 class IncorrectChannelError(commands.CommandError):
     """Error raised when commands are issued outside of the players session channel."""
 
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print("[IncorrectChannelError] Command issued outside of the player's session channel")
+        
+class Track(wavelink.Playable):
+    """Wavelink Track object with a requester attribute."""
+
+    __slots__ = ('requester', )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.requester = kwargs.get('requester')
+        print(f"[Track] Created track with requester: {self.requester}")
 
 
 class Player(wavelink.Player):
@@ -45,40 +58,61 @@ class Player(wavelink.Player):
         self.stop_votes = set()
 
     def clear_votes(self):
-        print("[Function] clear_votes")
         self.pause_votes.clear()
         self.resume_votes.clear()
         self.skip_votes.clear()
         self.shuffle_votes.clear()
         self.stop_votes.clear()
+        print("[clear_votes] cleared votes")
 
     async def do_next(self) -> None:
-
-        print("[Function] do_next")
+        print("[do_next] Start")
         if self.current or self.waiting:
+            print("[do_next] Currently playing or waiting")
             return
 
         self.clear_votes()
-
+        
         try:
             self.waiting = True
             with async_timeout.timeout(300):
-                track = await self.queue.get()
+                if len(self.queue) > 0:
+                    track = self.queue.get()  
+                print(f"[do_next] Going to play: {track.title}")
+                await self.play(track)
+
+                # next_songs = self.queue[:5]
+                # entries = [track.title for track in next_songs]
+
+                # queue_message = "\n".join(entries) if entries else "No upcoming songs."
+                # print(f"Next {len(next_songs)} songs in the queue:\n{queue_message}")
+
         except asyncio.TimeoutError:
             # No music has been played for 5 minutes, cleanup and disconnect...
-            return await self.disconnect()
+            return await self.teardown()
 
-        await self.play(track)
         self.waiting = False
 
+        print(f"[do_next] Playing {track.title}")
+        await self.invoke_controller()
+
     def build_embed(self) -> typing.Optional[discord.Embed]:
-        """Method which builds our players controller embed."""
+        print("[build_embed] Building embed")
         track = self.current
+
+        next_track_title = self.queue.get().title
+
         if not track:
+            print("[build_embed] No current track")
             return
 
-        channel = self.bot.get_channel(int(self.channel_id))
-        qsize = self.queue.qsize()
+        channel = self.client.get_channel(int(self.channel.id))
+        qsize = len(self.queue)
+
+        duration_seconds = int(track.length / 1000)
+        duration_minutes, duration_seconds = divmod(duration_seconds, 60)
+        duration_formatted = f"{duration_minutes:02}:{duration_seconds:02}"
+
 
         embed = discord.Embed(
             title=f"Music Controller | {config.e_voice} **{channel.name}**",
@@ -86,34 +120,190 @@ class Player(wavelink.Player):
         )
         embed.description = f"■ **Now Playing:**\n[{track.title}]({track.uri})\n■ **Artist:** `{track.author}`"
         embed.set_footer(text="If you enjoy the bot, don't forget to upvote :)")
-        embed.set_thumbnail(url=track.thumb)
+        embed.set_image(url=track.artwork)
 
-        embed.add_field(name="Requested By", value=track.requester.mention, inline=True)
         embed.add_field(
             name="Duration",
-            value=str(datetime.timedelta(milliseconds=int(track.length))),
-            inline=True,
+            value=duration_formatted,
+            inline=False,
         )
-        embed.add_field(name="Volume", value=f"**`{self.volume}%`**", inline=True)
-        embed.add_field(name="DJ", value=self.dj.mention, inline=False)
-        embed.add_field(name="Queue Length", value=str(qsize), inline=True)
 
+        embed.add_field(name="Next Track", value=f"{next_track_title}", inline=True)
+        embed.add_field(name="Queue Length", value=str(qsize), inline=True)
+        
+        embed.add_field(name="Volume", value=f"**`{self.volume}%`**", inline=False)
+        embed.add_field(name="DJ", value=self.dj.mention, inline=False)
+
+
+        print("[build_embed] Embed built")
         return embed
 
+
+    async def is_position_fresh(self) -> bool:
+        print("[is_position_fresh] Checking if position is fresh")
+        try:
+            async for message in self.ctx.channel.history(limit=5):
+                if message.id == self.controller.message.id:
+                    print("[is_position_fresh] Position is fresh")
+                    return True
+        except (discord.HTTPException, AttributeError) as e:
+            print(f"[is_position_fresh] Exception: {e}")
+            return False
+
+        print("[is_position_fresh] Position is not fresh")
+        return False
+
+    async def teardown(self):
+        print("[teardown] Tearing down")
+        try:
+            self.controller.disable_buttons()
+            await self.disconnect()
+            print("[teardown] Controller disabled")
+        except KeyError as e:
+            print(f"[teardown] KeyError: {e}")
+
+
+    async def invoke_controller(self) -> None:
+        """Method which updates or sends a new player controller."""
+        print("[invoke_controller] Start")
+        print(f"[invoke_controller] self.updating status: {self.updating}")
+        if self.updating:
+            print("[invoke_controller] Currently updating, exiting")
+            return
+
+        self.updating = True
+
+        if not self.controller:
+            print("[invoke_controller] Creating new controller")
+            self.controller = InteractiveController(embed=self.build_embed(), player=self)
+            await self.controller.start(self.ctx)
+
+        elif not await self.is_position_fresh():
+            print("[invoke_controller] Position not fresh, updating controller")
+            try:
+                await self.controller.message.delete()
+                print("[invoke_controller] Controller message deleted")
+            except discord.HTTPException:
+                print("[invoke_controller] Failed to delete controller message")
+
+            self.controller.stop()
+            print("[invoke_controller] Controller stopped")
+
+            self.controller = InteractiveController(embed=self.build_embed(), player=self)
+            await self.controller.start(self.ctx)
+        else:
+            print("[invoke_controller] Position fresh, updating embed only")
+            embed = self.build_embed()
+            await self.controller.message.edit(content=None, embed=embed)
+
+        self.updating = False
+        print("[invoke_controller] Finished updating controller")
+
+
+class InteractiveController(discord.ui.View):
+    def __init__(self, *, embed: discord.Embed, player: Player):
+        super().__init__(timeout=None)
+        self.embed = embed
+        self.player = player
+
+    async def start(self, context: commands.Context):
+        self.message = await context.send(embed=self.embed, view=self)
+        self.ctx = context
+
+    def update_context(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Update our context with the user who reacted."""
+        ctx = copy.copy(self.ctx)
+        ctx.author = payload.member
+
+        return ctx
+
+    def disable_buttons(self):
+        """Désactive tous les boutons."""
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+        # Mettre à jour l'affichage des boutons
+        asyncio.create_task(self.update_message())
+
+    async def update_message(self):
+        """Mettre à jour le message avec les boutons désactivés."""
+        if self.message:
+            await self.message.edit(view=self)
+
+    async def send_initial_message(
+        self, ctx: commands.Context, channel: discord.TextChannel
+    ) -> discord.Message:
+        return await channel.send(embed=self.embed)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\U000023ef", custom_id="pause_resume", row=0)
+    async def pause_resume_command(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print("[pause_resume_command] Button pressed")
+        try:
+            ctx = await self.player.client.get_context(interaction.message)
+            command = self.player.client.get_command("resume")
+            ctx.command = command
+            await self.player.client.invoke(ctx)
+            print("[pause_resume_command] Command invoked")
+        except Exception as e:
+            print(f"[pause_resume_command] Error: {e}")
+
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\u23F9", custom_id="stop", row=0)
+    async def stop_command(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Stop button."""
+        ctx = self.update_context(payload)
+
+        command = self.bot.get_command("stop")
+        ctx.command = command
+
+        await self.bot.invoke(ctx)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\u23ED", custom_id="skip", row=0)
+    async def skip_command(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Skip button."""
+        ctx = self.update_context(payload)
+
+        command = self.bot.get_command("skip")
+        ctx.command = command
+
+        await self.bot.invoke(ctx)
+
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\U0001f504", custom_id="restart", row=0)
+    async def restart_command(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Restart."""
+        ctx = self.update_context(payload)
+
+        command = self.bot.get_command("restart")
+        ctx.command = command
+
+        await self.bot.invoke(ctx)
+ 
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\U0001F500", custom_id="shuffle", row=1)
+    async def shuffle_command(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Shuffle button."""
+        ctx = self.update_context(payload)
+
+        command = self.bot.get_command("shuffle")
+        ctx.command = command
+
+        await self.bot.invoke(ctx)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, emoji="\U0001f4dc", custom_id="queue", row=1)
+    async def queue_command(self, interaction: discord.Interaction, button: discord.ui.Button, payload):
+        """Player queue button."""
+
+
+        ctx = await self.player.client.get_context(interaction.message)
+        command = self.player.client.get_command("queue")
+        ctx.command = command
+        await self.player.client.invoke(ctx)
 
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: Player, **payload: dict):
-        print(f'[TRACK ENDED] {payload.reason}')
-        await payload.player.do_next()
-
-    @commands.Cog.listener()
-    async def on_track_exception(self, node: wavelink.Node, payload):
-        print(f"[TRACK EXCEPTION] {payload.exception}")
-        await payload.player.do_next()
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -126,19 +316,20 @@ class Music(commands.Cog):
         if member.bot:
             return
 
-        player: Player = member.guild.voice_client
+        player: Player = cast(Player, member.guild.voice_client)
+
         if not player or not player.connected:
             # Exit if the player does not exist or is not connected
             return
 
-        print(f"[COG LISTENER] Player : {player}")
+        print(f"[on_voice_state_update] len of the channel : {len(player.channel.members)}")
 
-        player.ctx = member
-
-        channel = self.bot.get_channel(player.channel_id)
+        channel = self.bot.get_channel(player.channel.id)
         if not channel:
             # Exit if the channel does not exist
+            print(f"[on_voice_state_update] Channel not found")
             return
+        print(f"[on_voice_state_update] Channel : {channel}")
 
         # Update the DJ if the current DJ leaves the channel
         if member == player.dj and after.channel != channel:
@@ -148,11 +339,13 @@ class Music(commands.Cog):
         elif after.channel == channel and player.dj not in channel.members:
             player.dj = member
 
-        print(f"[COG LISTENER] Player.dj : {player.dj}")
+        print(f"[on_voice_state_update] Player.dj : {player.dj}")
         # Disconnect the player if it's the only member left in the channel
         if len(channel.members) == 1:
+            print(f"[on_voice_state_update] channel size is 1")
             await asyncio.sleep(15)
             if len(channel.members) == 1:
+                player.controller.disable_buttons()
                 await player.disconnect()
 
     @commands.Cog.listener()
@@ -165,7 +358,6 @@ class Music(commands.Cog):
         print(f"[ON_WAVELINK_TRACK_START] Player: {payload.player}")
 
         if not player:
-            print("[ON_WAVELINK_TRACK_START] Player not found")
             # Handle edge cases...
             return
 
@@ -185,7 +377,27 @@ class Music(commands.Cog):
         if track.album.name:
             embed.add_field(name="Album", value=track.album.name)
 
-        await player.home.send(embed=embed)
+        # await player.home.send(embed=embed, delete_after=5)
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+        player: Player | None = payload.player
+
+        print(f'[TRACK ENDED] Track: {payload.track.title}, Reason: {payload.reason}')
+        print('[TRACK ENDED] Moving to next track in queue.')
+
+        await player.do_next()
+
+    @commands.Cog.listener()
+    async def on_track_exception(self, node: wavelink.Node, payload):
+        print(f"[TRACK EXCEPTION] {payload.exception}, reason: {payload.reason}")
+        await payload.player.do_next()
+
+    @commands.Cog.listener()
+    async def on_wavelink_inactive_player(self, player: wavelink.Player) -> None:
+        await player.channel.send(f"The player has been inactive for `{player.inactive_timeout}` seconds. Goodbye!")
+        await player.disconnect()
+
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception):
         """Cog wide error handler."""
@@ -207,9 +419,9 @@ class Music(commands.Cog):
 
     def required(self, ctx: commands.Context):
         """Method which returns required votes based on amount of members in a channel."""
-        player: Player = Player(ctx.voice_client)
+        player: Player = cast(Player, ctx.voice_client)
 
-        channel = self.bot.get_channel(int(player.channel_id))
+        channel = self.bot.get_channel(int(player.channel.id))
         required = math.ceil((len(channel.members) - 1) / 2.5)
 
         if ctx.command.name == "stop":
@@ -220,7 +432,7 @@ class Music(commands.Cog):
 
     def is_privileged(self, ctx: commands.Context) -> bool:
         """Check whether the user is an Admin or DJ."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
         if player and player.dj:
             return player.dj == ctx.author or ctx.author.guild_permissions.kick_members
         return False
@@ -232,7 +444,7 @@ class Music(commands.Cog):
         
         if not player:
             try:
-                player: Player = await ctx.author.voice.channel.connect(cls=Player(ctx=ctx))  # type: ignore
+                player: Player = await ctx.author.voice.channel.connect(cls=Player(ctx=ctx)) 
             except AttributeError:
                 print(f"AttributeError : {AttributeError}")
                 await ctx.send(
@@ -245,9 +457,6 @@ class Music(commands.Cog):
                 )
                 return
             
-        print(f"[PLAY] Player : {player}")
-
-        await ctx.send(f"player :{player} ")
         player.autoplay = wavelink.AutoPlayMode.disabled
 
         if not hasattr(player, "home"):
@@ -276,26 +485,27 @@ class Music(commands.Cog):
             await ctx.send(f"Added **`{track}`** to the queue.")
 
         if not player.playing:
-            await player.play(player.queue.get(), volume=30)
+            # Play now since we aren't playing anything...
+            await player.play(player.queue.get())
 
     @commands.command()
     async def stop(self, ctx: commands.Context):
         """Stop the player, and disconnect from the channel."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
 
         if not player.connected:
             return
 
         if self.is_privileged(ctx):
             await ctx.send("An admin or DJ has stopped the player.", delete_after=10)
-            return await player.disconnect()
+            return await player.teardown()
 
         required = self.required(ctx)
         player.stop_votes.add(ctx.author)
 
         if len(player.stop_votes) >= required:
             await ctx.send("Vote to stop passed. Stopping the player.", delete_after=10)
-            await player.disconnect()
+            await player.teardown()
         else:
             await ctx.send(
                 f"{ctx.author.mention} has voted to stop the player.", delete_after=15
@@ -306,21 +516,30 @@ class Music(commands.Cog):
         """Skip the current song."""
         player: Player = cast(Player, ctx.voice_client)
         if not player:
+            await ctx.send("No player found.")
             return
-
-        print(f"[SKIP] Player : {player}")
 
         if self.is_privileged(ctx):
             await ctx.send("An admin or DJ has skipped the song.", delete_after=10)
             player.skip_votes.clear()
             print(f"[SKIP] Privileged Clearing votes...")
-            return await player.skip()
+            try:
+                await player.skip()
+                print("[SKIP] Song skipped by privileged user.")
+            except Exception as e:
+                print(f"[SKIP ERROR] Error skipping song: {e}")
+
+            return
 
         if ctx.author == player.current.requester:
-            await print(f"[SKIP] Requester has skipped the song.")
             await ctx.send('The song requester has skipped the song.', delete_after=10)
             player.skip_votes.clear()
-            return await player.skip()
+            try:
+                await player.skip()
+                print("[SKIP] Song skipped by requester.")
+            except Exception as e:
+                print(f"[SKIP ERROR] Error skipping song: {e}")
+            return
 
         required = self.required(ctx)
         player.skip_votes.add(ctx.author)
@@ -329,16 +548,18 @@ class Music(commands.Cog):
             print(f"[SKIP] Vote to skip passed. Skipping song.")
             await ctx.send('Vote to skip passed. Skipping song.', delete_after=10)
             player.skip_votes.clear()
-            await player.skip()
+            try:
+                await player.skip()
+                print("[SKIP] Song skipped by vote.")
+            except Exception as e:
+                print(f"[SKIP ERROR] Error skipping song: {e}")
         else:
             await ctx.send(f'{ctx.author.mention} has voted to skip the song.', delete_after=15)
-
-
 
     @commands.command(name="toggle", aliases=["pause", "resume"])
     async def pause_resume(self, ctx: commands.Context) -> None:
         """Toggle pause and resume on the player."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
 
         if not player:
             return
@@ -349,7 +570,7 @@ class Music(commands.Cog):
     @commands.command()
     async def volume(self, ctx: commands.Context, value: int) -> None:
         """Set the player volume."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
 
         if not player:
             return
@@ -360,17 +581,27 @@ class Music(commands.Cog):
     @commands.command(aliases=["dc"])
     async def disconnect(self, ctx: commands.Context) -> None:
         """Disconnect the player from the voice channel."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
         if not player:
             return
 
         await player.disconnect()
         await ctx.message.add_reaction("\u2705")
 
+    @commands.command(aliases=['np', 'now_playing', 'current'])
+    async def nowplaying(self, ctx: commands.Context):
+        """Update the player controller."""
+        player: Player = ctx.voice_client
+
+        if not player.current:
+            return
+
+        await player.invoke_controller()
+
     @commands.command(aliases=["q", "que"])
     async def queue(self, ctx: commands.Context):
         """Display the next 10 songs in the player's queue."""
-        player: Player = ctx.voice_client
+        player: Player = cast(Player, ctx.voice_client)
 
         if not player.connected:
             return await ctx.send("The player is not connected to a voice channel.")
@@ -382,7 +613,7 @@ class Music(commands.Cog):
             )
 
         # Get up to the next 10 songs
-        next_songs = player.queue[:10]
+        next_songs = player.queue[:20]
         entries = [track.title for track in next_songs]
 
         queue_message = "\n".join(entries) if entries else "No upcoming songs."
@@ -415,7 +646,7 @@ class Music(commands.Cog):
                     "Vote to shuffle passed. Shuffling the playlist.", delete_after=10
                 )
                 player.shuffle_votes.clear()
-                await player.queue.shuffle()  # Utilisez ici la méthode intégrée de Wavelink pour mélanger
+                await player.queue.shuffle() 
             else:
                 await ctx.send(
                     f"{ctx.author.mention} has voted to shuffle the playlist.",
