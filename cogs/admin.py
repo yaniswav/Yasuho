@@ -1,21 +1,24 @@
 import asyncio
-from contextlib import redirect_stdout
 import io
+import logging
 import subprocess
 import textwrap
 import traceback
-import discord
-import datetime
-from discord.ext import commands
-from discord.ext.commands import Greedy
-import typing
-import config
-import random
+from contextlib import redirect_stdout
+from typing import Literal, Optional
 
-from typing import Optional, Literal
+import discord
+from discord.ext import commands
+
+from tools.config_loader import config_loader
+from tools.formats import random_colour
+
+log = logging.getLogger(__name__)
 
 
 class Admin(commands.Cog):
+    """Owner-only administrative commands (sync, eval, extension management)."""
+
     def __init__(self, bot):
         self.bot = bot
         self._last_result = None
@@ -52,11 +55,16 @@ class Admin(commands.Cog):
             return f"```py\n{e.__class__.__name__}: {e}\n```"
         return f'```py\n{e.text}{"^":>{e.offset}}\n{e.__class__.__name__}: {e}```'
 
-    @commands.hybrid_command(hidden=True)
+    @commands.command(hidden=True)
     @commands.is_owner()
+    @commands.guild_only()
     async def sync(
-        self, ctx, guilds=None, spec: Optional[Literal["~", "*", "^"]] = None
+        self,
+        ctx,
+        guilds: commands.Greedy[discord.Object],
+        spec: Optional[Literal["~", "*", "^"]] = None,
     ) -> None:
+        """Synchronizes the application command tree globally or to guilds."""
         if not guilds:
             if spec == "~":
                 synced = await self.bot.tree.sync(guild=ctx.guild)
@@ -117,15 +125,15 @@ class Admin(commands.Cog):
         try:
             with redirect_stdout(stdout):
                 ret = await func()
-        except Exception as e:
+        except Exception:
             value = stdout.getvalue()
             await ctx.send(f"```py\n{value}{traceback.format_exc()}\n```")
         else:
             value = stdout.getvalue()
             try:
                 await ctx.message.add_reaction("\u2705")
-            except:
-                pass
+            except Exception:
+                log.exception("Failed to add success reaction")
 
             if ret is None:
                 if value:
@@ -134,22 +142,19 @@ class Admin(commands.Cog):
                 self._last_result = ret
                 await ctx.send(f"```py\n{value}{ret}\n```")
 
-
-    @commands.hybrid_command(
-        pass_context=True, hidden=True, name="reload", aliases=["rl"]
-    )
+    @commands.hybrid_command(hidden=True, name="reload", aliases=["rl"])
     @commands.is_owner()
     async def reload(self, ctx, extension=None):
-
+        """Reloads a single extension, or all configured extensions."""
         if extension is None:
             v, e = 0, 0
-            for ext in config.initial_extensions:
+            for ext in config_loader.getlist("Extension", "Extensions"):
                 try:
                     await self.bot.reload_extension(f"{ext}")
-                    print(f"Reloaded extension: {ext}")
+                    log.info("Reloaded extension: %s", ext)
                     v += 1
-                except commands.ExtensionError as error:
-                    print(f"Couldn't reload extension: {ext}\nError: {error}")
+                except commands.ExtensionError:
+                    log.exception("Couldn't reload extension: %s", ext)
                     e += 1
 
             if ctx.interaction:
@@ -165,10 +170,17 @@ class Admin(commands.Cog):
             await self.bot.reload_extension(f"cogs.{extension}")
 
         except commands.ExtensionError as e:
-            print(f"Couldn't reload extension: {extension}\nError: {e}")
+            log.exception("Couldn't reload extension: %s", extension)
+
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    f"Couldn't reload `{extension}`: {e}", ephemeral=True
+                )
+            else:
+                await ctx.send(f"Couldn't reload `{extension}`: {e}")
 
         else:
-            print(f"Reloaded extension: {extension}")
+            log.info("Reloaded extension: %s", extension)
 
             if ctx.interaction:
                 await ctx.interaction.response.send_message(
@@ -181,12 +193,13 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def load(self, ctx, extension):
+        """Loads an extension by name."""
         try:
             await self.bot.load_extension(f"cogs.{extension}")
             await ctx.message.add_reaction("\u2705")
 
         except Exception as error:
-            embed = discord.Embed(color=random.randint(0x000000, 0xFFFFFF))
+            embed = discord.Embed(color=random_colour())
             embed.add_field(
                 name="Error!",
                 value=f"{extension} cannot be loaded! \n**[{error}]**",
@@ -203,12 +216,13 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def unload(self, ctx, extension):
+        """Unloads an extension by name."""
         try:
             await self.bot.unload_extension(f"cogs.{extension}")
             await ctx.message.add_reaction("\u2705")
 
         except Exception as error:
-            embed = discord.Embed(color=random.randint(0x000000, 0xFFFFFF))
+            embed = discord.Embed(color=random_colour())
             embed.add_field(
                 name="Error!",
                 value=f"{extension} cannot be unloaded! \n**[{error}]**",

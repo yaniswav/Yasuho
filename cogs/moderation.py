@@ -1,24 +1,21 @@
-import asyncio
-import random
+import datetime
+import logging
+
 import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
-from discord.ext.commands.cooldowns import BucketType
-import os
-import time
-import typing
-import logging
-import re
-from re import *
-from inspect import cleandoc
-import json
-import enum
-import config
-import argparse
-import shlex
-import datetime
-from collections import deque
-from random import randint as rint
+
+from tools.config_loader import config_loader
+from tools.formats import random_colour
+
+log = logging.getLogger(__name__)
+
+E_VERIF = config_loader.getstr("Emojis", "verif")
+
+
+def trim_reason(reason):
+    """Truncate a moderation reason to 100 characters, appending an ellipsis when clipped."""
+    return reason if len(reason) <= 100 else f"{reason[:100]}..."
 
 
 class Moderation(commands.Cog):
@@ -34,7 +31,7 @@ class Moderation(commands.Cog):
             "month": 2592000,
         }
 
-    @commands.command(aliases=["newmembers"])
+    @commands.hybrid_command(aliases=["newmembers"])
     @commands.guild_only()
     async def newusers(self, ctx, *, count=5):
         """Tells you the newest members of the server.
@@ -53,19 +50,19 @@ class Moderation(commands.Cog):
             )[:count]
 
             e = discord.Embed(
-                title="New Members", colour=random.randint(0x000000, 0xFFFFFF)
+                title="New Members", colour=random_colour()
             )
 
             for member in members:
-                body = f"joined {time.human_timedelta(member.joined_at)}, created {time.human_timedelta(member.created_at)}"
+                body = f"joined {discord.utils.format_dt(member.joined_at, 'R')}, created {discord.utils.format_dt(member.created_at, 'R')}"
                 e.add_field(
                     name=f"{member} (ID: {member.id})", value=body, inline=False
                 )
 
             await ctx.send(embed=e)
 
-        except:
-            pass
+        except Exception:
+            log.exception("Failed to send new members embed")
 
     @commands.hybrid_command(name="kick", aliases=["k"])
     @commands.guild_only()
@@ -78,30 +75,31 @@ class Moderation(commands.Cog):
             reason = "No reason specified"
 
         embedkick = discord.Embed(
-            color=random.randint(0x000000, 0xFFFFFF),
+            color=random_colour(),
             timestamp=ctx.message.created_at,
             title=f"Kick | {ctx.author.name} has kicked {target.name}",
         )
-        embedkick.set_thumbnail(url=target.avatar_url)
+        embedkick.set_thumbnail(url=target.display_avatar.url)
         embedkick.add_field(
-            name=f"**🔴 Kick Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{reason if len(reason) <= 100 else f'{reason[:100]}...'}**\nTime: **{ctx.message.created_at}**",
+            name="**🔴 Kick Info**",
+            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
         )
-        embedkick.set_footer(text=ctx.guild, icon_url=ctx.guild.icon_url)
+        embedkick.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
         try:
             await ctx.guild.kick(
                 target,
-                reason=f"{ctx.author}: {reason if len(reason) <= 100 else f'{reason[:100]}...'}",
+                reason=f"{ctx.author}: {trim_reason(reason)}",
             )
             await ctx.send(embed=embedkick)
 
-        except:
+        except Exception:
+            log.exception("Failed to kick member")
             await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
 
-    @commands.command(name="voicekick", aliases=["vkick", "voicek"])
+    @commands.hybrid_command(name="voicekick", aliases=["vkick", "voicek"])
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(kick_members=True)
@@ -112,29 +110,30 @@ class Moderation(commands.Cog):
             reason = "No reason specified"
 
         embedkick = discord.Embed(
-            color=random.randint(0x000000, 0xFFFFFF),
+            color=random_colour(),
             timestamp=ctx.message.created_at,
             title=f"Kick | {ctx.author.name} has kicked {user.name}",
         )
-        embedkick.set_thumbnail(url=user.avatar_url)
+        embedkick.set_thumbnail(url=user.display_avatar.url)
         embedkick.add_field(
-            name=f"**🔴 Voice Kick Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{reason if len(reason) <= 100 else f'{reason[:100]}...'}**\nTime: **{ctx.message.created_at}**",
+            name="**🔴 Voice Kick Info**",
+            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
         )
-        embedkick.set_footer(text=ctx.guild, icon_url=ctx.guild.icon_url)
+        embedkick.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
         try:
             await user.move_to(
                 None,
-                reason=f"{ctx.author}: {reason if len(reason) <= 100 else f'{reason[:100]}...'}",
+                reason=f"{ctx.author}: {trim_reason(reason)}",
             )
             await ctx.send(embed=embedkick)
-        except:
+        except Exception:
+            log.exception("Failed to voice kick member")
             await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
 
-    @commands.command(name="move")
+    @commands.hybrid_command(name="move")
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(kick_members=True)
@@ -145,11 +144,11 @@ class Moderation(commands.Cog):
         try:
             await user.move_to(channel, reason=None)
             await ctx.send(f"{user.name} has been moved to {channel}")
-        except Exception as error:
+        except Exception:
             await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
-            print(f"[ERROR] {error}")
+            log.exception("Failed to move member to channel")
 
     @commands.hybrid_command(name="ban", aliases=["b"])
     @commands.guild_only()
@@ -162,24 +161,25 @@ class Moderation(commands.Cog):
             reason = "No reason specified"
 
         embedban = discord.Embed(
-            color=random.randint(0x000000, 0xFFFFFF),
+            color=random_colour(),
             timestamp=ctx.message.created_at,
             title=f"Ban | {ctx.author.name} has banned {target.name}",
         )
-        embedban.set_thumbnail(url=target.avatar_url)
+        embedban.set_thumbnail(url=target.display_avatar.url)
         embedban.add_field(
-            name=f"**🔴 Ban Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{reason if len(reason) <= 100 else f'{reason[:100]}...'}**\nTime: **{ctx.message.created_at}**",
+            name="**🔴 Ban Info**",
+            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
         )
-        embedban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon_url)
+        embedban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
         try:
             await ctx.guild.ban(
                 target,
-                reason=f"{ctx.author}: {reason if len(reason) <= 100 else f'{reason[:100]}...'}",
+                reason=f"{ctx.author}: {trim_reason(reason)}",
             )
             await ctx.send(embed=embedban)
-        except:
+        except Exception:
+            log.exception("Failed to ban member")
             await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
@@ -189,30 +189,31 @@ class Moderation(commands.Cog):
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     async def _unban(self, ctx, target: discord.User, *, reason: str = None):
-        """Bans an annoying user. Requires ban members permission. Also bot must have this permission."""
+        """Unbans a user. Requires ban members permission. Also bot must have this permission."""
 
         if reason is None:
             reason = "No reason specified"
 
         embedunban = discord.Embed(
-            color=random.randint(0x000000, 0xFFFFFF),
+            color=random_colour(),
             timestamp=ctx.message.created_at,
             title=f"Unban | {ctx.author.name} ❌🔨 {target.name}",
         )
-        embedunban.set_thumbnail(url=target.avatar_url)
+        embedunban.set_thumbnail(url=target.display_avatar.url)
         embedunban.add_field(
-            name=f"**🔴 Unban Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{reason if len(reason) <= 100 else f'{reason[:100]}...'}**\nTime: **{ctx.message.created_at}**",
+            name="**🔴 Unban Info**",
+            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
         )
-        embedunban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon_url)
+        embedunban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
 
         try:
             await ctx.guild.unban(
                 target,
-                reason=f"{ctx.author}: {reason if len(reason) <= 100 else f'{reason[:100]}...'}",
+                reason=f"{ctx.author}: {trim_reason(reason)}",
             )
             await ctx.send(embed=embedunban)
-        except:
+        except Exception:
+            log.exception("Failed to unban member")
             await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
@@ -237,24 +238,16 @@ class Moderation(commands.Cog):
 
         else:
             try:
-                await ctx.channel.purge(
-                    limit=count + 1, before=datetime.datetime.utcnow()
-                )
-            except:
+                await ctx.channel.purge(limit=count + 1)
+            except Exception:
+                log.exception("Failed to purge messages")
                 return await ctx.send(
                     "**:x: Sorry, I am missing permissions to do this**", delete_after=5
                 )
 
-        if ctx.interaction:
-            return await ctx.interaction.response.send_message(
-                f"{config.e_verif} **Deleted succefully !**", epheremal=True
-            )
+        return await ctx.send(f"{E_VERIF} **Deleted successfully!**", delete_after=3)
 
-        return await ctx.send(
-            f"{config.e_verif} **Deleted succefully !**", delete_after=3
-        )
-
-    @commands.command(description="Clears X messages.")
+    @commands.hybrid_command(description="Clears X messages.")
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     @commands.has_permissions(manage_messages=True)
@@ -271,7 +264,7 @@ class Moderation(commands.Cog):
 
         deleted = await ctx.channel.purge(limit=num, check=msgcheck)
         await ctx.send(
-            f"{config.e_verif} Deleted **{len(deleted)}/{num}** possible messages for you.",
+            f"{E_VERIF} Deleted **{len(deleted)}/{num}** possible messages for you.",
             delete_after=3,
         )
 
@@ -301,13 +294,12 @@ class Moderation(commands.Cog):
         con = self.bot.db_pool
 
         query = """
-                
-        SELECT role_id FROM muterole 
+
+        SELECT role_id FROM muterole
         WHERE guild_id = $1;
-                    
+
         """
 
-        await con.execute(query, ctx.guild.id)
         role = await con.fetchval(query, ctx.guild.id)
 
         try:
@@ -357,7 +349,7 @@ class Moderation(commands.Cog):
                     embed = discord.Embed(
                         title="Done!",
                         description=f":red_circle: {user} has been muted.",
-                        colour=random.randint(0x000000, 0xFFFFFF),
+                        colour=random_colour(),
                     )
 
                     query = """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
@@ -365,8 +357,8 @@ class Moderation(commands.Cog):
 
                     return await ctx.send(embed=embed)
 
-                except:
-                    pass
+                except Exception:
+                    log.exception("Failed to create mute role")
 
             mutedrole = discord.utils.get(ctx.guild.roles, id=role)
             await user.add_roles(
@@ -375,7 +367,7 @@ class Moderation(commands.Cog):
             embed = discord.Embed(
                 title="Done!",
                 description=f":red_circle: {user} has been muted.",
-                colour=random.randint(0x000000, 0xFFFFFF),
+                colour=random_colour(),
             )
             query = (
                 """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
@@ -383,34 +375,11 @@ class Moderation(commands.Cog):
             await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
             await ctx.send(embed=embed)
 
-            for channel in ctx.guild.text_channels:
-                await channel.set_permissions(
-                    mutedrole,
-                    overwrite=discord.PermissionOverwrite(
-                        send_messages=False,
-                        add_reactions=False,
-                        send_tts_messages=False,
-                    ),
-                )
-            for channel in ctx.guild.voice_channels:
-                await channel.set_permissions(
-                    mutedrole, overwrite=discord.PermissionOverwrite(speak=False)
-                )
-            for channel in ctx.guild.categories:
-                await channel.set_permissions(
-                    mutedrole,
-                    overwrite=discord.PermissionOverwrite(
-                        send_messages=False,
-                        add_reactions=False,
-                        send_tts_messages=False,
-                        speak=False,
-                    ),
-                )
-
-        except:
+        except Exception:
+            log.exception("Failed to mute member")
             embed = discord.Embed(
                 title="Already Muted",
-                colour=random.randint(0x000000, 0xFFFFFF),
+                colour=random_colour(),
                 description=f":red_circle: {user} is already muted!",
                 timestamp=datetime.datetime.utcnow(),
             )
@@ -427,10 +396,10 @@ class Moderation(commands.Cog):
         con = self.bot.db_pool
 
         query = """
-                
-        SELECT role_id FROM muterole 
+
+        SELECT role_id FROM muterole
         WHERE guild_id = $1;
-                    
+
         """
 
         role = await con.fetchval(query, ctx.guild.id)
@@ -441,7 +410,7 @@ class Moderation(commands.Cog):
             embed = discord.Embed(
                 title="Done!",
                 description=f":red_circle: {user.mention} has been un-muted.",
-                colour=random.randint(0x000000, 0xFFFFFF),
+                colour=random_colour(),
             )
             query = (
                 """DELETE FROM mutedmembers WHERE mguild_id = $1 AND member_id = $2;"""
@@ -453,13 +422,13 @@ class Moderation(commands.Cog):
             await ctx.send(e, delete_after=3)
             embed = discord.Embed(
                 title="Not Muted",
-                colour=random.randint(0x000000, 0xFFFFFF),
+                colour=random_colour(),
                 description=f""":red_circle: {user} was never muted!""",
                 timestamp=datetime.datetime.utcnow(),
             )
             await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def addrole(self, ctx, member, role: discord.Role):
@@ -480,10 +449,10 @@ class Moderation(commands.Cog):
         m = await converter.convert(ctx, member)
         await m.add_roles(role)
         return await ctx.send(
-            f"{config.e_verif} **`{role.name}`** role has been added to **{m.name}**"
+            f"{E_VERIF} **`{role.name}`** role has been added to **{m.name}**"
         )
 
-    @commands.command()
+    @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def removerole(self, ctx, member, role: discord.Role):
@@ -491,7 +460,7 @@ class Moderation(commands.Cog):
 
         if member == "-all":
             for m in ctx.message.guild.members:
-                if not role in m.roles:
+                if role in m.roles:
                     await m.remove_roles(role)
 
             return await ctx.send(
@@ -502,13 +471,15 @@ class Moderation(commands.Cog):
         m = await converter.convert(ctx, member)
         await m.remove_roles(role)
         return await ctx.send(
-            f"{config.e_verif} **`{role.name}`** role has been removed to **{m.name}**"
+            f"{E_VERIF} **`{role.name}`** role has been removed to **{m.name}**"
         )
 
-    @commands.command()
+    @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def moverole(self, ctx, role: discord.Role, pos: int):
+        """Move a role to the given position in the hierarchy."""
+
         try:
             await role.edit(position=pos)
             await ctx.send(f"{role} moved.")
@@ -516,21 +487,23 @@ class Moderation(commands.Cog):
             await ctx.send("You do not have permission to do that")
         except discord.HTTPException:
             await ctx.send("Failed to move role")
-        except discord.InvalidArgument:
+        except (TypeError, ValueError):
             await ctx.send("Invalid argument")
 
-    @commands.command()
+    @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
     async def warninfo(self, ctx, member: discord.Member = None):
+        """Show how many warns a member currently has."""
+
         if member is None:
             return await ctx.send_help(ctx.command)
 
         query = """
-                
-        SELECT warns_count FROM warns 
+
+        SELECT warns_count FROM warns
         WHERE guild_id = $1 AND user_id = $2;
-                    
+
         """
 
         fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
@@ -550,17 +523,16 @@ class Moderation(commands.Cog):
             return await ctx.send_help(ctx.command)
 
         query = """
-                
-        SELECT warns_count FROM warns 
+
+        SELECT warns_count FROM warns
         WHERE guild_id = $1 AND user_id = $2;
-                    
+
         """
 
         fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
-        await ctx.send(fetch)
 
         if not fetch:
-            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) ON CONFLICT (guild_id, user_id) DO UPDATE SET  = 1;"""
+            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 1;"""
             await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
             return await ctx.send(f"{member.mention} has been warned! [1 warn]")
 
@@ -577,16 +549,16 @@ class Moderation(commands.Cog):
                 return await ctx.send(
                     f"{member.mention} has been kicked from the server!"
                 )
-            except:
+            except Exception:
+                log.exception("Failed to kick member at 3 warns")
                 return await ctx.send(
                     f"{member.mention} has 3 warns but I don't have permissions to kick him from the guild."
                 )
 
         else:
-            await ctx.send(type(fetch), fetch)
-            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = warns_count + $4;"""
+            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3;"""
             await self.bot.db_pool.execute(
-                query, ctx.guild.id, member.id, fetch + 1, fetch + 1
+                query, ctx.guild.id, member.id, fetch + 1
             )
             await ctx.send(f"{member.mention} has been warned! [{fetch + 1} warns]")
 
@@ -608,14 +580,14 @@ class Moderation(commands.Cog):
             return await ctx.send(f"{member.mention} has no warns!")
 
         if fetch - num < 0:
-            query = f""" UPDATE warns SET warns_count = 0 WHERE guild_id = $1 AND user_id = $2;"""
+            query = """ UPDATE warns SET warns_count = 0 WHERE guild_id = $1 AND user_id = $2;"""
             await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
             return await ctx.send(f"Removed all warns for {member.mention}.")
 
         query = f""" UPDATE warns SET warns_count = warns_count - {int(num)} WHERE guild_id = $1 AND user_id = $2;"""
         await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
         await ctx.send(
-            f"Removed {num} warn(s) for {member.mention}. [{fetch - 1} warns]"
+            f"Removed {num} warn(s) for {member.mention}. [{fetch - num} warns]"
         )
 
 

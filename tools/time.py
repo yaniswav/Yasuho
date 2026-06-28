@@ -1,18 +1,25 @@
 from __future__ import annotations
 
 import datetime
+import re
 from typing import TYPE_CHECKING, Any, Optional, Union
+
 import parsedatetime as pdt
 from dateutil.relativedelta import relativedelta
-from .formats import plural, human_join, format_dt as format_dt
-from discord.ext import commands
 from discord import app_commands
-import re
+from discord.ext import commands
+
+from .formats import format_dt, human_join, plural
+
+if TYPE_CHECKING:
+    from discord.ext.commands import Context
+    from typing_extensions import Self
 
 # Monkey patch mins and secs into the units
 units = pdt.pdtLocales['en_US'].units
 units['minutes'].append('mins')
 units['seconds'].append('secs')
+
 
 class ShortTime:
     compiled = re.compile(
@@ -131,7 +138,7 @@ class Time(HumanTime):
     ):
         try:
             o = ShortTime(argument, now=now, tzinfo=tzinfo)
-        except Exception as e:
+        except Exception:
             super().__init__(argument, now=now, tzinfo=tzinfo)
         else:
             self.dt = o.dt

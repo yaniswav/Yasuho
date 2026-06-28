@@ -1,19 +1,28 @@
 import asyncio
+import logging
+import os
+
 import asyncpg
 import discord
-from discord.ext import commands
 import wavelink
+from discord.ext import commands
+
 from tools.config_loader import config_loader
+
+log = logging.getLogger(__name__)
 
 DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 TOKEN = config_loader.get("Bot_Token", "Token")
 POSTGRESQL_URI = config_loader.get("Database", "PostgreSQL")
 EXTENSIONS = config_loader.getlist("Extension", "Extensions")
 
+
 class Yasuho(commands.Bot):
-    def __init__(self, *args, db_pool: asyncpg.Pool):
+    """Main bot subclass wiring up intents, prefixes, and extensions."""
+
+    def __init__(self, db_pool: asyncpg.Pool):
         allowed_mentions = discord.AllowedMentions(
-            roles=False, everyone=True, users=True
+            roles=False, everyone=False, users=True
         )
         intents = discord.Intents.all()
 
@@ -28,8 +37,15 @@ class Yasuho(commands.Bot):
         )
 
         self.db_pool = db_pool
+        self.prefixes = {}
 
     async def setup_hook(self) -> None:
+        # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
+        schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
+        if os.path.exists(schema_path):
+            with open(schema_path, "r", encoding="utf-8") as fp:
+                await self.db_pool.execute(fp.read())
+
         self.prefixes = dict(
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
         )
@@ -37,20 +53,21 @@ class Yasuho(commands.Bot):
         for extension in EXTENSIONS:
             try:
                 await self.load_extension(extension)
-                print(f"[Loading] {extension}")
+                log.info("Loading %s", extension)
             except commands.ExtensionNotFound:
-                print(f"[Not found]: {extension}")
-            except Exception as e:
-                print(f"[Error] While trying to load {extension}: {e}")
+                log.error("Extension not found: %s", extension)
+            except Exception:
+                log.exception("Error while trying to load %s", extension)
 
-        print(f"Prefix count: {len(self.prefixes)}")
+        log.info("Prefix count: %d", len(self.prefixes))
 
-        node: wavelink.Node = wavelink.Node(
-            uri="http://0.0.0.0:2333",
-            password="youshallnotpass",
-        )
-
-        await wavelink.Pool.connect(client=self, nodes=[node])
+        # Connect to Lavalink for music. Non-fatal: if no Lavalink server is
+        # running, the bot still starts (music commands just won't work).
+        try:
+            node = wavelink.Node(uri="http://0.0.0.0:2333", password="youshallnotpass")
+            await wavelink.Pool.connect(client=self, nodes=[node])
+        except Exception as e:
+            log.warning("Lavalink unavailable, music disabled: %s", e)
 
 
 async def get_prefix(bot: Yasuho, message: discord.Message):
@@ -61,9 +78,9 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
 
     if not prefix:
         query = """
-                INSERT INTO prefixes 
-                (guild_id, prefix) 
-                VALUES ($1, $2) 
+                INSERT INTO prefixes
+                (guild_id, prefix)
+                VALUES ($1, $2)
                 ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;"""
 
         await bot.db_pool.execute(
@@ -75,8 +92,13 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
 
 
 async def main():
+    # Configure logging ourselves since we use asyncio.run + bot.start (not bot.run,
+    # which would call this for us). Routes discord.py + our own loggers to stderr.
+    discord.utils.setup_logging(level=logging.INFO)
     async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:
-        async with Yasuho(commands.when_mentioned, db_pool=pool) as bot:
+        async with Yasuho(db_pool=pool) as bot:
             await bot.start(TOKEN)
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,12 +1,16 @@
+import logging
+
 import discord
 from discord.ext import commands
 
-import asyncio
-import asyncpg
-import random
-import traceback
+from tools.formats import random_colour
+
+log = logging.getLogger(__name__)
+
 
 class Twitch(commands.Cog):
+    """Manage Twitch live alerts and a Live streamer role."""
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -26,10 +30,10 @@ class Twitch(commands.Cog):
             ):
                 for activity in after.activities:
                     if isinstance(activity, discord.Streaming):
-                        query = (
-                            """ SELECT user_id FROM twitch_alert WHERE guild_id = $1"""
+                        query = """ SELECT user_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2"""
+                        uid = await self.bot.db_pool.fetchval(
+                            query, after.guild.id, after.id
                         )
-                        uid = await self.bot.db_pool.fetchval(query, after.guild.id)
 
                         if not (uid):
                             return
@@ -44,13 +48,17 @@ class Twitch(commands.Cog):
                                     before.guild.channels, id=fetch_msgid
                                 )
 
-                            except:
+                            except Exception:
+                                log.exception("Failed to resolve twitch alert channel")
                                 return
 
                             query = """ SELECT message FROM twitch_alert WHERE user_id = $1 and guild_id = $2 """
                             f = await self.bot.db_pool.fetchval(
                                 query, after.id, after.guild.id
                             )
+
+                            if f is None:
+                                return
 
                             if "[url]" in f:
                                 f = f.replace("[url]", f"{activity.url}")
@@ -64,7 +72,8 @@ class Twitch(commands.Cog):
 
                             await ch_.send(f"{f}")
 
-                        except:
+                        except Exception:
+                            log.exception("Failed to send twitch live alert")
                             return
 
                         await after.add_roles(role, reason="Live Streamer Update")
@@ -77,8 +86,8 @@ class Twitch(commands.Cog):
             ):
                 await after.remove_roles(role, reason="Live Streamer Update")
 
-        except:
-            pass
+        except Exception:
+            log.exception("Error handling member streaming update")
 
     @commands.hybrid_group(aliases=["stream"])
     @commands.has_permissions(manage_messages=True)
@@ -99,7 +108,7 @@ class Twitch(commands.Cog):
         *,
         message: str,
     ):
-        """Informations : [url] Your Twitch url | [game] Your Twitch game"""
+        """Information: [url] Your Twitch url | [game] Your Twitch game"""
 
         await ctx.send(
             "⚠️ Info | Put [url] to set your Twitch URL in the string and [game] to set your game ;)",
@@ -107,9 +116,10 @@ class Twitch(commands.Cog):
         )
 
         member = member or ctx.author
-        query = """ 
-				INSERT INTO twitch_alert(guild_id, user_id, channel_id, message) VALUES($1,$2,$3,$4) ON CONFLICT (guild_id, user_id, channel_id) DO UPDATE SET channel_id = $5, message = $6;  
-				"""
+        channel = channel or ctx.channel
+        query = """
+                INSERT INTO twitch_alert(guild_id, user_id, channel_id, message) VALUES($1,$2,$3,$4) ON CONFLICT (guild_id, user_id, channel_id) DO UPDATE SET channel_id = $5, message = $6;
+                """
 
         try:
             await self.bot.db_pool.execute(
@@ -121,10 +131,11 @@ class Twitch(commands.Cog):
             try:
                 ch_ = discord.utils.get(member.guild.channels, id=channel.id)
                 await ch_.send(f"Twitch alerts set for {member.name}", delete_after=30)
-            except:
-                pass
+            except Exception:
+                log.exception("Failed to send confirmation message in channel")
 
-        except:
+        except Exception:
+            log.exception("Failed to register twitch alert")
             return
 
     @twitch.command(aliases=["remove-member", "del"])
@@ -132,9 +143,9 @@ class Twitch(commands.Cog):
     async def remove(self, ctx: commands.Context, member: discord.Member = None):
         """Remove a member from the Twitch alert DB."""
         member = member or ctx.author
-        query = """ 
-				DELETE FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
-				"""
+        query = """
+                DELETE FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;
+                """
 
         await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
         await ctx.send(f"Removed {member.mention} Twitch alerts.")
@@ -145,25 +156,25 @@ class Twitch(commands.Cog):
         """Gives Twitch info."""
 
         member = member or ctx.author
-        query = """ 
-				SELECT channel_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;  
-				"""
+        query = """
+                SELECT channel_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;
+                """
 
         channel = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
 
         if not (channel):
             embed = discord.Embed(
-                title="Twitch alerts", colour=random.randint(0x000000, 0xFFFFFF)
+                title="Twitch alerts", colour=random_colour()
             )
             embed.add_field(
                 name="The current Twitch alert channel:",
-                value=f"There is no channel for this user",
+                value="There is no channel for this user",
             )
             await ctx.send(embed=embed)
             return
 
         embed = discord.Embed(
-            title="Twitch alerts", colour=random.randint(0x000000, 0xFFFFFF)
+            title="Twitch alerts", colour=random_colour()
         )
         embed.add_field(name="The current Twitch alert channel:", value=f"<#{channel}>")
         await ctx.send(embed=embed)
@@ -214,6 +225,7 @@ class Twitch(commands.Cog):
             )
 
         await ctx.send("Live streamer role was successfully removed.")
+
 
 async def setup(bot):
     await bot.add_cog(Twitch(bot))

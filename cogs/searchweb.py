@@ -1,0 +1,189 @@
+import logging
+import urllib.parse
+
+import aiohttp
+import discord
+import lyricsgenius
+import wikipedia
+from discord.ext import commands
+
+from tools.config_loader import config_loader
+from tools.formats import random_colour
+
+log = logging.getLogger(__name__)
+
+
+class SearchWeb(commands.Cog):
+    """Commands that search the web and external APIs."""
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.hybrid_command(aliases=["wikipedia"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def wiki(self, ctx, *, query: str):
+        """Search Wikipedia for a short summary of a topic."""
+
+        async with ctx.typing():
+
+            def _w():
+                wikipedia.set_lang("en")
+                return wikipedia.summary(query, sentences=5)
+
+            try:
+                summary = await self.bot.loop.run_in_executor(None, _w)
+                embed = discord.Embed(
+                    title=query,
+                    description=summary,
+                    colour=random_colour(),
+                )
+                await ctx.send(embed=embed)
+
+            except wikipedia.exceptions.DisambiguationError as e:
+                options = ", ".join(e.options[:5])
+                embed = discord.Embed(
+                    title="Disambiguation",
+                    description=f"That term is ambiguous. Did you mean: {options}?",
+                    colour=random_colour(),
+                )
+                await ctx.send(embed=embed)
+
+            except wikipedia.exceptions.PageError:
+                await ctx.send("No page found.")
+
+            except Exception:
+                log.exception("failed to fetch wikipedia summary")
+                await ctx.send("Something went wrong while searching Wikipedia.")
+
+    @commands.hybrid_command()
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def lyrics(self, ctx, *, song: str):
+        """Fetch the lyrics of a song using Genius."""
+
+        token = config_loader.get("APITokens", "geniusKey", fallback=None)
+        if not token:
+            return await ctx.send("Lyrics are not configured (set geniusKey).")
+
+        async with ctx.typing():
+
+            def _l():
+                genius = lyricsgenius.Genius(
+                    token, verbose=False, remove_section_headers=True
+                )
+                s = genius.search_song(song)
+                return s.lyrics if s else None
+
+            try:
+                lyrics = await self.bot.loop.run_in_executor(None, _l)
+            except Exception:
+                log.exception("failed to fetch lyrics")
+                return await ctx.send("Something went wrong while fetching lyrics.")
+
+            if not lyrics:
+                return await ctx.send("No lyrics found.")
+
+            if len(lyrics) <= 4096:
+                embed = discord.Embed(
+                    title=song,
+                    description=lyrics,
+                    colour=random_colour(),
+                )
+                return await ctx.send(embed=embed)
+
+            for i in range(0, len(lyrics), 1990):
+                await ctx.send(lyrics[i : i + 1990])
+
+    @commands.hybrid_command(aliases=["saucefinder", "imgsource"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def imagesource(self, ctx, url: str = None):
+        """Build a Google reverse image search link for an image URL or attachment."""
+
+        if url is None and ctx.message.attachments:
+            url = ctx.message.attachments[0].url
+
+        if not url:
+            return await ctx.send("Provide an image URL or attach an image.")
+
+        link = "https://www.google.com/searchbyimage?image_url=" + urllib.parse.quote(
+            url, safe=""
+        )
+        embed = discord.Embed(
+            title="Reverse image search",
+            description=f"[Click here to search for the source]({link})",
+            colour=random_colour(),
+        )
+        embed.set_thumbnail(url=url)
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def osu(self, ctx, *, username: str):
+        """Look up an osu! player's stats."""
+
+        key = config_loader.get("APITokens", "osuKey", fallback=None)
+        if not key:
+            return await ctx.send("osu! is not configured.")
+
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(
+                        "https://osu.ppy.sh/api/get_user",
+                        params={"k": key, "u": username},
+                    ) as r:
+                        data = await r.json()
+
+                if not data:
+                    return await ctx.send("No osu! user found.")
+
+                u = data[0]
+                embed = discord.Embed(
+                    title=f"osu! stats for {u['username']}",
+                    colour=random_colour(),
+                )
+                embed.add_field(name="Rank", value=u["pp_rank"])
+                embed.add_field(name="PP", value=u["pp_raw"])
+                embed.add_field(name="Accuracy", value=u["accuracy"])
+                embed.add_field(name="Level", value=u["level"])
+                embed.add_field(name="Playcount", value=u["playcount"])
+                embed.add_field(name="Country", value=u["country"])
+                embed.set_thumbnail(url=f"https://a.ppy.sh/{u['user_id']}")
+                await ctx.send(embed=embed)
+
+            except Exception:
+                log.exception("failed to fetch osu! user")
+                await ctx.send("Something went wrong while fetching osu! data.")
+
+    @commands.hybrid_command()
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def minecraft(self, ctx, username: str):
+        """Look up a Minecraft account and render its skin."""
+
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(
+                        f"https://api.mojang.com/users/profiles/minecraft/{username}"
+                    ) as r:
+                        if r.status != 200:
+                            return await ctx.send("No such Minecraft account.")
+                        data = await r.json()
+
+                uuid = data["id"]
+                embed = discord.Embed(
+                    title=f"Minecraft account: {data['name']}",
+                    colour=random_colour(),
+                )
+                embed.add_field(name="UUID", value=uuid)
+                embed.set_image(
+                    url=f"https://crafatar.com/renders/body/{uuid}?overlay"
+                )
+                await ctx.send(embed=embed)
+
+            except Exception:
+                log.exception("failed to fetch minecraft account")
+                await ctx.send("Something went wrong while fetching Minecraft data.")
+
+
+async def setup(bot):
+    await bot.add_cog(SearchWeb(bot))

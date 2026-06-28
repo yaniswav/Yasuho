@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import datetime
-
+import random
 from typing import Any, Iterable, Optional, Sequence
+
+
+def random_colour() -> int:
+    """Return a random embed colour spanning the full RGB range."""
+    return random.randint(0x000000, 0xFFFFFF)
 
 
 class plural:

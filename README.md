@@ -1,75 +1,54 @@
 # Yasuho
 
-This bot is a Discord server bot that offers various features, including music playback and fun commands. Enjoy!
+A feature-rich Discord bot (moderation, leveling, fun, AniList, music, and more), built on discord.py 2.7.
 
 You can add the bot to your server using this [invite link](https://invite.yasuho.xyz).
 
 ## Features
 
-Yasuho offers a variety of features, including:
+- **Moderation 🛡️** — kick/ban/mute (durable), warns, purge, automod (anti-link/spam), modlog, blacklist.
+- **Leveling 📈** — message XP, rank and a paginated leaderboard.
+- **AniList 🍥** — anime/manga/character/studio lookup, trending/seasonal browse, account linking (OAuth) and list editing — all interactive (select menus, buttons, modals).
+- **Engagement 🎭** — starboard, reaction roles, welcome messages, AFK, temp voice rooms.
+- **Fun & tools 🎲** — games, image commands, polls, snipe, translate, wiki/lyrics, avatar history, and more.
+- **Music 🎶** — playback controls (currently on hold; wavelink is EOL).
 
-- **Music 🎶**: Listen to music with playback controls, pause, skip tracks, and more.
+Commands work as both **prefix** (`y!`) and **slash** (`/`) where possible. Type `y!help` to browse.
 
-- **Reaction Roles 🎭**: Set up reaction roles to allow users to choose their roles by reacting to messages.
+## Setup (no Docker)
 
-- **And much more!**: Yasuho offers many other features, including fun commands, moderation, and more.
+Yasuho ships a one-command bootstrap. On a fresh Linux host:
 
-- **Want to see more commands?**: Type **"help (`[category]` | `[command]`)"** to display all commands in a category, see the usage of a specific command, or navigate through the help page.
-
-  - Example with **`[category]`**
-  
-  - Example with **`[command]`**
-
-## Configuration [WIP]
-
-Before using Yasuho, you need to set up your configuration. Follow these steps:
-
-1. Create a `bot.ini` file based on the provided template.
-2. Fill in your bot's specific details, including your bot token and other necessary settings.
-3. - Setting Up a PostgreSQL Database: If you plan to use a PostgreSQL database, follow the instructions in the [Yasuho Wiki](https://github.com/yaniswav/Yasuho/wiki/Setting-Up-a-PostgreSQL-Database) to set it up correctly.
-
-Example `bot.ini` file:
-
-```ini
-[BotInfo]
-ClientID = YOUR_CLIENT_ID
-DefaultPrefix = YOUR_DEFAULT_PREFIX
-Token = "YOUR_BOT_TOKEN"
-...
-
-[Extension]
-Extensions = 
-    cogs.extension1
-    cogs.extension2
-    ...
+```bash
+git clone https://github.com/yaniswav/Yasuho.git
+cd Yasuho
+./setup.sh        # idempotent, safe to re-run
+./run.sh          # starts the bot (auto-restart loop)
 ```
 
-3. Create a `tokens.ini` file for any external API tokens.
+`setup.sh` creates a virtualenv + installs dependencies, copies `config/*.template.ini` → `config/*.ini`,
+**auto-generates the Fernet encryption key**, creates the local PostgreSQL role/database and wires the DSN
+into `config/bot.ini`, and prompts for your Discord bot token. The **database schema is created automatically**
+on first start (`schema.sql`).
 
-Example `tokens.ini` file:
+> PostgreSQL must be installed on the host first: `sudo apt install postgresql`. Run it on **localhost** (same host as the bot).
 
-```ini
-[Website_Tokens]
-topGG = "YOUR_TOPGG_TOKEN"
-DBL = "YOUR_DBL_TOKEN"
-...
+### Manual configuration
 
-[API_Tokens]
-nasaKey = "YOUR_NASA_API_KEY"
-weatherKey = "YOUR_WEATHER_API_KEY"
-...
-```
+The real `config/bot.ini` and `config/tokens.ini` are **gitignored** (they hold secrets) — copy them from the
+`*.template.ini` files and fill in:
 
-4. Save both files in the `config` directory.
+- `bot.ini` → `[Bot_Token] Token`, `[Database] PostgreSQL`, the cog list under `[Extension] Extensions`.
+- `tokens.ini` → optional feature keys: AniList (`clientId`/`clientSecret`), Genius lyrics, OpenWeather, NASA, top.gg…
 
 ## Built With
 
-* [Discord.py](https://github.com/Rapptz/discord.py)
-* [Wavelink](https://github.com/PythonistaGuild/Wavelink/)
-* [Lavalink](https://github.com/Frederikam/Lavalink)
+* [discord.py](https://github.com/Rapptz/discord.py)
+* [asyncpg](https://github.com/MagicStack/asyncpg) + PostgreSQL
+* [Pillow](https://python-pillow.org/), [cryptography](https://github.com/pyca/cryptography), and the [AniList GraphQL API](https://anilist.gitbook.io/anilist-apiv2-docs/)
 
 ## Author
 
-* **yaniswav** - _Development and Hosting_ - [yaniswav](https://github.com/yaniswav)
+* **yaniswav** — _Development and Hosting_ — [yaniswav](https://github.com/yaniswav)
 
 [![Yasuho on top.gg](https://top.gg/api/widget/498580306773934081.svg)](https://top.gg/bot/498580306773934081)

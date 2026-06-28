@@ -1,28 +1,29 @@
-import asyncio
-import discord
-import random
-import datetime
-import config
 import logging
 from itertools import cycle
 
+import discord
 from discord.ext import commands, tasks
-from discord.ext.commands.cooldowns import BucketType
 from discord.utils import find
+
+from tools.config_loader import config_loader
+
+log = logging.getLogger(__name__)
+
+DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 
 status = cycle(["@Yasuho help", "https://yasuho.xyz"])
 
 
 class Events(commands.Cog):
+    """Global event listeners (status loop, guild joins/leaves, member events)."""
+
     def __init__(self, bot):
         self.bot = bot
-        channel = None
         self.status = status
         self.change_status.start()
 
     def cog_unload(self):
         self.change_status.cancel()
-
 
     @tasks.loop(seconds=20)
     async def change_status(self):
@@ -37,23 +38,23 @@ class Events(commands.Cog):
 
     @change_status.before_loop
     async def before_change_status(self):
-        print("[STATUS] Waiting for bot to be ready to set custom status.")
+        log.info("Waiting for bot to be ready to set custom status.")
         await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         query = """
-        
-            INSERT INTO prefixes 
-            (guild_id, prefix) 
-            VALUES ($1, $2) 
+
+            INSERT INTO prefixes
+            (guild_id, prefix)
+            VALUES ($1, $2)
             ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;
 
             """
         await self.bot.db_pool.execute(
-            query, guild.id, config.default_prefix, config.default_prefix
+            query, guild.id, DEFAULT_PREFIX, DEFAULT_PREFIX
         )
-        self.bot.cache[guild.id] = config.default_prefix
+        self.bot.prefixes[guild.id] = DEFAULT_PREFIX
         names = [
             "general",
             "général",
@@ -68,7 +69,6 @@ class Events(commands.Cog):
             "command",
             "bots-commands",
             "bots",
-            
         ]
 
         general = find(lambda x: x.name in names, guild.text_channels)
@@ -79,14 +79,14 @@ class Events(commands.Cog):
             )
 
         else:
+            msg = f"🌺 Beep boop **{guild.name}**! To get started type `y!help`"
             try:
-                await guild.system_channel.send(
-                    f"🌺 Beep boop **{guild.name}**! To get started type `y!help`"
-                )
-            except:
-                await guild.owner.send(
-                    f"🌺 Beep boop **{guild.name}**! To get started type `y!help`"
-                )
+                if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
+                    await guild.system_channel.send(msg)
+                elif guild.owner:
+                    await guild.owner.send(msg)
+            except Exception:
+                log.exception("Failed to send welcome message")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
@@ -127,11 +127,55 @@ class Events(commands.Cog):
                 except discord.HTTPException:
                     pass
 
+        # Re-apply the mute role to evaders who left while muted and rejoined.
+        muted = await pool.fetchval(
+            "SELECT member_id FROM mutedmembers WHERE mguild_id = $1 AND member_id = $2;",
+            guild_id,
+            member.id,
+        )
+        if muted:
+            mute_role_id = await pool.fetchval(
+                "SELECT role_id FROM muterole WHERE guild_id = $1;", guild_id
+            )
+            mute_role = member.guild.get_role(mute_role_id) if mute_role_id else None
+            if mute_role:
+                try:
+                    await member.add_roles(
+                        mute_role, reason="Re-muted on rejoin (mute evasion)"
+                    )
+                except discord.HTTPException:
+                    log.exception("Failed to re-apply mute")
+
+    @commands.Cog.listener()
+    async def on_guild_channel_create(self, channel):
+        # Keep the mute role effective in newly created channels so muted members
+        # cannot simply talk in a freshly created channel.
+        mute_role_id = await self.bot.db_pool.fetchval(
+            "SELECT role_id FROM muterole WHERE guild_id = $1;", channel.guild.id
+        )
+        if not mute_role_id:
+            return
+        mute_role = channel.guild.get_role(mute_role_id)
+        if mute_role is None:
+            return
+        try:
+            if isinstance(channel, discord.VoiceChannel):
+                await channel.set_permissions(mute_role, speak=False)
+            elif isinstance(channel, (discord.TextChannel, discord.CategoryChannel)):
+                await channel.set_permissions(
+                    mute_role,
+                    send_messages=False,
+                    add_reactions=False,
+                    send_tts_messages=False,
+                )
+        except discord.HTTPException:
+            log.exception("Failed to sync mute role perms")
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
             return
+
 
 async def setup(bot):
     await bot.add_cog(Events(bot))
