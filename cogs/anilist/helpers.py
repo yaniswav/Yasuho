@@ -16,6 +16,54 @@ VALID_STATUSES = {
     "REPEATING",
 }
 
+# Friendly labels for the AniList list statuses (CURRENT is type-aware below).
+_STATUS_LABELS = {
+    "CURRENT": "Watching",
+    "PLANNING": "Planning",
+    "COMPLETED": "Completed",
+    "DROPPED": "Dropped",
+    "PAUSED": "Paused",
+    "REPEATING": "Repeating",
+}
+
+# Accept friendly words / aliases (not just the raw enum) when a user types a status.
+_STATUS_ALIASES = {
+    "watching": "CURRENT", "reading": "CURRENT", "current": "CURRENT",
+    "watch": "CURRENT", "read": "CURRENT",
+    "planning": "PLANNING", "plan": "PLANNING", "planned": "PLANNING",
+    "ptw": "PLANNING", "plantowatch": "PLANNING", "plantoread": "PLANNING",
+    "completed": "COMPLETED", "complete": "COMPLETED", "done": "COMPLETED",
+    "finished": "COMPLETED",
+    "dropped": "DROPPED", "drop": "DROPPED",
+    "paused": "PAUSED", "pause": "PAUSED", "hold": "PAUSED", "onhold": "PAUSED",
+    "repeating": "REPEATING", "repeat": "REPEATING",
+    "rewatching": "REPEATING", "rereading": "REPEATING",
+}
+
+
+def _status_label(status, media=None):
+    """Friendly label for a MediaListStatus (CURRENT -> Watching, or Reading for manga)."""
+
+    if not status:
+        return None
+    upper = status.upper()
+    if upper == "CURRENT" and media is not None and _media_unit(media) == "chapter":
+        return "Reading"
+    return _STATUS_LABELS.get(upper, status.title())
+
+
+def _parse_status(text):
+    """Map a friendly word, alias, or raw enum to a MediaListStatus (or None)."""
+
+    if not text:
+        return None
+    key = text.strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+    if key in _STATUS_ALIASES:
+        return _STATUS_ALIASES[key]
+    upper = text.strip().upper()
+    return upper if upper in VALID_STATUSES else None
+
+
 # Ordered so we can step forwards/backwards through the seasonal calendar.
 SEASONS = ("WINTER", "SPRING", "SUMMER", "FALL")
 

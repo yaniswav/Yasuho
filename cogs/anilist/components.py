@@ -3,7 +3,6 @@ import logging
 import discord
 
 from .helpers import (
-    VALID_STATUSES,
     _clean_description,
     _format_fuzzy_date,
     _format_ranking,
@@ -11,7 +10,9 @@ from .helpers import (
     _media_colour,
     _media_title,
     _media_unit,
+    _parse_status,
     _progress_max,
+    _status_label,
     _step_season,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
@@ -297,17 +298,25 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
     )
 
     def __init__(self, cog, media, token=None, entry=None):
-        super().__init__()
+        super().__init__(title=f"Edit: {_media_title(media)}"[:45])
         self.cog = cog
         self.media = media
         self.token = token
+
+        # Friendly, type-aware labels instead of the raw API enum.
+        unit = _media_unit(media)
+        watching = "Reading" if unit == "chapter" else "Watching"
+        self.status.placeholder = (
+            f"{watching}, Completed, Planning, Paused, Dropped, Repeating"
+        )
+        self.progress.label = f"Progress ({unit}s)"
 
         # Pre-fill each field from the viewer's existing entry, if any. The
         # TextInputs are deep-copied per instance, so these defaults never leak.
         entry = entry or {}
         current_status = entry.get("status")
         if current_status:
-            self.status.default = current_status
+            self.status.default = _status_label(current_status, media)
         current_progress = entry.get("progress")
         if current_progress is not None:
             self.progress.default = str(current_progress)
@@ -333,11 +342,11 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
             )
 
         if status_raw:
-            status = status_raw.upper()
-            if status not in VALID_STATUSES:
+            status = _parse_status(status_raw)
+            if status is None:
                 return await interaction.response.send_message(
-                    "Status must be one of: "
-                    + ", ".join(sorted(VALID_STATUSES)) + ".",
+                    "Status must be one of: Watching/Reading, Completed, "
+                    "Planning, Paused, Dropped, Repeating.",
                     ephemeral=True,
                 )
             variables["status"] = status
