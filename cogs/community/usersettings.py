@@ -4,13 +4,44 @@ import discord
 from discord.ext import commands
 
 from tools import settings
-from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
-# (key, label, default) - boolean per-user preferences. Add more entries here.
+PANEL_COLOUR = 0x5865F2
+ON_BADGE = "🟢"
+OFF_BADGE = "⚪"
+
+
+class Preference:
+    """A single boolean per-user preference rendered in the settings panel."""
+
+    __slots__ = ("key", "label", "emoji", "description", "default")
+
+    def __init__(self, key, label, emoji, description, default):
+        self.key = key
+        self.label = label
+        self.emoji = emoji
+        self.description = description
+        self.default = default
+
+
+# Ordered list of preferences. Drop a new ``Preference`` in here and it gets its
+# own embed field + author-restricted toggle button automatically.
 PREFS = [
-    ("help_expand", "Help: expand subcommands", False),
+    Preference(
+        key="levelup_announce",
+        label="Level-up announcements",
+        emoji="🔔",
+        description="Get pinged in chat when you reach a new level.",
+        default=True,
+    ),
+    Preference(
+        key="help_expand",
+        label="Expanded help",
+        emoji="📖",
+        description="Show every subcommand inline when you browse help.",
+        default=False,
+    ),
 ]
 
 
@@ -19,66 +50,91 @@ def _style(value):
     return discord.ButtonStyle.success if value else discord.ButtonStyle.secondary
 
 
-def _build_embed(author, states):
-    """Build the settings embed from a {key: bool} state map."""
+def build_embed(author, states):
+    """Render the settings panel from a ``{key: bool}`` state map."""
     embed = discord.Embed(
-        title="Your settings",
-        description="Click a button to toggle a preference.",
-        colour=random_colour(),
+        title="Your preferences",
+        description=(
+            "These settings only affect **you**, everywhere I'm used.\n"
+            "Tap a button below to toggle a preference on or off."
+        ),
+        colour=PANEL_COLOUR,
     )
     embed.set_author(name=str(author), icon_url=author.display_avatar.url)
-    for key, label, _default in PREFS:
+    embed.set_thumbnail(url=author.display_avatar.url)
+
+    for pref in PREFS:
+        on = bool(states.get(pref.key, pref.default))
+        badge = ON_BADGE if on else OFF_BADGE
+        state = "ON" if on else "OFF"
         embed.add_field(
-            name=label, value="On" if states.get(key) else "Off", inline=False
+            name=f"{pref.emoji} {pref.label} — {badge} {state}",
+            value=pref.description,
+            inline=False,
         )
+
+    embed.set_footer(text="Only you can use these controls.")
     return embed
 
 
 class PrefButton(discord.ui.Button):
     """Toggle button bound to a single boolean preference."""
 
-    def __init__(self, key, label, value):
-        super().__init__(label=label, style=_style(value))
-        self.key = key
+    def __init__(self, pref, value):
+        super().__init__(label=pref.label, emoji=pref.emoji, style=_style(value))
+        self.pref = pref
 
     async def callback(self, interaction):
         view = self.view
         try:
-            new_value = not view.states.get(self.key, False)
+            new_value = not view.states.get(self.pref.key, self.pref.default)
             await settings.set_user(
-                view.bot.db_pool, view.author_id, self.key, new_value
+                view.bot.db_pool, view.author_id, self.pref.key, new_value
             )
-            view.states[self.key] = new_value
+            view.states[self.pref.key] = new_value
             self.style = _style(new_value)
-            embed = _build_embed(view.author, view.states)
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(
+                embed=build_embed(view.author, view.states), view=view
+            )
         except Exception:
-            log.exception("Failed to toggle user setting %s", self.key)
+            log.exception(
+                "Failed to toggle user setting %s for %s",
+                self.pref.key,
+                view.author_id,
+            )
             try:
-                await interaction.response.send_message(
-                    "Something went wrong updating that setting.", ephemeral=True
-                )
-            except Exception:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong updating that setting.",
+                        ephemeral=True,
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong updating that setting.",
+                        ephemeral=True,
+                    )
+            except discord.HTTPException:
                 pass
 
 
 class SettingsView(discord.ui.View):
     """Author-restricted panel of per-user preference toggles."""
 
-    def __init__(self, bot, author, states, timeout=120):
+    def __init__(self, bot, author, states, timeout=180):
         super().__init__(timeout=timeout)
         self.bot = bot
         self.author = author
         self.author_id = author.id
         self.states = states
         self.message = None
-        for key, label, _default in PREFS:
-            self.add_item(PrefButton(key, label, states.get(key, False)))
+        for pref in PREFS:
+            value = bool(states.get(pref.key, pref.default))
+            self.add_item(PrefButton(pref, value))
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
             await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
+                "This panel isn't for you.", ephemeral=True
             )
             return False
         return True
@@ -103,13 +159,14 @@ class UserSettings(commands.Cog):
     async def settings_cmd(self, ctx):
         """Open your personal settings panel."""
         states = {}
-        for key, _label, default in PREFS:
-            states[key] = await settings.get_user(
-                self.bot.db_pool, ctx.author.id, key, default
+        for pref in PREFS:
+            states[pref.key] = await settings.get_user(
+                self.bot.db_pool, ctx.author.id, pref.key, pref.default
             )
-        embed = _build_embed(ctx.author, states)
         view = SettingsView(self.bot, ctx.author, states)
-        view.message = await ctx.send(embed=embed, view=view)
+        view.message = await ctx.send(
+            embed=build_embed(ctx.author, states), view=view
+        )
 
 
 async def setup(bot):

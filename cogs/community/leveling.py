@@ -59,7 +59,9 @@ class Leveling(commands.Cog):
             old_level = self.level_for_xp(new_xp - gain)
             new_level = self.level_for_xp(new_xp)
 
-            if new_level > old_level:
+            if new_level > old_level and await settings.get_user(
+                self.bot.db_pool, message.author.id, "levelup_announce", True
+            ):
                 await message.channel.send(
                     f"{message.author.mention} reached level **{new_level}**!"
                 )

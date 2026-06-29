@@ -75,6 +75,7 @@ class Yasuho(commands.Bot):
         )
 
         self.db_pool = db_pool
+        self.default_prefix = DEFAULT_PREFIX
         # In-memory caches for hot / rarely-changing data, loaded in setup_hook
         # and invalidated by the owning cogs (mirrors the prefixes cache).
         self.prefixes = {}

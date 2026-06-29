@@ -10,6 +10,78 @@ log = logging.getLogger(__name__)
 STAR = "⭐"
 
 
+# ----------------------------------------------------------------------
+# Interactive channel picker (discord.ui)
+# ----------------------------------------------------------------------
+class _StarboardChannelSelect(discord.ui.ChannelSelect):
+    """Pick the text channel that starred messages are posted to."""
+
+    def __init__(self, panel):
+        self.panel = panel
+        super().__init__(
+            channel_types=[discord.ChannelType.text],
+            placeholder="Pick the starboard channel",
+            min_values=1,
+            max_values=1,
+        )
+
+    async def callback(self, interaction):
+        try:
+            channel = self.values[0]
+            await self.panel.cog._apply_set(
+                interaction.guild.id, channel.id, self.panel.threshold
+            )
+            self.panel.stop()
+            for child in self.panel.children:
+                child.disabled = True
+            embed = self.panel.cog._set_embed(channel, self.panel.threshold)
+            await interaction.response.edit_message(
+                embed=embed, view=self.panel
+            )
+        except Exception:
+            log.exception("Starboard channel select failed")
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong.", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong.", ephemeral=True
+                    )
+            except discord.HTTPException:
+                pass
+
+
+class StarboardSetView(discord.ui.View):
+    """Author-restricted prompt to choose the starboard channel."""
+
+    def __init__(self, cog, author_id, *, threshold, timeout=120):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.author_id = author_id
+        self.threshold = threshold
+        self.message = None
+        self.add_item(_StarboardChannelSelect(self))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This panel isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 class Starboard(commands.Cog):
     """Highlight the messages your community loves the most."""
 
@@ -30,6 +102,25 @@ class Starboard(commands.Cog):
         self._config[guild_id] = config
         return config
 
+    async def _apply_set(self, guild_id, channel_id, threshold):
+        """Upsert the starboard config and keep the negative-cache coherent."""
+
+        query = """
+            INSERT INTO starboard
+            (guild_id, channel_id, threshold)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET channel_id = $2, threshold = $3;
+            """
+        await self.bot.db_pool.execute(query, guild_id, channel_id, threshold)
+        self._config[guild_id] = (channel_id, threshold)
+
+    def _set_embed(self, channel, threshold):
+        embed = discord.Embed(title="Starboard", colour=random_colour())
+        embed.add_field(name="Channel", value=channel.mention)
+        embed.add_field(name="Threshold", value=f"`{threshold}` {STAR}")
+        return embed
+
     @commands.hybrid_group(name="starboard")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -43,28 +134,26 @@ class Starboard(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def starboard_set(
-        self, ctx, channel: discord.TextChannel, threshold: int = 3
+        self, ctx, channel: discord.TextChannel = None, threshold: int = 3
     ):
         """Set the starboard channel and the star threshold."""
 
-        query = """
-            INSERT INTO starboard
-            (guild_id, channel_id, threshold)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (guild_id) DO UPDATE
-            SET channel_id = $2, threshold = $3;
-            """
+        if channel is None:
+            view = StarboardSetView(self, ctx.author.id, threshold=threshold)
+            embed = discord.Embed(
+                title="Starboard",
+                description=(
+                    "Pick the channel where starred messages should be "
+                    "posted using the menu below."
+                ),
+                colour=random_colour(),
+            )
+            embed.set_footer(text="Only you can use this menu.")
+            view.message = await ctx.send(embed=embed, view=view)
+            return
 
-        await self.bot.db_pool.execute(
-            query, ctx.guild.id, channel.id, threshold
-        )
-        self._config[ctx.guild.id] = (channel.id, threshold)
-        embed = discord.Embed(
-            title="Starboard", colour=random_colour()
-        )
-        embed.add_field(name="Channel", value=channel.mention)
-        embed.add_field(name="Threshold", value=f"`{threshold}` {STAR}")
-        await ctx.send(embed=embed)
+        await self._apply_set(ctx.guild.id, channel.id, threshold)
+        await ctx.send(embed=self._set_embed(channel, threshold))
 
     @starboard.command(name="threshold")
     @commands.guild_only()

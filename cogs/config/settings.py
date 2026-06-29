@@ -8,9 +8,283 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
+# Sentinel for "we tried to read this feature's state but the lookup failed".
+# Distinct from None, which legitimately means "not configured".
+_UNKNOWN = object()
+
+# Features the panel can route the admin to. Leveling is toggled in-panel; the
+# rest each point at their dedicated setup command.
+GUIDANCE = {
+    "prefix": (
+        "Use `/prefix set <prefix>` to change the command prefix for this "
+        "server."
+    ),
+    "autorole": (
+        "Use `/autorole set <role>` to choose the role new members receive on "
+        "join."
+    ),
+    "automod": (
+        "Use `/automod` to open the interactive AutoMod control panel "
+        "(custom + native filters)."
+    ),
+    "modlog": (
+        "Use `/modlog` to open the interactive mod-log control panel "
+        "(channel + event toggles)."
+    ),
+    "starboard": (
+        "Use `/starboard set <channel> [threshold]` to set up the starboard."
+    ),
+    "welcome": (
+        "Use `/welcome set <channel> <message>` to configure welcome messages. "
+        "Placeholders: {user}, {server}, {count}."
+    ),
+}
+
+
+def _onoff(value):
+    """Render a tri-state boolean (True / False / unknown) as a labelled dot."""
+
+    if value is _UNKNOWN:
+        return "❔ Unknown"
+    return "🟢 Enabled" if value else "🔴 Disabled"
+
+
+# ----------------------------------------------------------------------
+# Interactive server-settings panel (discord.ui)
+# ----------------------------------------------------------------------
+class ConfigSelect(discord.ui.Select):
+    """Pick a feature: Leveling toggles in place, others point to a command."""
+
+    def __init__(self, panel):
+        self.panel = panel
+        leveling = panel.state.get("leveling")
+        if leveling is _UNKNOWN:
+            lvl_desc = "Current state unknown"
+        elif leveling:
+            lvl_desc = "Currently enabled - select to disable"
+        else:
+            lvl_desc = "Currently disabled - select to enable"
+
+        options = [
+            discord.SelectOption(
+                label="Leveling",
+                value="leveling",
+                emoji="📈",
+                description=lvl_desc[:100],
+            ),
+            discord.SelectOption(
+                label="Prefix",
+                value="prefix",
+                emoji="💬",
+                description="Change the command prefix",
+            ),
+            discord.SelectOption(
+                label="Auto-role",
+                value="autorole",
+                emoji="🎭",
+                description="Role granted to new members",
+            ),
+            discord.SelectOption(
+                label="AutoMod",
+                value="automod",
+                emoji="🛡️",
+                description="Open the AutoMod control panel",
+            ),
+            discord.SelectOption(
+                label="Mod-log",
+                value="modlog",
+                emoji="📝",
+                description="Open the mod-log control panel",
+            ),
+            discord.SelectOption(
+                label="Starboard",
+                value="starboard",
+                emoji="⭐",
+                description="Configure the starboard",
+            ),
+            discord.SelectOption(
+                label="Welcome",
+                value="welcome",
+                emoji="👋",
+                description="Configure welcome messages",
+            ),
+        ]
+        super().__init__(
+            placeholder="Configure a feature...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0,
+        )
+
+    async def callback(self, interaction):
+        await self.panel.handle_select(interaction, self.values[0])
+
+
+class ConfigPanel(discord.ui.View):
+    """Author-restricted overview of every server feature, with quick controls."""
+
+    def __init__(self, cog, author_id, guild, state, timeout=180):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.author_id = author_id
+        self.guild = guild
+        self.state = state
+        self.message = None
+        self.add_item(ConfigSelect(self))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This panel isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    # -- rendering ------------------------------------------------------
+    def build_embed(self):
+        state = self.state
+        embed = discord.Embed(
+            title=f"⚙️ Configuration · {self.guild.name}"[:256],
+            description=(
+                "An overview of every feature for this server. Use the menu "
+                "below to toggle **Leveling** or jump to a feature's setup "
+                "command."
+            ),
+            colour=random_colour(),
+        )
+        icon = getattr(self.guild, "icon", None)
+        if icon is not None:
+            embed.set_thumbnail(url=icon.url)
+
+        embed.add_field(name="💬 Prefix", value=f"`{state['prefix']}`", inline=True)
+        embed.add_field(
+            name="📈 Leveling", value=_onoff(state["leveling"]), inline=True
+        )
+
+        role_id = state["autorole"]
+        embed.add_field(
+            name="🎭 Auto-role",
+            value=(f"🟢 <@&{role_id}>" if role_id else "🔴 Not set up"),
+            inline=True,
+        )
+
+        starboard = state["starboard"]
+        if starboard is _UNKNOWN:
+            starboard_value = "❔ Unknown"
+        elif starboard is None:
+            starboard_value = "🔴 Not set up"
+        else:
+            channel_id, threshold = starboard
+            starboard_value = f"🟢 <#{channel_id}> · {threshold} ⭐"
+        embed.add_field(name="⭐ Starboard", value=starboard_value, inline=True)
+
+        automod = state["automod"]
+        if automod is _UNKNOWN:
+            automod_value = "❔ Unknown"
+        elif automod is None:
+            automod_value = "🔴 Not set up"
+        else:
+            antilink, antispam = automod
+            automod_value = (
+                f"Anti-link {'🟢' if antilink else '🔴'} · "
+                f"Anti-spam {'🟢' if antispam else '🔴'}"
+            )
+        embed.add_field(name="🛡️ AutoMod", value=automod_value, inline=True)
+
+        modlog = state["modlog"]
+        if modlog is _UNKNOWN:
+            modlog_value = "❔ Unknown"
+        elif modlog:
+            modlog_value = f"🟢 <#{modlog}>"
+        else:
+            modlog_value = "🔴 Not set up"
+        embed.add_field(name="📝 Mod-log", value=modlog_value, inline=True)
+
+        welcome = state["welcome"]
+        if welcome is _UNKNOWN:
+            welcome_value = "❔ Unknown"
+        elif welcome:
+            welcome_value = f"🟢 <#{welcome}>"
+        else:
+            welcome_value = "🔴 Not set up"
+        embed.add_field(name="👋 Welcome", value=welcome_value, inline=True)
+
+        embed.set_footer(
+            text="Only you can use these controls · times out after 3 min"
+        )
+        return embed
+
+    async def _rerender(self, interaction):
+        """Rebuild from current state so the select's labels stay accurate."""
+
+        new = ConfigPanel(
+            self.cog, self.author_id, self.guild, dict(self.state)
+        )
+        new.message = self.message
+        self.stop()
+        await interaction.response.edit_message(
+            embed=new.build_embed(), view=new
+        )
+
+    async def _error(self, interaction):
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    "Something went wrong.", ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "Something went wrong.", ephemeral=True
+                )
+        except discord.HTTPException:
+            pass
+
+    # -- callbacks ------------------------------------------------------
+    async def handle_select(self, interaction, key):
+        if key == "leveling":
+            await self._toggle_leveling(interaction)
+            return
+
+        guidance = GUIDANCE.get(
+            key, "Use the matching command to configure this feature."
+        )
+        try:
+            # Re-render first so the dropdown resets, then send the tip.
+            await self._rerender(interaction)
+            await interaction.followup.send(guidance, ephemeral=True)
+        except Exception:
+            log.exception("Config panel guidance failed")
+            await self._error(interaction)
+
+    async def _toggle_leveling(self, interaction):
+        try:
+            current = self.state.get("leveling")
+            new_value = True if current is _UNKNOWN else not bool(current)
+            await settings.set_guild(
+                self.cog.bot.db_pool,
+                self.guild.id,
+                "leveling_enabled",
+                new_value,
+            )
+            self.state["leveling"] = new_value
+            await self._rerender(interaction)
+        except Exception:
+            log.exception("Config panel leveling toggle failed")
+            await self._error(interaction)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
 
 class Settings(commands.Cog):
-    """Server configuration commands (prefix and auto-role)."""
+    """Server configuration: prefix, auto-role, and the feature panel."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -59,7 +333,11 @@ class Settings(commands.Cog):
 
             """
 
-        prefix = await self.bot.db_pool.fetchval(query, ctx.guild.id)
+        # The DB only stores *custom* prefixes now, so an unconfigured guild
+        # gets None back - fall back to the bot-wide default for display.
+        prefix = (
+            await self.bot.db_pool.fetchval(query, ctx.guild.id)
+        ) or self.bot.default_prefix
         embed = discord.Embed(
             title="Server prefix", colour=random_colour()
         )
@@ -110,7 +388,7 @@ class Settings(commands.Cog):
                 title="Auto-role", colour=random_colour()
             )
             embed.add_field(
-                name="Auto-role has been remove from the guild", value="\u200B"
+                name="Auto-role has been remove from the guild", value="​"
             )
             await ctx.send(embed=embed)
 
@@ -147,59 +425,82 @@ class Settings(commands.Cog):
             embed.add_field(name="Current auto-role", value="`None`")
             await ctx.send(embed=embed)
 
+    # -- config panel ---------------------------------------------------
+    async def _config_state(self, guild):
+        """Collect every feature's current state, each lookup guarded."""
+
+        pool = self.bot.db_pool
+        gid = guild.id
+        state = {}
+
+        state["prefix"] = self.bot.prefixes.get(gid) or self.bot.default_prefix
+        state["autorole"] = self.bot.autoroles.get(gid)
+
+        try:
+            state["leveling"] = bool(
+                await settings.get_guild(pool, gid, "leveling_enabled", False)
+            )
+        except Exception:
+            log.exception("Config panel: failed to read leveling setting")
+            state["leveling"] = _UNKNOWN
+
+        try:
+            row = await pool.fetchrow(
+                "SELECT channel_id, threshold FROM starboard "
+                "WHERE guild_id = $1",
+                gid,
+            )
+            state["starboard"] = (
+                (row["channel_id"], row["threshold"]) if row else None
+            )
+        except Exception:
+            log.exception("Config panel: failed to read starboard config")
+            state["starboard"] = _UNKNOWN
+
+        try:
+            row = await pool.fetchrow(
+                "SELECT antilink, antispam FROM automod WHERE guild_id = $1",
+                gid,
+            )
+            state["automod"] = (
+                (bool(row["antilink"]), bool(row["antispam"]))
+                if row is not None
+                else None
+            )
+        except Exception:
+            log.exception("Config panel: failed to read automod config")
+            state["automod"] = _UNKNOWN
+
+        try:
+            state["modlog"] = await pool.fetchval(
+                "SELECT channel_id FROM modlog WHERE guild_id = $1", gid
+            )
+        except Exception:
+            log.exception("Config panel: failed to read modlog config")
+            state["modlog"] = _UNKNOWN
+
+        try:
+            state["welcome"] = await pool.fetchval(
+                "SELECT channel_id FROM welcome WHERE guild_id = $1", gid
+            )
+        except Exception:
+            log.exception("Config panel: failed to read welcome config")
+            state["welcome"] = _UNKNOWN
+
+        return state
+
     @commands.hybrid_group(name="config")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def config(self, ctx):
-        """Show and manage feature toggles for this server."""
+        """Open the interactive server-settings panel."""
 
         if ctx.invoked_subcommand is not None:
             return
 
-        pool = self.bot.db_pool
-        guild_id = ctx.guild.id
-
-        embed = discord.Embed(
-            title=f"Configuration | {ctx.guild.name}", colour=random_colour()
-        )
-
-        try:
-            leveling_on = await settings.get_guild(
-                pool, guild_id, "leveling_enabled", False
-            )
-            leveling_status = "Enabled" if leveling_on else "Disabled"
-        except Exception:
-            log.exception("Failed to read leveling setting")
-            leveling_status = "Unknown"
-        embed.add_field(name="Leveling", value=leveling_status, inline=False)
-
-        try:
-            starboard_row = await pool.fetchval(
-                "SELECT 1 FROM starboard WHERE guild_id = $1", guild_id
-            )
-            starboard_status = "configured" if starboard_row else "not set up"
-        except Exception:
-            log.exception("Failed to read starboard config")
-            starboard_status = "Unknown"
-        embed.add_field(name="Starboard", value=starboard_status, inline=False)
-
-        try:
-            automod_row = await pool.fetchrow(
-                "SELECT antilink, antispam FROM automod WHERE guild_id = $1",
-                guild_id,
-            )
-            if automod_row is None:
-                automod_status = "not set up"
-            else:
-                antilink = "on" if automod_row["antilink"] else "off"
-                antispam = "on" if automod_row["antispam"] else "off"
-                automod_status = f"Anti-link: {antilink} | Anti-spam: {antispam}"
-        except Exception:
-            log.exception("Failed to read automod config")
-            automod_status = "Unknown"
-        embed.add_field(name="AutoMod", value=automod_status, inline=False)
-
-        await ctx.send(embed=embed)
+        state = await self._config_state(ctx.guild)
+        view = ConfigPanel(self, ctx.author.id, ctx.guild, state)
+        view.message = await ctx.send(embed=view.build_embed(), view=view)
 
     @config.command(name="leveling")
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
