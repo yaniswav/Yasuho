@@ -53,18 +53,9 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        query = """
-
-            INSERT INTO prefixes
-            (guild_id, prefix)
-            VALUES ($1, $2)
-            ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;
-
-            """
-        await self.bot.db_pool.execute(
-            query, guild.id, DEFAULT_PREFIX, DEFAULT_PREFIX
-        )
-        self.bot.prefixes[guild.id] = DEFAULT_PREFIX
+        # No prefix row is stored for new guilds: the DB only holds *custom*
+        # prefixes; get_prefix resolves everyone else to DEFAULT_PREFIX in O(1)
+        # from memory, so there is nothing to insert or cache here.
         names = [
             "general",
             "général",
@@ -85,11 +76,11 @@ class Events(commands.Cog):
 
         if general and general.permissions_for(guild.me).send_messages:
             await general.send(
-                f"🌺 Beep boop **{guild.name}**! To get started type `y!help`"
+                f"🌺 Beep boop **{guild.name}**! To get started type `{DEFAULT_PREFIX}help`"
             )
 
         else:
-            msg = f"🌺 Beep boop **{guild.name}**! To get started type `y!help`"
+            msg = f"🌺 Beep boop **{guild.name}**! To get started type `{DEFAULT_PREFIX}help`"
             try:
                 if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
                     await guild.system_channel.send(msg)
@@ -106,6 +97,7 @@ class Events(commands.Cog):
 
                 """
         await self.bot.db_pool.execute(query, guild.id)
+        self.bot.prefixes.pop(guild.id, None)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
