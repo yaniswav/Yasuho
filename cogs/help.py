@@ -10,16 +10,52 @@ log = logging.getLogger(__name__)
 
 NO_CATEGORY = "No Category"
 
+# Stable, tasteful emoji per category. Unknown categories fall back to the
+# folder icon. Keys are cog qualified names (and NO_CATEGORY).
+CATEGORY_EMOJIS = {
+    "Admin": "🛠️",
+    "AFK": "💤",
+    "AniList": "📺",
+    "AutoMod": "🛡️",
+    "AvatarHistory": "🖼️",
+    "Blacklist": "🚫",
+    "Extras": "✨",
+    "Fun": "🎉",
+    "Games": "🎮",
+    "Info": "ℹ️",
+    "Leveling": "📈",
+    "Meta": "🌐",
+    "ModLog": "📋",
+    "Moderation": "🔨",
+    "Music": "🎵",
+    "Profiles": "🎯",
+    "ReactionRoles": "🎭",
+    "Reminder": "⏰",
+    "SearchWeb": "🔍",
+    "Settings": "⚙️",
+    "Starboard": "⭐",
+    "TemporaryRooms": "🔊",
+    "Twitch": "🟣",
+    "UserSettings": "🎚️",
+    "Utility": "🧰",
+    "Webstats": "📊",
+    "Welcome": "👋",
+    NO_CATEGORY: "📦",
+}
+DEFAULT_EMOJI = "📁"
+
+
+def category_emoji(name):
+    """Return a stable emoji for a category name."""
+    return CATEGORY_EMOJIS.get(name, DEFAULT_EMOJI)
+
 
 class CategorySelect(discord.ui.Select):
-    """Dropdown of help categories; selecting one shows that cog's commands."""
+    """Dropdown of help categories; selecting one jumps to that category."""
 
-    def __init__(self, categories):
-        options = [
-            discord.SelectOption(label=name) for name in categories[:25]
-        ]
+    def __init__(self, options):
         super().__init__(
-            placeholder="Choose a category…",
+            placeholder="Jump to a category…",
             min_values=1,
             max_values=1,
             options=options,
@@ -31,25 +67,32 @@ class CategorySelect(discord.ui.Select):
             await self.view.show_category(interaction, self.values[0])
         except Exception:
             log.exception("Failed to render help category")
-            try:
-                await interaction.response.send_message(
-                    "Something went wrong opening that category.", ephemeral=True
-                )
-            except Exception:
-                pass
+            await self.view.report_error(interaction)
 
 
 class HelpView(discord.ui.View):
-    """Author-restricted, navigable overview of every command category."""
+    """Author-restricted, navigable overview of every command category.
+
+    Combines a category dropdown (jump anywhere), previous/next pagination
+    (step through categories one at a time) and a Home button (welcome page).
+    State is a single index: ``None`` means the Home page, otherwise the
+    position within ``self.categories``.
+    """
 
     def __init__(self, help_command, categories, timeout=180):
         super().__init__(timeout=timeout)
+        self.help_command = help_command
         self.bot = help_command.context.bot
         self.author_id = help_command.context.author.id
         self.prefix = help_command.context.clean_prefix
         self.categories = categories
+        self.index = None
         self.message = None
-        self.add_item(CategorySelect(categories))
+        self.select = CategorySelect(self._select_options())
+        self.add_item(self.select)
+        self._update_buttons()
+
+    # -- data helpers -----------------------------------------------------
 
     def _category_commands(self, name):
         """Visible (non-hidden) commands for a category, sorted by name."""
@@ -60,48 +103,125 @@ class HelpView(discord.ui.View):
             cmds = cog.get_commands() if cog is not None else []
         return sorted((c for c in cmds if not c.hidden), key=lambda c: c.name)
 
-    def home_embed(self):
-        embed = discord.Embed(title="Help", colour=random_colour())
-        lines = ["Select a category from the menu below to browse its commands.\n"]
-        for name in self.categories:
-            cog = self.bot.get_cog(name)
-            count = len(self._category_commands(name))
-            desc = cog.description.split("\n")[0] if cog and cog.description else ""
-            if desc:
-                lines.append(f"**{name}** — {desc} ({count})")
-            else:
-                lines.append(f"**{name}** ({plural(count):command})")
-        embed.description = "\n".join(lines)
-        embed.set_footer(text=f"Use {self.prefix}help <command> for more info")
-        return embed
+    def _count(self, name):
+        return len(self._category_commands(name))
 
-    def category_embed(self, name):
-        embed = discord.Embed(title=f"Help | {name}", colour=random_colour())
-        cog = self.bot.get_cog(name)
+    def _select_options(self):
+        options = []
+        for name in self.categories:
+            options.append(
+                discord.SelectOption(
+                    label=name,
+                    description=f"{plural(self._count(name)):command}",
+                    emoji=category_emoji(name),
+                )
+            )
+        return options
+
+    # -- embeds -----------------------------------------------------------
+
+    def category_embed(self, index):
+        name = self.categories[index]
+        embed = discord.Embed(
+            title=f"{category_emoji(name)} {name}",
+            colour=random_colour(),
+        )
+
+        cog = self.bot.get_cog(name) if name != NO_CATEGORY else None
         if cog is not None and cog.description:
-            embed.description = cog.description
-        for command in self._category_commands(name):
+            embed.description = cog.description.split("\n")[0]
+
+        commands_list = self._category_commands(name)
+        shown = commands_list[:24]
+        for command in shown:
             embed.add_field(
                 name=f"{self.prefix}{command.qualified_name}",
                 value=command.short_doc or "No description provided.",
                 inline=False,
             )
-        embed.set_footer(text=f"Use {self.prefix}help <command> for more info")
+        if len(commands_list) > len(shown):
+            remaining = len(commands_list) - len(shown)
+            embed.add_field(
+                name="…",
+                value=(
+                    f"and {plural(remaining):more command}. Use "
+                    f"`{self.prefix}help <command>` to see them."
+                ),
+                inline=False,
+            )
+
+        embed.set_footer(
+            text=(
+                f"Category {index + 1}/{len(self.categories)} • "
+                f"{self.prefix}help <command> for details"
+            )
+        )
         return embed
 
-    async def show_category(self, interaction, name):
-        await interaction.response.edit_message(
-            embed=self.category_embed(name), view=self
+    # -- navigation -------------------------------------------------------
+
+    def _update_buttons(self):
+        active = self.index is not None
+        self.previous.disabled = not active or self.index == 0
+        self.forward.disabled = (
+            not active or self.index == len(self.categories) - 1
         )
 
-    @discord.ui.button(label="Home", style=discord.ButtonStyle.secondary, row=1)
+    async def _render(self, interaction):
+        self._update_buttons()
+        if self.index is None:
+            embed = await self.help_command.home_embed()
+        else:
+            embed = self.category_embed(self.index)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def show_category(self, interaction, name):
+        try:
+            self.index = self.categories.index(name)
+        except ValueError:
+            self.index = None
+        await self._render(interaction)
+
+    async def report_error(self, interaction):
+        """Best-effort, ephemeral error notice that never raises."""
+        try:
+            message = "Something went wrong opening the help menu."
+            if interaction.response.is_done():
+                await interaction.followup.send(message, ephemeral=True)
+            else:
+                await interaction.response.send_message(message, ephemeral=True)
+        except Exception:
+            log.debug("Failed to report help error", exc_info=True)
+
+    @discord.ui.button(emoji="◀", style=discord.ButtonStyle.secondary, row=1)
+    async def previous(self, interaction, button):
+        try:
+            self.index = 0 if self.index is None else max(0, self.index - 1)
+            await self._render(interaction)
+        except Exception:
+            log.exception("Failed to page to the previous help category")
+            await self.report_error(interaction)
+
+    @discord.ui.button(
+        emoji="🏠", label="Home", style=discord.ButtonStyle.primary, row=1
+    )
     async def home(self, interaction, button):
         try:
-            await interaction.response.edit_message(
-                embed=self.home_embed(), view=self
-            )
+            self.index = None
+            await self._render(interaction)
         except Exception:
             log.exception("Failed to return to help home")
+            await self.report_error(interaction)
+
+    @discord.ui.button(emoji="▶", style=discord.ButtonStyle.secondary, row=1)
+    async def forward(self, interaction, button):
+        try:
+            last = len(self.categories) - 1
+            self.index = 0 if self.index is None else min(last, self.index + 1)
+            await self._render(interaction)
+        except Exception:
+            log.exception("Failed to page to the next help category")
+            await self.report_error(interaction)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
@@ -181,15 +301,117 @@ class GroupHelpView(discord.ui.View):
 class YasuhoHelp(commands.HelpCommand):
     """Custom help command for Yasuho (replaces the default help_command)."""
 
-    async def send_bot_help(self, mapping):
-        prefix = self.context.clean_prefix
-
-        categories = []
-        for cog, cmds in mapping.items():
+    def _ordered_categories(self):
+        """Sorted category names that have at least one visible command."""
+        names = []
+        for cog, cmds in self.get_bot_mapping().items():
             if not any(not c.hidden for c in cmds):
                 continue
-            categories.append(cog.qualified_name if cog is not None else NO_CATEGORY)
-        categories = sorted(categories)[:25]
+            names.append(cog.qualified_name if cog is not None else NO_CATEGORY)
+        return sorted(names)[:25]
+
+    def _visible_count(self, name):
+        bot = self.context.bot
+        if name == NO_CATEGORY:
+            cmds = [c for c in bot.commands if c.cog is None]
+        else:
+            cog = bot.get_cog(name)
+            cmds = cog.get_commands() if cog is not None else []
+        return sum(1 for c in cmds if not c.hidden)
+
+    async def home_embed(self):
+        """The friendly welcome page shown by the bot-wide help menu."""
+        bot = self.context.bot
+        prefix = self.context.clean_prefix
+
+        embed = discord.Embed(
+            title=f"{bot.user.name} • Help",
+            description=(
+                f"Hey there! I'm **{bot.user.name}**, glad to help. 💫\n\n"
+                f"Use the menu to jump to a category, the arrows to browse, "
+                f"or `{prefix}help <command>` for a specific command."
+            ),
+            colour=random_colour(),
+        )
+        embed.set_thumbnail(url=bot.user.display_avatar.url)
+
+        # Server basics (or DM fallback).
+        guild = self.context.guild
+        if guild is not None:
+            try:
+                enabled = await settings.get_guild(
+                    bot.db_pool, guild.id, "leveling_enabled", False
+                )
+                leveling = "Enabled ✅" if enabled else "Disabled ❌"
+            except Exception:
+                log.exception(
+                    "Failed to read leveling_enabled for guild %s", guild.id
+                )
+                leveling = "Unknown"
+            embed.add_field(
+                name="🏠 Server",
+                value=(
+                    f"Prefix: `{prefix}`\n"
+                    f"Members: **{guild.member_count:,}**\n"
+                    f"Leveling: {leveling}"
+                ),
+                inline=True,
+            )
+        else:
+            embed.add_field(
+                name="🏠 Direct Messages",
+                value=f"Default prefix: `{prefix}`",
+                inline=True,
+            )
+
+        # Categories, split across fields to respect the 1024-char limit.
+        categories = self._ordered_categories()
+        lines = []
+        total = 0
+        for name in categories:
+            count = self._visible_count(name)
+            total += count
+            lines.append(
+                f"{category_emoji(name)} **{name}** — {plural(count):command}"
+            )
+
+        for position, chunk in enumerate(self._chunk(lines)):
+            embed.add_field(
+                name="📚 Categories" if position == 0 else "​",
+                value=chunk,
+                inline=position == 0 and guild is not None,
+            )
+
+        embed.set_footer(
+            text=(
+                f"{plural(total):command} across "
+                f"{plural(len(categories)):category|categories} • "
+                "Use the menu or arrows to explore"
+            )
+        )
+        return embed
+
+    @staticmethod
+    def _chunk(lines, limit=1024):
+        """Group lines into newline-joined blocks no longer than ``limit``."""
+        chunks = []
+        current = []
+        length = 0
+        for line in lines:
+            extra = len(line) + 1
+            if current and length + extra > limit:
+                chunks.append("\n".join(current))
+                current = []
+                length = 0
+            current.append(line)
+            length += extra
+        if current:
+            chunks.append("\n".join(current))
+        return chunks
+
+    async def send_bot_help(self, mapping):
+        prefix = self.context.clean_prefix
+        categories = self._ordered_categories()
 
         if not categories:
             embed = discord.Embed(
@@ -202,7 +424,7 @@ class YasuhoHelp(commands.HelpCommand):
 
         view = HelpView(self, categories)
         view.message = await self.get_destination().send(
-            embed=view.home_embed(), view=view
+            embed=await self.home_embed(), view=view
         )
 
     def group_embed(self, group, expand):
