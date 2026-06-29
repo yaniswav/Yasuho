@@ -1223,20 +1223,26 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
         self.author_id = author_id
 
     async def on_submit(self, interaction):
+        # Defer first: the token exchange is a network round-trip that can exceed
+        # the 3s interaction window, which would otherwise fail the modal submit.
+        try:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+        except discord.HTTPException:
+            pass
         try:
             name = await self.cog._exchange_code(self.author_id, self.code.value)
             if name is None:
-                return await interaction.response.send_message(
+                return await interaction.followup.send(
                     "That code did not work, try `/anilist login` again.",
                     ephemeral=True,
                 )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"Connected as {name}!", ephemeral=True
             )
         except Exception:
             log.exception("AniList login modal failed")
             try:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "Something went wrong linking your account.", ephemeral=True
                 )
             except Exception:
