@@ -116,7 +116,9 @@ query ($name: String) {
   User(name: $name) {
     name
     avatar { large }
+    bannerImage
     siteUrl
+    options { profileColor }
     statistics {
       anime {
         count
@@ -126,6 +128,11 @@ query ($name: String) {
         genres(limit: 6, sort: COUNT_DESC) { genre count }
       }
       manga { count meanScore chaptersRead }
+    }
+    favourites {
+      anime(perPage: 3) { nodes { title { romaji } } }
+      manga(perPage: 3) { nodes { title { romaji } } }
+      characters(perPage: 3) { nodes { name { full } } }
     }
   }
 }

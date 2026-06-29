@@ -43,6 +43,35 @@ def _media_colour(media):
     return random_colour()
 
 
+# AniList's named profile colours -> a matching embed colour.
+_PROFILE_COLOURS = {
+    "blue": 0x3DB4F2,
+    "purple": 0xC063FF,
+    "pink": 0xFC9DD6,
+    "orange": 0xEF881A,
+    "red": 0xE13333,
+    "green": 0x4CCB48,
+    "gray": 0x677B94,
+    "grey": 0x677B94,
+}
+
+
+def _profile_colour(value):
+    """Map an AniList profile colour (a named colour or "#hex") to an int."""
+
+    if not isinstance(value, str):
+        return None
+    value = value.strip().lower()
+    if value in _PROFILE_COLOURS:
+        return _PROFILE_COLOURS[value]
+    if value.startswith("#"):
+        try:
+            return int(value[1:], 16)
+        except ValueError:
+            return None
+    return None
+
+
 def _media_unit(media, *, plural=False):
     """Return the progress unit word ("episode"/"chapter") for a media dict.
 

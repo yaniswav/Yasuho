@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .components import LoginView
-from .helpers import REDIRECT_URI, VALID_STATUSES
+from .helpers import REDIRECT_URI, VALID_STATUSES, _profile_colour
 from .queries import (
     AUTOCOMPLETE_QUERY,
     MEDIA_LIST_QUERY,
@@ -196,34 +196,74 @@ class AccountMixin:
             stats = user.get("statistics") or {}
             anime = stats.get("anime") or {}
             manga = stats.get("manga") or {}
+            display_name = user.get("name") or name
+            site_url = user.get("siteUrl")
+            avatar = (user.get("avatar") or {}).get("large")
 
             embed = discord.Embed(
-                title=user.get("name") or name,
-                url=user.get("siteUrl"),
-                colour=random_colour(),
+                url=site_url,
+                colour=_profile_colour(
+                    (user.get("options") or {}).get("profileColor")
+                )
+                or random_colour(),
             )
-            avatar = user.get("avatar") or {}
-            if avatar.get("large"):
-                embed.set_thumbnail(url=avatar["large"])
+            embed.set_author(name=display_name, url=site_url, icon_url=avatar)
+            if avatar:
+                embed.set_thumbnail(url=avatar)
+            if user.get("bannerImage"):
+                embed.set_image(url=user["bannerImage"])
 
             days = (anime.get("minutesWatched") or 0) / 1440
-            embed.add_field(name="Anime", value=str(anime.get("count") or 0))
-            embed.add_field(name="Days watched", value=f"{days:.1f}")
-            embed.add_field(name="Mean score", value=str(anime.get("meanScore") or 0))
+            embed.add_field(
+                name="📺 Anime",
+                value=(
+                    f"**{anime.get('count') or 0}** titles\n"
+                    f"**{days:.1f}** days watched\n"
+                    f"★ **{anime.get('meanScore') or 0}**/100"
+                ),
+            )
+            embed.add_field(
+                name="📚 Manga",
+                value=(
+                    f"**{manga.get('count') or 0}** titles\n"
+                    f"**{manga.get('chaptersRead') or 0}** chapters\n"
+                    f"★ **{manga.get('meanScore') or 0}**/100"
+                ),
+            )
 
             genres = anime.get("genres") or []
-            top = ", ".join(
-                g.get("genre") for g in genres[:6] if g.get("genre")
-            )
+            top = ", ".join(g.get("genre") for g in genres[:6] if g.get("genre"))
             if top:
-                embed.add_field(name="Top genres", value=top, inline=False)
+                embed.add_field(name="🎭 Top genres", value=top, inline=False)
 
-            embed.add_field(name="Manga", value=str(manga.get("count") or 0))
-            embed.add_field(
-                name="Chapters read", value=str(manga.get("chaptersRead") or 0)
-            )
-            embed.add_field(name="Manga mean", value=str(manga.get("meanScore") or 0))
+            fav = user.get("favourites") or {}
 
+            def _titles(section):
+                nodes = (fav.get(section) or {}).get("nodes") or []
+                return [
+                    (n.get("title") or {}).get("romaji")
+                    for n in nodes
+                    if (n.get("title") or {}).get("romaji")
+                ]
+
+            fav_chars = [
+                (n.get("name") or {}).get("full")
+                for n in ((fav.get("characters") or {}).get("nodes") or [])
+                if (n.get("name") or {}).get("full")
+            ]
+            fav_lines = []
+            if _titles("anime"):
+                fav_lines.append("📺 " + ", ".join(_titles("anime")))
+            if _titles("manga"):
+                fav_lines.append("📚 " + ", ".join(_titles("manga")))
+            if fav_chars:
+                fav_lines.append("👤 " + ", ".join(fav_chars))
+            if fav_lines:
+                embed.add_field(
+                    name="⭐ Favourites", value="\n".join(fav_lines), inline=False
+                )
+
+            embed.set_footer(text="AniList")
             await ctx.send(embed=embed)
 
     @anilist.command(name="list")
