@@ -88,6 +88,7 @@ class Settings(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, ctx.guild.id, role.id, role.id)
+        self.bot.autoroles[ctx.guild.id] = role.id
         embed = discord.Embed(
             title="Auto-role role", colour=random_colour()
         )
@@ -104,6 +105,7 @@ class Settings(commands.Cog):
 
         try:
             await self.bot.db_pool.execute(query, ctx.guild.id)
+            self.bot.autoroles.pop(ctx.guild.id, None)
             embed = discord.Embed(
                 title="Auto-role", colour=random_colour()
             )

@@ -13,6 +13,19 @@ class Welcome(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # Per-guild welcome config cache: {guild_id: (channel_id, message) | None}.
+        # None is cached for unconfigured guilds so they cost zero queries.
+        self._welcome = {}
+
+    async def get_welcome(self, guild_id):
+        if guild_id in self._welcome:
+            return self._welcome[guild_id]
+
+        query = """SELECT channel_id, message FROM welcome WHERE guild_id = $1;"""
+        row = await self.bot.db_pool.fetchrow(query, guild_id)
+        value = (row["channel_id"], row["message"]) if row else None
+        self._welcome[guild_id] = value
+        return value
 
     def format_msg(self, template, member):
         return (
@@ -48,6 +61,7 @@ class Welcome(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, ctx.guild.id, channel.id, message)
+        self._welcome[ctx.guild.id] = (channel.id, message)
         embed = discord.Embed(
             title="Welcome message", colour=random_colour()
         )
@@ -64,6 +78,7 @@ class Welcome(commands.Cog):
         query = """DELETE FROM welcome WHERE guild_id = $1;"""
 
         await self.bot.db_pool.execute(query, ctx.guild.id)
+        self._welcome[ctx.guild.id] = None
         embed = discord.Embed(
             title="Welcome message", colour=random_colour()
         )
@@ -89,19 +104,18 @@ class Welcome(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        if await self.bot.db_pool.fetchval("SELECT 1 FROM blbot WHERE member_id = $1;", member.id):
+        if member.id in self.bot.blacklist:
             return
 
-        query = """SELECT channel_id, message FROM welcome WHERE guild_id = $1;"""
-
-        row = await self.bot.db_pool.fetchrow(query, member.guild.id)
-        if not row:
+        config = await self.get_welcome(member.guild.id)
+        if config is None:
             return
 
-        channel = member.guild.get_channel(row["channel_id"])
+        channel_id, message = config
+        channel = member.guild.get_channel(channel_id)
         if channel:
             try:
-                await channel.send(self.format_msg(row["message"], member))
+                await channel.send(self.format_msg(message, member))
             except Exception:
                 log.exception("Failed to send welcome message")
 

@@ -112,10 +112,8 @@ class Events(commands.Cog):
         guild_id = member.guild.id
         pool = self.bot.db_pool
 
-        # Verify if the member is blacklisted
-        query = "SELECT member_id FROM blbot WHERE member_id = $1;"
-        blacklisted = await pool.fetchval(query, member.id)
-        if blacklisted:
+        # Verify if the member is blacklisted (cached in memory at startup).
+        if member.id in self.bot.blacklist:
             try:
                 await member.guild.ban(member, reason="Blacklisted from bot")
                 try:
@@ -126,9 +124,8 @@ class Events(commands.Cog):
                 pass
             return
 
-        # Attribute a role to the member if the guild has autorole
-        query = "SELECT role_id FROM autorole WHERE guild_id = $1;"
-        role_id = await pool.fetchval(query, guild_id)
+        # Attribute a role to the member if the guild has autorole (cached).
+        role_id = self.bot.autoroles.get(guild_id)
         if role_id:
             role = member.guild.get_role(role_id)
             if role:

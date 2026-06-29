@@ -36,6 +36,7 @@ class Blacklist(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, user.id)
+        self.bot.blacklist.add(user.id)
         await ctx.send(f"{user} blacklisted.")
 
         for g in self.bot.guilds:
@@ -51,6 +52,7 @@ class Blacklist(commands.Cog):
         query = """DELETE FROM blbot WHERE member_id = $1;"""
 
         await self.bot.db_pool.execute(query, user.id)
+        self.bot.blacklist.discard(user.id)
         await ctx.send(f"{user} removed from the blacklist.")
 
         for g in self.bot.guilds:
@@ -65,11 +67,7 @@ class Blacklist(commands.Cog):
     async def blacklist_list(self, ctx):
         """List every blacklisted user."""
 
-        query = """SELECT member_id FROM blbot;"""
-
-        rows = await self.bot.db_pool.fetch(query)
-
-        if not rows:
+        if not self.bot.blacklist:
             embed = discord.Embed(
                 title="Blacklist",
                 description="The blacklist is empty.",
@@ -79,8 +77,7 @@ class Blacklist(commands.Cog):
             return
 
         lines = []
-        for row in rows:
-            member_id = row["member_id"]
+        for member_id in self.bot.blacklist:
             user = self.bot.get_user(member_id)
             if user is not None:
                 lines.append(f"{user} (`{member_id}`)")

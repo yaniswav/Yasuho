@@ -15,13 +15,20 @@ class Starboard(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self._config = {}
 
     async def get_config(self, guild_id):
+        if guild_id in self._config:
+            return self._config[guild_id]
+
         query = """
             SELECT channel_id, threshold FROM starboard
             WHERE guild_id = $1;
             """
-        return await self.bot.db_pool.fetchrow(query, guild_id)
+        row = await self.bot.db_pool.fetchrow(query, guild_id)
+        config = (row["channel_id"], row["threshold"]) if row else None
+        self._config[guild_id] = config
+        return config
 
     @commands.hybrid_group(name="starboard")
     @commands.guild_only()
@@ -51,6 +58,7 @@ class Starboard(commands.Cog):
         await self.bot.db_pool.execute(
             query, ctx.guild.id, channel.id, threshold
         )
+        self._config[ctx.guild.id] = (channel.id, threshold)
         embed = discord.Embed(
             title="Starboard", colour=random_colour()
         )
@@ -70,6 +78,9 @@ class Starboard(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, ctx.guild.id, value)
+        current = self._config.get(ctx.guild.id)
+        if current is not None:
+            self._config[ctx.guild.id] = (current[0], value)
         embed = discord.Embed(
             title="Starboard", colour=random_colour()
         )
@@ -88,6 +99,7 @@ class Starboard(commands.Cog):
         await self.bot.db_pool.execute(
             "DELETE FROM starboard WHERE guild_id = $1;", ctx.guild.id
         )
+        self._config[ctx.guild.id] = None
         embed = discord.Embed(
             title="Starboard", colour=random_colour()
         )
@@ -104,7 +116,9 @@ class Starboard(commands.Cog):
         if not cfg:
             return
 
-        if payload.channel_id == cfg["channel_id"]:
+        channel_id, threshold = cfg
+
+        if payload.channel_id == channel_id:
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -127,7 +141,7 @@ class Starboard(commands.Cog):
                 count = r.count
                 break
 
-        star_ch = guild.get_channel(cfg["channel_id"])
+        star_ch = guild.get_channel(channel_id)
         if star_ch is None:
             return
 
@@ -136,7 +150,7 @@ class Starboard(commands.Cog):
             msg.id,
         )
 
-        if count >= cfg["threshold"]:
+        if count >= threshold:
             embed = discord.Embed(
                 description=msg.content,
                 colour=0xFFAC33,  # fixed star-gold so the colour doesn't change on every edit

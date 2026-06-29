@@ -16,6 +16,22 @@ class TemporaryRooms(commands.Cog):
         self.active_temp_rooms = {}  # Stores the active temp rooms
         self._locks = defaultdict(asyncio.Lock)  # Per-guild creation locks
         self._cleanup_tasks = set()  # Outstanding fire-and-forget cleanup tasks
+        # {guild_id: set(channel_ids)} of auto-room hub channels.
+        # Negative-cached: a guild with no hubs maps to an empty set, and a
+        # guild missing from the dict is treated the same (no hubs) so
+        # unconfigured guilds cost zero queries on every voice event.
+        self._auto_rooms = {}
+
+    async def cog_load(self):
+        """Load every auto-room hub channel into memory once at startup."""
+        self._auto_rooms = {}
+        rows = await self.bot.db_pool.fetch(
+            "SELECT guild_id, channel_id FROM auto_room"
+        )
+        for row in rows:
+            self._auto_rooms.setdefault(int(row["guild_id"]), set()).add(
+                int(row["channel_id"])
+            )
 
     async def cog_unload(self):
         """Cancel any outstanding per-room cleanup tasks on unload."""
@@ -51,53 +67,47 @@ class TemporaryRooms(commands.Cog):
         if not after.channel:
             return
 
+        # Resolve the guild's hub set from memory; bail out for guilds with no
+        # hubs or when the joined channel isn't a hub, costing zero queries.
+        hubs = self._auto_rooms.get(member.guild.id)
+        if not hubs or after.channel.id not in hubs:
+            return
+
         try:
-            auto_rooms = await self.bot.db_pool.fetch(
-                "SELECT channel_id FROM auto_room WHERE guild_id = $1", member.guild.id
-            )
-            if not auto_rooms:
+            auto_room_channel = after.channel
+            category = auto_room_channel.category
+            if category is None:
                 return
 
-            for auto_room in auto_rooms:
-                auto_room_channel = self.bot.get_channel(int(auto_room["channel_id"]))
-                if not auto_room_channel or after.channel.id != auto_room_channel.id:
-                    continue
+            room_identifier = f"{category.id}-{auto_room_channel.id}"
+            channel_name = f"{auto_room_channel.name} | {member.name}"
 
-                category = auto_room_channel.category
-                if category is None:
-                    continue
+            # Serialize creation per guild so concurrent joins do not
+            # create duplicate temp rooms for the same auto-room.
+            async with self._locks[member.guild.id]:
+                existing_temp_channel_id = self.active_temp_rooms.get(
+                    (member.guild.id, room_identifier)
+                )
+                if existing_temp_channel_id:
+                    existing_channel = self.bot.get_channel(existing_temp_channel_id)
+                    if existing_channel:
+                        await member.move_to(existing_channel)
+                        return
 
-                room_identifier = f"{category.id}-{auto_room_channel.id}"
-                channel_name = f"{auto_room_channel.name} | {member.name}"
-
-                # Serialize creation per guild so concurrent joins do not
-                # create duplicate temp rooms for the same auto-room.
-                async with self._locks[member.guild.id]:
-                    existing_temp_channel_id = self.active_temp_rooms.get(
-                        (member.guild.id, room_identifier)
+                new_temp_channel = await member.guild.create_voice_channel(
+                    channel_name, category=category
+                )
+                self.active_temp_rooms[
+                    (member.guild.id, room_identifier)
+                ] = new_temp_channel.id
+                await member.move_to(new_temp_channel)
+                task = asyncio.create_task(
+                    self.remove_empty_room(
+                        new_temp_channel.id, member.guild.id, room_identifier
                     )
-                    if existing_temp_channel_id:
-                        existing_channel = self.bot.get_channel(
-                            existing_temp_channel_id
-                        )
-                        if existing_channel:
-                            await member.move_to(existing_channel)
-                            continue
-
-                    new_temp_channel = await member.guild.create_voice_channel(
-                        channel_name, category=category
-                    )
-                    self.active_temp_rooms[
-                        (member.guild.id, room_identifier)
-                    ] = new_temp_channel.id
-                    await member.move_to(new_temp_channel)
-                    task = asyncio.create_task(
-                        self.remove_empty_room(
-                            new_temp_channel.id, member.guild.id, room_identifier
-                        )
-                    )
-                    self._cleanup_tasks.add(task)
-                    task.add_done_callback(self._cleanup_tasks.discard)
+                )
+                self._cleanup_tasks.add(task)
+                task.add_done_callback(self._cleanup_tasks.discard)
 
         except Exception:
             log.exception("Failed to handle auto-room creation")
@@ -141,6 +151,7 @@ class TemporaryRooms(commands.Cog):
                     ctx.guild.id,
                     chan.id,
                 )
+                self._auto_rooms.setdefault(ctx.guild.id, set()).add(chan.id)
 
             await ctx.send(
                 "Successfully created your Auto-Room. You can rename category and channel to whatever you want."
@@ -184,6 +195,11 @@ class TemporaryRooms(commands.Cog):
                             await self.bot.db_pool.execute(
                                 "DELETE FROM auto_room WHERE channel_id = $1;", channel.id
                             )
+                            # Write through to the cache, leaving an empty set
+                            # so the guild stays negatively cached.
+                            hubs = self._auto_rooms.get(ctx.guild.id)
+                            if hubs is not None:
+                                hubs.discard(channel.id)
                             removed_any = True
                     except discord.HTTPException:
                         pass

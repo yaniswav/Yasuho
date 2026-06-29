@@ -185,3 +185,13 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     guild_id BIGINT PRIMARY KEY,
     settings JSONB  NOT NULL DEFAULT '{}'::jsonb
 );
+
+-- ============================================================
+-- Secondary-column indexes for non-PK lookups (see DB audit)
+-- ============================================================
+-- Leaderboard: WHERE guild_id ORDER BY xp DESC LIMIT N -> index range scan, no sort.
+CREATE INDEX IF NOT EXISTS levels_guild_xp_idx ON levels (guild_id, xp DESC);
+-- These tables are looked up / cleaned by guild_id, which is not their primary key.
+CREATE INDEX IF NOT EXISTS auto_room_guild_idx ON auto_room (guild_id);
+CREATE INDEX IF NOT EXISTS reaction_roles_guild_idx ON reaction_roles (guild_id);
+CREATE INDEX IF NOT EXISTS starboard_entries_guild_idx ON starboard_entries (guild_id);

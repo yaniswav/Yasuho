@@ -30,32 +30,25 @@ class Twitch(commands.Cog):
             ):
                 for activity in after.activities:
                     if isinstance(activity, discord.Streaming):
-                        query = """ SELECT user_id FROM twitch_alert WHERE guild_id = $1 AND user_id = $2"""
-                        uid = await self.bot.db_pool.fetchval(
+                        query = """ SELECT channel_id, message FROM twitch_alert WHERE guild_id = $1 AND user_id = $2"""
+                        row = await self.bot.db_pool.fetchrow(
                             query, after.guild.id, after.id
                         )
 
-                        if not (uid):
+                        if row is None:
                             return
 
                         try:
                             try:
-                                query = """ SELECT channel_id FROM twitch_alert WHERE user_id = $1 and guild_id = $2 """
-                                fetch_msgid = await self.bot.db_pool.fetchval(
-                                    query, after.id, after.guild.id
-                                )
                                 ch_ = discord.utils.get(
-                                    before.guild.channels, id=fetch_msgid
+                                    before.guild.channels, id=row["channel_id"]
                                 )
 
                             except Exception:
                                 log.exception("Failed to resolve twitch alert channel")
                                 return
 
-                            query = """ SELECT message FROM twitch_alert WHERE user_id = $1 and guild_id = $2 """
-                            f = await self.bot.db_pool.fetchval(
-                                query, after.id, after.guild.id
-                            )
+                            f = row["message"]
 
                             if f is None:
                                 return

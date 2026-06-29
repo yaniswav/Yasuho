@@ -14,6 +14,11 @@ class AFK(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.afk_users = set()
+
+    async def cog_load(self):
+        rows = await self.bot.db_pool.fetch("SELECT user_id FROM afk")
+        self.afk_users = {row["user_id"] for row in rows}
 
     @commands.hybrid_command()
     @commands.guild_only()
@@ -29,6 +34,7 @@ class AFK(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, ctx.author.id, message)
+        self.afk_users.add(ctx.author.id)
         embed = discord.Embed(colour=random_colour())
         embed.description = f"{ctx.author.mention} you are now AFK: {message}"
         await ctx.send(embed=embed)
@@ -40,19 +46,23 @@ class AFK(commands.Cog):
 
         try:
             # (1) The author is back from being AFK.
-            deleted = await self.bot.db_pool.fetchrow(
-                "DELETE FROM afk WHERE user_id = $1 AND now() - since > interval '3 seconds' RETURNING since",
-                message.author.id,
-            )
-            if deleted:
-                await message.channel.send(
-                    f"Welcome back {message.author.mention}, you were AFK for "
-                    f"{human_timedelta(deleted['since'], suffix=False)}.",
-                    delete_after=10,
+            if message.author.id in self.afk_users:
+                deleted = await self.bot.db_pool.fetchrow(
+                    "DELETE FROM afk WHERE user_id = $1 AND now() - since > interval '3 seconds' RETURNING since",
+                    message.author.id,
                 )
+                if deleted:
+                    self.afk_users.discard(message.author.id)
+                    await message.channel.send(
+                        f"Welcome back {message.author.mention}, you were AFK for "
+                        f"{human_timedelta(deleted['since'], suffix=False)}.",
+                        delete_after=10,
+                    )
 
             # (2) Notify when an AFK user gets mentioned.
             for user in message.mentions:
+                if user.id not in self.afk_users:
+                    continue
                 r = await self.bot.db_pool.fetchrow(
                     "SELECT message, since FROM afk WHERE user_id = $1", user.id
                 )

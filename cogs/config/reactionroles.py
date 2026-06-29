@@ -14,6 +14,14 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.cache = {}
+
+    async def cog_load(self):
+        query = "SELECT message_id, emoji, role_id FROM reaction_roles;"
+        rows = await self.bot.db_pool.fetch(query)
+        self.cache = {
+            (row["message_id"], row["emoji"]): row["role_id"] for row in rows
+        }
 
     @commands.hybrid_group(aliases=["rr"])
     @commands.guild_only()
@@ -62,6 +70,8 @@ class ReactionRoles(commands.Cog):
                 query, mid, stored_emoji, role.id, ctx.guild.id
             )
 
+        self.cache[(mid, stored_emoji)] = role.id
+
         embed = discord.Embed(
             title="Reaction role added",
             colour=random_colour(),
@@ -91,6 +101,8 @@ class ReactionRoles(commands.Cog):
             """
 
         await self.bot.db_pool.execute(query, mid, stored_emoji)
+
+        self.cache.pop((mid, stored_emoji), None)
 
         embed = discord.Embed(
             title="Reaction role removed",
@@ -135,14 +147,8 @@ class ReactionRoles(commands.Cog):
         if payload.guild_id is None or payload.member is None or payload.member.bot:
             return
 
-        query = """
-            SELECT role_id FROM reaction_roles
-            WHERE message_id = $1 AND emoji = $2;
-            """
-
-        rid = await self.bot.db_pool.fetchval(
-            query, payload.message_id, str(payload.emoji).replace("\uFE0F", "")
-        )
+        key = (payload.message_id, str(payload.emoji).replace("\uFE0F", ""))
+        rid = self.cache.get(key)
 
         if not rid:
             return
@@ -164,14 +170,8 @@ class ReactionRoles(commands.Cog):
         if payload.guild_id is None:
             return
 
-        query = """
-            SELECT role_id FROM reaction_roles
-            WHERE message_id = $1 AND emoji = $2;
-            """
-
-        rid = await self.bot.db_pool.fetchval(
-            query, payload.message_id, str(payload.emoji).replace("\uFE0F", "")
-        )
+        key = (payload.message_id, str(payload.emoji).replace("\uFE0F", ""))
+        rid = self.cache.get(key)
 
         if not rid:
             return

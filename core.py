@@ -75,7 +75,11 @@ class Yasuho(commands.Bot):
         )
 
         self.db_pool = db_pool
+        # In-memory caches for hot / rarely-changing data, loaded in setup_hook
+        # and invalidated by the owning cogs (mirrors the prefixes cache).
         self.prefixes = {}
+        self.blacklist = set()
+        self.autoroles = {}
 
     async def setup_hook(self) -> None:
         # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
@@ -86,6 +90,13 @@ class Yasuho(commands.Bot):
 
         self.prefixes = dict(
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
+        )
+        self.blacklist = {
+            r["member_id"]
+            for r in await self.db_pool.fetch("SELECT member_id FROM blbot;")
+        }
+        self.autoroles = dict(
+            await self.db_pool.fetch("SELECT guild_id, role_id FROM autorole;")
         )
 
         for extension in discover_extensions():
@@ -124,7 +135,9 @@ async def main():
     # which would call this for us). Routes discord.py + our own loggers to stderr.
     discord.utils.setup_logging(level=logging.INFO)
     enable_mobile_status()
-    async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:
+    async with asyncpg.create_pool(
+        POSTGRESQL_URI, min_size=5, max_size=20, command_timeout=60
+    ) as pool:
         async with Yasuho(db_pool=pool) as bot:
             await bot.start(TOKEN)
 
