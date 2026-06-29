@@ -15,7 +15,44 @@ log = logging.getLogger(__name__)
 DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 TOKEN = config_loader.get("Bot_Token", "Token")
 POSTGRESQL_URI = config_loader.get("Database", "PostgreSQL")
-EXTENSIONS = config_loader.getlist("Extension", "Extensions")
+
+
+def _module_has_setup(path):
+    """Cheap text check for a `setup` entry point, without importing the module."""
+    try:
+        with open(path, encoding="utf-8") as fp:
+            return "def setup(" in fp.read()
+    except OSError:
+        return False
+
+
+def discover_extensions():
+    """Find every cog under cogs/: any module or package exposing `setup`.
+
+    A package whose __init__ defines `setup` (e.g. cogs.anilist) is loaded whole
+    and not descended into; a category folder (with an empty __init__) is
+    descended so its cog modules load as cogs.<category>.<name>. This lets cogs be
+    organised into folders freely, with no extension list to maintain.
+    """
+    base_dir = os.path.dirname(__file__)
+    cogs_dir = os.path.join(base_dir, "cogs")
+    found = []
+    for root, dirs, files in os.walk(cogs_dir):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        rel = os.path.relpath(root, base_dir).replace(os.sep, ".")
+        init_path = os.path.join(root, "__init__.py")
+        if root != cogs_dir and os.path.isfile(init_path) and _module_has_setup(init_path):
+            found.append(rel)
+            dirs[:] = []
+            continue
+        for fname in files:
+            if (
+                fname.endswith(".py")
+                and fname != "__init__.py"
+                and _module_has_setup(os.path.join(root, fname))
+            ):
+                found.append(f"{rel}.{fname[:-3]}")
+    return sorted(found)
 
 
 class Yasuho(commands.Bot):
@@ -51,12 +88,10 @@ class Yasuho(commands.Bot):
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
         )
 
-        for extension in EXTENSIONS:
+        for extension in discover_extensions():
             try:
                 await self.load_extension(extension)
-                log.info("Loading %s", extension)
-            except commands.ExtensionNotFound:
-                log.error("Extension not found: %s", extension)
+                log.info("Loaded %s", extension)
             except Exception:
                 log.exception("Error while trying to load %s", extension)
 
