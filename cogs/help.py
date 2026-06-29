@@ -10,44 +10,104 @@ log = logging.getLogger(__name__)
 
 NO_CATEGORY = "No Category"
 
-# Stable, tasteful emoji per category. Unknown categories fall back to the
-# folder icon. Keys are cog qualified names (and NO_CATEGORY).
-CATEGORY_EMOJIS = {
-    "Admin": "🛠️",
-    "AFK": "💤",
-    "AniList": "📺",
-    "AutoMod": "🛡️",
-    "AvatarHistory": "🖼️",
-    "Blacklist": "🚫",
-    "Extras": "✨",
-    "Fun": "🎉",
-    "Games": "🎮",
-    "Info": "ℹ️",
-    "Leveling": "📈",
-    "Meta": "🌐",
-    "ModLog": "📋",
-    "Moderation": "🔨",
-    "Music": "🎵",
-    "Profiles": "🎯",
-    "ReactionRoles": "🎭",
-    "Reminder": "⏰",
-    "SearchWeb": "🔍",
-    "Settings": "⚙️",
-    "Starboard": "⭐",
-    "TemporaryRooms": "🔊",
-    "Twitch": "🟣",
-    "UserSettings": "🎚️",
-    "Utility": "🧰",
-    "Webstats": "📊",
-    "Welcome": "👋",
-    NO_CATEGORY: "📦",
-}
-DEFAULT_EMOJI = "📁"
+# Discord caps an embed description at 4096 characters.
+DESCRIPTION_LIMIT = 4096
+
+# Curated, top-level help taxonomy: (emoji, display name, member cog classes).
+# Each entry groups one or more cog *class names* (what ``bot.get_cog`` expects)
+# under a single, human-friendly category so the menu stays tidy instead of
+# showing one category per cog. Cogs not listed here but with visible commands
+# are swept into the "Other" catch-all (see ``build_categories``).
+CATEGORIES = [
+    ("🔨", "Moderation", ["Moderation", "AutoMod", "ModLog", "Blacklist"]),
+    (
+        "⚙️",
+        "Server Config",
+        ["Settings", "Welcome", "ReactionRoles", "Starboard", "TemporaryRooms", "Twitch"],
+    ),
+    ("📈", "Community", ["Leveling", "Profiles", "AFK", "Reminder", "AvatarHistory", "UserSettings"]),
+    ("🎮", "Fun & Games", ["Fun", "Games"]),
+    ("📺", "AniList", ["AniList"]),
+    ("🔧", "Tools & Info", ["Info", "Meta", "Utility", "Extras", "SearchWeb"]),
+    ("🎵", "Music", ["Music"]),
+]
+OTHER_EMOJI = "🧩"
+OTHER_NAME = "Other"
+
+# Cogs never surfaced as a category (the help cog wires itself in separately).
+EXCLUDED_COGS = {"Help"}
 
 
-def category_emoji(name):
-    """Return a stable emoji for a category name."""
-    return CATEGORY_EMOJIS.get(name, DEFAULT_EMOJI)
+def _visible_commands(cmds):
+    """Non-hidden commands from ``cmds``, sorted by name."""
+    return sorted((c for c in cmds if not c.hidden), key=lambda c: c.name)
+
+
+def build_categories(bot):
+    """Resolve :data:`CATEGORIES` against the bot's currently loaded cogs.
+
+    Returns an ordered list of dicts::
+
+        {"emoji": str, "name": str,
+         "groups": [(cog_label, [commands]), ...], "total": int}
+
+    Only the visible (non-hidden) commands of cogs that actually exist are
+    included; a member cog that is unloaded or has no visible commands is
+    skipped, and a category with zero visible commands is omitted entirely.
+
+    Any cog with visible commands that is not listed in the taxonomy (and is
+    not excluded, e.g. the help cog) is collected into a final "Other"
+    category so nothing silently disappears.
+    """
+    resolved = []
+    claimed = set(EXCLUDED_COGS)
+
+    for emoji, name, cog_names in CATEGORIES:
+        groups = []
+        total = 0
+        for cog_name in cog_names:
+            claimed.add(cog_name)
+            cog = bot.get_cog(cog_name)
+            if cog is None:
+                continue
+            cmds = _visible_commands(cog.get_commands())
+            if not cmds:
+                continue
+            groups.append((cog_name, cmds))
+            total += len(cmds)
+        if total:
+            resolved.append(
+                {"emoji": emoji, "name": name, "groups": groups, "total": total}
+            )
+
+    # Catch-all: cogs (and cog-less commands) not claimed by the taxonomy.
+    other_groups = []
+    other_total = 0
+    for cog_name, cog in bot.cogs.items():
+        if cog_name in claimed:
+            continue
+        cmds = _visible_commands(cog.get_commands())
+        if not cmds:
+            continue
+        other_groups.append((cog_name, cmds))
+        other_total += len(cmds)
+
+    cogless = _visible_commands([c for c in bot.commands if c.cog is None])
+    if cogless:
+        other_groups.append((NO_CATEGORY, cogless))
+        other_total += len(cogless)
+
+    if other_total:
+        resolved.append(
+            {
+                "emoji": OTHER_EMOJI,
+                "name": OTHER_NAME,
+                "groups": other_groups,
+                "total": other_total,
+            }
+        )
+
+    return resolved
 
 
 class CategorySelect(discord.ui.Select):
@@ -85,6 +145,8 @@ class HelpView(discord.ui.View):
         self.bot = help_command.context.bot
         self.author_id = help_command.context.author.id
         self.prefix = help_command.context.clean_prefix
+        # ``categories`` is a list of resolved category dicts (see
+        # ``build_categories``); the index into it is the only navigation state.
         self.categories = categories
         self.index = None
         self.message = None
@@ -94,26 +156,15 @@ class HelpView(discord.ui.View):
 
     # -- data helpers -----------------------------------------------------
 
-    def _category_commands(self, name):
-        """Visible (non-hidden) commands for a category, sorted by name."""
-        if name == NO_CATEGORY:
-            cmds = [c for c in self.bot.commands if c.cog is None]
-        else:
-            cog = self.bot.get_cog(name)
-            cmds = cog.get_commands() if cog is not None else []
-        return sorted((c for c in cmds if not c.hidden), key=lambda c: c.name)
-
-    def _count(self, name):
-        return len(self._category_commands(name))
-
     def _select_options(self):
         options = []
-        for name in self.categories:
+        for position, category in enumerate(self.categories):
             options.append(
                 discord.SelectOption(
-                    label=name,
-                    description=f"{plural(self._count(name)):command}",
-                    emoji=category_emoji(name),
+                    label=category["name"],
+                    value=str(position),
+                    description=f"{plural(category['total']):command}",
+                    emoji=category["emoji"],
                 )
             )
         return options
@@ -121,34 +172,45 @@ class HelpView(discord.ui.View):
     # -- embeds -----------------------------------------------------------
 
     def category_embed(self, index):
-        name = self.categories[index]
+        category = self.categories[index]
         embed = discord.Embed(
-            title=f"{category_emoji(name)} {name}",
+            title=f"{category['emoji']} {category['name']}",
             colour=random_colour(),
         )
 
-        cog = self.bot.get_cog(name) if name != NO_CATEGORY else None
-        if cog is not None and cog.description:
-            embed.description = cog.description.split("\n")[0]
+        # Categories aggregate several cogs, so render compactly: a bold
+        # sub-header per cog, then one terse line per command. Built line by
+        # line so we can stop cleanly before the 4096-char description limit.
+        rendered = []
+        for position, (label, commands_list) in enumerate(category["groups"]):
+            if position:
+                rendered.append("")
+            rendered.append(f"**{label}**")
+            for command in commands_list:
+                doc = command.short_doc or "No description provided."
+                rendered.append(f"`{self.prefix}{command.qualified_name}` — {doc}")
 
-        commands_list = self._category_commands(name)
-        shown = commands_list[:24]
-        for command in shown:
-            embed.add_field(
-                name=f"{self.prefix}{command.qualified_name}",
-                value=command.short_doc or "No description provided.",
-                inline=False,
-            )
-        if len(commands_list) > len(shown):
-            remaining = len(commands_list) - len(shown)
-            embed.add_field(
-                name="…",
-                value=(
-                    f"and {plural(remaining):more command}. Use "
-                    f"`{self.prefix}help <command>` to see them."
-                ),
-                inline=False,
-            )
+        notice = (
+            f"…more commands available. Use "
+            f"`{self.prefix}help <command>` to see them."
+        )
+        budget = DESCRIPTION_LIMIT - (len(notice) + 1)
+
+        lines = []
+        length = 0
+        truncated = False
+        for line in rendered:
+            extra = len(line) + (1 if lines else 0)
+            if length + extra > budget:
+                truncated = True
+                break
+            lines.append(line)
+            length += extra
+
+        description = "\n".join(lines) if lines else "No commands available."
+        if truncated:
+            description += "\n" + notice
+        embed.description = description
 
         embed.set_footer(
             text=(
@@ -175,10 +237,14 @@ class HelpView(discord.ui.View):
             embed = self.category_embed(self.index)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    async def show_category(self, interaction, name):
+    async def show_category(self, interaction, value):
         try:
-            self.index = self.categories.index(name)
-        except ValueError:
+            index = int(value)
+        except (TypeError, ValueError):
+            index = None
+        if index is not None and 0 <= index < len(self.categories):
+            self.index = index
+        else:
             self.index = None
         await self._render(interaction)
 
@@ -301,24 +367,6 @@ class GroupHelpView(discord.ui.View):
 class YasuhoHelp(commands.HelpCommand):
     """Custom help command for Yasuho (replaces the default help_command)."""
 
-    def _ordered_categories(self):
-        """Sorted category names that have at least one visible command."""
-        names = []
-        for cog, cmds in self.get_bot_mapping().items():
-            if not any(not c.hidden for c in cmds):
-                continue
-            names.append(cog.qualified_name if cog is not None else NO_CATEGORY)
-        return sorted(names)[:25]
-
-    def _visible_count(self, name):
-        bot = self.context.bot
-        if name == NO_CATEGORY:
-            cmds = [c for c in bot.commands if c.cog is None]
-        else:
-            cog = bot.get_cog(name)
-            cmds = cog.get_commands() if cog is not None else []
-        return sum(1 for c in cmds if not c.hidden)
-
     async def home_embed(self):
         """The friendly welcome page shown by the bot-wide help menu."""
         bot = self.context.bot
@@ -364,15 +412,17 @@ class YasuhoHelp(commands.HelpCommand):
                 inline=True,
             )
 
-        # Categories, split across fields to respect the 1024-char limit.
-        categories = self._ordered_categories()
+        # Curated categories, split across fields to respect the 1024-char
+        # limit. Each line shows the emoji, name and total visible-command
+        # count aggregated across the category's member cogs.
+        categories = build_categories(bot)
         lines = []
         total = 0
-        for name in categories:
-            count = self._visible_count(name)
-            total += count
+        for category in categories:
+            total += category["total"]
             lines.append(
-                f"{category_emoji(name)} **{name}** — {plural(count):command}"
+                f"{category['emoji']} **{category['name']}** — "
+                f"{plural(category['total']):command}"
             )
 
         for position, chunk in enumerate(self._chunk(lines)):
@@ -411,7 +461,7 @@ class YasuhoHelp(commands.HelpCommand):
 
     async def send_bot_help(self, mapping):
         prefix = self.context.clean_prefix
-        categories = self._ordered_categories()
+        categories = build_categories(self.context.bot)
 
         if not categories:
             embed = discord.Embed(
