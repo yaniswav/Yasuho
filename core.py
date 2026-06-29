@@ -113,20 +113,9 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
     if not message.guild:
         return DEFAULT_PREFIX
 
-    prefix = bot.prefixes.get(message.guild.id, None)
-
-    if not prefix:
-        query = """
-                INSERT INTO prefixes
-                (guild_id, prefix)
-                VALUES ($1, $2)
-                ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;"""
-
-        await bot.db_pool.execute(
-            query, message.guild.id, DEFAULT_PREFIX, DEFAULT_PREFIX
-        )
-        prefix = bot.prefixes[message.guild.id] = DEFAULT_PREFIX
-
+    # The DB only stores custom prefixes (overrides); everything else falls back
+    # to DEFAULT_PREFIX so changing the default later applies everywhere at once.
+    prefix = bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
