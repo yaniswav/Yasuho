@@ -95,6 +95,26 @@ query ($search: String) {
 }
 """
 
+# Same shape as SEARCH_QUERY but tagged with the viewer's own list entry.
+# ``mediaListEntry`` resolves only when the request carries the user's token,
+# letting the update wizard prioritise titles already on their list.
+SEARCH_ENTRY_QUERY = """
+query ($search: String) {
+  Page(perPage: 10) {
+    media(search: $search) {
+      id
+      type
+      format
+      title { romaji english }
+      episodes
+      chapters
+      seasonYear
+      mediaListEntry { id status score progress }
+    }
+  }
+}
+"""
+
 # Browse query for trending / popular / seasonal listings.
 PAGE_QUERY = """
 query ($sort: [MediaSort], $type: MediaType, $season: MediaSeason, $seasonYear: Int) {
@@ -919,6 +939,109 @@ class SeasonSelectView(discord.ui.View):
                 pass
 
 
+class OnListSelect(discord.ui.Select):
+    """Update wizard: pick among the titles the user *already tracks*.
+
+    Each option is labelled with its type/title and described with the user's
+    current status and progress, so the choice is unambiguous.
+    """
+
+    def __init__(self, cog, candidates, author_id):
+        self.cog = cog
+        self.author_id = author_id
+        self.candidates = {str(m.get("id")): m for m in candidates}
+
+        options = []
+        for media in candidates[:25]:
+            mtype = media.get("type") or "?"
+            romaji = (media.get("title") or {}).get("romaji") or "Unknown"
+            year = media.get("seasonYear") or "?"
+            label = f"[{mtype}] {romaji} ({year})"
+
+            entry = media.get("mediaListEntry") or {}
+            parts = []
+            status = entry.get("status")
+            if status:
+                parts.append(status.title())
+            progress = entry.get("progress")
+            if progress is not None:
+                total = _progress_max(media)
+                unit = _media_unit(media, plural=True)
+                parts.append(f"{progress}/{total if total else '?'} {unit}")
+            description = ", ".join(parts) if parts else None
+
+            options.append(
+                discord.SelectOption(
+                    label=label[:100],
+                    description=description[:100] if description else None,
+                    value=str(media.get("id")),
+                )
+            )
+
+        super().__init__(placeholder="Pick which one to update...", options=options)
+
+    async def callback(self, interaction):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+
+        try:
+            media = self.candidates.get(self.values[0])
+            if not media:
+                return await interaction.response.send_message(
+                    "Could not load that title.", ephemeral=True
+                )
+
+            # Fetch the canonical entry BEFORE send_modal (allowed) to pre-fill.
+            entry, _ = await self.cog._viewer_entry(
+                interaction.user.id, media.get("id")
+            )
+            await interaction.response.send_modal(
+                EditEntryModal(self.cog, media, entry=entry)
+            )
+        except Exception:
+            log.exception("AniList update on-list select failed")
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong opening the editor.", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong opening the editor.", ephemeral=True
+                    )
+            except Exception:
+                pass
+
+
+class OnListSelectView(discord.ui.View):
+    """Author-restricted wrapper around an :class:`OnListSelect`."""
+
+    def __init__(self, cog, candidates, author_id, timeout=180):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.message = None
+        self.add_item(OnListSelect(cog, candidates, author_id))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 class StatusSelect(discord.ui.Select):
     """One-tap list-status picker for the authenticated viewer (logged-in)."""
 
@@ -1706,6 +1829,20 @@ class AniList(commands.Cog):
         page = ((data or {}).get("data") or {}).get("Page") or {}
         return page.get("media") or []
 
+    async def _search_candidates_for_user(self, title, token):
+        """Like :meth:`_search_candidates`, but each media is tagged with the
+        viewer's own ``mediaListEntry`` (resolved via their token). A candidate
+        is "on their list" when that entry is not ``None``. The token is never
+        logged. Used only by the update wizard; status/score keep the anonymous
+        :meth:`_search_candidates`.
+        """
+
+        data = await self._graphql(
+            SEARCH_ENTRY_QUERY, {"search": title}, token=token
+        )
+        page = ((data or {}).get("data") or {}).get("Page") or {}
+        return page.get("media") or []
+
     async def _reply(self, sender, content):
         """Send ``content`` via either a Context or an Interaction."""
 
@@ -1836,11 +1973,13 @@ class AniList(commands.Cog):
         view.message = await ctx.send(embed=view.overview_embed(), view=view)
 
     async def _update_wizard(self, ctx, title):
-        """Guided ``update``: resolve the media by clicks, then a pre-filled edit.
+        """Guided ``update``, prioritising titles the user already tracks.
 
-        update saves to the user's list, so a linked account is required. The
-        flow asks anime-or-manga (only when ambiguous), then which exact title,
-        then opens the editor pre-filled with whatever the user already has.
+        update saves to the user's list, so a linked account is required.
+        Routing:
+          * exactly one matching entry on their list -> edit it directly;
+          * several matching entries -> ask which one, scoped to their list;
+          * nothing tracked -> the full add-a-new-entry wizard.
         """
 
         token = await self._get_token(ctx.author.id)
@@ -1852,19 +1991,39 @@ class AniList(commands.Cog):
             async with ctx.typing():
                 return await self._open_media_editor(ctx, int(title[3:]), token)
 
+        # Token-aware search so each candidate carries the viewer's own entry.
         async with ctx.typing():
-            candidates = await self._search_candidates(title)
+            candidates = await self._search_candidates_for_user(title, token)
 
         if not candidates:
             return await ctx.send(f"No result for **{title}**.")
 
+        on_list = [c for c in candidates if c.get("mediaListEntry")]
+
+        # Exactly one tracked entry -> edit it directly, no questions asked.
+        if len(on_list) == 1:
+            async with ctx.typing():
+                return await self._open_media_editor(
+                    ctx, on_list[0].get("id"), token, fallback=on_list[0]
+                )
+
+        # Several tracked entries -> pick among ONLY what they actually track.
+        if len(on_list) > 1:
+            view = OnListSelectView(self, on_list, ctx.author.id)
+            view.message = await ctx.send(
+                content=f"You track several titles matching **{title}** "
+                "- which one?",
+                view=view,
+            )
+            return
+
+        # Nothing tracked -> full wizard over the global results to add an entry.
         if len(candidates) == 1:
             async with ctx.typing():
                 return await self._open_media_editor(
                     ctx, candidates[0].get("id"), token, fallback=candidates[0]
                 )
 
-        # Several candidates: offer the click-driven picker(s).
         types_present = []
         for media in candidates:
             mtype = media.get("type")
