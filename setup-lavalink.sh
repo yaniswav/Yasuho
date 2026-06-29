@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
-# Download, configure and run a Lavalink v4 server for Yasuho's music feature.
+# Download, configure, run and UPDATE a Lavalink v4 server for Yasuho's music.
 # Lavalink is the audio backend SonoLink connects to; run this on the bot host.
 #
 # Usage:
-#   ./setup-lavalink.sh            download + write config, then print how to run
-#   ./setup-lavalink.sh start      ... and launch it now in the foreground
-#   ./setup-lavalink.sh systemd    ... and install a systemd service (needs sudo)
-#   ./setup-lavalink.sh update     re-download the latest Lavalink.jar
+#   ./setup-lavalink.sh                  download + write config, then print how to run
+#   ./setup-lavalink.sh start            ... and launch it now in the foreground
+#   ./setup-lavalink.sh systemd          ... and install a systemd service (needs sudo)
+#   ./setup-lavalink.sh update           update Lavalink.jar AND the youtube-source plugin
+#   ./setup-lavalink.sh update lavalink  update only Lavalink.jar to the latest
+#   ./setup-lavalink.sh update youtube   update only the youtube-source plugin (latest)
 #
 # Override defaults via env, e.g.:
 #   LAVALINK_PASSWORD='strongpass' LAVALINK_PORT=2333 ./setup-lavalink.sh
@@ -20,10 +22,50 @@ LAVALINK_PASSWORD="${LAVALINK_PASSWORD:-youshallnotpass}"
 YOUTUBE_PLUGIN_VERSION="${YOUTUBE_PLUGIN_VERSION:-1.18.1}"
 HEAP="${HEAP:-512m}"
 JAR_URL="https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
+YT_API="https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
 
 info() { printf '[lavalink] %s\n' "$1"; }
+warn() { printf '[lavalink][warn] %s\n' "$1" >&2; }
 errx() { printf '[lavalink][error] %s\n' "$1" >&2; exit 1; }
 
+# Latest youtube-source release tag (e.g. 1.18.1), or empty on failure.
+latest_youtube() {
+    curl -fsSL "$YT_API" 2>/dev/null \
+        | grep -oE '"tag_name"[^,]*' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
+}
+
+download_jar() {
+    info "Downloading the latest Lavalink.jar..."
+    curl -fL -o "$LAVALINK_DIR/Lavalink.jar" "$JAR_URL" || errx "Download failed."
+}
+
+set_youtube_version() {  # $1 = version
+    [ -f "$LAVALINK_DIR/application.yml" ] || { warn "No application.yml yet (run setup first)."; return; }
+    sed -i -E "s|(youtube-plugin:)[0-9]+\.[0-9]+\.[0-9]+|\1$1|" "$LAVALINK_DIR/application.yml"
+    info "Set youtube-plugin to $1 in application.yml."
+}
+
+# ---- update mode ---------------------------------------------------------
+if [ "${1:-}" = "update" ]; then
+    mkdir -p "$LAVALINK_DIR"
+    target="${2:-all}"
+    case "$target" in
+        all|lavalink|youtube) ;;
+        *) errx "Unknown update target '$target' (use: lavalink | youtube | all)." ;;
+    esac
+    [ "$target" = "youtube" ] || download_jar
+    if [ "$target" != "lavalink" ]; then
+        yt="$(latest_youtube)"
+        [ -n "$yt" ] || errx "Could not fetch the latest youtube-source version (check your connection)."
+        set_youtube_version "$yt"
+    fi
+    info "Update done. Restart Lavalink to apply:"
+    info "  sudo systemctl restart lavalink     (if installed as a service)"
+    info "  or kill the running 'java -jar Lavalink.jar' and start it again"
+    exit 0
+fi
+
+# ---- setup mode ----------------------------------------------------------
 # 1. Java 17+ is required by Lavalink v4.
 command -v java >/dev/null 2>&1 || errx "Java not found. Install Java 17+ (e.g. Temurin)."
 java_major="$(java -version 2>&1 | head -1 | grep -oE '[0-9]+' | head -1)"
@@ -32,11 +74,10 @@ if ! [ "${java_major:-0}" -ge 17 ] 2>/dev/null; then
 fi
 info "Java OK ($(java -version 2>&1 | head -1))."
 
-# 2. Download the latest Lavalink.jar (kept unless 'update' is requested).
+# 2. Download Lavalink.jar if it is missing (use 'update' to refresh it).
 mkdir -p "$LAVALINK_DIR"
-if [ ! -f "$LAVALINK_DIR/Lavalink.jar" ] || [ "${1:-}" = "update" ]; then
-    info "Downloading the latest Lavalink.jar..."
-    curl -fL -o "$LAVALINK_DIR/Lavalink.jar" "$JAR_URL" || errx "Download failed."
+if [ ! -f "$LAVALINK_DIR/Lavalink.jar" ]; then
+    download_jar
 else
     info "Lavalink.jar already present (use './setup-lavalink.sh update' to refresh)."
 fi
@@ -51,8 +92,7 @@ server:
 lavalink:
   plugins:
     # Native YouTube was deprecated in Lavalink v4; this plugin restores it.
-    # If Lavalink fails to start on this version, bump it to one that exists at
-    # https://github.com/lavalink-devs/youtube-source/releases
+    # Bump it with: ./setup-lavalink.sh update youtube
     - dependency: "dev.lavalink.youtube:youtube-plugin:${YOUTUBE_PLUGIN_VERSION}"
       snapshot: false
   server:
@@ -124,6 +164,8 @@ EOF
   foreground (test) : cd "${LAVALINK_DIR}" && java -Xmx${HEAP} -jar Lavalink.jar
   background (screen): screen -dmS lavalink bash -c 'cd "${LAVALINK_DIR}" && java -Xmx${HEAP} -jar Lavalink.jar'
   persistent service : ./setup-lavalink.sh systemd   (installs a systemd unit, needs sudo)
+
+  update everything : ./setup-lavalink.sh update
 EOF
         ;;
 esac
