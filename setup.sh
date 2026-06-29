@@ -60,7 +60,12 @@ if [ -f config/tokens.ini ] && grep -qE '^[[:space:]]*fernetKey[[:space:]]*=[[:s
 fi
 
 # ---- 4. PostgreSQL role + database ---------------------------------------
-if command -v psql >/dev/null 2>&1; then
+# Skip the whole step (and the sudo it needs) when the DB is already reachable
+# via the configured DSN - so re-running setup.sh never re-prompts for sudo.
+DSN="$(grep -E '^[[:space:]]*PostgreSQL[[:space:]]*=' config/bot.ini 2>/dev/null | head -1 | sed 's/^[^=]*=[[:space:]]*//')"
+if [ -n "$DSN" ] && command -v psql >/dev/null 2>&1 && psql "$DSN" -c 'SELECT 1' >/dev/null 2>&1; then
+    info "Database already reachable via the configured DSN - skipping PostgreSQL setup."
+elif command -v psql >/dev/null 2>&1; then
     pg() { sudo -u postgres psql -tAc "$1" 2>/dev/null; }
     if [ "$(pg "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'")" != "1" ]; then
         DB_PASS="$("$VENV_PY" -c 'import secrets; print(secrets.token_urlsafe(24))')"
