@@ -1217,10 +1217,11 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
         max_length=4000,
     )
 
-    def __init__(self, cog, author_id):
+    def __init__(self, cog, author_id, login_view=None):
         super().__init__()
         self.cog = cog
         self.author_id = author_id
+        self.login_view = login_view
 
     async def on_submit(self, interaction):
         # Defer first: the token exchange is a network round-trip that can exceed
@@ -1239,6 +1240,17 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
             await interaction.followup.send(
                 f"Connected as {name}!", ephemeral=True
             )
+            # Once linked, replace the prompt (and its authorize link) with a
+            # confirmation and stop the view so nothing lingers in the DM.
+            view = self.login_view
+            if view is not None and view.message is not None:
+                try:
+                    await view.message.edit(
+                        content=f"✅ Linked as **{name}**.", view=None
+                    )
+                except discord.HTTPException:
+                    pass
+                view.stop()
         except Exception:
             log.exception("AniList login modal failed")
             try:
@@ -1270,7 +1282,7 @@ class LoginView(discord.ui.View):
     async def enter_code(self, interaction, button):
         try:
             await interaction.response.send_modal(
-                LoginModal(self.cog, self.author_id)
+                LoginModal(self.cog, self.author_id, login_view=self)
             )
         except Exception:
             log.exception("AniList login modal launch failed")
