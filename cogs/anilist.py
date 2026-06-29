@@ -666,7 +666,7 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
         max_length=6,
     )
 
-    def __init__(self, cog, media, token, entry=None):
+    def __init__(self, cog, media, token=None, entry=None):
         super().__init__()
         self.cog = cog
         self.media = media
@@ -722,9 +722,19 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
                 ephemeral=True,
             )
 
+        # The wizard opens this modal without a token; resolve it lazily here
+        # (never logged). Direct callers may still pass one in.
+        token = self.token
+        if token is None:
+            token = await self.cog._get_token(interaction.user.id)
+        if not token:
+            return await interaction.response.send_message(
+                "Link your account first with `/anilist login`.", ephemeral=True
+            )
+
         try:
             data = await self.cog._graphql(
-                SAVE_ENTRY_QUERY, variables, token=self.token
+                SAVE_ENTRY_QUERY, variables, token=token
             )
             entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
             if not entry:
@@ -748,6 +758,164 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
                     "Something went wrong updating that entry.", ephemeral=True
                 )
             except Exception:
+                pass
+
+
+class TypeView(discord.ui.View):
+    """Update wizard, step 1: pick anime vs manga among mixed candidates.
+
+    Only the buttons for types actually present in ``candidates`` are shown.
+    """
+
+    def __init__(self, cog, candidates, author_id, timeout=180):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.candidates = candidates
+        self.author_id = author_id
+        self.message = None
+
+        types_present = {m.get("type") for m in candidates if m.get("type")}
+        if "ANIME" not in types_present:
+            self.remove_item(self.anime_button)
+        if "MANGA" not in types_present:
+            self.remove_item(self.manga_button)
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def _choose_type(self, interaction, media_type):
+        try:
+            subset = [
+                m for m in self.candidates if m.get("type") == media_type
+            ]
+            if not subset:
+                return await interaction.response.send_message(
+                    "No matching titles of that type.", ephemeral=True
+                )
+
+            view = SeasonSelectView(self.cog, subset, self.author_id, media_type)
+            await interaction.response.edit_message(
+                content="Pick the exact title to update:", view=view
+            )
+            view.message = interaction.message
+            self.stop()
+        except Exception:
+            log.exception("AniList update type selection failed")
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong.", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong.", ephemeral=True
+                    )
+            except Exception:
+                pass
+
+    @discord.ui.button(label="📺 Anime", style=discord.ButtonStyle.primary)
+    async def anime_button(self, interaction, button):
+        await self._choose_type(interaction, "ANIME")
+
+    @discord.ui.button(label="📖 Manga", style=discord.ButtonStyle.success)
+    async def manga_button(self, interaction, button):
+        await self._choose_type(interaction, "MANGA")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+class SeasonSelect(discord.ui.Select):
+    """Update wizard, step 2: pick the exact title; opens a pre-filled modal."""
+
+    def __init__(self, cog, candidates, author_id, media_type):
+        self.cog = cog
+        self.author_id = author_id
+        self.media_type = media_type
+        self.candidates = {str(m.get("id")): m for m in candidates}
+
+        options = []
+        for media in candidates[:25]:
+            romaji = (media.get("title") or {}).get("romaji") or "Unknown"
+            year = media.get("seasonYear") or "?"
+            label = f"{romaji} ({year})"
+            options.append(
+                discord.SelectOption(label=label[:100], value=str(media.get("id")))
+            )
+
+        super().__init__(placeholder="Pick the exact title...", options=options)
+
+    async def callback(self, interaction):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+
+        try:
+            media = self.candidates.get(self.values[0])
+            if not media:
+                return await interaction.response.send_message(
+                    "Could not load that title.", ephemeral=True
+                )
+
+            # Fetch the viewer's current entry BEFORE send_modal (allowed) so
+            # the form opens pre-filled with their existing status/score/progress.
+            entry, _ = await self.cog._viewer_entry(
+                interaction.user.id, media.get("id")
+            )
+            await interaction.response.send_modal(
+                EditEntryModal(self.cog, media, entry=entry)
+            )
+        except Exception:
+            log.exception("AniList update season select failed")
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong opening the editor.", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong opening the editor.", ephemeral=True
+                    )
+            except Exception:
+                pass
+
+
+class SeasonSelectView(discord.ui.View):
+    """Author-restricted wrapper around a :class:`SeasonSelect`."""
+
+    def __init__(self, cog, candidates, author_id, media_type, timeout=180):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.message = None
+        self.add_item(SeasonSelect(cog, candidates, author_id, media_type))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
                 pass
 
 
@@ -1650,6 +1818,72 @@ class AniList(commands.Cog):
             view=view,
         )
 
+    async def _open_media_editor(self, ctx, media_id, token, fallback=None):
+        """Open the full MediaView editor for a resolved media (ctx-driven path).
+
+        Used by the wizard's single-candidate / ``id:`` entry points, where a
+        ``Context`` (not a component interaction) cannot send a modal. The
+        MediaView carries the StatusSelect / +1 / Complete / Edit tools, and its
+        Edit button opens the same pre-filled modal from a component interaction.
+        """
+
+        data = await self._graphql(MEDIA_QUERY, {"id": media_id})
+        media = ((data or {}).get("data") or {}).get("Media") or fallback
+        if not media:
+            return await ctx.send("Could not load that title.")
+
+        view = MediaView(self, media, ctx.author.id, token=token)
+        view.message = await ctx.send(embed=view.overview_embed(), view=view)
+
+    async def _update_wizard(self, ctx, title):
+        """Guided ``update``: resolve the media by clicks, then a pre-filled edit.
+
+        update saves to the user's list, so a linked account is required. The
+        flow asks anime-or-manga (only when ambiguous), then which exact title,
+        then opens the editor pre-filled with whatever the user already has.
+        """
+
+        token = await self._get_token(ctx.author.id)
+        if not token:
+            return await ctx.send("Link your account first with `/anilist login`.")
+
+        # Autocomplete supplies an "id:<n>" sentinel: resolve straight to editor.
+        if title.startswith("id:") and title[3:].isdigit():
+            async with ctx.typing():
+                return await self._open_media_editor(ctx, int(title[3:]), token)
+
+        async with ctx.typing():
+            candidates = await self._search_candidates(title)
+
+        if not candidates:
+            return await ctx.send(f"No result for **{title}**.")
+
+        if len(candidates) == 1:
+            async with ctx.typing():
+                return await self._open_media_editor(
+                    ctx, candidates[0].get("id"), token, fallback=candidates[0]
+                )
+
+        # Several candidates: offer the click-driven picker(s).
+        types_present = []
+        for media in candidates:
+            mtype = media.get("type")
+            if mtype and mtype not in types_present:
+                types_present.append(mtype)
+
+        if len(types_present) >= 2:
+            view = TypeView(self, candidates, ctx.author.id)
+            view.message = await ctx.send(
+                content=f"**{title}** - is it an anime or a manga?", view=view
+            )
+            return
+
+        only_type = types_present[0] if types_present else None
+        view = SeasonSelectView(self, candidates, ctx.author.id, only_type)
+        view.message = await ctx.send(
+            content="Pick the exact title to update:", view=view
+        )
+
     # ------------------------------------------------------------------
     # Lookup commands (no auth required)
     # ------------------------------------------------------------------
@@ -1924,13 +2158,10 @@ class AniList(commands.Cog):
 
     @anilist.command(name="update")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def anilist_update(self, ctx, progress: int, *, title: str):
-        """Set your progress on a title and mark it as currently watching/reading."""
+    async def anilist_update(self, ctx, *, title: str):
+        """Guided update: pick the title by clicking, then edit a pre-filled form."""
 
-        if progress < 0:
-            return await ctx.send("Progress must be zero or a positive number.")
-
-        await self._edit_flow(ctx, title, "progress", progress)
+        await self._update_wizard(ctx, title)
 
     @anilist.command(name="status")
     @commands.cooldown(1, 5, commands.BucketType.user)
