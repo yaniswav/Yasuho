@@ -51,6 +51,9 @@ def build_now_playing_embed(player: Player) -> typing.Optional[discord.Embed]:
     if track is None:
         return None
 
+    # Temporary diagnostic: shows whether Lavalink returned an artwork URL.
+    log.info("now-playing: %s | artwork=%r", track.title, track.artwork)
+
     embed = discord.Embed(
         title=track.title[:256],
         url=track.uri or None,
