@@ -68,7 +68,7 @@ def build_embed(author, states):
         badge = ON_BADGE if on else OFF_BADGE
         state = "ON" if on else "OFF"
         embed.add_field(
-            name=f"{pref.emoji} {pref.label} — {badge} {state}",
+            name=f"{pref.emoji} {pref.label} - {badge} {state}",
             value=pref.description,
             inline=False,
         )
