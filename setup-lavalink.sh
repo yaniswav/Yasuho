@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 LAVALINK_DIR="${LAVALINK_DIR:-$(pwd)/lavalink}"
 LAVALINK_PORT="${LAVALINK_PORT:-2333}"
 LAVALINK_PASSWORD="${LAVALINK_PASSWORD:-youshallnotpass}"
-YOUTUBE_PLUGIN_VERSION="${YOUTUBE_PLUGIN_VERSION:-1.13.5}"
+YOUTUBE_PLUGIN_VERSION="${YOUTUBE_PLUGIN_VERSION:-1.18.1}"
 HEAP="${HEAP:-512m}"
 JAR_URL="https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
 
