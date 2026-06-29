@@ -4,6 +4,7 @@ import re
 
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from tools import crypto
@@ -183,6 +184,35 @@ query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
 }
 """
 
+# Lightweight fetch by id, used to resolve an autocomplete "id:<n>" sentinel.
+ID_MEDIA_QUERY = """
+query ($id: Int) {
+  Media(id: $id) {
+    id
+    type
+    format
+    title { romaji english }
+    episodes
+    chapters
+    seasonYear
+  }
+}
+"""
+
+# Fast cross-type (anime + manga) search powering slash title autocomplete.
+AUTOCOMPLETE_QUERY = """
+query ($search: String) {
+  Page(perPage: 12) {
+    media(search: $search) {
+      id
+      type
+      title { romaji english }
+      seasonYear
+    }
+  }
+}
+"""
+
 # The authenticated viewer's own list entry for a media. ``mediaListEntry`` is
 # only resolved per-viewer when the request carries that user's OAuth token.
 MEDIA_ENTRY_QUERY = """
@@ -254,6 +284,20 @@ def _media_unit(media, *, plural=False):
 
     word = "chapter" if is_manga else "episode"
     return word + "s" if plural else word
+
+
+def _progress_max(media):
+    """Return the total episodes/chapters for clamping progress, or None.
+
+    Returns ``None`` when the total is unknown (e.g. an ongoing series), so
+    callers should treat a missing value as "no upper bound".
+    """
+
+    if _media_unit(media) == "chapter":
+        total = media.get("chapters")
+    else:
+        total = media.get("episodes")
+    return total if total else None
 
 
 def _format_ranking(ranking):
@@ -707,6 +751,56 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
                 pass
 
 
+class StatusSelect(discord.ui.Select):
+    """One-tap list-status picker for the authenticated viewer (logged-in)."""
+
+    def __init__(self, cog, media, author_id):
+        self.cog = cog
+        self.media = media
+        self.author_id = author_id
+
+        watching = "Reading" if _media_unit(media) == "chapter" else "Watching"
+        options = [
+            discord.SelectOption(label=watching, value="CURRENT", emoji="▶️"),
+            discord.SelectOption(label="Completed", value="COMPLETED", emoji="✅"),
+            discord.SelectOption(label="Planning", value="PLANNING", emoji="📝"),
+            discord.SelectOption(label="Paused", value="PAUSED", emoji="⏸️"),
+            discord.SelectOption(label="Dropped", value="DROPPED", emoji="🗑️"),
+            discord.SelectOption(label="Repeating", value="REPEATING", emoji="🔁"),
+        ]
+        super().__init__(
+            placeholder="Set status...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=1,
+        )
+
+    async def callback(self, interaction):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+        try:
+            await interaction.response.defer()
+            await self.cog._apply_edit(
+                interaction, self.author_id, self.media, "status", self.values[0]
+            )
+            # Re-render so the dropdown resets instead of sticking on the choice.
+            try:
+                await interaction.edit_original_response(view=self.view)
+            except discord.HTTPException:
+                pass
+        except Exception:
+            log.exception("AniList status select failed")
+            try:
+                await interaction.followup.send(
+                    "Something went wrong updating that entry.", ephemeral=True
+                )
+            except Exception:
+                pass
+
+
 class MediaView(discord.ui.View):
     """Tabbed view over a full media object with optional list actions."""
 
@@ -731,16 +825,20 @@ class MediaView(discord.ui.View):
         self.parent_content = parent_content
         self.message = None
 
-        # The "Back" button (row 2) only makes sense when we came from a menu.
-        if self.parent_view is None:
-            for child in list(self.children):
-                if getattr(child, "row", None) == 2:
-                    self.remove_item(child)
-
-        # The quick-action row only makes sense for linked users.
+        # Logged-in controls: a status dropdown (row 1) and action buttons
+        # (row 2). The dropdown is added dynamically; the row-2 buttons are
+        # declarative and stripped for logged-out users so no empty row shows.
         if self.token is None:
             for child in list(self.children):
-                if getattr(child, "row", None) == 1:
+                if getattr(child, "row", None) in (1, 2):
+                    self.remove_item(child)
+        else:
+            self.add_item(StatusSelect(self.cog, self.media, self.author_id))
+
+        # The "Back" button (row 3) only makes sense when we came from a menu.
+        if self.parent_view is None:
+            for child in list(self.children):
+                if getattr(child, "row", None) == 3:
                     self.remove_item(child)
 
     async def interaction_check(self, interaction):
@@ -1102,8 +1200,8 @@ class MediaView(discord.ui.View):
             )
         await interaction.response.edit_message(embed=embed, view=self)
 
-    # -- back to the originating menu (row 2, only when we have a parent) --
-    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary, row=2)
+    # -- back to the originating menu (row 3, only when we have a parent) --
+    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary, row=3)
     async def back_button(self, interaction, button):
         try:
             # Re-link the restored menu to this message so it stays interactive.
@@ -1124,20 +1222,32 @@ class MediaView(discord.ui.View):
             except Exception:
                 pass
 
-    # -- quick actions (row 1, linked users only) ----------------------
-    @discord.ui.button(label="Watching", style=discord.ButtonStyle.success, row=1)
-    async def watching_button(self, interaction, button):
-        await self._set_status(interaction, "CURRENT")
+    # -- quick actions (row 2, linked users only) ----------------------
+    @discord.ui.button(label="-1", style=discord.ButtonStyle.secondary, row=2)
+    async def decrement_button(self, interaction, button):
+        await self._step_progress(interaction, -1)
 
-    @discord.ui.button(label="Completed", style=discord.ButtonStyle.success, row=1)
-    async def completed_button(self, interaction, button):
-        await self._set_status(interaction, "COMPLETED")
+    @discord.ui.button(label="+1", style=discord.ButtonStyle.success, row=2)
+    async def increment_button(self, interaction, button):
+        await self._step_progress(interaction, +1)
 
-    @discord.ui.button(label="Planning", style=discord.ButtonStyle.secondary, row=1)
-    async def planning_button(self, interaction, button):
-        await self._set_status(interaction, "PLANNING")
+    @discord.ui.button(label="✅ Complete", style=discord.ButtonStyle.success, row=2)
+    async def complete_button(self, interaction, button):
+        try:
+            await interaction.response.defer()
+            await self.cog._apply_edit(
+                interaction, self.author_id, self.media, "complete", None
+            )
+        except Exception:
+            log.exception("AniList complete action failed")
+            try:
+                await interaction.followup.send(
+                    "Something went wrong updating that entry.", ephemeral=True
+                )
+            except Exception:
+                pass
 
-    @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary, row=1)
+    @discord.ui.button(label="✏️ Edit", style=discord.ButtonStyle.primary, row=2)
     async def edit_button(self, interaction, button):
         try:
             # Pre-load the viewer's current entry so the modal opens pre-filled.
@@ -1158,30 +1268,29 @@ class MediaView(discord.ui.View):
             except Exception:
                 pass
 
-    async def _set_status(self, interaction, status):
-        try:
-            data = await self.cog._graphql(
-                SAVE_ENTRY_QUERY,
-                {"mediaId": self.media.get("id"), "status": status},
-                token=self.token,
-            )
-            entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
-            if not entry:
-                return await interaction.response.send_message(
-                    "Could not update that entry.", ephemeral=True
-                )
+    async def _step_progress(self, interaction, delta):
+        """Bump the viewer's progress by ``delta``, clamped to [0, max]."""
 
-            name = (
-                (entry.get("media") or {}).get("title") or {}
-            ).get("romaji") or _media_title(self.media)
-            await interaction.response.send_message(
-                f"Set **{name}** to {entry.get('status')}.", ephemeral=True
+        try:
+            await interaction.response.defer()
+            entry, _ = await self.cog._viewer_entry(
+                interaction.user.id, self.media.get("id")
+            )
+            current = (entry or {}).get("progress") or 0
+            new = current + delta
+            if new < 0:
+                new = 0
+            maximum = _progress_max(self.media)
+            if maximum is not None and new > maximum:
+                new = maximum
+            await self.cog._apply_edit(
+                interaction, self.author_id, self.media, "progress", new
             )
         except Exception:
-            log.exception("AniList quick status update failed")
+            log.exception("AniList progress step failed")
             try:
-                await interaction.response.send_message(
-                    "Something went wrong updating that entry.", ephemeral=True
+                await interaction.followup.send(
+                    "Something went wrong updating progress.", ephemeral=True
                 )
             except Exception:
                 pass
@@ -1446,9 +1555,11 @@ class AniList(commands.Cog):
     async def _apply_edit(self, sender, user_id, media, field, value):
         """Apply a single ``field`` edit to ``user_id``'s list entry for ``media``.
 
-        ``field`` is one of ``progress``/``status``/``score``. ``sender`` may be
-        a Context or an Interaction; the type-aware confirmation is routed
-        accordingly (episode vs chapter).
+        ``field`` is one of ``progress``/``status``/``score``/``complete``.
+        ``complete`` sets the status to COMPLETED and, when the total is known,
+        the progress to it in a single mutation. ``sender`` may be a Context or
+        an Interaction; the type-aware confirmation is routed accordingly
+        (episode vs chapter).
         """
 
         token = await self._get_token(user_id)
@@ -1465,6 +1576,11 @@ class AniList(commands.Cog):
             variables["status"] = value
         elif field == "score":
             variables["score"] = value
+        elif field == "complete":
+            variables["status"] = "COMPLETED"
+            total = _progress_max(media)
+            if total:
+                variables["progress"] = total
 
         data = await self._graphql(SAVE_ENTRY_QUERY, variables, token=token)
         entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
@@ -1483,10 +1599,23 @@ class AniList(commands.Cog):
             )
         elif field == "status":
             message = f"Set **{name}** to {entry.get('status')}."
+        elif field == "complete":
+            progress = entry.get("progress")
+            if progress:
+                unit = _media_unit(media, plural=True)
+                message = f"Completed **{name}** ({progress} {unit})."
+            else:
+                message = f"Marked **{name}** as completed."
         else:
             message = f"Scored **{name}** {entry.get('score')}."
 
         await self._reply(sender, message)
+
+    async def _media_by_id(self, media_id):
+        """Fetch a lightweight media object by id (for the autocomplete path)."""
+
+        data = await self._graphql(ID_MEDIA_QUERY, {"id": media_id})
+        return ((data or {}).get("data") or {}).get("Media")
 
     async def _edit_flow(self, ctx, title, field, value):
         """Resolve ``title`` (disambiguating anime/manga) then apply an edit."""
@@ -1494,6 +1623,15 @@ class AniList(commands.Cog):
         token = await self._get_token(ctx.author.id)
         if not token:
             return await ctx.send("Link your account first with `/anilist login`.")
+
+        # Slash autocomplete supplies an "id:<n>" sentinel (collision-safe vs a
+        # numeric title like "86"): resolve it directly, skipping the search.
+        if title.startswith("id:") and title[3:].isdigit():
+            async with ctx.typing():
+                media = await self._media_by_id(int(title[3:]))
+            if not media:
+                return await ctx.send("Could not load that title.")
+            return await self._apply_edit(ctx, ctx.author.id, media, field, value)
 
         async with ctx.typing():
             candidates = await self._search_candidates(title)
@@ -1816,6 +1954,42 @@ class AniList(commands.Cog):
             return await ctx.send("Score must be zero or a positive number.")
 
         await self._edit_flow(ctx, title, "score", score)
+
+    @anilist_update.autocomplete("title")
+    @anilist_status.autocomplete("title")
+    @anilist_score.autocomplete("title")
+    async def _title_autocomplete(self, interaction, current):
+        """Live AniList search powering the update/status/score 'title' option.
+
+        Returns ``id:<mediaId>`` sentinels as choice values so a numeric title
+        (e.g. the anime "86") can never be mistaken for an id in the edit flow.
+        """
+
+        try:
+            current = (current or "").strip()
+            if len(current) < 2:
+                return []
+
+            data = await self._graphql(AUTOCOMPLETE_QUERY, {"search": current})
+            media = (
+                ((data or {}).get("data") or {}).get("Page") or {}
+            ).get("media") or []
+
+            choices = []
+            for item in media[:25]:
+                mtype = item.get("type") or "?"
+                romaji = (item.get("title") or {}).get("romaji") or "Unknown"
+                year = item.get("seasonYear") or "?"
+                label = f"[{mtype}] {romaji} ({year})"
+                choices.append(
+                    app_commands.Choice(
+                        name=label[:100], value=f"id:{item.get('id')}"
+                    )
+                )
+            return choices
+        except Exception:
+            log.exception("AniList title autocomplete failed")
+            return []
 
     @anilist.command(name="profile")
     @commands.cooldown(1, 10, commands.BucketType.user)
