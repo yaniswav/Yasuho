@@ -15,6 +15,12 @@ class TemporaryRooms(commands.Cog):
         self.bot = bot
         self.active_temp_rooms = {}  # Stores the active temp rooms
         self._locks = defaultdict(asyncio.Lock)  # Per-guild creation locks
+        self._cleanup_tasks = set()  # Outstanding fire-and-forget cleanup tasks
+
+    async def cog_unload(self):
+        """Cancel any outstanding per-room cleanup tasks on unload."""
+        for task in list(self._cleanup_tasks):
+            task.cancel()
 
     async def remove_empty_room(self, channel_id, guild_id, room_identifier):
         """Deletes the temporary room if it is empty and cleans up the dictionary."""
@@ -22,18 +28,22 @@ class TemporaryRooms(commands.Cog):
 
         while True:
             await asyncio.sleep(15)
-            temp_channel = self.bot.get_channel(channel_id)
-            if temp_channel is None:
-                # Channel already gone; just clean up the dictionary.
-                self.active_temp_rooms.pop((guild_id, room_identifier), None)
-                return
-            if len(temp_channel.members) == 0:
-                try:
-                    await temp_channel.delete()
-                except discord.HTTPException:
-                    pass
-                # Clean up the dictionary
-                self.active_temp_rooms.pop((guild_id, room_identifier), None)
+            try:
+                temp_channel = self.bot.get_channel(channel_id)
+                if temp_channel is None:
+                    # Channel already gone; just clean up the dictionary.
+                    self.active_temp_rooms.pop((guild_id, room_identifier), None)
+                    return
+                if len(temp_channel.members) == 0:
+                    try:
+                        await temp_channel.delete()
+                    except discord.HTTPException:
+                        pass
+                    # Clean up the dictionary
+                    self.active_temp_rooms.pop((guild_id, room_identifier), None)
+                    return
+            except Exception:
+                log.exception("Failed to clean up temporary room %s", channel_id)
                 return
 
     @commands.Cog.listener()
@@ -81,11 +91,13 @@ class TemporaryRooms(commands.Cog):
                         (member.guild.id, room_identifier)
                     ] = new_temp_channel.id
                     await member.move_to(new_temp_channel)
-                    asyncio.create_task(
+                    task = asyncio.create_task(
                         self.remove_empty_room(
                             new_temp_channel.id, member.guild.id, room_identifier
                         )
                     )
+                    self._cleanup_tasks.add(task)
+                    task.add_done_callback(self._cleanup_tasks.discard)
 
         except Exception:
             log.exception("Failed to handle auto-room creation")
@@ -104,38 +116,39 @@ class TemporaryRooms(commands.Cog):
         """Setup an auto-room system"""
 
         try:
-            existing_rooms = await self.bot.db_pool.fetch(
-                "SELECT channel_id FROM auto_room WHERE guild_id = $1", ctx.guild.id
-            )
-
-            if len(existing_rooms) >= 3:
-                return await ctx.send(
-                    "You have reached the maximum number of Auto-Rooms for this server."
+            async with ctx.typing():
+                existing_rooms = await self.bot.db_pool.fetch(
+                    "SELECT channel_id FROM auto_room WHERE guild_id = $1", ctx.guild.id
                 )
 
-            try:
+                if len(existing_rooms) >= 3:
+                    return await ctx.send(
+                        "You have reached the maximum number of Auto-Rooms for this server."
+                    )
 
-                cat = await ctx.guild.create_category_channel("Temp-Rooms")
-                chan = await ctx.guild.create_voice_channel(
-                    "Auto-Temp Room", category=cat
+                try:
+                    cat = await ctx.guild.create_category_channel("Temp-Rooms")
+                    chan = await ctx.guild.create_voice_channel(
+                        "Auto-Temp Room", category=cat
+                    )
+                except discord.HTTPException:
+                    return await ctx.send(
+                        "Something went wrong while creating your Auto-Room."
+                    )
+
+                await self.bot.db_pool.execute(
+                    "INSERT INTO auto_room(guild_id, channel_id) VALUES($1, $2);",
+                    ctx.guild.id,
+                    chan.id,
                 )
 
-            except discord.HTTPException:
-                return await ctx.send(
-                    "Something went wrong while creating your Auto-Room."
-                )
-
-            await self.bot.db_pool.execute(
-                "INSERT INTO auto_room(guild_id, channel_id) VALUES($1, $2);",
-                ctx.guild.id,
-                chan.id,
-            )
             await ctx.send(
                 "Successfully created your Auto-Room. You can rename category and channel to whatever you want."
             )
 
         except Exception:
             log.exception("Failed to set up auto-room")
+            await ctx.send("Something went wrong while creating your Auto-Room.")
 
     @autoroom.command(aliases=["delete", "del"])
     @commands.has_permissions(manage_channels=True)
@@ -157,31 +170,33 @@ class TemporaryRooms(commands.Cog):
 
         category = matching_categories[0]
 
-        removed_any = False
-        for channel in category.channels:
-            if isinstance(channel, discord.VoiceChannel):
-                try:
-
-                    fetch = await self.bot.db_pool.fetchval(
-                        "SELECT channel_id FROM auto_room WHERE channel_id = $1;",
-                        channel.id,
-                    )
-                    if fetch:
-                        await channel.delete()
-                        await self.bot.db_pool.execute(
-                            "DELETE FROM auto_room WHERE channel_id = $1;", channel.id
+        async with ctx.typing():
+            removed_any = False
+            for channel in category.channels:
+                if isinstance(channel, discord.VoiceChannel):
+                    try:
+                        fetch = await self.bot.db_pool.fetchval(
+                            "SELECT channel_id FROM auto_room WHERE channel_id = $1;",
+                            channel.id,
                         )
-                        removed_any = True
-                except discord.HTTPException:
-                    pass
+                        if fetch:
+                            await channel.delete()
+                            await self.bot.db_pool.execute(
+                                "DELETE FROM auto_room WHERE channel_id = $1;", channel.id
+                            )
+                            removed_any = True
+                    except discord.HTTPException:
+                        pass
 
-        if not removed_any:
-            return await ctx.send("That category is not an Auto-Room.")
+            if not removed_any:
+                return await ctx.send("That category is not an Auto-Room.")
 
-        try:
-            await category.delete()
-        except discord.HTTPException:
-            return await ctx.send("Something went wrong while deleting the category.")
+            try:
+                await category.delete()
+            except discord.HTTPException:
+                return await ctx.send(
+                    "Something went wrong while deleting the category."
+                )
 
         await ctx.send("Successfully removed the Auto-Room category and its channels.")
 

@@ -10,6 +10,9 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
+# Cap external HTTP calls so a slow or hung endpoint can't block an interaction.
+_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
+
 NASA_KEY = config_loader.get('APITokens', 'nasaKey')
 WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
 
@@ -25,77 +28,90 @@ class Meta(commands.Cog):
         """
         Shows Astronomy Picture of the Day.
         """
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}") as resp:
-
-                cont = await resp.json()
-
-                embed = discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
-                    title="Astronomy Picture of the Day",
-                    description=f'`{cont["title"]}` ● `{cont["date"]}`'
-                    f'\n\n{cont["explanation"]}',
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                    async with cs.get(
+                        f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}"
+                    ) as resp:
+                        if resp.status != 200:
+                            return await ctx.send(
+                                "Could not fetch the Astronomy Picture of the Day right now."
+                            )
+                        cont = await resp.json()
+            except Exception:
+                log.exception("APOD fetch failed")
+                return await ctx.send(
+                    "Could not fetch the Astronomy Picture of the Day right now."
                 )
 
-                if not cont["url"].endswith(("gif", "png", "jpg")):
-                    embed.add_field(
-                        name="**🔴 Watch**",
-                        value=f"**[➢ Watch this!]({cont['url']})**")
-                else:
-                    embed.set_image(url=cont["url"])
+            url = cont.get("url") or ""
+            embed = discord.Embed(
+                color=random_colour(),
+                timestamp=ctx.message.created_at,
+                title="Astronomy Picture of the Day",
+                description=f'`{cont.get("title", "Unknown")}` ● `{cont.get("date", "")}`'
+                f'\n\n{cont.get("explanation", "")}',
+            )
 
-                try:
-                    embed.add_field(
-                        name="**🖼 Download**",
-                        value=f'**[➢ HD Download]({cont["hdurl"]})**',
-                    )
-                except KeyError:
-                    pass
+            if url and not url.endswith(("gif", "png", "jpg")):
+                embed.add_field(
+                    name="**🔴 Watch**",
+                    value=f"**[➢ Watch this!]({url})**")
+            elif url:
+                embed.set_image(url=url)
 
-                embed.set_footer(
-                    text=f"APOD Requested by {ctx.author.name}",
-                    icon_url=ctx.author.display_avatar.url,
+            hdurl = cont.get("hdurl")
+            if hdurl:
+                embed.add_field(
+                    name="**🖼 Download**",
+                    value=f'**[➢ HD Download]({hdurl})**',
                 )
 
-                if ctx.interaction:
-                    return await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
+            embed.set_footer(
+                text=f"APOD Requested by {ctx.author.name}",
+                icon_url=ctx.author.display_avatar.url,
+            )
 
-                await ctx.send(
-                    embed=embed
-                )
+            await ctx.send(embed=embed)
 
     @commands.hybrid_command()
     @commands.guild_only()
     async def weather(self, ctx, city: str):
         """Shows the current weather for a given city."""
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric') as r:
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                    async with cs.get(
+                        f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric'
+                    ) as r:
+                        res = await r.json()
+            except Exception:
+                log.exception("Weather fetch failed")
+                return await ctx.send("Could not fetch the weather right now.")
 
-                res = await r.json()
+            if str(res.get("cod")) != "200":
+                return await ctx.send(res.get("message", "City not found."))
 
-                if str(res.get("cod")) != "200":
-                    return await ctx.send(res.get("message", "City not found."))
+            main = res.get("main") or {}
+            weather_list = res.get("weather") or [{}]
+            weather_main = weather_list[0].get("main", "Unknown")
+            weather_desc = weather_list[0].get("description", "")
+            clouds = (res.get("clouds") or {}).get("all", "?")
 
-                city_json = res["name"]
-                embed = discord.Embed(title=f"Temperature in {city_json}", color=random_colour(), timestamp=discord.utils.utcnow())
-                weather = res["weather"][0]["main"]
-                weather_desc = res["weather"][0]["description"]
-                current_temp = res['main']["temp"]
-                feel_like = res['main']["feels_like"]
-                temp_min = res['main']["temp_min"]
-                temp_max = res['main']["temp_max"]
-                pressure = res['main']["pressure"]
-                humidity = res['main']["humidity"]
-                clouds = res['clouds']["all"]
+            city_json = res.get("name", city)
+            embed = discord.Embed(title=f"Temperature in {city_json}", color=random_colour(), timestamp=discord.utils.utcnow())
+            current_temp = main.get("temp", "?")
+            feel_like = main.get("feels_like", "?")
+            temp_min = main.get("temp_min", "?")
+            temp_max = main.get("temp_max", "?")
+            pressure = main.get("pressure", "?")
+            humidity = main.get("humidity", "?")
 
-                embed.add_field(name="Weather Informations",
-                                value=f"```Weather status: {weather}, {weather_desc}\nCurrent temperature: {current_temp}°C\nFeel like: {feel_like}°C\nMinimum temperature: {temp_min}°C\nMax temperature {temp_max}°C\nPressure: {pressure}hPa\nHumidity: {humidity}%\nClouds: {clouds}%\n```", inline=True)
+            embed.add_field(name="Weather Informations",
+                            value=f"```Weather status: {weather_main}, {weather_desc}\nCurrent temperature: {current_temp}°C\nFeel like: {feel_like}°C\nMinimum temperature: {temp_min}°C\nMax temperature {temp_max}°C\nPressure: {pressure}hPa\nHumidity: {humidity}%\nClouds: {clouds}%\n```", inline=True)
 
-                if ctx.interaction:
-                    return await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
-
-                await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
 
 async def setup(bot):

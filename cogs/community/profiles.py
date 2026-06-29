@@ -94,18 +94,21 @@ class Profiles(commands.Cog):
         col = self.FIELDS[field]
         query = f"INSERT INTO profiles(user_id, {col}) VALUES($1, $2) ON CONFLICT (user_id) DO UPDATE SET {col} = $2"
 
-        try:
-            await self.bot.db_pool.execute(query, ctx.author.id, value)
-        except Exception:
-            log.exception("Failed to set field %s", field)
-            await ctx.send("Failed to update your profile, please try again later.")
-            return
+        async with ctx.typing():
+            try:
+                await self.bot.db_pool.execute(query, ctx.author.id, value)
+            except Exception:
+                log.exception("Failed to set field %s", field)
+                await ctx.send(
+                    "Failed to update your profile, please try again later."
+                )
+                return
 
-        embed = discord.Embed(
-            title="Profile updated", colour=random_colour()
-        )
-        embed.add_field(name=self.LABELS[col], value=value)
-        await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title="Profile updated", colour=random_colour()
+            )
+            embed.add_field(name=self.LABELS[col], value=value)
+            await ctx.send(embed=embed)
 
     @profile.command(name="clear")
     @commands.guild_only()
@@ -114,18 +117,21 @@ class Profiles(commands.Cog):
 
         query = """DELETE FROM profiles WHERE user_id = $1;"""
 
-        try:
-            await self.bot.db_pool.execute(query, ctx.author.id)
-        except Exception:
-            log.exception("Failed to clear profile")
-            await ctx.send("Failed to clear your profile, please try again later.")
-            return
+        async with ctx.typing():
+            try:
+                await self.bot.db_pool.execute(query, ctx.author.id)
+            except Exception:
+                log.exception("Failed to clear profile")
+                await ctx.send(
+                    "Failed to clear your profile, please try again later."
+                )
+                return
 
-        embed = discord.Embed(
-            title="Profile cleared", colour=random_colour()
-        )
-        embed.add_field(name="Your profile has been cleared.", value="​")
-        await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title="Profile cleared", colour=random_colour()
+            )
+            embed.add_field(name="Your profile has been cleared.", value="​")
+            await ctx.send(embed=embed)
 
 
 async def setup(bot):

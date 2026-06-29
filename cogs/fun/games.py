@@ -37,34 +37,48 @@ class TicTacToeButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         view: "TicTacToeView" = self.view
 
-        # Safety: ignore clicks on already-filled cells or finished games.
-        if view.board[self.index] is not None or view.is_finished():
-            return await interaction.response.defer()
+        try:
+            # Safety: ignore clicks on already-filled cells or finished games.
+            if view.board[self.index] is not None or view.is_finished():
+                return await interaction.response.defer()
 
-        # 1) Human plays X on the clicked cell.
-        view.mark(self.index, view.X, self)
-        result = view.check_state()
-
-        # 2) If the game is still going, the bot (O) answers.
-        if result is None:
-            move = view.best_move()
-            if move is not None:
-                view.mark(move, view.BOT_MARK, view.button_at(move))
+            # 1) Human plays X on the clicked cell.
+            view.mark(self.index, view.X, self)
             result = view.check_state()
 
-        # 3) Resolve the outcome and update the board in a single edit.
-        content = view.PROMPT
-        if result is not None:
-            view.disable_all()
-            view.stop()
-            if result == view.X:
-                content = "Tic-Tac-Toe: you win! ❌"
-            elif result == view.BOT_MARK:
-                content = "Tic-Tac-Toe: I win! ⭕ Better luck next time."
-            else:
-                content = "Tic-Tac-Toe: it's a draw!"
+            # 2) If the game is still going, the bot (O) answers.
+            if result is None:
+                move = view.best_move()
+                if move is not None:
+                    view.mark(move, view.BOT_MARK, view.button_at(move))
+                result = view.check_state()
 
-        await interaction.response.edit_message(content=content, view=view)
+            # 3) Resolve the outcome and update the board in a single edit.
+            content = view.PROMPT
+            if result is not None:
+                view.disable_all()
+                view.stop()
+                if result == view.X:
+                    content = "Tic-Tac-Toe: you win! ❌"
+                elif result == view.BOT_MARK:
+                    content = "Tic-Tac-Toe: I win! ⭕ Better luck next time."
+                else:
+                    content = "Tic-Tac-Toe: it's a draw!"
+
+            await interaction.response.edit_message(content=content, view=view)
+        except Exception:
+            log.exception("tic-tac-toe move failed")
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        "Something went wrong with that move.", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        "Something went wrong with that move.", ephemeral=True
+                    )
+            except Exception:
+                pass
 
 
 class TicTacToeView(discord.ui.View):

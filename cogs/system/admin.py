@@ -147,6 +147,9 @@ class Admin(commands.Cog):
     async def reload(self, ctx, extension=None):
         """Reloads a single extension, or all configured extensions."""
         if extension is None:
+            if ctx.interaction:
+                await ctx.interaction.response.defer(ephemeral=True)
+
             v, e = 0, 0
             for ext in config_loader.getlist("Extension", "Extensions"):
                 try:
@@ -158,9 +161,7 @@ class Admin(commands.Cog):
                     e += 1
 
             if ctx.interaction:
-                return await ctx.interaction.response.send_message(
-                    f"Reloaded {v} extensions, {e} fail.", ephemeral=True
-                )
+                return await ctx.send(f"Reloaded {v} extensions, {e} fail.")
 
             await ctx.message.add_reaction("\u2705")
             await ctx.send(f"Reloaded {v} extensions, {e} fail.")

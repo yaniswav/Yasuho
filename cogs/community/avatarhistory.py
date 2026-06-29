@@ -61,19 +61,25 @@ class AvatarHistoryView(discord.ui.View):
 
     async def _show(self, interaction, kind):
         await interaction.response.defer()
-        # Banners are not pushed by Discord, so grab one at view time too.
-        if kind == "banner":
-            await self.cog.capture_banner(self.member)
-        guild_id = self.guild.id if (kind == "guild" and self.guild) else None
-        embed, buf = await self.cog.build_payload(self.member, kind, guild_id)
-        self._set_active(kind)
-        if buf is None:
-            await self.message.edit(embed=embed, attachments=[], view=self)
-        else:
-            await self.message.edit(
-                embed=embed,
-                attachments=[discord.File(buf, "history.png")],
-                view=self,
+        try:
+            # Banners are not pushed by Discord, so grab one at view time too.
+            if kind == "banner":
+                await self.cog.capture_banner(self.member)
+            guild_id = self.guild.id if (kind == "guild" and self.guild) else None
+            embed, buf = await self.cog.build_payload(self.member, kind, guild_id)
+            self._set_active(kind)
+            if buf is None:
+                await self.message.edit(embed=embed, attachments=[], view=self)
+            else:
+                await self.message.edit(
+                    embed=embed,
+                    attachments=[discord.File(buf, "history.png")],
+                    view=self,
+                )
+        except Exception:
+            log.exception("failed to render avatar history (%s)", kind)
+            await interaction.followup.send(
+                "Something went wrong loading that history.", ephemeral=True
             )
 
     @discord.ui.button(label="Global")

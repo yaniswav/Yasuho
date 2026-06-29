@@ -15,6 +15,9 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
+# Cap outbound HTTP calls so a slow or hung endpoint can't block an interaction.
+_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
+
 regex = re.compile(
     r"^(?:http|ftp)s?://"  # http:// or https://
     r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain...
@@ -44,39 +47,47 @@ class Fun(commands.Cog):
         if not member:
             return await ctx.send("You can't hug the air...")
 
-        font = ImageFont.truetype("ressources/fonts/playtime.ttf", size=20)
-        im = Image.open("ressources/images/hug.gif")
+        hug_colour = self.hug_colour
+        author_name = ctx.author.display_name
+        member_name = member.display_name
 
-        frames = []
-        for frame in ImageSequence.Iterator(im):
-            # Make a copy of the frame
-            frame = frame.copy()
+        def _render():
+            font = ImageFont.truetype("ressources/fonts/playtime.ttf", size=20)
+            im = Image.open("ressources/images/hug.gif")
 
-            d = ImageDraw.Draw(frame)
-            d.text((30, 296), member.display_name, font=font, fill=self.hug_colour)
-            d.text((300, 310), ctx.author.display_name, font=font, fill=self.hug_colour)
-            del d
+            frames = []
+            for frame in ImageSequence.Iterator(im):
+                # Make a copy of the frame
+                frame = frame.copy()
 
-            # Save the modified frame into a BytesIO object
-            b = io.BytesIO()
-            frame.save(b, format="GIF", optimize=True)
-            b.seek(0)
-            frames.append(b)
+                d = ImageDraw.Draw(frame)
+                d.text((30, 296), member_name, font=font, fill=hug_colour)
+                d.text((300, 310), author_name, font=font, fill=hug_colour)
+                del d
 
-        # Create the final GIF in memory
-        final_gif = io.BytesIO()
-        with Image.open(frames[0]) as first_frame:
-            first_frame.save(
-                final_gif,
-                format="GIF",
-                save_all=True,
-                append_images=[Image.open(frame) for frame in frames[1:]],
-                loop=0,
-                optimize=True,
-            )
-        final_gif.seek(0)
+                # Save the modified frame into a BytesIO object
+                b = io.BytesIO()
+                frame.save(b, format="GIF", optimize=True)
+                b.seek(0)
+                frames.append(b)
 
-        await ctx.send(file=discord.File(final_gif, filename="hug.gif"))
+            # Create the final GIF in memory
+            final_gif = io.BytesIO()
+            with Image.open(frames[0]) as first_frame:
+                first_frame.save(
+                    final_gif,
+                    format="GIF",
+                    save_all=True,
+                    append_images=[Image.open(frame) for frame in frames[1:]],
+                    loop=0,
+                    optimize=True,
+                )
+            final_gif.seek(0)
+            return final_gif
+
+        async with ctx.typing():
+            final_gif = await self.bot.loop.run_in_executor(None, _render)
+            await ctx.send(file=discord.File(final_gif, filename="hug.gif"))
 
     @commands.hybrid_command()
     @commands.guild_only()
@@ -84,45 +95,48 @@ class Fun(commands.Cog):
     async def cat(self, ctx):
         """Sends a random cat image"""
 
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://api.thecatapi.com/v1/images/search/') as r:
-                res = await r.json()
-                try:
-                    url=(res[0]['url'])
-                    await ctx.send(url)
-                except Exception:
-                    log.exception("Failed to fetch cat image")
-                    await ctx.send(':warning: **ERROR !**', delete_after=3)
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                    async with cs.get('https://api.thecatapi.com/v1/images/search/') as r:
+                        res = await r.json()
+                        url=(res[0]['url'])
+                await ctx.send(url)
+            except Exception:
+                log.exception("Failed to fetch cat image")
+                await ctx.send(':warning: **ERROR !**', delete_after=3)
 
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def dog(self, ctx):
         """ Sends a random dog picture"""
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://random.dog/woof.json') as r:
-                res = await r.json()
-                try:
-                    url=(res['url'])
-                    await ctx.send(url)
-                except Exception:
-                    log.exception("Failed to fetch dog image")
-                    await ctx.send(':warning: **ERROR !**', delete_after=3)
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                    async with cs.get('https://random.dog/woof.json') as r:
+                        res = await r.json()
+                        url=(res['url'])
+                await ctx.send(url)
+            except Exception:
+                log.exception("Failed to fetch dog image")
+                await ctx.send(':warning: **ERROR !**', delete_after=3)
 
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def fox(self, ctx):
         """ Sends a random dog picture"""
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://randomfox.ca/floof/?ref=apilist.fun') as r:
-                res = await r.json()
-                try:
-                    url=(res['image'])
-                    await ctx.send(url)
-                except Exception:
-                    log.exception("Failed to fetch fox image")
-                    await ctx.send(':warning: **ERROR !**', delete_after=3)
+        async with ctx.typing():
+            try:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                    async with cs.get('https://randomfox.ca/floof/?ref=apilist.fun') as r:
+                        res = await r.json()
+                        url=(res['image'])
+                await ctx.send(url)
+            except Exception:
+                log.exception("Failed to fetch fox image")
+                await ctx.send(':warning: **ERROR !**', delete_after=3)
 
     @commands.hybrid_command()
     @commands.guild_only()

@@ -12,6 +12,8 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
+_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
+
 
 class SearchWeb(commands.Cog):
     """Commands that search the web and external APIs."""
@@ -126,7 +128,7 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession() as s:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as s:
                     async with s.get(
                         "https://osu.ppy.sh/api/get_user",
                         params={"k": key, "u": username},
@@ -161,7 +163,7 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession() as s:
+                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as s:
                     async with s.get(
                         f"https://api.mojang.com/users/profiles/minecraft/{username}"
                     ) as r:

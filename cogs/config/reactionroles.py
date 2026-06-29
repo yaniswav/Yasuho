@@ -38,25 +38,29 @@ class ReactionRoles(commands.Cog):
             await ctx.send("That doesn't look like a valid message ID.")
             return
 
-        try:
-            msg = await ctx.channel.fetch_message(mid)
-            await msg.add_reaction(emoji)
-        except Exception:
-            log.exception("Failed to pre-add reaction")
+        # Defer the slash interaction (and show a typing indicator for prefix)
+        # so the message fetch, reaction add and DB write can't blow the 3s
+        # interaction window.
+        async with ctx.typing():
+            try:
+                msg = await ctx.channel.fetch_message(mid)
+                await msg.add_reaction(emoji)
+            except Exception:
+                log.exception("Failed to pre-add reaction")
 
-        stored_emoji = emoji.replace("\uFE0F", "")
+            stored_emoji = emoji.replace("\uFE0F", "")
 
-        query = """
-            INSERT INTO reaction_roles
-            (message_id, emoji, role_id, guild_id)
-            VALUES
-            ($1, $2, $3, $4)
-            ON CONFLICT (message_id, emoji) DO UPDATE SET role_id = $3;
-            """
+            query = """
+                INSERT INTO reaction_roles
+                (message_id, emoji, role_id, guild_id)
+                VALUES
+                ($1, $2, $3, $4)
+                ON CONFLICT (message_id, emoji) DO UPDATE SET role_id = $3;
+                """
 
-        await self.bot.db_pool.execute(
-            query, mid, stored_emoji, role.id, ctx.guild.id
-        )
+            await self.bot.db_pool.execute(
+                query, mid, stored_emoji, role.id, ctx.guild.id
+            )
 
         embed = discord.Embed(
             title="Reaction role added",

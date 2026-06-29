@@ -42,24 +42,25 @@ class Moderation(commands.Cog):
         try:
             count = max(min(count, 25), 5)
 
-            if not ctx.guild.chunked:
-                await self.bot.request_offline_members(ctx.guild)
+            async with ctx.typing():
+                if not ctx.guild.chunked:
+                    await self.bot.request_offline_members(ctx.guild)
 
-            members = sorted(
-                ctx.guild.members, key=lambda m: m.joined_at, reverse=True
-            )[:count]
+                members = sorted(
+                    ctx.guild.members, key=lambda m: m.joined_at, reverse=True
+                )[:count]
 
-            e = discord.Embed(
-                title="New Members", colour=random_colour()
-            )
-
-            for member in members:
-                body = f"joined {discord.utils.format_dt(member.joined_at, 'R')}, created {discord.utils.format_dt(member.created_at, 'R')}"
-                e.add_field(
-                    name=f"{member} (ID: {member.id})", value=body, inline=False
+                e = discord.Embed(
+                    title="New Members", colour=random_colour()
                 )
 
-            await ctx.send(embed=e)
+                for member in members:
+                    body = f"joined {discord.utils.format_dt(member.joined_at, 'R')}, created {discord.utils.format_dt(member.created_at, 'R')}"
+                    e.add_field(
+                        name=f"{member} (ID: {member.id})", value=body, inline=False
+                    )
+
+                await ctx.send(embed=e)
 
         except Exception:
             log.exception("Failed to send new members embed")
@@ -262,6 +263,9 @@ class Moderation(commands.Cog):
                 return amsg.author.id == target.id
             return True
 
+        if ctx.interaction:
+            await ctx.interaction.response.defer()
+
         deleted = await ctx.channel.purge(limit=num, check=msgcheck)
         await ctx.send(
             f"{E_VERIF} Deleted **{len(deleted)}/{num}** possible messages for you.",
@@ -437,9 +441,10 @@ class Moderation(commands.Cog):
         # rank = discord.utils.get(ctx.guild.roles, role=role)
 
         if member == "-all":
-            for m in ctx.message.guild.members:
-                if not role in m.roles:
-                    await m.add_roles(role)
+            async with ctx.typing():
+                for m in ctx.message.guild.members:
+                    if not role in m.roles:
+                        await m.add_roles(role)
 
             return await ctx.send(
                 f"Added to all guilds members **`{role.name}`** role."
@@ -459,9 +464,10 @@ class Moderation(commands.Cog):
         """Remove a role to a specified member."""
 
         if member == "-all":
-            for m in ctx.message.guild.members:
-                if role in m.roles:
-                    await m.remove_roles(role)
+            async with ctx.typing():
+                for m in ctx.message.guild.members:
+                    if role in m.roles:
+                        await m.remove_roles(role)
 
             return await ctx.send(
                 f"Removed to all guilds members **`{role.name}`** role."

@@ -27,19 +27,29 @@ class Events(commands.Cog):
 
     @tasks.loop(seconds=20)
     async def change_status(self):
-        await self.bot.change_presence(
-            status=discord.Status.online,
-            activity=discord.CustomActivity(
-                type=discord.ActivityType.custom,
-                emoji=discord.PartialEmoji(name="🌺"),
-                name=next(self.status),
-            ),
-        )
+        try:
+            await self.bot.change_presence(
+                status=discord.Status.online,
+                activity=discord.CustomActivity(
+                    type=discord.ActivityType.custom,
+                    emoji=discord.PartialEmoji(name="🌺"),
+                    name=next(self.status),
+                ),
+            )
+        except Exception:
+            # Never let a one-off failure permanently stop the rotation;
+            # the next iteration will try again.
+            log.exception("status rotation failed")
 
     @change_status.before_loop
     async def before_change_status(self):
         log.info("Waiting for bot to be ready to set custom status.")
         await self.bot.wait_until_ready()
+
+    @change_status.error
+    async def change_status_error(self, error):
+        log.exception("status rotation loop crashed; restarting", exc_info=error)
+        self.change_status.restart()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):

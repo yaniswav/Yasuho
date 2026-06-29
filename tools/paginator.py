@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 import discord
 
 from .formats import random_colour
+
+log = logging.getLogger(__name__)
 
 
 def paginate_lines(lines, *, title=None, colour=None, per_page=10):
@@ -72,7 +76,19 @@ class Paginator(discord.ui.View):
     async def _go(self, interaction, index):
         self.index = max(0, min(index, len(self.embeds) - 1))
         self._sync()
-        await interaction.response.edit_message(embed=self.embeds[self.index], view=self)
+        try:
+            await interaction.response.edit_message(
+                embed=self.embeds[self.index], view=self
+            )
+        except Exception:
+            log.exception("paginator navigation failed")
+            if not interaction.response.is_done():
+                try:
+                    await interaction.response.send_message(
+                        "Couldn't turn the page, please try again.", ephemeral=True
+                    )
+                except Exception:
+                    log.exception("paginator navigation failed")
 
     @discord.ui.button(emoji="⏮️", style=discord.ButtonStyle.secondary)
     async def first_page(self, interaction, button):
@@ -94,8 +110,19 @@ class Paginator(discord.ui.View):
     async def stop_page(self, interaction, button):
         for child in self.children:
             child.disabled = True
-        await interaction.response.edit_message(view=self)
-        self.stop()
+        try:
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            log.exception("paginator navigation failed")
+            if not interaction.response.is_done():
+                try:
+                    await interaction.response.send_message(
+                        "Couldn't close the menu, please try again.", ephemeral=True
+                    )
+                except Exception:
+                    log.exception("paginator navigation failed")
+        finally:
+            self.stop()
 
     async def on_timeout(self):
         for child in self.children:
