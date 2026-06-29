@@ -11,7 +11,7 @@ You can add the bot to your server using this [invite link](https://invite.yasuh
 - **AniList 🍥** - anime/manga/character/studio lookup, trending/seasonal browse, account linking (OAuth) and list editing - all interactive (select menus, buttons, modals).
 - **Engagement 🎭** - starboard, reaction roles, welcome messages, AFK, temp voice rooms.
 - **Fun & tools 🎲** - games, image commands, polls, snipe, translate, wiki/lyrics, avatar history, and more.
-- **Music 🎶** - playback controls (currently on hold; wavelink is EOL).
+- **Music 🎶** - full playback with an interactive controller, via sonolink + a Lavalink v4 server (see ./setup-lavalink.sh).
 
 Commands work as both **prefix** (`y!`) and **slash** (`/`) where possible. Type `y!help` to browse.
 

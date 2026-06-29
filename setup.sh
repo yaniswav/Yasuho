@@ -24,12 +24,12 @@ DB_NAME="yasuho_db"
 DB_USER="yasuho"
 
 # ---- 1. Python + virtualenv + dependencies -------------------------------
-PYTHON="${PYTHON:-$(command -v python3.11 || command -v python3.10 || command -v python3 || true)}"
-[ -n "$PYTHON" ] || errx "No suitable Python found. Install python3.11 first."
+PYTHON="${PYTHON:-$(command -v python3.13 || command -v python3.12 || command -v python3.11 || command -v python3 || true)}"
+[ -n "$PYTHON" ] || errx "No suitable Python found. Install python3.12+ (the music backend sonolink needs 3.12+)."
 info "Using interpreter: $PYTHON ($("$PYTHON" --version 2>&1))"
-# discord.py 2.x needs Python 3.8+; the system 'python3' may be older.
+# discord.py needs Python 3.8+; the music backend (sonolink) needs 3.12+.
 "$PYTHON" -c 'import sys; sys.exit(0 if (3, 8) <= sys.version_info[:2] < (3, 14) else 1)' \
-    || errx "Python 3.8-3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.11 ./setup.sh"
+    || errx "Python 3.8-3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.13 ./setup.sh"
 
 if [ ! -d .venv ]; then
     info "Creating virtualenv (.venv)..."

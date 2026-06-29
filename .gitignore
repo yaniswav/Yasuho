@@ -17,6 +17,9 @@ config/bot.ini
 config/tokens.ini
 config.py
 
+# Lavalink server (jar + config downloaded by ./setup-lavalink.sh)
+lavalink/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

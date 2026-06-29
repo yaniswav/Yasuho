@@ -11,9 +11,5 @@ ignore = [
     "F405",  # name may be undefined from star import
 ]
 
-[lint.per-file-ignores]
-# Music cog is on hold (wavelink is EOL); don't gate CI on its known issues.
-"cogs/music.py" = ["F"]
-
 [lint.isort]
 known-local-folder = ["tools", "cogs"]

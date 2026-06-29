@@ -4,7 +4,7 @@ import os
 
 import asyncpg
 import discord
-import wavelink
+import sonolink
 from discord.ext import commands
 
 from tools.config_loader import config_loader
@@ -76,6 +76,9 @@ class Yasuho(commands.Bot):
 
         self.db_pool = db_pool
         self.default_prefix = DEFAULT_PREFIX
+        # sonolink client for music (Lavalink v4). Created here but only started
+        # in setup_hook, and only when [Lavalink] is configured.
+        self.sl_client = sonolink.Client(self)
         # In-memory caches for hot / rarely-changing data, loaded in setup_hook
         # and invalidated by the owning cogs (mirrors the prefixes cache).
         self.prefixes = {}
@@ -127,10 +130,8 @@ class Yasuho(commands.Bot):
             except Exception:
                 lavalink_pw = "youshallnotpass"
             try:
-                node = wavelink.Node(uri=lavalink_uri, password=lavalink_pw)
-                await asyncio.wait_for(
-                    wavelink.Pool.connect(client=self, nodes=[node]), timeout=8
-                )
+                self.sl_client.create_node(uri=lavalink_uri, password=lavalink_pw)
+                await self.sl_client.start()
             except Exception as e:
                 log.warning("Lavalink unavailable, music disabled: %s", e)
         else:
