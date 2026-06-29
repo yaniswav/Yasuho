@@ -9,7 +9,7 @@ if [ -x ./.venv/bin/python ]; then
     PY=./.venv/bin/python
 else
     PY="$(command -v python3.11 || command -v python3.10 || command -v python3)"
-    echo "[run] No .venv found — using $PY (run ./setup.sh to create one)."
+    echo "[run] No .venv found - using $PY (run ./setup.sh to create one)."
 fi
 
 while true; do

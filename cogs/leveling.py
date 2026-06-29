@@ -126,7 +126,7 @@ class Leveling(commands.Cog):
             member = ctx.guild.get_member(uid)
             name = member.display_name if member else f"User {uid}"
             level = self.level_for_xp(xp)
-            lines.append(f"**{index}.** {name} — level **{level}** ({xp} XP)")
+            lines.append(f"**{index}.** {name} - level **{level}** ({xp} XP)")
 
         embeds = paginate_lines(lines, title=f"Leaderboard | {ctx.guild.name}")
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)

@@ -115,7 +115,7 @@ class CategorySelect(discord.ui.Select):
 
     def __init__(self, options):
         super().__init__(
-            placeholder="Jump to a category…",
+            placeholder="Jump to a category...",
             min_values=1,
             max_values=1,
             options=options,
@@ -188,10 +188,10 @@ class HelpView(discord.ui.View):
             rendered.append(f"**{label}**")
             for command in commands_list:
                 doc = command.short_doc or "No description provided."
-                rendered.append(f"`{self.prefix}{command.qualified_name}` — {doc}")
+                rendered.append(f"`{self.prefix}{command.qualified_name}` - {doc}")
 
         notice = (
-            f"…more commands available. Use "
+            f"...more commands available. Use "
             f"`{self.prefix}help <command>` to see them."
         )
         budget = DESCRIPTION_LIMIT - (len(notice) + 1)
@@ -421,7 +421,7 @@ class YasuhoHelp(commands.HelpCommand):
         for category in categories:
             total += category["total"]
             lines.append(
-                f"{category['emoji']} **{category['name']}** — "
+                f"{category['emoji']} **{category['name']}** - "
                 f"{plural(category['total']):command}"
             )
 
@@ -498,7 +498,7 @@ class YasuhoHelp(commands.HelpCommand):
 
         if expand:
             value = "\n".join(
-                f"`{c.name}` — {c.short_doc or 'No description provided.'}"
+                f"`{c.name}` - {c.short_doc or 'No description provided.'}"
                 for c in subcommands
             )
             embed.add_field(name="Subcommands", value=value, inline=False)

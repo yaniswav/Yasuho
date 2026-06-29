@@ -12,7 +12,7 @@ import json
 # (table_name, id_value) -> settings dict
 _cache: dict = {}
 
-# Fixed table identifiers — never user input, so safe to interpolate into SQL.
+# Fixed table identifiers - never user input, so safe to interpolate into SQL.
 _USER = ("user_settings", "user_id")
 _GUILD = ("guild_settings", "guild_id")
 

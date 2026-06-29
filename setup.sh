@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Yasuho one-command setup (no Docker). Idempotent — safe to re-run.
+# Yasuho one-command setup (no Docker). Idempotent - safe to re-run.
 #
 # Provisions, on a fresh Linux host:
 #   1. a Python virtualenv (.venv) + all dependencies
@@ -29,15 +29,15 @@ PYTHON="${PYTHON:-$(command -v python3.11 || command -v python3.10 || command -v
 info "Using interpreter: $PYTHON ($("$PYTHON" --version 2>&1))"
 # discord.py 2.x needs Python 3.8+; the system 'python3' may be older.
 "$PYTHON" -c 'import sys; sys.exit(0 if (3, 8) <= sys.version_info[:2] < (3, 14) else 1)' \
-    || errx "Python 3.8–3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.11 ./setup.sh"
+    || errx "Python 3.8-3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.11 ./setup.sh"
 
 if [ ! -d .venv ]; then
-    info "Creating virtualenv (.venv)…"
+    info "Creating virtualenv (.venv)..."
     "$PYTHON" -m venv .venv || errx "Failed to create the virtualenv (try: sudo apt install ${PYTHON##*/}-venv)."
 fi
 VENV_PY="./.venv/bin/python"
 
-info "Installing dependencies (this can take a minute)…"
+info "Installing dependencies (this can take a minute)..."
 "$VENV_PY" -m pip install -q -U pip || warn "pip self-upgrade failed, continuing."
 "$VENV_PY" -m pip install -q -r requirements.txt || errx "Dependency install failed."
 
@@ -64,7 +64,7 @@ if command -v psql >/dev/null 2>&1; then
     pg() { sudo -u postgres psql -tAc "$1" 2>/dev/null; }
     if [ "$(pg "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'")" != "1" ]; then
         DB_PASS="$("$VENV_PY" -c 'import secrets; print(secrets.token_urlsafe(24))')"
-        info "Creating PostgreSQL role '${DB_USER}'…"
+        info "Creating PostgreSQL role '${DB_USER}'..."
         if sudo -u postgres psql -c "CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASS}';" >/dev/null; then
             sed -i "s|^[[:space:]]*PostgreSQL[[:space:]]*=.*|PostgreSQL = postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}|" config/bot.ini
             info "Wrote the database DSN into config/bot.ini."
@@ -72,12 +72,12 @@ if command -v psql >/dev/null 2>&1; then
             warn "Could not create the role (need sudo/postgres access?). Set the DSN in config/bot.ini manually."
         fi
     else
-        info "Role '${DB_USER}' already exists — keeping the existing DSN/password."
+        info "Role '${DB_USER}' already exists - keeping the existing DSN/password."
     fi
     if [ "$(pg "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'")" != "1" ]; then
-        info "Creating database '${DB_NAME}'…"
+        info "Creating database '${DB_NAME}'..."
         sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null \
-            || warn "Could not create the database — create it manually."
+            || warn "Could not create the database - create it manually."
     else
         info "Database '${DB_NAME}' already exists."
     fi
@@ -99,6 +99,6 @@ if [ -f config/bot.ini ] && grep -qE '^[[:space:]]*Token[[:space:]]*=[[:space:]]
 fi
 
 echo
-info "Setup complete. Optional features (AniList, lyrics, weather, top.gg…) need their keys in config/tokens.ini."
+info "Setup complete. Optional features (AniList, lyrics, weather, top.gg...) need their keys in config/tokens.ini."
 info "Start the bot with:  ./run.sh        (auto-restart loop)"
 info "The database schema is created automatically on first start."

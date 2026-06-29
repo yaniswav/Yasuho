@@ -22,7 +22,7 @@ class Info(commands.Cog):
         member = member or ctx.author
 
         embed = discord.Embed(
-            title=f"User info — {member}",
+            title=f"User info - {member}",
             colour=random_colour(),
         )
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -71,7 +71,7 @@ class Info(commands.Cog):
         voice_channels = len(guild.voice_channels)
 
         embed = discord.Embed(
-            title=f"Server info — {guild.name}",
+            title=f"Server info - {guild.name}",
             colour=random_colour(),
         )
         embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
@@ -102,7 +102,7 @@ class Info(commands.Cog):
         member = member or ctx.author
 
         embed = discord.Embed(
-            title=f"Avatar — {member}",
+            title=f"Avatar - {member}",
             colour=random_colour(),
         )
         embed.set_image(url=member.display_avatar.url)

@@ -8,7 +8,7 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
-# (key, label, default) — boolean per-user preferences. Add more entries here.
+# (key, label, default) - boolean per-user preferences. Add more entries here.
 PREFS = [
     ("help_expand", "Help: expand subcommands", False),
 ]

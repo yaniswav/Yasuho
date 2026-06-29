@@ -4,7 +4,7 @@ target-version = "py310"
 
 [lint]
 # Conservative, high-signal ruleset: real errors (pyflakes), syntax (E9), and
-# import sorting (isort) — not cosmetic style noise.
+# import sorting (isort) - not cosmetic style noise.
 select = ["F", "E9", "I", "W"]
 ignore = [
     "F403",  # 'from x import *' (only music.py legacy; allowed there)

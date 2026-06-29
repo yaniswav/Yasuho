@@ -486,7 +486,7 @@ class SeasonView(discord.ui.View):
 
             view = SeasonView(self.cog, media, self.author_id, season, year)
             view.message = await interaction.edit_original_response(
-                content=f"**{season.title()} {year} anime** — pick one for details:",
+                content=f"**{season.title()} {year} anime** - pick one for details:",
                 view=view,
             )
         except Exception:
@@ -674,7 +674,7 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
             and "status" not in variables
         ):
             return await interaction.response.send_message(
-                "Nothing to update — fill in status, progress and/or score.",
+                "Nothing to update - fill in status, progress and/or score.",
                 ephemeral=True,
             )
 
@@ -693,7 +693,7 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
             ).get("romaji") or _media_title(self.media)
             unit = _media_unit(self.media)
             await interaction.response.send_message(
-                f"Updated **{name}** — {unit} {entry.get('progress')}, "
+                f"Updated **{name}** - {unit} {entry.get('progress')}, "
                 f"score {entry.get('score')}.",
                 ephemeral=True,
             )
@@ -818,7 +818,7 @@ class MediaView(discord.ui.View):
 
     def characters_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} — Characters"
+        embed.title = f"{_media_title(self.media)} - Characters"
 
         edges = ((self.media.get("characters") or {}).get("edges")) or []
         lines = []
@@ -829,7 +829,7 @@ class MediaView(discord.ui.View):
                 continue
             role = edge.get("role")
             if role:
-                lines.append(f"**{role.title()}** — {name}")
+                lines.append(f"**{role.title()}** - {name}")
             else:
                 lines.append(name)
 
@@ -838,7 +838,7 @@ class MediaView(discord.ui.View):
 
     def relations_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} — Relations"
+        embed.title = f"{_media_title(self.media)} - Relations"
 
         edges = ((self.media.get("relations") or {}).get("edges")) or []
         lines = []
@@ -858,7 +858,7 @@ class MediaView(discord.ui.View):
 
     def recommendations_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} — Recommendations"
+        embed.title = f"{_media_title(self.media)} - Recommendations"
 
         nodes = ((self.media.get("recommendations") or {}).get("nodes")) or []
         lines = []
@@ -930,7 +930,7 @@ class MediaView(discord.ui.View):
     def stats_embed(self, viewer_entry=None, logged_in=False):
         media = self.media
         embed = self._base_embed()
-        embed.title = f"{_media_title(media)} — Stats"
+        embed.title = f"{_media_title(media)} - Stats"
 
         your_value = self._your_stats_value(viewer_entry, logged_in)
 
@@ -1508,7 +1508,7 @@ class AniList(commands.Cog):
 
         view = EditSelectView(self, candidates, ctx.author.id, field, value)
         view.message = await ctx.send(
-            content=f"Multiple matches for **{title}** — pick the right one:",
+            content=f"Multiple matches for **{title}** - pick the right one:",
             view=view,
         )
 
@@ -1546,7 +1546,7 @@ class AniList(commands.Cog):
 
             view = ResultView(self, candidates, ctx.author.id, media_type)
             view.message = await ctx.send(
-                content=f"Found {len(candidates)} results for **{search}** — "
+                content=f"Found {len(candidates)} results for **{search}** - "
                 "pick one:",
                 view=view,
             )
@@ -1564,7 +1564,7 @@ class AniList(commands.Cog):
 
             view = ResultView(self, media, ctx.author.id, media_type)
             view.message = await ctx.send(
-                content=f"**{label}** — pick one for details:", view=view
+                content=f"**{label}** - pick one for details:", view=view
             )
 
     @commands.hybrid_command()
@@ -1642,7 +1642,7 @@ class AniList(commands.Cog):
 
             view = SeasonView(self, media, ctx.author.id, season, year)
             view.message = await ctx.send(
-                content=f"**{season.title()} {year} anime** — pick one for details:",
+                content=f"**{season.title()} {year} anime** - pick one for details:",
                 view=view,
             )
 
@@ -1925,7 +1925,7 @@ class AniList(commands.Cog):
                         else media.get("episodes")
                     ) or "?"
                     lines.append(
-                        f"{name} — {entry.get('progress', 0)}/{total} {unit}"
+                        f"{name} - {entry.get('progress', 0)}/{total} {unit}"
                     )
 
             if not lines:

@@ -6,12 +6,12 @@ You can add the bot to your server using this [invite link](https://invite.yasuh
 
 ## Features
 
-- **Moderation 🛡️** — kick/ban/mute (durable), warns, purge, automod (anti-link/spam), modlog, blacklist.
-- **Leveling 📈** — message XP, rank and a paginated leaderboard.
-- **AniList 🍥** — anime/manga/character/studio lookup, trending/seasonal browse, account linking (OAuth) and list editing — all interactive (select menus, buttons, modals).
-- **Engagement 🎭** — starboard, reaction roles, welcome messages, AFK, temp voice rooms.
-- **Fun & tools 🎲** — games, image commands, polls, snipe, translate, wiki/lyrics, avatar history, and more.
-- **Music 🎶** — playback controls (currently on hold; wavelink is EOL).
+- **Moderation 🛡️** - kick/ban/mute (durable), warns, purge, automod (anti-link/spam), modlog, blacklist.
+- **Leveling 📈** - message XP, rank and a paginated leaderboard.
+- **AniList 🍥** - anime/manga/character/studio lookup, trending/seasonal browse, account linking (OAuth) and list editing - all interactive (select menus, buttons, modals).
+- **Engagement 🎭** - starboard, reaction roles, welcome messages, AFK, temp voice rooms.
+- **Fun & tools 🎲** - games, image commands, polls, snipe, translate, wiki/lyrics, avatar history, and more.
+- **Music 🎶** - playback controls (currently on hold; wavelink is EOL).
 
 Commands work as both **prefix** (`y!`) and **slash** (`/`) where possible. Type `y!help` to browse.
 
@@ -35,11 +35,11 @@ on first start (`schema.sql`).
 
 ### Manual configuration
 
-The real `config/bot.ini` and `config/tokens.ini` are **gitignored** (they hold secrets) — copy them from the
+The real `config/bot.ini` and `config/tokens.ini` are **gitignored** (they hold secrets) - copy them from the
 `*.template.ini` files and fill in:
 
 - `bot.ini` → `[Bot_Token] Token`, `[Database] PostgreSQL`, the cog list under `[Extension] Extensions`.
-- `tokens.ini` → optional feature keys: AniList (`clientId`/`clientSecret`), Genius lyrics, OpenWeather, NASA, top.gg…
+- `tokens.ini` → optional feature keys: AniList (`clientId`/`clientSecret`), Genius lyrics, OpenWeather, NASA, top.gg...
 
 ## Built With
 
@@ -49,6 +49,6 @@ The real `config/bot.ini` and `config/tokens.ini` are **gitignored** (they hold 
 
 ## Author
 
-* **yaniswav** — _Development and Hosting_ — [yaniswav](https://github.com/yaniswav)
+* **yaniswav** - _Development and Hosting_ - [yaniswav](https://github.com/yaniswav)
 
 [![Yasuho on top.gg](https://top.gg/api/widget/498580306773934081.svg)](https://top.gg/bot/498580306773934081)

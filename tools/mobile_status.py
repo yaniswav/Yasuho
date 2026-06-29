@@ -3,7 +3,7 @@
 Discord shows the mobile indicator when the gateway IDENTIFY payload reports a
 mobile client. discord.py has no official option for this, so we patch the
 gateway's send_as_json to rewrite the browser/device properties on the IDENTIFY
-op only. Purely cosmetic — it changes nothing about how the bot behaves.
+op only. Purely cosmetic - it changes nothing about how the bot behaves.
 """
 
 from __future__ import annotations

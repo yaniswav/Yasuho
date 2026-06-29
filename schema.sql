@@ -1,4 +1,4 @@
--- Yasuho — base database schema (PostgreSQL / asyncpg)
+-- Yasuho - base database schema (PostgreSQL / asyncpg)
 -- Reconstructed from every SQL query in the bot's cogs.
 --
 -- Apply to a fresh database, e.g.:

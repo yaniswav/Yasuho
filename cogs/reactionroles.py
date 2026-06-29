@@ -119,7 +119,7 @@ class ReactionRoles(commands.Cog):
             return
 
         lines = [
-            f"Message `{row['message_id']}` — {row['emoji']} → <@&{row['role_id']}>"
+            f"Message `{row['message_id']}` - {row['emoji']} → <@&{row['role_id']}>"
             for row in rows
         ]
         await Paginator(

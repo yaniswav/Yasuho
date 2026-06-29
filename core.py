@@ -63,7 +63,7 @@ class Yasuho(commands.Bot):
         log.info("Prefix count: %d", len(self.prefixes))
 
         # Connect to Lavalink for music. Non-fatal AND non-blocking: wavelink
-        # retries forever on failure, so we cap it with a timeout — if no
+        # retries forever on failure, so we cap it with a timeout - if no
         # Lavalink server answers, give up and start the bot without music.
         try:
             node = wavelink.Node(uri="http://0.0.0.0:2333", password="youshallnotpass")
