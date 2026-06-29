@@ -47,6 +47,17 @@ class Info(commands.Cog):
         embed.add_field(name="Role count", value=len(member.roles) - 1)
         embed.add_field(name="Is bot", value="Yes" if member.bot else "No")
 
+        # Banners require a REST fetch; show it and opportunistically archive it.
+        try:
+            full = await self.bot.fetch_user(member.id)
+            if full.banner:
+                embed.set_image(url=full.banner.url)
+            ah = self.bot.get_cog("AvatarHistory")
+            if ah:
+                await ah.capture_banner(member)
+        except Exception:
+            log.exception("failed to fetch/capture banner for %s", member.id)
+
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="serverinfo", aliases=["guildinfo", "si"])

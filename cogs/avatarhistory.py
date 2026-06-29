@@ -1,7 +1,6 @@
 import io
 import logging
 import math
-import time
 
 import discord
 from discord.ext import commands
@@ -11,34 +10,169 @@ from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
 
+# Human-readable titles and nouns per tracked image kind.
+KIND_TITLES = {
+    "global": "Global avatar history",
+    "guild": "Server avatar history",
+    "banner": "Banner history",
+}
+KIND_NOUNS = {"global": "global", "guild": "server", "banner": "banner"}
+
+
+class AvatarHistoryView(discord.ui.View):
+    """Lets the requester switch between global / server / banner history."""
+
+    def __init__(self, cog, ctx, member, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.ctx = ctx
+        self.member = member
+        self.guild = ctx.guild
+        self.message = None
+        # Per-guild avatars only make sense inside a guild.
+        if self.guild is None:
+            self.server_button.disabled = True
+        self._set_active("global")
+
+    def _set_active(self, kind):
+        self.global_button.style = (
+            discord.ButtonStyle.success
+            if kind == "global"
+            else discord.ButtonStyle.secondary
+        )
+        self.server_button.style = (
+            discord.ButtonStyle.success
+            if kind == "guild"
+            else discord.ButtonStyle.secondary
+        )
+        self.banner_button.style = (
+            discord.ButtonStyle.success
+            if kind == "banner"
+            else discord.ButtonStyle.secondary
+        )
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def _show(self, interaction, kind):
+        await interaction.response.defer()
+        # Banners are not pushed by Discord, so grab one at view time too.
+        if kind == "banner":
+            await self.cog.capture_banner(self.member)
+        guild_id = self.guild.id if (kind == "guild" and self.guild) else None
+        embed, buf = await self.cog.build_payload(self.member, kind, guild_id)
+        self._set_active(kind)
+        if buf is None:
+            await self.message.edit(embed=embed, attachments=[], view=self)
+        else:
+            await self.message.edit(
+                embed=embed,
+                attachments=[discord.File(buf, "history.png")],
+                view=self,
+            )
+
+    @discord.ui.button(label="Global")
+    async def global_button(self, interaction, button):
+        await self._show(interaction, "global")
+
+    @discord.ui.button(label="Server")
+    async def server_button(self, interaction, button):
+        await self._show(interaction, "guild")
+
+    @discord.ui.button(label="Banner")
+    async def banner_button(self, interaction, button):
+        await self._show(interaction, "banner")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
 
 class AvatarHistory(commands.Cog):
-    """Records users' avatar changes and builds a collage of their history."""
+    """Records users' avatar/banner changes and builds history collages."""
 
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_user_update(self, before, after):
-        if before.display_avatar.key == after.display_avatar.key:
+    async def _record(self, user_id, guild_id, kind, asset):
+        """Single recording path for every tracked image kind."""
+        if asset is None:
             return
-
         try:
-            data = await after.display_avatar.replace(
-                size=128, format="png"
-            ).read()
+            ref = asset.key
+            last = await self.bot.db_pool.fetchval(
+                "SELECT ref FROM avatar_history "
+                "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
+                "ORDER BY changed_at DESC LIMIT 1",
+                user_id,
+                kind,
+                guild_id,
+            )
+            if last == ref:
+                return
+
+            data = await asset.replace(size=256, format="png").read()
             await self.bot.db_pool.execute(
-                "INSERT INTO avatar_history(user_id, avatar) VALUES($1, $2)",
-                after.id,
+                "INSERT INTO avatar_history(user_id, guild_id, kind, ref, avatar) "
+                "VALUES($1, $2, $3, $4, $5)",
+                user_id,
+                guild_id,
+                kind,
+                ref,
                 data,
             )
             await self.bot.db_pool.execute(
-                "DELETE FROM avatar_history WHERE user_id = $1 AND id NOT IN "
-                "(SELECT id FROM avatar_history WHERE user_id = $1 ORDER BY changed_at DESC LIMIT 50)",
-                after.id,
+                "DELETE FROM avatar_history "
+                "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
+                "AND id NOT IN ("
+                "SELECT id FROM avatar_history "
+                "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
+                "ORDER BY changed_at DESC LIMIT 50)",
+                user_id,
+                kind,
+                guild_id,
             )
         except Exception:
-            log.exception("failed to record avatar change")
+            log.exception("failed to record %s image for user %s", kind, user_id)
+
+    @commands.Cog.listener()
+    async def on_user_update(self, before, after):
+        # Skip default avatars: only record when a custom avatar is set.
+        if after.avatar is not None:
+            await self._record(after.id, None, "global", after.avatar)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if after.guild_avatar is not None and (
+            before.guild_avatar is None
+            or before.guild_avatar.key != after.guild_avatar.key
+        ):
+            await self._record(
+                after.id, after.guild.id, "guild", after.guild_avatar
+            )
+
+    async def capture_banner(self, user):
+        """Best-effort banner capture (Discord never pushes banner changes)."""
+        try:
+            fetched = await self.bot.fetch_user(user.id)
+            if fetched.banner:
+                await self._record(user.id, None, "banner", fetched.banner)
+        except Exception:
+            log.exception("failed to capture banner for user %s", user.id)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        await self.capture_banner(member)
 
     @staticmethod
     def build_collage(images):
@@ -60,40 +194,58 @@ class AvatarHistory(commands.Cog):
         buf.seek(0)
         return buf
 
+    async def _collage_for(self, member, kind, guild_id):
+        """Fetch up to 50 rows for a kind and render them into a collage."""
+        rows = await self.bot.db_pool.fetch(
+            "SELECT avatar FROM avatar_history "
+            "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
+            "ORDER BY changed_at DESC LIMIT 50",
+            member.id,
+            kind,
+            guild_id,
+        )
+        if not rows:
+            return None
+        images = [bytes(r["avatar"]) for r in rows]
+        buf = await self.bot.loop.run_in_executor(
+            None, self.build_collage, images
+        )
+        return buf, len(images)
+
+    async def build_payload(self, member, kind, guild_id):
+        """Build the (embed, buffer) pair for a kind; buffer is None if empty."""
+        embed = discord.Embed(title=KIND_TITLES[kind], colour=random_colour())
+        embed.set_author(
+            name=f"{member} ({member.id})",
+            icon_url=member.display_avatar.url,
+        )
+        result = await self._collage_for(member, kind, guild_id)
+        if result is None:
+            embed.description = (
+                f"No {KIND_NOUNS[kind]} history recorded yet."
+            )
+            return embed, None
+        buf, count = result
+        embed.description = f"Showing `{count}` of up to `50` changes"
+        embed.set_image(url="attachment://history.png")
+        return embed, buf
+
     @commands.hybrid_command(aliases=["avh"])
     async def avatarhistory(self, ctx, member: discord.User = None):
-        """Build a collage of a user's past avatars."""
+        """Show a collage of a user's avatar / server avatar / banner history."""
 
         member = member or ctx.author
         async with ctx.typing():
-            start = time.perf_counter()
-            rows = await self.bot.db_pool.fetch(
-                "SELECT avatar FROM avatar_history WHERE user_id = $1 ORDER BY changed_at DESC LIMIT 50",
-                member.id,
-            )
-            if not rows:
-                return await ctx.send(
-                    f"No avatar history recorded for {member} yet."
+            view = AvatarHistoryView(self, ctx, member)
+            embed, buf = await self.build_payload(member, "global", None)
+            if buf is None:
+                view.message = await ctx.send(embed=embed, view=view)
+            else:
+                view.message = await ctx.send(
+                    embed=embed,
+                    file=discord.File(buf, "history.png"),
+                    view=view,
                 )
-            images = [bytes(r["avatar"]) for r in rows]
-            buf = await self.bot.loop.run_in_executor(
-                None, self.build_collage, images
-            )
-            elapsed = time.perf_counter() - start
-            embed = discord.Embed(
-                title="Avatar History",
-                colour=random_colour(),
-            )
-            embed.set_author(
-                name=f"{member} ({member.id})",
-                icon_url=member.display_avatar.url,
-            )
-            embed.description = (
-                f"Generating took `{elapsed:.2f}s`\n"
-                f"Showing `{len(images)}` of up to `50` changes"
-            )
-            embed.set_image(url="attachment://avatars.png")
-            await ctx.send(embed=embed, file=discord.File(buf, "avatars.png"))
 
 
 async def setup(bot):

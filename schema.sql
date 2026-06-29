@@ -149,14 +149,22 @@ CREATE TABLE IF NOT EXISTS profiles (
     steamid    TEXT
 );
 
--- Per-user avatar change history (raw PNG bytes, capped to ~50/user in code).  avatarhistory.py
+-- Per-user image history: global avatars, per-guild avatars and banners
+-- (raw PNG bytes, capped to ~50 per user/guild/kind in code).  avatarhistory.py
 CREATE TABLE IF NOT EXISTS avatar_history (
     id         BIGSERIAL   PRIMARY KEY,
     user_id    BIGINT      NOT NULL,
+    guild_id   BIGINT,                                 -- NULL for global avatars & banners
+    kind       TEXT        NOT NULL DEFAULT 'global',   -- 'global' | 'guild' | 'banner'
+    ref        TEXT,                                    -- asset key/hash, for de-duplication
     avatar     BYTEA       NOT NULL,
     changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS avatar_history_user_idx ON avatar_history (user_id, changed_at DESC);
+-- Migrate pre-existing installs (no-ops on a fresh database):
+ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS guild_id BIGINT;
+ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'global';
+ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS ref TEXT;
+CREATE INDEX IF NOT EXISTS avatar_history_user_idx ON avatar_history (user_id, kind, changed_at DESC);
 
 -- Per-user AniList OAuth access token, encrypted at rest (Fernet ciphertext;
 -- the key lives in config, never in the DB).  anilist.py
