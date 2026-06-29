@@ -186,6 +186,22 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     settings JSONB  NOT NULL DEFAULT '{}'::jsonb
 );
 
+-- Moderation cases / infractions: one row per mod action, numbered per guild.
+-- moderation.py (ban/kick/mute/warn create cases; case/cases/reason read/edit)
+CREATE TABLE IF NOT EXISTS cases (
+    id           BIGSERIAL   PRIMARY KEY,
+    guild_id     BIGINT      NOT NULL,
+    case_number  INTEGER     NOT NULL,            -- sequential per guild (#1, #2, ...)
+    user_id      BIGINT      NOT NULL,            -- the target
+    moderator_id BIGINT      NOT NULL,
+    action       TEXT        NOT NULL,            -- ban / kick / mute / warn / unban / ...
+    reason       TEXT,
+    expires      TIMESTAMPTZ,                     -- for tempban/tempmute (NULL = permanent)
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (guild_id, case_number)
+);
+CREATE INDEX IF NOT EXISTS cases_guild_user_idx ON cases (guild_id, user_id);
+
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
 -- ============================================================

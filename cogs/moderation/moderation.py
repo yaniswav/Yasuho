@@ -5,8 +5,10 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
+from tools import modactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
 
@@ -16,6 +18,252 @@ E_VERIF = config_loader.getstr("Emojis", "verif")
 def trim_reason(reason):
     """Truncate a moderation reason to 100 characters, appending an ellipsis when clipped."""
     return reason if len(reason) <= 100 else f"{reason[:100]}..."
+
+
+class ConfirmView(discord.ui.View):
+    """Author-restricted Confirm/Cancel prompt for dangerous moderation actions.
+
+    The invoker presses Confirm or Cancel; the caller waits on the view and reads
+    ``self.value`` (``True`` confirmed, ``False``/``None`` aborted).
+    """
+
+    def __init__(self, author_id, *, timeout=30):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.value = None
+        self.message = None
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def _finish(self, interaction, value):
+        self.value = value
+        for child in self.children:
+            child.disabled = True
+        try:
+            await interaction.response.edit_message(view=self)
+        except discord.HTTPException:
+            log.exception("Confirm view failed to update")
+        finally:
+            self.stop()
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction, button):
+        await self._finish(interaction, True)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+        await self._finish(interaction, False)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+class WarningsView(discord.ui.View):
+    """Author-restricted, paginated list of a member's warn-cases.
+
+    A dropdown selects a warn on the current page and the danger button removes
+    it (deletes the case row and decrements the member's ``warns_count``).
+    """
+
+    def __init__(self, cog, guild, member, warns, author_id, *, per_page=10, timeout=120):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.guild = guild
+        self.member = member
+        self.warns = list(warns)  # asyncpg Records, newest first
+        self.author_id = author_id
+        self.per_page = per_page
+        self.index = 0
+        self.selected = None
+        self.message = None
+
+        self.select = discord.ui.Select(
+            placeholder="Select a warn to remove...", row=0
+        )
+        self.select.callback = self._on_select
+        self.add_item(self.select)
+        self._rebuild()
+
+    @property
+    def page_count(self):
+        if not self.warns:
+            return 1
+        return (len(self.warns) + self.per_page - 1) // self.per_page
+
+    def _page_slice(self):
+        start = self.index * self.per_page
+        return self.warns[start : start + self.per_page]
+
+    def _mod_text(self, moderator_id):
+        mod = self.guild.get_member(moderator_id)
+        return mod.mention if mod else f"<@{moderator_id}>"
+
+    def embed(self):
+        embed = discord.Embed(
+            title=f"Warnings - {self.member}",
+            colour=modactions.action_colour("warn"),
+        )
+        embed.set_thumbnail(url=self.member.display_avatar.url)
+
+        page = self._page_slice()
+        if not page:
+            embed.description = "No warnings on record."
+        else:
+            lines = []
+            for warn in page:
+                reason = warn["reason"] or "*No reason provided*"
+                when = discord.utils.format_dt(warn["created_at"], "R")
+                lines.append(
+                    f"**Case #{warn['case_number']}** - {reason}\n"
+                    f"by {self._mod_text(warn['moderator_id'])} - {when}"
+                )
+            embed.description = "\n\n".join(lines)
+
+        embed.set_footer(
+            text=f"Page {self.index + 1}/{self.page_count} - {len(self.warns)} warn(s)"
+        )
+        return embed
+
+    def _rebuild(self):
+        """Refresh the select options and button states for the current page."""
+        page = self._page_slice()
+        options = []
+        for warn in page:
+            reason = warn["reason"] or "No reason"
+            options.append(
+                discord.SelectOption(
+                    label=f"Case #{warn['case_number']}",
+                    description=reason[:100],
+                    value=str(warn["case_number"]),
+                )
+            )
+
+        if options:
+            self.select.options = options
+            self.select.disabled = False
+        else:
+            self.select.options = [
+                discord.SelectOption(label="No warnings", value="none")
+            ]
+            self.select.disabled = True
+
+        self.selected = None
+        self.remove_warn.disabled = True
+        self.prev_page.disabled = self.index <= 0
+        self.next_page.disabled = self.index >= self.page_count - 1
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def _on_select(self, interaction):
+        try:
+            self.selected = int(self.select.values[0])
+            self.remove_warn.disabled = False
+            for option in self.select.options:
+                option.default = option.value == self.select.values[0]
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            log.exception("Warnings select failed")
+            if not interaction.response.is_done():
+                try:
+                    await interaction.response.send_message(
+                        "Couldn't select that warn, please try again.",
+                        ephemeral=True,
+                    )
+                except Exception:
+                    log.exception("Warnings select failed")
+
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.secondary, row=1)
+    async def prev_page(self, interaction, button):
+        await self._turn(interaction, self.index - 1)
+
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.secondary, row=1)
+    async def next_page(self, interaction, button):
+        await self._turn(interaction, self.index + 1)
+
+    async def _turn(self, interaction, index):
+        try:
+            self.index = max(0, min(index, self.page_count - 1))
+            self._rebuild()
+            await interaction.response.edit_message(embed=self.embed(), view=self)
+        except Exception:
+            log.exception("Warnings pagination failed")
+            if not interaction.response.is_done():
+                try:
+                    await interaction.response.send_message(
+                        "Couldn't turn the page, please try again.", ephemeral=True
+                    )
+                except Exception:
+                    log.exception("Warnings pagination failed")
+
+    @discord.ui.button(label="Remove warn", style=discord.ButtonStyle.danger, row=1)
+    async def remove_warn(self, interaction, button):
+        if self.selected is None:
+            return await interaction.response.send_message(
+                "Pick a warn from the dropdown first.", ephemeral=True
+            )
+
+        try:
+            await self.cog.bot.db_pool.execute(
+                "DELETE FROM cases WHERE guild_id = $1 AND user_id = $2 "
+                "AND action = 'warn' AND case_number = $3;",
+                self.guild.id,
+                self.member.id,
+                self.selected,
+            )
+            await self.cog.bot.db_pool.execute(
+                "UPDATE warns SET warns_count = GREATEST(warns_count - 1, 0) "
+                "WHERE guild_id = $1 AND user_id = $2;",
+                self.guild.id,
+                self.member.id,
+            )
+
+            removed = self.selected
+            self.warns = [
+                w for w in self.warns if w["case_number"] != removed
+            ]
+            if self.index >= self.page_count:
+                self.index = self.page_count - 1
+            self._rebuild()
+            await interaction.response.edit_message(
+                embed=self.embed(), view=self
+            )
+        except Exception:
+            log.exception("Failed to remove warn case")
+            if not interaction.response.is_done():
+                try:
+                    await interaction.response.send_message(
+                        "Couldn't remove that warn, please try again.",
+                        ephemeral=True,
+                    )
+                except Exception:
+                    log.exception("Failed to remove warn case")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
 
 
 class Moderation(commands.Cog):
@@ -30,6 +278,61 @@ class Moderation(commands.Cog):
             "week": 604800,
             "month": 2592000,
         }
+
+    async def _post_modlog(self, guild, embed):
+        """Funnel a mod-action embed to the guild's configured mod-log channel."""
+        ml = self.bot.get_cog("ModLog")
+        if ml is None:
+            return
+        try:
+            await ml.post_action(guild, embed)
+        except Exception:
+            log.exception("Failed to funnel mod action to mod-log")
+
+    def _case_record_embed(self, guild, row):
+        """Render a stored case row (DB record) as a consistent case embed.
+
+        Resolves the target/moderator from cache when possible and degrades to a
+        bare mention when they are no longer reachable.
+        """
+        action = row["action"]
+        verb = modactions.ACTION_VERBS.get(action, action.title())
+        embed = discord.Embed(
+            title=f"Case #{row['case_number']} - {verb}",
+            colour=modactions.action_colour(action),
+            timestamp=row["created_at"],
+        )
+
+        target = guild.get_member(row["user_id"]) or self.bot.get_user(
+            row["user_id"]
+        )
+        if target is not None:
+            embed.set_thumbnail(url=target.display_avatar.url)
+            user_value = f"{target.mention} (`{target.id}`)"
+        else:
+            user_value = f"<@{row['user_id']}> (`{row['user_id']}`)"
+
+        moderator = guild.get_member(row["moderator_id"]) or self.bot.get_user(
+            row["moderator_id"]
+        )
+        mod_value = (
+            moderator.mention if moderator else f"<@{row['moderator_id']}>"
+        )
+
+        embed.add_field(name="User", value=user_value)
+        embed.add_field(name="Moderator", value=mod_value)
+        embed.add_field(
+            name="Reason",
+            value=row["reason"] or "*No reason provided*",
+            inline=False,
+        )
+        if row["expires"] is not None:
+            embed.add_field(
+                name="Expires",
+                value=discord.utils.format_dt(row["expires"], "R"),
+            )
+        embed.set_footer(text=f"User ID: {row['user_id']}")
+        return embed
 
     @commands.hybrid_command(aliases=["newmembers"])
     @commands.guild_only()
@@ -75,30 +378,28 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        embedkick = discord.Embed(
-            color=random_colour(),
-            timestamp=ctx.message.created_at,
-            title=f"Kick | {ctx.author.name} has kicked {target.name}",
-        )
-        embedkick.set_thumbnail(url=target.display_avatar.url)
-        embedkick.add_field(
-            name="**🔴 Kick Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
-        )
-        embedkick.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
-
         try:
             await ctx.guild.kick(
                 target,
                 reason=f"{ctx.author}: {trim_reason(reason)}",
             )
-            await ctx.send(embed=embedkick)
-
         except Exception:
             log.exception("Failed to kick member")
-            await ctx.send(
+            return await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
+
+        num = await modactions.create_case(
+            self.bot.db_pool,
+            ctx.guild.id,
+            target.id,
+            ctx.author.id,
+            "kick",
+            reason,
+        )
+        embed = modactions.case_embed(num, "kick", target, ctx.author, reason)
+        await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
 
     @commands.hybrid_command(name="voicekick", aliases=["vkick", "voicek"])
     @commands.guild_only()
@@ -161,29 +462,58 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        embedban = discord.Embed(
-            color=random_colour(),
-            timestamp=ctx.message.created_at,
-            title=f"Ban | {ctx.author.name} has banned {target.name}",
+        confirm = discord.Embed(
+            title="Confirm ban",
+            description=(
+                f"Are you sure you want to ban {target.mention} "
+                f"(`{target.id}`)?"
+            ),
+            colour=modactions.action_colour("ban"),
         )
-        embedban.set_thumbnail(url=target.display_avatar.url)
-        embedban.add_field(
-            name="**🔴 Ban Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
-        )
-        embedban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
+        confirm.add_field(name="Reason", value=trim_reason(reason), inline=False)
+        confirm.set_thumbnail(url=target.display_avatar.url)
+
+        view = ConfirmView(ctx.author.id)
+        view.message = await ctx.send(embed=confirm, view=view)
+        await view.wait()
+
+        if not view.value:
+            aborted = discord.Embed(
+                title="Ban cancelled",
+                description=f"No action taken against {target.mention}.",
+                colour=modactions.action_colour("note"),
+            )
+            try:
+                await view.message.edit(embed=aborted, view=None)
+            except discord.HTTPException:
+                pass
+            return
 
         try:
             await ctx.guild.ban(
                 target,
                 reason=f"{ctx.author}: {trim_reason(reason)}",
             )
-            await ctx.send(embed=embedban)
         except Exception:
             log.exception("Failed to ban member")
-            await ctx.send(
+            return await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
+
+        num = await modactions.create_case(
+            self.bot.db_pool,
+            ctx.guild.id,
+            target.id,
+            ctx.author.id,
+            "ban",
+            reason,
+        )
+        embed = modactions.case_embed(num, "ban", target, ctx.author, reason)
+        try:
+            await view.message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
 
     @commands.hybrid_command(name="unban", aliases=["ub"])
     @commands.guild_only()
@@ -195,29 +525,28 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        embedunban = discord.Embed(
-            color=random_colour(),
-            timestamp=ctx.message.created_at,
-            title=f"Unban | {ctx.author.name} ❌🔨 {target.name}",
-        )
-        embedunban.set_thumbnail(url=target.display_avatar.url)
-        embedunban.add_field(
-            name="**🔴 Unban Info**",
-            value=f"Moderator: **{ctx.author.mention}**\nReason: **{trim_reason(reason)}**\nTime: **{ctx.message.created_at}**",
-        )
-        embedunban.set_footer(text=ctx.guild, icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
-
         try:
             await ctx.guild.unban(
                 target,
                 reason=f"{ctx.author}: {trim_reason(reason)}",
             )
-            await ctx.send(embed=embedunban)
         except Exception:
             log.exception("Failed to unban member")
-            await ctx.send(
+            return await ctx.send(
                 "**:x: Sorry, I am missing permissions to do this!**", delete_after=10
             )
+
+        num = await modactions.create_case(
+            self.bot.db_pool,
+            ctx.guild.id,
+            target.id,
+            ctx.author.id,
+            "unban",
+            reason,
+        )
+        embed = modactions.case_embed(num, "unban", target, ctx.author, reason)
+        await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
 
     @commands.hybrid_command(
         name="purge", aliases=["pg", "massclean", "massdelete", "prune"]
@@ -350,16 +679,24 @@ class Moderation(commands.Cog):
                     await user.add_roles(
                         mrole, reason=f"""Muted By: {ctx.author} for: {reason} """
                     )
-                    embed = discord.Embed(
-                        title="Done!",
-                        description=f":red_circle: {user} has been muted.",
-                        colour=random_colour(),
-                    )
 
                     query = """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
                     await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
 
-                    return await ctx.send(embed=embed)
+                    num = await modactions.create_case(
+                        self.bot.db_pool,
+                        ctx.guild.id,
+                        user.id,
+                        ctx.author.id,
+                        "mute",
+                        reason,
+                    )
+                    embed = modactions.case_embed(
+                        num, "mute", user, ctx.author, reason
+                    )
+                    await ctx.send(embed=embed)
+                    await self._post_modlog(ctx.guild, embed)
+                    return
 
                 except Exception:
                     log.exception("Failed to create mute role")
@@ -368,16 +705,23 @@ class Moderation(commands.Cog):
             await user.add_roles(
                 mutedrole, reason=f"""Muted By: {ctx.author} for: {reason} """
             )
-            embed = discord.Embed(
-                title="Done!",
-                description=f":red_circle: {user} has been muted.",
-                colour=random_colour(),
-            )
+
             query = (
                 """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
             )
             await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
+
+            num = await modactions.create_case(
+                self.bot.db_pool,
+                ctx.guild.id,
+                user.id,
+                ctx.author.id,
+                "mute",
+                reason,
+            )
+            embed = modactions.case_embed(num, "mute", user, ctx.author, reason)
             await ctx.send(embed=embed)
+            await self._post_modlog(ctx.guild, embed)
 
         except Exception:
             log.exception("Failed to mute member")
@@ -411,16 +755,23 @@ class Moderation(commands.Cog):
         try:
             mutedrole = discord.utils.get(ctx.guild.roles, id=role)
             await user.remove_roles(mutedrole, reason=f"""Unmuted by {ctx.author}""")
-            embed = discord.Embed(
-                title="Done!",
-                description=f":red_circle: {user.mention} has been un-muted.",
-                colour=random_colour(),
-            )
+
             query = (
                 """DELETE FROM mutedmembers WHERE mguild_id = $1 AND member_id = $2;"""
             )
             await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
+
+            num = await modactions.create_case(
+                self.bot.db_pool,
+                ctx.guild.id,
+                user.id,
+                ctx.author.id,
+                "unmute",
+                None,
+            )
+            embed = modactions.case_embed(num, "unmute", user, ctx.author, None)
             await ctx.send(embed=embed)
+            await self._post_modlog(ctx.guild, embed)
 
         except Exception as e:
             await ctx.send(e, delete_after=3)
@@ -438,12 +789,31 @@ class Moderation(commands.Cog):
     async def addrole(self, ctx, member, role: discord.Role):
         """Set a role to a specified member."""
 
-        # rank = discord.utils.get(ctx.guild.roles, role=role)
-
         if member == "-all":
+            confirm = discord.Embed(
+                title="Confirm mass role add",
+                description=(
+                    f"Add the **{role.name}** role to **all** members of this "
+                    "server? This can take a while."
+                ),
+                colour=modactions.action_colour("note"),
+            )
+            view = ConfirmView(ctx.author.id)
+            view.message = await ctx.send(embed=confirm, view=view)
+            await view.wait()
+
+            if not view.value:
+                try:
+                    await view.message.edit(
+                        content="Cancelled.", embed=None, view=None
+                    )
+                except discord.HTTPException:
+                    pass
+                return
+
             async with ctx.typing():
-                for m in ctx.message.guild.members:
-                    if not role in m.roles:
+                for m in ctx.guild.members:
+                    if role not in m.roles:
                         await m.add_roles(role)
 
             return await ctx.send(
@@ -464,8 +834,29 @@ class Moderation(commands.Cog):
         """Remove a role to a specified member."""
 
         if member == "-all":
+            confirm = discord.Embed(
+                title="Confirm mass role remove",
+                description=(
+                    f"Remove the **{role.name}** role from **all** members of "
+                    "this server? This can take a while."
+                ),
+                colour=modactions.action_colour("note"),
+            )
+            view = ConfirmView(ctx.author.id)
+            view.message = await ctx.send(embed=confirm, view=view)
+            await view.wait()
+
+            if not view.value:
+                try:
+                    await view.message.edit(
+                        content="Cancelled.", embed=None, view=None
+                    )
+                except discord.HTTPException:
+                    pass
+                return
+
             async with ctx.typing():
-                for m in ctx.message.guild.members:
+                for m in ctx.guild.members:
                     if role in m.roles:
                         await m.remove_roles(role)
 
@@ -522,7 +913,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
-    async def warn(self, ctx, member: discord.Member = None):
+    async def warn(self, ctx, member: discord.Member = None, *, reason: str = None):
         """Warn a member of the guild (auto-kick at 3 warns)"""
 
         if member is None:
@@ -535,38 +926,60 @@ class Moderation(commands.Cog):
 
         """
 
-        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
+        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id) or 0
+        new_count = fetch + 1
 
-        if not fetch:
-            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 1;"""
-            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
-            return await ctx.send(f"{member.mention} has been warned! [1 warn]")
+        # Every warn is recorded as its own case for history/auditing, while the
+        # warns_count row stays the source of truth for the auto-kick threshold.
+        num = await modactions.create_case(
+            self.bot.db_pool,
+            ctx.guild.id,
+            member.id,
+            ctx.author.id,
+            "warn",
+            reason,
+        )
 
-        elif fetch + 1 >= 3:
+        if new_count >= 3:
             query = """ INSERT INTO warns
                         (guild_id, user_id, warns_count)
                         VALUES
                         ($1, $2, 0) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 0;
                         """
             await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
+
+            embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
+            embed.add_field(
+                name="Auto-action", value="Reached 3 warns - kicked", inline=False
+            )
+
             try:
-                await member.kick()
-                await member.send("You have been kick from the server!")
-                return await ctx.send(
-                    f"{member.mention} has been kicked from the server!"
-                )
+                await member.kick(reason="Auto-kick: reached 3 warns")
             except Exception:
                 log.exception("Failed to kick member at 3 warns")
+                await ctx.send(embed=embed)
+                await self._post_modlog(ctx.guild, embed)
                 return await ctx.send(
-                    f"{member.mention} has 3 warns but I don't have permissions to kick him from the guild."
+                    f"{member.mention} has 3 warns but I don't have permissions "
+                    "to kick them from the guild."
                 )
 
-        else:
-            query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3;"""
-            await self.bot.db_pool.execute(
-                query, ctx.guild.id, member.id, fetch + 1
-            )
-            await ctx.send(f"{member.mention} has been warned! [{fetch + 1} warns]")
+            try:
+                await member.send("You have been kicked from the server!")
+            except Exception:
+                log.exception("Failed to DM kicked member")
+
+            await ctx.send(embed=embed)
+            await self._post_modlog(ctx.guild, embed)
+            return
+
+        query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3;"""
+        await self.bot.db_pool.execute(query, ctx.guild.id, member.id, new_count)
+
+        embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
+        embed.add_field(name="Warns", value=f"{new_count}/3", inline=False)
+        await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
 
     @commands.hybrid_command(aliases=["rmwarn", "removewarn"])
     @commands.guild_only()
@@ -595,6 +1008,106 @@ class Moderation(commands.Cog):
         await ctx.send(
             f"Removed {num} warn(s) for {member.mention}. [{fetch - num} warns]"
         )
+
+    @commands.hybrid_command(name="warnings", aliases=["warns"])
+    @commands.guild_only()
+    @commands.has_permissions(kick_members=True)
+    async def warnings(self, ctx, member: discord.Member = None):
+        """Interactively browse and remove a member's warnings."""
+
+        member = member or ctx.author
+
+        rows = await self.bot.db_pool.fetch(
+            "SELECT case_number, reason, moderator_id, created_at FROM cases "
+            "WHERE guild_id = $1 AND user_id = $2 AND action = 'warn' "
+            "ORDER BY case_number DESC;",
+            ctx.guild.id,
+            member.id,
+        )
+
+        view = WarningsView(self, ctx.guild, member, rows, ctx.author.id)
+        view.message = await ctx.send(embed=view.embed(), view=view)
+
+    @commands.hybrid_command(name="case")
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def case(self, ctx, number: int):
+        """Show a single moderation case by its number."""
+
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT * FROM cases WHERE guild_id = $1 AND case_number = $2;",
+            ctx.guild.id,
+            number,
+        )
+        if row is None:
+            return await ctx.send(f"No case #{number} found in this server.")
+
+        await ctx.send(embed=self._case_record_embed(ctx.guild, row))
+
+    @commands.hybrid_command(name="cases", aliases=["history"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def cases(self, ctx, member: discord.Member = None):
+        """Paginated moderation case history (optionally filtered to a member)."""
+
+        if member is None:
+            rows = await self.bot.db_pool.fetch(
+                "SELECT case_number, user_id, action, reason, created_at FROM cases "
+                "WHERE guild_id = $1 ORDER BY case_number DESC;",
+                ctx.guild.id,
+            )
+            title = f"Case history - {ctx.guild.name}"
+        else:
+            rows = await self.bot.db_pool.fetch(
+                "SELECT case_number, user_id, action, reason, created_at FROM cases "
+                "WHERE guild_id = $1 AND user_id = $2 ORDER BY case_number DESC;",
+                ctx.guild.id,
+                member.id,
+            )
+            title = f"Case history - {member}"
+
+        if not rows:
+            return await ctx.send("No cases on record.")
+
+        lines = []
+        for row in rows:
+            verb = modactions.ACTION_VERBS.get(
+                row["action"], row["action"].title()
+            )
+            reason = row["reason"] or "No reason"
+            if len(reason) > 60:
+                reason = f"{reason[:57]}..."
+            when = discord.utils.format_dt(row["created_at"], "d")
+            lines.append(
+                f"`#{row['case_number']}` **{verb}** <@{row['user_id']}> "
+                f"- {reason} ({when})"
+            )
+
+        embeds = paginate_lines(
+            lines, title=title, colour=modactions.action_colour("note")
+        )
+        await Paginator(embeds, author_id=ctx.author.id).start(ctx)
+
+    @commands.hybrid_command(name="reason")
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def reason(self, ctx, case_number: int, *, new_reason: str):
+        """Update the reason recorded on an existing case."""
+
+        row = await self.bot.db_pool.fetchrow(
+            "UPDATE cases SET reason = $3 "
+            "WHERE guild_id = $1 AND case_number = $2 RETURNING *;",
+            ctx.guild.id,
+            case_number,
+            new_reason,
+        )
+        if row is None:
+            return await ctx.send(f"No case #{case_number} found in this server.")
+
+        embed = self._case_record_embed(ctx.guild, row)
+        embed.add_field(name="Updated by", value=ctx.author.mention, inline=False)
+        await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
 
 
 async def setup(bot):
