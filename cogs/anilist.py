@@ -54,6 +54,11 @@ query ($id: Int, $search: String, $type: MediaType) {
     recommendations(sort: RATING_DESC, perPage: 10) {
       nodes { mediaRecommendation { id title { romaji } format } }
     }
+    rankings { rank type context allTime }
+    stats {
+      scoreDistribution { score amount }
+      statusDistribution { status amount }
+    }
   }
 }
 """
@@ -178,6 +183,24 @@ query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
 }
 """
 
+# The authenticated viewer's own list entry for a media. ``mediaListEntry`` is
+# only resolved per-viewer when the request carries that user's OAuth token.
+MEDIA_ENTRY_QUERY = """
+query ($id: Int) {
+  Media(id: $id) {
+    mediaListEntry {
+      status
+      score
+      progress
+      progressVolumes
+      repeat
+      startedAt { year month day }
+      completedAt { year month day }
+    }
+  }
+}
+"""
+
 VALID_STATUSES = {
     "CURRENT",
     "PLANNING",
@@ -231,6 +254,59 @@ def _media_unit(media, *, plural=False):
 
     word = "chapter" if is_manga else "episode"
     return word + "s" if plural else word
+
+
+def _format_ranking(ranking):
+    """Format an AniList ranking dict as ``"#3 Most Popular (all time)"``.
+
+    Returns ``None`` when the ranking lacks a rank or context to display.
+    """
+
+    rank = ranking.get("rank")
+    context = (ranking.get("context") or "").strip()
+    if not rank or not context:
+        return None
+
+    if ranking.get("allTime") and "all time" in context.lower():
+        label = re.sub(r"\s*all time", "", context, flags=re.IGNORECASE).strip()
+        label = f"{label.title()} (all time)"
+    else:
+        label = context.title()
+    return f"#{rank} {label}"
+
+
+def _format_fuzzy_date(date):
+    """Format an AniList fuzzy date dict (year/month/day) as ``YYYY-MM-DD``.
+
+    Month and day may be missing; returns ``None`` when there is no year.
+    """
+
+    if not date:
+        return None
+    year = date.get("year")
+    if not year:
+        return None
+    month = date.get("month")
+    day = date.get("day")
+    if month and day:
+        return f"{year:04d}-{month:02d}-{day:02d}"
+    if month:
+        return f"{year:04d}-{month:02d}"
+    return str(year)
+
+
+def _format_score(score):
+    """Render a raw AniList score, dropping a trailing ``.0`` on whole numbers."""
+
+    if score is None:
+        return None
+    try:
+        value = float(score)
+    except (TypeError, ValueError):
+        return str(score)
+    if value.is_integer():
+        return str(int(value))
+    return str(score)
 
 
 def _current_season(now=None):
@@ -302,6 +378,12 @@ class ResultSelect(discord.ui.Select):
             )
 
         try:
+            # Remember the menu we came from so the MediaView can offer "Back".
+            parent_view = self.view
+            parent_content = (
+                interaction.message.content if interaction.message else None
+            )
+
             await interaction.response.defer()
             data = await self.cog._graphql(
                 MEDIA_QUERY, {"id": int(self.values[0])}
@@ -313,7 +395,14 @@ class ResultSelect(discord.ui.Select):
                 )
 
             token = await self.cog._get_token(self.author_id)
-            view = MediaView(self.cog, media, self.author_id, token=token)
+            view = MediaView(
+                self.cog,
+                media,
+                self.author_id,
+                token=token,
+                parent_view=parent_view,
+                parent_content=parent_content,
+            )
             view.message = await interaction.edit_original_response(
                 content=None, embed=view.overview_embed(), view=view
             )
@@ -512,8 +601,15 @@ class EditSelectView(discord.ui.View):
 
 
 class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
-    """Collect a new progress and/or score for a list entry."""
+    """Collect a new status/progress/score, pre-filled from the user's entry."""
 
+    status = discord.ui.TextInput(
+        label="Status",
+        placeholder="CURRENT / PLANNING / COMPLETED / DROPPED / PAUSED / REPEATING",
+        required=False,
+        style=discord.TextStyle.short,
+        max_length=12,
+    )
     progress = discord.ui.TextInput(
         label="Progress (episode/chapter)",
         required=False,
@@ -521,19 +617,33 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
         max_length=6,
     )
     score = discord.ui.TextInput(
-        label="Score (0-100)",
+        label="Score",
         required=False,
-        max_length=5,
+        max_length=6,
     )
 
-    def __init__(self, cog, media, token):
+    def __init__(self, cog, media, token, entry=None):
         super().__init__()
         self.cog = cog
         self.media = media
         self.token = token
 
+        # Pre-fill each field from the viewer's existing entry, if any. The
+        # TextInputs are deep-copied per instance, so these defaults never leak.
+        entry = entry or {}
+        current_status = entry.get("status")
+        if current_status:
+            self.status.default = current_status
+        current_progress = entry.get("progress")
+        if current_progress is not None:
+            self.progress.default = str(current_progress)
+        current_score = _format_score(entry.get("score"))
+        if current_score and current_score != "0":
+            self.score.default = current_score
+
     async def on_submit(self, interaction):
         variables = {"mediaId": self.media.get("id")}
+        status_raw = (self.status.value or "").strip()
         progress_raw = (self.progress.value or "").strip()
         score_raw = (self.score.value or "").strip()
 
@@ -548,9 +658,23 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
                 ephemeral=True,
             )
 
-        if "progress" not in variables and "score" not in variables:
+        if status_raw:
+            status = status_raw.upper()
+            if status not in VALID_STATUSES:
+                return await interaction.response.send_message(
+                    "Status must be one of: "
+                    + ", ".join(sorted(VALID_STATUSES)) + ".",
+                    ephemeral=True,
+                )
+            variables["status"] = status
+
+        if (
+            "progress" not in variables
+            and "score" not in variables
+            and "status" not in variables
+        ):
             return await interaction.response.send_message(
-                "Nothing to update — fill in progress and/or score.",
+                "Nothing to update — fill in status, progress and/or score.",
                 ephemeral=True,
             )
 
@@ -586,13 +710,32 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
 class MediaView(discord.ui.View):
     """Tabbed view over a full media object with optional list actions."""
 
-    def __init__(self, cog, media, author_id, token=None, timeout=180):
+    def __init__(
+        self,
+        cog,
+        media,
+        author_id,
+        token=None,
+        parent_view=None,
+        parent_embed=None,
+        parent_content=None,
+        timeout=180,
+    ):
         super().__init__(timeout=timeout)
         self.cog = cog
         self.media = media
         self.author_id = author_id
         self.token = token
+        self.parent_view = parent_view
+        self.parent_embed = parent_embed
+        self.parent_content = parent_content
         self.message = None
+
+        # The "Back" button (row 2) only makes sense when we came from a menu.
+        if self.parent_view is None:
+            for child in list(self.children):
+                if getattr(child, "row", None) == 2:
+                    self.remove_item(child)
 
         # The quick-action row only makes sense for linked users.
         if self.token is None:
@@ -731,6 +874,189 @@ class MediaView(discord.ui.View):
         embed.description = "\n".join(lines) if lines else "No recommendations."
         return embed
 
+    def _your_stats_value(self, viewer_entry, logged_in):
+        """Build the "Your stats" field text for the authenticated viewer."""
+
+        if not logged_in:
+            return (
+                "🔗 Link your AniList with `/anilist login` to see your "
+                "personal stats."
+            )
+        if not viewer_entry:
+            return "Not on your list yet."
+
+        watch_word = (
+            "Reading" if _media_unit(self.media) == "chapter" else "Watching"
+        )
+        labels = {
+            "CURRENT": watch_word,
+            "PLANNING": "Planning",
+            "COMPLETED": "Completed",
+            "DROPPED": "Dropped",
+            "PAUSED": "Paused",
+            "REPEATING": "Repeating",
+        }
+
+        lines = ["On your list ✓"]
+        status = viewer_entry.get("status")
+        if status:
+            lines.append(f"Status: {labels.get(status, str(status).title())}")
+
+        score = _format_score(viewer_entry.get("score"))
+        if score and score != "0":
+            lines.append(f"Your score: {score}")
+
+        progress = viewer_entry.get("progress")
+        if progress is not None:
+            total = (
+                self.media.get("chapters") or self.media.get("episodes") or "?"
+            )
+            unit = _media_unit(self.media, plural=True)
+            lines.append(f"Progress: {progress}/{total} {unit}")
+
+        repeat = viewer_entry.get("repeat")
+        if repeat:
+            lines.append(f"Repeats: {repeat}")
+
+        started = _format_fuzzy_date(viewer_entry.get("startedAt"))
+        if started:
+            lines.append(f"Started: {started}")
+        completed = _format_fuzzy_date(viewer_entry.get("completedAt"))
+        if completed:
+            lines.append(f"Completed: {completed}")
+
+        return "\n".join(lines)
+
+    def stats_embed(self, viewer_entry=None, logged_in=False):
+        media = self.media
+        embed = self._base_embed()
+        embed.title = f"{_media_title(media)} — Stats"
+
+        your_value = self._your_stats_value(viewer_entry, logged_in)
+
+        mean = media.get("meanScore")
+        average = media.get("averageScore")
+        popularity = media.get("popularity")
+        favourites = media.get("favourites")
+
+        stats = media.get("stats") or {}
+        score_dist = stats.get("scoreDistribution") or []
+        status_dist = stats.get("statusDistribution") or []
+        rankings = media.get("rankings") or []
+
+        # Some media (e.g. unreleased titles) carry no usable stats at all.
+        if not any(
+            (
+                mean is not None,
+                average is not None,
+                popularity is not None,
+                favourites is not None,
+                score_dist,
+                status_dist,
+                rankings,
+            )
+        ):
+            embed.description = "No stats available."
+            embed.add_field(name="👤 Your stats", value=your_value, inline=False)
+            return embed
+
+        if mean is not None:
+            embed.add_field(name="Mean score", value=f"{mean}/100", inline=True)
+        if average is not None:
+            embed.add_field(
+                name="Average score", value=f"{average}/100", inline=True
+            )
+        if popularity is not None:
+            embed.add_field(
+                name="Popularity", value=f"{popularity:,} followers", inline=True
+            )
+        if favourites is not None:
+            embed.add_field(
+                name="Favourites", value=f"{favourites:,}", inline=True
+            )
+
+        # Score distribution as a compact monospace bar chart.
+        valid_scores = [
+            d for d in score_dist if d.get("score") is not None
+        ]
+        if valid_scores:
+            max_amount = max((d.get("amount") or 0) for d in valid_scores) or 1
+            lines = []
+            for d in sorted(valid_scores, key=lambda x: x.get("score") or 0):
+                amount = d.get("amount") or 0
+                filled = round((amount / max_amount) * 12)
+                if amount and not filled:
+                    filled = 1
+                bar = "█" * filled
+                lines.append(f"{str(d.get('score')).rjust(3)} │ {bar} {amount}")
+            embed.add_field(
+                name="Score distribution",
+                value="```\n" + "\n".join(lines) + "\n```",
+                inline=False,
+            )
+
+        # Status distribution with friendly labels.
+        if status_dist:
+            labels = {
+                "CURRENT": "Watching",
+                "PLANNING": "Planning",
+                "COMPLETED": "Completed",
+                "DROPPED": "Dropped",
+                "PAUSED": "Paused",
+                "REPEATING": "Repeating",
+            }
+            order = [
+                "CURRENT",
+                "PLANNING",
+                "COMPLETED",
+                "DROPPED",
+                "PAUSED",
+                "REPEATING",
+            ]
+            by_status = {
+                d.get("status"): (d.get("amount") or 0) for d in status_dist
+            }
+            lines = []
+            for status in order:
+                if status in by_status:
+                    lines.append(
+                        f"{labels[status]}: {by_status[status]:,}"
+                    )
+            for status, amount in by_status.items():
+                if status not in order:
+                    lines.append(
+                        f"{str(status).title()}: {amount:,}"
+                    )
+            if lines:
+                embed.add_field(
+                    name="Status distribution",
+                    value="\n".join(lines),
+                    inline=False,
+                )
+
+        # A few meaningful rankings: all-time placements plus the best
+        # contextual (seasonal/yearly) ones.
+        if rankings:
+            all_time = [r for r in rankings if r.get("allTime")]
+            contextual = sorted(
+                (r for r in rankings if not r.get("allTime")),
+                key=lambda r: r.get("rank") or 9999,
+            )
+            lines = []
+            for ranking in all_time + contextual[:2]:
+                formatted = _format_ranking(ranking)
+                if formatted:
+                    lines.append(formatted)
+            if lines:
+                embed.add_field(
+                    name="Rankings",
+                    value="\n".join(lines[:5]),
+                    inline=False,
+                )
+
+        embed.add_field(name="👤 Your stats", value=your_value, inline=False)
+        return embed
+
     async def _show(self, interaction, builder):
         try:
             embed = builder()
@@ -760,6 +1086,44 @@ class MediaView(discord.ui.View):
     async def recommendations_button(self, interaction, button):
         await self._show(interaction, self.recommendations_embed)
 
+    @discord.ui.button(label="📊 Stats", style=discord.ButtonStyle.secondary, row=0)
+    async def stats_button(self, interaction, button):
+        try:
+            viewer_entry, logged_in = await self.cog._viewer_entry(
+                interaction.user.id, self.media.get("id")
+            )
+            embed = self.stats_embed(
+                viewer_entry=viewer_entry, logged_in=logged_in
+            )
+        except Exception:
+            log.exception("AniList stats section failed")
+            return await interaction.response.send_message(
+                "Could not render that section.", ephemeral=True
+            )
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    # -- back to the originating menu (row 2, only when we have a parent) --
+    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary, row=2)
+    async def back_button(self, interaction, button):
+        try:
+            # Re-link the restored menu to this message so it stays interactive.
+            self.parent_view.message = interaction.message
+            await interaction.response.edit_message(
+                content=self.parent_content,
+                embed=self.parent_embed,
+                view=self.parent_view,
+            )
+            # Stop our own timeout so it can't later clobber the restored menu.
+            self.stop()
+        except Exception:
+            log.exception("AniList back navigation failed")
+            try:
+                await interaction.response.send_message(
+                    "Could not go back.", ephemeral=True
+                )
+            except Exception:
+                pass
+
     # -- quick actions (row 1, linked users only) ----------------------
     @discord.ui.button(label="Watching", style=discord.ButtonStyle.success, row=1)
     async def watching_button(self, interaction, button):
@@ -775,9 +1139,24 @@ class MediaView(discord.ui.View):
 
     @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary, row=1)
     async def edit_button(self, interaction, button):
-        await interaction.response.send_modal(
-            EditEntryModal(self.cog, self.media, self.token)
-        )
+        try:
+            # Pre-load the viewer's current entry so the modal opens pre-filled.
+            viewer_entry, _ = await self.cog._viewer_entry(
+                interaction.user.id, self.media.get("id")
+            )
+            await interaction.response.send_modal(
+                EditEntryModal(
+                    self.cog, self.media, self.token, entry=viewer_entry
+                )
+            )
+        except Exception:
+            log.exception("AniList edit modal launch failed")
+            try:
+                await interaction.response.send_message(
+                    "Could not open the edit form.", ephemeral=True
+                )
+            except Exception:
+                pass
 
     async def _set_status(self, interaction, status):
         try:
@@ -980,6 +1359,31 @@ class AniList(commands.Cog):
             return None
 
         return crypto.decrypt(row["token"])
+
+    async def _viewer_entry(self, user_id, media_id):
+        """Return ``(entry, logged_in)`` for the user's list entry on a media.
+
+        ``entry`` is the authenticated viewer's ``mediaListEntry`` (or ``None``
+        when the media is not on their list), and ``logged_in`` is ``True`` only
+        when a valid token was found. The query is sent with the user's OAuth
+        token so AniList resolves the entry per-viewer; the token is never
+        logged.
+        """
+
+        if media_id is None:
+            return None, False
+
+        token = await self._get_token(user_id)
+        if not token:
+            return None, False
+
+        data = await self._graphql(
+            MEDIA_ENTRY_QUERY, {"id": media_id}, token=token
+        )
+        entry = (
+            ((data or {}).get("data") or {}).get("Media") or {}
+        ).get("mediaListEntry")
+        return entry, True
 
     async def _exchange_code(self, user_id, code):
         """Exchange an OAuth PIN for a token and store it.
