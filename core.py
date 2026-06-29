@@ -113,16 +113,28 @@ class Yasuho(commands.Bot):
 
         log.info("Prefix count: %d", len(self.prefixes))
 
-        # Connect to Lavalink for music. Non-fatal AND non-blocking: wavelink
-        # retries forever on failure, so we cap it with a timeout - if no
-        # Lavalink server answers, give up and start the bot without music.
+        # Connect to Lavalink for music ONLY if it is configured. Skipping the
+        # attempt avoids the startup delay and reconnect spam when there is no
+        # Lavalink server (music is deferred). Set [Lavalink] uri (and password)
+        # in config to enable it.
         try:
-            node = wavelink.Node(uri="http://0.0.0.0:2333", password="youshallnotpass")
-            await asyncio.wait_for(
-                wavelink.Pool.connect(client=self, nodes=[node]), timeout=8
-            )
-        except Exception as e:
-            log.warning("Lavalink unavailable, music disabled: %s", e)
+            lavalink_uri = config_loader.get("Lavalink", "uri")
+        except Exception:
+            lavalink_uri = None
+        if lavalink_uri:
+            try:
+                lavalink_pw = config_loader.get("Lavalink", "password")
+            except Exception:
+                lavalink_pw = "youshallnotpass"
+            try:
+                node = wavelink.Node(uri=lavalink_uri, password=lavalink_pw)
+                await asyncio.wait_for(
+                    wavelink.Pool.connect(client=self, nodes=[node]), timeout=8
+                )
+            except Exception as e:
+                log.warning("Lavalink unavailable, music disabled: %s", e)
+        else:
+            log.info("Lavalink not configured; music disabled.")
 
 
 async def get_prefix(bot: Yasuho, message: discord.Message):

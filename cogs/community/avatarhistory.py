@@ -127,7 +127,15 @@ class AvatarHistory(commands.Cog):
             if last == ref:
                 return
 
-            data = await asset.replace(size=256, format="png").read()
+            try:
+                data = await asset.replace(size=256, format="png").read()
+            except discord.NotFound:
+                return  # the asset already vanished (avatar changed again); skip
+            except discord.HTTPException:
+                log.warning(
+                    "could not download %s image for user %s", kind, user_id
+                )
+                return
             # A 256px PNG is small; anything large is unexpected (a malformed or
             # pathological image), so skip it rather than store/parse it.
             if len(data) > 2 * 1024 * 1024:
