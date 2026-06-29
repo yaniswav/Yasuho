@@ -81,6 +81,7 @@ class Yasuho(commands.Bot):
         self.prefixes = {}
         self.blacklist = set()
         self.autoroles = {}
+        self.muteroles = {}
 
     async def setup_hook(self) -> None:
         # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
@@ -98,6 +99,9 @@ class Yasuho(commands.Bot):
         }
         self.autoroles = dict(
             await self.db_pool.fetch("SELECT guild_id, role_id FROM autorole;")
+        )
+        self.muteroles = dict(
+            await self.db_pool.fetch("SELECT guild_id, role_id FROM muterole;")
         )
 
         for extension in discover_extensions():

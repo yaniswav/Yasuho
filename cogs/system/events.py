@@ -141,9 +141,7 @@ class Events(commands.Cog):
             member.id,
         )
         if muted:
-            mute_role_id = await pool.fetchval(
-                "SELECT role_id FROM muterole WHERE guild_id = $1;", guild_id
-            )
+            mute_role_id = self.bot.muteroles.get(guild_id)
             mute_role = member.guild.get_role(mute_role_id) if mute_role_id else None
             if mute_role:
                 try:
@@ -157,9 +155,7 @@ class Events(commands.Cog):
     async def on_guild_channel_create(self, channel):
         # Keep the mute role effective in newly created channels so muted members
         # cannot simply talk in a freshly created channel.
-        mute_role_id = await self.bot.db_pool.fetchval(
-            "SELECT role_id FROM muterole WHERE guild_id = $1;", channel.guild.id
-        )
+        mute_role_id = self.bot.muteroles.get(channel.guild.id)
         if not mute_role_id:
             return
         mute_role = channel.guild.get_role(mute_role_id)

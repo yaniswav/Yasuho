@@ -201,9 +201,27 @@ class ModLog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._recent_bans = set()
+        # (guild_id, user_id, kind) keys for bot-initiated actions whose own
+        # case embed is already posted by the moderation cog; the matching
+        # listener skips its duplicate embed. Keys auto-expire after ~10s.
+        self._suppressed = set()
         # guild_id -> channel_id | None (negative-cached: None means "looked up,
         # not configured", so unconfigured guilds never re-query).
         self._channels = {}
+
+    def suppress(self, guild_id, user_id, kind):
+        """Mark a bot-initiated action so its listener skips the duplicate embed.
+
+        The moderation cog posts its own case embed for ban/kick/unban, so the
+        matching gateway listener ('ban'/'unban'/'remove') would otherwise log
+        the same action twice. The key auto-expires after ~10s in case the
+        gateway event never arrives (e.g. the action failed).
+        """
+        key = (guild_id, user_id, kind)
+        self._suppressed.add(key)
+        asyncio.get_running_loop().call_later(
+            10, self._suppressed.discard, key
+        )
 
     # -- settings helpers (shared by panel + fallback subcommands) ------
     async def _set_channel(self, guild_id, channel_id):
@@ -322,6 +340,13 @@ class ModLog(commands.Cog):
             5, self._recent_bans.discard, key
         )
 
+        # A bot ban already posted its own case embed; skip the duplicate here
+        # (the recent-ban dedup above still applies to the resulting leave).
+        skey = (guild.id, user.id, "ban")
+        if skey in self._suppressed:
+            self._suppressed.discard(skey)
+            return
+
         if not await self._enabled(guild.id, "ban"):
             return
 
@@ -337,6 +362,12 @@ class ModLog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
+        # A bot unban already posted its own case embed; skip the duplicate.
+        skey = (guild.id, user.id, "unban")
+        if skey in self._suppressed:
+            self._suppressed.discard(skey)
+            return
+
         if not await self._enabled(guild.id, "unban"):
             return
 
@@ -353,6 +384,12 @@ class ModLog(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         if (member.guild.id, member.id) in self._recent_bans:
+            return
+
+        # A bot kick already posted its own case embed; skip the duplicate.
+        skey = (member.guild.id, member.id, "remove")
+        if skey in self._suppressed:
+            self._suppressed.discard(skey)
             return
 
         if not await self._enabled(member.guild.id, "leave"):

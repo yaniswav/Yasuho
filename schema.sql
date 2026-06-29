@@ -202,6 +202,19 @@ CREATE TABLE IF NOT EXISTS cases (
 );
 CREATE INDEX IF NOT EXISTS cases_guild_user_idx ON cases (guild_id, user_id);
 
+-- Self-assignable button roles: one row per (message, role) button on a panel.
+-- buttonroles.py (admin builds a panel; persistent views toggle the roles)
+CREATE TABLE IF NOT EXISTS button_roles (
+    message_id BIGINT NOT NULL,
+    guild_id   BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    role_id    BIGINT NOT NULL,
+    label      TEXT,
+    emoji      TEXT,
+    PRIMARY KEY (message_id, role_id)
+);
+CREATE INDEX IF NOT EXISTS button_roles_guild_idx ON button_roles (guild_id);
+
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
 -- ============================================================

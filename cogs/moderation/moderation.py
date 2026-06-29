@@ -289,6 +289,18 @@ class Moderation(commands.Cog):
         except Exception:
             log.exception("Failed to funnel mod action to mod-log")
 
+    async def _get_mute_role_id(self, guild_id):
+        """Return the guild's mute-role id from the bot cache, DB-filling on a miss."""
+        role_id = self.bot.muteroles.get(guild_id)
+        if role_id is not None:
+            return role_id
+        role_id = await self.bot.db_pool.fetchval(
+            "SELECT role_id FROM muterole WHERE guild_id = $1;", guild_id
+        )
+        if role_id is not None:
+            self.bot.muteroles[guild_id] = role_id
+        return role_id
+
     def _case_record_embed(self, guild, row):
         """Render a stored case row (DB record) as a consistent case embed.
 
@@ -377,6 +389,12 @@ class Moderation(commands.Cog):
 
         if reason is None:
             reason = "No reason specified"
+
+        # Suppress the ModLog leave listener so this bot kick is logged once
+        # (the case embed below), not twice.
+        ml = self.bot.get_cog("ModLog")
+        if ml:
+            ml.suppress(ctx.guild.id, target.id, "remove")
 
         try:
             await ctx.guild.kick(
@@ -489,6 +507,12 @@ class Moderation(commands.Cog):
                 pass
             return
 
+        # Suppress the ModLog ban listener so this bot ban is logged once
+        # (the case embed below), not twice.
+        ml = self.bot.get_cog("ModLog")
+        if ml:
+            ml.suppress(ctx.guild.id, target.id, "ban")
+
         try:
             await ctx.guild.ban(
                 target,
@@ -524,6 +548,12 @@ class Moderation(commands.Cog):
 
         if reason is None:
             reason = "No reason specified"
+
+        # Suppress the ModLog unban listener so this bot unban is logged once
+        # (the case embed below), not twice.
+        ml = self.bot.get_cog("ModLog")
+        if ml:
+            ml.suppress(ctx.guild.id, target.id, "unban")
 
         try:
             await ctx.guild.unban(
@@ -624,16 +654,7 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        con = self.bot.db_pool
-
-        query = """
-
-        SELECT role_id FROM muterole
-        WHERE guild_id = $1;
-
-        """
-
-        role = await con.fetchval(query, ctx.guild.id)
+        role = await self._get_mute_role_id(ctx.guild.id)
 
         try:
             if role is None:
@@ -651,6 +672,7 @@ class Moderation(commands.Cog):
                     await ctx.send(content="Mute role created!", delete_after=5)
                     query = """INSERT INTO muterole (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $3;"""
                     await self.bot.db_pool.execute(query, ctx.guild.id, mrole.id, mrole.id)
+                    self.bot.muteroles[ctx.guild.id] = mrole.id
 
                     for channel in ctx.guild.text_channels:
                         await channel.set_permissions(
@@ -741,16 +763,7 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, user: discord.Member):
         """Un-mutes the specified member."""
 
-        con = self.bot.db_pool
-
-        query = """
-
-        SELECT role_id FROM muterole
-        WHERE guild_id = $1;
-
-        """
-
-        role = await con.fetchval(query, ctx.guild.id)
+        role = await self._get_mute_role_id(ctx.guild.id)
 
         try:
             mutedrole = discord.utils.get(ctx.guild.roles, id=role)
@@ -952,6 +965,12 @@ class Moderation(commands.Cog):
             embed.add_field(
                 name="Auto-action", value="Reached 3 warns - kicked", inline=False
             )
+
+            # Suppress the ModLog leave listener so this auto-kick is logged once
+            # (the case embed above), not twice.
+            ml = self.bot.get_cog("ModLog")
+            if ml:
+                ml.suppress(ctx.guild.id, member.id, "remove")
 
             try:
                 await member.kick(reason="Auto-kick: reached 3 warns")
