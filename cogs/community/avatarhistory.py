@@ -128,6 +128,16 @@ class AvatarHistory(commands.Cog):
                 return
 
             data = await asset.replace(size=256, format="png").read()
+            # A 256px PNG is small; anything large is unexpected (a malformed or
+            # pathological image), so skip it rather than store/parse it.
+            if len(data) > 2 * 1024 * 1024:
+                log.warning(
+                    "skipping oversized %s image for user %s (%d bytes)",
+                    kind,
+                    user_id,
+                    len(data),
+                )
+                return
             await self.bot.db_pool.execute(
                 "INSERT INTO avatar_history(user_id, guild_id, kind, ref, avatar) "
                 "VALUES($1, $2, $3, $4, $5)",
@@ -153,9 +163,14 @@ class AvatarHistory(commands.Cog):
 
     @commands.Cog.listener()
     async def on_user_update(self, before, after):
-        # Skip default avatars: only record when a custom avatar is set.
-        if after.avatar is not None:
-            await self._record(after.id, None, "global", after.avatar)
+        # on_user_update also fires for username/discriminator edits, so only act
+        # on an actual avatar change (and skip default avatars). This avoids a DB
+        # round-trip on every unrelated profile update.
+        if after.avatar is None:
+            return
+        if before.avatar is not None and before.avatar.key == after.avatar.key:
+            return
+        await self._record(after.id, None, "global", after.avatar)
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
