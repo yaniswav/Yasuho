@@ -1,6 +1,8 @@
 import asyncio
 import io
 import logging
+import os
+import shlex
 import subprocess
 import textwrap
 import traceback
@@ -10,10 +12,12 @@ from typing import Literal, Optional
 import discord
 from discord.ext import commands
 
-from tools.config_loader import config_loader
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
+
+# Repo root: this file is cogs/system/admin.py, so three levels up.
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
 class Admin(commands.Cog):
@@ -151,9 +155,9 @@ class Admin(commands.Cog):
                 await ctx.interaction.response.defer(ephemeral=True)
 
             v, e = 0, 0
-            for ext in config_loader.getlist("Extension", "Extensions"):
+            for ext in list(self.bot.extensions):
                 try:
-                    await self.bot.reload_extension(f"{ext}")
+                    await self.bot.reload_extension(ext)
                     log.info("Reloaded extension: %s", ext)
                     v += 1
                 except commands.ExtensionError:
@@ -168,7 +172,9 @@ class Admin(commands.Cog):
             return
 
         try:
-            await self.bot.reload_extension(f"cogs.{extension}")
+            await self.bot.reload_extension(
+                self._resolve_ext(extension) or f"cogs.{extension}"
+            )
 
         except commands.ExtensionError as e:
             log.exception("Couldn't reload extension: %s", extension)
@@ -219,7 +225,9 @@ class Admin(commands.Cog):
     async def unload(self, ctx, extension):
         """Unloads an extension by name."""
         try:
-            await self.bot.unload_extension(f"cogs.{extension}")
+            await self.bot.unload_extension(
+                self._resolve_ext(extension) or f"cogs.{extension}"
+            )
             await ctx.message.add_reaction("\u2705")
 
         except Exception as error:
@@ -236,6 +244,105 @@ class Admin(commands.Cog):
                 )
 
             await ctx.send(embed=embed)
+
+
+    def _resolve_ext(self, name):
+        """Resolve a short cog name to a currently-loaded extension path."""
+        if name in self.bot.extensions:
+            return name
+        if f"cogs.{name}" in self.bot.extensions:
+            return f"cogs.{name}"
+        matches = [
+            e
+            for e in self.bot.extensions
+            if e == name or e.endswith("." + name) or e.split(".")[-1] == name
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    async def _git(self, *args):
+        """Run a git command in the repo and return its combined output."""
+        cmd = "git -C " + shlex.quote(REPO_DIR) + " " + " ".join(
+            shlex.quote(a) for a in args
+        )
+        out, err = await self.run_process(cmd)
+        return (out + err).strip()
+
+    @commands.command(hidden=True, name="update", aliases=["pull"])
+    @commands.is_owner()
+    async def update(self, ctx, extension: str = None):
+        """Pull the latest code from the remote and hot-reload the changed cogs.
+
+        With no argument, reloads exactly the cogs whose files changed. Pass a
+        cog name to reload only that one. core.py / tools changes need a restart.
+        """
+        async with ctx.typing():
+            before = await self._git("rev-parse", "HEAD")
+            pull_out = await self._git("pull", "--ff-only")
+            after = await self._git("rev-parse", "HEAD")
+
+        if before == after:
+            if "up to date" in pull_out.lower():
+                return await ctx.send("Already up to date - nothing to reload.")
+            return await ctx.send(f"Nothing pulled:\n```\n{pull_out[:1500]}\n```")
+
+        changed = [
+            f.strip()
+            for f in (await self._git("diff", "--name-only", before, after)).splitlines()
+            if f.strip()
+        ]
+        pulled = await self._git("log", "--oneline", "--no-decorate", f"{before}..{after}")
+
+        embed = discord.Embed(title="Update", colour=random_colour())
+        embed.add_field(
+            name="Pulled",
+            value=f"`{before[:7]}` -> `{after[:7]}`\n```\n{(pulled or '(no log)')[:900]}\n```",
+            inline=False,
+        )
+
+        if extension:
+            targets, restart = {self._resolve_ext(extension) or f"cogs.{extension}"}, []
+        else:
+            targets, restart = set(), []
+            for f in changed:
+                if not f.endswith(".py"):
+                    continue
+                mod = f[:-3].replace("/", ".")
+                ext = next(
+                    (x for x in self.bot.extensions if mod == x or mod.startswith(x + ".")),
+                    None,
+                )
+                if ext:
+                    targets.add(ext)
+                elif not f.startswith("cogs/"):
+                    restart.append(f)
+
+        ok, fail = [], []
+        for ext in sorted(targets):
+            try:
+                await self.bot.reload_extension(ext)
+                ok.append(ext)
+            except commands.ExtensionError as err:
+                log.exception("update: reload failed for %s", ext)
+                fail.append(f"{ext} ({type(err).__name__})")
+
+        if ok:
+            embed.add_field(
+                name="Reloaded", value="\n".join(f"`{e}`" for e in ok), inline=False
+            )
+        if fail:
+            embed.add_field(
+                name="Failed", value="\n".join(f"`{e}`" for e in fail), inline=False
+            )
+        if restart:
+            embed.add_field(
+                name="Restart needed (not hot-reloadable)",
+                value="\n".join(f"`{f}`" for f in restart),
+                inline=False,
+            )
+        if not (ok or fail or restart):
+            embed.add_field(name="Reloaded", value="No cog files changed.", inline=False)
+
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):
