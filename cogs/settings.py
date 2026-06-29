@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools import settings
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -143,6 +144,78 @@ class Settings(commands.Cog):
             )
             embed.add_field(name="Current auto-role", value="`None`")
             await ctx.send(embed=embed)
+
+    @commands.hybrid_group(name="config")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def config(self, ctx):
+        """Show and manage feature toggles for this server."""
+
+        if ctx.invoked_subcommand is not None:
+            return
+
+        pool = self.bot.db_pool
+        guild_id = ctx.guild.id
+
+        embed = discord.Embed(
+            title=f"Configuration | {ctx.guild.name}", colour=random_colour()
+        )
+
+        try:
+            leveling_on = await settings.get_guild(
+                pool, guild_id, "leveling_enabled", False
+            )
+            leveling_status = "Enabled" if leveling_on else "Disabled"
+        except Exception:
+            log.exception("Failed to read leveling setting")
+            leveling_status = "Unknown"
+        embed.add_field(name="Leveling", value=leveling_status, inline=False)
+
+        try:
+            starboard_row = await pool.fetchval(
+                "SELECT 1 FROM starboard WHERE guild_id = $1", guild_id
+            )
+            starboard_status = "configured" if starboard_row else "not set up"
+        except Exception:
+            log.exception("Failed to read starboard config")
+            starboard_status = "Unknown"
+        embed.add_field(name="Starboard", value=starboard_status, inline=False)
+
+        try:
+            automod_row = await pool.fetchrow(
+                "SELECT antilink, antispam FROM automod WHERE guild_id = $1",
+                guild_id,
+            )
+            if automod_row is None:
+                automod_status = "not set up"
+            else:
+                antilink = "on" if automod_row["antilink"] else "off"
+                antispam = "on" if automod_row["antispam"] else "off"
+                automod_status = f"Anti-link: {antilink} | Anti-spam: {antispam}"
+        except Exception:
+            log.exception("Failed to read automod config")
+            automod_status = "Unknown"
+        embed.add_field(name="AutoMod", value=automod_status, inline=False)
+
+        await ctx.send(embed=embed)
+
+    @config.command(name="leveling")
+    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
+    @commands.has_permissions(manage_guild=True)
+    async def config_leveling(self, ctx, mode: bool):
+        """Enable or disable the leveling system for this server."""
+
+        await settings.set_guild(
+            self.bot.db_pool, ctx.guild.id, "leveling_enabled", mode
+        )
+        embed = discord.Embed(
+            title="Leveling",
+            description=(
+                f"Leveling {'enabled' if mode else 'disabled'} for this server."
+            ),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
 
 
 async def setup(bot: commands.Bot):

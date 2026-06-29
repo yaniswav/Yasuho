@@ -165,3 +165,15 @@ CREATE TABLE IF NOT EXISTS anilist_tokens (
     token   TEXT        NOT NULL,
     expires TIMESTAMPTZ
 );
+
+-- Per-user preferences (JSONB blob).  tools/settings.py, usersettings.py, help.py
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id  BIGINT PRIMARY KEY,
+    settings JSONB  NOT NULL DEFAULT '{}'::jsonb
+);
+
+-- Per-guild feature toggles & preferences (JSONB blob).  tools/settings.py, settings.py
+CREATE TABLE IF NOT EXISTS guild_settings (
+    guild_id BIGINT PRIMARY KEY,
+    settings JSONB  NOT NULL DEFAULT '{}'::jsonb
+);

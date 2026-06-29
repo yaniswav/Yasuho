@@ -180,6 +180,18 @@ def _media_title(media):
     return romaji
 
 
+def _media_colour(media):
+    """Use the cover image's accent colour ("#aabbcc") as an int, else random."""
+
+    colour = (media.get("coverImage") or {}).get("color")
+    if isinstance(colour, str) and colour.startswith("#"):
+        try:
+            return int(colour[1:], 16)
+        except ValueError:
+            pass
+    return random_colour()
+
+
 # ----------------------------------------------------------------------
 # Interactive components (discord.ui)
 # ----------------------------------------------------------------------
@@ -364,16 +376,20 @@ class MediaView(discord.ui.View):
     # -- embed builders -------------------------------------------------
     def _base_embed(self):
         media = self.media
-        embed = discord.Embed(colour=random_colour(), url=media.get("siteUrl"))
+        embed = discord.Embed(colour=_media_colour(media), url=media.get("siteUrl"))
 
         cover = media.get("coverImage") or {}
         if cover.get("large"):
             embed.set_thumbnail(url=cover["large"])
 
+        banner = media.get("bannerImage")
+        if banner:
+            embed.set_image(url=banner)
+
         footer = []
-        score = media.get("averageScore")
-        if score is not None:
-            footer.append(f"Score {score}/100")
+        genres = media.get("genres") or []
+        if genres:
+            footer.append(" • ".join(genres[:5]))
         popularity = media.get("popularity")
         if popularity is not None:
             footer.append(f"{popularity} in lists")
@@ -389,35 +405,36 @@ class MediaView(discord.ui.View):
         embed.description = self.cog._clean_description(media.get("description"))
 
         if media.get("format"):
-            embed.add_field(name="Format", value=media["format"])
+            embed.add_field(name="Format", value=media["format"], inline=True)
         if media.get("episodes"):
-            embed.add_field(name="Episodes", value=str(media["episodes"]))
+            embed.add_field(
+                name="Episodes", value=str(media["episodes"]), inline=True
+            )
         elif media.get("chapters"):
-            embed.add_field(name="Chapters", value=str(media["chapters"]))
-        if media.get("status"):
-            embed.add_field(name="Status", value=media["status"])
+            embed.add_field(
+                name="Chapters", value=str(media["chapters"]), inline=True
+            )
 
         score = media.get("averageScore")
         if score is not None:
-            embed.add_field(name="Score", value=f"{score}/100")
+            embed.add_field(name="Score", value=f"{score}/100", inline=True)
+
+        if media.get("status"):
+            embed.add_field(name="Status", value=media["status"], inline=True)
 
         studios = ((media.get("studios") or {}).get("nodes")) or []
         names = [s.get("name") for s in studios if s.get("name")]
         if names:
-            embed.add_field(name="Studio", value=", ".join(names[:3]))
-
-        genres = media.get("genres") or []
-        if genres:
-            embed.add_field(
-                name="Genres", value=", ".join(genres[:5]), inline=False
-            )
+            embed.add_field(name="Studio", value=", ".join(names[:3]), inline=True)
 
         season = media.get("season")
         year = media.get("seasonYear")
         if season and year:
-            embed.add_field(name="Season", value=f"{season.title()} {year}")
+            embed.add_field(
+                name="Season", value=f"{season.title()} {year}", inline=True
+            )
         elif year:
-            embed.add_field(name="Year", value=str(year))
+            embed.add_field(name="Year", value=str(year), inline=True)
 
         return embed
 
@@ -565,6 +582,85 @@ class MediaView(discord.ui.View):
                 pass
 
 
+class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
+    """Collect the OAuth PIN and finish linking without ever echoing it."""
+
+    code = discord.ui.TextInput(
+        label="Code",
+        placeholder="Paste the code AniList showed you",
+        required=True,
+        style=discord.TextStyle.paragraph,
+        max_length=4000,
+    )
+
+    def __init__(self, cog, author_id):
+        super().__init__()
+        self.cog = cog
+        self.author_id = author_id
+
+    async def on_submit(self, interaction):
+        try:
+            name = await self.cog._exchange_code(self.author_id, self.code.value)
+            if name is None:
+                return await interaction.response.send_message(
+                    "That code did not work, try `/anilist login` again.",
+                    ephemeral=True,
+                )
+            await interaction.response.send_message(
+                f"Connected as {name}!", ephemeral=True
+            )
+        except Exception:
+            log.exception("AniList login modal failed")
+            try:
+                await interaction.response.send_message(
+                    "Something went wrong linking your account.", ephemeral=True
+                )
+            except Exception:
+                pass
+
+
+class LoginView(discord.ui.View):
+    """Author-restricted view exposing a modal to enter the OAuth PIN."""
+
+    def __init__(self, cog, author_id, timeout=300):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.author_id = author_id
+        self.message = None
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Enter code", style=discord.ButtonStyle.primary)
+    async def enter_code(self, interaction, button):
+        try:
+            await interaction.response.send_modal(
+                LoginModal(self.cog, self.author_id)
+            )
+        except Exception:
+            log.exception("AniList login modal launch failed")
+            try:
+                await interaction.response.send_message(
+                    "Could not open the code form.", ephemeral=True
+                )
+            except Exception:
+                pass
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 class AniList(commands.Cog):
     """AniList lookups plus per-user account linking to edit your lists."""
 
@@ -650,6 +746,39 @@ class AniList(commands.Cog):
 
         return crypto.decrypt(row["token"])
 
+    async def _exchange_code(self, user_id, code):
+        """Exchange an OAuth PIN for a token and store it.
+
+        Returns the AniList viewer name on success, or ``None`` on failure.
+        The token and code are never logged or echoed.
+        """
+
+        payload = {
+            "grant_type": "authorization_code",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "redirect_uri": REDIRECT_URI,
+            "code": (code or "").strip(),
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(TOKEN_URL, json=payload) as r:
+                    data = await r.json()
+        except Exception:
+            log.exception("AniList token exchange failed")
+            return None
+
+        access_token = (data or {}).get("access_token")
+        if not access_token:
+            return None
+
+        await self._store_token(user_id, access_token, data.get("expires_in"))
+
+        viewer = await self._graphql(VIEWER_QUERY, {}, token=access_token)
+        name = (((viewer or {}).get("data") or {}).get("Viewer") or {}).get("name")
+        return name or "AniList user"
+
     async def _resolve_media(self, search, media_type=None):
         """Return the first matching media dict (id + title) for ``search``."""
 
@@ -672,12 +801,16 @@ class AniList(commands.Cog):
             title=title,
             url=media.get("siteUrl"),
             description=self._clean_description(media.get("description")),
-            colour=random_colour(),
+            colour=_media_colour(media),
         )
 
         cover = media.get("coverImage") or {}
         if cover.get("large"):
             embed.set_thumbnail(url=cover["large"])
+
+        banner = media.get("bannerImage")
+        if banner:
+            embed.set_image(url=banner)
 
         if media.get("format"):
             embed.add_field(name="Format", value=media["format"])
@@ -908,14 +1041,17 @@ class AniList(commands.Cog):
         instructions = (
             "Authorize the bot here:\n"
             f"{authorize_url}\n\n"
-            "Authorize, copy the code AniList shows you, then run "
-            "`/anilist code <code>` (preferably here in DMs)."
+            "Authorize, copy the code AniList shows you, then press "
+            "**Enter code** below (or run `/anilist code <code>`)."
         )
 
+        view = LoginView(self, ctx.author.id)
+
         try:
-            await ctx.author.send(instructions)
+            view.message = await ctx.author.send(instructions, view=view)
         except discord.Forbidden:
-            return await ctx.send(instructions, ephemeral=True)
+            view.message = await ctx.send(instructions, view=view, ephemeral=True)
+            return
 
         await ctx.send("Check your DMs.")
 
@@ -934,35 +1070,16 @@ class AniList(commands.Cog):
             except discord.HTTPException:
                 pass
 
-        payload = {
-            "grant_type": "authorization_code",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "redirect_uri": REDIRECT_URI,
-            "code": code.strip(),
-        }
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(TOKEN_URL, json=payload) as r:
-                    data = await r.json()
-        except Exception:
-            log.exception("AniList token exchange failed")
-            return await ctx.send("Something went wrong talking to AniList.")
-
-        access_token = (data or {}).get("access_token")
-        if not access_token:
+        name = await self._exchange_code(ctx.author.id, code)
+        if name is None:
             return await ctx.send(
                 "That code did not work, try `/anilist login` again.",
-                ephemeral=True,
+                ephemeral=ctx.interaction is not None,
             )
 
-        await self._store_token(ctx.author.id, access_token, data.get("expires_in"))
-
-        viewer = await self._graphql(VIEWER_QUERY, {}, token=access_token)
-        name = (((viewer or {}).get("data") or {}).get("Viewer") or {}).get("name")
-        message = f"Connected as {name}!" if name else "Connected!"
-        await ctx.send(message, ephemeral=ctx.interaction is not None)
+        await ctx.send(
+            f"Connected as {name}!", ephemeral=ctx.interaction is not None
+        )
 
     @anilist.command(name="logout")
     async def anilist_logout(self, ctx):

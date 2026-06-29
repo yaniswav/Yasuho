@@ -5,6 +5,7 @@ import time
 import discord
 from discord.ext import commands
 
+from tools import settings
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
 
@@ -27,6 +28,11 @@ class Leveling(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or message.guild is None:
+            return
+
+        if not await settings.get_guild(
+            self.bot.db_pool, message.guild.id, "leveling_enabled", False
+        ):
             return
 
         key = (message.guild.id, message.author.id)
