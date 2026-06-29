@@ -46,41 +46,52 @@ def format_duration(track: sonolink.models.Playable) -> str:
 
 
 def build_now_playing_embed(player: Player) -> typing.Optional[discord.Embed]:
-    """Build the "now playing" embed for the player's current track."""
+    """Build a pretty "now playing" embed for the player's current track."""
     track = player.current
     if track is None:
         return None
 
-    channel_name = player.channel.name if player.channel else "Voice"
     embed = discord.Embed(
-        title=f"Music Controller | {E_VOICE} {channel_name}",
+        title=track.title[:256],
+        url=track.uri or None,
+        description=f"by **{track.author}**",
         colour=random_colour(),
     )
+    embed.set_author(name="🎵 Now Playing")
 
-    if track.uri:
-        title_line = f"[{track.title}]({track.uri})"
-    else:
-        title_line = track.title
-    embed.description = f"**Now Playing**\n{title_line}\n**Artist:** `{track.author}`"
-
+    # The track artwork as a big banner is what makes the controller look good.
     if track.artwork:
         embed.set_image(url=track.artwork)
 
-    upcoming = player.queue.tracks
-    next_title = upcoming[0].title if upcoming else "Nothing queued"
-
+    status = "⏸ Paused" if player.paused else "▶ Playing"
+    embed.add_field(name="Status", value=status)
     embed.add_field(name="Duration", value=f"`{format_duration(track)}`")
-    embed.add_field(name="Up Next", value=next_title)
-    embed.add_field(name="Queue Length", value=str(len(upcoming)))
     embed.add_field(name="Volume", value=f"`{player.volume}%`")
 
+    channel_name = player.channel.name if player.channel else "voice"
+    embed.add_field(name="Channel", value=f"{E_VOICE} {channel_name}")
     if player.dj is not None:
         embed.add_field(name="DJ", value=player.dj.mention)
-
     requester_id = getattr(track.extras, "requester", None)
     if requester_id:
         embed.add_field(name="Requested by", value=f"<@{requester_id}>")
 
+    upcoming = player.queue.tracks
+    if upcoming:
+        lines = "\n".join(
+            f"`{i}.` {t.title[:60]}" for i, t in enumerate(upcoming[:5], 1)
+        )
+        if len(upcoming) > 5:
+            lines += f"\n`+{len(upcoming) - 5}` more in the queue"
+        embed.add_field(name=f"Up Next ({len(upcoming)})", value=lines, inline=False)
+    else:
+        embed.add_field(
+            name="Up Next",
+            value="Nothing queued. Add a song to keep the music going!",
+            inline=False,
+        )
+
+    embed.set_footer(text="Use the buttons below to control playback")
     return embed
 
 
