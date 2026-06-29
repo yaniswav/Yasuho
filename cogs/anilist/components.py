@@ -10,7 +10,6 @@ from .helpers import (
     _media_colour,
     _media_title,
     _media_unit,
-    _parse_status,
     _progress_max,
     _status_label,
     _step_season,
@@ -275,60 +274,69 @@ class EditSelectView(discord.ui.View):
                 pass
 
 
-class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
-    """Collect a new status/progress/score, pre-filled from the user's entry."""
-
-    status = discord.ui.TextInput(
-        label="Status",
-        placeholder="CURRENT / PLANNING / COMPLETED / DROPPED / PAUSED / REPEATING",
-        required=False,
-        style=discord.TextStyle.short,
-        max_length=12,
-    )
-    progress = discord.ui.TextInput(
-        label="Progress (episode/chapter)",
-        required=False,
-        style=discord.TextStyle.short,
-        max_length=6,
-    )
-    score = discord.ui.TextInput(
-        label="Score",
-        required=False,
-        max_length=6,
-    )
+class EditEntryModal(discord.ui.Modal):
+    """Edit status (a dropdown) + progress/score (fields), pre-filled from the entry."""
 
     def __init__(self, cog, media, token=None, entry=None):
         super().__init__(title=f"Edit: {_media_title(media)}"[:45])
         self.cog = cog
         self.media = media
         self.token = token
+        entry = entry or {}
 
-        # Friendly, type-aware labels instead of the raw API enum.
         unit = _media_unit(media)
         watching = "Reading" if unit == "chapter" else "Watching"
-        self.status.placeholder = (
-            f"{watching}, Completed, Planning, Paused, Dropped, Repeating"
-        )
-        self.progress.label = f"Progress ({unit}s)"
-
-        # Pre-fill each field from the viewer's existing entry, if any. The
-        # TextInputs are deep-copied per instance, so these defaults never leak.
-        entry = entry or {}
         current_status = entry.get("status")
-        if current_status:
-            self.status.default = _status_label(current_status, media)
+        choices = [
+            ("CURRENT", watching),
+            ("PLANNING", "Planning"),
+            ("COMPLETED", "Completed"),
+            ("REPEATING", "Repeating"),
+            ("PAUSED", "Paused"),
+            ("DROPPED", "Dropped"),
+        ]
+        # Status is a real dropdown (Components V2 select-in-modal), the current
+        # value pre-selected; min_values=0 so it can be left unchanged.
+        self.status_select = discord.ui.Select(
+            placeholder="Keep current status",
+            min_values=0,
+            max_values=1,
+            required=False,
+            options=[
+                discord.SelectOption(
+                    label=label, value=value, default=(value == current_status)
+                )
+                for value, label in choices
+            ],
+        )
+        self.add_item(discord.ui.Label(text="Status", component=self.status_select))
+
         current_progress = entry.get("progress")
-        if current_progress is not None:
-            self.progress.default = str(current_progress)
-        current_score = _format_score(entry.get("score"))
-        if current_score and current_score != "0":
-            self.score.default = current_score
+        self.progress_input = discord.ui.TextInput(
+            required=False,
+            style=discord.TextStyle.short,
+            max_length=6,
+            default=str(current_progress) if current_progress is not None else None,
+        )
+        self.add_item(
+            discord.ui.Label(
+                text=f"Progress ({unit}s)", component=self.progress_input
+            )
+        )
+
+        score = _format_score(entry.get("score"))
+        self.score_input = discord.ui.TextInput(
+            required=False,
+            max_length=6,
+            default=score if score and score != "0" else None,
+        )
+        self.add_item(discord.ui.Label(text="Score", component=self.score_input))
 
     async def on_submit(self, interaction):
         variables = {"mediaId": self.media.get("id")}
-        status_raw = (self.status.value or "").strip()
-        progress_raw = (self.progress.value or "").strip()
-        score_raw = (self.score.value or "").strip()
+        status_values = self.status_select.values
+        progress_raw = (self.progress_input.value or "").strip()
+        score_raw = (self.score_input.value or "").strip()
 
         try:
             if progress_raw:
@@ -341,15 +349,8 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
                 ephemeral=True,
             )
 
-        if status_raw:
-            status = _parse_status(status_raw)
-            if status is None:
-                return await interaction.response.send_message(
-                    "Status must be one of: Watching/Reading, Completed, "
-                    "Planning, Paused, Dropped, Repeating.",
-                    ephemeral=True,
-                )
-            variables["status"] = status
+        if status_values:
+            variables["status"] = status_values[0]
 
         if (
             "progress" not in variables
@@ -357,7 +358,7 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
             and "status" not in variables
         ):
             return await interaction.response.send_message(
-                "Nothing to update - fill in status, progress and/or score.",
+                "Nothing to update - pick a status or fill in progress/score.",
                 ephemeral=True,
             )
 
@@ -581,7 +582,7 @@ class OnListSelect(discord.ui.Select):
             parts = []
             status = entry.get("status")
             if status:
-                parts.append(status.title())
+                parts.append(_status_label(status, media))
             progress = entry.get("progress")
             if progress is not None:
                 total = _progress_max(media)

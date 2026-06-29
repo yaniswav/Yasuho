@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .components import LoginView
-from .helpers import REDIRECT_URI, VALID_STATUSES, _profile_colour
+from .helpers import REDIRECT_URI, _parse_status, _profile_colour
 from .queries import (
     AUTOCOMPLETE_QUERY,
     MEDIA_LIST_QUERY,
@@ -114,10 +114,11 @@ class AccountMixin:
     async def anilist_status(self, ctx, status: str, *, title: str):
         """Set the status of a title on your list."""
 
-        status = status.upper()
-        if status not in VALID_STATUSES:
+        status = _parse_status(status)
+        if status is None:
             return await ctx.send(
-                "Status must be one of: " + ", ".join(sorted(VALID_STATUSES)) + "."
+                "Status must be one of: Watching/Reading, Completed, "
+                "Planning, Paused, Dropped, Repeating."
             )
 
         await self._edit_flow(ctx, title, "status", status)
@@ -277,10 +278,11 @@ class AccountMixin:
         if media_type not in ("anime", "manga"):
             return await ctx.send("Media type must be `anime` or `manga`.")
 
-        status = status.upper()
-        if status not in VALID_STATUSES:
+        status = _parse_status(status)
+        if status is None:
             return await ctx.send(
-                "Status must be one of: " + ", ".join(sorted(VALID_STATUSES)) + "."
+                "Status must be one of: Watching/Reading, Completed, "
+                "Planning, Paused, Dropped, Repeating."
             )
 
         token = await self._get_token(ctx.author.id)
