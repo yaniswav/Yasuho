@@ -61,11 +61,14 @@ class Yasuho(commands.Bot):
 
         log.info("Prefix count: %d", len(self.prefixes))
 
-        # Connect to Lavalink for music. Non-fatal: if no Lavalink server is
-        # running, the bot still starts (music commands just won't work).
+        # Connect to Lavalink for music. Non-fatal AND non-blocking: wavelink
+        # retries forever on failure, so we cap it with a timeout — if no
+        # Lavalink server answers, give up and start the bot without music.
         try:
             node = wavelink.Node(uri="http://0.0.0.0:2333", password="youshallnotpass")
-            await wavelink.Pool.connect(client=self, nodes=[node])
+            await asyncio.wait_for(
+                wavelink.Pool.connect(client=self, nodes=[node]), timeout=8
+            )
         except Exception as e:
             log.warning("Lavalink unavailable, music disabled: %s", e)
 
