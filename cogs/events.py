@@ -28,7 +28,7 @@ class Events(commands.Cog):
     @tasks.loop(seconds=20)
     async def change_status(self):
         await self.bot.change_presence(
-            status=discord.Status.idle,
+            status=discord.Status.online,
             activity=discord.CustomActivity(
                 type=discord.ActivityType.custom,
                 emoji=discord.PartialEmoji(name="🌺"),
