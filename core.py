@@ -8,6 +8,7 @@ import wavelink
 from discord.ext import commands
 
 from tools.config_loader import config_loader
+from tools.mobile_status import enable_mobile_status
 
 log = logging.getLogger(__name__)
 
@@ -98,6 +99,7 @@ async def main():
     # Configure logging ourselves since we use asyncio.run + bot.start (not bot.run,
     # which would call this for us). Routes discord.py + our own loggers to stderr.
     discord.utils.setup_logging(level=logging.INFO)
+    enable_mobile_status()
     async with asyncpg.create_pool(POSTGRESQL_URI, command_timeout=60) as pool:
         async with Yasuho(db_pool=pool) as bot:
             await bot.start(TOKEN)

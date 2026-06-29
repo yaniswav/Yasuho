@@ -22,6 +22,7 @@ query ($id: Int, $search: String, $type: MediaType) {
   Media(id: $id, search: $search, type: $type) {
     id
     idMal
+    type
     title { romaji english native }
     format
     status
@@ -65,6 +66,23 @@ query ($search: String, $type: MediaType) {
       id
       title { romaji english }
       format
+      seasonYear
+    }
+  }
+}
+"""
+
+# Cross-type search used to disambiguate list edits (anime vs manga).
+SEARCH_QUERY = """
+query ($search: String) {
+  Page(perPage: 10) {
+    media(search: $search) {
+      id
+      type
+      format
+      title { romaji english }
+      episodes
+      chapters
       seasonYear
     }
   }
@@ -147,12 +165,13 @@ mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus, $score: Float
 """
 
 MEDIA_LIST_QUERY = """
-query ($userId: Int, $status: MediaListStatus) {
-  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
+  MediaListCollection(userId: $userId, type: $type, status: $status) {
     lists {
       entries {
         progress
-        media { title { romaji } episodes }
+        score
+        media { title { romaji } episodes chapters }
       }
     }
   }
@@ -167,6 +186,9 @@ VALID_STATUSES = {
     "PAUSED",
     "REPEATING",
 }
+
+# Ordered so we can step forwards/backwards through the seasonal calendar.
+SEASONS = ("WINTER", "SPRING", "SUMMER", "FALL")
 
 
 def _media_title(media):
@@ -190,6 +212,61 @@ def _media_colour(media):
         except ValueError:
             pass
     return random_colour()
+
+
+def _media_unit(media, *, plural=False):
+    """Return the progress unit word ("episode"/"chapter") for a media dict.
+
+    Manga track chapters, everything else tracks episodes. Relies on the
+    ``type`` field, falling back to whichever count the media actually has.
+    """
+
+    mtype = media.get("type")
+    if mtype == "MANGA":
+        is_manga = True
+    elif mtype == "ANIME":
+        is_manga = False
+    else:
+        is_manga = bool(media.get("chapters")) and not media.get("episodes")
+
+    word = "chapter" if is_manga else "episode"
+    return word + "s" if plural else word
+
+
+def _current_season(now=None):
+    """Return the ``(SEASON, year)`` matching the given UTC datetime."""
+
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+    if now.month in (12, 1, 2):
+        season = "WINTER"
+    elif now.month in (3, 4, 5):
+        season = "SPRING"
+    elif now.month in (6, 7, 8):
+        season = "SUMMER"
+    else:
+        season = "FALL"
+    return season, now.year
+
+
+def _step_season(season, year, *, forward=True):
+    """Step one season forward/backward, rolling the year at the boundaries."""
+
+    try:
+        index = SEASONS.index(season)
+    except ValueError:
+        return _current_season()
+
+    if forward:
+        index += 1
+        if index >= len(SEASONS):
+            return SEASONS[0], year + 1
+        return SEASONS[index], year
+
+    index -= 1
+    if index < 0:
+        return SEASONS[-1], year - 1
+    return SEASONS[index], year
 
 
 # ----------------------------------------------------------------------
@@ -277,6 +354,163 @@ class ResultView(discord.ui.View):
                 pass
 
 
+class SeasonView(discord.ui.View):
+    """Seasonal browser: a title picker plus previous/next season navigation."""
+
+    def __init__(self, cog, results, author_id, season, year, timeout=180):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.author_id = author_id
+        self.season = season
+        self.year = year
+        self.message = None
+        self.add_item(ResultSelect(cog, results, author_id, "ANIME"))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def _change_season(self, interaction, *, forward):
+        try:
+            await interaction.response.defer()
+            season, year = _step_season(self.season, self.year, forward=forward)
+            data = await self.cog._graphql(
+                PAGE_QUERY,
+                {
+                    "sort": ["POPULARITY_DESC"],
+                    "type": "ANIME",
+                    "season": season,
+                    "seasonYear": year,
+                },
+            )
+            media = (
+                ((data or {}).get("data") or {}).get("Page") or {}
+            ).get("media") or []
+            if not media:
+                return await interaction.followup.send(
+                    f"No anime found for {season.title()} {year}.", ephemeral=True
+                )
+
+            view = SeasonView(self.cog, media, self.author_id, season, year)
+            view.message = await interaction.edit_original_response(
+                content=f"**{season.title()} {year} anime** — pick one for details:",
+                view=view,
+            )
+        except Exception:
+            log.exception("AniList season navigation failed")
+            try:
+                await interaction.followup.send(
+                    "Something went wrong loading that season.", ephemeral=True
+                )
+            except Exception:
+                pass
+
+    @discord.ui.button(
+        label="◀ Previous season", style=discord.ButtonStyle.secondary, row=1
+    )
+    async def previous_season(self, interaction, button):
+        await self._change_season(interaction, forward=False)
+
+    @discord.ui.button(
+        label="Next season ▶", style=discord.ButtonStyle.secondary, row=1
+    )
+    async def next_season(self, interaction, button):
+        await self._change_season(interaction, forward=True)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+class EditSelect(discord.ui.Select):
+    """Disambiguation dropdown: choose which media a text edit targets."""
+
+    def __init__(self, cog, candidates, author_id, field, value):
+        self.cog = cog
+        self.author_id = author_id
+        self.field = field
+        self.value = value
+        self.candidates = {str(m.get("id")): m for m in candidates}
+
+        options = []
+        for media in candidates[:25]:
+            mtype = media.get("type") or "?"
+            romaji = (media.get("title") or {}).get("romaji") or "Unknown"
+            year = media.get("seasonYear") or "?"
+            label = f"[{mtype}] {romaji} ({year})"
+            options.append(
+                discord.SelectOption(label=label[:100], value=str(media.get("id")))
+            )
+
+        super().__init__(placeholder="Pick the right title...", options=options)
+
+    async def callback(self, interaction):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+
+        try:
+            media = self.candidates.get(self.values[0])
+            if not media:
+                return await interaction.response.send_message(
+                    "Could not load that title.", ephemeral=True
+                )
+
+            for child in self.view.children:
+                child.disabled = True
+            await interaction.response.edit_message(
+                content=f"Updating **{_media_title(media)}**...", view=self.view
+            )
+            await self.cog._apply_edit(
+                interaction, self.author_id, media, self.field, self.value
+            )
+        except Exception:
+            log.exception("AniList edit select failed")
+            try:
+                await interaction.followup.send(
+                    "Something went wrong updating that entry.", ephemeral=True
+                )
+            except Exception:
+                pass
+
+
+class EditSelectView(discord.ui.View):
+    """Author-restricted wrapper around an :class:`EditSelect`."""
+
+    def __init__(self, cog, candidates, author_id, field, value, timeout=120):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.message = None
+        self.add_item(EditSelect(cog, candidates, author_id, field, value))
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "This menu isn't for you.", ephemeral=True
+            )
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
     """Collect a new progress and/or score for a list entry."""
 
@@ -292,14 +526,14 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
         max_length=5,
     )
 
-    def __init__(self, cog, media_id, token):
+    def __init__(self, cog, media, token):
         super().__init__()
         self.cog = cog
-        self.media_id = media_id
+        self.media = media
         self.token = token
 
     async def on_submit(self, interaction):
-        variables = {"mediaId": self.media_id}
+        variables = {"mediaId": self.media.get("id")}
         progress_raw = (self.progress.value or "").strip()
         score_raw = (self.score.value or "").strip()
 
@@ -332,9 +566,10 @@ class EditEntryModal(discord.ui.Modal, title="Edit list entry"):
 
             name = (
                 (entry.get("media") or {}).get("title") or {}
-            ).get("romaji") or "your entry"
+            ).get("romaji") or _media_title(self.media)
+            unit = _media_unit(self.media)
             await interaction.response.send_message(
-                f"Updated **{name}** — progress {entry.get('progress')}, "
+                f"Updated **{name}** — {unit} {entry.get('progress')}, "
                 f"score {entry.get('score')}.",
                 ephemeral=True,
             )
@@ -541,7 +776,7 @@ class MediaView(discord.ui.View):
     @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary, row=1)
     async def edit_button(self, interaction, button):
         await interaction.response.send_modal(
-            EditEntryModal(self.cog, self.media.get("id"), self.token)
+            EditEntryModal(self.cog, self.media, self.token)
         )
 
     async def _set_status(self, interaction, status):
@@ -779,56 +1014,99 @@ class AniList(commands.Cog):
         name = (((viewer or {}).get("data") or {}).get("Viewer") or {}).get("name")
         return name or "AniList user"
 
-    async def _resolve_media(self, search, media_type=None):
-        """Return the first matching media dict (id + title) for ``search``."""
+    async def _search_candidates(self, title):
+        """Return up to ~10 search candidates across both anime and manga.
 
-        variables = {"search": search}
-        if media_type:
-            variables["type"] = media_type
+        The lack of a type filter is deliberate: it lets the edit flow tell
+        the user that, e.g., "Berserk" exists as both an anime and a manga.
+        """
 
-        data = await self._graphql(MEDIA_QUERY, variables)
-        return ((data or {}).get("data") or {}).get("Media")
+        data = await self._graphql(SEARCH_QUERY, {"search": title})
+        page = ((data or {}).get("data") or {}).get("Page") or {}
+        return page.get("media") or []
 
-    def _media_embed(self, media, *, count_label, count_value):
-        """Build a shared embed for an anime/manga media object."""
+    async def _reply(self, sender, content):
+        """Send ``content`` via either a Context or an Interaction."""
 
-        title_data = media.get("title") or {}
-        romaji = title_data.get("romaji") or "Unknown"
-        english = title_data.get("english")
-        title = f"{romaji} ({english})" if english and english != romaji else romaji
+        try:
+            if isinstance(sender, discord.Interaction):
+                if sender.response.is_done():
+                    await sender.followup.send(content, ephemeral=True)
+                else:
+                    await sender.response.send_message(content, ephemeral=True)
+            else:
+                await sender.send(content)
+        except Exception:
+            log.exception("AniList reply failed")
 
-        embed = discord.Embed(
-            title=title,
-            url=media.get("siteUrl"),
-            description=self._clean_description(media.get("description")),
-            colour=_media_colour(media),
-        )
+    async def _apply_edit(self, sender, user_id, media, field, value):
+        """Apply a single ``field`` edit to ``user_id``'s list entry for ``media``.
 
-        cover = media.get("coverImage") or {}
-        if cover.get("large"):
-            embed.set_thumbnail(url=cover["large"])
+        ``field`` is one of ``progress``/``status``/``score``. ``sender`` may be
+        a Context or an Interaction; the type-aware confirmation is routed
+        accordingly (episode vs chapter).
+        """
 
-        banner = media.get("bannerImage")
-        if banner:
-            embed.set_image(url=banner)
-
-        if media.get("format"):
-            embed.add_field(name="Format", value=media["format"])
-        embed.add_field(name=count_label, value=str(count_value or "?"))
-        if media.get("status"):
-            embed.add_field(name="Status", value=media["status"])
-
-        score = media.get("averageScore")
-        if score is not None:
-            embed.add_field(name="Score", value=f"{score}/100")
-
-        genres = media.get("genres") or []
-        if genres:
-            embed.add_field(
-                name="Genres", value=", ".join(genres[:5]), inline=False
+        token = await self._get_token(user_id)
+        if not token:
+            return await self._reply(
+                sender, "Link your account first with `/anilist login`."
             )
 
-        return embed
+        variables = {"mediaId": media.get("id")}
+        if field == "progress":
+            variables["progress"] = value
+            variables["status"] = "CURRENT"
+        elif field == "status":
+            variables["status"] = value
+        elif field == "score":
+            variables["score"] = value
+
+        data = await self._graphql(SAVE_ENTRY_QUERY, variables, token=token)
+        entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
+        if not entry:
+            return await self._reply(sender, "Could not update that entry.")
+
+        name = ((entry.get("media") or {}).get("title") or {}).get(
+            "romaji"
+        ) or _media_title(media)
+
+        if field == "progress":
+            unit = _media_unit(media)
+            message = (
+                f"Set **{name}** to {unit} {entry.get('progress')} "
+                f"({entry.get('status')})."
+            )
+        elif field == "status":
+            message = f"Set **{name}** to {entry.get('status')}."
+        else:
+            message = f"Scored **{name}** {entry.get('score')}."
+
+        await self._reply(sender, message)
+
+    async def _edit_flow(self, ctx, title, field, value):
+        """Resolve ``title`` (disambiguating anime/manga) then apply an edit."""
+
+        token = await self._get_token(ctx.author.id)
+        if not token:
+            return await ctx.send("Link your account first with `/anilist login`.")
+
+        async with ctx.typing():
+            candidates = await self._search_candidates(title)
+
+        if not candidates:
+            return await ctx.send(f"No result for **{title}**.")
+
+        if len(candidates) == 1:
+            return await self._apply_edit(
+                ctx, ctx.author.id, candidates[0], field, value
+            )
+
+        view = EditSelectView(self, candidates, ctx.author.id, field, value)
+        view.message = await ctx.send(
+            content=f"Multiple matches for **{title}** — pick the right one:",
+            view=view,
+        )
 
     # ------------------------------------------------------------------
     # Lookup commands (no auth required)
@@ -928,32 +1206,41 @@ class AniList(commands.Cog):
     async def seasonal(self, ctx, season: str = None, year: int = None):
         """Browse anime from a season (defaults to the current season)."""
 
-        seasons = ("WINTER", "SPRING", "SUMMER", "FALL")
-        now = datetime.datetime.now(datetime.timezone.utc)
-
         if season:
             season = season.upper()
-            if season not in seasons:
+            if season not in SEASONS:
                 return await ctx.send(
                     "Season must be one of: WINTER, SPRING, SUMMER, FALL."
                 )
+            if year is None:
+                year = datetime.datetime.now(datetime.timezone.utc).year
         else:
-            season = seasons[(now.month - 1) // 3]
+            current_season, current_year = _current_season()
+            season = current_season
+            if year is None:
+                year = current_year
 
-        if year is None:
-            year = now.year
+        async with ctx.typing():
+            data = await self._graphql(
+                PAGE_QUERY,
+                {
+                    "sort": ["POPULARITY_DESC"],
+                    "type": "ANIME",
+                    "season": season,
+                    "seasonYear": year,
+                },
+            )
+            media = (
+                ((data or {}).get("data") or {}).get("Page") or {}
+            ).get("media") or []
+            if not media:
+                return await ctx.send(f"No anime found for {season.title()} {year}.")
 
-        await self._browse(
-            ctx,
-            {
-                "sort": ["POPULARITY_DESC"],
-                "type": "ANIME",
-                "season": season,
-                "seasonYear": year,
-            },
-            "ANIME",
-            f"{season.title()} {year} anime",
-        )
+            view = SeasonView(self, media, ctx.author.id, season, year)
+            view.message = await ctx.send(
+                content=f"**{season.title()} {year} anime** — pick one for details:",
+                view=view,
+            )
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -1098,28 +1385,10 @@ class AniList(commands.Cog):
     async def anilist_update(self, ctx, progress: int, *, title: str):
         """Set your progress on a title and mark it as currently watching/reading."""
 
-        token = await self._get_token(ctx.author.id)
-        if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
+        if progress < 0:
+            return await ctx.send("Progress must be zero or a positive number.")
 
-        async with ctx.typing():
-            media = await self._resolve_media(title)
-            if not media:
-                return await ctx.send("No matching title found.")
-
-            data = await self._graphql(
-                SAVE_ENTRY_QUERY,
-                {"mediaId": media["id"], "progress": progress, "status": "CURRENT"},
-                token=token,
-            )
-            entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
-            if not entry:
-                return await ctx.send("Could not update that entry.")
-
-            name = ((entry.get("media") or {}).get("title") or {}).get(
-                "romaji"
-            ) or title
-            await ctx.send(f"Updated **{name}** — progress {entry.get('progress')}.")
+        await self._edit_flow(ctx, title, "progress", progress)
 
     @anilist.command(name="status")
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -1132,56 +1401,17 @@ class AniList(commands.Cog):
                 "Status must be one of: " + ", ".join(sorted(VALID_STATUSES)) + "."
             )
 
-        token = await self._get_token(ctx.author.id)
-        if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
-
-        async with ctx.typing():
-            media = await self._resolve_media(title)
-            if not media:
-                return await ctx.send("No matching title found.")
-
-            data = await self._graphql(
-                SAVE_ENTRY_QUERY,
-                {"mediaId": media["id"], "status": status},
-                token=token,
-            )
-            entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
-            if not entry:
-                return await ctx.send("Could not update that entry.")
-
-            name = ((entry.get("media") or {}).get("title") or {}).get(
-                "romaji"
-            ) or title
-            await ctx.send(f"Set **{name}** to {entry.get('status')}.")
+        await self._edit_flow(ctx, title, "status", status)
 
     @anilist.command(name="score")
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def anilist_score(self, ctx, score: float, *, title: str):
         """Score a title on your AniList list."""
 
-        token = await self._get_token(ctx.author.id)
-        if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
+        if score < 0:
+            return await ctx.send("Score must be zero or a positive number.")
 
-        async with ctx.typing():
-            media = await self._resolve_media(title)
-            if not media:
-                return await ctx.send("No matching title found.")
-
-            data = await self._graphql(
-                SAVE_ENTRY_QUERY,
-                {"mediaId": media["id"], "score": score},
-                token=token,
-            )
-            entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
-            if not entry:
-                return await ctx.send("Could not update that entry.")
-
-            name = ((entry.get("media") or {}).get("title") or {}).get(
-                "romaji"
-            ) or title
-            await ctx.send(f"Scored **{name}** {entry.get('score')}.")
+        await self._edit_flow(ctx, title, "score", score)
 
     @anilist.command(name="profile")
     @commands.cooldown(1, 10, commands.BucketType.user)
@@ -1243,23 +1473,27 @@ class AniList(commands.Cog):
 
     @anilist.command(name="list")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def anilist_list(self, ctx, status: str = None):
-        """Show your anime list, optionally filtered by status."""
+    async def anilist_list(
+        self, ctx, media_type: str = "anime", status: str = "CURRENT"
+    ):
+        """Show your anime/manga list, filtered by status (defaults to CURRENT)."""
+
+        media_type = media_type.lower()
+        if media_type not in ("anime", "manga"):
+            return await ctx.send("Media type must be `anime` or `manga`.")
+
+        status = status.upper()
+        if status not in VALID_STATUSES:
+            return await ctx.send(
+                "Status must be one of: " + ", ".join(sorted(VALID_STATUSES)) + "."
+            )
 
         token = await self._get_token(ctx.author.id)
         if not token:
             return await ctx.send("Link your account first with `/anilist login`.")
 
-        if status:
-            status = status.upper()
-            if status not in VALID_STATUSES:
-                return await ctx.send(
-                    "Status must be one of: "
-                    + ", ".join(sorted(VALID_STATUSES))
-                    + "."
-                )
-        else:
-            status = "CURRENT"
+        gql_type = media_type.upper()
+        unit = "chapters" if gql_type == "MANGA" else "episodes"
 
         async with ctx.typing():
             viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
@@ -1269,7 +1503,7 @@ class AniList(commands.Cog):
 
             data = await self._graphql(
                 MEDIA_LIST_QUERY,
-                {"userId": user["id"], "status": status},
+                {"userId": user["id"], "type": gql_type, "status": status},
                 token=token,
             )
             collection = (
@@ -1281,14 +1515,22 @@ class AniList(commands.Cog):
                 for entry in lst.get("entries") or []:
                     media = entry.get("media") or {}
                     name = (media.get("title") or {}).get("romaji") or "Unknown"
-                    total = media.get("episodes") or "?"
-                    lines.append(f"{name} - ep {entry.get('progress', 0)}/{total}")
+                    total = (
+                        media.get("chapters")
+                        if gql_type == "MANGA"
+                        else media.get("episodes")
+                    ) or "?"
+                    lines.append(
+                        f"{name} — {entry.get('progress', 0)}/{total} {unit}"
+                    )
 
             if not lines:
-                return await ctx.send(f"Nothing on your {status.title()} list.")
+                return await ctx.send(
+                    f"Nothing on your {status.title()} {media_type} list."
+                )
 
         await Paginator(
-            paginate_lines(lines, title=f"{status.title()} list"),
+            paginate_lines(lines, title=f"{status.title()} {media_type} list"),
             author_id=ctx.author.id,
         ).start(ctx)
 
