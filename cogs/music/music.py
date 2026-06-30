@@ -55,18 +55,6 @@ def format_duration(track: sonolink.models.Playable) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
-def _track_artwork(track: sonolink.models.Playable) -> typing.Optional[str]:
-    """Artwork URL for a track, rebuilding the YouTube thumbnail when missing."""
-    if track.artwork:
-        return track.artwork
-    # The youtube-plugin often omits artworkUrl; rebuild it from the video id
-    # (hqdefault always exists, unlike maxresdefault which 404s on some videos).
-    source = (track.source_name or "").lower()
-    if source in ("youtube", "youtubemusic") and track.identifier:
-        return f"https://i.ytimg.com/vi/{track.identifier}/hqdefault.jpg"
-    return None
-
-
 def _first_track(
     result: typing.Optional[typing.Any],
 ) -> typing.Optional[sonolink.models.Playable]:
@@ -177,9 +165,8 @@ class _ControllerButton(discord.ui.Button):
 class MusicController(discord.ui.LayoutView):
     """Interactive now-playing controls as a Components V2 layout.
 
-    The artwork is shown as a prominent media gallery image at the top, followed
-    by a coloured container holding the track details and the playback buttons.
-    The view is restricted to listeners currently in the player's voice channel.
+    A coloured container holds the track details and the playback buttons. The
+    view is restricted to listeners currently in the player's voice channel.
     """
 
     def __init__(self, cog: "Music", player: Player, *, timeout: float = 600.0) -> None:
@@ -206,13 +193,6 @@ class MusicController(discord.ui.LayoutView):
         if track is None:
             self.add_item(discord.ui.TextDisplay("Nothing is playing right now."))
             return
-
-        # The track artwork as a big banner is what makes the controller look good.
-        artwork = _track_artwork(track)
-        if artwork:
-            self.add_item(
-                discord.ui.MediaGallery(discord.MediaGalleryItem(media=artwork))
-            )
 
         container = discord.ui.Container(accent_colour=random_colour())
 
