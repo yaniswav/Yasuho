@@ -6,7 +6,11 @@ embed to the guild's mod-log via ModLog.post_action(guild, embed).
 
 from __future__ import annotations
 
+import logging
+
 import discord
+
+log = logging.getLogger(__name__)
 
 # Colour per action type, used for case + mod-log embeds.
 ACTION_COLOURS = {
@@ -85,3 +89,33 @@ def case_embed(case_number, action, target, moderator, reason, expires=None):
         embed.add_field(name="Expires", value=discord.utils.format_dt(expires, "R"))
     embed.set_footer(text=f"User ID: {target.id}")
     return embed
+
+
+# ----------------------------------------------------------------------
+# ModLog funnel
+# ----------------------------------------------------------------------
+# The single place that resolves the ModLog cog. Routing every post/suppress
+# through here means renaming the cog only touches this funnel, not every
+# moderation/automod call site (which would otherwise fail get_cog silently).
+async def funnel_action(bot, guild, embed):
+    """Post a pre-built embed to the guild's mod-log, if ModLog is loaded."""
+
+    cog = bot.get_cog("ModLog")
+    if cog is None:
+        return
+    try:
+        await cog.post_action(guild, embed)
+    except Exception:
+        log.exception("Failed to funnel mod-log action")
+
+
+def funnel_suppress(bot, guild_id, user_id, kind):
+    """Suppress the duplicate listener embed for a bot-initiated action."""
+
+    cog = bot.get_cog("ModLog")
+    if cog is None:
+        return
+    try:
+        cog.suppress(guild_id, user_id, kind)
+    except Exception:
+        log.exception("Failed to funnel mod-log suppress")

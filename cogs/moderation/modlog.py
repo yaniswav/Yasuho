@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import settings
+from tools import db, embed_creator, settings
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +32,34 @@ EVENT_LABELS = {
 
 EVENT_KEYS = list(EVENT_LABELS)
 
+# Embed titles for the shared member-event embed, keyed by the same action key
+# used for EVENT_COLOURS.
+MEMBER_EVENT_TITLES = {
+    "join": "Member Joined",
+    "leave": "Member Left / Kicked",
+    "ban": "Member Banned",
+    "unban": "Member Unbanned",
+}
+
+
+def _member_event_embed(user, action):
+    """Build the shared join/leave/ban/unban embed for a member event.
+
+    ``action`` is the event key (join/leave/ban/unban) used to look up both the
+    title and the colour. Callers that need extra fields (e.g. join's account
+    age) add them to the returned embed.
+    """
+
+    embed = discord.Embed(
+        title=MEMBER_EVENT_TITLES[action],
+        description=f"{user.mention} ({user})",
+        colour=EVENT_COLOURS[action],
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.set_thumbnail(url=user.display_avatar.url)
+    embed.set_footer(text=f"ID: {user.id}")
+    return embed
+
 
 # ----------------------------------------------------------------------
 # Interactive control panel (discord.ui)
@@ -57,7 +85,7 @@ class LogChannelSelect(discord.ui.ChannelSelect):
             await self.panel._refresh(interaction)
         except Exception:
             log.exception("Mod-log panel channel select failed")
-            await self.panel._error(interaction)
+            await embed_creator.notify_failure(interaction)
 
 
 class EventSelect(discord.ui.Select):
@@ -90,7 +118,7 @@ class EventSelect(discord.ui.Select):
             await self.panel._refresh(interaction)
         except Exception:
             log.exception("Mod-log panel event select failed")
-            await self.panel._error(interaction)
+            await embed_creator.notify_failure(interaction)
 
 
 class ModLogPanel(discord.ui.View):
@@ -152,19 +180,6 @@ class ModLogPanel(discord.ui.View):
             embed=new.build_embed(), view=new
         )
 
-    async def _error(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
-
     @discord.ui.button(
         label="Disable logging", style=discord.ButtonStyle.danger, row=2
     )
@@ -175,7 +190,7 @@ class ModLogPanel(discord.ui.View):
             await self._refresh(interaction)
         except Exception:
             log.exception("Mod-log panel disable failed")
-            await self._error(interaction)
+            await embed_creator.notify_failure(interaction)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
@@ -225,11 +240,9 @@ class ModLog(commands.Cog):
 
     # -- settings helpers (shared by panel + fallback subcommands) ------
     async def _set_channel(self, guild_id, channel_id):
-        query = (
-            "INSERT INTO modlog (guild_id, channel_id) VALUES ($1, $2) "
-            "ON CONFLICT (guild_id) DO UPDATE SET channel_id = $2;"
+        await db.upsert_guild_value(
+            self.bot.db_pool, "modlog", "channel_id", guild_id, channel_id
         )
-        await self.bot.db_pool.execute(query, guild_id, channel_id)
         self._channels[guild_id] = channel_id
 
     async def _disable(self, guild_id):
@@ -350,14 +363,7 @@ class ModLog(commands.Cog):
         if not await self._enabled(guild.id, "ban"):
             return
 
-        embed = discord.Embed(
-            title="Member Banned",
-            description=f"{user.mention} ({user})",
-            colour=EVENT_COLOURS["ban"],
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.set_footer(text=f"ID: {user.id}")
+        embed = _member_event_embed(user, "ban")
         await self.post_action(guild, embed)
 
     @commands.Cog.listener()
@@ -371,14 +377,7 @@ class ModLog(commands.Cog):
         if not await self._enabled(guild.id, "unban"):
             return
 
-        embed = discord.Embed(
-            title="Member Unbanned",
-            description=f"{user.mention} ({user})",
-            colour=EVENT_COLOURS["unban"],
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.set_footer(text=f"ID: {user.id}")
+        embed = _member_event_embed(user, "unban")
         await self.post_action(guild, embed)
 
     @commands.Cog.listener()
@@ -395,14 +394,7 @@ class ModLog(commands.Cog):
         if not await self._enabled(member.guild.id, "leave"):
             return
 
-        embed = discord.Embed(
-            title="Member Left / Kicked",
-            description=f"{member.mention} ({member})",
-            colour=EVENT_COLOURS["leave"],
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"ID: {member.id}")
+        embed = _member_event_embed(member, "leave")
         await self.post_action(member.guild, embed)
 
     @commands.Cog.listener()
@@ -410,18 +402,11 @@ class ModLog(commands.Cog):
         if not await self._enabled(member.guild.id, "join"):
             return
 
-        embed = discord.Embed(
-            title="Member Joined",
-            description=f"{member.mention} ({member})",
-            colour=EVENT_COLOURS["join"],
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
+        embed = _member_event_embed(member, "join")
         embed.add_field(
             name="Account created",
             value=discord.utils.format_dt(member.created_at, "R"),
         )
-        embed.set_footer(text=f"ID: {member.id}")
         await self.post_action(member.guild, embed)
 
     @commands.Cog.listener()

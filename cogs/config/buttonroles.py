@@ -751,15 +751,7 @@ class BuilderView(discord.ui.View):
         )
 
     async def _error(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send("Something went wrong.", ephemeral=True)
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await embed_creator.notify_failure(interaction)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:

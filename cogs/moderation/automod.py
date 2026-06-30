@@ -6,7 +6,7 @@ import time
 import discord
 from discord.ext import commands
 
-from tools import modactions, settings
+from tools import db, modactions, settings
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -447,13 +447,10 @@ class AutoMod(commands.Cog):
             )
             return
 
-        # Fixed identifier (never user input) -> safe to interpolate.
         column = "antilink" if key == "link" else "antispam"
-        query = (
-            f"INSERT INTO automod (guild_id, {column}) VALUES ($1, $2) "
-            f"ON CONFLICT (guild_id) DO UPDATE SET {column} = $2;"
+        await db.upsert_guild_value(
+            self.bot.db_pool, "automod", column, guild_id, value
         )
-        await self.bot.db_pool.execute(query, guild_id, value)
         self._update_cache(guild_id, **{column: value})
 
     async def _panel_state(self, guild):
@@ -608,12 +605,7 @@ class AutoMod(commands.Cog):
         embed = modactions.case_embed(
             case_number, action, target, guild.me, reason
         )
-        ml = self.bot.get_cog("ModLog")
-        if ml:
-            try:
-                await ml.post_action(guild, embed)
-            except Exception:
-                log.exception("AutoMod failed to post mod-log action")
+        await modactions.funnel_action(self.bot, guild, embed)
 
     async def _handle_violation(self, message, *, kind, notice, reason):
         """Delete the message, apply the configured action, and log a case."""

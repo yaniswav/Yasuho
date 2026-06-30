@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools import embed_creator
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -40,17 +41,7 @@ class _StarboardChannelSelect(discord.ui.ChannelSelect):
             )
         except Exception:
             log.exception("Starboard channel select failed")
-            try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        "Something went wrong.", ephemeral=True
-                    )
-                else:
-                    await interaction.response.send_message(
-                        "Something went wrong.", ephemeral=True
-                    )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(interaction)
 
 
 class StarboardSetView(discord.ui.View):

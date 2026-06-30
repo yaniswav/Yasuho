@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from tools import settings
+from tools import embed_creator, settings
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -156,17 +156,7 @@ class _PanelModal(discord.ui.Modal):
         await self.panel._refresh(interaction)
 
     async def _fail(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await embed_creator.notify_failure(interaction, "Something went wrong.")
 
 
 class TitleModal(_PanelModal):
@@ -848,18 +838,9 @@ class WelcomePanel(discord.ui.View):
         new = WelcomePanel(self.cog, self.guild, self.author_id, self.config)
         new.message = self.message
         self.stop()
-        embed = new.build_embed()
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=new)
-                return
-        except discord.HTTPException:
-            pass
-        if self.message is not None:
-            try:
-                await self.message.edit(embed=embed, view=new)
-            except discord.HTTPException:
-                pass
+        await embed_creator.refresh_in_place(
+            interaction, self.message, embed=new.build_embed(), view=new
+        )
 
     async def sync_message(self):
         """Re-render the stored panel message (used by the GIF sub-panel)."""
@@ -875,17 +856,7 @@ class WelcomePanel(discord.ui.View):
             pass
 
     async def _error(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await embed_creator.notify_failure(interaction, "Something went wrong.")
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:

@@ -11,6 +11,25 @@ from tools.formats import random_colour
 log = logging.getLogger(__name__)
 
 
+def _error_embed(ctx, name, value):
+    """Build the standard error embed used by every branch below."""
+    return (
+        discord.Embed(
+            color=random_colour(),
+            timestamp=ctx.message.created_at,
+        )
+        .add_field(name=name, value=value)
+        .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
+    )
+
+
+def _usage(ctx):
+    """Return the command usage line with the bot mention replaced by @name."""
+    return f":information_source: Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
+        ctx.me.mention, f"@{ctx.bot.user.name}"
+    )
+
+
 class Errors(commands.Cog):
     """Global command error handler that reports failures as embeds."""
 
@@ -29,15 +48,11 @@ class Errors(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             try:
                 await ctx.send(
-                    embed=discord.Embed(
-                        color=random_colour(),
-                        timestamp=ctx.message.created_at,
-                    )
-                    .add_field(
-                        name="**Invalid command entered. Did you mean:**",
-                        value=f"`{' | '.join(str(command) for command in self.bot.commands if lv.distance(ctx.invoked_with, command.name) < 4 and not command.hidden) or 'Sorry, no similar commands found'}`",
-                    )
-                    .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url),
+                    embed=_error_embed(
+                        ctx,
+                        "**Invalid command entered. Did you mean:**",
+                        f"`{' | '.join(str(command) for command in self.bot.commands if lv.distance(ctx.invoked_with, command.name) < 4 and not command.hidden) or 'Sorry, no similar commands found'}`",
+                    ),
                     delete_after=10,
                 )
 
@@ -55,48 +70,30 @@ class Errors(commands.Cog):
                 log.exception("Interactive arg completion failed; using usage text")
 
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you're missing a required argument:**",
+                    f":warning: Error: `{error}`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like you're missing a required argument:**",
-                    value=f":warning: Error: `{error}`\n:information_source: Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you gave me a bad argument:**",
+                    f":warning: Error: `{error}`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like you gave me a bad argument:**",
-                    value=f":warning: Error: `{error}`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.CommandOnCooldown):
 
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
-                )
-                .add_field(
-                    name="**Seems like you are on cooldown:**",
-                    value=f":hourglass: Remaining time: `{timedelta(seconds=int(error.retry_after))}`\n:information_source: Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url),
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you are on cooldown:**",
+                    f":hourglass: Remaining time: `{timedelta(seconds=int(error.retry_after))}`\n{_usage(ctx)}",
+                ),
                 delete_after=60,
             )
 
@@ -105,17 +102,11 @@ class Errors(commands.Cog):
 
         elif isinstance(error, commands.NoPrivateMessage):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you can't use this command in private messages:**",
+                    "Go in a guild where I am or invite me in your server\ninvite.yasuho.xyz",
                 )
-                .add_field(
-                    name="**Seems like you can't use this command in private messages:**",
-                    value="Go in a guild where I am or invite me in your server\ninvite.yasuho.xyz".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, discord.HTTPException):
@@ -123,47 +114,29 @@ class Errors(commands.Cog):
 
         elif isinstance(error, commands.TooManyArguments):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you gave me too many arguments:**",
+                    f":question: What to do: `look at {ctx.prefix}help and try being more specific`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like you gave me too many arguments:**",
-                    value=f":question: What to do: `look at {ctx.prefix}help and try being more specific`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.UserInputError):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you did something wrong:**",
+                    f":question: What to do: `look at {ctx.prefix}help and try being more specific`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like you did something wrong:**",
-                    value=f":question: What to do: `look at {ctx.prefix}help and try being more specific`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.MissingPermissions):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like you are missing permissions:**",
+                    f":warning: Error: `{error}`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like you are missing permissions:**",
-                    value=f":warning: Error: `{error}`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.DisabledCommand):
@@ -171,32 +144,20 @@ class Errors(commands.Cog):
 
         elif isinstance(error, commands.CommandInvokeError):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like something went wrong while executing command:**",
+                    f":question: What to do: `Report the bug to bot owner` [<@!228895251576782858>]\n:warning: Error: `{error}`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like something went wrong while executing command:**",
-                    value=f":question: What to do: `Report the bug to bot owner` [<@!228895251576782858>]\n:warning: Error: `{error}`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
         elif isinstance(error, commands.BotMissingPermissions):
             await ctx.send(
-                embed=discord.Embed(
-                    color=random_colour(),
-                    timestamp=ctx.message.created_at,
+                embed=_error_embed(
+                    ctx,
+                    "**Seems like I am missing permissions:**",
+                    f":warning: Error: `{error}`\n{_usage(ctx)}",
                 )
-                .add_field(
-                    name="**Seems like I am missing permissions:**",
-                    value=f":warning: Error: `{error}`\n:information_source:  Command usage: `{ctx.prefix}{ctx.command} {ctx.command.signature}`".replace(
-                        ctx.me.mention, f"@{self.bot.user.name}"
-                    ),
-                )
-                .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
             )
 
 

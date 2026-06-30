@@ -365,7 +365,7 @@ async def refresh_in_place(interaction, message, *, embed, view) -> None:
             pass
 
 
-async def _notify_failure(interaction, message: str = "Something went wrong.") -> None:
+async def notify_failure(interaction, message: str = "Something went wrong.") -> None:
     """Best-effort ephemeral error reply that respects the response state."""
 
     try:
@@ -423,7 +423,7 @@ class _EmbedModal(discord.ui.Modal):
         await self.host.on_embed_changed(interaction)
 
     async def _fail(self, interaction):
-        await _notify_failure(interaction)
+        await notify_failure(interaction)
 
 
 class TitleModal(_EmbedModal):
@@ -719,7 +719,7 @@ class _EditSelect(discord.ui.Select):
             log.warning("embed_creator edit select got unknown option %r", choice)
         except Exception:
             log.exception("embed_creator edit select failed")
-            await _notify_failure(interaction)
+            await notify_failure(interaction)
 
 
 def make_edit_select(

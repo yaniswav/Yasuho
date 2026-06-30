@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
-from tools import modactions
+from tools import db, modactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
@@ -281,13 +281,21 @@ class Moderation(commands.Cog):
 
     async def _post_modlog(self, guild, embed):
         """Funnel a mod-action embed to the guild's configured mod-log channel."""
-        ml = self.bot.get_cog("ModLog")
-        if ml is None:
-            return
-        try:
-            await ml.post_action(guild, embed)
-        except Exception:
-            log.exception("Failed to funnel mod action to mod-log")
+        await modactions.funnel_action(self.bot, guild, embed)
+
+    async def _confirm(self, ctx, embed, *, timeout=30):
+        """Send a danger-action confirm prompt and wait for the author's choice.
+
+        Builds a ConfirmView locked to the invoker, sends ``embed`` with it, then
+        waits and returns True only if Confirm was pressed. The prompt message is
+        stored on ``ctx`` as ``confirm_message`` so callers can edit it in place
+        to show the cancelled/result embed exactly as before.
+        """
+        view = ConfirmView(ctx.author.id, timeout=timeout)
+        view.message = await ctx.send(embed=embed, view=view)
+        ctx.confirm_message = view.message
+        await view.wait()
+        return bool(view.value)
 
     async def _get_mute_role_id(self, guild_id):
         """Return the guild's mute-role id from the bot cache, DB-filling on a miss."""
@@ -392,9 +400,7 @@ class Moderation(commands.Cog):
 
         # Suppress the ModLog leave listener so this bot kick is logged once
         # (the case embed below), not twice.
-        ml = self.bot.get_cog("ModLog")
-        if ml:
-            ml.suppress(ctx.guild.id, target.id, "remove")
+        modactions.funnel_suppress(self.bot, ctx.guild.id, target.id, "remove")
 
         try:
             await ctx.guild.kick(
@@ -491,27 +497,21 @@ class Moderation(commands.Cog):
         confirm.add_field(name="Reason", value=trim_reason(reason), inline=False)
         confirm.set_thumbnail(url=target.display_avatar.url)
 
-        view = ConfirmView(ctx.author.id)
-        view.message = await ctx.send(embed=confirm, view=view)
-        await view.wait()
-
-        if not view.value:
+        if not await self._confirm(ctx, confirm):
             aborted = discord.Embed(
                 title="Ban cancelled",
                 description=f"No action taken against {target.mention}.",
                 colour=modactions.action_colour("note"),
             )
             try:
-                await view.message.edit(embed=aborted, view=None)
+                await ctx.confirm_message.edit(embed=aborted, view=None)
             except discord.HTTPException:
                 pass
             return
 
         # Suppress the ModLog ban listener so this bot ban is logged once
         # (the case embed below), not twice.
-        ml = self.bot.get_cog("ModLog")
-        if ml:
-            ml.suppress(ctx.guild.id, target.id, "ban")
+        modactions.funnel_suppress(self.bot, ctx.guild.id, target.id, "ban")
 
         try:
             await ctx.guild.ban(
@@ -534,7 +534,7 @@ class Moderation(commands.Cog):
         )
         embed = modactions.case_embed(num, "ban", target, ctx.author, reason)
         try:
-            await view.message.edit(embed=embed, view=None)
+            await ctx.confirm_message.edit(embed=embed, view=None)
         except discord.HTTPException:
             await ctx.send(embed=embed)
         await self._post_modlog(ctx.guild, embed)
@@ -551,9 +551,7 @@ class Moderation(commands.Cog):
 
         # Suppress the ModLog unban listener so this bot unban is logged once
         # (the case embed below), not twice.
-        ml = self.bot.get_cog("ModLog")
-        if ml:
-            ml.suppress(ctx.guild.id, target.id, "unban")
+        modactions.funnel_suppress(self.bot, ctx.guild.id, target.id, "unban")
 
         try:
             await ctx.guild.unban(
@@ -607,27 +605,21 @@ class Moderation(commands.Cog):
             colour=modactions.action_colour("ban"),
         )
         confirm.add_field(name="Reason", value=trim_reason(reason), inline=False)
-        view = ConfirmView(ctx.author.id)
-        view.message = await ctx.send(embed=confirm, view=view)
-        await view.wait()
-
-        if not view.value:
+        if not await self._confirm(ctx, confirm):
             aborted = discord.Embed(
                 title="Mass ban cancelled",
                 description="No action taken.",
                 colour=modactions.action_colour("note"),
             )
             try:
-                await view.message.edit(embed=aborted, view=None)
+                await ctx.confirm_message.edit(embed=aborted, view=None)
             except discord.HTTPException:
                 pass
             return
 
         # Log each ban once (the summary below), not twice via the ModLog listener.
-        ml = self.bot.get_cog("ModLog")
-        if ml:
-            for obj in users:
-                ml.suppress(ctx.guild.id, obj.id, "ban")
+        for obj in users:
+            modactions.funnel_suppress(self.bot, ctx.guild.id, obj.id, "ban")
 
         try:
             result = await ctx.guild.bulk_ban(
@@ -667,7 +659,7 @@ class Moderation(commands.Cog):
             text=f"By {ctx.author}", icon_url=ctx.author.display_avatar.url
         )
         try:
-            await view.message.edit(embed=embed, view=None)
+            await ctx.confirm_message.edit(embed=embed, view=None)
         except discord.HTTPException:
             await ctx.send(embed=embed)
         await self._post_modlog(ctx.guild, embed)
@@ -761,11 +753,11 @@ class Moderation(commands.Cog):
                         send_tts_messages=False,
                         speak=False,
                     )
-                    role = "Muted"
-                    mrole = await ctx.guild.create_role(name=role, permissions=perms)
+                    mrole = await ctx.guild.create_role(name="Muted", permissions=perms)
                     await ctx.send(content="Mute role created!", delete_after=5)
-                    query = """INSERT INTO muterole (guild_id, role_id) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $3;"""
-                    await self.bot.db_pool.execute(query, ctx.guild.id, mrole.id, mrole.id)
+                    await db.upsert_guild_value(
+                        self.bot.db_pool, "muterole", "role_id", ctx.guild.id, mrole.id
+                    )
                     self.bot.muteroles[ctx.guild.id] = mrole.id
 
                     for channel in ctx.guild.text_channels:
@@ -840,11 +832,30 @@ class Moderation(commands.Cog):
             await self._post_modlog(ctx.guild, embed)
 
         except Exception:
+            # "Already muted" is the only benign outcome here; treat anything
+            # else as a real failure (missing permissions, DB error, deleted
+            # role) and log it instead of mislabelling it as "already muted".
+            mute_role_id = self.bot.muteroles.get(ctx.guild.id)
+            mute_role = (
+                discord.utils.get(ctx.guild.roles, id=mute_role_id)
+                if mute_role_id is not None
+                else None
+            )
+            if mute_role is not None and mute_role in user.roles:
+                embed = discord.Embed(
+                    title="Already Muted",
+                    colour=random_colour(),
+                    description=f":red_circle: {user} is already muted!",
+                    timestamp=datetime.datetime.utcnow(),
+                )
+                await ctx.send(embed=embed)
+                return
+
             log.exception("Failed to mute member")
             embed = discord.Embed(
-                title="Already Muted",
+                title="Mute failed",
                 colour=random_colour(),
-                description=f":red_circle: {user} is already muted!",
+                description=f":red_circle: Could not mute {user}, please try again.",
                 timestamp=datetime.datetime.utcnow(),
             )
             await ctx.send(embed=embed)
@@ -880,12 +891,12 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
             await self._post_modlog(ctx.guild, embed)
 
-        except Exception as e:
-            await ctx.send(e, delete_after=3)
+        except Exception:
+            log.exception("Failed to unmute member")
             embed = discord.Embed(
-                title="Not Muted",
+                title="Unmute failed",
                 colour=random_colour(),
-                description=f""":red_circle: {user} was never muted!""",
+                description=f":red_circle: Could not unmute {user}, please try again.",
                 timestamp=datetime.datetime.utcnow(),
             )
             await ctx.send(embed=embed)
@@ -905,13 +916,9 @@ class Moderation(commands.Cog):
                 ),
                 colour=modactions.action_colour("note"),
             )
-            view = ConfirmView(ctx.author.id)
-            view.message = await ctx.send(embed=confirm, view=view)
-            await view.wait()
-
-            if not view.value:
+            if not await self._confirm(ctx, confirm):
                 try:
-                    await view.message.edit(
+                    await ctx.confirm_message.edit(
                         content="Cancelled.", embed=None, view=None
                     )
                 except discord.HTTPException:
@@ -949,13 +956,9 @@ class Moderation(commands.Cog):
                 ),
                 colour=modactions.action_colour("note"),
             )
-            view = ConfirmView(ctx.author.id)
-            view.message = await ctx.send(embed=confirm, view=view)
-            await view.wait()
-
-            if not view.value:
+            if not await self._confirm(ctx, confirm):
                 try:
-                    await view.message.edit(
+                    await ctx.confirm_message.edit(
                         content="Cancelled.", embed=None, view=None
                     )
                 except discord.HTTPException:
@@ -1062,9 +1065,7 @@ class Moderation(commands.Cog):
 
             # Suppress the ModLog leave listener so this auto-kick is logged once
             # (the case embed above), not twice.
-            ml = self.bot.get_cog("ModLog")
-            if ml:
-                ml.suppress(ctx.guild.id, member.id, "remove")
+            modactions.funnel_suppress(self.bot, ctx.guild.id, member.id, "remove")
 
             try:
                 await member.kick(reason="Auto-kick: reached 3 warns")

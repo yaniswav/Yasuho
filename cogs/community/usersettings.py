@@ -3,7 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import settings
+from tools import embed_creator, settings
 
 log = logging.getLogger(__name__)
 
@@ -102,19 +102,9 @@ class PrefButton(discord.ui.Button):
                 self.pref.key,
                 view.author_id,
             )
-            try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        "Something went wrong updating that setting.",
-                        ephemeral=True,
-                    )
-                else:
-                    await interaction.response.send_message(
-                        "Something went wrong updating that setting.",
-                        ephemeral=True,
-                    )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(
+                interaction, "Something went wrong updating that setting."
+            )
 
 
 class SettingsView(discord.ui.View):

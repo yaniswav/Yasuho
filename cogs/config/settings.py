@@ -3,7 +3,8 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import settings
+from tools import db, settings
+from tools.embed_creator import notify_failure
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -227,19 +228,6 @@ class ConfigPanel(discord.ui.View):
             embed=new.build_embed(), view=new
         )
 
-    async def _error(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
-
     # -- callbacks ------------------------------------------------------
     async def handle_select(self, interaction, key):
         if key == "leveling":
@@ -255,7 +243,7 @@ class ConfigPanel(discord.ui.View):
             await interaction.followup.send(guidance, ephemeral=True)
         except Exception:
             log.exception("Config panel guidance failed")
-            await self._error(interaction)
+            await notify_failure(interaction)
 
     async def _toggle_leveling(self, interaction):
         try:
@@ -271,7 +259,7 @@ class ConfigPanel(discord.ui.View):
             await self._rerender(interaction)
         except Exception:
             log.exception("Config panel leveling toggle failed")
-            await self._error(interaction)
+            await notify_failure(interaction)
 
     async def on_timeout(self):
         for child in self.children:
@@ -304,15 +292,9 @@ class Settings(commands.Cog):
     async def set_prefix(self, ctx, prefix: str):
         """Assign a Prefix to Yasuho for use in your guild."""
 
-        query = """
-            INSERT INTO prefixes
-            (guild_id, prefix)
-            VALUES
-            ($1, $2)
-            ON CONFLICT (guild_id) DO UPDATE SET prefix = $3;
-            """
-
-        await self.bot.db_pool.execute(query, ctx.guild.id, prefix, prefix)
+        await db.upsert_guild_value(
+            self.bot.db_pool, "prefixes", "prefix", ctx.guild.id, prefix
+        )
         self.bot.prefixes[ctx.guild.id] = prefix
         embed = discord.Embed(
             title="Server prefix", colour=random_colour()
@@ -358,14 +340,9 @@ class Settings(commands.Cog):
     async def autorole_set(self, ctx, role: discord.Role):
         """Assign an auto role to your guild."""
 
-        query = """
-            INSERT INTO autorole
-            (guild_id, role_id)
-            VALUES
-            ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET role_id = $3;
-            """
-
-        await self.bot.db_pool.execute(query, ctx.guild.id, role.id, role.id)
+        await db.upsert_guild_value(
+            self.bot.db_pool, "autorole", "role_id", ctx.guild.id, role.id
+        )
         self.bot.autoroles[ctx.guild.id] = role.id
         embed = discord.Embed(
             title="Auto-role role", colour=random_colour()
@@ -480,8 +457,12 @@ class Settings(commands.Cog):
             state["modlog"] = _UNKNOWN
 
         try:
-            state["welcome"] = await pool.fetchval(
-                "SELECT channel_id FROM welcome WHERE guild_id = $1", gid
+            # Welcome stores its state as a JSONB blob via settings.set_guild;
+            # the legacy ``welcome`` table is no longer written, so read the blob
+            # the same way the Welcome cog does (matches starboard/automod/modlog).
+            blob = await settings.get_guild(pool, gid, "welcome", None)
+            state["welcome"] = (
+                blob.get("channel_id") if blob and blob.get("enabled") else None
             )
         except Exception:
             log.exception("Config panel: failed to read welcome config")

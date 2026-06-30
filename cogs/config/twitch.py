@@ -5,7 +5,7 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import settings
+from tools import embed_creator, settings
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
 
@@ -171,17 +171,7 @@ class _PanelModal(discord.ui.Modal):
         await self.panel._refresh(interaction)
 
     async def _fail(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await embed_creator.notify_failure(interaction)
 
 
 class MessageModal(_PanelModal):
@@ -807,30 +797,12 @@ class TwitchPanel(discord.ui.View):
         new.message = self.message
         self.stop()
         embed = new.build_embed()
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=new)
-                return
-        except discord.HTTPException:
-            pass
-        if self.message is not None:
-            try:
-                await self.message.edit(embed=embed, view=new)
-            except discord.HTTPException:
-                pass
+        await embed_creator.refresh_in_place(
+            interaction, self.message, embed=embed, view=new
+        )
 
     async def _error(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    "Something went wrong.", ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await embed_creator.notify_failure(interaction)
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
