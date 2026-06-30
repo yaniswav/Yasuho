@@ -45,14 +45,23 @@ def format_duration(track: sonolink.models.Playable) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
+def _track_artwork(track: sonolink.models.Playable) -> typing.Optional[str]:
+    """Artwork URL for a track, rebuilding the YouTube thumbnail when missing."""
+    if track.artwork:
+        return track.artwork
+    # The youtube-plugin often omits artworkUrl; rebuild it from the video id
+    # (hqdefault always exists, unlike maxresdefault which 404s on some videos).
+    source = (track.source_name or "").lower()
+    if source in ("youtube", "youtubemusic") and track.identifier:
+        return f"https://i.ytimg.com/vi/{track.identifier}/hqdefault.jpg"
+    return None
+
+
 def build_now_playing_embed(player: Player) -> typing.Optional[discord.Embed]:
     """Build a pretty "now playing" embed for the player's current track."""
     track = player.current
     if track is None:
         return None
-
-    # Temporary diagnostic: shows whether Lavalink returned an artwork URL.
-    log.info("now-playing: %s | artwork=%r", track.title, track.artwork)
 
     embed = discord.Embed(
         title=track.title[:256],
@@ -63,8 +72,9 @@ def build_now_playing_embed(player: Player) -> typing.Optional[discord.Embed]:
     embed.set_author(name="🎵 Now Playing")
 
     # The track artwork as a big banner is what makes the controller look good.
-    if track.artwork:
-        embed.set_image(url=track.artwork)
+    artwork = _track_artwork(track)
+    if artwork:
+        embed.set_image(url=artwork)
 
     status = "⏸ Paused" if player.paused else "▶ Playing"
     embed.add_field(name="Status", value=status)
