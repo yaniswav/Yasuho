@@ -47,14 +47,21 @@ def _remember(message_id: int) -> None:
 class _Field:
     """One command parameter we may need to collect interactively."""
 
-    __slots__ = ("name", "kind", "required", "consume_rest", "channel_types")
+    __slots__ = (
+        "name", "kind", "required", "consume_rest", "channel_types",
+        "optional_annotation",
+    )
 
-    def __init__(self, name, kind, required, consume_rest, channel_types):
+    def __init__(
+        self, name, kind, required, consume_rest, channel_types,
+        optional_annotation=False,
+    ):
         self.name = name
         self.kind = kind
         self.required = required
         self.consume_rest = consume_rest
         self.channel_types = channel_types
+        self.optional_annotation = optional_annotation
 
 
 # --- parameter inspection -------------------------------------------------
@@ -68,6 +75,19 @@ def _unwrap_optional(annotation):
         if len(args) == 1:
             return args[0]
     return annotation
+
+
+def _is_optional_annotation(annotation) -> bool:
+    """True for a typing.Optional[X] / Union[X, None] annotation.
+
+    discord.py backtracks (view.undo) on a failed conversion for these, so an
+    Optional positional argument is safe to omit from a rebuilt command line; a
+    bare ``= None`` default is not.
+    """
+    return (
+        typing.get_origin(annotation) is typing.Union
+        and type(None) in typing.get_args(annotation)
+    )
 
 
 def _categorize(param) -> str:
@@ -140,8 +160,22 @@ def _build_fields(command):
                 required=param.required,
                 consume_rest=param.kind == param.KEYWORD_ONLY,
                 channel_types=ctypes,
+                optional_annotation=_is_optional_annotation(param.annotation),
             )
         )
+    # A positional field with a bare (non-Optional) default that is followed by
+    # another field cannot be safely skipped: discord.py will not backtrack on a
+    # failed conversion, so its slot would swallow a later token and corrupt the
+    # rebuilt line. Force it to be filled in the form. True typing.Optional
+    # positionals DO backtrack, so they stay skippable.
+    for index, field in enumerate(fields):
+        if (
+            not field.required
+            and not field.consume_rest
+            and not field.optional_annotation
+            and index < len(fields) - 1
+        ):
+            field.required = True
     return fields
 
 
@@ -258,6 +292,12 @@ class _CompletionView(discord.ui.View):
                 "This prompt isn't for you.", ephemeral=True
             )
             return False
+        if self.finished:
+            await interaction.response.send_message(
+                "This prompt is no longer active. Please run the command again.",
+                ephemeral=True,
+            )
+            return False
         return True
 
     async def _refresh(self, interaction):
@@ -300,6 +340,16 @@ class _CompletionView(discord.ui.View):
             await self._report(interaction)
 
     async def maybe_finish(self, interaction):
+        # A modal can be submitted after the view timed out; bail out cleanly.
+        if self.finished:
+            try:
+                await interaction.response.send_message(
+                    "This prompt is no longer active. Please run the command again.",
+                    ephemeral=True,
+                )
+            except discord.HTTPException:
+                log.debug("arg completion: stale finish notice failed", exc_info=True)
+            return
         missing = [f for f in self.fields if f.required and f.name not in self.provided]
         if missing:
             await self._refresh(interaction)
@@ -307,6 +357,12 @@ class _CompletionView(discord.ui.View):
             await self.finish(interaction)
 
     async def finish(self, interaction):
+        # Idempotency guard: two Run clicks (or Run racing a modal submit) can be
+        # dispatched concurrently. There is no await before this set, so the
+        # check-and-set is atomic on the event loop and the loser returns here
+        # before re-invoking, preventing a destructive command from running twice.
+        if self.finished:
+            return
         self.finished = True
         for child in self.children:
             child.disabled = True
@@ -330,13 +386,21 @@ class _CompletionView(discord.ui.View):
 
     async def _reinvoke(self, content):
         _remember(self.ctx.message.id)
+        message = self.ctx.message
+        original = message.content
         try:
-            message = self.ctx.message
             message.content = content
             new_ctx = await self.ctx.bot.get_context(message)
+            # The failed (missing-argument) attempt already charged any cooldown,
+            # so clear it before the rebuilt run to avoid a false CommandOnCooldown.
+            if new_ctx.command is not None:
+                new_ctx.command.reset_cooldown(new_ctx)
             await self.ctx.bot.invoke(new_ctx)
         except Exception:
             log.exception("arg completion: re-invoke failed for %r", content)
+        finally:
+            # Leave the shared cached Message object exactly as we found it.
+            message.content = original
 
     async def cancel(self, interaction):
         self.finished = True
@@ -349,7 +413,11 @@ class _CompletionView(discord.ui.View):
             log.debug("arg completion: cancel edit failed", exc_info=True)
 
     async def on_timeout(self):
-        if self.finished or self.message is None:
+        if self.finished:
+            return
+        # Record the timed-out state so a late modal submit short-circuits.
+        self.finished = True
+        if self.message is None:
             return
         for child in self.children:
             child.disabled = True
@@ -501,6 +569,31 @@ class _CompletionModal(discord.ui.Modal):
 # --- entry point ----------------------------------------------------------
 
 
+def _prefill(view, ctx) -> None:
+    """Seed the form with the arguments discord.py already parsed before the gap.
+
+    At MissingRequiredArgument time ctx.args/ctx.kwargs already hold the
+    successfully converted leading arguments, so the user is not asked again for
+    what they already typed. Best-effort: any problem just leaves the form empty.
+    """
+    try:
+        # ctx.args == [cog, ctx, *positionals] for a cog command, else [ctx, ...].
+        offset = 2 if ctx.command.cog is not None else 1
+        positional = list(ctx.args[offset:])
+        for field, value in zip(view.fields, positional):
+            if value is not None:
+                view.set_value(field, value)
+        for name, value in (ctx.kwargs or {}).items():
+            if value is None:
+                continue
+            for field in view.fields:
+                if field.name == name:
+                    view.set_value(field, value)
+                    break
+    except Exception:
+        log.debug("arg completion: prefill failed", exc_info=True)
+
+
 async def start(ctx, error) -> bool:
     """Try to launch an interactive completion. Returns True if a prompt was
     sent (the caller should not show the usage message), False otherwise."""
@@ -527,6 +620,7 @@ async def start(ctx, error) -> bool:
         return False
 
     view = _CompletionView(ctx, fields, select_fields, text_fields)
+    _prefill(view, ctx)
     try:
         view.message = await ctx.send(embed=view.build_embed(), view=view)
     except discord.HTTPException:
