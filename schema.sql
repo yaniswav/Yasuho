@@ -215,6 +215,19 @@ CREATE TABLE IF NOT EXISTS button_roles (
 );
 CREATE INDEX IF NOT EXISTS button_roles_guild_idx ON button_roles (guild_id);
 
+-- Per-user favourite tracks (a personal playlist).  music/music.py
+CREATE TABLE IF NOT EXISTS music_favorites (
+    user_id     BIGINT NOT NULL,
+    identifier  TEXT   NOT NULL,   -- Lavalink track identifier (dedup key)
+    title       TEXT,
+    author      TEXT,
+    uri         TEXT,
+    source_name TEXT,
+    added_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, identifier)
+);
+CREATE INDEX IF NOT EXISTS music_favorites_user_idx ON music_favorites (user_id, added_at DESC);
+
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
 -- ============================================================
