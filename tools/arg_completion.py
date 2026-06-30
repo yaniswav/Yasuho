@@ -370,11 +370,11 @@ class _MemberSelect(discord.ui.UserSelect):
             max_values=1,
             row=row,
         )
-        self.parent = parent
+        self._owner = parent
         self.field = field
 
     async def callback(self, interaction):
-        await self.parent.on_select(interaction, self.field, self.values[0])
+        await self._owner.on_select(interaction, self.field, self.values[0])
 
 
 class _RoleSelect(discord.ui.RoleSelect):
@@ -385,11 +385,11 @@ class _RoleSelect(discord.ui.RoleSelect):
             max_values=1,
             row=row,
         )
-        self.parent = parent
+        self._owner = parent
         self.field = field
 
     async def callback(self, interaction):
-        await self.parent.on_select(interaction, self.field, self.values[0])
+        await self._owner.on_select(interaction, self.field, self.values[0])
 
 
 class _ChannelSelect(discord.ui.ChannelSelect):
@@ -404,11 +404,11 @@ class _ChannelSelect(discord.ui.ChannelSelect):
             row=row,
             **kwargs,
         )
-        self.parent = parent
+        self._owner = parent
         self.field = field
 
     async def callback(self, interaction):
-        await self.parent.on_select(interaction, self.field, self.values[0])
+        await self._owner.on_select(interaction, self.field, self.values[0])
 
 
 class _BoolSelect(discord.ui.Select):
@@ -423,11 +423,11 @@ class _BoolSelect(discord.ui.Select):
                 discord.SelectOption(label="No", value="false"),
             ],
         )
-        self.parent = parent
+        self._owner = parent
         self.field = field
 
     async def callback(self, interaction):
-        await self.parent.on_select(interaction, self.field, self.values[0] == "true")
+        await self._owner.on_select(interaction, self.field, self.values[0] == "true")
 
 
 def _make_select(parent, field, row):
@@ -446,20 +446,20 @@ def _make_select(parent, field, row):
 class _ActionButton(discord.ui.Button):
     def __init__(self, parent, label, style, action, row):
         super().__init__(label=label, style=style, row=row)
-        self.parent = parent
+        self._owner = parent
         self.action = action
 
     async def callback(self, interaction):
         try:
             if self.action == "modal":
-                await interaction.response.send_modal(_CompletionModal(self.parent))
+                await interaction.response.send_modal(_CompletionModal(self._owner))
             elif self.action == "run":
-                await self.parent.maybe_finish(interaction)
+                await self._owner.maybe_finish(interaction)
             else:
-                await self.parent.cancel(interaction)
+                await self._owner.cancel(interaction)
         except Exception:
             log.exception("arg completion: button %r failed", self.action)
-            await self.parent._report(interaction)
+            await self._owner._report(interaction)
 
 
 class _CompletionModal(discord.ui.Modal):
@@ -467,7 +467,7 @@ class _CompletionModal(discord.ui.Modal):
         super().__init__(
             title=_clip(f"Complete {parent.prefix}{parent.command.qualified_name}", 45)
         )
-        self.parent = parent
+        self._owner = parent
         self.inputs = {}
         for field in parent.text_fields:
             existing = parent.collected.get(field.name)
@@ -487,15 +487,15 @@ class _CompletionModal(discord.ui.Modal):
 
     async def on_submit(self, interaction):
         try:
-            for field in self.parent.text_fields:
+            for field in self._owner.text_fields:
                 raw = str(self.inputs[field.name].value or "")
                 if raw.strip() == "":
                     continue
-                self.parent.set_value(field, raw)
-            await self.parent.maybe_finish(interaction)
+                self._owner.set_value(field, raw)
+            await self._owner.maybe_finish(interaction)
         except Exception:
             log.exception("arg completion: modal submit failed")
-            await self.parent._report(interaction)
+            await self._owner._report(interaction)
 
 
 # --- entry point ----------------------------------------------------------
