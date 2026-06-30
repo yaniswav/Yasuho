@@ -19,7 +19,7 @@ class Extras(commands.Cog):
         self.bot = bot
         self.start = discord.utils.utcnow()
 
-    @commands.hybrid_command()
+    @commands.command()
     async def quote(self, ctx, message: discord.Message):
         """Quote a message into a clean embed."""
 
@@ -35,7 +35,7 @@ class Extras(commands.Cog):
         embed.add_field(name="Jump", value=f"[Jump]({message.jump_url})")
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     async def charinfo(self, ctx, *, characters: str):
         """Show unicode information about the given characters."""
 
@@ -48,7 +48,7 @@ class Extras(commands.Cog):
 
         await ctx.send(f">>> {msg}")
 
-    @commands.hybrid_command()
+    @commands.command()
     async def password(self, ctx, length: int = 16):
         """Generate a random password and send it to you in DMs."""
 
@@ -77,7 +77,7 @@ class Extras(commands.Cog):
 
         await ctx.send("Sent you a DM", ephemeral=True)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     async def spotify(self, ctx, member: discord.Member = None):
         """Show what a member is currently listening to on Spotify."""
@@ -110,7 +110,7 @@ class Extras(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     async def uptime(self, ctx):
         """Show how long the bot has been running."""
 
@@ -121,7 +121,7 @@ class Extras(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     async def permissions(self, ctx, member: discord.Member = None):
         """List the channel permissions a member currently has."""
@@ -138,7 +138,7 @@ class Extras(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     async def botpermissions(self, ctx):
         """List the channel permissions the bot currently has."""
@@ -154,7 +154,7 @@ class Extras(commands.Cog):
         embed.set_thumbnail(url=ctx.me.display_avatar.url)
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(aliases=["botinvite"])
+    @commands.command(aliases=["botinvite"])
     async def invite(self, ctx):
         """Get an invite link to add the bot to your server."""
 

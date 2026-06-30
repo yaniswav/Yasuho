@@ -39,7 +39,7 @@ class Fun(commands.Cog):
     def hug_colour(self):
         return ImageColor.getcolor("#e94573", "L")
 
-    @commands.hybrid_command(name="hug")
+    @commands.command(name="hug")
     @commands.guild_only()
     @commands.cooldown(3, 90, commands.BucketType.user)
     async def give_hug(self, ctx, member: discord.Member = None):
@@ -89,7 +89,7 @@ class Fun(commands.Cog):
             final_gif = await self.bot.loop.run_in_executor(None, _render)
             await ctx.send(file=discord.File(final_gif, filename="hug.gif"))
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def cat(self, ctx):
@@ -106,7 +106,7 @@ class Fun(commands.Cog):
                 log.exception("Failed to fetch cat image")
                 await ctx.send(':warning: **ERROR !**', delete_after=3)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def dog(self, ctx):
@@ -122,7 +122,7 @@ class Fun(commands.Cog):
                 log.exception("Failed to fetch dog image")
                 await ctx.send(':warning: **ERROR !**', delete_after=3)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def fox(self, ctx):
@@ -138,7 +138,7 @@ class Fun(commands.Cog):
                 log.exception("Failed to fetch fox image")
                 await ctx.send(':warning: **ERROR !**', delete_after=3)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 10.0, commands.BucketType.user)
     async def say(self, ctx, *, args: str):
@@ -183,7 +183,7 @@ class Fun(commands.Cog):
         except Exception:
             log.exception("Failed to process say command")
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def bigmoji(self, ctx, *, emoji):
         """Makes big an emoji"""
@@ -210,7 +210,7 @@ class Fun(commands.Cog):
         embed.timestamp = ctx.message.created_at
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     async def ascii(self, ctx, *, msg: str):
         "Convert text to ascii art"
@@ -230,7 +230,7 @@ class Fun(commands.Cog):
                 "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
             )
 
-    @commands.hybrid_command(
+    @commands.command(
         name="ask", aliases=["eight-ball", "ball-8", "8-ball"]
     )
     @commands.guild_only()
@@ -249,7 +249,7 @@ class Fun(commands.Cog):
                 )
                 await ctx.message.add_reaction("🎱")
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def reverse(self, ctx, *, text):
@@ -261,7 +261,7 @@ class Fun(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.command()
     @commands.guild_only()
     async def rate(self, ctx, *, thing: commands.clean_content):
         """Rates what you desire"""
@@ -275,7 +275,7 @@ class Fun(commands.Cog):
 
             await ctx.send(f"I'd rate {thing} a **{num}.{deci}/ 100**")
 
-    @commands.hybrid_command(aliases=["howhot", "hot"])
+    @commands.command(aliases=["howhot", "hot"])
     @commands.guild_only()
     async def hotcalc(self, ctx, *, user: discord.Member = None):
         """Returns a random percent for how hot is a discord user"""
@@ -309,7 +309,7 @@ class Fun(commands.Cog):
 
         await ctx.send(f"**{user.name}** is **{hot:.2f}%** hot {emoji}")
 
-    @commands.hybrid_command(description="Calculate how gay you are!")
+    @commands.command(description="Calculate how gay you are!")
     @commands.guild_only()
     async def gaycalc(self, ctx, member: discord.Member = None):
         """Returns a random percent for how gay is a discord user"""
@@ -326,7 +326,7 @@ class Fun(commands.Cog):
 
         await ctx.send(f"{member.name} is **{y}.{random.randint(0, 99)}%** gay {emj}")
 
-    @commands.hybrid_command(aliases=["slots", "bet"])
+    @commands.command(aliases=["slots", "bet"])
     @commands.guild_only()
     async def slot(self, ctx):
         """Roll the slot machine"""
@@ -344,7 +344,7 @@ class Fun(commands.Cog):
         else:
             await ctx.send(f"{slotmachine} No match, you lost 😢")
 
-    @commands.hybrid_command(name="rps", aliases=["shifumi", "pfc"])
+    @commands.command(name="rps", aliases=["shifumi", "pfc"])
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     async def pfc(self, ctx):
