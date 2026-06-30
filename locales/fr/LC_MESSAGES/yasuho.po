@@ -47,7 +47,7 @@ msgstr "Ce code n'a pas fonctionné, réessayez `/anilist login`."
 #: cogs/anilist/account.py:91 cogs/anilist/components.py:1159
 #, python-brace-format
 msgid "Connected as {name}!"
-msgstr "Connecté en tant que {name} !"
+msgstr "Connectée en tant que {name} !"
 
 #: cogs/anilist/account.py:103
 msgid "Your AniList account has been unlinked."
@@ -538,7 +538,7 @@ msgstr "Une erreur est survenue lors de la mise à jour de la progression."
 #: cogs/anilist/components.py:1167
 #, python-brace-format
 msgid "✅ Linked as **{name}**."
-msgstr "✅ Lié en tant que **{name}**."
+msgstr "✅ Liée en tant que **{name}**."
 
 #: cogs/anilist/components.py:1177
 msgid "Something went wrong linking your account."
@@ -824,7 +824,7 @@ msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Tap a button below to toggle a preference on or off."
 msgstr ""
-"Ces paramètres n'affectent que **vous**, partout où je suis utilisé.\n"
+"Ces paramètres n'affectent que **vous**, partout où je suis utilisée.\n"
 "Appuyez sur un bouton ci-dessous pour activer ou désactiver une préférence."
 
 #: cogs/community/usersettings.py:73
@@ -1049,7 +1049,7 @@ msgstr "Je ne peux ajouter des boutons de rôle qu'à un message que j'ai moi-m�
 
 #: cogs/config/buttonroles.py:707
 msgid "I'm not allowed to edit that message."
-msgstr "Je ne suis pas autorisé à modifier ce message."
+msgstr "Je ne suis pas autorisée à modifier ce message."
 
 #: cogs/config/buttonroles.py:713
 msgid "Something went wrong attaching the buttons."
@@ -2227,7 +2227,7 @@ msgstr "{member} (ID : {id})"
 #: cogs/moderation/moderation.py:489 cogs/moderation/moderation.py:540
 #: cogs/moderation/moderation.py:581
 msgid "**:x: Sorry, I am missing permissions to do this!**"
-msgstr "**:x: Désolé, il me manque les permissions pour faire cela !**"
+msgstr "**:x: Désolée, il me manque les permissions pour faire cela !**"
 
 #: cogs/moderation/moderation.py:442
 #, python-brace-format
@@ -2308,7 +2308,7 @@ msgstr "Aucune action prise."
 
 #: cogs/moderation/moderation.py:655
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
-msgstr "**:x: Désolé, je n'ai pas pu bannir ces utilisateurs (permissions manquantes ?).**"
+msgstr "**:x: Désolée, je n'ai pas pu bannir ces utilisateurs (permissions manquantes ?).**"
 
 #: cogs/moderation/moderation.py:673
 msgid "Mass ban complete"
@@ -2333,7 +2333,7 @@ msgstr ":warning: | **Le nombre ne peut pas être inférieur à 0 ni supérieur 
 
 #: cogs/moderation/moderation.py:714
 msgid "**:x: Sorry, I am missing permissions to do this**"
-msgstr "**:x: Désolé, il me manque les permissions pour faire cela**"
+msgstr "**:x: Désolée, il me manque les permissions pour faire cela**"
 
 #: cogs/moderation/moderation.py:719
 #, python-brace-format
@@ -2883,7 +2883,7 @@ msgstr "**{title}** par `{author}` ajouté à la file d'attente."
 #: cogs/music/music.py:951 cogs/music/music.py:965 cogs/music/music.py:976
 #: cogs/music/music.py:995 cogs/music/music.py:1011 cogs/music/music.py:1065
 msgid "I'm not connected to a voice channel."
-msgstr "Je ne suis pas connecté à un salon vocal."
+msgstr "Je ne suis pas connectée à un salon vocal."
 
 #: cogs/music/music.py:904
 msgid "The player is already paused."
@@ -2943,7 +2943,7 @@ msgstr "**À suivre :**"
 
 #: cogs/music/music.py:1068
 msgid "Disconnected from the voice channel."
-msgstr "Déconnecté du salon vocal."
+msgstr "Déconnectée du salon vocal."
 
 #: cogs/music/music.py:1081
 msgid "You have no saved favourites yet."
@@ -3156,7 +3156,7 @@ msgstr ":information_source: Utilisation de la commande : `{prefix}{command} {si
 
 #: cogs/system/errors.py:64
 msgid "Sorry, no similar commands found"
-msgstr "Désolé, aucune commande similaire trouvée"
+msgstr "Désolée, aucune commande similaire trouvée"
 
 #: cogs/system/errors.py:69
 msgid "**Invalid command entered. Did you mean:**"
@@ -3315,7 +3315,7 @@ msgid ""
 "\n"
 "Use the menu to jump to a category, the arrows to browse, or `{prefix}help <command>` for a specific command."
 msgstr ""
-"Salut ! Je suis **{bot}**, ravi de vous aider. 💫\n"
+"Salut ! Je suis **{bot}**, ravie de vous aider. 💫\n"
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
