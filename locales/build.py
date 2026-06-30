@@ -24,6 +24,9 @@ def names(s):
 summary = []
 for path in sorted(glob.glob(os.path.join(WORK, "*.json"))):
     code = os.path.splitext(os.path.basename(path))[0]
+    # Skip scratch files (e.g. _new_fr.json): only real locale codes get built.
+    if code.startswith("_"):
+        continue
     try:
         trans = json.load(open(path, encoding="utf-8"))
     except Exception as e:
