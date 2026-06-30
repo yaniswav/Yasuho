@@ -203,17 +203,22 @@ CREATE TABLE IF NOT EXISTS cases (
 CREATE INDEX IF NOT EXISTS cases_guild_user_idx ON cases (guild_id, user_id);
 
 -- Self-assignable button roles: one row per (message, role) button on a panel.
--- buttonroles.py (admin builds a panel; persistent views toggle the roles)
+-- buttonroles.py (admin builds a panel; persistent views toggle the roles).
+-- style is a discord.ButtonStyle int (1 primary / 2 secondary / 3 success /
+-- 4 danger); the builder lets each button pick its own label, emoji and style.
 CREATE TABLE IF NOT EXISTS button_roles (
-    message_id BIGINT NOT NULL,
-    guild_id   BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    role_id    BIGINT NOT NULL,
+    message_id BIGINT   NOT NULL,
+    guild_id   BIGINT   NOT NULL,
+    channel_id BIGINT   NOT NULL,
+    role_id    BIGINT   NOT NULL,
     label      TEXT,
     emoji      TEXT,
+    style      SMALLINT NOT NULL DEFAULT 2,
     PRIMARY KEY (message_id, role_id)
 );
 CREATE INDEX IF NOT EXISTS button_roles_guild_idx ON button_roles (guild_id);
+-- Migrate pre-existing installs (no-op on a fresh database):
+ALTER TABLE button_roles ADD COLUMN IF NOT EXISTS style SMALLINT NOT NULL DEFAULT 2;
 
 -- Per-user favourite tracks (a personal playlist).  music/music.py
 CREATE TABLE IF NOT EXISTS music_favorites (
