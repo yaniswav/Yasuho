@@ -20,6 +20,9 @@ config.py
 # Lavalink server (jar + config downloaded by ./setup-lavalink.sh)
 lavalink/
 
+# i18n: intermediate per-language translation JSON (assembled into the .po files)
+locales/_work/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db

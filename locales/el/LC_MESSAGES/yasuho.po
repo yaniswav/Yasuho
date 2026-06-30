@@ -1,0 +1,4032 @@
+# Greek translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-30 16:46+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: el\n"
+"Language-Team: el <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: cogs/anilist/account.py:42 cogs/anilist/account.py:74
+msgid "AniList account linking is not configured."
+msgstr "Η σύνδεση λογαριασμού AniList δεν έχει ρυθμιστεί."
+
+#: cogs/anilist/account.py:52
+#, python-brace-format
+msgid ""
+"Authorize the bot here:\n"
+"{authorize_url}\n"
+"\n"
+"Authorize, copy the code AniList shows you, then press **Enter code** below (or run `/anilist code <code>`)."
+msgstr ""
+"Εξουσιοδότησε το bot εδώ:\n"
+"{authorize_url}\n"
+"\n"
+"Εξουσιοδότησε, αντίγραψε τον κωδικό που σου δείχνει το AniList, και μετά πάτησε **Enter code** παρακάτω (ή τρέξε `/anilist code <code>`)."
+
+#: cogs/anilist/account.py:66
+msgid "Check your DMs."
+msgstr "Δες τα προσωπικά σου μηνύματα."
+
+#: cogs/anilist/account.py:86 cogs/anilist/components.py:1155
+msgid "That code did not work, try `/anilist login` again."
+msgstr "Αυτός ο κωδικός δεν λειτούργησε, δοκίμασε ξανά `/anilist login`."
+
+#: cogs/anilist/account.py:91 cogs/anilist/components.py:1159
+#, python-brace-format
+msgid "Connected as {name}!"
+msgstr "Συνδέθηκες ως {name}!"
+
+#: cogs/anilist/account.py:103
+msgid "Your AniList account has been unlinked."
+msgstr "Ο λογαριασμός σου AniList αποσυνδέθηκε."
+
+#: cogs/anilist/account.py:123 cogs/anilist/account.py:303
+msgid "Status must be one of: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
+msgstr "Η κατάσταση πρέπει να είναι μία από: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
+
+#: cogs/anilist/account.py:136
+msgid "Score must be zero or a positive number."
+msgstr "Η βαθμολογία πρέπει να είναι μηδέν ή θετικός αριθμός."
+
+#: cogs/anilist/account.py:187
+msgid "Provide a name or link your account with `/anilist login`."
+msgstr "Δώσε ένα όνομα ή σύνδεσε τον λογαριασμό σου με `/anilist login`."
+
+#: cogs/anilist/account.py:197
+msgid "Could not resolve your AniList account."
+msgstr "Δεν ήταν δυνατός ο εντοπισμός του λογαριασμού σου AniList."
+
+#: cogs/anilist/account.py:203
+msgid "No AniList user found."
+msgstr "Δεν βρέθηκε χρήστης AniList."
+
+#: cogs/anilist/account.py:227
+msgid "📺 Anime"
+msgstr "📺 Anime"
+
+#: cogs/anilist/account.py:229
+#, python-brace-format
+msgid ""
+"**{count}** titles\n"
+"**{days:.1f}** days watched\n"
+"★ **{score}**/100"
+msgstr ""
+"**{count}** τίτλοι\n"
+"**{days:.1f}** ημέρες παρακολούθησης\n"
+"★ **{score}**/100"
+
+#: cogs/anilist/account.py:239
+msgid "📚 Manga"
+msgstr "📚 Manga"
+
+#: cogs/anilist/account.py:241
+#, python-brace-format
+msgid ""
+"**{count}** titles\n"
+"**{chapters}** chapters\n"
+"★ **{score}**/100"
+msgstr ""
+"**{count}** τίτλοι\n"
+"**{chapters}** κεφάλαια\n"
+"★ **{score}**/100"
+
+#: cogs/anilist/account.py:254
+msgid "🎭 Top genres"
+msgstr "🎭 Κορυφαία είδη"
+
+#: cogs/anilist/account.py:280
+msgid "⭐ Favourites"
+msgstr "⭐ Αγαπημένα"
+
+#: cogs/anilist/account.py:297
+msgid "Media type must be `anime` or `manga`."
+msgstr "Ο τύπος πρέπει να είναι `anime` ή `manga`."
+
+#: cogs/anilist/account.py:311 cogs/anilist/base.py:227
+#: cogs/anilist/base.py:293 cogs/anilist/base.py:356
+#: cogs/anilist/components.py:326
+msgid "Link your account first with `/anilist login`."
+msgstr "Σύνδεσε πρώτα τον λογαριασμό σου με `/anilist login`."
+
+#: cogs/anilist/account.py:315
+msgid "chapters"
+msgstr "κεφάλαια"
+
+#: cogs/anilist/account.py:315
+msgid "episodes"
+msgstr "επεισόδια"
+
+#: cogs/anilist/account.py:321
+msgid "Could not reach your AniList account."
+msgstr "Δεν ήταν δυνατή η πρόσβαση στον λογαριασμό σου AniList."
+
+#: cogs/anilist/account.py:336 cogs/anilist/lookup.py:113
+#: cogs/config/settings.py:52 cogs/config/settings.py:176
+#: cogs/config/settings.py:188 cogs/config/settings.py:205
+#: cogs/config/settings.py:216 cogs/system/help.py:404 cogs/utility/info.py:85
+msgid "Unknown"
+msgstr "Άγνωστο"
+
+#: cogs/anilist/account.py:343
+#, python-brace-format
+msgid "{name} - {progress}/{total} {unit}"
+msgstr "{name} - {progress}/{total} {unit}"
+
+#: cogs/anilist/account.py:353
+#, python-brace-format
+msgid "Nothing on your {status} {media_type} list."
+msgstr "Δεν υπάρχει τίποτα στη λίστα {media_type} σου ({status})."
+
+#: cogs/anilist/account.py:361
+#, python-brace-format
+msgid "{status} {media_type} list"
+msgstr "λίστα {media_type} - {status}"
+
+#: cogs/anilist/base.py:173
+msgid "AniList user"
+msgstr "Χρήστης AniList"
+
+#: cogs/anilist/base.py:247 cogs/anilist/components.py:337
+msgid "Could not update that entry."
+msgstr "Δεν ήταν δυνατή η ενημέρωση αυτής της καταχώρισης."
+
+#: cogs/anilist/base.py:255
+#, python-brace-format
+msgid "Set **{name}** to {unit} {progress} ({status})."
+msgstr "Ορίστηκε το **{name}** σε {unit} {progress} ({status})."
+
+#: cogs/anilist/base.py:262
+#, python-brace-format
+msgid "Set **{name}** to {status}."
+msgstr "Ορίστηκε το **{name}** σε {status}."
+
+#: cogs/anilist/base.py:269
+#, python-brace-format
+msgid "Completed **{name}** ({progress} {unit})."
+msgstr "Ολοκληρώθηκε το **{name}** ({progress} {unit})."
+
+#: cogs/anilist/base.py:273
+#, python-brace-format
+msgid "Marked **{name}** as completed."
+msgstr "Το **{name}** σημειώθηκε ως ολοκληρωμένο."
+
+#: cogs/anilist/base.py:275
+#, python-brace-format
+msgid "Scored **{name}** {score}."
+msgstr "Βαθμολογήθηκε το **{name}** με {score}."
+
+#: cogs/anilist/base.py:302 cogs/anilist/base.py:338
+#: cogs/anilist/components.py:65 cogs/anilist/components.py:192
+#: cogs/anilist/components.py:445 cogs/anilist/components.py:530
+msgid "Could not load that title."
+msgstr "Δεν ήταν δυνατή η φόρτωση αυτού του τίτλου."
+
+#: cogs/anilist/base.py:310 cogs/anilist/base.py:370
+#, python-brace-format
+msgid "No result for **{title}**."
+msgstr "Κανένα αποτέλεσμα για **{title}**."
+
+#: cogs/anilist/base.py:321
+#, python-brace-format
+msgid "Multiple matches for **{title}** - pick the right one:"
+msgstr "Πολλαπλά αποτελέσματα για **{title}** - διάλεξε το σωστό:"
+
+#: cogs/anilist/base.py:387
+#, python-brace-format
+msgid "You track several titles matching **{title}** - which one?"
+msgstr "Παρακολουθείς πολλούς τίτλους που ταιριάζουν με **{title}** - ποιον;"
+
+#: cogs/anilist/base.py:409
+#, python-brace-format
+msgid "**{title}** - is it an anime or a manga?"
+msgstr "**{title}** - είναι anime ή manga;"
+
+#: cogs/anilist/base.py:419 cogs/anilist/components.py:394
+msgid "Pick the exact title to update:"
+msgstr "Διάλεξε τον ακριβή τίτλο για ενημέρωση:"
+
+#: cogs/anilist/base.py:436 cogs/anilist/base.py:447 cogs/anilist/base.py:471
+msgid "No result."
+msgstr "Κανένα αποτέλεσμα."
+
+#: cogs/anilist/base.py:457
+#, python-brace-format
+msgid "Found {count} results for **{search}** - pick one:"
+msgstr "Βρέθηκαν {count} αποτελέσματα για **{search}** - διάλεξε ένα:"
+
+#: cogs/anilist/base.py:475
+#, python-brace-format
+msgid "**{label}** - pick one for details:"
+msgstr "**{label}** - διάλεξε ένα για λεπτομέρειες:"
+
+#: cogs/anilist/components.py:48
+msgid "Pick a title..."
+msgstr "Διάλεξε έναν τίτλο..."
+
+#: cogs/anilist/components.py:84
+msgid "Something went wrong loading that title."
+msgstr "Κάτι πήγε στραβά κατά τη φόρτωση αυτού του τίτλου."
+
+#: cogs/anilist/components.py:130 cogs/anilist/lookup.py:88
+#, python-brace-format
+msgid "No anime found for {season} {year}."
+msgstr "Δεν βρέθηκαν anime για {season} {year}."
+
+#: cogs/anilist/components.py:139 cogs/anilist/lookup.py:96
+#, python-brace-format
+msgid "**{season} {year} anime** - pick one for details:"
+msgstr "**anime {season} {year}** - διάλεξε ένα για λεπτομέρειες:"
+
+#: cogs/anilist/components.py:147
+msgid "Something went wrong loading that season."
+msgstr "Κάτι πήγε στραβά κατά τη φόρτωση αυτής της σεζόν."
+
+#: cogs/anilist/components.py:185
+msgid "Pick the right title..."
+msgstr "Διάλεξε τον σωστό τίτλο..."
+
+#: cogs/anilist/components.py:198
+#, python-brace-format
+msgid "Updating **{title}**..."
+msgstr "Ενημέρωση του **{title}**..."
+
+#: cogs/anilist/components.py:210 cogs/anilist/components.py:357
+#: cogs/anilist/components.py:607 cogs/anilist/components.py:1073
+msgid "Something went wrong updating that entry."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της καταχώρισης."
+
+#: cogs/anilist/components.py:231
+#, python-brace-format
+msgid "Edit: {title}"
+msgstr "Επεξεργασία: {title}"
+
+#: cogs/anilist/components.py:239 cogs/anilist/components.py:575
+#: cogs/anilist/components.py:796
+msgid "Reading"
+msgstr "Ανάγνωση"
+
+#: cogs/anilist/components.py:239 cogs/anilist/components.py:575
+#: cogs/anilist/components.py:796 cogs/anilist/components.py:922
+msgid "Watching"
+msgstr "Παρακολούθηση"
+
+#: cogs/anilist/components.py:243 cogs/anilist/components.py:579
+#: cogs/anilist/components.py:800 cogs/anilist/components.py:923
+msgid "Planning"
+msgstr "Σε σχεδιασμό"
+
+#: cogs/anilist/components.py:244 cogs/anilist/components.py:578
+#: cogs/anilist/components.py:801 cogs/anilist/components.py:924
+msgid "Completed"
+msgstr "Ολοκληρωμένα"
+
+#: cogs/anilist/components.py:245 cogs/anilist/components.py:582
+#: cogs/anilist/components.py:804 cogs/anilist/components.py:927
+msgid "Repeating"
+msgstr "Επανάληψη"
+
+#: cogs/anilist/components.py:246 cogs/anilist/components.py:580
+#: cogs/anilist/components.py:803 cogs/anilist/components.py:926
+msgid "Paused"
+msgstr "Σε παύση"
+
+#: cogs/anilist/components.py:247 cogs/anilist/components.py:581
+#: cogs/anilist/components.py:802 cogs/anilist/components.py:925
+msgid "Dropped"
+msgstr "Εγκαταλειμμένα"
+
+#: cogs/anilist/components.py:252
+msgid "Keep current status"
+msgstr "Διατήρηση τρέχουσας κατάστασης"
+
+#: cogs/anilist/components.py:264 cogs/anilist/components.py:700
+#: cogs/config/twitch.py:421 cogs/config/welcome.py:432
+msgid "Status"
+msgstr "Κατάσταση"
+
+#: cogs/anilist/components.py:276
+#, python-brace-format
+msgid "Progress ({unit}s)"
+msgstr "Πρόοδος ({unit}s)"
+
+#: cogs/anilist/components.py:287 cogs/anilist/components.py:697
+msgid "Score"
+msgstr "Βαθμολογία"
+
+#: cogs/anilist/components.py:302
+msgid "Progress must be a whole number and score a number."
+msgstr "Η πρόοδος πρέπει να είναι ακέραιος και η βαθμολογία αριθμός."
+
+#: cogs/anilist/components.py:315
+msgid "Nothing to update - pick a status or fill in progress/score."
+msgstr "Τίποτα προς ενημέρωση - διάλεξε κατάσταση ή συμπλήρωσε πρόοδο/βαθμολογία."
+
+#: cogs/anilist/components.py:345
+#, python-brace-format
+msgid "Updated **{name}** - {unit} {progress}, score {score}."
+msgstr "Ενημερώθηκε το **{name}** - {unit} {progress}, βαθμολογία {score}."
+
+#: cogs/anilist/components.py:389
+msgid "No matching titles of that type."
+msgstr "Δεν υπάρχουν τίτλοι αυτού του τύπου που να ταιριάζουν."
+
+#: cogs/anilist/components.py:403 cogs/anilist/components.py:407
+#: cogs/config/welcome.py:100 cogs/config/welcome.py:273
+#: cogs/config/welcome.py:500
+msgid "Something went wrong."
+msgstr "Κάτι πήγε στραβά."
+
+#: cogs/anilist/components.py:438
+msgid "Pick the exact title..."
+msgstr "Διάλεξε τον ακριβή τίτλο..."
+
+#: cogs/anilist/components.py:461 cogs/anilist/components.py:466
+#: cogs/anilist/components.py:545 cogs/anilist/components.py:550
+msgid "Something went wrong opening the editor."
+msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του επεξεργαστή."
+
+#: cogs/anilist/components.py:522
+msgid "Pick which one to update..."
+msgstr "Διάλεξε ποιο να ενημερωθεί..."
+
+#: cogs/anilist/components.py:585
+msgid "Set status..."
+msgstr "Όρισε κατάσταση..."
+
+#: cogs/anilist/components.py:672
+#, python-brace-format
+msgid "{popularity} in lists"
+msgstr "{popularity} σε λίστες"
+
+#: cogs/anilist/components.py:685
+msgid "Format"
+msgstr "Μορφή"
+
+#: cogs/anilist/components.py:688
+msgid "Episodes"
+msgstr "Επεισόδια"
+
+#: cogs/anilist/components.py:692
+msgid "Chapters"
+msgstr "Κεφάλαια"
+
+#: cogs/anilist/components.py:706
+msgid "Studio"
+msgstr "Στούντιο"
+
+#: cogs/anilist/components.py:713
+msgid "Season"
+msgstr "Σεζόν"
+
+#: cogs/anilist/components.py:716
+msgid "Year"
+msgstr "Έτος"
+
+#: cogs/anilist/components.py:722
+#, python-brace-format
+msgid "{title} - Characters"
+msgstr "{title} - Χαρακτήρες"
+
+#: cogs/anilist/components.py:738
+msgid "No character data."
+msgstr "Δεν υπάρχουν δεδομένα χαρακτήρων."
+
+#: cogs/anilist/components.py:744
+#, python-brace-format
+msgid "{title} - Relations"
+msgstr "{title} - Σχέσεις"
+
+#: cogs/anilist/components.py:754
+msgid "Related"
+msgstr "Σχετικά"
+
+#: cogs/anilist/components.py:759
+msgid "No relations."
+msgstr "Δεν υπάρχουν σχέσεις."
+
+#: cogs/anilist/components.py:764
+#, python-brace-format
+msgid "{title} - Recommendations"
+msgstr "{title} - Προτάσεις"
+
+#: cogs/anilist/components.py:780
+msgid "No recommendations."
+msgstr "Δεν υπάρχουν προτάσεις."
+
+#: cogs/anilist/components.py:789
+msgid "🔗 Link your AniList with `/anilist login` to see your personal stats."
+msgstr "🔗 Σύνδεσε το AniList σου με `/anilist login` για να δεις τα προσωπικά σου στατιστικά."
+
+#: cogs/anilist/components.py:793
+msgid "Not on your list yet."
+msgstr "Δεν είναι ακόμη στη λίστα σου."
+
+#: cogs/anilist/components.py:807
+msgid "On your list ✓"
+msgstr "Στη λίστα σου ✓"
+
+#: cogs/anilist/components.py:811
+#, python-brace-format
+msgid "Status: {status}"
+msgstr "Κατάσταση: {status}"
+
+#: cogs/anilist/components.py:818
+#, python-brace-format
+msgid "Your score: {score}"
+msgstr "Η βαθμολογία σου: {score}"
+
+#: cogs/anilist/components.py:827
+#, python-brace-format
+msgid "Progress: {progress}/{total} {unit}"
+msgstr "Πρόοδος: {progress}/{total} {unit}"
+
+#: cogs/anilist/components.py:834
+#, python-brace-format
+msgid "Repeats: {repeat}"
+msgstr "Επαναλήψεις: {repeat}"
+
+#: cogs/anilist/components.py:838
+#, python-brace-format
+msgid "Started: {started}"
+msgstr "Ξεκίνησε: {started}"
+
+#: cogs/anilist/components.py:841
+#, python-brace-format
+msgid "Completed: {completed}"
+msgstr "Ολοκληρώθηκε: {completed}"
+
+#: cogs/anilist/components.py:848
+#, python-brace-format
+msgid "{title} - Stats"
+msgstr "{title} - Στατιστικά"
+
+#: cogs/anilist/components.py:874
+msgid "No stats available."
+msgstr "Δεν υπάρχουν διαθέσιμα στατιστικά."
+
+#: cogs/anilist/components.py:876 cogs/anilist/components.py:983
+msgid "👤 Your stats"
+msgstr "👤 Τα στατιστικά σου"
+
+#: cogs/anilist/components.py:881
+msgid "Mean score"
+msgstr "Μέση βαθμολογία"
+
+#: cogs/anilist/components.py:884
+msgid "Average score"
+msgstr "Μέσος όρος βαθμολογίας"
+
+#: cogs/anilist/components.py:888
+msgid "Popularity"
+msgstr "Δημοτικότητα"
+
+#: cogs/anilist/components.py:889
+#, python-brace-format
+msgid "{popularity} followers"
+msgstr "{popularity} ακόλουθοι"
+
+#: cogs/anilist/components.py:896
+msgid "Favourites"
+msgstr "Αγαπημένα"
+
+#: cogs/anilist/components.py:914
+msgid "Score distribution"
+msgstr "Κατανομή βαθμολογίας"
+
+#: cogs/anilist/components.py:944 cogs/anilist/components.py:952
+#, python-brace-format
+msgid "{label}: {amount}"
+msgstr "{label}: {amount}"
+
+#: cogs/anilist/components.py:958
+msgid "Status distribution"
+msgstr "Κατανομή κατάστασης"
+
+#: cogs/anilist/components.py:978
+msgid "Rankings"
+msgstr "Κατατάξεις"
+
+#: cogs/anilist/components.py:992 cogs/anilist/components.py:1027
+msgid "Could not render that section."
+msgstr "Δεν ήταν δυνατή η εμφάνιση αυτής της ενότητας."
+
+#: cogs/anilist/components.py:1048
+msgid "Could not go back."
+msgstr "Δεν ήταν δυνατή η επιστροφή."
+
+#: cogs/anilist/components.py:1094
+msgid "Could not open the edit form."
+msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας επεξεργασίας."
+
+#: cogs/anilist/components.py:1121
+msgid "Something went wrong updating progress."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση της προόδου."
+
+#: cogs/anilist/components.py:1167
+#, python-brace-format
+msgid "✅ Linked as **{name}**."
+msgstr "✅ Συνδέθηκες ως **{name}**."
+
+#: cogs/anilist/components.py:1177
+msgid "Something went wrong linking your account."
+msgstr "Κάτι πήγε στραβά κατά τη σύνδεση του λογαριασμού σου."
+
+#: cogs/anilist/components.py:1202
+msgid "Could not open the code form."
+msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κωδικού."
+
+#: cogs/anilist/lookup.py:39
+msgid "Trending anime"
+msgstr "Δημοφιλή anime της στιγμής"
+
+#: cogs/anilist/lookup.py:51
+msgid "Popular anime"
+msgstr "Δημοφιλή anime"
+
+#: cogs/anilist/lookup.py:63
+msgid "Season must be one of: WINTER, SPRING, SUMMER, FALL."
+msgstr "Η σεζόν πρέπει να είναι μία από: WINTER, SPRING, SUMMER, FALL."
+
+#: cogs/anilist/lookup.py:110
+msgid "No character found."
+msgstr "Δεν βρέθηκε χαρακτήρας."
+
+#: cogs/anilist/lookup.py:137
+msgid "No studio found."
+msgstr "Δεν βρέθηκε στούντιο."
+
+#: cogs/anilist/lookup.py:140
+msgid "Unknown studio"
+msgstr "Άγνωστο στούντιο"
+
+#: cogs/anilist/lookup.py:153
+msgid "Popular productions"
+msgstr "Δημοφιλείς παραγωγές"
+
+#: cogs/community/afk.py:40
+#, python-brace-format
+msgid "{user} you are now AFK: {message}"
+msgstr "{user} είσαι πλέον AFK: {message}"
+
+#: cogs/community/afk.py:60
+#, python-brace-format
+msgid "Welcome back {user}, you were AFK for {duration}."
+msgstr "Καλώς ήρθες ξανά {user}, ήσουν AFK για {duration}."
+
+#: cogs/community/afk.py:76
+#, python-brace-format
+msgid "{name} is AFK: {message} ({duration})"
+msgstr "Ο/Η {name} είναι AFK: {message} ({duration})"
+
+#: cogs/community/avatarhistory.py:18
+msgid "Global avatar history"
+msgstr "Ιστορικό καθολικού avatar"
+
+#: cogs/community/avatarhistory.py:19
+msgid "Server avatar history"
+msgstr "Ιστορικό avatar διακομιστή"
+
+#: cogs/community/avatarhistory.py:20
+msgid "Banner history"
+msgstr "Ιστορικό banner"
+
+#: cogs/community/avatarhistory.py:23
+msgid "global"
+msgstr "καθολικό"
+
+#: cogs/community/avatarhistory.py:24
+msgid "server"
+msgstr "διακομιστής"
+
+#: cogs/community/avatarhistory.py:25
+msgid "banner"
+msgstr "banner"
+
+#: cogs/community/avatarhistory.py:80
+msgid "Something went wrong loading that history."
+msgstr "Κάτι πήγε στραβά κατά τη φόρτωση αυτού του ιστορικού."
+
+#: cogs/community/avatarhistory.py:243
+#, python-brace-format
+msgid "No {kind} history recorded yet."
+msgstr "Δεν έχει καταγραφεί ακόμη ιστορικό {kind}."
+
+#: cogs/community/avatarhistory.py:248
+#, python-brace-format
+msgid "Showing `{count}` of up to `50` changes"
+msgstr "Εμφάνιση `{count}` από έως `50` αλλαγές"
+
+#: cogs/community/language.py:55
+#, python-brace-format
+msgid "Your language is now **{lang}**."
+msgstr "Η γλώσσα σου είναι πλέον **{lang}**."
+
+#: cogs/community/language.py:85
+msgid "Pick your language:"
+msgstr "Διάλεξε τη γλώσσα σου:"
+
+#: cogs/community/language.py:96
+#, python-brace-format
+msgid "Unknown language. Available: {options}"
+msgstr "Άγνωστη γλώσσα. Διαθέσιμες: {options}"
+
+#: cogs/community/language.py:100
+#, python-brace-format
+msgid "Server default language set to **{lang}**."
+msgstr "Η προεπιλεγμένη γλώσσα του διακομιστή ορίστηκε σε **{lang}**."
+
+#: cogs/community/leveling.py:73
+#, python-brace-format
+msgid "{user} reached level **{level}**!"
+msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
+
+#: cogs/community/leveling.py:248
+#, python-brace-format
+msgid "Rank | {name}"
+msgstr "Κατάταξη | {name}"
+
+#: cogs/community/leveling.py:252 cogs/utility/searchweb.py:155
+msgid "Rank"
+msgstr "Κατάταξη"
+
+#: cogs/community/leveling.py:253 cogs/utility/searchweb.py:158
+msgid "Level"
+msgstr "Επίπεδο"
+
+#: cogs/community/leveling.py:254
+msgid "XP"
+msgstr "XP"
+
+#: cogs/community/leveling.py:256
+msgid "XP for next level"
+msgstr "XP για το επόμενο επίπεδο"
+
+#: cogs/community/leveling.py:278 cogs/community/leveling.py:298
+#, python-brace-format
+msgid "Leaderboard | {guild}"
+msgstr "Πίνακας κατάταξης | {guild}"
+
+#: cogs/community/leveling.py:279
+msgid "No one has earned any XP yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
+
+#: cogs/community/leveling.py:289
+#, python-brace-format
+msgid "User {uid}"
+msgstr "Χρήστης {uid}"
+
+#: cogs/community/leveling.py:292
+#, python-brace-format
+msgid "**{index}.** {name} - level **{level}** ({xp} XP)"
+msgstr "**{index}.** {name} - επίπεδο **{level}** ({xp} XP)"
+
+#: cogs/community/profiles.py:15
+msgid "Switch friend code"
+msgstr "Κωδικός φίλου Switch"
+
+#: cogs/community/profiles.py:16
+msgid "3DS friend code"
+msgstr "Κωδικός φίλου 3DS"
+
+#: cogs/community/profiles.py:17 cogs/community/profiles.py:99
+msgid "BattleTag"
+msgstr "BattleTag"
+
+#: cogs/community/profiles.py:18 cogs/community/profiles.py:100
+msgid "Riot ID"
+msgstr "Riot ID"
+
+#: cogs/community/profiles.py:19 cogs/community/profiles.py:101
+msgid "Steam ID"
+msgstr "Steam ID"
+
+#: cogs/community/profiles.py:27
+msgid "Edit your profile"
+msgstr "Επεξεργασία προφίλ σου"
+
+#: cogs/community/profiles.py:32
+msgid "Field"
+msgstr "Πεδίο"
+
+#: cogs/community/profiles.py:36
+msgid "Value"
+msgstr "Τιμή"
+
+#: cogs/community/profiles.py:44
+msgid "Pick a field and enter a value."
+msgstr "Διάλεξε ένα πεδίο και πληκτρολόγησε μια τιμή."
+
+#: cogs/community/profiles.py:49
+msgid "Unknown field."
+msgstr "Άγνωστο πεδίο."
+
+#: cogs/community/profiles.py:51 cogs/community/profiles.py:195
+msgid "Profile updated"
+msgstr "Το προφίλ ενημερώθηκε"
+
+#: cogs/community/profiles.py:57 cogs/community/profiles.py:183
+msgid "Failed to update your profile, please try again later."
+msgstr "Αποτυχία ενημέρωσης του προφίλ σου, δοκίμασε ξανά αργότερα."
+
+#: cogs/community/profiles.py:97
+msgid "Switch Friend Code"
+msgstr "Κωδικός φίλου Switch"
+
+#: cogs/community/profiles.py:98
+msgid "3DS Friend Code"
+msgstr "Κωδικός φίλου 3DS"
+
+#: cogs/community/profiles.py:133
+#, python-brace-format
+msgid "{name} has no profile set."
+msgstr "Ο/Η {name} δεν έχει ορίσει προφίλ."
+
+#: cogs/community/profiles.py:138
+#, python-brace-format
+msgid "{name}'s profile"
+msgstr "Προφίλ του/της {name}"
+
+#: cogs/community/profiles.py:174
+msgid "That value is too long (max 1000 characters)."
+msgstr "Αυτή η τιμή είναι πολύ μεγάλη (μέγιστο 1000 χαρακτήρες)."
+
+#: cogs/community/profiles.py:189
+#, python-brace-format
+msgid "Unknown field. Choose: {options}"
+msgstr "Άγνωστο πεδίο. Διάλεξε: {options}"
+
+#: cogs/community/profiles.py:209
+msgid "Click below to edit a profile field:"
+msgstr "Κάνε κλικ παρακάτω για να επεξεργαστείς ένα πεδίο του προφίλ:"
+
+#: cogs/community/profiles.py:225
+msgid "Failed to clear your profile, please try again later."
+msgstr "Αποτυχία εκκαθάρισης του προφίλ σου, δοκίμασε ξανά αργότερα."
+
+#: cogs/community/profiles.py:230
+msgid "Profile cleared"
+msgstr "Το προφίλ εκκαθαρίστηκε"
+
+#: cogs/community/profiles.py:232
+msgid "Your profile has been cleared."
+msgstr "Το προφίλ σου εκκαθαρίστηκε."
+
+#: cogs/community/reminders.py:93
+#, python-brace-format
+msgid "<@{author_id}>, {when}: {message}"
+msgstr "<@{author_id}>, {when}: {message}"
+
+#: cogs/community/reminders.py:126
+#, python-brace-format
+msgid "Okay, reminding you {when}: {message}"
+msgstr "Εντάξει, θα σου υπενθυμίσω {when}: {message}"
+
+#: cogs/community/reminders.py:152
+#, python-brace-format
+msgid "Banned {member} until {time}."
+msgstr "Ο/Η {member} αποκλείστηκε μέχρι {time}."
+
+#: cogs/community/usersettings.py:37
+msgid "Level-up announcements"
+msgstr "Ανακοινώσεις ανόδου επιπέδου"
+
+#: cogs/community/usersettings.py:39
+msgid "Get pinged in chat when you reach a new level."
+msgstr "Λάβε ping στη συνομιλία όταν φτάνεις σε νέο επίπεδο."
+
+#: cogs/community/usersettings.py:44
+msgid "Expanded help"
+msgstr "Εκτεταμένη βοήθεια"
+
+#: cogs/community/usersettings.py:46
+msgid "Show every subcommand inline when you browse help."
+msgstr "Εμφάνιση κάθε υποεντολής inline όταν περιηγείσαι στη βοήθεια."
+
+#: cogs/community/usersettings.py:60
+msgid "Your preferences"
+msgstr "Οι προτιμήσεις σου"
+
+#: cogs/community/usersettings.py:62
+msgid ""
+"These settings only affect **you**, everywhere I'm used.\n"
+"Tap a button below to toggle a preference on or off."
+msgstr ""
+"Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, παντού όπου χρησιμοποιούμαι.\n"
+"Πάτησε ένα κουμπί παρακάτω για να ενεργοποιήσεις ή να απενεργοποιήσεις μια προτίμηση."
+
+#: cogs/community/usersettings.py:73
+msgid "ON"
+msgstr "ON"
+
+#: cogs/community/usersettings.py:73
+msgid "OFF"
+msgstr "OFF"
+
+#: cogs/community/usersettings.py:80 cogs/config/buttonroles.py:460
+#: cogs/moderation/modlog.py:167
+msgid "Only you can use these controls."
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
+
+#: cogs/community/usersettings.py:110
+msgid "Something went wrong updating that setting."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
+
+#: cogs/config/buttonroles.py:128
+msgid "Roles can only be toggled inside a server."
+msgstr "Οι ρόλοι μπορούν να εναλλαχθούν μόνο μέσα σε έναν διακομιστή."
+
+#: cogs/config/buttonroles.py:135
+msgid "That role no longer exists."
+msgstr "Αυτός ο ρόλος δεν υπάρχει πλέον."
+
+#: cogs/config/buttonroles.py:144
+#, python-brace-format
+msgid "Removed {role} from you."
+msgstr "Αφαιρέθηκε ο ρόλος {role} από εσένα."
+
+#: cogs/config/buttonroles.py:151
+#, python-brace-format
+msgid "Gave you {role}."
+msgstr "Σου δόθηκε ο ρόλος {role}."
+
+#: cogs/config/buttonroles.py:158
+msgid "I don't have permission to manage that role. It may be above my highest role."
+msgstr "Δεν έχω δικαίωμα να διαχειριστώ αυτόν τον ρόλο. Ίσως είναι πάνω από τον υψηλότερο ρόλο μου."
+
+#: cogs/config/buttonroles.py:166
+msgid "Something went wrong toggling that role."
+msgstr "Κάτι πήγε στραβά κατά την εναλλαγή αυτού του ρόλου."
+
+#: cogs/config/buttonroles.py:200
+msgid "Add a role as a button..."
+msgstr "Πρόσθεσε έναν ρόλο ως κουμπί..."
+
+#: cogs/config/buttonroles.py:217
+msgid "Channel to post the panel in..."
+msgstr "Κανάλι για δημοσίευση του πάνελ..."
+
+#: cogs/config/buttonroles.py:238 cogs/config/reactionroles.py:82
+msgid "Role"
+msgstr "Ρόλος"
+
+#: cogs/config/buttonroles.py:244
+msgid "Remove a role button..."
+msgstr "Αφαίρεσε ένα κουμπί ρόλου..."
+
+#: cogs/config/buttonroles.py:267
+msgid "Add role button"
+msgstr "Προσθήκη κουμπιού ρόλου"
+
+#: cogs/config/buttonroles.py:271
+msgid "Button label"
+msgstr "Ετικέτα κουμπιού"
+
+#: cogs/config/buttonroles.py:277
+msgid "Emoji (optional)"
+msgstr "Emoji (προαιρετικό)"
+
+#: cogs/config/buttonroles.py:280
+msgid "Paste an emoji, or leave blank"
+msgstr "Επικόλλησε ένα emoji ή άφησέ το κενό"
+
+#: cogs/config/buttonroles.py:283 cogs/config/twitch.py:431
+msgid "Style"
+msgstr "Στυλ"
+
+#: cogs/config/buttonroles.py:298
+#, python-brace-format
+msgid "A panel can have at most {max} buttons."
+msgstr "Ένα πάνελ μπορεί να έχει το πολύ {max} κουμπιά."
+
+#: cogs/config/buttonroles.py:306 cogs/config/buttonroles.py:495
+#, python-brace-format
+msgid "{role} already has a button on this panel."
+msgstr "Ο ρόλος {role} έχει ήδη κουμπί σε αυτό το πάνελ."
+
+#: cogs/config/buttonroles.py:331
+msgid "Attach to a message"
+msgstr "Επισύναψη σε μήνυμα"
+
+#: cogs/config/buttonroles.py:334
+msgid "Message ID or link"
+msgstr "ID μηνύματος ή σύνδεσμος"
+
+#: cogs/config/buttonroles.py:418
+msgid "Button role builder"
+msgstr "Δημιουργός ρόλων κουμπιών"
+
+#: cogs/config/buttonroles.py:420
+msgid "Design the panel below. Edit the embed, add role buttons, then **Post panel** to a channel or **Attach to message** to drop the buttons onto a message I already sent. Every change is kept until you post."
+msgstr "Σχεδίασε το πάνελ παρακάτω. Επεξεργάσου το embed, πρόσθεσε κουμπιά ρόλων και μετά κάνε **Post panel** σε ένα κανάλι ή **Attach to message** για να προσθέσεις τα κουμπιά σε ένα μήνυμα που έχω ήδη στείλει. Κάθε αλλαγή διατηρείται μέχρι να δημοσιεύσεις."
+
+#: cogs/config/buttonroles.py:439
+msgid "*No buttons yet. Pick a role below to add one.*"
+msgstr "*Κανένα κουμπί ακόμη. Διάλεξε έναν ρόλο παρακάτω για να προσθέσεις ένα.*"
+
+#: cogs/config/buttonroles.py:441
+#, python-brace-format
+msgid "Buttons ({count})"
+msgstr "Κουμπιά ({count})"
+
+#: cogs/config/buttonroles.py:447 cogs/config/twitch.py:432
+#: cogs/config/twitch.py:452 cogs/config/welcome.py:464
+msgid "Embed"
+msgstr "Embed"
+
+#: cogs/config/buttonroles.py:452
+msgid "Post target"
+msgstr "Προορισμός δημοσίευσης"
+
+#: cogs/config/buttonroles.py:456 cogs/config/twitch.py:416
+#: cogs/config/welcome.py:430
+msgid "*Not set.*"
+msgstr "*Δεν έχει οριστεί.*"
+
+#: cogs/config/buttonroles.py:468
+msgid "Self-assignable roles"
+msgstr "Ρόλοι αυτοανάθεσης"
+
+#: cogs/config/buttonroles.py:471
+msgid "Click a button below to give yourself a role, or click it again to remove it:"
+msgstr "Κάνε κλικ σε ένα κουμπί παρακάτω για να δώσεις στον εαυτό σου έναν ρόλο, ή κάνε ξανά κλικ για να τον αφαιρέσεις:"
+
+#: cogs/config/buttonroles.py:487
+msgid "I can't assign that role - it's either managed by an integration or above my highest role."
+msgstr "Δεν μπορώ να αναθέσω αυτόν τον ρόλο - είτε τον διαχειρίζεται μια ενσωμάτωση είτε είναι πάνω από τον υψηλότερο ρόλο μου."
+
+#: cogs/config/buttonroles.py:529 cogs/config/buttonroles.py:633
+msgid "Add at least one assignable role button before attaching."
+msgstr "Πρόσθεσε τουλάχιστον ένα κουμπί ρόλου που μπορεί να ανατεθεί πριν την επισύναψη."
+
+#: cogs/config/buttonroles.py:552
+msgid "Cancelled"
+msgstr "Ακυρώθηκε"
+
+#: cogs/config/buttonroles.py:553
+msgid "Panel building was cancelled."
+msgstr "Η δημιουργία του πάνελ ακυρώθηκε."
+
+#: cogs/config/buttonroles.py:568
+msgid "Add at least one role button before posting."
+msgstr "Πρόσθεσε τουλάχιστον ένα κουμπί ρόλου πριν τη δημοσίευση."
+
+#: cogs/config/buttonroles.py:574
+msgid "None of those roles can be assigned by me - they're either managed by an integration or above my highest role."
+msgstr "Κανένας από αυτούς τους ρόλους δεν μπορεί να ανατεθεί από εμένα - είτε τους διαχειρίζεται μια ενσωμάτωση είτε είναι πάνω από τον υψηλότερο ρόλο μου."
+
+#: cogs/config/buttonroles.py:585
+msgid "Pick a valid text channel to post the panel in."
+msgstr "Διάλεξε ένα έγκυρο κανάλι κειμένου για τη δημοσίευση του πάνελ."
+
+#: cogs/config/buttonroles.py:596
+#, python-brace-format
+msgid "I can't send messages in {channel}."
+msgstr "Δεν μπορώ να στείλω μηνύματα στο {channel}."
+
+#: cogs/config/buttonroles.py:605
+msgid "Something went wrong posting the panel."
+msgstr "Κάτι πήγε στραβά κατά τη δημοσίευση του πάνελ."
+
+#: cogs/config/buttonroles.py:613
+msgid "Panel posted"
+msgstr "Το πάνελ δημοσιεύτηκε"
+
+#: cogs/config/buttonroles.py:614
+#, python-brace-format
+msgid "Your button-role panel is live in {channel}."
+msgstr "Το πάνελ ρόλων-κουμπιών σου είναι ενεργό στο {channel}."
+
+#: cogs/config/buttonroles.py:621
+msgid "Skipped"
+msgstr "Παραλείφθηκε"
+
+#: cogs/config/buttonroles.py:622
+#, python-brace-format
+msgid "{count} role(s) I can't assign were left off."
+msgstr "{count} ρόλος/ρόλοι που δεν μπορώ να αναθέσω παραλείφθηκαν."
+
+#: cogs/config/buttonroles.py:641
+msgid "That doesn't look like a message ID or a Discord message link."
+msgstr "Αυτό δεν μοιάζει με ID μηνύματος ή σύνδεσμο μηνύματος Discord."
+
+#: cogs/config/buttonroles.py:648
+msgid "That message link points to a different server."
+msgstr "Αυτός ο σύνδεσμος μηνύματος δείχνει σε άλλον διακομιστή."
+
+#: cogs/config/buttonroles.py:656
+msgid "I can't find that channel in this server."
+msgstr "Δεν μπορώ να βρω αυτό το κανάλι σε αυτόν τον διακομιστή."
+
+#: cogs/config/buttonroles.py:664
+msgid "I couldn't find a message with that ID in that channel."
+msgstr "Δεν μπόρεσα να βρω μήνυμα με αυτό το ID σε εκείνο το κανάλι."
+
+#: cogs/config/buttonroles.py:670
+#, python-brace-format
+msgid "I can't read messages in {channel}."
+msgstr "Δεν μπορώ να διαβάσω μηνύματα στο {channel}."
+
+#: cogs/config/buttonroles.py:679
+msgid "Something went wrong fetching that message."
+msgstr "Κάτι πήγε στραβά κατά την ανάκτηση αυτού του μηνύματος."
+
+#: cogs/config/buttonroles.py:687
+msgid "I can only add role buttons to a message I posted myself - Discord won't let a bot edit buttons onto someone else's message. Use **Post panel** to publish a fresh panel instead (I'll happily recreate the same embed and buttons there)."
+msgstr "Μπορώ να προσθέσω κουμπιά ρόλων μόνο σε μήνυμα που έστειλα ο ίδιος - το Discord δεν επιτρέπει σε ένα bot να επεξεργαστεί κουμπιά στο μήνυμα κάποιου άλλου. Χρησιμοποίησε **Post panel** για να δημοσιεύσεις ένα νέο πάνελ (θα αναδημιουργήσω ευχαρίστως το ίδιο embed και τα κουμπιά εκεί)."
+
+#: cogs/config/buttonroles.py:707
+msgid "I'm not allowed to edit that message."
+msgstr "Δεν μου επιτρέπεται να επεξεργαστώ αυτό το μήνυμα."
+
+#: cogs/config/buttonroles.py:713
+msgid "Something went wrong attaching the buttons."
+msgstr "Κάτι πήγε στραβά κατά την επισύναψη των κουμπιών."
+
+#: cogs/config/buttonroles.py:720
+msgid "Buttons attached"
+msgstr "Τα κουμπιά επισυνάφθηκαν"
+
+#: cogs/config/buttonroles.py:722
+#, python-brace-format
+msgid "Added the role button(s) to [that message]({link}) in {channel}."
+msgstr "Προστέθηκαν τα κουμπιά ρόλου σε [εκείνο το μήνυμα]({link}) στο {channel}."
+
+#: cogs/config/buttonroles.py:883 cogs/config/buttonroles.py:905
+msgid "Button roles"
+msgstr "Ρόλοι κουμπιών"
+
+#: cogs/config/buttonroles.py:885
+msgid "No button-role panels have been set up for this guild."
+msgstr "Δεν έχουν ρυθμιστεί πάνελ ρόλων-κουμπιών για αυτόν τον διακομιστή."
+
+#: cogs/config/buttonroles.py:917 cogs/config/reactionroles.py:47
+#: cogs/config/reactionroles.py:94
+msgid "That doesn't look like a valid message ID."
+msgstr "Αυτό δεν μοιάζει με έγκυρο ID μηνύματος."
+
+#: cogs/config/buttonroles.py:928
+msgid "No button-role panel found with that message ID."
+msgstr "Δεν βρέθηκε πάνελ ρόλων-κουμπιών με αυτό το ID μηνύματος."
+
+#: cogs/config/buttonroles.py:942
+msgid "Button-role panel deleted"
+msgstr "Το πάνελ ρόλων-κουμπιών διαγράφηκε"
+
+#: cogs/config/buttonroles.py:944
+#, python-brace-format
+msgid "Removed `{count}` role button(s) for message `{mid}`."
+msgstr "Αφαιρέθηκαν `{count}` κουμπιά ρόλου για το μήνυμα `{mid}`."
+
+#: cogs/config/reactionroles.py:77
+msgid "Reaction role added"
+msgstr "Προστέθηκε ρόλος αντίδρασης"
+
+#: cogs/config/reactionroles.py:80 cogs/config/reactionroles.py:112
+#: cogs/config/twitch.py:35 cogs/config/twitch.py:441
+#: cogs/config/welcome.py:669
+msgid "Message"
+msgstr "Μήνυμα"
+
+#: cogs/config/reactionroles.py:81 cogs/config/reactionroles.py:113
+msgid "Emoji"
+msgstr "Emoji"
+
+#: cogs/config/reactionroles.py:109
+msgid "Reaction role removed"
+msgstr "Αφαιρέθηκε ρόλος αντίδρασης"
+
+#: cogs/config/reactionroles.py:131 cogs/config/reactionroles.py:145
+msgid "Reaction roles"
+msgstr "Ρόλοι αντίδρασης"
+
+#: cogs/config/reactionroles.py:132
+msgid "No reaction roles have been set up for this guild."
+msgstr "Δεν έχουν ρυθμιστεί ρόλοι αντίδρασης για αυτόν τον διακομιστή."
+
+#: cogs/config/reactionroles.py:139
+#, python-brace-format
+msgid "Message `{mid}` - {emoji} -> <@&{role}>"
+msgstr "Μήνυμα `{mid}` - {emoji} -> <@&{role}>"
+
+#: cogs/config/rooms.py:139
+msgid "You have reached the maximum number of Auto-Rooms for this server."
+msgstr "Έφτασες τον μέγιστο αριθμό Auto-Rooms για αυτόν τον διακομιστή."
+
+#: cogs/config/rooms.py:151 cogs/config/rooms.py:171
+msgid "Something went wrong while creating your Auto-Room."
+msgstr "Κάτι πήγε στραβά κατά τη δημιουργία του Auto-Room σου."
+
+#: cogs/config/rooms.py:163
+msgid "Successfully created your Auto-Room. You can rename category and channel to whatever you want."
+msgstr "Το Auto-Room σου δημιουργήθηκε με επιτυχία. Μπορείς να μετονομάσεις την κατηγορία και το κανάλι όπως θέλεις."
+
+#: cogs/config/rooms.py:185
+msgid "No category found with that name."
+msgstr "Δεν βρέθηκε κατηγορία με αυτό το όνομα."
+
+#: cogs/config/rooms.py:190
+msgid "Multiple categories found with that name. Please be more specific."
+msgstr "Βρέθηκαν πολλές κατηγορίες με αυτό το όνομα. Δώσε πιο συγκεκριμένα στοιχεία."
+
+#: cogs/config/rooms.py:221
+msgid "That category is not an Auto-Room."
+msgstr "Αυτή η κατηγορία δεν είναι Auto-Room."
+
+#: cogs/config/rooms.py:227
+msgid "Something went wrong while deleting the category."
+msgstr "Κάτι πήγε στραβά κατά τη διαγραφή της κατηγορίας."
+
+#: cogs/config/rooms.py:231
+msgid "Successfully removed the Auto-Room category and its channels."
+msgstr "Η κατηγορία Auto-Room και τα κανάλια της αφαιρέθηκαν με επιτυχία."
+
+#: cogs/config/rooms.py:246
+msgid "There are no autorooms set up in this server."
+msgstr "Δεν υπάρχουν autorooms ρυθμισμένα σε αυτόν τον διακομιστή."
+
+#: cogs/config/rooms.py:250
+msgid "Auto Rooms in Server"
+msgstr "Auto Rooms στον διακομιστή"
+
+#: cogs/config/rooms.py:257
+#, python-brace-format
+msgid "Channel ID: {id}"
+msgstr "ID καναλιού: {id}"
+
+#: cogs/config/rooms.py:258
+#, python-brace-format
+msgid "Name: {name}"
+msgstr "Όνομα: {name}"
+
+#: cogs/config/rooms.py:263
+msgid "Channel ID: Unknown"
+msgstr "ID καναλιού: Άγνωστο"
+
+#: cogs/config/rooms.py:264
+msgid "This channel might have been deleted."
+msgstr "Αυτό το κανάλι ίσως έχει διαγραφεί."
+
+#: cogs/config/settings.py:23
+msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
+msgstr "Χρησιμοποίησε `/prefix set <prefix>` για να αλλάξεις το πρόθεμα εντολών αυτού του διακομιστή."
+
+#: cogs/config/settings.py:27
+msgid "Use `/autorole set <role>` to choose the role new members receive on join."
+msgstr "Χρησιμοποίησε `/autorole set <role>` για να επιλέξεις τον ρόλο που λαμβάνουν τα νέα μέλη κατά την είσοδο."
+
+#: cogs/config/settings.py:31
+msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
+msgstr "Χρησιμοποίησε `/automod` για να ανοίξεις το διαδραστικό πάνελ ελέγχου AutoMod (προσαρμοσμένα + εγγενή φίλτρα)."
+
+#: cogs/config/settings.py:35
+msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
+msgstr "Χρησιμοποίησε `/modlog` για να ανοίξεις το διαδραστικό πάνελ ελέγχου mod-log (κανάλι + εναλλαγές συμβάντων)."
+
+#: cogs/config/settings.py:39
+msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
+msgstr "Χρησιμοποίησε `/starboard set <channel> [threshold]` για να ρυθμίσεις το starboard."
+
+#: cogs/config/settings.py:42
+#, python-brace-format
+msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
+msgstr "Χρησιμοποίησε `/welcome set <channel> <message>` για να ρυθμίσεις τα μηνύματα καλωσορίσματος. Placeholders: {user}, {server}, {count}."
+
+#: cogs/config/settings.py:53 cogs/config/twitch.py:423
+#: cogs/config/welcome.py:434 cogs/moderation/automod.py:362
+#: cogs/moderation/automod.py:373 cogs/moderation/automod.py:384
+#: cogs/moderation/automod.py:400 cogs/moderation/automod.py:403
+msgid "Enabled"
+msgstr "Ενεργοποιημένο"
+
+#: cogs/config/settings.py:53 cogs/config/twitch.py:425
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:688
+#: cogs/moderation/automod.py:362 cogs/moderation/automod.py:373
+#: cogs/moderation/automod.py:384 cogs/moderation/automod.py:400
+#: cogs/moderation/automod.py:403
+msgid "Disabled"
+msgstr "Απενεργοποιημένο"
+
+#: cogs/config/settings.py:66
+msgid "Current state unknown"
+msgstr "Άγνωστη τρέχουσα κατάσταση"
+
+#: cogs/config/settings.py:68
+msgid "Currently enabled - select to disable"
+msgstr "Αυτή τη στιγμή ενεργοποιημένο - επίλεξε για απενεργοποίηση"
+
+#: cogs/config/settings.py:70
+msgid "Currently disabled - select to enable"
+msgstr "Αυτή τη στιγμή απενεργοποιημένο - επίλεξε για ενεργοποίηση"
+
+#: cogs/config/settings.py:74 cogs/config/settings.py:162
+#: cogs/config/settings.py:506
+msgid "Leveling"
+msgstr "Επίπεδα"
+
+#: cogs/config/settings.py:80 cogs/config/settings.py:157
+msgid "Prefix"
+msgstr "Πρόθεμα"
+
+#: cogs/config/settings.py:83
+msgid "Change the command prefix"
+msgstr "Άλλαξε το πρόθεμα εντολών"
+
+#: cogs/config/settings.py:86 cogs/config/settings.py:169
+#: cogs/config/settings.py:375 cogs/config/settings.py:403
+#: cogs/config/settings.py:410
+msgid "Auto-role"
+msgstr "Αυτόματος ρόλος"
+
+#: cogs/config/settings.py:89
+msgid "Role granted to new members"
+msgstr "Ρόλος που δίνεται στα νέα μέλη"
+
+#: cogs/config/settings.py:92 cogs/config/settings.py:200
+msgid "AutoMod"
+msgstr "AutoMod"
+
+#: cogs/config/settings.py:95
+msgid "Open the AutoMod control panel"
+msgstr "Άνοιξε το πάνελ ελέγχου AutoMod"
+
+#: cogs/config/settings.py:98 cogs/config/settings.py:211
+msgid "Mod-log"
+msgstr "Mod-log"
+
+#: cogs/config/settings.py:101
+msgid "Open the mod-log control panel"
+msgstr "Άνοιξε το πάνελ ελέγχου mod-log"
+
+#: cogs/config/settings.py:104 cogs/config/settings.py:183
+#: cogs/config/starboard.py:96 cogs/config/starboard.py:121
+#: cogs/config/starboard.py:151 cogs/config/starboard.py:172
+msgid "Starboard"
+msgstr "Starboard"
+
+#: cogs/config/settings.py:107
+msgid "Configure the starboard"
+msgstr "Ρύθμισε το starboard"
+
+#: cogs/config/settings.py:110 cogs/config/settings.py:222
+msgid "Welcome"
+msgstr "Καλωσόρισμα"
+
+#: cogs/config/settings.py:113
+msgid "Configure welcome messages"
+msgstr "Ρύθμισε τα μηνύματα καλωσορίσματος"
+
+#: cogs/config/settings.py:117
+msgid "Configure a feature..."
+msgstr "Ρύθμισε μια λειτουργία..."
+
+#: cogs/config/settings.py:144
+msgid "Configuration"
+msgstr "Διαμόρφωση"
+
+#: cogs/config/settings.py:146
+msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
+msgstr "Μια επισκόπηση κάθε λειτουργίας αυτού του διακομιστή. Χρησιμοποίησε το μενού παρακάτω για να εναλλάξεις τα **Επίπεδα** ή να μεταβείς στην εντολή ρύθμισης μιας λειτουργίας."
+
+#: cogs/config/settings.py:170 cogs/config/settings.py:178
+#: cogs/config/settings.py:190 cogs/config/settings.py:209
+#: cogs/config/settings.py:220
+msgid "Not set up"
+msgstr "Δεν έχει ρυθμιστεί"
+
+#: cogs/config/settings.py:194 cogs/moderation/automod.py:146
+#: cogs/moderation/automod.py:362 cogs/moderation/automod.py:400
+msgid "Anti-link"
+msgstr "Anti-link"
+
+#: cogs/config/settings.py:196 cogs/moderation/automod.py:148
+#: cogs/moderation/automod.py:384 cogs/moderation/automod.py:403
+msgid "Anti-spam"
+msgstr "Anti-spam"
+
+#: cogs/config/settings.py:227
+msgid "Only you can use these controls"
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
+
+#: cogs/config/settings.py:229
+msgid "times out after 3 min"
+msgstr "λήγει μετά από 3 λεπτά"
+
+#: cogs/config/settings.py:308 cogs/config/settings.py:332
+msgid "Server prefix"
+msgstr "Πρόθεμα διακομιστή"
+
+#: cogs/config/settings.py:310
+msgid "Prefix has been set to:"
+msgstr "Το πρόθεμα ορίστηκε σε:"
+
+#: cogs/config/settings.py:334
+msgid "Current server prefix"
+msgstr "Τρέχον πρόθεμα διακομιστή"
+
+#: cogs/config/settings.py:356
+msgid "Auto-role role"
+msgstr "Ρόλος αυτόματου ρόλου"
+
+#: cogs/config/settings.py:359
+msgid "Auto-role has been set to:"
+msgstr "Ο αυτόματος ρόλος ορίστηκε σε:"
+
+#: cogs/config/settings.py:378
+msgid "Auto-role has been remove from the guild"
+msgstr "Ο αυτόματος ρόλος αφαιρέθηκε από τον διακομιστή"
+
+#: cogs/config/settings.py:405 cogs/config/settings.py:412
+msgid "Current auto-role"
+msgstr "Τρέχων αυτόματος ρόλος"
+
+#: cogs/config/settings.py:508
+msgid "Leveling enabled for this server."
+msgstr "Τα επίπεδα ενεργοποιήθηκαν για αυτόν τον διακομιστή."
+
+#: cogs/config/settings.py:510
+msgid "Leveling disabled for this server."
+msgstr "Τα επίπεδα απενεργοποιήθηκαν για αυτόν τον διακομιστή."
+
+#: cogs/config/starboard.py:27
+msgid "Pick the starboard channel"
+msgstr "Διάλεξε το κανάλι starboard"
+
+#: cogs/config/starboard.py:97 cogs/config/twitch.py:429
+#: cogs/config/welcome.py:440 cogs/config/welcome.py:667
+#: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
+msgid "Channel"
+msgstr "Κανάλι"
+
+#: cogs/config/starboard.py:98
+msgid "Threshold"
+msgstr "Όριο"
+
+#: cogs/config/starboard.py:123
+msgid "Pick the channel where starred messages should be posted using the menu below."
+msgstr "Διάλεξε το κανάλι όπου θα δημοσιεύονται τα μηνύματα με αστέρι χρησιμοποιώντας το μενού παρακάτω."
+
+#: cogs/config/starboard.py:128
+msgid "Only you can use this menu."
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτό το μενού."
+
+#: cogs/config/starboard.py:154
+msgid "Threshold has been set to:"
+msgstr "Το όριο ορίστηκε σε:"
+
+#: cogs/config/starboard.py:175
+msgid "Starboard has been disabled for this guild"
+msgstr "Το starboard απενεργοποιήθηκε για αυτόν τον διακομιστή"
+
+#: cogs/config/starboard.py:197 cogs/config/starboard.py:229
+#, python-brace-format
+msgid "Starboard top | {guild}"
+msgstr "Κορυφαία starboard | {guild}"
+
+#: cogs/config/starboard.py:198
+msgid "No starred messages yet."
+msgstr "Δεν υπάρχουν ακόμη μηνύματα με αστέρι."
+
+#: cogs/config/starboard.py:223 cogs/config/starboard.py:286
+#: cogs/utility/extras.py:38
+#, python-brace-format
+msgid "[Jump]({url})"
+msgstr "[Μετάβαση]({url})"
+
+#: cogs/config/starboard.py:285
+msgid "Source"
+msgstr "Πηγή"
+
+#: cogs/config/twitch.py:41
+msgid "The streamer's display name."
+msgstr "Το εμφανιζόμενο όνομα του streamer."
+
+#: cogs/config/twitch.py:42
+msgid "Pings the streamer, e.g. @name."
+msgstr "Κάνει ping τον streamer, π.χ. @name."
+
+#: cogs/config/twitch.py:43
+msgid "A clickable link to the Twitch stream."
+msgstr "Ένας σύνδεσμος με δυνατότητα κλικ προς το stream στο Twitch."
+
+#: cogs/config/twitch.py:44
+msgid "What they are playing (may be blank)."
+msgstr "Τι παίζει (μπορεί να είναι κενό)."
+
+#: cogs/config/twitch.py:45
+msgid "The stream's title."
+msgstr "Ο τίτλος του stream."
+
+#: cogs/config/twitch.py:46
+msgid "Your server's name."
+msgstr "Το όνομα του διακομιστή σου."
+
+#: cogs/config/twitch.py:49
+msgid "The streamer's avatar URL. Perfect for the Thumbnail or Image field."
+msgstr "Το URL του avatar του streamer. Ιδανικό για το πεδίο Thumbnail ή Image."
+
+#: cogs/config/twitch.py:56
+#, python-brace-format
+msgid ""
+"Drop any of these into your message, or into the embed's title, description, fields, author, or footer. They are filled in automatically the moment a watched member goes live.\n"
+"\n"
+"Example: `{mention} is now live playing {game}! Watch: {url}`\n"
+"Tip: pop {avatar} into Thumbnail for a clean look."
+msgstr ""
+"Βάλε οποιοδήποτε από αυτά στο μήνυμά σου ή στον τίτλο, την περιγραφή, τα πεδία, τον συγγραφέα ή το υποσέλιδο του embed. Συμπληρώνονται αυτόματα τη στιγμή που ένα παρακολουθούμενο μέλος ξεκινά live.\n"
+"\n"
+"Παράδειγμα: `{mention} is now live playing {game}! Watch: {url}`\n"
+"Συμβουλή: βάλε το {avatar} στο Thumbnail για καθαρή εμφάνιση."
+
+#: cogs/config/twitch.py:121
+msgid "Edit message"
+msgstr "Επεξεργασία μηνύματος"
+
+#: cogs/config/twitch.py:124
+msgid "Alert message"
+msgstr "Μήνυμα ειδοποίησης"
+
+#: cogs/config/twitch.py:158
+msgid "Select the alert channel..."
+msgstr "Επίλεξε το κανάλι ειδοποίησης..."
+
+#: cogs/config/twitch.py:187
+msgid "Select the Live role (optional)..."
+msgstr "Επίλεξε τον ρόλο Live (προαιρετικό)..."
+
+#: cogs/config/twitch.py:220
+msgid "Edit the alert message..."
+msgstr "Επεξεργάσου το μήνυμα ειδοποίησης..."
+
+#: cogs/config/twitch.py:242
+msgid "Style: Embed"
+msgstr "Στυλ: Embed"
+
+#: cogs/config/twitch.py:242
+msgid "Style: Classic"
+msgstr "Στυλ: Κλασικό"
+
+#: cogs/config/twitch.py:264
+msgid "Placeholders"
+msgstr "Placeholders"
+
+#: cogs/config/twitch.py:277
+msgid "Twitch alert placeholders"
+msgstr "Placeholders ειδοποίησης Twitch"
+
+#: cogs/config/twitch.py:292 cogs/config/welcome.py:190
+msgid "Preview"
+msgstr "Προεπισκόπηση"
+
+#: cogs/config/twitch.py:303 cogs/config/welcome.py:201
+msgid "Could not render the preview."
+msgstr "Δεν ήταν δυνατή η εμφάνιση της προεπισκόπησης."
+
+#: cogs/config/twitch.py:314 cogs/config/welcome.py:212
+msgid "Disable"
+msgstr "Απενεργοποίηση"
+
+#: cogs/config/twitch.py:314 cogs/config/welcome.py:212
+msgid "Enable"
+msgstr "Ενεργοποίηση"
+
+#: cogs/config/twitch.py:372
+msgid "Edit the alert embed..."
+msgstr "Επεξεργάσου το embed ειδοποίησης..."
+
+#: cogs/config/twitch.py:406
+msgid "Twitch live alerts"
+msgstr "Ειδοποιήσεις live Twitch"
+
+#: cogs/config/twitch.py:408
+msgid "Design the alert that fires when a watched member goes live on Twitch. Every change saves instantly - hit **Preview** to see it, and add streamers with `/twitch watch`."
+msgstr "Σχεδίασε την ειδοποίηση που ενεργοποιείται όταν ένα παρακολουθούμενο μέλος ξεκινά live στο Twitch. Κάθε αλλαγή αποθηκεύεται αμέσως - πάτησε **Preview** για να τη δεις και πρόσθεσε streamers με `/twitch watch`."
+
+#: cogs/config/twitch.py:418
+msgid "*None (legacy lookup).*"
+msgstr "*Κανένα (παλαιού τύπου αναζήτηση).*"
+
+#: cogs/config/twitch.py:432
+msgid "Classic message"
+msgstr "Κλασικό μήνυμα"
+
+#: cogs/config/twitch.py:435
+msgid "Live role"
+msgstr "Ρόλος Live"
+
+#: cogs/config/twitch.py:438
+msgid "*none*"
+msgstr "*κανένα*"
+
+#: cogs/config/twitch.py:449
+#, python-brace-format
+msgid "**Content line:** {preview}"
+msgstr "**Γραμμή περιεχομένου:** {preview}"
+
+#: cogs/config/twitch.py:455 cogs/config/welcome.py:470
+#, python-brace-format
+msgid "Only you can use these controls. Placeholders: {placeholders}"
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου. Placeholders: {placeholders}"
+
+#: cogs/config/twitch.py:527
+#, python-brace-format
+msgid "{mention} is now live! {url}"
+msgstr "{mention} είναι τώρα live! {url}"
+
+#: cogs/config/twitch.py:549
+msgid "Nothing to preview yet - add a message or some embed content."
+msgstr "Δεν υπάρχει τίποτα για προεπισκόπηση ακόμη - πρόσθεσε ένα μήνυμα ή λίγο περιεχόμενο embed."
+
+#: cogs/config/twitch.py:681
+msgid "Could not add that member to the watchlist."
+msgstr "Δεν ήταν δυνατή η προσθήκη αυτού του μέλους στη λίστα παρακολούθησης."
+
+#: cogs/config/twitch.py:685
+msgid "the configured alert channel"
+msgstr "το ρυθμισμένο κανάλι ειδοποίησης"
+
+#: cogs/config/twitch.py:687 cogs/config/twitch.py:711
+#: cogs/config/twitch.py:738
+msgid "Twitch watchlist"
+msgstr "Λίστα παρακολούθησης Twitch"
+
+#: cogs/config/twitch.py:688
+msgid "Now watching"
+msgstr "Παρακολούθηση τώρα"
+
+#: cogs/config/twitch.py:689
+msgid "Alerts in"
+msgstr "Ειδοποιήσεις στο"
+
+#: cogs/config/twitch.py:690
+msgid "Use /twitch to open the builder."
+msgstr "Χρησιμοποίησε /twitch για να ανοίξεις τον δημιουργό."
+
+#: cogs/config/twitch.py:709
+msgid "Could not remove that member."
+msgstr "Δεν ήταν δυνατή η αφαίρεση αυτού του μέλους."
+
+#: cogs/config/twitch.py:712
+msgid "Removed"
+msgstr "Αφαιρέθηκε"
+
+#: cogs/config/twitch.py:729
+msgid "Could not load the watchlist."
+msgstr "Δεν ήταν δυνατή η φόρτωση της λίστας παρακολούθησης."
+
+#: cogs/config/twitch.py:734
+msgid "default alert channel"
+msgstr "προεπιλεγμένο κανάλι ειδοποίησης"
+
+#: cogs/config/twitch.py:757
+msgid "Your guild already has a Live streamer role - it is now linked."
+msgstr "Ο διακομιστής σου έχει ήδη έναν ρόλο Live streamer - τώρα συνδέθηκε."
+
+#: cogs/config/twitch.py:768
+msgid "Could not create the Live streamer role."
+msgstr "Δεν ήταν δυνατή η δημιουργία του ρόλου Live streamer."
+
+#: cogs/config/twitch.py:776
+msgid "Live streamer role created and linked. Move it to your preferred position in the role list."
+msgstr "Ο ρόλος Live streamer δημιουργήθηκε και συνδέθηκε. Μετακίνησέ τον στην προτιμώμενη θέση στη λίστα ρόλων."
+
+#: cogs/config/twitch.py:791
+msgid "No Live streamer role is set up."
+msgstr "Δεν έχει ρυθμιστεί ρόλος Live streamer."
+
+#: cogs/config/twitch.py:797
+msgid "Could not delete the Live streamer role."
+msgstr "Δεν ήταν δυνατή η διαγραφή του ρόλου Live streamer."
+
+#: cogs/config/twitch.py:803
+msgid "Live streamer role removed."
+msgstr "Ο ρόλος Live streamer αφαιρέθηκε."
+
+#: cogs/config/welcome.py:73
+msgid "Add a GIF"
+msgstr "Πρόσθεσε ένα GIF"
+
+#: cogs/config/welcome.py:76
+msgid "GIF or image URL"
+msgstr "URL GIF ή εικόνας"
+
+#: cogs/config/welcome.py:88
+msgid "That doesn't look like a valid URL."
+msgstr "Αυτό δεν μοιάζει με έγκυρο URL."
+
+#: cogs/config/welcome.py:122
+msgid "Select the welcome channel..."
+msgstr "Επίλεξε το κανάλι καλωσορίσματος..."
+
+#: cogs/config/welcome.py:147 cogs/config/welcome.py:449
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:459
+msgid "On"
+msgstr "Ενεργό"
+
+#: cogs/config/welcome.py:147 cogs/config/welcome.py:449
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:459
+#: cogs/music/music.py:217
+msgid "Off"
+msgstr "Ανενεργό"
+
+#: cogs/config/welcome.py:172
+msgid "Manage GIFs"
+msgstr "Διαχείριση GIF"
+
+#: cogs/config/welcome.py:245
+msgid "GIF"
+msgstr "GIF"
+
+#: cogs/config/welcome.py:251
+msgid "Remove a GIF..."
+msgstr "Αφαίρεσε ένα GIF..."
+
+#: cogs/config/welcome.py:294
+msgid "Add GIF"
+msgstr "Προσθήκη GIF"
+
+#: cogs/config/welcome.py:301
+msgid "Manage welcome GIFs"
+msgstr "Διαχείριση GIF καλωσορίσματος"
+
+#: cogs/config/welcome.py:303
+msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
+msgstr "Πρόσθεσε URL εικόνας/GIF στη συλλογή τυχαίων ή αφαίρεσε ένα παρακάτω. Ενεργοποίησε το **Random GIF** στο κύριο πάνελ για να χρησιμοποιήσεις τη συλλογή."
+
+#: cogs/config/welcome.py:311
+#, python-brace-format
+msgid "...and {count} more"
+msgstr "...και {count} ακόμη"
+
+#: cogs/config/welcome.py:314
+#, python-brace-format
+msgid "Pool ({count})"
+msgstr "Συλλογή ({count})"
+
+#: cogs/config/welcome.py:320
+msgid "Pool (0)"
+msgstr "Συλλογή (0)"
+
+#: cogs/config/welcome.py:321
+msgid "No GIFs yet. Add one to build the random pool."
+msgstr "Κανένα GIF ακόμη. Πρόσθεσε ένα για να φτιάξεις τη συλλογή τυχαίων."
+
+#: cogs/config/welcome.py:336
+msgid "Could not open the form."
+msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας."
+
+#: cogs/config/welcome.py:387
+msgid "Edit the welcome embed..."
+msgstr "Επεξεργάσου το embed καλωσορίσματος..."
+
+#: cogs/config/welcome.py:390 cogs/config/welcome.py:448
+msgid "Card"
+msgstr "Κάρτα"
+
+#: cogs/config/welcome.py:391 cogs/config/welcome.py:453
+msgid "Random GIF"
+msgstr "Τυχαίο GIF"
+
+#: cogs/config/welcome.py:392 cogs/config/welcome.py:458
+msgid "Ping"
+msgstr "Ping"
+
+#: cogs/config/welcome.py:421
+msgid "Welcome system"
+msgstr "Σύστημα καλωσορίσματος"
+
+#: cogs/config/welcome.py:423
+msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
+msgstr "Σχεδίασε τον χαιρετισμό που λαμβάνουν τα νέα μέλη. Χρησιμοποίησε τα μενού παρακάτω, κάθε αλλαγή αποθηκεύεται αμέσως. Πάτησε **Preview** για να το δεις ζωντανά."
+
+#: cogs/config/welcome.py:442
+msgid "GIF pool"
+msgstr "Συλλογή GIF"
+
+#: cogs/config/welcome.py:443
+#, python-brace-format
+msgid "{count} saved"
+msgstr "{count} αποθηκευμένα"
+
+#: cogs/config/welcome.py:585
+#, python-brace-format
+msgid "Welcome {mention}!"
+msgstr "Καλώς ήρθες {mention}!"
+
+#: cogs/config/welcome.py:666 cogs/config/welcome.py:686
+msgid "Welcome message"
+msgstr "Μήνυμα καλωσορίσματος"
+
+#: cogs/config/welcome.py:673
+msgid "Use /welcome to open the full builder."
+msgstr "Χρησιμοποίησε /welcome για να ανοίξεις τον πλήρη δημιουργό."
+
+#: cogs/config/welcome.py:689
+msgid "Welcome messages have been turned off."
+msgstr "Τα μηνύματα καλωσορίσματος απενεργοποιήθηκαν."
+
+#: cogs/config/welcome.py:753
+#, python-brace-format
+msgid "Welcome {member}!"
+msgstr "Καλώς ήρθες {member}!"
+
+#: cogs/fun/fun.py:49
+msgid "You can't hug the air..."
+msgstr "Δεν μπορείς να αγκαλιάσεις τον αέρα..."
+
+#: cogs/fun/fun.py:108 cogs/fun/fun.py:124 cogs/fun/fun.py:140
+msgid ":warning: **ERROR !**"
+msgstr ":warning: **ΣΦΑΛΜΑ !**"
+
+#: cogs/fun/fun.py:157 cogs/fun/fun.py:173
+msgid ":warning: Warning!"
+msgstr ":warning: Προειδοποίηση!"
+
+#: cogs/fun/fun.py:158
+#, python-brace-format
+msgid ""
+"Don't mention everyone {author}\n"
+" Message : {message}"
+msgstr ""
+"Μην κάνεις mention everyone {author}\n"
+" Μήνυμα : {message}"
+
+#: cogs/fun/fun.py:174
+#, python-brace-format
+msgid ""
+"Please, don't send links {author}\n"
+" Message : {message}"
+msgstr ""
+"Σε παρακαλώ, μη στέλνεις συνδέσμους {author}\n"
+" Μήνυμα : {message}"
+
+#: cogs/fun/fun.py:183
+msgid "Yes, we know."
+msgstr "Ναι, το ξέρουμε."
+
+#: cogs/fun/fun.py:208
+msgid "**Download link**"
+msgstr "**Σύνδεσμος λήψης**"
+
+#: cogs/fun/fun.py:209
+#, python-brace-format
+msgid "**[➡️ URL]({url})**"
+msgstr "**[➡️ URL]({url})**"
+
+#: cogs/fun/fun.py:213 cogs/fun/fun.py:266
+#, python-brace-format
+msgid "Requested by: {user}"
+msgstr "Ζητήθηκε από: {user}"
+
+#: cogs/fun/fun.py:227
+msgid "*Message too long.*"
+msgstr "*Το μήνυμα είναι πολύ μεγάλο.*"
+
+#: cogs/fun/fun.py:236
+msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
+msgstr "**Πληκτρολόγησε κείμενο για μετατροπή σε ascii art. Π.χ.: ``<prefix> ascii stuff``**"
+
+#: cogs/fun/fun.py:247
+msgid "Ask me a question..."
+msgstr "Κάνε μου μια ερώτηση..."
+
+#: cogs/fun/fun.py:264
+msgid "Reversed:"
+msgstr "Αντεστραμμένο:"
+
+#: cogs/fun/fun.py:284
+#, python-brace-format
+msgid "I'd rate {thing} a **{num}.{deci}/ 100**"
+msgstr "Θα βαθμολογούσα το {thing} με **{num}.{deci}/ 100**"
+
+#: cogs/fun/fun.py:299
+#, python-brace-format
+msgid "**{user}** is **1000%** hot :heart_eyes: :lips:"
+msgstr "Ο/Η **{user}** είναι **1000%** καυτός/ή :heart_eyes: :lips:"
+
+#: cogs/fun/fun.py:308
+#, python-brace-format
+msgid "{user} is hot like a pineapple :pineapple:"
+msgstr "Ο/Η {user} είναι καυτός/ή σαν ανανάς :pineapple:"
+
+#: cogs/fun/fun.py:324
+#, python-brace-format
+msgid "**{user}** is **{hot:.2f}%** hot {emoji}"
+msgstr "Ο/Η **{user}** είναι **{hot:.2f}%** καυτός/ή {emoji}"
+
+#: cogs/fun/fun.py:341
+#, python-brace-format
+msgid "{member} is **0%** gay 👑"
+msgstr "Ο/Η {member} είναι **0%** gay 👑"
+
+#: cogs/fun/fun.py:345
+#, python-brace-format
+msgid "{member} is **{y}.{rand}%** gay {emj}"
+msgstr "Ο/Η {member} είναι **{y}.{rand}%** gay {emj}"
+
+#: cogs/fun/fun.py:362
+#, python-brace-format
+msgid "{slot} All matching, you won! 🎉"
+msgstr "{slot} Όλα ταιριάζουν, κέρδισες! 🎉"
+
+#: cogs/fun/fun.py:364
+#, python-brace-format
+msgid "{slot} 2 in a row, you won! 🎉"
+msgstr "{slot} 2 στη σειρά, κέρδισες! 🎉"
+
+#: cogs/fun/fun.py:366
+#, python-brace-format
+msgid "{slot} No match, you lost 😢"
+msgstr "{slot} Καμία αντιστοιχία, έχασες 😢"
+
+#: cogs/fun/fun.py:376 cogs/fun/fun.py:417
+msgid "RPS Game"
+msgstr "Παιχνίδι Πέτρα-Ψαλίδι-Χαρτί"
+
+#: cogs/fun/fun.py:377
+msgid ""
+"**I choose ** :grey_question: \n"
+"\n"
+"React with:\n"
+"✊ for `Rock`\n"
+"🖐 for `Paper`\n"
+"✌ for `Scissors`"
+msgstr ""
+"**Διαλέγω ** :grey_question: \n"
+"\n"
+"Αντίδρασε με:\n"
+"✊ για `Πέτρα`\n"
+"🖐 για `Χαρτί`\n"
+"✌ για `Ψαλίδι`"
+
+#: cogs/fun/fun.py:379
+msgid "I'm waiting for you!"
+msgstr "Σε περιμένω!"
+
+#: cogs/fun/fun.py:399
+msgid "Game timed out! Please try again."
+msgstr "Το παιχνίδι έληξε! Δοκίμασε ξανά."
+
+#: cogs/fun/fun.py:403
+msgid "Draw"
+msgstr "Ισοπαλία"
+
+#: cogs/fun/fun.py:408
+msgid "You won"
+msgstr "Κέρδισες"
+
+#: cogs/fun/fun.py:408
+msgid "You lost"
+msgstr "Έχασες"
+
+#: cogs/fun/fun.py:411
+#, python-brace-format
+msgid ""
+"I choose {bot_response}\n"
+"You choose {user_choice}\n"
+"\n"
+"Result : `{result}`"
+msgstr ""
+"Διαλέγω {bot_response}\n"
+"Διαλέγεις {user_choice}\n"
+"\n"
+"Αποτέλεσμα : `{result}`"
+
+#: cogs/fun/fun.py:420
+msgid "Thanks for playing!"
+msgstr "Ευχαριστώ που έπαιξες!"
+
+#: cogs/fun/games.py:64
+msgid "Tic-Tac-Toe: you win! ❌"
+msgstr "Τρίλιζα: κέρδισες! ❌"
+
+#: cogs/fun/games.py:66
+msgid "Tic-Tac-Toe: I win! ⭕ Better luck next time."
+msgstr "Τρίλιζα: κέρδισα! ⭕ Καλύτερη τύχη την επόμενη φορά."
+
+#: cogs/fun/games.py:68
+msgid "Tic-Tac-Toe: it's a draw!"
+msgstr "Τρίλιζα: ισοπαλία!"
+
+#: cogs/fun/games.py:76 cogs/fun/games.py:80
+msgid "Something went wrong with that move."
+msgstr "Κάτι πήγε στραβά με αυτή την κίνηση."
+
+#: cogs/fun/games.py:177
+msgid "Tic-Tac-Toe: time's up, game over!"
+msgstr "Τρίλιζα: τελείωσε ο χρόνος, τέλος παιχνιδιού!"
+
+#: cogs/fun/games.py:208
+msgid "The sentence list is unavailable right now."
+msgstr "Η λίστα προτάσεων δεν είναι διαθέσιμη αυτή τη στιγμή."
+
+#: cogs/fun/games.py:211
+msgid "There are no sentences configured to race with."
+msgstr "Δεν υπάρχουν ρυθμισμένες προτάσεις για αγώνα."
+
+#: cogs/fun/games.py:216
+msgid "Sentence Race!"
+msgstr "Αγώνας Πρότασης!"
+
+#: cogs/fun/games.py:217
+#, python-brace-format
+msgid ""
+"Be the first to type out the following sentence:\n"
+"\n"
+"{sentence}"
+msgstr ""
+"Γίνε ο πρώτος που θα πληκτρολογήσει την παρακάτω πρόταση:\n"
+"\n"
+"{sentence}"
+
+#: cogs/fun/games.py:222
+msgid "You have 60 seconds. No copy-pasting cheaters!"
+msgstr "Έχεις 60 δευτερόλεπτα. Όχι αντιγραφή-επικόλληση, ζαβολιάρηδες!"
+
+#: cogs/fun/games.py:240
+msgid "Time's up! Nobody managed to finish the sentence in time."
+msgstr "Τελείωσε ο χρόνος! Κανείς δεν κατάφερε να ολοκληρώσει την πρόταση εγκαίρως."
+
+#: cogs/fun/games.py:248
+msgid "We have a winner!"
+msgstr "Έχουμε νικητή!"
+
+#: cogs/fun/games.py:249
+#, python-brace-format
+msgid "{winner} finished the sentence first!"
+msgstr "Ο/Η {winner} ολοκλήρωσε την πρόταση πρώτος/η!"
+
+#: cogs/fun/games.py:255
+msgid "Time"
+msgstr "Χρόνος"
+
+#: cogs/fun/games.py:256
+#, python-brace-format
+msgid "{seconds:.2f} seconds"
+msgstr "{seconds:.2f} δευτερόλεπτα"
+
+#: cogs/fun/games.py:260
+msgid "Speed"
+msgstr "Ταχύτητα"
+
+#: cogs/fun/games.py:260
+#, python-brace-format
+msgid "~{wpm:.0f} WPM"
+msgstr "~{wpm:.0f} WPM"
+
+#: cogs/moderation/automod.py:56
+#, python-brace-format
+msgid "{label} (N/A)"
+msgstr "{label} (Μ/Δ)"
+
+#: cogs/moderation/automod.py:77
+msgid "Action on a custom violation..."
+msgstr "Ενέργεια σε προσαρμοσμένη παράβαση..."
+
+#: cogs/moderation/automod.py:97
+msgid "Exempt roles (select to replace)..."
+msgstr "Εξαιρούμενοι ρόλοι (επίλεξε για αντικατάσταση)..."
+
+#: cogs/moderation/automod.py:116
+msgid "Exempt channels (select to replace)..."
+msgstr "Εξαιρούμενα κανάλια (επίλεξε για αντικατάσταση)..."
+
+#: cogs/moderation/automod.py:139 cogs/moderation/modlog.py:131
+#: tools/views.py:21
+msgid "This panel isn't for you."
+msgstr "Αυτό το πάνελ δεν είναι για εσένα."
+
+#: cogs/moderation/automod.py:147 cogs/moderation/automod.py:373
+msgid "Anti-invite"
+msgstr "Anti-invite"
+
+#: cogs/moderation/automod.py:149
+msgid "Native: Keyword"
+msgstr "Εγγενές: Λέξη-κλειδί"
+
+#: cogs/moderation/automod.py:150
+msgid "Native: Spam"
+msgstr "Εγγενές: Spam"
+
+#: cogs/moderation/automod.py:151
+msgid "Native: Mentions"
+msgstr "Εγγενές: Αναφορές"
+
+#: cogs/moderation/automod.py:183
+msgid "⚪ Unavailable"
+msgstr "⚪ Μη διαθέσιμο"
+
+#: cogs/moderation/automod.py:184
+msgid "🟢 Enabled"
+msgstr "🟢 Ενεργοποιημένο"
+
+#: cogs/moderation/automod.py:184
+msgid "🔴 Disabled"
+msgstr "🔴 Απενεργοποιημένο"
+
+#: cogs/moderation/automod.py:187
+msgid "AutoMod control panel"
+msgstr "Πάνελ ελέγχου AutoMod"
+
+#: cogs/moderation/automod.py:189
+msgid "Custom filters are enforced by Yasuho on every message. Native filters are Discord's own AutoMod, blocked before a message is ever posted."
+msgstr "Τα προσαρμοσμένα φίλτρα επιβάλλονται από τον Yasuho σε κάθε μήνυμα. Τα εγγενή φίλτρα είναι το AutoMod του ίδιου του Discord, που μπλοκάρουν ένα μήνυμα πριν καν δημοσιευτεί."
+
+#: cogs/moderation/automod.py:196
+msgid "Custom filters (Yasuho)"
+msgstr "Προσαρμοσμένα φίλτρα (Yasuho)"
+
+#: cogs/moderation/automod.py:198
+#, python-brace-format
+msgid ""
+"Anti-link: {link}\n"
+"Anti-invite: {invite}\n"
+"Anti-spam: {spam}"
+msgstr ""
+"Anti-link: {link}\n"
+"Anti-invite: {invite}\n"
+"Anti-spam: {spam}"
+
+#: cogs/moderation/automod.py:209
+msgid "Native filters (Discord)"
+msgstr "Εγγενή φίλτρα (Discord)"
+
+#: cogs/moderation/automod.py:211
+#, python-brace-format
+msgid ""
+"Keyword preset: {kw}\n"
+"Spam: {nspam}\n"
+"Mention spam: {nmention}"
+msgstr ""
+"Προκαθορισμένη λέξη-κλειδί: {kw}\n"
+"Spam: {nspam}\n"
+"Spam αναφορών: {nmention}"
+
+#: cogs/moderation/automod.py:222
+msgid "Action on custom violation"
+msgstr "Ενέργεια σε προσαρμοσμένη παράβαση"
+
+#: cogs/moderation/automod.py:230
+msgid "Exempt roles"
+msgstr "Εξαιρούμενοι ρόλοι"
+
+#: cogs/moderation/automod.py:232 cogs/moderation/automod.py:239
+msgid "None"
+msgstr "Κανένα"
+
+#: cogs/moderation/automod.py:237
+msgid "Exempt channels"
+msgstr "Εξαιρούμενα κανάλια"
+
+#: cogs/moderation/automod.py:246
+msgid "Native rules need the bot to have Manage Server."
+msgstr "Οι εγγενείς κανόνες απαιτούν το bot να έχει το δικαίωμα Manage Server."
+
+#: cogs/moderation/automod.py:258 cogs/moderation/automod.py:262
+msgid "Something went wrong updating the panel."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
+
+#: cogs/moderation/automod.py:278
+msgid "I couldn't change that rule. Discord's built-in AutoMod needs the bot to have the **Manage Server** permission."
+msgstr "Δεν μπόρεσα να αλλάξω αυτόν τον κανόνα. Το ενσωματωμένο AutoMod του Discord απαιτεί το bot να έχει το δικαίωμα **Manage Server**."
+
+#: cogs/moderation/automod.py:360 cogs/moderation/automod.py:371
+#: cogs/moderation/automod.py:382
+msgid "Auto-mod"
+msgstr "Auto-mod"
+
+#: cogs/moderation/automod.py:397
+msgid "Auto-mod status"
+msgstr "Κατάσταση Auto-mod"
+
+#: cogs/moderation/automod.py:676
+#, python-brace-format
+msgid "{user} Discord invite links are not allowed here."
+msgstr "{user} οι σύνδεσμοι πρόσκλησης Discord δεν επιτρέπονται εδώ."
+
+#: cogs/moderation/automod.py:686
+#, python-brace-format
+msgid "{user} links are not allowed here."
+msgstr "{user} οι σύνδεσμοι δεν επιτρέπονται εδώ."
+
+#: cogs/moderation/automod.py:710
+#, python-brace-format
+msgid "{user} stop spamming."
+msgstr "{user} σταμάτα το spam."
+
+#: cogs/moderation/blacklist.py:41
+#, python-brace-format
+msgid "{user} blacklisted."
+msgstr "Ο/Η {user} μπήκε στη μαύρη λίστα."
+
+#: cogs/moderation/blacklist.py:57
+#, python-brace-format
+msgid "{user} removed from the blacklist."
+msgstr "Ο/Η {user} αφαιρέθηκε από τη μαύρη λίστα."
+
+#: cogs/moderation/blacklist.py:73 cogs/moderation/blacklist.py:89
+msgid "Blacklist"
+msgstr "Μαύρη λίστα"
+
+#: cogs/moderation/blacklist.py:74
+msgid "The blacklist is empty."
+msgstr "Η μαύρη λίστα είναι κενή."
+
+#: cogs/moderation/moderation.py:53 cogs/moderation/moderation.py:86
+#: tools/paginator.py:68 tools/views.py:20
+msgid "This menu isn't for you."
+msgstr "Αυτό το μενού δεν είναι για εσένα."
+
+#: cogs/moderation/moderation.py:97
+msgid "Select a warn to remove..."
+msgstr "Επίλεξε μια προειδοποίηση για αφαίρεση..."
+
+#: cogs/moderation/moderation.py:119
+#, python-brace-format
+msgid "Warnings - {member}"
+msgstr "Προειδοποιήσεις - {member}"
+
+#: cogs/moderation/moderation.py:126
+msgid "No warnings on record."
+msgstr "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις."
+
+#: cogs/moderation/moderation.py:130
+msgid "*No reason provided*"
+msgstr "*Δεν δόθηκε λόγος*"
+
+#: cogs/moderation/moderation.py:133
+#, python-brace-format
+msgid ""
+"**Case #{case}** - {reason}\n"
+"by {mod} - {when}"
+msgstr ""
+"**Υπόθεση #{case}** - {reason}\n"
+"από {mod} - {when}"
+
+#: cogs/moderation/moderation.py:143
+#, python-brace-format
+msgid "Page {current}/{total} - {count} warn(s)"
+msgstr "Σελίδα {current}/{total} - {count} προειδοποίηση/εις"
+
+#: cogs/moderation/moderation.py:156 cogs/moderation/moderation.py:1238
+msgid "No reason"
+msgstr "Χωρίς λόγο"
+
+#: cogs/moderation/moderation.py:159
+#, python-brace-format
+msgid "Case #{case}"
+msgstr "Υπόθεση #{case}"
+
+#: cogs/moderation/moderation.py:170
+msgid "No warnings"
+msgstr "Καμία προειδοποίηση"
+
+#: cogs/moderation/moderation.py:191
+msgid "Couldn't select that warn, please try again."
+msgstr "Δεν ήταν δυνατή η επιλογή αυτής της προειδοποίησης, δοκίμασε ξανά."
+
+#: cogs/moderation/moderation.py:215 tools/paginator.py:94
+msgid "Couldn't turn the page, please try again."
+msgstr "Δεν ήταν δυνατή η αλλαγή σελίδας, δοκίμασε ξανά."
+
+#: cogs/moderation/moderation.py:224
+msgid "Pick a warn from the dropdown first."
+msgstr "Διάλεξε πρώτα μια προειδοποίηση από το αναπτυσσόμενο μενού."
+
+#: cogs/moderation/moderation.py:247
+msgid "Couldn't remove that warn, please try again."
+msgstr "Δεν ήταν δυνατή η αφαίρεση αυτής της προειδοποίησης, δοκίμασε ξανά."
+
+#: cogs/moderation/moderation.py:370
+msgid "New Members"
+msgstr "Νέα μέλη"
+
+#: cogs/moderation/moderation.py:374
+#, python-brace-format
+msgid "joined {joined}, created {created}"
+msgstr "μπήκε {joined}, δημιουργήθηκε {created}"
+
+#: cogs/moderation/moderation.py:379
+#, python-brace-format
+msgid "{member} (ID: {id})"
+msgstr "{member} (ID: {id})"
+
+#: cogs/moderation/moderation.py:413 cogs/moderation/moderation.py:468
+#: cogs/moderation/moderation.py:489 cogs/moderation/moderation.py:540
+#: cogs/moderation/moderation.py:581
+msgid "**:x: Sorry, I am missing permissions to do this!**"
+msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό!**"
+
+#: cogs/moderation/moderation.py:442
+#, python-brace-format
+msgid "Kick | {mod} has kicked {target}"
+msgstr "Kick | Ο/Η {mod} έδιωξε τον/την {target}"
+
+#: cogs/moderation/moderation.py:448
+msgid "**🔴 Voice Kick Info**"
+msgstr "**🔴 Πληροφορίες Voice Kick**"
+
+#: cogs/moderation/moderation.py:450
+#, python-brace-format
+msgid ""
+"Moderator: **{mod}**\n"
+"Reason: **{reason}**\n"
+"Time: **{time}**"
+msgstr ""
+"Συντονιστής: **{mod}**\n"
+"Λόγος: **{reason}**\n"
+"Ώρα: **{time}**"
+
+#: cogs/moderation/moderation.py:483
+#, python-brace-format
+msgid "{user} has been moved to {channel}"
+msgstr "Ο/Η {user} μετακινήθηκε στο {channel}"
+
+#: cogs/moderation/moderation.py:505
+msgid "Confirm ban"
+msgstr "Επιβεβαίωση ban"
+
+#: cogs/moderation/moderation.py:506
+#, python-brace-format
+msgid "Are you sure you want to ban {target} (`{id}`)?"
+msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban τον/την {target} (`{id}`);"
+
+#: cogs/moderation/moderation.py:511 cogs/moderation/moderation.py:629
+#: cogs/moderation/moderation.py:679
+msgid "Reason"
+msgstr "Λόγος"
+
+#: cogs/moderation/moderation.py:516
+msgid "Ban cancelled"
+msgstr "Το ban ακυρώθηκε"
+
+#: cogs/moderation/moderation.py:517
+#, python-brace-format
+msgid "No action taken against {target}."
+msgstr "Δεν έγινε καμία ενέργεια κατά του/της {target}."
+
+#: cogs/moderation/moderation.py:612
+msgid ""
+"Give me at least one user id to ban.\n"
+"Usage: `massban <id1> <id2> ... [reason]`"
+msgstr ""
+"Δώσε μου τουλάχιστον ένα id χρήστη για ban.\n"
+"Χρήση: `massban <id1> <id2> ... [reason]`"
+
+#: cogs/moderation/moderation.py:617
+msgid "I can ban at most 200 users in one go."
+msgstr "Μπορώ να κάνω ban το πολύ 200 χρήστες με τη μία."
+
+#: cogs/moderation/moderation.py:623
+msgid "Confirm mass ban"
+msgstr "Επιβεβαίωση μαζικού ban"
+
+#: cogs/moderation/moderation.py:625
+#, python-brace-format
+msgid "Are you sure you want to ban **{count}** user(s) by id?"
+msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban **{count}** χρήστη/ες με id;"
+
+#: cogs/moderation/moderation.py:632
+msgid "Mass ban cancelled"
+msgstr "Το μαζικό ban ακυρώθηκε"
+
+#: cogs/moderation/moderation.py:633
+msgid "No action taken."
+msgstr "Δεν έγινε καμία ενέργεια."
+
+#: cogs/moderation/moderation.py:655
+msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
+msgstr "**:x: Συγγνώμη, δεν μπόρεσα να κάνω ban αυτούς τους χρήστες (λείπουν δικαιώματα;).**"
+
+#: cogs/moderation/moderation.py:673
+msgid "Mass ban complete"
+msgstr "Το μαζικό ban ολοκληρώθηκε"
+
+#: cogs/moderation/moderation.py:677
+msgid "Banned"
+msgstr "Έγινε ban"
+
+#: cogs/moderation/moderation.py:678
+msgid "Failed"
+msgstr "Απέτυχε"
+
+#: cogs/moderation/moderation.py:681
+#, python-brace-format
+msgid "By {author}"
+msgstr "Από {author}"
+
+#: cogs/moderation/moderation.py:704
+msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
+msgstr ":warning: | **Ο αριθμός δεν μπορεί να είναι μικρότερος από 0 και μεγαλύτερος από 999**"
+
+#: cogs/moderation/moderation.py:714
+msgid "**:x: Sorry, I am missing permissions to do this**"
+msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό**"
+
+#: cogs/moderation/moderation.py:719
+#, python-brace-format
+msgid "{emoji} **Deleted successfully!**"
+msgstr "{emoji} **Διαγράφηκε με επιτυχία!**"
+
+#: cogs/moderation/moderation.py:731
+msgid "Invalid amount. Maximum is 500."
+msgstr "Μη έγκυρη ποσότητα. Το μέγιστο είναι 500."
+
+#: cogs/moderation/moderation.py:743
+#, python-brace-format
+msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
+msgstr "{emoji} Διαγράφηκαν **{deleted}/{num}** πιθανά μηνύματα για εσένα."
+
+#: cogs/moderation/moderation.py:821
+msgid "Mute role is not defined"
+msgstr "Ο ρόλος mute δεν έχει οριστεί"
+
+#: cogs/moderation/moderation.py:822
+msgid "Creating role..."
+msgstr "Δημιουργία ρόλου..."
+
+#: cogs/moderation/moderation.py:824
+msgid "Mute role created!"
+msgstr "Ο ρόλος mute δημιουργήθηκε!"
+
+#: cogs/moderation/moderation.py:861
+msgid "Already Muted"
+msgstr "Ήδη σε σίγαση"
+
+#: cogs/moderation/moderation.py:863
+#, python-brace-format
+msgid ":red_circle: {user} is already muted!"
+msgstr ":red_circle: Ο/Η {user} είναι ήδη σε σίγαση!"
+
+#: cogs/moderation/moderation.py:873
+msgid "Mute failed"
+msgstr "Η σίγαση απέτυχε"
+
+#: cogs/moderation/moderation.py:876
+#, python-brace-format
+msgid ":red_circle: Could not mute {user}, please try again."
+msgstr ":red_circle: Δεν ήταν δυνατή η σίγαση του/της {user}, δοκίμασε ξανά."
+
+#: cogs/moderation/moderation.py:916
+msgid "Unmute failed"
+msgstr "Η κατάργηση σίγασης απέτυχε"
+
+#: cogs/moderation/moderation.py:919
+#, python-brace-format
+msgid ":red_circle: Could not unmute {user}, please try again."
+msgstr ":red_circle: Δεν ήταν δυνατή η κατάργηση σίγασης του/της {user}, δοκίμασε ξανά."
+
+#: cogs/moderation/moderation.py:933
+msgid "Confirm mass role add"
+msgstr "Επιβεβαίωση μαζικής προσθήκης ρόλου"
+
+#: cogs/moderation/moderation.py:935
+#, python-brace-format
+msgid "Add the **{role}** role to **all** members of this server? This can take a while."
+msgstr "Προσθήκη του ρόλου **{role}** σε **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
+
+#: cogs/moderation/moderation.py:943 cogs/moderation/moderation.py:987
+#: tools/arg_completion.py:413
+msgid "Cancelled."
+msgstr "Ακυρώθηκε."
+
+#: cogs/moderation/moderation.py:955
+#, python-brace-format
+msgid "Added to all guilds members **`{role}`** role."
+msgstr "Προστέθηκε σε όλα τα μέλη του διακομιστή ο ρόλος **`{role}`**."
+
+#: cogs/moderation/moderation.py:964
+#, python-brace-format
+msgid "{emoji} **`{role}`** role has been added to **{member}**"
+msgstr "{emoji} Ο ρόλος **`{role}`** προστέθηκε στον/στην **{member}**"
+
+#: cogs/moderation/moderation.py:977
+msgid "Confirm mass role remove"
+msgstr "Επιβεβαίωση μαζικής αφαίρεσης ρόλου"
+
+#: cogs/moderation/moderation.py:979
+#, python-brace-format
+msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
+msgstr "Αφαίρεση του ρόλου **{role}** από **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
+
+#: cogs/moderation/moderation.py:999
+#, python-brace-format
+msgid "Removed to all guilds members **`{role}`** role."
+msgstr "Αφαιρέθηκε από όλα τα μέλη του διακομιστή ο ρόλος **`{role}`**."
+
+#: cogs/moderation/moderation.py:1008
+#, python-brace-format
+msgid "{emoji} **`{role}`** role has been removed to **{member}**"
+msgstr "{emoji} Ο ρόλος **`{role}`** αφαιρέθηκε από τον/την **{member}**"
+
+#: cogs/moderation/moderation.py:1021
+#, python-brace-format
+msgid "{role} moved."
+msgstr "Ο ρόλος {role} μετακινήθηκε."
+
+#: cogs/moderation/moderation.py:1023
+msgid "You do not have permission to do that"
+msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
+
+#: cogs/moderation/moderation.py:1025
+msgid "Failed to move role"
+msgstr "Αποτυχία μετακίνησης ρόλου"
+
+#: cogs/moderation/moderation.py:1027
+msgid "Invalid argument"
+msgstr "Μη έγκυρο όρισμα"
+
+#: cogs/moderation/moderation.py:1049
+#, python-brace-format
+msgid "{member} has no warns."
+msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις."
+
+#: cogs/moderation/moderation.py:1053
+#, python-brace-format
+msgid "{member} has {count} warn(s)"
+msgstr "Ο/Η {member} έχει {count} προειδοποίηση/εις"
+
+#: cogs/moderation/moderation.py:1098
+msgid "Auto-action"
+msgstr "Αυτόματη ενέργεια"
+
+#: cogs/moderation/moderation.py:1099
+msgid "Reached 3 warns - kicked"
+msgstr "Έφτασε τις 3 προειδοποιήσεις - διώχθηκε"
+
+#: cogs/moderation/moderation.py:1115
+#, python-brace-format
+msgid "{member} has 3 warns but I don't have permissions to kick them from the guild."
+msgstr "Ο/Η {member} έχει 3 προειδοποιήσεις αλλά δεν έχω δικαιώματα να τον/την διώξω από τον διακομιστή."
+
+#: cogs/moderation/moderation.py:1121
+msgid "You have been kicked from the server!"
+msgstr "Διώχθηκες από τον διακομιστή!"
+
+#: cogs/moderation/moderation.py:1133
+msgid "Warns"
+msgstr "Προειδοποιήσεις"
+
+#: cogs/moderation/moderation.py:1153
+#, python-brace-format
+msgid "{member} has no warns!"
+msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις!"
+
+#: cogs/moderation/moderation.py:1160
+#, python-brace-format
+msgid "Removed all warns for {member}."
+msgstr "Αφαιρέθηκαν όλες οι προειδοποιήσεις για τον/την {member}."
+
+#: cogs/moderation/moderation.py:1166
+#, python-brace-format
+msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
+msgstr "Αφαιρέθηκαν {num} προειδοποίηση/εις για τον/την {member}. [{remaining} προειδοποιήσεις]"
+
+#: cogs/moderation/moderation.py:1203 cogs/moderation/moderation.py:1267
+#, python-brace-format
+msgid "No case #{number} found in this server."
+msgstr "Δεν βρέθηκε υπόθεση #{number} σε αυτόν τον διακομιστή."
+
+#: cogs/moderation/moderation.py:1220
+#, python-brace-format
+msgid "Case history - {guild}"
+msgstr "Ιστορικό υποθέσεων - {guild}"
+
+#: cogs/moderation/moderation.py:1228
+#, python-brace-format
+msgid "Case history - {member}"
+msgstr "Ιστορικό υποθέσεων - {member}"
+
+#: cogs/moderation/moderation.py:1231
+msgid "No cases on record."
+msgstr "Δεν υπάρχουν καταγεγραμμένες υποθέσεις."
+
+#: cogs/moderation/moderation.py:1273
+msgid "Updated by"
+msgstr "Ενημερώθηκε από"
+
+#: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:427
+#: cogs/moderation/modlog.py:468
+#, python-brace-format
+msgid "ID: {id}"
+msgstr "ID: {id}"
+
+#: cogs/moderation/modlog.py:76
+msgid "Select the log channel..."
+msgstr "Επίλεξε το κανάλι καταγραφής..."
+
+#: cogs/moderation/modlog.py:108
+msgid "Choose which events to log..."
+msgstr "Διάλεξε ποια συμβάντα θα καταγράφονται..."
+
+#: cogs/moderation/modlog.py:150
+msgid "*Not set - logging is off.*"
+msgstr "*Δεν έχει οριστεί - η καταγραφή είναι ανενεργή.*"
+
+#: cogs/moderation/modlog.py:158
+msgid "Mod-log settings"
+msgstr "Ρυθμίσεις mod-log"
+
+#: cogs/moderation/modlog.py:160
+msgid "Choose where server events are logged and which events to record. Changes apply instantly."
+msgstr "Διάλεξε πού καταγράφονται τα συμβάντα του διακομιστή και ποια συμβάντα θα καταγράφονται. Οι αλλαγές εφαρμόζονται αμέσως."
+
+#: cogs/moderation/modlog.py:165
+msgid "Log channel"
+msgstr "Κανάλι καταγραφής"
+
+#: cogs/moderation/modlog.py:166
+msgid "Events"
+msgstr "Συμβάντα"
+
+#: cogs/moderation/modlog.py:283 cogs/moderation/modlog.py:297
+msgid "Mod log"
+msgstr "Mod log"
+
+#: cogs/moderation/modlog.py:284
+#, python-brace-format
+msgid "Mod-log channel set to {channel}."
+msgstr "Το κανάλι mod-log ορίστηκε σε {channel}."
+
+#: cogs/moderation/modlog.py:298
+msgid "Mod-log has been disabled for this guild."
+msgstr "Το mod-log απενεργοποιήθηκε για αυτόν τον διακομιστή."
+
+#: cogs/moderation/modlog.py:394 cogs/utility/info.py:34
+msgid "Account created"
+msgstr "Ο λογαριασμός δημιουργήθηκε"
+
+#: cogs/moderation/modlog.py:408
+msgid "Message Deleted"
+msgstr "Το μήνυμα διαγράφηκε"
+
+#: cogs/moderation/modlog.py:414 cogs/moderation/modlog.py:452
+msgid "Author"
+msgstr "Συγγραφέας"
+
+#: cogs/moderation/modlog.py:418
+msgid "Content"
+msgstr "Περιεχόμενο"
+
+#: cogs/moderation/modlog.py:423 cogs/moderation/modlog.py:464
+#: cogs/utility/extras.py:37
+msgid "Jump"
+msgstr "Μετάβαση"
+
+#: cogs/moderation/modlog.py:424
+#, python-brace-format
+msgid "[Go to location]({url})"
+msgstr "[Μετάβαση στην τοποθεσία]({url})"
+
+#: cogs/moderation/modlog.py:446
+msgid "Message Edited"
+msgstr "Το μήνυμα επεξεργάστηκε"
+
+#: cogs/moderation/modlog.py:456
+msgid "Before"
+msgstr "Πριν"
+
+#: cogs/moderation/modlog.py:459
+msgid "After"
+msgstr "Μετά"
+
+#: cogs/moderation/modlog.py:465
+#, python-brace-format
+msgid "[Go to message]({url})"
+msgstr "[Μετάβαση στο μήνυμα]({url})"
+
+#: cogs/music/music.py:102 cogs/music/music.py:361
+msgid "The player is no longer active."
+msgstr "Ο player δεν είναι πλέον ενεργός."
+
+#: cogs/music/music.py:109
+msgid "Give me a song name or URL to add."
+msgstr "Δώσε μου ένα όνομα τραγουδιού ή URL για προσθήκη."
+
+#: cogs/music/music.py:116
+#, python-brace-format
+msgid "Could not find anything for `{query}`."
+msgstr "Δεν βρέθηκε τίποτα για `{query}`."
+
+#: cogs/music/music.py:127
+#, python-brace-format
+msgid "Queued **{title}**."
+msgstr "Προστέθηκε στην ουρά το **{title}**."
+
+#: cogs/music/music.py:135 cogs/music/music.py:139
+msgid "Something went wrong adding that song."
+msgstr "Κάτι πήγε στραβά κατά την προσθήκη αυτού του τραγουδιού."
+
+#: cogs/music/music.py:196 cogs/music/music.py:1052
+msgid "Nothing is playing right now."
+msgstr "Δεν παίζει τίποτα αυτή τη στιγμή."
+
+#: cogs/music/music.py:203
+msgid "### 🎵 Now Playing"
+msgstr "### 🎵 Παίζει τώρα"
+
+#: cogs/music/music.py:206
+#, python-brace-format
+msgid "by **{author}**"
+msgstr "από **{author}**"
+
+#: cogs/music/music.py:210
+msgid "⏸ Paused"
+msgstr "⏸ Σε παύση"
+
+#: cogs/music/music.py:210
+msgid "▶ Playing"
+msgstr "▶ Αναπαραγωγή"
+
+#: cogs/music/music.py:213
+msgid "On (queue)"
+msgstr "Ενεργό (ουρά)"
+
+#: cogs/music/music.py:215
+msgid "On (track)"
+msgstr "Ενεργό (κομμάτι)"
+
+#: cogs/music/music.py:221
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Duration:** `{duration}`\n"
+"**Volume:** `{volume}%`\n"
+"**Loop:** {loop}"
+msgstr ""
+"**Κατάσταση:** {status}\n"
+"**Διάρκεια:** `{duration}`\n"
+"**Ένταση:** `{volume}%`\n"
+"**Επανάληψη:** {loop}"
+
+#: cogs/music/music.py:236
+#, python-brace-format
+msgid "**Channel:** {emoji} {channel}"
+msgstr "**Κανάλι:** {emoji} {channel}"
+
+#: cogs/music/music.py:242
+#, python-brace-format
+msgid "**DJ:** {dj}"
+msgstr "**DJ:** {dj}"
+
+#: cogs/music/music.py:247
+#, python-brace-format
+msgid "**Requested by:** <@{requester_id}>"
+msgstr "**Ζητήθηκε από:** <@{requester_id}>"
+
+#: cogs/music/music.py:261
+#, python-brace-format
+msgid ""
+"\n"
+"`+{count}` more in the queue"
+msgstr ""
+"\n"
+"`+{count}` ακόμη στην ουρά"
+
+#: cogs/music/music.py:264
+#, python-brace-format
+msgid ""
+"**Up Next ({count})**\n"
+"{lines}"
+msgstr ""
+"**Επόμενα ({count})**\n"
+"{lines}"
+
+#: cogs/music/music.py:269
+msgid ""
+"**Up Next**\n"
+"Nothing queued. Add a song to keep the music going!"
+msgstr ""
+"**Επόμενα**\n"
+"Τίποτα στην ουρά. Πρόσθεσε ένα τραγούδι για να συνεχιστεί η μουσική!"
+
+#: cogs/music/music.py:279
+msgid "Pause/Resume"
+msgstr "Παύση/Συνέχεια"
+
+#: cogs/music/music.py:285
+msgid "Skip"
+msgstr "Παράλειψη"
+
+#: cogs/music/music.py:291
+msgid "Vol -"
+msgstr "Έντ. -"
+
+#: cogs/music/music.py:297
+msgid "Vol +"
+msgstr "Έντ. +"
+
+#: cogs/music/music.py:303
+msgid "Loop"
+msgstr "Επανάληψη"
+
+#: cogs/music/music.py:313
+msgid "Shuffle"
+msgstr "Ανακάτεμα"
+
+#: cogs/music/music.py:319 cogs/music/music.py:1040
+msgid "Queue"
+msgstr "Ουρά"
+
+#: cogs/music/music.py:325
+msgid "Add"
+msgstr "Προσθήκη"
+
+#: cogs/music/music.py:331
+msgid "Favorite"
+msgstr "Αγαπημένο"
+
+#: cogs/music/music.py:337
+msgid "Disconnect"
+msgstr "Αποσύνδεση"
+
+#: cogs/music/music.py:345
+msgid "-# Use the buttons to control playback"
+msgstr "-# Χρησιμοποίησε τα κουμπιά για να ελέγξεις την αναπαραγωγή"
+
+#: cogs/music/music.py:372
+msgid "You must be in my voice channel to use these controls."
+msgstr "Πρέπει να είσαι στο φωνητικό μου κανάλι για να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
+
+#: cogs/music/music.py:392 cogs/music/music.py:396
+msgid "Something went wrong handling that action."
+msgstr "Κάτι πήγε στραβά κατά τον χειρισμό αυτής της ενέργειας."
+
+#: cogs/music/music.py:417
+msgid "Resumed."
+msgstr "Συνεχίστηκε."
+
+#: cogs/music/music.py:420
+msgid "Paused."
+msgstr "Σε παύση."
+
+#: cogs/music/music.py:430
+msgid "Skipped."
+msgstr "Παραλείφθηκε."
+
+#: cogs/music/music.py:433
+msgid "There is nothing left to skip to."
+msgstr "Δεν υπάρχει τίποτα άλλο για παράλειψη."
+
+#: cogs/music/music.py:445 cogs/music/music.py:460
+#, python-brace-format
+msgid "Volume set to {volume}%."
+msgstr "Η ένταση ορίστηκε σε {volume}%."
+
+#: cogs/music/music.py:470
+msgid "off"
+msgstr "ανενεργή"
+
+#: cogs/music/music.py:473
+msgid "on"
+msgstr "ενεργή"
+
+#: cogs/music/music.py:476
+#, python-brace-format
+msgid "Queue loop turned {state}."
+msgstr "Η επανάληψη ουράς έγινε {state}."
+
+#: cogs/music/music.py:486
+msgid "Add a few more tracks before shuffling."
+msgstr "Πρόσθεσε μερικά ακόμη κομμάτια πριν το ανακάτεμα."
+
+#: cogs/music/music.py:492 cogs/music/music.py:982
+msgid "Shuffled the queue."
+msgstr "Η ουρά ανακατεύτηκε."
+
+#: cogs/music/music.py:503 cogs/music/music.py:1016
+msgid "The queue is empty."
+msgstr "Η ουρά είναι κενή."
+
+#: cogs/music/music.py:507 cogs/music/music.py:1030
+#, python-brace-format
+msgid "`{index}.` {title} by `{author}`"
+msgstr "`{index}.` {title} από `{author}`"
+
+#: cogs/music/music.py:514 cogs/music/music.py:1036
+#, python-brace-format
+msgid "*...and {count} more.*"
+msgstr "*...και {count} ακόμη.*"
+
+#: cogs/music/music.py:533
+msgid "Nothing is playing to favourite right now."
+msgstr "Δεν παίζει τίποτα για να προστεθεί στα αγαπημένα αυτή τη στιγμή."
+
+#: cogs/music/music.py:539
+#, python-brace-format
+msgid "Added **{title}** to your favourites."
+msgstr "Το **{title}** προστέθηκε στα αγαπημένα σου."
+
+#: cogs/music/music.py:546 cogs/music/music.py:1219
+#, python-brace-format
+msgid "**{title}** is already in your favourites."
+msgstr "Το **{title}** είναι ήδη στα αγαπημένα σου."
+
+#: cogs/music/music.py:690
+#, python-brace-format
+msgid "There was a problem playing **{title}**, skipping it."
+msgstr "Υπήρξε πρόβλημα στην αναπαραγωγή του **{title}**, παραλείπεται."
+
+#: cogs/music/music.py:817 cogs/music/music.py:1057
+msgid "Here is the player."
+msgstr "Ορίστε ο player."
+
+#: cogs/music/music.py:820
+msgid "Give me something to play, e.g. `play never gonna give you up`."
+msgstr "Δώσε μου κάτι να παίξω, π.χ. `play never gonna give you up`."
+
+#: cogs/music/music.py:828 cogs/music/music.py:863 cogs/music/music.py:1130
+#: cogs/music/music.py:1201
+msgid "Music is currently unavailable - no Lavalink node is connected."
+msgstr "Η μουσική δεν είναι διαθέσιμη αυτή τη στιγμή - κανένας κόμβος Lavalink δεν είναι συνδεδεμένος."
+
+#: cogs/music/music.py:835 cogs/music/music.py:1142
+msgid "You must be in a voice channel first."
+msgstr "Πρέπει πρώτα να είσαι σε ένα φωνητικό κανάλι."
+
+#: cogs/music/music.py:842 cogs/music/music.py:1149
+msgid "I was unable to join your voice channel. Please try again."
+msgstr "Δεν μπόρεσα να μπω στο φωνητικό σου κανάλι. Δοκίμασε ξανά."
+
+#: cogs/music/music.py:852
+#, python-brace-format
+msgid "The player is already active in {channel}."
+msgstr "Ο player είναι ήδη ενεργός στο {channel}."
+
+#: cogs/music/music.py:868 cogs/music/music.py:1207
+msgid "Could not find any tracks for that query."
+msgstr "Δεν βρέθηκαν κομμάτια για αυτό το ερώτημα."
+
+#: cogs/music/music.py:879
+#, python-brace-format
+msgid "Added the playlist **{name}** ({count} tracks) to the queue."
+msgstr "Η λίστα αναπαραγωγής **{name}** ({count} κομμάτια) προστέθηκε στην ουρά."
+
+#: cogs/music/music.py:887
+#, python-brace-format
+msgid "Added **{title}** by `{author}` to the queue."
+msgstr "Το **{title}** από `{author}` προστέθηκε στην ουρά."
+
+#: cogs/music/music.py:901 cogs/music/music.py:915 cogs/music/music.py:929
+#: cogs/music/music.py:951 cogs/music/music.py:965 cogs/music/music.py:976
+#: cogs/music/music.py:995 cogs/music/music.py:1011 cogs/music/music.py:1065
+msgid "I'm not connected to a voice channel."
+msgstr "Δεν είμαι συνδεδεμένος σε φωνητικό κανάλι."
+
+#: cogs/music/music.py:904
+msgid "The player is already paused."
+msgstr "Ο player είναι ήδη σε παύση."
+
+#: cogs/music/music.py:907
+msgid "Paused the player."
+msgstr "Ο player τέθηκε σε παύση."
+
+#: cogs/music/music.py:918
+msgid "The player is not paused."
+msgstr "Ο player δεν είναι σε παύση."
+
+#: cogs/music/music.py:921
+msgid "Resumed the player."
+msgstr "Ο player συνεχίστηκε."
+
+#: cogs/music/music.py:934
+msgid "There are no more tracks in the queue to skip to."
+msgstr "Δεν υπάρχουν άλλα κομμάτια στην ουρά για παράλειψη."
+
+#: cogs/music/music.py:938
+#, python-brace-format
+msgid "Skipped to **{title}** by `{author}`."
+msgstr "Παράλειψη στο **{title}** από `{author}`."
+
+#: cogs/music/music.py:943
+msgid "Skipped. The queue is now empty."
+msgstr "Παραλείφθηκε. Η ουρά είναι πλέον κενή."
+
+#: cogs/music/music.py:954
+msgid "Stopped playback and cleared the queue."
+msgstr "Η αναπαραγωγή σταμάτησε και η ουρά εκκαθαρίστηκε."
+
+#: cogs/music/music.py:968
+#, python-brace-format
+msgid "Set the volume to {volume}%."
+msgstr "Η ένταση ορίστηκε σε {volume}%."
+
+#: cogs/music/music.py:979
+msgid "Add a few more tracks to the queue before shuffling."
+msgstr "Πρόσθεσε μερικά ακόμη κομμάτια στην ουρά πριν το ανακάτεμα."
+
+#: cogs/music/music.py:1003
+#, python-brace-format
+msgid "Loop mode set to `{mode}`."
+msgstr "Η λειτουργία επανάληψης ορίστηκε σε `{mode}`."
+
+#: cogs/music/music.py:1022
+#, python-brace-format
+msgid "**Now Playing:** {title} by `{author}`\n"
+msgstr "**Παίζει τώρα:** {title} από `{author}`\n"
+
+#: cogs/music/music.py:1027
+msgid "**Up Next:**"
+msgstr "**Επόμενα:**"
+
+#: cogs/music/music.py:1068
+msgid "Disconnected from the voice channel."
+msgstr "Αποσυνδέθηκε από το φωνητικό κανάλι."
+
+#: cogs/music/music.py:1081
+msgid "You have no saved favourites yet."
+msgstr "Δεν έχεις ακόμη αποθηκευμένα αγαπημένα."
+
+#: cogs/music/music.py:1084
+#, python-brace-format
+msgid "{name} has no saved favourites yet."
+msgstr "Ο/Η {name} δεν έχει ακόμη αποθηκευμένα αγαπημένα."
+
+#: cogs/music/music.py:1092 cogs/music/music.py:1247
+msgid "Unknown title"
+msgstr "Άγνωστος τίτλος"
+
+#: cogs/music/music.py:1093
+msgid "Unknown artist"
+msgstr "Άγνωστος καλλιτέχνης"
+
+#: cogs/music/music.py:1097
+#, python-brace-format
+msgid "`{index}.` {label} by `{author}`"
+msgstr "`{index}.` {label} από `{author}`"
+
+#: cogs/music/music.py:1104
+#, python-brace-format
+msgid "{name}'s Favourites"
+msgstr "Αγαπημένα του/της {name}"
+
+#: cogs/music/music.py:1136
+msgid "You have no saved favourites to play."
+msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αναπαραγωγή."
+
+#: cogs/music/music.py:1171
+msgid "None of your favourites could be loaded right now."
+msgstr "Κανένα από τα αγαπημένα σου δεν μπόρεσε να φορτωθεί αυτή τη στιγμή."
+
+#: cogs/music/music.py:1178
+#, python-brace-format
+msgid "Queued {count} track(s) from your favourites."
+msgstr "Προστέθηκαν στην ουρά {count} κομμάτι/α από τα αγαπημένα σου."
+
+#: cogs/music/music.py:1194
+msgid "Nothing is playing - give me a song name or URL to save."
+msgstr "Δεν παίζει τίποτα - δώσε μου ένα όνομα τραγουδιού ή URL για αποθήκευση."
+
+#: cogs/music/music.py:1213
+#, python-brace-format
+msgid "Added **{title}** by `{author}` to your favourites."
+msgstr "Το **{title}** από `{author}` προστέθηκε στα αγαπημένα σου."
+
+#: cogs/music/music.py:1231
+msgid "You have no saved favourites to remove."
+msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αφαίρεση."
+
+#: cogs/music/music.py:1235
+#, python-brace-format
+msgid "Pick a number between 1 and {max}."
+msgstr "Διάλεξε έναν αριθμό μεταξύ 1 και {max}."
+
+#: cogs/music/music.py:1246
+#, python-brace-format
+msgid "Removed **{title}** from your favourites."
+msgstr "Το **{title}** αφαιρέθηκε από τα αγαπημένα σου."
+
+#: cogs/system/admin.py:34
+msgid "Cogs to reload"
+msgstr "Cogs για επαναφόρτωση"
+
+#: cogs/system/admin.py:64
+msgid "Nothing selected."
+msgstr "Δεν επιλέχθηκε τίποτα."
+
+#: cogs/system/admin.py:77
+#, python-brace-format
+msgid "Reloaded: {items}"
+msgstr "Επαναφορτώθηκαν: {items}"
+
+#: cogs/system/admin.py:81
+#, python-brace-format
+msgid "Failed: {items}"
+msgstr "Απέτυχαν: {items}"
+
+#: cogs/system/admin.py:84
+msgid "Nothing reloaded."
+msgstr "Δεν επαναφορτώθηκε τίποτα."
+
+#: cogs/system/admin.py:180
+msgid "globally"
+msgstr "καθολικά"
+
+#: cogs/system/admin.py:180
+msgid "to the current guild."
+msgstr "στον τρέχοντα διακομιστή."
+
+#: cogs/system/admin.py:182
+#, python-brace-format
+msgid "Synced {count} commands {scope}"
+msgstr "Συγχρονίστηκαν {count} εντολές {scope}"
+
+#: cogs/system/admin.py:198
+#, python-brace-format
+msgid "Synced the tree to {done}/{total}."
+msgstr "Το δέντρο συγχρονίστηκε σε {done}/{total}."
+
+#: cogs/system/admin.py:271 cogs/system/admin.py:278
+#, python-brace-format
+msgid "Reloaded {count} extensions, {fail} fail."
+msgstr "Επαναφορτώθηκαν {count} επεκτάσεις, {fail} αποτυχίες."
+
+#: cogs/system/admin.py:292 cogs/system/admin.py:299
+#, python-brace-format
+msgid "Couldn't reload `{ext}`: {error}"
+msgstr "Δεν ήταν δυνατή η επαναφόρτωση του `{ext}`: {error}"
+
+#: cogs/system/admin.py:309
+#, python-brace-format
+msgid "Reloaded `{ext}`"
+msgstr "Επαναφορτώθηκε το `{ext}`"
+
+#: cogs/system/admin.py:326 cogs/system/admin.py:353
+msgid "Error!"
+msgstr "Σφάλμα!"
+
+#: cogs/system/admin.py:327
+#, python-brace-format
+msgid ""
+"{ext} cannot be loaded! \n"
+"**[{error}]**"
+msgstr ""
+"Το {ext} δεν μπορεί να φορτωθεί! \n"
+"**[{error}]**"
+
+#: cogs/system/admin.py:354
+#, python-brace-format
+msgid ""
+"{ext} cannot be unloaded! \n"
+"**[{error}]**"
+msgstr ""
+"Το {ext} δεν μπορεί να αποφορτωθεί! \n"
+"**[{error}]**"
+
+#: cogs/system/admin.py:403
+#, python-brace-format
+msgid "Pulled and reloaded `{ext}`."
+msgstr "Έγινε pull και επαναφόρτωση του `{ext}`."
+
+#: cogs/system/admin.py:407
+#, python-brace-format
+msgid "Could not reload `{ext}`: {error}"
+msgstr "Δεν ήταν δυνατή η επαναφόρτωση του `{ext}`: {error}"
+
+#: cogs/system/admin.py:442
+msgid "Update"
+msgstr "Ενημέρωση"
+
+#: cogs/system/admin.py:445
+msgid "Already up to date."
+msgstr "Ήδη ενημερωμένο."
+
+#: cogs/system/admin.py:447
+#, python-brace-format
+msgid ""
+"Nothing pulled:\n"
+"```\n"
+"{output}\n"
+"```"
+msgstr ""
+"Δεν έγινε pull τίποτα:\n"
+"```\n"
+"{output}\n"
+"```"
+
+#: cogs/system/admin.py:456
+msgid "Pulled"
+msgstr "Έγινε pull"
+
+#: cogs/system/admin.py:457
+#, python-brace-format
+msgid ""
+"`{before}` -> `{after}`\n"
+"```\n"
+"{log}\n"
+"```"
+msgstr ""
+"`{before}` -> `{after}`\n"
+"```\n"
+"{log}\n"
+"```"
+
+#: cogs/system/admin.py:460
+msgid "(no log)"
+msgstr "(χωρίς log)"
+
+#: cogs/system/admin.py:466
+msgid "Changed cogs"
+msgstr "Cogs που άλλαξαν"
+
+#: cogs/system/admin.py:472
+msgid "Restart needed (not hot-reloadable)"
+msgstr "Απαιτείται επανεκκίνηση (δεν γίνεται hot-reload)"
+
+#: cogs/system/admin.py:477
+msgid "Pick the cogs to reload below, or reload everything."
+msgstr "Διάλεξε τα cogs για επαναφόρτωση παρακάτω ή επαναφόρτωσε τα πάντα."
+
+#: cogs/system/errors.py:30
+#, python-brace-format
+msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
+msgstr ":information_source: Χρήση εντολής: `{prefix}{command} {signature}`"
+
+#: cogs/system/errors.py:64
+msgid "Sorry, no similar commands found"
+msgstr "Συγγνώμη, δεν βρέθηκαν παρόμοιες εντολές"
+
+#: cogs/system/errors.py:69
+msgid "**Invalid command entered. Did you mean:**"
+msgstr "**Εισήχθη μη έγκυρη εντολή. Μήπως εννοούσες:**"
+
+#: cogs/system/errors.py:91
+msgid "**Seems like you're missing a required argument:**"
+msgstr "**Φαίνεται ότι σου λείπει ένα απαιτούμενο όρισμα:**"
+
+#: cogs/system/errors.py:92 cogs/system/errors.py:103 cogs/system/errors.py:170
+#: cogs/system/errors.py:196
+#, python-brace-format
+msgid ""
+":warning: Error: `{error}`\n"
+"{usage}"
+msgstr ""
+":warning: Σφάλμα: `{error}`\n"
+"{usage}"
+
+#: cogs/system/errors.py:102
+msgid "**Seems like you gave me a bad argument:**"
+msgstr "**Φαίνεται ότι μου έδωσες ένα λάθος όρισμα:**"
+
+#: cogs/system/errors.py:114
+msgid "**Seems like you are on cooldown:**"
+msgstr "**Φαίνεται ότι είσαι σε cooldown:**"
+
+#: cogs/system/errors.py:115
+#, python-brace-format
+msgid ""
+":hourglass: Remaining time: `{time}`\n"
+"{usage}"
+msgstr ""
+":hourglass: Υπολειπόμενος χρόνος: `{time}`\n"
+"{usage}"
+
+#: cogs/system/errors.py:124
+msgid "I need more permissions!"
+msgstr "Χρειάζομαι περισσότερα δικαιώματα!"
+
+#: cogs/system/errors.py:130
+msgid "**Seems like you can't use this command in private messages:**"
+msgstr "**Φαίνεται ότι δεν μπορείς να χρησιμοποιήσεις αυτή την εντολή σε προσωπικά μηνύματα:**"
+
+#: cogs/system/errors.py:132
+msgid ""
+"Go in a guild where I am or invite me in your server\n"
+"invite.yasuho.xyz"
+msgstr ""
+"Πήγαινε σε έναν διακομιστή όπου βρίσκομαι ή προσκάλεσέ με στον διακομιστή σου\n"
+"invite.yasuho.xyz"
+
+#: cogs/system/errors.py:145
+msgid "**Seems like you gave me too many arguments:**"
+msgstr "**Φαίνεται ότι μου έδωσες πάρα πολλά ορίσματα:**"
+
+#: cogs/system/errors.py:147 cogs/system/errors.py:159
+#, python-brace-format
+msgid ""
+":question: What to do: `look at {prefix}help and try being more specific`\n"
+"{usage}"
+msgstr ""
+":question: Τι να κάνεις: `δες το {prefix}help και προσπάθησε να είσαι πιο συγκεκριμένος`\n"
+"{usage}"
+
+#: cogs/system/errors.py:157
+msgid "**Seems like you did something wrong:**"
+msgstr "**Φαίνεται ότι έκανες κάτι λάθος:**"
+
+#: cogs/system/errors.py:169
+msgid "**Seems like you are missing permissions:**"
+msgstr "**Φαίνεται ότι σου λείπουν δικαιώματα:**"
+
+#: cogs/system/errors.py:183
+msgid "**Seems like something went wrong while executing command:**"
+msgstr "**Φαίνεται ότι κάτι πήγε στραβά κατά την εκτέλεση της εντολής:**"
+
+#: cogs/system/errors.py:185
+#, python-brace-format
+msgid ""
+":question: What to do: `Report the bug to bot owner` [<@!228895251576782858>]\n"
+":warning: Error: `{error}`\n"
+"{usage}"
+msgstr ""
+":question: Τι να κάνεις: `Ανέφερε το bug στον ιδιοκτήτη του bot` [<@!228895251576782858>]\n"
+":warning: Σφάλμα: `{error}`\n"
+"{usage}"
+
+#: cogs/system/errors.py:195
+msgid "**Seems like I am missing permissions:**"
+msgstr "**Φαίνεται ότι μου λείπουν δικαιώματα:**"
+
+#: cogs/system/events.py:79
+#, python-brace-format
+msgid "🌺 Beep boop **{guild}**! To get started type `{prefix}help`"
+msgstr "🌺 Beep boop **{guild}**! Για να ξεκινήσεις πληκτρολόγησε `{prefix}help`"
+
+#: cogs/system/events.py:117
+msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
+msgstr "Είσαι στη μαύρη λίστα του bot. Μπορείς να ζητήσεις να αφαιρεθείς από αυτήν στέλνοντας μήνυμα στο <@228895251576782858>"
+
+#: cogs/system/help.py:127
+msgid "Jump to a category..."
+msgstr "Μετάβαση σε κατηγορία..."
+
+#: cogs/system/help.py:174 cogs/system/help.py:434 cogs/system/help.py:449
+#, python-brace-format
+msgid "{n} command"
+msgid_plural "{n} commands"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/system/help.py:199 cogs/system/help.py:502 cogs/system/help.py:543
+msgid "No description provided."
+msgstr "Δεν δόθηκε περιγραφή."
+
+#: cogs/system/help.py:203
+#, python-brace-format
+msgid "...more commands available. Use `{prefix}help <command>` to see them."
+msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
+
+#: cogs/system/help.py:219
+msgid "No commands available."
+msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
+
+#: cogs/system/help.py:226
+#, python-brace-format
+msgid "Category {current}/{total} • {prefix}help <command> for details"
+msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
+
+#: cogs/system/help.py:296
+msgid "Something went wrong opening the help menu."
+msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
+
+#: cogs/system/help.py:348
+msgid "Collapse subcommands"
+msgstr "Σύμπτυξη υποεντολών"
+
+#: cogs/system/help.py:348
+msgid "Expand subcommands"
+msgstr "Ανάπτυξη υποεντολών"
+
+#: cogs/system/help.py:367
+msgid "Something went wrong updating that preference."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
+
+#: cogs/system/help.py:382
+#, python-brace-format
+msgid "{bot} • Help"
+msgstr "{bot} • Βοήθεια"
+
+#: cogs/system/help.py:384
+#, python-brace-format
+msgid ""
+"Hey there! I'm **{bot}**, glad to help. 💫\n"
+"\n"
+"Use the menu to jump to a category, the arrows to browse, or `{prefix}help <command>` for a specific command."
+msgstr ""
+"Γεια σου! Είμαι ο **{bot}**, χαρά μου να βοηθήσω. 💫\n"
+"\n"
+"Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
+
+#: cogs/system/help.py:399
+msgid "Enabled ✅"
+msgstr "Ενεργοποιημένο ✅"
+
+#: cogs/system/help.py:399
+msgid "Disabled ❌"
+msgstr "Απενεργοποιημένο ❌"
+
+#: cogs/system/help.py:406
+msgid "🏠 Server"
+msgstr "🏠 Διακομιστής"
+
+#: cogs/system/help.py:408
+#, python-brace-format
+msgid ""
+"Prefix: `{prefix}`\n"
+"Members: **{members}**\n"
+"Leveling: {leveling}"
+msgstr ""
+"Πρόθεμα: `{prefix}`\n"
+"Μέλη: **{members}**\n"
+"Επίπεδα: {leveling}"
+
+#: cogs/system/help.py:420
+msgid "🏠 Direct Messages"
+msgstr "🏠 Προσωπικά μηνύματα"
+
+#: cogs/system/help.py:421
+#, python-brace-format
+msgid "Default prefix: `{prefix}`"
+msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
+
+#: cogs/system/help.py:442
+msgid "📚 Categories"
+msgstr "📚 Κατηγορίες"
+
+#: cogs/system/help.py:448
+#, python-brace-format
+msgid "{commands} across {categories} • Use the menu or arrows to explore"
+msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
+
+#: cogs/system/help.py:453
+#, python-brace-format
+msgid "{n} category"
+msgid_plural "{n} categories"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/system/help.py:483 cogs/system/help.py:568
+msgid "Help"
+msgstr "Βοήθεια"
+
+#: cogs/system/help.py:485
+#, python-brace-format
+msgid "Use `{prefix}help <command>` for more info on a command."
+msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."
+
+#: cogs/system/help.py:508 cogs/system/help.py:549
+msgid "Aliases"
+msgstr "Συνώνυμα"
+
+#: cogs/system/help.py:521 cogs/system/help.py:524
+msgid "Subcommands"
+msgstr "Υποεντολές"
+
+#: cogs/system/help.py:526
+#, python-brace-format
+msgid "This command has {count}. Toggle expansion in /settings, or use `{prefix}help {group} <subcommand>`."
+msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /settings ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
+
+#: cogs/system/help.py:531
+#, python-brace-format
+msgid "{n} subcommand"
+msgid_plural "{n} subcommands"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/utility/extras.py:28
+msgid "(no text)"
+msgstr "(χωρίς κείμενο)"
+
+#: cogs/utility/extras.py:65
+#, python-brace-format
+msgid ""
+"Here is your password:\n"
+"||`{secret}`||"
+msgstr ""
+"Ορίστε ο κωδικός σου:\n"
+"||`{secret}`||"
+
+#: cogs/utility/extras.py:71
+#, python-brace-format
+msgid ""
+"I could not DM you, here it is instead:\n"
+"||`{secret}`||"
+msgstr ""
+"Δεν μπόρεσα να σου στείλω προσωπικό μήνυμα, ορίστε εδώ:\n"
+"||`{secret}`||"
+
+#: cogs/utility/extras.py:76
+msgid "I could not DM you - please enable direct messages and try again."
+msgstr "Δεν μπόρεσα να σου στείλω προσωπικό μήνυμα - ενεργοποίησε τα προσωπικά μηνύματα και δοκίμασε ξανά."
+
+#: cogs/utility/extras.py:81
+msgid "Something went wrong while generating your password."
+msgstr "Κάτι πήγε στραβά κατά τη δημιουργία του κωδικού σου."
+
+#: cogs/utility/extras.py:85
+msgid "Sent you a DM"
+msgstr "Σου έστειλα προσωπικό μήνυμα"
+
+#: cogs/utility/extras.py:102
+#, python-brace-format
+msgid "{member} is not listening to Spotify."
+msgstr "Ο/Η {member} δεν ακούει Spotify."
+
+#: cogs/utility/extras.py:112
+msgid "Artist"
+msgstr "Καλλιτέχνης"
+
+#: cogs/utility/extras.py:113
+msgid "Album"
+msgstr "Άλμπουμ"
+
+#: cogs/utility/extras.py:115
+msgid "Duration"
+msgstr "Διάρκεια"
+
+#: cogs/utility/extras.py:127
+msgid "Uptime"
+msgstr "Χρόνος λειτουργίας"
+
+#: cogs/utility/extras.py:143 cogs/utility/extras.py:159
+#, python-brace-format
+msgid "Permissions for {member}"
+msgstr "Δικαιώματα για τον/την {member}"
+
+#: cogs/utility/extras.py:174
+msgid "Invite me"
+msgstr "Προσκάλεσέ με"
+
+#: cogs/utility/extras.py:175
+#, python-brace-format
+msgid "[Click here to invite me]({url})"
+msgstr "[Κάνε κλικ εδώ για να με προσκαλέσεις]({url})"
+
+#: cogs/utility/info.py:26
+#, python-brace-format
+msgid "User info - {member}"
+msgstr "Πληροφορίες χρήστη - {member}"
+
+#: cogs/utility/info.py:30
+msgid "Display name"
+msgstr "Εμφανιζόμενο όνομα"
+
+#: cogs/utility/info.py:31 cogs/utility/info.py:82
+msgid "ID"
+msgstr "ID"
+
+#: cogs/utility/info.py:32
+msgid "Mention"
+msgstr "Αναφορά"
+
+#: cogs/utility/info.py:42
+msgid "Joined server"
+msgstr "Μπήκε στον διακομιστή"
+
+#: cogs/utility/info.py:47
+msgid "Top role"
+msgstr "Κορυφαίος ρόλος"
+
+#: cogs/utility/info.py:48
+msgid "Role count"
+msgstr "Αριθμός ρόλων"
+
+#: cogs/utility/info.py:50
+msgid "Is bot"
+msgstr "Είναι bot"
+
+#: cogs/utility/info.py:50 cogs/utility/utility.py:65
+#: tools/arg_completion.py:266 tools/arg_completion.py:493
+msgid "Yes"
+msgstr "Ναι"
+
+#: cogs/utility/info.py:50 cogs/utility/utility.py:66
+#: tools/arg_completion.py:266 tools/arg_completion.py:494
+msgid "No"
+msgstr "Όχι"
+
+#: cogs/utility/info.py:77
+#, python-brace-format
+msgid "Server info - {guild}"
+msgstr "Πληροφορίες διακομιστή - {guild}"
+
+#: cogs/utility/info.py:81
+msgid "Name"
+msgstr "Όνομα"
+
+#: cogs/utility/info.py:84
+msgid "Owner"
+msgstr "Ιδιοκτήτης"
+
+#: cogs/utility/info.py:88
+msgid "Created"
+msgstr "Δημιουργήθηκε"
+
+#: cogs/utility/info.py:92
+msgid "Members"
+msgstr "Μέλη"
+
+#: cogs/utility/info.py:93
+msgid "Text channels"
+msgstr "Κανάλια κειμένου"
+
+#: cogs/utility/info.py:94
+msgid "Voice channels"
+msgstr "Φωνητικά κανάλια"
+
+#: cogs/utility/info.py:95
+msgid "Roles"
+msgstr "Ρόλοι"
+
+#: cogs/utility/info.py:97
+msgid "Boost tier"
+msgstr "Επίπεδο boost"
+
+#: cogs/utility/info.py:98
+#, python-brace-format
+msgid "Tier {tier}"
+msgstr "Επίπεδο {tier}"
+
+#: cogs/utility/info.py:100
+msgid "Boosts"
+msgstr "Boosts"
+
+#: cogs/utility/info.py:111
+#, python-brace-format
+msgid "Avatar - {member}"
+msgstr "Avatar - {member}"
+
+#: cogs/utility/info.py:123
+msgid "Pong!"
+msgstr "Pong!"
+
+#: cogs/utility/info.py:124
+#, python-brace-format
+msgid "Latency: **{ms} ms**"
+msgstr "Καθυστέρηση: **{ms} ms**"
+
+#: cogs/utility/info.py:141
+msgid "Bot info"
+msgstr "Πληροφορίες bot"
+
+#: cogs/utility/info.py:144
+msgid "Servers"
+msgstr "Διακομιστές"
+
+#: cogs/utility/info.py:145
+msgid "Users"
+msgstr "Χρήστες"
+
+#: cogs/utility/info.py:148
+msgid "Websocket latency"
+msgstr "Καθυστέρηση websocket"
+
+#: cogs/utility/info.py:149
+#, python-brace-format
+msgid "{ms} ms"
+msgstr "{ms} ms"
+
+#: cogs/utility/meta.py:41 cogs/utility/meta.py:48
+msgid "Could not fetch the Astronomy Picture of the Day right now."
+msgstr "Δεν ήταν δυνατή η ανάκτηση της Αστρονομικής Εικόνας της Ημέρας αυτή τη στιγμή."
+
+#: cogs/utility/meta.py:55
+msgid "Astronomy Picture of the Day"
+msgstr "Αστρονομική Εικόνα της Ημέρας"
+
+#: cogs/utility/meta.py:75
+#, python-brace-format
+msgid "APOD Requested by {user}"
+msgstr "APOD ζητήθηκε από {user}"
+
+#: cogs/utility/meta.py:94
+msgid "Could not fetch the weather right now."
+msgstr "Δεν ήταν δυνατή η ανάκτηση του καιρού αυτή τη στιγμή."
+
+#: cogs/utility/meta.py:97
+msgid "City not found."
+msgstr "Η πόλη δεν βρέθηκε."
+
+#: cogs/utility/meta.py:106
+#, python-brace-format
+msgid "Temperature in {city}"
+msgstr "Θερμοκρασία στην/στο {city}"
+
+#: cogs/utility/meta.py:114
+msgid "Weather Informations"
+msgstr "Πληροφορίες καιρού"
+
+#: cogs/utility/meta.py:115
+#, python-brace-format
+msgid ""
+"```Weather status: {status}, {desc}\n"
+"Current temperature: {temp}°C\n"
+"Feel like: {feels}°C\n"
+"Minimum temperature: {tmin}°C\n"
+"Max temperature {tmax}°C\n"
+"Pressure: {pressure}hPa\n"
+"Humidity: {humidity}%\n"
+"Clouds: {clouds}%\n"
+"```"
+msgstr ""
+"```Κατάσταση καιρού: {status}, {desc}\n"
+"Τρέχουσα θερμοκρασία: {temp}°C\n"
+"Αίσθηση σαν: {feels}°C\n"
+"Ελάχιστη θερμοκρασία: {tmin}°C\n"
+"Μέγιστη θερμοκρασία {tmax}°C\n"
+"Πίεση: {pressure}hPa\n"
+"Υγρασία: {humidity}%\n"
+"Σύννεφα: {clouds}%\n"
+"```"
+
+#: cogs/utility/searchweb.py:48
+msgid "Disambiguation"
+msgstr "Αποσαφήνιση"
+
+#: cogs/utility/searchweb.py:50
+#, python-brace-format
+msgid "That term is ambiguous. Did you mean: {options}?"
+msgstr "Αυτός ο όρος είναι ασαφής. Μήπως εννοούσες: {options};"
+
+#: cogs/utility/searchweb.py:57
+msgid "No page found."
+msgstr "Δεν βρέθηκε σελίδα."
+
+#: cogs/utility/searchweb.py:61
+msgid "Something went wrong while searching Wikipedia."
+msgstr "Κάτι πήγε στραβά κατά την αναζήτηση στη Wikipedia."
+
+#: cogs/utility/searchweb.py:70
+msgid "Lyrics are not configured (set geniusKey)."
+msgstr "Οι στίχοι δεν έχουν ρυθμιστεί (όρισε το geniusKey)."
+
+#: cogs/utility/searchweb.py:86
+msgid "Something went wrong while fetching lyrics."
+msgstr "Κάτι πήγε στραβά κατά την ανάκτηση των στίχων."
+
+#: cogs/utility/searchweb.py:90
+msgid "No lyrics found."
+msgstr "Δεν βρέθηκαν στίχοι."
+
+#: cogs/utility/searchweb.py:112
+msgid "Provide an image URL or attach an image."
+msgstr "Δώσε ένα URL εικόνας ή επισύναψε μια εικόνα."
+
+#: cogs/utility/searchweb.py:118
+msgid "Reverse image search"
+msgstr "Αντίστροφη αναζήτηση εικόνας"
+
+#: cogs/utility/searchweb.py:119
+#, python-brace-format
+msgid "[Click here to search for the source]({link})"
+msgstr "[Κάνε κλικ εδώ για να αναζητήσεις την πηγή]({link})"
+
+#: cogs/utility/searchweb.py:134
+msgid "osu! is not configured."
+msgstr "Το osu! δεν έχει ρυθμιστεί."
+
+#: cogs/utility/searchweb.py:146
+msgid "No osu! user found."
+msgstr "Δεν βρέθηκε χρήστης osu!."
+
+#: cogs/utility/searchweb.py:150
+#, python-brace-format
+msgid "osu! stats for {username}"
+msgstr "Στατιστικά osu! για {username}"
+
+#: cogs/utility/searchweb.py:156
+msgid "PP"
+msgstr "PP"
+
+#: cogs/utility/searchweb.py:157
+msgid "Accuracy"
+msgstr "Ακρίβεια"
+
+#: cogs/utility/searchweb.py:159
+msgid "Playcount"
+msgstr "Αριθμός παιξιμάτων"
+
+#: cogs/utility/searchweb.py:160
+msgid "Country"
+msgstr "Χώρα"
+
+#: cogs/utility/searchweb.py:166
+msgid "Something went wrong while fetching osu! data."
+msgstr "Κάτι πήγε στραβά κατά την ανάκτηση δεδομένων osu!."
+
+#: cogs/utility/searchweb.py:180
+msgid "No such Minecraft account."
+msgstr "Δεν υπάρχει τέτοιος λογαριασμός Minecraft."
+
+#: cogs/utility/searchweb.py:185
+#, python-brace-format
+msgid "Minecraft account: {name}"
+msgstr "Λογαριασμός Minecraft: {name}"
+
+#: cogs/utility/searchweb.py:188
+msgid "UUID"
+msgstr "UUID"
+
+#: cogs/utility/searchweb.py:197
+msgid "Something went wrong while fetching Minecraft data."
+msgstr "Κάτι πήγε στραβά κατά την ανάκτηση δεδομένων Minecraft."
+
+#: cogs/utility/utility.py:41
+msgid "Nothing to snipe."
+msgstr "Δεν υπάρχει τίποτα για snipe."
+
+#: cogs/utility/utility.py:58
+msgid "Please give a question to ask."
+msgstr "Δώσε μια ερώτηση για να τεθεί."
+
+#: cogs/utility/utility.py:61
+msgid "The poll question must be 300 characters or fewer."
+msgstr "Η ερώτηση της ψηφοφορίας πρέπει να είναι 300 χαρακτήρες ή λιγότεροι."
+
+#: cogs/utility/utility.py:72 cogs/utility/utility.py:105
+msgid "I could not create that poll here."
+msgstr "Δεν μπόρεσα να δημιουργήσω αυτή την ψηφοφορία εδώ."
+
+#: cogs/utility/utility.py:85
+msgid "Give a question and options: `quickpoll question | option 1 | option 2`"
+msgstr "Δώσε μια ερώτηση και επιλογές: `quickpoll question | option 1 | option 2`"
+
+#: cogs/utility/utility.py:89
+msgid "A poll needs at least two options."
+msgstr "Μια ψηφοφορία χρειάζεται τουλάχιστον δύο επιλογές."
+
+#: cogs/utility/utility.py:91
+msgid "A poll can have at most 10 options."
+msgstr "Μια ψηφοφορία μπορεί να έχει το πολύ 10 επιλογές."
+
+#: cogs/utility/utility.py:93
+msgid "The question must be 300 characters or fewer."
+msgstr "Η ερώτηση πρέπει να είναι 300 χαρακτήρες ή λιγότεροι."
+
+#: cogs/utility/utility.py:95
+msgid "Each option must be 55 characters or fewer."
+msgstr "Κάθε επιλογή πρέπει να είναι 55 χαρακτήρες ή λιγότεροι."
+
+#: cogs/utility/utility.py:127
+msgid "auto -> en (unofficial)"
+msgstr "auto -> en (ανεπίσημο)"
+
+#: cogs/utility/utility.py:132
+msgid "Translation failed."
+msgstr "Η μετάφραση απέτυχε."
+
+#: tools/arg_completion.py:213
+msgid "Fill in"
+msgstr "Συμπλήρωσε"
+
+#: tools/arg_completion.py:216
+msgid "Enter details"
+msgstr "Εισαγωγή στοιχείων"
+
+#: tools/arg_completion.py:217
+msgid "Run"
+msgstr "Εκτέλεση"
+
+#: tools/arg_completion.py:218
+msgid "Cancel"
+msgstr "Ακύρωση"
+
+#: tools/arg_completion.py:256
+msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
+msgstr "Διάλεξε από τα μενού, χρησιμοποίησε το **Enter details** για τα υπόλοιπα και μετά πάτησε **Run**."
+
+#: tools/arg_completion.py:258
+msgid "Pick from the menus, then press **Run**."
+msgstr "Διάλεξε από τα μενού και μετά πάτησε **Run**."
+
+#: tools/arg_completion.py:259
+msgid "Press **Fill in** to type the details."
+msgstr "Πάτησε **Fill in** για να πληκτρολογήσεις τα στοιχεία."
+
+#: tools/arg_completion.py:271
+msgid "Let's finish that command"
+msgstr "Ας ολοκληρώσουμε αυτή την εντολή"
+
+#: tools/arg_completion.py:273
+#, python-brace-format
+msgid ""
+"`{command}` needs a little more info.\n"
+"{instructions}"
+msgstr ""
+"Η `{command}` χρειάζεται λίγες ακόμη πληροφορίες.\n"
+"{instructions}"
+
+#: tools/arg_completion.py:282
+#, python-brace-format
+msgid "Set: {preview}"
+msgstr "Ορίστηκε: {preview}"
+
+#: tools/arg_completion.py:284
+msgid "Required"
+msgstr "Απαιτείται"
+
+#: tools/arg_completion.py:286
+msgid "Optional - you can skip this"
+msgstr "Προαιρετικό - μπορείς να το παραλείψεις"
+
+#: tools/arg_completion.py:288
+msgid "Only you can use this - it times out in 3 minutes."
+msgstr "Μόνο εσύ μπορείς να το χρησιμοποιήσεις - λήγει σε 3 λεπτά."
+
+#: tools/arg_completion.py:298 tools/arg_completion.py:348
+msgid "This prompt is no longer active. Please run the command again."
+msgstr "Αυτή η προτροπή δεν είναι πλέον ενεργή. Τρέξε ξανά την εντολή."
+
+#: tools/arg_completion.py:326 tools/arg_completion.py:330
+msgid "Something went wrong with that prompt."
+msgstr "Κάτι πήγε στραβά με αυτή την προτροπή."
+
+#: tools/arg_completion.py:371
+#, python-brace-format
+msgid "Running `{command}`..."
+msgstr "Εκτέλεση της `{command}`..."
+
+#: tools/arg_completion.py:428
+msgid "This prompt timed out."
+msgstr "Αυτή η προτροπή έληξε."
+
+#: tools/arg_completion.py:439 tools/arg_completion.py:454
+#: tools/arg_completion.py:472 tools/arg_completion.py:488
+#, python-brace-format
+msgid "Choose {name}"
+msgstr "Διάλεξε {name}"
+
+#: tools/arg_completion.py:540
+#, python-brace-format
+msgid "Complete {command}"
+msgstr "Ολοκλήρωσε την {command}"
+
+#: tools/embed_creator.py:278
+msgid "default"
+msgstr "προεπιλογή"
+
+#: tools/embed_creator.py:280
+#, python-brace-format
+msgid "**Title:** {title}"
+msgstr "**Τίτλος:** {title}"
+
+#: tools/embed_creator.py:281
+#, python-brace-format
+msgid "**Description:** {description}"
+msgstr "**Περιγραφή:** {description}"
+
+#: tools/embed_creator.py:282
+#, python-brace-format
+msgid "**Colour:** {colour}"
+msgstr "**Χρώμα:** {colour}"
+
+#: tools/embed_creator.py:283
+#, python-brace-format
+msgid "**Fields:** {count}"
+msgstr "**Πεδία:** {count}"
+
+#: tools/embed_creator.py:287
+#, python-brace-format
+msgid "**Author:** {name}"
+msgstr "**Συγγραφέας:** {name}"
+
+#: tools/embed_creator.py:290
+#, python-brace-format
+msgid "**Footer:** {text}"
+msgstr "**Υποσέλιδο:** {text}"
+
+#: tools/embed_creator.py:292
+msgid "**Thumbnail:** set"
+msgstr "**Thumbnail:** ορίστηκε"
+
+#: tools/embed_creator.py:294
+msgid "**Image:** set"
+msgstr "**Εικόνα:** ορίστηκε"
+
+#: tools/embed_creator.py:344
+msgid "Tokens"
+msgstr "Tokens"
+
+#: tools/embed_creator.py:436
+msgid "Edit title"
+msgstr "Επεξεργασία τίτλου"
+
+#: tools/embed_creator.py:438
+msgid "Title"
+msgstr "Τίτλος"
+
+#: tools/embed_creator.py:460
+msgid "Edit description"
+msgstr "Επεξεργασία περιγραφής"
+
+#: tools/embed_creator.py:462
+msgid "Description"
+msgstr "Περιγραφή"
+
+#: tools/embed_creator.py:496
+msgid "Edit colour"
+msgstr "Επεξεργασία χρώματος"
+
+#: tools/embed_creator.py:504
+msgid "Quick colour (optional)"
+msgstr "Γρήγορο χρώμα (προαιρετικό)"
+
+#: tools/embed_creator.py:506
+msgid "Pick one, or edit the box below. Empty both to clear."
+msgstr "Διάλεξε ένα ή επεξεργάσου το πλαίσιο παρακάτω. Άδειασε και τα δύο για εκκαθάριση."
+
+#: tools/embed_creator.py:518
+msgid "Custom colour (hex or name)"
+msgstr "Προσαρμοσμένο χρώμα (hex ή όνομα)"
+
+#: tools/embed_creator.py:533
+msgid "That colour wasn't recognised. Use #rrggbb or a name like 'blurple'."
+msgstr "Αυτό το χρώμα δεν αναγνωρίστηκε. Χρησιμοποίησε #rrggbb ή ένα όνομα όπως 'blurple'."
+
+#: tools/embed_creator.py:552
+msgid "Edit author"
+msgstr "Επεξεργασία συγγραφέα"
+
+#: tools/embed_creator.py:555
+msgid "Author name"
+msgstr "Όνομα συγγραφέα"
+
+#: tools/embed_creator.py:562
+msgid "Author icon URL"
+msgstr "URL εικονιδίου συγγραφέα"
+
+#: tools/embed_creator.py:587
+msgid "Edit footer"
+msgstr "Επεξεργασία υποσέλιδου"
+
+#: tools/embed_creator.py:590
+msgid "Footer text"
+msgstr "Κείμενο υποσέλιδου"
+
+#: tools/embed_creator.py:597
+msgid "Footer icon URL"
+msgstr "URL εικονιδίου υποσέλιδου"
+
+#: tools/embed_creator.py:622
+#, python-brace-format
+msgid "Edit {label}"
+msgstr "Επεξεργασία {label}"
+
+#: tools/embed_creator.py:625
+#, python-brace-format
+msgid "{label} URL"
+msgstr "URL {label}"
+
+#: tools/embed_creator.py:646
+msgid "Add a field"
+msgstr "Πρόσθεσε ένα πεδίο"
+
+#: tools/embed_creator.py:648
+msgid "Field name"
+msgstr "Όνομα πεδίου"
+
+#: tools/embed_creator.py:654
+msgid "Field value"
+msgstr "Τιμή πεδίου"
+
+#: tools/embed_creator.py:661
+msgid "Inline? (yes/no)"
+msgstr "Inline; (ναι/όχι)"
+
+#: tools/embed_creator.py:675
+#, python-brace-format
+msgid "An embed can have at most {limit} fields."
+msgstr "Ένα embed μπορεί να έχει το πολύ {limit} πεδία."
+
+#: tools/embed_creator.py:800
+msgid "Could not open the guide."
+msgstr "Δεν ήταν δυνατό το άνοιγμα του οδηγού."
+
+#: tools/paginator.py:23 tools/paginator.py:49
+msgid "Nothing to show."
+msgstr "Δεν υπάρχει τίποτα για εμφάνιση."
+
+#: tools/paginator.py:60
+#, python-brace-format
+msgid "Page {current}/{total}"
+msgstr "Σελίδα {current}/{total}"
+
+#: tools/paginator.py:126
+msgid "Couldn't close the menu, please try again."
+msgstr "Δεν ήταν δυνατό το κλείσιμο του μενού, δοκίμασε ξανά."
+
+#: tools/views.py:22
+msgid "This prompt isn't for you."
+msgstr "Αυτή η προτροπή δεν είναι για εσένα."
+
+#: tools/views.py:23
+msgid "This profile editor isn't for you."
+msgstr "Αυτός ο επεξεργαστής προφίλ δεν είναι για εσένα."
+
+#: tools/views.py:24
+msgid "This isn't your game, start your own with the command!"
+msgstr "Αυτό δεν είναι το παιχνίδι σου, ξεκίνα το δικό σου με την εντολή!"
+
