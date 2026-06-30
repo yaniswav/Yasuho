@@ -21,6 +21,25 @@ def trim_reason(reason):
     return reason if len(reason) <= 100 else f"{reason[:100]}..."
 
 
+class _MentionFallback:
+    """Minimal stand-in for a user who is no longer reachable.
+
+    Lets ``modactions.case_embed`` render a bare mention + id for someone who
+    has left the guild, exactly as the old hand-rolled embed did. It exposes
+    only ``id`` and ``mention`` (and deliberately no ``display_avatar``), so the
+    embed simply omits the thumbnail.
+    """
+
+    __slots__ = ("id",)
+
+    def __init__(self, user_id):
+        self.id = user_id
+
+    @property
+    def mention(self):
+        return f"<@{self.id}>"
+
+
 class ConfirmView(AuthorView):
     """Author-restricted Confirm/Cancel prompt for dangerous moderation actions.
 
@@ -197,18 +216,8 @@ class WarningsView(AuthorView):
             )
 
         try:
-            await self.cog.bot.db_pool.execute(
-                "DELETE FROM cases WHERE guild_id = $1 AND user_id = $2 "
-                "AND action = 'warn' AND case_number = $3;",
-                self.guild.id,
-                self.member.id,
-                self.selected,
-            )
-            await self.cog.bot.db_pool.execute(
-                "UPDATE warns SET warns_count = GREATEST(warns_count - 1, 0) "
-                "WHERE guild_id = $1 AND user_id = $2;",
-                self.guild.id,
-                self.member.id,
+            await self.cog.remove_warn_case(
+                self.guild.id, self.member.id, self.selected
             )
 
             removed = self.selected
@@ -276,49 +285,57 @@ class Moderation(commands.Cog):
             self.bot.muteroles[guild_id] = role_id
         return role_id
 
+    async def remove_warn_case(self, guild_id, user_id, case_number):
+        """Delete a member's warn-case row and clamp their warns_count at 0.
+
+        Owns the persistence the warnings UI used to run inline: removes the
+        single ``warn`` case and decrements the running ``warns_count`` (floored
+        at 0 via ``GREATEST(..., 0)``).
+        """
+        await self.bot.db_pool.execute(
+            "DELETE FROM cases WHERE guild_id = $1 AND user_id = $2 "
+            "AND action = 'warn' AND case_number = $3;",
+            guild_id,
+            user_id,
+            case_number,
+        )
+        await self.bot.db_pool.execute(
+            "UPDATE warns SET warns_count = GREATEST(warns_count - 1, 0) "
+            "WHERE guild_id = $1 AND user_id = $2;",
+            guild_id,
+            user_id,
+        )
+
     def _case_record_embed(self, guild, row):
         """Render a stored case row (DB record) as a consistent case embed.
 
-        Resolves the target/moderator from cache when possible and degrades to a
-        bare mention when they are no longer reachable.
+        Thin wrapper over ``modactions.case_embed``: resolves the
+        target/moderator from cache when possible and degrades to a bare-mention
+        shim when they are no longer reachable (e.g. the user left the guild),
+        then restamps the embed with the case's stored creation time.
         """
-        action = row["action"]
-        verb = modactions.ACTION_VERBS.get(action, action.title())
-        embed = discord.Embed(
-            title=f"Case #{row['case_number']} - {verb}",
-            colour=modactions.action_colour(action),
-            timestamp=row["created_at"],
+        target = (
+            guild.get_member(row["user_id"])
+            or self.bot.get_user(row["user_id"])
+            or _MentionFallback(row["user_id"])
+        )
+        moderator = (
+            guild.get_member(row["moderator_id"])
+            or self.bot.get_user(row["moderator_id"])
+            or _MentionFallback(row["moderator_id"])
         )
 
-        target = guild.get_member(row["user_id"]) or self.bot.get_user(
-            row["user_id"]
+        embed = modactions.case_embed(
+            row["case_number"],
+            row["action"],
+            target,
+            moderator,
+            row["reason"],
+            row["expires"],
         )
-        if target is not None:
-            embed.set_thumbnail(url=target.display_avatar.url)
-            user_value = f"{target.mention} (`{target.id}`)"
-        else:
-            user_value = f"<@{row['user_id']}> (`{row['user_id']}`)"
-
-        moderator = guild.get_member(row["moderator_id"]) or self.bot.get_user(
-            row["moderator_id"]
-        )
-        mod_value = (
-            moderator.mention if moderator else f"<@{row['moderator_id']}>"
-        )
-
-        embed.add_field(name="User", value=user_value)
-        embed.add_field(name="Moderator", value=mod_value)
-        embed.add_field(
-            name="Reason",
-            value=row["reason"] or "*No reason provided*",
-            inline=False,
-        )
-        if row["expires"] is not None:
-            embed.add_field(
-                name="Expires",
-                value=discord.utils.format_dt(row["expires"], "R"),
-            )
-        embed.set_footer(text=f"User ID: {row['user_id']}")
+        # case_embed stamps "now" for live actions; a stored record must reflect
+        # when the case was actually created.
+        embed.timestamp = row["created_at"]
         return embed
 
     @commands.hybrid_command(aliases=["newmembers"])
@@ -697,6 +714,51 @@ class Moderation(commands.Cog):
         await ctx.guild.create_role(name=role, permissions=perms)
         await ctx.send(f"{ctx.guild.id}, {role}")
 
+    async def _ensure_mute_role(self, guild):
+        """Create the guild's "Muted" role, persist it, and return it.
+
+        Provisions the role with deny overwrites across every text channel,
+        voice channel and category, persists the role id via the muterole
+        upsert, and primes the in-memory ``bot.muteroles`` cache so subsequent
+        mutes resolve it without recreating it.
+        """
+        perms = discord.Permissions(
+            send_messages=False,
+            add_reactions=False,
+            send_tts_messages=False,
+            speak=False,
+        )
+        mrole = await guild.create_role(name="Muted", permissions=perms)
+        await db.upsert_guild_value(
+            self.bot.db_pool, "muterole", "role_id", guild.id, mrole.id
+        )
+        self.bot.muteroles[guild.id] = mrole.id
+
+        for channel in guild.text_channels:
+            await channel.set_permissions(
+                mrole,
+                overwrite=discord.PermissionOverwrite(
+                    send_messages=False,
+                    add_reactions=False,
+                    send_tts_messages=False,
+                ),
+            )
+        for channel in guild.voice_channels:
+            await channel.set_permissions(
+                mrole, overwrite=discord.PermissionOverwrite(speak=False)
+            )
+        for channel in guild.categories:
+            await channel.set_permissions(
+                mrole,
+                overwrite=discord.PermissionOverwrite(
+                    send_messages=False,
+                    add_reactions=False,
+                    send_tts_messages=False,
+                    speak=False,
+                ),
+            )
+        return mrole
+
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
@@ -707,76 +769,17 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        role = await self._get_mute_role_id(ctx.guild.id)
+        role_id = await self._get_mute_role_id(ctx.guild.id)
 
         try:
-            if role is None:
-                try:
-                    await ctx.send("Mute role is not defined", delete_after=3)
-                    await ctx.send("Creating role...", delete_after=1)
-                    perms = discord.Permissions(
-                        send_messages=False,
-                        add_reactions=False,
-                        send_tts_messages=False,
-                        speak=False,
-                    )
-                    mrole = await ctx.guild.create_role(name="Muted", permissions=perms)
-                    await ctx.send(content="Mute role created!", delete_after=5)
-                    await db.upsert_guild_value(
-                        self.bot.db_pool, "muterole", "role_id", ctx.guild.id, mrole.id
-                    )
-                    self.bot.muteroles[ctx.guild.id] = mrole.id
+            if role_id is None:
+                await ctx.send("Mute role is not defined", delete_after=3)
+                await ctx.send("Creating role...", delete_after=1)
+                mutedrole = await self._ensure_mute_role(ctx.guild)
+                await ctx.send(content="Mute role created!", delete_after=5)
+            else:
+                mutedrole = discord.utils.get(ctx.guild.roles, id=role_id)
 
-                    for channel in ctx.guild.text_channels:
-                        await channel.set_permissions(
-                            mrole,
-                            overwrite=discord.PermissionOverwrite(
-                                send_messages=False,
-                                add_reactions=False,
-                                send_tts_messages=False,
-                            ),
-                        )
-                    for channel in ctx.guild.voice_channels:
-                        await channel.set_permissions(
-                            mrole, overwrite=discord.PermissionOverwrite(speak=False)
-                        )
-                    for channel in ctx.guild.categories:
-                        await channel.set_permissions(
-                            mrole,
-                            overwrite=discord.PermissionOverwrite(
-                                send_messages=False,
-                                add_reactions=False,
-                                send_tts_messages=False,
-                                speak=False,
-                            ),
-                        )
-
-                    await user.add_roles(
-                        mrole, reason=f"""Muted By: {ctx.author} for: {reason} """
-                    )
-
-                    query = """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
-                    await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
-
-                    num = await modactions.create_case(
-                        self.bot.db_pool,
-                        ctx.guild.id,
-                        user.id,
-                        ctx.author.id,
-                        "mute",
-                        reason,
-                    )
-                    embed = modactions.case_embed(
-                        num, "mute", user, ctx.author, reason
-                    )
-                    await ctx.send(embed=embed)
-                    await self._post_modlog(ctx.guild, embed)
-                    return
-
-                except Exception:
-                    log.exception("Failed to create mute role")
-
-            mutedrole = discord.utils.get(ctx.guild.roles, id=role)
             await user.add_roles(
                 mutedrole, reason=f"""Muted By: {ctx.author} for: {reason} """
             )
