@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class TicTacToeButton(discord.ui.Button):
                 pass
 
 
-class TicTacToeView(discord.ui.View):
+class TicTacToeView(AuthorView):
     """A 3x3 Tic-Tac-Toe board: the command author (X) versus a simple bot AI (O)."""
 
     X = "X"
@@ -90,23 +91,16 @@ class TicTacToeView(discord.ui.View):
     PROMPT = "Tic-Tac-Toe: you are X"
 
     def __init__(self, player: discord.abc.User):
-        super().__init__(timeout=180)
+        super().__init__(
+            player.id,
+            timeout=180,
+            deny_message="This isn't your game, start your own with the command!",
+        )
         self.player = player
-        self.message: discord.Message | None = None
         self.board = [None] * 9
         for y in range(3):
             for x in range(3):
                 self.add_item(TicTacToeButton(x, y))
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Only the command author may play their own game."""
-        if interaction.user.id != self.player.id:
-            await interaction.response.send_message(
-                "This isn't your game, start your own with the command!",
-                ephemeral=True,
-            )
-            return False
-        return True
 
     def button_at(self, index: int) -> TicTacToeButton:
         for child in self.children:

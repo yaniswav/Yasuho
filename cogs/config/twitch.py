@@ -8,6 +8,7 @@ from discord.ext import commands
 from tools import embed_creator, settings
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -327,7 +328,7 @@ class _EnableButton(discord.ui.Button):
 # ----------------------------------------------------------------------
 # Main control panel
 # ----------------------------------------------------------------------
-class TwitchPanel(discord.ui.View):
+class TwitchPanel(AuthorView):
     """Author-restricted Twitch live-alert builder (the single entry point).
 
     Satisfies the embed_creator.EmbedEditorHost protocol: it exposes the
@@ -345,12 +346,14 @@ class TwitchPanel(discord.ui.View):
     colour_names = {**embed_creator.COLOUR_NAMES, "twitch": TWITCH_PURPLE, "purple": TWITCH_PURPLE}
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id,
+            timeout=timeout,
+            deny_message="This panel isn't for you.",
+        )
         self.cog = cog
         self.guild = guild
-        self.author_id = author_id
         self.config = config
-        self.message = None
 
         self.add_item(TwitchChannelSelect(self))
         self.add_item(TwitchRoleSelect(self))
@@ -456,23 +459,6 @@ class TwitchPanel(discord.ui.View):
 
     async def _error(self, interaction):
         await embed_creator.notify_failure(interaction)
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 # ----------------------------------------------------------------------

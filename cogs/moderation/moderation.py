@@ -9,6 +9,7 @@ from tools import db, modactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ def trim_reason(reason):
     return reason if len(reason) <= 100 else f"{reason[:100]}..."
 
 
-class ConfirmView(discord.ui.View):
+class ConfirmView(AuthorView):
     """Author-restricted Confirm/Cancel prompt for dangerous moderation actions.
 
     The invoker presses Confirm or Cancel; the caller waits on the view and reads
@@ -28,18 +29,10 @@ class ConfirmView(discord.ui.View):
     """
 
     def __init__(self, author_id, *, timeout=30):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.value = None
-        self.message = None
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _finish(self, interaction, value):
         self.value = value
@@ -60,17 +53,8 @@ class ConfirmView(discord.ui.View):
     async def cancel(self, interaction, button):
         await self._finish(interaction, False)
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
-
-class WarningsView(discord.ui.View):
+class WarningsView(AuthorView):
     """Author-restricted, paginated list of a member's warn-cases.
 
     A dropdown selects a warn on the current page and the danger button removes
@@ -78,16 +62,16 @@ class WarningsView(discord.ui.View):
     """
 
     def __init__(self, cog, guild, member, warns, author_id, *, per_page=10, timeout=120):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.cog = cog
         self.guild = guild
         self.member = member
         self.warns = list(warns)  # asyncpg Records, newest first
-        self.author_id = author_id
         self.per_page = per_page
         self.index = 0
         self.selected = None
-        self.message = None
 
         self.select = discord.ui.Select(
             placeholder="Select a warn to remove...", row=0
@@ -163,14 +147,6 @@ class WarningsView(discord.ui.View):
         self.remove_warn.disabled = True
         self.prev_page.disabled = self.index <= 0
         self.next_page.disabled = self.index >= self.page_count - 1
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _on_select(self, interaction):
         try:
@@ -255,15 +231,6 @@ class WarningsView(discord.ui.View):
                     )
                 except Exception:
                     log.exception("Failed to remove warn case")
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class Moderation(commands.Cog):

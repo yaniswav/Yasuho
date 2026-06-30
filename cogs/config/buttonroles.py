@@ -25,6 +25,7 @@ from discord.ext import commands
 from tools import embed_creator
 from tools.formats import random_colour
 from tools.paginator import Paginator, paginate_lines
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -341,7 +342,7 @@ class AttachModal(discord.ui.Modal):
 # ----------------------------------------------------------------------
 # Builder view (the single entry point for admins)
 # ----------------------------------------------------------------------
-class BuilderView(discord.ui.View):
+class BuilderView(AuthorView):
     """Author-restricted builder that designs, posts or attaches a panel.
 
     Satisfies the embed_creator.EmbedEditorHost protocol (embed_config +
@@ -354,13 +355,13 @@ class BuilderView(discord.ui.View):
     placeholder_hint = ""
 
     def __init__(self, cog, guild, author_id, target_channel_id, config, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.cog = cog
         self.guild = guild
-        self.author_id = author_id
         self.target_channel_id = target_channel_id
         self.config = config
-        self.message = None
 
         self.add_item(embed_creator.make_edit_select(self, row=0))
         self.add_item(_AddRoleSelect())
@@ -752,23 +753,6 @@ class BuilderView(discord.ui.View):
 
     async def _error(self, interaction):
         await embed_creator.notify_failure(interaction)
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 def _default_panel_config():

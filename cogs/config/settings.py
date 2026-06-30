@@ -6,6 +6,7 @@ from discord.ext import commands
 from tools import db, settings
 from tools.embed_creator import notify_failure
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -122,25 +123,17 @@ class ConfigSelect(discord.ui.Select):
         await self.panel.handle_select(interaction, self.values[0])
 
 
-class ConfigPanel(discord.ui.View):
+class ConfigPanel(AuthorView):
     """Author-restricted overview of every server feature, with quick controls."""
 
     def __init__(self, cog, author_id, guild, state, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.cog = cog
-        self.author_id = author_id
         self.guild = guild
         self.state = state
-        self.message = None
         self.add_item(ConfigSelect(self))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     # -- rendering ------------------------------------------------------
     def build_embed(self):
@@ -260,15 +253,6 @@ class ConfigPanel(discord.ui.View):
         except Exception:
             log.exception("Config panel leveling toggle failed")
             await notify_failure(interaction)
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class Settings(commands.Cog):

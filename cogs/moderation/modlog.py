@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from tools import db, embed_creator, settings
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -121,17 +122,17 @@ class EventSelect(discord.ui.Select):
             await embed_creator.notify_failure(interaction)
 
 
-class ModLogPanel(discord.ui.View):
+class ModLogPanel(AuthorView):
     """Author-restricted control panel for the mod-log: channel + event toggles."""
 
     def __init__(self, cog, author_id, *, channel_id, events, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.cog = cog
-        self.author_id = author_id
         self.channel_id = channel_id
         # ``events`` is None (unset -> everything enabled) or an explicit list.
         self.events = events
-        self.message = None
         self.add_item(LogChannelSelect(self))
         self.add_item(EventSelect(self))
 
@@ -191,23 +192,6 @@ class ModLogPanel(discord.ui.View):
         except Exception:
             log.exception("Mod-log panel disable failed")
             await embed_creator.notify_failure(interaction)
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class ModLog(commands.Cog):

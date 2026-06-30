@@ -5,6 +5,7 @@ import logging
 import discord
 
 from .formats import random_colour
+from .views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -29,21 +30,23 @@ def paginate_lines(lines, *, title=None, colour=None, per_page=10):
     return embeds
 
 
-class Paginator(discord.ui.View):
+class Paginator(AuthorView):
     """A reusable button paginator over a list of embeds.
 
     Usage::
 
         embeds = paginate_lines(lines, title="Leaderboard")
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
+
+    ``author_id`` is optional: when None the paginator is public (anyone may
+    page), so interaction_check is overridden to keep that looser gate while
+    still inheriting the shared on_timeout cleanup.
     """
 
     def __init__(self, embeds, *, author_id=None, timeout=120):
-        super().__init__(timeout=timeout)
+        super().__init__(author_id, timeout=timeout)
         self.embeds = list(embeds) or [discord.Embed(description="Nothing to show.")]
-        self.author_id = author_id
         self.index = 0
-        self.message = None
         self._sync()
 
     def _sync(self):
@@ -123,12 +126,3 @@ class Paginator(discord.ui.View):
                     log.exception("paginator navigation failed")
         finally:
             self.stop()
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass

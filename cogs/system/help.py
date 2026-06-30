@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from tools import settings
 from tools.formats import plural, random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ class CategorySelect(discord.ui.Select):
             await self.view.report_error(interaction)
 
 
-class HelpView(discord.ui.View):
+class HelpView(AuthorView):
     """Author-restricted, navigable overview of every command category.
 
     Combines a category dropdown (jump anywhere), previous/next pagination
@@ -147,16 +148,14 @@ class HelpView(discord.ui.View):
     """
 
     def __init__(self, help_command, categories, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(help_command.context.author.id, timeout=timeout)
         self.help_command = help_command
         self.bot = help_command.context.bot
-        self.author_id = help_command.context.author.id
         self.prefix = help_command.context.clean_prefix
         # ``categories`` is a list of resolved category dicts (see
         # ``build_categories``); the index into it is the only navigation state.
         self.categories = categories
         self.index = None
-        self.message = None
         self.select = CategorySelect(self._select_options())
         self.add_item(self.select)
         self._update_buttons()
@@ -327,35 +326,16 @@ class HelpView(discord.ui.View):
             log.exception("Failed to page to the next help category")
             await self.report_error(interaction)
 
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
-
-
-class GroupHelpView(discord.ui.View):
+class GroupHelpView(AuthorView):
     """Author-restricted group help with a per-user expand/collapse toggle."""
 
     def __init__(self, help_command, group, expand, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(help_command.context.author.id, timeout=timeout)
         self.help_command = help_command
         self.bot = help_command.context.bot
-        self.author_id = help_command.context.author.id
         self.group = group
         self.expand = expand
-        self.message = None
         self._sync_button()
 
     def _sync_button(self):
@@ -382,23 +362,6 @@ class GroupHelpView(discord.ui.View):
                     "Something went wrong updating that preference.", ephemeral=True
                 )
             except Exception:
-                pass
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
                 pass
 
 

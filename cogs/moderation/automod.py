@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from tools import db, modactions, settings
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -129,16 +130,16 @@ class _ExemptChannelSelect(discord.ui.ChannelSelect):
         )
 
 
-class AutoModPanel(discord.ui.View):
+class AutoModPanel(AuthorView):
     """Author-restricted control panel for every custom + native AutoMod rule."""
 
     def __init__(self, cog, guild, author_id, state, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.cog = cog
         self.guild = guild
-        self.author_id = author_id
         self.state = state
-        self.message = None
 
         self._toggles = [
             _AutoModToggle(self, "link", "Anti-link", native=False, row=0),
@@ -168,14 +169,6 @@ class AutoModPanel(discord.ui.View):
         self.add_item(
             _ExemptChannelSelect(self, row=4, defaults=channel_defaults)
         )
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     # -- rendering ------------------------------------------------------
     def _refresh_components(self):
@@ -313,15 +306,6 @@ class AutoModPanel(discord.ui.View):
         except Exception:
             log.exception("AutoMod panel exemption update failed")
             await self._safe_fail(interaction)
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class AutoMod(commands.Cog):

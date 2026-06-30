@@ -15,6 +15,7 @@ from .helpers import (
     _step_season,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -90,52 +91,27 @@ class ResultSelect(discord.ui.Select):
                 pass
 
 
-class ResultView(discord.ui.View):
+class ResultView(AuthorView):
     """Author-restricted wrapper around a :class:`ResultSelect`."""
 
     def __init__(self, cog, results, author_id, media_type, timeout=120):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
-        self.message = None
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.add_item(ResultSelect(cog, results, author_id, media_type))
 
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
-
-
-class SeasonView(discord.ui.View):
+class SeasonView(AuthorView):
     """Seasonal browser: a title picker plus previous/next season navigation."""
 
     def __init__(self, cog, results, author_id, season, year, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.cog = cog
-        self.author_id = author_id
         self.season = season
         self.year = year
-        self.message = None
         self.add_item(ResultSelect(cog, results, author_id, "ANIME"))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _change_season(self, interaction, *, forward):
         try:
@@ -183,15 +159,6 @@ class SeasonView(discord.ui.View):
     )
     async def next_season(self, interaction, button):
         await self._change_season(interaction, forward=True)
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class EditSelect(discord.ui.Select):
@@ -247,31 +214,14 @@ class EditSelect(discord.ui.Select):
                 pass
 
 
-class EditSelectView(discord.ui.View):
+class EditSelectView(AuthorView):
     """Author-restricted wrapper around an :class:`EditSelect`."""
 
     def __init__(self, cog, candidates, author_id, field, value, timeout=120):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
-        self.message = None
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.add_item(EditSelect(cog, candidates, author_id, field, value))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class EditEntryModal(discord.ui.Modal):
@@ -401,32 +351,24 @@ class EditEntryModal(discord.ui.Modal):
                 pass
 
 
-class TypeView(discord.ui.View):
+class TypeView(AuthorView):
     """Update wizard, step 1: pick anime vs manga among mixed candidates.
 
     Only the buttons for types actually present in ``candidates`` are shown.
     """
 
     def __init__(self, cog, candidates, author_id, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.cog = cog
         self.candidates = candidates
-        self.author_id = author_id
-        self.message = None
 
         types_present = {m.get("type") for m in candidates if m.get("type")}
         if "ANIME" not in types_present:
             self.remove_item(self.anime_button)
         if "MANGA" not in types_present:
             self.remove_item(self.manga_button)
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _choose_type(self, interaction, media_type):
         try:
@@ -465,15 +407,6 @@ class TypeView(discord.ui.View):
     @discord.ui.button(label="📖 Manga", style=discord.ButtonStyle.success)
     async def manga_button(self, interaction, button):
         await self._choose_type(interaction, "MANGA")
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class SeasonSelect(discord.ui.Select):
@@ -532,31 +465,14 @@ class SeasonSelect(discord.ui.Select):
                 pass
 
 
-class SeasonSelectView(discord.ui.View):
+class SeasonSelectView(AuthorView):
     """Author-restricted wrapper around a :class:`SeasonSelect`."""
 
     def __init__(self, cog, candidates, author_id, media_type, timeout=180):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
-        self.message = None
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.add_item(SeasonSelect(cog, candidates, author_id, media_type))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class OnListSelect(discord.ui.Select):
@@ -635,31 +551,14 @@ class OnListSelect(discord.ui.Select):
                 pass
 
 
-class OnListSelectView(discord.ui.View):
+class OnListSelectView(AuthorView):
     """Author-restricted wrapper around an :class:`OnListSelect`."""
 
     def __init__(self, cog, candidates, author_id, timeout=180):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
-        self.message = None
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.add_item(OnListSelect(cog, candidates, author_id))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class StatusSelect(discord.ui.Select):
@@ -712,7 +611,7 @@ class StatusSelect(discord.ui.Select):
                 pass
 
 
-class MediaView(discord.ui.View):
+class MediaView(AuthorView):
     """Tabbed view over a full media object with optional list actions."""
 
     def __init__(
@@ -726,15 +625,15 @@ class MediaView(discord.ui.View):
         parent_content=None,
         timeout=180,
     ):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.cog = cog
         self.media = media
-        self.author_id = author_id
         self.token = token
         self.parent_view = parent_view
         self.parent_embed = parent_embed
         self.parent_content = parent_content
-        self.message = None
 
         # Logged-in controls: a status dropdown (row 1) and action buttons
         # (row 2). The dropdown is added dynamically; the row-2 buttons are
@@ -751,14 +650,6 @@ class MediaView(discord.ui.View):
             for child in list(self.children):
                 if getattr(child, "row", None) == 3:
                     self.remove_item(child)
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     # -- embed builders -------------------------------------------------
     def _base_embed(self):
@@ -1206,15 +1097,6 @@ class MediaView(discord.ui.View):
             except Exception:
                 pass
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
-
 
 class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
     """Collect the OAuth PIN and finish linking without ever echoing it."""
@@ -1271,22 +1153,14 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
                 pass
 
 
-class LoginView(discord.ui.View):
+class LoginView(AuthorView):
     """Author-restricted view exposing a modal to enter the OAuth PIN."""
 
     def __init__(self, cog, author_id, timeout=300):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
+        )
         self.cog = cog
-        self.author_id = author_id
-        self.message = None
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     @discord.ui.button(label="Enter code", style=discord.ButtonStyle.primary)
     async def enter_code(self, interaction, button):
@@ -1301,13 +1175,4 @@ class LoginView(discord.ui.View):
                     "Could not open the code form.", ephemeral=True
                 )
             except Exception:
-                pass
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
                 pass

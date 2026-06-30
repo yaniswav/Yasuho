@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from tools import embed_creator
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -44,33 +45,16 @@ class _StarboardChannelSelect(discord.ui.ChannelSelect):
             await embed_creator.notify_failure(interaction)
 
 
-class StarboardSetView(discord.ui.View):
+class StarboardSetView(AuthorView):
     """Author-restricted prompt to choose the starboard channel."""
 
     def __init__(self, cog, author_id, *, threshold, timeout=120):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.cog = cog
-        self.author_id = author_id
         self.threshold = threshold
-        self.message = None
         self.add_item(_StarboardChannelSelect(self))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class Starboard(commands.Cog):

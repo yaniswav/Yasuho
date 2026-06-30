@@ -24,6 +24,7 @@ import typing
 import discord
 
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -187,13 +188,14 @@ def _clip(text: str, limit: int) -> str:
 # --- the interactive view -------------------------------------------------
 
 
-class _CompletionView(discord.ui.View):
+class _CompletionView(AuthorView):
     """Guided form that collects a command's arguments then re-invokes it."""
 
     def __init__(self, ctx, fields, select_fields, text_fields, timeout=180.0):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            ctx.author.id, timeout=timeout, deny_message="This prompt isn't for you."
+        )
         self.ctx = ctx
-        self.author_id = ctx.author.id
         self.command = ctx.command
         self.prefix = ctx.prefix
         self.fields = fields
@@ -201,7 +203,6 @@ class _CompletionView(discord.ui.View):
         self.text_fields = text_fields
         self.collected = {}
         self.provided = set()
-        self.message = None
         self.finished = False
 
         button_row = len(select_fields)
@@ -287,10 +288,7 @@ class _CompletionView(discord.ui.View):
     # -- interaction plumbing --------------------------------------------
 
     async def interaction_check(self, interaction) -> bool:
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This prompt isn't for you.", ephemeral=True
-            )
+        if not await super().interaction_check(interaction):
             return False
         if self.finished:
             await interaction.response.send_message(

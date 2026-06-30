@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools import embed_creator, settings
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -107,36 +108,19 @@ class PrefButton(discord.ui.Button):
             )
 
 
-class SettingsView(discord.ui.View):
+class SettingsView(AuthorView):
     """Author-restricted panel of per-user preference toggles."""
 
     def __init__(self, bot, author, states, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author.id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.bot = bot
         self.author = author
-        self.author_id = author.id
         self.states = states
-        self.message = None
         for pref in PREFS:
             value = bool(states.get(pref.key, pref.default))
             self.add_item(PrefButton(pref, value))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class UserSettings(commands.Cog):

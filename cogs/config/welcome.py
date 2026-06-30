@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from tools import embed_creator, settings
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -280,17 +281,19 @@ class RemoveGifSelect(discord.ui.Select):
                 pass
 
 
-class ManageGifsView(discord.ui.View):
+class ManageGifsView(AuthorView):
     """Small ephemeral flow to add/remove GIFs in the random pool."""
 
     def __init__(self, panel, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            panel.author_id,
+            timeout=timeout,
+            deny_message="This panel isn't for you.",
+        )
         self.panel = panel
         self.cog = panel.cog
         self.guild = panel.guild
         self.config = panel.config
-        self.author_id = panel.author_id
-        self.message = None
         if self.config.get("gifs"):
             self.add_item(RemoveGifSelect(self))
 
@@ -352,28 +355,11 @@ class ManageGifsView(discord.ui.View):
             pass
         await self.panel.sync_message()
 
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
-
 
 # ----------------------------------------------------------------------
 # Main control panel
 # ----------------------------------------------------------------------
-class WelcomePanel(discord.ui.View):
+class WelcomePanel(AuthorView):
     """Author-restricted welcome control panel (the single entry point).
 
     This View is the embed_creator.EmbedEditorHost for the welcome embed: it
@@ -383,12 +369,14 @@ class WelcomePanel(discord.ui.View):
     """
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id,
+            timeout=timeout,
+            deny_message="This panel isn't for you.",
+        )
         self.cog = cog
         self.guild = guild
-        self.author_id = author_id
         self.config = config
-        self.message = None
         # Read by the embed_creator modals via getattr.
         self.placeholder_hint = PLACEHOLDER_HINT
         self.asset_hint = ASSET_HINT
@@ -507,23 +495,6 @@ class WelcomePanel(discord.ui.View):
 
     async def _error(self, interaction):
         await embed_creator.notify_failure(interaction, "Something went wrong.")
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 # ----------------------------------------------------------------------

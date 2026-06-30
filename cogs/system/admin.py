@@ -13,6 +13,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -44,25 +45,17 @@ class UpdateSelect(discord.ui.Select):
             log.exception("update select failed")
 
 
-class UpdateView(discord.ui.View):
+class UpdateView(AuthorView):
     """Owner panel to choose what to hot-reload after a pull."""
 
     def __init__(self, bot, author_id, cogs, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
         self.bot = bot
-        self.author_id = author_id
-        self.message = None
         self.selected = set(cogs)
         if cogs:
             self.add_item(UpdateSelect(cogs))
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                "This panel isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _reload(self, interaction, exts):
         if not exts:
@@ -115,15 +108,6 @@ class UpdateView(discord.ui.View):
             self.stop()
         except Exception:
             log.exception("update close failed")
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class Admin(commands.Cog):

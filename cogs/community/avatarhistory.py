@@ -7,6 +7,7 @@ from discord.ext import commands
 from PIL import Image
 
 from tools.formats import random_colour
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -19,16 +20,15 @@ KIND_TITLES = {
 KIND_NOUNS = {"global": "global", "guild": "server", "banner": "banner"}
 
 
-class AvatarHistoryView(discord.ui.View):
+class AvatarHistoryView(AuthorView):
     """Lets the requester switch between global / server / banner history."""
 
     def __init__(self, cog, ctx, member, *, timeout=180):
-        super().__init__(timeout=timeout)
+        super().__init__(ctx.author.id, timeout=timeout)
         self.cog = cog
         self.ctx = ctx
         self.member = member
         self.guild = ctx.guild
-        self.message = None
         # Per-guild avatars only make sense inside a guild.
         if self.guild is None:
             self.server_button.disabled = True
@@ -50,14 +50,6 @@ class AvatarHistoryView(discord.ui.View):
             if kind == "banner"
             else discord.ButtonStyle.secondary
         )
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.ctx.author.id:
-            await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-            return False
-        return True
 
     async def _show(self, interaction, kind):
         await interaction.response.defer()
@@ -94,14 +86,6 @@ class AvatarHistoryView(discord.ui.View):
     async def banner_button(self, interaction, button):
         await self._show(interaction, "banner")
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
 
 
 class AvatarHistory(commands.Cog):
