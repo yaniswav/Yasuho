@@ -13,6 +13,13 @@ NO_CATEGORY = "No Category"
 # Discord caps an embed description at 4096 characters.
 DESCRIPTION_LIMIT = 4096
 
+# Once this many messages have been posted after the help menu, navigating to a
+# new category re-posts the menu at the bottom of the channel instead of editing
+# it in place (otherwise it would update far up where the user can no longer see
+# it). Self-correcting: right after a re-post nothing is below it, so subsequent
+# navigation edits in place again until the channel buries it once more.
+REPOST_AFTER_MESSAGES = 4
+
 # Curated, top-level help taxonomy: (emoji, display name, member cog classes).
 # Each entry groups one or more cog *class names* (what ``bot.get_cog`` expects)
 # under a single, human-friendly category so the menu stays tidy instead of
@@ -229,13 +236,44 @@ class HelpView(discord.ui.View):
             not active or self.index == len(self.categories) - 1
         )
 
+    async def _is_buried(self, interaction):
+        """True when enough messages piled up after the menu to re-post it."""
+        channel = interaction.channel
+        if channel is None or self.message is None:
+            return False
+        try:
+            count = 0
+            async for _ in channel.history(
+                limit=REPOST_AFTER_MESSAGES, after=self.message
+            ):
+                count += 1
+            return count >= REPOST_AFTER_MESSAGES
+        except discord.HTTPException:
+            return False
+
+    async def _repost(self, interaction, embed):
+        """Re-post the menu at the bottom of the channel, dropping the old one."""
+        await interaction.response.defer()
+        old = self.message
+        self.message = await interaction.channel.send(embed=embed, view=self)
+        if old is not None:
+            try:
+                await old.delete()
+            except discord.HTTPException:
+                pass
+
     async def _render(self, interaction):
         self._update_buttons()
         if self.index is None:
             embed = await self.help_command.home_embed()
         else:
             embed = self.category_embed(self.index)
-        await interaction.response.edit_message(embed=embed, view=self)
+        # If later messages have buried the menu, re-post it at the bottom rather
+        # than editing in place (which would strand the user scrolled up).
+        if await self._is_buried(interaction):
+            await self._repost(interaction, embed)
+        else:
+            await interaction.response.edit_message(embed=embed, view=self)
 
     async def show_category(self, interaction, value):
         try:
