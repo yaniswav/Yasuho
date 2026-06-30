@@ -5,6 +5,7 @@ import discord
 import Levenshtein as lv
 from discord.ext import commands
 
+from tools import arg_completion
 from tools.formats import random_colour
 
 log = logging.getLogger(__name__)
@@ -44,6 +45,15 @@ class Errors(commands.Cog):
                 pass
 
         elif isinstance(error, commands.MissingRequiredArgument):
+            # First try to guide the user through the missing arguments with an
+            # interactive form (select menus / a modal). Only fall back to the
+            # plain usage message when that is not possible for this command.
+            try:
+                if await arg_completion.start(ctx, error):
+                    return
+            except Exception:
+                log.exception("Interactive arg completion failed; using usage text")
+
             await ctx.send(
                 embed=discord.Embed(
                     color=random_colour(),
