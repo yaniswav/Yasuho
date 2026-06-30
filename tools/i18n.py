@@ -118,3 +118,24 @@ async def resolve_locale(bot, *, user_id, guild_id=None, interaction=None):
         if loc:
             return loc
     return DEFAULT_LOCALE
+
+
+async def apply_interaction_locale(interaction):
+    """Resolve and set the locale for a component/modal interaction.
+
+    get_context only fires for command invocations; button/select callbacks and
+    modal submits run in their own tasks where the ContextVar is still the
+    default. Call this at the start of interaction handling (a View's or Modal's
+    interaction_check) so _() inside the callback renders in the user's locale.
+    """
+    try:
+        current_locale.set(
+            await resolve_locale(
+                interaction.client,
+                user_id=interaction.user.id,
+                guild_id=interaction.guild_id,
+                interaction=interaction,
+            )
+        )
+    except Exception:
+        current_locale.set(DEFAULT_LOCALE)

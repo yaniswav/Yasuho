@@ -128,7 +128,7 @@ class ModLogPanel(AuthorView):
 
     def __init__(self, cog, author_id, *, channel_id, events, timeout=180):
         super().__init__(
-            author_id, timeout=timeout, deny_message=_("This panel isn't for you.")
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
         )
         self.cog = cog
         self.channel_id = channel_id

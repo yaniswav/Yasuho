@@ -50,7 +50,7 @@ class ConfirmView(AuthorView):
 
     def __init__(self, author_id, *, timeout=30):
         super().__init__(
-            author_id, timeout=timeout, deny_message=_("This menu isn't for you.")
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
         )
         self.value = None
 
@@ -83,7 +83,7 @@ class WarningsView(AuthorView):
 
     def __init__(self, cog, guild, member, warns, author_id, *, per_page=10, timeout=120):
         super().__init__(
-            author_id, timeout=timeout, deny_message=_("This menu isn't for you.")
+            author_id, timeout=timeout, deny_message="This menu isn't for you."
         )
         self.cog = cog
         self.guild = guild

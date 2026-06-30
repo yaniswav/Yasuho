@@ -4,7 +4,7 @@ import random
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, settings, welcome_card
+from tools import embed_creator, i18n, settings, welcome_card
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorView
@@ -79,6 +79,10 @@ class AddGifModal(discord.ui.Modal):
             placeholder="https://...",
         )
         self.add_item(self.url_field)
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
 
     async def on_submit(self, interaction):
         try:

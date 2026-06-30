@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorView
@@ -34,6 +35,10 @@ class ProfileEditModal(discord.ui.Modal):
             style=discord.TextStyle.short, required=True, max_length=1000
         )
         self.add_item(discord.ui.Label(text=_("Value"), component=self.value_input))
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
 
     async def on_submit(self, interaction):
         try:

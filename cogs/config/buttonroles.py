@@ -22,7 +22,7 @@ import re
 import discord
 from discord.ext import commands
 
-from tools import embed_creator
+from tools import embed_creator, i18n
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
@@ -121,6 +121,7 @@ class ButtonRoleButton(discord.ui.Button):
         )
 
     async def callback(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
         guild = interaction.guild
         member = interaction.user
         if guild is None or not isinstance(member, discord.Member):
@@ -290,6 +291,10 @@ class AddButtonModal(discord.ui.Modal):
         self.add_item(self.emoji_field)
         self.add_item(self.style_field)
 
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
     async def on_submit(self, interaction):
         try:
             buttons = self.builder.config["buttons"]
@@ -337,6 +342,10 @@ class AttachModal(discord.ui.Modal):
             placeholder="123456789012345678 or https://discord.com/channels/...",
         )
         self.add_item(self.ref_field)
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
 
     async def on_submit(self, interaction):
         try:

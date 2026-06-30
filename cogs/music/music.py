@@ -10,6 +10,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
+from tools import i18n
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -94,6 +95,10 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
         self.cog = cog
         self.controller = controller
 
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
             player = self.controller.player
@@ -171,7 +176,11 @@ class MusicController(discord.ui.LayoutView):
     view is restricted to listeners currently in the player's voice channel.
     """
 
-    def __init__(self, cog: "Music", player: Player, *, timeout: float = 600.0) -> None:
+    def __init__(self, cog: "Music", player: Player, *, timeout=None) -> None:
+        # timeout=None so the controls never die mid-track (a long song or a
+        # livestream fires no track_start to refresh the timer). The controller
+        # is explicitly stopped + deleted on track change, idle teardown and
+        # disconnect, so it never lingers.
         super().__init__(timeout=timeout)
         self.cog = cog
         self.player = player
@@ -651,9 +660,13 @@ class Music(commands.Cog):
                     log.exception("Failed to delete the previous controller message")
 
         # A LayoutView carries its own content; it must be sent with no embed.
+        # Components V2 TextDisplay resolves mentions (unlike an embed), so
+        # suppress pings or the DJ/requester would be notified on every repost.
         view = MusicController(self, player)
         try:
-            message = await player.home.send(view=view)
+            message = await player.home.send(
+                view=view, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to send the now-playing controller")
             return

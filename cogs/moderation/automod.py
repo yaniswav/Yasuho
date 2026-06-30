@@ -136,7 +136,7 @@ class AutoModPanel(AuthorView):
 
     def __init__(self, cog, guild, author_id, state, timeout=180):
         super().__init__(
-            author_id, timeout=timeout, deny_message=_("This panel isn't for you.")
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
         )
         self.cog = cog
         self.guild = guild

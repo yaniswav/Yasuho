@@ -23,6 +23,7 @@ import typing
 
 import discord
 
+from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorView
@@ -228,7 +229,12 @@ class _CompletionView(AuthorView):
             return str(value.id)
         if field.kind == "bool":
             return "true" if value else "false"
-        text = str(value)
+        # A prefilled discord object (e.g. a User parsed before the missing arg)
+        # in a text field re-converts reliably by id, not by its str() name.
+        if not isinstance(value, str) and hasattr(value, "id"):
+            text = str(value.id)
+        else:
+            text = str(value)
         if field.consume_rest:
             return text
         text = text.replace("\n", " ").strip()
@@ -533,7 +539,26 @@ class _ActionButton(discord.ui.Button):
             await self._owner._report(interaction)
 
 
+def _prefill_default(value):
+    """Render a prefilled value as a modal text-box default.
+
+    A discord object parsed before the missing argument (e.g. a User) prefills as
+    its id so it re-converts; plain strings pass through; None clears the box.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if hasattr(value, "id"):
+        return str(value.id)
+    return str(value)
+
+
 class _CompletionModal(discord.ui.Modal):
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
     def __init__(self, parent):
         super().__init__(
             title=_clip(
@@ -556,7 +581,7 @@ class _CompletionModal(discord.ui.Modal):
                     else discord.TextStyle.short
                 ),
                 max_length=2000 if field.consume_rest else 400,
-                default=str(existing) if isinstance(existing, str) else None,
+                default=_prefill_default(existing),
             )
             self.add_item(text_input)
             self.inputs[field.name] = text_input

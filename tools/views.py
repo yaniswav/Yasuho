@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import discord
 
+from tools import i18n
 from tools.i18n import N_, _
 
 # Deny wordings used as AuthorView.deny_message across the cogs. They are stored
@@ -62,6 +63,9 @@ class AuthorView(discord.ui.View):
         self._deny_message = deny_message
 
     async def interaction_check(self, interaction):
+        # Component callbacks run in their own task where get_context never set
+        # the locale; resolve it here so this check AND the callback localize.
+        await i18n.apply_interaction_locale(interaction)
         if interaction.user.id != self.author_id:
             # Translate in the clicker's locale (the stored wording is a
             # registered N_ literal, see _DENY_STRINGS).

@@ -31,6 +31,7 @@ from typing import Callable, Optional, Protocol
 
 import discord
 
+from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -411,6 +412,10 @@ class _EmbedModal(discord.ui.Modal):
     def __init__(self, host, title):
         super().__init__(title=title)
         self.host = host
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
 
     @property
     def embed_config(self) -> dict:
