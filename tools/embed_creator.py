@@ -477,28 +477,55 @@ class DescriptionModal(_EmbedModal):
 
 
 class ColourModal(_EmbedModal):
-    """Edit the embed colour. Empty clears to None; bad input does not commit."""
+    """Edit the embed colour: a quick-pick radio, or a typed hex / name.
+
+    A selected radio option wins; otherwise the text box is parsed (through the
+    host palette, so a cog override like Twitch's purple still applies). The box
+    defaults to the current colour, so submitting unchanged keeps it; clearing
+    the box and picking nothing clears the colour.
+    """
+
+    # Curated quick-pick names, resolved through the host palette on submit.
+    _QUICK = (
+        "blurple", "red", "green", "blue", "yellow",
+        "orange", "purple", "pink", "white", "black",
+    )
 
     def __init__(self, host):
         super().__init__(host, "Edit colour")
         current = self.embed_config.get("color")
+
+        self.radio = discord.ui.RadioGroup(required=False)
+        for name in self._QUICK:
+            self.radio.add_option(label=name.capitalize(), value=name)
+        self.add_item(
+            discord.ui.Label(
+                text="Quick colour (optional)",
+                component=self.radio,
+                description="Pick one, or edit the box below. Empty both to clear.",
+            )
+        )
+
         self.field = discord.ui.TextInput(
-            label="Colour (#hex or name)",
             style=discord.TextStyle.short,
             required=False,
             max_length=20,
             default=(f"#{current:06X}" if isinstance(current, int) else None),
-            placeholder="#5865F2, blurple, red, random...",
+            placeholder="#5865F2, blurple, random...",
         )
-        self.add_item(self.field)
+        self.add_item(
+            discord.ui.Label(text="Custom colour (hex or name)", component=self.field)
+        )
 
     async def on_submit(self, interaction):
         try:
-            raw = self.field.value.strip()
-            if not raw:
-                self.embed_config["color"] = None
-            else:
-                parsed = parse_colour(raw, getattr(self.host, "colour_names", None))
+            names = getattr(self.host, "colour_names", None)
+            raw = (self.field.value or "").strip()
+            chosen = self.radio.value
+            if chosen:
+                self.embed_config["color"] = parse_colour(chosen, names)
+            elif raw:
+                parsed = parse_colour(raw, names)
                 if parsed is None:
                     await interaction.response.send_message(
                         "That colour wasn't recognised. Use #rrggbb or a name "
@@ -507,6 +534,8 @@ class ColourModal(_EmbedModal):
                     )
                     return
                 self.embed_config["color"] = parsed
+            else:
+                self.embed_config["color"] = None
             await self._commit(interaction)
         except Exception:
             log.exception("embed_creator colour modal failed")
