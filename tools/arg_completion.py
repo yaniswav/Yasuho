@@ -24,6 +24,7 @@ import typing
 import discord
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -209,12 +210,12 @@ class _CompletionView(AuthorView):
         for index, field in enumerate(select_fields):
             self.add_item(_make_select(self, field, index))
         if not select_fields and text_fields:
-            self.add_item(_ActionButton(self, "Fill in", discord.ButtonStyle.primary, "modal", button_row))
+            self.add_item(_ActionButton(self, _("Fill in"), discord.ButtonStyle.primary, "modal", button_row))
         else:
             if text_fields:
-                self.add_item(_ActionButton(self, "Enter details", discord.ButtonStyle.secondary, "modal", button_row))
-            self.add_item(_ActionButton(self, "Run", discord.ButtonStyle.success, "run", button_row))
-        self.add_item(_ActionButton(self, "Cancel", discord.ButtonStyle.danger, "cancel", button_row))
+                self.add_item(_ActionButton(self, _("Enter details"), discord.ButtonStyle.secondary, "modal", button_row))
+            self.add_item(_ActionButton(self, _("Run"), discord.ButtonStyle.success, "run", button_row))
+        self.add_item(_ActionButton(self, _("Cancel"), discord.ButtonStyle.danger, "cancel", button_row))
 
     # -- value handling ---------------------------------------------------
 
@@ -252,37 +253,39 @@ class _CompletionView(AuthorView):
 
     def _instructions(self) -> str:
         if self.select_fields and self.text_fields:
-            return "Pick from the menus, use **Enter details** for the rest, then press **Run**."
+            return _("Pick from the menus, use **Enter details** for the rest, then press **Run**.")
         if self.select_fields:
-            return "Pick from the menus, then press **Run**."
-        return "Press **Fill in** to type the details."
+            return _("Pick from the menus, then press **Run**.")
+        return _("Press **Fill in** to type the details.")
 
     def _preview(self, field) -> str:
         value = self.collected.get(field.name)
         if field.kind in ("member", "role", "channel"):
             return getattr(value, "mention", str(value))
         if field.kind == "bool":
-            return "Yes" if value else "No"
+            return _("Yes") if value else _("No")
         return _clip(str(value), 60)
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(
-            title="Let's finish that command",
-            description=(
-                f"`{self.prefix}{self.command.qualified_name}` needs a little more info.\n"
-                f"{self._instructions()}"
+            title=_("Let's finish that command"),
+            description=_(
+                "`{command}` needs a little more info.\n{instructions}"
+            ).format(
+                command=f"{self.prefix}{self.command.qualified_name}",
+                instructions=self._instructions(),
             ),
             colour=random_colour(),
         )
         for field in self.fields:
             if field.name in self.provided:
-                value = f"Set: {self._preview(field)}"
+                value = _("Set: {preview}").format(preview=self._preview(field))
             elif field.required:
-                value = "Required"
+                value = _("Required")
             else:
-                value = "Optional - you can skip this"
+                value = _("Optional - you can skip this")
             embed.add_field(name=field.name, value=value, inline=False)
-        embed.set_footer(text="Only you can use this - it times out in 3 minutes.")
+        embed.set_footer(text=_("Only you can use this - it times out in 3 minutes."))
         return embed
 
     # -- interaction plumbing --------------------------------------------
@@ -292,7 +295,7 @@ class _CompletionView(AuthorView):
             return False
         if self.finished:
             await interaction.response.send_message(
-                "This prompt is no longer active. Please run the command again.",
+                _("This prompt is no longer active. Please run the command again."),
                 ephemeral=True,
             )
             return False
@@ -320,11 +323,11 @@ class _CompletionView(AuthorView):
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(
-                    "Something went wrong with that prompt.", ephemeral=True
+                    _("Something went wrong with that prompt."), ephemeral=True
                 )
             else:
                 await interaction.response.send_message(
-                    "Something went wrong with that prompt.", ephemeral=True
+                    _("Something went wrong with that prompt."), ephemeral=True
                 )
         except discord.HTTPException:
             log.debug("arg completion: report failed", exc_info=True)
@@ -342,7 +345,7 @@ class _CompletionView(AuthorView):
         if self.finished:
             try:
                 await interaction.response.send_message(
-                    "This prompt is no longer active. Please run the command again.",
+                    _("This prompt is no longer active. Please run the command again."),
                     ephemeral=True,
                 )
             except discord.HTTPException:
@@ -365,7 +368,9 @@ class _CompletionView(AuthorView):
         for child in self.children:
             child.disabled = True
         content = self._reconstruct()
-        running = f"Running `{self.prefix}{self.command.qualified_name}`..."
+        running = _("Running `{command}`...").format(
+            command=f"{self.prefix}{self.command.qualified_name}"
+        )
         try:
             await interaction.response.edit_message(content=running, embed=None, view=None)
         except discord.HTTPException:
@@ -405,7 +410,7 @@ class _CompletionView(AuthorView):
         self.stop()
         try:
             await interaction.response.edit_message(
-                content="Cancelled.", embed=None, view=None
+                content=_("Cancelled."), embed=None, view=None
             )
         except discord.HTTPException:
             log.debug("arg completion: cancel edit failed", exc_info=True)
@@ -420,7 +425,7 @@ class _CompletionView(AuthorView):
         for child in self.children:
             child.disabled = True
         try:
-            await self.message.edit(content="This prompt timed out.", view=self)
+            await self.message.edit(content=_("This prompt timed out."), view=self)
         except discord.HTTPException:
             log.debug("arg completion: timeout edit failed", exc_info=True)
 
@@ -431,7 +436,7 @@ class _CompletionView(AuthorView):
 class _MemberSelect(discord.ui.UserSelect):
     def __init__(self, parent, field, row):
         super().__init__(
-            placeholder=_clip(f"Choose {field.name}", 100),
+            placeholder=_clip(_("Choose {name}").format(name=field.name), 100),
             min_values=1,
             max_values=1,
             row=row,
@@ -446,7 +451,7 @@ class _MemberSelect(discord.ui.UserSelect):
 class _RoleSelect(discord.ui.RoleSelect):
     def __init__(self, parent, field, row):
         super().__init__(
-            placeholder=_clip(f"Choose {field.name}", 100),
+            placeholder=_clip(_("Choose {name}").format(name=field.name), 100),
             min_values=1,
             max_values=1,
             row=row,
@@ -464,7 +469,7 @@ class _ChannelSelect(discord.ui.ChannelSelect):
         if field.channel_types:
             kwargs["channel_types"] = field.channel_types
         super().__init__(
-            placeholder=_clip(f"Choose {field.name}", 100),
+            placeholder=_clip(_("Choose {name}").format(name=field.name), 100),
             min_values=1,
             max_values=1,
             row=row,
@@ -480,13 +485,13 @@ class _ChannelSelect(discord.ui.ChannelSelect):
 class _BoolSelect(discord.ui.Select):
     def __init__(self, parent, field, row):
         super().__init__(
-            placeholder=_clip(f"Choose {field.name}", 100),
+            placeholder=_clip(_("Choose {name}").format(name=field.name), 100),
             min_values=1,
             max_values=1,
             row=row,
             options=[
-                discord.SelectOption(label="Yes", value="true"),
-                discord.SelectOption(label="No", value="false"),
+                discord.SelectOption(label=_("Yes"), value="true"),
+                discord.SelectOption(label=_("No"), value="false"),
             ],
         )
         self._owner = parent
@@ -531,7 +536,12 @@ class _ActionButton(discord.ui.Button):
 class _CompletionModal(discord.ui.Modal):
     def __init__(self, parent):
         super().__init__(
-            title=_clip(f"Complete {parent.prefix}{parent.command.qualified_name}", 45)
+            title=_clip(
+                _("Complete {command}").format(
+                    command=f"{parent.prefix}{parent.command.qualified_name}"
+                ),
+                45,
+            )
         )
         self._owner = parent
         self.inputs = {}

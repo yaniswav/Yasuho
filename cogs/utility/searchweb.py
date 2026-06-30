@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -44,18 +45,20 @@ class SearchWeb(commands.Cog):
             except wikipedia.exceptions.DisambiguationError as e:
                 options = ", ".join(e.options[:5])
                 embed = discord.Embed(
-                    title="Disambiguation",
-                    description=f"That term is ambiguous. Did you mean: {options}?",
+                    title=_("Disambiguation"),
+                    description=_(
+                        "That term is ambiguous. Did you mean: {options}?"
+                    ).format(options=options),
                     colour=random_colour(),
                 )
                 await ctx.send(embed=embed)
 
             except wikipedia.exceptions.PageError:
-                await ctx.send("No page found.")
+                await ctx.send(_("No page found."))
 
             except Exception:
                 log.exception("failed to fetch wikipedia summary")
-                await ctx.send("Something went wrong while searching Wikipedia.")
+                await ctx.send(_("Something went wrong while searching Wikipedia."))
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -64,7 +67,7 @@ class SearchWeb(commands.Cog):
 
         token = config_loader.get("APITokens", "geniusKey", fallback=None)
         if not token:
-            return await ctx.send("Lyrics are not configured (set geniusKey).")
+            return await ctx.send(_("Lyrics are not configured (set geniusKey)."))
 
         async with ctx.typing():
 
@@ -79,10 +82,12 @@ class SearchWeb(commands.Cog):
                 lyrics = await self.bot.loop.run_in_executor(None, _l)
             except Exception:
                 log.exception("failed to fetch lyrics")
-                return await ctx.send("Something went wrong while fetching lyrics.")
+                return await ctx.send(
+                    _("Something went wrong while fetching lyrics.")
+                )
 
             if not lyrics:
-                return await ctx.send("No lyrics found.")
+                return await ctx.send(_("No lyrics found."))
 
             if len(lyrics) <= 4096:
                 embed = discord.Embed(
@@ -104,14 +109,16 @@ class SearchWeb(commands.Cog):
             url = ctx.message.attachments[0].url
 
         if not url:
-            return await ctx.send("Provide an image URL or attach an image.")
+            return await ctx.send(_("Provide an image URL or attach an image."))
 
         link = "https://www.google.com/searchbyimage?image_url=" + urllib.parse.quote(
             url, safe=""
         )
         embed = discord.Embed(
-            title="Reverse image search",
-            description=f"[Click here to search for the source]({link})",
+            title=_("Reverse image search"),
+            description=_("[Click here to search for the source]({link})").format(
+                link=link
+            ),
             colour=random_colour(),
         )
         embed.set_thumbnail(url=url)
@@ -124,7 +131,7 @@ class SearchWeb(commands.Cog):
 
         key = config_loader.get("APITokens", "osuKey", fallback=None)
         if not key:
-            return await ctx.send("osu! is not configured.")
+            return await ctx.send(_("osu! is not configured."))
 
         async with ctx.typing():
             try:
@@ -136,25 +143,27 @@ class SearchWeb(commands.Cog):
                         data = await r.json()
 
                 if not data:
-                    return await ctx.send("No osu! user found.")
+                    return await ctx.send(_("No osu! user found."))
 
                 u = data[0]
                 embed = discord.Embed(
-                    title=f"osu! stats for {u['username']}",
+                    title=_("osu! stats for {username}").format(
+                        username=u["username"]
+                    ),
                     colour=random_colour(),
                 )
-                embed.add_field(name="Rank", value=u["pp_rank"])
-                embed.add_field(name="PP", value=u["pp_raw"])
-                embed.add_field(name="Accuracy", value=u["accuracy"])
-                embed.add_field(name="Level", value=u["level"])
-                embed.add_field(name="Playcount", value=u["playcount"])
-                embed.add_field(name="Country", value=u["country"])
+                embed.add_field(name=_("Rank"), value=u["pp_rank"])
+                embed.add_field(name=_("PP"), value=u["pp_raw"])
+                embed.add_field(name=_("Accuracy"), value=u["accuracy"])
+                embed.add_field(name=_("Level"), value=u["level"])
+                embed.add_field(name=_("Playcount"), value=u["playcount"])
+                embed.add_field(name=_("Country"), value=u["country"])
                 embed.set_thumbnail(url=f"https://a.ppy.sh/{u['user_id']}")
                 await ctx.send(embed=embed)
 
             except Exception:
                 log.exception("failed to fetch osu! user")
-                await ctx.send("Something went wrong while fetching osu! data.")
+                await ctx.send(_("Something went wrong while fetching osu! data."))
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -168,15 +177,15 @@ class SearchWeb(commands.Cog):
                         f"https://api.mojang.com/users/profiles/minecraft/{username}"
                     ) as r:
                         if r.status != 200:
-                            return await ctx.send("No such Minecraft account.")
+                            return await ctx.send(_("No such Minecraft account."))
                         data = await r.json()
 
                 uuid = data["id"]
                 embed = discord.Embed(
-                    title=f"Minecraft account: {data['name']}",
+                    title=_("Minecraft account: {name}").format(name=data["name"]),
                     colour=random_colour(),
                 )
-                embed.add_field(name="UUID", value=uuid)
+                embed.add_field(name=_("UUID"), value=uuid)
                 embed.set_image(
                     url=f"https://crafatar.com/renders/body/{uuid}?overlay"
                 )
@@ -184,7 +193,9 @@ class SearchWeb(commands.Cog):
 
             except Exception:
                 log.exception("failed to fetch minecraft account")
-                await ctx.send("Something went wrong while fetching Minecraft data.")
+                await ctx.send(
+                    _("Something went wrong while fetching Minecraft data.")
+                )
 
 
 async def setup(bot):

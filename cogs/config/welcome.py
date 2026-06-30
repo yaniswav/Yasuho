@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from tools import embed_creator, settings, welcome_card
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -69,10 +70,10 @@ class AddGifModal(discord.ui.Modal):
     """Add a single GIF/image URL to the random pool."""
 
     def __init__(self, manage_view):
-        super().__init__(title="Add a GIF")
+        super().__init__(title=_("Add a GIF"))
         self.manage_view = manage_view
         self.url_field = discord.ui.TextInput(
-            label="GIF or image URL",
+            label=_("GIF or image URL"),
             required=True,
             max_length=1024,
             placeholder="https://...",
@@ -84,7 +85,7 @@ class AddGifModal(discord.ui.Modal):
             url = self.url_field.value.strip()
             if not embed_creator.is_url(url):
                 return await interaction.response.send_message(
-                    "That doesn't look like a valid URL.", ephemeral=True
+                    _("That doesn't look like a valid URL."), ephemeral=True
                 )
             gifs = self.manage_view.config.setdefault("gifs", [])
             gifs.append(url)
@@ -96,7 +97,7 @@ class AddGifModal(discord.ui.Modal):
             log.exception("Welcome add-GIF modal failed")
             try:
                 await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
+                    _("Something went wrong."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass
@@ -118,7 +119,7 @@ class WelcomeChannelSelect(discord.ui.ChannelSelect):
                 defaults = [channel]
         super().__init__(
             channel_types=[discord.ChannelType.text],
-            placeholder="Select the welcome channel...",
+            placeholder=_("Select the welcome channel..."),
             min_values=1,
             max_values=1,
             default_values=defaults,
@@ -143,7 +144,7 @@ class _ToggleButton(discord.ui.Button):
         self.key = key
         on = bool(panel.config.get(key))
         super().__init__(
-            label=f"{label}: {'On' if on else 'Off'}",
+            label=label + ": " + (_("On") if on else _("Off")),
             style=(
                 discord.ButtonStyle.success
                 if on
@@ -168,7 +169,7 @@ class _ManageGifsButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         super().__init__(
-            label="Manage GIFs", style=discord.ButtonStyle.primary, row=2
+            label=_("Manage GIFs"), style=discord.ButtonStyle.primary, row=2
         )
 
     async def callback(self, interaction):
@@ -186,7 +187,7 @@ class _PreviewButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         super().__init__(
-            label="Preview", style=discord.ButtonStyle.primary, row=2
+            label=_("Preview"), style=discord.ButtonStyle.primary, row=2
         )
 
     async def callback(self, interaction):
@@ -197,7 +198,7 @@ class _PreviewButton(discord.ui.Button):
             log.exception("Welcome preview failed")
             try:
                 await interaction.followup.send(
-                    "Could not render the preview.", ephemeral=True
+                    _("Could not render the preview."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass
@@ -208,7 +209,7 @@ class _EnableButton(discord.ui.Button):
         self.panel = panel
         enabled = bool(panel.config.get("enabled"))
         super().__init__(
-            label="Disable" if enabled else "Enable",
+            label=_("Disable") if enabled else _("Enable"),
             style=(
                 discord.ButtonStyle.danger
                 if enabled
@@ -241,13 +242,13 @@ class RemoveGifSelect(discord.ui.Select):
             name = url.rsplit("/", 1)[-1] or url
             options.append(
                 discord.SelectOption(
-                    label=name[:100] or "GIF",
+                    label=name[:100] or _("GIF"),
                     value=str(index),
                     description=url[:100],
                 )
             )
         super().__init__(
-            placeholder="Remove a GIF...",
+            placeholder=_("Remove a GIF..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -269,7 +270,7 @@ class RemoveGifSelect(discord.ui.Select):
             log.exception("Welcome remove-GIF select failed")
             try:
                 await interaction.response.send_message(
-                    "Something went wrong.", ephemeral=True
+                    _("Something went wrong."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass
@@ -288,14 +289,17 @@ class ManageGifsView(AuthorView):
         self.cog = panel.cog
         self.guild = panel.guild
         self.config = panel.config
+        # The decorator label is fixed at class-definition time (before any
+        # locale is set), so translate it per instance against the live locale.
+        self.add_button.label = _("Add GIF")
         if self.config.get("gifs"):
             self.add_item(RemoveGifSelect(self))
 
     def build_embed(self):
         gifs = self.config.get("gifs") or []
         embed = discord.Embed(
-            title="Manage welcome GIFs",
-            description=(
+            title=_("Manage welcome GIFs"),
+            description=_(
                 "Add image/GIF URLs to the random pool, or remove one below. "
                 "Turn on **Random GIF** on the main panel to use the pool."
             ),
@@ -304,15 +308,17 @@ class ManageGifsView(AuthorView):
         if gifs:
             lines = [f"{i + 1}. {url}" for i, url in enumerate(gifs[:15])]
             if len(gifs) > 15:
-                lines.append(f"...and {len(gifs) - 15} more")
+                lines.append(_("...and {count} more").format(count=len(gifs) - 15))
             value = "\n".join(lines)
             embed.add_field(
-                name=f"Pool ({len(gifs)})", value=value[:1024], inline=False
+                name=_("Pool ({count})").format(count=len(gifs)),
+                value=value[:1024],
+                inline=False,
             )
         else:
             embed.add_field(
-                name="Pool (0)",
-                value="No GIFs yet. Add one to build the random pool.",
+                name=_("Pool (0)"),
+                value=_("No GIFs yet. Add one to build the random pool."),
                 inline=False,
             )
         return embed
@@ -327,7 +333,7 @@ class ManageGifsView(AuthorView):
             log.exception("Welcome add-GIF launch failed")
             try:
                 await interaction.response.send_message(
-                    "Could not open the form.", ephemeral=True
+                    _("Could not open the form."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass
@@ -378,12 +384,12 @@ class WelcomePanel(AuthorView):
         self.add_item(WelcomeChannelSelect(self))
         self.add_item(
             embed_creator.make_edit_select(
-                self, placeholder="Edit the welcome embed...", row=1
+                self, placeholder=_("Edit the welcome embed..."), row=1
             )
         )
-        self.add_item(_ToggleButton(self, "card", "Card"))
-        self.add_item(_ToggleButton(self, "random_gif", "Random GIF"))
-        self.add_item(_ToggleButton(self, "ping", "Ping"))
+        self.add_item(_ToggleButton(self, "card", _("Card")))
+        self.add_item(_ToggleButton(self, "random_gif", _("Random GIF")))
+        self.add_item(_ToggleButton(self, "ping", _("Ping")))
         self.add_item(_ManageGifsButton(self))
         self.add_item(_PreviewButton(self))
         self.add_item(_EnableButton(self))
@@ -412,8 +418,8 @@ class WelcomePanel(AuthorView):
         colour = embed_cfg.get("color")
 
         embed = discord.Embed(
-            title="Welcome system",
-            description=(
+            title=_("Welcome system"),
+            description=_(
                 "Design the greeting new members receive. Use the menus below; "
                 "every change saves instantly. Hit **Preview** to see it live."
             ),
@@ -421,45 +427,48 @@ class WelcomePanel(AuthorView):
         )
 
         cid = config.get("channel_id")
-        channel_value = f"<#{cid}>" if cid else "*Not set.*"
+        channel_value = f"<#{cid}>" if cid else _("*Not set.*")
         embed.add_field(
-            name="Status",
-            value="\U0001F7E2 Enabled" if enabled else "\U0001F534 Disabled",
+            name=_("Status"),
+            value=(
+                ("\U0001F7E2 " + _("Enabled"))
+                if enabled
+                else ("\U0001F534 " + _("Disabled"))
+            ),
             inline=True,
         )
-        embed.add_field(name="Channel", value=channel_value, inline=True)
+        embed.add_field(name=_("Channel"), value=channel_value, inline=True)
         embed.add_field(
-            name="GIF pool",
-            value=f"{len(config.get('gifs') or [])} saved",
-            inline=True,
-        )
-
-        embed.add_field(
-            name="Card",
-            value="On" if config.get("card") else "Off",
-            inline=True,
-        )
-        embed.add_field(
-            name="Random GIF",
-            value="On" if config.get("random_gif") else "Off",
-            inline=True,
-        )
-        embed.add_field(
-            name="Ping",
-            value="On" if config.get("ping") else "Off",
+            name=_("GIF pool"),
+            value=_("{count} saved").format(count=len(config.get("gifs") or [])),
             inline=True,
         )
 
         embed.add_field(
-            name="Embed",
+            name=_("Card"),
+            value=_("On") if config.get("card") else _("Off"),
+            inline=True,
+        )
+        embed.add_field(
+            name=_("Random GIF"),
+            value=_("On") if config.get("random_gif") else _("Off"),
+            inline=True,
+        )
+        embed.add_field(
+            name=_("Ping"),
+            value=_("On") if config.get("ping") else _("Off"),
+            inline=True,
+        )
+
+        embed.add_field(
+            name=_("Embed"),
             value=embed_creator.summarise(embed_cfg),
             inline=False,
         )
 
         embed.set_footer(
-            text=(
-                "Only you can use these controls. "
-                f"Placeholders: {PLACEHOLDER_HINT}"
+            text=_("Only you can use these controls. Placeholders: {placeholders}").format(
+                placeholders=PLACEHOLDER_HINT
             )
         )
         return embed
@@ -488,7 +497,7 @@ class WelcomePanel(AuthorView):
             pass
 
     async def _error(self, interaction):
-        await embed_creator.notify_failure(interaction, "Something went wrong.")
+        await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
 
 # ----------------------------------------------------------------------
@@ -573,7 +582,7 @@ class Welcome(commands.Cog):
             embed.set_image(url=random.choice(gifs))
 
         if not embed_creator.embed_has_content(embed):
-            embed.description = substitute("Welcome {mention}!")
+            embed.description = substitute(_("Welcome {mention}!"))
 
         content = member.mention if config.get("ping") else None
         return content, embed
@@ -654,14 +663,14 @@ class Welcome(commands.Cog):
         config["embed"]["description"] = message
         await self.save(ctx.guild.id, config)
 
-        embed = discord.Embed(title="Welcome message", colour=random_colour())
-        embed.add_field(name="Channel", value=channel.mention, inline=False)
+        embed = discord.Embed(title=_("Welcome message"), colour=random_colour())
+        embed.add_field(name=_("Channel"), value=channel.mention, inline=False)
         embed.add_field(
-            name="Message",
+            name=_("Message"),
             value=(message if len(message) <= 1024 else message[:1021] + "..."),
             inline=False,
         )
-        embed.set_footer(text="Use /welcome to open the full builder.")
+        embed.set_footer(text=_("Use /welcome to open the full builder."))
         await ctx.send(embed=embed)
 
     @welcome.command(name="disable")
@@ -674,10 +683,10 @@ class Welcome(commands.Cog):
         config["enabled"] = False
         await self.save(ctx.guild.id, config)
 
-        embed = discord.Embed(title="Welcome message", colour=random_colour())
+        embed = discord.Embed(title=_("Welcome message"), colour=random_colour())
         embed.add_field(
-            name="Disabled",
-            value="Welcome messages have been turned off.",
+            name=_("Disabled"),
+            value=_("Welcome messages have been turned off."),
             inline=False,
         )
         await ctx.send(embed=embed)
@@ -740,7 +749,9 @@ class Welcome(commands.Cog):
                 config = await self.get_config(member.guild.id)
                 channel = member.guild.get_channel(config.get("channel_id"))
                 if channel is not None:
-                    await channel.send(f"Welcome {member.mention}!")
+                    await channel.send(
+                        _("Welcome {member}!").format(member=member.mention)
+                    )
             except Exception:
                 log.exception("Welcome fallback send failed")
 

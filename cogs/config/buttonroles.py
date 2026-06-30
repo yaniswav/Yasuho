@@ -24,6 +24,7 @@ from discord.ext import commands
 
 from tools import embed_creator
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView
 
@@ -124,14 +125,14 @@ class ButtonRoleButton(discord.ui.Button):
         member = interaction.user
         if guild is None or not isinstance(member, discord.Member):
             await interaction.response.send_message(
-                "Roles can only be toggled inside a server.", ephemeral=True
+                _("Roles can only be toggled inside a server."), ephemeral=True
             )
             return
 
         role = guild.get_role(self.role_id)
         if role is None:
             await interaction.response.send_message(
-                "That role no longer exists.", ephemeral=True
+                _("That role no longer exists."), ephemeral=True
             )
             return
 
@@ -140,27 +141,29 @@ class ButtonRoleButton(discord.ui.Button):
             if role in member.roles:
                 await member.remove_roles(role, reason="Button role")
                 await interaction.response.send_message(
-                    f"Removed {role.mention} from you.",
+                    _("Removed {role} from you.").format(role=role.mention),
                     ephemeral=True,
                     allowed_mentions=none,
                 )
             else:
                 await member.add_roles(role, reason="Button role")
                 await interaction.response.send_message(
-                    f"Gave you {role.mention}.",
+                    _("Gave you {role}.").format(role=role.mention),
                     ephemeral=True,
                     allowed_mentions=none,
                 )
         except discord.Forbidden:
             await interaction.response.send_message(
-                "I don't have permission to manage that role. It may be above "
-                "my highest role.",
+                _(
+                    "I don't have permission to manage that role. It may be above "
+                    "my highest role."
+                ),
                 ephemeral=True,
             )
         except discord.HTTPException:
             log.exception("Failed to toggle button role %s", self.role_id)
             await interaction.response.send_message(
-                "Something went wrong toggling that role.", ephemeral=True
+                _("Something went wrong toggling that role."), ephemeral=True
             )
 
 
@@ -194,7 +197,7 @@ class _AddRoleSelect(discord.ui.RoleSelect):
 
     def __init__(self):
         super().__init__(
-            placeholder="Add a role as a button...",
+            placeholder=_("Add a role as a button..."),
             min_values=1,
             max_values=1,
             row=1,
@@ -211,7 +214,7 @@ class _TargetChannelSelect(discord.ui.ChannelSelect):
         channel = builder.guild.get_channel(builder.target_channel_id)
         super().__init__(
             channel_types=[discord.ChannelType.text, discord.ChannelType.news],
-            placeholder="Channel to post the panel in...",
+            placeholder=_("Channel to post the panel in..."),
             min_values=1,
             max_values=1,
             default_values=[channel] if channel is not None else [],
@@ -232,13 +235,13 @@ class _RemoveButtonSelect(discord.ui.Select):
             name = button.get("label") or (role.name if role else str(button["role_id"]))
             options.append(
                 discord.SelectOption(
-                    label=name[:100] or "Role",
+                    label=name[:100] or _("Role"),
                     value=str(index),
                     description=(role.name[:100] if role else None),
                 )
             )
         super().__init__(
-            placeholder="Remove a role button...",
+            placeholder=_("Remove a role button..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -261,23 +264,23 @@ class AddButtonModal(discord.ui.Modal):
     """Customise a new role button: label, emoji and ButtonStyle."""
 
     def __init__(self, builder, role):
-        super().__init__(title="Add role button")
+        super().__init__(title=_("Add role button"))
         self.builder = builder
         self.role = role
         self.label_field = discord.ui.TextInput(
-            label="Button label",
+            label=_("Button label"),
             required=True,
             max_length=80,
             default=role.name[:80],
         )
         self.emoji_field = discord.ui.TextInput(
-            label="Emoji (optional)",
+            label=_("Emoji (optional)"),
             required=False,
             max_length=64,
-            placeholder="Paste an emoji, or leave blank",
+            placeholder=_("Paste an emoji, or leave blank"),
         )
         self.style_field = discord.ui.TextInput(
-            label="Style",
+            label=_("Style"),
             required=False,
             max_length=16,
             default="secondary",
@@ -292,13 +295,17 @@ class AddButtonModal(discord.ui.Modal):
             buttons = self.builder.config["buttons"]
             if len(buttons) >= MAX_BUTTONS:
                 await interaction.response.send_message(
-                    f"A panel can have at most {MAX_BUTTONS} buttons.",
+                    _("A panel can have at most {max} buttons.").format(
+                        max=MAX_BUTTONS
+                    ),
                     ephemeral=True,
                 )
                 return
             if any(b["role_id"] == self.role.id for b in buttons):
                 await interaction.response.send_message(
-                    f"{self.role.mention} already has a button on this panel.",
+                    _("{role} already has a button on this panel.").format(
+                        role=self.role.mention
+                    ),
                     ephemeral=True,
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
@@ -321,10 +328,10 @@ class AttachModal(discord.ui.Modal):
     """Collect a message ID or jump link to attach the role buttons to."""
 
     def __init__(self, builder):
-        super().__init__(title="Attach to a message")
+        super().__init__(title=_("Attach to a message"))
         self.builder = builder
         self.ref_field = discord.ui.TextInput(
-            label="Message ID or link",
+            label=_("Message ID or link"),
             required=True,
             max_length=200,
             placeholder="123456789012345678 or https://discord.com/channels/...",
@@ -408,8 +415,8 @@ class BuilderView(AuthorView):
         embed_cfg = self.config.get("embed") or {}
         colour = embed_cfg.get("color")
         embed = discord.Embed(
-            title="Button role builder",
-            description=(
+            title=_("Button role builder"),
+            description=_(
                 "Design the panel below. Edit the embed, add role buttons, then "
                 "**Post panel** to a channel or **Attach to message** to drop the "
                 "buttons onto a message I already sent. Every change is kept until "
@@ -429,20 +436,28 @@ class BuilderView(AuthorView):
                 lines.append(f"{prefix} {label} -> <@&{button['role_id']}>")
             value = "\n".join(lines)
         else:
-            value = "*No buttons yet. Pick a role below to add one.*"
-        embed.add_field(name=f"Buttons ({len(buttons)})", value=value[:1024], inline=False)
+            value = _("*No buttons yet. Pick a role below to add one.*")
+        embed.add_field(
+            name=_("Buttons ({count})").format(count=len(buttons)),
+            value=value[:1024],
+            inline=False,
+        )
 
         embed.add_field(
-            name="Embed",
+            name=_("Embed"),
             value=embed_creator.summarise(embed_cfg),
             inline=False,
         )
         embed.add_field(
-            name="Post target",
-            value=f"<#{self.target_channel_id}>" if self.target_channel_id else "*Not set.*",
+            name=_("Post target"),
+            value=(
+                f"<#{self.target_channel_id}>"
+                if self.target_channel_id
+                else _("*Not set.*")
+            ),
             inline=False,
         )
-        embed.set_footer(text="Only you can use these controls.")
+        embed.set_footer(text=_("Only you can use these controls."))
         return embed
 
     def _render_panel_embed(self, buttons):
@@ -450,10 +465,13 @@ class BuilderView(AuthorView):
 
         embed = embed_creator.render(self.config["embed"])
         if not embed_creator.embed_has_content(embed):
-            embed.title = "Self-assignable roles"
+            embed.title = _("Self-assignable roles")
             embed.description = (
-                "Click a button below to give yourself a role, or click it again "
-                "to remove it:\n"
+                _(
+                    "Click a button below to give yourself a role, or click it "
+                    "again to remove it:"
+                )
+                + "\n"
                 + "\n".join(f"- <@&{b['role_id']}>" for b in buttons)
             )
             if embed.colour is None:
@@ -465,14 +483,18 @@ class BuilderView(AuthorView):
         try:
             if not self._can_assign(role):
                 await interaction.response.send_message(
-                    "I can't assign that role - it's either managed by an "
-                    "integration or above my highest role.",
+                    _(
+                        "I can't assign that role - it's either managed by an "
+                        "integration or above my highest role."
+                    ),
                     ephemeral=True,
                 )
                 return
             if any(b["role_id"] == role.id for b in self.config["buttons"]):
                 await interaction.response.send_message(
-                    f"{role.mention} already has a button on this panel.",
+                    _("{role} already has a button on this panel.").format(
+                        role=role.mention
+                    ),
                     ephemeral=True,
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
@@ -504,7 +526,7 @@ class BuilderView(AuthorView):
         try:
             if not self._assignable_buttons():
                 await interaction.response.send_message(
-                    "Add at least one assignable role button before attaching.",
+                    _("Add at least one assignable role button before attaching."),
                     ephemeral=True,
                 )
                 return
@@ -527,8 +549,8 @@ class BuilderView(AuthorView):
     async def cancel_button(self, interaction, button):
         try:
             embed = discord.Embed(
-                title="Cancelled",
-                description="Panel building was cancelled.",
+                title=_("Cancelled"),
+                description=_("Panel building was cancelled."),
                 colour=random_colour(),
             )
             await self._finish(interaction, embed)
@@ -543,12 +565,16 @@ class BuilderView(AuthorView):
         if not assignable:
             if not buttons:
                 await interaction.response.send_message(
-                    "Add at least one role button before posting.", ephemeral=True
+                    _("Add at least one role button before posting."),
+                    ephemeral=True,
                 )
             else:
                 await interaction.response.send_message(
-                    "None of those roles can be assigned by me - they're either "
-                    "managed by an integration or above my highest role.",
+                    _(
+                        "None of those roles can be assigned by me - they're "
+                        "either managed by an integration or above my highest "
+                        "role."
+                    ),
                     ephemeral=True,
                 )
             return
@@ -556,7 +582,8 @@ class BuilderView(AuthorView):
         channel = self.guild.get_channel(self.target_channel_id)
         if channel is None:
             await interaction.response.send_message(
-                "Pick a valid text channel to post the panel in.", ephemeral=True
+                _("Pick a valid text channel to post the panel in."),
+                ephemeral=True,
             )
             return
 
@@ -566,13 +593,16 @@ class BuilderView(AuthorView):
             panel = await channel.send(embed=embed, view=ButtonRoleView(rows))
         except discord.Forbidden:
             await interaction.response.send_message(
-                f"I can't send messages in {channel.mention}.", ephemeral=True
+                _("I can't send messages in {channel}.").format(
+                    channel=channel.mention
+                ),
+                ephemeral=True,
             )
             return
         except discord.HTTPException:
             log.exception("Failed to post button-role panel")
             await interaction.response.send_message(
-                "Something went wrong posting the panel.", ephemeral=True
+                _("Something went wrong posting the panel."), ephemeral=True
             )
             return
 
@@ -580,14 +610,18 @@ class BuilderView(AuthorView):
 
         skipped = len(buttons) - len(assignable)
         done = discord.Embed(
-            title="Panel posted",
-            description=f"Your button-role panel is live in {channel.mention}.",
+            title=_("Panel posted"),
+            description=_("Your button-role panel is live in {channel}.").format(
+                channel=channel.mention
+            ),
             colour=random_colour(),
         )
         if skipped:
             done.add_field(
-                name="Skipped",
-                value=f"{skipped} role(s) I can't assign were left off.",
+                name=_("Skipped"),
+                value=_("{count} role(s) I can't assign were left off.").format(
+                    count=skipped
+                ),
                 inline=False,
             )
         await self._finish(interaction, done)
@@ -596,7 +630,7 @@ class BuilderView(AuthorView):
         assignable = self._assignable_buttons()
         if not assignable:
             await interaction.response.send_message(
-                "Add at least one assignable role button before attaching.",
+                _("Add at least one assignable role button before attaching."),
                 ephemeral=True,
             )
             return
@@ -604,21 +638,22 @@ class BuilderView(AuthorView):
         parsed = _parse_message_ref(raw, self.target_channel_id)
         if parsed is None:
             await interaction.response.send_message(
-                "That doesn't look like a message ID or a Discord message link.",
+                _("That doesn't look like a message ID or a Discord message link."),
                 ephemeral=True,
             )
             return
         guild_id, channel_id, message_id = parsed
         if guild_id is not None and guild_id != self.guild.id:
             await interaction.response.send_message(
-                "That message link points to a different server.", ephemeral=True
+                _("That message link points to a different server."),
+                ephemeral=True,
             )
             return
 
         channel = self.guild.get_channel_or_thread(channel_id)
         if channel is None:
             await interaction.response.send_message(
-                "I can't find that channel in this server.", ephemeral=True
+                _("I can't find that channel in this server."), ephemeral=True
             )
             return
 
@@ -626,29 +661,34 @@ class BuilderView(AuthorView):
             target = await channel.fetch_message(message_id)
         except discord.NotFound:
             await interaction.response.send_message(
-                "I couldn't find a message with that ID in that channel.",
+                _("I couldn't find a message with that ID in that channel."),
                 ephemeral=True,
             )
             return
         except discord.Forbidden:
             await interaction.response.send_message(
-                f"I can't read messages in {channel.mention}.", ephemeral=True
+                _("I can't read messages in {channel}.").format(
+                    channel=channel.mention
+                ),
+                ephemeral=True,
             )
             return
         except discord.HTTPException:
             log.exception("Failed to fetch attach target message")
             await interaction.response.send_message(
-                "Something went wrong fetching that message.", ephemeral=True
+                _("Something went wrong fetching that message."), ephemeral=True
             )
             return
 
         # Discord only lets a bot edit components onto a message IT authored.
         if target.author.id != self.cog.bot.user.id:
             await interaction.response.send_message(
-                "I can only add role buttons to a message I posted myself - "
-                "Discord won't let a bot edit buttons onto someone else's "
-                "message. Use **Post panel** to publish a fresh panel instead "
-                "(I'll happily recreate the same embed and buttons there).",
+                _(
+                    "I can only add role buttons to a message I posted myself - "
+                    "Discord won't let a bot edit buttons onto someone else's "
+                    "message. Use **Post panel** to publish a fresh panel instead "
+                    "(I'll happily recreate the same embed and buttons there)."
+                ),
                 ephemeral=True,
             )
             return
@@ -664,24 +704,23 @@ class BuilderView(AuthorView):
             await target.edit(**edit_kwargs)
         except discord.Forbidden:
             await interaction.response.send_message(
-                "I'm not allowed to edit that message.", ephemeral=True
+                _("I'm not allowed to edit that message."), ephemeral=True
             )
             return
         except discord.HTTPException:
             log.exception("Failed to attach button-role view to message %s", message_id)
             await interaction.response.send_message(
-                "Something went wrong attaching the buttons.", ephemeral=True
+                _("Something went wrong attaching the buttons."), ephemeral=True
             )
             return
 
         await self._persist(target.id, channel.id, assignable, rows)
 
         done = discord.Embed(
-            title="Buttons attached",
-            description=(
-                f"Added the role button(s) to [that message]({target.jump_url}) "
-                f"in {channel.mention}."
-            ),
+            title=_("Buttons attached"),
+            description=_(
+                "Added the role button(s) to [that message]({link}) in {channel}."
+            ).format(link=target.jump_url, channel=channel.mention),
             colour=random_colour(),
         )
         await self._finish(interaction, done)
@@ -841,8 +880,10 @@ class ButtonRoles(commands.Cog):
 
         if not rows:
             embed = discord.Embed(
-                title="Button roles",
-                description="No button-role panels have been set up for this guild.",
+                title=_("Button roles"),
+                description=_(
+                    "No button-role panels have been set up for this guild."
+                ),
                 colour=random_colour(),
             )
             await ctx.send(embed=embed)
@@ -861,7 +902,7 @@ class ButtonRoles(commands.Cog):
             lines.append(f"[`{mid}`]({link}) - {roles}")
 
         await Paginator(
-            paginate_lines(lines, title="Button roles"), author_id=ctx.author.id
+            paginate_lines(lines, title=_("Button roles")), author_id=ctx.author.id
         ).start(ctx)
 
     @buttonrole.command(name="delete")
@@ -873,7 +914,7 @@ class ButtonRoles(commands.Cog):
         try:
             mid = int(message_id)
         except ValueError:
-            await ctx.send("That doesn't look like a valid message ID.")
+            await ctx.send(_("That doesn't look like a valid message ID."))
             return
 
         query = """
@@ -884,7 +925,7 @@ class ButtonRoles(commands.Cog):
         rows = await self.bot.db_pool.fetch(query, mid, ctx.guild.id)
 
         if not rows:
-            await ctx.send("No button-role panel found with that message ID.")
+            await ctx.send(_("No button-role panel found with that message ID."))
             return
 
         # Best-effort: strip the buttons off the message rather than delete it,
@@ -898,8 +939,10 @@ class ButtonRoles(commands.Cog):
                 pass
 
         embed = discord.Embed(
-            title="Button-role panel deleted",
-            description=f"Removed `{len(rows)}` role button(s) for message `{mid}`.",
+            title=_("Button-role panel deleted"),
+            description=_(
+                "Removed `{count}` role button(s) for message `{mid}`."
+            ).format(count=len(rows), mid=mid),
             colour=random_colour(),
         )
         await ctx.send(embed=embed)

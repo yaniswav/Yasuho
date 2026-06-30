@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from tools import db, embed_creator, settings
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ def _member_event_embed(user, action):
         timestamp=discord.utils.utcnow(),
     )
     embed.set_thumbnail(url=user.display_avatar.url)
-    embed.set_footer(text=f"ID: {user.id}")
+    embed.set_footer(text=_("ID: {id}").format(id=user.id))
     return embed
 
 
@@ -72,7 +73,7 @@ class LogChannelSelect(discord.ui.ChannelSelect):
         self.panel = panel
         super().__init__(
             channel_types=[discord.ChannelType.text],
-            placeholder="Select the log channel...",
+            placeholder=_("Select the log channel..."),
             min_values=1,
             max_values=1,
             row=0,
@@ -104,7 +105,7 @@ class EventSelect(discord.ui.Select):
             for key in EVENT_KEYS
         ]
         super().__init__(
-            placeholder="Choose which events to log...",
+            placeholder=_("Choose which events to log..."),
             min_values=0,
             max_values=len(EVENT_KEYS),  # all six event keys
             options=options,
@@ -127,7 +128,7 @@ class ModLogPanel(AuthorView):
 
     def __init__(self, cog, author_id, *, channel_id, events, timeout=180):
         super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
+            author_id, timeout=timeout, deny_message=_("This panel isn't for you.")
         )
         self.cog = cog
         self.channel_id = channel_id
@@ -146,7 +147,7 @@ class ModLogPanel(AuthorView):
         if self.channel_id:
             channel_value = f"<#{self.channel_id}>"
         else:
-            channel_value = "*Not set - logging is off.*"
+            channel_value = _("*Not set - logging is off.*")
 
         lines = [
             f"{'🟢' if key in enabled else '⚪'} {EVENT_LABELS[key]}"
@@ -154,16 +155,16 @@ class ModLogPanel(AuthorView):
         ]
 
         embed = discord.Embed(
-            title="Mod-log settings",
-            description=(
+            title=_("Mod-log settings"),
+            description=_(
                 "Choose where server events are logged and which events to "
                 "record. Changes apply instantly."
             ),
             colour=0x5865F2,
         )
-        embed.add_field(name="Log channel", value=channel_value, inline=False)
-        embed.add_field(name="Events", value="\n".join(lines), inline=False)
-        embed.set_footer(text="Only you can use these controls.")
+        embed.add_field(name=_("Log channel"), value=channel_value, inline=False)
+        embed.add_field(name=_("Events"), value="\n".join(lines), inline=False)
+        embed.set_footer(text=_("Only you can use these controls."))
         return embed
 
     async def _refresh(self, interaction):
@@ -279,8 +280,10 @@ class ModLog(commands.Cog):
 
         await self._set_channel(ctx.guild.id, channel.id)
         embed = discord.Embed(
-            title="Mod log",
-            description=f"Mod-log channel set to {channel.mention}.",
+            title=_("Mod log"),
+            description=_("Mod-log channel set to {channel}.").format(
+                channel=channel.mention
+            ),
             colour=EVENT_COLOURS["join"],
         )
         await ctx.send(embed=embed)
@@ -291,8 +294,8 @@ class ModLog(commands.Cog):
 
         await self._disable(ctx.guild.id)
         embed = discord.Embed(
-            title="Mod log",
-            description="Mod-log has been disabled for this guild.",
+            title=_("Mod log"),
+            description=_("Mod-log has been disabled for this guild."),
             colour=EVENT_COLOURS["leave"],
         )
         await ctx.send(embed=embed)
@@ -388,7 +391,7 @@ class ModLog(commands.Cog):
 
         embed = _member_event_embed(member, "join")
         embed.add_field(
-            name="Account created",
+            name=_("Account created"),
             value=discord.utils.format_dt(member.created_at, "R"),
         )
         await self.post_action(member.guild, embed)
@@ -402,24 +405,26 @@ class ModLog(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="Message Deleted",
+            title=_("Message Deleted"),
             colour=EVENT_COLOURS["message_delete"],
             timestamp=discord.utils.utcnow(),
         )
         embed.set_thumbnail(url=message.author.display_avatar.url)
         embed.add_field(
-            name="Author", value=f"{message.author.mention} ({message.author})"
+            name=_("Author"), value=f"{message.author.mention} ({message.author})"
         )
-        embed.add_field(name="Channel", value=message.channel.mention)
+        embed.add_field(name=_("Channel"), value=message.channel.mention)
         embed.add_field(
-            name="Content", value=message.content[:1024], inline=False
+            name=_("Content"), value=message.content[:1024], inline=False
         )
         jump = getattr(message, "jump_url", None)
         if jump:
             embed.add_field(
-                name="Jump", value=f"[Go to location]({jump})", inline=False
+                name=_("Jump"),
+                value=_("[Go to location]({url})").format(url=jump),
+                inline=False,
             )
-        embed.set_footer(text=f"ID: {message.author.id}")
+        embed.set_footer(text=_("ID: {id}").format(id=message.author.id))
         await self.post_action(message.guild, embed)
 
     @commands.Cog.listener()
@@ -438,27 +443,29 @@ class ModLog(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="Message Edited",
+            title=_("Message Edited"),
             colour=EVENT_COLOURS["message_edit"],
             timestamp=discord.utils.utcnow(),
         )
         embed.set_thumbnail(url=before.author.display_avatar.url)
         embed.add_field(
-            name="Author", value=f"{before.author.mention} ({before.author})"
+            name=_("Author"), value=f"{before.author.mention} ({before.author})"
         )
-        embed.add_field(name="Channel", value=before.channel.mention)
+        embed.add_field(name=_("Channel"), value=before.channel.mention)
         embed.add_field(
-            name="Before", value=(before.content[:512] or "​"), inline=False
+            name=_("Before"), value=(before.content[:512] or "​"), inline=False
         )
         embed.add_field(
-            name="After", value=(after.content[:512] or "​"), inline=False
+            name=_("After"), value=(after.content[:512] or "​"), inline=False
         )
         jump = getattr(after, "jump_url", None)
         if jump:
             embed.add_field(
-                name="Jump", value=f"[Go to message]({jump})", inline=False
+                name=_("Jump"),
+                value=_("[Go to message]({url})").format(url=jump),
+                inline=False,
             )
-        embed.set_footer(text=f"ID: {before.author.id}")
+        embed.set_footer(text=_("ID: {id}").format(id=before.author.id))
         await self.post_action(before.guild, embed)
 
 

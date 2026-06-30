@@ -5,6 +5,7 @@ import logging
 import discord
 
 from .formats import random_colour
+from .i18n import _
 from .views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def paginate_lines(lines, *, title=None, colour=None, per_page=10):
     if colour is None:
         colour = random_colour()
     if not lines:
-        return [discord.Embed(title=title, description="Nothing to show.", colour=colour)]
+        return [discord.Embed(title=title, description=_("Nothing to show."), colour=colour)]
 
     embeds = []
     for start in range(0, len(lines), per_page):
@@ -45,7 +46,7 @@ class Paginator(AuthorView):
 
     def __init__(self, embeds, *, author_id=None, timeout=120):
         super().__init__(author_id, timeout=timeout)
-        self.embeds = list(embeds) or [discord.Embed(description="Nothing to show.")]
+        self.embeds = list(embeds) or [discord.Embed(description=_("Nothing to show."))]
         self.index = 0
         self._sync()
 
@@ -56,13 +57,15 @@ class Paginator(AuthorView):
         self.first_page.disabled = self.prev_page.disabled = at_start
         self.next_page.disabled = self.last_page.disabled = at_end
         self.embeds[self.index].set_footer(
-            text=f"Page {self.index + 1}/{len(self.embeds)}"
+            text=_("Page {current}/{total}").format(
+                current=self.index + 1, total=len(self.embeds)
+            )
         )
 
     async def interaction_check(self, interaction):
         if self.author_id is not None and interaction.user.id != self.author_id:
             await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
+                _("This menu isn't for you."), ephemeral=True
             )
             return False
         return True
@@ -88,7 +91,7 @@ class Paginator(AuthorView):
             if not interaction.response.is_done():
                 try:
                     await interaction.response.send_message(
-                        "Couldn't turn the page, please try again.", ephemeral=True
+                        _("Couldn't turn the page, please try again."), ephemeral=True
                     )
                 except Exception:
                     log.exception("paginator navigation failed")
@@ -120,7 +123,7 @@ class Paginator(AuthorView):
             if not interaction.response.is_done():
                 try:
                     await interaction.response.send_message(
-                        "Couldn't close the menu, please try again.", ephemeral=True
+                        _("Couldn't close the menu, please try again."), ephemeral=True
                     )
                 except Exception:
                     log.exception("paginator navigation failed")

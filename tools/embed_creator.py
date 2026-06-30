@@ -32,6 +32,7 @@ from typing import Callable, Optional, Protocol
 import discord
 
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -274,23 +275,23 @@ def summarise(config: dict, *, empty: str = "*none*") -> str:
     desc = config.get("description") or empty
     if len(desc) > 120:
         desc = desc[:117] + "..."
-    colour_text = f"#{colour:06X}" if isinstance(colour, int) else "default"
+    colour_text = f"#{colour:06X}" if isinstance(colour, int) else _("default")
     lines = [
-        f"**Title:** {title[:120]}",
-        f"**Description:** {desc}",
-        f"**Colour:** {colour_text}",
-        f"**Fields:** {len(config.get('fields') or [])}",
+        _("**Title:** {title}").format(title=title[:120]),
+        _("**Description:** {description}").format(description=desc),
+        _("**Colour:** {colour}").format(colour=colour_text),
+        _("**Fields:** {count}").format(count=len(config.get('fields') or [])),
     ]
     author_name = (config.get("author") or {}).get("name")
     if author_name:
-        lines.append(f"**Author:** {author_name[:60]}")
+        lines.append(_("**Author:** {name}").format(name=author_name[:60]))
     footer_text = (config.get("footer") or {}).get("text")
     if footer_text:
-        lines.append(f"**Footer:** {footer_text[:60]}")
+        lines.append(_("**Footer:** {text}").format(text=footer_text[:60]))
     if config.get("thumbnail"):
-        lines.append("**Thumbnail:** set")
+        lines.append(_("**Thumbnail:** set"))
     if config.get("image"):
-        lines.append("**Image:** set")
+        lines.append(_("**Image:** set"))
     return "\n".join(lines)
 
 
@@ -340,7 +341,7 @@ def placeholder_guide(
 
     for index, value in enumerate(chunks[:LIMIT_FIELDS]):
         embed.add_field(
-            name="Tokens" if index == 0 else _ZERO_WIDTH,
+            name=_("Tokens") if index == 0 else _ZERO_WIDTH,
             value=value,
             inline=False,
         )
@@ -432,9 +433,9 @@ class TitleModal(_EmbedModal):
     """Edit the embed title."""
 
     def __init__(self, host):
-        super().__init__(host, "Edit title")
+        super().__init__(host, _("Edit title"))
         self.field = discord.ui.TextInput(
-            label="Title",
+            label=_("Title"),
             style=discord.TextStyle.short,
             required=False,
             max_length=LIMIT_TITLE,
@@ -456,9 +457,9 @@ class DescriptionModal(_EmbedModal):
     """Edit the embed description."""
 
     def __init__(self, host):
-        super().__init__(host, "Edit description")
+        super().__init__(host, _("Edit description"))
         self.field = discord.ui.TextInput(
-            label="Description",
+            label=_("Description"),
             style=discord.TextStyle.paragraph,
             required=False,
             max_length=4000,
@@ -492,7 +493,7 @@ class ColourModal(_EmbedModal):
     )
 
     def __init__(self, host):
-        super().__init__(host, "Edit colour")
+        super().__init__(host, _("Edit colour"))
         current = self.embed_config.get("color")
 
         self.radio = discord.ui.RadioGroup(required=False)
@@ -500,9 +501,9 @@ class ColourModal(_EmbedModal):
             self.radio.add_option(label=name.capitalize(), value=name)
         self.add_item(
             discord.ui.Label(
-                text="Quick colour (optional)",
+                text=_("Quick colour (optional)"),
                 component=self.radio,
-                description="Pick one, or edit the box below. Empty both to clear.",
+                description=_("Pick one, or edit the box below. Empty both to clear."),
             )
         )
 
@@ -514,7 +515,7 @@ class ColourModal(_EmbedModal):
             placeholder="#5865F2, blurple, random...",
         )
         self.add_item(
-            discord.ui.Label(text="Custom colour (hex or name)", component=self.field)
+            discord.ui.Label(text=_("Custom colour (hex or name)"), component=self.field)
         )
 
     async def on_submit(self, interaction):
@@ -528,8 +529,10 @@ class ColourModal(_EmbedModal):
                 parsed = parse_colour(raw, names)
                 if parsed is None:
                     await interaction.response.send_message(
-                        "That colour wasn't recognised. Use #rrggbb or a name "
-                        "like 'blurple'.",
+                        _(
+                            "That colour wasn't recognised. Use #rrggbb or a name "
+                            "like 'blurple'."
+                        ),
                         ephemeral=True,
                     )
                     return
@@ -546,17 +549,17 @@ class AuthorModal(_EmbedModal):
     """Edit the embed author (name + icon URL)."""
 
     def __init__(self, host):
-        super().__init__(host, "Edit author")
+        super().__init__(host, _("Edit author"))
         author = self.embed_config.get("author") or {}
         self.name_field = discord.ui.TextInput(
-            label="Author name",
+            label=_("Author name"),
             required=False,
             max_length=LIMIT_AUTHOR,
             default=author.get("name") or None,
             placeholder=self._placeholder_hint(),
         )
         self.icon_field = discord.ui.TextInput(
-            label="Author icon URL",
+            label=_("Author icon URL"),
             required=False,
             max_length=1024,
             default=author.get("icon") or None,
@@ -581,17 +584,17 @@ class FooterModal(_EmbedModal):
     """Edit the embed footer (text + icon URL)."""
 
     def __init__(self, host):
-        super().__init__(host, "Edit footer")
+        super().__init__(host, _("Edit footer"))
         footer = self.embed_config.get("footer") or {}
         self.text_field = discord.ui.TextInput(
-            label="Footer text",
+            label=_("Footer text"),
             required=False,
             max_length=LIMIT_FOOTER,
             default=footer.get("text") or None,
             placeholder=self._placeholder_hint(),
         )
         self.icon_field = discord.ui.TextInput(
-            label="Footer icon URL",
+            label=_("Footer icon URL"),
             required=False,
             max_length=1024,
             default=footer.get("icon") or None,
@@ -616,10 +619,10 @@ class AssetModal(_EmbedModal):
     """Edit a single image URL field (key is 'thumbnail' or 'image')."""
 
     def __init__(self, host, key, label):
-        super().__init__(host, f"Edit {label.lower()}")
+        super().__init__(host, _("Edit {label}").format(label=label.lower()))
         self.key = key
         self.field = discord.ui.TextInput(
-            label=f"{label} URL",
+            label=_("{label} URL").format(label=label),
             required=False,
             max_length=1024,
             default=self.embed_config.get(key) or None,
@@ -640,22 +643,22 @@ class AddFieldModal(_EmbedModal):
     """Append a field (name/value/inline), enforcing the 25-field cap."""
 
     def __init__(self, host):
-        super().__init__(host, "Add a field")
+        super().__init__(host, _("Add a field"))
         self.name_field = discord.ui.TextInput(
-            label="Field name",
+            label=_("Field name"),
             required=True,
             max_length=LIMIT_FIELD_NAME,
             placeholder=self._placeholder_hint(),
         )
         self.value_field = discord.ui.TextInput(
-            label="Field value",
+            label=_("Field value"),
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=LIMIT_FIELD_VALUE,
             placeholder=self._placeholder_hint(),
         )
         self.inline_field = discord.ui.TextInput(
-            label="Inline? (yes/no)",
+            label=_("Inline? (yes/no)"),
             required=False,
             max_length=5,
             default="no",
@@ -669,7 +672,9 @@ class AddFieldModal(_EmbedModal):
             fields = self.embed_config.setdefault("fields", [])
             if len(fields) >= LIMIT_FIELDS:
                 await interaction.response.send_message(
-                    f"An embed can have at most {LIMIT_FIELDS} fields.",
+                    _("An embed can have at most {limit} fields.").format(
+                        limit=LIMIT_FIELDS
+                    ),
                     ephemeral=True,
                 )
                 return
@@ -792,7 +797,7 @@ class PlaceholderGuideButton(discord.ui.Button):
             log.exception("embed_creator placeholder guide failed")
             try:
                 await interaction.response.send_message(
-                    "Could not open the guide.", ephemeral=True
+                    _("Could not open the guide."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass

@@ -14,6 +14,7 @@ from .queries import (
 )
 from tools import crypto
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class AccountMixin:
         """Start linking your AniList account."""
 
         if not self.client_id or not self.client_secret or not crypto.is_configured():
-            return await ctx.send("AniList account linking is not configured.")
+            return await ctx.send(_("AniList account linking is not configured."))
 
         authorize_url = (
             "https://anilist.co/api/v2/oauth/authorize?client_id="
@@ -47,12 +48,12 @@ class AccountMixin:
             + REDIRECT_URI
             + "&response_type=code"
         )
-        instructions = (
+        instructions = _(
             "Authorize the bot here:\n"
-            f"{authorize_url}\n\n"
+            "{authorize_url}\n\n"
             "Authorize, copy the code AniList shows you, then press "
             "**Enter code** below (or run `/anilist code <code>`)."
-        )
+        ).format(authorize_url=authorize_url)
 
         view = LoginView(self, ctx.author.id)
 
@@ -62,7 +63,7 @@ class AccountMixin:
             view.message = await ctx.send(instructions, view=view, ephemeral=True)
             return
 
-        await ctx.send("Check your DMs.")
+        await ctx.send(_("Check your DMs."))
 
     @anilist.command(name="code")
     @commands.cooldown(1, 10, commands.BucketType.user)
@@ -70,7 +71,7 @@ class AccountMixin:
         """Finish linking with the PIN code AniList gave you."""
 
         if not self.client_id or not self.client_secret or not crypto.is_configured():
-            return await ctx.send("AniList account linking is not configured.")
+            return await ctx.send(_("AniList account linking is not configured."))
 
         # Hide the PIN if it was posted in a guild text channel.
         if ctx.message is not None and ctx.guild is not None:
@@ -82,12 +83,13 @@ class AccountMixin:
         name = await self._exchange_code(ctx.author.id, code)
         if name is None:
             return await ctx.send(
-                "That code did not work, try `/anilist login` again.",
+                _("That code did not work, try `/anilist login` again."),
                 ephemeral=ctx.interaction is not None,
             )
 
         await ctx.send(
-            f"Connected as {name}!", ephemeral=ctx.interaction is not None
+            _("Connected as {name}!").format(name=name),
+            ephemeral=ctx.interaction is not None,
         )
 
     @anilist.command(name="logout")
@@ -98,7 +100,7 @@ class AccountMixin:
             "DELETE FROM anilist_tokens WHERE user_id = $1;", ctx.author.id
         )
         await ctx.send(
-            "Your AniList account has been unlinked.",
+            _("Your AniList account has been unlinked."),
             ephemeral=ctx.interaction is not None,
         )
 
@@ -117,8 +119,10 @@ class AccountMixin:
         status = _parse_status(status)
         if status is None:
             return await ctx.send(
-                "Status must be one of: Watching/Reading, Completed, "
-                "Planning, Paused, Dropped, Repeating."
+                _(
+                    "Status must be one of: Watching/Reading, Completed, "
+                    "Planning, Paused, Dropped, Repeating."
+                )
             )
 
         await self._edit_flow(ctx, title, "status", status)
@@ -129,7 +133,7 @@ class AccountMixin:
         """Score a title on your AniList list."""
 
         if score < 0:
-            return await ctx.send("Score must be zero or a positive number.")
+            return await ctx.send(_("Score must be zero or a positive number."))
 
         await self._edit_flow(ctx, title, "score", score)
 
@@ -179,20 +183,24 @@ class AccountMixin:
                 token = await self._get_token(ctx.author.id)
                 if not token:
                     return await ctx.send(
-                        "Provide a name or link your account with "
-                        "`/anilist login`."
+                        _(
+                            "Provide a name or link your account with "
+                            "`/anilist login`."
+                        )
                     )
                 viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
                 name = (
                     ((viewer or {}).get("data") or {}).get("Viewer") or {}
                 ).get("name")
                 if not name:
-                    return await ctx.send("Could not resolve your AniList account.")
+                    return await ctx.send(
+                        _("Could not resolve your AniList account.")
+                    )
 
             data = await self._graphql(USER_STATS_QUERY, {"name": name})
             user = ((data or {}).get("data") or {}).get("User")
             if not user:
-                return await ctx.send("No AniList user found.")
+                return await ctx.send(_("No AniList user found."))
 
             stats = user.get("statistics") or {}
             anime = stats.get("anime") or {}
@@ -216,26 +224,34 @@ class AccountMixin:
 
             days = (anime.get("minutesWatched") or 0) / 1440
             embed.add_field(
-                name="📺 Anime",
-                value=(
-                    f"**{anime.get('count') or 0}** titles\n"
-                    f"**{days:.1f}** days watched\n"
-                    f"★ **{anime.get('meanScore') or 0}**/100"
+                name=_("📺 Anime"),
+                value=_(
+                    "**{count}** titles\n"
+                    "**{days:.1f}** days watched\n"
+                    "★ **{score}**/100"
+                ).format(
+                    count=anime.get("count") or 0,
+                    days=days,
+                    score=anime.get("meanScore") or 0,
                 ),
             )
             embed.add_field(
-                name="📚 Manga",
-                value=(
-                    f"**{manga.get('count') or 0}** titles\n"
-                    f"**{manga.get('chaptersRead') or 0}** chapters\n"
-                    f"★ **{manga.get('meanScore') or 0}**/100"
+                name=_("📚 Manga"),
+                value=_(
+                    "**{count}** titles\n"
+                    "**{chapters}** chapters\n"
+                    "★ **{score}**/100"
+                ).format(
+                    count=manga.get("count") or 0,
+                    chapters=manga.get("chaptersRead") or 0,
+                    score=manga.get("meanScore") or 0,
                 ),
             )
 
             genres = anime.get("genres") or []
             top = ", ".join(g.get("genre") for g in genres[:6] if g.get("genre"))
             if top:
-                embed.add_field(name="🎭 Top genres", value=top, inline=False)
+                embed.add_field(name=_("🎭 Top genres"), value=top, inline=False)
 
             fav = user.get("favourites") or {}
 
@@ -261,7 +277,9 @@ class AccountMixin:
                 fav_lines.append("👤 " + ", ".join(fav_chars))
             if fav_lines:
                 embed.add_field(
-                    name="⭐ Favourites", value="\n".join(fav_lines), inline=False
+                    name=_("⭐ Favourites"),
+                    value="\n".join(fav_lines),
+                    inline=False,
                 )
 
             embed.set_footer(text="AniList")
@@ -276,27 +294,31 @@ class AccountMixin:
 
         media_type = media_type.lower()
         if media_type not in ("anime", "manga"):
-            return await ctx.send("Media type must be `anime` or `manga`.")
+            return await ctx.send(_("Media type must be `anime` or `manga`."))
 
         status = _parse_status(status)
         if status is None:
             return await ctx.send(
-                "Status must be one of: Watching/Reading, Completed, "
-                "Planning, Paused, Dropped, Repeating."
+                _(
+                    "Status must be one of: Watching/Reading, Completed, "
+                    "Planning, Paused, Dropped, Repeating."
+                )
             )
 
         token = await self._get_token(ctx.author.id)
         if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
+            return await ctx.send(
+                _("Link your account first with `/anilist login`.")
+            )
 
         gql_type = media_type.upper()
-        unit = "chapters" if gql_type == "MANGA" else "episodes"
+        unit = _("chapters") if gql_type == "MANGA" else _("episodes")
 
         async with ctx.typing():
             viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
             user = ((viewer or {}).get("data") or {}).get("Viewer")
             if not user:
-                return await ctx.send("Could not reach your AniList account.")
+                return await ctx.send(_("Could not reach your AniList account."))
 
             data = await self._graphql(
                 MEDIA_LIST_QUERY,
@@ -311,22 +333,34 @@ class AccountMixin:
             for lst in collection.get("lists") or []:
                 for entry in lst.get("entries") or []:
                     media = entry.get("media") or {}
-                    name = (media.get("title") or {}).get("romaji") or "Unknown"
+                    name = (media.get("title") or {}).get("romaji") or _("Unknown")
                     total = (
                         media.get("chapters")
                         if gql_type == "MANGA"
                         else media.get("episodes")
                     ) or "?"
                     lines.append(
-                        f"{name} - {entry.get('progress', 0)}/{total} {unit}"
+                        _("{name} - {progress}/{total} {unit}").format(
+                            name=name,
+                            progress=entry.get("progress", 0),
+                            total=total,
+                            unit=unit,
+                        )
                     )
 
             if not lines:
                 return await ctx.send(
-                    f"Nothing on your {status.title()} {media_type} list."
+                    _("Nothing on your {status} {media_type} list.").format(
+                        status=status.title(), media_type=media_type
+                    )
                 )
 
         await Paginator(
-            paginate_lines(lines, title=f"{status.title()} {media_type} list"),
+            paginate_lines(
+                lines,
+                title=_("{status} {media_type} list").format(
+                    status=status.title(), media_type=media_type
+                ),
+            ),
             author_id=ctx.author.id,
         ).start(ctx)

@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -22,15 +23,15 @@ class Info(commands.Cog):
         member = member or ctx.author
 
         embed = discord.Embed(
-            title=f"User info - {member}",
+            title=_("User info - {member}").format(member=member),
             colour=random_colour(),
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name="Display name", value=member.display_name)
-        embed.add_field(name="ID", value=member.id)
-        embed.add_field(name="Mention", value=member.mention)
+        embed.add_field(name=_("Display name"), value=member.display_name)
+        embed.add_field(name=_("ID"), value=member.id)
+        embed.add_field(name=_("Mention"), value=member.mention)
         embed.add_field(
-            name="Account created",
+            name=_("Account created"),
             value=f"{discord.utils.format_dt(member.created_at, 'F')} "
             f"({discord.utils.format_dt(member.created_at, 'R')})",
             inline=False,
@@ -38,14 +39,16 @@ class Info(commands.Cog):
 
         if member.joined_at is not None:
             embed.add_field(
-                name="Joined server",
+                name=_("Joined server"),
                 value=discord.utils.format_dt(member.joined_at, "F"),
                 inline=False,
             )
 
-        embed.add_field(name="Top role", value=member.top_role.mention)
-        embed.add_field(name="Role count", value=len(member.roles) - 1)
-        embed.add_field(name="Is bot", value="Yes" if member.bot else "No")
+        embed.add_field(name=_("Top role"), value=member.top_role.mention)
+        embed.add_field(name=_("Role count"), value=len(member.roles) - 1)
+        embed.add_field(
+            name=_("Is bot"), value=_("Yes") if member.bot else _("No")
+        )
 
         # Banners require a REST fetch; show it and opportunistically archive it.
         try:
@@ -71,27 +74,30 @@ class Info(commands.Cog):
         voice_channels = len(guild.voice_channels)
 
         embed = discord.Embed(
-            title=f"Server info - {guild.name}",
+            title=_("Server info - {guild}").format(guild=guild.name),
             colour=random_colour(),
         )
         embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-        embed.add_field(name="Name", value=guild.name)
-        embed.add_field(name="ID", value=guild.id)
+        embed.add_field(name=_("Name"), value=guild.name)
+        embed.add_field(name=_("ID"), value=guild.id)
         embed.add_field(
-            name="Owner",
-            value=guild.owner.mention if guild.owner else "Unknown",
+            name=_("Owner"),
+            value=guild.owner.mention if guild.owner else _("Unknown"),
         )
         embed.add_field(
-            name="Created",
+            name=_("Created"),
             value=discord.utils.format_dt(guild.created_at, "F"),
             inline=False,
         )
-        embed.add_field(name="Members", value=guild.member_count)
-        embed.add_field(name="Text channels", value=text_channels)
-        embed.add_field(name="Voice channels", value=voice_channels)
-        embed.add_field(name="Roles", value=len(guild.roles))
-        embed.add_field(name="Boost tier", value=f"Tier {guild.premium_tier}")
-        embed.add_field(name="Boosts", value=guild.premium_subscription_count)
+        embed.add_field(name=_("Members"), value=guild.member_count)
+        embed.add_field(name=_("Text channels"), value=text_channels)
+        embed.add_field(name=_("Voice channels"), value=voice_channels)
+        embed.add_field(name=_("Roles"), value=len(guild.roles))
+        embed.add_field(
+            name=_("Boost tier"),
+            value=_("Tier {tier}").format(tier=guild.premium_tier),
+        )
+        embed.add_field(name=_("Boosts"), value=guild.premium_subscription_count)
 
         await ctx.send(embed=embed)
 
@@ -102,7 +108,7 @@ class Info(commands.Cog):
         member = member or ctx.author
 
         embed = discord.Embed(
-            title=f"Avatar - {member}",
+            title=_("Avatar - {member}").format(member=member),
             colour=random_colour(),
         )
         embed.set_image(url=member.display_avatar.url)
@@ -114,8 +120,10 @@ class Info(commands.Cog):
         """Shows the bot's websocket latency."""
 
         embed = discord.Embed(
-            title="Pong!",
-            description=f"Latency: **{round(self.bot.latency * 1000)} ms**",
+            title=_("Pong!"),
+            description=_("Latency: **{ms} ms**").format(
+                ms=round(self.bot.latency * 1000)
+            ),
             colour=random_colour(),
         )
 
@@ -130,15 +138,15 @@ class Info(commands.Cog):
         )
 
         embed = discord.Embed(
-            title="Bot info",
+            title=_("Bot info"),
             colour=random_colour(),
         )
-        embed.add_field(name="Servers", value=len(self.bot.guilds))
-        embed.add_field(name="Users", value=total_users)
+        embed.add_field(name=_("Servers"), value=len(self.bot.guilds))
+        embed.add_field(name=_("Users"), value=total_users)
         embed.add_field(name="discord.py", value=discord.__version__)
         embed.add_field(
-            name="Websocket latency",
-            value=f"{round(self.bot.latency * 1000)} ms",
+            name=_("Websocket latency"),
+            value=_("{ms} ms").format(ms=round(self.bot.latency * 1000)),
         )
 
         await ctx.send(embed=embed)

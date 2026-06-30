@@ -6,6 +6,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools.i18n import _
 from tools.time import ShortTime, UserFriendlyTime, human_timedelta
 
 log = logging.getLogger(__name__)
@@ -89,8 +90,11 @@ class Reminder(commands.Cog):
                         ch = None
                 if ch:
                     await ch.send(
-                        f"<@{extra['author_id']}>, "
-                        f"{human_timedelta(row['created'])}: {extra['message']}"
+                        _("<@{author_id}>, {when}: {message}").format(
+                            author_id=extra["author_id"],
+                            when=human_timedelta(row["created"]),
+                            message=extra["message"],
+                        )
                     )
             elif event == "tempban":
                 g = self.bot.get_guild(extra["guild_id"])
@@ -119,7 +123,9 @@ class Reminder(commands.Cog):
             message=when.arg,
         )
         await ctx.send(
-            f"Okay, reminding you {discord.utils.format_dt(when.dt, 'R')}: {when.arg}"
+            _("Okay, reminding you {when}: {message}").format(
+                when=discord.utils.format_dt(when.dt, "R"), message=when.arg
+            )
         )
 
     @commands.hybrid_command()
@@ -143,7 +149,9 @@ class Reminder(commands.Cog):
             user_id=member.id,
         )
         await ctx.send(
-            f"Banned {member} until {discord.utils.format_dt(duration.dt, 'F')}."
+            _("Banned {member} until {time}.").format(
+                member=member, time=discord.utils.format_dt(duration.dt, "F")
+            )
         )
 
 

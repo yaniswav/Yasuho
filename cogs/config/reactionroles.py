@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ class ReactionRoles(commands.Cog):
         try:
             mid = int(message_id)
         except ValueError:
-            await ctx.send("That doesn't look like a valid message ID.")
+            await ctx.send(_("That doesn't look like a valid message ID."))
             return
 
         # Defer the slash interaction (and show a typing indicator for prefix)
@@ -73,12 +74,12 @@ class ReactionRoles(commands.Cog):
         self.cache[(mid, stored_emoji)] = role.id
 
         embed = discord.Embed(
-            title="Reaction role added",
+            title=_("Reaction role added"),
             colour=random_colour(),
         )
-        embed.add_field(name="Message", value=f"`{mid}`")
-        embed.add_field(name="Emoji", value=emoji)
-        embed.add_field(name="Role", value=f"<@&{role.id}>")
+        embed.add_field(name=_("Message"), value=f"`{mid}`")
+        embed.add_field(name=_("Emoji"), value=emoji)
+        embed.add_field(name=_("Role"), value=f"<@&{role.id}>")
         await ctx.send(embed=embed)
 
     @reactionrole.command(name="remove")
@@ -90,7 +91,7 @@ class ReactionRoles(commands.Cog):
         try:
             mid = int(message_id)
         except ValueError:
-            await ctx.send("That doesn't look like a valid message ID.")
+            await ctx.send(_("That doesn't look like a valid message ID."))
             return
 
         stored_emoji = emoji.replace("\uFE0F", "")
@@ -105,11 +106,11 @@ class ReactionRoles(commands.Cog):
         self.cache.pop((mid, stored_emoji), None)
 
         embed = discord.Embed(
-            title="Reaction role removed",
+            title=_("Reaction role removed"),
             colour=random_colour(),
         )
-        embed.add_field(name="Message", value=f"`{mid}`")
-        embed.add_field(name="Emoji", value=emoji)
+        embed.add_field(name=_("Message"), value=f"`{mid}`")
+        embed.add_field(name=_("Emoji"), value=emoji)
         await ctx.send(embed=embed)
 
     @reactionrole.command(name="list")
@@ -127,19 +128,21 @@ class ReactionRoles(commands.Cog):
 
         if not rows:
             embed = discord.Embed(
-                title="Reaction roles",
-                description="No reaction roles have been set up for this guild.",
+                title=_("Reaction roles"),
+                description=_("No reaction roles have been set up for this guild."),
                 colour=random_colour(),
             )
             await ctx.send(embed=embed)
             return
 
         lines = [
-            f"Message `{row['message_id']}` - {row['emoji']} -> <@&{row['role_id']}>"
+            _("Message `{mid}` - {emoji} -> <@&{role}>").format(
+                mid=row["message_id"], emoji=row["emoji"], role=row["role_id"]
+            )
             for row in rows
         ]
         await Paginator(
-            paginate_lines(lines, title="Reaction roles"), author_id=ctx.author.id
+            paginate_lines(lines, title=_("Reaction roles")), author_id=ctx.author.id
         ).start(ctx)
 
     @commands.Cog.listener()

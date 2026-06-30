@@ -15,6 +15,7 @@ from .helpers import (
     _step_season,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class ResultSelect(discord.ui.Select):
                 )
             )
 
-        super().__init__(placeholder="Pick a title...", options=options)
+        super().__init__(placeholder=_("Pick a title..."), options=options)
 
     async def callback(self, interaction):
         try:
@@ -61,7 +62,7 @@ class ResultSelect(discord.ui.Select):
             media = ((data or {}).get("data") or {}).get("Media")
             if not media:
                 return await interaction.followup.send(
-                    "Could not load that title.", ephemeral=True
+                    _("Could not load that title."), ephemeral=True
                 )
 
             token = await self.cog._get_token(self.author_id)
@@ -80,7 +81,7 @@ class ResultSelect(discord.ui.Select):
             log.exception("AniList result select failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong loading that title.", ephemeral=True
+                    _("Something went wrong loading that title."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -126,19 +127,24 @@ class SeasonView(AuthorView):
             ).get("media") or []
             if not media:
                 return await interaction.followup.send(
-                    f"No anime found for {season.title()} {year}.", ephemeral=True
+                    _("No anime found for {season} {year}.").format(
+                        season=season.title(), year=year
+                    ),
+                    ephemeral=True,
                 )
 
             view = SeasonView(self.cog, media, self.author_id, season, year)
             view.message = await interaction.edit_original_response(
-                content=f"**{season.title()} {year} anime** - pick one for details:",
+                content=_(
+                    "**{season} {year} anime** - pick one for details:"
+                ).format(season=season.title(), year=year),
                 view=view,
             )
         except Exception:
             log.exception("AniList season navigation failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong loading that season.", ephemeral=True
+                    _("Something went wrong loading that season."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -176,20 +182,23 @@ class EditSelect(discord.ui.Select):
                 discord.SelectOption(label=label[:100], value=str(media.get("id")))
             )
 
-        super().__init__(placeholder="Pick the right title...", options=options)
+        super().__init__(placeholder=_("Pick the right title..."), options=options)
 
     async def callback(self, interaction):
         try:
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
-                    "Could not load that title.", ephemeral=True
+                    _("Could not load that title."), ephemeral=True
                 )
 
             for child in self.view.children:
                 child.disabled = True
             await interaction.response.edit_message(
-                content=f"Updating **{_media_title(media)}**...", view=self.view
+                content=_("Updating **{title}**...").format(
+                    title=_media_title(media)
+                ),
+                view=self.view,
             )
             await self.cog._apply_edit(
                 interaction, self.author_id, media, self.field, self.value
@@ -198,7 +207,7 @@ class EditSelect(discord.ui.Select):
             log.exception("AniList edit select failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong updating that entry.", ephemeral=True
+                    _("Something went wrong updating that entry."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -218,27 +227,29 @@ class EditEntryModal(discord.ui.Modal):
     """Edit status (a dropdown) + progress/score (fields), pre-filled from the entry."""
 
     def __init__(self, cog, media, token=None, entry=None):
-        super().__init__(title=f"Edit: {_media_title(media)}"[:45])
+        super().__init__(
+            title=_("Edit: {title}").format(title=_media_title(media))[:45]
+        )
         self.cog = cog
         self.media = media
         self.token = token
         entry = entry or {}
 
         unit = _media_unit(media)
-        watching = "Reading" if unit == "chapter" else "Watching"
+        watching = _("Reading") if unit == "chapter" else _("Watching")
         current_status = entry.get("status")
         choices = [
             ("CURRENT", watching),
-            ("PLANNING", "Planning"),
-            ("COMPLETED", "Completed"),
-            ("REPEATING", "Repeating"),
-            ("PAUSED", "Paused"),
-            ("DROPPED", "Dropped"),
+            ("PLANNING", _("Planning")),
+            ("COMPLETED", _("Completed")),
+            ("REPEATING", _("Repeating")),
+            ("PAUSED", _("Paused")),
+            ("DROPPED", _("Dropped")),
         ]
         # Status is a real dropdown (Components V2 select-in-modal), the current
         # value pre-selected; min_values=0 so it can be left unchanged.
         self.status_select = discord.ui.Select(
-            placeholder="Keep current status",
+            placeholder=_("Keep current status"),
             min_values=0,
             max_values=1,
             required=False,
@@ -249,7 +260,9 @@ class EditEntryModal(discord.ui.Modal):
                 for value, label in choices
             ],
         )
-        self.add_item(discord.ui.Label(text="Status", component=self.status_select))
+        self.add_item(
+            discord.ui.Label(text=_("Status"), component=self.status_select)
+        )
 
         current_progress = entry.get("progress")
         self.progress_input = discord.ui.TextInput(
@@ -260,7 +273,8 @@ class EditEntryModal(discord.ui.Modal):
         )
         self.add_item(
             discord.ui.Label(
-                text=f"Progress ({unit}s)", component=self.progress_input
+                text=_("Progress ({unit}s)").format(unit=unit),
+                component=self.progress_input,
             )
         )
 
@@ -270,7 +284,7 @@ class EditEntryModal(discord.ui.Modal):
             max_length=6,
             default=score if score and score != "0" else None,
         )
-        self.add_item(discord.ui.Label(text="Score", component=self.score_input))
+        self.add_item(discord.ui.Label(text=_("Score"), component=self.score_input))
 
     async def on_submit(self, interaction):
         variables = {"mediaId": self.media.get("id")}
@@ -285,7 +299,7 @@ class EditEntryModal(discord.ui.Modal):
                 variables["score"] = float(score_raw)
         except ValueError:
             return await interaction.response.send_message(
-                "Progress must be a whole number and score a number.",
+                _("Progress must be a whole number and score a number."),
                 ephemeral=True,
             )
 
@@ -298,7 +312,7 @@ class EditEntryModal(discord.ui.Modal):
             and "status" not in variables
         ):
             return await interaction.response.send_message(
-                "Nothing to update - pick a status or fill in progress/score.",
+                _("Nothing to update - pick a status or fill in progress/score."),
                 ephemeral=True,
             )
 
@@ -309,7 +323,8 @@ class EditEntryModal(discord.ui.Modal):
             token = await self.cog._get_token(interaction.user.id)
         if not token:
             return await interaction.response.send_message(
-                "Link your account first with `/anilist login`.", ephemeral=True
+                _("Link your account first with `/anilist login`."),
+                ephemeral=True,
             )
 
         try:
@@ -319,7 +334,7 @@ class EditEntryModal(discord.ui.Modal):
             entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
             if not entry:
                 return await interaction.response.send_message(
-                    "Could not update that entry.", ephemeral=True
+                    _("Could not update that entry."), ephemeral=True
                 )
 
             name = (
@@ -327,15 +342,19 @@ class EditEntryModal(discord.ui.Modal):
             ).get("romaji") or _media_title(self.media)
             unit = _media_unit(self.media)
             await interaction.response.send_message(
-                f"Updated **{name}** - {unit} {entry.get('progress')}, "
-                f"score {entry.get('score')}.",
+                _("Updated **{name}** - {unit} {progress}, score {score}.").format(
+                    name=name,
+                    unit=unit,
+                    progress=entry.get("progress"),
+                    score=entry.get("score"),
+                ),
                 ephemeral=True,
             )
         except Exception:
             log.exception("AniList edit modal failed")
             try:
                 await interaction.response.send_message(
-                    "Something went wrong updating that entry.", ephemeral=True
+                    _("Something went wrong updating that entry."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -367,12 +386,12 @@ class TypeView(AuthorView):
             ]
             if not subset:
                 return await interaction.response.send_message(
-                    "No matching titles of that type.", ephemeral=True
+                    _("No matching titles of that type."), ephemeral=True
                 )
 
             view = SeasonSelectView(self.cog, subset, self.author_id, media_type)
             await interaction.response.edit_message(
-                content="Pick the exact title to update:", view=view
+                content=_("Pick the exact title to update:"), view=view
             )
             view.message = interaction.message
             self.stop()
@@ -381,11 +400,11 @@ class TypeView(AuthorView):
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(
-                        "Something went wrong.", ephemeral=True
+                        _("Something went wrong."), ephemeral=True
                     )
                 else:
                     await interaction.response.send_message(
-                        "Something went wrong.", ephemeral=True
+                        _("Something went wrong."), ephemeral=True
                     )
             except Exception:
                 pass
@@ -416,19 +435,19 @@ class SeasonSelect(discord.ui.Select):
                 discord.SelectOption(label=label[:100], value=str(media.get("id")))
             )
 
-        super().__init__(placeholder="Pick the exact title...", options=options)
+        super().__init__(placeholder=_("Pick the exact title..."), options=options)
 
     async def callback(self, interaction):
         try:
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
-                    "Could not load that title.", ephemeral=True
+                    _("Could not load that title."), ephemeral=True
                 )
 
             # Fetch the viewer's current entry BEFORE send_modal (allowed) so
             # the form opens pre-filled with their existing status/score/progress.
-            entry, _ = await self.cog._viewer_entry(
+            entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, media.get("id")
             )
             await interaction.response.send_modal(
@@ -439,11 +458,13 @@ class SeasonSelect(discord.ui.Select):
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(
-                        "Something went wrong opening the editor.", ephemeral=True
+                        _("Something went wrong opening the editor."),
+                        ephemeral=True,
                     )
                 else:
                     await interaction.response.send_message(
-                        "Something went wrong opening the editor.", ephemeral=True
+                        _("Something went wrong opening the editor."),
+                        ephemeral=True,
                     )
             except Exception:
                 pass
@@ -497,18 +518,20 @@ class OnListSelect(discord.ui.Select):
                 )
             )
 
-        super().__init__(placeholder="Pick which one to update...", options=options)
+        super().__init__(
+            placeholder=_("Pick which one to update..."), options=options
+        )
 
     async def callback(self, interaction):
         try:
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
-                    "Could not load that title.", ephemeral=True
+                    _("Could not load that title."), ephemeral=True
                 )
 
             # Fetch the canonical entry BEFORE send_modal (allowed) to pre-fill.
-            entry, _ = await self.cog._viewer_entry(
+            entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, media.get("id")
             )
             await interaction.response.send_modal(
@@ -519,11 +542,13 @@ class OnListSelect(discord.ui.Select):
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(
-                        "Something went wrong opening the editor.", ephemeral=True
+                        _("Something went wrong opening the editor."),
+                        ephemeral=True,
                     )
                 else:
                     await interaction.response.send_message(
-                        "Something went wrong opening the editor.", ephemeral=True
+                        _("Something went wrong opening the editor."),
+                        ephemeral=True,
                     )
             except Exception:
                 pass
@@ -547,17 +572,17 @@ class StatusSelect(discord.ui.Select):
         self.media = media
         self.author_id = author_id
 
-        watching = "Reading" if _media_unit(media) == "chapter" else "Watching"
+        watching = _("Reading") if _media_unit(media) == "chapter" else _("Watching")
         options = [
             discord.SelectOption(label=watching, value="CURRENT", emoji="▶️"),
-            discord.SelectOption(label="Completed", value="COMPLETED", emoji="✅"),
-            discord.SelectOption(label="Planning", value="PLANNING", emoji="📝"),
-            discord.SelectOption(label="Paused", value="PAUSED", emoji="⏸️"),
-            discord.SelectOption(label="Dropped", value="DROPPED", emoji="🗑️"),
-            discord.SelectOption(label="Repeating", value="REPEATING", emoji="🔁"),
+            discord.SelectOption(label=_("Completed"), value="COMPLETED", emoji="✅"),
+            discord.SelectOption(label=_("Planning"), value="PLANNING", emoji="📝"),
+            discord.SelectOption(label=_("Paused"), value="PAUSED", emoji="⏸️"),
+            discord.SelectOption(label=_("Dropped"), value="DROPPED", emoji="🗑️"),
+            discord.SelectOption(label=_("Repeating"), value="REPEATING", emoji="🔁"),
         ]
         super().__init__(
-            placeholder="Set status...",
+            placeholder=_("Set status..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -579,7 +604,7 @@ class StatusSelect(discord.ui.Select):
             log.exception("AniList status select failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong updating that entry.", ephemeral=True
+                    _("Something went wrong updating that entry."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -644,7 +669,7 @@ class MediaView(AuthorView):
             footer.append(" • ".join(genres[:5]))
         popularity = media.get("popularity")
         if popularity is not None:
-            footer.append(f"{popularity} in lists")
+            footer.append(_("{popularity} in lists").format(popularity=popularity))
         if footer:
             embed.set_footer(text=" | ".join(footer))
 
@@ -657,42 +682,44 @@ class MediaView(AuthorView):
         embed.description = _clean_description(media.get("description"))
 
         if media.get("format"):
-            embed.add_field(name="Format", value=media["format"], inline=True)
+            embed.add_field(name=_("Format"), value=media["format"], inline=True)
         if media.get("episodes"):
             embed.add_field(
-                name="Episodes", value=str(media["episodes"]), inline=True
+                name=_("Episodes"), value=str(media["episodes"]), inline=True
             )
         elif media.get("chapters"):
             embed.add_field(
-                name="Chapters", value=str(media["chapters"]), inline=True
+                name=_("Chapters"), value=str(media["chapters"]), inline=True
             )
 
         score = media.get("averageScore")
         if score is not None:
-            embed.add_field(name="Score", value=f"{score}/100", inline=True)
+            embed.add_field(name=_("Score"), value=f"{score}/100", inline=True)
 
         if media.get("status"):
-            embed.add_field(name="Status", value=media["status"], inline=True)
+            embed.add_field(name=_("Status"), value=media["status"], inline=True)
 
         studios = ((media.get("studios") or {}).get("nodes")) or []
         names = [s.get("name") for s in studios if s.get("name")]
         if names:
-            embed.add_field(name="Studio", value=", ".join(names[:3]), inline=True)
+            embed.add_field(
+                name=_("Studio"), value=", ".join(names[:3]), inline=True
+            )
 
         season = media.get("season")
         year = media.get("seasonYear")
         if season and year:
             embed.add_field(
-                name="Season", value=f"{season.title()} {year}", inline=True
+                name=_("Season"), value=f"{season.title()} {year}", inline=True
             )
         elif year:
-            embed.add_field(name="Year", value=str(year), inline=True)
+            embed.add_field(name=_("Year"), value=str(year), inline=True)
 
         return embed
 
     def characters_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} - Characters"
+        embed.title = _("{title} - Characters").format(title=_media_title(self.media))
 
         edges = ((self.media.get("characters") or {}).get("edges")) or []
         lines = []
@@ -707,12 +734,14 @@ class MediaView(AuthorView):
             else:
                 lines.append(name)
 
-        embed.description = "\n".join(lines) if lines else "No character data."
+        embed.description = (
+            "\n".join(lines) if lines else _("No character data.")
+        )
         return embed
 
     def relations_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} - Relations"
+        embed.title = _("{title} - Relations").format(title=_media_title(self.media))
 
         edges = ((self.media.get("relations") or {}).get("edges")) or []
         lines = []
@@ -722,17 +751,19 @@ class MediaView(AuthorView):
             if not title:
                 continue
             rel = edge.get("relationType")
-            label = rel.replace("_", " ").title() if rel else "Related"
+            label = rel.replace("_", " ").title() if rel else _("Related")
             fmt = node.get("format")
             suffix = f" ({fmt})" if fmt else ""
             lines.append(f"**{label}:** {title}{suffix}")
 
-        embed.description = "\n".join(lines) if lines else "No relations."
+        embed.description = "\n".join(lines) if lines else _("No relations.")
         return embed
 
     def recommendations_embed(self):
         embed = self._base_embed()
-        embed.title = f"{_media_title(self.media)} - Recommendations"
+        embed.title = _("{title} - Recommendations").format(
+            title=_media_title(self.media)
+        )
 
         nodes = ((self.media.get("recommendations") or {}).get("nodes")) or []
         lines = []
@@ -745,40 +776,46 @@ class MediaView(AuthorView):
             suffix = f" ({fmt})" if fmt else ""
             lines.append(f"- {title}{suffix}")
 
-        embed.description = "\n".join(lines) if lines else "No recommendations."
+        embed.description = (
+            "\n".join(lines) if lines else _("No recommendations.")
+        )
         return embed
 
     def _your_stats_value(self, viewer_entry, logged_in):
         """Build the "Your stats" field text for the authenticated viewer."""
 
         if not logged_in:
-            return (
+            return _(
                 "🔗 Link your AniList with `/anilist login` to see your "
                 "personal stats."
             )
         if not viewer_entry:
-            return "Not on your list yet."
+            return _("Not on your list yet.")
 
         watch_word = (
-            "Reading" if _media_unit(self.media) == "chapter" else "Watching"
+            _("Reading") if _media_unit(self.media) == "chapter" else _("Watching")
         )
         labels = {
             "CURRENT": watch_word,
-            "PLANNING": "Planning",
-            "COMPLETED": "Completed",
-            "DROPPED": "Dropped",
-            "PAUSED": "Paused",
-            "REPEATING": "Repeating",
+            "PLANNING": _("Planning"),
+            "COMPLETED": _("Completed"),
+            "DROPPED": _("Dropped"),
+            "PAUSED": _("Paused"),
+            "REPEATING": _("Repeating"),
         }
 
-        lines = ["On your list ✓"]
+        lines = [_("On your list ✓")]
         status = viewer_entry.get("status")
         if status:
-            lines.append(f"Status: {labels.get(status, str(status).title())}")
+            lines.append(
+                _("Status: {status}").format(
+                    status=labels.get(status, str(status).title())
+                )
+            )
 
         score = _format_score(viewer_entry.get("score"))
         if score and score != "0":
-            lines.append(f"Your score: {score}")
+            lines.append(_("Your score: {score}").format(score=score))
 
         progress = viewer_entry.get("progress")
         if progress is not None:
@@ -786,25 +823,29 @@ class MediaView(AuthorView):
                 self.media.get("chapters") or self.media.get("episodes") or "?"
             )
             unit = _media_unit(self.media, plural=True)
-            lines.append(f"Progress: {progress}/{total} {unit}")
+            lines.append(
+                _("Progress: {progress}/{total} {unit}").format(
+                    progress=progress, total=total, unit=unit
+                )
+            )
 
         repeat = viewer_entry.get("repeat")
         if repeat:
-            lines.append(f"Repeats: {repeat}")
+            lines.append(_("Repeats: {repeat}").format(repeat=repeat))
 
         started = _format_fuzzy_date(viewer_entry.get("startedAt"))
         if started:
-            lines.append(f"Started: {started}")
+            lines.append(_("Started: {started}").format(started=started))
         completed = _format_fuzzy_date(viewer_entry.get("completedAt"))
         if completed:
-            lines.append(f"Completed: {completed}")
+            lines.append(_("Completed: {completed}").format(completed=completed))
 
         return "\n".join(lines)
 
     def stats_embed(self, viewer_entry=None, logged_in=False):
         media = self.media
         embed = self._base_embed()
-        embed.title = f"{_media_title(media)} - Stats"
+        embed.title = _("{title} - Stats").format(title=_media_title(media))
 
         your_value = self._your_stats_value(viewer_entry, logged_in)
 
@@ -830,23 +871,29 @@ class MediaView(AuthorView):
                 rankings,
             )
         ):
-            embed.description = "No stats available."
-            embed.add_field(name="👤 Your stats", value=your_value, inline=False)
+            embed.description = _("No stats available.")
+            embed.add_field(
+                name=_("👤 Your stats"), value=your_value, inline=False
+            )
             return embed
 
         if mean is not None:
-            embed.add_field(name="Mean score", value=f"{mean}/100", inline=True)
+            embed.add_field(name=_("Mean score"), value=f"{mean}/100", inline=True)
         if average is not None:
             embed.add_field(
-                name="Average score", value=f"{average}/100", inline=True
+                name=_("Average score"), value=f"{average}/100", inline=True
             )
         if popularity is not None:
             embed.add_field(
-                name="Popularity", value=f"{popularity:,} followers", inline=True
+                name=_("Popularity"),
+                value=_("{popularity} followers").format(
+                    popularity=f"{popularity:,}"
+                ),
+                inline=True,
             )
         if favourites is not None:
             embed.add_field(
-                name="Favourites", value=f"{favourites:,}", inline=True
+                name=_("Favourites"), value=f"{favourites:,}", inline=True
             )
 
         # Score distribution as a compact monospace bar chart.
@@ -864,7 +911,7 @@ class MediaView(AuthorView):
                 bar = "█" * filled
                 lines.append(f"{str(d.get('score')).rjust(3)} │ {bar} {amount}")
             embed.add_field(
-                name="Score distribution",
+                name=_("Score distribution"),
                 value="```\n" + "\n".join(lines) + "\n```",
                 inline=False,
             )
@@ -872,12 +919,12 @@ class MediaView(AuthorView):
         # Status distribution with friendly labels.
         if status_dist:
             labels = {
-                "CURRENT": "Watching",
-                "PLANNING": "Planning",
-                "COMPLETED": "Completed",
-                "DROPPED": "Dropped",
-                "PAUSED": "Paused",
-                "REPEATING": "Repeating",
+                "CURRENT": _("Watching"),
+                "PLANNING": _("Planning"),
+                "COMPLETED": _("Completed"),
+                "DROPPED": _("Dropped"),
+                "PAUSED": _("Paused"),
+                "REPEATING": _("Repeating"),
             }
             order = [
                 "CURRENT",
@@ -894,16 +941,21 @@ class MediaView(AuthorView):
             for status in order:
                 if status in by_status:
                     lines.append(
-                        f"{labels[status]}: {by_status[status]:,}"
+                        _("{label}: {amount}").format(
+                            label=labels[status],
+                            amount=f"{by_status[status]:,}",
+                        )
                     )
             for status, amount in by_status.items():
                 if status not in order:
                     lines.append(
-                        f"{str(status).title()}: {amount:,}"
+                        _("{label}: {amount}").format(
+                            label=str(status).title(), amount=f"{amount:,}"
+                        )
                     )
             if lines:
                 embed.add_field(
-                    name="Status distribution",
+                    name=_("Status distribution"),
                     value="\n".join(lines),
                     inline=False,
                 )
@@ -923,12 +975,12 @@ class MediaView(AuthorView):
                     lines.append(formatted)
             if lines:
                 embed.add_field(
-                    name="Rankings",
+                    name=_("Rankings"),
                     value="\n".join(lines[:5]),
                     inline=False,
                 )
 
-        embed.add_field(name="👤 Your stats", value=your_value, inline=False)
+        embed.add_field(name=_("👤 Your stats"), value=your_value, inline=False)
         return embed
 
     async def _show(self, interaction, builder):
@@ -937,7 +989,7 @@ class MediaView(AuthorView):
         except Exception:
             log.exception("AniList media view section failed")
             return await interaction.response.send_message(
-                "Could not render that section.", ephemeral=True
+                _("Could not render that section."), ephemeral=True
             )
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -972,7 +1024,7 @@ class MediaView(AuthorView):
         except Exception:
             log.exception("AniList stats section failed")
             return await interaction.response.send_message(
-                "Could not render that section.", ephemeral=True
+                _("Could not render that section."), ephemeral=True
             )
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -993,7 +1045,7 @@ class MediaView(AuthorView):
             log.exception("AniList back navigation failed")
             try:
                 await interaction.response.send_message(
-                    "Could not go back.", ephemeral=True
+                    _("Could not go back."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -1018,7 +1070,7 @@ class MediaView(AuthorView):
             log.exception("AniList complete action failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong updating that entry.", ephemeral=True
+                    _("Something went wrong updating that entry."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -1027,7 +1079,7 @@ class MediaView(AuthorView):
     async def edit_button(self, interaction, button):
         try:
             # Pre-load the viewer's current entry so the modal opens pre-filled.
-            viewer_entry, _ = await self.cog._viewer_entry(
+            viewer_entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
             await interaction.response.send_modal(
@@ -1039,7 +1091,7 @@ class MediaView(AuthorView):
             log.exception("AniList edit modal launch failed")
             try:
                 await interaction.response.send_message(
-                    "Could not open the edit form.", ephemeral=True
+                    _("Could not open the edit form."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -1049,7 +1101,7 @@ class MediaView(AuthorView):
 
         try:
             await interaction.response.defer()
-            entry, _ = await self.cog._viewer_entry(
+            entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
             current = (entry or {}).get("progress") or 0
@@ -1066,7 +1118,7 @@ class MediaView(AuthorView):
             log.exception("AniList progress step failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong updating progress.", ephemeral=True
+                    _("Something went wrong updating progress."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -1100,11 +1152,11 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
             name = await self.cog._exchange_code(self.author_id, self.code.value)
             if name is None:
                 return await interaction.followup.send(
-                    "That code did not work, try `/anilist login` again.",
+                    _("That code did not work, try `/anilist login` again."),
                     ephemeral=True,
                 )
             await interaction.followup.send(
-                f"Connected as {name}!", ephemeral=True
+                _("Connected as {name}!").format(name=name), ephemeral=True
             )
             # Once linked, replace the prompt (and its authorize link) with a
             # confirmation and stop the view so nothing lingers in the DM.
@@ -1112,7 +1164,8 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
             if view is not None and view.message is not None:
                 try:
                     await view.message.edit(
-                        content=f"✅ Linked as **{name}**.", view=None
+                        content=_("✅ Linked as **{name}**.").format(name=name),
+                        view=None,
                     )
                 except discord.HTTPException:
                     pass
@@ -1121,7 +1174,7 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
             log.exception("AniList login modal failed")
             try:
                 await interaction.followup.send(
-                    "Something went wrong linking your account.", ephemeral=True
+                    _("Something went wrong linking your account."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -1146,7 +1199,7 @@ class LoginView(AuthorView):
             log.exception("AniList login modal launch failed")
             try:
                 await interaction.response.send_message(
-                    "Could not open the code form.", ephemeral=True
+                    _("Could not open the code form."), ephemeral=True
                 )
             except Exception:
                 pass

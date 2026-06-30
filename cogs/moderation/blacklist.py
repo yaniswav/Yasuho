@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class Blacklist(commands.Cog):
 
         await self.bot.db_pool.execute(query, user.id)
         self.bot.blacklist.add(user.id)
-        await ctx.send(f"{user} blacklisted.")
+        await ctx.send(_("{user} blacklisted.").format(user=user))
 
         for g in self.bot.guilds:
             try:
@@ -53,7 +54,7 @@ class Blacklist(commands.Cog):
 
         await self.bot.db_pool.execute(query, user.id)
         self.bot.blacklist.discard(user.id)
-        await ctx.send(f"{user} removed from the blacklist.")
+        await ctx.send(_("{user} removed from the blacklist.").format(user=user))
 
         for g in self.bot.guilds:
             try:
@@ -69,8 +70,8 @@ class Blacklist(commands.Cog):
 
         if not self.bot.blacklist:
             embed = discord.Embed(
-                title="Blacklist",
-                description="The blacklist is empty.",
+                title=_("Blacklist"),
+                description=_("The blacklist is empty."),
                 colour=random_colour(),
             )
             await ctx.send(embed=embed)
@@ -85,7 +86,7 @@ class Blacklist(commands.Cog):
                 lines.append(f"`{member_id}`")
 
         await Paginator(
-            paginate_lines(lines, title="Blacklist"), author_id=ctx.author.id
+            paginate_lines(lines, title=_("Blacklist")), author_id=ctx.author.id
         ).start(ctx)
 
 

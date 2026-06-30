@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.time import human_timedelta
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,9 @@ class AFK(commands.Cog):
         await self.bot.db_pool.execute(query, ctx.author.id, message)
         self.afk_users.add(ctx.author.id)
         embed = discord.Embed(colour=random_colour())
-        embed.description = f"{ctx.author.mention} you are now AFK: {message}"
+        embed.description = _("{user} you are now AFK: {message}").format(
+            user=ctx.author.mention, message=message
+        )
         await ctx.send(embed=embed)
 
     @commands.Cog.listener()
@@ -54,8 +57,10 @@ class AFK(commands.Cog):
                 if deleted:
                     self.afk_users.discard(message.author.id)
                     await message.channel.send(
-                        f"Welcome back {message.author.mention}, you were AFK for "
-                        f"{human_timedelta(deleted['since'], suffix=False)}.",
+                        _("Welcome back {user}, you were AFK for {duration}.").format(
+                            user=message.author.mention,
+                            duration=human_timedelta(deleted["since"], suffix=False),
+                        ),
                         delete_after=10,
                     )
 
@@ -68,8 +73,11 @@ class AFK(commands.Cog):
                 )
                 if r:
                     await message.channel.send(
-                        f"{user.display_name} is AFK: {r['message']} "
-                        f"({human_timedelta(r['since'])})"
+                        _("{name} is AFK: {message} ({duration})").format(
+                            name=user.display_name,
+                            message=r["message"],
+                            duration=human_timedelta(r["since"]),
+                        )
                     )
 
         except Exception:

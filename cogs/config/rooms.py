@@ -5,6 +5,8 @@ from collections import defaultdict
 import discord
 from discord.ext import commands
 
+from tools.i18n import _
+
 log = logging.getLogger(__name__)
 
 
@@ -133,7 +135,10 @@ class TemporaryRooms(commands.Cog):
 
                 if len(existing_rooms) >= 3:
                     return await ctx.send(
-                        "You have reached the maximum number of Auto-Rooms for this server."
+                        _(
+                            "You have reached the maximum number of Auto-Rooms "
+                            "for this server."
+                        )
                     )
 
                 try:
@@ -143,7 +148,7 @@ class TemporaryRooms(commands.Cog):
                     )
                 except discord.HTTPException:
                     return await ctx.send(
-                        "Something went wrong while creating your Auto-Room."
+                        _("Something went wrong while creating your Auto-Room.")
                     )
 
                 await self.bot.db_pool.execute(
@@ -154,12 +159,17 @@ class TemporaryRooms(commands.Cog):
                 self._auto_rooms.setdefault(ctx.guild.id, set()).add(chan.id)
 
             await ctx.send(
-                "Successfully created your Auto-Room. You can rename category and channel to whatever you want."
+                _(
+                    "Successfully created your Auto-Room. You can rename category "
+                    "and channel to whatever you want."
+                )
             )
 
         except Exception:
             log.exception("Failed to set up auto-room")
-            await ctx.send("Something went wrong while creating your Auto-Room.")
+            await ctx.send(
+                _("Something went wrong while creating your Auto-Room.")
+            )
 
     @autoroom.command(aliases=["delete", "del"])
     @commands.has_permissions(manage_channels=True)
@@ -172,11 +182,14 @@ class TemporaryRooms(commands.Cog):
         ]
 
         if not matching_categories:
-            return await ctx.send("No category found with that name.")
+            return await ctx.send(_("No category found with that name."))
 
         if len(matching_categories) > 1:
             return await ctx.send(
-                "Multiple categories found with that name. Please be more specific."
+                _(
+                    "Multiple categories found with that name. Please be more "
+                    "specific."
+                )
             )
 
         category = matching_categories[0]
@@ -205,16 +218,18 @@ class TemporaryRooms(commands.Cog):
                         pass
 
             if not removed_any:
-                return await ctx.send("That category is not an Auto-Room.")
+                return await ctx.send(_("That category is not an Auto-Room."))
 
             try:
                 await category.delete()
             except discord.HTTPException:
                 return await ctx.send(
-                    "Something went wrong while deleting the category."
+                    _("Something went wrong while deleting the category.")
                 )
 
-        await ctx.send("Successfully removed the Auto-Room category and its channels.")
+        await ctx.send(
+            _("Successfully removed the Auto-Room category and its channels.")
+        )
 
     @autoroom.command(aliases=["list"])
     @commands.has_permissions(manage_channels=True)
@@ -227,22 +242,26 @@ class TemporaryRooms(commands.Cog):
         )
 
         if not autorooms:
-            return await ctx.send("There are no autorooms set up in this server.")
+            return await ctx.send(
+                _("There are no autorooms set up in this server.")
+            )
 
-        embed = discord.Embed(title="Auto Rooms in Server", color=discord.Color.blue())
+        embed = discord.Embed(
+            title=_("Auto Rooms in Server"), color=discord.Color.blue()
+        )
 
         for room in autorooms:
             channel = self.bot.get_channel(room["channel_id"])
             if channel:
                 embed.add_field(
-                    name=f"Channel ID: {channel.id}",
-                    value=f"Name: {channel.name}",
+                    name=_("Channel ID: {id}").format(id=channel.id),
+                    value=_("Name: {name}").format(name=channel.name),
                     inline=False,
                 )
             else:
                 embed.add_field(
-                    name="Channel ID: Unknown",
-                    value="This channel might have been deleted.",
+                    name=_("Channel ID: Unknown"),
+                    value=_("This channel might have been deleted."),
                     inline=False,
                 )
 

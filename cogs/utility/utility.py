@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class Utility(commands.Cog):
 
         data = self._snipes.get(ctx.channel.id)
         if not data:
-            return await ctx.send("Nothing to snipe.")
+            return await ctx.send(_("Nothing to snipe."))
 
         content, author, when = data
         embed = discord.Embed(
@@ -54,19 +55,21 @@ class Utility(commands.Cog):
 
         question = question.strip()
         if not question:
-            return await ctx.send("Please give a question to ask.")
+            return await ctx.send(_("Please give a question to ask."))
         if len(question) > 300:
-            return await ctx.send("The poll question must be 300 characters or fewer.")
+            return await ctx.send(
+                _("The poll question must be 300 characters or fewer.")
+            )
 
         poll = discord.Poll(question=question, duration=datetime.timedelta(hours=24))
-        poll.add_answer(text="Yes", emoji="\U0001F44D")
-        poll.add_answer(text="No", emoji="\U0001F44E")
+        poll.add_answer(text=_("Yes"), emoji="\U0001F44D")
+        poll.add_answer(text=_("No"), emoji="\U0001F44E")
 
         try:
             await ctx.send(poll=poll)
         except (discord.HTTPException, ValueError):
             log.exception("Failed to send native poll")
-            await ctx.send("I could not create that poll here.")
+            await ctx.send(_("I could not create that poll here."))
 
     @commands.hybrid_command()
     async def quickpoll(self, ctx, *, args: str):
@@ -78,16 +81,18 @@ class Utility(commands.Cog):
 
         if not question:
             return await ctx.send(
-                "Give a question and options: `quickpoll question | option 1 | option 2`"
+                _(
+                    "Give a question and options: `quickpoll question | option 1 | option 2`"
+                )
             )
         if len(options) < 2:
-            return await ctx.send("A poll needs at least two options.")
+            return await ctx.send(_("A poll needs at least two options."))
         if len(options) > 10:
-            return await ctx.send("A poll can have at most 10 options.")
+            return await ctx.send(_("A poll can have at most 10 options."))
         if len(question) > 300:
-            return await ctx.send("The question must be 300 characters or fewer.")
+            return await ctx.send(_("The question must be 300 characters or fewer."))
         if any(len(option) > 55 for option in options):
-            return await ctx.send("Each option must be 55 characters or fewer.")
+            return await ctx.send(_("Each option must be 55 characters or fewer."))
 
         poll = discord.Poll(question=question, duration=datetime.timedelta(hours=24))
         for option in options:
@@ -97,7 +102,7 @@ class Utility(commands.Cog):
             await ctx.send(poll=poll)
         except (discord.HTTPException, ValueError):
             log.exception("Failed to send native quickpoll")
-            await ctx.send("I could not create that poll here.")
+            await ctx.send(_("I could not create that poll here."))
 
     @commands.hybrid_command()
     async def translate(self, ctx, *, text: str):
@@ -119,12 +124,12 @@ class Utility(commands.Cog):
                     description=translated,
                     colour=random_colour(),
                 )
-                embed.set_footer(text="auto -> en (unofficial)")
+                embed.set_footer(text=_("auto -> en (unofficial)"))
                 await ctx.send(embed=embed)
 
             except Exception:
                 log.exception("translation failed")
-                await ctx.send("Translation failed.")
+                await ctx.send(_("Translation failed."))
 
 
 async def setup(bot):

@@ -13,6 +13,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class UpdateSelect(discord.ui.Select):
             for c in cogs[:25]
         ]
         super().__init__(
-            placeholder="Cogs to reload",
+            placeholder=_("Cogs to reload"),
             min_values=0,
             max_values=len(options),
             options=options,
@@ -60,7 +61,7 @@ class UpdateView(AuthorView):
     async def _reload(self, interaction, exts):
         if not exts:
             return await interaction.response.send_message(
-                "Nothing selected.", ephemeral=True
+                _("Nothing selected."), ephemeral=True
             )
         ok, fail = [], []
         for e in exts:
@@ -72,11 +73,15 @@ class UpdateView(AuthorView):
                 fail.append(f"{e} ({type(err).__name__})")
         lines = []
         if ok:
-            lines.append("Reloaded: " + ", ".join(f"`{e}`" for e in ok))
+            lines.append(
+                _("Reloaded: {items}").format(items=", ".join(f"`{e}`" for e in ok))
+            )
         if fail:
-            lines.append("Failed: " + ", ".join(f"`{e}`" for e in fail))
+            lines.append(
+                _("Failed: {items}").format(items=", ".join(f"`{e}`" for e in fail))
+            )
         await interaction.response.send_message(
-            "\n".join(lines) or "Nothing reloaded.", ephemeral=True
+            "\n".join(lines) or _("Nothing reloaded."), ephemeral=True
         )
 
     @discord.ui.button(
@@ -172,8 +177,11 @@ class Admin(commands.Cog):
             else:
                 synced = await self.bot.tree.sync()
 
+            scope = _("globally") if spec is None else _("to the current guild.")
             await ctx.send(
-                f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
+                _("Synced {count} commands {scope}").format(
+                    count=len(synced), scope=scope
+                )
             )
             return
 
@@ -186,7 +194,9 @@ class Admin(commands.Cog):
             else:
                 ret += 1
 
-        await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+        await ctx.send(
+            _("Synced the tree to {done}/{total}.").format(done=ret, total=len(guilds))
+        )
 
     @commands.command(hidden=True, name="eval")
     @commands.is_owner()
@@ -200,10 +210,12 @@ class Admin(commands.Cog):
             "author": ctx.author,
             "guild": ctx.guild,
             "message": ctx.message,
-            "_": self._last_result,
         }
 
         env.update(globals())
+        # Set after update(globals()) so the eval "_" (last result) is not
+        # shadowed by the module-level gettext "_" pulled in from globals().
+        env["_"] = self._last_result
 
         body = self.cleanup_code(body)
         stdout = io.StringIO()
@@ -255,10 +267,16 @@ class Admin(commands.Cog):
                     e += 1
 
             if ctx.interaction:
-                return await ctx.send(f"Reloaded {v} extensions, {e} fail.")
+                return await ctx.send(
+                    _("Reloaded {count} extensions, {fail} fail.").format(
+                        count=v, fail=e
+                    )
+                )
 
             await ctx.message.add_reaction("\u2705")
-            await ctx.send(f"Reloaded {v} extensions, {e} fail.")
+            await ctx.send(
+                _("Reloaded {count} extensions, {fail} fail.").format(count=v, fail=e)
+            )
             return
 
         try:
@@ -271,17 +289,24 @@ class Admin(commands.Cog):
 
             if ctx.interaction:
                 await ctx.interaction.response.send_message(
-                    f"Couldn't reload `{extension}`: {e}", ephemeral=True
+                    _("Couldn't reload `{ext}`: {error}").format(
+                        ext=extension, error=e
+                    ),
+                    ephemeral=True,
                 )
             else:
-                await ctx.send(f"Couldn't reload `{extension}`: {e}")
+                await ctx.send(
+                    _("Couldn't reload `{ext}`: {error}").format(
+                        ext=extension, error=e
+                    )
+                )
 
         else:
             log.info("Reloaded extension: %s", extension)
 
             if ctx.interaction:
                 await ctx.interaction.response.send_message(
-                    f"Reloaded `{extension}`", ephemeral=True
+                    _("Reloaded `{ext}`").format(ext=extension), ephemeral=True
                 )
                 return
 
@@ -298,8 +323,10 @@ class Admin(commands.Cog):
         except Exception as error:
             embed = discord.Embed(color=random_colour())
             embed.add_field(
-                name="Error!",
-                value=f"{extension} cannot be loaded! \n**[{error}]**",
+                name=_("Error!"),
+                value=_("{ext} cannot be loaded! \n**[{error}]**").format(
+                    ext=extension, error=error
+                ),
                 inline=True,
             )
 
@@ -323,8 +350,10 @@ class Admin(commands.Cog):
         except Exception as error:
             embed = discord.Embed(color=random_colour())
             embed.add_field(
-                name="Error!",
-                value=f"{extension} cannot be unloaded! \n**[{error}]**",
+                name=_("Error!"),
+                value=_("{ext} cannot be unloaded! \n**[{error}]**").format(
+                    ext=extension, error=error
+                ),
                 inline=True,
             )
 
@@ -370,9 +399,13 @@ class Admin(commands.Cog):
             ext = self._resolve_ext(extension) or f"cogs.{extension}"
             try:
                 await self.bot.reload_extension(ext)
-                return await ctx.send(f"Pulled and reloaded `{ext}`.")
+                return await ctx.send(
+                    _("Pulled and reloaded `{ext}`.").format(ext=ext)
+                )
             except commands.ExtensionError as err:
-                return await ctx.send(f"Could not reload `{ext}`: {err}")
+                return await ctx.send(
+                    _("Could not reload `{ext}`: {error}").format(ext=ext, error=err)
+                )
 
         async with ctx.typing():
             before = await self._git("rev-parse", "HEAD")
@@ -406,35 +439,43 @@ class Admin(commands.Cog):
             elif not ext and not f.startswith("cogs/"):
                 restart.append(f)
 
-        embed = discord.Embed(title="Update", colour=random_colour())
+        embed = discord.Embed(title=_("Update"), colour=random_colour())
         if not moved:
             embed.description = (
-                "Already up to date."
+                _("Already up to date.")
                 if "up to date" in pull_out.lower()
-                else f"Nothing pulled:\n```\n{pull_out[:400]}\n```"
+                else _("Nothing pulled:\n```\n{output}\n```").format(
+                    output=pull_out[:400]
+                )
             )
         else:
             pulled = await self._git(
                 "log", "--oneline", "--no-decorate", f"{before}..{after}"
             )
             embed.add_field(
-                name="Pulled",
-                value=f"`{before[:7]}` -> `{after[:7]}`\n```\n{(pulled or '(no log)')[:800]}\n```",
+                name=_("Pulled"),
+                value=_("`{before}` -> `{after}`\n```\n{log}\n```").format(
+                    before=before[:7],
+                    after=after[:7],
+                    log=(pulled or _("(no log)"))[:800],
+                ),
                 inline=False,
             )
         if cogs:
             embed.add_field(
-                name="Changed cogs",
+                name=_("Changed cogs"),
                 value="\n".join(f"`{c}`" for c in cogs),
                 inline=False,
             )
         if restart:
             embed.add_field(
-                name="Restart needed (not hot-reloadable)",
+                name=_("Restart needed (not hot-reloadable)"),
                 value="\n".join(f"`{f}`" for f in restart),
                 inline=False,
             )
-        embed.set_footer(text="Pick the cogs to reload below, or reload everything.")
+        embed.set_footer(
+            text=_("Pick the cogs to reload below, or reload everything.")
+        )
 
         view = UpdateView(self.bot, ctx.author.id, cogs)
         view.message = await ctx.send(embed=embed, view=view)

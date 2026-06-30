@@ -6,6 +6,7 @@ from discord.ext import commands
 from tools import db, settings
 from tools.embed_creator import notify_failure
 from tools.formats import random_colour
+from tools.i18n import N_, _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -15,28 +16,29 @@ log = logging.getLogger(__name__)
 _UNKNOWN = object()
 
 # Features the panel can route the admin to. Leveling is toggled in-panel; the
-# rest each point at their dedicated setup command.
+# rest each point at their dedicated setup command. Each value is N_-marked for
+# extraction and translated at the use site via _(...) (see handle_select).
 GUIDANCE = {
-    "prefix": (
+    "prefix": N_(
         "Use `/prefix set <prefix>` to change the command prefix for this "
         "server."
     ),
-    "autorole": (
+    "autorole": N_(
         "Use `/autorole set <role>` to choose the role new members receive on "
         "join."
     ),
-    "automod": (
+    "automod": N_(
         "Use `/automod` to open the interactive AutoMod control panel "
         "(custom + native filters)."
     ),
-    "modlog": (
+    "modlog": N_(
         "Use `/modlog` to open the interactive mod-log control panel "
         "(channel + event toggles)."
     ),
-    "starboard": (
+    "starboard": N_(
         "Use `/starboard set <channel> [threshold]` to set up the starboard."
     ),
-    "welcome": (
+    "welcome": N_(
         "Use `/welcome set <channel> <message>` to configure welcome messages. "
         "Placeholders: {user}, {server}, {count}."
     ),
@@ -47,8 +49,8 @@ def _onoff(value):
     """Render a tri-state boolean (True / False / unknown) as a labelled dot."""
 
     if value is _UNKNOWN:
-        return "❔ Unknown"
-    return "🟢 Enabled" if value else "🔴 Disabled"
+        return "❔ " + _("Unknown")
+    return ("🟢 " + _("Enabled")) if value else ("🔴 " + _("Disabled"))
 
 
 # ----------------------------------------------------------------------
@@ -61,58 +63,58 @@ class ConfigSelect(discord.ui.Select):
         self.panel = panel
         leveling = panel.state.get("leveling")
         if leveling is _UNKNOWN:
-            lvl_desc = "Current state unknown"
+            lvl_desc = _("Current state unknown")
         elif leveling:
-            lvl_desc = "Currently enabled - select to disable"
+            lvl_desc = _("Currently enabled - select to disable")
         else:
-            lvl_desc = "Currently disabled - select to enable"
+            lvl_desc = _("Currently disabled - select to enable")
 
         options = [
             discord.SelectOption(
-                label="Leveling",
+                label=_("Leveling"),
                 value="leveling",
                 emoji="📈",
                 description=lvl_desc[:100],
             ),
             discord.SelectOption(
-                label="Prefix",
+                label=_("Prefix"),
                 value="prefix",
                 emoji="💬",
-                description="Change the command prefix",
+                description=_("Change the command prefix"),
             ),
             discord.SelectOption(
-                label="Auto-role",
+                label=_("Auto-role"),
                 value="autorole",
                 emoji="🎭",
-                description="Role granted to new members",
+                description=_("Role granted to new members"),
             ),
             discord.SelectOption(
-                label="AutoMod",
+                label=_("AutoMod"),
                 value="automod",
                 emoji="🛡️",
-                description="Open the AutoMod control panel",
+                description=_("Open the AutoMod control panel"),
             ),
             discord.SelectOption(
-                label="Mod-log",
+                label=_("Mod-log"),
                 value="modlog",
                 emoji="📝",
-                description="Open the mod-log control panel",
+                description=_("Open the mod-log control panel"),
             ),
             discord.SelectOption(
-                label="Starboard",
+                label=_("Starboard"),
                 value="starboard",
                 emoji="⭐",
-                description="Configure the starboard",
+                description=_("Configure the starboard"),
             ),
             discord.SelectOption(
-                label="Welcome",
+                label=_("Welcome"),
                 value="welcome",
                 emoji="👋",
-                description="Configure welcome messages",
+                description=_("Configure welcome messages"),
             ),
         ]
         super().__init__(
-            placeholder="Configure a feature...",
+            placeholder=_("Configure a feature..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -139,8 +141,8 @@ class ConfigPanel(AuthorView):
     def build_embed(self):
         state = self.state
         embed = discord.Embed(
-            title=f"⚙️ Configuration · {self.guild.name}"[:256],
-            description=(
+            title=("⚙️ " + _("Configuration") + f" · {self.guild.name}")[:256],
+            description=_(
                 "An overview of every feature for this server. Use the menu "
                 "below to toggle **Leveling** or jump to a feature's setup "
                 "command."
@@ -151,61 +153,81 @@ class ConfigPanel(AuthorView):
         if icon is not None:
             embed.set_thumbnail(url=icon.url)
 
-        embed.add_field(name="💬 Prefix", value=f"`{state['prefix']}`", inline=True)
         embed.add_field(
-            name="📈 Leveling", value=_onoff(state["leveling"]), inline=True
+            name="💬 " + _("Prefix"),
+            value=f"`{state['prefix']}`",
+            inline=True,
+        )
+        embed.add_field(
+            name="📈 " + _("Leveling"),
+            value=_onoff(state["leveling"]),
+            inline=True,
         )
 
         role_id = state["autorole"]
         embed.add_field(
-            name="🎭 Auto-role",
-            value=(f"🟢 <@&{role_id}>" if role_id else "🔴 Not set up"),
+            name="🎭 " + _("Auto-role"),
+            value=(f"🟢 <@&{role_id}>" if role_id else "🔴 " + _("Not set up")),
             inline=True,
         )
 
         starboard = state["starboard"]
         if starboard is _UNKNOWN:
-            starboard_value = "❔ Unknown"
+            starboard_value = "❔ " + _("Unknown")
         elif starboard is None:
-            starboard_value = "🔴 Not set up"
+            starboard_value = "🔴 " + _("Not set up")
         else:
             channel_id, threshold = starboard
             starboard_value = f"🟢 <#{channel_id}> · {threshold} ⭐"
-        embed.add_field(name="⭐ Starboard", value=starboard_value, inline=True)
+        embed.add_field(
+            name="⭐ " + _("Starboard"), value=starboard_value, inline=True
+        )
 
         automod = state["automod"]
         if automod is _UNKNOWN:
-            automod_value = "❔ Unknown"
+            automod_value = "❔ " + _("Unknown")
         elif automod is None:
-            automod_value = "🔴 Not set up"
+            automod_value = "🔴 " + _("Not set up")
         else:
             antilink, antispam = automod
             automod_value = (
-                f"Anti-link {'🟢' if antilink else '🔴'} · "
-                f"Anti-spam {'🟢' if antispam else '🔴'}"
+                _("Anti-link")
+                + f" {'🟢' if antilink else '🔴'} · "
+                + _("Anti-spam")
+                + f" {'🟢' if antispam else '🔴'}"
             )
-        embed.add_field(name="🛡️ AutoMod", value=automod_value, inline=True)
+        embed.add_field(
+            name="🛡️ " + _("AutoMod"), value=automod_value, inline=True
+        )
 
         modlog = state["modlog"]
         if modlog is _UNKNOWN:
-            modlog_value = "❔ Unknown"
+            modlog_value = "❔ " + _("Unknown")
         elif modlog:
             modlog_value = f"🟢 <#{modlog}>"
         else:
-            modlog_value = "🔴 Not set up"
-        embed.add_field(name="📝 Mod-log", value=modlog_value, inline=True)
+            modlog_value = "🔴 " + _("Not set up")
+        embed.add_field(
+            name="📝 " + _("Mod-log"), value=modlog_value, inline=True
+        )
 
         welcome = state["welcome"]
         if welcome is _UNKNOWN:
-            welcome_value = "❔ Unknown"
+            welcome_value = "❔ " + _("Unknown")
         elif welcome:
             welcome_value = f"🟢 <#{welcome}>"
         else:
-            welcome_value = "🔴 Not set up"
-        embed.add_field(name="👋 Welcome", value=welcome_value, inline=True)
+            welcome_value = "🔴 " + _("Not set up")
+        embed.add_field(
+            name="👋 " + _("Welcome"), value=welcome_value, inline=True
+        )
 
         embed.set_footer(
-            text="Only you can use these controls · times out after 3 min"
+            text=(
+                _("Only you can use these controls")
+                + " · "
+                + _("times out after 3 min")
+            )
         )
         return embed
 
@@ -227,8 +249,10 @@ class ConfigPanel(AuthorView):
             await self._toggle_leveling(interaction)
             return
 
-        guidance = GUIDANCE.get(
-            key, "Use the matching command to configure this feature."
+        guidance = _(
+            GUIDANCE.get(
+                key, N_("Use the matching command to configure this feature.")
+            )
         )
         try:
             # Re-render first so the dropdown resets, then send the tip.
@@ -281,9 +305,9 @@ class Settings(commands.Cog):
         )
         self.bot.prefixes[ctx.guild.id] = prefix
         embed = discord.Embed(
-            title="Server prefix", colour=random_colour()
+            title=_("Server prefix"), colour=random_colour()
         )
-        embed.add_field(name="Prefix has been set to:", value=f"`{prefix}`")
+        embed.add_field(name=_("Prefix has been set to:"), value=f"`{prefix}`")
         await ctx.send(embed=embed)
 
     @prefix.command(name="current", aliases=["list", "info"])
@@ -305,9 +329,9 @@ class Settings(commands.Cog):
             await self.bot.db_pool.fetchval(query, ctx.guild.id)
         ) or self.bot.default_prefix
         embed = discord.Embed(
-            title="Server prefix", colour=random_colour()
+            title=_("Server prefix"), colour=random_colour()
         )
-        embed.add_field(name="Current server prefix", value=f"`{prefix}`")
+        embed.add_field(name=_("Current server prefix"), value=f"`{prefix}`")
         await ctx.send(embed=embed)
 
     @commands.hybrid_group(aliases=["auto-role"])
@@ -329,9 +353,11 @@ class Settings(commands.Cog):
         )
         self.bot.autoroles[ctx.guild.id] = role.id
         embed = discord.Embed(
-            title="Auto-role role", colour=random_colour()
+            title=_("Auto-role role"), colour=random_colour()
         )
-        embed.add_field(name="Auto-role has been set to:", value=f"<@&{role.id}>")
+        embed.add_field(
+            name=_("Auto-role has been set to:"), value=f"<@&{role.id}>"
+        )
         await ctx.send(embed=embed)
 
     @autorole.command(name="remove")
@@ -346,10 +372,10 @@ class Settings(commands.Cog):
             await self.bot.db_pool.execute(query, ctx.guild.id)
             self.bot.autoroles.pop(ctx.guild.id, None)
             embed = discord.Embed(
-                title="Auto-role", colour=random_colour()
+                title=_("Auto-role"), colour=random_colour()
             )
             embed.add_field(
-                name="Auto-role has been remove from the guild", value="​"
+                name=_("Auto-role has been remove from the guild"), value="​"
             )
             await ctx.send(embed=embed)
 
@@ -374,16 +400,16 @@ class Settings(commands.Cog):
         if role is not None:
 
             embed = discord.Embed(
-                title="Auto-role", colour=random_colour()
+                title=_("Auto-role"), colour=random_colour()
             )
-            embed.add_field(name="Current auto-role", value=f"<@&{role}>")
+            embed.add_field(name=_("Current auto-role"), value=f"<@&{role}>")
             await ctx.send(embed=embed)
 
         else:
             embed = discord.Embed(
-                title="Auto-role", colour=random_colour()
+                title=_("Auto-role"), colour=random_colour()
             )
-            embed.add_field(name="Current auto-role", value="`None`")
+            embed.add_field(name=_("Current auto-role"), value="`None`")
             await ctx.send(embed=embed)
 
     # -- config panel ---------------------------------------------------
@@ -477,9 +503,11 @@ class Settings(commands.Cog):
             self.bot.db_pool, ctx.guild.id, "leveling_enabled", mode
         )
         embed = discord.Embed(
-            title="Leveling",
+            title=_("Leveling"),
             description=(
-                f"Leveling {'enabled' if mode else 'disabled'} for this server."
+                _("Leveling enabled for this server.")
+                if mode
+                else _("Leveling disabled for this server.")
             ),
             colour=random_colour(),
         )

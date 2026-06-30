@@ -7,6 +7,7 @@ from .components import SeasonView
 from .helpers import SEASONS, _clean_description, _current_season
 from .queries import CHARACTER_QUERY, PAGE_QUERY, STUDIO_QUERY
 from tools.formats import random_colour
+from tools.i18n import _
 
 
 class LookupMixin:
@@ -35,7 +36,7 @@ class LookupMixin:
             ctx,
             {"sort": ["TRENDING_DESC"], "type": "ANIME"},
             "ANIME",
-            "Trending anime",
+            _("Trending anime"),
         )
 
     @commands.hybrid_command()
@@ -47,7 +48,7 @@ class LookupMixin:
             ctx,
             {"sort": ["POPULARITY_DESC"], "type": "ANIME"},
             "ANIME",
-            "Popular anime",
+            _("Popular anime"),
         )
 
     @commands.hybrid_command()
@@ -59,7 +60,7 @@ class LookupMixin:
             season = season.upper()
             if season not in SEASONS:
                 return await ctx.send(
-                    "Season must be one of: WINTER, SPRING, SUMMER, FALL."
+                    _("Season must be one of: WINTER, SPRING, SUMMER, FALL.")
                 )
             if year is None:
                 year = datetime.datetime.now(datetime.timezone.utc).year
@@ -83,11 +84,17 @@ class LookupMixin:
                 ((data or {}).get("data") or {}).get("Page") or {}
             ).get("media") or []
             if not media:
-                return await ctx.send(f"No anime found for {season.title()} {year}.")
+                return await ctx.send(
+                    _("No anime found for {season} {year}.").format(
+                        season=season.title(), year=year
+                    )
+                )
 
             view = SeasonView(self, media, ctx.author.id, season, year)
             view.message = await ctx.send(
-                content=f"**{season.title()} {year} anime** - pick one for details:",
+                content=_(
+                    "**{season} {year} anime** - pick one for details:"
+                ).format(season=season.title(), year=year),
                 view=view,
             )
 
@@ -100,10 +107,10 @@ class LookupMixin:
             data = await self._graphql(CHARACTER_QUERY, {"search": search})
             char = ((data or {}).get("data") or {}).get("Character")
             if not char:
-                return await ctx.send("No character found.")
+                return await ctx.send(_("No character found."))
 
             name = char.get("name") or {}
-            full = name.get("full") or "Unknown"
+            full = name.get("full") or _("Unknown")
             native = name.get("native")
             title = f"{full} ({native})" if native else full
 
@@ -127,10 +134,10 @@ class LookupMixin:
             data = await self._graphql(STUDIO_QUERY, {"search": search})
             studio = ((data or {}).get("data") or {}).get("Studio")
             if not studio:
-                return await ctx.send("No studio found.")
+                return await ctx.send(_("No studio found."))
 
             embed = discord.Embed(
-                title=studio.get("name") or "Unknown studio",
+                title=studio.get("name") or _("Unknown studio"),
                 url=studio.get("siteUrl"),
                 colour=random_colour(),
             )
@@ -143,7 +150,7 @@ class LookupMixin:
             ]
             if titles:
                 embed.add_field(
-                    name="Popular productions",
+                    name=_("Popular productions"),
                     value="\n".join(f"- {t}" for t in titles[:10]),
                     inline=False,
                 )

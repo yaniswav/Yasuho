@@ -6,6 +6,7 @@ from discord.ext import commands, tasks
 from discord.utils import find
 
 from tools.config_loader import config_loader
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -74,13 +75,15 @@ class Events(commands.Cog):
 
         general = find(lambda x: x.name in names, guild.text_channels)
 
+        welcome = _(
+            "🌺 Beep boop **{guild}**! To get started type `{prefix}help`"
+        ).format(guild=guild.name, prefix=DEFAULT_PREFIX)
+
         if general and general.permissions_for(guild.me).send_messages:
-            await general.send(
-                f"🌺 Beep boop **{guild.name}**! To get started type `{DEFAULT_PREFIX}help`"
-            )
+            await general.send(welcome)
 
         else:
-            msg = f"🌺 Beep boop **{guild.name}**! To get started type `{DEFAULT_PREFIX}help`"
+            msg = welcome
             try:
                 if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
                     await guild.system_channel.send(msg)
@@ -109,7 +112,13 @@ class Events(commands.Cog):
             try:
                 await member.guild.ban(member, reason="Blacklisted from bot")
                 try:
-                    await member.send("You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>")
+                    await member.send(
+                        _(
+                            "You are blacklisted from bot. You can ask to be "
+                            "unblacklisted by send a message to "
+                            "<@228895251576782858>"
+                        )
+                    )
                 except discord.HTTPException:
                     pass
             except discord.HTTPException:

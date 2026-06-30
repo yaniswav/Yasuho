@@ -4,34 +4,36 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import N_, _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
 # Nice labels for the radio picker; each value is a FIELDS key (see Profiles).
+# Labels are N_-marked for extraction and translated at the use site via _(...).
 _FIELD_CHOICES = [
-    ("Switch friend code", "switch"),
-    ("3DS friend code", "3ds"),
-    ("BattleTag", "battletag"),
-    ("Riot ID", "riot"),
-    ("Steam ID", "steam"),
+    (N_("Switch friend code"), "switch"),
+    (N_("3DS friend code"), "3ds"),
+    (N_("BattleTag"), "battletag"),
+    (N_("Riot ID"), "riot"),
+    (N_("Steam ID"), "steam"),
 ]
 
 
-class ProfileEditModal(discord.ui.Modal, title="Edit your profile"):
+class ProfileEditModal(discord.ui.Modal):
     """Pick a field from a radio and type its value (Components V2 modal)."""
 
     def __init__(self, cog):
-        super().__init__()
+        super().__init__(title=_("Edit your profile"))
         self.cog = cog
         self.field = discord.ui.RadioGroup(required=True)
         for label, value in _FIELD_CHOICES:
-            self.field.add_option(label=label, value=value)
-        self.add_item(discord.ui.Label(text="Field", component=self.field))
+            self.field.add_option(label=_(label), value=value)
+        self.add_item(discord.ui.Label(text=_("Field"), component=self.field))
         self.value_input = discord.ui.TextInput(
             style=discord.TextStyle.short, required=True, max_length=1000
         )
-        self.add_item(discord.ui.Label(text="Value", component=self.value_input))
+        self.add_item(discord.ui.Label(text=_("Value"), component=self.value_input))
 
     async def on_submit(self, interaction):
         try:
@@ -39,20 +41,20 @@ class ProfileEditModal(discord.ui.Modal, title="Edit your profile"):
             value = (self.value_input.value or "").strip()
             if not field or not value:
                 return await interaction.response.send_message(
-                    "Pick a field and enter a value.", ephemeral=True
+                    _("Pick a field and enter a value."), ephemeral=True
                 )
             label = await self.cog._apply_field(interaction.user.id, field, value)
             if label is None:
                 return await interaction.response.send_message(
-                    "Unknown field.", ephemeral=True
+                    _("Unknown field."), ephemeral=True
                 )
-            embed = discord.Embed(title="Profile updated", colour=random_colour())
-            embed.add_field(name=label, value=value)
+            embed = discord.Embed(title=_("Profile updated"), colour=random_colour())
+            embed.add_field(name=_(label), value=value)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception:
             log.exception("Profile edit modal failed")
             await interaction.response.send_message(
-                "Failed to update your profile, please try again later.",
+                _("Failed to update your profile, please try again later."),
                 ephemeral=True,
             )
 
@@ -89,13 +91,14 @@ class Profiles(commands.Cog):
         "steam": "steamid",
     }
 
-    # Friendly labels for displaying each column in the profile embed.
+    # Friendly labels for displaying each column in the profile embed. N_-marked
+    # for extraction; translated at the use site via _(label).
     LABELS = {
-        "switch_fc": "Switch Friend Code",
-        "threeds_fc": "3DS Friend Code",
-        "battletag": "BattleTag",
-        "riotid": "Riot ID",
-        "steamid": "Steam ID",
+        "switch_fc": N_("Switch Friend Code"),
+        "threeds_fc": N_("3DS Friend Code"),
+        "battletag": N_("BattleTag"),
+        "riotid": N_("Riot ID"),
+        "steamid": N_("Steam ID"),
     }
 
     def __init__(self, bot):
@@ -126,11 +129,13 @@ class Profiles(commands.Cog):
             row = await self.bot.db_pool.fetchrow(query, member.id)
 
             if row is None or all(row[col] is None for col in self.LABELS):
-                await ctx.send(f"{member.display_name} has no profile set.")
+                await ctx.send(
+                    _("{name} has no profile set.").format(name=member.display_name)
+                )
                 return
 
             embed = discord.Embed(
-                title=f"{member.display_name}'s profile",
+                title=_("{name}'s profile").format(name=member.display_name),
                 colour=random_colour(),
             )
             embed.set_thumbnail(url=member.display_avatar.url)
@@ -138,7 +143,7 @@ class Profiles(commands.Cog):
             for col, label in self.LABELS.items():
                 value = row[col]
                 if value is not None:
-                    embed.add_field(name=label, value=value, inline=False)
+                    embed.add_field(name=_(label), value=value, inline=False)
 
             await ctx.send(embed=embed)
 
@@ -166,7 +171,7 @@ class Profiles(commands.Cog):
         """Set one of your profile fields (switch, 3ds, battletag, riot, steam)."""
 
         if len(value) > 1000:
-            await ctx.send("That value is too long (max 1000 characters).")
+            await ctx.send(_("That value is too long (max 1000 characters)."))
             return
 
         async with ctx.typing():
@@ -175,16 +180,20 @@ class Profiles(commands.Cog):
             except Exception:
                 log.exception("Failed to set field %s", field)
                 await ctx.send(
-                    "Failed to update your profile, please try again later."
+                    _("Failed to update your profile, please try again later.")
                 )
                 return
 
             if label is None:
-                await ctx.send(f"Unknown field. Choose: {', '.join(self.FIELDS)}")
+                await ctx.send(
+                    _("Unknown field. Choose: {options}").format(
+                        options=", ".join(self.FIELDS)
+                    )
+                )
                 return
 
-            embed = discord.Embed(title="Profile updated", colour=random_colour())
-            embed.add_field(name=label, value=value)
+            embed = discord.Embed(title=_("Profile updated"), colour=random_colour())
+            embed.add_field(name=_(label), value=value)
             await ctx.send(embed=embed)
 
     @profile.command(name="edit")
@@ -197,7 +206,7 @@ class Profiles(commands.Cog):
         else:
             view = ProfileEditView(self, ctx.author.id)
             view.message = await ctx.send(
-                "Click below to edit a profile field:", view=view
+                _("Click below to edit a profile field:"), view=view
             )
 
     @profile.command(name="clear")
@@ -213,14 +222,14 @@ class Profiles(commands.Cog):
             except Exception:
                 log.exception("Failed to clear profile")
                 await ctx.send(
-                    "Failed to clear your profile, please try again later."
+                    _("Failed to clear your profile, please try again later.")
                 )
                 return
 
             embed = discord.Embed(
-                title="Profile cleared", colour=random_colour()
+                title=_("Profile cleared"), colour=random_colour()
             )
-            embed.add_field(name="Your profile has been cleared.", value="​")
+            embed.add_field(name=_("Your profile has been cleared."), value="​")
             await ctx.send(embed=embed)
 
 

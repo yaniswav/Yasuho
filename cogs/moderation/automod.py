@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from tools import db, modactions, settings
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class _AutoModToggle(discord.ui.Button):
         if state is None:
             # Native rule we can't read/manage (missing permission) -> disabled.
             self.disabled = True
-            self.label = f"{self.base_label} (N/A)"
+            self.label = _("{label} (N/A)").format(label=self.base_label)
             self.style = discord.ButtonStyle.secondary
         else:
             self.disabled = False
@@ -73,7 +74,7 @@ class _ActionSelect(discord.ui.Select):
     def __init__(self, panel, row):
         self.panel = panel
         super().__init__(
-            placeholder="Action on a custom violation...",
+            placeholder=_("Action on a custom violation..."),
             min_values=1,
             max_values=1,
             options=_action_options(panel.state["action"]),
@@ -93,7 +94,7 @@ class _ExemptRoleSelect(discord.ui.RoleSelect):
     def __init__(self, panel, row, defaults):
         self.panel = panel
         super().__init__(
-            placeholder="Exempt roles (select to replace)...",
+            placeholder=_("Exempt roles (select to replace)..."),
             min_values=0,
             max_values=25,
             default_values=defaults,
@@ -112,7 +113,7 @@ class _ExemptChannelSelect(discord.ui.ChannelSelect):
     def __init__(self, panel, row, defaults):
         self.panel = panel
         super().__init__(
-            placeholder="Exempt channels (select to replace)...",
+            placeholder=_("Exempt channels (select to replace)..."),
             channel_types=[
                 discord.ChannelType.text,
                 discord.ChannelType.news,
@@ -135,19 +136,19 @@ class AutoModPanel(AuthorView):
 
     def __init__(self, cog, guild, author_id, state, timeout=180):
         super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
+            author_id, timeout=timeout, deny_message=_("This panel isn't for you.")
         )
         self.cog = cog
         self.guild = guild
         self.state = state
 
         self._toggles = [
-            _AutoModToggle(self, "link", "Anti-link", native=False, row=0),
-            _AutoModToggle(self, "invite", "Anti-invite", native=False, row=0),
-            _AutoModToggle(self, "spam", "Anti-spam", native=False, row=0),
-            _AutoModToggle(self, "kw", "Native: Keyword", native=True, row=1),
-            _AutoModToggle(self, "nspam", "Native: Spam", native=True, row=1),
-            _AutoModToggle(self, "nmention", "Native: Mentions", native=True, row=1),
+            _AutoModToggle(self, "link", _("Anti-link"), native=False, row=0),
+            _AutoModToggle(self, "invite", _("Anti-invite"), native=False, row=0),
+            _AutoModToggle(self, "spam", _("Anti-spam"), native=False, row=0),
+            _AutoModToggle(self, "kw", _("Native: Keyword"), native=True, row=1),
+            _AutoModToggle(self, "nspam", _("Native: Spam"), native=True, row=1),
+            _AutoModToggle(self, "nmention", _("Native: Mentions"), native=True, row=1),
         ]
         for toggle in self._toggles:
             self.add_item(toggle)
@@ -179,12 +180,12 @@ class AutoModPanel(AuthorView):
     def embed(self):
         def mark(value):
             if value is None:
-                return "⚪ Unavailable"
-            return "🟢 Enabled" if value else "🔴 Disabled"
+                return _("⚪ Unavailable")
+            return _("🟢 Enabled") if value else _("🔴 Disabled")
 
         embed = discord.Embed(
-            title="AutoMod control panel",
-            description=(
+            title=_("AutoMod control panel"),
+            description=_(
                 "Custom filters are enforced by Yasuho on every message. "
                 "Native filters are Discord's own AutoMod, blocked before a "
                 "message is ever posted."
@@ -192,25 +193,33 @@ class AutoModPanel(AuthorView):
             colour=random_colour(),
         )
         embed.add_field(
-            name="Custom filters (Yasuho)",
-            value=(
-                f"Anti-link: {mark(self.state['link'])}\n"
-                f"Anti-invite: {mark(self.state['invite'])}\n"
-                f"Anti-spam: {mark(self.state['spam'])}"
+            name=_("Custom filters (Yasuho)"),
+            value=_(
+                "Anti-link: {link}\n"
+                "Anti-invite: {invite}\n"
+                "Anti-spam: {spam}"
+            ).format(
+                link=mark(self.state["link"]),
+                invite=mark(self.state["invite"]),
+                spam=mark(self.state["spam"]),
             ),
             inline=True,
         )
         embed.add_field(
-            name="Native filters (Discord)",
-            value=(
-                f"Keyword preset: {mark(self.state['kw'])}\n"
-                f"Spam: {mark(self.state['nspam'])}\n"
-                f"Mention spam: {mark(self.state['nmention'])}"
+            name=_("Native filters (Discord)"),
+            value=_(
+                "Keyword preset: {kw}\n"
+                "Spam: {nspam}\n"
+                "Mention spam: {nmention}"
+            ).format(
+                kw=mark(self.state["kw"]),
+                nspam=mark(self.state["nspam"]),
+                nmention=mark(self.state["nmention"]),
             ),
             inline=True,
         )
         embed.add_field(
-            name="Action on custom violation",
+            name=_("Action on custom violation"),
             value=self.state["action"].title(),
             inline=False,
         )
@@ -218,23 +227,23 @@ class AutoModPanel(AuthorView):
         roles = self.state["exempt_roles"]
         channels = self.state["exempt_channels"]
         embed.add_field(
-            name="Exempt roles",
+            name=_("Exempt roles"),
             value=(
-                ", ".join(f"<@&{r}>" for r in roles) if roles else "None"
+                ", ".join(f"<@&{r}>" for r in roles) if roles else _("None")
             ),
             inline=False,
         )
         embed.add_field(
-            name="Exempt channels",
+            name=_("Exempt channels"),
             value=(
-                ", ".join(f"<#{c}>" for c in channels) if channels else "None"
+                ", ".join(f"<#{c}>" for c in channels) if channels else _("None")
             ),
             inline=False,
         )
 
         if any(self.state[k] is None for k in ("kw", "nspam", "nmention")):
             embed.set_footer(
-                text="Native rules need the bot to have Manage Server."
+                text=_("Native rules need the bot to have Manage Server.")
             )
         return embed
 
@@ -246,11 +255,11 @@ class AutoModPanel(AuthorView):
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(
-                    "Something went wrong updating the panel.", ephemeral=True
+                    _("Something went wrong updating the panel."), ephemeral=True
                 )
             else:
                 await interaction.response.send_message(
-                    "Something went wrong updating the panel.", ephemeral=True
+                    _("Something went wrong updating the panel."), ephemeral=True
                 )
         except discord.HTTPException:
             pass
@@ -265,9 +274,11 @@ class AutoModPanel(AuthorView):
                 )
                 if not ok:
                     return await interaction.response.send_message(
-                        "I couldn't change that rule. Discord's built-in "
-                        "AutoMod needs the bot to have the **Manage Server** "
-                        "permission.",
+                        _(
+                            "I couldn't change that rule. Discord's built-in "
+                            "AutoMod needs the bot to have the **Manage Server** "
+                            "permission."
+                        ),
                         ephemeral=True,
                     )
                 self.state[key] = new_state
@@ -346,9 +357,9 @@ class AutoMod(commands.Cog):
         """Enable or disable link filtering for this guild."""
 
         await self.set_custom_rule(ctx.guild.id, "link", mode)
-        embed = discord.Embed(title="Auto-mod", colour=random_colour())
+        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
         embed.add_field(
-            name="Anti-link", value="Enabled" if mode else "Disabled"
+            name=_("Anti-link"), value=_("Enabled") if mode else _("Disabled")
         )
         await ctx.send(embed=embed)
 
@@ -357,9 +368,9 @@ class AutoMod(commands.Cog):
         """Enable or disable Discord-invite filtering for this guild."""
 
         await self.set_custom_rule(ctx.guild.id, "invite", mode)
-        embed = discord.Embed(title="Auto-mod", colour=random_colour())
+        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
         embed.add_field(
-            name="Anti-invite", value="Enabled" if mode else "Disabled"
+            name=_("Anti-invite"), value=_("Enabled") if mode else _("Disabled")
         )
         await ctx.send(embed=embed)
 
@@ -368,9 +379,9 @@ class AutoMod(commands.Cog):
         """Enable or disable spam filtering for this guild."""
 
         await self.set_custom_rule(ctx.guild.id, "spam", mode)
-        embed = discord.Embed(title="Auto-mod", colour=random_colour())
+        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
         embed.add_field(
-            name="Anti-spam", value="Enabled" if mode else "Disabled"
+            name=_("Anti-spam"), value=_("Enabled") if mode else _("Disabled")
         )
         await ctx.send(embed=embed)
 
@@ -383,13 +394,13 @@ class AutoMod(commands.Cog):
         antispam = bool(s["antispam"]) if s else False
 
         embed = discord.Embed(
-            title="Auto-mod status", colour=random_colour()
+            title=_("Auto-mod status"), colour=random_colour()
         )
         embed.add_field(
-            name="Anti-link", value="Enabled" if antilink else "Disabled"
+            name=_("Anti-link"), value=_("Enabled") if antilink else _("Disabled")
         )
         embed.add_field(
-            name="Anti-spam", value="Enabled" if antispam else "Disabled"
+            name=_("Anti-spam"), value=_("Enabled") if antispam else _("Disabled")
         )
         await ctx.send(embed=embed)
 
@@ -661,7 +672,9 @@ class AutoMod(commands.Cog):
             await self._handle_violation(
                 message,
                 kind="invite",
-                notice=f"{message.author.mention} Discord invite links are not allowed here.",
+                notice=_(
+                    "{user} Discord invite links are not allowed here."
+                ).format(user=message.author.mention),
                 reason="Posted a Discord invite link",
             )
             return
@@ -670,7 +683,9 @@ class AutoMod(commands.Cog):
             await self._handle_violation(
                 message,
                 kind="link",
-                notice=f"{message.author.mention} links are not allowed here.",
+                notice=_("{user} links are not allowed here.").format(
+                    user=message.author.mention
+                ),
                 reason="Posted a disallowed link",
             )
             return
@@ -692,7 +707,9 @@ class AutoMod(commands.Cog):
                 await self._handle_violation(
                     message,
                     kind="spam",
-                    notice=f"{message.author.mention} stop spamming.",
+                    notice=_("{user} stop spamming.").format(
+                        user=message.author.mention
+                    ),
                     reason="Spamming messages",
                 )
 

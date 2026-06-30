@@ -7,17 +7,23 @@ from discord.ext import commands
 from PIL import Image
 
 from tools.formats import random_colour
+from tools.i18n import N_, _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
-# Human-readable titles and nouns per tracked image kind.
+# Human-readable titles and nouns per tracked image kind. Marked with N_ so
+# pybabel extracts them; each is translated at the use site via _(...).
 KIND_TITLES = {
-    "global": "Global avatar history",
-    "guild": "Server avatar history",
-    "banner": "Banner history",
+    "global": N_("Global avatar history"),
+    "guild": N_("Server avatar history"),
+    "banner": N_("Banner history"),
 }
-KIND_NOUNS = {"global": "global", "guild": "server", "banner": "banner"}
+KIND_NOUNS = {
+    "global": N_("global"),
+    "guild": N_("server"),
+    "banner": N_("banner"),
+}
 
 
 class AvatarHistoryView(AuthorView):
@@ -71,7 +77,7 @@ class AvatarHistoryView(AuthorView):
         except Exception:
             log.exception("failed to render avatar history (%s)", kind)
             await interaction.followup.send(
-                "Something went wrong loading that history.", ephemeral=True
+                _("Something went wrong loading that history."), ephemeral=True
             )
 
     @discord.ui.button(label="Global")
@@ -227,19 +233,21 @@ class AvatarHistory(commands.Cog):
 
     async def build_payload(self, member, kind, guild_id):
         """Build the (embed, buffer) pair for a kind; buffer is None if empty."""
-        embed = discord.Embed(title=KIND_TITLES[kind], colour=random_colour())
+        embed = discord.Embed(title=_(KIND_TITLES[kind]), colour=random_colour())
         embed.set_author(
             name=f"{member} ({member.id})",
             icon_url=member.display_avatar.url,
         )
         result = await self._collage_for(member, kind, guild_id)
         if result is None:
-            embed.description = (
-                f"No {KIND_NOUNS[kind]} history recorded yet."
+            embed.description = _("No {kind} history recorded yet.").format(
+                kind=KIND_NOUNS[kind]
             )
             return embed, None
         buf, count = result
-        embed.description = f"Showing `{count}` of up to `50` changes"
+        embed.description = _("Showing `{count}` of up to `50` changes").format(
+            count=count
+        )
         embed.set_image(url="attachment://history.png")
         return embed, buf
 

@@ -12,6 +12,7 @@ from sonolink.rest.enums import TrackSourceType
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
@@ -98,21 +99,22 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
             player = self.controller.player
             if not isinstance(player, sonolink.Player) or player.channel is None:
                 await interaction.response.send_message(
-                    "The player is no longer active.", ephemeral=True
+                    _("The player is no longer active."), ephemeral=True
                 )
                 return
 
             query = self.song.value.strip()
             if not query:
                 await interaction.response.send_message(
-                    "Give me a song name or URL to add.", ephemeral=True
+                    _("Give me a song name or URL to add."), ephemeral=True
                 )
                 return
 
             track = _first_track(await self.cog._search(query))
             if track is None:
                 await interaction.response.send_message(
-                    f"Could not find anything for `{query}`.", ephemeral=True
+                    _("Could not find anything for `{query}`.").format(query=query),
+                    ephemeral=True,
                 )
                 return
 
@@ -122,7 +124,7 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
                 await player.play(player.queue.get())
 
             await interaction.response.send_message(
-                f"Queued **{track.title}**.", ephemeral=True
+                _("Queued **{title}**.").format(title=track.title), ephemeral=True
             )
             await self.controller._refresh()
         except Exception:
@@ -130,11 +132,11 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(
-                        "Something went wrong adding that song.", ephemeral=True
+                        _("Something went wrong adding that song."), ephemeral=True
                     )
                 else:
                     await interaction.response.send_message(
-                        "Something went wrong adding that song.", ephemeral=True
+                        _("Something went wrong adding that song."), ephemeral=True
                     )
             except discord.HTTPException:
                 log.exception("Failed to report add-song error to the user")
@@ -191,42 +193,61 @@ class MusicController(discord.ui.LayoutView):
 
         track = self.player.current
         if track is None:
-            self.add_item(discord.ui.TextDisplay("Nothing is playing right now."))
+            self.add_item(discord.ui.TextDisplay(_("Nothing is playing right now.")))
             return
 
         container = discord.ui.Container(accent_colour=random_colour())
 
         title = track.title[:256]
         header = f"## [{title}]({track.uri})" if track.uri else f"## {title}"
-        container.add_item(discord.ui.TextDisplay("### 🎵 Now Playing"))
+        container.add_item(discord.ui.TextDisplay(_("### 🎵 Now Playing")))
         container.add_item(discord.ui.TextDisplay(header))
-        container.add_item(discord.ui.TextDisplay(f"by **{track.author}**"))
+        container.add_item(
+            discord.ui.TextDisplay(_("by **{author}**").format(author=track.author))
+        )
         container.add_item(discord.ui.Separator())
 
-        status = "⏸ Paused" if self.player.paused else "▶ Playing"
+        status = _("⏸ Paused") if self.player.paused else _("▶ Playing")
         mode = self.player.queue.mode
         if mode == sonolink.QueueMode.LOOP_ALL:
-            loop_state = "On (queue)"
+            loop_state = _("On (queue)")
         elif mode == sonolink.QueueMode.LOOP:
-            loop_state = "On (track)"
+            loop_state = _("On (track)")
         else:
-            loop_state = "Off"
+            loop_state = _("Off")
         container.add_item(
             discord.ui.TextDisplay(
-                f"**Status:** {status}\n"
-                f"**Duration:** `{format_duration(track)}`\n"
-                f"**Volume:** `{self.player.volume}%`\n"
-                f"**Loop:** {loop_state}"
+                _(
+                    "**Status:** {status}\n"
+                    "**Duration:** `{duration}`\n"
+                    "**Volume:** `{volume}%`\n"
+                    "**Loop:** {loop}"
+                ).format(
+                    status=status,
+                    duration=format_duration(track),
+                    volume=self.player.volume,
+                    loop=loop_state,
+                )
             )
         )
 
         channel_name = self.player.channel.name if self.player.channel else "voice"
-        meta_lines = [f"**Channel:** {E_VOICE} {channel_name}"]
+        meta_lines = [
+            _("**Channel:** {emoji} {channel}").format(
+                emoji=E_VOICE, channel=channel_name
+            )
+        ]
         if self.player.dj is not None:
-            meta_lines.append(f"**DJ:** {self.player.dj.mention}")
+            meta_lines.append(
+                _("**DJ:** {dj}").format(dj=self.player.dj.mention)
+            )
         requester_id = getattr(track.extras, "requester", None)
         if requester_id:
-            meta_lines.append(f"**Requested by:** <@{requester_id}>")
+            meta_lines.append(
+                _("**Requested by:** <@{requester_id}>").format(
+                    requester_id=requester_id
+                )
+            )
         container.add_item(discord.ui.TextDisplay("\n".join(meta_lines)))
 
         container.add_item(discord.ui.Separator())
@@ -237,10 +258,14 @@ class MusicController(discord.ui.LayoutView):
                 f"`{i}.` {t.title[:60]}" for i, t in enumerate(upcoming[:5], 1)
             )
             if len(upcoming) > 5:
-                lines += f"\n`+{len(upcoming) - 5}` more in the queue"
-            up_next = f"**Up Next ({len(upcoming)})**\n{lines}"
+                lines += _("\n`+{count}` more in the queue").format(
+                    count=len(upcoming) - 5
+                )
+            up_next = _("**Up Next ({count})**\n{lines}").format(
+                count=len(upcoming), lines=lines
+            )
         else:
-            up_next = (
+            up_next = _(
                 "**Up Next**\nNothing queued. Add a song to keep the music going!"
             )
         container.add_item(discord.ui.TextDisplay(up_next))
@@ -251,31 +276,31 @@ class MusicController(discord.ui.LayoutView):
             discord.ui.ActionRow(
                 self._make_button(
                     self._pause_resume,
-                    label="Pause/Resume",
+                    label=_("Pause/Resume"),
                     emoji="⏯️",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._skip,
-                    label="Skip",
+                    label=_("Skip"),
                     emoji="⏭️",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._volume_down,
-                    label="Vol -",
+                    label=_("Vol -"),
                     emoji="🔉",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._volume_up,
-                    label="Vol +",
+                    label=_("Vol +"),
                     emoji="🔊",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._loop_toggle,
-                    label="Loop",
+                    label=_("Loop"),
                     emoji="🔁",
                     style=discord.ButtonStyle.secondary,
                 ),
@@ -285,31 +310,31 @@ class MusicController(discord.ui.LayoutView):
             discord.ui.ActionRow(
                 self._make_button(
                     self._shuffle,
-                    label="Shuffle",
+                    label=_("Shuffle"),
                     emoji="\U0001f500",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._show_queue,
-                    label="Queue",
+                    label=_("Queue"),
                     emoji="\U0001f4dc",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._add_song,
-                    label="Add",
+                    label=_("Add"),
                     emoji="➕",
                     style=discord.ButtonStyle.success,
                 ),
                 self._make_button(
                     self._favorite,
-                    label="Favorite",
+                    label=_("Favorite"),
                     emoji="⭐",
                     style=discord.ButtonStyle.secondary,
                 ),
                 self._make_button(
                     self._disconnect,
-                    label="Disconnect",
+                    label=_("Disconnect"),
                     emoji="⏹️",
                     style=discord.ButtonStyle.danger,
                 ),
@@ -317,7 +342,7 @@ class MusicController(discord.ui.LayoutView):
         )
 
         container.add_item(
-            discord.ui.TextDisplay("-# Use the buttons to control playback")
+            discord.ui.TextDisplay(_("-# Use the buttons to control playback"))
         )
 
         self.add_item(container)
@@ -333,7 +358,7 @@ class MusicController(discord.ui.LayoutView):
         channel = getattr(self.player, "channel", None)
         if channel is None:
             await interaction.response.send_message(
-                "The player is no longer active.", ephemeral=True
+                _("The player is no longer active."), ephemeral=True
             )
             return False
 
@@ -344,7 +369,7 @@ class MusicController(discord.ui.LayoutView):
             or user.voice.channel != channel
         ):
             await interaction.response.send_message(
-                "You must be in my voice channel to use these controls.",
+                _("You must be in my voice channel to use these controls."),
                 ephemeral=True,
             )
             return False
@@ -364,11 +389,11 @@ class MusicController(discord.ui.LayoutView):
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(
-                    "Something went wrong handling that action.", ephemeral=True
+                    _("Something went wrong handling that action."), ephemeral=True
                 )
             else:
                 await interaction.response.send_message(
-                    "Something went wrong handling that action.", ephemeral=True
+                    _("Something went wrong handling that action."), ephemeral=True
                 )
         except discord.HTTPException:
             log.exception("Failed to report controller error to the user")
@@ -389,10 +414,10 @@ class MusicController(discord.ui.LayoutView):
         try:
             if self.player.paused:
                 await self.player.resume()
-                message = "Resumed."
+                message = _("Resumed.")
             else:
                 await self.player.pause()
-                message = "Paused."
+                message = _("Paused.")
             await self._refresh()
             await interaction.response.send_message(message, ephemeral=True)
         except Exception:
@@ -402,10 +427,10 @@ class MusicController(discord.ui.LayoutView):
     async def _skip(self, interaction: discord.Interaction) -> None:
         try:
             await self.player.skip()
-            await interaction.response.send_message("Skipped.", ephemeral=True)
+            await interaction.response.send_message(_("Skipped."), ephemeral=True)
         except sonolink.QueueEmpty:
             await interaction.response.send_message(
-                "There is nothing left to skip to.", ephemeral=True
+                _("There is nothing left to skip to."), ephemeral=True
             )
         except Exception:
             log.exception("Controller skip failed")
@@ -417,7 +442,7 @@ class MusicController(discord.ui.LayoutView):
             await self.player.set_volume(new_volume)
             await self._refresh()
             await interaction.response.send_message(
-                f"Volume set to {new_volume}%.", ephemeral=True
+                _("Volume set to {volume}%.").format(volume=new_volume), ephemeral=True
             )
         except Exception:
             log.exception("Controller volume-down failed")
@@ -432,7 +457,7 @@ class MusicController(discord.ui.LayoutView):
             await self.player.set_volume(new_volume)
             await self._refresh()
             await interaction.response.send_message(
-                f"Volume set to {new_volume}%.", ephemeral=True
+                _("Volume set to {volume}%.").format(volume=new_volume), ephemeral=True
             )
         except Exception:
             log.exception("Controller volume-up failed")
@@ -442,13 +467,13 @@ class MusicController(discord.ui.LayoutView):
         try:
             if self.player.queue.mode == sonolink.QueueMode.LOOP_ALL:
                 self.player.queue.mode = sonolink.QueueMode.NORMAL
-                state = "off"
+                state = _("off")
             else:
                 self.player.queue.mode = sonolink.QueueMode.LOOP_ALL
-                state = "on"
+                state = _("on")
             await self._refresh()
             await interaction.response.send_message(
-                f"Queue loop turned {state}.", ephemeral=True
+                _("Queue loop turned {state}.").format(state=state), ephemeral=True
             )
         except Exception:
             log.exception("Controller loop toggle failed")
@@ -458,12 +483,14 @@ class MusicController(discord.ui.LayoutView):
         try:
             if len(self.player.queue.tracks) < 2:
                 await interaction.response.send_message(
-                    "Add a few more tracks before shuffling.", ephemeral=True
+                    _("Add a few more tracks before shuffling."), ephemeral=True
                 )
                 return
             self.player.queue.shuffle()
             await self._refresh()
-            await interaction.response.send_message("Shuffled the queue.", ephemeral=True)
+            await interaction.response.send_message(
+                _("Shuffled the queue."), ephemeral=True
+            )
         except Exception:
             log.exception("Controller shuffle failed")
             await self._report_failure(interaction)
@@ -473,15 +500,19 @@ class MusicController(discord.ui.LayoutView):
             upcoming = self.player.queue.tracks
             if not upcoming:
                 await interaction.response.send_message(
-                    "The queue is empty.", ephemeral=True
+                    _("The queue is empty."), ephemeral=True
                 )
                 return
             lines = [
-                f"`{index}.` {track.title} by `{track.author}`"
+                _("`{index}.` {title} by `{author}`").format(
+                    index=index, title=track.title, author=track.author
+                )
                 for index, track in enumerate(upcoming[:10], start=1)
             ]
             if len(upcoming) > 10:
-                lines.append(f"*...and {len(upcoming) - 10} more.*")
+                lines.append(
+                    _("*...and {count} more.*").format(count=len(upcoming) - 10)
+                )
             await interaction.response.send_message("\n".join(lines), ephemeral=True)
         except Exception:
             log.exception("Controller queue failed")
@@ -499,17 +530,23 @@ class MusicController(discord.ui.LayoutView):
             track = self.player.current
             if track is None:
                 await interaction.response.send_message(
-                    "Nothing is playing to favourite right now.", ephemeral=True
+                    _("Nothing is playing to favourite right now."), ephemeral=True
                 )
                 return
             added = await self.cog.add_favourite(interaction.user.id, track)
             if added:
                 await interaction.response.send_message(
-                    f"Added **{track.title}** to your favourites.", ephemeral=True
+                    _("Added **{title}** to your favourites.").format(
+                        title=track.title
+                    ),
+                    ephemeral=True,
                 )
             else:
                 await interaction.response.send_message(
-                    f"**{track.title}** is already in your favourites.", ephemeral=True
+                    _("**{title}** is already in your favourites.").format(
+                        title=track.title
+                    ),
+                    ephemeral=True,
                 )
         except Exception:
             log.exception("Controller favourite failed")
@@ -650,7 +687,9 @@ class Music(commands.Cog):
         if home is not None:
             try:
                 await home.send(
-                    f"There was a problem playing **{event.track.title}**, skipping it."
+                    _("There was a problem playing **{title}**, skipping it.").format(
+                        title=event.track.title
+                    )
                 )
             except discord.HTTPException:
                 log.exception("Failed to notify channel of track exception")
@@ -775,29 +814,33 @@ class Music(commands.Cog):
                 player.home = ctx.channel
                 await self._send_controller(player)
                 if ctx.interaction is not None:
-                    await ctx.send("Here is the player.", ephemeral=True)
+                    await ctx.send(_("Here is the player."), ephemeral=True)
                 return
             await ctx.send(
-                "Give me something to play, e.g. `play never gonna give you up`."
+                _("Give me something to play, e.g. `play never gonna give you up`.")
             )
             return
 
         await ctx.defer()
 
         if not self._nodes_available():
-            await ctx.send("Music is currently unavailable - no Lavalink node is connected.")
+            await ctx.send(
+                _("Music is currently unavailable - no Lavalink node is connected.")
+            )
             return
 
         player = ctx.voice_client
         if player is None:
             if not ctx.author.voice or not ctx.author.voice.channel:
-                await ctx.send("You must be in a voice channel first.")
+                await ctx.send(_("You must be in a voice channel first."))
                 return
             try:
                 player = await ctx.author.voice.channel.connect(cls=Player)
             except discord.ClientException:
                 log.exception("Failed to connect to the voice channel")
-                await ctx.send("I was unable to join your voice channel. Please try again.")
+                await ctx.send(
+                    _("I was unable to join your voice channel. Please try again.")
+                )
                 return
             player.dj = ctx.author
             player.home = ctx.channel
@@ -805,18 +848,24 @@ class Music(commands.Cog):
         if player.home is None:
             player.home = ctx.channel
         elif player.home != ctx.channel:
-            await ctx.send(f"The player is already active in {player.home.mention}.")
+            await ctx.send(
+                _("The player is already active in {channel}.").format(
+                    channel=player.home.mention
+                )
+            )
             return
 
         try:
             result = await self.bot.sl_client.search_track(query, source=SEARCH_SOURCE)
         except RuntimeError:
             log.exception("Track search failed: no node available")
-            await ctx.send("Music is currently unavailable - no Lavalink node is connected.")
+            await ctx.send(
+                _("Music is currently unavailable - no Lavalink node is connected.")
+            )
             return
 
         if result.is_error() or result.is_empty() or result.result is None:
-            await ctx.send("Could not find any tracks for that query.")
+            await ctx.send(_("Could not find any tracks for that query."))
             return
 
         data = result.result
@@ -826,13 +875,19 @@ class Music(commands.Cog):
                 track.extras.requester = ctx.author.id
             player.queue.put(data.tracks)
             await ctx.send(
-                f"Added the playlist **{data.name}** ({len(data.tracks)} tracks) to the queue."
+                _(
+                    "Added the playlist **{name}** ({count} tracks) to the queue."
+                ).format(name=data.name, count=len(data.tracks))
             )
         else:
             track = data[0] if isinstance(data, list) else data
             track.extras.requester = ctx.author.id
             player.queue.put(track)
-            await ctx.send(f"Added **{track.title}** by `{track.author}` to the queue.")
+            await ctx.send(
+                _("Added **{title}** by `{author}` to the queue.").format(
+                    title=track.title, author=track.author
+                )
+            )
 
         if not player.current:
             await player.play(player.queue.get())
@@ -843,13 +898,13 @@ class Music(commands.Cog):
         """Pause the current track."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         if player.paused:
-            await ctx.send("The player is already paused.")
+            await ctx.send(_("The player is already paused."))
             return
         await player.pause()
-        await ctx.send("Paused the player.")
+        await ctx.send(_("Paused the player."))
 
     @commands.hybrid_command(name="resume")
     @commands.guild_only()
@@ -857,13 +912,13 @@ class Music(commands.Cog):
         """Resume the player if it is paused."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         if not player.paused:
-            await ctx.send("The player is not paused.")
+            await ctx.send(_("The player is not paused."))
             return
         await player.resume()
-        await ctx.send("Resumed the player.")
+        await ctx.send(_("Resumed the player."))
 
     @commands.hybrid_command(name="skip", aliases=["next"])
     @commands.guild_only()
@@ -871,17 +926,21 @@ class Music(commands.Cog):
         """Skip the current track and play the next one."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         try:
             track = await player.skip()
         except sonolink.QueueEmpty:
-            await ctx.send("There are no more tracks in the queue to skip to.")
+            await ctx.send(_("There are no more tracks in the queue to skip to."))
             return
         if track:
-            await ctx.send(f"Skipped to **{track.title}** by `{track.author}`.")
+            await ctx.send(
+                _("Skipped to **{title}** by `{author}`.").format(
+                    title=track.title, author=track.author
+                )
+            )
         else:
-            await ctx.send("Skipped. The queue is now empty.")
+            await ctx.send(_("Skipped. The queue is now empty."))
 
     @commands.hybrid_command(name="stop")
     @commands.guild_only()
@@ -889,10 +948,10 @@ class Music(commands.Cog):
         """Stop playback and clear the queue (stays connected)."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         await player.stop(clear_queue=True)
-        await ctx.send("Stopped playback and cleared the queue.")
+        await ctx.send(_("Stopped playback and cleared the queue."))
 
     @commands.hybrid_command(name="volume", aliases=["vol"])
     @commands.guild_only()
@@ -903,10 +962,10 @@ class Music(commands.Cog):
         """Set the player volume (0-1000)."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         await player.set_volume(value)
-        await ctx.send(f"Set the volume to {value}%.")
+        await ctx.send(_("Set the volume to {volume}%.").format(volume=value))
 
     @commands.hybrid_command(name="shuffle", aliases=["mix"])
     @commands.guild_only()
@@ -914,13 +973,13 @@ class Music(commands.Cog):
         """Shuffle the upcoming tracks in the queue."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         if len(player.queue.tracks) < 2:
-            await ctx.send("Add a few more tracks to the queue before shuffling.")
+            await ctx.send(_("Add a few more tracks to the queue before shuffling."))
             return
         player.queue.shuffle()
-        await ctx.send("Shuffled the queue.")
+        await ctx.send(_("Shuffled the queue."))
 
     @commands.hybrid_command(name="loop")
     @commands.guild_only()
@@ -933,7 +992,7 @@ class Music(commands.Cog):
         """Set the loop mode for the queue."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         mapping = {
             "track": sonolink.QueueMode.LOOP,
@@ -941,7 +1000,7 @@ class Music(commands.Cog):
             "off": sonolink.QueueMode.NORMAL,
         }
         player.queue.mode = mapping[mode]
-        await ctx.send(f"Loop mode set to `{mode}`.")
+        await ctx.send(_("Loop mode set to `{mode}`.").format(mode=mode))
 
     @commands.hybrid_command(name="queue", aliases=["q", "que"])
     @commands.guild_only()
@@ -949,28 +1008,36 @@ class Music(commands.Cog):
         """Show the currently playing track and the next tracks in the queue."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
 
         upcoming = player.queue.tracks
         if not upcoming and not player.current:
-            await ctx.send("The queue is empty.")
+            await ctx.send(_("The queue is empty."))
             return
 
         lines: list[str] = []
         if player.current:
             lines.append(
-                f"**Now Playing:** {player.current.title} by `{player.current.author}`\n"
+                _("**Now Playing:** {title} by `{author}`\n").format(
+                    title=player.current.title, author=player.current.author
+                )
             )
         if upcoming:
-            lines.append("**Up Next:**")
+            lines.append(_("**Up Next:**"))
             for index, track in enumerate(upcoming[:10], start=1):
-                lines.append(f"`{index}.` {track.title} by `{track.author}`")
+                lines.append(
+                    _("`{index}.` {title} by `{author}`").format(
+                        index=index, title=track.title, author=track.author
+                    )
+                )
             if len(upcoming) > 10:
-                lines.append(f"*...and {len(upcoming) - 10} more.*")
+                lines.append(
+                    _("*...and {count} more.*").format(count=len(upcoming) - 10)
+                )
 
         embed = discord.Embed(
-            title="Queue",
+            title=_("Queue"),
             description="\n".join(lines),
             colour=random_colour(),
         )
@@ -982,12 +1049,12 @@ class Music(commands.Cog):
         """Show the interactive now-playing controller."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player) or not player.current:
-            await ctx.send("Nothing is playing right now.")
+            await ctx.send(_("Nothing is playing right now."))
             return
         player.home = ctx.channel
         await self._send_controller(player)
         if ctx.interaction is not None:
-            await ctx.send("Here is the player.", ephemeral=True)
+            await ctx.send(_("Here is the player."), ephemeral=True)
 
     @commands.hybrid_command(name="disconnect", aliases=["dc", "leave"])
     @commands.guild_only()
@@ -995,10 +1062,10 @@ class Music(commands.Cog):
         """Disconnect the player from the voice channel."""
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
-            await ctx.send("I'm not connected to a voice channel.")
+            await ctx.send(_("I'm not connected to a voice channel."))
             return
         await player.disconnect()
-        await ctx.send("Disconnected from the voice channel.")
+        await ctx.send(_("Disconnected from the voice channel."))
 
     # ------------------------------------------------------------------
     # Favourites / playlist commands
@@ -1010,19 +1077,32 @@ class Music(commands.Cog):
         """Send a paginated, numbered list of a member's favourites (newest first)."""
         rows = await self._fetch_favourites(member.id)
         if not rows:
-            who = "You have" if member == ctx.author else f"{member.display_name} has"
-            await ctx.send(f"{who} no saved favourites yet.")
+            if member == ctx.author:
+                await ctx.send(_("You have no saved favourites yet."))
+            else:
+                await ctx.send(
+                    _("{name} has no saved favourites yet.").format(
+                        name=member.display_name
+                    )
+                )
             return
 
         lines: list[str] = []
         for index, row in enumerate(rows, start=1):
-            title = row["title"] or "Unknown title"
-            author = row["author"] or "Unknown artist"
+            title = row["title"] or _("Unknown title")
+            author = row["author"] or _("Unknown artist")
             uri = row["uri"]
             label = f"[{title}]({uri})" if uri else title
-            lines.append(f"`{index}.` {label} by `{author}`")
+            lines.append(
+                _("`{index}.` {label} by `{author}`").format(
+                    index=index, label=label, author=author
+                )
+            )
 
-        embeds = paginate_lines(lines, title=f"{member.display_name}'s Favourites")
+        embeds = paginate_lines(
+            lines,
+            title=_("{name}'s Favourites").format(name=member.display_name),
+        )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
     @commands.hybrid_group(
@@ -1046,24 +1126,28 @@ class Music(commands.Cog):
         await ctx.defer()
 
         if not self._nodes_available():
-            await ctx.send("Music is currently unavailable - no Lavalink node is connected.")
+            await ctx.send(
+                _("Music is currently unavailable - no Lavalink node is connected.")
+            )
             return
 
         rows = await self._fetch_favourites(ctx.author.id)
         if not rows:
-            await ctx.send("You have no saved favourites to play.")
+            await ctx.send(_("You have no saved favourites to play."))
             return
 
         player = ctx.voice_client
         if player is None:
             if not ctx.author.voice or not ctx.author.voice.channel:
-                await ctx.send("You must be in a voice channel first.")
+                await ctx.send(_("You must be in a voice channel first."))
                 return
             try:
                 player = await ctx.author.voice.channel.connect(cls=Player)
             except discord.ClientException:
                 log.exception("Failed to connect to the voice channel")
-                await ctx.send("I was unable to join your voice channel. Please try again.")
+                await ctx.send(
+                    _("I was unable to join your voice channel. Please try again.")
+                )
                 return
             player.dj = ctx.author
             player.home = ctx.channel
@@ -1084,13 +1168,15 @@ class Music(commands.Cog):
             queued += 1
 
         if queued == 0:
-            await ctx.send("None of your favourites could be loaded right now.")
+            await ctx.send(_("None of your favourites could be loaded right now."))
             return
 
         if not player.current:
             await player.play(player.queue.get())
 
-        await ctx.send(f"Queued {queued} track(s) from your favourites.")
+        await ctx.send(
+            _("Queued {count} track(s) from your favourites.").format(count=queued)
+        )
 
     @playlist.command(name="add")
     @commands.guild_only()
@@ -1105,29 +1191,35 @@ class Music(commands.Cog):
             player = ctx.voice_client
             if not isinstance(player, sonolink.Player) or not player.current:
                 await ctx.send(
-                    "Nothing is playing - give me a song name or URL to save."
+                    _("Nothing is playing - give me a song name or URL to save.")
                 )
                 return
             track = player.current
         else:
             if not self._nodes_available():
                 await ctx.send(
-                    "Music is currently unavailable - no Lavalink node is connected."
+                    _("Music is currently unavailable - no Lavalink node is connected.")
                 )
                 return
             await ctx.defer()
             track = _first_track(await self._search(query))
             if track is None:
-                await ctx.send("Could not find any tracks for that query.")
+                await ctx.send(_("Could not find any tracks for that query."))
                 return
 
         added = await self.add_favourite(ctx.author.id, track)
         if added:
             await ctx.send(
-                f"Added **{track.title}** by `{track.author}` to your favourites."
+                _("Added **{title}** by `{author}` to your favourites.").format(
+                    title=track.title, author=track.author
+                )
             )
         else:
-            await ctx.send(f"**{track.title}** is already in your favourites.")
+            await ctx.send(
+                _("**{title}** is already in your favourites.").format(
+                    title=track.title
+                )
+            )
 
     @playlist.command(name="remove", aliases=["rm", "delete", "del"])
     @commands.guild_only()
@@ -1136,10 +1228,12 @@ class Music(commands.Cog):
         """Remove the favourite at the given position in your list."""
         rows = await self._fetch_favourites(ctx.author.id)
         if not rows:
-            await ctx.send("You have no saved favourites to remove.")
+            await ctx.send(_("You have no saved favourites to remove."))
             return
         if index < 1 or index > len(rows):
-            await ctx.send(f"Pick a number between 1 and {len(rows)}.")
+            await ctx.send(
+                _("Pick a number between 1 and {max}.").format(max=len(rows))
+            )
             return
 
         row = rows[index - 1]
@@ -1149,7 +1243,9 @@ class Music(commands.Cog):
             row["identifier"],
         )
         await ctx.send(
-            f"Removed **{row['title'] or 'Unknown title'}** from your favourites."
+            _("Removed **{title}** from your favourites.").format(
+                title=row["title"] or _("Unknown title")
+            )
         )
 
 

@@ -4,7 +4,8 @@ import discord
 from discord.ext import commands
 
 from tools import settings
-from tools.formats import plural, random_colour
+from tools.formats import random_colour
+from tools.i18n import _, ngettext
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ class CategorySelect(discord.ui.Select):
 
     def __init__(self, options):
         super().__init__(
-            placeholder="Jump to a category...",
+            placeholder=_("Jump to a category..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -169,7 +170,9 @@ class HelpView(AuthorView):
                 discord.SelectOption(
                     label=category["name"],
                     value=str(position),
-                    description=f"{plural(category['total']):command}",
+                    description=ngettext(
+                        "{n} command", "{n} commands", category["total"]
+                    ).format(n=category["total"]),
                     emoji=category["emoji"],
                 )
             )
@@ -193,13 +196,13 @@ class HelpView(AuthorView):
                 rendered.append("")
             rendered.append(f"**{label}**")
             for command in commands_list:
-                doc = command.short_doc or "No description provided."
+                doc = command.short_doc or _("No description provided.")
                 rendered.append(f"`{self.prefix}{command.qualified_name}` - {doc}")
 
-        notice = (
-            f"...more commands available. Use "
-            f"`{self.prefix}help <command>` to see them."
-        )
+        notice = _(
+            "...more commands available. Use "
+            "`{prefix}help <command>` to see them."
+        ).format(prefix=self.prefix)
         budget = DESCRIPTION_LIMIT - (len(notice) + 1)
 
         lines = []
@@ -213,15 +216,17 @@ class HelpView(AuthorView):
             lines.append(line)
             length += extra
 
-        description = "\n".join(lines) if lines else "No commands available."
+        description = "\n".join(lines) if lines else _("No commands available.")
         if truncated:
             description += "\n" + notice
         embed.description = description
 
         embed.set_footer(
-            text=(
-                f"Category {index + 1}/{len(self.categories)} • "
-                f"{self.prefix}help <command> for details"
+            text=_(
+                "Category {current}/{total} • "
+                "{prefix}help <command> for details"
+            ).format(
+                current=index + 1, total=len(self.categories), prefix=self.prefix
             )
         )
         return embed
@@ -288,7 +293,7 @@ class HelpView(AuthorView):
     async def report_error(self, interaction):
         """Best-effort, ephemeral error notice that never raises."""
         try:
-            message = "Something went wrong opening the help menu."
+            message = _("Something went wrong opening the help menu.")
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:
@@ -340,7 +345,7 @@ class GroupHelpView(AuthorView):
 
     def _sync_button(self):
         self.toggle.label = (
-            "Collapse subcommands" if self.expand else "Expand subcommands"
+            _("Collapse subcommands") if self.expand else _("Expand subcommands")
         )
 
     def embed(self):
@@ -359,7 +364,7 @@ class GroupHelpView(AuthorView):
             log.exception("Failed to toggle help_expand")
             try:
                 await interaction.response.send_message(
-                    "Something went wrong updating that preference.", ephemeral=True
+                    _("Something went wrong updating that preference."), ephemeral=True
                 )
             except Exception:
                 pass
@@ -374,12 +379,12 @@ class YasuhoHelp(commands.HelpCommand):
         prefix = self.context.clean_prefix
 
         embed = discord.Embed(
-            title=f"{bot.user.name} • Help",
-            description=(
-                f"Hey there! I'm **{bot.user.name}**, glad to help. 💫\n\n"
-                f"Use the menu to jump to a category, the arrows to browse, "
-                f"or `{prefix}help <command>` for a specific command."
-            ),
+            title=_("{bot} • Help").format(bot=bot.user.name),
+            description=_(
+                "Hey there! I'm **{bot}**, glad to help. 💫\n\n"
+                "Use the menu to jump to a category, the arrows to browse, "
+                "or `{prefix}help <command>` for a specific command."
+            ).format(bot=bot.user.name, prefix=prefix),
             colour=random_colour(),
         )
         embed.set_thumbnail(url=bot.user.display_avatar.url)
@@ -391,25 +396,29 @@ class YasuhoHelp(commands.HelpCommand):
                 enabled = await settings.get_guild(
                     bot.db_pool, guild.id, "leveling_enabled", False
                 )
-                leveling = "Enabled ✅" if enabled else "Disabled ❌"
+                leveling = _("Enabled ✅") if enabled else _("Disabled ❌")
             except Exception:
                 log.exception(
                     "Failed to read leveling_enabled for guild %s", guild.id
                 )
-                leveling = "Unknown"
+                leveling = _("Unknown")
             embed.add_field(
-                name="🏠 Server",
-                value=(
-                    f"Prefix: `{prefix}`\n"
-                    f"Members: **{guild.member_count:,}**\n"
-                    f"Leveling: {leveling}"
+                name=_("🏠 Server"),
+                value=_(
+                    "Prefix: `{prefix}`\n"
+                    "Members: **{members}**\n"
+                    "Leveling: {leveling}"
+                ).format(
+                    prefix=prefix,
+                    members=f"{guild.member_count:,}",
+                    leveling=leveling,
                 ),
                 inline=True,
             )
         else:
             embed.add_field(
-                name="🏠 Direct Messages",
-                value=f"Default prefix: `{prefix}`",
+                name=_("🏠 Direct Messages"),
+                value=_("Default prefix: `{prefix}`").format(prefix=prefix),
                 inline=True,
             )
 
@@ -421,23 +430,28 @@ class YasuhoHelp(commands.HelpCommand):
         total = 0
         for category in categories:
             total += category["total"]
+            count = ngettext(
+                "{n} command", "{n} commands", category["total"]
+            ).format(n=category["total"])
             lines.append(
-                f"{category['emoji']} **{category['name']}** - "
-                f"{plural(category['total']):command}"
+                f"{category['emoji']} **{category['name']}** - {count}"
             )
 
         for position, chunk in enumerate(self._chunk(lines)):
             embed.add_field(
-                name="📚 Categories" if position == 0 else "​",
+                name=_("📚 Categories") if position == 0 else "​",
                 value=chunk,
                 inline=position == 0 and guild is not None,
             )
 
         embed.set_footer(
-            text=(
-                f"{plural(total):command} across "
-                f"{plural(len(categories)):category|categories} • "
-                "Use the menu or arrows to explore"
+            text=_("{commands} across {categories} • Use the menu or arrows to explore").format(
+                commands=ngettext("{n} command", "{n} commands", total).format(
+                    n=total
+                ),
+                categories=ngettext(
+                    "{n} category", "{n} categories", len(categories)
+                ).format(n=len(categories)),
             )
         )
         return embed
@@ -466,8 +480,10 @@ class YasuhoHelp(commands.HelpCommand):
 
         if not categories:
             embed = discord.Embed(
-                title="Help",
-                description=f"Use `{prefix}help <command>` for more info on a command.",
+                title=_("Help"),
+                description=_(
+                    "Use `{prefix}help <command>` for more info on a command."
+                ).format(prefix=prefix),
                 colour=random_colour(),
             )
             await self.get_destination().send(embed=embed)
@@ -483,13 +499,13 @@ class YasuhoHelp(commands.HelpCommand):
         prefix = self.context.clean_prefix
         embed = discord.Embed(
             title=self.get_command_signature(group),
-            description=group.help or "No description provided.",
+            description=group.help or _("No description provided."),
             colour=random_colour(),
         )
 
         if group.aliases:
             aliases = ", ".join(f"`{alias}`" for alias in group.aliases)
-            embed.add_field(name="Aliases", value=aliases, inline=False)
+            embed.add_field(name=_("Aliases"), value=aliases, inline=False)
 
         subcommands = sorted(
             (c for c in group.commands if not c.hidden), key=lambda c: c.name
@@ -499,17 +515,23 @@ class YasuhoHelp(commands.HelpCommand):
 
         if expand:
             value = "\n".join(
-                f"`{c.name}` - {c.short_doc or 'No description provided.'}"
+                f"`{c.name}` - {c.short_doc or _('No description provided.')}"
                 for c in subcommands
             )
-            embed.add_field(name="Subcommands", value=value, inline=False)
+            embed.add_field(name=_("Subcommands"), value=value, inline=False)
         else:
             embed.add_field(
-                name="Subcommands",
-                value=(
-                    f"This command has {plural(len(subcommands)):subcommand}. "
-                    f"Toggle expansion in /settings, or use "
-                    f"`{prefix}help {group.qualified_name} <subcommand>`."
+                name=_("Subcommands"),
+                value=_(
+                    "This command has {count}. "
+                    "Toggle expansion in /settings, or use "
+                    "`{prefix}help {group} <subcommand>`."
+                ).format(
+                    count=ngettext(
+                        "{n} subcommand", "{n} subcommands", len(subcommands)
+                    ).format(n=len(subcommands)),
+                    prefix=prefix,
+                    group=group.qualified_name,
                 ),
                 inline=False,
             )
@@ -518,13 +540,13 @@ class YasuhoHelp(commands.HelpCommand):
     async def send_command_help(self, command):
         embed = discord.Embed(
             title=self.get_command_signature(command),
-            description=command.help or "No description provided.",
+            description=command.help or _("No description provided."),
             colour=random_colour(),
         )
 
         if command.aliases:
             aliases = ", ".join(f"`{alias}`" for alias in command.aliases)
-            embed.add_field(name="Aliases", value=aliases, inline=False)
+            embed.add_field(name=_("Aliases"), value=aliases, inline=False)
 
         await self.get_destination().send(embed=embed)
 
@@ -543,7 +565,7 @@ class YasuhoHelp(commands.HelpCommand):
 
     async def send_error_message(self, error):
         embed = discord.Embed(
-            title="Help",
+            title=_("Help"),
             description=error,
             colour=random_colour(),
         )

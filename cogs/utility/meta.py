@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -36,20 +37,22 @@ class Meta(commands.Cog):
                     ) as resp:
                         if resp.status != 200:
                             return await ctx.send(
-                                "Could not fetch the Astronomy Picture of the Day right now."
+                                _(
+                                    "Could not fetch the Astronomy Picture of the Day right now."
+                                )
                             )
                         cont = await resp.json()
             except Exception:
                 log.exception("APOD fetch failed")
                 return await ctx.send(
-                    "Could not fetch the Astronomy Picture of the Day right now."
+                    _("Could not fetch the Astronomy Picture of the Day right now.")
                 )
 
             url = cont.get("url") or ""
             embed = discord.Embed(
                 color=random_colour(),
                 timestamp=ctx.message.created_at,
-                title="Astronomy Picture of the Day",
+                title=_("Astronomy Picture of the Day"),
                 description=f'`{cont.get("title", "Unknown")}` ● `{cont.get("date", "")}`'
                 f'\n\n{cont.get("explanation", "")}',
             )
@@ -69,7 +72,7 @@ class Meta(commands.Cog):
                 )
 
             embed.set_footer(
-                text=f"APOD Requested by {ctx.author.name}",
+                text=_("APOD Requested by {user}").format(user=ctx.author.name),
                 icon_url=ctx.author.display_avatar.url,
             )
 
@@ -88,10 +91,10 @@ class Meta(commands.Cog):
                         res = await r.json()
             except Exception:
                 log.exception("Weather fetch failed")
-                return await ctx.send("Could not fetch the weather right now.")
+                return await ctx.send(_("Could not fetch the weather right now."))
 
             if str(res.get("cod")) != "200":
-                return await ctx.send(res.get("message", "City not found."))
+                return await ctx.send(res.get("message", _("City not found.")))
 
             main = res.get("main") or {}
             weather_list = res.get("weather") or [{}]
@@ -100,7 +103,7 @@ class Meta(commands.Cog):
             clouds = (res.get("clouds") or {}).get("all", "?")
 
             city_json = res.get("name", city)
-            embed = discord.Embed(title=f"Temperature in {city_json}", color=random_colour(), timestamp=discord.utils.utcnow())
+            embed = discord.Embed(title=_("Temperature in {city}").format(city=city_json), color=random_colour(), timestamp=discord.utils.utcnow())
             current_temp = main.get("temp", "?")
             feel_like = main.get("feels_like", "?")
             temp_min = main.get("temp_min", "?")
@@ -108,8 +111,8 @@ class Meta(commands.Cog):
             pressure = main.get("pressure", "?")
             humidity = main.get("humidity", "?")
 
-            embed.add_field(name="Weather Informations",
-                            value=f"```Weather status: {weather_main}, {weather_desc}\nCurrent temperature: {current_temp}°C\nFeel like: {feel_like}°C\nMinimum temperature: {temp_min}°C\nMax temperature {temp_max}°C\nPressure: {pressure}hPa\nHumidity: {humidity}%\nClouds: {clouds}%\n```", inline=True)
+            embed.add_field(name=_("Weather Informations"),
+                            value=_("```Weather status: {status}, {desc}\nCurrent temperature: {temp}°C\nFeel like: {feels}°C\nMinimum temperature: {tmin}°C\nMax temperature {tmax}°C\nPressure: {pressure}hPa\nHumidity: {humidity}%\nClouds: {clouds}%\n```").format(status=weather_main, desc=weather_desc, temp=current_temp, feels=feel_like, tmin=temp_min, tmax=temp_max, pressure=pressure, humidity=humidity, clouds=clouds), inline=True)
 
             await ctx.send(embed=embed)
 

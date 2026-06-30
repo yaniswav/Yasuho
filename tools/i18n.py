@@ -58,9 +58,23 @@ def use_current_ngettext(singular, plural, n):
     return catalog.ngettext(singular, plural, n)
 
 
-# Short aliases used throughout the cogs; pybabel is told to scan for both.
+# Short aliases used throughout the cogs; pybabel is told to scan for these.
 _ = use_current_gettext
 ngettext = use_current_ngettext
+
+
+def mark(message):
+    """No-op extraction marker (N_).
+
+    Tags a literal so pybabel collects it WITHOUT translating now. Use it for
+    strings stored in module-level constants or default arguments (evaluated at
+    import, outside any command task), then translate at the in-task use site
+    with ``_(stored_value)``. Extraction must pass ``-k N_``.
+    """
+    return message
+
+
+N_ = mark
 
 
 def normalize(code):

@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -60,11 +61,11 @@ class TicTacToeButton(discord.ui.Button):
                 view.disable_all()
                 view.stop()
                 if result == view.X:
-                    content = "Tic-Tac-Toe: you win! ❌"
+                    content = _("Tic-Tac-Toe: you win! ❌")
                 elif result == view.BOT_MARK:
-                    content = "Tic-Tac-Toe: I win! ⭕ Better luck next time."
+                    content = _("Tic-Tac-Toe: I win! ⭕ Better luck next time.")
                 else:
-                    content = "Tic-Tac-Toe: it's a draw!"
+                    content = _("Tic-Tac-Toe: it's a draw!")
 
             await interaction.response.edit_message(content=content, view=view)
         except Exception:
@@ -72,11 +73,11 @@ class TicTacToeButton(discord.ui.Button):
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(
-                        "Something went wrong with that move.", ephemeral=True
+                        _("Something went wrong with that move."), ephemeral=True
                     )
                 else:
                     await interaction.response.send_message(
-                        "Something went wrong with that move.", ephemeral=True
+                        _("Something went wrong with that move."), ephemeral=True
                     )
             except Exception:
                 pass
@@ -173,7 +174,7 @@ class TicTacToeView(AuthorView):
         if self.message is not None:
             try:
                 await self.message.edit(
-                    content="Tic-Tac-Toe: time's up, game over!", view=self
+                    content=_("Tic-Tac-Toe: time's up, game over!"), view=self
                 )
             except discord.HTTPException:
                 log.exception("failed to edit timed-out tic-tac-toe message")
@@ -204,19 +205,21 @@ class Games(commands.Cog):
             sentences = config_loader.getlist("SentenceRace", "minigames_sentences")
         except Exception:
             log.exception("failed to load sentence-race sentences")
-            return await ctx.send("The sentence list is unavailable right now.")
+            return await ctx.send(_("The sentence list is unavailable right now."))
 
         if not sentences:
-            return await ctx.send("There are no sentences configured to race with.")
+            return await ctx.send(_("There are no sentences configured to race with."))
 
         sentence = random.choice(sentences)
 
         embed = discord.Embed(
-            title="Sentence Race!",
-            description=f"Be the first to type out the following sentence:\n\n{sentence}",
+            title=_("Sentence Race!"),
+            description=_("Be the first to type out the following sentence:\n\n{sentence}").format(
+                sentence=sentence
+            ),
             colour=random_colour(),
         )
-        embed.set_footer(text="You have 60 seconds. No copy-pasting cheaters!")
+        embed.set_footer(text=_("You have 60 seconds. No copy-pasting cheaters!"))
         await ctx.send(embed=embed)
 
         start = time.monotonic()
@@ -234,7 +237,7 @@ class Games(commands.Cog):
             )
         except asyncio.TimeoutError:
             return await ctx.send(
-                "Time's up! Nobody managed to finish the sentence in time."
+                _("Time's up! Nobody managed to finish the sentence in time.")
             )
 
         elapsed = time.monotonic() - start
@@ -242,12 +245,20 @@ class Games(commands.Cog):
         wpm = word_count / (elapsed / 60) if elapsed > 0 else 0
 
         result = discord.Embed(
-            title="We have a winner!",
-            description=f"{winner_message.author.mention} finished the sentence first!",
+            title=_("We have a winner!"),
+            description=_("{winner} finished the sentence first!").format(
+                winner=winner_message.author.mention
+            ),
             colour=random_colour(),
         )
-        result.add_field(name="Time", value=f"{elapsed:.2f} seconds", inline=True)
-        result.add_field(name="Speed", value=f"~{wpm:.0f} WPM", inline=True)
+        result.add_field(
+            name=_("Time"),
+            value=_("{seconds:.2f} seconds").format(seconds=elapsed),
+            inline=True,
+        )
+        result.add_field(
+            name=_("Speed"), value=_("~{wpm:.0f} WPM").format(wpm=wpm), inline=True
+        )
         result.set_thumbnail(url=winner_message.author.display_avatar.url)
         await ctx.send(embed=result)
 

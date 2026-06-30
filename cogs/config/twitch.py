@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from tools import embed_creator, settings
 from tools.formats import random_colour
+from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView
 
@@ -28,27 +29,30 @@ ASSET_HINT = "https://... or {avatar}"
 # stays cog-agnostic (we never mutate the shared global).
 
 # Edit-menu option for the classic-text style. The embed style reuses
-# embed_creator's default edit options through make_edit_select.
+# embed_creator's default edit options through make_edit_select. The label is
+# N_-marked for extraction and translated at the use site via _(label).
 TEXT_EDIT_OPTIONS = [
-    ("message", "Message", "\U0001F4AC"),
+    ("message", N_("Message"), "\U0001F4AC"),
 ]
 
 # Placeholder tokens shown by the guide button, as (token, description) pairs.
+# Descriptions are N_-marked for extraction and translated at the use site.
 PLACEHOLDER_ENTRIES = [
-    ("{streamer}", "The streamer's display name."),
-    ("{mention}", "Pings the streamer, e.g. @name."),
-    ("{url}", "A clickable link to the Twitch stream."),
-    ("{game}", "What they are playing (may be blank)."),
-    ("{title}", "The stream's title."),
-    ("{server}", "Your server's name."),
+    ("{streamer}", N_("The streamer's display name.")),
+    ("{mention}", N_("Pings the streamer, e.g. @name.")),
+    ("{url}", N_("A clickable link to the Twitch stream.")),
+    ("{game}", N_("What they are playing (may be blank).")),
+    ("{title}", N_("The stream's title.")),
+    ("{server}", N_("Your server's name.")),
     (
         "{avatar}",
-        "The streamer's avatar URL. Perfect for the Thumbnail or Image field.",
+        N_("The streamer's avatar URL. Perfect for the Thumbnail or Image field."),
     ),
 ]
 
 # Intro blurb for the placeholder guide (carries the old example + tip lines).
-PLACEHOLDER_INTRO = (
+# N_-marked for extraction; translated at the use site via _(PLACEHOLDER_INTRO).
+PLACEHOLDER_INTRO = N_(
     "Drop any of these into your message, or into the embed's title, "
     "description, fields, author, or footer. They are filled in automatically "
     "the moment a watched member goes live.\n\n"
@@ -114,10 +118,10 @@ class MessageModal(discord.ui.Modal):
     """Edit the classic-text alert message (used when style == 'text')."""
 
     def __init__(self, panel):
-        super().__init__(title="Edit message")
+        super().__init__(title=_("Edit message"))
         self.panel = panel
         self.field = discord.ui.TextInput(
-            label="Alert message",
+            label=_("Alert message"),
             style=discord.TextStyle.paragraph,
             required=False,
             max_length=2000,
@@ -151,7 +155,7 @@ class TwitchChannelSelect(discord.ui.ChannelSelect):
                 defaults = [channel]
         super().__init__(
             channel_types=[discord.ChannelType.text],
-            placeholder="Select the alert channel...",
+            placeholder=_("Select the alert channel..."),
             min_values=1,
             max_values=1,
             default_values=defaults,
@@ -180,7 +184,7 @@ class TwitchRoleSelect(discord.ui.RoleSelect):
             if role is not None:
                 defaults = [role]
         super().__init__(
-            placeholder="Select the Live role (optional)...",
+            placeholder=_("Select the Live role (optional)..."),
             min_values=0,
             max_values=1,
             default_values=defaults,
@@ -209,11 +213,11 @@ class _MessageSelect(discord.ui.Select):
     def __init__(self, panel):
         self.panel = panel
         options = [
-            discord.SelectOption(label=label, value=value, emoji=emoji)
+            discord.SelectOption(label=_(label), value=value, emoji=emoji)
             for value, label, emoji in TEXT_EDIT_OPTIONS
         ]
         super().__init__(
-            placeholder="Edit the alert message...",
+            placeholder=_("Edit the alert message..."),
             min_values=1,
             max_values=1,
             options=options,
@@ -235,7 +239,7 @@ class _StyleButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         style = panel.config.get("style", "embed")
-        label = "Style: Embed" if style == "embed" else "Style: Classic"
+        label = _("Style: Embed") if style == "embed" else _("Style: Classic")
         super().__init__(
             label=label, style=discord.ButtonStyle.secondary, row=3
         )
@@ -257,18 +261,21 @@ class _PlaceholdersButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         super().__init__(
-            label="Placeholders",
+            label=_("Placeholders"),
             style=discord.ButtonStyle.secondary,
             row=3,
         )
 
     async def callback(self, interaction):
         try:
+            entries = [
+                (token, _(desc)) for token, desc in PLACEHOLDER_ENTRIES
+            ]
             await interaction.response.send_message(
                 embed=embed_creator.placeholder_guide(
-                    PLACEHOLDER_ENTRIES,
-                    title="Twitch alert placeholders",
-                    intro=PLACEHOLDER_INTRO,
+                    entries,
+                    title=_("Twitch alert placeholders"),
+                    intro=_(PLACEHOLDER_INTRO),
                     colour=TWITCH_PURPLE,
                 ),
                 ephemeral=True,
@@ -282,7 +289,7 @@ class _PreviewButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         super().__init__(
-            label="Preview", style=discord.ButtonStyle.primary, row=3
+            label=_("Preview"), style=discord.ButtonStyle.primary, row=3
         )
 
     async def callback(self, interaction):
@@ -293,7 +300,7 @@ class _PreviewButton(discord.ui.Button):
             log.exception("Twitch preview failed")
             try:
                 await interaction.followup.send(
-                    "Could not render the preview.", ephemeral=True
+                    _("Could not render the preview."), ephemeral=True
                 )
             except discord.HTTPException:
                 pass
@@ -304,7 +311,7 @@ class _EnableButton(discord.ui.Button):
         self.panel = panel
         enabled = bool(panel.config.get("enabled"))
         super().__init__(
-            label="Disable" if enabled else "Enable",
+            label=_("Disable") if enabled else _("Enable"),
             style=(
                 discord.ButtonStyle.danger
                 if enabled
@@ -362,7 +369,7 @@ class TwitchPanel(AuthorView):
         else:
             self.add_item(
                 embed_creator.make_edit_select(
-                    self, placeholder="Edit the alert embed...", row=2
+                    self, placeholder=_("Edit the alert embed..."), row=2
                 )
             )
         self.add_item(_StyleButton(self))
@@ -396,8 +403,8 @@ class TwitchPanel(AuthorView):
         colour = embed_cfg.get("color")
 
         embed = discord.Embed(
-            title="Twitch live alerts",
-            description=(
+            title=_("Twitch live alerts"),
+            description=_(
                 "Design the alert that fires when a watched member goes live "
                 "on Twitch. Every change saves instantly - hit **Preview** to "
                 "see it, and add streamers with `/twitch watch`."
@@ -406,28 +413,32 @@ class TwitchPanel(AuthorView):
         )
 
         cid = config.get("channel_id")
-        channel_value = f"<#{cid}>" if cid else "*Not set.*"
+        channel_value = f"<#{cid}>" if cid else _("*Not set.*")
         rid = config.get("role_id")
-        role_value = f"<@&{rid}>" if rid else "*None (legacy lookup).*"
+        role_value = f"<@&{rid}>" if rid else _("*None (legacy lookup).*")
 
         embed.add_field(
-            name="Status",
-            value="\U0001F7E2 Enabled" if enabled else "\U0001F534 Disabled",
+            name=_("Status"),
+            value=(
+                ("\U0001F7E2 " + _("Enabled"))
+                if enabled
+                else ("\U0001F534 " + _("Disabled"))
+            ),
             inline=True,
         )
-        embed.add_field(name="Channel", value=channel_value, inline=True)
+        embed.add_field(name=_("Channel"), value=channel_value, inline=True)
         embed.add_field(
-            name="Style",
-            value="Embed" if style == "embed" else "Classic message",
+            name=_("Style"),
+            value=_("Embed") if style == "embed" else _("Classic message"),
             inline=True,
         )
-        embed.add_field(name="Live role", value=role_value, inline=False)
+        embed.add_field(name=_("Live role"), value=role_value, inline=False)
 
         if style == "text":
-            text = config.get("text") or "*none*"
+            text = config.get("text") or _("*none*")
             if len(text) > 200:
                 text = text[:197] + "..."
-            embed.add_field(name="Message", value=text, inline=False)
+            embed.add_field(name=_("Message"), value=text, inline=False)
         else:
             summary = embed_creator.summarise(embed_cfg)
             content_line = config.get("text")
@@ -435,13 +446,14 @@ class TwitchPanel(AuthorView):
                 preview = content_line
                 if len(preview) > 80:
                     preview = preview[:77] + "..."
-                summary += f"\n**Content line:** {preview}"
-            embed.add_field(name="Embed", value=summary, inline=False)
+                summary += "\n" + _("**Content line:** {preview}").format(
+                    preview=preview
+                )
+            embed.add_field(name=_("Embed"), value=summary, inline=False)
 
         embed.set_footer(
-            text=(
-                "Only you can use these controls. "
-                f"Placeholders: {PLACEHOLDER_HINT}"
+            text=_("Only you can use these controls. Placeholders: {placeholders}").format(
+                placeholders=PLACEHOLDER_HINT
             )
         )
         return embed
@@ -512,7 +524,7 @@ class Twitch(commands.Cog):
         )
         if not embed_creator.embed_has_content(embed):
             embed.description = self._apply(
-                "{mention} is now live! {url}", member, activity
+                _("{mention} is now live! {url}"), member, activity
             )
         return (text or None), embed
 
@@ -533,7 +545,7 @@ class Twitch(commands.Cog):
         if embed is not None:
             kwargs["embed"] = embed
         if not content and embed is None:
-            kwargs["content"] = (
+            kwargs["content"] = _(
                 "Nothing to preview yet - add a message or some embed content."
             )
         await interaction.followup.send(**kwargs)
@@ -665,13 +677,17 @@ class Twitch(commands.Cog):
             )
         except Exception:
             log.exception("Twitch watch failed")
-            return await ctx.send("Could not add that member to the watchlist.")
+            return await ctx.send(
+                _("Could not add that member to the watchlist.")
+            )
 
-        where = channel.mention if channel else "the configured alert channel"
-        embed = discord.Embed(title="Twitch watchlist", colour=random_colour())
-        embed.add_field(name="Now watching", value=member.mention, inline=True)
-        embed.add_field(name="Alerts in", value=where, inline=True)
-        embed.set_footer(text="Use /twitch to open the builder.")
+        where = (
+            channel.mention if channel else _("the configured alert channel")
+        )
+        embed = discord.Embed(title=_("Twitch watchlist"), colour=random_colour())
+        embed.add_field(name=_("Now watching"), value=member.mention, inline=True)
+        embed.add_field(name=_("Alerts in"), value=where, inline=True)
+        embed.set_footer(text=_("Use /twitch to open the builder."))
         await ctx.send(embed=embed)
 
     @twitch.command(name="unwatch", aliases=["remove", "del"])
@@ -690,10 +706,10 @@ class Twitch(commands.Cog):
             )
         except Exception:
             log.exception("Twitch unwatch failed")
-            return await ctx.send("Could not remove that member.")
+            return await ctx.send(_("Could not remove that member."))
 
-        embed = discord.Embed(title="Twitch watchlist", colour=random_colour())
-        embed.add_field(name="Removed", value=member.mention, inline=False)
+        embed = discord.Embed(title=_("Twitch watchlist"), colour=random_colour())
+        embed.add_field(name=_("Removed"), value=member.mention, inline=False)
         await ctx.send(embed=embed)
 
     @twitch.command(name="list")
@@ -710,16 +726,16 @@ class Twitch(commands.Cog):
             )
         except Exception:
             log.exception("Twitch list failed")
-            return await ctx.send("Could not load the watchlist.")
+            return await ctx.send(_("Could not load the watchlist."))
 
         lines = []
         for row in rows:
             cid = row["channel_id"]
-            target = f"<#{cid}>" if cid else "default alert channel"
+            target = f"<#{cid}>" if cid else _("default alert channel")
             lines.append(f"<@{row['user_id']}> -> {target}")
 
         embeds = paginate_lines(
-            lines, title="Twitch watchlist", colour=TWITCH_PURPLE, per_page=10
+            lines, title=_("Twitch watchlist"), colour=TWITCH_PURPLE, per_page=10
         )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
@@ -737,7 +753,10 @@ class Twitch(commands.Cog):
                 config["role_id"] = existing.id
                 await self.save(ctx.guild.id, config)
             return await ctx.send(
-                "Your guild already has a Live streamer role - it is now linked."
+                _(
+                    "Your guild already has a Live streamer role - it is now "
+                    "linked."
+                )
             )
 
         try:
@@ -746,15 +765,17 @@ class Twitch(commands.Cog):
             )
         except discord.HTTPException as e:
             return await ctx.send(
-                f"Could not create the Live streamer role.\n\n{e}"
+                _("Could not create the Live streamer role.") + f"\n\n{e}"
             )
 
         config = await self.get_config(ctx.guild.id)
         config["role_id"] = role.id
         await self.save(ctx.guild.id, config)
         await ctx.send(
-            "Live streamer role created and linked. Move it to your preferred "
-            "position in the role list."
+            _(
+                "Live streamer role created and linked. Move it to your preferred "
+                "position in the role list."
+            )
         )
 
     @twitch.command(name="removerole", aliases=["delete-role", "del-role"])
@@ -767,19 +788,19 @@ class Twitch(commands.Cog):
         config = await self.get_config(ctx.guild.id)
         role = self._resolve_role(ctx.guild, config)
         if role is None:
-            return await ctx.send("No Live streamer role is set up.")
+            return await ctx.send(_("No Live streamer role is set up."))
 
         try:
             await role.delete(reason="Twitch live role removed")
         except discord.HTTPException as e:
             return await ctx.send(
-                f"Could not delete the Live streamer role.\n\n{e}"
+                _("Could not delete the Live streamer role.") + f"\n\n{e}"
             )
 
         if config.get("role_id"):
             config["role_id"] = None
             await self.save(ctx.guild.id, config)
-        await ctx.send("Live streamer role removed.")
+        await ctx.send(_("Live streamer role removed."))
 
 
 async def setup(bot):

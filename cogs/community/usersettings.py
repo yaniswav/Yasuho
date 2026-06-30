@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools import embed_creator, settings
+from tools.i18n import N_, _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -27,20 +28,22 @@ class Preference:
 
 
 # Ordered list of preferences. Drop a new ``Preference`` in here and it gets its
-# own embed field + author-restricted toggle button automatically.
+# own embed field + author-restricted toggle button automatically. The label and
+# description are N_-marked for extraction and translated at the use site via
+# _(pref.label) / _(pref.description).
 PREFS = [
     Preference(
         key="levelup_announce",
-        label="Level-up announcements",
+        label=N_("Level-up announcements"),
         emoji="🔔",
-        description="Get pinged in chat when you reach a new level.",
+        description=N_("Get pinged in chat when you reach a new level."),
         default=True,
     ),
     Preference(
         key="help_expand",
-        label="Expanded help",
+        label=N_("Expanded help"),
         emoji="📖",
-        description="Show every subcommand inline when you browse help.",
+        description=N_("Show every subcommand inline when you browse help."),
         default=False,
     ),
 ]
@@ -54,8 +57,8 @@ def _style(value):
 def build_embed(author, states):
     """Render the settings panel from a ``{key: bool}`` state map."""
     embed = discord.Embed(
-        title="Your preferences",
-        description=(
+        title=_("Your preferences"),
+        description=_(
             "These settings only affect **you**, everywhere I'm used.\n"
             "Tap a button below to toggle a preference on or off."
         ),
@@ -67,14 +70,14 @@ def build_embed(author, states):
     for pref in PREFS:
         on = bool(states.get(pref.key, pref.default))
         badge = ON_BADGE if on else OFF_BADGE
-        state = "ON" if on else "OFF"
+        state = _("ON") if on else _("OFF")
         embed.add_field(
-            name=f"{pref.emoji} {pref.label} - {badge} {state}",
-            value=pref.description,
+            name=f"{pref.emoji} {_(pref.label)} - {badge} {state}",
+            value=_(pref.description),
             inline=False,
         )
 
-    embed.set_footer(text="Only you can use these controls.")
+    embed.set_footer(text=_("Only you can use these controls."))
     return embed
 
 
@@ -82,7 +85,7 @@ class PrefButton(discord.ui.Button):
     """Toggle button bound to a single boolean preference."""
 
     def __init__(self, pref, value):
-        super().__init__(label=pref.label, emoji=pref.emoji, style=_style(value))
+        super().__init__(label=_(pref.label), emoji=pref.emoji, style=_style(value))
         self.pref = pref
 
     async def callback(self, interaction):
@@ -104,7 +107,7 @@ class PrefButton(discord.ui.Button):
                 view.author_id,
             )
             await embed_creator.notify_failure(
-                interaction, "Something went wrong updating that setting."
+                interaction, _("Something went wrong updating that setting.")
             )
 
 

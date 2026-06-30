@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.time import human_timedelta
 
 log = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ class Extras(commands.Cog):
         """Quote a message into a clean embed."""
 
         embed = discord.Embed(
-            description=message.content or "(no text)",
+            description=message.content or _("(no text)"),
             colour=random_colour(),
             timestamp=message.created_at,
         )
@@ -32,7 +33,10 @@ class Extras(commands.Cog):
             name=message.author.display_name,
             icon_url=message.author.display_avatar.url,
         )
-        embed.add_field(name="Jump", value=f"[Jump]({message.jump_url})")
+        embed.add_field(
+            name=_("Jump"),
+            value=_("[Jump]({url})").format(url=message.jump_url),
+        )
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -57,25 +61,28 @@ class Extras(commands.Cog):
         secret = "".join(secrets.choice(alphabet) for _ in range(length))
 
         try:
-            await ctx.author.send(f"Here is your password:\n||`{secret}`||")
+            await ctx.author.send(
+                _("Here is your password:\n||`{secret}`||").format(secret=secret)
+            )
         except discord.Forbidden:
             if ctx.interaction is not None:
                 return await ctx.send(
-                    "I could not DM you, here it is instead:\n"
-                    f"||`{secret}`||",
+                    _(
+                        "I could not DM you, here it is instead:\n||`{secret}`||"
+                    ).format(secret=secret),
                     ephemeral=True,
                 )
             return await ctx.send(
-                "I could not DM you - please enable direct messages and try again."
+                _("I could not DM you - please enable direct messages and try again.")
             )
         except Exception:
             log.exception("Failed to DM password")
             return await ctx.send(
-                "Something went wrong while generating your password.",
+                _("Something went wrong while generating your password."),
                 ephemeral=True,
             )
 
-        await ctx.send("Sent you a DM", ephemeral=True)
+        await ctx.send(_("Sent you a DM"), ephemeral=True)
 
     @commands.command()
     @commands.guild_only()
@@ -92,7 +99,9 @@ class Extras(commands.Cog):
 
         if activity is None:
             return await ctx.send(
-                f"{member.display_name} is not listening to Spotify."
+                _("{member} is not listening to Spotify.").format(
+                    member=member.display_name
+                )
             )
 
         embed = discord.Embed(
@@ -100,10 +109,10 @@ class Extras(commands.Cog):
             colour=random_colour(),
             timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(name="Artist", value=", ".join(activity.artists))
-        embed.add_field(name="Album", value=activity.album)
+        embed.add_field(name=_("Artist"), value=", ".join(activity.artists))
+        embed.add_field(name=_("Album"), value=activity.album)
         _mins, _secs = divmod(int(activity.duration.total_seconds()), 60)
-        embed.add_field(name="Duration", value=f"{_mins}:{_secs:02d}")
+        embed.add_field(name=_("Duration"), value=f"{_mins}:{_secs:02d}")
         embed.set_thumbnail(url=activity.album_cover_url)
         embed.set_author(
             name=member.display_name, icon_url=member.display_avatar.url
@@ -115,7 +124,7 @@ class Extras(commands.Cog):
         """Show how long the bot has been running."""
 
         embed = discord.Embed(
-            title="Uptime",
+            title=_("Uptime"),
             description=human_timedelta(self.start, suffix=False),
             colour=random_colour(),
         )
@@ -131,7 +140,7 @@ class Extras(commands.Cog):
         allowed = [name for name, value in perms if value]
 
         embed = discord.Embed(
-            title=f"Permissions for {member.display_name}",
+            title=_("Permissions for {member}").format(member=member.display_name),
             description="```\n" + "\n".join(allowed) + "\n```",
             colour=random_colour(),
         )
@@ -147,7 +156,7 @@ class Extras(commands.Cog):
         allowed = [name for name, value in perms if value]
 
         embed = discord.Embed(
-            title=f"Permissions for {ctx.me.display_name}",
+            title=_("Permissions for {member}").format(member=ctx.me.display_name),
             description="```\n" + "\n".join(allowed) + "\n```",
             colour=random_colour(),
         )
@@ -162,8 +171,8 @@ class Extras(commands.Cog):
             self.bot.user.id, permissions=discord.Permissions(permissions=8)
         )
         embed = discord.Embed(
-            title="Invite me",
-            description=f"[Click here to invite me]({url})",
+            title=_("Invite me"),
+            description=_("[Click here to invite me]({url})").format(url=url),
             colour=random_colour(),
         )
         await ctx.send(embed=embed)

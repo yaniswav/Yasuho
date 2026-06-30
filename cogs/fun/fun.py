@@ -12,6 +12,7 @@ from pyfiglet import figlet_format
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class Fun(commands.Cog):
     async def give_hug(self, ctx, member: discord.Member = None):
         """Give a hug to your secret crush ッ"""
         if not member:
-            return await ctx.send("You can't hug the air...")
+            return await ctx.send(_("You can't hug the air..."))
 
         hug_colour = self.hug_colour
         author_name = ctx.author.display_name
@@ -104,7 +105,7 @@ class Fun(commands.Cog):
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch cat image")
-                await ctx.send(':warning: **ERROR !**', delete_after=3)
+                await ctx.send(_(':warning: **ERROR !**'), delete_after=3)
 
     @commands.command()
     @commands.guild_only()
@@ -120,7 +121,7 @@ class Fun(commands.Cog):
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch dog image")
-                await ctx.send(':warning: **ERROR !**', delete_after=3)
+                await ctx.send(_(':warning: **ERROR !**'), delete_after=3)
 
     @commands.command()
     @commands.guild_only()
@@ -136,7 +137,7 @@ class Fun(commands.Cog):
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch fox image")
-                await ctx.send(':warning: **ERROR !**', delete_after=3)
+                await ctx.send(_(':warning: **ERROR !**'), delete_after=3)
 
     @commands.command()
     @commands.guild_only()
@@ -153,8 +154,10 @@ class Fun(commands.Cog):
                     color=random_colour(),
                 )
                 embed.add_field(
-                    name=":warning: Warning!",
-                    value=f"Don't mention everyone {ctx.message.author.mention}\n Message : {message}",
+                    name=_(":warning: Warning!"),
+                    value=_("Don't mention everyone {author}\n Message : {message}").format(
+                        author=ctx.message.author.mention, message=message
+                    ),
                     inline=True,
                 )
                 await ctx.send(embed=embed)
@@ -167,15 +170,17 @@ class Fun(commands.Cog):
                     color=random_colour(),
                 )
                 embed.add_field(
-                    name=":warning: Warning!",
-                    value=f"Please, don't send links {ctx.message.author.mention}\n Message : {message}",
+                    name=_(":warning: Warning!"),
+                    value=_("Please, don't send links {author}\n Message : {message}").format(
+                        author=ctx.message.author.mention, message=message
+                    ),
                     inline=True,
                 )
                 await ctx.send(embed=embed)
                 return
 
             elif "stupid" in message:
-                await ctx.send("Yes, we know.")
+                await ctx.send(_("Yes, we know."))
 
             else:
                 await ctx.send(message)
@@ -200,12 +205,13 @@ class Fun(commands.Cog):
 
         embed = discord.Embed(color=random_colour())
         embed.add_field(
-            name="**Download link**",
-            value=f"**[➡️ URL]({url})**",
+            name=_("**Download link**"),
+            value=_("**[➡️ URL]({url})**").format(url=url),
         )
         embed.set_image(url=url)
         embed.set_footer(
-            text=f"Requested by: {ctx.author.name}", icon_url=ctx.author.display_avatar.url
+            text=_("Requested by: {user}").format(user=ctx.author.name),
+            icon_url=ctx.author.display_avatar.url,
         )
         embed.timestamp = ctx.message.created_at
         await ctx.send(embed=embed)
@@ -218,7 +224,7 @@ class Fun(commands.Cog):
             if msg:
                 msg = str(figlet_format(msg.strip(), font="big"))
                 if len(msg) > 2000:
-                    await ctx.send("*Message too long.*")
+                    await ctx.send(_("*Message too long.*"))
                 else:
                     try:
                         await ctx.send(f"```fix\n{msg}\n```")
@@ -227,7 +233,7 @@ class Fun(commands.Cog):
                         log.exception("Failed to send ascii art")
         else:
             await ctx.send(
-                "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
+                _("**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**")
             )
 
     @commands.command(
@@ -238,7 +244,7 @@ class Fun(commands.Cog):
     async def eight_ball(self, ctx, yesnoquestion=None):
         """Answer to a yes/no quesiton."""
         if yesnoquestion is None:
-            await ctx.send("Ask me a question...")
+            await ctx.send(_("Ask me a question..."))
 
         else:
             async with ctx.typing():
@@ -255,9 +261,10 @@ class Fun(commands.Cog):
     async def reverse(self, ctx, *, text):
         """Gives you reversed text"""
         embed = discord.Embed(color=random_colour())
-        embed.add_field(name="Reversed:", value=f"```{text[::-1]}```")
+        embed.add_field(name=_("Reversed:"), value=f"```{text[::-1]}```")
         embed.set_footer(
-            text=f"Requested by: {ctx.author}", icon_url=ctx.author.display_avatar.url
+            text=_("Requested by: {user}").format(user=ctx.author),
+            icon_url=ctx.author.display_avatar.url,
         )
         await ctx.send(embed=embed)
 
@@ -273,7 +280,11 @@ class Fun(commands.Cog):
             if num == 100:
                 deci = 0
 
-            await ctx.send(f"I'd rate {thing} a **{num}.{deci}/ 100**")
+            await ctx.send(
+                _("I'd rate {thing} a **{num}.{deci}/ 100**").format(
+                    thing=thing, num=num, deci=deci
+                )
+            )
 
     @commands.command(aliases=["howhot", "hot"])
     @commands.guild_only()
@@ -285,7 +296,7 @@ class Fun(commands.Cog):
 
         elif user.id == 228895251576782858:
             s = await ctx.send(
-                f"**{user.mention}** is **1000%** hot :heart_eyes: :lips:"
+                _("**{user}** is **1000%** hot :heart_eyes: :lips:").format(user=user.mention)
             )
             await s.add_reaction("🇭")
             await s.add_reaction("🇴")
@@ -293,7 +304,9 @@ class Fun(commands.Cog):
             return
 
         elif user.id == 295575165931356160:
-            await ctx.send(f"{user.name} is hot like a pineapple :pineapple:")
+            await ctx.send(
+                _("{user} is hot like a pineapple :pineapple:").format(user=user.name)
+            )
             return
 
         r = random.randint(1, 100)
@@ -307,7 +320,11 @@ class Fun(commands.Cog):
         if hot > 75:
             emoji = "💞"
 
-        await ctx.send(f"**{user.name}** is **{hot:.2f}%** hot {emoji}")
+        await ctx.send(
+            _("**{user}** is **{hot:.2f}%** hot {emoji}").format(
+                user=user.name, hot=hot, emoji=emoji
+            )
+        )
 
     @commands.command(description="Calculate how gay you are!")
     @commands.guild_only()
@@ -321,10 +338,14 @@ class Fun(commands.Cog):
             emj += ":gay_pride_flag:"
 
         if member.id in (228895251576782858, 295575165931356160, 447697573118214148, 313353843629096960):
-            await ctx.send(f"{member.name} is **0%** gay 👑")
+            await ctx.send(_("{member} is **0%** gay 👑").format(member=member.name))
             return
 
-        await ctx.send(f"{member.name} is **{y}.{random.randint(0, 99)}%** gay {emj}")
+        await ctx.send(
+            _("{member} is **{y}.{rand}%** gay {emj}").format(
+                member=member.name, y=y, rand=random.randint(0, 99), emj=emj
+            )
+        )
 
     @commands.command(aliases=["slots", "bet"])
     @commands.guild_only()
@@ -338,11 +359,11 @@ class Fun(commands.Cog):
         slotmachine = f"**[ {a} {b} {c} ]\n{ctx.author.name}**,"
 
         if a == b == c:
-            await ctx.send(f"{slotmachine} All matching, you won! 🎉")
+            await ctx.send(_("{slot} All matching, you won! 🎉").format(slot=slotmachine))
         elif (a == b) or (a == c) or (b == c):
-            await ctx.send(f"{slotmachine} 2 in a row, you won! 🎉")
+            await ctx.send(_("{slot} 2 in a row, you won! 🎉").format(slot=slotmachine))
         else:
-            await ctx.send(f"{slotmachine} No match, you lost 😢")
+            await ctx.send(_("{slot} No match, you lost 😢").format(slot=slotmachine))
 
     @commands.command(name="rps", aliases=["shifumi", "pfc"])
     @commands.guild_only()
@@ -352,10 +373,10 @@ class Fun(commands.Cog):
         em = discord.Embed(
             color=random_colour(),
             timestamp=discord.utils.utcnow(),
-            title="RPS Game",
-            description="**I choose ** :grey_question: \n\nReact with:\n✊ for `Rock`\n🖐 for `Paper`\n✌ for `Scissors`",
+            title=_("RPS Game"),
+            description=_("**I choose ** :grey_question: \n\nReact with:\n✊ for `Rock`\n🖐 for `Paper`\n✌ for `Scissors`"),
         )
-        em.set_footer(text="I'm waiting for you!")
+        em.set_footer(text=_("I'm waiting for you!"))
         rps = await ctx.send(embed=em)
         responses = ["✊", "🖐", "✌"]
         bot_response = random.choice(responses)
@@ -375,28 +396,28 @@ class Fun(commands.Cog):
                 "reaction_add", timeout=60.0, check=check
             )
         except asyncio.TimeoutError:
-            await rps.edit(content="Game timed out! Please try again.", embed=None)
+            await rps.edit(content=_("Game timed out! Please try again."), embed=None)
             return
 
         user_choice = str(reaction.emoji)
-        result = "Draw"
+        result = _("Draw")
 
         if bot_response != user_choice:
             win_conditions = {"✊": "✌", "🖐": "✊", "✌": "🖐"}
             result = (
-                "You won" if win_conditions[user_choice] == bot_response else "You lost"
+                _("You won") if win_conditions[user_choice] == bot_response else _("You lost")
             )
 
-        response_desc = (
-            f"I choose {bot_response}\nYou choose {user_choice}\n\nResult : `{result}`"
+        response_desc = _("I choose {bot_response}\nYou choose {user_choice}\n\nResult : `{result}`").format(
+            bot_response=bot_response, user_choice=user_choice, result=result
         )
         result_em = discord.Embed(
             color=random_colour(),
             timestamp=discord.utils.utcnow(),
-            title="RPS Game",
+            title=_("RPS Game"),
             description=response_desc,
         )
-        result_em.set_footer(text="Thanks for playing!")
+        result_em.set_footer(text=_("Thanks for playing!"))
         await rps.edit(embed=result_em)
 
 

@@ -33,6 +33,7 @@ from .queries import (
 )
 from tools import crypto
 from tools.config_loader import config_loader
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class AniListBase:
 
         viewer = await self._graphql(VIEWER_QUERY, {}, token=access_token)
         name = (((viewer or {}).get("data") or {}).get("Viewer") or {}).get("name")
-        return name or "AniList user"
+        return name or _("AniList user")
 
     async def _search_candidates(self, title):
         """Return up to ~10 search candidates across both anime and manga.
@@ -223,7 +224,7 @@ class AniListBase:
         token = await self._get_token(user_id)
         if not token:
             return await self._reply(
-                sender, "Link your account first with `/anilist login`."
+                sender, _("Link your account first with `/anilist login`.")
             )
 
         variables = {"mediaId": media.get("id")}
@@ -243,7 +244,7 @@ class AniListBase:
         data = await self._graphql(SAVE_ENTRY_QUERY, variables, token=token)
         entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
         if not entry:
-            return await self._reply(sender, "Could not update that entry.")
+            return await self._reply(sender, _("Could not update that entry."))
 
         name = ((entry.get("media") or {}).get("title") or {}).get(
             "romaji"
@@ -251,21 +252,29 @@ class AniListBase:
 
         if field == "progress":
             unit = _media_unit(media)
-            message = (
-                f"Set **{name}** to {unit} {entry.get('progress')} "
-                f"({entry.get('status')})."
+            message = _("Set **{name}** to {unit} {progress} ({status}).").format(
+                name=name,
+                unit=unit,
+                progress=entry.get("progress"),
+                status=entry.get("status"),
             )
         elif field == "status":
-            message = f"Set **{name}** to {entry.get('status')}."
+            message = _("Set **{name}** to {status}.").format(
+                name=name, status=entry.get("status")
+            )
         elif field == "complete":
             progress = entry.get("progress")
             if progress:
                 unit = _media_unit(media, plural=True)
-                message = f"Completed **{name}** ({progress} {unit})."
+                message = _("Completed **{name}** ({progress} {unit}).").format(
+                    name=name, progress=progress, unit=unit
+                )
             else:
-                message = f"Marked **{name}** as completed."
+                message = _("Marked **{name}** as completed.").format(name=name)
         else:
-            message = f"Scored **{name}** {entry.get('score')}."
+            message = _("Scored **{name}** {score}.").format(
+                name=name, score=entry.get("score")
+            )
 
         await self._reply(sender, message)
 
@@ -280,7 +289,9 @@ class AniListBase:
 
         token = await self._get_token(ctx.author.id)
         if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
+            return await ctx.send(
+                _("Link your account first with `/anilist login`.")
+            )
 
         # Slash autocomplete supplies an "id:<n>" sentinel (collision-safe vs a
         # numeric title like "86"): resolve it directly, skipping the search.
@@ -288,14 +299,16 @@ class AniListBase:
             async with ctx.typing():
                 media = await self._media_by_id(int(title[3:]))
             if not media:
-                return await ctx.send("Could not load that title.")
+                return await ctx.send(_("Could not load that title."))
             return await self._apply_edit(ctx, ctx.author.id, media, field, value)
 
         async with ctx.typing():
             candidates = await self._search_candidates(title)
 
         if not candidates:
-            return await ctx.send(f"No result for **{title}**.")
+            return await ctx.send(
+                _("No result for **{title}**.").format(title=title)
+            )
 
         if len(candidates) == 1:
             return await self._apply_edit(
@@ -304,7 +317,9 @@ class AniListBase:
 
         view = EditSelectView(self, candidates, ctx.author.id, field, value)
         view.message = await ctx.send(
-            content=f"Multiple matches for **{title}** - pick the right one:",
+            content=_(
+                "Multiple matches for **{title}** - pick the right one:"
+            ).format(title=title),
             view=view,
         )
 
@@ -320,7 +335,7 @@ class AniListBase:
         data = await self._graphql(MEDIA_QUERY, {"id": media_id})
         media = ((data or {}).get("data") or {}).get("Media") or fallback
         if not media:
-            return await ctx.send("Could not load that title.")
+            return await ctx.send(_("Could not load that title."))
 
         view = MediaView(self, media, ctx.author.id, token=token)
         view.message = await ctx.send(embed=view.overview_embed(), view=view)
@@ -337,7 +352,9 @@ class AniListBase:
 
         token = await self._get_token(ctx.author.id)
         if not token:
-            return await ctx.send("Link your account first with `/anilist login`.")
+            return await ctx.send(
+                _("Link your account first with `/anilist login`.")
+            )
 
         # Autocomplete supplies an "id:<n>" sentinel: resolve straight to editor.
         if title.startswith("id:") and title[3:].isdigit():
@@ -349,7 +366,9 @@ class AniListBase:
             candidates = await self._search_candidates_for_user(title, token)
 
         if not candidates:
-            return await ctx.send(f"No result for **{title}**.")
+            return await ctx.send(
+                _("No result for **{title}**.").format(title=title)
+            )
 
         on_list = [c for c in candidates if c.get("mediaListEntry")]
 
@@ -364,8 +383,9 @@ class AniListBase:
         if len(on_list) > 1:
             view = OnListSelectView(self, on_list, ctx.author.id)
             view.message = await ctx.send(
-                content=f"You track several titles matching **{title}** "
-                "- which one?",
+                content=_(
+                    "You track several titles matching **{title}** - which one?"
+                ).format(title=title),
                 view=view,
             )
             return
@@ -386,14 +406,17 @@ class AniListBase:
         if len(types_present) >= 2:
             view = TypeView(self, candidates, ctx.author.id)
             view.message = await ctx.send(
-                content=f"**{title}** - is it an anime or a manga?", view=view
+                content=_("**{title}** - is it an anime or a manga?").format(
+                    title=title
+                ),
+                view=view,
             )
             return
 
         only_type = types_present[0] if types_present else None
         view = SeasonSelectView(self, candidates, ctx.author.id, only_type)
         view.message = await ctx.send(
-            content="Pick the exact title to update:", view=view
+            content=_("Pick the exact title to update:"), view=view
         )
 
     # ------------------------------------------------------------------
@@ -410,7 +433,7 @@ class AniListBase:
                 ((data or {}).get("data") or {}).get("Page") or {}
             ).get("media") or []
             if not candidates:
-                return await ctx.send("No result.")
+                return await ctx.send(_("No result."))
 
             token = await self._get_token(ctx.author.id)
 
@@ -421,7 +444,7 @@ class AniListBase:
                 )
                 media = ((full or {}).get("data") or {}).get("Media")
                 if not media:
-                    return await ctx.send("No result.")
+                    return await ctx.send(_("No result."))
                 view = MediaView(self, media, ctx.author.id, token=token)
                 view.message = await ctx.send(
                     embed=view.overview_embed(), view=view
@@ -430,8 +453,9 @@ class AniListBase:
 
             view = ResultView(self, candidates, ctx.author.id, media_type)
             view.message = await ctx.send(
-                content=f"Found {len(candidates)} results for **{search}** - "
-                "pick one:",
+                content=_(
+                    "Found {count} results for **{search}** - pick one:"
+                ).format(count=len(candidates), search=search),
                 view=view,
             )
 
@@ -444,9 +468,12 @@ class AniListBase:
                 ((data or {}).get("data") or {}).get("Page") or {}
             ).get("media") or []
             if not media:
-                return await ctx.send("No result.")
+                return await ctx.send(_("No result."))
 
             view = ResultView(self, media, ctx.author.id, media_type)
             view.message = await ctx.send(
-                content=f"**{label}** - pick one for details:", view=view
+                content=_("**{label}** - pick one for details:").format(
+                    label=label
+                ),
+                view=view,
             )

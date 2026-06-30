@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from tools import settings
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,9 @@ class Leveling(commands.Cog):
                 self.bot.db_pool, message.author.id, "levelup_announce", True
             ):
                 await message.channel.send(
-                    f"{message.author.mention} reached level **{new_level}**!"
+                    _("{user} reached level **{level}**!").format(
+                        user=message.author.mention, level=new_level
+                    )
                 )
 
         except Exception:
@@ -242,15 +245,15 @@ class Leveling(commands.Cog):
             except Exception:
                 log.exception("Failed to render rank card")
                 embed = discord.Embed(
-                    title=f"Rank | {member.display_name}",
+                    title=_("Rank | {name}").format(name=member.display_name),
                     colour=random_colour(),
                 )
                 embed.set_thumbnail(url=member.display_avatar.url)
-                embed.add_field(name="Rank", value=f"**#{rank_pos}**")
-                embed.add_field(name="Level", value=f"**{level}**")
-                embed.add_field(name="XP", value=f"**{xp}**")
+                embed.add_field(name=_("Rank"), value=f"**#{rank_pos}**")
+                embed.add_field(name=_("Level"), value=f"**{level}**")
+                embed.add_field(name=_("XP"), value=f"**{xp}**")
                 embed.add_field(
-                    name="XP for next level",
+                    name=_("XP for next level"),
                     value=f"**{needed}** ({xp}/{next_threshold})",
                     inline=False,
                 )
@@ -272,8 +275,8 @@ class Leveling(commands.Cog):
 
         if not rows:
             embed = discord.Embed(
-                title=f"Leaderboard | {ctx.guild.name}",
-                description="No one has earned any XP yet!",
+                title=_("Leaderboard | {guild}").format(guild=ctx.guild.name),
+                description=_("No one has earned any XP yet!"),
                 colour=random_colour(),
             )
             return await ctx.send(embed=embed)
@@ -283,11 +286,17 @@ class Leveling(commands.Cog):
             uid = row["user_id"]
             xp = row["xp"]
             member = ctx.guild.get_member(uid)
-            name = member.display_name if member else f"User {uid}"
+            name = member.display_name if member else _("User {uid}").format(uid=uid)
             level = self.level_for_xp(xp)
-            lines.append(f"**{index}.** {name} - level **{level}** ({xp} XP)")
+            lines.append(
+                _("**{index}.** {name} - level **{level}** ({xp} XP)").format(
+                    index=index, name=name, level=level, xp=xp
+                )
+            )
 
-        embeds = paginate_lines(lines, title=f"Leaderboard | {ctx.guild.name}")
+        embeds = paginate_lines(
+            lines, title=_("Leaderboard | {guild}").format(guild=ctx.guild.name)
+        )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
 

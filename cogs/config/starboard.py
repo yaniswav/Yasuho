@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from tools import embed_creator
 from tools.formats import random_colour
+from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView
 
@@ -23,7 +24,7 @@ class _StarboardChannelSelect(discord.ui.ChannelSelect):
         self.panel = panel
         super().__init__(
             channel_types=[discord.ChannelType.text],
-            placeholder="Pick the starboard channel",
+            placeholder=_("Pick the starboard channel"),
             min_values=1,
             max_values=1,
         )
@@ -92,9 +93,9 @@ class Starboard(commands.Cog):
         self._config[guild_id] = (channel_id, threshold)
 
     def _set_embed(self, channel, threshold):
-        embed = discord.Embed(title="Starboard", colour=random_colour())
-        embed.add_field(name="Channel", value=channel.mention)
-        embed.add_field(name="Threshold", value=f"`{threshold}` {STAR}")
+        embed = discord.Embed(title=_("Starboard"), colour=random_colour())
+        embed.add_field(name=_("Channel"), value=channel.mention)
+        embed.add_field(name=_("Threshold"), value=f"`{threshold}` {STAR}")
         return embed
 
     @commands.hybrid_group(name="starboard")
@@ -117,14 +118,14 @@ class Starboard(commands.Cog):
         if channel is None:
             view = StarboardSetView(self, ctx.author.id, threshold=threshold)
             embed = discord.Embed(
-                title="Starboard",
-                description=(
+                title=_("Starboard"),
+                description=_(
                     "Pick the channel where starred messages should be "
                     "posted using the menu below."
                 ),
                 colour=random_colour(),
             )
-            embed.set_footer(text="Only you can use this menu.")
+            embed.set_footer(text=_("Only you can use this menu."))
             view.message = await ctx.send(embed=embed, view=view)
             return
 
@@ -147,9 +148,11 @@ class Starboard(commands.Cog):
         if current is not None:
             self._config[ctx.guild.id] = (current[0], value)
         embed = discord.Embed(
-            title="Starboard", colour=random_colour()
+            title=_("Starboard"), colour=random_colour()
         )
-        embed.add_field(name="Threshold has been set to:", value=f"`{value}` {STAR}")
+        embed.add_field(
+            name=_("Threshold has been set to:"), value=f"`{value}` {STAR}"
+        )
         await ctx.send(embed=embed)
 
     @starboard.command(name="disable")
@@ -166,10 +169,10 @@ class Starboard(commands.Cog):
         )
         self._config[ctx.guild.id] = None
         embed = discord.Embed(
-            title="Starboard", colour=random_colour()
+            title=_("Starboard"), colour=random_colour()
         )
         embed.add_field(
-            name="Starboard has been disabled for this guild", value="​"
+            name=_("Starboard has been disabled for this guild"), value="​"
         )
         await ctx.send(embed=embed)
 
@@ -191,8 +194,8 @@ class Starboard(commands.Cog):
 
         if not rows:
             embed = discord.Embed(
-                title=f"Starboard top | {ctx.guild.name}",
-                description="No starred messages yet.",
+                title=_("Starboard top | {guild}").format(guild=ctx.guild.name),
+                description=_("No starred messages yet."),
                 colour=random_colour(),
             )
             return await ctx.send(embed=embed)
@@ -217,12 +220,14 @@ class Starboard(commands.Cog):
                     "https://discord.com/channels/"
                     f"{ctx.guild.id}/{channel_id}/{target_id}"
                 )
-                link = f" - [Jump]({url})"
+                link = " - " + _("[Jump]({url})").format(url=url)
             else:
                 link = ""
             lines.append(f"{rank} **{count}** {STAR}{link}")
 
-        embeds = paginate_lines(lines, title=f"Starboard top | {ctx.guild.name}")
+        embeds = paginate_lines(
+            lines, title=_("Starboard top | {guild}").format(guild=ctx.guild.name)
+        )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
     async def handle(self, payload):
@@ -276,7 +281,10 @@ class Starboard(commands.Cog):
             embed.set_author(
                 name=msg.author.display_name, icon_url=msg.author.display_avatar.url
             )
-            embed.add_field(name="Source", value=f"[Jump]({msg.jump_url})")
+            embed.add_field(
+                name=_("Source"),
+                value=_("[Jump]({url})").format(url=msg.jump_url),
+            )
 
             for attachment in msg.attachments:
                 if attachment.content_type and attachment.content_type.startswith(

@@ -10,6 +10,20 @@ from __future__ import annotations
 
 import discord
 
+from tools.i18n import N_, _
+
+# Deny wordings used as AuthorView.deny_message across the cogs. They are stored
+# on the view at construction time (outside the clicker's task) and translated
+# at send time in interaction_check, so the literals are registered here with N_
+# to be extractable. Add any new deny wording here so it gets translated.
+_DENY_STRINGS = [
+    N_("This menu isn't for you."),
+    N_("This panel isn't for you."),
+    N_("This prompt isn't for you."),
+    N_("This profile editor isn't for you."),
+    N_("This isn't your game, start your own with the command!"),
+]
+
 
 class AuthorView(discord.ui.View):
     """A View that only its originating author may interact with.
@@ -49,7 +63,11 @@ class AuthorView(discord.ui.View):
 
     async def interaction_check(self, interaction):
         if interaction.user.id != self.author_id:
-            await interaction.response.send_message(self._deny_message, ephemeral=True)
+            # Translate in the clicker's locale (the stored wording is a
+            # registered N_ literal, see _DENY_STRINGS).
+            await interaction.response.send_message(
+                _(self._deny_message), ephemeral=True
+            )
             return False
         return True
 
