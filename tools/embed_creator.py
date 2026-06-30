@@ -1,9 +1,8 @@
 """Reusable embed-creator toolkit for cogs that build configurable embeds.
 
-This module is the shared spine for cogs that build configurable embeds. The
-button-role builder uses it today; the welcome and Twitch builders still carry
-their own copies and are the next to migrate onto it. It owns ONLY the "embed"
-sub-blob of a cog's config: title/description/colour/author/footer/thumbnail/
+This module is the shared spine for cogs that build configurable embeds - the
+button-role, welcome, and Twitch builders all consume it. It owns ONLY the
+"embed" sub-blob of a cog's config: title/description/colour/author/footer/thumbnail/
 image/fields. The cog keeps its own top-level keys (channel_id, enabled,
 role_id, style, ...) and hands the toolkit ``config["embed"]`` by reference.
 
@@ -139,20 +138,23 @@ def merge_embed(blob) -> dict:
     return config
 
 
-def parse_colour(text) -> Optional[int]:
-    """Parse '#rrggbb', 'rrggbb', a name in COLOUR_NAMES, or 'random'.
+def parse_colour(text, names=None) -> Optional[int]:
+    """Parse '#rrggbb', 'rrggbb', a colour name, or 'random'.
 
-    Returns an int in 0..0xFFFFFF, a fresh random_colour() for 'random', or None
-    when the input is empty or unrecognised.
+    ``names`` is the name->int palette to accept (defaults to COLOUR_NAMES). A
+    cog can pass its own palette so its colour vocabulary stays its own concern
+    instead of mutating the shared global. Returns an int in 0..0xFFFFFF, a fresh
+    random_colour() for 'random', or None when empty or unrecognised.
     """
 
     if not text:
         return None
+    palette = names if names is not None else COLOUR_NAMES
     text = text.strip().lower()
     if text == "random":
         return random_colour()
-    if text in COLOUR_NAMES:
-        return COLOUR_NAMES[text]
+    if text in palette:
+        return palette[text]
     text = text.lstrip("#")
     try:
         value = int(text, 16)
@@ -496,7 +498,7 @@ class ColourModal(_EmbedModal):
             if not raw:
                 self.embed_config["color"] = None
             else:
-                parsed = parse_colour(raw)
+                parsed = parse_colour(raw, getattr(self.host, "colour_names", None))
                 if parsed is None:
                     await interaction.response.send_message(
                         "That colour wasn't recognised. Use #rrggbb or a name "

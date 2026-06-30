@@ -15,42 +15,12 @@ log = logging.getLogger(__name__)
 # PIL's bitmap default if the file is missing so a render never hard-fails.
 _FONT_PATH = "ressources/fonts/impact.ttf"
 
-# Hint shown in modals so admins know what they can interpolate.
+# Hint shown in modals so admins know what they can interpolate. The embed
+# editing (modals, edit select, render, colour parsing, summary) all comes from
+# tools.embed_creator now; welcome only owns its token vocabulary and the
+# non-embed controls below.
 PLACEHOLDER_HINT = "{mention} {user} {server} {count} {membercount}"
 ASSET_HINT = "https://... or {avatar}"
-
-# Common colour names accepted by the colour modal (alongside #rrggbb).
-COLOUR_NAMES = {
-    "blurple": 0x5865F2,
-    "green": 0x2ECC71,
-    "red": 0xE74C3C,
-    "blue": 0x3498DB,
-    "yellow": 0xF1C40F,
-    "gold": 0xF1C40F,
-    "orange": 0xE67E22,
-    "purple": 0x9B59B6,
-    "pink": 0xE91E63,
-    "magenta": 0xE91E63,
-    "teal": 0x1ABC9C,
-    "cyan": 0x1ABC9C,
-    "white": 0xFFFFFF,
-    "black": 0x000000,
-    "grey": 0x95A5A6,
-    "gray": 0x95A5A6,
-}
-
-# Edit-menu options: (value, label, emoji). Order defines the dropdown order.
-EDIT_OPTIONS = [
-    ("title", "Title", "\U0001F4DD"),
-    ("description", "Description", "\U0001F4C4"),
-    ("color", "Colour", "\U0001F3A8"),
-    ("author", "Author", "\U0001F464"),
-    ("footer", "Footer", "\U0001F516"),
-    ("thumbnail", "Thumbnail", "\U0001F5BC"),
-    ("image", "Image", "\U0001F305"),
-    ("addfield", "Add field", "\U00002795"),
-    ("clearfields", "Clear fields", "\U0001F9F9"),
-]
 
 
 def _default_config():
@@ -81,6 +51,8 @@ def _merge_defaults(blob):
 
     Every nested container is rebuilt so the result never aliases the settings
     cache; the panel can mutate it freely and persist with one set_guild call.
+    The "embed" sub-blob is normalised by embed_creator.merge_embed, the shared
+    spine for every embed-builder cog.
     """
 
     config = _default_config()
@@ -91,295 +63,13 @@ def _merge_defaults(blob):
         if key in blob:
             config[key] = blob[key]
     config["gifs"] = list(blob.get("gifs") or [])
-
-    embed = config["embed"]
-    raw = blob.get("embed") or {}
-    for key in ("title", "description", "color", "thumbnail", "image"):
-        if key in raw:
-            embed[key] = raw[key]
-    embed["author"] = {
-        "name": (raw.get("author") or {}).get("name", ""),
-        "icon": (raw.get("author") or {}).get("icon", ""),
-    }
-    embed["footer"] = {
-        "text": (raw.get("footer") or {}).get("text", ""),
-        "icon": (raw.get("footer") or {}).get("icon", ""),
-    }
-    embed["fields"] = [
-        {
-            "name": f.get("name", ""),
-            "value": f.get("value", ""),
-            "inline": bool(f.get("inline")),
-        }
-        for f in (raw.get("fields") or [])
-        if isinstance(f, dict)
-    ]
+    config["embed"] = embed_creator.merge_embed(blob.get("embed"))
     return config
 
 
-def _parse_colour(text):
-    """Parse '#rrggbb', 'rrggbb', or a common colour name. None if invalid."""
-
-    if not text:
-        return None
-    text = text.strip().lower()
-    if text in COLOUR_NAMES:
-        return COLOUR_NAMES[text]
-    text = text.lstrip("#")
-    try:
-        value = int(text, 16)
-    except ValueError:
-        return None
-    if 0 <= value <= 0xFFFFFF:
-        return value
-    return None
-
-
-def _is_url(value):
-    return bool(value) and (
-        value.startswith("http://") or value.startswith("https://")
-    )
-
-
 # ----------------------------------------------------------------------
-# Modals (one per editable embed part)
+# GIF pool modal (welcome-specific; the embed modals come from embed_creator)
 # ----------------------------------------------------------------------
-class _PanelModal(discord.ui.Modal):
-    """Base modal: writes the config blob then re-renders the parent panel."""
-
-    def __init__(self, panel, title):
-        super().__init__(title=title)
-        self.panel = panel
-
-    async def _save_and_refresh(self, interaction):
-        await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-        await self.panel._refresh(interaction)
-
-    async def _fail(self, interaction):
-        await embed_creator.notify_failure(interaction, "Something went wrong.")
-
-
-class TitleModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit title")
-        self.field = discord.ui.TextInput(
-            label="Title",
-            style=discord.TextStyle.short,
-            required=False,
-            max_length=256,
-            default=panel.config["embed"].get("title") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["title"] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome title modal failed")
-            await self._fail(interaction)
-
-
-class DescriptionModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit description")
-        self.field = discord.ui.TextInput(
-            label="Description",
-            style=discord.TextStyle.paragraph,
-            required=False,
-            max_length=4000,
-            default=panel.config["embed"].get("description") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["description"] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome description modal failed")
-            await self._fail(interaction)
-
-
-class ColorModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit colour")
-        current = panel.config["embed"].get("color")
-        self.field = discord.ui.TextInput(
-            label="Colour (#hex or name)",
-            style=discord.TextStyle.short,
-            required=False,
-            max_length=20,
-            default=(f"#{current:06X}" if isinstance(current, int) else None),
-            placeholder="#5865F2, blurple, red, green...",
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            raw = self.field.value.strip()
-            if not raw:
-                self.panel.config["embed"]["color"] = None
-            else:
-                parsed = _parse_colour(raw)
-                if parsed is None:
-                    return await interaction.response.send_message(
-                        "That colour wasn't recognised. Use #rrggbb or a name "
-                        "like 'blurple'.",
-                        ephemeral=True,
-                    )
-                self.panel.config["embed"]["color"] = parsed
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome colour modal failed")
-            await self._fail(interaction)
-
-
-class AuthorModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit author")
-        author = panel.config["embed"].get("author") or {}
-        self.name_field = discord.ui.TextInput(
-            label="Author name",
-            required=False,
-            max_length=256,
-            default=author.get("name") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.icon_field = discord.ui.TextInput(
-            label="Author icon URL",
-            required=False,
-            max_length=1024,
-            default=author.get("icon") or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.name_field)
-        self.add_item(self.icon_field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["author"] = {
-                "name": self.name_field.value.strip(),
-                "icon": self.icon_field.value.strip(),
-            }
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome author modal failed")
-            await self._fail(interaction)
-
-
-class FooterModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit footer")
-        footer = panel.config["embed"].get("footer") or {}
-        self.text_field = discord.ui.TextInput(
-            label="Footer text",
-            required=False,
-            max_length=2048,
-            default=footer.get("text") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.icon_field = discord.ui.TextInput(
-            label="Footer icon URL",
-            required=False,
-            max_length=1024,
-            default=footer.get("icon") or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.text_field)
-        self.add_item(self.icon_field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["footer"] = {
-                "text": self.text_field.value.strip(),
-                "icon": self.icon_field.value.strip(),
-            }
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome footer modal failed")
-            await self._fail(interaction)
-
-
-class AssetModal(_PanelModal):
-    """Edit a single image URL field (thumbnail or image)."""
-
-    def __init__(self, panel, key, label):
-        super().__init__(panel, f"Edit {label.lower()}")
-        self.key = key
-        self.field = discord.ui.TextInput(
-            label=f"{label} URL",
-            required=False,
-            max_length=1024,
-            default=panel.config["embed"].get(key) or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"][self.key] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome asset modal failed")
-            await self._fail(interaction)
-
-
-class AddFieldModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Add a field")
-        self.name_field = discord.ui.TextInput(
-            label="Field name",
-            required=True,
-            max_length=256,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.value_field = discord.ui.TextInput(
-            label="Field value",
-            style=discord.TextStyle.paragraph,
-            required=True,
-            max_length=1024,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.inline_field = discord.ui.TextInput(
-            label="Inline? (yes/no)",
-            required=False,
-            max_length=5,
-            default="no",
-        )
-        self.add_item(self.name_field)
-        self.add_item(self.value_field)
-        self.add_item(self.inline_field)
-
-    async def on_submit(self, interaction):
-        try:
-            fields = self.panel.config["embed"].setdefault("fields", [])
-            if len(fields) >= 25:
-                return await interaction.response.send_message(
-                    "An embed can have at most 25 fields.", ephemeral=True
-                )
-            inline = self.inline_field.value.strip().lower() in (
-                "yes",
-                "y",
-                "true",
-                "1",
-                "on",
-            )
-            fields.append(
-                {
-                    "name": self.name_field.value.strip(),
-                    "value": self.value_field.value.strip(),
-                    "inline": inline,
-                }
-            )
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Welcome add-field modal failed")
-            await self._fail(interaction)
-
-
 class AddGifModal(discord.ui.Modal):
     """Add a single GIF/image URL to the random pool."""
 
@@ -397,7 +87,7 @@ class AddGifModal(discord.ui.Modal):
     async def on_submit(self, interaction):
         try:
             url = self.url_field.value.strip()
-            if not _is_url(url):
+            if not embed_creator.is_url(url):
                 return await interaction.response.send_message(
                     "That doesn't look like a valid URL.", ephemeral=True
                 )
@@ -447,57 +137,6 @@ class WelcomeChannelSelect(discord.ui.ChannelSelect):
             await self.panel._refresh(interaction)
         except Exception:
             log.exception("Welcome channel select failed")
-            await self.panel._error(interaction)
-
-
-class EditSelect(discord.ui.Select):
-    """Choose which embed part to edit; opens the matching modal."""
-
-    def __init__(self, panel):
-        self.panel = panel
-        options = [
-            discord.SelectOption(label=label, value=value, emoji=emoji)
-            for value, label, emoji in EDIT_OPTIONS
-        ]
-        super().__init__(
-            placeholder="Edit the welcome embed...",
-            min_values=1,
-            max_values=1,
-            options=options,
-            row=1,
-        )
-
-    async def callback(self, interaction):
-        try:
-            choice = self.values[0]
-            modals = {
-                "title": TitleModal,
-                "description": DescriptionModal,
-                "color": ColorModal,
-                "author": AuthorModal,
-                "footer": FooterModal,
-                "addfield": AddFieldModal,
-            }
-            if choice in modals:
-                return await interaction.response.send_modal(
-                    modals[choice](self.panel)
-                )
-            if choice == "thumbnail":
-                return await interaction.response.send_modal(
-                    AssetModal(self.panel, "thumbnail", "Thumbnail")
-                )
-            if choice == "image":
-                return await interaction.response.send_modal(
-                    AssetModal(self.panel, "image", "Image")
-                )
-            if choice == "clearfields":
-                self.panel.config["embed"]["fields"] = []
-                await self.panel.cog.save(
-                    self.panel.guild.id, self.panel.config
-                )
-                await self.panel._refresh(interaction)
-        except Exception:
-            log.exception("Welcome edit select failed")
             await self.panel._error(interaction)
 
 
@@ -735,7 +374,13 @@ class ManageGifsView(discord.ui.View):
 # Main control panel
 # ----------------------------------------------------------------------
 class WelcomePanel(discord.ui.View):
-    """Author-restricted welcome control panel (the single entry point)."""
+    """Author-restricted welcome control panel (the single entry point).
+
+    This View is the embed_creator.EmbedEditorHost for the welcome embed: it
+    exposes ``embed_config`` (the config["embed"] sub-blob the shared modals
+    mutate) and ``on_embed_changed`` (persist + refresh). ``placeholder_hint``
+    and ``asset_hint`` feed the shared modals' input placeholders.
+    """
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
         super().__init__(timeout=timeout)
@@ -744,15 +389,39 @@ class WelcomePanel(discord.ui.View):
         self.author_id = author_id
         self.config = config
         self.message = None
+        # Read by the embed_creator modals via getattr.
+        self.placeholder_hint = PLACEHOLDER_HINT
+        self.asset_hint = ASSET_HINT
 
         self.add_item(WelcomeChannelSelect(self))
-        self.add_item(EditSelect(self))
+        self.add_item(
+            embed_creator.make_edit_select(
+                self, placeholder="Edit the welcome embed...", row=1
+            )
+        )
         self.add_item(_ToggleButton(self, "card", "Card"))
         self.add_item(_ToggleButton(self, "random_gif", "Random GIF"))
         self.add_item(_ToggleButton(self, "ping", "Ping"))
         self.add_item(_ManageGifsButton(self))
         self.add_item(_PreviewButton(self))
         self.add_item(_EnableButton(self))
+
+    # -- embed_creator.EmbedEditorHost contract -------------------------
+    @property
+    def embed_config(self):
+        """The embed sub-blob the shared modals/edit select mutate in place."""
+
+        return self.config["embed"]
+
+    async def on_embed_changed(self, interaction):
+        """Persist the config blob and re-render the panel in place.
+
+        Called by the shared embed_creator modals and edit select after they
+        mutate embed_config; mirrors the channel/toggle save + refresh flow.
+        """
+
+        await self.cog.save(self.guild.id, self.config)
+        await self._refresh(interaction)
 
     def build_embed(self):
         config = self.config
@@ -799,30 +468,11 @@ class WelcomePanel(discord.ui.View):
             inline=True,
         )
 
-        title = embed_cfg.get("title") or "*none*"
-        desc = embed_cfg.get("description") or "*none*"
-        if len(desc) > 120:
-            desc = desc[:117] + "..."
-        colour_text = (
-            f"#{colour:06X}" if isinstance(colour, int) else "default"
+        embed.add_field(
+            name="Embed",
+            value=embed_creator.summarise(embed_cfg),
+            inline=False,
         )
-        lines = [
-            f"**Title:** {title[:120]}",
-            f"**Description:** {desc}",
-            f"**Colour:** {colour_text}",
-            f"**Fields:** {len(embed_cfg.get('fields') or [])}",
-        ]
-        author_name = (embed_cfg.get("author") or {}).get("name")
-        if author_name:
-            lines.append(f"**Author:** {author_name[:60]}")
-        footer_text = (embed_cfg.get("footer") or {}).get("text")
-        if footer_text:
-            lines.append(f"**Footer:** {footer_text[:60]}")
-        if embed_cfg.get("thumbnail"):
-            lines.append("**Thumbnail:** set")
-        if embed_cfg.get("image"):
-            lines.append("**Image:** set")
-        embed.add_field(name="Embed", value="\n".join(lines), inline=False)
 
         embed.set_footer(
             text=(
@@ -917,97 +567,48 @@ class Welcome(commands.Cog):
         await settings.set_guild(self.bot.db_pool, guild_id, "welcome", config)
 
     # -- placeholder + embed building -----------------------------------
-    def _apply(self, text, member):
-        if not text:
-            return text
+    def _substitution(self, member):
+        """Build the token resolver passed to embed_creator.render.
+
+        Folds every welcome placeholder ({mention}/{user}/{server}/{count}/
+        {membercount}) and the asset token {avatar} into one callable, so the
+        text parts and the thumbnail/image URLs all resolve through render's
+        single substitute path.
+        """
+
         guild = member.guild if member else None
         count = guild.member_count if guild else None
         count_text = str(count) if count is not None else ""
+        avatar = member.display_avatar.url if member else ""
         replacements = {
             "{mention}": member.mention if member else "",
             "{user}": member.display_name if member else "",
             "{server}": guild.name if guild else "",
             "{count}": count_text,
             "{membercount}": count_text,
+            "{avatar}": avatar,
         }
-        for key, value in replacements.items():
-            text = text.replace(key, value)
-        return text
 
-    def _resolve_asset(self, value, member):
-        if not value:
-            return None
-        avatar = member.display_avatar.url if member else ""
-        value = value.replace("{avatar}", avatar).strip()
-        return value or None
+        def substitute(text):
+            for key, value in replacements.items():
+                text = text.replace(key, value)
+            return text
 
-    def _build_embed(self, config, member):
-        embed_cfg = config.get("embed") or {}
-        colour = embed_cfg.get("color")
-        embed = discord.Embed(
-            colour=colour if isinstance(colour, int) else None
-        )
-
-        title = self._apply(embed_cfg.get("title"), member)
-        if title:
-            embed.title = title[:256]
-        description = self._apply(embed_cfg.get("description"), member)
-        if description:
-            embed.description = description[:4096]
-
-        author = embed_cfg.get("author") or {}
-        author_name = self._apply(author.get("name"), member)
-        if author_name:
-            icon = self._resolve_asset(author.get("icon"), member)
-            embed.set_author(
-                name=author_name[:256],
-                icon_url=icon if _is_url(icon) else None,
-            )
-
-        footer = embed_cfg.get("footer") or {}
-        footer_text = self._apply(footer.get("text"), member)
-        if footer_text:
-            icon = self._resolve_asset(footer.get("icon"), member)
-            embed.set_footer(
-                text=footer_text[:2048],
-                icon_url=icon if _is_url(icon) else None,
-            )
-
-        thumbnail = self._resolve_asset(embed_cfg.get("thumbnail"), member)
-        if _is_url(thumbnail):
-            embed.set_thumbnail(url=thumbnail)
-        image = self._resolve_asset(embed_cfg.get("image"), member)
-        if _is_url(image):
-            embed.set_image(url=image)
-
-        for field in (embed_cfg.get("fields") or [])[:25]:
-            name = self._apply(field.get("name"), member) or "​"
-            value = self._apply(field.get("value"), member) or "​"
-            embed.add_field(
-                name=name[:256],
-                value=value[:1024],
-                inline=bool(field.get("inline")),
-            )
-        return embed
+        return substitute
 
     def _compose(self, config, member):
         """Build (content, embed) exactly as a real join would render."""
 
-        embed = self._build_embed(config, member)
+        substitute = self._substitution(member)
+        embed = embed_creator.render(
+            config.get("embed") or {}, substitute=substitute
+        )
         gifs = config.get("gifs") or []
         if config.get("random_gif") and gifs:
             embed.set_image(url=random.choice(gifs))
 
-        if not (
-            embed.title
-            or embed.description
-            or embed.fields
-            or embed.image.url
-            or embed.thumbnail.url
-            or embed.author.name
-            or embed.footer.text
-        ):
-            embed.description = self._apply("Welcome {mention}!", member)
+        if not embed_creator.embed_has_content(embed):
+            embed.description = substitute("Welcome {mention}!")
 
         content = member.mention if config.get("ping") else None
         return content, embed

@@ -22,44 +22,38 @@ LEGACY_ROLE_NAME = "Live \U0001F534"
 PLACEHOLDER_HINT = "{streamer} {mention} {url} {game} {title} {server}"
 ASSET_HINT = "https://... or {avatar}"
 
-# Common colour names accepted by the colour modal (alongside #rrggbb).
-COLOUR_NAMES = {
-    "blurple": 0x5865F2,
-    "twitch": 0x9146FF,
-    "purple": 0x9146FF,
-    "green": 0x2ECC71,
-    "red": 0xE74C3C,
-    "blue": 0x3498DB,
-    "yellow": 0xF1C40F,
-    "gold": 0xF1C40F,
-    "orange": 0xE67E22,
-    "pink": 0xE91E63,
-    "magenta": 0xE91E63,
-    "teal": 0x1ABC9C,
-    "cyan": 0x1ABC9C,
-    "white": 0xFFFFFF,
-    "black": 0x000000,
-    "grey": 0x95A5A6,
-    "gray": 0x95A5A6,
-}
+# Twitch's own colour palette (brand purple, aliased as "twitch" and "purple")
+# lives on TwitchPanel.colour_names below, so the shared embed_creator palette
+# stays cog-agnostic (we never mutate the shared global).
 
-# Edit-menu options for the embed style: (value, label, emoji).
-EMBED_EDIT_OPTIONS = [
-    ("title", "Title", "\U0001F4DD"),
-    ("description", "Description", "\U0001F4C4"),
-    ("color", "Colour", "\U0001F3A8"),
-    ("author", "Author", "\U0001F464"),
-    ("footer", "Footer", "\U0001F516"),
-    ("thumbnail", "Thumbnail", "\U0001F5BC"),
-    ("image", "Image", "\U0001F305"),
-    ("addfield", "Add field", "\U00002795"),
-    ("clearfields", "Clear fields", "\U0001F9F9"),
-]
-
-# Edit-menu option for the classic-text style.
+# Edit-menu option for the classic-text style. The embed style reuses
+# embed_creator's default edit options through make_edit_select.
 TEXT_EDIT_OPTIONS = [
     ("message", "Message", "\U0001F4AC"),
 ]
+
+# Placeholder tokens shown by the guide button, as (token, description) pairs.
+PLACEHOLDER_ENTRIES = [
+    ("{streamer}", "The streamer's display name."),
+    ("{mention}", "Pings the streamer, e.g. @name."),
+    ("{url}", "A clickable link to the Twitch stream."),
+    ("{game}", "What they are playing (may be blank)."),
+    ("{title}", "The stream's title."),
+    ("{server}", "Your server's name."),
+    (
+        "{avatar}",
+        "The streamer's avatar URL. Perfect for the Thumbnail or Image field.",
+    ),
+]
+
+# Intro blurb for the placeholder guide (carries the old example + tip lines).
+PLACEHOLDER_INTRO = (
+    "Drop any of these into your message, or into the embed's title, "
+    "description, fields, author, or footer. They are filled in automatically "
+    "the moment a watched member goes live.\n\n"
+    "Example: `{mention} is now live playing {game}! Watch: {url}`\n"
+    "Tip: pop {avatar} into Thumbnail for a clean look."
+)
 
 
 def _default_config():
@@ -95,6 +89,7 @@ def _merge_defaults(blob):
 
     Every nested container is rebuilt so the result never aliases the settings
     cache; the panel can mutate it freely and persist with one set_guild call.
+    The embed sub-blob is rebuilt by embed_creator.merge_embed.
     """
 
     config = _default_config()
@@ -107,78 +102,19 @@ def _merge_defaults(blob):
     if config["style"] not in ("embed", "text"):
         config["style"] = "embed"
 
-    embed = config["embed"]
-    raw = blob.get("embed") or {}
-    for key in ("title", "description", "color", "thumbnail", "image"):
-        if key in raw:
-            embed[key] = raw[key]
-    embed["author"] = {
-        "name": (raw.get("author") or {}).get("name", ""),
-        "icon": (raw.get("author") or {}).get("icon", ""),
-    }
-    embed["footer"] = {
-        "text": (raw.get("footer") or {}).get("text", ""),
-        "icon": (raw.get("footer") or {}).get("icon", ""),
-    }
-    embed["fields"] = [
-        {
-            "name": f.get("name", ""),
-            "value": f.get("value", ""),
-            "inline": bool(f.get("inline")),
-        }
-        for f in (raw.get("fields") or [])
-        if isinstance(f, dict)
-    ]
+    config["embed"] = embed_creator.merge_embed(blob.get("embed"))
     return config
 
 
-def _parse_colour(text):
-    """Parse '#rrggbb', 'rrggbb', or a common colour name. None if invalid."""
-
-    if not text:
-        return None
-    text = text.strip().lower()
-    if text in COLOUR_NAMES:
-        return COLOUR_NAMES[text]
-    text = text.lstrip("#")
-    try:
-        value = int(text, 16)
-    except ValueError:
-        return None
-    if 0 <= value <= 0xFFFFFF:
-        return value
-    return None
-
-
-def _is_url(value):
-    return bool(value) and (
-        value.startswith("http://") or value.startswith("https://")
-    )
-
-
 # ----------------------------------------------------------------------
-# Modals (one per editable part)
+# Text-style modal (the cog's own concern; embed parts come from embed_creator)
 # ----------------------------------------------------------------------
-class _PanelModal(discord.ui.Modal):
-    """Base modal: writes the config blob then re-renders the parent panel."""
-
-    def __init__(self, panel, title):
-        super().__init__(title=title)
-        self.panel = panel
-
-    async def _save_and_refresh(self, interaction):
-        await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-        await self.panel._refresh(interaction)
-
-    async def _fail(self, interaction):
-        await embed_creator.notify_failure(interaction)
-
-
-class MessageModal(_PanelModal):
+class MessageModal(discord.ui.Modal):
     """Edit the classic-text alert message (used when style == 'text')."""
 
     def __init__(self, panel):
-        super().__init__(panel, "Edit message")
+        super().__init__(title="Edit message")
+        self.panel = panel
         self.field = discord.ui.TextInput(
             label="Alert message",
             style=discord.TextStyle.paragraph,
@@ -192,231 +128,10 @@ class MessageModal(_PanelModal):
     async def on_submit(self, interaction):
         try:
             self.panel.config["text"] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
+            await self.panel.on_embed_changed(interaction)
         except Exception:
             log.exception("Twitch message modal failed")
-            await self._fail(interaction)
-
-
-class TitleModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit title")
-        self.field = discord.ui.TextInput(
-            label="Title",
-            style=discord.TextStyle.short,
-            required=False,
-            max_length=256,
-            default=panel.config["embed"].get("title") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["title"] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch title modal failed")
-            await self._fail(interaction)
-
-
-class DescriptionModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit description")
-        self.field = discord.ui.TextInput(
-            label="Description",
-            style=discord.TextStyle.paragraph,
-            required=False,
-            max_length=4000,
-            default=panel.config["embed"].get("description") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["description"] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch description modal failed")
-            await self._fail(interaction)
-
-
-class ColorModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit colour")
-        current = panel.config["embed"].get("color")
-        self.field = discord.ui.TextInput(
-            label="Colour (#hex or name)",
-            style=discord.TextStyle.short,
-            required=False,
-            max_length=20,
-            default=(f"#{current:06X}" if isinstance(current, int) else None),
-            placeholder="#9146FF, twitch, blurple, red...",
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            raw = self.field.value.strip()
-            if not raw:
-                self.panel.config["embed"]["color"] = None
-            else:
-                parsed = _parse_colour(raw)
-                if parsed is None:
-                    return await interaction.response.send_message(
-                        "That colour wasn't recognised. Use #rrggbb or a name "
-                        "like 'twitch' or 'blurple'.",
-                        ephemeral=True,
-                    )
-                self.panel.config["embed"]["color"] = parsed
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch colour modal failed")
-            await self._fail(interaction)
-
-
-class AuthorModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit author")
-        author = panel.config["embed"].get("author") or {}
-        self.name_field = discord.ui.TextInput(
-            label="Author name",
-            required=False,
-            max_length=256,
-            default=author.get("name") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.icon_field = discord.ui.TextInput(
-            label="Author icon URL",
-            required=False,
-            max_length=1024,
-            default=author.get("icon") or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.name_field)
-        self.add_item(self.icon_field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["author"] = {
-                "name": self.name_field.value.strip(),
-                "icon": self.icon_field.value.strip(),
-            }
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch author modal failed")
-            await self._fail(interaction)
-
-
-class FooterModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Edit footer")
-        footer = panel.config["embed"].get("footer") or {}
-        self.text_field = discord.ui.TextInput(
-            label="Footer text",
-            required=False,
-            max_length=2048,
-            default=footer.get("text") or None,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.icon_field = discord.ui.TextInput(
-            label="Footer icon URL",
-            required=False,
-            max_length=1024,
-            default=footer.get("icon") or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.text_field)
-        self.add_item(self.icon_field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"]["footer"] = {
-                "text": self.text_field.value.strip(),
-                "icon": self.icon_field.value.strip(),
-            }
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch footer modal failed")
-            await self._fail(interaction)
-
-
-class AssetModal(_PanelModal):
-    """Edit a single image URL field (thumbnail or image)."""
-
-    def __init__(self, panel, key, label):
-        super().__init__(panel, f"Edit {label.lower()}")
-        self.key = key
-        self.field = discord.ui.TextInput(
-            label=f"{label} URL",
-            required=False,
-            max_length=1024,
-            default=panel.config["embed"].get(key) or None,
-            placeholder=ASSET_HINT,
-        )
-        self.add_item(self.field)
-
-    async def on_submit(self, interaction):
-        try:
-            self.panel.config["embed"][self.key] = self.field.value.strip()
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch asset modal failed")
-            await self._fail(interaction)
-
-
-class AddFieldModal(_PanelModal):
-    def __init__(self, panel):
-        super().__init__(panel, "Add a field")
-        self.name_field = discord.ui.TextInput(
-            label="Field name",
-            required=True,
-            max_length=256,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.value_field = discord.ui.TextInput(
-            label="Field value",
-            style=discord.TextStyle.paragraph,
-            required=True,
-            max_length=1024,
-            placeholder=PLACEHOLDER_HINT,
-        )
-        self.inline_field = discord.ui.TextInput(
-            label="Inline? (yes/no)",
-            required=False,
-            max_length=5,
-            default="no",
-        )
-        self.add_item(self.name_field)
-        self.add_item(self.value_field)
-        self.add_item(self.inline_field)
-
-    async def on_submit(self, interaction):
-        try:
-            fields = self.panel.config["embed"].setdefault("fields", [])
-            if len(fields) >= 25:
-                return await interaction.response.send_message(
-                    "An embed can have at most 25 fields.", ephemeral=True
-                )
-            inline = self.inline_field.value.strip().lower() in (
-                "yes",
-                "y",
-                "true",
-                "1",
-                "on",
-            )
-            fields.append(
-                {
-                    "name": self.name_field.value.strip(),
-                    "value": self.value_field.value.strip(),
-                    "inline": inline,
-                }
-            )
-            await self._save_and_refresh(interaction)
-        except Exception:
-            log.exception("Twitch add-field modal failed")
-            await self._fail(interaction)
+            await embed_creator.notify_failure(interaction)
 
 
 # ----------------------------------------------------------------------
@@ -483,23 +198,21 @@ class TwitchRoleSelect(discord.ui.RoleSelect):
             await self.panel._error(interaction)
 
 
-class EditSelect(discord.ui.Select):
-    """Choose which part to edit; the options adapt to the current style."""
+class _MessageSelect(discord.ui.Select):
+    """Single 'Message' option that edits the classic-text alert (text style).
+
+    The embed style uses embed_creator.make_edit_select instead; only the
+    text-style message editing stays the cog's own concern.
+    """
 
     def __init__(self, panel):
         self.panel = panel
-        if panel.config.get("style") == "text":
-            source = TEXT_EDIT_OPTIONS
-            placeholder = "Edit the alert message..."
-        else:
-            source = EMBED_EDIT_OPTIONS
-            placeholder = "Edit the alert embed..."
         options = [
             discord.SelectOption(label=label, value=value, emoji=emoji)
-            for value, label, emoji in source
+            for value, label, emoji in TEXT_EDIT_OPTIONS
         ]
         super().__init__(
-            placeholder=placeholder,
+            placeholder="Edit the alert message...",
             min_values=1,
             max_values=1,
             options=options,
@@ -508,39 +221,10 @@ class EditSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
-            choice = self.values[0]
-            if choice == "message":
-                return await interaction.response.send_modal(
-                    MessageModal(self.panel)
-                )
-            modals = {
-                "title": TitleModal,
-                "description": DescriptionModal,
-                "color": ColorModal,
-                "author": AuthorModal,
-                "footer": FooterModal,
-                "addfield": AddFieldModal,
-            }
-            if choice in modals:
-                return await interaction.response.send_modal(
-                    modals[choice](self.panel)
-                )
-            if choice == "thumbnail":
-                return await interaction.response.send_modal(
-                    AssetModal(self.panel, "thumbnail", "Thumbnail")
-                )
-            if choice == "image":
-                return await interaction.response.send_modal(
-                    AssetModal(self.panel, "image", "Image")
-                )
-            if choice == "clearfields":
-                self.panel.config["embed"]["fields"] = []
-                await self.panel.cog.save(
-                    self.panel.guild.id, self.panel.config
-                )
-                await self.panel._refresh(interaction)
+            if self.values[0] == "message":
+                await interaction.response.send_modal(MessageModal(self.panel))
         except Exception:
-            log.exception("Twitch edit select failed")
+            log.exception("Twitch message select failed")
             await self.panel._error(interaction)
 
 
@@ -579,63 +263,15 @@ class _PlaceholdersButton(discord.ui.Button):
 
     async def callback(self, interaction):
         try:
-            embed = discord.Embed(
-                title="Twitch alert placeholders",
-                description=(
-                    "Drop any of these into your message, or into the embed's "
-                    "title, description, fields, author, or footer. They are "
-                    "filled in automatically the moment a watched member goes "
-                    "live."
+            await interaction.response.send_message(
+                embed=embed_creator.placeholder_guide(
+                    PLACEHOLDER_ENTRIES,
+                    title="Twitch alert placeholders",
+                    intro=PLACEHOLDER_INTRO,
+                    colour=TWITCH_PURPLE,
                 ),
-                colour=TWITCH_PURPLE,
+                ephemeral=True,
             )
-            embed.add_field(
-                name="{streamer}",
-                value="The streamer's display name.",
-                inline=False,
-            )
-            embed.add_field(
-                name="{mention}",
-                value="Pings the streamer, e.g. @name.",
-                inline=False,
-            )
-            embed.add_field(
-                name="{url}",
-                value="A clickable link to the Twitch stream.",
-                inline=False,
-            )
-            embed.add_field(
-                name="{game}",
-                value="What they are playing (may be blank).",
-                inline=False,
-            )
-            embed.add_field(
-                name="{title}",
-                value="The stream's title.",
-                inline=False,
-            )
-            embed.add_field(
-                name="{server}",
-                value="Your server's name.",
-                inline=False,
-            )
-            embed.add_field(
-                name="{avatar}",
-                value=(
-                    "The streamer's avatar URL. Perfect for the Thumbnail or "
-                    "Image field."
-                ),
-                inline=False,
-            )
-            embed.add_field(
-                name="Example",
-                value="`{mention} is now live playing {game}! Watch: {url}`",
-                inline=False,
-            )
-            embed.set_footer(
-                text="Tip: pop {avatar} into Thumbnail for a clean look."
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception:
             log.exception("Twitch placeholders button failed")
             await self.panel._error(interaction)
@@ -692,7 +328,21 @@ class _EnableButton(discord.ui.Button):
 # Main control panel
 # ----------------------------------------------------------------------
 class TwitchPanel(discord.ui.View):
-    """Author-restricted Twitch live-alert builder (the single entry point)."""
+    """Author-restricted Twitch live-alert builder (the single entry point).
+
+    Satisfies the embed_creator.EmbedEditorHost protocol: it exposes the
+    ``embed_config`` sub-blob the shared modals/edit-select mutate, plus an async
+    ``on_embed_changed`` that persists and refreshes. ``placeholder_hint`` and
+    ``asset_hint`` are read by the shared modals via getattr.
+    """
+
+    # Surfaced to the shared embed_creator modals (read via getattr).
+    placeholder_hint = PLACEHOLDER_HINT
+    asset_hint = ASSET_HINT
+    # Per-cog colour palette: a copy of the shared names plus the Twitch brand
+    # purple ("twitch"/"purple"). The shared embed_creator.COLOUR_NAMES is never
+    # mutated, so other cogs keep their own vocabulary.
+    colour_names = {**embed_creator.COLOUR_NAMES, "twitch": TWITCH_PURPLE, "purple": TWITCH_PURPLE}
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
         super().__init__(timeout=timeout)
@@ -704,11 +354,36 @@ class TwitchPanel(discord.ui.View):
 
         self.add_item(TwitchChannelSelect(self))
         self.add_item(TwitchRoleSelect(self))
-        self.add_item(EditSelect(self))
+        if config.get("style") == "text":
+            self.add_item(_MessageSelect(self))
+        else:
+            self.add_item(
+                embed_creator.make_edit_select(
+                    self, placeholder="Edit the alert embed...", row=2
+                )
+            )
         self.add_item(_StyleButton(self))
         self.add_item(_PlaceholdersButton(self))
         self.add_item(_PreviewButton(self))
         self.add_item(_EnableButton(self))
+
+    # -- EmbedEditorHost contract ---------------------------------------
+    @property
+    def embed_config(self):
+        """The embed sub-blob the shared embed_creator modals mutate."""
+
+        return self.config["embed"]
+
+    async def on_embed_changed(self, interaction):
+        """Persist the whole config blob and refresh the panel in place.
+
+        This is the EmbedEditorHost hook the shared modals and edit-select call
+        after mutating embed_config. MessageModal reuses it too, since persist +
+        refresh is identical for the classic-text style.
+        """
+
+        await self.cog.save(self.guild.id, self.config)
+        await self._refresh(interaction)
 
     def build_embed(self):
         config = self.config
@@ -751,36 +426,14 @@ class TwitchPanel(discord.ui.View):
                 text = text[:197] + "..."
             embed.add_field(name="Message", value=text, inline=False)
         else:
-            title = embed_cfg.get("title") or "*none*"
-            desc = embed_cfg.get("description") or "*none*"
-            if len(desc) > 120:
-                desc = desc[:117] + "..."
-            colour_text = (
-                f"#{colour:06X}" if isinstance(colour, int) else "default"
-            )
-            lines = [
-                f"**Title:** {title[:120]}",
-                f"**Description:** {desc}",
-                f"**Colour:** {colour_text}",
-                f"**Fields:** {len(embed_cfg.get('fields') or [])}",
-            ]
-            author_name = (embed_cfg.get("author") or {}).get("name")
-            if author_name:
-                lines.append(f"**Author:** {author_name[:60]}")
-            footer_text = (embed_cfg.get("footer") or {}).get("text")
-            if footer_text:
-                lines.append(f"**Footer:** {footer_text[:60]}")
-            if embed_cfg.get("thumbnail"):
-                lines.append("**Thumbnail:** set")
-            if embed_cfg.get("image"):
-                lines.append("**Image:** set")
+            summary = embed_creator.summarise(embed_cfg)
             content_line = config.get("text")
             if content_line:
                 preview = content_line
                 if len(preview) > 80:
                     preview = preview[:77] + "..."
-                lines.append(f"**Content line:** {preview}")
-            embed.add_field(name="Embed", value="\n".join(lines), inline=False)
+                summary += f"\n**Content line:** {preview}"
+            embed.add_field(name="Embed", value=summary, inline=False)
 
         embed.set_footer(
             text=(
@@ -859,62 +512,6 @@ class Twitch(commands.Cog):
             text = text.replace(key, value)
         return text
 
-    def _resolve_asset(self, value, member):
-        if not value:
-            return None
-        avatar = member.display_avatar.url if member else ""
-        value = value.replace("{avatar}", avatar).strip()
-        return value or None
-
-    def _build_embed(self, config, member, activity=None):
-        embed_cfg = config.get("embed") or {}
-        colour = embed_cfg.get("color")
-        embed = discord.Embed(
-            colour=colour if isinstance(colour, int) else None
-        )
-
-        title = self._apply(embed_cfg.get("title"), member, activity)
-        if title:
-            embed.title = title[:256]
-        description = self._apply(embed_cfg.get("description"), member, activity)
-        if description:
-            embed.description = description[:4096]
-
-        author = embed_cfg.get("author") or {}
-        author_name = self._apply(author.get("name"), member, activity)
-        if author_name:
-            icon = self._resolve_asset(author.get("icon"), member)
-            embed.set_author(
-                name=author_name[:256],
-                icon_url=icon if _is_url(icon) else None,
-            )
-
-        footer = embed_cfg.get("footer") or {}
-        footer_text = self._apply(footer.get("text"), member, activity)
-        if footer_text:
-            icon = self._resolve_asset(footer.get("icon"), member)
-            embed.set_footer(
-                text=footer_text[:2048],
-                icon_url=icon if _is_url(icon) else None,
-            )
-
-        thumbnail = self._resolve_asset(embed_cfg.get("thumbnail"), member)
-        if _is_url(thumbnail):
-            embed.set_thumbnail(url=thumbnail)
-        image = self._resolve_asset(embed_cfg.get("image"), member)
-        if _is_url(image):
-            embed.set_image(url=image)
-
-        for field in (embed_cfg.get("fields") or [])[:25]:
-            name = self._apply(field.get("name"), member, activity) or "​"
-            value = self._apply(field.get("value"), member, activity) or "​"
-            embed.add_field(
-                name=name[:256],
-                value=value[:1024],
-                inline=bool(field.get("inline")),
-            )
-        return embed
-
     def _compose(self, config, member, activity=None):
         """Build (content, embed) exactly as a real go-live would render."""
 
@@ -923,16 +520,11 @@ class Twitch(commands.Cog):
         if style == "text":
             return text or None, None
 
-        embed = self._build_embed(config, member, activity)
-        if not (
-            embed.title
-            or embed.description
-            or embed.fields
-            or embed.image.url
-            or embed.thumbnail.url
-            or embed.author.name
-            or embed.footer.text
-        ):
+        embed = embed_creator.render(
+            config.get("embed") or {},
+            substitute=lambda value: self._apply(value, member, activity),
+        )
+        if not embed_creator.embed_has_content(embed):
             embed.description = self._apply(
                 "{mention} is now live! {url}", member, activity
             )
