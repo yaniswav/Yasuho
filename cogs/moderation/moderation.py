@@ -578,6 +578,100 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
         await self._post_modlog(ctx.guild, embed)
 
+    @commands.command(name="massban", aliases=["bulkban", "hackban"])
+    @commands.guild_only()
+    @commands.cooldown(1.0, 10.0, commands.BucketType.guild)
+    @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
+    async def massban(self, ctx, users: commands.Greedy[discord.Object], *, reason: str = None):
+        """Ban many users at once by id, for raid cleanup.
+
+        Usage: massban <id1> <id2> <id3> ... [reason]
+        Bans up to 200 ids in one go and does NOT delete their messages.
+        Requires the Ban Members permission.
+        """
+        if not users:
+            return await ctx.send(
+                "Give me at least one user id to ban.\n"
+                "Usage: `massban <id1> <id2> ... [reason]`"
+            )
+        if len(users) > 200:
+            return await ctx.send("I can ban at most 200 users in one go.")
+
+        if reason is None:
+            reason = "No reason specified"
+
+        confirm = discord.Embed(
+            title="Confirm mass ban",
+            description=f"Are you sure you want to ban **{len(users)}** user(s) by id?",
+            colour=modactions.action_colour("ban"),
+        )
+        confirm.add_field(name="Reason", value=trim_reason(reason), inline=False)
+        view = ConfirmView(ctx.author.id)
+        view.message = await ctx.send(embed=confirm, view=view)
+        await view.wait()
+
+        if not view.value:
+            aborted = discord.Embed(
+                title="Mass ban cancelled",
+                description="No action taken.",
+                colour=modactions.action_colour("note"),
+            )
+            try:
+                await view.message.edit(embed=aborted, view=None)
+            except discord.HTTPException:
+                pass
+            return
+
+        # Log each ban once (the summary below), not twice via the ModLog listener.
+        ml = self.bot.get_cog("ModLog")
+        if ml:
+            for obj in users:
+                ml.suppress(ctx.guild.id, obj.id, "ban")
+
+        try:
+            result = await ctx.guild.bulk_ban(
+                users,
+                reason=f"{ctx.author}: {trim_reason(reason)}",
+                delete_message_seconds=0,
+            )
+        except Exception:
+            log.exception("Failed to bulk ban")
+            return await ctx.send(
+                "**:x: Sorry, I could not ban those users (missing permissions?).**",
+                delete_after=10,
+            )
+
+        for obj in result.banned:
+            try:
+                await modactions.create_case(
+                    self.bot.db_pool,
+                    ctx.guild.id,
+                    obj.id,
+                    ctx.author.id,
+                    "ban",
+                    reason,
+                )
+            except Exception:
+                log.exception("Failed to record mass-ban case for %s", obj.id)
+
+        embed = discord.Embed(
+            title="Mass ban complete",
+            colour=modactions.action_colour("ban"),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.add_field(name="Banned", value=str(len(result.banned)))
+        embed.add_field(name="Failed", value=str(len(result.failed)))
+        embed.add_field(name="Reason", value=trim_reason(reason), inline=False)
+        embed.set_footer(
+            text=f"By {ctx.author}", icon_url=ctx.author.display_avatar.url
+        )
+        try:
+            await view.message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            await ctx.send(embed=embed)
+        await self._post_modlog(ctx.guild, embed)
+
     @commands.hybrid_command(
         name="purge", aliases=["pg", "massclean", "massdelete", "prune"]
     )
