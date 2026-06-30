@@ -10,6 +10,7 @@ from discord.ext import commands
 from tools import i18n
 from tools.config_loader import config_loader
 from tools.mobile_status import enable_mobile_status
+from tools.translator import YasuhoTranslator
 
 log = logging.getLogger(__name__)
 
@@ -140,6 +141,10 @@ class Yasuho(commands.Bot):
 
         log.info("Prefix count: %d", len(self.prefixes))
         log.info("i18n locales: %s", ", ".join(sorted(i18n.LOCALES)))
+
+        # Localize slash command descriptions/choices in the Discord command
+        # picker (the response text is handled separately by tools/i18n.py).
+        await self.tree.set_translator(YasuhoTranslator())
 
         # Connect to Lavalink for music ONLY if it is configured. Skipping the
         # attempt avoids the startup delay and reconnect spam when there is no
