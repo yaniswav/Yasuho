@@ -1,4 +1,5 @@
 import logging
+import typing
 
 import discord
 from discord.ext import commands
@@ -96,8 +97,8 @@ class Twitch(commands.Cog):
     async def add(
         self,
         ctx: commands.Context,
-        member: discord.Member = None,
-        channel: discord.TextChannel = None,
+        member: typing.Optional[discord.Member] = None,
+        channel: typing.Optional[discord.TextChannel] = None,
         *,
         message: str,
     ):
