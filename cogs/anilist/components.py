@@ -47,11 +47,6 @@ class ResultSelect(discord.ui.Select):
         super().__init__(placeholder="Pick a title...", options=options)
 
     async def callback(self, interaction):
-        if interaction.user.id != self.author_id:
-            return await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-
         try:
             # Remember the menu we came from so the MediaView can offer "Back".
             parent_view = self.view
@@ -184,11 +179,6 @@ class EditSelect(discord.ui.Select):
         super().__init__(placeholder="Pick the right title...", options=options)
 
     async def callback(self, interaction):
-        if interaction.user.id != self.author_id:
-            return await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-
         try:
             media = self.candidates.get(self.values[0])
             if not media:
@@ -412,9 +402,8 @@ class TypeView(AuthorView):
 class SeasonSelect(discord.ui.Select):
     """Update wizard, step 2: pick the exact title; opens a pre-filled modal."""
 
-    def __init__(self, cog, candidates, author_id, media_type):
+    def __init__(self, cog, candidates, media_type):
         self.cog = cog
-        self.author_id = author_id
         self.media_type = media_type
         self.candidates = {str(m.get("id")): m for m in candidates}
 
@@ -430,11 +419,6 @@ class SeasonSelect(discord.ui.Select):
         super().__init__(placeholder="Pick the exact title...", options=options)
 
     async def callback(self, interaction):
-        if interaction.user.id != self.author_id:
-            return await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-
         try:
             media = self.candidates.get(self.values[0])
             if not media:
@@ -472,7 +456,7 @@ class SeasonSelectView(AuthorView):
         super().__init__(
             author_id, timeout=timeout, deny_message="This menu isn't for you."
         )
-        self.add_item(SeasonSelect(cog, candidates, author_id, media_type))
+        self.add_item(SeasonSelect(cog, candidates, media_type))
 
 
 class OnListSelect(discord.ui.Select):
@@ -482,9 +466,8 @@ class OnListSelect(discord.ui.Select):
     current status and progress, so the choice is unambiguous.
     """
 
-    def __init__(self, cog, candidates, author_id):
+    def __init__(self, cog, candidates):
         self.cog = cog
-        self.author_id = author_id
         self.candidates = {str(m.get("id")): m for m in candidates}
 
         options = []
@@ -517,11 +500,6 @@ class OnListSelect(discord.ui.Select):
         super().__init__(placeholder="Pick which one to update...", options=options)
 
     async def callback(self, interaction):
-        if interaction.user.id != self.author_id:
-            return await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
-
         try:
             media = self.candidates.get(self.values[0])
             if not media:
@@ -558,7 +536,7 @@ class OnListSelectView(AuthorView):
         super().__init__(
             author_id, timeout=timeout, deny_message="This menu isn't for you."
         )
-        self.add_item(OnListSelect(cog, candidates, author_id))
+        self.add_item(OnListSelect(cog, candidates))
 
 
 class StatusSelect(discord.ui.Select):
@@ -587,10 +565,6 @@ class StatusSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction):
-        if interaction.user.id != self.author_id:
-            return await interaction.response.send_message(
-                "This menu isn't for you.", ephemeral=True
-            )
         try:
             await interaction.response.defer()
             await self.cog._apply_edit(

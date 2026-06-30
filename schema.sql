@@ -104,10 +104,15 @@ CREATE TABLE IF NOT EXISTS starboard (
     threshold  INTEGER NOT NULL DEFAULT 3
 );
 CREATE TABLE IF NOT EXISTS starboard_entries (
-    message_id      BIGINT PRIMARY KEY,
-    guild_id        BIGINT NOT NULL,
-    star_message_id BIGINT
+    message_id      BIGINT  PRIMARY KEY,
+    guild_id        BIGINT  NOT NULL,
+    star_message_id BIGINT,
+    channel_id      BIGINT,   -- channel the star post lives in (for stable jump links)
+    star_count      INTEGER NOT NULL DEFAULT 0
 );
+-- Migrate pre-existing installs (no-op on a fresh database):
+ALTER TABLE starboard_entries ADD COLUMN IF NOT EXISTS star_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE starboard_entries ADD COLUMN IF NOT EXISTS channel_id BIGINT;
 
 -- Configurable welcome message per guild.  welcome.py
 CREATE TABLE IF NOT EXISTS welcome (

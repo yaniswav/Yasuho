@@ -40,7 +40,7 @@ class Player(sonolink.Player):
         super().__init__(*args, **kwargs)
         self.dj: typing.Optional[discord.Member] = None
         self.home: typing.Optional[discord.abc.MessageableChannel] = None
-        self.controller: typing.Optional["PlayerController"] = None
+        self.controller: typing.Optional["MusicController"] = None
         # Monotonic timestamp of when this player first became idle, or None
         # while it is active. Maintained by the cog's idle-timeout loop.
         self.idle_since: typing.Optional[float] = None
@@ -85,66 +85,6 @@ def _first_track(
     return data
 
 
-def build_now_playing_embed(player: Player) -> typing.Optional[discord.Embed]:
-    """Build a pretty "now playing" embed for the player's current track."""
-    track = player.current
-    if track is None:
-        return None
-
-    embed = discord.Embed(
-        title=track.title[:256],
-        url=track.uri or None,
-        description=f"by **{track.author}**",
-        colour=random_colour(),
-    )
-    embed.set_author(name="🎵 Now Playing")
-
-    # The track artwork as a big banner is what makes the controller look good.
-    artwork = _track_artwork(track)
-    if artwork:
-        embed.set_image(url=artwork)
-
-    status = "⏸ Paused" if player.paused else "▶ Playing"
-    embed.add_field(name="Status", value=status)
-    embed.add_field(name="Duration", value=f"`{format_duration(track)}`")
-    embed.add_field(name="Volume", value=f"`{player.volume}%`")
-
-    mode = player.queue.mode
-    if mode == sonolink.QueueMode.LOOP_ALL:
-        loop_state = "On (queue)"
-    elif mode == sonolink.QueueMode.LOOP:
-        loop_state = "On (track)"
-    else:
-        loop_state = "Off"
-    embed.add_field(name="Loop", value=loop_state)
-
-    channel_name = player.channel.name if player.channel else "voice"
-    embed.add_field(name="Channel", value=f"{E_VOICE} {channel_name}")
-    if player.dj is not None:
-        embed.add_field(name="DJ", value=player.dj.mention)
-    requester_id = getattr(track.extras, "requester", None)
-    if requester_id:
-        embed.add_field(name="Requested by", value=f"<@{requester_id}>")
-
-    upcoming = player.queue.tracks
-    if upcoming:
-        lines = "\n".join(
-            f"`{i}.` {t.title[:60]}" for i, t in enumerate(upcoming[:5], 1)
-        )
-        if len(upcoming) > 5:
-            lines += f"\n`+{len(upcoming) - 5}` more in the queue"
-        embed.add_field(name=f"Up Next ({len(upcoming)})", value=lines, inline=False)
-    else:
-        embed.add_field(
-            name="Up Next",
-            value="Nothing queued. Add a song to keep the music going!",
-            inline=False,
-        )
-
-    embed.set_footer(text="Use the buttons below to control playback")
-    return embed
-
-
 class AddSongModal(discord.ui.Modal, title="Add a song"):
     """Modal that queues a track from a search query or a full URL.
 
@@ -160,7 +100,7 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
         max_length=400,
     )
 
-    def __init__(self, cog: "Music", controller: "PlayerController") -> None:
+    def __init__(self, cog: "Music", controller: "MusicController") -> None:
         super().__init__()
         self.cog = cog
         self.controller = controller
@@ -212,14 +152,201 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
                 log.exception("Failed to report add-song error to the user")
 
 
-class PlayerController(discord.ui.View):
-    """Interactive now-playing controls, restricted to listeners in the channel."""
+class _ControllerButton(discord.ui.Button):
+    """A controller button whose callback delegates to a bound handler.
+
+    Components V2 layouts cannot use the ``@discord.ui.button`` decorator (buttons
+    live inside :class:`discord.ui.ActionRow` children), so each button is a plain
+    instance that forwards its click to a coroutine on the owning view.
+    """
+
+    def __init__(
+        self,
+        handler: typing.Callable[
+            [discord.Interaction], typing.Awaitable[None]
+        ],
+        **kwargs: typing.Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._handler = handler
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await self._handler(interaction)
+
+
+class MusicController(discord.ui.LayoutView):
+    """Interactive now-playing controls as a Components V2 layout.
+
+    The artwork is shown as a prominent media gallery image at the top, followed
+    by a coloured container holding the track details and the playback buttons.
+    The view is restricted to listeners currently in the player's voice channel.
+    """
 
     def __init__(self, cog: "Music", player: Player, *, timeout: float = 600.0) -> None:
         super().__init__(timeout=timeout)
         self.cog = cog
         self.player = player
         self.message: typing.Optional[discord.Message] = None
+        self._build()
+
+    def _make_button(
+        self,
+        handler: typing.Callable[
+            [discord.Interaction], typing.Awaitable[None]
+        ],
+        **kwargs: typing.Any,
+    ) -> _ControllerButton:
+        return _ControllerButton(handler, **kwargs)
+
+    def _build(self) -> None:
+        """(Re)assemble the layout from the player's current state."""
+        self.clear_items()
+
+        track = self.player.current
+        if track is None:
+            self.add_item(discord.ui.TextDisplay("Nothing is playing right now."))
+            return
+
+        # The track artwork as a big banner is what makes the controller look good.
+        artwork = _track_artwork(track)
+        if artwork:
+            self.add_item(
+                discord.ui.MediaGallery(discord.MediaGalleryItem(media=artwork))
+            )
+
+        container = discord.ui.Container(accent_colour=random_colour())
+
+        title = track.title[:256]
+        header = f"## [{title}]({track.uri})" if track.uri else f"## {title}"
+        container.add_item(discord.ui.TextDisplay("### 🎵 Now Playing"))
+        container.add_item(discord.ui.TextDisplay(header))
+        container.add_item(discord.ui.TextDisplay(f"by **{track.author}**"))
+        container.add_item(discord.ui.Separator())
+
+        status = "⏸ Paused" if self.player.paused else "▶ Playing"
+        mode = self.player.queue.mode
+        if mode == sonolink.QueueMode.LOOP_ALL:
+            loop_state = "On (queue)"
+        elif mode == sonolink.QueueMode.LOOP:
+            loop_state = "On (track)"
+        else:
+            loop_state = "Off"
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"**Status:** {status}\n"
+                f"**Duration:** `{format_duration(track)}`\n"
+                f"**Volume:** `{self.player.volume}%`\n"
+                f"**Loop:** {loop_state}"
+            )
+        )
+
+        channel_name = self.player.channel.name if self.player.channel else "voice"
+        meta_lines = [f"**Channel:** {E_VOICE} {channel_name}"]
+        if self.player.dj is not None:
+            meta_lines.append(f"**DJ:** {self.player.dj.mention}")
+        requester_id = getattr(track.extras, "requester", None)
+        if requester_id:
+            meta_lines.append(f"**Requested by:** <@{requester_id}>")
+        container.add_item(discord.ui.TextDisplay("\n".join(meta_lines)))
+
+        container.add_item(discord.ui.Separator())
+
+        upcoming = self.player.queue.tracks
+        if upcoming:
+            lines = "\n".join(
+                f"`{i}.` {t.title[:60]}" for i, t in enumerate(upcoming[:5], 1)
+            )
+            if len(upcoming) > 5:
+                lines += f"\n`+{len(upcoming) - 5}` more in the queue"
+            up_next = f"**Up Next ({len(upcoming)})**\n{lines}"
+        else:
+            up_next = (
+                "**Up Next**\nNothing queued. Add a song to keep the music going!"
+            )
+        container.add_item(discord.ui.TextDisplay(up_next))
+
+        container.add_item(discord.ui.Separator())
+
+        container.add_item(
+            discord.ui.ActionRow(
+                self._make_button(
+                    self._pause_resume,
+                    label="Pause/Resume",
+                    emoji="⏯️",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._skip,
+                    label="Skip",
+                    emoji="⏭️",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._volume_down,
+                    label="Vol -",
+                    emoji="🔉",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._volume_up,
+                    label="Vol +",
+                    emoji="🔊",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._loop_toggle,
+                    label="Loop",
+                    emoji="🔁",
+                    style=discord.ButtonStyle.secondary,
+                ),
+            )
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                self._make_button(
+                    self._shuffle,
+                    label="Shuffle",
+                    emoji="\U0001f500",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._show_queue,
+                    label="Queue",
+                    emoji="\U0001f4dc",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._add_song,
+                    label="Add",
+                    emoji="➕",
+                    style=discord.ButtonStyle.success,
+                ),
+                self._make_button(
+                    self._favorite,
+                    label="Favorite",
+                    emoji="⭐",
+                    style=discord.ButtonStyle.secondary,
+                ),
+                self._make_button(
+                    self._disconnect,
+                    label="Disconnect",
+                    emoji="⏹️",
+                    style=discord.ButtonStyle.danger,
+                ),
+            )
+        )
+
+        container.add_item(
+            discord.ui.TextDisplay("-# Use the buttons to control playback")
+        )
+
+        self.add_item(container)
+
+    def _disable_all(self) -> None:
+        """Disable every button in the layout (walks nested ActionRows)."""
+        for child in self.walk_children():
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow members currently in the player's voice channel."""
@@ -245,9 +372,7 @@ class PlayerController(discord.ui.View):
         return True
 
     async def on_timeout(self) -> None:
-        for child in self.children:
-            if isinstance(child, discord.ui.Button):
-                child.disabled = True
+        self._disable_all()
         if self.message is not None:
             try:
                 await self.message.edit(view=self)
@@ -269,23 +394,18 @@ class PlayerController(discord.ui.View):
             log.exception("Failed to report controller error to the user")
 
     async def _refresh(self) -> None:
-        """Re-render the now-playing embed in place so it reflects new state."""
+        """Re-render the now-playing layout in place so it reflects new state."""
         if self.message is None:
             return
-        embed = build_now_playing_embed(self.player)
-        if embed is None:
+        if self.player.current is None:
             return
+        self._build()
         try:
-            await self.message.edit(embed=embed, view=self)
+            await self.message.edit(view=self)
         except discord.HTTPException:
-            log.exception("Failed to refresh the controller embed")
+            log.exception("Failed to refresh the controller view")
 
-    @discord.ui.button(
-        label="Pause/Resume", emoji="⏯️", style=discord.ButtonStyle.secondary, row=0
-    )
-    async def pause_resume(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _pause_resume(self, interaction: discord.Interaction) -> None:
         try:
             if self.player.paused:
                 await self.player.resume()
@@ -299,10 +419,7 @@ class PlayerController(discord.ui.View):
             log.exception("Controller pause/resume failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Skip", emoji="⏭️", style=discord.ButtonStyle.secondary, row=0)
-    async def skip(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _skip(self, interaction: discord.Interaction) -> None:
         try:
             await self.player.skip()
             await interaction.response.send_message("Skipped.", ephemeral=True)
@@ -314,12 +431,9 @@ class PlayerController(discord.ui.View):
             log.exception("Controller skip failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Vol -", emoji="🔉", style=discord.ButtonStyle.secondary, row=0)
-    async def volume_down(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _volume_down(self, interaction: discord.Interaction) -> None:
         try:
-            new_volume = max(0, min(150, self.player.volume - 10))
+            new_volume = max(0, self.player.volume - 10)
             await self.player.set_volume(new_volume)
             await self._refresh()
             await interaction.response.send_message(
@@ -329,12 +443,12 @@ class PlayerController(discord.ui.View):
             log.exception("Controller volume-down failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Vol +", emoji="🔊", style=discord.ButtonStyle.secondary, row=0)
-    async def volume_up(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _volume_up(self, interaction: discord.Interaction) -> None:
         try:
-            new_volume = max(0, min(150, self.player.volume + 10))
+            # Cap the button at 150 to spare ears, but never snap a higher
+            # volume (set via the volume command, 0-1000) back down.
+            current = self.player.volume
+            new_volume = current if current >= 150 else min(150, current + 10)
             await self.player.set_volume(new_volume)
             await self._refresh()
             await interaction.response.send_message(
@@ -344,10 +458,7 @@ class PlayerController(discord.ui.View):
             log.exception("Controller volume-up failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Loop", emoji="🔁", style=discord.ButtonStyle.secondary, row=0)
-    async def loop_toggle(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _loop_toggle(self, interaction: discord.Interaction) -> None:
         try:
             if self.player.queue.mode == sonolink.QueueMode.LOOP_ALL:
                 self.player.queue.mode = sonolink.QueueMode.NORMAL
@@ -363,10 +474,7 @@ class PlayerController(discord.ui.View):
             log.exception("Controller loop toggle failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Shuffle", emoji="\U0001f500", style=discord.ButtonStyle.secondary, row=1)
-    async def shuffle(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _shuffle(self, interaction: discord.Interaction) -> None:
         try:
             if len(self.player.queue.tracks) < 2:
                 await interaction.response.send_message(
@@ -374,15 +482,13 @@ class PlayerController(discord.ui.View):
                 )
                 return
             self.player.queue.shuffle()
+            await self._refresh()
             await interaction.response.send_message("Shuffled the queue.", ephemeral=True)
         except Exception:
             log.exception("Controller shuffle failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Queue", emoji="\U0001f4dc", style=discord.ButtonStyle.secondary, row=1)
-    async def show_queue(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _show_queue(self, interaction: discord.Interaction) -> None:
         try:
             upcoming = self.player.queue.tracks
             if not upcoming:
@@ -401,20 +507,14 @@ class PlayerController(discord.ui.View):
             log.exception("Controller queue failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Add", emoji="➕", style=discord.ButtonStyle.success, row=1)
-    async def add_song(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _add_song(self, interaction: discord.Interaction) -> None:
         try:
             await interaction.response.send_modal(AddSongModal(self.cog, self))
         except Exception:
             log.exception("Controller add-song failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Favorite", emoji="⭐", style=discord.ButtonStyle.secondary, row=1)
-    async def favorite(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _favorite(self, interaction: discord.Interaction) -> None:
         try:
             track = self.player.current
             if track is None:
@@ -435,14 +535,9 @@ class PlayerController(discord.ui.View):
             log.exception("Controller favourite failed")
             await self._report_failure(interaction)
 
-    @discord.ui.button(label="Disconnect", emoji="⏹️", style=discord.ButtonStyle.danger, row=1)
-    async def disconnect(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def _disconnect(self, interaction: discord.Interaction) -> None:
         try:
-            for child in self.children:
-                if isinstance(child, discord.ui.Button):
-                    child.disabled = True
+            self._disable_all()
             await interaction.response.edit_message(view=self)
             await self.player.disconnect()
             self.stop()
@@ -526,8 +621,7 @@ class Music(commands.Cog):
         if player.home is None:
             return
 
-        embed = build_now_playing_embed(player)
-        if embed is None:
+        if player.current is None:
             return
 
         old = player.controller
@@ -539,9 +633,10 @@ class Music(commands.Cog):
                 except discord.HTTPException:
                     log.exception("Failed to delete the previous controller message")
 
-        view = PlayerController(self, player)
+        # A LayoutView carries its own content; it must be sent with no embed.
+        view = MusicController(self, player)
         try:
-            message = await player.home.send(embed=embed, view=view)
+            message = await player.home.send(view=view)
         except discord.HTTPException:
             log.exception("Failed to send the now-playing controller")
             return

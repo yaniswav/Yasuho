@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from tools import embed_creator
 from tools.formats import random_colour
+from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
@@ -172,6 +173,58 @@ class Starboard(commands.Cog):
         )
         await ctx.send(embed=embed)
 
+    @starboard.command(name="top", aliases=["leaderboard"])
+    @commands.guild_only()
+    async def starboard_top(self, ctx, limit: int = 10):
+        """Show the most-starred messages in this guild."""
+
+        limit = max(1, min(limit, 25))
+
+        query = """
+            SELECT message_id, star_message_id, channel_id, star_count
+            FROM starboard_entries
+            WHERE guild_id = $1 AND star_count > 0
+            ORDER BY star_count DESC
+            LIMIT $2;
+            """
+        rows = await self.bot.db_pool.fetch(query, ctx.guild.id, limit)
+
+        if not rows:
+            embed = discord.Embed(
+                title=f"Starboard top | {ctx.guild.name}",
+                description="No starred messages yet.",
+                colour=random_colour(),
+            )
+            return await ctx.send(embed=embed)
+
+        cfg = await self.get_config(ctx.guild.id)
+        star_channel_id = cfg[0] if cfg else None
+
+        medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+        lines = []
+        for index, row in enumerate(rows, start=1):
+            rank = medals.get(index, f"`#{index}`")
+            count = row["star_count"]
+            star_message_id = row["star_message_id"]
+            target_id = star_message_id or row["message_id"]
+            # Prefer the channel stored with the entry; fall back to the current
+            # starboard channel for entries written before channel_id existed.
+            channel_id = (
+                (row["channel_id"] or star_channel_id) if star_message_id else None
+            )
+            if channel_id:
+                url = (
+                    "https://discord.com/channels/"
+                    f"{ctx.guild.id}/{channel_id}/{target_id}"
+                )
+                link = f" - [Jump]({url})"
+            else:
+                link = ""
+            lines.append(f"{rank} **{count}** {STAR}{link}")
+
+        embeds = paginate_lines(lines, title=f"Starboard top | {ctx.guild.name}")
+        await Paginator(embeds, author_id=ctx.author.id).start(ctx)
+
     async def handle(self, payload):
         if str(payload.emoji) != STAR or payload.guild_id is None:
             return
@@ -238,12 +291,22 @@ class Starboard(commands.Cog):
                 try:
                     star_message = await star_ch.fetch_message(entry)
                     await star_message.edit(embed=embed)
+                    await self.bot.db_pool.execute(
+                        "UPDATE starboard_entries SET star_count = $2, "
+                        "channel_id = $3 WHERE message_id = $1;",
+                        msg.id,
+                        count,
+                        channel_id,
+                    )
                 except discord.NotFound:
                     star_message = await star_ch.send(embed=embed)
                     await self.bot.db_pool.execute(
-                        "UPDATE starboard_entries SET star_message_id = $2 WHERE message_id = $1;",
+                        "UPDATE starboard_entries SET star_message_id = $2, "
+                        "star_count = $3, channel_id = $4 WHERE message_id = $1;",
                         msg.id,
                         star_message.id,
+                        count,
+                        channel_id,
                     )
                 except Exception:
                     log.exception("Failed to edit star message %s", entry)
@@ -252,13 +315,13 @@ class Starboard(commands.Cog):
                 try:
                     query = """
                         INSERT INTO starboard_entries
-                        (message_id, guild_id, star_message_id)
-                        VALUES ($1, $2, $3)
+                        (message_id, guild_id, star_message_id, channel_id, star_count)
+                        VALUES ($1, $2, $3, $4, $5)
                         ON CONFLICT (message_id) DO UPDATE
-                        SET star_message_id = $3;
+                        SET star_message_id = $3, channel_id = $4, star_count = $5;
                         """
                     await self.bot.db_pool.execute(
-                        query, msg.id, guild.id, star_message.id
+                        query, msg.id, guild.id, star_message.id, channel_id, count
                     )
                 except Exception:
                     log.exception("Failed to record entry, rolling back")
