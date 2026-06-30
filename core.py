@@ -7,6 +7,7 @@ import discord
 import sonolink
 from discord.ext import commands
 
+from tools import i18n
 from tools.config_loader import config_loader
 from tools.mobile_status import enable_mobile_status
 
@@ -86,6 +87,29 @@ class Yasuho(commands.Bot):
         self.autoroles = {}
         self.muteroles = {}
 
+    async def get_context(self, *args, **kwargs):
+        """Set the per-invocation i18n locale before a command runs.
+
+        This runs for every message (via process_commands) and every hybrid
+        slash invocation, but the locale is resolved only for real commands. It
+        runs in the same task that then executes the command body, so the
+        ContextVar that _() reads is correct for the whole invocation.
+        """
+        ctx = await super().get_context(*args, **kwargs)
+        if ctx.command is not None:
+            try:
+                i18n.current_locale.set(
+                    await i18n.resolve_locale(
+                        self,
+                        user_id=ctx.author.id,
+                        guild_id=ctx.guild.id if ctx.guild else None,
+                        interaction=ctx.interaction,
+                    )
+                )
+            except Exception:
+                i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+        return ctx
+
     async def setup_hook(self) -> None:
         # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
         schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -115,6 +139,7 @@ class Yasuho(commands.Bot):
                 log.exception("Error while trying to load %s", extension)
 
         log.info("Prefix count: %d", len(self.prefixes))
+        log.info("i18n locales: %s", ", ".join(sorted(i18n.LOCALES)))
 
         # Connect to Lavalink for music ONLY if it is configured. Skipping the
         # attempt avoids the startup delay and reconnect spam when there is no

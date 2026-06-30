@@ -454,11 +454,11 @@ class Settings(commands.Cog):
 
         return state
 
-    @commands.hybrid_group(name="config")
+    @commands.hybrid_group(name="config", aliases=["setup"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def config(self, ctx):
-        """Open the interactive server-settings panel."""
+        """Open the interactive server-settings panel (also: setup)."""
 
         if ctx.invoked_subcommand is not None:
             return
