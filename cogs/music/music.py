@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import typing
+from datetime import datetime, timezone
 
 import discord
 import sonolink
@@ -10,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from tools import interactions
+from tools import interactions, music_state
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -29,6 +30,11 @@ SEARCH_SOURCE = TrackSourceType.YOUTUBE
 # resources. A player counts as idle when it is paused, has nothing playing and
 # an empty queue, or is alone in its voice channel. See the idle-timeout loop.
 IDLE_TIMEOUT = 300
+
+# Only resume a persisted player younger than this (seconds). Scopes the
+# survive-restart behaviour to a quick restart, so the bot never rejoins a
+# channel and starts blasting music after a long downtime.
+RESTORE_MAX_AGE = 600
 
 
 class Player(sonolink.Player):
@@ -74,6 +80,24 @@ def _first_track(
     if isinstance(data, list):
         return data[0] if data else None
     return data
+
+
+def _loop_to_int(mode) -> int:
+    """Map a sonolink QueueMode to the persisted loop_mode column value."""
+    if mode == sonolink.QueueMode.LOOP:
+        return music_state.LOOP_TRACK
+    if mode == sonolink.QueueMode.LOOP_ALL:
+        return music_state.LOOP_QUEUE
+    return music_state.LOOP_OFF
+
+
+def _int_to_loop(value):
+    """Map a persisted loop_mode value back to a sonolink QueueMode."""
+    if value == music_state.LOOP_TRACK:
+        return sonolink.QueueMode.LOOP
+    if value == music_state.LOOP_QUEUE:
+        return sonolink.QueueMode.LOOP_ALL
+    return sonolink.QueueMode.NORMAL
 
 
 class AddSongModal(LocaleModal, title="Add a song"):
@@ -124,6 +148,7 @@ class AddSongModal(LocaleModal, title="Add a song"):
             player.queue.put(track)
             if not player.current:
                 await player.play(player.queue.get())
+            await self.cog._snapshot(player)
 
             await interaction.response.send_message(
                 _("Queued **{title}**.").format(title=track.title), ephemeral=True
@@ -546,7 +571,10 @@ class MusicController(discord.ui.LayoutView):
         try:
             self._disable_all()
             await interaction.response.edit_message(view=self)
+            guild = getattr(self.player.channel, "guild", None)
             await self.player.disconnect()
+            if guild is not None:
+                await self.cog._clear(guild.id)
             self.stop()
         except Exception:
             log.exception("Controller disconnect failed")
@@ -558,6 +586,8 @@ class Music(commands.Cog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        # Guards the one-shot startup restore (on_ready can fire repeatedly).
+        self._restored = False
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -664,6 +694,43 @@ class Music(commands.Cog):
         player.controller = view
 
     # ------------------------------------------------------------------
+    # Restart persistence (snapshot live players, restore them on startup)
+    # ------------------------------------------------------------------
+
+    async def _snapshot(self, player: Player) -> None:
+        """Persist a player's live state so a restart can resume it (best-effort)."""
+        try:
+            channel = player.channel
+            current = player.current
+            if channel is None or current is None or not current.encoded:
+                return
+            home = getattr(player, "home", None)
+            dj = getattr(player, "dj", None)
+            await music_state.save_state(
+                self.bot.db_pool,
+                guild_id=channel.guild.id,
+                voice_channel_id=channel.id,
+                home_channel_id=home.id if home is not None else None,
+                dj_id=dj.id if dj is not None else None,
+                volume=int(getattr(player, "volume", 100) or 100),
+                loop_mode=_loop_to_int(player.queue.mode),
+                position_ms=int(getattr(player, "position", 0) or 0),
+                paused=bool(getattr(player, "paused", False)),
+                current_track=current.encoded,
+                queue=[
+                    t.encoded
+                    for t in player.queue.tracks
+                    if getattr(t, "encoded", None)
+                ],
+            )
+        except Exception:
+            log.exception("Failed to snapshot player state")
+
+    async def _clear(self, guild_id: int) -> None:
+        """Forget a guild's persisted player state (best-effort)."""
+        await music_state.clear_state(self.bot.db_pool, guild_id)
+
+    # ------------------------------------------------------------------
     # Event listeners
     # ------------------------------------------------------------------
 
@@ -672,6 +739,7 @@ class Music(commands.Cog):
         self, player: Player, event: sonolink.gateway.TrackStartEvent
     ) -> None:
         log.debug("Track started: %s", event.track.title)
+        await self._snapshot(player)
         if getattr(player, "home", None) is None:
             return
         await self._send_controller(player)
@@ -727,10 +795,12 @@ class Music(commands.Cog):
         if any(not m.bot for m in channel.members):
             return
 
+        guild_id = channel.guild.id
         try:
             await player.disconnect()
         except Exception:
             log.exception("Failed to auto-disconnect from an empty channel")
+        await self._clear(guild_id)
 
     # ------------------------------------------------------------------
     # Idle timeout
@@ -747,10 +817,13 @@ class Music(commands.Cog):
                 except discord.HTTPException:
                     log.exception("Failed to delete controller during idle teardown")
             player.controller = None
+        guild = getattr(player.channel, "guild", None)
         try:
             await player.disconnect()
         except Exception:
             log.exception("Failed to disconnect an idle player")
+        if guild is not None:
+            await self._clear(guild.id)
 
     @staticmethod
     def _is_idle(player: Player) -> bool:
@@ -772,6 +845,10 @@ class Music(commands.Cog):
             for voice_client in list(self.bot.voice_clients):
                 if not isinstance(voice_client, Player):
                     continue
+                # Refresh the persisted snapshot: volume / loop / pause / position
+                # drift between the event-driven snapshots.
+                if voice_client.current is not None:
+                    await self._snapshot(voice_client)
                 if self._is_idle(voice_client):
                     if voice_client.idle_since is None:
                         voice_client.idle_since = now
@@ -794,6 +871,102 @@ class Music(commands.Cog):
     async def _idle_check_error(self, error: BaseException) -> None:
         log.exception("idle-timeout loop crashed; restarting", exc_info=error)
         self._idle_check.restart()
+
+    # ------------------------------------------------------------------
+    # Startup restore (survive a restart)
+    # ------------------------------------------------------------------
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        """Resume players left behind by a restart, exactly once.
+
+        ``on_ready`` can fire repeatedly on reconnects, so a flag keeps this to a
+        single run. It waits for a Lavalink node (decoding the stored tracks needs
+        one) and must never crash startup, hence the broad guard.
+        """
+        if self._restored:
+            return
+        if not self._nodes_available():
+            # Try again on the next on_ready, once the node has connected.
+            return
+        self._restored = True
+        try:
+            await self._restore_players()
+        except Exception:
+            log.exception("Music startup restore failed")
+
+    async def _restore_players(self) -> None:
+        """Rejoin and resume every recently-active player from the DB."""
+        rows = await music_state.load_all_states(self.bot.db_pool)
+        if not rows:
+            return
+        now = datetime.now(timezone.utc)
+        for row in rows:
+            try:
+                await self._restore_one(row, now)
+            except Exception:
+                log.exception(
+                    "Failed to restore music for guild %s", row["guild_id"]
+                )
+
+    async def _restore_one(self, row, now: datetime) -> None:
+        """Resume a single guild's playback, or forget a stale/unusable row."""
+        guild_id = row["guild_id"]
+
+        age = (now - row["updated_at"]).total_seconds()
+        if age > RESTORE_MAX_AGE or not row["current_track"]:
+            await self._clear(guild_id)
+            return
+
+        guild = self.bot.get_guild(guild_id)
+        channel = guild.get_channel(row["voice_channel_id"]) if guild else None
+        if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+            await self._clear(guild_id)
+            return
+
+        # Nobody left to listen -> do not rejoin.
+        if not any(not m.bot for m in channel.members):
+            await self._clear(guild_id)
+            return
+
+        # Decode the exact tracks (no re-search) via the node.
+        current = await self.bot.sl_client.decode_track(row["current_track"])
+        if current is None:
+            await self._clear(guild_id)
+            return
+        queue_tracks = []
+        if row["queue"]:
+            queue_tracks = await self.bot.sl_client.decode_tracks(list(row["queue"]))
+
+        player = guild.voice_client
+        if not isinstance(player, Player):
+            player = await channel.connect(cls=Player)
+
+        home = (
+            guild.get_channel(row["home_channel_id"])
+            if row["home_channel_id"]
+            else None
+        )
+        player.home = home if isinstance(home, discord.abc.Messageable) else None
+        player.dj = guild.get_member(row["dj_id"]) if row["dj_id"] else None
+        player.queue.mode = _int_to_loop(row["loop_mode"])
+        for track in queue_tracks or []:
+            player.queue.put(track)
+
+        position = music_state.extrapolate_position(
+            row["position_ms"],
+            row["updated_at"],
+            now,
+            paused=row["paused"],
+            length_ms=getattr(current, "length", None),
+        )
+        await player.play(
+            current,
+            start=position,
+            paused=bool(row["paused"]),
+            volume=int(row["volume"] or 100),
+        )
+        log.info("Resumed music in guild %s at %dms", guild_id, position)
 
     # ------------------------------------------------------------------
     # Commands
@@ -893,6 +1066,7 @@ class Music(commands.Cog):
 
         if not player.current:
             await player.play(player.queue.get())
+        await self._snapshot(player)
 
     @commands.hybrid_command(name="pause")
     @commands.guild_only()
@@ -939,6 +1113,7 @@ class Music(commands.Cog):
                 )
             )
         else:
+            await self._clear(ctx.guild.id)
             await ctx.send(_("Skipped. The queue is now empty."))
 
     @commands.hybrid_command(name="stop")
@@ -949,6 +1124,7 @@ class Music(commands.Cog):
         if player is None:
             return
         await player.stop(clear_queue=True)
+        await self._clear(ctx.guild.id)
         await ctx.send(_("Stopped playback and cleared the queue."))
 
     @commands.hybrid_command(name="volume", aliases=["vol"])
@@ -1058,6 +1234,7 @@ class Music(commands.Cog):
         if player is None:
             return
         await player.disconnect()
+        await self._clear(ctx.guild.id)
         await ctx.send(_("Disconnected from the voice channel."))
 
     # ------------------------------------------------------------------
@@ -1166,6 +1343,7 @@ class Music(commands.Cog):
 
         if not player.current:
             await player.play(player.queue.get())
+        await self._snapshot(player)
 
         await ctx.send(
             _("Queued {count} track(s) from your favourites.").format(count=queued)

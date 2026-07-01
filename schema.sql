@@ -238,6 +238,26 @@ CREATE TABLE IF NOT EXISTS music_favorites (
 );
 CREATE INDEX IF NOT EXISTS music_favorites_user_idx ON music_favorites (user_id, added_at DESC);
 
+-- Live player state, persisted so playback survives a (fast) bot restart.
+-- One row per guild with an active player; cleared on disconnect/stop. Tracks
+-- are stored as Lavalink `encoded` strings so they restore exactly (decoded via
+-- the node, no re-search). The position is extrapolated from position_ms +
+-- (now - updated_at) at restore time; only recent snapshots are resumed, so the
+-- bot never barges back into a channel after a long downtime.  music/music.py
+CREATE TABLE IF NOT EXISTS music_state (
+    guild_id         BIGINT      PRIMARY KEY,
+    voice_channel_id BIGINT      NOT NULL,
+    home_channel_id  BIGINT,
+    dj_id            BIGINT,
+    volume           INTEGER     NOT NULL DEFAULT 100,
+    loop_mode        SMALLINT    NOT NULL DEFAULT 0,    -- 0 off / 1 track / 2 queue
+    position_ms      BIGINT      NOT NULL DEFAULT 0,
+    paused           BOOLEAN     NOT NULL DEFAULT FALSE,
+    current_track    TEXT,                              -- Lavalink encoded string
+    queue            TEXT[]      NOT NULL DEFAULT '{}', -- upcoming tracks, encoded
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
 -- ============================================================
