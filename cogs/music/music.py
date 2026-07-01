@@ -712,6 +712,12 @@ class Music(commands.Cog):
                 return
             home = getattr(player, "home", None)
             dj = getattr(player, "dj", None)
+            controller = getattr(player, "controller", None)
+            controller_message_id = (
+                controller.message.id
+                if controller is not None and controller.message is not None
+                else None
+            )
             await music_state.save_state(
                 self.bot.db_pool,
                 guild_id=channel.guild.id,
@@ -728,6 +734,7 @@ class Music(commands.Cog):
                     for t in player.queue.tracks
                     if getattr(t, "encoded", None)
                 ],
+                controller_message_id=controller_message_id,
             )
         except Exception:
             log.exception("Failed to snapshot player state")
@@ -912,12 +919,33 @@ class Music(commands.Cog):
         if not rows:
             return
         now = datetime.now(timezone.utc)
+
+        # Which guilds is Lavalink still playing (its session was resumed)? Those
+        # can be rebound gap-free; everything else gets a cold restore. Also back
+        # up the current session id so the NEXT restart can resume in turn.
+        node = self.bot.sl_client.get_best_node()
+        live_guilds = set()
+        if node is not None:
+            if getattr(node, "session_id", None):
+                await music_state.save_session(
+                    self.bot.db_pool, music_state.MUSIC_NODE_ID, node.session_id
+                )
+            try:
+                for lavalink_player in await node.fetch_players():
+                    gid = getattr(lavalink_player, "guild_id", None) or getattr(
+                        lavalink_player, "guild", None
+                    )
+                    if gid is not None:
+                        live_guilds.add(int(gid))
+            except Exception:
+                log.exception("Failed to fetch resumed Lavalink players")
+
         semaphore = asyncio.Semaphore(RESTORE_CONCURRENCY)
 
         async def _guarded(row) -> None:
             async with semaphore:
                 try:
-                    await self._restore_one(row, now)
+                    await self._restore_one(row, now, live_guilds)
                 except Exception:
                     log.exception(
                         "Failed to restore music for guild %s", row["guild_id"]
@@ -926,8 +954,13 @@ class Music(commands.Cog):
         await asyncio.gather(*(_guarded(row) for row in rows))
         log.info("Music restore complete: processed %d player(s)", len(rows))
 
-    async def _restore_one(self, row, now: datetime) -> None:
-        """Resume a single guild's playback, or forget a stale/unusable row."""
+    async def _restore_one(self, row, now: datetime, live_guilds) -> None:
+        """Resume a single guild's playback, or forget a stale/unusable row.
+
+        Prefers a gap-free rebind when Lavalink still holds the player (resumed
+        session); otherwise cold-restores by rejoining and replaying at the saved
+        position. Either way it leaves exactly one fresh, working controller.
+        """
         guild_id = row["guild_id"]
 
         age = (now - row["updated_at"]).total_seconds()
@@ -946,6 +979,24 @@ class Music(commands.Cog):
             await self._clear(guild_id)
             return
 
+        home = (
+            guild.get_channel(row["home_channel_id"])
+            if row["home_channel_id"]
+            else None
+        )
+        home = home if isinstance(home, discord.abc.Messageable) else None
+        dj = guild.get_member(row["dj_id"]) if row["dj_id"] else None
+        loop_mode = _int_to_loop(row["loop_mode"])
+
+        # Drop the now-dead controller from before the restart, so its buttons
+        # (bound to the old process) do not linger unresponsive.
+        stale_id = row["controller_message_id"]
+        if stale_id and home is not None:
+            try:
+                await home.get_partial_message(stale_id).delete()
+            except (discord.HTTPException, AttributeError):
+                pass
+
         # Decode the exact tracks (no re-search) via the node.
         current = await self.bot.sl_client.decode_track(row["current_track"])
         if current is None:
@@ -955,18 +1006,36 @@ class Music(commands.Cog):
         if row["queue"]:
             queue_tracks = await self.bot.sl_client.decode_tracks(list(row["queue"]))
 
+        # --- Gap-free path: Lavalink still holds a usable player for this guild.
+        if guild_id in live_guilds:
+            node = self.bot.sl_client.get_best_node()
+            resumed = node.get_player(guild_id) if node is not None else None
+            if (
+                isinstance(resumed, Player)
+                and resumed.channel is not None
+                and resumed.current is not None
+            ):
+                resumed.home = home
+                resumed.dj = dj
+                resumed.queue.mode = loop_mode
+                if not resumed.queue.tracks:
+                    for track in queue_tracks or []:
+                        resumed.queue.put(track)
+                await self._send_controller(resumed)
+                await self._snapshot(resumed)
+                log.info(
+                    "Rebound live (gap-free) music player in guild %s", guild_id
+                )
+                return
+
+        # --- Cold restore: rejoin and replay at the extrapolated position; the
+        # resulting track_start re-posts a fresh controller.
         player = guild.voice_client
         if not isinstance(player, Player):
             player = await channel.connect(cls=Player)
-
-        home = (
-            guild.get_channel(row["home_channel_id"])
-            if row["home_channel_id"]
-            else None
-        )
-        player.home = home if isinstance(home, discord.abc.Messageable) else None
-        player.dj = guild.get_member(row["dj_id"]) if row["dj_id"] else None
-        player.queue.mode = _int_to_loop(row["loop_mode"])
+        player.home = home
+        player.dj = dj
+        player.queue.mode = loop_mode
         for track in queue_tracks or []:
             player.queue.put(track)
 
@@ -983,7 +1052,7 @@ class Music(commands.Cog):
             paused=bool(row["paused"]),
             volume=int(row["volume"] or 100),
         )
-        log.info("Resumed music in guild %s at %dms", guild_id, position)
+        log.info("Cold-restored music in guild %s at %dms", guild_id, position)
 
     # ------------------------------------------------------------------
     # Commands

@@ -7,7 +7,7 @@ import discord
 import sonolink
 from discord.ext import commands
 
-from tools import i18n
+from tools import i18n, music_state
 from tools.config_loader import config_loader
 from tools.mobile_status import enable_mobile_status
 from tools.translator import YasuhoTranslator
@@ -162,9 +162,45 @@ class Yasuho(commands.Bot):
                 lavalink_pw = config_loader.get("Lavalink", "password")
             except Exception:
                 lavalink_pw = "youshallnotpass"
+            # Resume the previous Lavalink session when we have one, so a quick
+            # restart can rebind to still-playing players (music/music.py). A
+            # stale/invalid session must NEVER block startup, so any failure of
+            # the resuming path falls back to a plain fresh node - never worse
+            # than before this feature.
+            prev_session = await music_state.load_session(
+                self.db_pool, music_state.MUSIC_NODE_ID
+            )
             try:
-                self.sl_client.create_node(uri=lavalink_uri, password=lavalink_pw)
-                await self.sl_client.start()
+                try:
+                    self.sl_client.create_node(
+                        uri=lavalink_uri,
+                        password=lavalink_pw,
+                        id=music_state.MUSIC_NODE_ID,
+                        resume_timeout=120,
+                        session=prev_session,
+                    )
+                    await self.sl_client.start()
+                except Exception as resume_error:
+                    if prev_session is None:
+                        raise
+                    log.warning(
+                        "Lavalink resume failed (%s); starting a fresh session.",
+                        resume_error,
+                    )
+                    self.sl_client.clear_nodes()
+                    self.sl_client.create_node(
+                        uri=lavalink_uri,
+                        password=lavalink_pw,
+                        id=music_state.MUSIC_NODE_ID,
+                        resume_timeout=120,
+                    )
+                    await self.sl_client.start()
+                # Persist the (possibly new) session id for the next restart.
+                node = self.sl_client.get_node(music_state.MUSIC_NODE_ID)
+                if node is not None and getattr(node, "session_id", None):
+                    await music_state.save_session(
+                        self.db_pool, music_state.MUSIC_NODE_ID, node.session_id
+                    )
             except Exception as e:
                 log.warning("Lavalink unavailable, music disabled: %s", e)
         else:

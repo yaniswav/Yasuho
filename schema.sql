@@ -245,17 +245,29 @@ CREATE INDEX IF NOT EXISTS music_favorites_user_idx ON music_favorites (user_id,
 -- (now - updated_at) at restore time; only recent snapshots are resumed, so the
 -- bot never barges back into a channel after a long downtime.  music/music.py
 CREATE TABLE IF NOT EXISTS music_state (
-    guild_id         BIGINT      PRIMARY KEY,
-    voice_channel_id BIGINT      NOT NULL,
-    home_channel_id  BIGINT,
-    dj_id            BIGINT,
-    volume           INTEGER     NOT NULL DEFAULT 100,
-    loop_mode        SMALLINT    NOT NULL DEFAULT 0,    -- 0 off / 1 track / 2 queue
-    position_ms      BIGINT      NOT NULL DEFAULT 0,
-    paused           BOOLEAN     NOT NULL DEFAULT FALSE,
-    current_track    TEXT,                              -- Lavalink encoded string
-    queue            TEXT[]      NOT NULL DEFAULT '{}', -- upcoming tracks, encoded
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+    guild_id              BIGINT      PRIMARY KEY,
+    voice_channel_id      BIGINT      NOT NULL,
+    home_channel_id       BIGINT,
+    dj_id                 BIGINT,
+    volume                INTEGER     NOT NULL DEFAULT 100,
+    loop_mode             SMALLINT    NOT NULL DEFAULT 0,    -- 0 off / 1 track / 2 queue
+    position_ms           BIGINT      NOT NULL DEFAULT 0,
+    paused                BOOLEAN     NOT NULL DEFAULT FALSE,
+    current_track         TEXT,                              -- Lavalink encoded string
+    queue                 TEXT[]      NOT NULL DEFAULT '{}', -- upcoming tracks, encoded
+    controller_message_id BIGINT,                            -- now-playing controller, to delete the stale one on restore
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Migrate pre-existing installs (no-op on a fresh database):
+ALTER TABLE music_state ADD COLUMN IF NOT EXISTS controller_message_id BIGINT;
+
+-- Lavalink session id per node, so a restarting bot can resume the SAME Lavalink
+-- session (players kept alive by resume_timeout) instead of a fresh one - the
+-- basis for gap-free restarts.  core.py, tools/music_state.py, music/music.py
+CREATE TABLE IF NOT EXISTS music_node_session (
+    node_id    TEXT        PRIMARY KEY,
+    session_id TEXT        NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ============================================================
