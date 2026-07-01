@@ -255,7 +255,7 @@ class _RemoveButtonSelect(discord.ui.Select):
             buttons = self.view.config["buttons"]
             if 0 <= index < len(buttons):
                 buttons.pop(index)
-            await self.view._refresh(interaction)
+            await self.view._rerender(interaction)
         except Exception:
             log.exception("Button-role remove select failed")
             await self.view._error(interaction)
@@ -319,7 +319,7 @@ class AddButtonModal(LocaleModal):
                     "style": _parse_style(self.style_field.value),
                 }
             )
-            await self.builder._refresh(interaction)
+            await self.builder._rerender(interaction)
         except Exception:
             log.exception("Button-role add modal failed")
             await self.builder._error(interaction)
@@ -383,7 +383,7 @@ class BuilderView(AuthorView):
         return self.config["embed"]
 
     async def on_embed_changed(self, interaction):
-        await self._refresh(interaction)
+        await self._rerender(interaction)
 
     # ---- role helpers ----
     @staticmethod
@@ -508,7 +508,7 @@ class BuilderView(AuthorView):
     async def on_target_selected(self, interaction, channel):
         try:
             self.target_channel_id = channel.id
-            await self._refresh(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("Button-role target select failed")
             await self._error(interaction)
@@ -769,7 +769,7 @@ class BuilderView(AuthorView):
             )
 
     # ---- view plumbing ----
-    async def _refresh(self, interaction):
+    async def _rerender(self, interaction):
         new = BuilderView(
             self.cog,
             self.guild,

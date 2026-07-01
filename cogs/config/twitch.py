@@ -166,7 +166,7 @@ class TwitchChannelSelect(discord.ui.ChannelSelect):
         try:
             self.panel.config["channel_id"] = self.values[0].id
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Twitch channel select failed")
             await self.panel._error(interaction)
@@ -197,7 +197,7 @@ class TwitchRoleSelect(discord.ui.RoleSelect):
                 self.values[0].id if self.values else None
             )
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Twitch role select failed")
             await self.panel._error(interaction)
@@ -251,7 +251,7 @@ class _StyleButton(discord.ui.Button):
                 "text" if current == "embed" else "embed"
             )
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Twitch style button failed")
             await self.panel._error(interaction)
@@ -323,7 +323,7 @@ class _EnableButton(discord.ui.Button):
                 self.panel.config.get("enabled")
             )
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Twitch enable button failed")
             await self.panel._error(interaction)
@@ -390,7 +390,7 @@ class TwitchPanel(AuthorView):
         """
 
         await self.cog.save(self.guild.id, self.config)
-        await self._refresh(interaction)
+        await self._rerender(interaction)
 
     def build_embed(self):
         config = self.config
@@ -455,7 +455,7 @@ class TwitchPanel(AuthorView):
         )
         return embed
 
-    async def _refresh(self, interaction):
+    async def _rerender(self, interaction):
         """Rebuild a fresh panel from current config and show it in place."""
 
         new = TwitchPanel(self.cog, self.guild, self.author_id, self.config)

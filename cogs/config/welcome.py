@@ -125,7 +125,7 @@ class WelcomeChannelSelect(discord.ui.ChannelSelect):
         try:
             self.panel.config["channel_id"] = self.values[0].id
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Welcome channel select failed")
             await self.panel._error(interaction)
@@ -154,7 +154,7 @@ class _ToggleButton(discord.ui.Button):
                 self.panel.config.get(self.key)
             )
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Welcome toggle button failed")
             await self.panel._error(interaction)
@@ -216,7 +216,7 @@ class _EnableButton(discord.ui.Button):
                 self.panel.config.get("enabled")
             )
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Welcome enable button failed")
             await self.panel._error(interaction)
@@ -393,7 +393,7 @@ class WelcomePanel(AuthorView):
         """
 
         await self.cog.save(self.guild.id, self.config)
-        await self._refresh(interaction)
+        await self._rerender(interaction)
 
     def build_embed(self):
         config = self.config
@@ -457,7 +457,7 @@ class WelcomePanel(AuthorView):
         )
         return embed
 
-    async def _refresh(self, interaction):
+    async def _rerender(self, interaction):
         """Rebuild a fresh panel from current config and show it in place."""
 
         new = WelcomePanel(self.cog, self.guild, self.author_id, self.config)

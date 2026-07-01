@@ -84,7 +84,7 @@ class LogChannelSelect(discord.ui.ChannelSelect):
             channel = self.values[0]
             await self.panel.cog._set_channel(interaction.guild.id, channel.id)
             self.panel.channel_id = channel.id
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Mod-log panel channel select failed")
             await embed_creator.notify_failure(interaction)
@@ -117,7 +117,7 @@ class EventSelect(discord.ui.Select):
             selected = list(self.values)
             await self.panel.cog._set_events(interaction.guild.id, selected)
             self.panel.events = selected
-            await self.panel._refresh(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Mod-log panel event select failed")
             await embed_creator.notify_failure(interaction)
@@ -167,7 +167,7 @@ class ModLogPanel(AuthorView):
         embed.set_footer(text=_("Only you can use these controls."))
         return embed
 
-    async def _refresh(self, interaction):
+    async def _rerender(self, interaction):
         """Re-render with a fresh panel so option defaults reflect new state."""
 
         new = ModLogPanel(
@@ -189,7 +189,7 @@ class ModLogPanel(AuthorView):
         try:
             await self.cog._disable(interaction.guild.id)
             self.channel_id = None
-            await self._refresh(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("Mod-log panel disable failed")
             await embed_creator.notify_failure(interaction)

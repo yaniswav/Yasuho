@@ -307,7 +307,7 @@ class _CompletionView(AuthorView):
             return False
         return True
 
-    async def _refresh(self, interaction):
+    async def _rerender(self, interaction):
         """Re-render the form in place, tolerating either interaction type."""
         try:
             await interaction.response.edit_message(embed=self.build_embed(), view=self)
@@ -333,7 +333,7 @@ class _CompletionView(AuthorView):
     async def on_select(self, interaction, field, value):
         try:
             self.set_value(field, value)
-            await self._refresh(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("arg completion: select handling failed")
             await self._report(interaction)
@@ -351,7 +351,7 @@ class _CompletionView(AuthorView):
             return
         missing = [f for f in self.fields if f.required and f.name not in self.provided]
         if missing:
-            await self._refresh(interaction)
+            await self._rerender(interaction)
         else:
             await self.finish(interaction)
 

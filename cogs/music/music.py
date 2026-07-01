@@ -128,7 +128,7 @@ class AddSongModal(LocaleModal, title="Add a song"):
             await interaction.response.send_message(
                 _("Queued **{title}**.").format(title=track.title), ephemeral=True
             )
-            await self.controller._refresh()
+            await self.controller._rerender()
         except Exception:
             log.exception("Add-song modal submit failed")
             await interactions.notify_failure(
@@ -388,7 +388,7 @@ class MusicController(discord.ui.LayoutView):
             interaction, _("Something went wrong handling that action.")
         )
 
-    async def _refresh(self) -> None:
+    async def _rerender(self) -> None:
         """Re-render the now-playing layout in place so it reflects new state."""
         if self.message is None:
             return
@@ -408,7 +408,7 @@ class MusicController(discord.ui.LayoutView):
             else:
                 await self.player.pause()
                 message = _("Paused.")
-            await self._refresh()
+            await self._rerender()
             await interaction.response.send_message(message, ephemeral=True)
         except Exception:
             log.exception("Controller pause/resume failed")
@@ -430,7 +430,7 @@ class MusicController(discord.ui.LayoutView):
         try:
             new_volume = max(0, self.player.volume - 10)
             await self.player.set_volume(new_volume)
-            await self._refresh()
+            await self._rerender()
             await interaction.response.send_message(
                 _("Volume set to {volume}%.").format(volume=new_volume), ephemeral=True
             )
@@ -445,7 +445,7 @@ class MusicController(discord.ui.LayoutView):
             current = self.player.volume
             new_volume = current if current >= 150 else min(150, current + 10)
             await self.player.set_volume(new_volume)
-            await self._refresh()
+            await self._rerender()
             await interaction.response.send_message(
                 _("Volume set to {volume}%.").format(volume=new_volume), ephemeral=True
             )
@@ -461,7 +461,7 @@ class MusicController(discord.ui.LayoutView):
             else:
                 self.player.queue.mode = sonolink.QueueMode.LOOP_ALL
                 state = _("on")
-            await self._refresh()
+            await self._rerender()
             await interaction.response.send_message(
                 _("Queue loop turned {state}.").format(state=state), ephemeral=True
             )
@@ -477,7 +477,7 @@ class MusicController(discord.ui.LayoutView):
                 )
                 return
             self.player.queue.shuffle()
-            await self._refresh()
+            await self._rerender()
             await interaction.response.send_message(
                 _("Shuffled the queue."), ephemeral=True
             )
