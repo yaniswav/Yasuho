@@ -8,8 +8,9 @@ from tools import db, modactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.interactions import notify_failure
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -250,6 +251,110 @@ class WarningsView(AuthorView):
                     log.exception("Failed to remove warn case")
 
 
+class ReasonEditModal(LocaleModal):
+    """Edit a case's reason via a paragraph input prefilled with its current value.
+
+    Opened from the interactive (slash) ``reason`` path once the case row has
+    been resolved. On submit it reuses the cog's UPDATE + case-embed + mod-log
+    plumbing so both the text and interactive paths persist identically.
+    """
+
+    def __init__(self, cog, guild, row):
+        super().__init__(
+            title=_("Edit reason - case #{number}").format(
+                number=row["case_number"]
+            )[:45]
+        )
+        self.cog = cog
+        self.guild = guild
+        self.row = row
+
+        self.reason_input = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=500,
+            default=row["reason"] or "",
+        )
+        self.add_item(
+            discord.ui.Label(
+                text=_("New reason"), component=self.reason_input
+            )
+        )
+
+    async def on_submit(self, interaction):
+        new_reason = (self.reason_input.value or "").strip()
+        if not new_reason:
+            return await notify_failure(
+                interaction, _("The reason can't be empty.")
+            )
+
+        try:
+            row = await self.cog.bot.db_pool.fetchrow(
+                "UPDATE cases SET reason = $3 "
+                "WHERE guild_id = $1 AND case_number = $2 RETURNING *;",
+                self.guild.id,
+                self.row["case_number"],
+                new_reason,
+            )
+            if row is None:
+                return await notify_failure(
+                    interaction,
+                    _("No case #{number} found in this server.").format(
+                        number=self.row["case_number"]
+                    ),
+                )
+
+            embed = self.cog._case_record_embed(self.guild, row)
+            embed.add_field(
+                name=_("Updated by"),
+                value=interaction.user.mention,
+                inline=False,
+            )
+            await interaction.response.send_message(embed=embed)
+            await self.cog._post_modlog(self.guild, embed)
+        except Exception:
+            log.exception("Failed to edit case reason via modal")
+            await notify_failure(
+                interaction, _("Sorry, I couldn't update that reason.")
+            )
+
+
+class NewUsersView(discord.ui.LayoutView):
+    """Newest members rendered as a Components V2 layout.
+
+    A single container holds one Section per member (their avatar as a Thumbnail
+    accessory beside a TextDisplay of join/create relative timestamps), with
+    Separators between. The member list is capped so the component budget holds.
+    """
+
+    MAX_MEMBERS = 8
+
+    def __init__(self, members, *, timeout=180):
+        super().__init__(timeout=timeout)
+
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(discord.ui.TextDisplay(_("## New Members")))
+
+        for member in members[: self.MAX_MEMBERS]:
+            container.add_item(discord.ui.Separator())
+            body = _(
+                "**{member}** (ID: {id})\njoined {joined}, created {created}"
+            ).format(
+                member=member.mention,
+                id=member.id,
+                joined=discord.utils.format_dt(member.joined_at, "R"),
+                created=discord.utils.format_dt(member.created_at, "R"),
+            )
+            container.add_item(
+                discord.ui.Section(
+                    discord.ui.TextDisplay(body),
+                    accessory=discord.ui.Thumbnail(member.display_avatar.url),
+                )
+            )
+
+        self.add_item(container)
+
+
 class Moderation(commands.Cog):
     """Ultracool moderator commands"""
 
@@ -378,27 +483,17 @@ class Moderation(commands.Cog):
                     ctx.guild.members, key=lambda m: m.joined_at, reverse=True
                 )[:count]
 
-                e = discord.Embed(
-                    title=_("New Members"), colour=random_colour()
+                # A LayoutView carries its own content, so it is sent with no
+                # embed and no content. It renders member mentions via
+                # TextDisplay, so suppress pings on send.
+                view = NewUsersView(members)
+                await ctx.send(
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions.none(),
                 )
 
-                for member in members:
-                    body = _("joined {joined}, created {created}").format(
-                        joined=discord.utils.format_dt(member.joined_at, "R"),
-                        created=discord.utils.format_dt(member.created_at, "R"),
-                    )
-                    e.add_field(
-                        name=_("{member} (ID: {id})").format(
-                            member=member, id=member.id
-                        ),
-                        value=body,
-                        inline=False,
-                    )
-
-                await ctx.send(embed=e)
-
         except Exception:
-            log.exception("Failed to send new members embed")
+            log.exception("Failed to send new members view")
 
     @commands.hybrid_command(name="kick", aliases=["k"])
     @commands.guild_only()
@@ -1224,8 +1319,32 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="reason")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
-    async def reason(self, ctx, case_number: int, *, new_reason: str):
+    async def reason(self, ctx, case_number: int, *, new_reason: str = None):
         """Update the reason recorded on an existing case."""
+
+        # Interactive path: no reason supplied via the slash command. Resolve the
+        # case row first, then open a modal prefilled with its current reason so
+        # the moderator can edit it in place (persisted on submit).
+        if new_reason is None and ctx.interaction is not None:
+            row = await self.bot.db_pool.fetchrow(
+                "SELECT * FROM cases WHERE guild_id = $1 AND case_number = $2;",
+                ctx.guild.id,
+                case_number,
+            )
+            if row is None:
+                return await ctx.send(
+                    _("No case #{number} found in this server.").format(
+                        number=case_number
+                    )
+                )
+            await ctx.interaction.response.send_modal(
+                ReasonEditModal(self, ctx.guild, row)
+            )
+            return
+
+        # Text path with no reason: nothing to update, show usage.
+        if new_reason is None:
+            return await ctx.send_help(ctx.command)
 
         row = await self.bot.db_pool.fetchrow(
             "UPDATE cases SET reason = $3 "

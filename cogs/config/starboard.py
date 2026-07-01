@@ -7,7 +7,7 @@ from tools import embed_creator
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -15,40 +15,93 @@ STAR = "⭐"
 
 
 # ----------------------------------------------------------------------
-# Interactive channel picker (discord.ui)
+# Interactive configuration form (discord.ui)
 # ----------------------------------------------------------------------
-class _StarboardChannelSelect(discord.ui.ChannelSelect):
-    """Pick the text channel that starred messages are posted to."""
+class StarboardSetModal(LocaleModal):
+    """One form combining the channel picker and the star threshold.
 
-    def __init__(self, panel):
+    A Label-wrapped :class:`discord.ui.ChannelSelect` (text channels only) sits
+    above a short "Star threshold" text field. On submit the threshold is
+    validated as a positive whole number and persisted through the cog's
+    existing ``_apply_set``.
+    """
+
+    def __init__(self, cog, *, threshold=3, panel=None):
+        super().__init__(title=_("Configure the starboard"))
+        self.cog = cog
         self.panel = panel
-        super().__init__(
+
+        self.channel_select = discord.ui.ChannelSelect(
             channel_types=[discord.ChannelType.text],
             placeholder=_("Pick the starboard channel"),
             min_values=1,
             max_values=1,
         )
+        self.add_item(
+            discord.ui.Label(
+                text=_("Starboard channel"), component=self.channel_select
+            )
+        )
 
-    async def callback(self, interaction):
+        self.threshold_input = discord.ui.TextInput(
+            style=discord.TextStyle.short,
+            placeholder=_("How many stars a message needs"),
+            default=str(threshold),
+            max_length=6,
+            required=True,
+        )
+        self.add_item(
+            discord.ui.Label(
+                text=_("Star threshold"), component=self.threshold_input
+            )
+        )
+
+    async def on_submit(self, interaction):
         try:
-            channel = self.values[0]
-            await self.panel.cog._apply_set(
-                interaction.guild.id, channel.id, self.panel.threshold
-            )
-            self.panel.stop()
-            for child in self.panel.children:
-                child.disabled = True
-            embed = self.panel.cog._set_embed(channel, self.panel.threshold)
-            await interaction.response.edit_message(
-                embed=embed, view=self.panel
-            )
+            raw = (self.threshold_input.value or "").strip()
+            try:
+                threshold = int(raw)
+            except ValueError:
+                threshold = 0
+            if threshold < 1:
+                return await embed_creator.notify_failure(
+                    interaction,
+                    _("The star threshold must be a positive whole number."),
+                )
+
+            values = self.channel_select.values
+            if not values:
+                return await embed_creator.notify_failure(
+                    interaction, _("Please pick a starboard channel.")
+                )
+            channel = values[0]
+
+            await self.cog._apply_set(interaction.guild.id, channel.id, threshold)
+            embed = self.cog._set_embed(channel, threshold)
+
+            # Prefix path: refresh the button panel in place and acknowledge
+            # the modal quietly. Slash path (no panel): post the result.
+            if self.panel is not None:
+                self.panel.stop()
+                for child in self.panel.children:
+                    child.disabled = True
+                if self.panel.message is not None:
+                    try:
+                        await self.panel.message.edit(embed=embed, view=self.panel)
+                    except discord.HTTPException:
+                        pass
+                await interaction.response.send_message(
+                    _("Starboard configured!"), ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(embed=embed)
         except Exception:
-            log.exception("Starboard channel select failed")
+            log.exception("Starboard set modal failed")
             await embed_creator.notify_failure(interaction)
 
 
 class StarboardSetView(AuthorView):
-    """Author-restricted prompt to choose the starboard channel."""
+    """Author-restricted prompt that opens the starboard configuration form."""
 
     def __init__(self, cog, author_id, *, threshold, timeout=120):
         super().__init__(
@@ -56,7 +109,17 @@ class StarboardSetView(AuthorView):
         )
         self.cog = cog
         self.threshold = threshold
-        self.add_item(_StarboardChannelSelect(self))
+        self.configure.label = _("Configure the starboard")
+
+    @discord.ui.button(style=discord.ButtonStyle.primary)
+    async def configure(self, interaction, button):
+        try:
+            await interaction.response.send_modal(
+                StarboardSetModal(self.cog, threshold=self.threshold, panel=self)
+            )
+        except Exception:
+            log.exception("Starboard set modal launch failed")
+            await embed_creator.notify_failure(interaction)
 
 
 class Starboard(commands.Cog):
@@ -116,12 +179,20 @@ class Starboard(commands.Cog):
         """Set the starboard channel and the star threshold."""
 
         if channel is None:
+            # Slash invocation can pop the modal straight away; a prefix
+            # invocation has no interaction, so offer a button that opens it.
+            if ctx.interaction is not None:
+                await ctx.interaction.response.send_modal(
+                    StarboardSetModal(self, threshold=threshold)
+                )
+                return
+
             view = StarboardSetView(self, ctx.author.id, threshold=threshold)
             embed = discord.Embed(
                 title=_("Starboard"),
                 description=_(
-                    "Pick the channel where starred messages should be "
-                    "posted using the menu below."
+                    "Use the button below to pick the channel where starred "
+                    "messages should be posted and set the star threshold."
                 ),
                 colour=random_colour(),
             )

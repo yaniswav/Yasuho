@@ -16,6 +16,39 @@ NASA_KEY = config_loader.get('APITokens', 'nasaKey')
 WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
 
 
+class WeatherView(discord.ui.LayoutView):
+    """Current weather as a Components V2 layout.
+
+    A coloured container pairs the OpenWeather condition icon (as a Section
+    thumbnail accessory) with a header, then lists the readings below a
+    separator. The view is display-only, so it carries no interactive
+    components and never times out.
+    """
+
+    def __init__(self, *, city, condition, icon_url, readings, timeout=None):
+        super().__init__(timeout=timeout)
+
+        container = discord.ui.Container(accent_colour=random_colour())
+
+        header = _("## {city}\n{condition}").format(
+            city=city, condition=condition
+        )
+        if icon_url:
+            container.add_item(
+                discord.ui.Section(
+                    discord.ui.TextDisplay(header),
+                    accessory=discord.ui.Thumbnail(icon_url),
+                )
+            )
+        else:
+            container.add_item(discord.ui.TextDisplay(header))
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(readings))
+
+        self.add_item(container)
+
+
 class Meta(commands.Cog):
     """Miscellaneous informational commands (NASA APOD, weather)."""
 
@@ -98,10 +131,10 @@ class Meta(commands.Cog):
             weather_list = res.get("weather") or [{}]
             weather_main = weather_list[0].get("main", "Unknown")
             weather_desc = weather_list[0].get("description", "")
+            icon = weather_list[0].get("icon")
             clouds = (res.get("clouds") or {}).get("all", "?")
 
             city_json = res.get("name", city)
-            embed = discord.Embed(title=_("Temperature in {city}").format(city=city_json), color=random_colour(), timestamp=discord.utils.utcnow())
             current_temp = main.get("temp", "?")
             feel_like = main.get("feels_like", "?")
             temp_min = main.get("temp_min", "?")
@@ -109,10 +142,36 @@ class Meta(commands.Cog):
             pressure = main.get("pressure", "?")
             humidity = main.get("humidity", "?")
 
-            embed.add_field(name=_("Weather Informations"),
-                            value=_("```Weather status: {status}, {desc}\nCurrent temperature: {temp}°C\nFeel like: {feels}°C\nMinimum temperature: {tmin}°C\nMax temperature {tmax}°C\nPressure: {pressure}hPa\nHumidity: {humidity}%\nClouds: {clouds}%\n```").format(status=weather_main, desc=weather_desc, temp=current_temp, feels=feel_like, tmin=temp_min, tmax=temp_max, pressure=pressure, humidity=humidity, clouds=clouds), inline=True)
+            condition = _("{status} - {desc}").format(
+                status=weather_main, desc=weather_desc
+            )
+            readings = _(
+                "**Temperature:** `{temp}C`\n"
+                "**Feels like:** `{feels}C`\n"
+                "**Min / Max:** `{tmin}C` / `{tmax}C`\n"
+                "**Humidity:** `{humidity}%`\n"
+                "**Clouds:** `{clouds}%`\n"
+                "**Pressure:** `{pressure}hPa`"
+            ).format(
+                temp=current_temp,
+                feels=feel_like,
+                tmin=temp_min,
+                tmax=temp_max,
+                humidity=humidity,
+                clouds=clouds,
+                pressure=pressure,
+            )
+            icon_url = (
+                f"https://openweathermap.org/img/wn/{icon}@2x.png" if icon else None
+            )
 
-            await ctx.send(embed=embed)
+            view = WeatherView(
+                city=city_json,
+                condition=condition,
+                icon_url=icon_url,
+                readings=readings,
+            )
+            await ctx.send(view=view, allowed_mentions=discord.AllowedMentions.none())
 
 
 async def setup(bot):

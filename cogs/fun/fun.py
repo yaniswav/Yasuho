@@ -10,10 +10,12 @@ from discord.ext import commands
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageSequence
 from pyfiglet import figlet_format
 
+from tools import interactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.http import TIMEOUT
 from tools.i18n import _
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +28,89 @@ regex = re.compile(
     r"(?:/?|[/?]\S+)$",
     re.IGNORECASE,
 )
+
+
+# Rock-Paper-Scissors: which emoji beats which (key beats value).
+RPS_BEATS = {"✊": "✌", "🖐": "✊", "✌": "🖐"}
+RPS_CHOICES = list(RPS_BEATS)
+
+
+class RPSButton(discord.ui.Button):
+    """A single Rock / Paper / Scissors move."""
+
+    def __init__(self, choice: str, label: str):
+        super().__init__(style=discord.ButtonStyle.primary, label=label, emoji=choice)
+        self.choice = choice
+
+    async def callback(self, interaction: discord.Interaction):
+        view: "RPSView" = self.view
+        try:
+            await view.resolve(interaction, self.choice)
+        except Exception:
+            log.exception("rps move failed")
+            await interactions.notify_failure(
+                interaction, _("Something went wrong with that move.")
+            )
+
+
+class RPSView(AuthorView):
+    """Rock-Paper-Scissors against Yasuho: three buttons, author-gated."""
+
+    def __init__(self, player: discord.abc.User):
+        super().__init__(
+            player.id,
+            timeout=60,
+            deny_message="This isn't your game, start your own with the command!",
+        )
+        self.player = player
+        self.add_item(RPSButton("✊", _("Rock")))
+        self.add_item(RPSButton("🖐", _("Paper")))
+        self.add_item(RPSButton("✌", _("Scissors")))
+
+    def disable_all(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    async def resolve(self, interaction: discord.Interaction, user_choice: str):
+        """Pick the bot's move, decide the outcome, and reveal it in one edit."""
+        bot_choice = random.choice(RPS_CHOICES)
+
+        result = _("Draw")
+        if bot_choice != user_choice:
+            result = (
+                _("You won") if RPS_BEATS[user_choice] == bot_choice else _("You lost")
+            )
+
+        description = _(
+            "I choose {bot_choice}\nYou choose {user_choice}\n\nResult : `{result}`"
+        ).format(bot_choice=bot_choice, user_choice=user_choice, result=result)
+
+        result_em = discord.Embed(
+            color=random_colour(),
+            timestamp=discord.utils.utcnow(),
+            title=_("RPS Game"),
+            description=description,
+        )
+        result_em.set_footer(text=_("Thanks for playing!"))
+
+        self.disable_all()
+        self.stop()
+        await interaction.response.edit_message(embed=result_em, view=self)
+
+    async def on_timeout(self):
+        self.disable_all()
+        if self.message is not None:
+            timeout_em = discord.Embed(
+                color=random_colour(),
+                timestamp=discord.utils.utcnow(),
+                title=_("RPS Game"),
+                description=_("Game timed out! Please try again."),
+            )
+            try:
+                await self.message.edit(embed=timeout_em, view=self)
+            except discord.HTTPException:
+                log.debug("failed to edit timed-out rps message", exc_info=True)
 
 
 class Fun(commands.Cog):
@@ -372,51 +457,11 @@ class Fun(commands.Cog):
             color=random_colour(),
             timestamp=discord.utils.utcnow(),
             title=_("RPS Game"),
-            description=_("**I choose ** :grey_question: \n\nReact with:\n✊ for `Rock`\n🖐 for `Paper`\n✌ for `Scissors`"),
+            description=_("Pick your move below: Rock, Paper or Scissors!"),
         )
         em.set_footer(text=_("I'm waiting for you!"))
-        rps = await ctx.send(embed=em)
-        responses = ["✊", "🖐", "✌"]
-        bot_response = random.choice(responses)
-        await rps.add_reaction("✊")
-        await rps.add_reaction("🖐")
-        await rps.add_reaction("✌")
-
-        def check(reaction, user):
-            return (
-                user == ctx.author
-                and str(reaction.emoji) in responses
-                and reaction.message.id == rps.id
-            )
-
-        try:
-            reaction, user = await self.bot.wait_for(
-                "reaction_add", timeout=60.0, check=check
-            )
-        except asyncio.TimeoutError:
-            await rps.edit(content=_("Game timed out! Please try again."), embed=None)
-            return
-
-        user_choice = str(reaction.emoji)
-        result = _("Draw")
-
-        if bot_response != user_choice:
-            win_conditions = {"✊": "✌", "🖐": "✊", "✌": "🖐"}
-            result = (
-                _("You won") if win_conditions[user_choice] == bot_response else _("You lost")
-            )
-
-        response_desc = _("I choose {bot_response}\nYou choose {user_choice}\n\nResult : `{result}`").format(
-            bot_response=bot_response, user_choice=user_choice, result=result
-        )
-        result_em = discord.Embed(
-            color=random_colour(),
-            timestamp=discord.utils.utcnow(),
-            title=_("RPS Game"),
-            description=response_desc,
-        )
-        result_em.set_footer(text=_("Thanks for playing!"))
-        await rps.edit(embed=result_em)
+        view = RPSView(ctx.author)
+        view.message = await ctx.send(embed=em, view=view)
 
 
 async def setup(bot):

@@ -7,9 +7,123 @@ import discord
 from discord.ext import commands
 
 from tools.i18n import _
-from tools.time import ShortTime, UserFriendlyTime, human_timedelta
+from tools.time import (
+    FutureTime,
+    ShortTime,
+    UserFriendlyTime,
+    human_timedelta,
+)
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
+
+# Fallback reminder body when the user leaves the message blank; mirrors the
+# free-text command's UserFriendlyTime(default="something").
+DEFAULT_REMINDER_MESSAGE = "something"
+
+
+class RemindModal(LocaleModal):
+    """Interactive reminder form: a short "When" and a paragraph "Message".
+
+    The "When" field is parsed with the cog's own time parsing (ShortTime for
+    relative/absolute inputs, falling back to FutureTime for natural language),
+    then the same "reminder" timer row the text command creates is inserted.
+    """
+
+    def __init__(self, cog, channel_id, author_id):
+        super().__init__(title=_("Set a reminder"))
+        self.cog = cog
+        self.channel_id = channel_id
+        self.author_id = author_id
+
+        self.when_input = discord.ui.TextInput(
+            label=_("When"),
+            placeholder=_("e.g. 10m, tomorrow at 6pm, in 3 days"),
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=100,
+        )
+        self.add_item(self.when_input)
+
+        self.message_input = discord.ui.TextInput(
+            label=_("Message"),
+            placeholder=_("What should I remind you about?"),
+            style=discord.TextStyle.paragraph,
+            required=False,
+            max_length=1500,
+        )
+        self.add_item(self.message_input)
+
+    async def on_submit(self, interaction):
+        when_raw = (self.when_input.value or "").strip()
+        message = (self.message_input.value or "").strip() or _(
+            DEFAULT_REMINDER_MESSAGE
+        )
+
+        tzinfo = await self.cog.get_tzinfo(interaction.user.id)
+        now = interaction.created_at.astimezone(tzinfo)
+
+        try:
+            dt = ShortTime(when_raw, now=now, tzinfo=tzinfo).dt
+        except commands.BadArgument:
+            try:
+                dt = FutureTime(when_raw, now=now, tzinfo=tzinfo).dt
+            except commands.BadArgument:
+                return await interaction.response.send_message(
+                    _(
+                        "I couldn't understand that time. Try something like "
+                        "`10m`, `tomorrow at 6pm`, or `in 3 days`."
+                    ),
+                    ephemeral=True,
+                )
+
+        if dt <= now:
+            return await interaction.response.send_message(
+                _("That time is in the past. Give me a moment in the future."),
+                ephemeral=True,
+            )
+
+        await self.cog.create_timer(
+            dt,
+            "reminder",
+            author_id=self.author_id,
+            channel_id=self.channel_id,
+            message=message,
+        )
+        await interaction.response.send_message(
+            _("Okay, reminding you {when}: {message}").format(
+                when=discord.utils.format_dt(dt, "R"), message=message
+            ),
+            ephemeral=True,
+        )
+
+
+class RemindLauncherView(AuthorView):
+    """A single button that opens the reminder modal (prefix-command path).
+
+    Prefix invocations have no interaction to open a modal with, so the command
+    posts this view and the author clicks the button to summon the modal.
+    """
+
+    def __init__(self, cog, author_id, channel_id, timeout=180):
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This prompt isn't for you."
+        )
+        self.cog = cog
+        self.channel_id = channel_id
+
+        button = discord.ui.Button(
+            label=_("Set a reminder"),
+            style=discord.ButtonStyle.primary,
+            emoji="\N{ALARM CLOCK}",
+        )
+        button.callback = self._open
+        self.add_item(button)
+
+    async def _open(self, interaction):
+        await interaction.response.send_modal(
+            RemindModal(self.cog, self.channel_id, self.author_id)
+        )
 
 
 class Reminder(commands.Cog):
@@ -111,9 +225,23 @@ class Reminder(commands.Cog):
         self,
         ctx,
         *,
-        when: UserFriendlyTime(commands.clean_content, default="something"),
+        when: UserFriendlyTime(commands.clean_content, default="something") = None,
     ):
         """Reminds you of something after a certain amount of time."""
+
+        # No time supplied -> offer the interactive form. Slash invocations can
+        # open the modal straight away; prefix invocations have no interaction,
+        # so they get a button that opens it on click.
+        if when is None:
+            if ctx.interaction is not None:
+                return await ctx.interaction.response.send_modal(
+                    RemindModal(self, ctx.channel.id, ctx.author.id)
+                )
+            view = RemindLauncherView(self, ctx.author.id, ctx.channel.id)
+            view.message = await ctx.send(
+                _("Tap the button below to set a reminder."), view=view
+            )
+            return
 
         await self.create_timer(
             when.dt,

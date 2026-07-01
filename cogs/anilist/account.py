@@ -20,6 +20,138 @@ from tools.paginator import Paginator, paginate_lines
 log = logging.getLogger(__name__)
 
 
+class AniListProfileView(discord.ui.LayoutView):
+    """AniList profile rendered as a Components V2 layout.
+
+    A coloured container pairs the user's avatar (as a Section thumbnail) with
+    their name and anime/manga stats, then top genres, favourites and the banner
+    image when AniList provides one. The view carries no interactive components,
+    so it needs no author gating; it mirrors the proven MusicController layout.
+    """
+
+    # Keep the layout inside Discord's component budget: cap the favourite lists
+    # so a heavy profile can never overflow a single TextDisplay/Container.
+    _FAV_LIMIT = 8
+
+    def __init__(self, user, *, timeout=None):
+        super().__init__(timeout=timeout)
+        self.user = user
+        self._build()
+
+    def _build(self):
+        user = self.user
+        stats = user.get("statistics") or {}
+        anime = stats.get("anime") or {}
+        manga = stats.get("manga") or {}
+        display_name = user.get("name") or "?"
+        site_url = user.get("siteUrl")
+        avatar = (user.get("avatar") or {}).get("large")
+
+        container = discord.ui.Container(
+            accent_colour=_profile_colour(
+                (user.get("options") or {}).get("profileColor")
+            )
+            or random_colour()
+        )
+
+        header = discord.ui.TextDisplay(
+            "## [{name}]({url})".format(name=display_name, url=site_url)
+            if site_url
+            else "## {name}".format(name=display_name)
+        )
+        if avatar:
+            container.add_item(
+                discord.ui.Section(header, accessory=discord.ui.Thumbnail(avatar))
+            )
+        else:
+            container.add_item(header)
+
+        container.add_item(discord.ui.Separator())
+
+        days = (anime.get("minutesWatched") or 0) / 1440
+        container.add_item(
+            discord.ui.TextDisplay(
+                _(
+                    "### 📺 Anime\n"
+                    "**{count}** titles - **{days:.1f}** days watched - "
+                    "★ **{score}**/100"
+                ).format(
+                    count=anime.get("count") or 0,
+                    days=days,
+                    score=anime.get("meanScore") or 0,
+                )
+            )
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                _(
+                    "### 📚 Manga\n"
+                    "**{count}** titles - **{chapters}** chapters - "
+                    "★ **{score}**/100"
+                ).format(
+                    count=manga.get("count") or 0,
+                    chapters=manga.get("chaptersRead") or 0,
+                    score=manga.get("meanScore") or 0,
+                )
+            )
+        )
+
+        genres = anime.get("genres") or []
+        top = ", ".join(g.get("genre") for g in genres[:6] if g.get("genre"))
+        if top:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("### 🎭 Top genres\n{genres}").format(genres=top)
+                )
+            )
+
+        fav = user.get("favourites") or {}
+
+        def _titles(section):
+            nodes = (fav.get(section) or {}).get("nodes") or []
+            titles = [
+                (n.get("title") or {}).get("romaji")
+                for n in nodes
+                if (n.get("title") or {}).get("romaji")
+            ]
+            return titles[: self._FAV_LIMIT]
+
+        fav_chars = [
+            (n.get("name") or {}).get("full")
+            for n in ((fav.get("characters") or {}).get("nodes") or [])
+            if (n.get("name") or {}).get("full")
+        ][: self._FAV_LIMIT]
+
+        fav_lines = []
+        if _titles("anime"):
+            fav_lines.append("📺 " + ", ".join(_titles("anime")))
+        if _titles("manga"):
+            fav_lines.append("📚 " + ", ".join(_titles("manga")))
+        if fav_chars:
+            fav_lines.append("👤 " + ", ".join(fav_chars))
+        if fav_lines:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("### ⭐ Favourites\n{lines}").format(
+                        lines="\n".join(fav_lines)
+                    )
+                )
+            )
+
+        banner = user.get("bannerImage")
+        if banner:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.MediaGallery(discord.MediaGalleryItem(banner))
+            )
+
+        container.add_item(discord.ui.TextDisplay(_("-# AniList")))
+
+        self.add_item(container)
+
+
 class AccountMixin:
     """AniList account group: OAuth PIN flow plus list editing."""
 
@@ -202,88 +334,12 @@ class AccountMixin:
             if not user:
                 return await ctx.send(_("No AniList user found."))
 
-            stats = user.get("statistics") or {}
-            anime = stats.get("anime") or {}
-            manga = stats.get("manga") or {}
-            display_name = user.get("name") or name
-            site_url = user.get("siteUrl")
-            avatar = (user.get("avatar") or {}).get("large")
-
-            embed = discord.Embed(
-                url=site_url,
-                colour=_profile_colour(
-                    (user.get("options") or {}).get("profileColor")
-                )
-                or random_colour(),
+            # A LayoutView carries its own content; send it with no embed and
+            # suppress mentions since TextDisplay resolves them (unlike an embed).
+            await ctx.send(
+                view=AniListProfileView(user),
+                allowed_mentions=discord.AllowedMentions.none(),
             )
-            embed.set_author(name=display_name, url=site_url, icon_url=avatar)
-            if avatar:
-                embed.set_thumbnail(url=avatar)
-            if user.get("bannerImage"):
-                embed.set_image(url=user["bannerImage"])
-
-            days = (anime.get("minutesWatched") or 0) / 1440
-            embed.add_field(
-                name=_("📺 Anime"),
-                value=_(
-                    "**{count}** titles\n"
-                    "**{days:.1f}** days watched\n"
-                    "★ **{score}**/100"
-                ).format(
-                    count=anime.get("count") or 0,
-                    days=days,
-                    score=anime.get("meanScore") or 0,
-                ),
-            )
-            embed.add_field(
-                name=_("📚 Manga"),
-                value=_(
-                    "**{count}** titles\n"
-                    "**{chapters}** chapters\n"
-                    "★ **{score}**/100"
-                ).format(
-                    count=manga.get("count") or 0,
-                    chapters=manga.get("chaptersRead") or 0,
-                    score=manga.get("meanScore") or 0,
-                ),
-            )
-
-            genres = anime.get("genres") or []
-            top = ", ".join(g.get("genre") for g in genres[:6] if g.get("genre"))
-            if top:
-                embed.add_field(name=_("🎭 Top genres"), value=top, inline=False)
-
-            fav = user.get("favourites") or {}
-
-            def _titles(section):
-                nodes = (fav.get(section) or {}).get("nodes") or []
-                return [
-                    (n.get("title") or {}).get("romaji")
-                    for n in nodes
-                    if (n.get("title") or {}).get("romaji")
-                ]
-
-            fav_chars = [
-                (n.get("name") or {}).get("full")
-                for n in ((fav.get("characters") or {}).get("nodes") or [])
-                if (n.get("name") or {}).get("full")
-            ]
-            fav_lines = []
-            if _titles("anime"):
-                fav_lines.append("📺 " + ", ".join(_titles("anime")))
-            if _titles("manga"):
-                fav_lines.append("📚 " + ", ".join(_titles("manga")))
-            if fav_chars:
-                fav_lines.append("👤 " + ", ".join(fav_chars))
-            if fav_lines:
-                embed.add_field(
-                    name=_("⭐ Favourites"),
-                    value="\n".join(fav_lines),
-                    inline=False,
-                )
-
-            embed.set_footer(text="AniList")
-            await ctx.send(embed=embed)
 
     @anilist.command(name="list")
     @commands.cooldown(1, 5, commands.BucketType.user)

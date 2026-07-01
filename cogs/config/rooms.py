@@ -6,8 +6,51 @@ import discord
 from discord.ext import commands
 
 from tools.i18n import _
+from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
+
+# Default names used when the operator does not customise them (the modal
+# prefills these, and the text/prefix path uses them as-is). These are channel
+# names, not prose, so they stay as plain literals.
+DEFAULT_CATEGORY_NAME = "Temp-Rooms"
+DEFAULT_HUB_NAME = "Auto-Temp Room"
+
+
+class AutoRoomSetupModal(LocaleModal):
+    """Ask for the category + hub channel names before provisioning them.
+
+    Prefilled with the current defaults; the submitted names are handed to
+    ``TemporaryRooms._provision_autoroom`` which performs the same limit check,
+    channel creation and persistence as the text path.
+    """
+
+    def __init__(self, cog, default_category, default_hub):
+        super().__init__(title=_("Set up an Auto-Room"))
+        self.cog = cog
+        self.category_input = discord.ui.TextInput(
+            label=_("Category name"),
+            default=default_category,
+            max_length=100,
+            required=True,
+        )
+        self.hub_input = discord.ui.TextInput(
+            label=_("Hub channel name"),
+            default=default_hub,
+            max_length=100,
+            required=True,
+        )
+        self.add_item(self.category_input)
+        self.add_item(self.hub_input)
+
+    async def on_submit(self, interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        category_name = (self.category_input.value or "").strip() or DEFAULT_CATEGORY_NAME
+        hub_name = (self.hub_input.value or "").strip() or DEFAULT_HUB_NAME
+        message = await self.cog._provision_autoroom(
+            interaction.guild, category_name, hub_name
+        )
+        await interaction.followup.send(message, ephemeral=True)
 
 
 class TemporaryRooms(commands.Cog):
@@ -121,55 +164,76 @@ class TemporaryRooms(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
+    async def _provision_autoroom(self, guild, category_name, hub_name):
+        """Create the category + hub voice channel, persist and cache it.
+
+        Shared by the modal (interactive) and text paths. Enforces the
+        3-per-guild limit and returns a ready-to-send, user-facing message.
+        """
+
+        try:
+            existing_rooms = await self.bot.db_pool.fetch(
+                "SELECT channel_id FROM auto_room WHERE guild_id = $1", guild.id
+            )
+
+            if len(existing_rooms) >= 3:
+                return _(
+                    "You have reached the maximum number of Auto-Rooms "
+                    "for this server."
+                )
+
+            try:
+                cat = await guild.create_category_channel(category_name)
+                chan = await guild.create_voice_channel(hub_name, category=cat)
+            except discord.HTTPException:
+                return _("Something went wrong while creating your Auto-Room.")
+
+            await self.bot.db_pool.execute(
+                "INSERT INTO auto_room(guild_id, channel_id) VALUES($1, $2);",
+                guild.id,
+                chan.id,
+            )
+            self._auto_rooms.setdefault(guild.id, set()).add(chan.id)
+
+        except Exception:
+            log.exception("Failed to set up auto-room")
+            return _("Something went wrong while creating your Auto-Room.")
+
+        return _(
+            "Successfully created your Auto-Room. You can rename category "
+            "and channel to whatever you want."
+        )
+
     @autoroom.command()
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def setup(self, ctx):
         """Setup an auto-room system"""
 
-        try:
-            async with ctx.typing():
-                existing_rooms = await self.bot.db_pool.fetch(
-                    "SELECT channel_id FROM auto_room WHERE guild_id = $1", ctx.guild.id
-                )
-
-                if len(existing_rooms) >= 3:
-                    return await ctx.send(
-                        _(
-                            "You have reached the maximum number of Auto-Rooms "
-                            "for this server."
-                        )
-                    )
-
-                try:
-                    cat = await ctx.guild.create_category_channel("Temp-Rooms")
-                    chan = await ctx.guild.create_voice_channel(
-                        "Auto-Temp Room", category=cat
-                    )
-                except discord.HTTPException:
-                    return await ctx.send(
-                        _("Something went wrong while creating your Auto-Room.")
-                    )
-
-                await self.bot.db_pool.execute(
-                    "INSERT INTO auto_room(guild_id, channel_id) VALUES($1, $2);",
-                    ctx.guild.id,
-                    chan.id,
-                )
-                self._auto_rooms.setdefault(ctx.guild.id, set()).add(chan.id)
-
-            await ctx.send(
-                _(
-                    "Successfully created your Auto-Room. You can rename category "
-                    "and channel to whatever you want."
-                )
+        # Interactive path: as a slash command, prompt for the category + hub
+        # names with a modal prefilled with the defaults. Re-check the limit up
+        # front so we can respond before opening the modal.
+        if ctx.interaction is not None:
+            existing_rooms = await self.bot.db_pool.fetch(
+                "SELECT channel_id FROM auto_room WHERE guild_id = $1", ctx.guild.id
             )
+            if len(existing_rooms) >= 3:
+                return await ctx.send(
+                    _(
+                        "You have reached the maximum number of Auto-Rooms "
+                        "for this server."
+                    )
+                )
+            modal = AutoRoomSetupModal(self, DEFAULT_CATEGORY_NAME, DEFAULT_HUB_NAME)
+            await ctx.interaction.response.send_modal(modal)
+            return
 
-        except Exception:
-            log.exception("Failed to set up auto-room")
-            await ctx.send(
-                _("Something went wrong while creating your Auto-Room.")
+        # Text path: keep the original prefix behaviour with the default names.
+        async with ctx.typing():
+            message = await self._provision_autoroom(
+                ctx.guild, DEFAULT_CATEGORY_NAME, DEFAULT_HUB_NAME
             )
+        await ctx.send(message)
 
     @autoroom.command(aliases=["delete", "del"])
     @commands.has_permissions(manage_channels=True)

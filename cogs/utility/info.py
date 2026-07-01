@@ -9,6 +9,61 @@ from tools.i18n import _
 log = logging.getLogger(__name__)
 
 
+class UserInfoView(discord.ui.LayoutView):
+    """Member profile rendered as a Components V2 layout.
+
+    A coloured container holds a Section whose thumbnail accessory is the
+    member's display avatar alongside the identity lines, then (when present)
+    a MediaGallery showing the member's banner. This view carries its own
+    content, so it is sent with ``view=`` only (no embed, no content) and with
+    ``allowed_mentions`` suppressed because the TextDisplay resolves mentions.
+    """
+
+    def __init__(self, member: discord.Member, *, banner_url: str = None):
+        super().__init__(timeout=None)
+
+        container = discord.ui.Container(accent_colour=random_colour())
+
+        created = "{full} ({rel})".format(
+            full=discord.utils.format_dt(member.created_at, "F"),
+            rel=discord.utils.format_dt(member.created_at, "R"),
+        )
+        if member.joined_at is not None:
+            joined = discord.utils.format_dt(member.joined_at, "F")
+        else:
+            joined = _("Unknown")
+
+        lines = [
+            _("## {member}").format(member=member),
+            _("**Display name:** {name}").format(name=member.display_name),
+            _("**ID:** `{id}`").format(id=member.id),
+            _("**Mention:** {mention}").format(mention=member.mention),
+            _("**Account created:** {created}").format(created=created),
+            _("**Joined server:** {joined}").format(joined=joined),
+            _("**Top role:** {role}").format(role=member.top_role.mention),
+            _("**Role count:** {count}").format(count=len(member.roles) - 1),
+            _("**Is bot:** {value}").format(
+                value=_("Yes") if member.bot else _("No")
+            ),
+        ]
+
+        section = discord.ui.Section(
+            discord.ui.TextDisplay("\n".join(lines)),
+            accessory=discord.ui.Thumbnail(member.display_avatar.url),
+        )
+        container.add_item(section)
+
+        if banner_url:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.MediaGallery(
+                    discord.MediaGalleryItem(banner_url)
+                )
+            )
+
+        self.add_item(container)
+
+
 class Info(commands.Cog):
     """Informational commands about users, the server and the bot."""
 
@@ -22,46 +77,22 @@ class Info(commands.Cog):
 
         member = member or ctx.author
 
-        embed = discord.Embed(
-            title=_("User info - {member}").format(member=member),
-            colour=random_colour(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.add_field(name=_("Display name"), value=member.display_name)
-        embed.add_field(name=_("ID"), value=member.id)
-        embed.add_field(name=_("Mention"), value=member.mention)
-        embed.add_field(
-            name=_("Account created"),
-            value=f"{discord.utils.format_dt(member.created_at, 'F')} "
-            f"({discord.utils.format_dt(member.created_at, 'R')})",
-            inline=False,
-        )
-
-        if member.joined_at is not None:
-            embed.add_field(
-                name=_("Joined server"),
-                value=discord.utils.format_dt(member.joined_at, "F"),
-                inline=False,
-            )
-
-        embed.add_field(name=_("Top role"), value=member.top_role.mention)
-        embed.add_field(name=_("Role count"), value=len(member.roles) - 1)
-        embed.add_field(
-            name=_("Is bot"), value=_("Yes") if member.bot else _("No")
-        )
-
         # Banners require a REST fetch; show it and opportunistically archive it.
+        banner_url = None
         try:
             full = await self.bot.fetch_user(member.id)
             if full.banner:
-                embed.set_image(url=full.banner.url)
+                banner_url = full.banner.url
             ah = self.bot.get_cog("AvatarHistory")
             if ah:
                 await ah.capture_banner(member)
         except Exception:
             log.exception("failed to fetch/capture banner for %s", member.id)
 
-        await ctx.send(embed=embed)
+        view = UserInfoView(member, banner_url=banner_url)
+        # A LayoutView carries its own content; send it with no embed and no
+        # content, and suppress pings since the TextDisplay resolves mentions.
+        await ctx.send(view=view, allowed_mentions=discord.AllowedMentions.none())
 
     @commands.hybrid_command(name="serverinfo", aliases=["guildinfo", "si"])
     @commands.guild_only()

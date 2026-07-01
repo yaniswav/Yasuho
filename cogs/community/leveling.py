@@ -11,12 +11,78 @@ from PIL import Image, ImageDraw, ImageFont
 from tools import settings
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
 
 # Bundled TTF used for the rank card; falls back to Pillow's default if missing.
 _FONT_PATH = os.path.join("ressources", "fonts", "impact.ttf")
+
+# Neutral Discord avatar used when a top-ranked member has left the guild and no
+# real avatar is available for the Section thumbnail accessory.
+_DEFAULT_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png"
+
+# Components V2 budget: how many ranks get their own avatar Section (podium) and
+# how many total ranks the single-page layout shows (the rest go in a text list).
+_PODIUM_SLOTS = 5
+_LEADERBOARD_CAP = 15
+
+# Medal glyphs for the top three; lower ranks fall back to a plain number.
+_MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD PLACE MEDAL}"}
+
+
+class LeaderboardView(discord.ui.LayoutView):
+    """Single-page Components V2 podium for the guild XP leaderboard.
+
+    The top ranks each become a :class:`discord.ui.Section` with the member's
+    avatar as a :class:`discord.ui.Thumbnail` accessory; the remaining ranks are
+    collapsed into one :class:`discord.ui.TextDisplay` list to respect the V2
+    component budget. It is purely presentational (no interactive components), so
+    it carries no author gating.
+    """
+
+    def __init__(self, title, entries, *, timeout=180):
+        # entries: list of dicts with rank, name, level, xp, avatar_url.
+        super().__init__(timeout=timeout)
+        self.message = None
+        self._build(title, entries)
+
+    def _build(self, title, entries):
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(discord.ui.TextDisplay("## {title}".format(title=title)))
+        container.add_item(discord.ui.Separator())
+
+        podium = entries[:_PODIUM_SLOTS]
+        remainder = entries[_PODIUM_SLOTS:]
+
+        for entry in podium:
+            marker = _MEDALS.get(entry["rank"], "**#{rank}**".format(rank=entry["rank"]))
+            text = _("{marker} **{name}**\nLevel **{level}** - {xp} XP").format(
+                marker=marker,
+                name=entry["name"],
+                level=entry["level"],
+                xp=entry["xp"],
+            )
+            container.add_item(
+                discord.ui.Section(
+                    discord.ui.TextDisplay(text),
+                    accessory=discord.ui.Thumbnail(entry["avatar_url"]),
+                )
+            )
+
+        if remainder:
+            container.add_item(discord.ui.Separator())
+            lines = [
+                _("**#{rank}** {name} - level **{level}** ({xp} XP)").format(
+                    rank=entry["rank"],
+                    name=entry["name"],
+                    level=entry["level"],
+                    xp=entry["xp"],
+                )
+                for entry in remainder
+            ]
+            container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+
+        self.add_item(container)
 
 
 class Leveling(commands.Cog):
@@ -281,23 +347,31 @@ class Leveling(commands.Cog):
             )
             return await ctx.send(embed=embed)
 
-        lines = []
-        for index, row in enumerate(rows, start=1):
+        entries = []
+        for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
             uid = row["user_id"]
             xp = row["xp"]
             member = ctx.guild.get_member(uid)
             name = member.display_name if member else _("User {uid}").format(uid=uid)
-            level = self.level_for_xp(xp)
-            lines.append(
-                _("**{index}.** {name} - level **{level}** ({xp} XP)").format(
-                    index=index, name=name, level=level, xp=xp
-                )
+            avatar_url = member.display_avatar.url if member else _DEFAULT_AVATAR_URL
+            entries.append(
+                {
+                    "rank": index,
+                    "name": name,
+                    "level": self.level_for_xp(xp),
+                    "xp": xp,
+                    "avatar_url": avatar_url,
+                }
             )
 
-        embeds = paginate_lines(
-            lines, title=_("Leaderboard | {guild}").format(guild=ctx.guild.name)
+        # A LayoutView carries its own content: send it with no embed/content, and
+        # suppress mentions since TextDisplay resolves them (unlike an embed).
+        view = LeaderboardView(
+            _("Leaderboard | {guild}").format(guild=ctx.guild.name), entries
         )
-        await Paginator(embeds, author_id=ctx.author.id).start(ctx)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
 
 async def setup(bot):
