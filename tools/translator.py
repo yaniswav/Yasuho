@@ -40,5 +40,13 @@ class YasuhoTranslator(app_commands.Translator):
         if catalog is None:
             return None
         translated = catalog.gettext(string.message)
-        # None keeps Discord's source (English); only override on a real change.
-        return translated if translated != string.message else None
+        if translated == string.message:
+            # Unchanged -> keep Discord's source (English).
+            return None
+        # Discord caps every value we localize here (command / group / parameter
+        # descriptions and choice names) at 100 characters. A longer translation
+        # would 400 the entire tree sync, so fall back to the (always <= 100)
+        # English source for that one string instead of breaking the sync.
+        if len(translated) > 100:
+            return None
+        return translated
