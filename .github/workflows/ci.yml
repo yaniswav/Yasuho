@@ -23,3 +23,32 @@ jobs:
       - name: Byte-compile all sources
         # Compile-only: no third-party deps needed, just catches syntax/indentation errors.
         run: python -m compileall -q cogs core.py tools
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # sonolink (the music backend) requires Python 3.12+, so the test job
+          # runs on 3.12. There the REAL sonolink installs from requirements.txt
+          # and the conftest stub becomes a no-op, exercising the real import path.
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Bootstrap config from templates
+        # The templates carry every key read at module import time; the suite
+        # never contacts Discord, a database, or Lavalink, so placeholder values
+        # are enough.
+        run: |
+          cp config/bot.template.ini config/bot.ini
+          cp config/tokens.template.ini config/tokens.ini
+
+      - name: Run tests
+        run: python -m pytest -q

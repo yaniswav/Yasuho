@@ -1,0 +1,5 @@
+# Test-only dependencies (not needed to run the bot).
+# Install with: python -m pip install -r requirements-dev.txt
+pytest
+pytest-asyncio
+pytest-cov

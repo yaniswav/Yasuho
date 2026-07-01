@@ -23,6 +23,11 @@ lavalink/
 # i18n: intermediate per-language translation JSON (assembled into the .po files)
 locales/_work/
 
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
