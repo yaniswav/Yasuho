@@ -15,6 +15,12 @@ log = logging.getLogger(__name__)
 NASA_KEY = config_loader.get('APITokens', 'nasaKey')
 WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
 
+# NASA's public DEMO_KEY works (with tighter rate limits) when no real key is
+# configured, so /apod degrades gracefully instead of always failing when the
+# nasaKey slot still holds the template placeholder.
+if not NASA_KEY or NASA_KEY.startswith("YOUR_"):
+    NASA_KEY = "DEMO_KEY"
+
 
 class WeatherView(discord.ui.LayoutView):
     """Current weather as a Components V2 layout.
@@ -67,6 +73,7 @@ class Meta(commands.Cog):
                         f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}"
                     ) as resp:
                         if resp.status != 200:
+                            log.warning("APOD API returned HTTP %s", resp.status)
                             return await ctx.send(
                                 _(
                                     "Could not fetch the Astronomy Picture of the Day right now."
