@@ -30,7 +30,11 @@ async def _load(pool, spec, id_val):
             data = json.loads(raw)
         else:
             data = dict(raw)
-        _cache[cache_key] = data
+        # setdefault, not assignment: if another task populated (or wrote) this
+        # entry while we awaited the fetch above, keep that newer value rather
+        # than clobbering it with our now-stale DB read. This closes a cold-cache
+        # race where two concurrent writes to the same id could lose one.
+        _cache.setdefault(cache_key, data)
     return _cache[cache_key]
 
 
