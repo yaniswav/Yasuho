@@ -415,7 +415,7 @@ class _SlotSelect(discord.ui.Select):
     """Ephemeral picker of sensible user-limit values for a room."""
 
     def __init__(self, parent):
-        self.parent = parent
+        self._owner = parent
         options = [
             discord.SelectOption(label=slot_value_label(value), value=str(value))
             for value in SLOT_VALUES
@@ -429,7 +429,7 @@ class _SlotSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         await i18n.apply_interaction_locale(interaction)
-        channel = self.parent._channel()
+        channel = self._owner._channel()
         if channel is None:
             await interaction.response.edit_message(
                 content=_("This room no longer exists."), view=None
@@ -451,7 +451,7 @@ class _MemberActionSelect(discord.ui.Select):
     """Ephemeral picker of channel members for kick/unblacklist/transfer."""
 
     def __init__(self, parent, members, action):
-        self.parent = parent
+        self._owner = parent
         self.action = action
         options = [
             discord.SelectOption(
@@ -474,7 +474,7 @@ class _MemberActionSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         await i18n.apply_interaction_locale(interaction)
-        await self.parent._handle_member_action(
+        await self._owner._handle_member_action(
             interaction, self.action, int(self.values[0])
         )
 
@@ -492,7 +492,7 @@ class _RoomRenameModal(LocaleModal):
 
     def __init__(self, parent, current_name):
         super().__init__(title=_("Rename room"))
-        self.parent = parent
+        self._owner = parent
         self.name_input = discord.ui.TextInput(
             label=_("New room name"),
             default=(current_name or "")[:100],
@@ -502,7 +502,7 @@ class _RoomRenameModal(LocaleModal):
         self.add_item(self.name_input)
 
     async def on_submit(self, interaction):
-        channel = self.parent._channel()
+        channel = self._owner._channel()
         if channel is None:
             await interactions.reply(interaction, _("This room no longer exists."))
             return
@@ -857,7 +857,20 @@ class RoomControlView(discord.ui.LayoutView):
             await self._gone(interaction)
             return
         try:
-            await channel.edit(position=0)
+            # Keep the hub's join-to-create channel first: bump to just BELOW it,
+            # not to position 0 (which lands ABOVE the hub trigger channel).
+            hub_channel = None
+            category = channel.category
+            if category is not None:
+                for hub_id in self.cog._hub_index.get(channel.guild.id, {}):
+                    candidate = channel.guild.get_channel(hub_id)
+                    if candidate is not None and candidate.category_id == category.id:
+                        hub_channel = candidate
+                        break
+            if hub_channel is not None:
+                await channel.move(after=hub_channel)
+            else:
+                await channel.move(beginning=True)
         except discord.HTTPException:
             await interactions.notify_failure(
                 interaction, _("Could not bump the room.")
