@@ -3022,12 +3022,12 @@ msgstr "何もリロードされませんでした。"
 
 #: cogs/system/admin.py:199
 msgid "Failed to write the command strings file."
-msgstr ""
+msgstr "コマンド文字列ファイルの書き込みに失敗しました。"
 
 #: cogs/system/admin.py:201
 #, python-brace-format
 msgid "Wrote {count} command strings to locales/command_strings.py."
-msgstr ""
+msgstr "{count} 件のコマンド文字列を locales/command_strings.py に書き込みました。"
 
 #: cogs/system/admin.py:229
 msgid "globally"
@@ -3779,607 +3779,607 @@ msgstr "翻訳に失敗しました。"
 
 #: locales/command_strings.py:9
 msgid "A song name or URL to search for and play."
-msgstr ""
+msgstr "検索して再生する曲名またはURL。"
 
 #: locales/command_strings.py:10
 msgid "A song to search for and save (defaults to the current track)."
-msgstr ""
+msgstr "検索して保存する曲(未指定の場合は現在再生中の曲)。"
 
 #: locales/command_strings.py:11
 msgid "Add a member to the live-alert watchlist (channel is an optional override)."
-msgstr ""
+msgstr "ライブ配信通知のウォッチリストにメンバーを追加します(チャンネルは任意で上書き可能)。"
 
 #: locales/command_strings.py:12
 msgid "Add a user to the bot-wide blacklist."
-msgstr ""
+msgstr "ボット全体のブラックリストにユーザーを追加します。"
 
 #: locales/command_strings.py:13
 msgid "Answer to a yes/no quesiton."
-msgstr ""
+msgstr "はい/いいえの質問に答えます。"
 
 #: locales/command_strings.py:14
 msgid "Assign a Prefix to Yasuho for use in your guild."
-msgstr ""
+msgstr "サーバーで使用するプレフィックスをヤスホに設定します。"
 
 #: locales/command_strings.py:15
 msgid "Assign an auto role to your guild."
-msgstr ""
+msgstr "サーバーに自動ロールを設定します。"
 
 #: locales/command_strings.py:16
 msgid "Auto-role of your guild."
-msgstr ""
+msgstr "サーバーの自動ロール。"
 
 #: locales/command_strings.py:17
 msgid "Auto-role related commands."
-msgstr ""
+msgstr "自動ロール関連のコマンド。"
 
 #: locales/command_strings.py:18
 msgid "Automatic moderation related commands."
-msgstr ""
+msgstr "自動モデレーション関連のコマンド。"
 
 #: locales/command_strings.py:19
 msgid "Ban many users at once by id, for raid cleanup."
-msgstr ""
+msgstr "荒らし対策として、IDを指定して複数のユーザーを一括BANします。"
 
 #: locales/command_strings.py:20
 msgid "Bans an annoying user. Requires ban members permission. Also bot must have this permission."
-msgstr ""
+msgstr "迷惑なユーザーをBANします。メンバーをBANする権限が必要で、ボットにもその権限が必要です。"
 
 #: locales/command_strings.py:21
 msgid "Be the first to retype the given sentence as fast as you can."
-msgstr ""
+msgstr "与えられた文章を誰よりも早く正確に打ち込もう。"
 
 #: locales/command_strings.py:22
 msgid "Bot-wide blacklist related commands."
-msgstr ""
+msgstr "ボット全体のブラックリスト関連のコマンド。"
 
 #: locales/command_strings.py:23
 msgid "Build a Google reverse image search link for an image URL or attachment."
-msgstr ""
+msgstr "画像URLまたは添付ファイルからGoogle画像検索のリンクを作成します。"
 
 #: locales/command_strings.py:24
 msgid "Calculate how gay you are!"
-msgstr ""
+msgstr "あなたのゲイ度を診断します!"
 
 #: locales/command_strings.py:25
 msgid "Clear your entire gaming profile."
-msgstr ""
+msgstr "ゲーミングプロフィールを完全に削除します。"
 
 #: locales/command_strings.py:26
 msgid "Clears X messages of a member"
-msgstr ""
+msgstr "指定したメンバーのメッセージをX件削除します"
 
 #: locales/command_strings.py:27
 msgid "Clears X messages."
-msgstr ""
+msgstr "メッセージをX件削除します。"
 
 #: locales/command_strings.py:28
 msgid "Convert text to ascii art"
-msgstr ""
+msgstr "テキストをアスキーアートに変換します"
 
 #: locales/command_strings.py:29
 msgid "Create a Live streamer role and link it to the alert config."
-msgstr ""
+msgstr "ライブ配信者ロールを作成し、通知設定にリンクします。"
 
 #: locales/command_strings.py:30
 msgid "Create a native yes/no poll (runs for 24 hours)."
-msgstr ""
+msgstr "はい/いいえのネイティブ投票を作成します(24時間実施)。"
 
 #: locales/command_strings.py:31
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
-msgstr ""
+msgstr "メッセージIDを指定してボタンロールパネルを削除します(ボタンを取り除きます)。"
 
 #: locales/command_strings.py:32
 msgid "Delete the Live streamer role and unlink it from the config."
-msgstr ""
+msgstr "ライブ配信者ロールを削除し、設定から解除します。"
 
 #: locales/command_strings.py:33
 msgid "Disable moderation logging for this guild."
-msgstr ""
+msgstr "このサーバーのモデレーションログを無効にします。"
 
 #: locales/command_strings.py:34
 msgid "Disable the starboard and wipe its configuration for this guild."
-msgstr ""
+msgstr "このサーバーのスターボードを無効にし、設定を消去します。"
 
 #: locales/command_strings.py:35
 msgid "Disable the welcome message for your guild."
-msgstr ""
+msgstr "サーバーのウェルカムメッセージを無効にします。"
 
 #: locales/command_strings.py:36
 msgid "Disconnect the player from the voice channel."
-msgstr ""
+msgstr "プレイヤーをボイスチャンネルから切断します。"
 
 #: locales/command_strings.py:37
 msgid "Displays information about a member of the guild."
-msgstr ""
+msgstr "サーバーメンバーの情報を表示します。"
 
 #: locales/command_strings.py:38
 msgid "Displays information about the bot."
-msgstr ""
+msgstr "ボットの情報を表示します。"
 
 #: locales/command_strings.py:39
 msgid "Displays information about the current guild."
-msgstr ""
+msgstr "現在のサーバーの情報を表示します。"
 
 #: locales/command_strings.py:40
 msgid "Displays the avatar of a member."
-msgstr ""
+msgstr "メンバーのアバターを表示します。"
 
 #: locales/command_strings.py:41
 msgid "Dump live slash command descriptions/choices for i18n extraction."
-msgstr ""
+msgstr "i18n抽出用に、稼働中のスラッシュコマンドの説明/選択肢を出力します。"
 
 #: locales/command_strings.py:42
 msgid "Edit a profile field through a guided form (radio picker + value)."
-msgstr ""
+msgstr "ガイド付きフォーム(選択肢+値)でプロフィール項目を編集します。"
 
 #: locales/command_strings.py:43
 msgid "Enable or disable Discord-invite filtering for this guild."
-msgstr ""
+msgstr "このサーバーのDiscord招待リンクフィルタリングを有効/無効にします。"
 
 #: locales/command_strings.py:44
 msgid "Enable or disable link filtering for this guild."
-msgstr ""
+msgstr "このサーバーのリンクフィルタリングを有効/無効にします。"
 
 #: locales/command_strings.py:45
 msgid "Enable or disable spam filtering for this guild."
-msgstr ""
+msgstr "このサーバーのスパムフィルタリングを有効/無効にします。"
 
 #: locales/command_strings.py:46
 msgid "Enable or disable the leveling system for this server."
-msgstr ""
+msgstr "このサーバーのレベルシステムを有効/無効にします。"
 
 #: locales/command_strings.py:47
 msgid "Evaluates a code"
-msgstr ""
+msgstr "コードを評価します"
 
 #: locales/command_strings.py:48
 msgid "Fetch the lyrics of a song using Genius."
-msgstr ""
+msgstr "Geniusを使って曲の歌詞を取得します。"
 
 #: locales/command_strings.py:49
 msgid "Gaming profile related commands."
-msgstr ""
+msgstr "ゲーミングプロフィール関連のコマンド。"
 
 #: locales/command_strings.py:50
 msgid "Generate a random password and send it to you in DMs."
-msgstr ""
+msgstr "ランダムなパスワードを生成し、DMで送信します。"
 
 #: locales/command_strings.py:51
 msgid "Get an invite link to add the bot to your server."
-msgstr ""
+msgstr "ボットをサーバーに追加するための招待リンクを取得します。"
 
 #: locales/command_strings.py:52
 msgid "Give a hug to your secret crush ッ"
-msgstr ""
+msgstr "秘密の想い人にハグをあげよう ッ"
 
 #: locales/command_strings.py:53
 msgid "Gives you reversed text"
-msgstr ""
+msgstr "テキストを反転させます"
 
 #: locales/command_strings.py:54
 msgid "Interactively browse and remove a member's warnings."
-msgstr ""
+msgstr "メンバーの警告をインタラクティブに閲覧・削除します。"
 
 #: locales/command_strings.py:55
 msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
-msgstr ""
+msgstr "迷惑なユーザーをキックします。メンバーをキックする権限が必要で、ボットにもその権限が必要です。"
 
 #: locales/command_strings.py:56
 msgid "List all autorooms in the server"
-msgstr ""
+msgstr "サーバー内のすべての自動ボイスルームを一覧表示します"
 
 #: locales/command_strings.py:57
 msgid "List all reaction-role mappings for this guild."
-msgstr ""
+msgstr "このサーバーのリアクションロールの対応関係を一覧表示します。"
 
 #: locales/command_strings.py:58
 msgid "List every blacklisted user."
-msgstr ""
+msgstr "ブラックリストに登録されているすべてのユーザーを一覧表示します。"
 
 #: locales/command_strings.py:59
 msgid "List every button-role panel set up in this guild."
-msgstr ""
+msgstr "このサーバーに設定されているすべてのボタンロールパネルを一覧表示します。"
 
 #: locales/command_strings.py:60
 msgid "List the available prefixes for your guild."
-msgstr ""
+msgstr "サーバーで使用可能なプレフィックスを一覧表示します。"
 
 #: locales/command_strings.py:61
 msgid "List the channel permissions a member currently has."
-msgstr ""
+msgstr "メンバーが現在持っているチャンネル権限を一覧表示します。"
 
 #: locales/command_strings.py:62
 msgid "List the channel permissions the bot currently has."
-msgstr ""
+msgstr "ボットが現在持っているチャンネル権限を一覧表示します。"
 
 #: locales/command_strings.py:63
 msgid "Loads an extension by name."
-msgstr ""
+msgstr "名前を指定して拡張機能を読み込みます。"
 
 #: locales/command_strings.py:64
 msgid "Look up a Minecraft account and render its skin."
-msgstr ""
+msgstr "Minecraftアカウントを検索し、スキンを表示します。"
 
 #: locales/command_strings.py:65
 msgid "Look up an osu! player's stats."
-msgstr ""
+msgstr "osu!プレイヤーの統計情報を検索します。"
 
 #: locales/command_strings.py:66
 msgid "Makes big an emoji"
-msgstr ""
+msgstr "絵文字を拡大表示します"
 
 #: locales/command_strings.py:67
 msgid "Manage the auto-room system for temporary voice channels."
-msgstr ""
+msgstr "一時ボイスチャンネルの自動ルームシステムを管理します。"
 
 #: locales/command_strings.py:68
 msgid "Map an emoji on a message to a role."
-msgstr ""
+msgstr "メッセージ上の絵文字をロールに対応付けます。"
 
 #: locales/command_strings.py:69
 msgid "Move a role to the given position in the hierarchy."
-msgstr ""
+msgstr "ロールを指定した階層位置に移動します。"
 
 #: locales/command_strings.py:70
 msgid "Moves an annoying user to a channel."
-msgstr ""
+msgstr "迷惑なユーザーを別のチャンネルに移動させます。"
 
 #: locales/command_strings.py:71
 msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ..."
-msgstr ""
+msgstr "複数選択投票: quickpoll 質問 | 選択肢1 | 選択肢2 ..."
 
 #: locales/command_strings.py:72
 msgid "Mutes the specified member."
-msgstr ""
+msgstr "指定したメンバーをミュートします。"
 
 #: locales/command_strings.py:73
 msgid "One of: track, all, off."
-msgstr ""
+msgstr "track、all、off のいずれか。"
 
 #: locales/command_strings.py:74
 msgid "Open the Twitch live-alert builder."
-msgstr ""
+msgstr "Twitchライブ通知の設定画面を開きます。"
 
 #: locales/command_strings.py:75
 msgid "Open the interactive AutoMod control panel."
-msgstr ""
+msgstr "インタラクティブなAutoModコントロールパネルを開きます。"
 
 #: locales/command_strings.py:76
 msgid "Open the interactive button-role builder."
-msgstr ""
+msgstr "インタラクティブなボタンロール作成画面を開きます。"
 
 #: locales/command_strings.py:77
 msgid "Open the interactive server-settings panel (also: setup)."
-msgstr ""
+msgstr "インタラクティブなサーバー設定パネルを開きます(setupと同じ)。"
 
 #: locales/command_strings.py:78
 msgid "Open the moderation-log control panel."
-msgstr ""
+msgstr "モデレーションログのコントロールパネルを開きます。"
 
 #: locales/command_strings.py:79
 msgid "Open the welcome control panel."
-msgstr ""
+msgstr "ウェルカムメッセージのコントロールパネルを開きます。"
 
 #: locales/command_strings.py:80
 msgid "Open your personal settings panel."
-msgstr ""
+msgstr "個人設定パネルを開きます。"
 
 #: locales/command_strings.py:81
 msgid "Paginated moderation case history (optionally filtered to a member)."
-msgstr ""
+msgstr "ページ形式でモデレーション履歴を表示します(メンバーで絞り込み可能)。"
 
 #: locales/command_strings.py:82
 msgid "Pause the current track."
-msgstr ""
+msgstr "現在再生中の曲を一時停止します。"
 
 #: locales/command_strings.py:83
 msgid "Pick the language for the bot's replies to you."
-msgstr ""
+msgstr "ボットがあなたへの返信に使う言語を選びます。"
 
 #: locales/command_strings.py:84
 msgid "Play Rock Paper Scissors with Yasuho!"
-msgstr ""
+msgstr "ヤスホーとじゃんけんをします！"
 
 #: locales/command_strings.py:85
 msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
-msgstr ""
+msgstr "ボットと三目並べで対戦します。あなたはXです。"
 
 #: locales/command_strings.py:86
 msgid "Play a track or playlist, or add it to the queue."
-msgstr ""
+msgstr "トラックやプレイリストを再生、またはキューに追加します。"
 
 #: locales/command_strings.py:87
 msgid "Prefix related commands."
-msgstr ""
+msgstr "プレフィックス関連のコマンドです。"
 
 #: locales/command_strings.py:88
 msgid "Pull the latest code, then pick which cogs to hot-reload (interactive)."
-msgstr ""
+msgstr "最新のコードを取得し、ホットリロードするコグを選択します（対話形式）。"
 
 #: locales/command_strings.py:89
 msgid "Purges messages. Requires manage messages permission"
-msgstr ""
+msgstr "メッセージを一括削除します。メッセージの管理権限が必要です"
 
 #: locales/command_strings.py:90
 msgid "Queue every track in your favourites and start playing."
-msgstr ""
+msgstr "お気に入りの全トラックをキューに追加して再生を開始します。"
 
 #: locales/command_strings.py:91
 msgid "Quote a message into a clean embed."
-msgstr ""
+msgstr "メッセージをきれいな埋め込みとして引用します。"
 
 #: locales/command_strings.py:92
 msgid "Rates what you desire"
-msgstr ""
+msgstr "あなたの欲しいものを評価します"
 
 #: locales/command_strings.py:93
 msgid "Reaction-role related commands."
-msgstr ""
+msgstr "リアクションロール関連のコマンドです。"
 
 #: locales/command_strings.py:94
 msgid "Reloads a single extension, or all configured extensions."
-msgstr ""
+msgstr "単一の拡張機能、または設定済みの全拡張機能をリロードします。"
 
 #: locales/command_strings.py:95
 msgid "Reminds you of something after a certain amount of time."
-msgstr ""
+msgstr "指定した時間が経過したらリマインドします。"
 
 #: locales/command_strings.py:96
 msgid "Remove a member from the live-alert watchlist."
-msgstr ""
+msgstr "配信通知の監視リストからメンバーを削除します。"
 
 #: locales/command_strings.py:97
 msgid "Remove a role to a specified member."
-msgstr ""
+msgstr "指定したメンバーからロールを削除します。"
 
 #: locales/command_strings.py:98
 msgid "Remove a user from the bot-wide blacklist."
-msgstr ""
+msgstr "ボット全体のブラックリストからユーザーを削除します。"
 
 #: locales/command_strings.py:99
 msgid "Remove a warn from a member of the guild."
-msgstr ""
+msgstr "サーバーのメンバーから警告を1件削除します。"
 
 #: locales/command_strings.py:100
 msgid "Remove an emoji-to-role mapping from a message."
-msgstr ""
+msgstr "メッセージから絵文字とロールの紐付けを削除します。"
 
 #: locales/command_strings.py:101
 msgid "Remove auto role from your guild."
-msgstr ""
+msgstr "サーバーから自動ロールを削除します。"
 
 #: locales/command_strings.py:102
 msgid "Remove the auto-room system based on category name"
-msgstr ""
+msgstr "カテゴリ名を指定して自動ルームシステムを削除します"
 
 #: locales/command_strings.py:103
 msgid "Remove the favourite at the given position in your list."
-msgstr ""
+msgstr "リスト内の指定した位置のお気に入りを削除します。"
 
 #: locales/command_strings.py:104
 msgid "Resume the player if it is paused."
-msgstr ""
+msgstr "一時停止中のプレイヤーを再開します。"
 
 #: locales/command_strings.py:105
 msgid "Returns a random percent for how gay is a discord user"
-msgstr ""
+msgstr "Discordユーザーがどれくらいゲイっぽいかをランダムな割合で返します"
 
 #: locales/command_strings.py:106
 msgid "Returns a random percent for how hot is a discord user"
-msgstr ""
+msgstr "Discordユーザーがどれくらいホットかをランダムな割合で返します"
 
 #: locales/command_strings.py:107
 msgid "Roll the slot machine"
-msgstr ""
+msgstr "スロットマシンを回します"
 
 #: locales/command_strings.py:108
 msgid "Save the current track, or a searched track, to your favourites."
-msgstr ""
+msgstr "現在のトラック、または検索したトラックをお気に入りに保存します。"
 
 #: locales/command_strings.py:109
 msgid "Search Wikipedia for a short summary of a topic."
-msgstr ""
+msgstr "Wikipediaでトピックの簡単な要約を検索します。"
 
 #: locales/command_strings.py:110
 msgid "Sends a random cat image"
-msgstr ""
+msgstr "ランダムな猫の画像を送信します"
 
 #: locales/command_strings.py:111
 msgid "Sends a random dog picture"
-msgstr ""
+msgstr "ランダムな犬の画像を送信します"
 
 #: locales/command_strings.py:112
 msgid "Set a role to a specified member."
-msgstr ""
+msgstr "指定したメンバーにロールを設定します。"
 
 #: locales/command_strings.py:113
 msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
-msgstr ""
+msgstr "プロフィール項目のいずれかを設定します（switch、3ds、battletag、riot、steam）。"
 
 #: locales/command_strings.py:114
 msgid "Set the channel where moderation logs are sent."
-msgstr ""
+msgstr "モデレーションログを送信するチャンネルを設定します。"
 
 #: locales/command_strings.py:115
 msgid "Set the loop mode for the queue."
-msgstr ""
+msgstr "キューのループモードを設定します。"
 
 #: locales/command_strings.py:116
 msgid "Set the player volume (0-1000)."
-msgstr ""
+msgstr "プレイヤーの音量を設定します（0-1000）。"
 
 #: locales/command_strings.py:117
 msgid "Set the server's default language (used when a member has not picked one)."
-msgstr ""
+msgstr "サーバーの既定言語を設定します（メンバーが言語を選んでいない場合に使用されます）。"
 
 #: locales/command_strings.py:118
 msgid "Set the starboard channel and the star threshold."
-msgstr ""
+msgstr "スターボードチャンネルとスターのしきい値を設定します。"
 
 #: locales/command_strings.py:119
 msgid "Set the welcome channel and message (a simple fallback)."
-msgstr ""
+msgstr "ウェルカムチャンネルとメッセージを設定します（簡易的な代替設定）。"
 
 #: locales/command_strings.py:120
 msgid "Set your AFK status, with an optional message."
-msgstr ""
+msgstr "任意のメッセージ付きでAFKステータスを設定します。"
 
 #: locales/command_strings.py:121
 msgid "Setup an auto-room system"
-msgstr ""
+msgstr "自動ルームシステムをセットアップします"
 
 #: locales/command_strings.py:122
 msgid "Show a collage of a user's avatar / server avatar / banner history."
-msgstr ""
+msgstr "ユーザーのアバター・サーバーアバター・バナーの履歴コラージュを表示します。"
 
 #: locales/command_strings.py:123
 msgid "Show a single moderation case by its number."
-msgstr ""
+msgstr "番号を指定してモデレーションケースを1件表示します。"
 
 #: locales/command_strings.py:124
 msgid "Show every member on the live-alert watchlist."
-msgstr ""
+msgstr "配信通知の監視リストにいる全メンバーを表示します。"
 
 #: locales/command_strings.py:125
 msgid "Show how long the bot has been running."
-msgstr ""
+msgstr "ボットの稼働時間を表示します。"
 
 #: locales/command_strings.py:126
 msgid "Show how many warns a member currently has."
-msgstr ""
+msgstr "メンバーが現在受けている警告の数を表示します。"
 
 #: locales/command_strings.py:127
 msgid "Show the current auto-mod settings for this guild."
-msgstr ""
+msgstr "このサーバーの現在の自動モデレーション設定を表示します。"
 
 #: locales/command_strings.py:128
 msgid "Show the currently playing track and the next tracks in the queue."
-msgstr ""
+msgstr "現在再生中のトラックとキュー内の次のトラックを表示します。"
 
 #: locales/command_strings.py:129
 msgid "Show the interactive now-playing controller."
-msgstr ""
+msgstr "対話式の再生中コントローラーを表示します。"
 
 #: locales/command_strings.py:130
 msgid "Show the last deleted message in this channel."
-msgstr ""
+msgstr "このチャンネルで最後に削除されたメッセージを表示します。"
 
 #: locales/command_strings.py:131
 msgid "Show the most-starred messages in this guild."
-msgstr ""
+msgstr "このサーバーで最もスターを獲得したメッセージを表示します。"
 
 #: locales/command_strings.py:132
 msgid "Show unicode information about the given characters."
-msgstr ""
+msgstr "指定した文字のUnicode情報を表示します。"
 
 #: locales/command_strings.py:133
 msgid "Show what a member is currently listening to on Spotify."
-msgstr ""
+msgstr "メンバーがSpotifyで現在聴いている曲を表示します。"
 
 #: locales/command_strings.py:134
 msgid "Show your saved favourite tracks, or another member's."
-msgstr ""
+msgstr "保存済みのお気に入りトラックを表示します（自分または他のメンバー）。"
 
 #: locales/command_strings.py:135
 msgid "Shows Astronomy Picture of the Day."
-msgstr ""
+msgstr "今日の天文写真を表示します。"
 
 #: locales/command_strings.py:136
 msgid "Shows the bot's websocket latency."
-msgstr ""
+msgstr "ボットのWebSocketレイテンシを表示します。"
 
 #: locales/command_strings.py:137
 msgid "Shows the current weather for a given city."
-msgstr ""
+msgstr "指定した都市の現在の天気を表示します。"
 
 #: locales/command_strings.py:138
 msgid "Shows the ranked members of the guild."
-msgstr ""
+msgstr "サーバーのランキングメンバーを表示します。"
 
 #: locales/command_strings.py:139
 msgid "Shows your level and XP rank card, or another member's."
-msgstr ""
+msgstr "レベルとXPランクカードを表示します（自分または他のメンバー）。"
 
 #: locales/command_strings.py:140
 msgid "Shuffle the upcoming tracks in the queue."
-msgstr ""
+msgstr "キュー内の次のトラックをシャッフルします。"
 
 #: locales/command_strings.py:141
 msgid "Simulate a join for yourself to preview the welcome."
-msgstr ""
+msgstr "ウェルカムメッセージをプレビューするため、自分の参加をシミュレートします。"
 
 #: locales/command_strings.py:142
 msgid "Skip the current track and play the next one."
-msgstr ""
+msgstr "現在のトラックをスキップして次を再生します。"
 
 #: locales/command_strings.py:143
 msgid "Starboard related commands."
-msgstr ""
+msgstr "スターボード関連のコマンドです。"
 
 #: locales/command_strings.py:144
 msgid "Stop playback and clear the queue (stays connected)."
-msgstr ""
+msgstr "再生を停止しキューをクリアします（接続は維持されます）。"
 
 #: locales/command_strings.py:145
 msgid "Synchronizes the application command tree globally or to guilds."
-msgstr ""
+msgstr "アプリケーションコマンドツリーをグローバルまたはサーバーに同期します。"
 
 #: locales/command_strings.py:146
 msgid "Tells you the newest members of the server."
-msgstr ""
+msgstr "サーバーの新規メンバーを教えます。"
 
 #: locales/command_strings.py:147
 msgid "Temporarily bans a member for the given duration."
-msgstr ""
+msgstr "指定した期間、メンバーを一時的にBANします。"
 
 #: locales/command_strings.py:148
 msgid "The 1-based position of the favourite to remove."
-msgstr ""
+msgstr "削除するお気に入りの位置です（1から始まります）。"
 
 #: locales/command_strings.py:149
 msgid "The bot say what you want."
-msgstr ""
+msgstr "ボットに好きなことを言わせます。"
 
 #: locales/command_strings.py:150
 msgid "Translate text to English (auto-detect source language)."
-msgstr ""
+msgstr "テキストを英語に翻訳します（元の言語は自動検出）。"
 
 #: locales/command_strings.py:151
 msgid "Un-mutes the specified member."
-msgstr ""
+msgstr "指定したメンバーのミュートを解除します。"
 
 #: locales/command_strings.py:152
 msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
-msgstr ""
+msgstr "ユーザーのBANを解除します。メンバーのBAN権限が必要で、ボットにもこの権限が必要です。"
 
 #: locales/command_strings.py:153
 msgid "Unloads an extension by name."
-msgstr ""
+msgstr "名前を指定して拡張機能をアンロードします。"
 
 #: locales/command_strings.py:154
 msgid "Update the amount of stars needed to reach the starboard."
-msgstr ""
+msgstr "スターボードに掲載されるために必要なスターの数を更新します。"
 
 #: locales/command_strings.py:155
 msgid "Update the reason recorded on an existing case."
-msgstr ""
+msgstr "既存のケースに記録された理由を更新します。"
 
 #: locales/command_strings.py:156
 msgid "View a member's gaming profile."
-msgstr ""
+msgstr "メンバーのゲーミングプロフィールを表示します。"
 
 #: locales/command_strings.py:157
 msgid "Volume level between 0 and 1000 (100 is default)."
-msgstr ""
+msgstr "0から1000の間の音量レベルです（既定値は100）。"
 
 #: locales/command_strings.py:158
 msgid "Warn a member of the guild (auto-kick at 3 warns)"
-msgstr ""
+msgstr "サーバーのメンバーに警告します（警告3回で自動キック）"
 
 #: locales/command_strings.py:159
 msgid "Whose favourites to show (defaults to you)."
-msgstr ""
+msgstr "誰のお気に入りを表示するかを指定します（既定はあなた自身）。"
 
 #: tools/arg_completion.py:214
 msgid "Fill in"
