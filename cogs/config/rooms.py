@@ -69,19 +69,32 @@ def _parse_int(text, default):
         return default
 
 
-def _parse_bool(text):
-    """Read a loose yes/no answer from a modal text field.
+def _make_limit_select(current):
+    """Build the user-limit Select (0 = unlimited) pre-selecting ``current``.
 
-    Also accepts the current locale's translation of "yes"/"y": the Edit modal
-    prefills this field with the localized _("yes")/_("no"), so a value left
-    unchanged in a non-English locale must still round-trip to True instead of
-    silently reading as False and un-setting the hub's private flag.
+    The options are the curated ``SLOT_VALUES`` (0 reads as "unlimited"). When
+    ``current`` matches one of them it is marked ``default`` so submitting the
+    modal unchanged keeps the hub's limit; an off-menu value (e.g. a legacy
+    typed 7) simply preselects nothing and the picker forces a choice.
     """
-    value = (text or "").strip().lower()
-    affirmatives = {"1", "yes", "y", "true", "on", "private", "locked"}
-    affirmatives.add(_("yes").strip().lower())
-    affirmatives.add(_("y").strip().lower())
-    return value in affirmatives
+    try:
+        current = int(current)
+    except (TypeError, ValueError):
+        current = 0
+    options = [
+        discord.SelectOption(
+            label=slot_value_label(value),
+            value=str(value),
+            default=(value == current),
+        )
+        for value in SLOT_VALUES
+    ]
+    return discord.ui.Select(
+        placeholder=_("User limit..."),
+        min_values=1,
+        max_values=1,
+        options=options,
+    )
 
 
 class _PanelButton(discord.ui.Button):
@@ -159,23 +172,23 @@ class AddHubModal(LocaleModal):
             max_length=100,
             required=True,
         )
-        self.limit_input = discord.ui.TextInput(
-            label=_("User limit (0 = unlimited)"),
-            default="0",
-            max_length=2,
-            required=False,
-        )
+        self.limit_select = _make_limit_select(0)
         for item in (
             self.label_input,
             self.category_input,
             self.hub_input,
             self.template_input,
-            self.limit_input,
         ):
             self.add_item(item)
+        self.add_item(
+            discord.ui.Label(
+                text=_("User limit (0 = unlimited)"), component=self.limit_select
+            )
+        )
 
     async def on_submit(self, interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
+        limit_values = self.limit_select.values
         message = await self.cog._add_hub(
             interaction.guild,
             label=(self.label_input.value or "").strip() or DEFAULT_LABEL,
@@ -183,7 +196,7 @@ class AddHubModal(LocaleModal):
             or DEFAULT_CATEGORY_NAME,
             hub_name=(self.hub_input.value or "").strip() or DEFAULT_HUB_NAME,
             template=(self.template_input.value or "").strip() or DEFAULT_TEMPLATE,
-            user_limit=_parse_int(self.limit_input.value, 0),
+            user_limit=_parse_int(limit_values[0], 0) if limit_values else 0,
         )
         await interaction.followup.send(message, ephemeral=True)
         await self.panel._rerender()
@@ -214,43 +227,44 @@ class EditHubModal(LocaleModal):
             max_length=100,
             required=True,
         )
-        self.limit_input = discord.ui.TextInput(
-            label=_("User limit (0 = unlimited)"),
-            default=str(hub.get("user_limit", 0)),
-            max_length=2,
-            required=False,
-        )
+        self.limit_select = _make_limit_select(hub.get("user_limit", 0))
         self.rooms_input = discord.ui.TextInput(
             label=_("Max rooms (1-50)"),
             default=str(hub.get("max_rooms", 20)),
             max_length=2,
             required=False,
         )
-        self.private_input = discord.ui.TextInput(
-            label=_("Private rooms? (yes/no)"),
-            default=_("yes") if hub.get("private") else _("no"),
-            max_length=5,
-            required=False,
+        is_private = bool(hub.get("private"))
+        self.private_radio = discord.ui.RadioGroup(required=True)
+        self.private_radio.add_option(
+            label=_("Private"), value="private", default=is_private
         )
-        for item in (
-            self.label_input,
-            self.template_input,
-            self.limit_input,
-            self.rooms_input,
-            self.private_input,
-        ):
-            self.add_item(item)
+        self.private_radio.add_option(
+            label=_("Public"), value="public", default=not is_private
+        )
+        self.add_item(self.label_input)
+        self.add_item(self.template_input)
+        self.add_item(
+            discord.ui.Label(
+                text=_("User limit (0 = unlimited)"), component=self.limit_select
+            )
+        )
+        self.add_item(self.rooms_input)
+        self.add_item(
+            discord.ui.Label(text=_("Room privacy"), component=self.private_radio)
+        )
 
     async def on_submit(self, interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
+        limit_values = self.limit_select.values
         message = await self.cog._edit_hub(
             interaction.guild,
             self.hub_id,
             label=(self.label_input.value or "").strip() or DEFAULT_LABEL,
             template=(self.template_input.value or "").strip() or DEFAULT_TEMPLATE,
-            user_limit=_parse_int(self.limit_input.value, 0),
+            user_limit=_parse_int(limit_values[0], 0) if limit_values else 0,
             max_rooms=_parse_int(self.rooms_input.value, 20),
-            private=_parse_bool(self.private_input.value),
+            private=self.private_radio.value == "private",
         )
         await interaction.followup.send(message, ephemeral=True)
         await self.panel._rerender()
@@ -385,54 +399,13 @@ _ACTION_TRANSFER = "transfer"
 _ACTION_BUMP = "bump"
 _ACTION_CLAIM = "claim"
 
+# Stable custom_id for the Claim button so ``interaction_check`` can recognise
+# it and let a non-owner through (Claim is validated in its own handler). Only
+# one Claim button exists per control message, so a constant id is unambiguous.
+_CLAIM_CUSTOM_ID = "autoroom:room:claim"
+
 # Discord caps a select at 25 options; member pickers are sliced to this.
 _MEMBER_OPTION_CAP = 25
-
-
-class _RoomActionSelect(discord.ui.Select):
-    """The single action picker on a room's control panel."""
-
-    def __init__(self):
-        options = [
-            discord.SelectOption(
-                label=_("Change user limit"),
-                value=_ACTION_LIMIT,
-                emoji="🔢",
-            ),
-            discord.SelectOption(
-                label=_("Rename room"), value=_ACTION_RENAME, emoji="✏️"
-            ),
-            discord.SelectOption(
-                label=_("Lock / Unlock"), value=_ACTION_LOCK, emoji="🔒"
-            ),
-            discord.SelectOption(
-                label=_("Hide / Unhide"), value=_ACTION_HIDE, emoji="👁️"
-            ),
-            discord.SelectOption(
-                label=_("Kick + blacklist"), value=_ACTION_KICK, emoji="🔨"
-            ),
-            discord.SelectOption(
-                label=_("Remove from blacklist"),
-                value=_ACTION_UNBLACKLIST,
-                emoji="♻️",
-            ),
-            discord.SelectOption(
-                label=_("Transfer lead"), value=_ACTION_TRANSFER, emoji="👑"
-            ),
-            discord.SelectOption(
-                label=_("Bump to top"), value=_ACTION_BUMP, emoji="⬆️"
-            ),
-            discord.SelectOption(label=_("Claim"), value=_ACTION_CLAIM, emoji="🙋"),
-        ]
-        super().__init__(
-            placeholder=_("Choose an action..."),
-            min_values=1,
-            max_values=1,
-            options=options,
-        )
-
-    async def callback(self, interaction):
-        await self.view._dispatch(interaction, self.values[0])
 
 
 class _SlotSelect(discord.ui.Select):
@@ -546,14 +519,17 @@ class _RoomRenameModal(LocaleModal):
         )
 
 
-class RoomControlView(discord.ui.View):
+class RoomControlView(discord.ui.LayoutView):
     """Per-room voicemaster panel: owner-gated, lives while the channel does.
 
-    A plain ``discord.ui.View`` (not ``AuthorView``) because the owner can
-    change via Transfer/Claim: ``interaction_check`` reads the live owner from
-    the cog's in-memory map instead of a fixed author id. ``timeout=None`` keeps
-    it responsive for the whole life of the room. Every action either acts on
-    the channel directly or opens an ephemeral sub-picker/modal for its input.
+    A Components V2 ``LayoutView`` (following ``MusicController``): a coloured
+    Container holds a header, a Separator and one or two ActionRows of action
+    buttons. Not an ``AuthorView`` because the owner can change via
+    Transfer/Claim - ``interaction_check`` reads the live owner from the cog's
+    in-memory map instead of a fixed author id. ``timeout=None`` keeps it
+    responsive for the whole life of the room. Every button either acts on the
+    channel directly or opens an ephemeral sub-picker/modal for its input; the
+    stateful Lock/Hide buttons re-render in place so their label tracks state.
     """
 
     def __init__(self, cog, channel_id):
@@ -561,7 +537,7 @@ class RoomControlView(discord.ui.View):
         self.cog = cog
         self.channel_id = channel_id
         self.message = None
-        self.add_item(_RoomActionSelect())
+        self._build()
 
     def _channel(self):
         """Return the live voice channel, or ``None`` if it is gone."""
@@ -569,6 +545,128 @@ class RoomControlView(discord.ui.View):
         if isinstance(channel, discord.VoiceChannel):
             return channel
         return None
+
+    def _is_locked(self):
+        """True when @everyone is denied Connect on the live channel."""
+        channel = self._channel()
+        if channel is None:
+            return False
+        overwrite = channel.overwrites_for(channel.guild.default_role)
+        return overwrite.connect is False
+
+    def _is_hidden(self):
+        """True when @everyone is denied View Channel on the live channel."""
+        channel = self._channel()
+        if channel is None:
+            return False
+        overwrite = channel.overwrites_for(channel.guild.default_role)
+        return overwrite.view_channel is False
+
+    def _make_handler(self, action):
+        async def handler(interaction):
+            await self._dispatch(interaction, action)
+
+        return handler
+
+    def _build(self):
+        """(Re)assemble the layout, reflecting the room's current lock/hide state."""
+        self.clear_items()
+        container = discord.ui.Container(accent_colour=discord.Colour.blurple())
+        container.add_item(discord.ui.TextDisplay(_("## Room controls")))
+        owner_id = self.cog._room_owners.get(self.channel_id)
+        if owner_id is not None:
+            header = _(
+                "Owner: <@{owner_id}> - use the buttons below to manage the room."
+            ).format(owner_id=owner_id)
+        else:
+            header = _(
+                "No owner right now - anyone in the room can Claim it below."
+            )
+        container.add_item(discord.ui.TextDisplay(header))
+        container.add_item(discord.ui.Separator())
+
+        locked = self._is_locked()
+        hidden = self._is_hidden()
+        row_one = discord.ui.ActionRow(
+            _PanelButton(
+                self._make_handler(_ACTION_LIMIT),
+                label=_("Slots"),
+                emoji="🔢",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_RENAME),
+                label=_("Rename"),
+                emoji="✏️",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_LOCK),
+                label=_("Unlock") if locked else _("Lock"),
+                emoji="🔓" if locked else "🔒",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_HIDE),
+                label=_("Unhide") if hidden else _("Hide"),
+                emoji="👁️" if hidden else "🙈",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_KICK),
+                label=_("Kick + blacklist"),
+                emoji="🔨",
+                style=discord.ButtonStyle.danger,
+            ),
+        )
+        row_two = discord.ui.ActionRow(
+            _PanelButton(
+                self._make_handler(_ACTION_UNBLACKLIST),
+                label=_("Remove from blacklist"),
+                emoji="♻️",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_TRANSFER),
+                label=_("Transfer lead"),
+                emoji="👑",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_BUMP),
+                label=_("Bump to top"),
+                emoji="⬆️",
+                style=discord.ButtonStyle.secondary,
+            ),
+            _PanelButton(
+                self._make_handler(_ACTION_CLAIM),
+                label=_("Claim"),
+                emoji="🙋",
+                style=discord.ButtonStyle.success,
+                custom_id=_CLAIM_CUSTOM_ID,
+            ),
+        )
+        container.add_item(row_one)
+        container.add_item(row_two)
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("-# Only the room owner can use these controls (except Claim).")
+            )
+        )
+        self.add_item(container)
+
+    async def _rerender(self):
+        """Redraw the panel in place so stateful button labels stay accurate."""
+        if self.message is None:
+            return
+        self._build()
+        try:
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except discord.HTTPException:
+            log.debug("Could not re-render room control panel", exc_info=True)
 
     async def _gone(self, interaction):
         await interactions.reply(interaction, _("This room no longer exists."))
@@ -581,27 +679,16 @@ class RoomControlView(discord.ui.View):
         if interaction.user.id == owner_id:
             return True
         # Claim is the one action anyone may reach (validated in its handler);
-        # detect it from the pending select value before rejecting non-owners.
-        selected = None
+        # recognise its button by custom_id before rejecting non-owners.
+        custom_id = None
         if isinstance(interaction.data, dict):
-            values = interaction.data.get("values")
-            if values:
-                selected = values[0]
-        if selected == _ACTION_CLAIM:
+            custom_id = interaction.data.get("custom_id")
+        if custom_id == _CLAIM_CUSTOM_ID:
             return True
         await interaction.response.send_message(
             _("Only the room owner can use these controls."), ephemeral=True
         )
         return False
-
-    async def _reset(self):
-        """Best-effort redraw so the action select clears its selection."""
-        if self.message is None:
-            return
-        try:
-            await self.message.edit(view=self)
-        except discord.HTTPException:
-            log.debug("Could not reset room control panel", exc_info=True)
 
     async def _dispatch(self, interaction, action):
         handlers = {
@@ -626,8 +713,6 @@ class RoomControlView(discord.ui.View):
             await interactions.notify_failure(
                 interaction, _("Something went wrong with that action.")
             )
-        finally:
-            await self._reset()
 
     # -- individual actions --------------------------------------------------
 
@@ -670,6 +755,7 @@ class RoomControlView(discord.ui.View):
             if locked
             else _("Locked the room - no one new can join."),
         )
+        await self._rerender()
 
     async def _do_hide(self, interaction):
         channel = self._channel()
@@ -693,6 +779,7 @@ class RoomControlView(discord.ui.View):
             if hidden
             else _("Hid the room from everyone else."),
         )
+        await self._rerender()
 
     async def _do_kick(self, interaction):
         channel = self._channel()
@@ -794,6 +881,7 @@ class RoomControlView(discord.ui.View):
         await interactions.reply(
             interaction, _("You're now the owner of this room.")
         )
+        await self._rerender()
 
     async def _handle_member_action(self, interaction, action, member_id):
         channel = self._channel()
@@ -841,6 +929,9 @@ class RoomControlView(discord.ui.View):
             )
             return
         await interaction.response.edit_message(content=content, view=None)
+        if action == _ACTION_TRANSFER:
+            # Ownership moved: redraw the main panel so its header reflects it.
+            await self._rerender()
 
 
 class AutoroomPanel(discord.ui.LayoutView):
@@ -1144,21 +1235,16 @@ class TemporaryRooms(commands.Cog):
             log.debug("Could not grant room owner perms", exc_info=True)
 
     async def _post_room_controls(self, channel, owner):
-        """Post the per-room voicemaster control panel in the room's chat."""
+        """Post the per-room voicemaster control panel in the room's chat.
+
+        A Components V2 ``LayoutView`` is sent with ``view=`` only (no embed, no
+        content); the owner is read from ``_room_owners`` when the view builds
+        its header, so ``owner`` is only needed to ensure the map is populated
+        before the panel renders (the room-creation path already sets it).
+        """
         try:
-            embed = discord.Embed(
-                title=_("Room controls"),
-                description=_(
-                    "Manage your own voice room. {owner} is the owner - use the "
-                    "menu below to change the limit, rename, lock, hide, kick or "
-                    "hand it over."
-                ).format(owner=owner.mention),
-                colour=discord.Colour.blurple(),
-            )
-            embed.set_footer(text=_("Only the room owner can use these controls."))
             view = RoomControlView(self, channel.id)
             message = await channel.send(
-                embed=embed,
                 view=view,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
