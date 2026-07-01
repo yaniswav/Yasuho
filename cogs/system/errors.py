@@ -13,13 +13,21 @@ log = logging.getLogger(__name__)
 
 
 def _error_embed(ctx, name, value):
-    """Build the standard error embed used by every branch below."""
+    """Build the standard error embed used by every branch below.
+
+    Discord caps a field name at 256 and a field value at 1024 characters; a
+    long error or usage string would otherwise 400 the whole error report (which
+    discord.py then swallows as "Ignoring exception in on_command_error", hiding
+    the real error). Clamp both so the report always sends.
+    """
+    if len(value) > 1024:
+        value = value[:1021] + "..."
     return (
         discord.Embed(
             color=random_colour(),
             timestamp=ctx.message.created_at,
         )
-        .add_field(name=name, value=value)
+        .add_field(name=name[:256], value=value or "​")
         .set_footer(text=ctx.author, icon_url=ctx.author.display_avatar.url)
     )
 
