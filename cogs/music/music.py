@@ -36,6 +36,12 @@ IDLE_TIMEOUT = 300
 # channel and starts blasting music after a long downtime.
 RESTORE_MAX_AGE = 600
 
+# How many players to restore in parallel on startup. Bounded so a large fleet
+# never fires a burst of voice reconnects at Discord's rate limits at once - a
+# few hundred active players then restore in seconds instead of minutes, with no
+# thundering herd.
+RESTORE_CONCURRENCY = 5
+
 
 class Player(sonolink.Player):
     """A sonolink player that also tracks the DJ, home text channel, and controller.
@@ -896,18 +902,29 @@ class Music(commands.Cog):
             log.exception("Music startup restore failed")
 
     async def _restore_players(self) -> None:
-        """Rejoin and resume every recently-active player from the DB."""
+        """Rejoin and resume every recently-active player, bounded-concurrently.
+
+        Restores run in parallel but capped at ``RESTORE_CONCURRENCY`` so a large
+        fleet cannot fire a burst of voice reconnects at Discord's rate limits;
+        each restore is isolated so one failure never sinks the others.
+        """
         rows = await music_state.load_all_states(self.bot.db_pool)
         if not rows:
             return
         now = datetime.now(timezone.utc)
-        for row in rows:
-            try:
-                await self._restore_one(row, now)
-            except Exception:
-                log.exception(
-                    "Failed to restore music for guild %s", row["guild_id"]
-                )
+        semaphore = asyncio.Semaphore(RESTORE_CONCURRENCY)
+
+        async def _guarded(row) -> None:
+            async with semaphore:
+                try:
+                    await self._restore_one(row, now)
+                except Exception:
+                    log.exception(
+                        "Failed to restore music for guild %s", row["guild_id"]
+                    )
+
+        await asyncio.gather(*(_guarded(row) for row in rows))
+        log.info("Music restore complete: processed %d player(s)", len(rows))
 
     async def _restore_one(self, row, now: datetime) -> None:
         """Resume a single guild's playback, or forget a stale/unusable row."""
