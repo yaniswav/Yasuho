@@ -109,6 +109,7 @@ _COMMAND_STRINGS = [
     N_("Search Wikipedia for a short summary of a topic."),
     N_("Sends a random cat image"),
     N_("Sends a random dog picture"),
+    N_("Sends a random fox picture"),
     N_("Set a role to a specified member."),
     N_("Set one of your profile fields (switch, 3ds, battletag, riot, steam)."),
     N_("Set the channel where moderation logs are sent."),

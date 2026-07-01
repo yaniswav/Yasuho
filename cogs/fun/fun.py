@@ -125,7 +125,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def fox(self, ctx):
-        """ Sends a random dog picture"""
+        """ Sends a random fox picture"""
         async with ctx.typing():
             try:
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-01 16:36+0200\n"
+"POT-Creation-Date: 2026-07-01 16:47+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -4186,258 +4186,262 @@ msgid "Sends a random dog picture"
 msgstr "Envía una foto aleatoria de un perro"
 
 #: locales/command_strings.py:112
+msgid "Sends a random fox picture"
+msgstr "Envía una foto aleatoria de un zorro"
+
+#: locales/command_strings.py:113
 msgid "Set a role to a specified member."
 msgstr "Asigna un rol a un miembro específico."
 
-#: locales/command_strings.py:113
+#: locales/command_strings.py:114
 msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
 msgstr "Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, steam)."
 
-#: locales/command_strings.py:114
+#: locales/command_strings.py:115
 msgid "Set the channel where moderation logs are sent."
 msgstr "Establece el canal donde se envían los registros de moderación."
 
-#: locales/command_strings.py:115
+#: locales/command_strings.py:116
 msgid "Set the loop mode for the queue."
 msgstr "Establece el modo de repetición de la cola."
 
-#: locales/command_strings.py:116
+#: locales/command_strings.py:117
 msgid "Set the player volume (0-1000)."
 msgstr "Ajusta el volumen del reproductor (0-1000)."
 
-#: locales/command_strings.py:117
+#: locales/command_strings.py:118
 msgid "Set the server's default language (used when a member has not picked one)."
 msgstr "Establece el idioma predeterminado del servidor (se usa cuando un miembro no ha elegido uno)."
 
-#: locales/command_strings.py:118
+#: locales/command_strings.py:119
 msgid "Set the starboard channel and the star threshold."
 msgstr "Establece el canal de destacados y el umbral de estrellas."
 
-#: locales/command_strings.py:119
+#: locales/command_strings.py:120
 msgid "Set the welcome channel and message (a simple fallback)."
 msgstr "Establece el canal y el mensaje de bienvenida (una alternativa sencilla)."
 
-#: locales/command_strings.py:120
+#: locales/command_strings.py:121
 msgid "Set your AFK status, with an optional message."
 msgstr "Configura tu estado AFK, con un mensaje opcional."
 
-#: locales/command_strings.py:121
+#: locales/command_strings.py:122
 msgid "Setup an auto-room system"
 msgstr "Configura un sistema de salas automáticas"
 
-#: locales/command_strings.py:122
+#: locales/command_strings.py:123
 msgid "Show a collage of a user's avatar / server avatar / banner history."
 msgstr "Muestra un collage del historial de avatar / avatar de servidor / banner de un usuario."
 
-#: locales/command_strings.py:123
+#: locales/command_strings.py:124
 msgid "Show a single moderation case by its number."
 msgstr "Muestra un caso de moderación específico por su número."
 
-#: locales/command_strings.py:124
+#: locales/command_strings.py:125
 msgid "Show every member on the live-alert watchlist."
 msgstr "Muestra todos los miembros en la lista de seguimiento de alertas en directo."
 
-#: locales/command_strings.py:125
+#: locales/command_strings.py:126
 msgid "Show how long the bot has been running."
 msgstr "Muestra cuánto tiempo lleva funcionando el bot."
 
-#: locales/command_strings.py:126
+#: locales/command_strings.py:127
 msgid "Show how many warns a member currently has."
 msgstr "Muestra cuántas advertencias tiene actualmente un miembro."
 
-#: locales/command_strings.py:127
+#: locales/command_strings.py:128
 msgid "Show the current auto-mod settings for this guild."
 msgstr "Muestra la configuración actual de auto-moderación de este servidor."
 
-#: locales/command_strings.py:128
+#: locales/command_strings.py:129
 msgid "Show the currently playing track and the next tracks in the queue."
 msgstr "Muestra la pista que se está reproduciendo y las siguientes en la cola."
 
-#: locales/command_strings.py:129
+#: locales/command_strings.py:130
 msgid "Show the interactive now-playing controller."
 msgstr "Muestra el controlador interactivo de reproducción actual."
 
-#: locales/command_strings.py:130
+#: locales/command_strings.py:131
 msgid "Show the last deleted message in this channel."
 msgstr "Muestra el último mensaje eliminado en este canal."
 
-#: locales/command_strings.py:131
+#: locales/command_strings.py:132
 msgid "Show the most-starred messages in this guild."
 msgstr "Muestra los mensajes con más estrellas de este servidor."
 
-#: locales/command_strings.py:132
+#: locales/command_strings.py:133
 msgid "Show unicode information about the given characters."
 msgstr "Muestra información unicode sobre los caracteres indicados."
 
-#: locales/command_strings.py:133
+#: locales/command_strings.py:134
 msgid "Show what a member is currently listening to on Spotify."
 msgstr "Muestra lo que un miembro está escuchando actualmente en Spotify."
 
-#: locales/command_strings.py:134
+#: locales/command_strings.py:135
 msgid "Show your saved favourite tracks, or another member's."
 msgstr "Muestra tus pistas favoritas guardadas, o las de otro miembro."
 
-#: locales/command_strings.py:135
+#: locales/command_strings.py:136
 msgid "Shows Astronomy Picture of the Day."
 msgstr "Muestra la foto astronómica del día."
 
-#: locales/command_strings.py:136
+#: locales/command_strings.py:137
 msgid "Shows the bot's websocket latency."
 msgstr "Muestra la latencia websocket del bot."
 
-#: locales/command_strings.py:137
+#: locales/command_strings.py:138
 msgid "Shows the current weather for a given city."
 msgstr "Muestra el clima actual de una ciudad indicada."
 
-#: locales/command_strings.py:138
+#: locales/command_strings.py:139
 msgid "Shows the ranked members of the guild."
 msgstr "Muestra los miembros clasificados del servidor."
 
-#: locales/command_strings.py:139
+#: locales/command_strings.py:140
 msgid "Shows your level and XP rank card, or another member's."
 msgstr "Muestra tu tarjeta de nivel y rango de XP, o la de otro miembro."
 
-#: locales/command_strings.py:140
+#: locales/command_strings.py:141
 msgid "Shuffle the upcoming tracks in the queue."
 msgstr "Mezcla las próximas pistas de la cola."
 
-#: locales/command_strings.py:141
+#: locales/command_strings.py:142
 msgid "Simulate a join for yourself to preview the welcome."
 msgstr "Simula tu propia entrada para previsualizar la bienvenida."
 
-#: locales/command_strings.py:142
+#: locales/command_strings.py:143
 msgid "Skip the current track and play the next one."
 msgstr "Salta la pista actual y reproduce la siguiente."
 
-#: locales/command_strings.py:143
+#: locales/command_strings.py:144
 msgid "Starboard related commands."
 msgstr "Comandos relacionados con el starboard."
 
-#: locales/command_strings.py:144
+#: locales/command_strings.py:145
 msgid "Stop playback and clear the queue (stays connected)."
 msgstr "Detiene la reproducción y vacía la cola (permanece conectada)."
 
-#: locales/command_strings.py:145
+#: locales/command_strings.py:146
 msgid "Synchronizes the application command tree globally or to guilds."
 msgstr "Sincroniza el árbol de comandos de la aplicación globalmente o en servidores."
 
-#: locales/command_strings.py:146
+#: locales/command_strings.py:147
 msgid "Tells you the newest members of the server."
 msgstr "Te indica los miembros más nuevos del servidor."
 
-#: locales/command_strings.py:147
+#: locales/command_strings.py:148
 msgid "Temporarily bans a member for the given duration."
 msgstr "Banea temporalmente a un miembro durante la duración indicada."
 
-#: locales/command_strings.py:148
+#: locales/command_strings.py:149
 msgid "The 1-based position of the favourite to remove."
 msgstr "La posición (empezando en 1) del favorito a eliminar."
 
-#: locales/command_strings.py:149
+#: locales/command_strings.py:150
 msgid "The bot say what you want."
 msgstr "Haz que el bot diga lo que quieras."
 
-#: locales/command_strings.py:150
+#: locales/command_strings.py:151
 msgid "Translate text to English (auto-detect source language)."
 msgstr "Traduce texto al inglés (detecta automáticamente el idioma de origen)."
 
-#: locales/command_strings.py:151
+#: locales/command_strings.py:152
 msgid "Un-mutes the specified member."
 msgstr "Quita el silencio al miembro especificado."
 
-#: locales/command_strings.py:152
+#: locales/command_strings.py:153
 msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
 msgstr "Desbanea a un usuario. Requiere el permiso de banear miembros. El bot también debe tener este permiso."
 
-#: locales/command_strings.py:153
+#: locales/command_strings.py:154
 msgid "Unloads an extension by name."
 msgstr "Descarga una extensión por su nombre."
 
-#: locales/command_strings.py:154
+#: locales/command_strings.py:155
 msgid "Update the amount of stars needed to reach the starboard."
 msgstr "Actualiza la cantidad de estrellas necesarias para llegar al starboard."
 
-#: locales/command_strings.py:155
+#: locales/command_strings.py:156
 msgid "Update the reason recorded on an existing case."
 msgstr "Actualiza el motivo registrado en un caso existente."
 
-#: locales/command_strings.py:156
+#: locales/command_strings.py:157
 msgid "View a member's gaming profile."
 msgstr "Consulta el perfil de videojuegos de un miembro."
 
-#: locales/command_strings.py:157
+#: locales/command_strings.py:158
 msgid "Volume level between 0 and 1000 (100 is default)."
 msgstr "Nivel de volumen entre 0 y 1000 (100 por defecto)."
 
-#: locales/command_strings.py:158
+#: locales/command_strings.py:159
 msgid "Warn a member of the guild (auto-kick at 3 warns)"
 msgstr "Advierte a un miembro del servidor (expulsión automática a las 3 advertencias)"
 
-#: locales/command_strings.py:159
+#: locales/command_strings.py:160
 msgid "Whose favourites to show (defaults to you)."
 msgstr "De quién mostrar los favoritos (por defecto, los tuyos)."
 
-#: locales/command_strings.py:160
+#: locales/command_strings.py:161
 msgid "Look up an anime on AniList."
 msgstr "Busca un anime en AniList."
 
-#: locales/command_strings.py:161
+#: locales/command_strings.py:162
 msgid "Look up a manga on AniList."
 msgstr "Busca un manga en AniList."
 
-#: locales/command_strings.py:162
+#: locales/command_strings.py:163
 msgid "Look up a character on AniList."
 msgstr "Busca un personaje en AniList."
 
-#: locales/command_strings.py:163
+#: locales/command_strings.py:164
 msgid "Look up an animation studio on AniList."
 msgstr "Busca un estudio de animacion en AniList."
 
-#: locales/command_strings.py:164
+#: locales/command_strings.py:165
 msgid "Browse the anime trending on AniList right now."
 msgstr "Explora el anime en tendencia en AniList ahora mismo."
 
-#: locales/command_strings.py:165
+#: locales/command_strings.py:166
 msgid "Browse the most popular anime on AniList."
 msgstr "Explora el anime mas popular en AniList."
 
-#: locales/command_strings.py:166
+#: locales/command_strings.py:167
 msgid "Browse anime from a season (defaults to the current season)."
 msgstr "Explora anime de una temporada (por defecto, la temporada actual)."
 
-#: locales/command_strings.py:167
+#: locales/command_strings.py:168
 msgid "Link your AniList account and edit your lists."
 msgstr "Vincula tu cuenta de AniList y edita tus listas."
 
-#: locales/command_strings.py:168
+#: locales/command_strings.py:169
 msgid "Start linking your AniList account."
 msgstr "Comienza a vincular tu cuenta de AniList."
 
-#: locales/command_strings.py:169
+#: locales/command_strings.py:170
 msgid "Finish linking with the PIN code AniList gave you."
 msgstr "Termina de vincular con el codigo PIN que te dio AniList."
 
-#: locales/command_strings.py:170
+#: locales/command_strings.py:171
 msgid "Unlink your AniList account."
 msgstr "Desvincula tu cuenta de AniList."
 
-#: locales/command_strings.py:171
+#: locales/command_strings.py:172
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
 msgstr "Actualizacion guiada: elige el titulo haciendo clic y luego edita un formulario prerellenado."
 
-#: locales/command_strings.py:172
+#: locales/command_strings.py:173
 msgid "Set the status of a title on your list."
 msgstr "Establece el estado de un titulo en tu lista."
 
-#: locales/command_strings.py:173
+#: locales/command_strings.py:174
 msgid "Score a title on your AniList list."
 msgstr "Puntua un titulo en tu lista de AniList."
 
-#: locales/command_strings.py:174
+#: locales/command_strings.py:175
 msgid "Show AniList stats for a user (defaults to your linked account)."
 msgstr "Muestra las estadisticas de AniList de un usuario (por defecto, tu cuenta vinculada)."
 
-#: locales/command_strings.py:175
+#: locales/command_strings.py:176
 msgid "Show your anime/manga list, filtered by status (defaults to CURRENT)."
 msgstr "Muestra tu lista de anime/manga, filtrada por estado (por defecto ACTUAL)."
 
