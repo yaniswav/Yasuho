@@ -23,6 +23,7 @@ import typing
 
 import discord
 
+from tools import interactions
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorView, LocaleModal
@@ -325,17 +326,9 @@ class _CompletionView(AuthorView):
                 log.debug("arg completion: refresh edit failed", exc_info=True)
 
     async def _report(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    _("Something went wrong with that prompt."), ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    _("Something went wrong with that prompt."), ephemeral=True
-                )
-        except discord.HTTPException:
-            log.debug("arg completion: report failed", exc_info=True)
+        await interactions.notify_failure(
+            interaction, _("Something went wrong with that prompt.")
+        )
 
     async def on_select(self, interaction, field, value):
         try:

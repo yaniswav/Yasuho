@@ -9,11 +9,10 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 
 class SearchWeb(commands.Cog):
@@ -135,7 +134,7 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as s:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
                     async with s.get(
                         "https://osu.ppy.sh/api/get_user",
                         params={"k": key, "u": username},
@@ -172,7 +171,7 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as s:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
                     async with s.get(
                         f"https://api.mojang.com/users/profiles/minecraft/{username}"
                     ) as r:

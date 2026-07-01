@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 import discord
@@ -268,6 +267,19 @@ class Moderation(commands.Cog):
         """Funnel a mod-action embed to the guild's configured mod-log channel."""
         await modactions.funnel_action(self.bot, guild, embed)
 
+    async def _no_perms(self, ctx):
+        """Standard 'missing permissions' notice, auto-deleted after 10s."""
+        await ctx.send(
+            _("**:x: Sorry, I am missing permissions to do this!**"), delete_after=10
+        )
+
+    async def _edit_confirm(self, ctx, **kwargs):
+        """Edit the stored confirm-prompt message in place, ignoring HTTP errors."""
+        try:
+            await ctx.confirm_message.edit(**kwargs)
+        except discord.HTTPException:
+            pass
+
     async def _confirm(self, ctx, embed, *, timeout=30):
         """Send a danger-action confirm prompt and wait for the author's choice.
 
@@ -409,10 +421,7 @@ class Moderation(commands.Cog):
             )
         except Exception:
             log.exception("Failed to kick member")
-            return await ctx.send(
-                _("**:x: Sorry, I am missing permissions to do this!**"),
-                delete_after=10,
-            )
+            return await self._no_perms(ctx)
 
         num = await modactions.create_case(
             self.bot.db_pool,
@@ -464,10 +473,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embedkick)
         except Exception:
             log.exception("Failed to voice kick member")
-            await ctx.send(
-                _("**:x: Sorry, I am missing permissions to do this!**"),
-                delete_after=10,
-            )
+            await self._no_perms(ctx)
 
     @commands.hybrid_command(name="move")
     @commands.guild_only()
@@ -485,10 +491,7 @@ class Moderation(commands.Cog):
                 )
             )
         except Exception:
-            await ctx.send(
-                _("**:x: Sorry, I am missing permissions to do this!**"),
-                delete_after=10,
-            )
+            await self._no_perms(ctx)
             log.exception("Failed to move member to channel")
 
     @commands.hybrid_command(name="ban", aliases=["b"])
@@ -519,10 +522,7 @@ class Moderation(commands.Cog):
                 ),
                 colour=modactions.action_colour("note"),
             )
-            try:
-                await ctx.confirm_message.edit(embed=aborted, view=None)
-            except discord.HTTPException:
-                pass
+            await self._edit_confirm(ctx, embed=aborted, view=None)
             return
 
         # Suppress the ModLog ban listener so this bot ban is logged once
@@ -536,10 +536,7 @@ class Moderation(commands.Cog):
             )
         except Exception:
             log.exception("Failed to ban member")
-            return await ctx.send(
-                _("**:x: Sorry, I am missing permissions to do this!**"),
-                delete_after=10,
-            )
+            return await self._no_perms(ctx)
 
         num = await modactions.create_case(
             self.bot.db_pool,
@@ -577,10 +574,7 @@ class Moderation(commands.Cog):
             )
         except Exception:
             log.exception("Failed to unban member")
-            return await ctx.send(
-                _("**:x: Sorry, I am missing permissions to do this!**"),
-                delete_after=10,
-            )
+            return await self._no_perms(ctx)
 
         num = await modactions.create_case(
             self.bot.db_pool,
@@ -633,10 +627,7 @@ class Moderation(commands.Cog):
                 description=_("No action taken."),
                 colour=modactions.action_colour("note"),
             )
-            try:
-                await ctx.confirm_message.edit(embed=aborted, view=None)
-            except discord.HTTPException:
-                pass
+            await self._edit_confirm(ctx, embed=aborted, view=None)
             return
 
         # Log each ban once (the summary below), not twice via the ModLog listener.
@@ -746,19 +737,6 @@ class Moderation(commands.Cog):
             delete_after=3,
         )
 
-    async def create_mute_role(self, ctx):
-        perms = discord.Permissions(
-            send_messages=False,
-            read_messages=True,
-            add_reactions=False,
-            send_tts_messages=False,
-            read_message_history=True,
-            speak=False,
-        )
-        role = "Muted"
-        await ctx.guild.create_role(name=role, permissions=perms)
-        await ctx.send(f"{ctx.guild.id}, {role}")
-
     async def _ensure_mute_role(self, guild):
         """Create the guild's "Muted" role, persist it, and return it.
 
@@ -863,7 +841,7 @@ class Moderation(commands.Cog):
                     description=_(":red_circle: {user} is already muted!").format(
                         user=user
                     ),
-                    timestamp=datetime.datetime.utcnow(),
+                    timestamp=discord.utils.utcnow(),
                 )
                 await ctx.send(embed=embed)
                 return
@@ -875,7 +853,7 @@ class Moderation(commands.Cog):
                 description=_(
                     ":red_circle: Could not mute {user}, please try again."
                 ).format(user=user),
-                timestamp=datetime.datetime.utcnow(),
+                timestamp=discord.utils.utcnow(),
             )
             await ctx.send(embed=embed)
             return
@@ -918,7 +896,7 @@ class Moderation(commands.Cog):
                 description=_(
                     ":red_circle: Could not unmute {user}, please try again."
                 ).format(user=user),
-                timestamp=datetime.datetime.utcnow(),
+                timestamp=discord.utils.utcnow(),
             )
             await ctx.send(embed=embed)
 
@@ -938,12 +916,9 @@ class Moderation(commands.Cog):
                 colour=modactions.action_colour("note"),
             )
             if not await self._confirm(ctx, confirm):
-                try:
-                    await ctx.confirm_message.edit(
-                        content=_("Cancelled."), embed=None, view=None
-                    )
-                except discord.HTTPException:
-                    pass
+                await self._edit_confirm(
+                    ctx, content=_("Cancelled."), embed=None, view=None
+                )
                 return
 
             async with ctx.typing():
@@ -982,12 +957,9 @@ class Moderation(commands.Cog):
                 colour=modactions.action_colour("note"),
             )
             if not await self._confirm(ctx, confirm):
-                try:
-                    await ctx.confirm_message.edit(
-                        content=_("Cancelled."), embed=None, view=None
-                    )
-                except discord.HTTPException:
-                    pass
+                await self._edit_confirm(
+                    ctx, content=_("Cancelled."), embed=None, view=None
+                )
                 return
 
             async with ctx.typing():
@@ -1160,8 +1132,8 @@ class Moderation(commands.Cog):
                 _("Removed all warns for {member}.").format(member=member.mention)
             )
 
-        query = f""" UPDATE warns SET warns_count = warns_count - {int(num)} WHERE guild_id = $1 AND user_id = $2;"""
-        await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
+        query = """UPDATE warns SET warns_count = warns_count - $3 WHERE guild_id = $1 AND user_id = $2;"""
+        await self.bot.db_pool.execute(query, ctx.guild.id, member.id, num)
         await ctx.send(
             _("Removed {num} warn(s) for {member}. [{remaining} warns]").format(
                 num=num, member=member.mention, remaining=fetch - num

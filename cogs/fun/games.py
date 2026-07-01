@@ -6,6 +6,7 @@ import time
 import discord
 from discord.ext import commands
 
+from tools import interactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -70,17 +71,9 @@ class TicTacToeButton(discord.ui.Button):
             await interaction.response.edit_message(content=content, view=view)
         except Exception:
             log.exception("tic-tac-toe move failed")
-            try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        _("Something went wrong with that move."), ephemeral=True
-                    )
-                else:
-                    await interaction.response.send_message(
-                        _("Something went wrong with that move."), ephemeral=True
-                    )
-            except Exception:
-                pass
+            await interactions.notify_failure(
+                interaction, _("Something went wrong with that move.")
+            )
 
 
 class TicTacToeView(AuthorView):

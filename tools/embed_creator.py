@@ -33,6 +33,10 @@ import discord
 
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.interactions import (  # noqa: F401  (re-exported for cogs)
+    notify_failure,
+    refresh_in_place,
+)
 from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
@@ -347,38 +351,6 @@ def placeholder_guide(
             inline=False,
         )
     return embed
-
-
-async def refresh_in_place(interaction, message, *, embed, view) -> None:
-    """Edit the panel in place, handling the response.is_done() fork.
-
-    Factored out of every panel's _refresh: try the live interaction edit first,
-    fall back to editing the stored message if the interaction is already done.
-    """
-
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(embed=embed, view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(embed=embed, view=view)
-        except discord.HTTPException:
-            pass
-
-
-async def notify_failure(interaction, message: str = "Something went wrong.") -> None:
-    """Best-effort ephemeral error reply that respects the response state."""
-
-    try:
-        if interaction.response.is_done():
-            await interaction.followup.send(message, ephemeral=True)
-        else:
-            await interaction.response.send_message(message, ephemeral=True)
-    except discord.HTTPException:
-        pass
 
 
 # ----------------------------------------------------------------------

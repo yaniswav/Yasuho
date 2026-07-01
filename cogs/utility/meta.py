@@ -7,12 +7,10 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-# Cap external HTTP calls so a slow or hung endpoint can't block an interaction.
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 NASA_KEY = config_loader.get('APITokens', 'nasaKey')
 WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
@@ -31,7 +29,7 @@ class Meta(commands.Cog):
         """
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get(
                         f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}"
                     ) as resp:
@@ -84,7 +82,7 @@ class Meta(commands.Cog):
         """Shows the current weather for a given city."""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get(
                         f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric'
                     ) as r:

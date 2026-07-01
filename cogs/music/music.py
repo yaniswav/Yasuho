@@ -10,6 +10,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
+from tools import interactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -130,17 +131,9 @@ class AddSongModal(LocaleModal, title="Add a song"):
             await self.controller._refresh()
         except Exception:
             log.exception("Add-song modal submit failed")
-            try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        _("Something went wrong adding that song."), ephemeral=True
-                    )
-                else:
-                    await interaction.response.send_message(
-                        _("Something went wrong adding that song."), ephemeral=True
-                    )
-            except discord.HTTPException:
-                log.exception("Failed to report add-song error to the user")
+            await interactions.notify_failure(
+                interaction, _("Something went wrong adding that song.")
+            )
 
 
 class _ControllerButton(discord.ui.Button):
@@ -391,17 +384,9 @@ class MusicController(discord.ui.LayoutView):
 
     async def _report_failure(self, interaction: discord.Interaction) -> None:
         """Best-effort error notice when a button callback raises."""
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    _("Something went wrong handling that action."), ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    _("Something went wrong handling that action."), ephemeral=True
-                )
-        except discord.HTTPException:
-            log.exception("Failed to report controller error to the user")
+        await interactions.notify_failure(
+            interaction, _("Something went wrong handling that action.")
+        )
 
     async def _refresh(self) -> None:
         """Re-render the now-playing layout in place so it reflects new state."""
@@ -584,6 +569,14 @@ class Music(commands.Cog):
     def _nodes_available(self) -> bool:
         client = self._client()
         return bool(client and client.nodes)
+
+    async def _require_player(self, ctx):
+        """Return the connected player, or None after telling the user there is none."""
+        player = ctx.voice_client
+        if isinstance(player, sonolink.Player):
+            return player
+        await ctx.send(_("I'm not connected to a voice channel."))
+        return None
 
     async def _search(
         self, query: str, *, source: TrackSourceType = SEARCH_SOURCE
@@ -905,9 +898,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def pause(self, ctx: commands.Context) -> None:
         """Pause the current track."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         if player.paused:
             await ctx.send(_("The player is already paused."))
@@ -919,9 +911,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def resume(self, ctx: commands.Context) -> None:
         """Resume the player if it is paused."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         if not player.paused:
             await ctx.send(_("The player is not paused."))
@@ -933,9 +924,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def skip(self, ctx: commands.Context) -> None:
         """Skip the current track and play the next one."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         try:
             track = await player.skip()
@@ -955,9 +945,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def stop(self, ctx: commands.Context) -> None:
         """Stop playback and clear the queue (stays connected)."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         await player.stop(clear_queue=True)
         await ctx.send(_("Stopped playback and cleared the queue."))
@@ -969,9 +958,8 @@ class Music(commands.Cog):
         self, ctx: commands.Context, value: commands.Range[int, 0, 1000]
     ) -> None:
         """Set the player volume (0-1000)."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         await player.set_volume(value)
         await ctx.send(_("Set the volume to {volume}%.").format(volume=value))
@@ -980,9 +968,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def shuffle(self, ctx: commands.Context) -> None:
         """Shuffle the upcoming tracks in the queue."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         if len(player.queue.tracks) < 2:
             await ctx.send(_("Add a few more tracks to the queue before shuffling."))
@@ -999,9 +986,8 @@ class Music(commands.Cog):
         mode: typing.Literal["track", "all", "off"] = "track",
     ) -> None:
         """Set the loop mode for the queue."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         mapping = {
             "track": sonolink.QueueMode.LOOP,
@@ -1015,9 +1001,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def queue(self, ctx: commands.Context) -> None:
         """Show the currently playing track and the next tracks in the queue."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
 
         upcoming = player.queue.tracks
@@ -1069,9 +1054,8 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def disconnect(self, ctx: commands.Context) -> None:
         """Disconnect the player from the voice channel."""
-        player = ctx.voice_client
-        if not isinstance(player, sonolink.Player):
-            await ctx.send(_("I'm not connected to a voice channel."))
+        player = await self._require_player(ctx)
+        if player is None:
             return
         await player.disconnect()
         await ctx.send(_("Disconnected from the voice channel."))

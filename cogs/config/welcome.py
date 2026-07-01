@@ -95,12 +95,7 @@ class AddGifModal(LocaleModal):
             await self.manage_view.refresh(interaction)
         except Exception:
             log.exception("Welcome add-GIF modal failed")
-            try:
-                await interaction.response.send_message(
-                    _("Something went wrong."), ephemeral=True
-                )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
 
 # ----------------------------------------------------------------------
@@ -196,12 +191,9 @@ class _PreviewButton(discord.ui.Button):
             await self.panel.cog.send_preview(interaction, self.panel.config)
         except Exception:
             log.exception("Welcome preview failed")
-            try:
-                await interaction.followup.send(
-                    _("Could not render the preview."), ephemeral=True
-                )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(
+                interaction, _("Could not render the preview.")
+            )
 
 
 class _EnableButton(discord.ui.Button):
@@ -268,12 +260,7 @@ class RemoveGifSelect(discord.ui.Select):
             await self.manage_view.refresh(interaction)
         except Exception:
             log.exception("Welcome remove-GIF select failed")
-            try:
-                await interaction.response.send_message(
-                    _("Something went wrong."), ephemeral=True
-                )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
 
 class ManageGifsView(AuthorView):
@@ -331,12 +318,9 @@ class ManageGifsView(AuthorView):
             await interaction.response.send_modal(AddGifModal(self))
         except Exception:
             log.exception("Welcome add-GIF launch failed")
-            try:
-                await interaction.response.send_message(
-                    _("Could not open the form."), ephemeral=True
-                )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(
+                interaction, _("Could not open the form.")
+            )
 
     async def refresh(self, interaction):
         """Re-render this ephemeral view and sync the main panel summary."""

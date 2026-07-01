@@ -3,7 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import settings
+from tools import interactions, settings
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.views import AuthorView
@@ -292,14 +292,9 @@ class HelpView(AuthorView):
 
     async def report_error(self, interaction):
         """Best-effort, ephemeral error notice that never raises."""
-        try:
-            message = _("Something went wrong opening the help menu.")
-            if interaction.response.is_done():
-                await interaction.followup.send(message, ephemeral=True)
-            else:
-                await interaction.response.send_message(message, ephemeral=True)
-        except Exception:
-            log.debug("Failed to report help error", exc_info=True)
+        await interactions.notify_failure(
+            interaction, _("Something went wrong opening the help menu.")
+        )
 
     @discord.ui.button(emoji="◀", style=discord.ButtonStyle.secondary, row=1)
     async def previous(self, interaction, button):

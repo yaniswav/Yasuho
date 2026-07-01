@@ -12,12 +12,10 @@ from pyfiglet import figlet_format
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
+from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-# Cap outbound HTTP calls so a slow or hung endpoint can't block an interaction.
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 regex = re.compile(
     r"^(?:http|ftp)s?://"  # http:// or https://
@@ -98,7 +96,7 @@ class Fun(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get('https://api.thecatapi.com/v1/images/search/') as r:
                         res = await r.json()
                         url=(res[0]['url'])
@@ -114,7 +112,7 @@ class Fun(commands.Cog):
         """ Sends a random dog picture"""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get('https://random.dog/woof.json') as r:
                         res = await r.json()
                         url=(res['url'])
@@ -130,7 +128,7 @@ class Fun(commands.Cog):
         """ Sends a random dog picture"""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as cs:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get('https://randomfox.ca/floof/?ref=apilist.fun') as r:
                         res = await r.json()
                         url=(res['image'])

@@ -7,11 +7,10 @@ import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
+from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 
 class Utility(commands.Cog):
@@ -115,7 +114,7 @@ class Utility(commands.Cog):
                     "?client=gtx&sl=auto&tl=en&dt=t&q="
                     + urllib.parse.quote(text)
                 )
-                async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as s:
+                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
                     async with s.get(url) as r:
                         data = await r.json()
 

@@ -6,7 +6,7 @@ import time
 import discord
 from discord.ext import commands
 
-from tools import db, modactions, settings
+from tools import db, interactions, modactions, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorView
@@ -252,17 +252,9 @@ class AutoModPanel(AuthorView):
         await interaction.response.edit_message(embed=self.embed(), view=self)
 
     async def _safe_fail(self, interaction):
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(
-                    _("Something went wrong updating the panel."), ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    _("Something went wrong updating the panel."), ephemeral=True
-                )
-        except discord.HTTPException:
-            pass
+        await interactions.notify_failure(
+            interaction, _("Something went wrong updating the panel.")
+        )
 
     # -- callbacks ------------------------------------------------------
     async def toggle(self, interaction, key, native):

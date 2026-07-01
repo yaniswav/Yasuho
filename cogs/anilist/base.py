@@ -33,12 +33,10 @@ from .queries import (
 )
 from tools import crypto
 from tools.config_loader import config_loader
+from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-# Cap AniList HTTP calls so a slow or hung endpoint can't block an interaction.
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 
 class AniListBase:
@@ -71,7 +69,7 @@ class AniListBase:
             headers["Authorization"] = "Bearer " + token
 
         try:
-            async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as session:
+            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
                 async with session.post(
                     API_URL,
                     json={"query": query, "variables": variables},
@@ -155,7 +153,7 @@ class AniListBase:
         }
 
         try:
-            async with aiohttp.ClientSession(timeout=_HTTP_TIMEOUT) as session:
+            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
                 async with session.post(TOKEN_URL, json=payload) as r:
                     data = await r.json()
         except Exception:

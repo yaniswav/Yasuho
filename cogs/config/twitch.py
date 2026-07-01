@@ -298,12 +298,9 @@ class _PreviewButton(discord.ui.Button):
             await self.panel.cog.send_preview(interaction, self.panel.config)
         except Exception:
             log.exception("Twitch preview failed")
-            try:
-                await interaction.followup.send(
-                    _("Could not render the preview."), ephemeral=True
-                )
-            except discord.HTTPException:
-                pass
+            await embed_creator.notify_failure(
+                interaction, _("Could not render the preview.")
+            )
 
 
 class _EnableButton(discord.ui.Button):

@@ -87,6 +87,9 @@ class Yasuho(commands.Bot):
         self.blacklist = set()
         self.autoroles = {}
         self.muteroles = {}
+        # Set by the Reminder cog on load; defaulted here so the tools.time
+        # converters can read bot.reminder even if that cog fails to load.
+        self.reminder = None
 
     async def get_context(self, *args, **kwargs):
         """Set the per-invocation i18n locale before a command runs.
