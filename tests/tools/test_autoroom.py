@@ -320,3 +320,72 @@ def test_summarise_hub_defensive_on_partial_dict():
     text = autoroom.summarise_hub({})
     assert autoroom.DEFAULT_LABEL in text
     assert "unlimited" in text
+
+
+# ---------------------------------------------------------------------------
+# SLOT_VALUES / slot_value_label
+# ---------------------------------------------------------------------------
+
+
+def test_slot_values_shape():
+    # 0 (unlimited) leads, values are unique, ascending and within Discord's cap.
+    assert autoroom.SLOT_VALUES[0] == 0
+    assert list(autoroom.SLOT_VALUES) == sorted(autoroom.SLOT_VALUES)
+    assert len(set(autoroom.SLOT_VALUES)) == len(autoroom.SLOT_VALUES)
+    assert max(autoroom.SLOT_VALUES) == 99
+
+
+def test_slot_value_label_unlimited_and_count():
+    assert autoroom.slot_value_label(0) == "Unlimited"
+    assert autoroom.slot_value_label(-3) == "Unlimited"
+    assert autoroom.slot_value_label(5) == "5"
+    assert autoroom.slot_value_label("12") == "12"
+
+
+def test_slot_value_label_garbage_is_unlimited():
+    assert autoroom.slot_value_label(None) == "Unlimited"
+    assert autoroom.slot_value_label("nope") == "Unlimited"
+
+
+# ---------------------------------------------------------------------------
+# blacklisted_targets
+# ---------------------------------------------------------------------------
+
+
+def test_blacklisted_targets_keeps_only_explicit_false():
+    pairs = [("a", False), ("b", True), ("c", None), ("d", False)]
+    assert autoroom.blacklisted_targets(pairs) == ["a", "d"]
+
+
+def test_blacklisted_targets_empty():
+    assert autoroom.blacklisted_targets([]) == []
+    assert autoroom.blacklisted_targets([("x", True), ("y", None)]) == []
+
+
+def test_blacklisted_targets_dedups_by_identity():
+    dup = object()
+    assert autoroom.blacklisted_targets([(dup, False), (dup, False)]) == [dup]
+
+
+def test_blacklisted_targets_preserves_order():
+    pairs = [("z", False), ("a", False), ("m", False)]
+    assert autoroom.blacklisted_targets(pairs) == ["z", "a", "m"]
+
+
+# ---------------------------------------------------------------------------
+# claimable
+# ---------------------------------------------------------------------------
+
+
+def test_claimable_no_owner():
+    assert autoroom.claimable(None, []) is True
+    assert autoroom.claimable(None, [1, 2, 3]) is True
+
+
+def test_claimable_owner_present():
+    assert autoroom.claimable(7, [7, 8, 9]) is False
+
+
+def test_claimable_owner_absent():
+    assert autoroom.claimable(7, [8, 9]) is True
+    assert autoroom.claimable(7, []) is True

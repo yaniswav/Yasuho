@@ -33,11 +33,15 @@ from tools.autoroom import (
     HUB_OVERHEAD_CHANNELS,
     MAX_CATEGORIES,
     MAX_HUBS,
+    SLOT_VALUES,
+    blacklisted_targets,
     can_add_hub,
     channels_needed,
+    claimable,
     default_hub,
     normalize_hubs,
     render_room_name,
+    slot_value_label,
     summarise_hub,
 )
 from tools.i18n import _
@@ -252,6 +256,593 @@ class EditHubModal(LocaleModal):
         await self.panel._rerender()
 
 
+class _RenameChannelsModal(LocaleModal):
+    """Rename a hub's category AND its join-to-create channel.
+
+    ``EditHubModal`` is already at Discord's five-row limit, so channel renames
+    live in their own two-field modal reached from the hub's manage chooser.
+    Only the Discord channels are renamed; the pure hub config is untouched.
+    """
+
+    def __init__(self, cog, panel, hub, *, category_name, hub_name):
+        super().__init__(title=_("Rename hub channels"))
+        self.cog = cog
+        self.panel = panel
+        self.hub_id = hub["id"]
+        self.category_input = discord.ui.TextInput(
+            label=_("Category name"),
+            default=category_name,
+            max_length=100,
+            required=True,
+        )
+        self.hub_input = discord.ui.TextInput(
+            label=_("Join-to-create channel name"),
+            default=hub_name,
+            max_length=100,
+            required=True,
+        )
+        self.add_item(self.category_input)
+        self.add_item(self.hub_input)
+
+    async def on_submit(self, interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        message = await self.cog._rename_hub_channels(
+            interaction.guild,
+            self.hub_id,
+            category_name=(self.category_input.value or "").strip(),
+            hub_name=(self.hub_input.value or "").strip(),
+        )
+        await interaction.followup.send(message, ephemeral=True)
+        await self.panel._rerender()
+
+
+class _HubManageView(discord.ui.View):
+    """Ephemeral chooser: edit a hub's settings or rename its channels.
+
+    The panel's per-hub accessory opens this so both affordances stay tidy
+    despite the Edit modal being full. It is only ever shown ephemerally to the
+    panel author, so no author gating beyond that is needed.
+    """
+
+    def __init__(self, cog, panel, hub):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.panel = panel
+        self.hub = hub
+        self.add_item(
+            _PanelButton(
+                self._on_settings,
+                label=_("Settings"),
+                style=discord.ButtonStyle.primary,
+                emoji="⚙️",
+            )
+        )
+        self.add_item(
+            _PanelButton(
+                self._on_rename,
+                label=_("Rename channels"),
+                style=discord.ButtonStyle.secondary,
+                emoji="✏️",
+            )
+        )
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
+    async def _on_settings(self, interaction):
+        await interaction.response.send_modal(
+            EditHubModal(self.cog, self.panel, self.hub)
+        )
+
+    async def _on_rename(self, interaction):
+        guild = interaction.guild
+        category = (
+            guild.get_channel(self.hub.get("category_id"))
+            if self.hub.get("category_id")
+            else None
+        )
+        hub_channel = (
+            guild.get_channel(self.hub.get("hub_channel_id"))
+            if self.hub.get("hub_channel_id")
+            else None
+        )
+        category_name = (
+            category.name
+            if isinstance(category, discord.CategoryChannel)
+            else DEFAULT_CATEGORY_NAME
+        )
+        hub_name = hub_channel.name if hub_channel is not None else DEFAULT_HUB_NAME
+        await interaction.response.send_modal(
+            _RenameChannelsModal(
+                self.cog,
+                self.panel,
+                self.hub,
+                category_name=category_name[:100],
+                hub_name=hub_name[:100],
+            )
+        )
+
+
+# ---------------------------------------------------------------------------
+# Per-room control panel (voicemaster)
+# ---------------------------------------------------------------------------
+#
+# One control message is posted in each temp room's own text chat. Its live
+# state (limit, name, lock, hide, blacklist) is pushed onto the Discord channel
+# and dies with it; only room ownership is held in memory on the cog
+# (``_room_owners``). The view has ``timeout=None`` so it stays alive for the
+# life of the channel and is gated to the current owner - except Claim, which
+# anyone in the channel may use once the owner has left.
+
+_ACTION_LIMIT = "limit"
+_ACTION_RENAME = "rename"
+_ACTION_LOCK = "lock"
+_ACTION_HIDE = "hide"
+_ACTION_KICK = "kick"
+_ACTION_UNBLACKLIST = "unblacklist"
+_ACTION_TRANSFER = "transfer"
+_ACTION_BUMP = "bump"
+_ACTION_CLAIM = "claim"
+
+# Discord caps a select at 25 options; member pickers are sliced to this.
+_MEMBER_OPTION_CAP = 25
+
+
+class _RoomActionSelect(discord.ui.Select):
+    """The single action picker on a room's control panel."""
+
+    def __init__(self):
+        options = [
+            discord.SelectOption(
+                label=_("Change user limit"),
+                value=_ACTION_LIMIT,
+                emoji="🔢",
+            ),
+            discord.SelectOption(
+                label=_("Rename room"), value=_ACTION_RENAME, emoji="✏️"
+            ),
+            discord.SelectOption(
+                label=_("Lock / Unlock"), value=_ACTION_LOCK, emoji="🔒"
+            ),
+            discord.SelectOption(
+                label=_("Hide / Unhide"), value=_ACTION_HIDE, emoji="👁️"
+            ),
+            discord.SelectOption(
+                label=_("Kick + blacklist"), value=_ACTION_KICK, emoji="🔨"
+            ),
+            discord.SelectOption(
+                label=_("Remove from blacklist"),
+                value=_ACTION_UNBLACKLIST,
+                emoji="♻️",
+            ),
+            discord.SelectOption(
+                label=_("Transfer lead"), value=_ACTION_TRANSFER, emoji="👑"
+            ),
+            discord.SelectOption(
+                label=_("Bump to top"), value=_ACTION_BUMP, emoji="⬆️"
+            ),
+            discord.SelectOption(label=_("Claim"), value=_ACTION_CLAIM, emoji="🙋"),
+        ]
+        super().__init__(
+            placeholder=_("Choose an action..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction):
+        await self.view._dispatch(interaction, self.values[0])
+
+
+class _SlotSelect(discord.ui.Select):
+    """Ephemeral picker of sensible user-limit values for a room."""
+
+    def __init__(self, parent):
+        self.parent = parent
+        options = [
+            discord.SelectOption(label=slot_value_label(value), value=str(value))
+            for value in SLOT_VALUES
+        ]
+        super().__init__(
+            placeholder=_("User limit..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        channel = self.parent._channel()
+        if channel is None:
+            await interaction.response.edit_message(
+                content=_("This room no longer exists."), view=None
+            )
+            return
+        try:
+            await channel.edit(user_limit=int(self.values[0]))
+        except (discord.HTTPException, ValueError):
+            await interaction.response.edit_message(
+                content=_("Could not change the user limit."), view=None
+            )
+            return
+        await interaction.response.edit_message(
+            content=_("Updated the user limit."), view=None
+        )
+
+
+class _MemberActionSelect(discord.ui.Select):
+    """Ephemeral picker of channel members for kick/unblacklist/transfer."""
+
+    def __init__(self, parent, members, action):
+        self.parent = parent
+        self.action = action
+        options = [
+            discord.SelectOption(
+                label=(getattr(member, "display_name", None) or str(member.id))[:100],
+                value=str(member.id),
+            )
+            for member in members[:_MEMBER_OPTION_CAP]
+        ]
+        placeholders = {
+            _ACTION_KICK: _("Select a member to remove..."),
+            _ACTION_UNBLACKLIST: _("Select a member to unblacklist..."),
+            _ACTION_TRANSFER: _("Select the new owner..."),
+        }
+        super().__init__(
+            placeholder=placeholders.get(action, _("Select a member...")),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        await self.parent._handle_member_action(
+            interaction, self.action, int(self.values[0])
+        )
+
+
+class _RoomSubView(discord.ui.View):
+    """A short-lived ephemeral view hosting one sub-picker of a room action."""
+
+    def __init__(self, item):
+        super().__init__(timeout=60)
+        self.add_item(item)
+
+
+class _RoomRenameModal(LocaleModal):
+    """One-field modal that renames the room's voice channel."""
+
+    def __init__(self, parent, current_name):
+        super().__init__(title=_("Rename room"))
+        self.parent = parent
+        self.name_input = discord.ui.TextInput(
+            label=_("New room name"),
+            default=(current_name or "")[:100],
+            max_length=100,
+            required=True,
+        )
+        self.add_item(self.name_input)
+
+    async def on_submit(self, interaction):
+        channel = self.parent._channel()
+        if channel is None:
+            await interactions.reply(interaction, _("This room no longer exists."))
+            return
+        name = (self.name_input.value or "").strip()
+        if not name:
+            await interactions.reply(interaction, _("Give the room a name."))
+            return
+        try:
+            await channel.edit(name=name[:100])
+        except discord.HTTPException:
+            await interactions.notify_failure(
+                interaction, _("Could not rename the room.")
+            )
+            return
+        await interactions.reply(
+            interaction, _("Renamed the room to **{name}**.").format(name=name[:100])
+        )
+
+
+class RoomControlView(discord.ui.View):
+    """Per-room voicemaster panel: owner-gated, lives while the channel does.
+
+    A plain ``discord.ui.View`` (not ``AuthorView``) because the owner can
+    change via Transfer/Claim: ``interaction_check`` reads the live owner from
+    the cog's in-memory map instead of a fixed author id. ``timeout=None`` keeps
+    it responsive for the whole life of the room. Every action either acts on
+    the channel directly or opens an ephemeral sub-picker/modal for its input.
+    """
+
+    def __init__(self, cog, channel_id):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.channel_id = channel_id
+        self.message = None
+        self.add_item(_RoomActionSelect())
+
+    def _channel(self):
+        """Return the live voice channel, or ``None`` if it is gone."""
+        channel = self.cog.bot.get_channel(self.channel_id)
+        if isinstance(channel, discord.VoiceChannel):
+            return channel
+        return None
+
+    async def _gone(self, interaction):
+        await interactions.reply(interaction, _("This room no longer exists."))
+
+    async def interaction_check(self, interaction):
+        # Callbacks run in their own task with no locale set; resolve it here so
+        # this check AND every action localise for the clicker.
+        await i18n.apply_interaction_locale(interaction)
+        owner_id = self.cog._room_owners.get(self.channel_id)
+        if interaction.user.id == owner_id:
+            return True
+        # Claim is the one action anyone may reach (validated in its handler);
+        # detect it from the pending select value before rejecting non-owners.
+        selected = None
+        if isinstance(interaction.data, dict):
+            values = interaction.data.get("values")
+            if values:
+                selected = values[0]
+        if selected == _ACTION_CLAIM:
+            return True
+        await interaction.response.send_message(
+            _("Only the room owner can use these controls."), ephemeral=True
+        )
+        return False
+
+    async def _reset(self):
+        """Best-effort redraw so the action select clears its selection."""
+        if self.message is None:
+            return
+        try:
+            await self.message.edit(view=self)
+        except discord.HTTPException:
+            log.debug("Could not reset room control panel", exc_info=True)
+
+    async def _dispatch(self, interaction, action):
+        handlers = {
+            _ACTION_LIMIT: self._do_limit,
+            _ACTION_RENAME: self._do_rename,
+            _ACTION_LOCK: self._do_lock,
+            _ACTION_HIDE: self._do_hide,
+            _ACTION_KICK: self._do_kick,
+            _ACTION_UNBLACKLIST: self._do_unblacklist,
+            _ACTION_TRANSFER: self._do_transfer,
+            _ACTION_BUMP: self._do_bump,
+            _ACTION_CLAIM: self._do_claim,
+        }
+        handler = handlers.get(action)
+        if handler is None:
+            await interactions.reply(interaction, _("Unknown action."))
+            return
+        try:
+            await handler(interaction)
+        except Exception:
+            log.exception("Room control action %s failed", action)
+            await interactions.notify_failure(
+                interaction, _("Something went wrong with that action.")
+            )
+        finally:
+            await self._reset()
+
+    # -- individual actions --------------------------------------------------
+
+    async def _do_limit(self, interaction):
+        if self._channel() is None:
+            await self._gone(interaction)
+            return
+        await interaction.response.send_message(
+            _("Choose a user limit for the room:"),
+            view=_RoomSubView(_SlotSelect(self)),
+            ephemeral=True,
+        )
+
+    async def _do_rename(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        await interaction.response.send_modal(_RoomRenameModal(self, channel.name))
+
+    async def _do_lock(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        everyone = channel.guild.default_role
+        overwrite = channel.overwrites_for(everyone)
+        locked = overwrite.connect is False
+        overwrite.connect = None if locked else False
+        try:
+            await channel.set_permissions(everyone, overwrite=overwrite)
+        except discord.HTTPException:
+            await interactions.notify_failure(
+                interaction, _("Could not change the lock.")
+            )
+            return
+        await interactions.reply(
+            interaction,
+            _("Unlocked the room - anyone can join.")
+            if locked
+            else _("Locked the room - no one new can join."),
+        )
+
+    async def _do_hide(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        everyone = channel.guild.default_role
+        overwrite = channel.overwrites_for(everyone)
+        hidden = overwrite.view_channel is False
+        overwrite.view_channel = None if hidden else False
+        try:
+            await channel.set_permissions(everyone, overwrite=overwrite)
+        except discord.HTTPException:
+            await interactions.notify_failure(
+                interaction, _("Could not change visibility.")
+            )
+            return
+        await interactions.reply(
+            interaction,
+            _("The room is visible again.")
+            if hidden
+            else _("Hid the room from everyone else."),
+        )
+
+    async def _do_kick(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        members = [
+            member
+            for member in channel.members
+            if not member.bot and member.id != interaction.user.id
+        ]
+        if not members:
+            await interactions.reply(
+                interaction, _("There's no one else in the room to remove.")
+            )
+            return
+        await interaction.response.send_message(
+            _("Pick who to kick and blacklist:"),
+            view=_RoomSubView(_MemberActionSelect(self, members, _ACTION_KICK)),
+            ephemeral=True,
+        )
+
+    async def _do_unblacklist(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        pairs = [
+            (target, overwrite.connect)
+            for target, overwrite in channel.overwrites.items()
+            if isinstance(target, discord.Member)
+        ]
+        blocked = blacklisted_targets(pairs)
+        if not blocked:
+            await interactions.reply(interaction, _("No one is blacklisted here."))
+            return
+        await interaction.response.send_message(
+            _("Pick who to remove from the blacklist:"),
+            view=_RoomSubView(
+                _MemberActionSelect(self, blocked, _ACTION_UNBLACKLIST)
+            ),
+            ephemeral=True,
+        )
+
+    async def _do_transfer(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        members = [
+            member
+            for member in channel.members
+            if not member.bot and member.id != interaction.user.id
+        ]
+        if not members:
+            await interactions.reply(
+                interaction, _("There's no one else here to hand the room to.")
+            )
+            return
+        await interaction.response.send_message(
+            _("Pick the new room owner:"),
+            view=_RoomSubView(_MemberActionSelect(self, members, _ACTION_TRANSFER)),
+            ephemeral=True,
+        )
+
+    async def _do_bump(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        try:
+            await channel.edit(position=0)
+        except discord.HTTPException:
+            await interactions.notify_failure(
+                interaction, _("Could not bump the room.")
+            )
+            return
+        await interactions.reply(interaction, _("Bumped the room to the top."))
+
+    async def _do_claim(self, interaction):
+        channel = self._channel()
+        if channel is None:
+            await self._gone(interaction)
+            return
+        owner_id = self.cog._room_owners.get(self.channel_id)
+        member_ids = [member.id for member in channel.members]
+        if not claimable(owner_id, member_ids):
+            await interactions.reply(
+                interaction, _("The room already has an owner who's still here.")
+            )
+            return
+        if interaction.user.id not in member_ids:
+            await interactions.reply(
+                interaction, _("Join the room first to claim it.")
+            )
+            return
+        self.cog._room_owners[self.channel_id] = interaction.user.id
+        await self.cog._grant_room_owner(channel, interaction.user)
+        await interactions.reply(
+            interaction, _("You're now the owner of this room.")
+        )
+
+    async def _handle_member_action(self, interaction, action, member_id):
+        channel = self._channel()
+        if channel is None:
+            await interaction.response.edit_message(
+                content=_("This room no longer exists."), view=None
+            )
+            return
+        member = channel.guild.get_member(member_id)
+        if member is None:
+            await interaction.response.edit_message(
+                content=_("That member is no longer here."), view=None
+            )
+            return
+        try:
+            if action == _ACTION_KICK:
+                try:
+                    await member.move_to(None)
+                except discord.HTTPException:
+                    log.debug("Could not move member out of room", exc_info=True)
+                overwrite = channel.overwrites_for(member)
+                overwrite.connect = False
+                await channel.set_permissions(member, overwrite=overwrite)
+                content = _("Removed and blacklisted {name}.").format(
+                    name=member.display_name
+                )
+            elif action == _ACTION_UNBLACKLIST:
+                overwrite = channel.overwrites_for(member)
+                overwrite.connect = None
+                await channel.set_permissions(member, overwrite=overwrite)
+                content = _("Removed {name} from the blacklist.").format(
+                    name=member.display_name
+                )
+            elif action == _ACTION_TRANSFER:
+                self.cog._room_owners[self.channel_id] = member.id
+                await self.cog._grant_room_owner(channel, member)
+                content = _("Transferred room ownership to {name}.").format(
+                    name=member.display_name
+                )
+            else:
+                content = _("Unknown action.")
+        except discord.HTTPException:
+            await interaction.response.edit_message(
+                content=_("Could not complete that action."), view=None
+            )
+            return
+        await interaction.response.edit_message(content=content, view=None)
+
+
 class AutoroomPanel(discord.ui.LayoutView):
     """Styled Components V2 panel for managing a guild's autoroom hubs.
 
@@ -413,7 +1004,13 @@ class AutoroomPanel(discord.ui.LayoutView):
                     _("That hub no longer exists."), ephemeral=True
                 )
                 return
-            await interaction.response.send_modal(EditHubModal(self.cog, self, hub))
+            await interaction.response.send_message(
+                _("Manage the **{label}** hub:").format(
+                    label=hub.get("label") or DEFAULT_LABEL
+                ),
+                view=_HubManageView(self.cog, self, hub),
+                ephemeral=True,
+            )
         except Exception:
             log.exception("Autoroom edit-hub failed")
             await interactions.notify_failure(
@@ -448,6 +1045,14 @@ class TemporaryRooms(commands.Cog):
         self._cooldowns = {}
         self._locks = defaultdict(asyncio.Lock)  # per-guild creation lock
         self._cleanup_tasks = set()  # outstanding empty-room reapers
+        # {channel_id: owner_user_id} - the ONLY per-room state kept in memory.
+        # Everything else (limit, name, lock, hide, blacklist) is pushed onto
+        # the channel and dies with it, so a restart loses only ownership (and
+        # Claim recovers that). Dropped when the reaper deletes the room.
+        self._room_owners = {}
+        # {channel_id: RoomControlView} so the timeout=None panels can be
+        # stopped when their room is reaped.
+        self._room_views = {}
 
     # ------------------------------------------------------------------
     # Load / migration
@@ -512,9 +1117,55 @@ class TemporaryRooms(commands.Cog):
                 log.exception("Failed to migrate legacy autorooms for %s", guild_id)
 
     def cog_unload(self):
-        """Cancel any outstanding empty-room reapers on unload."""
+        """Cancel outstanding reapers and stop any live room control panels."""
         for task in list(self._cleanup_tasks):
             task.cancel()
+        for view in list(self._room_views.values()):
+            view.stop()
+        self._room_views.clear()
+        self._room_owners.clear()
+
+    def _forget_room(self, channel_id):
+        """Drop a temp room's in-memory state and stop its control panel."""
+        self._room_owners.pop(channel_id, None)
+        view = self._room_views.pop(channel_id, None)
+        if view is not None:
+            view.stop()
+
+    async def _grant_room_owner(self, channel, member):
+        """Grant ``member`` owner-level perms on a temp room (best-effort)."""
+        try:
+            overwrite = channel.overwrites_for(member)
+            overwrite.manage_channels = True
+            overwrite.move_members = True
+            overwrite.connect = True
+            await channel.set_permissions(member, overwrite=overwrite)
+        except discord.HTTPException:
+            log.debug("Could not grant room owner perms", exc_info=True)
+
+    async def _post_room_controls(self, channel, owner):
+        """Post the per-room voicemaster control panel in the room's chat."""
+        try:
+            embed = discord.Embed(
+                title=_("Room controls"),
+                description=_(
+                    "Manage your own voice room. {owner} is the owner - use the "
+                    "menu below to change the limit, rename, lock, hide, kick or "
+                    "hand it over."
+                ).format(owner=owner.mention),
+                colour=discord.Colour.blurple(),
+            )
+            embed.set_footer(text=_("Only the room owner can use these controls."))
+            view = RoomControlView(self, channel.id)
+            message = await channel.send(
+                embed=embed,
+                view=view,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            view.message = message
+            self._room_views[channel.id] = view
+        except discord.HTTPException:
+            log.debug("Could not post room control panel", exc_info=True)
 
     # ------------------------------------------------------------------
     # Config helpers (settings <-> index)
@@ -621,6 +1272,7 @@ class TemporaryRooms(commands.Cog):
                 log.debug("Could not delete hub channel", exc_info=True)
         if isinstance(category, discord.CategoryChannel):
             for child in list(category.channels):
+                self._forget_room(child.id)
                 try:
                     await child.delete()
                 except discord.HTTPException:
@@ -636,6 +1288,44 @@ class TemporaryRooms(commands.Cog):
         return _("Removed the **{label}** hub.").format(
             label=hub.get("label") or DEFAULT_LABEL
         )
+
+    async def _rename_hub_channels(self, guild, hub_id, *, category_name, hub_name):
+        """Rename a hub's category and join-to-create channel (best-effort).
+
+        Only the Discord channels are touched; the hub's stored config is
+        unchanged. Blank fields are skipped, and a missing channel is simply
+        reported rather than raising.
+        """
+        hubs = await self._load_hubs(guild.id)
+        hub = next((h for h in hubs if h["id"] == hub_id), None)
+        if hub is None:
+            return _("That hub no longer exists.")
+
+        category = (
+            guild.get_channel(hub["category_id"]) if hub.get("category_id") else None
+        )
+        hub_channel = (
+            guild.get_channel(hub["hub_channel_id"])
+            if hub.get("hub_channel_id")
+            else None
+        )
+        renamed = []
+        if category_name and isinstance(category, discord.CategoryChannel):
+            try:
+                await category.edit(name=category_name[:100])
+                renamed.append(_("category"))
+            except discord.HTTPException:
+                log.debug("Could not rename hub category", exc_info=True)
+        if hub_name and isinstance(hub_channel, discord.VoiceChannel):
+            try:
+                await hub_channel.edit(name=hub_name[:100])
+                renamed.append(_("join-to-create channel"))
+            except discord.HTTPException:
+                log.debug("Could not rename hub channel", exc_info=True)
+
+        if not renamed:
+            return _("Nothing was renamed - those channels are missing.")
+        return _("Renamed the {targets}.").format(targets=" & ".join(renamed))
 
     # ------------------------------------------------------------------
     # Room creation + cleanup
@@ -699,10 +1389,15 @@ class TemporaryRooms(commands.Cog):
 
             new_channel = await guild.create_voice_channel(name, **kwargs)
             active.add(new_channel.id)
+            # Ownership is the only per-room state we hold in memory; it is
+            # dropped again when the reaper deletes the room.
+            self._room_owners[new_channel.id] = member.id
             try:
                 await member.move_to(new_channel)
             except discord.HTTPException:
                 log.debug("Could not move member into new room", exc_info=True)
+
+            await self._post_room_controls(new_channel, member)
 
             task = asyncio.create_task(
                 self._cleanup_room(new_channel.id, guild.id, hub["id"])
@@ -721,6 +1416,7 @@ class TemporaryRooms(commands.Cog):
                 channel = self.bot.get_channel(channel_id)
                 if channel is None:
                     self._active[(guild_id, hub_id)].discard(channel_id)
+                    self._forget_room(channel_id)
                     return
                 if len(channel.members) == 0:
                     try:
@@ -728,6 +1424,7 @@ class TemporaryRooms(commands.Cog):
                     except discord.HTTPException:
                         pass
                     self._active[(guild_id, hub_id)].discard(channel_id)
+                    self._forget_room(channel_id)
                     return
             except Exception:
                 log.exception("Failed to clean up temp room %s", channel_id)

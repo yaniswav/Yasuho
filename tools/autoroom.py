@@ -233,3 +233,59 @@ def summarise_hub(hub):
         lock=lock,
         template=template,
     )
+
+
+# --- Per-room control panel (voicemaster) -----------------------------------
+# The live per-room state (limit, name, lock, hide, blacklist) is pushed onto
+# the Discord channel itself and only the owner is held in memory. The helpers
+# below are the pure, deterministic pieces the control view leans on; every
+# Discord/DB side effect stays in the cog.
+
+# Sensible user-limit choices offered by the room control panel's slot picker.
+# 0 means "unlimited"; Discord caps a voice channel at 99 members.
+SLOT_VALUES = (0, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 50, 99)
+
+
+def slot_value_label(value):
+    """Human label for a slot value: 0 (or less) reads 'Unlimited', else the count.
+
+    Kept translation-free on purpose (the cog wraps it): garbage or negative
+    input collapses to the unlimited case so the picker never renders a broken
+    option.
+    """
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        value = 0
+    return "Unlimited" if value <= 0 else str(value)
+
+
+def blacklisted_targets(pairs):
+    """Filter ``(target, connect)`` pairs to targets explicitly denied Connect.
+
+    ``pairs`` is any iterable of ``(target, connect_value)`` where
+    ``connect_value`` is the tri-state Connect permission (``True``/``False``/
+    ``None``) read from a channel overwrite. A target is blacklisted only when
+    its Connect is *explicitly* ``False``; ``None`` (unset) and ``True`` are not
+    blacklists. Targets are returned in first-seen order, de-duplicated by
+    identity so a target never appears twice.
+    """
+    out = []
+    seen = set()
+    for target, connect in pairs:
+        if connect is False and id(target) not in seen:
+            out.append(target)
+            seen.add(id(target))
+    return out
+
+
+def claimable(owner_id, member_ids):
+    """True when a room may be claimed: no owner, or the owner has left.
+
+    ``member_ids`` is the collection of user ids currently in the voice channel.
+    A room is claimable when it has no recorded owner (``owner_id`` is ``None``)
+    or when the recorded owner is no longer present in the channel.
+    """
+    if owner_id is None:
+        return True
+    return owner_id not in set(member_ids)
