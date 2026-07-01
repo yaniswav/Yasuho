@@ -112,11 +112,12 @@ def test_gettext_alias_is_the_function():
 # ngettext (plural selection)
 # ---------------------------------------------------------------------------
 
-# These plural msgids exist in the catalogs; the fr forms are untranslated, so
-# the RETURNED text matches English but the SELECTED index follows each locale's
-# Plural-Forms rule (fr: n>1 ; en/NullTranslations: n!=1). n=0 is the tell.
+# These plural msgids exist in the catalogs; the SELECTED index follows each
+# locale's Plural-Forms rule (fr: n>1 ; en/NullTranslations: n!=1). n=0 is the tell.
 SING = "{n} category"
 PLUR = "{n} categories"
+FR_SING = "{n} categorie"
+FR_PLUR = "{n} categories"
 
 
 def test_ngettext_english_plural_rule():
@@ -130,9 +131,9 @@ def test_ngettext_english_plural_rule():
 def test_ngettext_french_plural_rule():
     # fr Plural-Forms is 'plural=(n > 1)', so 0 and 1 select the singular form.
     i18n.current_locale.set("fr")
-    assert i18n.use_current_ngettext(SING, PLUR, 0) == SING
-    assert i18n.use_current_ngettext(SING, PLUR, 1) == SING
-    assert i18n.use_current_ngettext(SING, PLUR, 2) == PLUR
+    assert i18n.use_current_ngettext(SING, PLUR, 0) == FR_SING
+    assert i18n.use_current_ngettext(SING, PLUR, 1) == FR_SING
+    assert i18n.use_current_ngettext(SING, PLUR, 2) == FR_PLUR
 
 
 # ---------------------------------------------------------------------------
