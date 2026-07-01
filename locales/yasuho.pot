@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-01 17:44+0200\n"
+"POT-Creation-Date: 2026-07-01 18:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -858,7 +858,7 @@ msgstr ""
 msgid "Turn on"
 msgstr ""
 
-#: cogs/community/usersettings.py:99 tools/views.py:22
+#: cogs/community/usersettings.py:99 cogs/config/rooms.py:361 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr ""
 
@@ -1215,76 +1215,160 @@ msgstr ""
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr ""
 
-#: cogs/config/rooms.py:29
-msgid "Set up an Auto-Room"
+#: cogs/config/rooms.py:78 cogs/config/rooms.py:227
+msgid "yes"
 msgstr ""
 
-#: cogs/config/rooms.py:32
+#: cogs/config/rooms.py:79
+msgid "y"
+msgstr ""
+
+#: cogs/config/rooms.py:111
+msgid "Remove a hub..."
+msgstr ""
+
+#: cogs/config/rooms.py:131
+msgid "Add an autoroom hub"
+msgstr ""
+
+#: cogs/config/rooms.py:135 cogs/config/rooms.py:202
+msgid "Hub label"
+msgstr ""
+
+#: cogs/config/rooms.py:141
 msgid "Category name"
 msgstr ""
 
-#: cogs/config/rooms.py:38
-msgid "Hub channel name"
+#: cogs/config/rooms.py:147
+msgid "Join-to-create channel name"
 msgstr ""
 
-#: cogs/config/rooms.py:181 cogs/config/rooms.py:223
-msgid "You have reached the maximum number of Auto-Rooms for this server."
+#: cogs/config/rooms.py:153 cogs/config/rooms.py:208
+#, python-brace-format
+msgid "Room name template ({user}, {count})"
 msgstr ""
 
-#: cogs/config/rooms.py:189 cogs/config/rooms.py:200
-msgid "Something went wrong while creating your Auto-Room."
+#: cogs/config/rooms.py:159 cogs/config/rooms.py:214
+msgid "User limit (0 = unlimited)"
 msgstr ""
 
-#: cogs/config/rooms.py:203
+#: cogs/config/rooms.py:197
+msgid "Edit autoroom hub"
+msgstr ""
+
+#: cogs/config/rooms.py:220
+msgid "Max rooms (1-50)"
+msgstr ""
+
+#: cogs/config/rooms.py:226
+msgid "Private rooms? (yes/no)"
+msgstr ""
+
+#: cogs/config/rooms.py:227
+msgid "no"
+msgstr ""
+
+#: cogs/config/rooms.py:278
+msgid "## Autoroom hubs"
+msgstr ""
+
+#: cogs/config/rooms.py:282
 msgid ""
-"Successfully created your Auto-Room. You can rename category and channel "
-"to whatever you want."
+"Join-to-create voice hubs. Members who join a hub get their own temp "
+"room, cleaned up when it empties."
 msgstr ""
 
-#: cogs/config/rooms.py:249
-msgid "No category found with that name."
+#: cogs/config/rooms.py:292
+msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr ""
 
-#: cogs/config/rooms.py:254
-msgid "Multiple categories found with that name. Please be more specific."
+#: cogs/config/rooms.py:299
+msgid "Edit"
 msgstr ""
 
-#: cogs/config/rooms.py:285
-msgid "That category is not an Auto-Room."
-msgstr ""
-
-#: cogs/config/rooms.py:291
-msgid "Something went wrong while deleting the category."
-msgstr ""
-
-#: cogs/config/rooms.py:295
-msgid "Successfully removed the Auto-Room category and its channels."
-msgstr ""
-
-#: cogs/config/rooms.py:310
-msgid "There are no autorooms set up in this server."
-msgstr ""
-
-#: cogs/config/rooms.py:314
-msgid "Auto Rooms in Server"
-msgstr ""
-
-#: cogs/config/rooms.py:321
+#: cogs/config/rooms.py:306
 #, python-brace-format
-msgid "Channel ID: {id}"
+msgid ""
+"**{label}**\n"
+"{summary}"
 msgstr ""
 
-#: cogs/config/rooms.py:322
+#: cogs/config/rooms.py:319
+msgid "Add hub"
+msgstr ""
+
+#: cogs/config/rooms.py:335
 #, python-brace-format
-msgid "Name: {name}"
+msgid ""
+"-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - "
+"{used}/{budget} channels used"
 msgstr ""
 
-#: cogs/config/rooms.py:327
-msgid "Channel ID: Unknown"
+#: cogs/config/rooms.py:395 cogs/config/rooms.py:551
+#, python-brace-format
+msgid "You already have the maximum of {max_hubs} hubs."
 msgstr ""
 
-#: cogs/config/rooms.py:328
-msgid "This channel might have been deleted."
+#: cogs/config/rooms.py:405 cogs/config/rooms.py:420
+msgid "Something went wrong opening that form."
+msgstr ""
+
+#: cogs/config/rooms.py:413 cogs/config/rooms.py:593 cogs/config/rooms.py:609
+msgid "That hub no longer exists."
+msgstr ""
+
+#: cogs/config/rooms.py:432
+msgid "Something went wrong removing that hub."
+msgstr ""
+
+#: cogs/config/rooms.py:556
+#, python-brace-format
+msgid "This server is at Discord's limit of {max} categories."
+msgstr ""
+
+#: cogs/config/rooms.py:560
+#, python-brace-format
+msgid ""
+"This server is too close to Discord's {budget}-channel limit to add "
+"another hub."
+msgstr ""
+
+#: cogs/config/rooms.py:571
+msgid "Something went wrong while creating the hub's channels."
+msgstr ""
+
+#: cogs/config/rooms.py:582
+#, python-brace-format
+msgid "Created the **{label}** hub. Members can join {channel} now."
+msgstr ""
+
+#: cogs/config/rooms.py:602
+#, python-brace-format
+msgid "Updated the **{label}** hub."
+msgstr ""
+
+#: cogs/config/rooms.py:636
+#, python-brace-format
+msgid "Removed the **{label}** hub."
+msgstr ""
+
+#: cogs/config/rooms.py:773
+msgid "There are no autoroom hubs set up in this server."
+msgstr ""
+
+#: cogs/config/rooms.py:777
+msgid "Autoroom hubs"
+msgstr ""
+
+#: cogs/config/rooms.py:781
+msgid "channel missing"
+msgstr ""
+
+#: cogs/config/rooms.py:784
+#, python-brace-format
+msgid ""
+"{location}\n"
+"{summary}"
 msgstr ""
 
 #: cogs/config/settings.py:23
@@ -3277,65 +3361,65 @@ msgstr ""
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr ""
 
-#: cogs/system/errors.py:30
+#: cogs/system/errors.py:38
 #, python-brace-format
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ""
 
-#: cogs/system/errors.py:64
+#: cogs/system/errors.py:72
 msgid "Sorry, no similar commands found"
 msgstr ""
 
-#: cogs/system/errors.py:69
+#: cogs/system/errors.py:77
 msgid "**Invalid command entered. Did you mean:**"
 msgstr ""
 
-#: cogs/system/errors.py:91
+#: cogs/system/errors.py:99
 msgid "**Seems like you're missing a required argument:**"
 msgstr ""
 
-#: cogs/system/errors.py:92 cogs/system/errors.py:103 cogs/system/errors.py:170
-#: cogs/system/errors.py:196
+#: cogs/system/errors.py:100 cogs/system/errors.py:111
+#: cogs/system/errors.py:178 cogs/system/errors.py:204
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:102
+#: cogs/system/errors.py:110
 msgid "**Seems like you gave me a bad argument:**"
 msgstr ""
 
-#: cogs/system/errors.py:114
+#: cogs/system/errors.py:122
 msgid "**Seems like you are on cooldown:**"
 msgstr ""
 
-#: cogs/system/errors.py:115
+#: cogs/system/errors.py:123
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:124
+#: cogs/system/errors.py:132
 msgid "I need more permissions!"
 msgstr ""
 
-#: cogs/system/errors.py:130
+#: cogs/system/errors.py:138
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr ""
 
-#: cogs/system/errors.py:132
+#: cogs/system/errors.py:140
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
 msgstr ""
 
-#: cogs/system/errors.py:145
+#: cogs/system/errors.py:153
 msgid "**Seems like you gave me too many arguments:**"
 msgstr ""
 
-#: cogs/system/errors.py:147 cogs/system/errors.py:159
+#: cogs/system/errors.py:155 cogs/system/errors.py:167
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`"
@@ -3343,19 +3427,19 @@ msgid ""
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:157
+#: cogs/system/errors.py:165
 msgid "**Seems like you did something wrong:**"
 msgstr ""
 
-#: cogs/system/errors.py:169
+#: cogs/system/errors.py:177
 msgid "**Seems like you are missing permissions:**"
 msgstr ""
 
-#: cogs/system/errors.py:183
+#: cogs/system/errors.py:191
 msgid "**Seems like something went wrong while executing command:**"
 msgstr ""
 
-#: cogs/system/errors.py:185
+#: cogs/system/errors.py:193
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report the bug to bot owner` "
@@ -3364,7 +3448,7 @@ msgid ""
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:195
+#: cogs/system/errors.py:203
 msgid "**Seems like I am missing permissions:**"
 msgstr ""
 
