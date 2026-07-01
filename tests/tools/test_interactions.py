@@ -23,7 +23,6 @@ import pytest
 
 from tools import interactions
 
-
 # ---------------------------------------------------------------------------
 # Helpers: build a real discord.HTTPException so the ``except`` clauses that
 # name it actually match (a bare Exception would not be caught).

@@ -17,7 +17,6 @@ deterministic rather than depending on config contents.
 """
 
 import pytest
-
 from cryptography.fernet import Fernet
 
 from tools import crypto

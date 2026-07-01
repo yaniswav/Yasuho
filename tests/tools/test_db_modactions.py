@@ -14,7 +14,6 @@ import pytest
 
 from tools import db, modactions
 
-
 # ---------------------------------------------------------------------------
 # small local fakes for the discord side of case_embed
 # ---------------------------------------------------------------------------

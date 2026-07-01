@@ -8,10 +8,11 @@ These cover the two module-level building blocks that have no live I/O:
   take (a ``Playlist``, a list of tracks, or a single track) into one usable
   track, returning ``None`` for the missing / errored / empty cases.
 
-Fakes are built with ``types.SimpleNamespace``; the ``Playlist`` branch uses the
-real (or stubbed) ``sonolink.models.Playlist`` so the ``isinstance`` check in the
-helper is genuinely exercised. ``sonolink`` is stubbed by the repo-root conftest
-on the 3.10 dev box and imported for real on 3.12+ CI.
+Fakes are built with ``types.SimpleNamespace``; the ``Playlist`` branch swaps
+``sonolink.models.Playlist`` for a small local class via monkeypatch (music.py
+resolves that name at call time, and the real Playlist exposes ``tracks`` as a
+read-only property, so it cannot be hand-built). ``sonolink`` is stubbed by the
+repo-root conftest on the 3.10 dev box and imported for real on 3.12+ CI.
 
 A small guard also asserts the module's interactive UI classes never reintroduce
 the ``_refresh`` name collision that caused a production crash: discord.py calls
@@ -26,7 +27,6 @@ import types
 import discord
 
 from cogs.music import music
-from sonolink.models import Playlist
 
 
 def _result(*, is_error=False, is_empty=False, result=None):
@@ -116,17 +116,33 @@ def test_first_track_result_payload_none():
     assert music._first_track(_result(result=None)) is None
 
 
-def test_first_track_playlist_returns_first():
+class _FakePlaylist:
+    """Stand-in for sonolink.models.Playlist with a settable ``tracks`` list.
+
+    The real Playlist exposes ``tracks`` as a read-only property, so the tests
+    swap the type in via monkeypatch (music.py resolves sonolink.models.Playlist
+    at call time) rather than constructing the real one.
+    """
+
+    def __init__(self, tracks):
+        self.tracks = tracks
+
+
+def test_first_track_playlist_returns_first(monkeypatch):
+    import sonolink.models as sonolink_models
+
+    monkeypatch.setattr(sonolink_models, "Playlist", _FakePlaylist)
     first = _track("first")
     second = _track("second")
-    playlist = Playlist.__new__(Playlist)
-    playlist.tracks = [first, second]
+    playlist = _FakePlaylist([first, second])
     assert music._first_track(_result(result=playlist)) is first
 
 
-def test_first_track_empty_playlist_returns_none():
-    playlist = Playlist.__new__(Playlist)
-    playlist.tracks = []
+def test_first_track_empty_playlist_returns_none(monkeypatch):
+    import sonolink.models as sonolink_models
+
+    monkeypatch.setattr(sonolink_models, "Playlist", _FakePlaylist)
+    playlist = _FakePlaylist([])
     assert music._first_track(_result(result=playlist)) is None
 
 

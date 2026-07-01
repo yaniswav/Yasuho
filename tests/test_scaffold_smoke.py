@@ -6,6 +6,7 @@ Kept intentionally small - real coverage lands in later phases.
 """
 
 import core  # noqa: F401  (import-time config reads + sonolink)
+
 from cogs.music import music  # noqa: F401  (def-time sonolink annotations)
 from tools import embed_creator, i18n, interactions  # noqa: F401
 

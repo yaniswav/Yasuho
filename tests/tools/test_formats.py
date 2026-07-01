@@ -8,10 +8,7 @@ fails loudly rather than silently drifting.
 
 import datetime
 
-import pytest
-
 from tools import formats
-
 
 # ---------------------------------------------------------------------------
 # plural.__format__

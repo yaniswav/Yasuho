@@ -16,9 +16,7 @@ import types
 
 import pytest
 
-from tools import i18n
-from tools import settings
-
+from tools import i18n, settings
 
 # A msgid that is translated in locales/fr/LC_MESSAGES/yasuho.po and whose
 # French rendering happens to be pure ASCII.
