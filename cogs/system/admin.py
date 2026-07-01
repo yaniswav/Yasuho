@@ -19,7 +19,7 @@ from tools.views import AuthorView
 log = logging.getLogger(__name__)
 
 # Repo root: this file is cogs/system/admin.py, so three levels up.
-REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 class UpdateSelect(discord.ui.Select):
