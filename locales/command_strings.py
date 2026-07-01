@@ -10,7 +10,7 @@ _COMMAND_STRINGS = [
     N_("A song to search for and save (defaults to the current track)."),
     N_("Add a member to the live-alert watchlist (channel is an optional override)."),
     N_("Add a user to the bot-wide blacklist."),
-    N_("Answer to a yes/no quesiton."),
+    N_("Answer to a yes/no question."),
     N_("Assign a Prefix to Yasuho for use in your guild."),
     N_("Assign an auto role to your guild."),
     N_("Auto-role of your guild."),

@@ -240,7 +240,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     async def eight_ball(self, ctx, yesnoquestion=None):
-        """Answer to a yes/no quesiton."""
+        """Answer to a yes/no question."""
         if yesnoquestion is None:
             await ctx.send(_("Ask me a question..."))
 
