@@ -23,10 +23,9 @@ import typing
 
 import discord
 
-from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -554,11 +553,7 @@ def _prefill_default(value):
     return str(value)
 
 
-class _CompletionModal(discord.ui.Modal):
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
-
+class _CompletionModal(LocaleModal):
     def __init__(self, parent):
         super().__init__(
             title=_clip(

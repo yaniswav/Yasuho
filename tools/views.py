@@ -83,3 +83,20 @@ class AuthorView(discord.ui.View):
                 await self.message.edit(view=self)
             except discord.HTTPException:
                 pass
+
+
+class LocaleModal(discord.ui.Modal):
+    """A Modal whose submit callback runs in the interaction's resolved locale.
+
+    Modal submit callbacks run in their own task, where ``Yasuho.get_context``
+    never set the i18n locale; resolving it in ``interaction_check`` makes the
+    modal's ``_()`` calls localize for the submitter. Subclass this instead of
+    ``discord.ui.Modal`` for any modal with user-facing (translatable) text.
+
+    Subclasses that need their own ``interaction_check`` should call
+    ``super().interaction_check(interaction)`` to keep the locale resolution.
+    """
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True

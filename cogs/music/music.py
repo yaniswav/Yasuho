@@ -10,11 +10,11 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from tools import i18n
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
+from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def _first_track(
     return data
 
 
-class AddSongModal(discord.ui.Modal, title="Add a song"):
+class AddSongModal(LocaleModal, title="Add a song"):
     """Modal that queues a track from a search query or a full URL.
 
     A modal is used instead of listening for a follow-up chat message so the
@@ -94,10 +94,6 @@ class AddSongModal(discord.ui.Modal, title="Add a song"):
         super().__init__()
         self.cog = cog
         self.controller = controller
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:

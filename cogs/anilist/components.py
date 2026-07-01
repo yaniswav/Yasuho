@@ -15,9 +15,8 @@ from .helpers import (
     _step_season,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
-from tools import i18n
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -224,7 +223,7 @@ class EditSelectView(AuthorView):
         self.add_item(EditSelect(cog, candidates, author_id, field, value))
 
 
-class EditEntryModal(discord.ui.Modal):
+class EditEntryModal(LocaleModal):
     """Edit status (a dropdown) + progress/score (fields), pre-filled from the entry."""
 
     def __init__(self, cog, media, token=None, entry=None):
@@ -286,10 +285,6 @@ class EditEntryModal(discord.ui.Modal):
             default=score if score and score != "0" else None,
         )
         self.add_item(discord.ui.Label(text=_("Score"), component=self.score_input))
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         variables = {"mediaId": self.media.get("id")}
@@ -1129,7 +1124,7 @@ class MediaView(AuthorView):
                 pass
 
 
-class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
+class LoginModal(LocaleModal, title="Enter your AniList code"):
     """Collect the OAuth PIN and finish linking without ever echoing it."""
 
     code = discord.ui.TextInput(
@@ -1145,10 +1140,6 @@ class LoginModal(discord.ui.Modal, title="Enter your AniList code"):
         self.cog = cog
         self.author_id = author_id
         self.login_view = login_view
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         # Defer first: the token exchange is a network round-trip that can exceed

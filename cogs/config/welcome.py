@@ -4,10 +4,10 @@ import random
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, i18n, settings, welcome_card
+from tools import embed_creator, settings, welcome_card
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def _merge_defaults(blob):
 # ----------------------------------------------------------------------
 # GIF pool modal (welcome-specific; the embed modals come from embed_creator)
 # ----------------------------------------------------------------------
-class AddGifModal(discord.ui.Modal):
+class AddGifModal(LocaleModal):
     """Add a single GIF/image URL to the random pool."""
 
     def __init__(self, manage_view):
@@ -79,10 +79,6 @@ class AddGifModal(discord.ui.Modal):
             placeholder="https://...",
         )
         self.add_item(self.url_field)
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         try:

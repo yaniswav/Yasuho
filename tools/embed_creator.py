@@ -31,9 +31,9 @@ from typing import Callable, Optional, Protocol
 
 import discord
 
-from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -406,16 +406,12 @@ class EmbedEditorHost(Protocol):
 # ----------------------------------------------------------------------
 # Modals (one per editable embed part), public and independently reusable
 # ----------------------------------------------------------------------
-class _EmbedModal(discord.ui.Modal):
+class _EmbedModal(LocaleModal):
     """Base modal: mutates host.embed_config then fires host.on_embed_changed."""
 
     def __init__(self, host, title):
         super().__init__(title=title)
         self.host = host
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     @property
     def embed_config(self) -> dict:

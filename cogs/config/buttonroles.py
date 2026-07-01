@@ -26,7 +26,7 @@ from tools import embed_creator, i18n
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +261,7 @@ class _RemoveButtonSelect(discord.ui.Select):
             await self.view._error(interaction)
 
 
-class AddButtonModal(discord.ui.Modal):
+class AddButtonModal(LocaleModal):
     """Customise a new role button: label, emoji and ButtonStyle."""
 
     def __init__(self, builder, role):
@@ -290,10 +290,6 @@ class AddButtonModal(discord.ui.Modal):
         self.add_item(self.label_field)
         self.add_item(self.emoji_field)
         self.add_item(self.style_field)
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         try:
@@ -329,7 +325,7 @@ class AddButtonModal(discord.ui.Modal):
             await self.builder._error(interaction)
 
 
-class AttachModal(discord.ui.Modal):
+class AttachModal(LocaleModal):
     """Collect a message ID or jump link to attach the role buttons to."""
 
     def __init__(self, builder):
@@ -342,10 +338,6 @@ class AttachModal(discord.ui.Modal):
             placeholder="123456789012345678 or https://discord.com/channels/...",
         )
         self.add_item(self.ref_field)
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         try:

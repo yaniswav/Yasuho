@@ -5,11 +5,11 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, i18n, settings
+from tools import embed_creator, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ def _merge_defaults(blob):
 # ----------------------------------------------------------------------
 # Text-style modal (the cog's own concern; embed parts come from embed_creator)
 # ----------------------------------------------------------------------
-class MessageModal(discord.ui.Modal):
+class MessageModal(LocaleModal):
     """Edit the classic-text alert message (used when style == 'text')."""
 
     def __init__(self, panel):
@@ -129,10 +129,6 @@ class MessageModal(discord.ui.Modal):
             placeholder=PLACEHOLDER_HINT,
         )
         self.add_item(self.field)
-
-    async def interaction_check(self, interaction):
-        await i18n.apply_interaction_locale(interaction)
-        return True
 
     async def on_submit(self, interaction):
         try:
