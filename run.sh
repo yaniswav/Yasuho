@@ -19,6 +19,32 @@ else
     echo "[run] No .venv found - using $PY (run ./setup.sh to create one)."
 fi
 
+# --- Out-of-repo backup of the gitignored secret config -----------------------
+# `git clean -fdx` and stray rm's can wipe config/bot.ini + config/tokens.ini
+# (they are gitignored, so NOT recoverable from git). Keep a copy OUTSIDE the
+# repo and restore it automatically if the working copy goes missing.
+CONFIG_BACKUP="${YASUHO_CONFIG_BACKUP:-$HOME/.yasuho-config-backup}"
+
+restore_config() {
+    for f in bot.ini tokens.ini; do
+        if [ ! -f "config/$f" ] && [ -f "$CONFIG_BACKUP/$f" ]; then
+            mkdir -p config
+            cp -f "$CONFIG_BACKUP/$f" "config/$f"
+            echo "[run] Restored config/$f from $CONFIG_BACKUP."
+        fi
+    done
+}
+
+backup_config() {
+    # Only snapshot a filled-in config (never a placeholder template) so a
+    # broken config can never overwrite a good backup.
+    [ -f config/bot.ini ] || return 0
+    grep -q 'YOUR_BOT_TOKEN' config/bot.ini && return 0
+    mkdir -p "$CONFIG_BACKUP" && chmod 700 "$CONFIG_BACKUP" 2>/dev/null
+    cp -f config/bot.ini "$CONFIG_BACKUP/bot.ini" 2>/dev/null
+    [ -f config/tokens.ini ] && cp -f config/tokens.ini "$CONFIG_BACKUP/tokens.ini" 2>/dev/null
+}
+
 self_update() {
     [ "$AUTO_UPDATE" = "1" ] || return 0
     command -v git >/dev/null 2>&1 || return 0
@@ -67,6 +93,10 @@ self_update() {
         echo "[run] Fast-forward failed - starting with the local version."
     fi
 }
+
+# Recover the secrets if a clean/rm wiped them, then snapshot a good config.
+restore_config
+backup_config
 
 while true; do
     self_update

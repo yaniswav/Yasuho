@@ -41,8 +41,17 @@ info "Installing dependencies (this can take a minute)..."
 "$VENV_PY" -m pip install -q -U pip || warn "pip self-upgrade failed, continuing."
 "$VENV_PY" -m pip install -q -r requirements.txt || errx "Dependency install failed."
 
-# ---- 2. config/*.ini from templates --------------------------------------
+# ---- 2. config/*.ini: restore from backup, else scaffold from templates --
+CONFIG_BACKUP="${YASUHO_CONFIG_BACKUP:-$HOME/.yasuho-config-backup}"
 mkdir -p config
+# Prefer restoring the real secrets from the out-of-repo backup (this survives a
+# `git clean -fdx`); only fall back to the templates when there is no backup.
+for f in bot.ini tokens.ini; do
+    if [ ! -f "config/$f" ] && [ -f "$CONFIG_BACKUP/$f" ]; then
+        cp "$CONFIG_BACKUP/$f" "config/$f"
+        info "Restored config/$f from the backup at $CONFIG_BACKUP."
+    fi
+done
 for tpl in config/*.template.ini; do
     [ -e "$tpl" ] || continue
     real="${tpl%.template.ini}.ini"
@@ -77,7 +86,21 @@ elif command -v psql >/dev/null 2>&1; then
             warn "Could not create the role (need sudo/postgres access?). Set the DSN in config/bot.ini manually."
         fi
     else
-        info "Role '${DB_USER}' already exists - keeping the existing DSN/password."
+        warn "Role '${DB_USER}' exists but the configured DSN cannot authenticate (lost password after a config wipe?)."
+        if [ -t 0 ]; then
+            read -rp "Reset the '${DB_USER}' password now and rewrite the DSN? (your data is kept) [y/N] " ans
+            if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
+                DB_PASS="$("$VENV_PY" -c 'import secrets; print(secrets.token_urlsafe(24))')"
+                if sudo -u postgres psql -c "ALTER ROLE ${DB_USER} WITH PASSWORD '${DB_PASS}';" >/dev/null; then
+                    sed -i "s|^[[:space:]]*PostgreSQL[[:space:]]*=.*|PostgreSQL = postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}|" config/bot.ini
+                    info "Reset the password and rewrote the DSN. The database and its data are untouched."
+                else
+                    warn "Could not reset the password (need sudo/postgres access). Do it manually with ALTER ROLE."
+                fi
+            fi
+        else
+            warn "Re-run setup.sh in a terminal to reset the password, or set the DSN in config/bot.ini manually."
+        fi
     fi
     if [ "$(pg "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'")" != "1" ]; then
         info "Creating database '${DB_NAME}'..."
@@ -101,6 +124,14 @@ if [ -f config/bot.ini ] && grep -qE '^[[:space:]]*Token[[:space:]]*=[[:space:]]
     else
         warn "Set your Discord bot token in config/bot.ini -> [Bot_Token] Token."
     fi
+fi
+
+# ---- 6. Back up the filled-in secrets outside the repo -------------------
+if [ -f config/bot.ini ] && ! grep -q 'YOUR_BOT_TOKEN' config/bot.ini; then
+    mkdir -p "$CONFIG_BACKUP" && chmod 700 "$CONFIG_BACKUP" 2>/dev/null
+    cp -f config/bot.ini "$CONFIG_BACKUP/bot.ini"
+    [ -f config/tokens.ini ] && cp -f config/tokens.ini "$CONFIG_BACKUP/tokens.ini"
+    info "Backed up config to $CONFIG_BACKUP - it survives 'git clean -fdx' and rm."
 fi
 
 echo
