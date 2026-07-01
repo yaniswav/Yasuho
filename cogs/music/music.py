@@ -384,6 +384,18 @@ class MusicController(discord.ui.LayoutView):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow members currently in the player's voice channel."""
+        # TEMPORARY diagnostic for a restore-only "interaction fails silently,
+        # zero server logs" report: if this line never prints for a broken
+        # click, discord.py's ViewStore never matched the message/custom_id (a
+        # dead click never reaches our code at all); if it DOES print, the bug
+        # is further down and this log narrows exactly where. Remove once
+        # resolved.
+        log.info(
+            "Controller interaction_check reached: guild=%s message=%s user=%s",
+            interaction.guild_id,
+            interaction.message.id if interaction.message else None,
+            interaction.user.id,
+        )
         channel = getattr(self.player, "channel", None)
         if channel is None:
             await interaction.response.send_message(
