@@ -162,42 +162,29 @@ class Yasuho(commands.Bot):
                 lavalink_pw = config_loader.get("Lavalink", "password")
             except Exception:
                 lavalink_pw = "youshallnotpass"
-            # Resume the previous Lavalink session when we have one, so a quick
-            # restart can rebind to still-playing players (music/music.py). A
-            # stale/invalid session must NEVER block startup, so any failure of
-            # the resuming path falls back to a plain fresh node - never worse
-            # than before this feature.
-            prev_session = await music_state.load_session(
-                self.db_pool, music_state.MUSIC_NODE_ID
-            )
             try:
-                try:
-                    self.sl_client.create_node(
-                        uri=lavalink_uri,
-                        password=lavalink_pw,
-                        id=music_state.MUSIC_NODE_ID,
-                        resume_timeout=120,
-                        session=prev_session,
-                    )
-                    await self.sl_client.start()
-                except Exception as resume_error:
-                    if prev_session is None:
-                        raise
-                    log.warning(
-                        "Lavalink resume failed (%s); starting a fresh session.",
-                        resume_error,
-                    )
-                    self.sl_client.clear_nodes()
-                    self.sl_client.create_node(
-                        uri=lavalink_uri,
-                        password=lavalink_pw,
-                        id=music_state.MUSIC_NODE_ID,
-                        resume_timeout=120,
-                    )
-                    await self.sl_client.start()
-                # Persist the (possibly new) session id for the next restart.
+                # NOTE: sonolink's create_node(session=...) takes an HTTP client
+                # session (aiohttp/curl_cffi) to reuse, NOT a Lavalink resume
+                # session id - there is no public way to seed a previous Lavalink
+                # session across a process restart (Node always starts with no
+                # resume session; it is only set from a live "ready" event). A
+                # previous attempt to pass our saved session id there broke the
+                # websocket connection outright. Cross-restart gap-free resume is
+                # therefore not attempted here; music/music.py's cold-restore
+                # path (music_state table) is what survives a restart.
+                self.sl_client.create_node(
+                    uri=lavalink_uri,
+                    password=lavalink_pw,
+                    id=music_state.MUSIC_NODE_ID,
+                    resume_timeout=120,
+                )
+                await self.sl_client.start()
+                # Persist the session id for diagnostics only (nothing reads it
+                # back yet). node.session_id raises RuntimeError, not
+                # AttributeError, until connected - check is_connected first so
+                # a slow/failed connect can't crash startup.
                 node = self.sl_client.get_node(music_state.MUSIC_NODE_ID)
-                if node is not None and getattr(node, "session_id", None):
+                if node is not None and node.is_connected:
                     await music_state.save_session(
                         self.db_pool, music_state.MUSIC_NODE_ID, node.session_id
                     )

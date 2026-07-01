@@ -921,12 +921,14 @@ class Music(commands.Cog):
         now = datetime.now(timezone.utc)
 
         # Which guilds is Lavalink still playing (its session was resumed)? Those
-        # can be rebound gap-free; everything else gets a cold restore. Also back
-        # up the current session id so the NEXT restart can resume in turn.
+        # can be rebound gap-free; everything else gets a cold restore. Also
+        # record the current session id for diagnostics (nothing reads it back -
+        # see core.py). node.session_id raises RuntimeError, not AttributeError,
+        # until connected, so check is_connected first.
         node = self.bot.sl_client.get_best_node()
         live_guilds = set()
         if node is not None:
-            if getattr(node, "session_id", None):
+            if node.is_connected:
                 await music_state.save_session(
                     self.bot.db_pool, music_state.MUSIC_NODE_ID, node.session_id
                 )
