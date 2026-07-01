@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-01 19:21+0200\n"
+"POT-Creation-Date: 2026-07-01 19:35+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -858,7 +858,8 @@ msgstr ""
 msgid "Turn on"
 msgstr ""
 
-#: cogs/community/usersettings.py:99 cogs/config/rooms.py:952 tools/views.py:22
+#: cogs/community/usersettings.py:99 cogs/config/rooms.py:1043
+#: tools/views.py:22
 msgid "This panel isn't for you."
 msgstr ""
 
@@ -1215,399 +1216,409 @@ msgstr ""
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr ""
 
-#: cogs/config/rooms.py:82 cogs/config/rooms.py:231
-msgid "yes"
+#: cogs/config/rooms.py:93 cogs/config/rooms.py:421
+msgid "User limit..."
 msgstr ""
 
-#: cogs/config/rooms.py:83
-msgid "y"
-msgstr ""
-
-#: cogs/config/rooms.py:115
+#: cogs/config/rooms.py:128
 msgid "Remove a hub..."
 msgstr ""
 
-#: cogs/config/rooms.py:135
+#: cogs/config/rooms.py:148
 msgid "Add an autoroom hub"
 msgstr ""
 
-#: cogs/config/rooms.py:139 cogs/config/rooms.py:206
+#: cogs/config/rooms.py:152 cogs/config/rooms.py:219
 msgid "Hub label"
 msgstr ""
 
-#: cogs/config/rooms.py:145 cogs/config/rooms.py:273
+#: cogs/config/rooms.py:158 cogs/config/rooms.py:287
 msgid "Category name"
 msgstr ""
 
-#: cogs/config/rooms.py:151 cogs/config/rooms.py:279
+#: cogs/config/rooms.py:164 cogs/config/rooms.py:293
 msgid "Join-to-create channel name"
 msgstr ""
 
-#: cogs/config/rooms.py:157 cogs/config/rooms.py:212
+#: cogs/config/rooms.py:170 cogs/config/rooms.py:225
 #, python-brace-format
 msgid "Room name template ({user}, {count})"
 msgstr ""
 
-#: cogs/config/rooms.py:163 cogs/config/rooms.py:218
+#: cogs/config/rooms.py:185 cogs/config/rooms.py:249
 msgid "User limit (0 = unlimited)"
 msgstr ""
 
-#: cogs/config/rooms.py:201
+#: cogs/config/rooms.py:214
 msgid "Edit autoroom hub"
 msgstr ""
 
-#: cogs/config/rooms.py:224
+#: cogs/config/rooms.py:232
 msgid "Max rooms (1-50)"
 msgstr ""
 
-#: cogs/config/rooms.py:230
-msgid "Private rooms? (yes/no)"
+#: cogs/config/rooms.py:240
+msgid "Private"
 msgstr ""
 
-#: cogs/config/rooms.py:231
-msgid "no"
+#: cogs/config/rooms.py:243
+msgid "Public"
 msgstr ""
 
-#: cogs/config/rooms.py:268
+#: cogs/config/rooms.py:254
+msgid "Room privacy"
+msgstr ""
+
+#: cogs/config/rooms.py:282
 msgid "Rename hub channels"
 msgstr ""
 
-#: cogs/config/rooms.py:315
+#: cogs/config/rooms.py:329
 msgid "Settings"
 msgstr ""
 
-#: cogs/config/rooms.py:323
+#: cogs/config/rooms.py:337
 msgid "Rename channels"
 msgstr ""
 
-#: cogs/config/rooms.py:398
-msgid "Change user limit"
-msgstr ""
-
-#: cogs/config/rooms.py:403 cogs/config/rooms.py:518
-msgid "Rename room"
-msgstr ""
-
-#: cogs/config/rooms.py:406
-msgid "Lock / Unlock"
-msgstr ""
-
-#: cogs/config/rooms.py:409
-msgid "Hide / Unhide"
-msgstr ""
-
-#: cogs/config/rooms.py:412
-msgid "Kick + blacklist"
-msgstr ""
-
-#: cogs/config/rooms.py:415
-msgid "Remove from blacklist"
-msgstr ""
-
-#: cogs/config/rooms.py:420
-msgid "Transfer lead"
-msgstr ""
-
-#: cogs/config/rooms.py:423
-msgid "Bump to top"
-msgstr ""
-
-#: cogs/config/rooms.py:425
-msgid "Claim"
-msgstr ""
-
-#: cogs/config/rooms.py:428
-msgid "Choose an action..."
-msgstr ""
-
-#: cogs/config/rooms.py:448
-msgid "User limit..."
-msgstr ""
-
-#: cogs/config/rooms.py:459 cogs/config/rooms.py:531 cogs/config/rooms.py:574
-#: cogs/config/rooms.py:802
+#: cogs/config/rooms.py:432 cogs/config/rooms.py:504 cogs/config/rooms.py:672
+#: cogs/config/rooms.py:890
 msgid "This room no longer exists."
 msgstr ""
 
-#: cogs/config/rooms.py:466
+#: cogs/config/rooms.py:439
 msgid "Could not change the user limit."
 msgstr ""
 
-#: cogs/config/rooms.py:470
+#: cogs/config/rooms.py:443
 msgid "Updated the user limit."
 msgstr ""
 
-#: cogs/config/rooms.py:488
+#: cogs/config/rooms.py:461
 msgid "Select a member to remove..."
 msgstr ""
 
-#: cogs/config/rooms.py:489
+#: cogs/config/rooms.py:462
 msgid "Select a member to unblacklist..."
 msgstr ""
 
-#: cogs/config/rooms.py:490
+#: cogs/config/rooms.py:463
 msgid "Select the new owner..."
 msgstr ""
 
-#: cogs/config/rooms.py:493
+#: cogs/config/rooms.py:466
 msgid "Select a member..."
 msgstr ""
 
-#: cogs/config/rooms.py:521
+#: cogs/config/rooms.py:491
+msgid "Rename room"
+msgstr ""
+
+#: cogs/config/rooms.py:494
 msgid "New room name"
 msgstr ""
 
-#: cogs/config/rooms.py:535
+#: cogs/config/rooms.py:508
 msgid "Give the room a name."
 msgstr ""
 
-#: cogs/config/rooms.py:541
+#: cogs/config/rooms.py:514
 msgid "Could not rename the room."
 msgstr ""
 
-#: cogs/config/rooms.py:545
+#: cogs/config/rooms.py:518
 #, python-brace-format
 msgid "Renamed the room to **{name}**."
 msgstr ""
 
-#: cogs/config/rooms.py:593 cogs/config/rooms.py:1158
+#: cogs/config/rooms.py:575
+msgid "## Room controls"
+msgstr ""
+
+#: cogs/config/rooms.py:579
+#, python-brace-format
+msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
+msgstr ""
+
+#: cogs/config/rooms.py:583
+msgid "No owner right now - anyone in the room can Claim it below."
+msgstr ""
+
+#: cogs/config/rooms.py:593
+msgid "Slots"
+msgstr ""
+
+#: cogs/config/rooms.py:599
+msgid "Rename"
+msgstr ""
+
+#: cogs/config/rooms.py:605
+msgid "Unlock"
+msgstr ""
+
+#: cogs/config/rooms.py:605
+msgid "Lock"
+msgstr ""
+
+#: cogs/config/rooms.py:611
+msgid "Unhide"
+msgstr ""
+
+#: cogs/config/rooms.py:611
+msgid "Hide"
+msgstr ""
+
+#: cogs/config/rooms.py:617
+msgid "Kick + blacklist"
+msgstr ""
+
+#: cogs/config/rooms.py:625
+msgid "Remove from blacklist"
+msgstr ""
+
+#: cogs/config/rooms.py:631
+msgid "Transfer lead"
+msgstr ""
+
+#: cogs/config/rooms.py:637
+msgid "Bump to top"
+msgstr ""
+
+#: cogs/config/rooms.py:643
+msgid "Claim"
+msgstr ""
+
+#: cogs/config/rooms.py:654
+msgid "-# Only the room owner can use these controls (except Claim)."
+msgstr ""
+
+#: cogs/config/rooms.py:689
 msgid "Only the room owner can use these controls."
 msgstr ""
 
-#: cogs/config/rooms.py:620 cogs/config/rooms.py:837
+#: cogs/config/rooms.py:707 cogs/config/rooms.py:925
 msgid "Unknown action."
 msgstr ""
 
-#: cogs/config/rooms.py:627
+#: cogs/config/rooms.py:714
 msgid "Something went wrong with that action."
 msgstr ""
 
-#: cogs/config/rooms.py:639
+#: cogs/config/rooms.py:724
 msgid "Choose a user limit for the room:"
 msgstr ""
 
-#: cogs/config/rooms.py:664
+#: cogs/config/rooms.py:749
 msgid "Could not change the lock."
 msgstr ""
 
-#: cogs/config/rooms.py:669
+#: cogs/config/rooms.py:754
 msgid "Unlocked the room - anyone can join."
 msgstr ""
 
-#: cogs/config/rooms.py:671
+#: cogs/config/rooms.py:756
 msgid "Locked the room - no one new can join."
 msgstr ""
 
-#: cogs/config/rooms.py:687
+#: cogs/config/rooms.py:773
 msgid "Could not change visibility."
 msgstr ""
 
-#: cogs/config/rooms.py:692
+#: cogs/config/rooms.py:778
 msgid "The room is visible again."
 msgstr ""
 
-#: cogs/config/rooms.py:694
+#: cogs/config/rooms.py:780
 msgid "Hid the room from everyone else."
 msgstr ""
 
-#: cogs/config/rooms.py:709
+#: cogs/config/rooms.py:796
 msgid "There's no one else in the room to remove."
 msgstr ""
 
-#: cogs/config/rooms.py:713
+#: cogs/config/rooms.py:800
 msgid "Pick who to kick and blacklist:"
 msgstr ""
 
-#: cogs/config/rooms.py:730
+#: cogs/config/rooms.py:817
 msgid "No one is blacklisted here."
 msgstr ""
 
-#: cogs/config/rooms.py:733
+#: cogs/config/rooms.py:820
 msgid "Pick who to remove from the blacklist:"
 msgstr ""
 
-#: cogs/config/rooms.py:752
+#: cogs/config/rooms.py:839
 msgid "There's no one else here to hand the room to."
 msgstr ""
 
-#: cogs/config/rooms.py:756
+#: cogs/config/rooms.py:843
 msgid "Pick the new room owner:"
 msgstr ""
 
-#: cogs/config/rooms.py:770
+#: cogs/config/rooms.py:857
 msgid "Could not bump the room."
 msgstr ""
 
-#: cogs/config/rooms.py:773
+#: cogs/config/rooms.py:860
 msgid "Bumped the room to the top."
 msgstr ""
 
-#: cogs/config/rooms.py:784
+#: cogs/config/rooms.py:871
 msgid "The room already has an owner who's still here."
 msgstr ""
 
-#: cogs/config/rooms.py:789
+#: cogs/config/rooms.py:876
 msgid "Join the room first to claim it."
 msgstr ""
 
-#: cogs/config/rooms.py:795
+#: cogs/config/rooms.py:882
 msgid "You're now the owner of this room."
 msgstr ""
 
-#: cogs/config/rooms.py:808
+#: cogs/config/rooms.py:896
 msgid "That member is no longer here."
 msgstr ""
 
-#: cogs/config/rooms.py:820
+#: cogs/config/rooms.py:908
 #, python-brace-format
 msgid "Removed and blacklisted {name}."
 msgstr ""
 
-#: cogs/config/rooms.py:827
+#: cogs/config/rooms.py:915
 #, python-brace-format
 msgid "Removed {name} from the blacklist."
 msgstr ""
 
-#: cogs/config/rooms.py:833
+#: cogs/config/rooms.py:921
 #, python-brace-format
 msgid "Transferred room ownership to {name}."
 msgstr ""
 
-#: cogs/config/rooms.py:840
+#: cogs/config/rooms.py:928
 msgid "Could not complete that action."
 msgstr ""
 
-#: cogs/config/rooms.py:869
+#: cogs/config/rooms.py:960
 msgid "## Autoroom hubs"
 msgstr ""
 
-#: cogs/config/rooms.py:873
+#: cogs/config/rooms.py:964
 msgid ""
 "Join-to-create voice hubs. Members who join a hub get their own temp "
 "room, cleaned up when it empties."
 msgstr ""
 
-#: cogs/config/rooms.py:883
+#: cogs/config/rooms.py:974
 msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr ""
 
-#: cogs/config/rooms.py:890
+#: cogs/config/rooms.py:981
 msgid "Edit"
 msgstr ""
 
-#: cogs/config/rooms.py:897
+#: cogs/config/rooms.py:988
 #, python-brace-format
 msgid ""
 "**{label}**\n"
 "{summary}"
 msgstr ""
 
-#: cogs/config/rooms.py:910
+#: cogs/config/rooms.py:1001
 msgid "Add hub"
 msgstr ""
 
-#: cogs/config/rooms.py:926
+#: cogs/config/rooms.py:1017
 #, python-brace-format
 msgid ""
 "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - "
 "{used}/{budget} channels used"
 msgstr ""
 
-#: cogs/config/rooms.py:986 cogs/config/rooms.py:1202
+#: cogs/config/rooms.py:1077 cogs/config/rooms.py:1288
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr ""
 
-#: cogs/config/rooms.py:996 cogs/config/rooms.py:1017
+#: cogs/config/rooms.py:1087 cogs/config/rooms.py:1108
 msgid "Something went wrong opening that form."
 msgstr ""
 
-#: cogs/config/rooms.py:1004 cogs/config/rooms.py:1244
-#: cogs/config/rooms.py:1260 cogs/config/rooms.py:1302
+#: cogs/config/rooms.py:1095 cogs/config/rooms.py:1330
+#: cogs/config/rooms.py:1346 cogs/config/rooms.py:1388
 msgid "That hub no longer exists."
 msgstr ""
 
-#: cogs/config/rooms.py:1008
+#: cogs/config/rooms.py:1099
 #, python-brace-format
 msgid "Manage the **{label}** hub:"
 msgstr ""
 
-#: cogs/config/rooms.py:1029
+#: cogs/config/rooms.py:1120
 msgid "Something went wrong removing that hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1150
-msgid "Room controls"
-msgstr ""
-
-#: cogs/config/rooms.py:1152
-#, python-brace-format
-msgid ""
-"Manage your own voice room. {owner} is the owner - use the menu below to "
-"change the limit, rename, lock, hide, kick or hand it over."
-msgstr ""
-
-#: cogs/config/rooms.py:1207
+#: cogs/config/rooms.py:1293
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr ""
 
-#: cogs/config/rooms.py:1211
+#: cogs/config/rooms.py:1297
 #, python-brace-format
 msgid ""
 "This server is too close to Discord's {budget}-channel limit to add "
 "another hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1222
+#: cogs/config/rooms.py:1308
 msgid "Something went wrong while creating the hub's channels."
 msgstr ""
 
-#: cogs/config/rooms.py:1233
+#: cogs/config/rooms.py:1319
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr ""
 
-#: cogs/config/rooms.py:1253
+#: cogs/config/rooms.py:1339
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1288
+#: cogs/config/rooms.py:1374
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1316
+#: cogs/config/rooms.py:1402
 msgid "category"
 msgstr ""
 
-#: cogs/config/rooms.py:1322
+#: cogs/config/rooms.py:1408
 msgid "join-to-create channel"
 msgstr ""
 
-#: cogs/config/rooms.py:1327
+#: cogs/config/rooms.py:1413
 msgid "Nothing was renamed - those channels are missing."
 msgstr ""
 
-#: cogs/config/rooms.py:1328
+#: cogs/config/rooms.py:1414
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr ""
 
-#: cogs/config/rooms.py:1470
+#: cogs/config/rooms.py:1556
 msgid "There are no autoroom hubs set up in this server."
 msgstr ""
 
-#: cogs/config/rooms.py:1474
+#: cogs/config/rooms.py:1560
 msgid "Autoroom hubs"
 msgstr ""
 
-#: cogs/config/rooms.py:1478
+#: cogs/config/rooms.py:1564
 msgid "channel missing"
 msgstr ""
 
-#: cogs/config/rooms.py:1481
+#: cogs/config/rooms.py:1567
 #, python-brace-format
 msgid ""
 "{location}\n"
