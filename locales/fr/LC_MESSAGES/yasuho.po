@@ -4641,3 +4641,52 @@ msgstr "Cet éditeur de profil n'est pas pour vous."
 msgid "This isn't your game, start your own with the command!"
 msgstr "Ce n'est pas votre partie, lancez la vôtre avec la commande !"
 
+#. AniList slash command descriptions (were missing from the extraction).
+msgid "Look up an anime on AniList."
+msgstr "Cherche un anime sur AniList."
+
+msgid "Look up a manga on AniList."
+msgstr "Cherche un manga sur AniList."
+
+msgid "Look up a character on AniList."
+msgstr "Cherche un personnage sur AniList."
+
+msgid "Look up an animation studio on AniList."
+msgstr "Cherche un studio d'animation sur AniList."
+
+msgid "Browse the anime trending on AniList right now."
+msgstr "Parcourt les animes tendance du moment sur AniList."
+
+msgid "Browse the most popular anime on AniList."
+msgstr "Parcourt les animes les plus populaires sur AniList."
+
+msgid "Browse anime from a season (defaults to the current season)."
+msgstr "Parcourt les animes d'une saison (par defaut la saison actuelle)."
+
+msgid "Link your AniList account and edit your lists."
+msgstr "Lie ton compte AniList et modifie tes listes."
+
+msgid "Start linking your AniList account."
+msgstr "Commence la liaison de ton compte AniList."
+
+msgid "Finish linking with the PIN code AniList gave you."
+msgstr "Termine la liaison avec le code PIN qu'AniList t'a donne."
+
+msgid "Unlink your AniList account."
+msgstr "Delie ton compte AniList."
+
+msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
+msgstr "Mise a jour guidee : selectionne le titre en cliquant, puis edite un formulaire prerempli."
+
+msgid "Set the status of a title on your list."
+msgstr "Definit le statut d'un titre sur ta liste."
+
+msgid "Score a title on your AniList list."
+msgstr "Note un titre sur ta liste AniList."
+
+msgid "Show AniList stats for a user (defaults to your linked account)."
+msgstr "Affiche les stats AniList d'un utilisateur (par defaut ton compte lie)."
+
+msgid "Show your anime/manga list, filtered by status (defaults to CURRENT)."
+msgstr "Affiche ta liste anime/manga, filtree par statut (par defaut CURRENT)."
+
