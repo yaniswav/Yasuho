@@ -289,3 +289,23 @@ def claimable(owner_id, member_ids):
     if owner_id is None:
         return True
     return owner_id not in set(member_ids)
+
+
+def owner_from_overwrites(pairs):
+    """Return the first target explicitly granted ``manage_channels``, else None.
+
+    ``pairs`` is any iterable of ``(target, manage_channels_value)`` where the
+    manage value is the tri-state permission overwrite (``True``/``False``/
+    ``None``). Room ownership is marked on the Discord channel by an explicit
+    ``manage_channels`` grant, so the owner is the first target whose value is
+    exactly ``True``; ``None`` (unset) and ``False`` do not own. Targets are
+    considered in iteration order and the first owner found is returned, or
+    ``None`` when no target is granted the permission.
+
+    This is the channel-backed source of truth for ownership that lets a control
+    panel recover its owner after a bot restart wipes the in-memory cache.
+    """
+    for target, manage in pairs:
+        if manage is True:
+            return target
+    return None

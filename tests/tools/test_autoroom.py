@@ -389,3 +389,40 @@ def test_claimable_owner_present():
 def test_claimable_owner_absent():
     assert autoroom.claimable(7, [8, 9]) is True
     assert autoroom.claimable(7, []) is True
+
+
+# ---------------------------------------------------------------------------
+# owner_from_overwrites
+# ---------------------------------------------------------------------------
+
+
+def test_owner_from_overwrites_picks_manage_grant():
+    # the target explicitly granted manage_channels owns the room
+    pairs = [(10, None), (20, True), (30, False)]
+    assert autoroom.owner_from_overwrites(pairs) == 20
+
+
+def test_owner_from_overwrites_none_when_no_grant():
+    pairs = [(10, None), (20, False), (30, None)]
+    assert autoroom.owner_from_overwrites(pairs) is None
+
+
+def test_owner_from_overwrites_empty():
+    assert autoroom.owner_from_overwrites([]) is None
+
+
+def test_owner_from_overwrites_returns_first_grant_in_order():
+    # if two targets somehow carry the grant, the first in order wins
+    pairs = [(10, True), (20, True)]
+    assert autoroom.owner_from_overwrites(pairs) == 10
+
+
+def test_owner_from_overwrites_only_explicit_true_owns():
+    # a truthy-but-not-True value (e.g. 1) must not be mistaken for a grant
+    pairs = [(10, 1), (20, "yes")]
+    assert autoroom.owner_from_overwrites(pairs) is None
+
+
+def test_owner_from_overwrites_false_and_none_ignored():
+    pairs = [(10, False), (20, None), (30, True)]
+    assert autoroom.owner_from_overwrites(pairs) == 30

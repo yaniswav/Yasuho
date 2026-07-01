@@ -40,6 +40,7 @@ from tools.autoroom import (
     claimable,
     default_hub,
     normalize_hubs,
+    owner_from_overwrites,
     render_room_name,
     slot_value_label,
     summarise_hub,
@@ -384,10 +385,12 @@ class _HubManageView(discord.ui.View):
 #
 # One control message is posted in each temp room's own text chat. Its live
 # state (limit, name, lock, hide, blacklist) is pushed onto the Discord channel
-# and dies with it; only room ownership is held in memory on the cog
-# (``_room_owners``). The view has ``timeout=None`` so it stays alive for the
-# life of the channel and is gated to the current owner - except Claim, which
-# anyone in the channel may use once the owner has left.
+# and dies with it; ownership is marked by the owner's manage_channels overwrite
+# on the channel (``_room_owners`` is only a fast cache of that). The view has
+# ``timeout=None`` so it stays alive for the life of the channel and is gated to
+# the current owner - except Claim, which anyone in the channel may use once the
+# owner has left. After a restart the on_ready re-adoption re-seeds ownership
+# from the channel overwrites and re-posts a fresh panel.
 
 _ACTION_LIMIT = "limit"
 _ACTION_RENAME = "rename"
@@ -573,7 +576,7 @@ class RoomControlView(discord.ui.LayoutView):
         self.clear_items()
         container = discord.ui.Container(accent_colour=discord.Colour.blurple())
         container.add_item(discord.ui.TextDisplay(_("## Room controls")))
-        owner_id = self.cog._room_owners.get(self.channel_id)
+        owner_id = self.cog._owner_of(self.channel_id)
         if owner_id is not None:
             header = _(
                 "Owner: <@{owner_id}> - use the buttons below to manage the room."
@@ -675,7 +678,10 @@ class RoomControlView(discord.ui.LayoutView):
         # Callbacks run in their own task with no locale set; resolve it here so
         # this check AND every action localise for the clicker.
         await i18n.apply_interaction_locale(interaction)
-        owner_id = self.cog._room_owners.get(self.channel_id)
+        # Cache is a fast path; the channel's manage_channels overwrite is the
+        # source of truth, so this still resolves the owner right after a restart
+        # wiped the in-memory map.
+        owner_id = self.cog._owner_of(self.channel_id)
         if interaction.user.id == owner_id:
             return True
         # Claim is the one action anyone may reach (validated in its handler);
@@ -864,7 +870,7 @@ class RoomControlView(discord.ui.LayoutView):
         if channel is None:
             await self._gone(interaction)
             return
-        owner_id = self.cog._room_owners.get(self.channel_id)
+        owner_id = self.cog._owner_of(self.channel_id)
         member_ids = [member.id for member in channel.members]
         if not claimable(owner_id, member_ids):
             await interactions.reply(
@@ -876,8 +882,8 @@ class RoomControlView(discord.ui.LayoutView):
                 interaction, _("Join the room first to claim it.")
             )
             return
-        self.cog._room_owners[self.channel_id] = interaction.user.id
-        await self.cog._grant_room_owner(channel, interaction.user)
+        # Move the channel-backed ownership marker to the claimer.
+        await self.cog._transfer_room(channel, interaction.user)
         await interactions.reply(
             interaction, _("You're now the owner of this room.")
         )
@@ -916,8 +922,8 @@ class RoomControlView(discord.ui.LayoutView):
                     name=member.display_name
                 )
             elif action == _ACTION_TRANSFER:
-                self.cog._room_owners[self.channel_id] = member.id
-                await self.cog._grant_room_owner(channel, member)
+                # Move the channel-backed ownership marker to the new owner.
+                await self.cog._transfer_room(channel, member)
                 content = _("Transferred room ownership to {name}.").format(
                     name=member.display_name
                 )
@@ -1136,14 +1142,19 @@ class TemporaryRooms(commands.Cog):
         self._cooldowns = {}
         self._locks = defaultdict(asyncio.Lock)  # per-guild creation lock
         self._cleanup_tasks = set()  # outstanding empty-room reapers
-        # {channel_id: owner_user_id} - the ONLY per-room state kept in memory.
-        # Everything else (limit, name, lock, hide, blacklist) is pushed onto
-        # the channel and dies with it, so a restart loses only ownership (and
-        # Claim recovers that). Dropped when the reaper deletes the room.
+        # {channel_id: owner_user_id} - a fast CACHE of room ownership. The
+        # source of truth is the owner's manage_channels overwrite ON the
+        # channel, so a restart re-seeds this map from the channels themselves
+        # (see the on_ready re-adoption). Everything else (limit, name, lock,
+        # hide, blacklist) is likewise channel-backed and survives a restart.
+        # Dropped when the reaper deletes the room.
         self._room_owners = {}
         # {channel_id: RoomControlView} so the timeout=None panels can be
         # stopped when their room is reaped.
         self._room_views = {}
+        # Guard so the once-per-process startup re-adoption (which survives the
+        # restart) runs a single time even though on_ready can fire repeatedly.
+        self._adopted = False
 
     # ------------------------------------------------------------------
     # Load / migration
@@ -1224,7 +1235,12 @@ class TemporaryRooms(commands.Cog):
             view.stop()
 
     async def _grant_room_owner(self, channel, member):
-        """Grant ``member`` owner-level perms on a temp room (best-effort)."""
+        """Grant ``member`` owner-level perms on a temp room (best-effort).
+
+        The ``manage_channels`` grant is doubly meaningful: it hands the member
+        real control of their own room AND marks ownership on the channel itself,
+        which is the source of truth that lets ownership survive a restart.
+        """
         try:
             overwrite = channel.overwrites_for(member)
             overwrite.manage_channels = True
@@ -1233,6 +1249,66 @@ class TemporaryRooms(commands.Cog):
             await channel.set_permissions(member, overwrite=overwrite)
         except discord.HTTPException:
             log.debug("Could not grant room owner perms", exc_info=True)
+
+    async def _revoke_room_owner(self, channel, member):
+        """Strip the ownership marker from ``member`` on a temp room (best-effort).
+
+        Clears the ``manage_channels``/``move_members`` grant so the channel no
+        longer reports ``member`` as its owner; ``connect`` is left untouched.
+        """
+        try:
+            overwrite = channel.overwrites_for(member)
+            overwrite.manage_channels = None
+            overwrite.move_members = None
+            await channel.set_permissions(member, overwrite=overwrite)
+        except discord.HTTPException:
+            log.debug("Could not revoke room owner perms", exc_info=True)
+
+    def _owner_from_channel(self, channel):
+        """Read the owner id off a room's channel overwrites, or ``None``.
+
+        The channel-backed source of truth: whichever member holds an explicit
+        ``manage_channels`` grant owns the room. Roles are ignored - only member
+        overwrites can mark ownership.
+        """
+        pairs = [
+            (target.id, overwrite.manage_channels)
+            for target, overwrite in channel.overwrites.items()
+            if isinstance(target, discord.Member)
+        ]
+        return owner_from_overwrites(pairs)
+
+    def _owner_of(self, channel_id):
+        """Resolve a room's owner: cache first, then the channel overwrite.
+
+        The in-memory map is only a cache; the channel's ``manage_channels``
+        overwrite is authoritative. When the cache misses (e.g. right after a
+        restart) we read the channel and re-seed the cache so later lookups are
+        cheap. Returns ``None`` when the room has no owner.
+        """
+        owner_id = self._room_owners.get(channel_id)
+        if owner_id is not None:
+            return owner_id
+        channel = self.bot.get_channel(channel_id)
+        if isinstance(channel, discord.VoiceChannel):
+            owner_id = self._owner_from_channel(channel)
+            if owner_id is not None:
+                self._room_owners[channel_id] = owner_id
+        return owner_id
+
+    async def _transfer_room(self, channel, member):
+        """Move room ownership to ``member`` on both the channel and the cache.
+
+        Revokes the previous owner's ``manage_channels`` marker (so exactly one
+        member owns the channel), grants it to ``member`` and updates the cache.
+        """
+        prev_id = self._owner_of(channel.id)
+        if prev_id is not None and prev_id != member.id:
+            prev = channel.guild.get_member(prev_id)
+            if prev is not None:
+                await self._revoke_room_owner(channel, prev)
+        self._room_owners[channel.id] = member.id
+        await self._grant_room_owner(channel, member)
 
     async def _post_room_controls(self, channel, owner):
         """Post the per-room voicemaster control panel in the room's chat.
@@ -1475,9 +1551,11 @@ class TemporaryRooms(commands.Cog):
 
             new_channel = await guild.create_voice_channel(name, **kwargs)
             active.add(new_channel.id)
-            # Ownership is the only per-room state we hold in memory; it is
-            # dropped again when the reaper deletes the room.
+            # Cache the owner in memory (fast path) AND stamp a manage_channels
+            # overwrite on the channel itself: that overwrite is the source of
+            # truth, so ownership survives a restart that wipes this map.
             self._room_owners[new_channel.id] = member.id
+            await self._grant_room_owner(new_channel, member)
             try:
                 await member.move_to(new_channel)
             except discord.HTTPException:
@@ -1515,6 +1593,112 @@ class TemporaryRooms(commands.Cog):
             except Exception:
                 log.exception("Failed to clean up temp room %s", channel_id)
                 return
+
+    # ------------------------------------------------------------------
+    # Startup re-adoption (survive a restart)
+    # ------------------------------------------------------------------
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Re-adopt temp rooms left behind by a restart, exactly once.
+
+        This is the guaranteed survive-restart mechanism: it needs no persistent
+        views and no per-room DB state. ``on_ready`` can fire repeatedly on
+        reconnects, so a flag keeps the sweep to a single run. It must never
+        crash startup, hence the broad guard.
+        """
+        if self._adopted:
+            return
+        self._adopted = True
+        try:
+            await self._adopt_existing_rooms()
+        except Exception:
+            log.exception("Autoroom startup re-adoption failed")
+
+    async def _adopt_existing_rooms(self):
+        """Sweep every configured hub's category for orphaned temp rooms."""
+        for guild_id, hub_map in list(self._hub_index.items()):
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                continue
+            for hub in list(hub_map.values()):
+                try:
+                    await self._adopt_hub_rooms(guild, hub)
+                except Exception:
+                    log.exception(
+                        "Failed to re-adopt rooms for hub %s in guild %s",
+                        hub.get("id"),
+                        guild_id,
+                    )
+
+    async def _adopt_hub_rooms(self, guild, hub):
+        """Re-adopt (or reap) the temp rooms sitting in one hub's category.
+
+        Every voice channel in the hub's category other than the trigger channel
+        is treated as a temp room: empty ones are reaped, live ones are re-armed.
+        """
+        category_id = hub.get("category_id")
+        category = guild.get_channel(category_id) if category_id else None
+        if not isinstance(category, discord.CategoryChannel):
+            return
+        hub_channel_id = hub.get("hub_channel_id")
+        for channel in list(category.voice_channels):
+            if channel.id == hub_channel_id:
+                continue  # the join-to-create trigger, never a temp room
+            try:
+                await self._adopt_room(channel, guild, hub)
+            except Exception:
+                log.exception("Failed to re-adopt temp room %s", channel.id)
+
+    async def _adopt_room(self, channel, guild, hub):
+        """Reap an empty leftover room, or re-arm a live one after a restart.
+
+        Live rooms: re-seed ownership from the channel's ``manage_channels``
+        overwrite (may be absent -> left unowned so the panel offers Claim),
+        purge the stale inert control panel, post a fresh one, and re-arm the
+        empty-room reaper. All Discord calls are best-effort.
+        """
+        if len(channel.members) == 0:
+            try:
+                await channel.delete()
+            except discord.HTTPException:
+                log.debug("Could not reap empty leftover room", exc_info=True)
+            self._forget_room(channel.id)
+            return
+
+        owner_id = self._owner_from_channel(channel)
+        if owner_id is not None:
+            self._room_owners[channel.id] = owner_id
+        self._active[(guild.id, hub["id"])].add(channel.id)
+
+        await self._purge_stale_panels(channel)
+        await self._post_room_controls(channel, None)
+
+        task = asyncio.create_task(
+            self._cleanup_room(channel.id, guild.id, hub["id"])
+        )
+        self._cleanup_tasks.add(task)
+        task.add_done_callback(self._cleanup_tasks.discard)
+
+    async def _purge_stale_panels(self, channel):
+        """Delete the bot's own recent messages in a room's voice text chat.
+
+        After a restart the old control panel is inert (its view is dead), so we
+        clear the bot's recent messages before posting a fresh panel. Deleted one
+        by one (not bulk) so it works regardless of message age and needs no
+        manage_messages permission for the bot's own messages. Best-effort.
+        """
+        me = self.bot.user
+        if me is None:
+            return
+        try:
+            await channel.purge(
+                limit=10,
+                check=lambda message: message.author.id == me.id,
+                bulk=False,
+            )
+        except (discord.HTTPException, AttributeError):
+            log.debug("Could not purge stale room panels", exc_info=True)
 
     # ------------------------------------------------------------------
     # Commands
