@@ -61,8 +61,9 @@ class Player(sonolink.Player):
         self.idle_since: typing.Optional[float] = None
         # On a cold restore the cog posts the controller explicitly (track_start
         # may never fire for a paused restore); this holds the restored track's
-        # encoded id so the ONE matching track_start skips its own post and the
-        # two never race into a duplicate. Consumed on first match.
+        # source identifier so every matching track_start skips its own post and
+        # the two never race into a duplicate. Cleared when a different track
+        # starts.
         self._suppress_controller_track: typing.Optional[str] = None
 
 
@@ -739,12 +740,32 @@ class Music(commands.Cog):
             existing = self._controllers.get(guild_id)
             if dedupe and existing is not None and existing.message is not None:
                 shown = existing.player.current or existing._track
-                if getattr(shown, "encoded", None) == getattr(track, "encoded", ""):
+                # Match by source identifier, not encoded: Lavalink may
+                # re-serialise the track in its events, so the encoded base64
+                # of a re-fired track_start is not guaranteed to equal the one
+                # we decoded from the DB even for the same track.
+                shown_id = getattr(shown, "identifier", None)
+                if shown_id is not None and shown_id == getattr(
+                    track, "identifier", ""
+                ):
                     # Same track already has a live controller - rebind it to
                     # this (possibly new) player instance and keep the message.
                     existing.player = player
                     player.controller = existing
+                    log.info(
+                        "Controller kept (dedupe) for guild %s: %s",
+                        guild_id,
+                        shown_id,
+                    )
                     return
+                # TEMPORARY: shows why the dedupe did not match. Remove once
+                # the restart double-post is confirmed fixed.
+                log.info(
+                    "Controller dedupe MISS for guild %s: shown=%r vs event=%r",
+                    guild_id,
+                    shown_id,
+                    getattr(track, "identifier", None),
+                )
 
             for old in {player.controller, existing}:
                 if old is None:
@@ -838,15 +859,16 @@ class Music(commands.Cog):
         )
         await self._snapshot(player)
         # A cold restore posts the controller itself and arms this token with the
-        # restored track's encoded id. Suppress EVERY track_start for that track,
-        # not just the first: a voice reconnect during restore (Lavalink WS 4006)
-        # re-fires track_start, so consuming on the first match would let the
-        # re-fire double-post. Clear the token only once a DIFFERENT track starts,
-        # which resumes normal posting. Match by encoded id (sonolink's own track
-        # identity) so an unrelated track is never suppressed.
+        # restored track's source identifier. Suppress EVERY track_start for that
+        # track, not just the first: a voice reconnect during restore (Lavalink
+        # WS 4006) re-fires track_start, so consuming on the first match would
+        # let the re-fire double-post. Clear the token only once a DIFFERENT
+        # track starts, which resumes normal posting. Match by identifier, NOT
+        # encoded: Lavalink may re-serialise the track in its events, so the
+        # encoded base64 is not stable across the DB blob and the event.
         suppress = getattr(player, "_suppress_controller_track", None)
         if suppress is not None:
-            if getattr(event.track, "encoded", None) == suppress:
+            if getattr(event.track, "identifier", None) == suppress:
                 log.info(
                     "track_start controller suppressed for restored track (guild=%s)",
                     player.channel.guild.id if player.channel else None,
@@ -1165,7 +1187,7 @@ class Music(commands.Cog):
         # race into a duplicate. We must post explicitly because track_start may
         # not fire at all for a paused restore, which used to leave no working
         # controller.
-        player._suppress_controller_track = getattr(current, "encoded", None)
+        player._suppress_controller_track = getattr(current, "identifier", None)
         await player.play(
             current,
             start=position,
