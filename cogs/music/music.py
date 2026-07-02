@@ -1013,21 +1013,28 @@ class Music(commands.Cog):
             await self._clear(guild_id)
             return
 
-        home = (
+        home_text = (
             guild.get_channel(row["home_channel_id"])
             if row["home_channel_id"]
             else None
         )
-        home = home if isinstance(home, discord.abc.Messageable) else None
+        home_text = home_text if isinstance(home_text, discord.abc.Messageable) else None
+        # Fall back to the voice channel's own text chat when the saved home text
+        # channel is missing / unresolved / was never persisted. A VoiceChannel
+        # is Messageable, so the controller still lands somewhere sensible; a
+        # None home used to skip BOTH the stale-delete and the controller post,
+        # leaving the guild with only the dead pre-restart controller.
+        home = home_text if home_text is not None else channel
         dj = guild.get_member(row["dj_id"]) if row["dj_id"] else None
         loop_mode = _int_to_loop(row["loop_mode"])
 
         # Drop the now-dead controller from before the restart, so its buttons
-        # (bound to the old process) do not linger unresponsive.
+        # (bound to the old process) do not linger unresponsive. Only the saved
+        # text channel can hold it (not the voice fallback), so key off home_text.
         stale_id = row["controller_message_id"]
-        if stale_id and home is not None:
+        if stale_id and home_text is not None:
             try:
-                await home.get_partial_message(stale_id).delete()
+                await home_text.get_partial_message(stale_id).delete()
             except (discord.HTTPException, AttributeError):
                 pass
 
@@ -1097,10 +1104,11 @@ class Music(commands.Cog):
         if player.controller is None:
             await self._send_controller(player)
         log.info(
-            "Cold-restored music in guild %s at %dms (home=%s, controller=%s)",
+            "Cold-restored music in guild %s at %dms (home_id=%s, home=%s, controller=%s)",
             guild_id,
             position,
-            "set" if player.home is not None else "none",
+            row["home_channel_id"],
+            "text" if home_text is not None else "voice-fallback",
             "ok" if player.controller is not None else "missing",
         )
 
