@@ -50,3 +50,15 @@ def test_none_position_defaults_to_zero():
         None, _ts(0), _ts(3), paused=True
     )
     assert pos == 0
+
+
+async def test_save_controller_message_id_updates_only_that_column(fake_pool):
+    # Persisting the fresh controller id must be a targeted UPDATE keyed by guild,
+    # so the next restart's stale-delete targets the actual last controller.
+    await music_state.save_controller_message_id(fake_pool, 111, 222)
+    assert len(fake_pool.calls) == 1
+    kind, query, args = fake_pool.calls[0]
+    assert kind == "execute"
+    assert "UPDATE music_state" in query
+    assert "controller_message_id" in query
+    assert args == (111, 222)

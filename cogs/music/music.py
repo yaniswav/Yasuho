@@ -729,6 +729,14 @@ class Music(commands.Cog):
             return
         view.message = message
         player.controller = view
+        # Persist this controller's id right away so the next restart's stale
+        # delete targets THIS message, not whatever the last full snapshot
+        # captured (which lags a track behind and left the previous controller
+        # undeleted after a quick restart).
+        if message.guild is not None:
+            await music_state.save_controller_message_id(
+                self.bot.db_pool, message.guild.id, message.id
+            )
 
     # ------------------------------------------------------------------
     # Restart persistence (snapshot live players, restore them on startup)

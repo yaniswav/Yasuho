@@ -138,6 +138,25 @@ async def load_all_states(pool):
         return []
 
 
+async def save_controller_message_id(pool, guild_id, message_id):
+    """Update just the persisted controller message id for a guild (best-effort).
+
+    Called right after a fresh controller is posted so the id is current for the
+    next restart's stale-controller delete, instead of lagging a track behind
+    whatever the last full snapshot captured (which left the previous controller
+    undeleted after a quick restart). A no-op if the guild has no state row yet;
+    the next full snapshot creates it.
+    """
+    try:
+        await pool.execute(
+            "UPDATE music_state SET controller_message_id = $2 WHERE guild_id = $1",
+            guild_id,
+            message_id,
+        )
+    except Exception:
+        log.exception("Failed to persist controller message id for guild %s", guild_id)
+
+
 async def clear_state(pool, guild_id):
     """Drop a guild's persisted player state (best-effort)."""
     try:
