@@ -797,14 +797,21 @@ class Music(commands.Cog):
         )
         await self._snapshot(player)
         # A cold restore posts the controller itself and arms this token with the
-        # restored track's id; skip the one matching track_start so the two do
-        # not race into a duplicate. Consume it so a later track (or a loop
-        # repeat) still posts normally. Match by encoded id so an unrelated
-        # track is never suppressed.
+        # restored track's encoded id. Suppress EVERY track_start for that track,
+        # not just the first: a voice reconnect during restore (Lavalink WS 4006)
+        # re-fires track_start, so consuming on the first match would let the
+        # re-fire double-post. Clear the token only once a DIFFERENT track starts,
+        # which resumes normal posting. Match by encoded id (sonolink's own track
+        # identity) so an unrelated track is never suppressed.
         suppress = getattr(player, "_suppress_controller_track", None)
-        if suppress is not None and getattr(event.track, "encoded", None) == suppress:
+        if suppress is not None:
+            if getattr(event.track, "encoded", None) == suppress:
+                log.info(
+                    "track_start controller suppressed for restored track (guild=%s)",
+                    player.channel.guild.id if player.channel else None,
+                )
+                return
             player._suppress_controller_track = None
-            return
         if getattr(player, "home", None) is None:
             return
         # Pass the event's track so the controller renders even while play()'s
