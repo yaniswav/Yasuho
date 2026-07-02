@@ -88,6 +88,9 @@ def _install_sonolink_stub() -> None:
     class TrackExceptionEvent:
         pass
 
+    class WebSocketClosedEvent:
+        pass
+
     class TrackSourceType:
         YOUTUBE = "youtube"
 
@@ -103,6 +106,7 @@ def _install_sonolink_stub() -> None:
     models.Playlist = Playlist
     gateway.TrackStartEvent = TrackStartEvent
     gateway.TrackExceptionEvent = TrackExceptionEvent
+    gateway.WebSocketClosedEvent = WebSocketClosedEvent
     rest.enums = enums
     enums.TrackSourceType = TrackSourceType
 

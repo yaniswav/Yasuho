@@ -932,6 +932,40 @@ class Music(commands.Cog):
                 log.exception("Failed to notify channel of track exception")
 
     @commands.Cog.listener()
+    async def on_sonolink_websocket_closed(
+        self, player: Player, event: sonolink.gateway.WebSocketClosedEvent
+    ) -> None:
+        """Self-heal remote voice closes that sonolink leaves dead.
+
+        sonolink force-disconnects on 4014/4022 and re-negotiates closes it
+        initiated itself, but a REMOTE 4006 (voice session invalidated) or 4009
+        (session timeout) is only logged - the player then sits in the channel
+        with no audio until someone manually reconnects. Re-running the voice
+        handshake negotiates a fresh session; Lavalink keeps the player's track
+        and position, so playback resumes where it broke.
+        """
+        if getattr(event, "code", None) not in (4006, 4009):
+            return
+        if not getattr(event, "by_remote", False):
+            return
+        if player.channel is None:
+            return
+        guild_id = player.channel.guild.id
+        try:
+            await player.connect(timeout=10.0, reconnect=True)
+            log.info(
+                "Re-negotiated voice session after remote close %s in guild %s",
+                event.code,
+                guild_id,
+            )
+        except Exception:
+            log.exception(
+                "Failed to recover from voice close %s in guild %s",
+                event.code,
+                guild_id,
+            )
+
+    @commands.Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,

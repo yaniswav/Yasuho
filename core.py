@@ -172,11 +172,17 @@ class Yasuho(commands.Bot):
                 # websocket connection outright. Cross-restart gap-free resume is
                 # therefore not attempted here; music/music.py's cold-restore
                 # path (music_state table) is what survives a restart.
+                # resume_timeout=0: since resume is never used (see NOTE above),
+                # a positive timeout only keeps the DEAD process's session and
+                # its zombie players alive server-side after a restart - they
+                # hold the guild's stale voice session and race the restored
+                # player, showing up as "voice WS closed, 4006 Session is no
+                # longer valid" churn right after every restore.
                 self.sl_client.create_node(
                     uri=lavalink_uri,
                     password=lavalink_pw,
                     id=music_state.MUSIC_NODE_ID,
-                    resume_timeout=120,
+                    resume_timeout=0,
                 )
                 await self.sl_client.start()
                 # Persist the session id for diagnostics only (nothing reads it
