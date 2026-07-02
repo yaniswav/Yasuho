@@ -698,6 +698,8 @@ class Music(commands.Cog):
         self,
         player: Player,
         track: typing.Optional[sonolink.models.Playable] = None,
+        *,
+        dedupe: bool = False,
     ) -> None:
         """Send a fresh now-playing controller in the player's home channel.
 
@@ -705,6 +707,12 @@ class Music(commands.Cog):
         controller render during the brief window before sonolink sets
         player.current (its REST update lands after Lavalink's websocket event) -
         the cold-restore race that otherwise posts no controller.
+
+        ``dedupe`` is set by event-driven posters (track_start): if a controller
+        for the SAME track is already up, keep it instead of delete+repost, so a
+        reconnect re-fire does not visibly flicker the panel. User-driven
+        reposts (/play, /nowplaying) leave it False and always get a fresh
+        message at the bottom of the channel.
         """
         if player.home is None:
             return
@@ -728,7 +736,17 @@ class Music(commands.Cog):
         # different Player instance), then post exactly one.
         lock = self._controller_locks.setdefault(guild_id, asyncio.Lock())
         async with lock:
-            for old in {player.controller, self._controllers.get(guild_id)}:
+            existing = self._controllers.get(guild_id)
+            if dedupe and existing is not None and existing.message is not None:
+                shown = existing.player.current or existing._track
+                if getattr(shown, "encoded", None) == getattr(track, "encoded", ""):
+                    # Same track already has a live controller - rebind it to
+                    # this (possibly new) player instance and keep the message.
+                    existing.player = player
+                    player.controller = existing
+                    return
+
+            for old in {player.controller, existing}:
                 if old is None:
                     continue
                 old.stop()
@@ -839,7 +857,7 @@ class Music(commands.Cog):
             return
         # Pass the event's track so the controller renders even while play()'s
         # REST update is still in flight and player.current is not set yet.
-        await self._send_controller(player, event.track)
+        await self._send_controller(player, event.track, dedupe=True)
 
     @commands.Cog.listener()
     async def on_sonolink_track_exception(
