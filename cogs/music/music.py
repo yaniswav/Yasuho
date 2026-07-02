@@ -59,6 +59,11 @@ class Player(sonolink.Player):
         # Monotonic timestamp of when this player first became idle, or None
         # while it is active. Maintained by the cog's idle-timeout loop.
         self.idle_since: typing.Optional[float] = None
+        # On a cold restore the cog posts the controller explicitly (track_start
+        # may never fire for a paused restore); this holds the restored track's
+        # encoded id so the ONE matching track_start skips its own post and the
+        # two never race into a duplicate. Consumed on first match.
+        self._suppress_controller_track: typing.Optional[str] = None
 
 
 def format_duration(track: sonolink.models.Playable) -> str:
@@ -783,6 +788,15 @@ class Music(commands.Cog):
             player.channel.guild.id if player.channel else None,
         )
         await self._snapshot(player)
+        # A cold restore posts the controller itself and arms this token with the
+        # restored track's id; skip the one matching track_start so the two do
+        # not race into a duplicate. Consume it so a later track (or a loop
+        # repeat) still posts normally. Match by encoded id so an unrelated
+        # track is never suppressed.
+        suppress = getattr(player, "_suppress_controller_track", None)
+        if suppress is not None and getattr(event.track, "encoded", None) == suppress:
+            player._suppress_controller_track = None
+            return
         if getattr(player, "home", None) is None:
             return
         # Pass the event's track so the controller renders even while play()'s
@@ -1089,20 +1103,21 @@ class Music(commands.Cog):
             paused=row["paused"],
             length_ms=getattr(current, "length", None),
         )
+        # Post the controller ourselves after play() returns (below), and tell
+        # this track's one track_start to skip its own post, so the two never
+        # race into a duplicate. We must post explicitly because track_start may
+        # not fire at all for a paused restore, which used to leave no working
+        # controller.
+        player._suppress_controller_track = getattr(current, "encoded", None)
         await player.play(
             current,
             start=position,
             paused=bool(row["paused"]),
             volume=int(row["volume"] or 100),
         )
-        # Guarantee a fresh, working controller. track_start posts one when it
-        # fires (during play()'s REST window), but it may not fire at all - e.g.
-        # a track restored paused, or a missed/late event - which left users
-        # with only the dead pre-restart controller and no working one. play()
-        # has returned so player.current is set; only post if track_start has
-        # not already done so, to avoid a double.
-        if player.controller is None:
-            await self._send_controller(player)
+        # player.current is set now that play() has returned, so this renders and
+        # posts a working controller regardless of whether track_start fired.
+        await self._send_controller(player)
         log.info(
             "Cold-restored music in guild %s at %dms (home_id=%s, home=%s, controller=%s)",
             guild_id,
