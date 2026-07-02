@@ -752,20 +752,12 @@ class Music(commands.Cog):
                     # this (possibly new) player instance and keep the message.
                     existing.player = player
                     player.controller = existing
-                    log.info(
+                    log.debug(
                         "Controller kept (dedupe) for guild %s: %s",
                         guild_id,
                         shown_id,
                     )
                     return
-                # TEMPORARY: shows why the dedupe did not match. Remove once
-                # the restart double-post is confirmed fixed.
-                log.info(
-                    "Controller dedupe MISS for guild %s: shown=%r vs event=%r",
-                    guild_id,
-                    shown_id,
-                    getattr(track, "identifier", None),
-                )
 
             for old in {player.controller, existing}:
                 if old is None:
@@ -869,7 +861,7 @@ class Music(commands.Cog):
         suppress = getattr(player, "_suppress_controller_track", None)
         if suppress is not None:
             if getattr(event.track, "identifier", None) == suppress:
-                log.info(
+                log.debug(
                     "track_start controller suppressed for restored track (guild=%s)",
                     player.channel.guild.id if player.channel else None,
                 )
