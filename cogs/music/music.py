@@ -1062,8 +1062,10 @@ class Music(commands.Cog):
                 )
                 return
 
-        # --- Cold restore: rejoin and replay at the extrapolated position; the
-        # resulting track_start re-posts a fresh controller.
+        # --- Cold restore: rejoin and replay at the extrapolated position. The
+        # track_start event posts a fresh controller, but a track restored in a
+        # paused state (or a missed/late event) emits no track_start, so we also
+        # post one explicitly below.
         player = guild.voice_client
         if not isinstance(player, Player):
             player = await channel.connect(cls=Player)
@@ -1086,7 +1088,21 @@ class Music(commands.Cog):
             paused=bool(row["paused"]),
             volume=int(row["volume"] or 100),
         )
-        log.info("Cold-restored music in guild %s at %dms", guild_id, position)
+        # Guarantee a fresh, working controller. track_start posts one when it
+        # fires (during play()'s REST window), but it may not fire at all - e.g.
+        # a track restored paused, or a missed/late event - which left users
+        # with only the dead pre-restart controller and no working one. play()
+        # has returned so player.current is set; only post if track_start has
+        # not already done so, to avoid a double.
+        if player.controller is None:
+            await self._send_controller(player)
+        log.info(
+            "Cold-restored music in guild %s at %dms (home=%s, controller=%s)",
+            guild_id,
+            position,
+            "set" if player.home is not None else "none",
+            "ok" if player.controller is not None else "missing",
+        )
 
     # ------------------------------------------------------------------
     # Commands
