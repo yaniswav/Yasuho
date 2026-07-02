@@ -615,6 +615,12 @@ class Music(commands.Cog):
         self.bot = bot
         # Guards the one-shot startup restore (on_ready can fire repeatedly).
         self._restored = False
+        # One live controller per guild, tracked at cog level so concurrent
+        # posters (explicit restore post, track_start, reconnect re-fires) can
+        # never leave two controllers standing - even across different Player
+        # object instances. The lock serialises delete+post per guild.
+        self._controllers: typing.Dict[int, MusicController] = {}
+        self._controller_locks: typing.Dict[int, asyncio.Lock] = {}
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -707,35 +713,51 @@ class Music(commands.Cog):
         if track is None:
             return
 
-        old = player.controller
-        if old is not None:
-            old.stop()
-            if old.message is not None:
-                try:
-                    await old.message.delete()
-                except discord.HTTPException:
-                    log.exception("Failed to delete the previous controller message")
-
-        # A LayoutView carries its own content; it must be sent with no embed.
-        # Components V2 TextDisplay resolves mentions (unlike an embed), so
-        # suppress pings or the DJ/requester would be notified on every repost.
-        view = MusicController(self, player, track=track)
-        try:
-            message = await player.home.send(
-                view=view, allowed_mentions=discord.AllowedMentions.none()
-            )
-        except discord.HTTPException:
-            log.exception("Failed to send the now-playing controller")
+        guild_id = (
+            player.channel.guild.id
+            if player.channel is not None
+            else getattr(player.home, "guild", None) and player.home.guild.id
+        )
+        if guild_id is None:
             return
-        view.message = message
-        player.controller = view
-        # Persist this controller's id right away so the next restart's stale
-        # delete targets THIS message, not whatever the last full snapshot
-        # captured (which lags a track behind and left the previous controller
-        # undeleted after a quick restart).
-        if message.guild is not None:
+
+        # Serialise per guild: two concurrent posters (explicit restore post +
+        # a track_start, or a reconnect re-fire) would otherwise both read "no
+        # controller yet" and both post. Inside the lock, delete every known
+        # previous controller (the cog registry catches ones attached to a
+        # different Player instance), then post exactly one.
+        lock = self._controller_locks.setdefault(guild_id, asyncio.Lock())
+        async with lock:
+            for old in {player.controller, self._controllers.get(guild_id)}:
+                if old is None:
+                    continue
+                old.stop()
+                if old.message is not None:
+                    try:
+                        await old.message.delete()
+                    except discord.HTTPException:
+                        pass
+
+            # A LayoutView carries its own content; it must be sent with no
+            # embed. Components V2 TextDisplay resolves mentions (unlike an
+            # embed), so suppress pings or the DJ/requester would be notified
+            # on every repost.
+            view = MusicController(self, player, track=track)
+            try:
+                message = await player.home.send(
+                    view=view, allowed_mentions=discord.AllowedMentions.none()
+                )
+            except discord.HTTPException:
+                log.exception("Failed to send the now-playing controller")
+                return
+            view.message = message
+            player.controller = view
+            self._controllers[guild_id] = view
+            # Persist this controller's id right away so the next restart's
+            # stale delete targets THIS message, not whatever the last full
+            # snapshot captured.
             await music_state.save_controller_message_id(
-                self.bot.db_pool, message.guild.id, message.id
+                self.bot.db_pool, guild_id, message.id
             )
 
     # ------------------------------------------------------------------
@@ -780,6 +802,7 @@ class Music(commands.Cog):
 
     async def _clear(self, guild_id: int) -> None:
         """Forget a guild's persisted player state (best-effort)."""
+        self._controllers.pop(guild_id, None)
         await music_state.clear_state(self.bot.db_pool, guild_id)
 
     # ------------------------------------------------------------------
@@ -897,6 +920,7 @@ class Music(commands.Cog):
         except Exception:
             log.exception("Failed to disconnect an idle player")
         if guild is not None:
+            self._controllers.pop(guild.id, None)
             await self._clear(guild.id)
 
     @staticmethod
