@@ -33,3 +33,9 @@ htmlcov/
 Thumbs.db
 .idea/
 .vscode/
+# Added by code-review-graph
+.code-review-graph/
+# Local, machine-specific MCP config (absolute venv path); do not commit
+.mcp.json
+# Local Claude Code guidance only - never committed/shared
+CLAUDE.md
