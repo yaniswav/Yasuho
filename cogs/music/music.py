@@ -681,10 +681,23 @@ class Music(commands.Cog):
 
     async def _send_controller(self, player: Player) -> None:
         """Send a fresh now-playing controller in the player's home channel."""
+        # TEMPORARY diagnostic for a restore-only "no new controller appears at
+        # all" report - the old controller message being reachable does not
+        # necessarily mean the new one gets past these guards. Remove once
+        # resolved.
+        guild_id = player.channel.guild.id if player.channel else None
         if player.home is None:
+            log.info(
+                "_send_controller: bailing, player.home is None (guild=%s)",
+                guild_id,
+            )
             return
 
         if player.current is None:
+            log.info(
+                "_send_controller: bailing, player.current is None (guild=%s)",
+                guild_id,
+            )
             return
 
         old = player.controller
@@ -708,6 +721,14 @@ class Music(commands.Cog):
             log.exception("Failed to send the now-playing controller")
             return
 
+        # TEMPORARY: confirms the controller actually got sent. Remove once
+        # the restore-only interaction bug is resolved.
+        log.info(
+            "_send_controller: posted message %s in channel %s (guild=%s)",
+            message.id,
+            player.home.id,
+            guild_id,
+        )
         view.message = message
         player.controller = view
 
@@ -763,9 +784,16 @@ class Music(commands.Cog):
     async def on_sonolink_track_start(
         self, player: Player, event: sonolink.gateway.TrackStartEvent
     ) -> None:
-        log.debug("Track started: %s", event.track.title)
+        # TEMPORARY: bumped to info + explicit bail log for a restore-only "no
+        # new controller appears at all" report. Remove once resolved.
+        log.info(
+            "on_sonolink_track_start: %s (guild=%s)",
+            event.track.title,
+            player.channel.guild.id if player.channel else None,
+        )
         await self._snapshot(player)
         if getattr(player, "home", None) is None:
+            log.info("on_sonolink_track_start: bailing, player.home is None")
             return
         await self._send_controller(player)
 
