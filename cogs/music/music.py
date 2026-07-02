@@ -196,7 +196,14 @@ class MusicController(discord.ui.LayoutView):
     view is restricted to listeners currently in the player's voice channel.
     """
 
-    def __init__(self, cog: "Music", player: Player, *, timeout=None) -> None:
+    def __init__(
+        self,
+        cog: "Music",
+        player: Player,
+        *,
+        track: typing.Optional[sonolink.models.Playable] = None,
+        timeout=None,
+    ) -> None:
         # timeout=None so the controls never die mid-track (a long song or a
         # livestream fires no track_start to refresh the timer). The controller
         # is explicitly stopped + deleted on track change, idle teardown and
@@ -204,6 +211,12 @@ class MusicController(discord.ui.LayoutView):
         super().__init__(timeout=timeout)
         self.cog = cog
         self.player = player
+        # Fallback track for the first render only. sonolink's Player.play() sets
+        # player.current after its REST update returns, but Lavalink's track_start
+        # arrives over the websocket first, so a controller built straight off
+        # that event would see player.current is None. Render from the event's
+        # track until player.current catches up (see _build).
+        self._track = track
         self.message: typing.Optional[discord.Message] = None
         self._build()
 
@@ -220,7 +233,10 @@ class MusicController(discord.ui.LayoutView):
         """(Re)assemble the layout from the player's current state."""
         self.clear_items()
 
-        track = self.player.current
+        # player.current wins once sonolink has set it; self._track only covers
+        # the brief window during a cold restore / track change where the
+        # websocket track_start beat play()'s REST update and current is None.
+        track = self.player.current or self._track
         if track is None:
             self.add_item(discord.ui.TextDisplay(_("Nothing is playing right now.")))
             return
@@ -384,18 +400,6 @@ class MusicController(discord.ui.LayoutView):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow members currently in the player's voice channel."""
-        # TEMPORARY diagnostic for a restore-only "interaction fails silently,
-        # zero server logs" report: if this line never prints for a broken
-        # click, discord.py's ViewStore never matched the message/custom_id (a
-        # dead click never reaches our code at all); if it DOES print, the bug
-        # is further down and this log narrows exactly where. Remove once
-        # resolved.
-        log.info(
-            "Controller interaction_check reached: guild=%s message=%s user=%s",
-            interaction.guild_id,
-            interaction.message.id if interaction.message else None,
-            interaction.user.id,
-        )
         channel = getattr(self.player, "channel", None)
         if channel is None:
             await interaction.response.send_message(
@@ -679,25 +683,23 @@ class Music(commands.Cog):
         """
         return await self.bot.db_pool.fetch(query, user_id)
 
-    async def _send_controller(self, player: Player) -> None:
-        """Send a fresh now-playing controller in the player's home channel."""
-        # TEMPORARY diagnostic for a restore-only "no new controller appears at
-        # all" report - the old controller message being reachable does not
-        # necessarily mean the new one gets past these guards. Remove once
-        # resolved.
-        guild_id = player.channel.guild.id if player.channel else None
+    async def _send_controller(
+        self,
+        player: Player,
+        track: typing.Optional[sonolink.models.Playable] = None,
+    ) -> None:
+        """Send a fresh now-playing controller in the player's home channel.
+
+        ``track`` is the just-started track from a track_start event. It lets the
+        controller render during the brief window before sonolink sets
+        player.current (its REST update lands after Lavalink's websocket event) -
+        the cold-restore race that otherwise posts no controller.
+        """
         if player.home is None:
-            log.info(
-                "_send_controller: bailing, player.home is None (guild=%s)",
-                guild_id,
-            )
             return
 
-        if player.current is None:
-            log.info(
-                "_send_controller: bailing, player.current is None (guild=%s)",
-                guild_id,
-            )
+        track = track if track is not None else player.current
+        if track is None:
             return
 
         old = player.controller
@@ -712,7 +714,7 @@ class Music(commands.Cog):
         # A LayoutView carries its own content; it must be sent with no embed.
         # Components V2 TextDisplay resolves mentions (unlike an embed), so
         # suppress pings or the DJ/requester would be notified on every repost.
-        view = MusicController(self, player)
+        view = MusicController(self, player, track=track)
         try:
             message = await player.home.send(
                 view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -720,15 +722,6 @@ class Music(commands.Cog):
         except discord.HTTPException:
             log.exception("Failed to send the now-playing controller")
             return
-
-        # TEMPORARY: confirms the controller actually got sent. Remove once
-        # the restore-only interaction bug is resolved.
-        log.info(
-            "_send_controller: posted message %s in channel %s (guild=%s)",
-            message.id,
-            player.home.id,
-            guild_id,
-        )
         view.message = message
         player.controller = view
 
@@ -784,18 +777,17 @@ class Music(commands.Cog):
     async def on_sonolink_track_start(
         self, player: Player, event: sonolink.gateway.TrackStartEvent
     ) -> None:
-        # TEMPORARY: bumped to info + explicit bail log for a restore-only "no
-        # new controller appears at all" report. Remove once resolved.
-        log.info(
-            "on_sonolink_track_start: %s (guild=%s)",
+        log.debug(
+            "Track start: %s (guild=%s)",
             event.track.title,
             player.channel.guild.id if player.channel else None,
         )
         await self._snapshot(player)
         if getattr(player, "home", None) is None:
-            log.info("on_sonolink_track_start: bailing, player.home is None")
             return
-        await self._send_controller(player)
+        # Pass the event's track so the controller renders even while play()'s
+        # REST update is still in flight and player.current is not set yet.
+        await self._send_controller(player, event.track)
 
     @commands.Cog.listener()
     async def on_sonolink_track_exception(

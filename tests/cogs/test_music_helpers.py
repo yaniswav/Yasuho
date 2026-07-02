@@ -163,6 +163,64 @@ def test_first_track_single_object_returns_itself():
 
 
 # ---------------------------------------------------------------------------
+# Regression: the controller must render from a fallback track during the
+# cold-restore race where player.current is not set yet
+# ---------------------------------------------------------------------------
+
+
+def test_controller_renders_from_fallback_track_before_current_set():
+    """A controller built off a track_start event must render even while
+    sonolink's play() REST update is still in flight and player.current is
+    None (the cold-restore race that used to post no controller).
+    """
+    import sonolink
+
+    track = types.SimpleNamespace(
+        title="Race Track", uri="http://example/x", author="DJ",
+        is_stream=False, length=125000,
+        extras=types.SimpleNamespace(requester=None),
+    )
+    player = types.SimpleNamespace(
+        current=None, paused=False, volume=100,
+        queue=types.SimpleNamespace(mode=sonolink.QueueMode.NORMAL, tracks=[]),
+        channel=types.SimpleNamespace(name="General"), dj=None,
+    )
+    view = music.MusicController(None, player, track=track)
+    texts = [
+        c.content for c in view.walk_children()
+        if isinstance(c, discord.ui.TextDisplay)
+    ]
+    assert any("Race Track" in t for t in texts)
+    assert not any("Nothing is playing" in t for t in texts)
+
+
+def test_controller_current_track_overrides_fallback():
+    """Once player.current is set it wins over the fallback track."""
+    import sonolink
+
+    live = types.SimpleNamespace(
+        title="Live Track", uri=None, author="A", is_stream=False,
+        length=1000, extras=types.SimpleNamespace(requester=None),
+    )
+    stale = types.SimpleNamespace(
+        title="Stale Track", uri=None, author="B", is_stream=False,
+        length=1000, extras=types.SimpleNamespace(requester=None),
+    )
+    player = types.SimpleNamespace(
+        current=live, paused=False, volume=100,
+        queue=types.SimpleNamespace(mode=sonolink.QueueMode.NORMAL, tracks=[]),
+        channel=types.SimpleNamespace(name="G"), dj=None,
+    )
+    view = music.MusicController(None, player, track=stale)
+    texts = [
+        c.content for c in view.walk_children()
+        if isinstance(c, discord.ui.TextDisplay)
+    ]
+    assert any("Live Track" in t for t in texts)
+    assert not any("Stale Track" in t for t in texts)
+
+
+# ---------------------------------------------------------------------------
 # Regression guard: no music UI class may shadow View._refresh
 # ---------------------------------------------------------------------------
 
