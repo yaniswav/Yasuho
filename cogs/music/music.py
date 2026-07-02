@@ -59,12 +59,6 @@ class Player(sonolink.Player):
         # Monotonic timestamp of when this player first became idle, or None
         # while it is active. Maintained by the cog's idle-timeout loop.
         self.idle_since: typing.Optional[float] = None
-        # On a cold restore the cog posts the controller explicitly (track_start
-        # may never fire for a paused restore); this holds the restored track's
-        # source identifier so every matching track_start skips its own post and
-        # the two never race into a duplicate. Cleared when a different track
-        # starts.
-        self._suppress_controller_track: typing.Optional[str] = None
 
 
 def format_duration(track: sonolink.models.Playable) -> str:
@@ -887,6 +881,7 @@ class Music(commands.Cog):
     async def _clear(self, guild_id: int) -> None:
         """Forget a guild's persisted player state (best-effort)."""
         self._controllers.pop(guild_id, None)
+        self._controller_locks.pop(guild_id, None)
         await music_state.clear_state(self.bot.db_pool, guild_id)
 
     # ------------------------------------------------------------------
@@ -902,32 +897,19 @@ class Music(commands.Cog):
             event.track.title,
             player.channel.guild.id if player.channel else None,
         )
-        # Pass the event's track: player.current may still be the previous track
-        # (or None) while play()'s REST update is in flight, and snapshotting
-        # that would persist stale state on every natural queue advance.
+        if getattr(player, "home", None) is not None:
+            # Pass the event's track so the controller renders even while
+            # play()'s REST update is still in flight and player.current is not
+            # set yet. dedupe=True: the per-guild lock in _send_controller
+            # resolves any race with the explicit restore post or a reconnect
+            # re-fire - the second poster keeps the first one's message.
+            await self._send_controller(player, event.track, dedupe=True)
+        # Snapshot AFTER the controller work so a reconnect that swapped in a
+        # fresh Player instance persists the rebound controller's message id,
+        # not None (which would defeat the next restart's stale delete). Pass
+        # the event's track: player.current may still be the previous track (or
+        # None) while play()'s REST update is in flight.
         await self._snapshot(player, event.track)
-        # A cold restore posts the controller itself and arms this token with the
-        # restored track's source identifier. Suppress EVERY track_start for that
-        # track, not just the first: a voice reconnect during restore (Lavalink
-        # WS 4006) re-fires track_start, so consuming on the first match would
-        # let the re-fire double-post. Clear the token only once a DIFFERENT
-        # track starts, which resumes normal posting. Match by identifier, NOT
-        # encoded: Lavalink may re-serialise the track in its events, so the
-        # encoded base64 is not stable across the DB blob and the event.
-        suppress = getattr(player, "_suppress_controller_track", None)
-        if suppress is not None:
-            if getattr(event.track, "identifier", None) == suppress:
-                log.debug(
-                    "track_start controller suppressed for restored track (guild=%s)",
-                    player.channel.guild.id if player.channel else None,
-                )
-                return
-            player._suppress_controller_track = None
-        if getattr(player, "home", None) is None:
-            return
-        # Pass the event's track so the controller renders even while play()'s
-        # REST update is still in flight and player.current is not set yet.
-        await self._send_controller(player, event.track, dedupe=True)
 
     @commands.Cog.listener()
     async def on_sonolink_track_exception(
@@ -1008,7 +990,7 @@ class Music(commands.Cog):
         except Exception:
             log.exception("Failed to disconnect an idle player")
         if guild is not None:
-            self._controllers.pop(guild.id, None)
+            # _clear also drops the controller registry/lock entries.
             await self._clear(guild.id)
 
     @staticmethod
@@ -1093,34 +1075,12 @@ class Music(commands.Cog):
             return
         now = datetime.now(timezone.utc)
 
-        # Which guilds is Lavalink still playing (its session was resumed)? Those
-        # can be rebound gap-free; everything else gets a cold restore. Also
-        # record the current session id for diagnostics (nothing reads it back -
-        # see core.py). node.session_id raises RuntimeError, not AttributeError,
-        # until connected, so check is_connected first.
-        node = self.bot.sl_client.get_best_node()
-        live_guilds = set()
-        if node is not None:
-            if node.is_connected:
-                await music_state.save_session(
-                    self.bot.db_pool, music_state.MUSIC_NODE_ID, node.session_id
-                )
-            try:
-                for lavalink_player in await node.fetch_players():
-                    gid = getattr(lavalink_player, "guild_id", None) or getattr(
-                        lavalink_player, "guild", None
-                    )
-                    if gid is not None:
-                        live_guilds.add(int(gid))
-            except Exception:
-                log.exception("Failed to fetch resumed Lavalink players")
-
         semaphore = asyncio.Semaphore(RESTORE_CONCURRENCY)
 
         async def _guarded(row) -> None:
             async with semaphore:
                 try:
-                    await self._restore_one(row, now, live_guilds)
+                    await self._restore_one(row, now)
                 except Exception:
                     log.exception(
                         "Failed to restore music for guild %s", row["guild_id"]
@@ -1129,12 +1089,11 @@ class Music(commands.Cog):
         await asyncio.gather(*(_guarded(row) for row in rows))
         log.info("Music restore complete: processed %d player(s)", len(rows))
 
-    async def _restore_one(self, row, now: datetime, live_guilds) -> None:
-        """Resume a single guild's playback, or forget a stale/unusable row.
+    async def _restore_one(self, row, now: datetime) -> None:
+        """Cold-restore a single guild's playback, or forget a stale/unusable row.
 
-        Prefers a gap-free rebind when Lavalink still holds the player (resumed
-        session); otherwise cold-restores by rejoining and replaying at the saved
-        position. Either way it leaves exactly one fresh, working controller.
+        Rejoins the voice channel and replays the saved track at the
+        extrapolated position, leaving exactly one fresh, working controller.
         """
         guild_id = row["guild_id"]
 
@@ -1181,41 +1140,20 @@ class Music(commands.Cog):
             except (discord.HTTPException, AttributeError):
                 pass
 
-        # Decode the exact tracks (no re-search) via the node.
-        current = await self.bot.sl_client.decode_track(row["current_track"])
-        if current is None:
+        # Decode the exact tracks (no re-search) in ONE round trip to Lavalink:
+        # the current track first, then the queue.
+        decoded = await self.bot.sl_client.decode_tracks(
+            row["current_track"], *(row["queue"] or [])
+        )
+        if not decoded or decoded[0] is None:
             await self._clear(guild_id)
             return
-        queue_tracks = []
-        if row["queue"]:
-            queue_tracks = await self.bot.sl_client.decode_tracks(list(row["queue"]))
+        current, queue_tracks = decoded[0], decoded[1:]
 
-        # --- Gap-free path: Lavalink still holds a usable player for this guild.
-        if guild_id in live_guilds:
-            node = self.bot.sl_client.get_best_node()
-            resumed = node.get_player(guild_id) if node is not None else None
-            if (
-                isinstance(resumed, Player)
-                and resumed.channel is not None
-                and resumed.current is not None
-            ):
-                resumed.home = home
-                resumed.dj = dj
-                resumed.queue.mode = loop_mode
-                if not resumed.queue.tracks:
-                    for track in queue_tracks or []:
-                        resumed.queue.put(track)
-                await self._send_controller(resumed)
-                await self._snapshot(resumed)
-                log.info(
-                    "Rebound live (gap-free) music player in guild %s", guild_id
-                )
-                return
-
-        # --- Cold restore: rejoin and replay at the extrapolated position. The
-        # track_start event posts a fresh controller, but a track restored in a
-        # paused state (or a missed/late event) emits no track_start, so we also
-        # post one explicitly below.
+        # Rejoin and replay at the extrapolated position. The track_start event
+        # posts a fresh controller, but a track restored in a paused state (or a
+        # missed/late event) emits no track_start, so we also post one
+        # explicitly below.
         player = guild.voice_client
         if not isinstance(player, Player):
             player = await channel.connect(cls=Player)
@@ -1232,12 +1170,6 @@ class Music(commands.Cog):
             paused=row["paused"],
             length_ms=getattr(current, "length", None),
         )
-        # Post the controller ourselves after play() returns (below), and tell
-        # this track's one track_start to skip its own post, so the two never
-        # race into a duplicate. We must post explicitly because track_start may
-        # not fire at all for a paused restore, which used to leave no working
-        # controller.
-        player._suppress_controller_track = getattr(current, "identifier", None)
         await player.play(
             current,
             start=position,
@@ -1246,14 +1178,12 @@ class Music(commands.Cog):
             # not come back at full blast after a restart.
             volume=100 if row["volume"] is None else int(row["volume"]),
         )
-        # player.current is set now that play() has returned, so this renders and
-        # posts a working controller regardless of whether track_start fired.
-        await self._send_controller(player)
-        # Disarm the token now that the explicit post has had its chance: later
-        # re-fires are handled by _send_controller's dedupe keep-path, and if
-        # the post FAILED (send error), leaving the token armed would suppress
-        # every retry and the track would play with no controller at all.
-        player._suppress_controller_track = None
+        # Post the controller explicitly: track_start may not fire at all for a
+        # track restored paused, which used to leave no working controller.
+        # dedupe=True lets _send_controller's per-guild lock resolve the race
+        # with a track_start that DID fire, whichever lands first - the second
+        # poster keeps the first one's message instead of duplicating it.
+        await self._send_controller(player, dedupe=True)
         log.info(
             "Cold-restored music in guild %s at %dms (home_id=%s, home=%s, controller=%s)",
             guild_id,

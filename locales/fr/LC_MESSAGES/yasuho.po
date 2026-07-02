@@ -3359,8 +3359,8 @@ msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flè
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
-msgstr[0] "{n} categorie"
-msgstr[1] "{n} categories"
+msgstr[0] "{n} catégorie"
+msgstr[1] "{n} catégories"
 
 #: cogs/system/help.py:478 cogs/system/help.py:563
 msgid "Help"

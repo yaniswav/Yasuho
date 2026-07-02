@@ -100,7 +100,11 @@ async def save_state(
 
 
 async def save_session(pool, node_id, session_id):
-    """Persist a node's Lavalink session id for resume on the next start."""
+    """Record a node's Lavalink session id (diagnostics only - nothing reads it).
+
+    Cross-restart session resume turned out to be unsupported by sonolink (see
+    core.py), so this is kept purely as a breadcrumb for debugging.
+    """
     if not node_id or not session_id:
         return
     try:
@@ -116,17 +120,6 @@ async def save_session(pool, node_id, session_id):
         )
     except Exception:
         log.exception("Failed to persist Lavalink session for node %s", node_id)
-
-
-async def load_session(pool, node_id):
-    """Return the last saved Lavalink session id for a node, or None."""
-    try:
-        return await pool.fetchval(
-            "SELECT session_id FROM music_node_session WHERE node_id = $1", node_id
-        )
-    except Exception:
-        log.exception("Failed to load Lavalink session for node %s", node_id)
-        return None
 
 
 async def load_all_states(pool):

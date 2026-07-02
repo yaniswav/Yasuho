@@ -116,8 +116,8 @@ def test_gettext_alias_is_the_function():
 # locale's Plural-Forms rule (fr: n>1 ; en/NullTranslations: n!=1). n=0 is the tell.
 SING = "{n} category"
 PLUR = "{n} categories"
-FR_SING = "{n} categorie"
-FR_PLUR = "{n} categories"
+FR_SING = "{n} catégorie"
+FR_PLUR = "{n} catégories"
 
 
 def test_ngettext_english_plural_rule():
