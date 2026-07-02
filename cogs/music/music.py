@@ -224,6 +224,10 @@ class MusicController(discord.ui.LayoutView):
         # track until player.current catches up (see _build).
         self._track = track
         self.message: typing.Optional[discord.Message] = None
+        # When this view was created; _send_controller's dedupe keep-path only
+        # keeps a very recent controller (a reconnect re-fire arrives within
+        # seconds), so a later same-track start (loop mode) still re-posts.
+        self.created_at = time.monotonic()
         self._build()
 
     def _make_button(
@@ -461,6 +465,11 @@ class MusicController(discord.ui.LayoutView):
             else:
                 await self.player.pause()
                 message = _("Paused.")
+            # Snapshot right away: the persisted paused flag drives the restore
+            # position maths, and waiting for the 60s idle tick would let a
+            # restart resume playing (at a wrongly advanced position) in a
+            # channel everyone expected to stay silent.
+            await self.cog._snapshot(self.player)
             await self._rerender()
             await interaction.response.send_message(message, ephemeral=True)
         except Exception:
@@ -634,6 +643,20 @@ class Music(commands.Cog):
         client = self._client()
         return bool(client and client.nodes)
 
+    def _nodes_connected(self) -> bool:
+        """True when at least one node is actually CONNECTED, not just registered.
+
+        The restore path must use this, not _nodes_available: a node exists in
+        client.nodes as soon as create_node() runs, well before its websocket is
+        up, and consuming the one-shot restore flag at that point would make
+        every decode/play fail and silently kill the restore forever.
+        """
+        client = self._client()
+        return bool(
+            client
+            and any(getattr(n, "is_connected", False) for n in client.nodes)
+        )
+
     async def _require_player(self, ctx):
         """Return the connected player, or None after telling the user there is none."""
         player = ctx.voice_client
@@ -738,7 +761,16 @@ class Music(commands.Cog):
         lock = self._controller_locks.setdefault(guild_id, asyncio.Lock())
         async with lock:
             existing = self._controllers.get(guild_id)
-            if dedupe and existing is not None and existing.message is not None:
+            if (
+                dedupe
+                and existing is not None
+                and existing.message is not None
+                # Only a very recent controller counts as a duplicate: reconnect
+                # re-fires land within seconds of the original post, while a
+                # same-track loop iteration (QueueMode.LOOP) comes minutes later
+                # and SHOULD re-post so the panel returns to the channel bottom.
+                and time.monotonic() - existing.created_at < 30
+            ):
                 shown = existing.player.current or existing._track
                 # Match by source identifier, not encoded: Lavalink may
                 # re-serialise the track in its events, so the encoded base64
@@ -767,7 +799,11 @@ class Music(commands.Cog):
                     try:
                         await old.message.delete()
                     except discord.HTTPException:
-                        pass
+                        # Keep this visible: a failed delete is exactly how a
+                        # duplicate controller ends up lingering in the channel.
+                        log.exception(
+                            "Failed to delete the previous controller message"
+                        )
 
             # A LayoutView carries its own content; it must be sent with no
             # embed. Components V2 TextDisplay resolves mentions (unlike an
@@ -795,11 +831,21 @@ class Music(commands.Cog):
     # Restart persistence (snapshot live players, restore them on startup)
     # ------------------------------------------------------------------
 
-    async def _snapshot(self, player: Player) -> None:
-        """Persist a player's live state so a restart can resume it (best-effort)."""
+    async def _snapshot(
+        self,
+        player: Player,
+        track: typing.Optional[sonolink.models.Playable] = None,
+    ) -> None:
+        """Persist a player's live state so a restart can resume it (best-effort).
+
+        ``track`` is the just-started track from a track_start event: during the
+        window where the websocket event beats play()'s REST update,
+        player.current is still the OLD track (or None), so snapshotting without
+        it would persist stale state on every natural queue advance.
+        """
         try:
             channel = player.channel
-            current = player.current
+            current = track if track is not None else player.current
             if channel is None or current is None or not current.encoded:
                 return
             home = getattr(player, "home", None)
@@ -816,7 +862,14 @@ class Music(commands.Cog):
                 voice_channel_id=channel.id,
                 home_channel_id=home.id if home is not None else None,
                 dj_id=dj.id if dj is not None else None,
-                volume=int(getattr(player, "volume", 100) or 100),
+                # A plain "or 100" would coerce a legitimate volume of 0 (muted
+                # but playing) back to full blast on restore; only None falls
+                # back to the default.
+                volume=(
+                    100
+                    if getattr(player, "volume", None) is None
+                    else int(player.volume)
+                ),
                 loop_mode=_loop_to_int(player.queue.mode),
                 position_ms=int(getattr(player, "position", 0) or 0),
                 paused=bool(getattr(player, "paused", False)),
@@ -849,7 +902,10 @@ class Music(commands.Cog):
             event.track.title,
             player.channel.guild.id if player.channel else None,
         )
-        await self._snapshot(player)
+        # Pass the event's track: player.current may still be the previous track
+        # (or None) while play()'s REST update is in flight, and snapshotting
+        # that would persist stale state on every natural queue advance.
+        await self._snapshot(player, event.track)
         # A cold restore posts the controller itself and arms this token with the
         # restored track's source identifier. Suppress EVERY track_start for that
         # track, not just the first: a voice reconnect during restore (Lavalink
@@ -1016,7 +1072,7 @@ class Music(commands.Cog):
         """
         if self._restored:
             return
-        if not self._nodes_available():
+        if not self._nodes_connected():
             # Try again on the next on_ready, once the node has connected.
             return
         self._restored = True
@@ -1114,12 +1170,14 @@ class Music(commands.Cog):
         loop_mode = _int_to_loop(row["loop_mode"])
 
         # Drop the now-dead controller from before the restart, so its buttons
-        # (bound to the old process) do not linger unresponsive. Only the saved
-        # text channel can hold it (not the voice fallback), so key off home_text.
+        # (bound to the old process) do not linger unresponsive. Use home (with
+        # the voice fallback applied): that is the same channel resolution the
+        # previous run used to post it, so a controller posted into the voice
+        # chat is deleted too, not just one in the saved text channel.
         stale_id = row["controller_message_id"]
-        if stale_id and home_text is not None:
+        if stale_id:
             try:
-                await home_text.get_partial_message(stale_id).delete()
+                await home.get_partial_message(stale_id).delete()
             except (discord.HTTPException, AttributeError):
                 pass
 
@@ -1184,11 +1242,18 @@ class Music(commands.Cog):
             current,
             start=position,
             paused=bool(row["paused"]),
-            volume=int(row["volume"] or 100),
+            # None-check, not "or 100": volume 0 is legitimate (muted) and must
+            # not come back at full blast after a restart.
+            volume=100 if row["volume"] is None else int(row["volume"]),
         )
         # player.current is set now that play() has returned, so this renders and
         # posts a working controller regardless of whether track_start fired.
         await self._send_controller(player)
+        # Disarm the token now that the explicit post has had its chance: later
+        # re-fires are handled by _send_controller's dedupe keep-path, and if
+        # the post FAILED (send error), leaving the token armed would suppress
+        # every retry and the track would play with no controller at all.
+        player._suppress_controller_track = None
         log.info(
             "Cold-restored music in guild %s at %dms (home_id=%s, home=%s, controller=%s)",
             guild_id,
@@ -1309,6 +1374,8 @@ class Music(commands.Cog):
             await ctx.send(_("The player is already paused."))
             return
         await player.pause()
+        # Persist the paused flag now; it drives the restore position maths.
+        await self._snapshot(player)
         await ctx.send(_("Paused the player."))
 
     @commands.hybrid_command(name="resume")
@@ -1322,6 +1389,8 @@ class Music(commands.Cog):
             await ctx.send(_("The player is not paused."))
             return
         await player.resume()
+        # Persist the resumed flag now; it drives the restore position maths.
+        await self._snapshot(player)
         await ctx.send(_("Resumed the player."))
 
     @commands.hybrid_command(name="skip", aliases=["next"])
