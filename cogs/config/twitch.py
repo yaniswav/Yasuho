@@ -574,9 +574,12 @@ class Twitch(commands.Cog):
 
     # -- streaming listener ---------------------------------------------
     @commands.Cog.listener()
-    async def on_member_update(
+    async def on_presence_update(
         self, before: discord.Member, after: discord.Member
     ):
+        # Streaming/activity changes arrive on presence_update, NOT member_update
+        # (which only fires for nick/roles/timeout). Reading before/after
+        # activities here is what actually catches the go-live edge.
         try:
             was_live = any(
                 isinstance(a, discord.Streaming) for a in before.activities
@@ -592,12 +595,19 @@ class Twitch(commands.Cog):
                 config = await self.get_config(after.guild.id)
                 await self._remove_role(after, config)
         except Exception:
-            log.exception("Twitch on_member_update failed")
+            log.exception("Twitch on_presence_update failed")
 
     async def _on_go_live(self, member, activity):
         """Post the alert and assign the Live role when a watched member goes live."""
 
         guild = member.guild
+
+        # Cheap cached check first: presence_update is high-frequency, so bail
+        # out before touching the DB when alerts are disabled for the guild.
+        config = await self.get_config(guild.id)
+        if not config.get("enabled"):
+            return
+
         try:
             row = await self.bot.db_pool.fetchrow(
                 "SELECT channel_id FROM twitch_alert "
@@ -609,10 +619,6 @@ class Twitch(commands.Cog):
             log.exception("Twitch watchlist lookup failed")
             return
         if row is None:
-            return
-
-        config = await self.get_config(guild.id)
-        if not config.get("enabled"):
             return
 
         # Per-member override (0 == no override) else the guild channel.
@@ -660,18 +666,25 @@ class Twitch(commands.Cog):
 
         override = channel.id if channel else 0
         try:
-            await self.bot.db_pool.execute(
-                "DELETE FROM twitch_alert WHERE guild_id = $1 AND user_id = $2;",
-                ctx.guild.id,
-                member.id,
-            )
-            await self.bot.db_pool.execute(
-                "INSERT INTO twitch_alert(guild_id, user_id, channel_id, message) "
-                "VALUES($1, $2, $3, NULL);",
-                ctx.guild.id,
-                member.id,
-                override,
-            )
+            # One watch entry per member: wipe any prior channel variants and
+            # insert the new one atomically, so a failure between the two can
+            # never leave the member un-watched.
+            async with self.bot.db_pool.acquire() as conn:
+                async with conn.transaction():
+                    await conn.execute(
+                        "DELETE FROM twitch_alert "
+                        "WHERE guild_id = $1 AND user_id = $2;",
+                        ctx.guild.id,
+                        member.id,
+                    )
+                    await conn.execute(
+                        "INSERT INTO twitch_alert"
+                        "(guild_id, user_id, channel_id, message) "
+                        "VALUES($1, $2, $3, NULL);",
+                        ctx.guild.id,
+                        member.id,
+                        override,
+                    )
         except Exception:
             log.exception("Twitch watch failed")
             return await ctx.send(
