@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import time
 from collections import defaultdict
 
 import discord
@@ -45,6 +44,7 @@ from tools.autoroom import (
     slot_value_label,
     summarise_hub,
 )
+from tools.cooldowns import Cooldowns
 from tools.i18n import _
 from tools.views import LocaleModal
 
@@ -1151,8 +1151,9 @@ class TemporaryRooms(commands.Cog):
         self._hub_index = {}
         # {(guild_id, hub_id): set(channel_id)} temp rooms alive per hub.
         self._active = defaultdict(set)
-        # {(guild_id, user_id): monotonic} last-created timestamp (anti-spam).
-        self._cooldowns = {}
+        # Per-(guild, user) anti-spam debounce that prunes itself (was an
+        # unbounded dict of last-created timestamps).
+        self._cooldowns = Cooldowns(CREATE_COOLDOWN_SECONDS)
         self._locks = defaultdict(asyncio.Lock)  # per-guild creation lock
         self._cleanup_tasks = set()  # outstanding empty-room reapers
         # {channel_id: owner_user_id} - a fast CACHE of room ownership. The
@@ -1518,11 +1519,10 @@ class TemporaryRooms(commands.Cog):
             return
 
         # Per-user cooldown to kill join/leave spam.
-        now = time.monotonic()
         key = (member.guild.id, member.id)
-        if now - self._cooldowns.get(key, 0.0) < CREATE_COOLDOWN_SECONDS:
+        if self._cooldowns.is_active(key):
             return
-        self._cooldowns[key] = now
+        self._cooldowns.touch(key)
 
         async with self._locks[member.guild.id]:
             await self._create_room(member, after.channel, hub)

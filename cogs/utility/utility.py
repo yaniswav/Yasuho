@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 import urllib.parse
 
 import aiohttp
@@ -102,22 +103,38 @@ class QuickPollLauncher(AuthorView):
         await interaction.response.send_modal(QuickPollModal())
 
 
+# Keep a deleted message snipeable for this long, then forget it: bounds both
+# the memory the snipe cache holds and how long deleted-message content lingers.
+_SNIPE_TTL = 15 * 60
+_SNIPE_SWEEP_AT = 500
+
+
 class Utility(commands.Cog):
     """Handy utility commands."""
 
     def __init__(self, bot):
         self.bot = bot
+        # channel_id -> (content, author, created_at, monotonic_expiry)
         self._snipes = {}
+
+    def _sweep_snipes(self, now):
+        self._snipes = {
+            cid: v for cid, v in self._snipes.items() if v[3] >= now
+        }
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.author.bot or not message.content:
             return
+        now = time.monotonic()
         self._snipes[message.channel.id] = (
             message.content,
             message.author,
             message.created_at,
+            now + _SNIPE_TTL,
         )
+        if len(self._snipes) > _SNIPE_SWEEP_AT:
+            self._sweep_snipes(now)
 
     @commands.hybrid_command()
     @commands.guild_only()
@@ -125,10 +142,11 @@ class Utility(commands.Cog):
         """Show the last deleted message in this channel."""
 
         data = self._snipes.get(ctx.channel.id)
-        if not data:
+        if not data or data[3] < time.monotonic():
+            self._snipes.pop(ctx.channel.id, None)
             return await ctx.send(_("Nothing to snipe."))
 
-        content, author, when = data
+        content, author, when, _expiry = data
         embed = discord.Embed(
             description=content,
             colour=random_colour(),

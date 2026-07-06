@@ -2,13 +2,13 @@ import io
 import logging
 import os
 import random
-import time
 
 import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
 from tools import settings
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -92,7 +92,7 @@ class Leveling(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self._cooldowns = {}
+        self._cooldowns = Cooldowns(self.COOLDOWN)
 
     @staticmethod
     def level_for_xp(xp):
@@ -109,12 +109,10 @@ class Leveling(commands.Cog):
             return
 
         key = (message.guild.id, message.author.id)
-        now = time.time()
-
-        if now - self._cooldowns.get(key, 0) < self.COOLDOWN:
+        if self._cooldowns.is_active(key):
             return
 
-        self._cooldowns[key] = now
+        self._cooldowns.touch(key)
         gain = random.randint(15, 25)
 
         try:

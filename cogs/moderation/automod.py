@@ -22,6 +22,15 @@ ACTION_CHOICES = [
 ]
 VALID_ACTIONS = {value for value, _label, _emoji in ACTION_CHOICES}
 
+# Anti-spam sliding window: keep the last _SPAM_WINDOW seconds of a member's
+# message timestamps and trip when more than _SPAM_THRESHOLD land inside it.
+# _SPAM_SWEEP_AT bounds the tracking map: once it holds more keys than this, the
+# next hit drops every entry that has gone quiet past the window (so a one-off
+# talker's key cannot linger forever).
+_SPAM_WINDOW = 5
+_SPAM_THRESHOLD = 5
+_SPAM_SWEEP_AT = 1000
+
 
 def _action_options(current):
     """Options for the panel's action <Select>, current value pre-selected."""
@@ -637,6 +646,14 @@ class AutoMod(commands.Cog):
 
         await self._log_case(guild, member, action, reason)
 
+    def _prune_spam(self, now):
+        """Drop spam-tracking entries whose newest timestamp is past the window."""
+        self._spam = {
+            k: ts
+            for k, ts in self._spam.items()
+            if ts and now - ts[-1] <= _SPAM_WINDOW
+        }
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or message.guild is None:
@@ -687,14 +704,16 @@ class AutoMod(commands.Cog):
             now = time.time()
             timestamps = self._spam.setdefault(key, [])
             timestamps.append(now)
-            recent = [t for t in timestamps if now - t <= 5]
+            recent = [t for t in timestamps if now - t <= _SPAM_WINDOW]
             if recent:
                 self._spam[key] = recent
+                if len(self._spam) > _SPAM_SWEEP_AT:
+                    self._prune_spam(now)
             else:
                 self._spam.pop(key, None)
                 return
 
-            if len(recent) > 5:
+            if len(recent) > _SPAM_THRESHOLD:
                 self._spam.pop(key, None)
                 await self._handle_violation(
                     message,
