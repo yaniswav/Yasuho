@@ -651,13 +651,31 @@ class Music(commands.Cog):
             and any(getattr(n, "is_connected", False) for n in client.nodes)
         )
 
-    async def _require_player(self, ctx):
-        """Return the connected player, or None after telling the user there is none."""
+    async def _require_player(self, ctx, *, in_channel=True):
+        """Return the connected player, or None after telling the user why not.
+
+        With ``in_channel`` (the default, for control actions like skip/stop/
+        volume/disconnect) the invoker must be in the bot's voice channel, so a
+        bystander cannot drive playback from anywhere - the controller buttons
+        already enforce this, and this makes the commands match. Read-only
+        callers (queue) pass ``in_channel=False``.
+        """
         player = ctx.voice_client
-        if isinstance(player, sonolink.Player):
-            return player
-        await ctx.send(_("I'm not connected to a voice channel."))
-        return None
+        if not isinstance(player, sonolink.Player):
+            await ctx.send(_("I'm not connected to a voice channel."))
+            return None
+        if in_channel:
+            author = ctx.author
+            channel = getattr(player, "channel", None)
+            if (
+                channel is None
+                or not isinstance(author, discord.Member)
+                or author.voice is None
+                or author.voice.channel != channel
+            ):
+                await ctx.send(_("You must be in my voice channel to do that."))
+                return None
+        return player
 
     async def _search(
         self, query: str, *, source: TrackSourceType = SEARCH_SOURCE
@@ -1440,7 +1458,7 @@ class Music(commands.Cog):
     @commands.guild_only()
     async def queue(self, ctx: commands.Context) -> None:
         """Show the currently playing track and the next tracks in the queue."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, in_channel=False)
         if player is None:
             return
 
