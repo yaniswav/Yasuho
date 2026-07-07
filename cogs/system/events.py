@@ -37,6 +37,12 @@ class Events(commands.Cog):
                     name=next(self.status),
                 ),
             )
+        except (discord.ConnectionClosed, ConnectionError):
+            # The tick landed while the gateway was mid-reconnect, so the write
+            # hit a closing socket. This is transient and self-heals (the next
+            # tick retries on the resumed connection), so it is not worth an
+            # ERROR + traceback - just note it at debug.
+            log.debug("status rotation skipped: gateway reconnecting")
         except Exception:
             # Never let a one-off failure permanently stop the rotation;
             # the next iteration will try again.
