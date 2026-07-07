@@ -8,9 +8,14 @@ from __future__ import annotations
 
 import logging
 
+import asyncpg
 import discord
 
 log = logging.getLogger(__name__)
+
+# How many times to retry the case INSERT when two actions in the same guild
+# race for the same MAX(case_number) + 1 and one loses the UNIQUE constraint.
+_CASE_INSERT_RETRIES = 5
 
 # Colour per action type, used for case + mod-log embeds.
 ACTION_COLOURS = {
@@ -48,24 +53,36 @@ async def create_case(
 ):
     """Insert a case with the next per-guild case number; return that number.
 
-    The per-guild number is computed in the INSERT; the UNIQUE(guild_id,
-    case_number) constraint guarantees integrity if two actions ever race.
+    The per-guild number is MAX(case_number) + 1, computed inside the INSERT.
+    The UNIQUE(guild_id, case_number) constraint stops two racing actions from
+    sharing a number: the loser raises UniqueViolationError, so we retry (the
+    MAX is higher by then) rather than let the mod action fail after the
+    ban/kick has already happened.
     """
 
-    row = await pool.fetchrow(
+    query = (
         "INSERT INTO cases "
         "(guild_id, case_number, user_id, moderator_id, action, reason, expires) "
         "VALUES ($1, (SELECT COALESCE(MAX(case_number), 0) + 1 FROM cases "
         "WHERE guild_id = $1), $2, $3, $4, $5, $6) "
-        "RETURNING case_number",
-        guild_id,
-        user_id,
-        moderator_id,
-        action,
-        reason,
-        expires,
+        "RETURNING case_number"
     )
-    return row["case_number"]
+    last_exc = None
+    for _attempt in range(_CASE_INSERT_RETRIES):
+        try:
+            row = await pool.fetchrow(
+                query,
+                guild_id,
+                user_id,
+                moderator_id,
+                action,
+                reason,
+                expires,
+            )
+            return row["case_number"]
+        except asyncpg.UniqueViolationError as exc:
+            last_exc = exc
+    raise last_exc
 
 
 def case_embed(case_number, action, target, moderator, reason, expires=None):

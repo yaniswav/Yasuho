@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 import discord
 from discord.ext import commands
@@ -128,6 +130,24 @@ class Starboard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._config = {}
+        # message_id -> [lock, waiter_count]; serializes concurrent star
+        # reactions on the same message and is pruned once nobody holds it, so
+        # it cannot grow without bound.
+        self._locks = {}
+
+    @asynccontextmanager
+    async def _message_lock(self, message_id):
+        entry = self._locks.get(message_id)
+        if entry is None:
+            entry = self._locks[message_id] = [asyncio.Lock(), 0]
+        entry[1] += 1
+        try:
+            async with entry[0]:
+                yield
+        finally:
+            entry[1] -= 1
+            if entry[1] == 0:
+                self._locks.pop(message_id, None)
 
     async def get_config(self, guild_id):
         if guild_id in self._config:
@@ -338,6 +358,13 @@ class Starboard(commands.Cog):
         if star_ch is None:
             return
 
+        # Serialize per source message so two near-simultaneous star reactions
+        # cannot both see "no entry yet" and each post a duplicate starboard
+        # message (which the ON CONFLICT below would then orphan).
+        async with self._message_lock(msg.id):
+            await self._sync_star(msg, guild, star_ch, channel_id, count, threshold)
+
+    async def _sync_star(self, msg, guild, star_ch, channel_id, count, threshold):
         entry = await self.bot.db_pool.fetchval(
             "SELECT star_message_id FROM starboard_entries WHERE message_id = $1;",
             msg.id,

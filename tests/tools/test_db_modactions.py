@@ -9,6 +9,7 @@ nothing here touches a real database, Discord, or the network.
 
 import datetime
 
+import asyncpg
 import discord
 import pytest
 
@@ -234,3 +235,33 @@ async def test_create_case_returns_case_number(fake_pool):
     assert "INSERT INTO cases" in query
     assert "RETURNING case_number" in query
     assert args == (4242, 1001, 2002, "ban", "spam", None)
+
+
+class _RaisingPool:
+    """Pool whose fetchrow raises UniqueViolationError a fixed number of times
+    before returning a row, to exercise create_case's race-retry loop."""
+
+    def __init__(self, fail_times, case_number=7):
+        self.fail_times = fail_times
+        self.case_number = case_number
+        self.calls = 0
+
+    async def fetchrow(self, query, *args):
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise asyncpg.UniqueViolationError("duplicate key value")
+        return {"case_number": self.case_number}
+
+
+async def test_create_case_retries_on_unique_violation():
+    pool = _RaisingPool(fail_times=2)
+    number = await modactions.create_case(pool, 1, 2, 3, "ban")
+    assert number == 7
+    assert pool.calls == 3  # two conflicts, then success
+
+
+async def test_create_case_reraises_after_exhausting_retries():
+    pool = _RaisingPool(fail_times=99)
+    with pytest.raises(asyncpg.UniqueViolationError):
+        await modactions.create_case(pool, 1, 2, 3, "ban")
+    assert pool.calls == modactions._CASE_INSERT_RETRIES
