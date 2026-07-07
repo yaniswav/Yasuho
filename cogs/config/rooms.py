@@ -1556,10 +1556,15 @@ class TemporaryRooms(commands.Cog):
             if hub["user_limit"] > 0:
                 kwargs["user_limit"] = hub["user_limit"]
             if hub["private"]:
+                # Actually lock the room: deny @everyone connect (the old code
+                # only granted the creator manage perms, which _grant_room_owner
+                # does anyway, so "private" rooms were joinable by all). The owner
+                # keeps connect + control and can admit people via the panel.
                 kwargs["overwrites"] = {
+                    guild.default_role: discord.PermissionOverwrite(connect=False),
                     member: discord.PermissionOverwrite(
-                        manage_channels=True, move_members=True
-                    )
+                        connect=True, manage_channels=True, move_members=True
+                    ),
                 }
 
             new_channel = await guild.create_voice_channel(name, **kwargs)
