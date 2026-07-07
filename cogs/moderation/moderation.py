@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
-from tools import db, modactions
+from tools import db, modactions, modchecks
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -505,6 +505,10 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
+        err = modchecks.hierarchy_error(ctx, target)
+        if err:
+            return await ctx.send(err, delete_after=10)
+
         # Suppress the ModLog leave listener so this bot kick is logged once
         # (the case embed below), not twice.
         modactions.funnel_suppress(self.bot, ctx.guild.id, target.id, "remove")
@@ -539,6 +543,10 @@ class Moderation(commands.Cog):
 
         if reason is None:
             reason = "No reason specified"
+
+        err = modchecks.hierarchy_error(ctx, user)
+        if err:
+            return await ctx.send(err, delete_after=10)
 
         embedkick = discord.Embed(
             color=random_colour(),
@@ -598,6 +606,10 @@ class Moderation(commands.Cog):
 
         if reason is None:
             reason = "No reason specified"
+
+        err = modchecks.hierarchy_error(ctx, target)
+        if err:
+            return await ctx.send(err, delete_after=10)
 
         confirm = discord.Embed(
             title=_("Confirm ban"),
@@ -886,6 +898,10 @@ class Moderation(commands.Cog):
 
         if reason is None:
             reason = "No reason specified"
+
+        err = modchecks.hierarchy_error(ctx, user)
+        if err:
+            return await ctx.send(err, delete_after=10)
 
         role_id = await self._get_mute_role_id(ctx.guild.id)
 

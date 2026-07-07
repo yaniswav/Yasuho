@@ -6,6 +6,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools import modchecks
 from tools.i18n import _
 from tools.time import (
     FutureTime,
@@ -269,6 +270,10 @@ class Reminder(commands.Cog):
         reason: str = None,
     ):
         """Temporarily bans a member for the given duration."""
+
+        err = modchecks.hierarchy_error(ctx, member)
+        if err:
+            return await ctx.send(err)
 
         try:
             await ctx.guild.ban(member, reason=reason)
