@@ -4,6 +4,7 @@ import urllib.parse
 import aiohttp
 import discord
 import lyricsgenius
+import requests
 import wikipedia
 from discord.ext import commands
 
@@ -13,6 +14,31 @@ from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
+
+
+class _TimeoutRequests:
+    """Thin proxy over the requests module that forces a default timeout on get.
+
+    The wikipedia library calls requests.get() with no timeout (see its
+    _wiki_request), so a hung upstream would tie up an executor thread forever.
+    We swap the name the wikipedia module resolves to for this proxy, which
+    forwards everything but caps get() - without touching the global requests
+    module every other caller shares.
+    """
+
+    def __init__(self, timeout):
+        self._timeout = timeout
+
+    def get(self, *args, **kwargs):
+        kwargs.setdefault("timeout", self._timeout)
+        return requests.get(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(requests, name)
+
+
+# Reuse the same cap as every aiohttp call (tools.http.TIMEOUT) as plain seconds.
+wikipedia.wikipedia.requests = _TimeoutRequests(TIMEOUT.total)
 
 
 class SearchWeb(commands.Cog):
