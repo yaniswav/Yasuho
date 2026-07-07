@@ -300,6 +300,15 @@ class Settings(commands.Cog):
     async def set_prefix(self, ctx, prefix: str):
         """Assign a Prefix to Yasuho for use in your guild."""
 
+        # Reject a blank or whitespace-only prefix (which would break parsing)
+        # and cap the length; a trailing space is kept on purpose (e.g. "y ").
+        if not prefix.strip():
+            return await ctx.send(_("The prefix can't be blank."))
+        if len(prefix) > 10:
+            return await ctx.send(
+                _("The prefix can't be longer than 10 characters.")
+            )
+
         await db.upsert_guild_value(
             self.bot.db_pool, "prefixes", "prefix", ctx.guild.id, prefix
         )

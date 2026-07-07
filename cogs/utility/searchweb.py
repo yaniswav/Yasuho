@@ -197,9 +197,10 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
+                safe_name = urllib.parse.quote(username, safe="")
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
                     async with s.get(
-                        f"https://api.mojang.com/users/profiles/minecraft/{username}"
+                        f"https://api.mojang.com/users/profiles/minecraft/{safe_name}"
                     ) as r:
                         if r.status != 200:
                             return await ctx.send(_("No such Minecraft account."))

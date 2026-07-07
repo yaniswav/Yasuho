@@ -24,6 +24,15 @@ class Extras(commands.Cog):
     async def quote(self, ctx, message: discord.Message):
         """Quote a message into a clean embed."""
 
+        # The Message converter resolves any message the BOT can see; only let
+        # the invoker quote one from a channel THEY can read, in this server.
+        if ctx.guild is None or message.guild != ctx.guild:
+            return await ctx.send(_("I can only quote messages from this server."))
+        if not message.channel.permissions_for(ctx.author).read_messages:
+            return await ctx.send(
+                _("You can't quote a message from a channel you can't see.")
+            )
+
         embed = discord.Embed(
             description=message.content or _("(no text)"),
             colour=random_colour(),
@@ -167,9 +176,31 @@ class Extras(commands.Cog):
     async def invite(self, ctx):
         """Get an invite link to add the bot to your server."""
 
-        url = discord.utils.oauth_url(
-            self.bot.user.id, permissions=discord.Permissions(permissions=8)
+        # Request exactly what Yasuho's features use, never Administrator (a
+        # blanket admin invite is a trust red flag and far more than she needs).
+        perms = discord.Permissions(
+            view_channel=True,
+            send_messages=True,
+            send_messages_in_threads=True,
+            embed_links=True,
+            attach_files=True,
+            read_message_history=True,
+            add_reactions=True,
+            external_emojis=True,
+            use_application_commands=True,
+            manage_messages=True,
+            manage_roles=True,
+            manage_channels=True,
+            manage_nicknames=True,
+            kick_members=True,
+            ban_members=True,
+            moderate_members=True,
+            manage_guild=True,
+            connect=True,
+            speak=True,
+            move_members=True,
         )
+        url = discord.utils.oauth_url(self.bot.user.id, permissions=perms)
         embed = discord.Embed(
             title=_("Invite me"),
             description=_("[Click here to invite me]({url})").format(url=url),

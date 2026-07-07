@@ -124,7 +124,8 @@ class Meta(commands.Cog):
             try:
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
                     async with cs.get(
-                        f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric'
+                        "https://api.openweathermap.org/data/2.5/weather",
+                        params={"q": city, "appid": WEATHER_KEY, "units": "metric"},
                     ) as r:
                         res = await r.json()
             except Exception:

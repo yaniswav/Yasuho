@@ -259,6 +259,7 @@ class Reminder(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
     async def tempban(
         self,
         ctx,
@@ -269,7 +270,14 @@ class Reminder(commands.Cog):
     ):
         """Temporarily bans a member for the given duration."""
 
-        await ctx.guild.ban(member, reason=reason)
+        try:
+            await ctx.guild.ban(member, reason=reason)
+        except discord.Forbidden:
+            return await ctx.send(
+                _("I don't have permission to ban that member.")
+            )
+        except discord.HTTPException:
+            return await ctx.send(_("Sorry, I couldn't ban that member."))
         await self.create_timer(
             duration.dt,
             "tempban",

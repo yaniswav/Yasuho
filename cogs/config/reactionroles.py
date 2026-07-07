@@ -277,14 +277,18 @@ class ReactionRoles(commands.Cog):
 
         stored_emoji = emoji.replace("\uFE0F", "")
 
+        # Scope the delete to this guild so a mod cannot wipe another guild's
+        # mapping by guessing a message id; only drop the cache if we removed a row.
         query = """
             DELETE FROM reaction_roles
-            WHERE message_id = $1 AND emoji = $2;
+            WHERE message_id = $1 AND emoji = $2 AND guild_id = $3;
             """
 
-        await self.bot.db_pool.execute(query, mid, stored_emoji)
-
-        self.cache.pop((mid, stored_emoji), None)
+        result = await self.bot.db_pool.execute(
+            query, mid, stored_emoji, ctx.guild.id
+        )
+        if result != "DELETE 0":
+            self.cache.pop((mid, stored_emoji), None)
 
         embed = discord.Embed(
             title=_("Reaction role removed"),
