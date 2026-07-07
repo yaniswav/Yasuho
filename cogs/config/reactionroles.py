@@ -1,5 +1,4 @@
 import logging
-import re
 
 import discord
 from discord.ext import commands
@@ -7,33 +6,11 @@ from discord.ext import commands
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.interactions import notify_failure
+from tools.message_ref import parse_message_ref
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
-
-# https://discord.com/channels/<guild>/<channel>/<message>
-_LINK_RE = re.compile(
-    r"https?://(?:\w+\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)"
-)
-
-
-def _parse_message_ref(text, default_channel_id):
-    """Resolve a message ID or jump link to (guild_id, channel_id, message_id).
-
-    A jump link yields all three. A bare numeric ID yields (None, the supplied
-    default channel id, the message id). Returns None when nothing parses.
-    """
-
-    if not text:
-        return None
-    text = text.strip()
-    match = _LINK_RE.search(text)
-    if match:
-        return int(match.group(1)), int(match.group(2)), int(match.group(3))
-    if text.isdigit():
-        return None, default_channel_id, int(text)
-    return None
 
 
 # ----------------------------------------------------------------------
@@ -90,7 +67,7 @@ class AddReactionRoleModal(LocaleModal):
             )
             return
 
-        parsed = _parse_message_ref(self.ref_field.value, self.default_channel_id)
+        parsed = parse_message_ref(self.ref_field.value, self.default_channel_id)
         if parsed is None:
             await interaction.response.send_message(
                 _("That doesn't look like a message ID or a Discord message link."),

@@ -17,7 +17,6 @@ ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
 
 import logging
-import re
 
 import discord
 from discord.ext import commands
@@ -25,6 +24,7 @@ from discord.ext import commands
 from tools import embed_creator, i18n
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.message_ref import parse_message_ref
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView, LocaleModal
 
@@ -61,12 +61,6 @@ _STYLE_DOT = {
     4: "\U0001F534",  # red circle
 }
 
-# https://discord.com/channels/<guild>/<channel>/<message>
-_LINK_RE = re.compile(
-    r"https?://(?:\w+\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)"
-)
-
-
 def _parse_style(text):
     """Parse a style name to a ButtonStyle int (defaults to secondary = 2)."""
 
@@ -85,24 +79,6 @@ def _coerce_style(value):
     if style.value not in (1, 2, 3, 4):
         return discord.ButtonStyle.secondary
     return style
-
-
-def _parse_message_ref(text, default_channel_id):
-    """Resolve a message ID or jump link to (guild_id, channel_id, message_id).
-
-    A jump link yields all three. A bare numeric ID yields (None, the supplied
-    default channel id, the message id). Returns None when nothing parses.
-    """
-
-    if not text:
-        return None
-    text = text.strip()
-    match = _LINK_RE.search(text)
-    if match:
-        return int(match.group(1)), int(match.group(2)), int(match.group(3))
-    if text.isdigit():
-        return None, default_channel_id, int(text)
-    return None
 
 
 # ----------------------------------------------------------------------
@@ -636,7 +612,7 @@ class BuilderView(AuthorView):
             )
             return
 
-        parsed = _parse_message_ref(raw, self.target_channel_id)
+        parsed = parse_message_ref(raw, self.target_channel_id)
         if parsed is None:
             await interaction.response.send_message(
                 _("That doesn't look like a message ID or a Discord message link."),
