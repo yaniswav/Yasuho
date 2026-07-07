@@ -22,6 +22,9 @@ log = logging.getLogger(__name__)
 # free-text command's UserFriendlyTime(default="something").
 DEFAULT_REMINDER_MESSAGE = "something"
 
+# Cap pending reminders per user so nobody can flood the timers table.
+MAX_PENDING_REMINDERS = 25
+
 
 class RemindModal(LocaleModal):
     """Interactive reminder form: a short "When" and a paragraph "Message".
@@ -84,6 +87,18 @@ class RemindModal(LocaleModal):
                 ephemeral=True,
             )
 
+        if (
+            await self.cog._pending_reminder_count(self.author_id)
+            >= MAX_PENDING_REMINDERS
+        ):
+            return await interaction.response.send_message(
+                _(
+                    "You already have {count} reminders pending - wait for some "
+                    "to fire before adding more."
+                ).format(count=MAX_PENDING_REMINDERS),
+                ephemeral=True,
+            )
+
         await self.cog.create_timer(
             dt,
             "reminder",
@@ -142,6 +157,17 @@ class Reminder(commands.Cog):
 
     async def get_tzinfo(self, user_id):
         return datetime.timezone.utc
+
+    async def _pending_reminder_count(self, user_id):
+        """How many reminders this user currently has queued."""
+        return (
+            await self.bot.db_pool.fetchval(
+                "SELECT COUNT(*) FROM timers "
+                "WHERE event = 'reminder' AND extra->>'author_id' = $1",
+                str(user_id),
+            )
+            or 0
+        )
 
     async def create_timer(self, when, event, **extra):
         row = await self.bot.db_pool.fetchrow(
@@ -243,6 +269,14 @@ class Reminder(commands.Cog):
                 _("Tap the button below to set a reminder."), view=view
             )
             return
+
+        if await self._pending_reminder_count(ctx.author.id) >= MAX_PENDING_REMINDERS:
+            return await ctx.send(
+                _(
+                    "You already have {count} reminders pending - wait for some "
+                    "to fire before adding more."
+                ).format(count=MAX_PENDING_REMINDERS)
+            )
 
         await self.create_timer(
             when.dt,
