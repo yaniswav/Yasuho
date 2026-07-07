@@ -1,6 +1,8 @@
 # Ruff configuration for Yasuho.
+# Python 3.12 is the real floor: sonolink (music) requires 3.12+, so the bot
+# cannot run on anything older. CI lints and byte-compiles on 3.12 to match.
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [lint]
 # Conservative, high-signal ruleset: real errors (pyflakes), syntax (E9), and
