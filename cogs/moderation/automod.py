@@ -638,6 +638,19 @@ class AutoMod(commands.Cog):
                 pass
             except discord.HTTPException:
                 log.exception("AutoMod failed to kick member")
+        elif action == "warn":
+            # A real warn: bump the shared 3-strike counter and auto-kick on the
+            # third, exactly like the warn command (via modactions.bump_warn).
+            new_count = await modactions.bump_warn(
+                self.bot.db_pool, guild.id, member.id
+            )
+            if new_count >= 3:
+                try:
+                    await guild.kick(member, reason="AutoMod: reached 3 warns")
+                except discord.Forbidden:
+                    pass
+                except discord.HTTPException:
+                    log.exception("AutoMod failed to auto-kick at 3 warns")
 
         try:
             await message.channel.send(notice, delete_after=5)

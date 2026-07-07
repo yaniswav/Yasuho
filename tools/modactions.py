@@ -85,6 +85,41 @@ async def create_case(
     raise last_exc
 
 
+async def bump_warn(pool, guild_id, user_id):
+    """Add one warn to a member and return the new running count.
+
+    On reaching 3 the counter is reset to 0 and 3 is returned, signalling the
+    caller to auto-kick; below the threshold the new count (1 or 2) is stored
+    and returned. This is the single home of the 3-strike rule, shared by the
+    warn command and AutoMod so both stay in lockstep.
+    """
+    current = (
+        await pool.fetchval(
+            "SELECT warns_count FROM warns WHERE guild_id = $1 AND user_id = $2",
+            guild_id,
+            user_id,
+        )
+        or 0
+    )
+    new_count = current + 1
+    if new_count >= 3:
+        await pool.execute(
+            "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 0) "
+            "ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 0",
+            guild_id,
+            user_id,
+        )
+        return 3
+    await pool.execute(
+        "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) "
+        "ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3",
+        guild_id,
+        user_id,
+        new_count,
+    )
+    return new_count
+
+
 def case_embed(case_number, action, target, moderator, reason, expires=None):
     """A consistent, colour-coded embed for a moderation action."""
 

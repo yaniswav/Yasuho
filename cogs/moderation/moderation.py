@@ -1172,18 +1172,9 @@ class Moderation(commands.Cog):
         if member is None:
             return await ctx.send_help(ctx.command)
 
-        query = """
-
-        SELECT warns_count FROM warns
-        WHERE guild_id = $1 AND user_id = $2;
-
-        """
-
-        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id) or 0
-        new_count = fetch + 1
-
         # Every warn is recorded as its own case for history/auditing, while the
-        # warns_count row stays the source of truth for the auto-kick threshold.
+        # warns_count row (bumped here) stays the source of truth for the
+        # 3-strike auto-kick threshold. bump_warn is shared with AutoMod.
         num = await modactions.create_case(
             self.bot.db_pool,
             ctx.guild.id,
@@ -1192,15 +1183,11 @@ class Moderation(commands.Cog):
             "warn",
             reason,
         )
+        new_count = await modactions.bump_warn(
+            self.bot.db_pool, ctx.guild.id, member.id
+        )
 
         if new_count >= 3:
-            query = """ INSERT INTO warns
-                        (guild_id, user_id, warns_count)
-                        VALUES
-                        ($1, $2, 0) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 0;
-                        """
-            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
-
             embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
             embed.add_field(
                 name=_("Auto-action"),
@@ -1233,9 +1220,6 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
             await self._post_modlog(ctx.guild, embed)
             return
-
-        query = """ INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3;"""
-        await self.bot.db_pool.execute(query, ctx.guild.id, member.id, new_count)
 
         embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
         embed.add_field(name=_("Warns"), value=f"{new_count}/3", inline=False)

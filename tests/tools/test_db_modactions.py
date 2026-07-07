@@ -265,3 +265,45 @@ async def test_create_case_reraises_after_exhausting_retries():
     with pytest.raises(asyncpg.UniqueViolationError):
         await modactions.create_case(pool, 1, 2, 3, "ban")
     assert pool.calls == modactions._CASE_INSERT_RETRIES
+
+
+# ---------------------------------------------------------------------------
+# modactions.bump_warn
+# ---------------------------------------------------------------------------
+
+
+class _WarnPool:
+    """Fake pool for bump_warn: fetchval returns a preset current count and
+    execute records the (query, args) that were issued."""
+
+    def __init__(self, current):
+        self.fetchval_return = current
+        self.executed = None
+
+    async def fetchval(self, query, *args):
+        return self.fetchval_return
+
+    async def execute(self, query, *args):
+        self.executed = (query, args)
+        return "INSERT 0 1"
+
+
+async def test_bump_warn_first_warn_stores_one():
+    pool = _WarnPool(current=0)
+    assert await modactions.bump_warn(pool, 1, 2) == 1
+    query, args = pool.executed
+    assert "warns_count = $3" in query
+    assert args == (1, 2, 1)
+
+
+async def test_bump_warn_null_current_treated_as_zero():
+    pool = _WarnPool(current=None)
+    assert await modactions.bump_warn(pool, 1, 2) == 1
+
+
+async def test_bump_warn_third_resets_and_signals_kick():
+    pool = _WarnPool(current=2)
+    assert await modactions.bump_warn(pool, 1, 2) == 3
+    query, args = pool.executed
+    assert "warns_count = 0" in query
+    assert args == (1, 2)  # reset path takes no count argument
