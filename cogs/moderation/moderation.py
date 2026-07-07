@@ -1033,14 +1033,26 @@ class Moderation(commands.Cog):
                 )
                 return
 
+            # Chunk first so we see every member (guilds are not chunked at
+            # startup), and never let one failure abort the whole sweep.
+            if not ctx.guild.chunked:
+                await ctx.guild.chunk()
+            done, failed = 0, 0
             async with ctx.typing():
                 for m in ctx.guild.members:
-                    if role not in m.roles:
-                        await m.add_roles(role)
+                    if role in m.roles:
+                        continue
+                    try:
+                        await m.add_roles(
+                            role, reason=f"addrole -all by {ctx.author}"
+                        )
+                        done += 1
+                    except discord.HTTPException:
+                        failed += 1
 
             return await ctx.send(
-                _("Added to all guilds members **`{role}`** role.").format(
-                    role=role.name
+                _("Added **{role}** to {done} member(s) ({failed} failed).").format(
+                    role=role.name, done=done, failed=failed
                 )
             )
 
@@ -1074,14 +1086,26 @@ class Moderation(commands.Cog):
                 )
                 return
 
+            # Chunk first so we see every member (guilds are not chunked at
+            # startup), and never let one failure abort the whole sweep.
+            if not ctx.guild.chunked:
+                await ctx.guild.chunk()
+            done, failed = 0, 0
             async with ctx.typing():
                 for m in ctx.guild.members:
-                    if role in m.roles:
-                        await m.remove_roles(role)
+                    if role not in m.roles:
+                        continue
+                    try:
+                        await m.remove_roles(
+                            role, reason=f"removerole -all by {ctx.author}"
+                        )
+                        done += 1
+                    except discord.HTTPException:
+                        failed += 1
 
             return await ctx.send(
-                _("Removed to all guilds members **`{role}`** role.").format(
-                    role=role.name
+                _("Removed **{role}** from {done} member(s) ({failed} failed).").format(
+                    role=role.name, done=done, failed=failed
                 )
             )
 
