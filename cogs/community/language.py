@@ -10,7 +10,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import i18n, settings
+from tools import i18n, interactions, settings
 from tools.i18n import _
 from tools.views import AuthorView
 
@@ -82,6 +82,9 @@ class LanguageSelect(discord.ui.Select):
             )
         except Exception:
             log.exception("Language select failed")
+            await interactions.notify_failure(
+                interaction, _("Sorry, I couldn't change your language.")
+            )
 
 
 class LanguageView(AuthorView):

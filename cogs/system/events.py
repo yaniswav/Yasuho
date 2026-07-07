@@ -175,11 +175,5 @@ class Events(commands.Cog):
         except discord.HTTPException:
             log.exception("Failed to sync mute role perms")
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-
-
 async def setup(bot):
     await bot.add_cog(Events(bot))

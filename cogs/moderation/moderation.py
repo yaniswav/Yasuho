@@ -903,7 +903,8 @@ class Moderation(commands.Cog):
             )
 
             query = (
-                """INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2)"""
+                "INSERT INTO mutedmembers (mguild_id, member_id) VALUES ($1, $2) "
+                "ON CONFLICT DO NOTHING"
             )
             await self.bot.db_pool.execute(query, ctx.guild.id, user.id)
 

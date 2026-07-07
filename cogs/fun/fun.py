@@ -170,7 +170,11 @@ class Fun(commands.Cog):
             return final_gif
 
         async with ctx.typing():
-            final_gif = await self.bot.loop.run_in_executor(None, _render)
+            try:
+                final_gif = await self.bot.loop.run_in_executor(None, _render)
+            except Exception:
+                log.exception("Failed to render hug gif")
+                return await ctx.send(_("Sorry, I couldn't make the hug image."))
             await ctx.send(file=discord.File(final_gif, filename="hug.gif"))
 
     @commands.command()
@@ -278,13 +282,21 @@ class Fun(commands.Cog):
         # Verify if the emoji is a custom emoji
         if emoji.startswith(("<:", "<a:")) and emoji.endswith(">"):
             m = re.search(r":(\d+)>$", emoji)
+            if m is None:
+                return await ctx.send(
+                    _("That doesn't look like an emoji I can enlarge.")
+                )
             emoji_id = m.group(1)
             extension = "gif" if emoji.startswith("<a:") else "png"
             url = f"https://cdn.discordapp.com/emojis/{emoji_id}.{extension}"
         else:
-            # For other emojis, we use Twemoji
+            # For other emojis, we use Twemoji (the maxcdn host is long dead;
+            # jsdelivr serves the maintained fork's assets).
             emoji_code = "".join(format(ord(char), "x") for char in emoji)
-            url = f"https://twemoji.maxcdn.com/v/latest/72x72/{emoji_code}.png"
+            url = (
+                "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/"
+                f"{emoji_code}.png"
+            )
 
         embed = discord.Embed(color=random_colour())
         embed.add_field(
