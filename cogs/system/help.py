@@ -42,6 +42,7 @@ CATEGORIES = [
             "Twitch",
             "Announcements",
             "CustomCommands",
+            "Verification",
         ],
     ),
     ("📈", "Community", ["Leveling", "Profiles", "AFK", "Reminder", "AvatarHistory", "UserSettings"]),
