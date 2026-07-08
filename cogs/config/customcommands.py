@@ -13,6 +13,8 @@ fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 
 import json
 import logging
+import re
+import time
 
 import discord
 from discord.ext import commands
@@ -63,6 +65,14 @@ def build_substitution(author, guild):
     return substitute
 
 
+def parse_cooldown(raw):
+    """Parse a cooldown string into 0..3600 seconds (0 = no cooldown)."""
+    try:
+        return max(0, min(3600, int((raw or "0").strip() or 0)))
+    except ValueError:
+        return 0
+
+
 # ----------------------------------------------------------------------
 # Modals
 # ----------------------------------------------------------------------
@@ -85,8 +95,22 @@ class AddTextModal(LocaleModal):
             max_length=cc.MAX_TEXT_LENGTH,
             required=True,
         )
+        self.aliases_field = discord.ui.TextInput(
+            label=_("Aliases (optional)"),
+            placeholder=_("other names, space or comma separated"),
+            max_length=200,
+            required=False,
+        )
+        self.cooldown_field = discord.ui.TextInput(
+            label=_("Cooldown seconds (optional)"),
+            placeholder="0",
+            max_length=5,
+            required=False,
+        )
         self.add_item(self.name_field)
         self.add_item(self.content_field)
+        self.add_item(self.aliases_field)
+        self.add_item(self.cooldown_field)
 
     async def on_submit(self, interaction):
         try:
@@ -94,10 +118,20 @@ class AddTextModal(LocaleModal):
             err = await self.panel.cog.validate_new_name(self.panel.guild.id, name)
             if err:
                 return await interaction.response.send_message(err, ephemeral=True)
+            aliases, aerr = await self.panel.cog.validate_aliases(
+                self.panel.guild.id, name, self.aliases_field.value
+            )
+            if aerr:
+                return await interaction.response.send_message(aerr, ephemeral=True)
             await self.panel.cog.save_command(
                 self.panel.guild.id,
                 name,
-                {"type": "text", "content": self.content_field.value.strip()},
+                {
+                    "type": "text",
+                    "content": self.content_field.value.strip(),
+                    "aliases": aliases,
+                    "cooldown": parse_cooldown(self.cooldown_field.value),
+                },
                 interaction.user.id,
             )
             await self.panel.refresh(interaction, selected=name)
@@ -109,26 +143,51 @@ class AddTextModal(LocaleModal):
 class EditTextModal(LocaleModal):
     """Edit an existing text command's response (the name is kept)."""
 
-    def __init__(self, panel, name, content):
+    def __init__(self, panel, name, response):
         super().__init__(title=_("Edit: {name}").format(name=name)[:45])
         self.panel = panel
         self.name = name
         self.content_field = discord.ui.TextInput(
             label=_("Response text"),
             style=discord.TextStyle.paragraph,
-            default=content or None,
+            default=(response.get("content") or None),
             placeholder=PLACEHOLDER_HINT,
             max_length=cc.MAX_TEXT_LENGTH,
             required=True,
         )
+        self.aliases_field = discord.ui.TextInput(
+            label=_("Aliases (optional)"),
+            default=(" ".join(response.get("aliases") or []) or None),
+            placeholder=_("other names, space or comma separated"),
+            max_length=200,
+            required=False,
+        )
+        self.cooldown_field = discord.ui.TextInput(
+            label=_("Cooldown seconds (optional)"),
+            default=str(response.get("cooldown") or 0),
+            max_length=5,
+            required=False,
+        )
         self.add_item(self.content_field)
+        self.add_item(self.aliases_field)
+        self.add_item(self.cooldown_field)
 
     async def on_submit(self, interaction):
         try:
+            aliases, aerr = await self.panel.cog.validate_aliases(
+                self.panel.guild.id, self.name, self.aliases_field.value
+            )
+            if aerr:
+                return await interaction.response.send_message(aerr, ephemeral=True)
             await self.panel.cog.save_command(
                 self.panel.guild.id,
                 self.name,
-                {"type": "text", "content": self.content_field.value.strip()},
+                {
+                    "type": "text",
+                    "content": self.content_field.value.strip(),
+                    "aliases": aliases,
+                    "cooldown": parse_cooldown(self.cooldown_field.value),
+                },
                 interaction.user.id,
             )
             await self.panel.refresh(interaction, selected=self.name)
@@ -149,7 +208,21 @@ class AddEmbedNameModal(LocaleModal):
             max_length=cc.MAX_NAME_LENGTH,
             required=True,
         )
+        self.aliases_field = discord.ui.TextInput(
+            label=_("Aliases (optional)"),
+            placeholder=_("other names, space or comma separated"),
+            max_length=200,
+            required=False,
+        )
+        self.cooldown_field = discord.ui.TextInput(
+            label=_("Cooldown seconds (optional)"),
+            placeholder="0",
+            max_length=5,
+            required=False,
+        )
         self.add_item(self.name_field)
+        self.add_item(self.aliases_field)
+        self.add_item(self.cooldown_field)
 
     async def on_submit(self, interaction):
         try:
@@ -157,7 +230,17 @@ class AddEmbedNameModal(LocaleModal):
             err = await self.panel.cog.validate_new_name(self.panel.guild.id, name)
             if err:
                 return await interaction.response.send_message(err, ephemeral=True)
-            draft = {"name": name, "embed": embed_creator.default_embed()}
+            aliases, aerr = await self.panel.cog.validate_aliases(
+                self.panel.guild.id, name, self.aliases_field.value
+            )
+            if aerr:
+                return await interaction.response.send_message(aerr, ephemeral=True)
+            draft = {
+                "name": name,
+                "embed": embed_creator.default_embed(),
+                "aliases": aliases,
+                "cooldown": parse_cooldown(self.cooldown_field.value),
+            }
             view = CustomEmbedPanel(self.panel.cog, self.panel.guild, self.panel.author_id, draft)
             await interaction.response.send_message(
                 embed=view.build_embed(), view=view, ephemeral=True
@@ -241,7 +324,12 @@ class CustomEmbedPanel(AuthorView):
         await self.cog.save_command(
             self.guild.id,
             self.draft["name"],
-            {"type": "embed", "embed": self.draft["embed"]},
+            {
+                "type": "embed",
+                "embed": self.draft["embed"],
+                "aliases": self.draft.get("aliases") or [],
+                "cooldown": int(self.draft.get("cooldown") or 0),
+            },
             interaction.user.id,
         )
         for child in self.children:
@@ -346,7 +434,12 @@ class _EditButton(discord.ui.Button):
         if response is None:
             return await self._owner.refresh(interaction, selected=None)
         if response.get("type") == "embed":
-            draft = {"name": name, "embed": embed_creator.merge_embed(response.get("embed"))}
+            draft = {
+                "name": name,
+                "embed": embed_creator.merge_embed(response.get("embed")),
+                "aliases": response.get("aliases") or [],
+                "cooldown": int(response.get("cooldown") or 0),
+            }
             view = CustomEmbedPanel(
                 self._owner.cog, self._owner.guild, self._owner.author_id, draft
             )
@@ -356,7 +449,7 @@ class _EditButton(discord.ui.Button):
             view.message = await interaction.original_response()
         else:
             await interaction.response.send_modal(
-                EditTextModal(self._owner, name, response.get("content") or "")
+                EditTextModal(self._owner, name, response)
             )
 
 
@@ -431,10 +524,26 @@ class CustomCommandsPanel(AuthorView):
                 detail = _("An embed reply.")
             else:
                 content = resp.get("content") or ""
-                detail = content[:300] or _("*empty*")
+                detail = content[:200] or _("*empty*")
+            meta = []
+            uses = self.cog._uses.get(self.guild.id, {}).get(self.selected)
+            if uses is not None:
+                meta.append(_("used {count}x").format(count=uses))
+            aliases = resp.get("aliases") or []
+            if aliases:
+                meta.append(
+                    _("aliases: {list}").format(
+                        list=", ".join(f"`{a}`" for a in aliases)
+                    )
+                )
+            cooldown = int(resp.get("cooldown") or 0)
+            if cooldown:
+                meta.append(_("cooldown: {sec}s").format(sec=cooldown))
+            if meta:
+                detail = detail + "\n" + " | ".join(meta)
             embed.add_field(
                 name=_("Selected: {name}").format(name=self.selected),
-                value=detail,
+                value=detail[:1024],
                 inline=False,
             )
         embed.set_footer(text=_("Placeholders: {placeholders}").format(placeholders=PLACEHOLDER_HINT))
@@ -462,6 +571,10 @@ class CustomCommands(commands.Cog):
         self.bot = bot
         # guild_id -> {name: response_dict}; lazily loaded, invalidated on write.
         self._cache = {}
+        # guild_id -> {name: uses} (for the panel's usage display).
+        self._uses = {}
+        # (guild_id, name, user_id) -> monotonic expiry for per-command cooldowns.
+        self._cd = {}
 
     async def get_commands(self, guild_id):
         """Return {name: response} for a guild (cached; loads on a miss)."""
@@ -469,17 +582,54 @@ class CustomCommands(commands.Cog):
         if cached is not None:
             return cached
         rows = await self.bot.db_pool.fetch(
-            "SELECT name, response FROM custom_commands WHERE guild_id = $1",
+            "SELECT name, response, uses FROM custom_commands WHERE guild_id = $1",
             guild_id,
         )
-        data = {}
+        data, uses = {}, {}
         for row in rows:
             response = row["response"]
             if isinstance(response, str):
                 response = json.loads(response)
             data[row["name"]] = response
+            uses[row["name"]] = row["uses"]
         self._cache[guild_id] = data
+        self._uses[guild_id] = uses
         return data
+
+    async def _resolve(self, guild_id, typed):
+        """Resolve a typed name to (name, response) by name then alias, or (None, None)."""
+        cmds = await self.get_commands(guild_id)
+        if typed in cmds:
+            return typed, cmds[typed]
+        for name, resp in cmds.items():
+            if typed in (resp.get("aliases") or []):
+                return name, resp
+        return None, None
+
+    async def validate_aliases(self, guild_id, name, raw):
+        """Parse a raw alias string into a clean list, or return (None, error).
+
+        Aliases are extra names the command also answers to. Each must be a
+        valid, non-reserved name; the command's own name is dropped, duplicates
+        collapse, and the list is capped. Light on purpose - a clash between two
+        custom commands' aliases just resolves first-match.
+        """
+        parts = [cc.normalize_name(p) for p in re.split(r"[,\s]+", raw or "") if p.strip()]
+        if not parts:
+            return [], None
+        reserved = set(self.bot.all_commands.keys())
+        clean, seen = [], set()
+        for alias in parts:
+            if alias == name or alias in seen:
+                continue
+            err = cc.validate_name(alias, reserved=reserved, existing=set())
+            if err:
+                return None, _("Alias `{alias}` is not usable: {why}").format(
+                    alias=alias, why=_NAME_ERRORS[err]()
+                )
+            seen.add(alias)
+            clean.append(alias)
+        return clean[:5], None
 
     async def at_capacity(self, guild_id):
         return len(await self.get_commands(guild_id)) >= cc.MAX_COMMANDS_PER_GUILD
@@ -504,6 +654,7 @@ class CustomCommands(commands.Cog):
             created_by,
         )
         self._cache.pop(guild_id, None)
+        self._uses.pop(guild_id, None)
 
     async def delete_command(self, guild_id, name):
         await self.bot.db_pool.execute(
@@ -512,6 +663,7 @@ class CustomCommands(commands.Cog):
             name,
         )
         self._cache.pop(guild_id, None)
+        self._uses.pop(guild_id, None)
 
     async def _bump_uses(self, guild_id, name):
         try:
@@ -544,12 +696,25 @@ class CustomCommands(commands.Cog):
         """
         if ctx.guild is None:
             return False
-        name = (ctx.invoked_with or "").lower()
-        if not name:
+        typed = (ctx.invoked_with or "").lower()
+        if not typed:
             return False
-        response = (await self.get_commands(ctx.guild.id)).get(name)
+        name, response = await self._resolve(ctx.guild.id, typed)
         if response is None:
             return False
+
+        # Per-user cooldown, if the command sets one. On cooldown we swallow it
+        # (return True) so nothing is sent and the "did you mean" stays quiet.
+        cooldown = int(response.get("cooldown") or 0)
+        if cooldown > 0:
+            key = (ctx.guild.id, name, ctx.author.id)
+            now = time.monotonic()
+            if self._cd.get(key, 0.0) > now:
+                return True
+            self._cd[key] = now + cooldown
+            if len(self._cd) > 5000:
+                self._cd = {k: v for k, v in self._cd.items() if v > now}
+
         await self._run(ctx.message, name, response)
         return True
 
