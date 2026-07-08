@@ -7,9 +7,25 @@ option list, so the rules are unit-testable without a bot.
 
 from __future__ import annotations
 
+import re
+
 MAX_OPTIONS = 25  # Discord caps a select at 25 options
 MAX_LABEL = 80
 MAX_DESCRIPTION = 100
+
+# Temporary self-roles: how long a role stays before auto-removal (0 = permanent).
+MAX_TEMP_SECONDS = 30 * 86400
+_DURATION_RE = re.compile(r"^\s*(\d+)\s*([smhd]?)\s*$", re.IGNORECASE)
+_DURATION_UNIT = {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
+def parse_duration(raw):
+    """Parse '90s'/'30m'/'2h'/'1d'/'120' into 0..MAX_TEMP_SECONDS (0 = none)."""
+    match = _DURATION_RE.match(raw or "")
+    if not match:
+        return 0
+    seconds = int(match.group(1)) * _DURATION_UNIT[match.group(2).lower()]
+    return max(0, min(MAX_TEMP_SECONDS, seconds))
 
 
 def resolve_selection(selected_ids, held_ids, menu_ids, *, exclusive):
@@ -51,8 +67,17 @@ def normalize_options(blob):
         emoji = entry.get("emoji") or None
         desc = entry.get("description")
         desc = str(desc)[:MAX_DESCRIPTION] if desc else None
+        temp = entry.get("temp_seconds")
+        temp = temp if isinstance(temp, int) and not isinstance(temp, bool) and temp > 0 else 0
+        temp = min(temp, MAX_TEMP_SECONDS)
         out.append(
-            {"role_id": rid, "label": label, "emoji": emoji, "description": desc}
+            {
+                "role_id": rid,
+                "label": label,
+                "emoji": emoji,
+                "description": desc,
+                "temp_seconds": temp,
+            }
         )
         if len(out) >= MAX_OPTIONS:
             break

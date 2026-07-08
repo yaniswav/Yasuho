@@ -11,6 +11,7 @@ Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the
 fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
 
+import datetime
 import json
 import logging
 import re
@@ -49,6 +50,17 @@ def valid_emoji(text):
     if any(c.isascii() and c.isalnum() for c in text):
         return False
     return len(text) <= 8 and any(ord(c) > 0x2000 for c in text)
+
+
+def _format_duration(seconds):
+    """Render seconds back into a compact '1d'/'2h'/'30m' for a modal default."""
+    seconds = int(seconds or 0)
+    if seconds <= 0:
+        return ""
+    for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
+        if seconds % size == 0:
+            return f"{seconds // size}{unit}"
+    return f"{seconds}s"
 
 
 # ----------------------------------------------------------------------
@@ -116,6 +128,22 @@ class RoleMenuSelect(discord.ui.Select):
                 removed.append(role)
             except discord.HTTPException:
                 pass
+
+        # Auto-remove any temporary role just added, via the shared timer system.
+        reminder = interaction.client.get_cog("Reminder")
+        if reminder is not None and added:
+            by_id = {o["role_id"]: o for o in self.config.get("options", [])}
+            for role in added:
+                secs = int((by_id.get(role.id) or {}).get("temp_seconds") or 0)
+                if secs > 0:
+                    when = discord.utils.utcnow() + datetime.timedelta(seconds=secs)
+                    await reminder.create_timer(
+                        when,
+                        "temprole",
+                        guild_id=guild.id,
+                        user_id=member.id,
+                        role_id=role.id,
+                    )
 
         none = discord.AllowedMentions.none()
         parts = []
@@ -207,8 +235,17 @@ class RoleOptionModal(LocaleModal):
             max_length=role_menus.MAX_DESCRIPTION,
             default=(opt.get("description") if opt else None),
         )
+        temp = (opt or {}).get("temp_seconds") or 0
+        self.temp_field = discord.ui.TextInput(
+            label=_("Temporary? (optional)"),
+            placeholder=_("e.g. 2h, 30m, 1d - blank = permanent"),
+            required=False,
+            max_length=10,
+            default=(_format_duration(temp) if temp else None),
+        )
         self.add_item(self.emoji_field)
         self.add_item(self.desc_field)
+        self.add_item(self.temp_field)
 
     async def on_submit(self, interaction):
         try:
@@ -219,10 +256,12 @@ class RoleOptionModal(LocaleModal):
                     ephemeral=True,
                 )
             desc = self.desc_field.value.strip() or None
+            temp_seconds = role_menus.parse_duration(self.temp_field.value)
             for opt in self.builder.draft.get("options", []):
                 if opt["role_id"] == self.role_id:
                     opt["emoji"] = emoji
                     opt["description"] = desc
+                    opt["temp_seconds"] = temp_seconds
                     break
             await self.builder._rerender(interaction)
         except Exception:
@@ -237,13 +276,17 @@ class _CustomizeSelect(discord.ui.Select):
         self._owner = builder
         options = []
         for opt in builder.draft.get("options", [])[: role_menus.MAX_OPTIONS]:
-            desc = opt.get("description")
+            sub = opt.get("description") or ""
+            temp = opt.get("temp_seconds") or 0
+            if temp:
+                tag = _("temporary {dur}").format(dur=_format_duration(temp))
+                sub = f"{sub} - {tag}" if sub else tag
             options.append(
                 discord.SelectOption(
                     label=opt["label"][:100],
                     value=str(opt["role_id"]),
                     emoji=opt.get("emoji") if valid_emoji(opt.get("emoji") or "") else None,
-                    description=(desc[:100] if desc else _("no emoji/description yet")),
+                    description=(sub[:100] if sub else _("no emoji/description yet")),
                 )
             )
         super().__init__(
@@ -567,6 +610,23 @@ class RoleMenus(commands.Cog):
             )
         except Exception:
             log.exception("Failed to delete role menu %s", payload.message_id)
+
+    @commands.Cog.listener()
+    async def on_temprole_timer_complete(self, extra):
+        """Remove a temporary self-role when its timer fires (dispatched by the
+        Reminder cog's generic timer handling)."""
+        try:
+            guild = self.bot.get_guild(extra.get("guild_id"))
+            if guild is None:
+                return
+            member = guild.get_member(extra.get("user_id"))
+            role = guild.get_role(extra.get("role_id"))
+            if member is None or role is None:
+                return
+            if role in member.roles:
+                await member.remove_roles(role, reason="Temporary self-role expired")
+        except discord.HTTPException:
+            log.exception("Temp-role removal failed")
 
     async def store_menu(self, message_id, guild_id, channel_id, config):
         await self.bot.db_pool.execute(

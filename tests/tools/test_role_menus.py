@@ -64,3 +64,27 @@ def test_normalize_options_cleans_and_caps():
 def test_normalize_options_non_list():
     assert rm.normalize_options(None) == []
     assert rm.normalize_options({"role_id": 1}) == []
+
+
+def test_parse_duration():
+    assert rm.parse_duration("90s") == 90
+    assert rm.parse_duration("30m") == 1800
+    assert rm.parse_duration("2h") == 7200
+    assert rm.parse_duration("1d") == 86400
+    assert rm.parse_duration("120") == 120  # bare number = seconds
+    assert rm.parse_duration("") == 0
+    assert rm.parse_duration("soon") == 0
+    assert rm.parse_duration("999d") == rm.MAX_TEMP_SECONDS  # clamped
+
+
+def test_normalize_options_carries_temp_seconds():
+    out = rm.normalize_options([
+        {"role_id": 1, "label": "Event", "temp_seconds": 3600},
+        {"role_id": 2, "label": "Perm"},                      # no temp -> 0
+        {"role_id": 3, "label": "Bad", "temp_seconds": True},  # bool -> 0
+        {"role_id": 4, "label": "Huge", "temp_seconds": 10**9},  # clamped
+    ])
+    assert out[0]["temp_seconds"] == 3600
+    assert out[1]["temp_seconds"] == 0
+    assert out[2]["temp_seconds"] == 0
+    assert out[3]["temp_seconds"] == rm.MAX_TEMP_SECONDS
