@@ -106,6 +106,37 @@ class AddTextModal(LocaleModal):
             await embed_creator.notify_failure(interaction)
 
 
+class EditTextModal(LocaleModal):
+    """Edit an existing text command's response (the name is kept)."""
+
+    def __init__(self, panel, name, content):
+        super().__init__(title=_("Edit: {name}").format(name=name)[:45])
+        self.panel = panel
+        self.name = name
+        self.content_field = discord.ui.TextInput(
+            label=_("Response text"),
+            style=discord.TextStyle.paragraph,
+            default=content or None,
+            placeholder=PLACEHOLDER_HINT,
+            max_length=cc.MAX_TEXT_LENGTH,
+            required=True,
+        )
+        self.add_item(self.content_field)
+
+    async def on_submit(self, interaction):
+        try:
+            await self.panel.cog.save_command(
+                self.panel.guild.id,
+                self.name,
+                {"type": "text", "content": self.content_field.value.strip()},
+                interaction.user.id,
+            )
+            await self.panel.refresh(interaction, selected=self.name)
+        except Exception:
+            log.exception("Custom command edit modal failed")
+            await embed_creator.notify_failure(interaction)
+
+
 class AddEmbedNameModal(LocaleModal):
     """Ask for the name, then open the embed editor sub-panel."""
 
@@ -295,13 +326,47 @@ class _AddEmbedButton(discord.ui.Button):
         await interaction.response.send_modal(AddEmbedNameModal(self._owner))
 
 
+class _EditButton(discord.ui.Button):
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(
+            label=_("Edit selected"),
+            style=discord.ButtonStyle.secondary,
+            row=2,
+            disabled=panel.selected is None,
+        )
+
+    async def callback(self, interaction):
+        name = self._owner.selected
+        if not name:
+            return await interaction.response.send_message(
+                _("Pick a command first."), ephemeral=True
+            )
+        response = (await self._owner.cog.get_commands(self._owner.guild.id)).get(name)
+        if response is None:
+            return await self._owner.refresh(interaction, selected=None)
+        if response.get("type") == "embed":
+            draft = {"name": name, "embed": embed_creator.merge_embed(response.get("embed"))}
+            view = CustomEmbedPanel(
+                self._owner.cog, self._owner.guild, self._owner.author_id, draft
+            )
+            await interaction.response.send_message(
+                embed=view.build_embed(), view=view, ephemeral=True
+            )
+            view.message = await interaction.original_response()
+        else:
+            await interaction.response.send_modal(
+                EditTextModal(self._owner, name, response.get("content") or "")
+            )
+
+
 class _DeleteButton(discord.ui.Button):
     def __init__(self, panel):
         self._owner = panel
         super().__init__(
             label=_("Delete selected"),
             style=discord.ButtonStyle.danger,
-            row=1,
+            row=2,
             disabled=panel.selected is None,
         )
 
@@ -328,6 +393,7 @@ class CustomCommandsPanel(AuthorView):
         self.add_item(_CommandSelect(self))
         self.add_item(_AddTextButton(self))
         self.add_item(_AddEmbedButton(self))
+        self.add_item(_EditButton(self))
         self.add_item(_DeleteButton(self))
 
     def build_embed(self):
