@@ -43,6 +43,11 @@ def valid_emoji(text):
         return False
     if _CUSTOM_EMOJI.match(text):
         return True
+    # A unicode emoji: short, carries a high codepoint, and holds NO ASCII
+    # letter/digit - that last check kills the common "typed a word (+ emoji)"
+    # mistake (e.g. "blue", "x") that Discord would 400 on send.
+    if any(c.isascii() and c.isalnum() for c in text):
+        return False
     return len(text) <= 8 and any(ord(c) > 0x2000 for c in text)
 
 

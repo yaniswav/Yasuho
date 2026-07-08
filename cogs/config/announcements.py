@@ -370,6 +370,15 @@ class AnnouncePanel(AuthorView):
             ),
             ephemeral=True,
         )
+        # Freeze the builder so Send / Schedule can't double-fire the same draft.
+        for child in self.children:
+            child.disabled = True
+        self.stop()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
 
     async def _finish(self, interaction, message):
         for child in self.children:

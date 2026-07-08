@@ -20,5 +20,11 @@ def test_plain_text_rejected():
     assert valid_emoji(None) is False
 
 
+def test_ascii_mixed_with_emoji_rejected():
+    # "letter + emoji" would 400 on send, so it must not pass the gate.
+    assert valid_emoji("x🔵") is False
+    assert valid_emoji("blue🔵") is False
+
+
 def test_long_string_rejected():
     assert valid_emoji("🔵🔵🔵🔵🔵🔵🔵🔵🔵") is False  # too long to be one emoji
