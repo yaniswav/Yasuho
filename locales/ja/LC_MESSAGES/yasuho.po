@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 19:46+0000\n"
+"POT-Creation-Date: 2026-07-08 20:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -3949,53 +3949,53 @@ msgstr "失敗: {items}"
 msgid "Nothing reloaded."
 msgstr "何もリロードされませんでした。"
 
-#: cogs/system/admin.py:198
+#: cogs/system/admin.py:201
 msgid "Failed to write the command strings file."
 msgstr "コマンド文字列ファイルの書き込みに失敗しました。"
 
-#: cogs/system/admin.py:200
+#: cogs/system/admin.py:203
 #, python-brace-format
 msgid "Wrote {count} command strings to locales/command_strings.py."
 msgstr "{count} 件のコマンド文字列を locales/command_strings.py に書き込みました。"
 
-#: cogs/system/admin.py:228
+#: cogs/system/admin.py:231
 msgid "globally"
 msgstr "グローバルに"
 
-#: cogs/system/admin.py:228
+#: cogs/system/admin.py:231
 msgid "to the current guild."
 msgstr "現在のサーバーに。"
 
-#: cogs/system/admin.py:230
+#: cogs/system/admin.py:233
 #, python-brace-format
 msgid "Synced {count} commands {scope}"
 msgstr "{count} 個のコマンドを {scope} 同期しました"
 
-#: cogs/system/admin.py:246
+#: cogs/system/admin.py:249
 #, python-brace-format
 msgid "Synced the tree to {done}/{total}."
 msgstr "ツリーを {done}/{total} に同期しました。"
 
-#: cogs/system/admin.py:319 cogs/system/admin.py:326
+#: cogs/system/admin.py:322 cogs/system/admin.py:329
 #, python-brace-format
 msgid "Reloaded {count} extensions, {fail} fail."
 msgstr "{count} 個の拡張機能をリロードしました。{fail} 件失敗。"
 
-#: cogs/system/admin.py:340 cogs/system/admin.py:347
+#: cogs/system/admin.py:343 cogs/system/admin.py:350
 #, python-brace-format
 msgid "Couldn't reload `{ext}`: {error}"
 msgstr "`{ext}` をリロードできませんでした: {error}"
 
-#: cogs/system/admin.py:357
+#: cogs/system/admin.py:360
 #, python-brace-format
 msgid "Reloaded `{ext}`"
 msgstr "`{ext}` をリロードしました"
 
-#: cogs/system/admin.py:374 cogs/system/admin.py:401
+#: cogs/system/admin.py:377 cogs/system/admin.py:404
 msgid "Error!"
 msgstr "エラー!"
 
-#: cogs/system/admin.py:375
+#: cogs/system/admin.py:378
 #, python-brace-format
 msgid ""
 "{ext} cannot be loaded! \n"
@@ -4004,7 +4004,7 @@ msgstr ""
 "{ext} を読み込めません! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:402
+#: cogs/system/admin.py:405
 #, python-brace-format
 msgid ""
 "{ext} cannot be unloaded! \n"
@@ -4013,25 +4013,25 @@ msgstr ""
 "{ext} をアンロードできません! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:451
+#: cogs/system/admin.py:454
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "`{ext}` をプルしてリロードしました。"
 
-#: cogs/system/admin.py:455
+#: cogs/system/admin.py:458
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "`{ext}` をリロードできませんでした: {error}"
 
-#: cogs/system/admin.py:490
+#: cogs/system/admin.py:493
 msgid "Update"
 msgstr "アップデート"
 
-#: cogs/system/admin.py:493
+#: cogs/system/admin.py:496
 msgid "Already up to date."
 msgstr "すでに最新です。"
 
-#: cogs/system/admin.py:495
+#: cogs/system/admin.py:498
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -4044,11 +4044,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:504
+#: cogs/system/admin.py:507
 msgid "Pulled"
 msgstr "プルしました"
 
-#: cogs/system/admin.py:505
+#: cogs/system/admin.py:508
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -4061,19 +4061,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:508
+#: cogs/system/admin.py:511
 msgid "(no log)"
 msgstr "(ログなし)"
 
-#: cogs/system/admin.py:514
+#: cogs/system/admin.py:517
 msgid "Changed cogs"
 msgstr "変更されたコグ"
 
-#: cogs/system/admin.py:520
+#: cogs/system/admin.py:523
 msgid "Restart needed (not hot-reloadable)"
 msgstr "再起動が必要です (ホットリロード不可)"
 
-#: cogs/system/admin.py:525
+#: cogs/system/admin.py:528
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "下でリロードするコグを選ぶか、すべてをリロードしてください。"
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 19:46+0000\n"
+"POT-Creation-Date: 2026-07-08 20:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -3949,53 +3949,53 @@ msgstr "Fallidos: {items}"
 msgid "Nothing reloaded."
 msgstr "No se recargó nada."
 
-#: cogs/system/admin.py:198
+#: cogs/system/admin.py:201
 msgid "Failed to write the command strings file."
 msgstr "Error al escribir el archivo de cadenas de comandos."
 
-#: cogs/system/admin.py:200
+#: cogs/system/admin.py:203
 #, python-brace-format
 msgid "Wrote {count} command strings to locales/command_strings.py."
 msgstr "Escribí {count} cadenas de comandos en locales/command_strings.py."
 
-#: cogs/system/admin.py:228
+#: cogs/system/admin.py:231
 msgid "globally"
 msgstr "globalmente"
 
-#: cogs/system/admin.py:228
+#: cogs/system/admin.py:231
 msgid "to the current guild."
 msgstr "al servidor actual."
 
-#: cogs/system/admin.py:230
+#: cogs/system/admin.py:233
 #, python-brace-format
 msgid "Synced {count} commands {scope}"
 msgstr "Sincronicé {count} comandos {scope}"
 
-#: cogs/system/admin.py:246
+#: cogs/system/admin.py:249
 #, python-brace-format
 msgid "Synced the tree to {done}/{total}."
 msgstr "Árbol de comandos sincronizado: {done}/{total}."
 
-#: cogs/system/admin.py:319 cogs/system/admin.py:326
+#: cogs/system/admin.py:322 cogs/system/admin.py:329
 #, python-brace-format
 msgid "Reloaded {count} extensions, {fail} fail."
 msgstr "Se recargaron {count} extensiones, {fail} fallaron."
 
-#: cogs/system/admin.py:340 cogs/system/admin.py:347
+#: cogs/system/admin.py:343 cogs/system/admin.py:350
 #, python-brace-format
 msgid "Couldn't reload `{ext}`: {error}"
 msgstr "No se pudo recargar `{ext}`: {error}"
 
-#: cogs/system/admin.py:357
+#: cogs/system/admin.py:360
 #, python-brace-format
 msgid "Reloaded `{ext}`"
 msgstr "He recargado `{ext}`"
 
-#: cogs/system/admin.py:374 cogs/system/admin.py:401
+#: cogs/system/admin.py:377 cogs/system/admin.py:404
 msgid "Error!"
 msgstr "¡Error!"
 
-#: cogs/system/admin.py:375
+#: cogs/system/admin.py:378
 #, python-brace-format
 msgid ""
 "{ext} cannot be loaded! \n"
@@ -4004,7 +4004,7 @@ msgstr ""
 "¡No se pudo cargar {ext}! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:402
+#: cogs/system/admin.py:405
 #, python-brace-format
 msgid ""
 "{ext} cannot be unloaded! \n"
@@ -4013,25 +4013,25 @@ msgstr ""
 "¡{ext} no se puede descargar!\n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:451
+#: cogs/system/admin.py:454
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "Descargué y recargué `{ext}`."
 
-#: cogs/system/admin.py:455
+#: cogs/system/admin.py:458
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "No se pudo recargar `{ext}`: {error}"
 
-#: cogs/system/admin.py:490
+#: cogs/system/admin.py:493
 msgid "Update"
 msgstr "Actualizar"
 
-#: cogs/system/admin.py:493
+#: cogs/system/admin.py:496
 msgid "Already up to date."
 msgstr "Ya está actualizado."
 
-#: cogs/system/admin.py:495
+#: cogs/system/admin.py:498
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -4044,11 +4044,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:504
+#: cogs/system/admin.py:507
 msgid "Pulled"
 msgstr "Descargado"
 
-#: cogs/system/admin.py:505
+#: cogs/system/admin.py:508
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -4061,19 +4061,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:508
+#: cogs/system/admin.py:511
 msgid "(no log)"
 msgstr "(sin registro)"
 
-#: cogs/system/admin.py:514
+#: cogs/system/admin.py:517
 msgid "Changed cogs"
 msgstr "Cogs modificados"
 
-#: cogs/system/admin.py:520
+#: cogs/system/admin.py:523
 msgid "Restart needed (not hot-reloadable)"
 msgstr "Se necesita reiniciar (no se puede recargar en caliente)"
 
-#: cogs/system/admin.py:525
+#: cogs/system/admin.py:528
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Elige los módulos que quieres recargar abajo, o recárgalos todos."
 
