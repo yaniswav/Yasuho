@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 20:26+0000\n"
+"POT-Creation-Date: 2026-07-08 20:52+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -138,7 +138,7 @@ msgstr "Impossible de joindre votre compte AniList."
 #: cogs/anilist/account.py:392 cogs/anilist/lookup.py:113
 #: cogs/config/settings.py:52 cogs/config/settings.py:176
 #: cogs/config/settings.py:188 cogs/config/settings.py:205
-#: cogs/config/settings.py:216 cogs/system/help.py:409 cogs/utility/info.py:34
+#: cogs/config/settings.py:216 cogs/system/help.py:410 cogs/utility/info.py:34
 #: cogs/utility/info.py:116
 msgid "Unknown"
 msgstr "Inconnu"
@@ -347,7 +347,7 @@ msgid "No matching titles of that type."
 msgstr "Aucun titre correspondant de ce type."
 
 #: cogs/anilist/components.py:403 cogs/anilist/components.py:407
-#: cogs/config/announcements.py:292 cogs/config/rolemenus.py:461
+#: cogs/config/announcements.py:292 cogs/config/rolemenus.py:508
 #: cogs/config/welcome.py:98 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:484
 msgid "Something went wrong."
@@ -943,7 +943,7 @@ msgid "Preview"
 msgstr "Aperçu"
 
 #: cogs/config/announcements.py:122 cogs/config/announcements.py:315
-#: cogs/config/customcommands.py:239
+#: cogs/config/customcommands.py:322
 msgid "Add some content to the embed first."
 msgstr "Ajoute d'abord du contenu a l'embed."
 
@@ -980,7 +980,7 @@ msgstr "Programmer"
 msgid "Edit the announcement embed..."
 msgstr "Modifier l'embed de l'annonce..."
 
-#: cogs/config/announcements.py:228 cogs/config/customcommands.py:204
+#: cogs/config/announcements.py:228 cogs/config/customcommands.py:287
 #: cogs/config/twitch.py:264
 msgid "Placeholders"
 msgstr "Variables"
@@ -993,7 +993,7 @@ msgstr "Createur d'annonce"
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un role a mentionner), puis **Envoyer**. L'apercu n'est visible que par toi."
 
-#: cogs/config/announcements.py:262 cogs/config/rolemenus.py:431
+#: cogs/config/announcements.py:262 cogs/config/rolemenus.py:478
 #: cogs/config/starboard.py:180 cogs/config/twitch.py:426
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:651
 #: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
@@ -1001,7 +1001,7 @@ msgid "Channel"
 msgstr "Salon"
 
 #: cogs/config/announcements.py:263 cogs/config/buttonroles.py:433
-#: cogs/config/rolemenus.py:432 cogs/config/twitch.py:413
+#: cogs/config/rolemenus.py:479 cogs/config/twitch.py:413
 #: cogs/config/welcome.py:414
 msgid "*Not set.*"
 msgstr "*Non défini.*"
@@ -1032,7 +1032,7 @@ msgid "Pick a target channel first."
 msgstr "Choisis d'abord un salon cible."
 
 #: cogs/config/announcements.py:309 cogs/config/buttonroles.py:573
-#: cogs/config/rolemenus.py:480
+#: cogs/config/rolemenus.py:527 cogs/config/verification.py:124
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "Je ne peux pas envoyer de messages dans {channel}."
@@ -1106,7 +1106,7 @@ msgstr "Ajouter un bouton de rôle"
 msgid "Button label"
 msgstr "Libellé du bouton"
 
-#: cogs/config/buttonroles.py:254 cogs/config/rolemenus.py:198
+#: cogs/config/buttonroles.py:254 cogs/config/rolemenus.py:230
 msgid "Emoji (optional)"
 msgstr "Emoji (facultatif)"
 
@@ -1291,167 +1291,202 @@ msgstr "Panneau de rôles à boutons supprimé"
 msgid "Removed `{count}` role button(s) for message `{mid}`."
 msgstr "`{count}` bouton(s) de rôle retiré(s) pour le message `{mid}`."
 
-#: cogs/config/customcommands.py:37
+#: cogs/config/customcommands.py:39
 msgid "The command name can't be empty."
 msgstr "Le nom de la commande ne peut pas etre vide."
 
-#: cogs/config/customcommands.py:38
+#: cogs/config/customcommands.py:40
 #, python-brace-format
 msgid "The name is too long (max {n} characters)."
 msgstr "Le nom est trop long (max {n} caracteres)."
 
-#: cogs/config/customcommands.py:42
+#: cogs/config/customcommands.py:44
 msgid "Use only lowercase letters, digits, - and _ (no spaces)."
 msgstr "Utilise uniquement des lettres minuscules, des chiffres, - et _ (pas d'espaces)."
 
-#: cogs/config/customcommands.py:44
+#: cogs/config/customcommands.py:46
 msgid "That name is already one of my built-in commands."
 msgstr "Ce nom correspond deja a l'une de mes commandes integrees."
 
-#: cogs/config/customcommands.py:45
+#: cogs/config/customcommands.py:47
 msgid "This server already has a custom command with that name."
 msgstr "Ce serveur a deja une commande personnalisee avec ce nom."
 
-#: cogs/config/customcommands.py:73
+#: cogs/config/customcommands.py:83
 msgid "New text command"
 msgstr "Nouvelle commande texte"
 
-#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:147
+#: cogs/config/customcommands.py:86 cogs/config/customcommands.py:206
 msgid "Command name"
 msgstr "Nom de la commande"
 
-#: cogs/config/customcommands.py:77
+#: cogs/config/customcommands.py:87
 msgid "e.g. rules (no prefix, no spaces)"
 msgstr "ex. rules (sans prefixe, sans espaces)"
 
-#: cogs/config/customcommands.py:82 cogs/config/customcommands.py:117
+#: cogs/config/customcommands.py:92 cogs/config/customcommands.py:151
 msgid "Response text"
 msgstr "Texte de la reponse"
 
-#: cogs/config/customcommands.py:113
+#: cogs/config/customcommands.py:99 cogs/config/customcommands.py:159
+#: cogs/config/customcommands.py:212
+msgid "Aliases (optional)"
+msgstr "Alias (facultatif)"
+
+#: cogs/config/customcommands.py:100 cogs/config/customcommands.py:161
+#: cogs/config/customcommands.py:213
+msgid "other names, space or comma separated"
+msgstr "autres noms, séparés par un espace ou une virgule"
+
+#: cogs/config/customcommands.py:105 cogs/config/customcommands.py:166
+#: cogs/config/customcommands.py:218
+msgid "Cooldown seconds (optional)"
+msgstr "Secondes de recharge (facultatif)"
+
+#: cogs/config/customcommands.py:147
 #, python-brace-format
 msgid "Edit: {name}"
 msgstr "Modifier : {name}"
 
-#: cogs/config/customcommands.py:144
+#: cogs/config/customcommands.py:203
 msgid "New embed command"
 msgstr "Nouvelle commande embed"
 
-#: cogs/config/customcommands.py:148
+#: cogs/config/customcommands.py:207
 msgid "e.g. welcome (no prefix, no spaces)"
 msgstr "ex. welcome (sans prefixe, sans espaces)"
 
-#: cogs/config/customcommands.py:177
+#: cogs/config/customcommands.py:260
 msgid "Save command"
 msgstr "Enregistrer la commande"
 
-#: cogs/config/customcommands.py:199
+#: cogs/config/customcommands.py:282
 msgid "Edit the response embed..."
 msgstr "Modifier l'embed de la reponse..."
 
-#: cogs/config/customcommands.py:221
+#: cogs/config/customcommands.py:304
 #, python-brace-format
 msgid "Embed command: {name}"
 msgstr "Commande embed : {name}"
 
-#: cogs/config/customcommands.py:223
+#: cogs/config/customcommands.py:306
 #, python-brace-format
 msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
 msgstr "Concois l'embed avec lequel cette commande repondra, puis **Enregistrer**. Variables : {placeholders}"
 
-#: cogs/config/customcommands.py:229
+#: cogs/config/customcommands.py:312
 msgid "Preview summary"
 msgstr "Resume de l'apercu"
 
-#: cogs/config/customcommands.py:255
+#: cogs/config/customcommands.py:343
 #, python-brace-format
 msgid "Saved the `{name}` command."
 msgstr "Commande `{name}` enregistree."
 
-#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
+#: cogs/config/customcommands.py:359 cogs/config/customcommands.py:505
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
+#: cogs/config/customcommands.py:359 cogs/config/customcommands.py:505
 msgid "text"
 msgstr "texte"
 
-#: cogs/config/customcommands.py:281
+#: cogs/config/customcommands.py:369
 msgid "Pick a command..."
 msgstr "Choisis une commande..."
 
-#: cogs/config/customcommands.py:284
+#: cogs/config/customcommands.py:372
 msgid "(none yet)"
 msgstr "(aucune pour l'instant)"
 
-#: cogs/config/customcommands.py:300
+#: cogs/config/customcommands.py:388
 msgid "Add text"
 msgstr "Ajouter un texte"
 
-#: cogs/config/customcommands.py:305 cogs/config/customcommands.py:321
+#: cogs/config/customcommands.py:393 cogs/config/customcommands.py:409
 #, python-brace-format
 msgid "This server already has the maximum of {n} custom commands."
 msgstr "Ce serveur a deja atteint le maximum de {n} commandes personnalisees."
 
-#: cogs/config/customcommands.py:316
+#: cogs/config/customcommands.py:404
 msgid "Add embed"
 msgstr "Ajouter un embed"
 
-#: cogs/config/customcommands.py:333
+#: cogs/config/customcommands.py:421
 msgid "Edit selected"
 msgstr "Modifier la sélection"
 
-#: cogs/config/customcommands.py:343
+#: cogs/config/customcommands.py:431
 msgid "Pick a command first."
 msgstr "Choisis d'abord une commande."
 
-#: cogs/config/customcommands.py:367
+#: cogs/config/customcommands.py:460
 msgid "Delete selected"
 msgstr "Supprimer la selection"
 
-#: cogs/config/customcommands.py:401
+#: cogs/config/customcommands.py:494
 msgid "Custom commands"
 msgstr "Commandes personnalisees"
 
-#: cogs/config/customcommands.py:403
+#: cogs/config/customcommands.py:496
 msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
 msgstr "Commandes que les membres lancent avec le prefixe du serveur. Ajoute une reponse texte ou embed, ou selectionnes-en une pour l'inspecter et la supprimer."
 
-#: cogs/config/customcommands.py:410
+#: cogs/config/customcommands.py:503
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:417
+#: cogs/config/customcommands.py:510
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} commande(s)"
 
-#: cogs/config/customcommands.py:423
+#: cogs/config/customcommands.py:516
 msgid "None yet"
 msgstr "Aucune pour l'instant"
 
-#: cogs/config/customcommands.py:424
+#: cogs/config/customcommands.py:517
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Utilise **Ajouter un texte** ou **Ajouter un embed** pour en creer une."
 
-#: cogs/config/customcommands.py:431
+#: cogs/config/customcommands.py:524
 msgid "An embed reply."
 msgstr "Une reponse embed."
 
-#: cogs/config/customcommands.py:434
+#: cogs/config/customcommands.py:527
 msgid "*empty*"
 msgstr "*vide*"
 
-#: cogs/config/customcommands.py:436
+#: cogs/config/customcommands.py:531
+#, python-brace-format
+msgid "used {count}x"
+msgstr "utilisée {count}x"
+
+#: cogs/config/customcommands.py:535
+#, python-brace-format
+msgid "aliases: {list}"
+msgstr "alias : {list}"
+
+#: cogs/config/customcommands.py:541
+#, python-brace-format
+msgid "cooldown: {sec}s"
+msgstr "recharge : {sec}s"
+
+#: cogs/config/customcommands.py:545
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Selectionne : {name}"
 
-#: cogs/config/customcommands.py:440
+#: cogs/config/customcommands.py:549
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Variables : {placeholders}"
+
+#: cogs/config/customcommands.py:627
+#, python-brace-format
+msgid "Alias `{alias}` is not usable: {why}"
+msgstr "L'alias `{alias}` n'est pas utilisable : {why}"
 
 #: cogs/config/reactionroles.py:29
 msgid "Add reaction role"
@@ -1507,159 +1542,172 @@ msgstr "Aucun rôle par réaction n'a été configuré pour ce serveur."
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr "Message `{mid}` - {emoji} -> <@&{role}>"
 
-#: cogs/config/rolemenus.py:88
+#: cogs/config/rolemenus.py:100
 msgid "Roles can only be set inside a server."
 msgstr "Les roles ne peuvent etre configures que dans un serveur."
 
-#: cogs/config/rolemenus.py:124
+#: cogs/config/rolemenus.py:156
 #, python-brace-format
 msgid "Added: {roles}"
 msgstr "Ajoute : {roles}"
 
-#: cogs/config/rolemenus.py:128
+#: cogs/config/rolemenus.py:160
 #, python-brace-format
 msgid "Removed: {roles}"
 msgstr "Retire : {roles}"
 
-#: cogs/config/rolemenus.py:134
+#: cogs/config/rolemenus.py:166
 msgid "I couldn't manage those roles - they may be above my highest role."
 msgstr "Je n'ai pas pu gerer ces roles - ils sont peut-etre au-dessus de mon role le plus eleve."
 
-#: cogs/config/rolemenus.py:137
+#: cogs/config/rolemenus.py:169
 msgid "No changes."
 msgstr "Aucun changement."
 
-#: cogs/config/rolemenus.py:158
+#: cogs/config/rolemenus.py:190
 msgid "Menu header"
 msgstr "En-tete du menu"
 
-#: cogs/config/rolemenus.py:161 tools/embed_creator.py:411
+#: cogs/config/rolemenus.py:193 tools/embed_creator.py:411
 msgid "Title"
 msgstr "Titre"
 
-#: cogs/config/rolemenus.py:167 tools/embed_creator.py:435
+#: cogs/config/rolemenus.py:199 tools/embed_creator.py:435
 msgid "Description"
 msgstr "Description"
 
-#: cogs/config/rolemenus.py:190
+#: cogs/config/rolemenus.py:222
 msgid "Role option"
 msgstr "Option de rôle"
 
-#: cogs/config/rolemenus.py:202
+#: cogs/config/rolemenus.py:234
 msgid "A single emoji, or leave blank"
 msgstr "Un seul emoji, ou laissez vide"
 
-#: cogs/config/rolemenus.py:205
+#: cogs/config/rolemenus.py:237
 msgid "Short description (optional)"
 msgstr "Description courte (facultatif)"
 
-#: cogs/config/rolemenus.py:218
+#: cogs/config/rolemenus.py:244
+msgid "Temporary? (optional)"
+msgstr "Temporaire ? (facultatif)"
+
+#: cogs/config/rolemenus.py:245
+msgid "e.g. 2h, 30m, 1d - blank = permanent"
+msgstr "ex. 2h, 30m, 1d - vide = permanent"
+
+#: cogs/config/rolemenus.py:259
 msgid "That emoji isn't valid. Use a single emoji, or leave it blank."
 msgstr "Cet emoji n'est pas valide. Utilisez un seul emoji, ou laissez-le vide."
 
-#: cogs/config/rolemenus.py:246
+#: cogs/config/rolemenus.py:286
+#, python-brace-format
+msgid "temporary {dur}"
+msgstr "temporaire {dur}"
+
+#: cogs/config/rolemenus.py:293
 msgid "no emoji/description yet"
 msgstr "pas encore d'emoji ni de description"
 
-#: cogs/config/rolemenus.py:250
+#: cogs/config/rolemenus.py:297
 msgid "Customize a role (emoji + description)..."
 msgstr "Personnalisez un rôle (emoji + description)..."
 
-#: cogs/config/rolemenus.py:251
+#: cogs/config/rolemenus.py:298
 msgid "(pick roles first)"
 msgstr "(choisissez des rôles d'abord)"
 
-#: cogs/config/rolemenus.py:278
+#: cogs/config/rolemenus.py:325
 msgid "Pick the roles to offer..."
 msgstr "Choisis les roles a proposer..."
 
-#: cogs/config/rolemenus.py:308
+#: cogs/config/rolemenus.py:355
 msgid "Members can pick any"
 msgstr "Les membres peuvent en choisir plusieurs"
 
-#: cogs/config/rolemenus.py:314
+#: cogs/config/rolemenus.py:361
 msgid "Members pick exactly one"
 msgstr "Les membres en choisissent exactement un"
 
-#: cogs/config/rolemenus.py:320
+#: cogs/config/rolemenus.py:367
 msgid "Selection rule..."
 msgstr "Regle de selection..."
 
-#: cogs/config/rolemenus.py:342
+#: cogs/config/rolemenus.py:389
 msgid "Channel to post the menu in..."
 msgstr "Salon ou publier le menu..."
 
-#: cogs/config/rolemenus.py:361
+#: cogs/config/rolemenus.py:408
 msgid "Edit header"
 msgstr "Modifier l'en-tete"
 
-#: cogs/config/rolemenus.py:370
+#: cogs/config/rolemenus.py:417
 msgid "Post menu"
 msgstr "Publier le menu"
 
-#: cogs/config/rolemenus.py:399 cogs/config/rolemenus.py:604
+#: cogs/config/rolemenus.py:446 cogs/config/rolemenus.py:678
 msgid "Pick your roles"
 msgstr "Choisis tes roles"
 
-#: cogs/config/rolemenus.py:406 cogs/utility/info.py:126
+#: cogs/config/rolemenus.py:453 cogs/utility/info.py:126
 msgid "Roles"
 msgstr "Rôles"
 
-#: cogs/config/rolemenus.py:411
+#: cogs/config/rolemenus.py:458
 msgid "Role menu builder"
 msgstr "Createur de menu de roles"
 
-#: cogs/config/rolemenus.py:413
+#: cogs/config/rolemenus.py:460
 msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
 msgstr "Choisis les roles a proposer, definis la regle, choisis un salon, puis **Publier le menu**. Les membres definissent leurs roles depuis un seul menu deroulant."
 
-#: cogs/config/rolemenus.py:420
+#: cogs/config/rolemenus.py:467
 #, python-brace-format
 msgid "Roles ({count})"
 msgstr "Roles ({count})"
 
-#: cogs/config/rolemenus.py:421
+#: cogs/config/rolemenus.py:468
 msgid "*None yet.*"
 msgstr "*Aucun pour l'instant.*"
 
-#: cogs/config/rolemenus.py:425
+#: cogs/config/rolemenus.py:472
 msgid "Rule"
 msgstr "Regle"
 
-#: cogs/config/rolemenus.py:426
+#: cogs/config/rolemenus.py:473
 msgid "Pick exactly one"
 msgstr "En choisir exactement un"
 
-#: cogs/config/rolemenus.py:426
+#: cogs/config/rolemenus.py:473
 msgid "Pick any"
 msgstr "En choisir plusieurs"
 
-#: cogs/config/rolemenus.py:436
+#: cogs/config/rolemenus.py:483
 msgid "Header"
 msgstr "En-tete"
 
-#: cogs/config/rolemenus.py:437
+#: cogs/config/rolemenus.py:484
 msgid "*default*"
 msgstr "*par defaut*"
 
-#: cogs/config/rolemenus.py:470
+#: cogs/config/rolemenus.py:517
 msgid "Pick at least one role first."
 msgstr "Choisis d'abord au moins un role."
 
-#: cogs/config/rolemenus.py:476
+#: cogs/config/rolemenus.py:523
 msgid "Pick a channel to post the menu in first."
 msgstr "Choisis d'abord un salon ou publier le menu."
 
-#: cogs/config/rolemenus.py:501
+#: cogs/config/rolemenus.py:548
 msgid "Posting failed, please try again."
 msgstr "La publication a echoue, reessaie."
 
-#: cogs/config/rolemenus.py:514
+#: cogs/config/rolemenus.py:561
 #, python-brace-format
 msgid "Posted the role menu in {channel}."
 msgstr "Menu de roles publie dans {channel}."
 
-#: cogs/config/rolemenus.py:599
+#: cogs/config/rolemenus.py:673
 #, python-brace-format
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Ce serveur a deja atteint le maximum de {n} menus de roles."
@@ -2520,6 +2568,52 @@ msgstr "Impossible de supprimer le rôle de streamer En direct."
 #: cogs/config/twitch.py:813
 msgid "Live streamer role removed."
 msgstr "Rôle de streamer En direct supprimé."
+
+#: cogs/config/verification.py:42
+msgid "Verification only works inside a server."
+msgstr "La vérification ne fonctionne que dans un serveur."
+
+#: cogs/config/verification.py:50
+msgid "Verification is not set up here."
+msgstr "La vérification n'est pas configurée ici."
+
+#: cogs/config/verification.py:54
+msgid "You are already verified."
+msgstr "Vous êtes déjà vérifié."
+
+#: cogs/config/verification.py:58
+msgid "I can't assign that role - it may be above my highest role."
+msgstr "Je ne peux pas attribuer ce rôle - il est peut-être au-dessus de mon rôle le plus élevé."
+
+#: cogs/config/verification.py:66
+msgid "Something went wrong, please try again."
+msgstr "Une erreur est survenue, veuillez réessayer."
+
+#: cogs/config/verification.py:69
+msgid "You are verified. Welcome!"
+msgstr "Vous êtes vérifié. Bienvenue !"
+
+#: cogs/config/verification.py:117
+#, python-brace-format
+msgid "I can't assign {role} - it must be below my highest role and not managed."
+msgstr "Je ne peux pas attribuer {role} - il doit être en dessous de mon rôle le plus élevé et ne pas être géré par une intégration."
+
+#: cogs/config/verification.py:130
+msgid "Verification"
+msgstr "Vérification"
+
+#: cogs/config/verification.py:133
+msgid "Click the button below to verify and unlock the server."
+msgstr "Cliquez sur le bouton ci-dessous pour vérifier et déverrouiller le serveur."
+
+#: cogs/config/verification.py:139
+#, python-brace-format
+msgid "Verification is set up - clicking grants {role} in {channel}."
+msgstr "La vérification est configurée - cliquer attribue {role} dans {channel}."
+
+#: cogs/config/verification.py:150
+msgid "Verification disabled."
+msgstr "Vérification désactivée."
 
 #: cogs/config/welcome.py:73
 msgid "Add a GIF"
@@ -4186,58 +4280,58 @@ msgstr "🌺 Bip boup **{guild}** ! Pour commencer, tapez `{prefix}help`"
 msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
 msgstr "Vous êtes sur la liste noire du bot. Vous pouvez demander à en être retiré en envoyant un message à <@228895251576782858>"
 
-#: cogs/system/help.py:137
+#: cogs/system/help.py:138
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:184 cogs/system/help.py:439 cogs/system/help.py:454
+#: cogs/system/help.py:185 cogs/system/help.py:440 cogs/system/help.py:455
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:209 cogs/system/help.py:507 cogs/system/help.py:523
-#: cogs/system/help.py:548
+#: cogs/system/help.py:210 cogs/system/help.py:508 cogs/system/help.py:524
+#: cogs/system/help.py:549
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:213
+#: cogs/system/help.py:214
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:229
+#: cogs/system/help.py:230
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:236
+#: cogs/system/help.py:237
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:306
+#: cogs/system/help.py:307
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:353
+#: cogs/system/help.py:354
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:353
+#: cogs/system/help.py:354
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:372
+#: cogs/system/help.py:373
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:387
+#: cogs/system/help.py:388
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:389
+#: cogs/system/help.py:390
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -4248,19 +4342,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:404
+#: cogs/system/help.py:405
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:404
+#: cogs/system/help.py:405
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:411
+#: cogs/system/help.py:412
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:413
+#: cogs/system/help.py:414
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -4271,54 +4365,54 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:425
+#: cogs/system/help.py:426
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:426
+#: cogs/system/help.py:427
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:447
+#: cogs/system/help.py:448
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:453
+#: cogs/system/help.py:454
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:458
+#: cogs/system/help.py:459
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:488 cogs/system/help.py:573
+#: cogs/system/help.py:489 cogs/system/help.py:574
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:490
+#: cogs/system/help.py:491
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."
 
-#: cogs/system/help.py:513 cogs/system/help.py:554
+#: cogs/system/help.py:514 cogs/system/help.py:555
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:526 cogs/system/help.py:529
+#: cogs/system/help.py:527 cogs/system/help.py:530
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:531
+#: cogs/system/help.py:532
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /settings, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /settings, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:536
+#: cogs/system/help.py:537
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
