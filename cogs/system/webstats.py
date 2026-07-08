@@ -7,8 +7,10 @@ from tools.config_loader import config_loader
 
 log = logging.getLogger(__name__)
 
-TOP_GG_TOKEN = config_loader.get('WebsiteTokens', 'topGG')
-TOP_GG_PASSWORD = config_loader.get('WebsiteTokens', 'topGGPassword')
+# fallback=None so a fresh checkout without top.gg config does not crash the
+# whole cog at import; the cog then simply skips autopost/webhook setup.
+TOP_GG_TOKEN = config_loader.get('WebsiteTokens', 'topGG', fallback=None)
+TOP_GG_PASSWORD = config_loader.get('WebsiteTokens', 'topGGPassword', fallback=None)
 
 
 class Webstats(commands.Cog):
@@ -18,6 +20,13 @@ class Webstats(commands.Cog):
         self.bot = bot
         self.dbl_token = TOP_GG_TOKEN
         self.dbl_password = TOP_GG_PASSWORD
+        self.dbl_client = None
+        self.webhook_manager = None
+        self._webhook_task = None
+
+        if not TOP_GG_TOKEN:
+            log.info("top.gg not configured; skipping autopost and vote webhook.")
+            return
 
         self.dbl_client = topgg.DBLClient(self.bot, self.dbl_token, autopost=True, post_shard_count=True)
         self.webhook_manager = topgg.WebhookManager(self.bot).dbl_webhook("/dblwebhook", TOP_GG_PASSWORD)
@@ -32,14 +41,16 @@ class Webstats(commands.Cog):
 
     async def cog_unload(self):
         # Close each independently so one failure doesn't block the other, and unload never raises
-        try:
-            await self.dbl_client.close()
-        except Exception:
-            log.exception("failed to close DBL client")
-        try:
-            await self.webhook_manager.close()
-        except Exception:
-            log.exception("failed to close webhook manager")
+        if self.dbl_client is not None:
+            try:
+                await self.dbl_client.close()
+            except Exception:
+                log.exception("failed to close DBL client")
+        if self.webhook_manager is not None:
+            try:
+                await self.webhook_manager.close()
+            except Exception:
+                log.exception("failed to close webhook manager")
 
     @commands.Cog.listener()
     async def on_autopost_success(self):

@@ -12,8 +12,10 @@ from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
-NASA_KEY = config_loader.get('APITokens', 'nasaKey')
-WEATHER_KEY = config_loader.get('APITokens', 'weatherKey')
+# fallback=None so a fresh checkout without these keys does not crash the cog at
+# import; apod falls back to NASA's DEMO_KEY below, and weather fails gracefully.
+NASA_KEY = config_loader.get('APITokens', 'nasaKey', fallback=None)
+WEATHER_KEY = config_loader.get('APITokens', 'weatherKey', fallback=None)
 
 # NASA's public DEMO_KEY works (with tighter rate limits) when no real key is
 # configured, so /apod degrades gracefully instead of always failing when the

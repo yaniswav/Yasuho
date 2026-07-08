@@ -42,6 +42,9 @@ RESTORE_MAX_AGE = 600
 # thundering herd.
 RESTORE_CONCURRENCY = 5
 
+# Cap a user's saved favourites so the table cannot grow without bound.
+MAX_FAVOURITES = 100
+
 
 class Player(sonolink.Player):
     """A sonolink player that also tracks the DJ, home text channel, and controller.
@@ -579,21 +582,20 @@ class MusicController(discord.ui.LayoutView):
                     _("Nothing is playing to favourite right now."), ephemeral=True
                 )
                 return
-            added = await self.cog.add_favourite(interaction.user.id, track)
-            if added:
-                await interaction.response.send_message(
-                    _("Added **{title}** to your favourites.").format(
-                        title=track.title
-                    ),
-                    ephemeral=True,
+            result = await self.cog.add_favourite(interaction.user.id, track)
+            if result == "added":
+                message = _("Added **{title}** to your favourites.").format(
+                    title=track.title
                 )
+            elif result == "full":
+                message = _(
+                    "Your favourites are full (max {max}). Remove some first."
+                ).format(max=MAX_FAVOURITES)
             else:
-                await interaction.response.send_message(
-                    _("**{title}** is already in your favourites.").format(
-                        title=track.title
-                    ),
-                    ephemeral=True,
+                message = _("**{title}** is already in your favourites.").format(
+                    title=track.title
                 )
+            await interaction.response.send_message(message, ephemeral=True)
         except Exception:
             log.exception("Controller favourite failed")
             await self._report_failure(interaction)
@@ -697,15 +699,18 @@ class Music(commands.Cog):
 
     async def add_favourite(
         self, user_id: int, track: sonolink.models.Playable
-    ) -> bool:
+    ) -> str:
         """Store a track in a user's favourites, deduped on the track identifier.
 
-        Returns True if a new row was inserted, False if it already existed.
+        Returns "added" on a new row, "exists" if it was already saved, or
+        "full" when the user is at the MAX_FAVOURITES cap and a new track was
+        refused. The INSERT only fires while under the cap, so growth is bounded.
         """
         query = """
             INSERT INTO music_favorites
                 (user_id, identifier, title, author, uri, source_name)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            SELECT $1, $2, $3, $4, $5, $6
+            WHERE (SELECT COUNT(*) FROM music_favorites WHERE user_id = $1) < $7
             ON CONFLICT (user_id, identifier) DO NOTHING
         """
         status = await self.bot.db_pool.execute(
@@ -716,19 +721,29 @@ class Music(commands.Cog):
             track.author,
             track.uri,
             track.source_name,
+            MAX_FAVOURITES,
         )
-        # asyncpg returns a status string like "INSERT 0 1" (or "... 0" on conflict).
-        return status.rsplit(" ", 1)[-1] == "1"
+        # asyncpg returns a status string like "INSERT 0 1" (or "... 0" on a
+        # conflict OR when the cap guard skipped the insert).
+        if status.rsplit(" ", 1)[-1] == "1":
+            return "added"
+        exists = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM music_favorites WHERE user_id = $1 AND identifier = $2",
+            user_id,
+            track.identifier,
+        )
+        return "exists" if exists else "full"
 
     async def _fetch_favourites(self, user_id: int) -> list:
-        """Return a user's favourites, newest first."""
+        """Return a user's favourites, newest first (bounded by the cap)."""
         query = """
             SELECT identifier, title, author, uri, source_name
             FROM music_favorites
             WHERE user_id = $1
             ORDER BY added_at DESC
+            LIMIT $2
         """
-        return await self.bot.db_pool.fetch(query, user_id)
+        return await self.bot.db_pool.fetch(query, user_id, MAX_FAVOURITES)
 
     async def _send_controller(
         self,
@@ -1410,11 +1425,11 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="volume", aliases=["vol"])
     @commands.guild_only()
-    @app_commands.describe(value="Volume level between 0 and 1000 (100 is default).")
+    @app_commands.describe(value="Volume level between 0 and 200 (100 is default).")
     async def volume(
-        self, ctx: commands.Context, value: commands.Range[int, 0, 1000]
+        self, ctx: commands.Context, value: commands.Range[int, 0, 200]
     ) -> None:
-        """Set the player volume (0-1000)."""
+        """Set the player volume (0-200)."""
         player = await self._require_player(ctx)
         if player is None:
             return
@@ -1659,11 +1674,17 @@ class Music(commands.Cog):
                 await ctx.send(_("Could not find any tracks for that query."))
                 return
 
-        added = await self.add_favourite(ctx.author.id, track)
-        if added:
+        result = await self.add_favourite(ctx.author.id, track)
+        if result == "added":
             await ctx.send(
                 _("Added **{title}** by `{author}` to your favourites.").format(
                     title=track.title, author=track.author
+                )
+            )
+        elif result == "full":
+            await ctx.send(
+                _("Your favourites are full (max {max}). Remove some first.").format(
+                    max=MAX_FAVOURITES
                 )
             )
         else:
