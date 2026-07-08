@@ -244,6 +244,10 @@ class Reminder(commands.Cog):
                         discord.Object(id=extra["user_id"]),
                         reason="Temp-ban expired",
                     )
+            else:
+                # Let other cogs own their timer events (e.g. scheduled
+                # announcements) without coupling them into this cog.
+                self.bot.dispatch(f"{event}_timer_complete", extra)
         except Exception:
             log.exception("Error while calling timer")
 

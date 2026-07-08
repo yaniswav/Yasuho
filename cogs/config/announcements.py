@@ -9,6 +9,7 @@ Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the
 fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
 
+import datetime
 import logging
 
 import discord
@@ -17,7 +18,8 @@ from discord.ext import commands
 from tools import embed_creator
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.time import FutureTime, ShortTime
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +144,59 @@ class _SendButton(discord.ui.Button):
             )
 
 
+class ScheduleModal(LocaleModal):
+    """Ask when to post the announcement, then queue it as a timer."""
+
+    def __init__(self, panel):
+        super().__init__(title=_("Schedule the announcement"))
+        self.panel = panel
+        self.when_field = discord.ui.TextInput(
+            label=_("When"),
+            placeholder=_("e.g. 2h, tomorrow at 9am, in 3 days"),
+            max_length=100,
+            required=True,
+        )
+        self.add_item(self.when_field)
+
+    async def on_submit(self, interaction):
+        raw = (self.when_field.value or "").strip()
+        reminder = self.panel.cog.bot.get_cog("Reminder")
+        tzinfo = (
+            await reminder.get_tzinfo(interaction.user.id)
+            if reminder is not None
+            else datetime.timezone.utc
+        )
+        now = interaction.created_at.astimezone(tzinfo)
+        try:
+            dt = ShortTime(raw, now=now, tzinfo=tzinfo).dt
+        except commands.BadArgument:
+            try:
+                dt = FutureTime(raw, now=now, tzinfo=tzinfo).dt
+            except commands.BadArgument:
+                return await interaction.response.send_message(
+                    _(
+                        "I couldn't understand that time. Try something like "
+                        "`2h`, `tomorrow at 9am`, or `in 3 days`."
+                    ),
+                    ephemeral=True,
+                )
+        if dt <= now:
+            return await interaction.response.send_message(
+                _("That time is in the past. Give me a moment in the future."),
+                ephemeral=True,
+            )
+        await self.panel.schedule(interaction, dt)
+
+
+class _ScheduleButton(discord.ui.Button):
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(label=_("Schedule"), style=discord.ButtonStyle.secondary, row=3)
+
+    async def callback(self, interaction):
+        await interaction.response.send_modal(ScheduleModal(self._owner))
+
+
 class AnnouncePanel(AuthorView):
     """Author-restricted announcement builder (an embed_creator.EmbedEditorHost).
 
@@ -168,6 +223,7 @@ class AnnouncePanel(AuthorView):
         )
         self.add_item(_PreviewButton(self))
         self.add_item(_SendButton(self))
+        self.add_item(_ScheduleButton(self))
         self.add_item(
             embed_creator.PlaceholderGuideButton(PLACEHOLDERS, label=_("Placeholders"), row=3)
         )
@@ -236,40 +292,86 @@ class AnnouncePanel(AuthorView):
         await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
     # -- send -----------------------------------------------------------
-    async def send(self, interaction):
+    async def _validated(self, interaction):
+        """Return the target channel if ready to send/schedule, else None.
+
+        Sends the relevant ephemeral error on failure (channel unset, no send
+        permission, or an empty embed).
+        """
         channel = self._target_channel()
         if channel is None:
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 _("Pick a target channel first."), ephemeral=True
             )
+            return None
         if not channel.permissions_for(self.guild.me).send_messages:
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 _("I can't send messages in {channel}.").format(channel=channel.mention),
                 ephemeral=True,
             )
-
-        embed = self.render_announcement()
-        if not embed_creator.embed_has_content(embed):
-            return await interaction.response.send_message(
+            return None
+        if not embed_creator.embed_has_content(self.render_announcement()):
+            await interaction.response.send_message(
                 _("Add some content to the embed first."), ephemeral=True
             )
+            return None
+        return channel
 
-        content = None
-        allowed = discord.AllowedMentions.none()
+    def _ping(self):
+        """Return (content, allowed_mentions) for the optional role ping."""
         rid = self.draft.get("role_id")
         role = self.guild.get_role(rid) if rid else None
-        if role is not None:
-            content = role.mention
-            allowed = discord.AllowedMentions(roles=[role])
+        if role is None:
+            return None, discord.AllowedMentions.none()
+        return role.mention, discord.AllowedMentions(roles=[role])
 
+    async def send(self, interaction):
+        channel = await self._validated(interaction)
+        if channel is None:
+            return
+        content, allowed = self._ping()
         try:
-            await channel.send(content=content, embed=embed, allowed_mentions=allowed)
+            await channel.send(
+                content=content,
+                embed=self.render_announcement(),
+                allowed_mentions=allowed,
+            )
         except discord.HTTPException:
             log.exception("Announce channel send failed")
             return await interaction.response.send_message(
                 _("Sending failed, please try again."), ephemeral=True
             )
+        await self._finish(interaction, _("Announcement sent to {channel}.").format(
+            channel=channel.mention
+        ))
 
+    async def schedule(self, interaction, when):
+        channel = await self._validated(interaction)
+        if channel is None:
+            return
+        reminder = self.cog.bot.get_cog("Reminder")
+        if reminder is None:
+            return await interaction.response.send_message(
+                _("Scheduling is unavailable right now."), ephemeral=True
+            )
+        # The embed blob is stored raw and re-rendered at fire time, so
+        # {members} and friends reflect the moment it actually posts.
+        await reminder.create_timer(
+            when,
+            "announcement",
+            guild_id=self.guild.id,
+            channel_id=channel.id,
+            role_id=self.draft.get("role_id"),
+            embed=self.draft.get("embed"),
+        )
+        await interaction.response.send_message(
+            _("Scheduled for {when} in {channel}.").format(
+                when=discord.utils.format_dt(when, "F"), channel=channel.mention
+            ),
+            ephemeral=True,
+        )
+
+    async def _finish(self, interaction, message):
         for child in self.children:
             child.disabled = True
         self.stop()
@@ -277,10 +379,7 @@ class AnnouncePanel(AuthorView):
             await interaction.response.edit_message(view=self)
         except discord.HTTPException:
             pass
-        await interaction.followup.send(
-            _("Announcement sent to {channel}.").format(channel=channel.mention),
-            ephemeral=True,
-        )
+        await interaction.followup.send(message, ephemeral=True)
 
 
 class Announcements(commands.Cog):
@@ -298,6 +397,33 @@ class Announcements(commands.Cog):
         draft = {"embed": embed_creator.default_embed(), "channel_id": None, "role_id": None}
         view = AnnouncePanel(self, ctx.guild, ctx.author.id, draft)
         view.message = await ctx.send(embed=view.build_embed(), view=view)
+
+    @commands.Cog.listener()
+    async def on_announcement_timer_complete(self, extra):
+        """Post a scheduled announcement when its timer fires (from the Reminder
+        cog's generic timer dispatch). The embed is rendered here, so its
+        placeholders reflect the moment it posts."""
+        try:
+            guild = self.bot.get_guild(extra.get("guild_id"))
+            if guild is None:
+                return
+            channel = guild.get_channel(extra.get("channel_id"))
+            if channel is None or not channel.permissions_for(guild.me).send_messages:
+                return
+            substitute = build_substitution(guild, channel)
+            embed = embed_creator.render(extra.get("embed") or {}, substitute=substitute)
+            if not embed_creator.embed_has_content(embed):
+                return
+            content = None
+            allowed = discord.AllowedMentions.none()
+            rid = extra.get("role_id")
+            role = guild.get_role(rid) if rid else None
+            if role is not None:
+                content = role.mention
+                allowed = discord.AllowedMentions(roles=[role])
+            await channel.send(content=content, embed=embed, allowed_mentions=allowed)
+        except Exception:
+            log.exception("Scheduled announcement send failed")
 
 
 async def setup(bot):
