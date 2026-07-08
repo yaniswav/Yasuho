@@ -32,7 +32,17 @@ CATEGORIES = [
     (
         "⚙️",
         "Server Config",
-        ["Settings", "Welcome", "ReactionRoles", "Starboard", "TemporaryRooms", "Twitch"],
+        [
+            "Settings",
+            "Welcome",
+            "ReactionRoles",
+            "RoleMenus",
+            "Starboard",
+            "TemporaryRooms",
+            "Twitch",
+            "Announcements",
+            "CustomCommands",
+        ],
     ),
     ("📈", "Community", ["Leveling", "Profiles", "AFK", "Reminder", "AvatarHistory", "UserSettings"]),
     ("🎮", "Fun & Games", ["Fun", "Games"]),
