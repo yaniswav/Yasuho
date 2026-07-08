@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 06:39+0000\n"
+"POT-Creation-Date: 2026-07-08 19:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -347,7 +347,7 @@ msgid "No matching titles of that type."
 msgstr "そのタイプに一致するタイトルがありません。"
 
 #: cogs/anilist/components.py:403 cogs/anilist/components.py:407
-#: cogs/config/announcements.py:236 cogs/config/rolemenus.py:353
+#: cogs/config/announcements.py:292 cogs/config/rolemenus.py:461
 #: cogs/config/welcome.py:98 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:484
 msgid "Something went wrong."
@@ -805,7 +805,7 @@ msgstr "あなたのプロフィールを消去しました。"
 msgid "Set a reminder"
 msgstr "リマインダーを設定"
 
-#: cogs/community/reminders.py:44
+#: cogs/community/reminders.py:44 cogs/config/announcements.py:154
 msgid "When"
 msgstr "いつ"
 
@@ -827,16 +827,16 @@ msgstr "何をリマインドしましょうか?"
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "その時間を理解できませんでした。`10m`、`tomorrow at 6pm`、`in 3 days` のように入力してみてください。"
 
-#: cogs/community/reminders.py:86
+#: cogs/community/reminders.py:86 cogs/config/announcements.py:185
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "その時間は過去です。未来の時刻を指定してください。"
 
-#: cogs/community/reminders.py:96 cogs/community/reminders.py:276
+#: cogs/community/reminders.py:96 cogs/community/reminders.py:280
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
-#: cogs/community/reminders.py:110 cogs/community/reminders.py:289
+#: cogs/community/reminders.py:110 cogs/community/reminders.py:293
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "了解しました。{when} にリマインドします: {message}"
@@ -846,19 +846,19 @@ msgstr "了解しました。{when} にリマインドします: {message}"
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>、{when}: {message}"
 
-#: cogs/community/reminders.py:269
+#: cogs/community/reminders.py:273
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
-#: cogs/community/reminders.py:316
+#: cogs/community/reminders.py:320
 msgid "I don't have permission to ban that member."
 msgstr "そのメンバーをBANする権限がありません。"
 
-#: cogs/community/reminders.py:319
+#: cogs/community/reminders.py:323
 msgid "Sorry, I couldn't ban that member."
 msgstr "申し訳ありませんが、そのメンバーをBANできませんでした。"
 
-#: cogs/community/reminders.py:327
+#: cogs/community/reminders.py:331
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "{member} を {time} まで禁止しました。"
@@ -929,106 +929,131 @@ msgstr "-# これらの操作はあなただけが使用できます。"
 msgid "Something went wrong updating that setting."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/config/announcements.py:66
+#: cogs/config/announcements.py:68
 msgid "Target channel..."
 msgstr "対象チャンネル..."
 
-#: cogs/config/announcements.py:94
+#: cogs/config/announcements.py:96
 msgid "Ping a role (optional)..."
 msgstr "ロールにメンション (任意)..."
 
-#: cogs/config/announcements.py:113 cogs/config/twitch.py:292
+#: cogs/config/announcements.py:115 cogs/config/twitch.py:292
 #: cogs/config/welcome.py:185
 msgid "Preview"
 msgstr "プレビュー"
 
-#: cogs/config/announcements.py:120 cogs/config/announcements.py:254
-#: cogs/config/customcommands.py:208
+#: cogs/config/announcements.py:122 cogs/config/announcements.py:315
+#: cogs/config/customcommands.py:239
 msgid "Add some content to the embed first."
 msgstr "まず埋め込みにコンテンツを追加してください。"
 
-#: cogs/config/announcements.py:126 cogs/config/twitch.py:302
+#: cogs/config/announcements.py:128 cogs/config/twitch.py:302
 #: cogs/config/welcome.py:195
 msgid "Could not render the preview."
 msgstr "プレビューを表示できませんでした。"
 
-#: cogs/config/announcements.py:133
+#: cogs/config/announcements.py:135
 msgid "Send"
 msgstr "送信"
 
-#: cogs/config/announcements.py:141
+#: cogs/config/announcements.py:143
 msgid "Could not send the announcement."
 msgstr "アナウンスを送信できませんでした。"
 
-#: cogs/config/announcements.py:166
+#: cogs/config/announcements.py:151
+msgid "Schedule the announcement"
+msgstr "アナウンスを予約"
+
+#: cogs/config/announcements.py:155
+msgid "e.g. 2h, tomorrow at 9am, in 3 days"
+msgstr "例: 2h, tomorrow at 9am, in 3 days"
+
+#: cogs/config/announcements.py:178
+msgid "I couldn't understand that time. Try something like `2h`, `tomorrow at 9am`, or `in 3 days`."
+msgstr "その時刻をうまく理解できませんでした。`2h`、`tomorrow at 9am`、`in 3 days` のような形式で入力してみてください。"
+
+#: cogs/config/announcements.py:194
+msgid "Schedule"
+msgstr "予約"
+
+#: cogs/config/announcements.py:221
 msgid "Edit the announcement embed..."
 msgstr "アナウンスの埋め込みを編集..."
 
-#: cogs/config/announcements.py:172 cogs/config/customcommands.py:173
+#: cogs/config/announcements.py:228 cogs/config/customcommands.py:204
 #: cogs/config/twitch.py:264
 msgid "Placeholders"
 msgstr "プレースホルダー"
 
-#: cogs/config/announcements.py:196
+#: cogs/config/announcements.py:252
 msgid "Announcement builder"
 msgstr "アナウンスビルダー"
 
-#: cogs/config/announcements.py:198
+#: cogs/config/announcements.py:254
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** を押してください。プレビューはあなたにのみ表示されます。"
 
-#: cogs/config/announcements.py:206 cogs/config/rolemenus.py:323
+#: cogs/config/announcements.py:262 cogs/config/rolemenus.py:431
 #: cogs/config/starboard.py:180 cogs/config/twitch.py:426
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:651
 #: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
 msgid "Channel"
 msgstr "チャンネル"
 
-#: cogs/config/announcements.py:207 cogs/config/buttonroles.py:433
-#: cogs/config/rolemenus.py:324 cogs/config/twitch.py:413
+#: cogs/config/announcements.py:263 cogs/config/buttonroles.py:433
+#: cogs/config/rolemenus.py:432 cogs/config/twitch.py:413
 #: cogs/config/welcome.py:414
 msgid "*Not set.*"
 msgstr "*未設定。*"
 
-#: cogs/config/announcements.py:211 cogs/config/welcome.py:376
+#: cogs/config/announcements.py:267 cogs/config/welcome.py:376
 #: cogs/config/welcome.py:442
 msgid "Ping"
 msgstr "メンション"
 
-#: cogs/config/announcements.py:212 cogs/moderation/automod.py:241
+#: cogs/config/announcements.py:268 cogs/moderation/automod.py:241
 #: cogs/moderation/automod.py:248
 msgid "None"
 msgstr "なし"
 
-#: cogs/config/announcements.py:216 cogs/config/buttonroles.py:424
+#: cogs/config/announcements.py:272 cogs/config/buttonroles.py:424
 #: cogs/config/twitch.py:429 cogs/config/twitch.py:449
 #: cogs/config/welcome.py:448
 msgid "Embed"
 msgstr "埋め込み"
 
-#: cogs/config/announcements.py:221
+#: cogs/config/announcements.py:277
 #, python-brace-format
 msgid "Only you can use this. Placeholders: {placeholders}"
 msgstr "これはあなただけが使用できます。プレースホルダー: {placeholders}"
 
-#: cogs/config/announcements.py:243
+#: cogs/config/announcements.py:304
 msgid "Pick a target channel first."
 msgstr "まず対象チャンネルを選んでください。"
 
-#: cogs/config/announcements.py:247 cogs/config/buttonroles.py:573
-#: cogs/config/rolemenus.py:372
+#: cogs/config/announcements.py:309 cogs/config/buttonroles.py:573
+#: cogs/config/rolemenus.py:480
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "{channel} にメッセージを送信できません。"
 
-#: cogs/config/announcements.py:270
+#: cogs/config/announcements.py:342
 msgid "Sending failed, please try again."
 msgstr "送信に失敗しました。もう一度お試しください。"
 
-#: cogs/config/announcements.py:281
+#: cogs/config/announcements.py:344
 #, python-brace-format
 msgid "Announcement sent to {channel}."
 msgstr "{channel} にアナウンスを送信しました。"
+
+#: cogs/config/announcements.py:355
+msgid "Scheduling is unavailable right now."
+msgstr "予約機能は現在利用できません。"
+
+#: cogs/config/announcements.py:368
+#, python-brace-format
+msgid "Scheduled for {when} in {channel}."
+msgstr "{channel} で {when} に予約しました。"
 
 #: cogs/config/buttonroles.py:105
 msgid "Roles can only be toggled inside a server."
@@ -1081,7 +1106,7 @@ msgstr "ロールボタンを追加"
 msgid "Button label"
 msgstr "ボタンのラベル"
 
-#: cogs/config/buttonroles.py:254
+#: cogs/config/buttonroles.py:254 cogs/config/rolemenus.py:198
 msgid "Emoji (optional)"
 msgstr "絵文字 (任意)"
 
@@ -1291,7 +1316,7 @@ msgstr "このサーバーにはすでにその名前のカスタムコマンド
 msgid "New text command"
 msgstr "新しいテキストコマンド"
 
-#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:116
+#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:147
 msgid "Command name"
 msgstr "コマンド名"
 
@@ -1299,118 +1324,131 @@ msgstr "コマンド名"
 msgid "e.g. rules (no prefix, no spaces)"
 msgstr "例: rules (プレフィックスなし、スペースなし)"
 
-#: cogs/config/customcommands.py:82
+#: cogs/config/customcommands.py:82 cogs/config/customcommands.py:117
 msgid "Response text"
 msgstr "応答テキスト"
 
 #: cogs/config/customcommands.py:113
+#, python-brace-format
+msgid "Edit: {name}"
+msgstr "編集: {name}"
+
+#: cogs/config/customcommands.py:144
 msgid "New embed command"
 msgstr "新しい埋め込みコマンド"
 
-#: cogs/config/customcommands.py:117
+#: cogs/config/customcommands.py:148
 msgid "e.g. welcome (no prefix, no spaces)"
 msgstr "例: welcome (プレフィックスなし、スペースなし)"
 
-#: cogs/config/customcommands.py:146
+#: cogs/config/customcommands.py:177
 msgid "Save command"
 msgstr "コマンドを保存"
 
-#: cogs/config/customcommands.py:168
+#: cogs/config/customcommands.py:199
 msgid "Edit the response embed..."
 msgstr "応答の埋め込みを編集..."
 
-#: cogs/config/customcommands.py:190
+#: cogs/config/customcommands.py:221
 #, python-brace-format
 msgid "Embed command: {name}"
 msgstr "埋め込みコマンド: {name}"
 
-#: cogs/config/customcommands.py:192
+#: cogs/config/customcommands.py:223
 #, python-brace-format
 msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
 msgstr "このコマンドが返信する埋め込みをデザインしてから、**Save** を押してください。プレースホルダー: {placeholders}"
 
-#: cogs/config/customcommands.py:198
+#: cogs/config/customcommands.py:229
 msgid "Preview summary"
 msgstr "プレビューの概要"
 
-#: cogs/config/customcommands.py:224
+#: cogs/config/customcommands.py:255
 #, python-brace-format
 msgid "Saved the `{name}` command."
 msgstr "`{name}` コマンドを保存しました。"
 
-#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
 msgid "embed"
 msgstr "埋め込み"
 
-#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
 msgid "text"
 msgstr "テキスト"
 
-#: cogs/config/customcommands.py:250
+#: cogs/config/customcommands.py:281
 msgid "Pick a command..."
 msgstr "コマンドを選んでください..."
 
-#: cogs/config/customcommands.py:253
+#: cogs/config/customcommands.py:284
 msgid "(none yet)"
 msgstr "(まだありません)"
 
-#: cogs/config/customcommands.py:269
+#: cogs/config/customcommands.py:300
 msgid "Add text"
 msgstr "テキストを追加"
 
-#: cogs/config/customcommands.py:274 cogs/config/customcommands.py:290
+#: cogs/config/customcommands.py:305 cogs/config/customcommands.py:321
 #, python-brace-format
 msgid "This server already has the maximum of {n} custom commands."
 msgstr "このサーバーはすでに最大 {n} 個のカスタムコマンドに達しています。"
 
-#: cogs/config/customcommands.py:285
+#: cogs/config/customcommands.py:316
 msgid "Add embed"
 msgstr "埋め込みを追加"
 
-#: cogs/config/customcommands.py:302
+#: cogs/config/customcommands.py:333
+msgid "Edit selected"
+msgstr "選択したものを編集"
+
+#: cogs/config/customcommands.py:343
+msgid "Pick a command first."
+msgstr "まずコマンドを選んでください。"
+
+#: cogs/config/customcommands.py:367
 msgid "Delete selected"
 msgstr "選択したものを削除"
 
-#: cogs/config/customcommands.py:335
+#: cogs/config/customcommands.py:401
 msgid "Custom commands"
 msgstr "カスタムコマンド"
 
-#: cogs/config/customcommands.py:337
+#: cogs/config/customcommands.py:403
 msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
 msgstr "メンバーがサーバープレフィックスで実行するコマンドです。テキストまたは埋め込みの返信を追加するか、1つ選んで確認・削除してください。"
 
-#: cogs/config/customcommands.py:344
+#: cogs/config/customcommands.py:410
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:351
+#: cogs/config/customcommands.py:417
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} 個のコマンド"
 
-#: cogs/config/customcommands.py:357
+#: cogs/config/customcommands.py:423
 msgid "None yet"
 msgstr "まだありません"
 
-#: cogs/config/customcommands.py:358
+#: cogs/config/customcommands.py:424
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "**Add text** または **Add embed** を使って作成してください。"
 
-#: cogs/config/customcommands.py:365
+#: cogs/config/customcommands.py:431
 msgid "An embed reply."
 msgstr "埋め込みの返信です。"
 
-#: cogs/config/customcommands.py:368
+#: cogs/config/customcommands.py:434
 msgid "*empty*"
 msgstr "*空*"
 
-#: cogs/config/customcommands.py:370
+#: cogs/config/customcommands.py:436
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "選択中: {name}"
 
-#: cogs/config/customcommands.py:374
+#: cogs/config/customcommands.py:440
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "プレースホルダー: {placeholders}"
@@ -1469,131 +1507,159 @@ msgstr "このサーバーにはリアクションロールが設定されてい
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr "メッセージ `{mid}` - {emoji} -> <@&{role}>"
 
-#: cogs/config/rolemenus.py:64
+#: cogs/config/rolemenus.py:88
 msgid "Roles can only be set inside a server."
 msgstr "ロールはサーバー内でのみ設定できます。"
 
-#: cogs/config/rolemenus.py:100
+#: cogs/config/rolemenus.py:124
 #, python-brace-format
 msgid "Added: {roles}"
 msgstr "追加しました: {roles}"
 
-#: cogs/config/rolemenus.py:104
+#: cogs/config/rolemenus.py:128
 #, python-brace-format
 msgid "Removed: {roles}"
 msgstr "削除しました: {roles}"
 
-#: cogs/config/rolemenus.py:110
+#: cogs/config/rolemenus.py:134
 msgid "I couldn't manage those roles - they may be above my highest role."
 msgstr "それらのロールを管理できませんでした - 私の最上位ロールより上にある可能性があります。"
 
-#: cogs/config/rolemenus.py:113
+#: cogs/config/rolemenus.py:137
 msgid "No changes."
 msgstr "変更はありません。"
 
-#: cogs/config/rolemenus.py:134
+#: cogs/config/rolemenus.py:158
 msgid "Menu header"
 msgstr "メニューのヘッダー"
 
-#: cogs/config/rolemenus.py:137 tools/embed_creator.py:411
+#: cogs/config/rolemenus.py:161 tools/embed_creator.py:411
 msgid "Title"
 msgstr "タイトル"
 
-#: cogs/config/rolemenus.py:143 tools/embed_creator.py:435
+#: cogs/config/rolemenus.py:167 tools/embed_creator.py:435
 msgid "Description"
 msgstr "説明"
 
-#: cogs/config/rolemenus.py:171
+#: cogs/config/rolemenus.py:190
+msgid "Role option"
+msgstr "ロールオプション"
+
+#: cogs/config/rolemenus.py:202
+msgid "A single emoji, or leave blank"
+msgstr "絵文字を1つ入力するか、空欄のままにしてください"
+
+#: cogs/config/rolemenus.py:205
+msgid "Short description (optional)"
+msgstr "簡単な説明 (任意)"
+
+#: cogs/config/rolemenus.py:218
+msgid "That emoji isn't valid. Use a single emoji, or leave it blank."
+msgstr "その絵文字は無効です。絵文字を1つ入力するか、空欄のままにしてください。"
+
+#: cogs/config/rolemenus.py:246
+msgid "no emoji/description yet"
+msgstr "絵文字も説明もまだありません"
+
+#: cogs/config/rolemenus.py:250
+msgid "Customize a role (emoji + description)..."
+msgstr "ロールをカスタマイズ (絵文字 + 説明)..."
+
+#: cogs/config/rolemenus.py:251
+msgid "(pick roles first)"
+msgstr "(まずロールを選択)"
+
+#: cogs/config/rolemenus.py:278
 msgid "Pick the roles to offer..."
 msgstr "提供するロールを選んでください..."
 
-#: cogs/config/rolemenus.py:201
+#: cogs/config/rolemenus.py:308
 msgid "Members can pick any"
 msgstr "メンバーは複数選択できます"
 
-#: cogs/config/rolemenus.py:207
+#: cogs/config/rolemenus.py:314
 msgid "Members pick exactly one"
 msgstr "メンバーは1つだけ選択できます"
 
-#: cogs/config/rolemenus.py:213
+#: cogs/config/rolemenus.py:320
 msgid "Selection rule..."
 msgstr "選択ルール..."
 
-#: cogs/config/rolemenus.py:235
+#: cogs/config/rolemenus.py:342
 msgid "Channel to post the menu in..."
 msgstr "メニューを投稿するチャンネル..."
 
-#: cogs/config/rolemenus.py:254
+#: cogs/config/rolemenus.py:361
 msgid "Edit header"
 msgstr "ヘッダーを編集"
 
-#: cogs/config/rolemenus.py:263
+#: cogs/config/rolemenus.py:370
 msgid "Post menu"
 msgstr "メニューを投稿"
 
-#: cogs/config/rolemenus.py:291 cogs/config/rolemenus.py:476
+#: cogs/config/rolemenus.py:399 cogs/config/rolemenus.py:604
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:298 cogs/utility/info.py:126
+#: cogs/config/rolemenus.py:406 cogs/utility/info.py:126
 msgid "Roles"
 msgstr "ロール"
 
-#: cogs/config/rolemenus.py:303
+#: cogs/config/rolemenus.py:411
 msgid "Role menu builder"
 msgstr "ロールメニュービルダー"
 
-#: cogs/config/rolemenus.py:305
+#: cogs/config/rolemenus.py:413
 msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
 msgstr "提供するロールを選び、ルールを選択し、チャンネルを設定してから、**Post menu** を押してください。メンバーは1つのドロップダウンからロールを設定します。"
 
-#: cogs/config/rolemenus.py:312
+#: cogs/config/rolemenus.py:420
 #, python-brace-format
 msgid "Roles ({count})"
 msgstr "ロール ({count})"
 
-#: cogs/config/rolemenus.py:313
+#: cogs/config/rolemenus.py:421
 msgid "*None yet.*"
 msgstr "*まだありません。*"
 
-#: cogs/config/rolemenus.py:317
+#: cogs/config/rolemenus.py:425
 msgid "Rule"
 msgstr "ルール"
 
-#: cogs/config/rolemenus.py:318
+#: cogs/config/rolemenus.py:426
 msgid "Pick exactly one"
 msgstr "1つだけ選択"
 
-#: cogs/config/rolemenus.py:318
+#: cogs/config/rolemenus.py:426
 msgid "Pick any"
 msgstr "複数選択可"
 
-#: cogs/config/rolemenus.py:328
+#: cogs/config/rolemenus.py:436
 msgid "Header"
 msgstr "ヘッダー"
 
-#: cogs/config/rolemenus.py:329
+#: cogs/config/rolemenus.py:437
 msgid "*default*"
 msgstr "*デフォルト*"
 
-#: cogs/config/rolemenus.py:362
+#: cogs/config/rolemenus.py:470
 msgid "Pick at least one role first."
 msgstr "まず少なくとも1つのロールを選んでください。"
 
-#: cogs/config/rolemenus.py:368
+#: cogs/config/rolemenus.py:476
 msgid "Pick a channel to post the menu in first."
 msgstr "まずメニューを投稿するチャンネルを選んでください。"
 
-#: cogs/config/rolemenus.py:393
+#: cogs/config/rolemenus.py:501
 msgid "Posting failed, please try again."
 msgstr "投稿に失敗しました。もう一度お試しください。"
 
-#: cogs/config/rolemenus.py:406
+#: cogs/config/rolemenus.py:514
 #, python-brace-format
 msgid "Posted the role menu in {channel}."
 msgstr "{channel} にロールメニューを投稿しました。"
 
-#: cogs/config/rolemenus.py:471
+#: cogs/config/rolemenus.py:599
 #, python-brace-format
 msgid "This server already has the maximum of {n} role menus."
 msgstr "このサーバーはすでに最大 {n} 個のロールメニューに達しています。"
@@ -2478,7 +2544,7 @@ msgstr "オン"
 
 #: cogs/config/welcome.py:142 cogs/config/welcome.py:433
 #: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-#: cogs/music/music.py:266
+#: cogs/music/music.py:269
 msgid "Off"
 msgstr "オフ"
 
@@ -3453,58 +3519,58 @@ msgstr "編集後"
 msgid "[Go to message]({url})"
 msgstr "[メッセージへ移動]({url})"
 
-#: cogs/music/music.py:134 cogs/music/music.py:410
+#: cogs/music/music.py:137 cogs/music/music.py:413
 msgid "The player is no longer active."
 msgstr "プレイヤーはもうアクティブではありません。"
 
-#: cogs/music/music.py:141
+#: cogs/music/music.py:144
 msgid "Give me a song name or URL to add."
 msgstr "追加する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:148
+#: cogs/music/music.py:151
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr "`{query}` に該当するものが見つかりませんでした。"
 
-#: cogs/music/music.py:160
+#: cogs/music/music.py:163
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "**{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:166
+#: cogs/music/music.py:169
 msgid "Something went wrong adding that song."
 msgstr "その曲の追加中に問題が発生しました。"
 
-#: cogs/music/music.py:245 cogs/music/music.py:1503
+#: cogs/music/music.py:248 cogs/music/music.py:1518
 msgid "Nothing is playing right now."
 msgstr "現在再生中の曲はありません。"
 
-#: cogs/music/music.py:252
+#: cogs/music/music.py:255
 msgid "### 🎵 Now Playing"
 msgstr "### 🎵 再生中"
 
-#: cogs/music/music.py:255
+#: cogs/music/music.py:258
 #, python-brace-format
 msgid "by **{author}**"
 msgstr "by **{author}**"
 
-#: cogs/music/music.py:259
+#: cogs/music/music.py:262
 msgid "⏸ Paused"
 msgstr "⏸ 一時停止中"
 
-#: cogs/music/music.py:259
+#: cogs/music/music.py:262
 msgid "▶ Playing"
 msgstr "▶ 再生中"
 
-#: cogs/music/music.py:262
+#: cogs/music/music.py:265
 msgid "On (queue)"
 msgstr "オン (キュー)"
 
-#: cogs/music/music.py:264
+#: cogs/music/music.py:267
 msgid "On (track)"
 msgstr "オン (トラック)"
 
-#: cogs/music/music.py:270
+#: cogs/music/music.py:273
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -3517,22 +3583,22 @@ msgstr ""
 "**音量:** `{volume}%`\n"
 "**ループ:** {loop}"
 
-#: cogs/music/music.py:285
+#: cogs/music/music.py:288
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr "**チャンネル:** {emoji} {channel}"
 
-#: cogs/music/music.py:291
+#: cogs/music/music.py:294
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr "**DJ:** {dj}"
 
-#: cogs/music/music.py:296
+#: cogs/music/music.py:299
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr "**リクエスト者:** <@{requester_id}>"
 
-#: cogs/music/music.py:310
+#: cogs/music/music.py:313
 #, python-brace-format
 msgid ""
 "\n"
@@ -3541,7 +3607,7 @@ msgstr ""
 "\n"
 "`+{count}` 件がキューにあります"
 
-#: cogs/music/music.py:313
+#: cogs/music/music.py:316
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
@@ -3550,7 +3616,7 @@ msgstr ""
 "**次の曲 ({count})**\n"
 "{lines}"
 
-#: cogs/music/music.py:318
+#: cogs/music/music.py:321
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
@@ -3558,300 +3624,305 @@ msgstr ""
 "**次の曲**\n"
 "キューに曲がありません。曲を追加して音楽を続けましょう!"
 
-#: cogs/music/music.py:328
+#: cogs/music/music.py:331
 msgid "Pause/Resume"
 msgstr "一時停止/再開"
 
-#: cogs/music/music.py:334
+#: cogs/music/music.py:337
 msgid "Skip"
 msgstr "スキップ"
 
-#: cogs/music/music.py:340
+#: cogs/music/music.py:343
 msgid "Vol -"
 msgstr "音量 -"
 
-#: cogs/music/music.py:346
+#: cogs/music/music.py:349
 msgid "Vol +"
 msgstr "音量 +"
 
-#: cogs/music/music.py:352
+#: cogs/music/music.py:355
 msgid "Loop"
 msgstr "ループ"
 
-#: cogs/music/music.py:362
+#: cogs/music/music.py:365
 msgid "Shuffle"
 msgstr "シャッフル"
 
-#: cogs/music/music.py:368 cogs/music/music.py:1491
+#: cogs/music/music.py:371 cogs/music/music.py:1506
 msgid "Queue"
 msgstr "キュー"
 
-#: cogs/music/music.py:374
+#: cogs/music/music.py:377
 msgid "Add"
 msgstr "追加"
 
-#: cogs/music/music.py:380
+#: cogs/music/music.py:383
 msgid "Favorite"
 msgstr "お気に入り"
 
-#: cogs/music/music.py:386
+#: cogs/music/music.py:389
 msgid "Disconnect"
 msgstr "切断"
 
-#: cogs/music/music.py:394
+#: cogs/music/music.py:397
 msgid "-# Use the buttons to control playback"
 msgstr "-# ボタンを使って再生を操作してください"
 
-#: cogs/music/music.py:421
+#: cogs/music/music.py:424
 msgid "You must be in my voice channel to use these controls."
 msgstr "これらの操作を使うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:439
+#: cogs/music/music.py:442
 msgid "Something went wrong handling that action."
 msgstr "そのアクションの処理中に問題が発生しました。"
 
-#: cogs/music/music.py:458
+#: cogs/music/music.py:461
 msgid "Resumed."
 msgstr "再開しました。"
 
-#: cogs/music/music.py:461
+#: cogs/music/music.py:464
 msgid "Paused."
 msgstr "一時停止しました。"
 
-#: cogs/music/music.py:476
+#: cogs/music/music.py:479
 msgid "Skipped."
 msgstr "スキップしました。"
 
-#: cogs/music/music.py:479
+#: cogs/music/music.py:482
 msgid "There is nothing left to skip to."
 msgstr "スキップする曲が残っていません。"
 
-#: cogs/music/music.py:491 cogs/music/music.py:506
+#: cogs/music/music.py:494 cogs/music/music.py:509
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:516
+#: cogs/music/music.py:519 locales/command_strings.py:149
 msgid "off"
 msgstr "オフ"
 
-#: cogs/music/music.py:519
+#: cogs/music/music.py:522
 msgid "on"
 msgstr "オン"
 
-#: cogs/music/music.py:522
+#: cogs/music/music.py:525
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr "キューのループを {state} にしました。"
 
-#: cogs/music/music.py:532
+#: cogs/music/music.py:535
 msgid "Add a few more tracks before shuffling."
 msgstr "シャッフルする前にもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:538 cogs/music/music.py:1435
+#: cogs/music/music.py:541 cogs/music/music.py:1450
 msgid "Shuffled the queue."
 msgstr "キューをシャッフルしました。"
 
-#: cogs/music/music.py:549 cogs/music/music.py:1467
+#: cogs/music/music.py:552 cogs/music/music.py:1482
 msgid "The queue is empty."
 msgstr "キューは空です。"
 
-#: cogs/music/music.py:553 cogs/music/music.py:1481
+#: cogs/music/music.py:556 cogs/music/music.py:1496
 #, python-brace-format
 msgid "`{index}.` {title} by `{author}`"
 msgstr "`{index}.` {title} by `{author}`"
 
-#: cogs/music/music.py:560 cogs/music/music.py:1487
+#: cogs/music/music.py:563 cogs/music/music.py:1502
 #, python-brace-format
 msgid "*...and {count} more.*"
 msgstr "*...他 {count} 件。*"
 
-#: cogs/music/music.py:579
+#: cogs/music/music.py:582
 msgid "Nothing is playing to favourite right now."
 msgstr "現在お気に入りに追加できる再生中の曲はありません。"
 
-#: cogs/music/music.py:585
+#: cogs/music/music.py:587
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr "**{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:592 cogs/music/music.py:1671
+#: cogs/music/music.py:592 cogs/music/music.py:1686
+#, python-brace-format
+msgid "Your favourites are full (max {max}). Remove some first."
+msgstr "お気に入りはすでに上限({max}件)に達しています。まずいくつか削除してください。"
+
+#: cogs/music/music.py:595 cogs/music/music.py:1692
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** はすでにお気に入りに入っています。"
 
-#: cogs/music/music.py:665
+#: cogs/music/music.py:667
 msgid "I'm not connected to a voice channel."
 msgstr "ボイスチャンネルに接続していません。"
 
-#: cogs/music/music.py:676
+#: cogs/music/music.py:678
 msgid "You must be in my voice channel to do that."
 msgstr "それを行うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:945
+#: cogs/music/music.py:960
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "**{title}** の再生に問題が発生したため、スキップします。"
 
-#: cogs/music/music.py:1269 cogs/music/music.py:1508
+#: cogs/music/music.py:1284 cogs/music/music.py:1523
 msgid "Here is the player."
 msgstr "プレイヤーはこちらです。"
 
-#: cogs/music/music.py:1272
+#: cogs/music/music.py:1287
 msgid "Give me something to play, e.g. `play never gonna give you up`."
 msgstr "再生する曲を指定してください。例: `play never gonna give you up`。"
 
-#: cogs/music/music.py:1280 cogs/music/music.py:1315 cogs/music/music.py:1581
-#: cogs/music/music.py:1653
+#: cogs/music/music.py:1295 cogs/music/music.py:1330 cogs/music/music.py:1596
+#: cogs/music/music.py:1668
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "音楽は現在利用できません - Lavalinkノードが接続されていません。"
 
-#: cogs/music/music.py:1287 cogs/music/music.py:1593
+#: cogs/music/music.py:1302 cogs/music/music.py:1608
 msgid "You must be in a voice channel first."
 msgstr "まずボイスチャンネルに参加する必要があります。"
 
-#: cogs/music/music.py:1294 cogs/music/music.py:1600
+#: cogs/music/music.py:1309 cogs/music/music.py:1615
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "あなたのボイスチャンネルに参加できませんでした。もう一度お試しください。"
 
-#: cogs/music/music.py:1304
+#: cogs/music/music.py:1319
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "プレイヤーはすでに {channel} でアクティブです。"
 
-#: cogs/music/music.py:1320 cogs/music/music.py:1659
+#: cogs/music/music.py:1335 cogs/music/music.py:1674
 msgid "Could not find any tracks for that query."
 msgstr "そのクエリに該当するトラックが見つかりませんでした。"
 
-#: cogs/music/music.py:1331
+#: cogs/music/music.py:1346
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr "プレイリスト **{name}** ({count} トラック) をキューに追加しました。"
 
-#: cogs/music/music.py:1339
+#: cogs/music/music.py:1354
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "`{author}` の **{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:1356
+#: cogs/music/music.py:1371
 msgid "The player is already paused."
 msgstr "プレイヤーはすでに一時停止しています。"
 
-#: cogs/music/music.py:1361
+#: cogs/music/music.py:1376
 msgid "Paused the player."
 msgstr "プレイヤーを一時停止しました。"
 
-#: cogs/music/music.py:1371
+#: cogs/music/music.py:1386
 msgid "The player is not paused."
 msgstr "プレイヤーは一時停止していません。"
 
-#: cogs/music/music.py:1376
+#: cogs/music/music.py:1391
 msgid "Resumed the player."
 msgstr "プレイヤーを再開しました。"
 
-#: cogs/music/music.py:1388
+#: cogs/music/music.py:1403
 msgid "There are no more tracks in the queue to skip to."
 msgstr "キューにスキップできるトラックがもうありません。"
 
-#: cogs/music/music.py:1392
+#: cogs/music/music.py:1407
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "`{author}` の **{title}** にスキップしました。"
 
-#: cogs/music/music.py:1398
+#: cogs/music/music.py:1413
 msgid "Skipped. The queue is now empty."
 msgstr "スキップしました。キューは空になりました。"
 
-#: cogs/music/music.py:1409
+#: cogs/music/music.py:1424
 msgid "Stopped playback and cleared the queue."
 msgstr "再生を停止してキューをクリアしました。"
 
-#: cogs/music/music.py:1422
+#: cogs/music/music.py:1437
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:1432
+#: cogs/music/music.py:1447
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "シャッフルする前に、キューにもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:1455
+#: cogs/music/music.py:1470
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "ループモードを `{mode}` に設定しました。"
 
-#: cogs/music/music.py:1473
+#: cogs/music/music.py:1488
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}`\n"
 msgstr "**再生中:** `{author}` の {title}\n"
 
-#: cogs/music/music.py:1478
+#: cogs/music/music.py:1493
 msgid "**Up Next:**"
 msgstr "**次の曲:**"
 
-#: cogs/music/music.py:1519
+#: cogs/music/music.py:1534
 msgid "Disconnected from the voice channel."
 msgstr "ボイスチャンネルから切断しました。"
 
-#: cogs/music/music.py:1532
+#: cogs/music/music.py:1547
 msgid "You have no saved favourites yet."
 msgstr "保存されたお気に入りはまだありません。"
 
-#: cogs/music/music.py:1535
+#: cogs/music/music.py:1550
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} には保存されたお気に入りがまだありません。"
 
-#: cogs/music/music.py:1543 cogs/music/music.py:1699
+#: cogs/music/music.py:1558 cogs/music/music.py:1720
 msgid "Unknown title"
 msgstr "不明なタイトル"
 
-#: cogs/music/music.py:1544
+#: cogs/music/music.py:1559
 msgid "Unknown artist"
 msgstr "不明なアーティスト"
 
-#: cogs/music/music.py:1548
+#: cogs/music/music.py:1563
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr "`{index}.` {label} by `{author}`"
 
-#: cogs/music/music.py:1555
+#: cogs/music/music.py:1570
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr "{name} のお気に入り"
 
-#: cogs/music/music.py:1587
+#: cogs/music/music.py:1602
 msgid "You have no saved favourites to play."
 msgstr "再生できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:1622
+#: cogs/music/music.py:1637
 msgid "None of your favourites could be loaded right now."
 msgstr "現在、お気に入りを1つも読み込めませんでした。"
 
-#: cogs/music/music.py:1630
+#: cogs/music/music.py:1645
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr "お気に入りから {count} トラックをキューに追加しました。"
 
-#: cogs/music/music.py:1646
+#: cogs/music/music.py:1661
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "再生中の曲がありません - 保存する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:1665
+#: cogs/music/music.py:1680
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "`{author}` の **{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:1683
+#: cogs/music/music.py:1704
 msgid "You have no saved favourites to remove."
 msgstr "削除できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:1687
+#: cogs/music/music.py:1708
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "1から {max} までの数を選んでください。"
 
-#: cogs/music/music.py:1698
+#: cogs/music/music.py:1719
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** をお気に入りから削除しました。"
@@ -4467,7 +4538,7 @@ msgstr "Websocketレイテンシ"
 msgid "{ms} ms"
 msgstr "{ms} ms"
 
-#: cogs/utility/meta.py:39
+#: cogs/utility/meta.py:41
 #, python-brace-format
 msgid ""
 "## {city}\n"
@@ -4476,33 +4547,33 @@ msgstr ""
 "## {city}\n"
 "{condition}"
 
-#: cogs/utility/meta.py:79 cogs/utility/meta.py:86
+#: cogs/utility/meta.py:81 cogs/utility/meta.py:88
 msgid "Could not fetch the Astronomy Picture of the Day right now."
 msgstr "現在、今日の天文写真を取得できませんでした。"
 
-#: cogs/utility/meta.py:93
+#: cogs/utility/meta.py:95
 msgid "Astronomy Picture of the Day"
 msgstr "今日の天文写真"
 
-#: cogs/utility/meta.py:113
+#: cogs/utility/meta.py:115
 #, python-brace-format
 msgid "APOD Requested by {user}"
 msgstr "APOD リクエスト者: {user}"
 
-#: cogs/utility/meta.py:133
+#: cogs/utility/meta.py:135
 msgid "Could not fetch the weather right now."
 msgstr "現在、天気を取得できませんでした。"
 
-#: cogs/utility/meta.py:136
+#: cogs/utility/meta.py:138
 msgid "City not found."
 msgstr "都市が見つかりませんでした。"
 
-#: cogs/utility/meta.py:153
+#: cogs/utility/meta.py:155
 #, python-brace-format
 msgid "{status} - {desc}"
 msgstr "{status} - {desc}"
 
-#: cogs/utility/meta.py:157
+#: cogs/utility/meta.py:159
 #, python-brace-format
 msgid ""
 "**Temperature:** `{temp}C`\n"
@@ -4676,25 +4747,21 @@ msgstr "自動 -> en (非公式)"
 msgid "Translation failed."
 msgstr "翻訳に失敗しました。"
 
-#: locales/command_strings.py:9
+#: locales/command_strings.py:10
 msgid "A song name or URL to search for and play."
 msgstr "検索して再生する曲名またはURL。"
 
-#: locales/command_strings.py:10
+#: locales/command_strings.py:11
 msgid "A song to search for and save (defaults to the current track)."
 msgstr "検索して保存する曲(未指定の場合は現在再生中の曲)。"
 
-#: locales/command_strings.py:11
+#: locales/command_strings.py:12
 msgid "Add a member to the live-alert watchlist (channel is an optional override)."
 msgstr "ライブ配信通知のウォッチリストにメンバーを追加します(チャンネルは任意で上書き可能)。"
 
-#: locales/command_strings.py:12
+#: locales/command_strings.py:13
 msgid "Add a user to the bot-wide blacklist."
 msgstr "ボット全体のブラックリストにユーザーを追加します。"
-
-#: locales/command_strings.py:13
-msgid "Answer to a yes/no question."
-msgstr "はい/いいえの質問に答えます。"
 
 #: locales/command_strings.py:14
 msgid "Assign a Prefix to Yasuho for use in your guild."
@@ -4717,636 +4784,528 @@ msgid "Automatic moderation related commands."
 msgstr "自動モデレーション関連のコマンド。"
 
 #: locales/command_strings.py:19
-msgid "Ban many users at once by id, for raid cleanup."
-msgstr "荒らし対策として、IDを指定して複数のユーザーを一括BANします。"
-
-#: locales/command_strings.py:20
 msgid "Bans an annoying user. Requires ban members permission. Also bot must have this permission."
 msgstr "迷惑なユーザーをBANします。メンバーをBANする権限が必要で、ボットにもその権限が必要です。"
 
-#: locales/command_strings.py:21
+#: locales/command_strings.py:20
 msgid "Be the first to retype the given sentence as fast as you can."
 msgstr "与えられた文章を誰よりも早く正確に打ち込もう。"
 
-#: locales/command_strings.py:22
+#: locales/command_strings.py:21
 msgid "Bot-wide blacklist related commands."
 msgstr "ボット全体のブラックリスト関連のコマンド。"
 
+#: locales/command_strings.py:22
+msgid "Browse anime from a season (defaults to the current season)."
+msgstr "シーズンのアニメを閲覧します(未指定の場合は現在のシーズン)。"
+
 #: locales/command_strings.py:23
+msgid "Browse the anime trending on AniList right now."
+msgstr "現在AniListでトレンド入りしているアニメを閲覧します。"
+
+#: locales/command_strings.py:24
+msgid "Browse the most popular anime on AniList."
+msgstr "AniListで最も人気のあるアニメを閲覧します。"
+
+#: locales/command_strings.py:25
 msgid "Build a Google reverse image search link for an image URL or attachment."
 msgstr "画像URLまたは添付ファイルからGoogle画像検索のリンクを作成します。"
 
-#: locales/command_strings.py:24
-msgid "Calculate how gay you are!"
-msgstr "あなたのゲイ度を診断します!"
-
-#: locales/command_strings.py:25
+#: locales/command_strings.py:26
 msgid "Clear your entire gaming profile."
 msgstr "ゲーミングプロフィールを完全に削除します。"
-
-#: locales/command_strings.py:26
-msgid "Clears X messages of a member"
-msgstr "指定したメンバーのメッセージをX件削除します"
 
 #: locales/command_strings.py:27
 msgid "Clears X messages."
 msgstr "メッセージをX件削除します。"
 
 #: locales/command_strings.py:28
-msgid "Convert text to ascii art"
-msgstr "テキストをアスキーアートに変換します"
-
-#: locales/command_strings.py:29
 msgid "Create a Live streamer role and link it to the alert config."
 msgstr "ライブ配信者ロールを作成し、通知設定にリンクします。"
 
-#: locales/command_strings.py:30
+#: locales/command_strings.py:29
 msgid "Create a native yes/no poll (runs for 24 hours)."
 msgstr "はい/いいえのネイティブ投票を作成します(24時間実施)。"
 
-#: locales/command_strings.py:31
+#: locales/command_strings.py:30
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
 msgstr "メッセージIDを指定してボタンロールパネルを削除します(ボタンを取り除きます)。"
 
-#: locales/command_strings.py:32
+#: locales/command_strings.py:31
 msgid "Delete the Live streamer role and unlink it from the config."
 msgstr "ライブ配信者ロールを削除し、設定から解除します。"
 
-#: locales/command_strings.py:33
+#: locales/command_strings.py:32
 msgid "Disable moderation logging for this guild."
 msgstr "このサーバーのモデレーションログを無効にします。"
 
-#: locales/command_strings.py:34
+#: locales/command_strings.py:33
 msgid "Disable the starboard and wipe its configuration for this guild."
 msgstr "このサーバーのスターボードを無効にし、設定を消去します。"
 
-#: locales/command_strings.py:35
+#: locales/command_strings.py:34
 msgid "Disable the welcome message for your guild."
 msgstr "サーバーのウェルカムメッセージを無効にします。"
 
-#: locales/command_strings.py:36
+#: locales/command_strings.py:35
 msgid "Disconnect the player from the voice channel."
 msgstr "プレイヤーをボイスチャンネルから切断します。"
 
-#: locales/command_strings.py:37
+#: locales/command_strings.py:36
 msgid "Displays information about a member of the guild."
 msgstr "サーバーメンバーの情報を表示します。"
 
-#: locales/command_strings.py:38
+#: locales/command_strings.py:37
 msgid "Displays information about the bot."
 msgstr "ボットの情報を表示します。"
 
-#: locales/command_strings.py:39
+#: locales/command_strings.py:38
 msgid "Displays information about the current guild."
 msgstr "現在のサーバーの情報を表示します。"
 
-#: locales/command_strings.py:40
+#: locales/command_strings.py:39
 msgid "Displays the avatar of a member."
 msgstr "メンバーのアバターを表示します。"
 
-#: locales/command_strings.py:41
-msgid "Dump live slash command descriptions/choices for i18n extraction."
-msgstr "i18n抽出用に、稼働中のスラッシュコマンドの説明/選択肢を出力します。"
-
-#: locales/command_strings.py:42
+#: locales/command_strings.py:40
 msgid "Edit a profile field through a guided form (radio picker + value)."
 msgstr "ガイド付きフォーム(選択肢+値)でプロフィール項目を編集します。"
 
-#: locales/command_strings.py:43
+#: locales/command_strings.py:41
 msgid "Enable or disable Discord-invite filtering for this guild."
 msgstr "このサーバーのDiscord招待リンクフィルタリングを有効/無効にします。"
 
-#: locales/command_strings.py:44
+#: locales/command_strings.py:42
 msgid "Enable or disable link filtering for this guild."
 msgstr "このサーバーのリンクフィルタリングを有効/無効にします。"
 
-#: locales/command_strings.py:45
+#: locales/command_strings.py:43
 msgid "Enable or disable spam filtering for this guild."
 msgstr "このサーバーのスパムフィルタリングを有効/無効にします。"
 
-#: locales/command_strings.py:46
+#: locales/command_strings.py:44
 msgid "Enable or disable the leveling system for this server."
 msgstr "このサーバーのレベルシステムを有効/無効にします。"
 
-#: locales/command_strings.py:47
-msgid "Evaluates a code"
-msgstr "コードを評価します"
-
-#: locales/command_strings.py:48
+#: locales/command_strings.py:45
 msgid "Fetch the lyrics of a song using Genius."
 msgstr "Geniusを使って曲の歌詞を取得します。"
 
-#: locales/command_strings.py:49
-msgid "Gaming profile related commands."
-msgstr "ゲーミングプロフィール関連のコマンド。"
-
-#: locales/command_strings.py:50
-msgid "Generate a random password and send it to you in DMs."
-msgstr "ランダムなパスワードを生成し、DMで送信します。"
-
-#: locales/command_strings.py:51
-msgid "Get an invite link to add the bot to your server."
-msgstr "ボットをサーバーに追加するための招待リンクを取得します。"
-
-#: locales/command_strings.py:52
-msgid "Give a hug to your secret crush ッ"
-msgstr "秘密の想い人にハグをあげよう ッ"
-
-#: locales/command_strings.py:53
-msgid "Gives you reversed text"
-msgstr "テキストを反転させます"
-
-#: locales/command_strings.py:54
-msgid "Interactively browse and remove a member's warnings."
-msgstr "メンバーの警告をインタラクティブに閲覧・削除します。"
-
-#: locales/command_strings.py:55
-msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
-msgstr "迷惑なユーザーをキックします。メンバーをキックする権限が必要で、ボットにもその権限が必要です。"
-
-#: locales/command_strings.py:56
-msgid "List all autorooms in the server"
-msgstr "サーバー内のすべての自動ボイスルームを一覧表示します"
-
-#: locales/command_strings.py:57
-msgid "List all reaction-role mappings for this guild."
-msgstr "このサーバーのリアクションロールの対応関係を一覧表示します。"
-
-#: locales/command_strings.py:58
-msgid "List every blacklisted user."
-msgstr "ブラックリストに登録されているすべてのユーザーを一覧表示します。"
-
-#: locales/command_strings.py:59
-msgid "List every button-role panel set up in this guild."
-msgstr "このサーバーに設定されているすべてのボタンロールパネルを一覧表示します。"
-
-#: locales/command_strings.py:60
-msgid "List the available prefixes for your guild."
-msgstr "サーバーで使用可能なプレフィックスを一覧表示します。"
-
-#: locales/command_strings.py:61
-msgid "List the channel permissions a member currently has."
-msgstr "メンバーが現在持っているチャンネル権限を一覧表示します。"
-
-#: locales/command_strings.py:62
-msgid "List the channel permissions the bot currently has."
-msgstr "ボットが現在持っているチャンネル権限を一覧表示します。"
-
-#: locales/command_strings.py:63
-msgid "Loads an extension by name."
-msgstr "名前を指定して拡張機能を読み込みます。"
-
-#: locales/command_strings.py:64
-msgid "Look up a Minecraft account and render its skin."
-msgstr "Minecraftアカウントを検索し、スキンを表示します。"
-
-#: locales/command_strings.py:65
-msgid "Look up an osu! player's stats."
-msgstr "osu!プレイヤーの統計情報を検索します。"
-
-#: locales/command_strings.py:66
-msgid "Makes big an emoji"
-msgstr "絵文字を拡大表示します"
-
-#: locales/command_strings.py:67
-msgid "Manage the auto-room system for temporary voice channels."
-msgstr "一時ボイスチャンネルの自動ルームシステムを管理します。"
-
-#: locales/command_strings.py:68
-msgid "Map an emoji on a message to a role."
-msgstr "メッセージ上の絵文字をロールに対応付けます。"
-
-#: locales/command_strings.py:69
-msgid "Move a role to the given position in the hierarchy."
-msgstr "ロールを指定した階層位置に移動します。"
-
-#: locales/command_strings.py:70
-msgid "Moves an annoying user to a channel."
-msgstr "迷惑なユーザーを別のチャンネルに移動させます。"
-
-#: locales/command_strings.py:71
-msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ..."
-msgstr "複数選択投票: quickpoll 質問 | 選択肢1 | 選択肢2 ..."
-
-#: locales/command_strings.py:72
-msgid "Mutes the specified member."
-msgstr "指定したメンバーをミュートします。"
-
-#: locales/command_strings.py:73
-msgid "One of: track, all, off."
-msgstr "track、all、off のいずれか。"
-
-#: locales/command_strings.py:74
-msgid "Open the Twitch live-alert builder."
-msgstr "Twitchライブ通知の設定画面を開きます。"
-
-#: locales/command_strings.py:75
-msgid "Open the interactive AutoMod control panel."
-msgstr "インタラクティブなAutoModコントロールパネルを開きます。"
-
-#: locales/command_strings.py:76
-msgid "Open the interactive button-role builder."
-msgstr "インタラクティブなボタンロール作成画面を開きます。"
-
-#: locales/command_strings.py:77
-msgid "Open the interactive server-settings panel (also: setup)."
-msgstr "インタラクティブなサーバー設定パネルを開きます(setupと同じ)。"
-
-#: locales/command_strings.py:78
-msgid "Open the moderation-log control panel."
-msgstr "モデレーションログのコントロールパネルを開きます。"
-
-#: locales/command_strings.py:79
-msgid "Open the welcome control panel."
-msgstr "ウェルカムメッセージのコントロールパネルを開きます。"
-
-#: locales/command_strings.py:80
-msgid "Open your personal settings panel."
-msgstr "個人設定パネルを開きます。"
-
-#: locales/command_strings.py:81
-msgid "Paginated moderation case history (optionally filtered to a member)."
-msgstr "ページ形式でモデレーション履歴を表示します(メンバーで絞り込み可能)。"
-
-#: locales/command_strings.py:82
-msgid "Pause the current track."
-msgstr "現在再生中の曲を一時停止します。"
-
-#: locales/command_strings.py:83
-msgid "Pick the language for the bot's replies to you."
-msgstr "ボットがあなたへの返信に使う言語を選びます。"
-
-#: locales/command_strings.py:84
-msgid "Play Rock Paper Scissors with Yasuho!"
-msgstr "ヤスホーとじゃんけんをします！"
-
-#: locales/command_strings.py:85
-msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
-msgstr "ボットと三目並べで対戦します。あなたはXです。"
-
-#: locales/command_strings.py:86
-msgid "Play a track or playlist, or add it to the queue."
-msgstr "トラックやプレイリストを再生、またはキューに追加します。"
-
-#: locales/command_strings.py:87
-msgid "Prefix related commands."
-msgstr "プレフィックス関連のコマンドです。"
-
-#: locales/command_strings.py:88
-msgid "Pull the latest code, then pick which cogs to hot-reload (interactive)."
-msgstr "最新のコードを取得し、ホットリロードするコグを選択します（対話形式）。"
-
-#: locales/command_strings.py:89
-msgid "Purges messages. Requires manage messages permission"
-msgstr "メッセージを一括削除します。メッセージの管理権限が必要です"
-
-#: locales/command_strings.py:90
-msgid "Queue every track in your favourites and start playing."
-msgstr "お気に入りの全トラックをキューに追加して再生を開始します。"
-
-#: locales/command_strings.py:91
-msgid "Quote a message into a clean embed."
-msgstr "メッセージをきれいな埋め込みとして引用します。"
-
-#: locales/command_strings.py:92
-msgid "Rates what you desire"
-msgstr "あなたの欲しいものを評価します"
-
-#: locales/command_strings.py:93
-msgid "Reaction-role related commands."
-msgstr "リアクションロール関連のコマンドです。"
-
-#: locales/command_strings.py:94
-msgid "Reloads a single extension, or all configured extensions."
-msgstr "単一の拡張機能、または設定済みの全拡張機能をリロードします。"
-
-#: locales/command_strings.py:95
-msgid "Reminds you of something after a certain amount of time."
-msgstr "指定した時間が経過したらリマインドします。"
-
-#: locales/command_strings.py:96
-msgid "Remove a member from the live-alert watchlist."
-msgstr "配信通知の監視リストからメンバーを削除します。"
-
-#: locales/command_strings.py:97
-msgid "Remove a role to a specified member."
-msgstr "指定したメンバーからロールを削除します。"
-
-#: locales/command_strings.py:98
-msgid "Remove a user from the bot-wide blacklist."
-msgstr "ボット全体のブラックリストからユーザーを削除します。"
-
-#: locales/command_strings.py:99
-msgid "Remove a warn from a member of the guild."
-msgstr "サーバーのメンバーから警告を1件削除します。"
-
-#: locales/command_strings.py:100
-msgid "Remove an emoji-to-role mapping from a message."
-msgstr "メッセージから絵文字とロールの紐付けを削除します。"
-
-#: locales/command_strings.py:101
-msgid "Remove auto role from your guild."
-msgstr "サーバーから自動ロールを削除します。"
-
-#: locales/command_strings.py:102
-msgid "Remove the auto-room system based on category name"
-msgstr "カテゴリ名を指定して自動ルームシステムを削除します"
-
-#: locales/command_strings.py:103
-msgid "Remove the favourite at the given position in your list."
-msgstr "リスト内の指定した位置のお気に入りを削除します。"
-
-#: locales/command_strings.py:104
-msgid "Resume the player if it is paused."
-msgstr "一時停止中のプレイヤーを再開します。"
-
-#: locales/command_strings.py:105
-msgid "Returns a random percent for how gay is a discord user"
-msgstr "Discordユーザーがどれくらいゲイっぽいかをランダムな割合で返します"
-
-#: locales/command_strings.py:106
-msgid "Returns a random percent for how hot is a discord user"
-msgstr "Discordユーザーがどれくらいホットかをランダムな割合で返します"
-
-#: locales/command_strings.py:107
-msgid "Roll the slot machine"
-msgstr "スロットマシンを回します"
-
-#: locales/command_strings.py:108
-msgid "Save the current track, or a searched track, to your favourites."
-msgstr "現在のトラック、または検索したトラックをお気に入りに保存します。"
-
-#: locales/command_strings.py:109
-msgid "Search Wikipedia for a short summary of a topic."
-msgstr "Wikipediaでトピックの簡単な要約を検索します。"
-
-#: locales/command_strings.py:110
-msgid "Sends a random cat image"
-msgstr "ランダムな猫の画像を送信します"
-
-#: locales/command_strings.py:111
-msgid "Sends a random dog picture"
-msgstr "ランダムな犬の画像を送信します"
-
-#: locales/command_strings.py:112
-msgid "Sends a random fox picture"
-msgstr "ランダムな狐の画像を送信します"
-
-#: locales/command_strings.py:113
-msgid "Set a role to a specified member."
-msgstr "指定したメンバーにロールを設定します。"
-
-#: locales/command_strings.py:114
-msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
-msgstr "プロフィール項目のいずれかを設定します（switch、3ds、battletag、riot、steam）。"
-
-#: locales/command_strings.py:115
-msgid "Set the channel where moderation logs are sent."
-msgstr "モデレーションログを送信するチャンネルを設定します。"
-
-#: locales/command_strings.py:116
-msgid "Set the loop mode for the queue."
-msgstr "キューのループモードを設定します。"
-
-#: locales/command_strings.py:117
-msgid "Set the player volume (0-1000)."
-msgstr "プレイヤーの音量を設定します（0-1000）。"
-
-#: locales/command_strings.py:118
-msgid "Set the server's default language (used when a member has not picked one)."
-msgstr "サーバーの既定言語を設定します（メンバーが言語を選んでいない場合に使用されます）。"
-
-#: locales/command_strings.py:119
-msgid "Set the starboard channel and the star threshold."
-msgstr "スターボードチャンネルとスターのしきい値を設定します。"
-
-#: locales/command_strings.py:120
-msgid "Set the welcome channel and message (a simple fallback)."
-msgstr "ウェルカムチャンネルとメッセージを設定します（簡易的な代替設定）。"
-
-#: locales/command_strings.py:121
-msgid "Set your AFK status, with an optional message."
-msgstr "任意のメッセージ付きでAFKステータスを設定します。"
-
-#: locales/command_strings.py:122
-msgid "Setup an auto-room system"
-msgstr "自動ルームシステムをセットアップします"
-
-#: locales/command_strings.py:123
-msgid "Show a collage of a user's avatar / server avatar / banner history."
-msgstr "ユーザーのアバター・サーバーアバター・バナーの履歴コラージュを表示します。"
-
-#: locales/command_strings.py:124
-msgid "Show a single moderation case by its number."
-msgstr "番号を指定してモデレーションケースを1件表示します。"
-
-#: locales/command_strings.py:125
-msgid "Show every member on the live-alert watchlist."
-msgstr "配信通知の監視リストにいる全メンバーを表示します。"
-
-#: locales/command_strings.py:126
-msgid "Show how long the bot has been running."
-msgstr "ボットの稼働時間を表示します。"
-
-#: locales/command_strings.py:127
-msgid "Show how many warns a member currently has."
-msgstr "メンバーが現在受けている警告の数を表示します。"
-
-#: locales/command_strings.py:128
-msgid "Show the current auto-mod settings for this guild."
-msgstr "このサーバーの現在の自動モデレーション設定を表示します。"
-
-#: locales/command_strings.py:129
-msgid "Show the currently playing track and the next tracks in the queue."
-msgstr "現在再生中のトラックとキュー内の次のトラックを表示します。"
-
-#: locales/command_strings.py:130
-msgid "Show the interactive now-playing controller."
-msgstr "対話式の再生中コントローラーを表示します。"
-
-#: locales/command_strings.py:131
-msgid "Show the last deleted message in this channel."
-msgstr "このチャンネルで最後に削除されたメッセージを表示します。"
-
-#: locales/command_strings.py:132
-msgid "Show the most-starred messages in this guild."
-msgstr "このサーバーで最もスターを獲得したメッセージを表示します。"
-
-#: locales/command_strings.py:133
-msgid "Show unicode information about the given characters."
-msgstr "指定した文字のUnicode情報を表示します。"
-
-#: locales/command_strings.py:134
-msgid "Show what a member is currently listening to on Spotify."
-msgstr "メンバーがSpotifyで現在聴いている曲を表示します。"
-
-#: locales/command_strings.py:135
-msgid "Show your saved favourite tracks, or another member's."
-msgstr "保存済みのお気に入りトラックを表示します（自分または他のメンバー）。"
-
-#: locales/command_strings.py:136
-msgid "Shows Astronomy Picture of the Day."
-msgstr "今日の天文写真を表示します。"
-
-#: locales/command_strings.py:137
-msgid "Shows the bot's websocket latency."
-msgstr "ボットのWebSocketレイテンシを表示します。"
-
-#: locales/command_strings.py:138
-msgid "Shows the current weather for a given city."
-msgstr "指定した都市の現在の天気を表示します。"
-
-#: locales/command_strings.py:139
-msgid "Shows the ranked members of the guild."
-msgstr "サーバーのランキングメンバーを表示します。"
-
-#: locales/command_strings.py:140
-msgid "Shows your level and XP rank card, or another member's."
-msgstr "レベルとXPランクカードを表示します（自分または他のメンバー）。"
-
-#: locales/command_strings.py:141
-msgid "Shuffle the upcoming tracks in the queue."
-msgstr "キュー内の次のトラックをシャッフルします。"
-
-#: locales/command_strings.py:142
-msgid "Simulate a join for yourself to preview the welcome."
-msgstr "ウェルカムメッセージをプレビューするため、自分の参加をシミュレートします。"
-
-#: locales/command_strings.py:143
-msgid "Skip the current track and play the next one."
-msgstr "現在のトラックをスキップして次を再生します。"
-
-#: locales/command_strings.py:144
-msgid "Starboard related commands."
-msgstr "スターボード関連のコマンドです。"
-
-#: locales/command_strings.py:145
-msgid "Stop playback and clear the queue (stays connected)."
-msgstr "再生を停止しキューをクリアします（接続は維持されます）。"
-
-#: locales/command_strings.py:146
-msgid "Synchronizes the application command tree globally or to guilds."
-msgstr "アプリケーションコマンドツリーをグローバルまたはサーバーに同期します。"
-
-#: locales/command_strings.py:147
-msgid "Tells you the newest members of the server."
-msgstr "サーバーの新規メンバーを教えます。"
-
-#: locales/command_strings.py:148
-msgid "Temporarily bans a member for the given duration."
-msgstr "指定した期間、メンバーを一時的にBANします。"
-
-#: locales/command_strings.py:149
-msgid "The 1-based position of the favourite to remove."
-msgstr "削除するお気に入りの位置です（1から始まります）。"
-
-#: locales/command_strings.py:150
-msgid "The bot say what you want."
-msgstr "ボットに好きなことを言わせます。"
-
-#: locales/command_strings.py:151
-msgid "Translate text to English (auto-detect source language)."
-msgstr "テキストを英語に翻訳します（元の言語は自動検出）。"
-
-#: locales/command_strings.py:152
-msgid "Un-mutes the specified member."
-msgstr "指定したメンバーのミュートを解除します。"
-
-#: locales/command_strings.py:153
-msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
-msgstr "ユーザーのBANを解除します。メンバーのBAN権限が必要で、ボットにもこの権限が必要です。"
-
-#: locales/command_strings.py:154
-msgid "Unloads an extension by name."
-msgstr "名前を指定して拡張機能をアンロードします。"
-
-#: locales/command_strings.py:155
-msgid "Update the amount of stars needed to reach the starboard."
-msgstr "スターボードに掲載されるために必要なスターの数を更新します。"
-
-#: locales/command_strings.py:156
-msgid "Update the reason recorded on an existing case."
-msgstr "既存のケースに記録された理由を更新します。"
-
-#: locales/command_strings.py:157
-msgid "View a member's gaming profile."
-msgstr "メンバーのゲーミングプロフィールを表示します。"
-
-#: locales/command_strings.py:158
-msgid "Volume level between 0 and 1000 (100 is default)."
-msgstr "0から1000の間の音量レベルです（既定値は100）。"
-
-#: locales/command_strings.py:159
-msgid "Warn a member of the guild (auto-kick at 3 warns)"
-msgstr "サーバーのメンバーに警告します（警告3回で自動キック）"
-
-#: locales/command_strings.py:160
-msgid "Whose favourites to show (defaults to you)."
-msgstr "誰のお気に入りを表示するかを指定します（既定はあなた自身）。"
-
-#: locales/command_strings.py:161
-msgid "Look up an anime on AniList."
-msgstr "AniListでアニメを検索します。"
-
-#: locales/command_strings.py:162
-msgid "Look up a manga on AniList."
-msgstr "AniListでマンガを検索します。"
-
-#: locales/command_strings.py:163
-msgid "Look up a character on AniList."
-msgstr "AniListでキャラクターを検索します。"
-
-#: locales/command_strings.py:164
-msgid "Look up an animation studio on AniList."
-msgstr "AniListでアニメ制作会社を検索します。"
-
-#: locales/command_strings.py:165
-msgid "Browse the anime trending on AniList right now."
-msgstr "現在AniListでトレンド入りしているアニメを閲覧します。"
-
-#: locales/command_strings.py:166
-msgid "Browse the most popular anime on AniList."
-msgstr "AniListで最も人気のあるアニメを閲覧します。"
-
-#: locales/command_strings.py:167
-msgid "Browse anime from a season (defaults to the current season)."
-msgstr "シーズンのアニメを閲覧します(未指定の場合は現在のシーズン)。"
-
-#: locales/command_strings.py:168
-msgid "Link your AniList account and edit your lists."
-msgstr "AniListアカウントをリンクしてリストを編集します。"
-
-#: locales/command_strings.py:169
-msgid "Start linking your AniList account."
-msgstr "AniListアカウントのリンクを開始します。"
-
-#: locales/command_strings.py:170
+#: locales/command_strings.py:46
 msgid "Finish linking with the PIN code AniList gave you."
 msgstr "AniListから発行されたPINコードでリンクを完了します。"
 
-#: locales/command_strings.py:171
-msgid "Unlink your AniList account."
-msgstr "AniListアカウントのリンクを解除します。"
+#: locales/command_strings.py:47
+msgid "Gaming profile related commands."
+msgstr "ゲーミングプロフィール関連のコマンド。"
 
-#: locales/command_strings.py:172
+#: locales/command_strings.py:48
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
 msgstr "ガイド付き更新: クリックしてタイトルを選択し、事前入力されたフォームを編集します。"
 
-#: locales/command_strings.py:173
-msgid "Set the status of a title on your list."
-msgstr "リスト内のタイトルのステータスを設定します。"
+#: locales/command_strings.py:49
+msgid "Interactively browse and remove a member's warnings."
+msgstr "メンバーの警告をインタラクティブに閲覧・削除します。"
 
-#: locales/command_strings.py:174
+#: locales/command_strings.py:50
+msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
+msgstr "迷惑なユーザーをキックします。メンバーをキックする権限が必要で、ボットにもその権限が必要です。"
+
+#: locales/command_strings.py:51
+msgid "Link your AniList account and edit your lists."
+msgstr "AniListアカウントをリンクしてリストを編集します。"
+
+#: locales/command_strings.py:52
+msgid "List all reaction-role mappings for this guild."
+msgstr "このサーバーのリアクションロールの対応関係を一覧表示します。"
+
+#: locales/command_strings.py:53
+msgid "List every blacklisted user."
+msgstr "ブラックリストに登録されているすべてのユーザーを一覧表示します。"
+
+#: locales/command_strings.py:54
+msgid "List every button-role panel set up in this guild."
+msgstr "このサーバーに設定されているすべてのボタンロールパネルを一覧表示します。"
+
+#: locales/command_strings.py:55
+msgid "List the available prefixes for your guild."
+msgstr "サーバーで使用可能なプレフィックスを一覧表示します。"
+
+#: locales/command_strings.py:56
+msgid "List the configured autoroom hubs in this server."
+msgstr "このサーバーに設定されている自動ルームハブを一覧表示します。"
+
+#: locales/command_strings.py:57
+msgid "Look up a Minecraft account and render its skin."
+msgstr "Minecraftアカウントを検索し、スキンを表示します。"
+
+#: locales/command_strings.py:58
+msgid "Look up a character on AniList."
+msgstr "AniListでキャラクターを検索します。"
+
+#: locales/command_strings.py:59
+msgid "Look up a manga on AniList."
+msgstr "AniListでマンガを検索します。"
+
+#: locales/command_strings.py:60
+msgid "Look up an animation studio on AniList."
+msgstr "AniListでアニメ制作会社を検索します。"
+
+#: locales/command_strings.py:61
+msgid "Look up an anime on AniList."
+msgstr "AniListでアニメを検索します。"
+
+#: locales/command_strings.py:62
+msgid "Look up an osu! player's stats."
+msgstr "osu!プレイヤーの統計情報を検索します。"
+
+#: locales/command_strings.py:63
+msgid "Map an emoji on a message to a role."
+msgstr "メッセージ上の絵文字をロールに対応付けます。"
+
+#: locales/command_strings.py:64
+msgid "Move a role to the given position in the hierarchy."
+msgstr "ロールを指定した階層位置に移動します。"
+
+#: locales/command_strings.py:65
+msgid "Moves an annoying user to a channel."
+msgstr "迷惑なユーザーを別のチャンネルに移動させます。"
+
+#: locales/command_strings.py:66
+msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
+msgstr "複数選択投票: quickpoll 質問 | 選択肢1 | 選択肢2 ...(引数なしの場合はフォームが開きます)。"
+
+#: locales/command_strings.py:67
+msgid "Mutes the specified member."
+msgstr "指定したメンバーをミュートします。"
+
+#: locales/command_strings.py:68
+msgid "One of: track, all, off."
+msgstr "track、all、off のいずれか。"
+
+#: locales/command_strings.py:69
+msgid "Open the Twitch live-alert builder."
+msgstr "Twitchライブ通知の設定画面を開きます。"
+
+#: locales/command_strings.py:70
+msgid "Open the announcement builder."
+msgstr "アナウンスビルダーを開きます。"
+
+#: locales/command_strings.py:71
+msgid "Open the autoroom hub setup panel."
+msgstr "自動ルームハブの設定パネルを開きます。"
+
+#: locales/command_strings.py:72
+msgid "Open the custom-commands builder."
+msgstr "カスタムコマンドビルダーを開きます。"
+
+#: locales/command_strings.py:73
+msgid "Open the interactive AutoMod control panel."
+msgstr "インタラクティブなAutoModコントロールパネルを開きます。"
+
+#: locales/command_strings.py:74
+msgid "Open the interactive button-role builder."
+msgstr "インタラクティブなボタンロール作成画面を開きます。"
+
+#: locales/command_strings.py:75
+msgid "Open the interactive server-settings panel (also: setup)."
+msgstr "インタラクティブなサーバー設定パネルを開きます(setupと同じ)。"
+
+#: locales/command_strings.py:76
+msgid "Open the moderation-log control panel."
+msgstr "モデレーションログのコントロールパネルを開きます。"
+
+#: locales/command_strings.py:77
+msgid "Open the self-role menu builder."
+msgstr "ロールメニュービルダーを開きます。"
+
+#: locales/command_strings.py:78
+msgid "Open the welcome control panel."
+msgstr "ウェルカムメッセージのコントロールパネルを開きます。"
+
+#: locales/command_strings.py:79
+msgid "Open your personal settings panel."
+msgstr "個人設定パネルを開きます。"
+
+#: locales/command_strings.py:80
+msgid "Paginated moderation case history (optionally filtered to a member)."
+msgstr "ページ形式でモデレーション履歴を表示します(メンバーで絞り込み可能)。"
+
+#: locales/command_strings.py:81
+msgid "Pause the current track."
+msgstr "現在再生中の曲を一時停止します。"
+
+#: locales/command_strings.py:82
+msgid "Pick the language for the bot's replies to you."
+msgstr "ボットがあなたへの返信に使う言語を選びます。"
+
+#: locales/command_strings.py:83
+msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
+msgstr "ボットと三目並べで対戦します。あなたはXです。"
+
+#: locales/command_strings.py:84
+msgid "Play a track or playlist, or add it to the queue."
+msgstr "トラックやプレイリストを再生、またはキューに追加します。"
+
+#: locales/command_strings.py:85
+msgid "Prefix related commands."
+msgstr "プレフィックス関連のコマンドです。"
+
+#: locales/command_strings.py:86
+msgid "Purges messages. Requires manage messages permission"
+msgstr "メッセージを一括削除します。メッセージの管理権限が必要です"
+
+#: locales/command_strings.py:87
+msgid "Queue every track in your favourites and start playing."
+msgstr "お気に入りの全トラックをキューに追加して再生を開始します。"
+
+#: locales/command_strings.py:88
+msgid "Reaction-role related commands."
+msgstr "リアクションロール関連のコマンドです。"
+
+#: locales/command_strings.py:89
+msgid "Reloads a single extension, or all configured extensions."
+msgstr "単一の拡張機能、または設定済みの全拡張機能をリロードします。"
+
+#: locales/command_strings.py:90
+msgid "Reminds you of something after a certain amount of time."
+msgstr "指定した時間が経過したらリマインドします。"
+
+#: locales/command_strings.py:91
+msgid "Remove a member from the live-alert watchlist."
+msgstr "配信通知の監視リストからメンバーを削除します。"
+
+#: locales/command_strings.py:92
+msgid "Remove a role to a specified member."
+msgstr "指定したメンバーからロールを削除します。"
+
+#: locales/command_strings.py:93
+msgid "Remove a user from the bot-wide blacklist."
+msgstr "ボット全体のブラックリストからユーザーを削除します。"
+
+#: locales/command_strings.py:94
+msgid "Remove a warn from a member of the guild."
+msgstr "サーバーのメンバーから警告を1件削除します。"
+
+#: locales/command_strings.py:95
+msgid "Remove an emoji-to-role mapping from a message."
+msgstr "メッセージから絵文字とロールの紐付けを削除します。"
+
+#: locales/command_strings.py:96
+msgid "Remove auto role from your guild."
+msgstr "サーバーから自動ロールを削除します。"
+
+#: locales/command_strings.py:97
+msgid "Remove the favourite at the given position in your list."
+msgstr "リスト内の指定した位置のお気に入りを削除します。"
+
+#: locales/command_strings.py:98
+msgid "Resume the player if it is paused."
+msgstr "一時停止中のプレイヤーを再開します。"
+
+#: locales/command_strings.py:99
+msgid "Save the current track, or a searched track, to your favourites."
+msgstr "現在のトラック、または検索したトラックをお気に入りに保存します。"
+
+#: locales/command_strings.py:100
 msgid "Score a title on your AniList list."
 msgstr "AniListのリストでタイトルを評価します。"
 
-#: locales/command_strings.py:175
+#: locales/command_strings.py:101
+msgid "Search Wikipedia for a short summary of a topic."
+msgstr "Wikipediaでトピックの簡単な要約を検索します。"
+
+#: locales/command_strings.py:102
+msgid "Set a role to a specified member."
+msgstr "指定したメンバーにロールを設定します。"
+
+#: locales/command_strings.py:103
+msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
+msgstr "プロフィール項目のいずれかを設定します（switch、3ds、battletag、riot、steam）。"
+
+#: locales/command_strings.py:104
+msgid "Set the channel where moderation logs are sent."
+msgstr "モデレーションログを送信するチャンネルを設定します。"
+
+#: locales/command_strings.py:105
+msgid "Set the loop mode for the queue."
+msgstr "キューのループモードを設定します。"
+
+#: locales/command_strings.py:106
+msgid "Set the player volume (0-200)."
+msgstr "プレイヤーの音量を設定します（0-200）。"
+
+#: locales/command_strings.py:107
+msgid "Set the server's default language (used when a member has not picked one)."
+msgstr "サーバーの既定言語を設定します（メンバーが言語を選んでいない場合に使用されます）。"
+
+#: locales/command_strings.py:108
+msgid "Set the starboard channel and the star threshold."
+msgstr "スターボードチャンネルとスターのしきい値を設定します。"
+
+#: locales/command_strings.py:109
+msgid "Set the status of a title on your list."
+msgstr "リスト内のタイトルのステータスを設定します。"
+
+#: locales/command_strings.py:110
+msgid "Set the welcome channel and message (a simple fallback)."
+msgstr "ウェルカムチャンネルとメッセージを設定します（簡易的な代替設定）。"
+
+#: locales/command_strings.py:111
+msgid "Set your AFK status, with an optional message."
+msgstr "任意のメッセージ付きでAFKステータスを設定します。"
+
+#: locales/command_strings.py:112
 msgid "Show AniList stats for a user (defaults to your linked account)."
 msgstr "ユーザーのAniList統計を表示します(未指定の場合はリンク済みのアカウント)。"
 
-#: locales/command_strings.py:176
+#: locales/command_strings.py:113
+msgid "Show a collage of a user's avatar / server avatar / banner history."
+msgstr "ユーザーのアバター・サーバーアバター・バナーの履歴コラージュを表示します。"
+
+#: locales/command_strings.py:114
+msgid "Show a single moderation case by its number."
+msgstr "番号を指定してモデレーションケースを1件表示します。"
+
+#: locales/command_strings.py:115
+msgid "Show every member on the live-alert watchlist."
+msgstr "配信通知の監視リストにいる全メンバーを表示します。"
+
+#: locales/command_strings.py:116
+msgid "Show how many warns a member currently has."
+msgstr "メンバーが現在受けている警告の数を表示します。"
+
+#: locales/command_strings.py:117
+msgid "Show the current auto-mod settings for this guild."
+msgstr "このサーバーの現在の自動モデレーション設定を表示します。"
+
+#: locales/command_strings.py:118
+msgid "Show the currently playing track and the next tracks in the queue."
+msgstr "現在再生中のトラックとキュー内の次のトラックを表示します。"
+
+#: locales/command_strings.py:119
+msgid "Show the interactive now-playing controller."
+msgstr "対話式の再生中コントローラーを表示します。"
+
+#: locales/command_strings.py:120
+msgid "Show the last deleted message in this channel."
+msgstr "このチャンネルで最後に削除されたメッセージを表示します。"
+
+#: locales/command_strings.py:121
+msgid "Show the most-starred messages in this guild."
+msgstr "このサーバーで最もスターを獲得したメッセージを表示します。"
+
+#: locales/command_strings.py:122
 msgid "Show your anime/manga list, filtered by status (defaults to CURRENT)."
 msgstr "ステータスで絞り込んだアニメ/マンガのリストを表示します(未指定の場合はCURRENT)。"
+
+#: locales/command_strings.py:123
+msgid "Show your saved favourite tracks, or another member's."
+msgstr "保存済みのお気に入りトラックを表示します（自分または他のメンバー）。"
+
+#: locales/command_strings.py:124
+msgid "Shows Astronomy Picture of the Day."
+msgstr "今日の天文写真を表示します。"
+
+#: locales/command_strings.py:125
+msgid "Shows the bot's websocket latency."
+msgstr "ボットのWebSocketレイテンシを表示します。"
+
+#: locales/command_strings.py:126
+msgid "Shows the current weather for a given city."
+msgstr "指定した都市の現在の天気を表示します。"
+
+#: locales/command_strings.py:127
+msgid "Shows the ranked members of the guild."
+msgstr "サーバーのランキングメンバーを表示します。"
+
+#: locales/command_strings.py:128
+msgid "Shows your level and XP rank card, or another member's."
+msgstr "レベルとXPランクカードを表示します（自分または他のメンバー）。"
+
+#: locales/command_strings.py:129
+msgid "Shuffle the upcoming tracks in the queue."
+msgstr "キュー内の次のトラックをシャッフルします。"
+
+#: locales/command_strings.py:130
+msgid "Simulate a join for yourself to preview the welcome."
+msgstr "ウェルカムメッセージをプレビューするため、自分の参加をシミュレートします。"
+
+#: locales/command_strings.py:131
+msgid "Skip the current track and play the next one."
+msgstr "現在のトラックをスキップして次を再生します。"
+
+#: locales/command_strings.py:132
+msgid "Starboard related commands."
+msgstr "スターボード関連のコマンドです。"
+
+#: locales/command_strings.py:133
+msgid "Start linking your AniList account."
+msgstr "AniListアカウントのリンクを開始します。"
+
+#: locales/command_strings.py:134
+msgid "Stop playback and clear the queue (stays connected)."
+msgstr "再生を停止しキューをクリアします（接続は維持されます）。"
+
+#: locales/command_strings.py:135
+msgid "Tells you the newest members of the server."
+msgstr "サーバーの新規メンバーを教えます。"
+
+#: locales/command_strings.py:136
+msgid "Temporarily bans a member for the given duration."
+msgstr "指定した期間、メンバーを一時的にBANします。"
+
+#: locales/command_strings.py:137
+msgid "The 1-based position of the favourite to remove."
+msgstr "削除するお気に入りの位置です（1から始まります）。"
+
+#: locales/command_strings.py:138
+msgid "Translate text to English (auto-detect source language)."
+msgstr "テキストを英語に翻訳します（元の言語は自動検出）。"
+
+#: locales/command_strings.py:139
+msgid "Un-mutes the specified member."
+msgstr "指定したメンバーのミュートを解除します。"
+
+#: locales/command_strings.py:140
+msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
+msgstr "ユーザーのBANを解除します。メンバーのBAN権限が必要で、ボットにもこの権限が必要です。"
+
+#: locales/command_strings.py:141
+msgid "Unlink your AniList account."
+msgstr "AniListアカウントのリンクを解除します。"
+
+#: locales/command_strings.py:142
+msgid "Update the amount of stars needed to reach the starboard."
+msgstr "スターボードに掲載されるために必要なスターの数を更新します。"
+
+#: locales/command_strings.py:143
+msgid "Update the reason recorded on an existing case."
+msgstr "既存のケースに記録された理由を更新します。"
+
+#: locales/command_strings.py:144
+msgid "View a member's gaming profile."
+msgstr "メンバーのゲーミングプロフィールを表示します。"
+
+#: locales/command_strings.py:145
+msgid "Volume level between 0 and 200 (100 is default)."
+msgstr "0から200の間の音量レベルです（既定値は100）。"
+
+#: locales/command_strings.py:146
+msgid "Warn a member of the guild (auto-kick at 3 warns)"
+msgstr "サーバーのメンバーに警告します（警告3回で自動キック）"
+
+#: locales/command_strings.py:147
+msgid "Whose favourites to show (defaults to you)."
+msgstr "誰のお気に入りを表示するかを指定します（既定はあなた自身）。"
+
+#: locales/command_strings.py:148
+msgid "all"
+msgstr "すべて"
+
+#: locales/command_strings.py:150
+msgid "track"
+msgstr "トラック"
 
 #: tools/arg_completion.py:214
 msgid "Fill in"

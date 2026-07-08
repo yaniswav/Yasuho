@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 06:39+0000\n"
+"POT-Creation-Date: 2026-07-08 19:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -347,7 +347,7 @@ msgid "No matching titles of that type."
 msgstr "No hay títulos coincidentes de ese tipo."
 
 #: cogs/anilist/components.py:403 cogs/anilist/components.py:407
-#: cogs/config/announcements.py:236 cogs/config/rolemenus.py:353
+#: cogs/config/announcements.py:292 cogs/config/rolemenus.py:461
 #: cogs/config/welcome.py:98 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:484
 msgid "Something went wrong."
@@ -805,7 +805,7 @@ msgstr "Tu perfil ha sido borrado."
 msgid "Set a reminder"
 msgstr "Crear un recordatorio"
 
-#: cogs/community/reminders.py:44
+#: cogs/community/reminders.py:44 cogs/config/announcements.py:154
 msgid "When"
 msgstr "Cuándo"
 
@@ -827,16 +827,16 @@ msgstr "¿Qué quieres que te recuerde?"
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "No entendí esa hora. Prueba algo como `10m`, `tomorrow at 6pm` o `in 3 days`."
 
-#: cogs/community/reminders.py:86
+#: cogs/community/reminders.py:86 cogs/config/announcements.py:185
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Esa hora ya pasó. Dame un momento en el futuro."
 
-#: cogs/community/reminders.py:96 cogs/community/reminders.py:276
+#: cogs/community/reminders.py:96 cogs/community/reminders.py:280
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Ya tienes {count} recordatorios pendientes - espera a que salte alguno antes de añadir más."
 
-#: cogs/community/reminders.py:110 cogs/community/reminders.py:289
+#: cogs/community/reminders.py:110 cogs/community/reminders.py:293
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "Vale, te recordaré {when}: {message}"
@@ -846,19 +846,19 @@ msgstr "Vale, te recordaré {when}: {message}"
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "&lt;@{author_id}&gt;, {when}: {message}"
 
-#: cogs/community/reminders.py:269
+#: cogs/community/reminders.py:273
 msgid "Tap the button below to set a reminder."
 msgstr "Toca el botón de abajo para crear un recordatorio."
 
-#: cogs/community/reminders.py:316
+#: cogs/community/reminders.py:320
 msgid "I don't have permission to ban that member."
 msgstr "No tengo permiso para banear a ese miembro."
 
-#: cogs/community/reminders.py:319
+#: cogs/community/reminders.py:323
 msgid "Sorry, I couldn't ban that member."
 msgstr "Lo siento, no pude banear a ese miembro."
 
-#: cogs/community/reminders.py:327
+#: cogs/community/reminders.py:331
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "Se ha baneado a {member} hasta {time}."
@@ -929,106 +929,131 @@ msgstr "-# Solo tú puedes usar estos controles."
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
-#: cogs/config/announcements.py:66
+#: cogs/config/announcements.py:68
 msgid "Target channel..."
 msgstr "Canal de destino..."
 
-#: cogs/config/announcements.py:94
+#: cogs/config/announcements.py:96
 msgid "Ping a role (optional)..."
 msgstr "Mencionar un rol (opcional)..."
 
-#: cogs/config/announcements.py:113 cogs/config/twitch.py:292
+#: cogs/config/announcements.py:115 cogs/config/twitch.py:292
 #: cogs/config/welcome.py:185
 msgid "Preview"
 msgstr "Vista previa"
 
-#: cogs/config/announcements.py:120 cogs/config/announcements.py:254
-#: cogs/config/customcommands.py:208
+#: cogs/config/announcements.py:122 cogs/config/announcements.py:315
+#: cogs/config/customcommands.py:239
 msgid "Add some content to the embed first."
 msgstr "Añade primero algo de contenido al embed."
 
-#: cogs/config/announcements.py:126 cogs/config/twitch.py:302
+#: cogs/config/announcements.py:128 cogs/config/twitch.py:302
 #: cogs/config/welcome.py:195
 msgid "Could not render the preview."
 msgstr "No se pudo mostrar la vista previa."
 
-#: cogs/config/announcements.py:133
+#: cogs/config/announcements.py:135
 msgid "Send"
 msgstr "Enviar"
 
-#: cogs/config/announcements.py:141
+#: cogs/config/announcements.py:143
 msgid "Could not send the announcement."
 msgstr "No se pudo enviar el anuncio."
 
-#: cogs/config/announcements.py:166
+#: cogs/config/announcements.py:151
+msgid "Schedule the announcement"
+msgstr "Programar el anuncio"
+
+#: cogs/config/announcements.py:155
+msgid "e.g. 2h, tomorrow at 9am, in 3 days"
+msgstr "p. ej. 2h, tomorrow at 9am, in 3 days"
+
+#: cogs/config/announcements.py:178
+msgid "I couldn't understand that time. Try something like `2h`, `tomorrow at 9am`, or `in 3 days`."
+msgstr "No entendí esa hora. Prueba algo como `2h`, `tomorrow at 9am` o `in 3 days`."
+
+#: cogs/config/announcements.py:194
+msgid "Schedule"
+msgstr "Programar"
+
+#: cogs/config/announcements.py:221
 msgid "Edit the announcement embed..."
 msgstr "Edita el embed del anuncio..."
 
-#: cogs/config/announcements.py:172 cogs/config/customcommands.py:173
+#: cogs/config/announcements.py:228 cogs/config/customcommands.py:204
 #: cogs/config/twitch.py:264
 msgid "Placeholders"
 msgstr "Marcadores"
 
-#: cogs/config/announcements.py:196
+#: cogs/config/announcements.py:252
 msgid "Announcement builder"
 msgstr "Creador de anuncios"
 
-#: cogs/config/announcements.py:198
+#: cogs/config/announcements.py:254
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Compón el embed con el menú, elige un canal (y opcionalmente un rol a mencionar) y luego pulsa **Enviar**. La vista previa solo la ves tú."
 
-#: cogs/config/announcements.py:206 cogs/config/rolemenus.py:323
+#: cogs/config/announcements.py:262 cogs/config/rolemenus.py:431
 #: cogs/config/starboard.py:180 cogs/config/twitch.py:426
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:651
 #: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
 msgid "Channel"
 msgstr "Canal"
 
-#: cogs/config/announcements.py:207 cogs/config/buttonroles.py:433
-#: cogs/config/rolemenus.py:324 cogs/config/twitch.py:413
+#: cogs/config/announcements.py:263 cogs/config/buttonroles.py:433
+#: cogs/config/rolemenus.py:432 cogs/config/twitch.py:413
 #: cogs/config/welcome.py:414
 msgid "*Not set.*"
 msgstr "*No establecido.*"
 
-#: cogs/config/announcements.py:211 cogs/config/welcome.py:376
+#: cogs/config/announcements.py:267 cogs/config/welcome.py:376
 #: cogs/config/welcome.py:442
 msgid "Ping"
 msgstr "Ping"
 
-#: cogs/config/announcements.py:212 cogs/moderation/automod.py:241
+#: cogs/config/announcements.py:268 cogs/moderation/automod.py:241
 #: cogs/moderation/automod.py:248
 msgid "None"
 msgstr "Ninguno"
 
-#: cogs/config/announcements.py:216 cogs/config/buttonroles.py:424
+#: cogs/config/announcements.py:272 cogs/config/buttonroles.py:424
 #: cogs/config/twitch.py:429 cogs/config/twitch.py:449
 #: cogs/config/welcome.py:448
 msgid "Embed"
 msgstr "Embed"
 
-#: cogs/config/announcements.py:221
+#: cogs/config/announcements.py:277
 #, python-brace-format
 msgid "Only you can use this. Placeholders: {placeholders}"
 msgstr "Solo tú puedes usar esto. Marcadores: {placeholders}"
 
-#: cogs/config/announcements.py:243
+#: cogs/config/announcements.py:304
 msgid "Pick a target channel first."
 msgstr "Elige primero un canal de destino."
 
-#: cogs/config/announcements.py:247 cogs/config/buttonroles.py:573
-#: cogs/config/rolemenus.py:372
+#: cogs/config/announcements.py:309 cogs/config/buttonroles.py:573
+#: cogs/config/rolemenus.py:480
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "No puedo enviar mensajes en {channel}."
 
-#: cogs/config/announcements.py:270
+#: cogs/config/announcements.py:342
 msgid "Sending failed, please try again."
 msgstr "El envío falló, inténtalo de nuevo."
 
-#: cogs/config/announcements.py:281
+#: cogs/config/announcements.py:344
 #, python-brace-format
 msgid "Announcement sent to {channel}."
 msgstr "Anuncio enviado a {channel}."
+
+#: cogs/config/announcements.py:355
+msgid "Scheduling is unavailable right now."
+msgstr "La programación no está disponible en este momento."
+
+#: cogs/config/announcements.py:368
+#, python-brace-format
+msgid "Scheduled for {when} in {channel}."
+msgstr "Programado para {when} en {channel}."
 
 #: cogs/config/buttonroles.py:105
 msgid "Roles can only be toggled inside a server."
@@ -1081,7 +1106,7 @@ msgstr "Botón para añadir rol"
 msgid "Button label"
 msgstr "Etiqueta del botón"
 
-#: cogs/config/buttonroles.py:254
+#: cogs/config/buttonroles.py:254 cogs/config/rolemenus.py:198
 msgid "Emoji (optional)"
 msgstr "Emoji (opcional)"
 
@@ -1291,7 +1316,7 @@ msgstr "Este servidor ya tiene un comando personalizado con ese nombre."
 msgid "New text command"
 msgstr "Nuevo comando de texto"
 
-#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:116
+#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:147
 msgid "Command name"
 msgstr "Nombre del comando"
 
@@ -1299,118 +1324,131 @@ msgstr "Nombre del comando"
 msgid "e.g. rules (no prefix, no spaces)"
 msgstr "p. ej. rules (sin prefijo, sin espacios)"
 
-#: cogs/config/customcommands.py:82
+#: cogs/config/customcommands.py:82 cogs/config/customcommands.py:117
 msgid "Response text"
 msgstr "Texto de respuesta"
 
 #: cogs/config/customcommands.py:113
+#, python-brace-format
+msgid "Edit: {name}"
+msgstr "Editar: {name}"
+
+#: cogs/config/customcommands.py:144
 msgid "New embed command"
 msgstr "Nuevo comando de embed"
 
-#: cogs/config/customcommands.py:117
+#: cogs/config/customcommands.py:148
 msgid "e.g. welcome (no prefix, no spaces)"
 msgstr "p. ej. welcome (sin prefijo, sin espacios)"
 
-#: cogs/config/customcommands.py:146
+#: cogs/config/customcommands.py:177
 msgid "Save command"
 msgstr "Guardar comando"
 
-#: cogs/config/customcommands.py:168
+#: cogs/config/customcommands.py:199
 msgid "Edit the response embed..."
 msgstr "Edita el embed de respuesta..."
 
-#: cogs/config/customcommands.py:190
+#: cogs/config/customcommands.py:221
 #, python-brace-format
 msgid "Embed command: {name}"
 msgstr "Comando de embed: {name}"
 
-#: cogs/config/customcommands.py:192
+#: cogs/config/customcommands.py:223
 #, python-brace-format
 msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
 msgstr "Diseña el embed con el que responderá este comando y luego pulsa **Guardar**. Marcadores: {placeholders}"
 
-#: cogs/config/customcommands.py:198
+#: cogs/config/customcommands.py:229
 msgid "Preview summary"
 msgstr "Resumen de vista previa"
 
-#: cogs/config/customcommands.py:224
+#: cogs/config/customcommands.py:255
 #, python-brace-format
 msgid "Saved the `{name}` command."
 msgstr "Comando `{name}` guardado."
 
-#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:271 cogs/config/customcommands.py:412
 msgid "text"
 msgstr "texto"
 
-#: cogs/config/customcommands.py:250
+#: cogs/config/customcommands.py:281
 msgid "Pick a command..."
 msgstr "Elige un comando..."
 
-#: cogs/config/customcommands.py:253
+#: cogs/config/customcommands.py:284
 msgid "(none yet)"
 msgstr "(ninguno todavía)"
 
-#: cogs/config/customcommands.py:269
+#: cogs/config/customcommands.py:300
 msgid "Add text"
 msgstr "Añadir texto"
 
-#: cogs/config/customcommands.py:274 cogs/config/customcommands.py:290
+#: cogs/config/customcommands.py:305 cogs/config/customcommands.py:321
 #, python-brace-format
 msgid "This server already has the maximum of {n} custom commands."
 msgstr "Este servidor ya tiene el máximo de {n} comandos personalizados."
 
-#: cogs/config/customcommands.py:285
+#: cogs/config/customcommands.py:316
 msgid "Add embed"
 msgstr "Añadir embed"
 
-#: cogs/config/customcommands.py:302
+#: cogs/config/customcommands.py:333
+msgid "Edit selected"
+msgstr "Editar seleccionado"
+
+#: cogs/config/customcommands.py:343
+msgid "Pick a command first."
+msgstr "Elige primero un comando."
+
+#: cogs/config/customcommands.py:367
 msgid "Delete selected"
 msgstr "Eliminar seleccionado"
 
-#: cogs/config/customcommands.py:335
+#: cogs/config/customcommands.py:401
 msgid "Custom commands"
 msgstr "Comandos personalizados"
 
-#: cogs/config/customcommands.py:337
+#: cogs/config/customcommands.py:403
 msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
 msgstr "Comandos que los miembros ejecutan con el prefijo del servidor. Añade una respuesta de texto o embed, o elige uno para inspeccionarlo y eliminarlo."
 
-#: cogs/config/customcommands.py:344
+#: cogs/config/customcommands.py:410
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:351
+#: cogs/config/customcommands.py:417
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} comando(s)"
 
-#: cogs/config/customcommands.py:357
+#: cogs/config/customcommands.py:423
 msgid "None yet"
 msgstr "Ninguno todavía"
 
-#: cogs/config/customcommands.py:358
+#: cogs/config/customcommands.py:424
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Usa **Añadir texto** o **Añadir embed** para crear uno."
 
-#: cogs/config/customcommands.py:365
+#: cogs/config/customcommands.py:431
 msgid "An embed reply."
 msgstr "Una respuesta de embed."
 
-#: cogs/config/customcommands.py:368
+#: cogs/config/customcommands.py:434
 msgid "*empty*"
 msgstr "*vacío*"
 
-#: cogs/config/customcommands.py:370
+#: cogs/config/customcommands.py:436
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Seleccionado: {name}"
 
-#: cogs/config/customcommands.py:374
+#: cogs/config/customcommands.py:440
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Marcadores: {placeholders}"
@@ -1469,131 +1507,159 @@ msgstr "No se han configurado roles por reacción para este servidor."
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr "Mensaje `{mid}` - {emoji} -> <@&{role}>"
 
-#: cogs/config/rolemenus.py:64
+#: cogs/config/rolemenus.py:88
 msgid "Roles can only be set inside a server."
 msgstr "Los roles solo se pueden configurar dentro de un servidor."
 
-#: cogs/config/rolemenus.py:100
+#: cogs/config/rolemenus.py:124
 #, python-brace-format
 msgid "Added: {roles}"
 msgstr "Añadidos: {roles}"
 
-#: cogs/config/rolemenus.py:104
+#: cogs/config/rolemenus.py:128
 #, python-brace-format
 msgid "Removed: {roles}"
 msgstr "Eliminados: {roles}"
 
-#: cogs/config/rolemenus.py:110
+#: cogs/config/rolemenus.py:134
 msgid "I couldn't manage those roles - they may be above my highest role."
 msgstr "No pude gestionar esos roles - puede que estén por encima de mi rol más alto."
 
-#: cogs/config/rolemenus.py:113
+#: cogs/config/rolemenus.py:137
 msgid "No changes."
 msgstr "Sin cambios."
 
-#: cogs/config/rolemenus.py:134
+#: cogs/config/rolemenus.py:158
 msgid "Menu header"
 msgstr "Encabezado del menú"
 
-#: cogs/config/rolemenus.py:137 tools/embed_creator.py:411
+#: cogs/config/rolemenus.py:161 tools/embed_creator.py:411
 msgid "Title"
 msgstr "Título"
 
-#: cogs/config/rolemenus.py:143 tools/embed_creator.py:435
+#: cogs/config/rolemenus.py:167 tools/embed_creator.py:435
 msgid "Description"
 msgstr "Descripción"
 
-#: cogs/config/rolemenus.py:171
+#: cogs/config/rolemenus.py:190
+msgid "Role option"
+msgstr "Opción de rol"
+
+#: cogs/config/rolemenus.py:202
+msgid "A single emoji, or leave blank"
+msgstr "Un solo emoji, o deja en blanco"
+
+#: cogs/config/rolemenus.py:205
+msgid "Short description (optional)"
+msgstr "Descripción breve (opcional)"
+
+#: cogs/config/rolemenus.py:218
+msgid "That emoji isn't valid. Use a single emoji, or leave it blank."
+msgstr "Ese emoji no es válido. Usa un solo emoji, o déjalo en blanco."
+
+#: cogs/config/rolemenus.py:246
+msgid "no emoji/description yet"
+msgstr "aún sin emoji ni descripción"
+
+#: cogs/config/rolemenus.py:250
+msgid "Customize a role (emoji + description)..."
+msgstr "Personaliza un rol (emoji + descripción)..."
+
+#: cogs/config/rolemenus.py:251
+msgid "(pick roles first)"
+msgstr "(elige primero los roles)"
+
+#: cogs/config/rolemenus.py:278
 msgid "Pick the roles to offer..."
 msgstr "Elige los roles a ofrecer..."
 
-#: cogs/config/rolemenus.py:201
+#: cogs/config/rolemenus.py:308
 msgid "Members can pick any"
 msgstr "Los miembros pueden elegir cualquiera"
 
-#: cogs/config/rolemenus.py:207
+#: cogs/config/rolemenus.py:314
 msgid "Members pick exactly one"
 msgstr "Los miembros eligen exactamente uno"
 
-#: cogs/config/rolemenus.py:213
+#: cogs/config/rolemenus.py:320
 msgid "Selection rule..."
 msgstr "Regla de selección..."
 
-#: cogs/config/rolemenus.py:235
+#: cogs/config/rolemenus.py:342
 msgid "Channel to post the menu in..."
 msgstr "Canal donde publicar el menú..."
 
-#: cogs/config/rolemenus.py:254
+#: cogs/config/rolemenus.py:361
 msgid "Edit header"
 msgstr "Editar encabezado"
 
-#: cogs/config/rolemenus.py:263
+#: cogs/config/rolemenus.py:370
 msgid "Post menu"
 msgstr "Publicar menú"
 
-#: cogs/config/rolemenus.py:291 cogs/config/rolemenus.py:476
+#: cogs/config/rolemenus.py:399 cogs/config/rolemenus.py:604
 msgid "Pick your roles"
 msgstr "Elige tus roles"
 
-#: cogs/config/rolemenus.py:298 cogs/utility/info.py:126
+#: cogs/config/rolemenus.py:406 cogs/utility/info.py:126
 msgid "Roles"
 msgstr "Roles"
 
-#: cogs/config/rolemenus.py:303
+#: cogs/config/rolemenus.py:411
 msgid "Role menu builder"
 msgstr "Creador de menú de roles"
 
-#: cogs/config/rolemenus.py:305
+#: cogs/config/rolemenus.py:413
 msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
 msgstr "Elige los roles a ofrecer, selecciona la regla, define un canal y luego pulsa **Publicar menú**. Los miembros ajustan sus roles desde un único desplegable."
 
-#: cogs/config/rolemenus.py:312
+#: cogs/config/rolemenus.py:420
 #, python-brace-format
 msgid "Roles ({count})"
 msgstr "Roles ({count})"
 
-#: cogs/config/rolemenus.py:313
+#: cogs/config/rolemenus.py:421
 msgid "*None yet.*"
 msgstr "*Ninguno todavía.*"
 
-#: cogs/config/rolemenus.py:317
+#: cogs/config/rolemenus.py:425
 msgid "Rule"
 msgstr "Regla"
 
-#: cogs/config/rolemenus.py:318
+#: cogs/config/rolemenus.py:426
 msgid "Pick exactly one"
 msgstr "Elige exactamente uno"
 
-#: cogs/config/rolemenus.py:318
+#: cogs/config/rolemenus.py:426
 msgid "Pick any"
 msgstr "Elige cualquiera"
 
-#: cogs/config/rolemenus.py:328
+#: cogs/config/rolemenus.py:436
 msgid "Header"
 msgstr "Encabezado"
 
-#: cogs/config/rolemenus.py:329
+#: cogs/config/rolemenus.py:437
 msgid "*default*"
 msgstr "*predeterminado*"
 
-#: cogs/config/rolemenus.py:362
+#: cogs/config/rolemenus.py:470
 msgid "Pick at least one role first."
 msgstr "Elige primero al menos un rol."
 
-#: cogs/config/rolemenus.py:368
+#: cogs/config/rolemenus.py:476
 msgid "Pick a channel to post the menu in first."
 msgstr "Elige primero un canal donde publicar el menú."
 
-#: cogs/config/rolemenus.py:393
+#: cogs/config/rolemenus.py:501
 msgid "Posting failed, please try again."
 msgstr "La publicación falló, inténtalo de nuevo."
 
-#: cogs/config/rolemenus.py:406
+#: cogs/config/rolemenus.py:514
 #, python-brace-format
 msgid "Posted the role menu in {channel}."
 msgstr "Menú de roles publicado en {channel}."
 
-#: cogs/config/rolemenus.py:471
+#: cogs/config/rolemenus.py:599
 #, python-brace-format
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Este servidor ya tiene el máximo de {n} menús de roles."
@@ -2478,7 +2544,7 @@ msgstr "Activado"
 
 #: cogs/config/welcome.py:142 cogs/config/welcome.py:433
 #: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-#: cogs/music/music.py:266
+#: cogs/music/music.py:269
 msgid "Off"
 msgstr "Desactivado"
 
@@ -3453,58 +3519,58 @@ msgstr "Después"
 msgid "[Go to message]({url})"
 msgstr "[Ir al mensaje]({url})"
 
-#: cogs/music/music.py:134 cogs/music/music.py:410
+#: cogs/music/music.py:137 cogs/music/music.py:413
 msgid "The player is no longer active."
 msgstr "El reproductor ya no está activo."
 
-#: cogs/music/music.py:141
+#: cogs/music/music.py:144
 msgid "Give me a song name or URL to add."
 msgstr "Dame el nombre o la URL de una canción para añadirla."
 
-#: cogs/music/music.py:148
+#: cogs/music/music.py:151
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr "No encontré nada para `{query}`."
 
-#: cogs/music/music.py:160
+#: cogs/music/music.py:163
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "Añadido a la cola: **{title}**."
 
-#: cogs/music/music.py:166
+#: cogs/music/music.py:169
 msgid "Something went wrong adding that song."
 msgstr "Algo salió mal al añadir esa canción."
 
-#: cogs/music/music.py:245 cogs/music/music.py:1503
+#: cogs/music/music.py:248 cogs/music/music.py:1518
 msgid "Nothing is playing right now."
 msgstr "No hay nada sonando ahora mismo."
 
-#: cogs/music/music.py:252
+#: cogs/music/music.py:255
 msgid "### 🎵 Now Playing"
 msgstr "### 🎵 Reproduciendo ahora"
 
-#: cogs/music/music.py:255
+#: cogs/music/music.py:258
 #, python-brace-format
 msgid "by **{author}**"
 msgstr "por **{author}**"
 
-#: cogs/music/music.py:259
+#: cogs/music/music.py:262
 msgid "⏸ Paused"
 msgstr "⏸ Pausado"
 
-#: cogs/music/music.py:259
+#: cogs/music/music.py:262
 msgid "▶ Playing"
 msgstr "▶ Reproduciendo"
 
-#: cogs/music/music.py:262
+#: cogs/music/music.py:265
 msgid "On (queue)"
 msgstr "Activado (cola)"
 
-#: cogs/music/music.py:264
+#: cogs/music/music.py:267
 msgid "On (track)"
 msgstr "Activado (pista)"
 
-#: cogs/music/music.py:270
+#: cogs/music/music.py:273
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -3517,22 +3583,22 @@ msgstr ""
 "**Volumen:** `{volume}%`\n"
 "**Repetición:** {loop}"
 
-#: cogs/music/music.py:285
+#: cogs/music/music.py:288
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr "**Canal:** {emoji} {channel}"
 
-#: cogs/music/music.py:291
+#: cogs/music/music.py:294
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr "**DJ:** {dj}"
 
-#: cogs/music/music.py:296
+#: cogs/music/music.py:299
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr "**Solicitado por:** <@{requester_id}>"
 
-#: cogs/music/music.py:310
+#: cogs/music/music.py:313
 #, python-brace-format
 msgid ""
 "\n"
@@ -3541,7 +3607,7 @@ msgstr ""
 "\n"
 "`+{count}` más en la cola"
 
-#: cogs/music/music.py:313
+#: cogs/music/music.py:316
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
@@ -3550,7 +3616,7 @@ msgstr ""
 "**A continuación ({count})**\n"
 "{lines}"
 
-#: cogs/music/music.py:318
+#: cogs/music/music.py:321
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
@@ -3558,300 +3624,305 @@ msgstr ""
 "**A continuación**\n"
 "No hay nada en cola. Añade una canción para seguir con la música."
 
-#: cogs/music/music.py:328
+#: cogs/music/music.py:331
 msgid "Pause/Resume"
 msgstr "Pausar/Reanudar"
 
-#: cogs/music/music.py:334
+#: cogs/music/music.py:337
 msgid "Skip"
 msgstr "Saltar"
 
-#: cogs/music/music.py:340
+#: cogs/music/music.py:343
 msgid "Vol -"
 msgstr "Vol -"
 
-#: cogs/music/music.py:346
+#: cogs/music/music.py:349
 msgid "Vol +"
 msgstr "Vol +"
 
-#: cogs/music/music.py:352
+#: cogs/music/music.py:355
 msgid "Loop"
 msgstr "Bucle"
 
-#: cogs/music/music.py:362
+#: cogs/music/music.py:365
 msgid "Shuffle"
 msgstr "Aleatorio"
 
-#: cogs/music/music.py:368 cogs/music/music.py:1491
+#: cogs/music/music.py:371 cogs/music/music.py:1506
 msgid "Queue"
 msgstr "Cola"
 
-#: cogs/music/music.py:374
+#: cogs/music/music.py:377
 msgid "Add"
 msgstr "Añadir"
 
-#: cogs/music/music.py:380
+#: cogs/music/music.py:383
 msgid "Favorite"
 msgstr "Favorito"
 
-#: cogs/music/music.py:386
+#: cogs/music/music.py:389
 msgid "Disconnect"
 msgstr "Desconectar"
 
-#: cogs/music/music.py:394
+#: cogs/music/music.py:397
 msgid "-# Use the buttons to control playback"
 msgstr "-# Usa los botones para controlar la reproducción"
 
-#: cogs/music/music.py:421
+#: cogs/music/music.py:424
 msgid "You must be in my voice channel to use these controls."
 msgstr "Debes estar en mi canal de voz para usar estos controles."
 
-#: cogs/music/music.py:439
+#: cogs/music/music.py:442
 msgid "Something went wrong handling that action."
 msgstr "Algo salió mal al procesar esa acción."
 
-#: cogs/music/music.py:458
+#: cogs/music/music.py:461
 msgid "Resumed."
 msgstr "Reanudado."
 
-#: cogs/music/music.py:461
+#: cogs/music/music.py:464
 msgid "Paused."
 msgstr "Pausado."
 
-#: cogs/music/music.py:476
+#: cogs/music/music.py:479
 msgid "Skipped."
 msgstr "Saltado."
 
-#: cogs/music/music.py:479
+#: cogs/music/music.py:482
 msgid "There is nothing left to skip to."
 msgstr "No queda nada a lo que saltar."
 
-#: cogs/music/music.py:491 cogs/music/music.py:506
+#: cogs/music/music.py:494 cogs/music/music.py:509
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr "Volumen establecido en {volume}%."
 
-#: cogs/music/music.py:516
+#: cogs/music/music.py:519 locales/command_strings.py:149
 msgid "off"
 msgstr "desactivado"
 
-#: cogs/music/music.py:519
+#: cogs/music/music.py:522
 msgid "on"
 msgstr "activado"
 
-#: cogs/music/music.py:522
+#: cogs/music/music.py:525
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr "El bucle de la cola se puso en {state}."
 
-#: cogs/music/music.py:532
+#: cogs/music/music.py:535
 msgid "Add a few more tracks before shuffling."
 msgstr "Añade algunas canciones más antes de mezclar."
 
-#: cogs/music/music.py:538 cogs/music/music.py:1435
+#: cogs/music/music.py:541 cogs/music/music.py:1450
 msgid "Shuffled the queue."
 msgstr "He mezclado la cola."
 
-#: cogs/music/music.py:549 cogs/music/music.py:1467
+#: cogs/music/music.py:552 cogs/music/music.py:1482
 msgid "The queue is empty."
 msgstr "La cola está vacía."
 
-#: cogs/music/music.py:553 cogs/music/music.py:1481
+#: cogs/music/music.py:556 cogs/music/music.py:1496
 #, python-brace-format
 msgid "`{index}.` {title} by `{author}`"
 msgstr "`{index}.` {title} de `{author}`"
 
-#: cogs/music/music.py:560 cogs/music/music.py:1487
+#: cogs/music/music.py:563 cogs/music/music.py:1502
 #, python-brace-format
 msgid "*...and {count} more.*"
 msgstr "*...y {count} más.*"
 
-#: cogs/music/music.py:579
+#: cogs/music/music.py:582
 msgid "Nothing is playing to favourite right now."
 msgstr "No hay nada sonando para añadir a favoritos ahora mismo."
 
-#: cogs/music/music.py:585
+#: cogs/music/music.py:587
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr "Se añadió **{title}** a tus favoritos."
 
-#: cogs/music/music.py:592 cogs/music/music.py:1671
+#: cogs/music/music.py:592 cogs/music/music.py:1686
+#, python-brace-format
+msgid "Your favourites are full (max {max}). Remove some first."
+msgstr "Tus favoritos están completos (máx. {max}). Elimina algunos primero."
+
+#: cogs/music/music.py:595 cogs/music/music.py:1692
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** ya está en tus favoritos."
 
-#: cogs/music/music.py:665
+#: cogs/music/music.py:667
 msgid "I'm not connected to a voice channel."
 msgstr "No estoy conectada a ningún canal de voz."
 
-#: cogs/music/music.py:676
+#: cogs/music/music.py:678
 msgid "You must be in my voice channel to do that."
 msgstr "Debes estar en mi canal de voz para hacer eso."
 
-#: cogs/music/music.py:945
+#: cogs/music/music.py:960
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Hubo un problema al reproducir **{title}**, se omitirá."
 
-#: cogs/music/music.py:1269 cogs/music/music.py:1508
+#: cogs/music/music.py:1284 cogs/music/music.py:1523
 msgid "Here is the player."
 msgstr "Aquí tienes el reproductor."
 
-#: cogs/music/music.py:1272
+#: cogs/music/music.py:1287
 msgid "Give me something to play, e.g. `play never gonna give you up`."
 msgstr "Dame algo para reproducir, por ejemplo `play never gonna give you up`."
 
-#: cogs/music/music.py:1280 cogs/music/music.py:1315 cogs/music/music.py:1581
-#: cogs/music/music.py:1653
+#: cogs/music/music.py:1295 cogs/music/music.py:1330 cogs/music/music.py:1596
+#: cogs/music/music.py:1668
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "La música no está disponible actualmente - no hay ningún nodo de Lavalink conectado."
 
-#: cogs/music/music.py:1287 cogs/music/music.py:1593
+#: cogs/music/music.py:1302 cogs/music/music.py:1608
 msgid "You must be in a voice channel first."
 msgstr "Primero debes estar en un canal de voz."
 
-#: cogs/music/music.py:1294 cogs/music/music.py:1600
+#: cogs/music/music.py:1309 cogs/music/music.py:1615
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "No pude unirme a tu canal de voz. Por favor, inténtalo de nuevo."
 
-#: cogs/music/music.py:1304
+#: cogs/music/music.py:1319
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "El reproductor ya está activo en {channel}."
 
-#: cogs/music/music.py:1320 cogs/music/music.py:1659
+#: cogs/music/music.py:1335 cogs/music/music.py:1674
 msgid "Could not find any tracks for that query."
 msgstr "No se encontraron pistas para esa búsqueda."
 
-#: cogs/music/music.py:1331
+#: cogs/music/music.py:1346
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr "Añadí la playlist **{name}** ({count} canciones) a la cola."
 
-#: cogs/music/music.py:1339
+#: cogs/music/music.py:1354
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "He añadido **{title}** de `{author}` a la cola."
 
-#: cogs/music/music.py:1356
+#: cogs/music/music.py:1371
 msgid "The player is already paused."
 msgstr "El reproductor ya está en pausa."
 
-#: cogs/music/music.py:1361
+#: cogs/music/music.py:1376
 msgid "Paused the player."
 msgstr "He pausado el reproductor."
 
-#: cogs/music/music.py:1371
+#: cogs/music/music.py:1386
 msgid "The player is not paused."
 msgstr "El reproductor no está pausado."
 
-#: cogs/music/music.py:1376
+#: cogs/music/music.py:1391
 msgid "Resumed the player."
 msgstr "Reanudé el reproductor."
 
-#: cogs/music/music.py:1388
+#: cogs/music/music.py:1403
 msgid "There are no more tracks in the queue to skip to."
 msgstr "No quedan más pistas en la cola a las que saltar."
 
-#: cogs/music/music.py:1392
+#: cogs/music/music.py:1407
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Salté a **{title}** de `{author}`."
 
-#: cogs/music/music.py:1398
+#: cogs/music/music.py:1413
 msgid "Skipped. The queue is now empty."
 msgstr "Saltado. La cola está vacía ahora."
 
-#: cogs/music/music.py:1409
+#: cogs/music/music.py:1424
 msgid "Stopped playback and cleared the queue."
 msgstr "Detuve la reproducción y vacié la cola."
 
-#: cogs/music/music.py:1422
+#: cogs/music/music.py:1437
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Volumen establecido en {volume}%."
 
-#: cogs/music/music.py:1432
+#: cogs/music/music.py:1447
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Añade algunas pistas más a la cola antes de mezclar."
 
-#: cogs/music/music.py:1455
+#: cogs/music/music.py:1470
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Modo de repetición configurado a `{mode}`."
 
-#: cogs/music/music.py:1473
+#: cogs/music/music.py:1488
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}`\n"
 msgstr "**Reproduciendo ahora:** {title} de `{author}`\n"
 
-#: cogs/music/music.py:1478
+#: cogs/music/music.py:1493
 msgid "**Up Next:**"
 msgstr "**A continuación:**"
 
-#: cogs/music/music.py:1519
+#: cogs/music/music.py:1534
 msgid "Disconnected from the voice channel."
 msgstr "Desconectada del canal de voz."
 
-#: cogs/music/music.py:1532
+#: cogs/music/music.py:1547
 msgid "You have no saved favourites yet."
 msgstr "Todavía no tienes favoritos guardados."
 
-#: cogs/music/music.py:1535
+#: cogs/music/music.py:1550
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} aún no tiene favoritos guardados."
 
-#: cogs/music/music.py:1543 cogs/music/music.py:1699
+#: cogs/music/music.py:1558 cogs/music/music.py:1720
 msgid "Unknown title"
 msgstr "Título desconocido"
 
-#: cogs/music/music.py:1544
+#: cogs/music/music.py:1559
 msgid "Unknown artist"
 msgstr "Artista desconocido"
 
-#: cogs/music/music.py:1548
+#: cogs/music/music.py:1563
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr "`{index}.` {label} por `{author}`"
 
-#: cogs/music/music.py:1555
+#: cogs/music/music.py:1570
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr "Favoritos de {name}"
 
-#: cogs/music/music.py:1587
+#: cogs/music/music.py:1602
 msgid "You have no saved favourites to play."
 msgstr "No tienes favoritos guardados para reproducir."
 
-#: cogs/music/music.py:1622
+#: cogs/music/music.py:1637
 msgid "None of your favourites could be loaded right now."
 msgstr "Ninguno de tus favoritos pudo cargarse en este momento."
 
-#: cogs/music/music.py:1630
+#: cogs/music/music.py:1645
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr "He añadido {count} pista(s) de tus favoritos a la cola."
 
-#: cogs/music/music.py:1646
+#: cogs/music/music.py:1661
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "No hay nada reproduciéndose - dame el nombre o el enlace de una canción para guardarla."
 
-#: cogs/music/music.py:1665
+#: cogs/music/music.py:1680
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "Se añadió **{title}** de `{author}` a tus favoritos."
 
-#: cogs/music/music.py:1683
+#: cogs/music/music.py:1704
 msgid "You have no saved favourites to remove."
 msgstr "No tienes favoritos guardados para eliminar."
 
-#: cogs/music/music.py:1687
+#: cogs/music/music.py:1708
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Elige un número entre 1 y {max}."
 
-#: cogs/music/music.py:1698
+#: cogs/music/music.py:1719
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "Se eliminó **{title}** de tus favoritos."
@@ -4467,7 +4538,7 @@ msgstr "Latencia del websocket"
 msgid "{ms} ms"
 msgstr "{ms} ms"
 
-#: cogs/utility/meta.py:39
+#: cogs/utility/meta.py:41
 #, python-brace-format
 msgid ""
 "## {city}\n"
@@ -4476,33 +4547,33 @@ msgstr ""
 "## {city}\n"
 "{condition}"
 
-#: cogs/utility/meta.py:79 cogs/utility/meta.py:86
+#: cogs/utility/meta.py:81 cogs/utility/meta.py:88
 msgid "Could not fetch the Astronomy Picture of the Day right now."
 msgstr "No pude obtener la Imagen Astronómica del Día en este momento."
 
-#: cogs/utility/meta.py:93
+#: cogs/utility/meta.py:95
 msgid "Astronomy Picture of the Day"
 msgstr "Imagen astronómica del día"
 
-#: cogs/utility/meta.py:113
+#: cogs/utility/meta.py:115
 #, python-brace-format
 msgid "APOD Requested by {user}"
 msgstr "APOD solicitado por {user}"
 
-#: cogs/utility/meta.py:133
+#: cogs/utility/meta.py:135
 msgid "Could not fetch the weather right now."
 msgstr "No pude obtener el clima en este momento."
 
-#: cogs/utility/meta.py:136
+#: cogs/utility/meta.py:138
 msgid "City not found."
 msgstr "No se encontró la ciudad."
 
-#: cogs/utility/meta.py:153
+#: cogs/utility/meta.py:155
 #, python-brace-format
 msgid "{status} - {desc}"
 msgstr "{status} - {desc}"
 
-#: cogs/utility/meta.py:157
+#: cogs/utility/meta.py:159
 #, python-brace-format
 msgid ""
 "**Temperature:** `{temp}C`\n"
@@ -4676,25 +4747,21 @@ msgstr "auto -> en (no oficial)"
 msgid "Translation failed."
 msgstr "La traducción falló."
 
-#: locales/command_strings.py:9
+#: locales/command_strings.py:10
 msgid "A song name or URL to search for and play."
 msgstr "Un nombre de canción o URL para buscar y reproducir."
 
-#: locales/command_strings.py:10
+#: locales/command_strings.py:11
 msgid "A song to search for and save (defaults to the current track)."
 msgstr "Una canción para buscar y guardar (por defecto, la pista actual)."
 
-#: locales/command_strings.py:11
+#: locales/command_strings.py:12
 msgid "Add a member to the live-alert watchlist (channel is an optional override)."
 msgstr "Añade un miembro a la lista de alertas en directo (el canal es una anulación opcional)."
 
-#: locales/command_strings.py:12
+#: locales/command_strings.py:13
 msgid "Add a user to the bot-wide blacklist."
 msgstr "Añade un usuario a la lista negra global del bot."
-
-#: locales/command_strings.py:13
-msgid "Answer to a yes/no question."
-msgstr "Responde a una pregunta de sí o no."
 
 #: locales/command_strings.py:14
 msgid "Assign a Prefix to Yasuho for use in your guild."
@@ -4717,636 +4784,528 @@ msgid "Automatic moderation related commands."
 msgstr "Comandos relacionados con la moderación automática."
 
 #: locales/command_strings.py:19
-msgid "Ban many users at once by id, for raid cleanup."
-msgstr "Banea a varios usuarios a la vez por id, para limpiar raids."
-
-#: locales/command_strings.py:20
 msgid "Bans an annoying user. Requires ban members permission. Also bot must have this permission."
 msgstr "Banea a un usuario molesto. Requiere el permiso de banear miembros. El bot también debe tener este permiso."
 
-#: locales/command_strings.py:21
+#: locales/command_strings.py:20
 msgid "Be the first to retype the given sentence as fast as you can."
 msgstr "Sé el primero en volver a escribir la frase dada lo más rápido posible."
 
-#: locales/command_strings.py:22
+#: locales/command_strings.py:21
 msgid "Bot-wide blacklist related commands."
 msgstr "Comandos relacionados con la lista negra global del bot."
 
+#: locales/command_strings.py:22
+msgid "Browse anime from a season (defaults to the current season)."
+msgstr "Explora anime de una temporada (por defecto, la temporada actual)."
+
 #: locales/command_strings.py:23
+msgid "Browse the anime trending on AniList right now."
+msgstr "Explora el anime en tendencia en AniList ahora mismo."
+
+#: locales/command_strings.py:24
+msgid "Browse the most popular anime on AniList."
+msgstr "Explora el anime mas popular en AniList."
+
+#: locales/command_strings.py:25
 msgid "Build a Google reverse image search link for an image URL or attachment."
 msgstr "Crea un enlace de búsqueda inversa de imágenes de Google para una URL o un adjunto."
 
-#: locales/command_strings.py:24
-msgid "Calculate how gay you are!"
-msgstr "¡Calcula cuán gay eres!"
-
-#: locales/command_strings.py:25
+#: locales/command_strings.py:26
 msgid "Clear your entire gaming profile."
 msgstr "Borra todo tu perfil de gaming."
-
-#: locales/command_strings.py:26
-msgid "Clears X messages of a member"
-msgstr "Elimina X mensajes de un miembro"
 
 #: locales/command_strings.py:27
 msgid "Clears X messages."
 msgstr "Elimina X mensajes."
 
 #: locales/command_strings.py:28
-msgid "Convert text to ascii art"
-msgstr "Convierte texto en arte ascii"
-
-#: locales/command_strings.py:29
 msgid "Create a Live streamer role and link it to the alert config."
 msgstr "Crea un rol de streamer en directo y vincúlalo a la configuración de alertas."
 
-#: locales/command_strings.py:30
+#: locales/command_strings.py:29
 msgid "Create a native yes/no poll (runs for 24 hours)."
 msgstr "Crea una encuesta nativa de sí/no (dura 24 horas)."
 
-#: locales/command_strings.py:31
+#: locales/command_strings.py:30
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
 msgstr "Elimina un panel de roles con botones por el ID de su mensaje (quita los botones)."
 
-#: locales/command_strings.py:32
+#: locales/command_strings.py:31
 msgid "Delete the Live streamer role and unlink it from the config."
 msgstr "Elimina el rol de streamer en directo y desvincúlalo de la configuración."
 
-#: locales/command_strings.py:33
+#: locales/command_strings.py:32
 msgid "Disable moderation logging for this guild."
 msgstr "Desactiva el registro de moderación para este servidor."
 
-#: locales/command_strings.py:34
+#: locales/command_strings.py:33
 msgid "Disable the starboard and wipe its configuration for this guild."
 msgstr "Desactiva el starboard y borra su configuración para este servidor."
 
-#: locales/command_strings.py:35
+#: locales/command_strings.py:34
 msgid "Disable the welcome message for your guild."
 msgstr "Desactiva el mensaje de bienvenida de tu servidor."
 
-#: locales/command_strings.py:36
+#: locales/command_strings.py:35
 msgid "Disconnect the player from the voice channel."
 msgstr "Desconecta el reproductor del canal de voz."
 
-#: locales/command_strings.py:37
+#: locales/command_strings.py:36
 msgid "Displays information about a member of the guild."
 msgstr "Muestra información sobre un miembro del servidor."
 
-#: locales/command_strings.py:38
+#: locales/command_strings.py:37
 msgid "Displays information about the bot."
 msgstr "Muestra información sobre el bot."
 
-#: locales/command_strings.py:39
+#: locales/command_strings.py:38
 msgid "Displays information about the current guild."
 msgstr "Muestra información sobre el servidor actual."
 
-#: locales/command_strings.py:40
+#: locales/command_strings.py:39
 msgid "Displays the avatar of a member."
 msgstr "Muestra el avatar de un miembro."
 
-#: locales/command_strings.py:41
-msgid "Dump live slash command descriptions/choices for i18n extraction."
-msgstr "Vuelca las descripciones/opciones en vivo de los comandos slash para extracción de i18n."
-
-#: locales/command_strings.py:42
+#: locales/command_strings.py:40
 msgid "Edit a profile field through a guided form (radio picker + value)."
 msgstr "Edita un campo del perfil mediante un formulario guiado (selector + valor)."
 
-#: locales/command_strings.py:43
+#: locales/command_strings.py:41
 msgid "Enable or disable Discord-invite filtering for this guild."
 msgstr "Activa o desactiva el filtrado de invitaciones de Discord para este servidor."
 
-#: locales/command_strings.py:44
+#: locales/command_strings.py:42
 msgid "Enable or disable link filtering for this guild."
 msgstr "Activa o desactiva el filtrado de enlaces para este servidor."
 
-#: locales/command_strings.py:45
+#: locales/command_strings.py:43
 msgid "Enable or disable spam filtering for this guild."
 msgstr "Activa o desactiva el filtro de spam para este servidor."
 
-#: locales/command_strings.py:46
+#: locales/command_strings.py:44
 msgid "Enable or disable the leveling system for this server."
 msgstr "Activa o desactiva el sistema de niveles para este servidor."
 
-#: locales/command_strings.py:47
-msgid "Evaluates a code"
-msgstr "Evalúa un código"
-
-#: locales/command_strings.py:48
+#: locales/command_strings.py:45
 msgid "Fetch the lyrics of a song using Genius."
 msgstr "Obtén la letra de una canción usando Genius."
 
-#: locales/command_strings.py:49
-msgid "Gaming profile related commands."
-msgstr "Comandos relacionados con el perfil de gaming."
-
-#: locales/command_strings.py:50
-msgid "Generate a random password and send it to you in DMs."
-msgstr "Genera una contraseña aleatoria y te la envía por mensaje directo."
-
-#: locales/command_strings.py:51
-msgid "Get an invite link to add the bot to your server."
-msgstr "Obtén un enlace de invitación para añadir el bot a tu servidor."
-
-#: locales/command_strings.py:52
-msgid "Give a hug to your secret crush ッ"
-msgstr "Dale un abrazo a tu amor secreto ッ"
-
-#: locales/command_strings.py:53
-msgid "Gives you reversed text"
-msgstr "Te devuelve el texto al revés"
-
-#: locales/command_strings.py:54
-msgid "Interactively browse and remove a member's warnings."
-msgstr "Explora y elimina de forma interactiva las advertencias de un miembro."
-
-#: locales/command_strings.py:55
-msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
-msgstr "Expulsa a un usuario molesto. Requiere el permiso de expulsar miembros. El bot también debe tener este permiso."
-
-#: locales/command_strings.py:56
-msgid "List all autorooms in the server"
-msgstr "Lista todas las autorooms del servidor"
-
-#: locales/command_strings.py:57
-msgid "List all reaction-role mappings for this guild."
-msgstr "Lista todas las asignaciones de roles por reacción de este servidor."
-
-#: locales/command_strings.py:58
-msgid "List every blacklisted user."
-msgstr "Lista todos los usuarios en la lista negra."
-
-#: locales/command_strings.py:59
-msgid "List every button-role panel set up in this guild."
-msgstr "Lista todos los paneles de roles con botones configurados en este servidor."
-
-#: locales/command_strings.py:60
-msgid "List the available prefixes for your guild."
-msgstr "Lista los prefijos disponibles para tu servidor."
-
-#: locales/command_strings.py:61
-msgid "List the channel permissions a member currently has."
-msgstr "Lista los permisos de canal que tiene actualmente un miembro."
-
-#: locales/command_strings.py:62
-msgid "List the channel permissions the bot currently has."
-msgstr "Lista los permisos de canal que el bot tiene actualmente."
-
-#: locales/command_strings.py:63
-msgid "Loads an extension by name."
-msgstr "Carga una extensión por su nombre."
-
-#: locales/command_strings.py:64
-msgid "Look up a Minecraft account and render its skin."
-msgstr "Busca una cuenta de Minecraft y renderiza su skin."
-
-#: locales/command_strings.py:65
-msgid "Look up an osu! player's stats."
-msgstr "Busca las estadísticas de un jugador de osu!."
-
-#: locales/command_strings.py:66
-msgid "Makes big an emoji"
-msgstr "Agranda un emoji"
-
-#: locales/command_strings.py:67
-msgid "Manage the auto-room system for temporary voice channels."
-msgstr "Gestiona el sistema de auto-rooms para canales de voz temporales."
-
-#: locales/command_strings.py:68
-msgid "Map an emoji on a message to a role."
-msgstr "Vincula un emoji de un mensaje a un rol."
-
-#: locales/command_strings.py:69
-msgid "Move a role to the given position in the hierarchy."
-msgstr "Mueve un rol a la posición indicada en la jerarquía."
-
-#: locales/command_strings.py:70
-msgid "Moves an annoying user to a channel."
-msgstr "Mueve a un usuario molesto a un canal."
-
-#: locales/command_strings.py:71
-msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ..."
-msgstr "Encuesta de opción múltiple: quickpoll pregunta | opción 1 | opción 2 ..."
-
-#: locales/command_strings.py:72
-msgid "Mutes the specified member."
-msgstr "Silencia al miembro especificado."
-
-#: locales/command_strings.py:73
-msgid "One of: track, all, off."
-msgstr "Uno de: track, all, off."
-
-#: locales/command_strings.py:74
-msgid "Open the Twitch live-alert builder."
-msgstr "Abre el creador de alertas en directo de Twitch."
-
-#: locales/command_strings.py:75
-msgid "Open the interactive AutoMod control panel."
-msgstr "Abre el panel de control interactivo de AutoMod."
-
-#: locales/command_strings.py:76
-msgid "Open the interactive button-role builder."
-msgstr "Abre el creador interactivo de roles con botones."
-
-#: locales/command_strings.py:77
-msgid "Open the interactive server-settings panel (also: setup)."
-msgstr "Abre el panel interactivo de configuración del servidor (también: setup)."
-
-#: locales/command_strings.py:78
-msgid "Open the moderation-log control panel."
-msgstr "Abre el panel de control del registro de moderación."
-
-#: locales/command_strings.py:79
-msgid "Open the welcome control panel."
-msgstr "Abre el panel de control de bienvenida."
-
-#: locales/command_strings.py:80
-msgid "Open your personal settings panel."
-msgstr "Abre tu panel de configuración personal."
-
-#: locales/command_strings.py:81
-msgid "Paginated moderation case history (optionally filtered to a member)."
-msgstr "Historial paginado de casos de moderación (opcionalmente filtrado por miembro)."
-
-#: locales/command_strings.py:82
-msgid "Pause the current track."
-msgstr "Pausa la pista actual."
-
-#: locales/command_strings.py:83
-msgid "Pick the language for the bot's replies to you."
-msgstr "Elige el idioma en el que el bot te responderá."
-
-#: locales/command_strings.py:84
-msgid "Play Rock Paper Scissors with Yasuho!"
-msgstr "¡Juega a piedra, papel o tijera con Yasuho!"
-
-#: locales/command_strings.py:85
-msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
-msgstr "Juega una partida de tres en raya contra el bot. Tú eres X."
-
-#: locales/command_strings.py:86
-msgid "Play a track or playlist, or add it to the queue."
-msgstr "Reproduce una pista o lista de reproducción, o añádela a la cola."
-
-#: locales/command_strings.py:87
-msgid "Prefix related commands."
-msgstr "Comandos relacionados con el prefijo."
-
-#: locales/command_strings.py:88
-msgid "Pull the latest code, then pick which cogs to hot-reload (interactive)."
-msgstr "Descarga el código más reciente y luego elige qué cogs recargar en caliente (interactivo)."
-
-#: locales/command_strings.py:89
-msgid "Purges messages. Requires manage messages permission"
-msgstr "Elimina mensajes en masa. Requiere el permiso de gestionar mensajes"
-
-#: locales/command_strings.py:90
-msgid "Queue every track in your favourites and start playing."
-msgstr "Encola todas las pistas de tus favoritos y empieza a reproducir."
-
-#: locales/command_strings.py:91
-msgid "Quote a message into a clean embed."
-msgstr "Cita un mensaje en un embed limpio."
-
-#: locales/command_strings.py:92
-msgid "Rates what you desire"
-msgstr "Valora lo que desees"
-
-#: locales/command_strings.py:93
-msgid "Reaction-role related commands."
-msgstr "Comandos relacionados con roles por reacción."
-
-#: locales/command_strings.py:94
-msgid "Reloads a single extension, or all configured extensions."
-msgstr "Recarga una sola extensión, o todas las extensiones configuradas."
-
-#: locales/command_strings.py:95
-msgid "Reminds you of something after a certain amount of time."
-msgstr "Te recuerda algo después de un tiempo determinado."
-
-#: locales/command_strings.py:96
-msgid "Remove a member from the live-alert watchlist."
-msgstr "Elimina a un miembro de la lista de alertas en directo."
-
-#: locales/command_strings.py:97
-msgid "Remove a role to a specified member."
-msgstr "Elimina un rol a un miembro especificado."
-
-#: locales/command_strings.py:98
-msgid "Remove a user from the bot-wide blacklist."
-msgstr "Elimina a un usuario de la lista negra global del bot."
-
-#: locales/command_strings.py:99
-msgid "Remove a warn from a member of the guild."
-msgstr "Elimina una advertencia de un miembro del servidor."
-
-#: locales/command_strings.py:100
-msgid "Remove an emoji-to-role mapping from a message."
-msgstr "Elimina un vínculo de emoji a rol de un mensaje."
-
-#: locales/command_strings.py:101
-msgid "Remove auto role from your guild."
-msgstr "Elimina el rol automático de tu servidor."
-
-#: locales/command_strings.py:102
-msgid "Remove the auto-room system based on category name"
-msgstr "Elimina el sistema de auto-salas según el nombre de la categoría"
-
-#: locales/command_strings.py:103
-msgid "Remove the favourite at the given position in your list."
-msgstr "Elimina el favorito en la posición indicada de tu lista."
-
-#: locales/command_strings.py:104
-msgid "Resume the player if it is paused."
-msgstr "Reanuda el reproductor si está pausado."
-
-#: locales/command_strings.py:105
-msgid "Returns a random percent for how gay is a discord user"
-msgstr "Devuelve un porcentaje aleatorio de lo gay que es un usuario de discord"
-
-#: locales/command_strings.py:106
-msgid "Returns a random percent for how hot is a discord user"
-msgstr "Devuelve un porcentaje aleatorio de lo atractivo que es un usuario de Discord"
-
-#: locales/command_strings.py:107
-msgid "Roll the slot machine"
-msgstr "Tira de la máquina tragaperras"
-
-#: locales/command_strings.py:108
-msgid "Save the current track, or a searched track, to your favourites."
-msgstr "Guarda la pista actual, o una pista buscada, en tus favoritos."
-
-#: locales/command_strings.py:109
-msgid "Search Wikipedia for a short summary of a topic."
-msgstr "Busca en Wikipedia un breve resumen de un tema."
-
-#: locales/command_strings.py:110
-msgid "Sends a random cat image"
-msgstr "Envía una imagen aleatoria de un gato"
-
-#: locales/command_strings.py:111
-msgid "Sends a random dog picture"
-msgstr "Envía una foto aleatoria de un perro"
-
-#: locales/command_strings.py:112
-msgid "Sends a random fox picture"
-msgstr "Envía una foto aleatoria de un zorro"
-
-#: locales/command_strings.py:113
-msgid "Set a role to a specified member."
-msgstr "Asigna un rol a un miembro específico."
-
-#: locales/command_strings.py:114
-msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
-msgstr "Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, steam)."
-
-#: locales/command_strings.py:115
-msgid "Set the channel where moderation logs are sent."
-msgstr "Establece el canal donde se envían los registros de moderación."
-
-#: locales/command_strings.py:116
-msgid "Set the loop mode for the queue."
-msgstr "Establece el modo de repetición de la cola."
-
-#: locales/command_strings.py:117
-msgid "Set the player volume (0-1000)."
-msgstr "Ajusta el volumen del reproductor (0-1000)."
-
-#: locales/command_strings.py:118
-msgid "Set the server's default language (used when a member has not picked one)."
-msgstr "Establece el idioma predeterminado del servidor (se usa cuando un miembro no ha elegido uno)."
-
-#: locales/command_strings.py:119
-msgid "Set the starboard channel and the star threshold."
-msgstr "Establece el canal de destacados y el umbral de estrellas."
-
-#: locales/command_strings.py:120
-msgid "Set the welcome channel and message (a simple fallback)."
-msgstr "Establece el canal y el mensaje de bienvenida (una alternativa sencilla)."
-
-#: locales/command_strings.py:121
-msgid "Set your AFK status, with an optional message."
-msgstr "Configura tu estado AFK, con un mensaje opcional."
-
-#: locales/command_strings.py:122
-msgid "Setup an auto-room system"
-msgstr "Configura un sistema de salas automáticas"
-
-#: locales/command_strings.py:123
-msgid "Show a collage of a user's avatar / server avatar / banner history."
-msgstr "Muestra un collage del historial de avatar / avatar de servidor / banner de un usuario."
-
-#: locales/command_strings.py:124
-msgid "Show a single moderation case by its number."
-msgstr "Muestra un caso de moderación específico por su número."
-
-#: locales/command_strings.py:125
-msgid "Show every member on the live-alert watchlist."
-msgstr "Muestra todos los miembros en la lista de seguimiento de alertas en directo."
-
-#: locales/command_strings.py:126
-msgid "Show how long the bot has been running."
-msgstr "Muestra cuánto tiempo lleva funcionando el bot."
-
-#: locales/command_strings.py:127
-msgid "Show how many warns a member currently has."
-msgstr "Muestra cuántas advertencias tiene actualmente un miembro."
-
-#: locales/command_strings.py:128
-msgid "Show the current auto-mod settings for this guild."
-msgstr "Muestra la configuración actual de auto-moderación de este servidor."
-
-#: locales/command_strings.py:129
-msgid "Show the currently playing track and the next tracks in the queue."
-msgstr "Muestra la pista que se está reproduciendo y las siguientes en la cola."
-
-#: locales/command_strings.py:130
-msgid "Show the interactive now-playing controller."
-msgstr "Muestra el controlador interactivo de reproducción actual."
-
-#: locales/command_strings.py:131
-msgid "Show the last deleted message in this channel."
-msgstr "Muestra el último mensaje eliminado en este canal."
-
-#: locales/command_strings.py:132
-msgid "Show the most-starred messages in this guild."
-msgstr "Muestra los mensajes con más estrellas de este servidor."
-
-#: locales/command_strings.py:133
-msgid "Show unicode information about the given characters."
-msgstr "Muestra información unicode sobre los caracteres indicados."
-
-#: locales/command_strings.py:134
-msgid "Show what a member is currently listening to on Spotify."
-msgstr "Muestra lo que un miembro está escuchando actualmente en Spotify."
-
-#: locales/command_strings.py:135
-msgid "Show your saved favourite tracks, or another member's."
-msgstr "Muestra tus pistas favoritas guardadas, o las de otro miembro."
-
-#: locales/command_strings.py:136
-msgid "Shows Astronomy Picture of the Day."
-msgstr "Muestra la foto astronómica del día."
-
-#: locales/command_strings.py:137
-msgid "Shows the bot's websocket latency."
-msgstr "Muestra la latencia websocket del bot."
-
-#: locales/command_strings.py:138
-msgid "Shows the current weather for a given city."
-msgstr "Muestra el clima actual de una ciudad indicada."
-
-#: locales/command_strings.py:139
-msgid "Shows the ranked members of the guild."
-msgstr "Muestra los miembros clasificados del servidor."
-
-#: locales/command_strings.py:140
-msgid "Shows your level and XP rank card, or another member's."
-msgstr "Muestra tu tarjeta de nivel y rango de XP, o la de otro miembro."
-
-#: locales/command_strings.py:141
-msgid "Shuffle the upcoming tracks in the queue."
-msgstr "Mezcla las próximas pistas de la cola."
-
-#: locales/command_strings.py:142
-msgid "Simulate a join for yourself to preview the welcome."
-msgstr "Simula tu propia entrada para previsualizar la bienvenida."
-
-#: locales/command_strings.py:143
-msgid "Skip the current track and play the next one."
-msgstr "Salta la pista actual y reproduce la siguiente."
-
-#: locales/command_strings.py:144
-msgid "Starboard related commands."
-msgstr "Comandos relacionados con el starboard."
-
-#: locales/command_strings.py:145
-msgid "Stop playback and clear the queue (stays connected)."
-msgstr "Detiene la reproducción y vacía la cola (permanece conectada)."
-
-#: locales/command_strings.py:146
-msgid "Synchronizes the application command tree globally or to guilds."
-msgstr "Sincroniza el árbol de comandos de la aplicación globalmente o en servidores."
-
-#: locales/command_strings.py:147
-msgid "Tells you the newest members of the server."
-msgstr "Te indica los miembros más nuevos del servidor."
-
-#: locales/command_strings.py:148
-msgid "Temporarily bans a member for the given duration."
-msgstr "Banea temporalmente a un miembro durante la duración indicada."
-
-#: locales/command_strings.py:149
-msgid "The 1-based position of the favourite to remove."
-msgstr "La posición (empezando en 1) del favorito a eliminar."
-
-#: locales/command_strings.py:150
-msgid "The bot say what you want."
-msgstr "Haz que el bot diga lo que quieras."
-
-#: locales/command_strings.py:151
-msgid "Translate text to English (auto-detect source language)."
-msgstr "Traduce texto al inglés (detecta automáticamente el idioma de origen)."
-
-#: locales/command_strings.py:152
-msgid "Un-mutes the specified member."
-msgstr "Quita el silencio al miembro especificado."
-
-#: locales/command_strings.py:153
-msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
-msgstr "Desbanea a un usuario. Requiere el permiso de banear miembros. El bot también debe tener este permiso."
-
-#: locales/command_strings.py:154
-msgid "Unloads an extension by name."
-msgstr "Descarga una extensión por su nombre."
-
-#: locales/command_strings.py:155
-msgid "Update the amount of stars needed to reach the starboard."
-msgstr "Actualiza la cantidad de estrellas necesarias para llegar al starboard."
-
-#: locales/command_strings.py:156
-msgid "Update the reason recorded on an existing case."
-msgstr "Actualiza el motivo registrado en un caso existente."
-
-#: locales/command_strings.py:157
-msgid "View a member's gaming profile."
-msgstr "Consulta el perfil de videojuegos de un miembro."
-
-#: locales/command_strings.py:158
-msgid "Volume level between 0 and 1000 (100 is default)."
-msgstr "Nivel de volumen entre 0 y 1000 (100 por defecto)."
-
-#: locales/command_strings.py:159
-msgid "Warn a member of the guild (auto-kick at 3 warns)"
-msgstr "Advierte a un miembro del servidor (expulsión automática a las 3 advertencias)"
-
-#: locales/command_strings.py:160
-msgid "Whose favourites to show (defaults to you)."
-msgstr "De quién mostrar los favoritos (por defecto, los tuyos)."
-
-#: locales/command_strings.py:161
-msgid "Look up an anime on AniList."
-msgstr "Busca un anime en AniList."
-
-#: locales/command_strings.py:162
-msgid "Look up a manga on AniList."
-msgstr "Busca un manga en AniList."
-
-#: locales/command_strings.py:163
-msgid "Look up a character on AniList."
-msgstr "Busca un personaje en AniList."
-
-#: locales/command_strings.py:164
-msgid "Look up an animation studio on AniList."
-msgstr "Busca un estudio de animacion en AniList."
-
-#: locales/command_strings.py:165
-msgid "Browse the anime trending on AniList right now."
-msgstr "Explora el anime en tendencia en AniList ahora mismo."
-
-#: locales/command_strings.py:166
-msgid "Browse the most popular anime on AniList."
-msgstr "Explora el anime mas popular en AniList."
-
-#: locales/command_strings.py:167
-msgid "Browse anime from a season (defaults to the current season)."
-msgstr "Explora anime de una temporada (por defecto, la temporada actual)."
-
-#: locales/command_strings.py:168
-msgid "Link your AniList account and edit your lists."
-msgstr "Vincula tu cuenta de AniList y edita tus listas."
-
-#: locales/command_strings.py:169
-msgid "Start linking your AniList account."
-msgstr "Comienza a vincular tu cuenta de AniList."
-
-#: locales/command_strings.py:170
+#: locales/command_strings.py:46
 msgid "Finish linking with the PIN code AniList gave you."
 msgstr "Termina de vincular con el codigo PIN que te dio AniList."
 
-#: locales/command_strings.py:171
-msgid "Unlink your AniList account."
-msgstr "Desvincula tu cuenta de AniList."
+#: locales/command_strings.py:47
+msgid "Gaming profile related commands."
+msgstr "Comandos relacionados con el perfil de gaming."
 
-#: locales/command_strings.py:172
+#: locales/command_strings.py:48
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
 msgstr "Actualizacion guiada: elige el titulo haciendo clic y luego edita un formulario prerellenado."
 
-#: locales/command_strings.py:173
-msgid "Set the status of a title on your list."
-msgstr "Establece el estado de un titulo en tu lista."
+#: locales/command_strings.py:49
+msgid "Interactively browse and remove a member's warnings."
+msgstr "Explora y elimina de forma interactiva las advertencias de un miembro."
 
-#: locales/command_strings.py:174
+#: locales/command_strings.py:50
+msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
+msgstr "Expulsa a un usuario molesto. Requiere el permiso de expulsar miembros. El bot también debe tener este permiso."
+
+#: locales/command_strings.py:51
+msgid "Link your AniList account and edit your lists."
+msgstr "Vincula tu cuenta de AniList y edita tus listas."
+
+#: locales/command_strings.py:52
+msgid "List all reaction-role mappings for this guild."
+msgstr "Lista todas las asignaciones de roles por reacción de este servidor."
+
+#: locales/command_strings.py:53
+msgid "List every blacklisted user."
+msgstr "Lista todos los usuarios en la lista negra."
+
+#: locales/command_strings.py:54
+msgid "List every button-role panel set up in this guild."
+msgstr "Lista todos los paneles de roles con botones configurados en este servidor."
+
+#: locales/command_strings.py:55
+msgid "List the available prefixes for your guild."
+msgstr "Lista los prefijos disponibles para tu servidor."
+
+#: locales/command_strings.py:56
+msgid "List the configured autoroom hubs in this server."
+msgstr "Lista los hubs de autosalas configurados en este servidor."
+
+#: locales/command_strings.py:57
+msgid "Look up a Minecraft account and render its skin."
+msgstr "Busca una cuenta de Minecraft y renderiza su skin."
+
+#: locales/command_strings.py:58
+msgid "Look up a character on AniList."
+msgstr "Busca un personaje en AniList."
+
+#: locales/command_strings.py:59
+msgid "Look up a manga on AniList."
+msgstr "Busca un manga en AniList."
+
+#: locales/command_strings.py:60
+msgid "Look up an animation studio on AniList."
+msgstr "Busca un estudio de animacion en AniList."
+
+#: locales/command_strings.py:61
+msgid "Look up an anime on AniList."
+msgstr "Busca un anime en AniList."
+
+#: locales/command_strings.py:62
+msgid "Look up an osu! player's stats."
+msgstr "Busca las estadísticas de un jugador de osu!."
+
+#: locales/command_strings.py:63
+msgid "Map an emoji on a message to a role."
+msgstr "Vincula un emoji de un mensaje a un rol."
+
+#: locales/command_strings.py:64
+msgid "Move a role to the given position in the hierarchy."
+msgstr "Mueve un rol a la posición indicada en la jerarquía."
+
+#: locales/command_strings.py:65
+msgid "Moves an annoying user to a channel."
+msgstr "Mueve a un usuario molesto a un canal."
+
+#: locales/command_strings.py:66
+msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
+msgstr "Encuesta de opción múltiple: quickpoll pregunta | opción 1 | opción 2 ... (sin argumentos abre un formulario)."
+
+#: locales/command_strings.py:67
+msgid "Mutes the specified member."
+msgstr "Silencia al miembro especificado."
+
+#: locales/command_strings.py:68
+msgid "One of: track, all, off."
+msgstr "Uno de: track, all, off."
+
+#: locales/command_strings.py:69
+msgid "Open the Twitch live-alert builder."
+msgstr "Abre el creador de alertas en directo de Twitch."
+
+#: locales/command_strings.py:70
+msgid "Open the announcement builder."
+msgstr "Abre el creador de anuncios."
+
+#: locales/command_strings.py:71
+msgid "Open the autoroom hub setup panel."
+msgstr "Abre el panel de configuración de hubs de autosalas."
+
+#: locales/command_strings.py:72
+msgid "Open the custom-commands builder."
+msgstr "Abre el creador de comandos personalizados."
+
+#: locales/command_strings.py:73
+msgid "Open the interactive AutoMod control panel."
+msgstr "Abre el panel de control interactivo de AutoMod."
+
+#: locales/command_strings.py:74
+msgid "Open the interactive button-role builder."
+msgstr "Abre el creador interactivo de roles con botones."
+
+#: locales/command_strings.py:75
+msgid "Open the interactive server-settings panel (also: setup)."
+msgstr "Abre el panel interactivo de configuración del servidor (también: setup)."
+
+#: locales/command_strings.py:76
+msgid "Open the moderation-log control panel."
+msgstr "Abre el panel de control del registro de moderación."
+
+#: locales/command_strings.py:77
+msgid "Open the self-role menu builder."
+msgstr "Abre el creador del menú de roles."
+
+#: locales/command_strings.py:78
+msgid "Open the welcome control panel."
+msgstr "Abre el panel de control de bienvenida."
+
+#: locales/command_strings.py:79
+msgid "Open your personal settings panel."
+msgstr "Abre tu panel de configuración personal."
+
+#: locales/command_strings.py:80
+msgid "Paginated moderation case history (optionally filtered to a member)."
+msgstr "Historial paginado de casos de moderación (opcionalmente filtrado por miembro)."
+
+#: locales/command_strings.py:81
+msgid "Pause the current track."
+msgstr "Pausa la pista actual."
+
+#: locales/command_strings.py:82
+msgid "Pick the language for the bot's replies to you."
+msgstr "Elige el idioma en el que el bot te responderá."
+
+#: locales/command_strings.py:83
+msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
+msgstr "Juega una partida de tres en raya contra el bot. Tú eres X."
+
+#: locales/command_strings.py:84
+msgid "Play a track or playlist, or add it to the queue."
+msgstr "Reproduce una pista o lista de reproducción, o añádela a la cola."
+
+#: locales/command_strings.py:85
+msgid "Prefix related commands."
+msgstr "Comandos relacionados con el prefijo."
+
+#: locales/command_strings.py:86
+msgid "Purges messages. Requires manage messages permission"
+msgstr "Elimina mensajes en masa. Requiere el permiso de gestionar mensajes"
+
+#: locales/command_strings.py:87
+msgid "Queue every track in your favourites and start playing."
+msgstr "Encola todas las pistas de tus favoritos y empieza a reproducir."
+
+#: locales/command_strings.py:88
+msgid "Reaction-role related commands."
+msgstr "Comandos relacionados con roles por reacción."
+
+#: locales/command_strings.py:89
+msgid "Reloads a single extension, or all configured extensions."
+msgstr "Recarga una sola extensión, o todas las extensiones configuradas."
+
+#: locales/command_strings.py:90
+msgid "Reminds you of something after a certain amount of time."
+msgstr "Te recuerda algo después de un tiempo determinado."
+
+#: locales/command_strings.py:91
+msgid "Remove a member from the live-alert watchlist."
+msgstr "Elimina a un miembro de la lista de alertas en directo."
+
+#: locales/command_strings.py:92
+msgid "Remove a role to a specified member."
+msgstr "Elimina un rol a un miembro especificado."
+
+#: locales/command_strings.py:93
+msgid "Remove a user from the bot-wide blacklist."
+msgstr "Elimina a un usuario de la lista negra global del bot."
+
+#: locales/command_strings.py:94
+msgid "Remove a warn from a member of the guild."
+msgstr "Elimina una advertencia de un miembro del servidor."
+
+#: locales/command_strings.py:95
+msgid "Remove an emoji-to-role mapping from a message."
+msgstr "Elimina un vínculo de emoji a rol de un mensaje."
+
+#: locales/command_strings.py:96
+msgid "Remove auto role from your guild."
+msgstr "Elimina el rol automático de tu servidor."
+
+#: locales/command_strings.py:97
+msgid "Remove the favourite at the given position in your list."
+msgstr "Elimina el favorito en la posición indicada de tu lista."
+
+#: locales/command_strings.py:98
+msgid "Resume the player if it is paused."
+msgstr "Reanuda el reproductor si está pausado."
+
+#: locales/command_strings.py:99
+msgid "Save the current track, or a searched track, to your favourites."
+msgstr "Guarda la pista actual, o una pista buscada, en tus favoritos."
+
+#: locales/command_strings.py:100
 msgid "Score a title on your AniList list."
 msgstr "Puntua un titulo en tu lista de AniList."
 
-#: locales/command_strings.py:175
+#: locales/command_strings.py:101
+msgid "Search Wikipedia for a short summary of a topic."
+msgstr "Busca en Wikipedia un breve resumen de un tema."
+
+#: locales/command_strings.py:102
+msgid "Set a role to a specified member."
+msgstr "Asigna un rol a un miembro específico."
+
+#: locales/command_strings.py:103
+msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
+msgstr "Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, steam)."
+
+#: locales/command_strings.py:104
+msgid "Set the channel where moderation logs are sent."
+msgstr "Establece el canal donde se envían los registros de moderación."
+
+#: locales/command_strings.py:105
+msgid "Set the loop mode for the queue."
+msgstr "Establece el modo de repetición de la cola."
+
+#: locales/command_strings.py:106
+msgid "Set the player volume (0-200)."
+msgstr "Ajusta el volumen del reproductor (0-200)."
+
+#: locales/command_strings.py:107
+msgid "Set the server's default language (used when a member has not picked one)."
+msgstr "Establece el idioma predeterminado del servidor (se usa cuando un miembro no ha elegido uno)."
+
+#: locales/command_strings.py:108
+msgid "Set the starboard channel and the star threshold."
+msgstr "Establece el canal de destacados y el umbral de estrellas."
+
+#: locales/command_strings.py:109
+msgid "Set the status of a title on your list."
+msgstr "Establece el estado de un titulo en tu lista."
+
+#: locales/command_strings.py:110
+msgid "Set the welcome channel and message (a simple fallback)."
+msgstr "Establece el canal y el mensaje de bienvenida (una alternativa sencilla)."
+
+#: locales/command_strings.py:111
+msgid "Set your AFK status, with an optional message."
+msgstr "Configura tu estado AFK, con un mensaje opcional."
+
+#: locales/command_strings.py:112
 msgid "Show AniList stats for a user (defaults to your linked account)."
 msgstr "Muestra las estadisticas de AniList de un usuario (por defecto, tu cuenta vinculada)."
 
-#: locales/command_strings.py:176
+#: locales/command_strings.py:113
+msgid "Show a collage of a user's avatar / server avatar / banner history."
+msgstr "Muestra un collage del historial de avatar / avatar de servidor / banner de un usuario."
+
+#: locales/command_strings.py:114
+msgid "Show a single moderation case by its number."
+msgstr "Muestra un caso de moderación específico por su número."
+
+#: locales/command_strings.py:115
+msgid "Show every member on the live-alert watchlist."
+msgstr "Muestra todos los miembros en la lista de seguimiento de alertas en directo."
+
+#: locales/command_strings.py:116
+msgid "Show how many warns a member currently has."
+msgstr "Muestra cuántas advertencias tiene actualmente un miembro."
+
+#: locales/command_strings.py:117
+msgid "Show the current auto-mod settings for this guild."
+msgstr "Muestra la configuración actual de auto-moderación de este servidor."
+
+#: locales/command_strings.py:118
+msgid "Show the currently playing track and the next tracks in the queue."
+msgstr "Muestra la pista que se está reproduciendo y las siguientes en la cola."
+
+#: locales/command_strings.py:119
+msgid "Show the interactive now-playing controller."
+msgstr "Muestra el controlador interactivo de reproducción actual."
+
+#: locales/command_strings.py:120
+msgid "Show the last deleted message in this channel."
+msgstr "Muestra el último mensaje eliminado en este canal."
+
+#: locales/command_strings.py:121
+msgid "Show the most-starred messages in this guild."
+msgstr "Muestra los mensajes con más estrellas de este servidor."
+
+#: locales/command_strings.py:122
 msgid "Show your anime/manga list, filtered by status (defaults to CURRENT)."
 msgstr "Muestra tu lista de anime/manga, filtrada por estado (por defecto ACTUAL)."
+
+#: locales/command_strings.py:123
+msgid "Show your saved favourite tracks, or another member's."
+msgstr "Muestra tus pistas favoritas guardadas, o las de otro miembro."
+
+#: locales/command_strings.py:124
+msgid "Shows Astronomy Picture of the Day."
+msgstr "Muestra la foto astronómica del día."
+
+#: locales/command_strings.py:125
+msgid "Shows the bot's websocket latency."
+msgstr "Muestra la latencia websocket del bot."
+
+#: locales/command_strings.py:126
+msgid "Shows the current weather for a given city."
+msgstr "Muestra el clima actual de una ciudad indicada."
+
+#: locales/command_strings.py:127
+msgid "Shows the ranked members of the guild."
+msgstr "Muestra los miembros clasificados del servidor."
+
+#: locales/command_strings.py:128
+msgid "Shows your level and XP rank card, or another member's."
+msgstr "Muestra tu tarjeta de nivel y rango de XP, o la de otro miembro."
+
+#: locales/command_strings.py:129
+msgid "Shuffle the upcoming tracks in the queue."
+msgstr "Mezcla las próximas pistas de la cola."
+
+#: locales/command_strings.py:130
+msgid "Simulate a join for yourself to preview the welcome."
+msgstr "Simula tu propia entrada para previsualizar la bienvenida."
+
+#: locales/command_strings.py:131
+msgid "Skip the current track and play the next one."
+msgstr "Salta la pista actual y reproduce la siguiente."
+
+#: locales/command_strings.py:132
+msgid "Starboard related commands."
+msgstr "Comandos relacionados con el starboard."
+
+#: locales/command_strings.py:133
+msgid "Start linking your AniList account."
+msgstr "Comienza a vincular tu cuenta de AniList."
+
+#: locales/command_strings.py:134
+msgid "Stop playback and clear the queue (stays connected)."
+msgstr "Detiene la reproducción y vacía la cola (permanece conectada)."
+
+#: locales/command_strings.py:135
+msgid "Tells you the newest members of the server."
+msgstr "Te indica los miembros más nuevos del servidor."
+
+#: locales/command_strings.py:136
+msgid "Temporarily bans a member for the given duration."
+msgstr "Banea temporalmente a un miembro durante la duración indicada."
+
+#: locales/command_strings.py:137
+msgid "The 1-based position of the favourite to remove."
+msgstr "La posición (empezando en 1) del favorito a eliminar."
+
+#: locales/command_strings.py:138
+msgid "Translate text to English (auto-detect source language)."
+msgstr "Traduce texto al inglés (detecta automáticamente el idioma de origen)."
+
+#: locales/command_strings.py:139
+msgid "Un-mutes the specified member."
+msgstr "Quita el silencio al miembro especificado."
+
+#: locales/command_strings.py:140
+msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
+msgstr "Desbanea a un usuario. Requiere el permiso de banear miembros. El bot también debe tener este permiso."
+
+#: locales/command_strings.py:141
+msgid "Unlink your AniList account."
+msgstr "Desvincula tu cuenta de AniList."
+
+#: locales/command_strings.py:142
+msgid "Update the amount of stars needed to reach the starboard."
+msgstr "Actualiza la cantidad de estrellas necesarias para llegar al starboard."
+
+#: locales/command_strings.py:143
+msgid "Update the reason recorded on an existing case."
+msgstr "Actualiza el motivo registrado en un caso existente."
+
+#: locales/command_strings.py:144
+msgid "View a member's gaming profile."
+msgstr "Consulta el perfil de videojuegos de un miembro."
+
+#: locales/command_strings.py:145
+msgid "Volume level between 0 and 200 (100 is default)."
+msgstr "Nivel de volumen entre 0 y 200 (100 por defecto)."
+
+#: locales/command_strings.py:146
+msgid "Warn a member of the guild (auto-kick at 3 warns)"
+msgstr "Advierte a un miembro del servidor (expulsión automática a las 3 advertencias)"
+
+#: locales/command_strings.py:147
+msgid "Whose favourites to show (defaults to you)."
+msgstr "De quién mostrar los favoritos (por defecto, los tuyos)."
+
+#: locales/command_strings.py:148
+msgid "all"
+msgstr "cola"
+
+#: locales/command_strings.py:150
+msgid "track"
+msgstr "pista"
 
 #: tools/arg_completion.py:214
 msgid "Fill in"
