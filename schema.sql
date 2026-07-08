@@ -279,3 +279,29 @@ CREATE INDEX IF NOT EXISTS levels_guild_xp_idx ON levels (guild_id, xp DESC);
 CREATE INDEX IF NOT EXISTS auto_room_guild_idx ON auto_room (guild_id);
 CREATE INDEX IF NOT EXISTS reaction_roles_guild_idx ON reaction_roles (guild_id);
 CREATE INDEX IF NOT EXISTS starboard_entries_guild_idx ON starboard_entries (guild_id);
+
+-- Per-guild custom (canned) commands invoked by the guild prefix. The response
+-- is a JSONB blob: {"type":"text","content":"..."} or
+-- {"type":"embed","embed":{...}} (an embed_creator blob).  cogs/config/customcommands.py
+CREATE TABLE IF NOT EXISTS custom_commands (
+    guild_id   BIGINT      NOT NULL,
+    name       TEXT        NOT NULL,             -- lowercase, one token
+    response   JSONB       NOT NULL,
+    created_by BIGINT,
+    uses       BIGINT      NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, name)
+);
+
+-- Self-assignable role menus (Components V2). One row per posted menu message;
+-- config is a JSONB blob holding the menu kind (buttons/select), its options
+-- (role_id/label/emoji/description) and its rules (min/max, exclusive).
+-- cogs/config/rolemenus.py
+CREATE TABLE IF NOT EXISTS role_menus (
+    message_id BIGINT      PRIMARY KEY,
+    guild_id   BIGINT      NOT NULL,
+    channel_id BIGINT      NOT NULL,
+    config     JSONB       NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS role_menus_guild_idx ON role_menus (guild_id);

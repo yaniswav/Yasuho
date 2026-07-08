@@ -61,6 +61,16 @@ class Errors(commands.Cog):
             return
 
         if isinstance(error, commands.CommandNotFound):
+            # A per-guild custom command may claim this name; if it does, it
+            # replies and we stop (no "did you mean" for a real custom command).
+            cc_cog = self.bot.get_cog("CustomCommands")
+            if cc_cog is not None:
+                try:
+                    if await cc_cog.handle_unknown(ctx):
+                        return
+                except Exception:
+                    log.exception("Custom command dispatch failed")
+
             try:
                 suggestions = (
                     " | ".join(
