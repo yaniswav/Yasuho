@@ -39,3 +39,5 @@ Thumbs.db
 .mcp.json
 # Local Claude Code guidance only - never committed/shared
 CLAUDE.md
+# Local Claude Code skills / config (workflow tooling, not bot code)
+.claude/
