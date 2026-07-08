@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-01 19:51+0200\n"
+"POT-Creation-Date: 2026-07-08 06:39+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -127,7 +127,7 @@ msgstr ""
 #: cogs/anilist/account.py:392 cogs/anilist/lookup.py:113
 #: cogs/config/settings.py:52 cogs/config/settings.py:176
 #: cogs/config/settings.py:188 cogs/config/settings.py:205
-#: cogs/config/settings.py:216 cogs/system/help.py:399 cogs/utility/info.py:34
+#: cogs/config/settings.py:216 cogs/system/help.py:409 cogs/utility/info.py:34
 #: cogs/utility/info.py:116
 msgid "Unknown"
 msgstr ""
@@ -336,6 +336,7 @@ msgid "No matching titles of that type."
 msgstr ""
 
 #: cogs/anilist/components.py:403 cogs/anilist/components.py:407
+#: cogs/config/announcements.py:236 cogs/config/rolemenus.py:353
 #: cogs/config/welcome.py:98 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:484
 msgid "Something went wrong."
@@ -626,16 +627,20 @@ msgstr ""
 msgid "Your language is now **{lang}**."
 msgstr ""
 
-#: cogs/community/language.py:108
+#: cogs/community/language.py:86
+msgid "Sorry, I couldn't change your language."
+msgstr ""
+
+#: cogs/community/language.py:111
 msgid "Pick your language:"
 msgstr ""
 
-#: cogs/community/language.py:119
+#: cogs/community/language.py:122
 #, python-brace-format
 msgid "Unknown language. Available: {options}"
 msgstr ""
 
-#: cogs/community/language.py:123
+#: cogs/community/language.py:126
 #, python-brace-format
 msgid "Server default language set to **{lang}**."
 msgstr ""
@@ -652,42 +657,42 @@ msgstr ""
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr ""
 
-#: cogs/community/leveling.py:139
+#: cogs/community/leveling.py:137
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr ""
 
-#: cogs/community/leveling.py:314
+#: cogs/community/leveling.py:312
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr ""
 
-#: cogs/community/leveling.py:318 cogs/utility/searchweb.py:154
+#: cogs/community/leveling.py:316 cogs/utility/searchweb.py:180
 msgid "Rank"
 msgstr ""
 
-#: cogs/community/leveling.py:319 cogs/utility/searchweb.py:157
+#: cogs/community/leveling.py:317 cogs/utility/searchweb.py:183
 msgid "Level"
 msgstr ""
 
-#: cogs/community/leveling.py:320
+#: cogs/community/leveling.py:318
 msgid "XP"
 msgstr ""
 
-#: cogs/community/leveling.py:322
+#: cogs/community/leveling.py:320
 msgid "XP for next level"
 msgstr ""
 
-#: cogs/community/leveling.py:344 cogs/community/leveling.py:370
+#: cogs/community/leveling.py:342 cogs/community/leveling.py:368
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr ""
 
-#: cogs/community/leveling.py:345
+#: cogs/community/leveling.py:343
 msgid "No one has earned any XP yet!"
 msgstr ""
 
-#: cogs/community/leveling.py:355
+#: cogs/community/leveling.py:353
 #, python-brace-format
 msgid "User {uid}"
 msgstr ""
@@ -783,53 +788,68 @@ msgstr ""
 msgid "Your profile has been cleared."
 msgstr ""
 
-#: cogs/community/reminders.py:34 cogs/community/reminders.py:116
+#: cogs/community/reminders.py:38 cogs/community/reminders.py:132
 msgid "Set a reminder"
 msgstr ""
 
-#: cogs/community/reminders.py:40
+#: cogs/community/reminders.py:44
 msgid "When"
 msgstr ""
 
-#: cogs/community/reminders.py:41
+#: cogs/community/reminders.py:45
 msgid "e.g. 10m, tomorrow at 6pm, in 3 days"
 msgstr ""
 
-#: cogs/community/reminders.py:49 cogs/config/reactionroles.py:205
-#: cogs/config/reactionroles.py:293 cogs/config/twitch.py:35
+#: cogs/community/reminders.py:53 cogs/config/reactionroles.py:182
+#: cogs/config/reactionroles.py:274 cogs/config/twitch.py:35
 #: cogs/config/twitch.py:438 cogs/config/welcome.py:653
 msgid "Message"
 msgstr ""
 
-#: cogs/community/reminders.py:50
+#: cogs/community/reminders.py:54
 msgid "What should I remind you about?"
 msgstr ""
 
-#: cogs/community/reminders.py:74
+#: cogs/community/reminders.py:78
 msgid ""
 "I couldn't understand that time. Try something like `10m`, `tomorrow at "
 "6pm`, or `in 3 days`."
 msgstr ""
 
-#: cogs/community/reminders.py:82
+#: cogs/community/reminders.py:86
 msgid "That time is in the past. Give me a moment in the future."
 msgstr ""
 
-#: cogs/community/reminders.py:94 cogs/community/reminders.py:254
+#: cogs/community/reminders.py:96 cogs/community/reminders.py:276
+#, python-brace-format
+msgid ""
+"You already have {count} reminders pending - wait for some to fire before"
+" adding more."
+msgstr ""
+
+#: cogs/community/reminders.py:110 cogs/community/reminders.py:289
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr ""
 
-#: cogs/community/reminders.py:207
+#: cogs/community/reminders.py:234
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr ""
 
-#: cogs/community/reminders.py:242
+#: cogs/community/reminders.py:269
 msgid "Tap the button below to set a reminder."
 msgstr ""
 
-#: cogs/community/reminders.py:280
+#: cogs/community/reminders.py:316
+msgid "I don't have permission to ban that member."
+msgstr ""
+
+#: cogs/community/reminders.py:319
+msgid "Sorry, I couldn't ban that member."
+msgstr ""
+
+#: cogs/community/reminders.py:327
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr ""
@@ -858,7 +878,7 @@ msgstr ""
 msgid "Turn on"
 msgstr ""
 
-#: cogs/community/usersettings.py:99 cogs/config/rooms.py:1049
+#: cogs/community/usersettings.py:99 cogs/config/rooms.py:1062
 #: tools/views.py:22
 msgid "This panel isn't for you."
 msgstr ""
@@ -896,222 +916,310 @@ msgstr ""
 msgid "Something went wrong updating that setting."
 msgstr ""
 
-#: cogs/config/buttonroles.py:129
+#: cogs/config/announcements.py:66
+msgid "Target channel..."
+msgstr ""
+
+#: cogs/config/announcements.py:94
+msgid "Ping a role (optional)..."
+msgstr ""
+
+#: cogs/config/announcements.py:113 cogs/config/twitch.py:292
+#: cogs/config/welcome.py:185
+msgid "Preview"
+msgstr ""
+
+#: cogs/config/announcements.py:120 cogs/config/announcements.py:254
+#: cogs/config/customcommands.py:208
+msgid "Add some content to the embed first."
+msgstr ""
+
+#: cogs/config/announcements.py:126 cogs/config/twitch.py:302
+#: cogs/config/welcome.py:195
+msgid "Could not render the preview."
+msgstr ""
+
+#: cogs/config/announcements.py:133
+msgid "Send"
+msgstr ""
+
+#: cogs/config/announcements.py:141
+msgid "Could not send the announcement."
+msgstr ""
+
+#: cogs/config/announcements.py:166
+msgid "Edit the announcement embed..."
+msgstr ""
+
+#: cogs/config/announcements.py:172 cogs/config/customcommands.py:173
+#: cogs/config/twitch.py:264
+msgid "Placeholders"
+msgstr ""
+
+#: cogs/config/announcements.py:196
+msgid "Announcement builder"
+msgstr ""
+
+#: cogs/config/announcements.py:198
+msgid ""
+"Compose the embed with the menu, pick a channel (and optionally a role to"
+" ping), then **Send**. Preview shows it only to you."
+msgstr ""
+
+#: cogs/config/announcements.py:206 cogs/config/rolemenus.py:323
+#: cogs/config/starboard.py:180 cogs/config/twitch.py:426
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:651
+#: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
+msgid "Channel"
+msgstr ""
+
+#: cogs/config/announcements.py:207 cogs/config/buttonroles.py:433
+#: cogs/config/rolemenus.py:324 cogs/config/twitch.py:413
+#: cogs/config/welcome.py:414
+msgid "*Not set.*"
+msgstr ""
+
+#: cogs/config/announcements.py:211 cogs/config/welcome.py:376
+#: cogs/config/welcome.py:442
+msgid "Ping"
+msgstr ""
+
+#: cogs/config/announcements.py:212 cogs/moderation/automod.py:241
+#: cogs/moderation/automod.py:248
+msgid "None"
+msgstr ""
+
+#: cogs/config/announcements.py:216 cogs/config/buttonroles.py:424
+#: cogs/config/twitch.py:429 cogs/config/twitch.py:449
+#: cogs/config/welcome.py:448
+msgid "Embed"
+msgstr ""
+
+#: cogs/config/announcements.py:221
+#, python-brace-format
+msgid "Only you can use this. Placeholders: {placeholders}"
+msgstr ""
+
+#: cogs/config/announcements.py:243
+msgid "Pick a target channel first."
+msgstr ""
+
+#: cogs/config/announcements.py:247 cogs/config/buttonroles.py:573
+#: cogs/config/rolemenus.py:372
+#, python-brace-format
+msgid "I can't send messages in {channel}."
+msgstr ""
+
+#: cogs/config/announcements.py:270
+msgid "Sending failed, please try again."
+msgstr ""
+
+#: cogs/config/announcements.py:281
+#, python-brace-format
+msgid "Announcement sent to {channel}."
+msgstr ""
+
+#: cogs/config/buttonroles.py:105
 msgid "Roles can only be toggled inside a server."
 msgstr ""
 
-#: cogs/config/buttonroles.py:136
+#: cogs/config/buttonroles.py:112
 msgid "That role no longer exists."
 msgstr ""
 
-#: cogs/config/buttonroles.py:145
+#: cogs/config/buttonroles.py:121
 #, python-brace-format
 msgid "Removed {role} from you."
 msgstr ""
 
-#: cogs/config/buttonroles.py:152
+#: cogs/config/buttonroles.py:128
 #, python-brace-format
 msgid "Gave you {role}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:159
+#: cogs/config/buttonroles.py:135
 msgid ""
 "I don't have permission to manage that role. It may be above my highest "
 "role."
 msgstr ""
 
-#: cogs/config/buttonroles.py:167
+#: cogs/config/buttonroles.py:143
 msgid "Something went wrong toggling that role."
 msgstr ""
 
-#: cogs/config/buttonroles.py:201
+#: cogs/config/buttonroles.py:177
 msgid "Add a role as a button..."
 msgstr ""
 
-#: cogs/config/buttonroles.py:218
+#: cogs/config/buttonroles.py:194
 msgid "Channel to post the panel in..."
 msgstr ""
 
-#: cogs/config/buttonroles.py:239 cogs/config/reactionroles.py:76
-#: cogs/config/reactionroles.py:207
+#: cogs/config/buttonroles.py:215 cogs/config/reactionroles.py:53
+#: cogs/config/reactionroles.py:184
 msgid "Role"
 msgstr ""
 
-#: cogs/config/buttonroles.py:245
+#: cogs/config/buttonroles.py:221
 msgid "Remove a role button..."
 msgstr ""
 
-#: cogs/config/buttonroles.py:268
+#: cogs/config/buttonroles.py:244
 msgid "Add role button"
 msgstr ""
 
-#: cogs/config/buttonroles.py:272
+#: cogs/config/buttonroles.py:248
 msgid "Button label"
 msgstr ""
 
-#: cogs/config/buttonroles.py:278
+#: cogs/config/buttonroles.py:254
 msgid "Emoji (optional)"
 msgstr ""
 
-#: cogs/config/buttonroles.py:281
+#: cogs/config/buttonroles.py:257
 msgid "Paste an emoji, or leave blank"
 msgstr ""
 
-#: cogs/config/buttonroles.py:284 cogs/config/twitch.py:428
+#: cogs/config/buttonroles.py:260 cogs/config/twitch.py:428
 msgid "Style"
 msgstr ""
 
-#: cogs/config/buttonroles.py:299
+#: cogs/config/buttonroles.py:275
 #, python-brace-format
 msgid "A panel can have at most {max} buttons."
 msgstr ""
 
-#: cogs/config/buttonroles.py:307 cogs/config/buttonroles.py:496
+#: cogs/config/buttonroles.py:283 cogs/config/buttonroles.py:472
 #, python-brace-format
 msgid "{role} already has a button on this panel."
 msgstr ""
 
-#: cogs/config/buttonroles.py:332
+#: cogs/config/buttonroles.py:308
 msgid "Attach to a message"
 msgstr ""
 
-#: cogs/config/buttonroles.py:335 cogs/config/reactionroles.py:58
+#: cogs/config/buttonroles.py:311 cogs/config/reactionroles.py:35
 msgid "Message ID or link"
 msgstr ""
 
-#: cogs/config/buttonroles.py:419
+#: cogs/config/buttonroles.py:395
 msgid "Button role builder"
 msgstr ""
 
-#: cogs/config/buttonroles.py:421
+#: cogs/config/buttonroles.py:397
 msgid ""
 "Design the panel below. Edit the embed, add role buttons, then **Post "
 "panel** to a channel or **Attach to message** to drop the buttons onto a "
 "message I already sent. Every change is kept until you post."
 msgstr ""
 
-#: cogs/config/buttonroles.py:440
+#: cogs/config/buttonroles.py:416
 msgid "*No buttons yet. Pick a role below to add one.*"
 msgstr ""
 
-#: cogs/config/buttonroles.py:442
+#: cogs/config/buttonroles.py:418
 #, python-brace-format
 msgid "Buttons ({count})"
 msgstr ""
 
-#: cogs/config/buttonroles.py:448 cogs/config/twitch.py:429
-#: cogs/config/twitch.py:449 cogs/config/welcome.py:448
-msgid "Embed"
-msgstr ""
-
-#: cogs/config/buttonroles.py:453
+#: cogs/config/buttonroles.py:429
 msgid "Post target"
 msgstr ""
 
-#: cogs/config/buttonroles.py:457 cogs/config/twitch.py:413
-#: cogs/config/welcome.py:414
-msgid "*Not set.*"
-msgstr ""
-
-#: cogs/config/buttonroles.py:461 cogs/moderation/modlog.py:167
+#: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
 msgid "Only you can use these controls."
 msgstr ""
 
-#: cogs/config/buttonroles.py:469
+#: cogs/config/buttonroles.py:445
 msgid "Self-assignable roles"
 msgstr ""
 
-#: cogs/config/buttonroles.py:472
+#: cogs/config/buttonroles.py:448
 msgid ""
 "Click a button below to give yourself a role, or click it again to remove"
 " it:"
 msgstr ""
 
-#: cogs/config/buttonroles.py:488
+#: cogs/config/buttonroles.py:464
 msgid ""
 "I can't assign that role - it's either managed by an integration or above"
 " my highest role."
 msgstr ""
 
-#: cogs/config/buttonroles.py:530 cogs/config/buttonroles.py:634
+#: cogs/config/buttonroles.py:506 cogs/config/buttonroles.py:610
 msgid "Add at least one assignable role button before attaching."
 msgstr ""
 
-#: cogs/config/buttonroles.py:553
+#: cogs/config/buttonroles.py:529
 msgid "Cancelled"
 msgstr ""
 
-#: cogs/config/buttonroles.py:554
+#: cogs/config/buttonroles.py:530
 msgid "Panel building was cancelled."
 msgstr ""
 
-#: cogs/config/buttonroles.py:569
+#: cogs/config/buttonroles.py:545
 msgid "Add at least one role button before posting."
 msgstr ""
 
-#: cogs/config/buttonroles.py:575
+#: cogs/config/buttonroles.py:551
 msgid ""
 "None of those roles can be assigned by me - they're either managed by an "
 "integration or above my highest role."
 msgstr ""
 
-#: cogs/config/buttonroles.py:586
+#: cogs/config/buttonroles.py:562
 msgid "Pick a valid text channel to post the panel in."
 msgstr ""
 
-#: cogs/config/buttonroles.py:597
-#, python-brace-format
-msgid "I can't send messages in {channel}."
-msgstr ""
-
-#: cogs/config/buttonroles.py:606
+#: cogs/config/buttonroles.py:582
 msgid "Something went wrong posting the panel."
 msgstr ""
 
-#: cogs/config/buttonroles.py:614
+#: cogs/config/buttonroles.py:590
 msgid "Panel posted"
 msgstr ""
 
-#: cogs/config/buttonroles.py:615
+#: cogs/config/buttonroles.py:591
 #, python-brace-format
 msgid "Your button-role panel is live in {channel}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:622
+#: cogs/config/buttonroles.py:598
 msgid "Skipped"
 msgstr ""
 
-#: cogs/config/buttonroles.py:623
+#: cogs/config/buttonroles.py:599
 #, python-brace-format
 msgid "{count} role(s) I can't assign were left off."
 msgstr ""
 
-#: cogs/config/buttonroles.py:642 cogs/config/reactionroles.py:96
+#: cogs/config/buttonroles.py:618 cogs/config/reactionroles.py:73
 msgid "That doesn't look like a message ID or a Discord message link."
 msgstr ""
 
-#: cogs/config/buttonroles.py:649 cogs/config/reactionroles.py:103
+#: cogs/config/buttonroles.py:625 cogs/config/reactionroles.py:80
 msgid "That message link points to a different server."
 msgstr ""
 
-#: cogs/config/buttonroles.py:657 cogs/config/reactionroles.py:111
+#: cogs/config/buttonroles.py:633 cogs/config/reactionroles.py:88
 msgid "I can't find that channel in this server."
 msgstr ""
 
-#: cogs/config/buttonroles.py:665
+#: cogs/config/buttonroles.py:641
 msgid "I couldn't find a message with that ID in that channel."
 msgstr ""
 
-#: cogs/config/buttonroles.py:671
+#: cogs/config/buttonroles.py:647
 #, python-brace-format
 msgid "I can't read messages in {channel}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:680
+#: cogs/config/buttonroles.py:656
 msgid "Something went wrong fetching that message."
 msgstr ""
 
-#: cogs/config/buttonroles.py:688
+#: cogs/config/buttonroles.py:664
 msgid ""
 "I can only add role buttons to a message I posted myself - Discord won't "
 "let a bot edit buttons onto someone else's message. Use **Post panel** to"
@@ -1119,101 +1227,385 @@ msgid ""
 "buttons there)."
 msgstr ""
 
-#: cogs/config/buttonroles.py:708
+#: cogs/config/buttonroles.py:684
 msgid "I'm not allowed to edit that message."
 msgstr ""
 
-#: cogs/config/buttonroles.py:714
+#: cogs/config/buttonroles.py:690
 msgid "Something went wrong attaching the buttons."
 msgstr ""
 
-#: cogs/config/buttonroles.py:721
+#: cogs/config/buttonroles.py:697
 msgid "Buttons attached"
 msgstr ""
 
-#: cogs/config/buttonroles.py:723
+#: cogs/config/buttonroles.py:699
 #, python-brace-format
 msgid "Added the role button(s) to [that message]({link}) in {channel}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:884 cogs/config/buttonroles.py:906
+#: cogs/config/buttonroles.py:860 cogs/config/buttonroles.py:882
 msgid "Button roles"
 msgstr ""
 
-#: cogs/config/buttonroles.py:886
+#: cogs/config/buttonroles.py:862
 msgid "No button-role panels have been set up for this guild."
 msgstr ""
 
-#: cogs/config/buttonroles.py:918 cogs/config/reactionroles.py:254
-#: cogs/config/reactionroles.py:275
+#: cogs/config/buttonroles.py:894 cogs/config/reactionroles.py:231
+#: cogs/config/reactionroles.py:252
 msgid "That doesn't look like a valid message ID."
 msgstr ""
 
-#: cogs/config/buttonroles.py:929
+#: cogs/config/buttonroles.py:905
 msgid "No button-role panel found with that message ID."
 msgstr ""
 
-#: cogs/config/buttonroles.py:943
+#: cogs/config/buttonroles.py:919
 msgid "Button-role panel deleted"
 msgstr ""
 
-#: cogs/config/buttonroles.py:945
+#: cogs/config/buttonroles.py:921
 #, python-brace-format
 msgid "Removed `{count}` role button(s) for message `{mid}`."
 msgstr ""
 
-#: cogs/config/reactionroles.py:52
+#: cogs/config/customcommands.py:37
+msgid "The command name can't be empty."
+msgstr ""
+
+#: cogs/config/customcommands.py:38
+#, python-brace-format
+msgid "The name is too long (max {n} characters)."
+msgstr ""
+
+#: cogs/config/customcommands.py:42
+msgid "Use only lowercase letters, digits, - and _ (no spaces)."
+msgstr ""
+
+#: cogs/config/customcommands.py:44
+msgid "That name is already one of my built-in commands."
+msgstr ""
+
+#: cogs/config/customcommands.py:45
+msgid "This server already has a custom command with that name."
+msgstr ""
+
+#: cogs/config/customcommands.py:73
+msgid "New text command"
+msgstr ""
+
+#: cogs/config/customcommands.py:76 cogs/config/customcommands.py:116
+msgid "Command name"
+msgstr ""
+
+#: cogs/config/customcommands.py:77
+msgid "e.g. rules (no prefix, no spaces)"
+msgstr ""
+
+#: cogs/config/customcommands.py:82
+msgid "Response text"
+msgstr ""
+
+#: cogs/config/customcommands.py:113
+msgid "New embed command"
+msgstr ""
+
+#: cogs/config/customcommands.py:117
+msgid "e.g. welcome (no prefix, no spaces)"
+msgstr ""
+
+#: cogs/config/customcommands.py:146
+msgid "Save command"
+msgstr ""
+
+#: cogs/config/customcommands.py:168
+msgid "Edit the response embed..."
+msgstr ""
+
+#: cogs/config/customcommands.py:190
+#, python-brace-format
+msgid "Embed command: {name}"
+msgstr ""
+
+#: cogs/config/customcommands.py:192
+#, python-brace-format
+msgid ""
+"Design the embed this command will reply with, then **Save**. "
+"Placeholders: {placeholders}"
+msgstr ""
+
+#: cogs/config/customcommands.py:198
+msgid "Preview summary"
+msgstr ""
+
+#: cogs/config/customcommands.py:224
+#, python-brace-format
+msgid "Saved the `{name}` command."
+msgstr ""
+
+#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+msgid "embed"
+msgstr ""
+
+#: cogs/config/customcommands.py:240 cogs/config/customcommands.py:346
+msgid "text"
+msgstr ""
+
+#: cogs/config/customcommands.py:250
+msgid "Pick a command..."
+msgstr ""
+
+#: cogs/config/customcommands.py:253
+msgid "(none yet)"
+msgstr ""
+
+#: cogs/config/customcommands.py:269
+msgid "Add text"
+msgstr ""
+
+#: cogs/config/customcommands.py:274 cogs/config/customcommands.py:290
+#, python-brace-format
+msgid "This server already has the maximum of {n} custom commands."
+msgstr ""
+
+#: cogs/config/customcommands.py:285
+msgid "Add embed"
+msgstr ""
+
+#: cogs/config/customcommands.py:302
+msgid "Delete selected"
+msgstr ""
+
+#: cogs/config/customcommands.py:335
+msgid "Custom commands"
+msgstr ""
+
+#: cogs/config/customcommands.py:337
+msgid ""
+"Commands members run with the server prefix. Add a text or embed reply, "
+"or pick one to inspect and delete."
+msgstr ""
+
+#: cogs/config/customcommands.py:344
+#, python-brace-format
+msgid "`{name}` - {kind}"
+msgstr ""
+
+#: cogs/config/customcommands.py:351
+#, python-brace-format
+msgid "{count} command(s)"
+msgstr ""
+
+#: cogs/config/customcommands.py:357
+msgid "None yet"
+msgstr ""
+
+#: cogs/config/customcommands.py:358
+msgid "Use **Add text** or **Add embed** to create one."
+msgstr ""
+
+#: cogs/config/customcommands.py:365
+msgid "An embed reply."
+msgstr ""
+
+#: cogs/config/customcommands.py:368
+msgid "*empty*"
+msgstr ""
+
+#: cogs/config/customcommands.py:370
+#, python-brace-format
+msgid "Selected: {name}"
+msgstr ""
+
+#: cogs/config/customcommands.py:374
+#, python-brace-format
+msgid "Placeholders: {placeholders}"
+msgstr ""
+
+#: cogs/config/reactionroles.py:29
 msgid "Add reaction role"
 msgstr ""
 
-#: cogs/config/reactionroles.py:64 cogs/config/reactionroles.py:206
-#: cogs/config/reactionroles.py:294
+#: cogs/config/reactionroles.py:41 cogs/config/reactionroles.py:183
+#: cogs/config/reactionroles.py:275
 msgid "Emoji"
 msgstr ""
 
-#: cogs/config/reactionroles.py:67
+#: cogs/config/reactionroles.py:44
 msgid "Paste the emoji to react with"
 msgstr ""
 
-#: cogs/config/reactionroles.py:70
+#: cogs/config/reactionroles.py:47
 msgid "Pick the role to grant..."
 msgstr ""
 
-#: cogs/config/reactionroles.py:82
+#: cogs/config/reactionroles.py:59
 msgid "Pick a role to grant."
 msgstr ""
 
-#: cogs/config/reactionroles.py:89
+#: cogs/config/reactionroles.py:66
 msgid "Give me an emoji to react with."
 msgstr ""
 
-#: cogs/config/reactionroles.py:202
+#: cogs/config/reactionroles.py:179
 msgid "Reaction role added"
 msgstr ""
 
-#: cogs/config/reactionroles.py:222
+#: cogs/config/reactionroles.py:199
 msgid "Add a reaction role"
 msgstr ""
 
-#: cogs/config/reactionroles.py:224
+#: cogs/config/reactionroles.py:201
 msgid "Open the builder to map an emoji on a message to a role."
 msgstr ""
 
-#: cogs/config/reactionroles.py:290
+#: cogs/config/reactionroles.py:271
 msgid "Reaction role removed"
 msgstr ""
 
-#: cogs/config/reactionroles.py:312 cogs/config/reactionroles.py:326
+#: cogs/config/reactionroles.py:293 cogs/config/reactionroles.py:307
 msgid "Reaction roles"
 msgstr ""
 
-#: cogs/config/reactionroles.py:313
+#: cogs/config/reactionroles.py:294
 msgid "No reaction roles have been set up for this guild."
 msgstr ""
 
-#: cogs/config/reactionroles.py:320
+#: cogs/config/reactionroles.py:301
 #, python-brace-format
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
+msgstr ""
+
+#: cogs/config/rolemenus.py:64
+msgid "Roles can only be set inside a server."
+msgstr ""
+
+#: cogs/config/rolemenus.py:100
+#, python-brace-format
+msgid "Added: {roles}"
+msgstr ""
+
+#: cogs/config/rolemenus.py:104
+#, python-brace-format
+msgid "Removed: {roles}"
+msgstr ""
+
+#: cogs/config/rolemenus.py:110
+msgid "I couldn't manage those roles - they may be above my highest role."
+msgstr ""
+
+#: cogs/config/rolemenus.py:113
+msgid "No changes."
+msgstr ""
+
+#: cogs/config/rolemenus.py:134
+msgid "Menu header"
+msgstr ""
+
+#: cogs/config/rolemenus.py:137 tools/embed_creator.py:411
+msgid "Title"
+msgstr ""
+
+#: cogs/config/rolemenus.py:143 tools/embed_creator.py:435
+msgid "Description"
+msgstr ""
+
+#: cogs/config/rolemenus.py:171
+msgid "Pick the roles to offer..."
+msgstr ""
+
+#: cogs/config/rolemenus.py:201
+msgid "Members can pick any"
+msgstr ""
+
+#: cogs/config/rolemenus.py:207
+msgid "Members pick exactly one"
+msgstr ""
+
+#: cogs/config/rolemenus.py:213
+msgid "Selection rule..."
+msgstr ""
+
+#: cogs/config/rolemenus.py:235
+msgid "Channel to post the menu in..."
+msgstr ""
+
+#: cogs/config/rolemenus.py:254
+msgid "Edit header"
+msgstr ""
+
+#: cogs/config/rolemenus.py:263
+msgid "Post menu"
+msgstr ""
+
+#: cogs/config/rolemenus.py:291 cogs/config/rolemenus.py:476
+msgid "Pick your roles"
+msgstr ""
+
+#: cogs/config/rolemenus.py:298 cogs/utility/info.py:126
+msgid "Roles"
+msgstr ""
+
+#: cogs/config/rolemenus.py:303
+msgid "Role menu builder"
+msgstr ""
+
+#: cogs/config/rolemenus.py:305
+msgid ""
+"Pick the roles to offer, choose the rule, set a channel, then **Post "
+"menu**. Members set their roles from a single dropdown."
+msgstr ""
+
+#: cogs/config/rolemenus.py:312
+#, python-brace-format
+msgid "Roles ({count})"
+msgstr ""
+
+#: cogs/config/rolemenus.py:313
+msgid "*None yet.*"
+msgstr ""
+
+#: cogs/config/rolemenus.py:317
+msgid "Rule"
+msgstr ""
+
+#: cogs/config/rolemenus.py:318
+msgid "Pick exactly one"
+msgstr ""
+
+#: cogs/config/rolemenus.py:318
+msgid "Pick any"
+msgstr ""
+
+#: cogs/config/rolemenus.py:328
+msgid "Header"
+msgstr ""
+
+#: cogs/config/rolemenus.py:329
+msgid "*default*"
+msgstr ""
+
+#: cogs/config/rolemenus.py:362
+msgid "Pick at least one role first."
+msgstr ""
+
+#: cogs/config/rolemenus.py:368
+msgid "Pick a channel to post the menu in first."
+msgstr ""
+
+#: cogs/config/rolemenus.py:393
+msgid "Posting failed, please try again."
+msgstr ""
+
+#: cogs/config/rolemenus.py:406
+#, python-brace-format
+msgid "Posted the role menu in {channel}."
+msgstr ""
+
+#: cogs/config/rolemenus.py:471
+#, python-brace-format
+msgid "This server already has the maximum of {n} role menus."
 msgstr ""
 
 #: cogs/config/rooms.py:94 cogs/config/rooms.py:424
@@ -1282,7 +1674,7 @@ msgid "Rename channels"
 msgstr ""
 
 #: cogs/config/rooms.py:435 cogs/config/rooms.py:507 cogs/config/rooms.py:675
-#: cogs/config/rooms.py:896
+#: cogs/config/rooms.py:909
 msgid "This room no longer exists."
 msgstr ""
 
@@ -1396,7 +1788,7 @@ msgstr ""
 msgid "Only the room owner can use these controls."
 msgstr ""
 
-#: cogs/config/rooms.py:713 cogs/config/rooms.py:931
+#: cogs/config/rooms.py:713 cogs/config/rooms.py:944
 msgid "Unknown action."
 msgstr ""
 
@@ -1456,169 +1848,169 @@ msgstr ""
 msgid "Pick the new room owner:"
 msgstr ""
 
-#: cogs/config/rooms.py:863
+#: cogs/config/rooms.py:876
 msgid "Could not bump the room."
 msgstr ""
 
-#: cogs/config/rooms.py:866
+#: cogs/config/rooms.py:879
 msgid "Bumped the room to the top."
 msgstr ""
 
-#: cogs/config/rooms.py:877
+#: cogs/config/rooms.py:890
 msgid "The room already has an owner who's still here."
 msgstr ""
 
-#: cogs/config/rooms.py:882
+#: cogs/config/rooms.py:895
 msgid "Join the room first to claim it."
 msgstr ""
 
-#: cogs/config/rooms.py:888
+#: cogs/config/rooms.py:901
 msgid "You're now the owner of this room."
 msgstr ""
 
-#: cogs/config/rooms.py:902
+#: cogs/config/rooms.py:915
 msgid "That member is no longer here."
-msgstr ""
-
-#: cogs/config/rooms.py:914
-#, python-brace-format
-msgid "Removed and blacklisted {name}."
-msgstr ""
-
-#: cogs/config/rooms.py:921
-#, python-brace-format
-msgid "Removed {name} from the blacklist."
 msgstr ""
 
 #: cogs/config/rooms.py:927
 #, python-brace-format
-msgid "Transferred room ownership to {name}."
+msgid "Removed and blacklisted {name}."
 msgstr ""
 
 #: cogs/config/rooms.py:934
+#, python-brace-format
+msgid "Removed {name} from the blacklist."
+msgstr ""
+
+#: cogs/config/rooms.py:940
+#, python-brace-format
+msgid "Transferred room ownership to {name}."
+msgstr ""
+
+#: cogs/config/rooms.py:947
 msgid "Could not complete that action."
 msgstr ""
 
-#: cogs/config/rooms.py:966
+#: cogs/config/rooms.py:979
 msgid "## Autoroom hubs"
 msgstr ""
 
-#: cogs/config/rooms.py:970
+#: cogs/config/rooms.py:983
 msgid ""
 "Join-to-create voice hubs. Members who join a hub get their own temp "
 "room, cleaned up when it empties."
 msgstr ""
 
-#: cogs/config/rooms.py:980
+#: cogs/config/rooms.py:993
 msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr ""
 
-#: cogs/config/rooms.py:987
+#: cogs/config/rooms.py:1000
 msgid "Edit"
 msgstr ""
 
-#: cogs/config/rooms.py:994
+#: cogs/config/rooms.py:1007
 #, python-brace-format
 msgid ""
 "**{label}**\n"
 "{summary}"
 msgstr ""
 
-#: cogs/config/rooms.py:1007
+#: cogs/config/rooms.py:1020
 msgid "Add hub"
 msgstr ""
 
-#: cogs/config/rooms.py:1023
+#: cogs/config/rooms.py:1036
 #, python-brace-format
 msgid ""
 "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - "
 "{used}/{budget} channels used"
 msgstr ""
 
-#: cogs/config/rooms.py:1083 cogs/config/rooms.py:1364
+#: cogs/config/rooms.py:1096 cogs/config/rooms.py:1378
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr ""
 
-#: cogs/config/rooms.py:1093 cogs/config/rooms.py:1114
+#: cogs/config/rooms.py:1106 cogs/config/rooms.py:1127
 msgid "Something went wrong opening that form."
 msgstr ""
 
-#: cogs/config/rooms.py:1101 cogs/config/rooms.py:1406
-#: cogs/config/rooms.py:1422 cogs/config/rooms.py:1464
+#: cogs/config/rooms.py:1114 cogs/config/rooms.py:1420
+#: cogs/config/rooms.py:1436 cogs/config/rooms.py:1478
 msgid "That hub no longer exists."
 msgstr ""
 
-#: cogs/config/rooms.py:1105
+#: cogs/config/rooms.py:1118
 #, python-brace-format
 msgid "Manage the **{label}** hub:"
 msgstr ""
 
-#: cogs/config/rooms.py:1126
+#: cogs/config/rooms.py:1139
 msgid "Something went wrong removing that hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1369
+#: cogs/config/rooms.py:1383
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr ""
 
-#: cogs/config/rooms.py:1373
+#: cogs/config/rooms.py:1387
 #, python-brace-format
 msgid ""
 "This server is too close to Discord's {budget}-channel limit to add "
 "another hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1384
+#: cogs/config/rooms.py:1398
 msgid "Something went wrong while creating the hub's channels."
 msgstr ""
 
-#: cogs/config/rooms.py:1395
+#: cogs/config/rooms.py:1409
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr ""
 
-#: cogs/config/rooms.py:1415
+#: cogs/config/rooms.py:1429
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1450
+#: cogs/config/rooms.py:1464
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr ""
 
-#: cogs/config/rooms.py:1478
+#: cogs/config/rooms.py:1492
 msgid "category"
 msgstr ""
 
-#: cogs/config/rooms.py:1484
+#: cogs/config/rooms.py:1498
 msgid "join-to-create channel"
 msgstr ""
 
-#: cogs/config/rooms.py:1489
+#: cogs/config/rooms.py:1503
 msgid "Nothing was renamed - those channels are missing."
 msgstr ""
 
-#: cogs/config/rooms.py:1490
+#: cogs/config/rooms.py:1504
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr ""
 
-#: cogs/config/rooms.py:1740
+#: cogs/config/rooms.py:1758
 msgid "There are no autoroom hubs set up in this server."
 msgstr ""
 
-#: cogs/config/rooms.py:1744
+#: cogs/config/rooms.py:1762
 msgid "Autoroom hubs"
 msgstr ""
 
-#: cogs/config/rooms.py:1748
+#: cogs/config/rooms.py:1766
 msgid "channel missing"
 msgstr ""
 
-#: cogs/config/rooms.py:1751
+#: cogs/config/rooms.py:1769
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -1657,17 +2049,17 @@ msgid ""
 msgstr ""
 
 #: cogs/config/settings.py:53 cogs/config/twitch.py:420
-#: cogs/config/welcome.py:418 cogs/moderation/automod.py:354
-#: cogs/moderation/automod.py:365 cogs/moderation/automod.py:376
-#: cogs/moderation/automod.py:392 cogs/moderation/automod.py:395
+#: cogs/config/welcome.py:418 cogs/moderation/automod.py:363
+#: cogs/moderation/automod.py:374 cogs/moderation/automod.py:385
+#: cogs/moderation/automod.py:401 cogs/moderation/automod.py:404
 msgid "Enabled"
 msgstr ""
 
 #: cogs/config/settings.py:53 cogs/config/twitch.py:422
 #: cogs/config/welcome.py:420 cogs/config/welcome.py:672
-#: cogs/moderation/automod.py:354 cogs/moderation/automod.py:365
-#: cogs/moderation/automod.py:376 cogs/moderation/automod.py:392
-#: cogs/moderation/automod.py:395
+#: cogs/moderation/automod.py:363 cogs/moderation/automod.py:374
+#: cogs/moderation/automod.py:385 cogs/moderation/automod.py:401
+#: cogs/moderation/automod.py:404
 msgid "Disabled"
 msgstr ""
 
@@ -1684,7 +2076,7 @@ msgid "Currently disabled - select to enable"
 msgstr ""
 
 #: cogs/config/settings.py:74 cogs/config/settings.py:162
-#: cogs/config/settings.py:506
+#: cogs/config/settings.py:515
 msgid "Leveling"
 msgstr ""
 
@@ -1697,8 +2089,8 @@ msgid "Change the command prefix"
 msgstr ""
 
 #: cogs/config/settings.py:86 cogs/config/settings.py:169
-#: cogs/config/settings.py:375 cogs/config/settings.py:403
-#: cogs/config/settings.py:410
+#: cogs/config/settings.py:384 cogs/config/settings.py:412
+#: cogs/config/settings.py:419
 msgid "Auto-role"
 msgstr ""
 
@@ -1723,13 +2115,13 @@ msgid "Open the mod-log control panel"
 msgstr ""
 
 #: cogs/config/settings.py:104 cogs/config/settings.py:183
-#: cogs/config/starboard.py:159 cogs/config/starboard.py:192
-#: cogs/config/starboard.py:222 cogs/config/starboard.py:243
+#: cogs/config/starboard.py:179 cogs/config/starboard.py:212
+#: cogs/config/starboard.py:242 cogs/config/starboard.py:263
 msgid "Starboard"
 msgstr ""
 
-#: cogs/config/settings.py:107 cogs/config/starboard.py:30
-#: cogs/config/starboard.py:112
+#: cogs/config/settings.py:107 cogs/config/starboard.py:32
+#: cogs/config/starboard.py:114
 msgid "Configure the starboard"
 msgstr ""
 
@@ -1761,13 +2153,13 @@ msgstr ""
 msgid "Not set up"
 msgstr ""
 
-#: cogs/config/settings.py:194 cogs/moderation/automod.py:146
-#: cogs/moderation/automod.py:354 cogs/moderation/automod.py:392
+#: cogs/config/settings.py:194 cogs/moderation/automod.py:155
+#: cogs/moderation/automod.py:363 cogs/moderation/automod.py:401
 msgid "Anti-link"
 msgstr ""
 
-#: cogs/config/settings.py:196 cogs/moderation/automod.py:148
-#: cogs/moderation/automod.py:376 cogs/moderation/automod.py:395
+#: cogs/config/settings.py:196 cogs/moderation/automod.py:157
+#: cogs/moderation/automod.py:385 cogs/moderation/automod.py:404
 msgid "Anti-spam"
 msgstr ""
 
@@ -1779,114 +2171,116 @@ msgstr ""
 msgid "times out after 3 min"
 msgstr ""
 
-#: cogs/config/settings.py:308 cogs/config/settings.py:332
+#: cogs/config/settings.py:306
+msgid "The prefix can't be blank."
+msgstr ""
+
+#: cogs/config/settings.py:309
+msgid "The prefix can't be longer than 10 characters."
+msgstr ""
+
+#: cogs/config/settings.py:317 cogs/config/settings.py:341
 msgid "Server prefix"
 msgstr ""
 
-#: cogs/config/settings.py:310
+#: cogs/config/settings.py:319
 msgid "Prefix has been set to:"
 msgstr ""
 
-#: cogs/config/settings.py:334
+#: cogs/config/settings.py:343
 msgid "Current server prefix"
 msgstr ""
 
-#: cogs/config/settings.py:356
+#: cogs/config/settings.py:365
 msgid "Auto-role role"
 msgstr ""
 
-#: cogs/config/settings.py:359
+#: cogs/config/settings.py:368
 msgid "Auto-role has been set to:"
 msgstr ""
 
-#: cogs/config/settings.py:378
+#: cogs/config/settings.py:387
 msgid "Auto-role has been remove from the guild"
 msgstr ""
 
-#: cogs/config/settings.py:405 cogs/config/settings.py:412
+#: cogs/config/settings.py:414 cogs/config/settings.py:421
 msgid "Current auto-role"
 msgstr ""
 
-#: cogs/config/settings.py:508
+#: cogs/config/settings.py:517
 msgid "Leveling enabled for this server."
 msgstr ""
 
-#: cogs/config/settings.py:510
+#: cogs/config/settings.py:519
 msgid "Leveling disabled for this server."
 msgstr ""
 
-#: cogs/config/starboard.py:36
+#: cogs/config/starboard.py:38
 msgid "Pick the starboard channel"
 msgstr ""
 
-#: cogs/config/starboard.py:42
+#: cogs/config/starboard.py:44
 msgid "Starboard channel"
 msgstr ""
 
-#: cogs/config/starboard.py:48
+#: cogs/config/starboard.py:50
 msgid "How many stars a message needs"
 msgstr ""
 
-#: cogs/config/starboard.py:55
+#: cogs/config/starboard.py:57
 msgid "Star threshold"
 msgstr ""
 
-#: cogs/config/starboard.py:69
+#: cogs/config/starboard.py:71
 msgid "The star threshold must be a positive whole number."
 msgstr ""
 
-#: cogs/config/starboard.py:75
+#: cogs/config/starboard.py:77
 msgid "Please pick a starboard channel."
 msgstr ""
 
-#: cogs/config/starboard.py:94
+#: cogs/config/starboard.py:96
 msgid "Starboard configured!"
 msgstr ""
 
-#: cogs/config/starboard.py:160 cogs/config/twitch.py:426
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:651
-#: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
-msgid "Channel"
-msgstr ""
-
-#: cogs/config/starboard.py:161
+#: cogs/config/starboard.py:181
 msgid "Threshold"
 msgstr ""
 
-#: cogs/config/starboard.py:194
+#: cogs/config/starboard.py:214
 msgid ""
 "Use the button below to pick the channel where starred messages should be"
 " posted and set the star threshold."
 msgstr ""
 
-#: cogs/config/starboard.py:199
+#: cogs/config/starboard.py:219
 msgid "Only you can use this menu."
 msgstr ""
 
-#: cogs/config/starboard.py:225
+#: cogs/config/starboard.py:245
 msgid "Threshold has been set to:"
 msgstr ""
 
-#: cogs/config/starboard.py:246
+#: cogs/config/starboard.py:266
 msgid "Starboard has been disabled for this guild"
 msgstr ""
 
-#: cogs/config/starboard.py:268 cogs/config/starboard.py:300
+#: cogs/config/starboard.py:288 cogs/config/starboard.py:320
 #, python-brace-format
 msgid "Starboard top | {guild}"
 msgstr ""
 
-#: cogs/config/starboard.py:269
+#: cogs/config/starboard.py:289
 msgid "No starred messages yet."
 msgstr ""
 
-#: cogs/config/starboard.py:294 cogs/config/starboard.py:357
-#: cogs/utility/extras.py:38
+#: cogs/config/starboard.py:314 cogs/config/starboard.py:384
+#: cogs/utility/extras.py:47
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr ""
 
-#: cogs/config/starboard.py:356
+#: cogs/config/starboard.py:383
 msgid "Source"
 msgstr ""
 
@@ -1957,20 +2351,8 @@ msgstr ""
 msgid "Style: Classic"
 msgstr ""
 
-#: cogs/config/twitch.py:264
-msgid "Placeholders"
-msgstr ""
-
 #: cogs/config/twitch.py:277
 msgid "Twitch alert placeholders"
-msgstr ""
-
-#: cogs/config/twitch.py:292 cogs/config/welcome.py:185
-msgid "Preview"
-msgstr ""
-
-#: cogs/config/twitch.py:302 cogs/config/welcome.py:195
-msgid "Could not render the preview."
 msgstr ""
 
 #: cogs/config/twitch.py:311 cogs/config/welcome.py:204
@@ -2031,70 +2413,70 @@ msgstr ""
 msgid "Nothing to preview yet - add a message or some embed content."
 msgstr ""
 
-#: cogs/config/twitch.py:678
+#: cogs/config/twitch.py:691
 msgid "Could not add that member to the watchlist."
 msgstr ""
 
-#: cogs/config/twitch.py:682
+#: cogs/config/twitch.py:695
 msgid "the configured alert channel"
 msgstr ""
 
-#: cogs/config/twitch.py:684 cogs/config/twitch.py:708
-#: cogs/config/twitch.py:735
+#: cogs/config/twitch.py:697 cogs/config/twitch.py:721
+#: cogs/config/twitch.py:748
 msgid "Twitch watchlist"
 msgstr ""
 
-#: cogs/config/twitch.py:685
+#: cogs/config/twitch.py:698
 msgid "Now watching"
 msgstr ""
 
-#: cogs/config/twitch.py:686
+#: cogs/config/twitch.py:699
 msgid "Alerts in"
 msgstr ""
 
-#: cogs/config/twitch.py:687
+#: cogs/config/twitch.py:700
 msgid "Use /twitch to open the builder."
 msgstr ""
 
-#: cogs/config/twitch.py:706
+#: cogs/config/twitch.py:719
 msgid "Could not remove that member."
 msgstr ""
 
-#: cogs/config/twitch.py:709
+#: cogs/config/twitch.py:722
 msgid "Removed"
 msgstr ""
 
-#: cogs/config/twitch.py:726
+#: cogs/config/twitch.py:739
 msgid "Could not load the watchlist."
 msgstr ""
 
-#: cogs/config/twitch.py:731
+#: cogs/config/twitch.py:744
 msgid "default alert channel"
 msgstr ""
 
-#: cogs/config/twitch.py:754
+#: cogs/config/twitch.py:767
 msgid "Your guild already has a Live streamer role - it is now linked."
 msgstr ""
 
-#: cogs/config/twitch.py:765
+#: cogs/config/twitch.py:778
 msgid "Could not create the Live streamer role."
 msgstr ""
 
-#: cogs/config/twitch.py:773
+#: cogs/config/twitch.py:786
 msgid ""
 "Live streamer role created and linked. Move it to your preferred position"
 " in the role list."
 msgstr ""
 
-#: cogs/config/twitch.py:788
+#: cogs/config/twitch.py:801
 msgid "No Live streamer role is set up."
 msgstr ""
 
-#: cogs/config/twitch.py:794
+#: cogs/config/twitch.py:807
 msgid "Could not delete the Live streamer role."
 msgstr ""
 
-#: cogs/config/twitch.py:800
+#: cogs/config/twitch.py:813
 msgid "Live streamer role removed."
 msgstr ""
 
@@ -2121,7 +2503,7 @@ msgstr ""
 
 #: cogs/config/welcome.py:142 cogs/config/welcome.py:433
 #: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-#: cogs/music/music.py:215
+#: cogs/music/music.py:266
 msgid "Off"
 msgstr ""
 
@@ -2183,10 +2565,6 @@ msgstr ""
 
 #: cogs/config/welcome.py:375 cogs/config/welcome.py:437
 msgid "Random GIF"
-msgstr ""
-
-#: cogs/config/welcome.py:376 cogs/config/welcome.py:442
-msgid "Ping"
 msgstr ""
 
 #: cogs/config/welcome.py:405
@@ -2267,7 +2645,7 @@ msgid ""
 "Result : `{result}`"
 msgstr ""
 
-#: cogs/fun/fun.py:92 cogs/fun/fun.py:107 cogs/fun/fun.py:459
+#: cogs/fun/fun.py:92 cogs/fun/fun.py:107 cogs/fun/fun.py:471
 msgid "RPS Game"
 msgstr ""
 
@@ -2283,114 +2661,122 @@ msgstr ""
 msgid "You can't hug the air..."
 msgstr ""
 
-#: cogs/fun/fun.py:191 cogs/fun/fun.py:207 cogs/fun/fun.py:223
+#: cogs/fun/fun.py:177
+msgid "Sorry, I couldn't make the hug image."
+msgstr ""
+
+#: cogs/fun/fun.py:195 cogs/fun/fun.py:211 cogs/fun/fun.py:227
 msgid ":warning: **ERROR !**"
 msgstr ""
 
-#: cogs/fun/fun.py:240 cogs/fun/fun.py:256
+#: cogs/fun/fun.py:244 cogs/fun/fun.py:260
 msgid ":warning: Warning!"
 msgstr ""
 
-#: cogs/fun/fun.py:241
+#: cogs/fun/fun.py:245
 #, python-brace-format
 msgid ""
 "Don't mention everyone {author}\n"
 " Message : {message}"
 msgstr ""
 
-#: cogs/fun/fun.py:257
+#: cogs/fun/fun.py:261
 #, python-brace-format
 msgid ""
 "Please, don't send links {author}\n"
 " Message : {message}"
 msgstr ""
 
-#: cogs/fun/fun.py:266
+#: cogs/fun/fun.py:270
 msgid "Yes, we know."
 msgstr ""
 
-#: cogs/fun/fun.py:291
+#: cogs/fun/fun.py:287
+msgid "That doesn't look like an emoji I can enlarge."
+msgstr ""
+
+#: cogs/fun/fun.py:303
 msgid "**Download link**"
 msgstr ""
 
-#: cogs/fun/fun.py:292
+#: cogs/fun/fun.py:304
 #, python-brace-format
 msgid "**[➡️ URL]({url})**"
 msgstr ""
 
-#: cogs/fun/fun.py:296 cogs/fun/fun.py:349
+#: cogs/fun/fun.py:308 cogs/fun/fun.py:361
 #, python-brace-format
 msgid "Requested by: {user}"
 msgstr ""
 
-#: cogs/fun/fun.py:310
+#: cogs/fun/fun.py:322
 msgid "*Message too long.*"
 msgstr ""
 
-#: cogs/fun/fun.py:319
+#: cogs/fun/fun.py:331
 msgid ""
 "**Please input text to convert to ascii art. Ex: ``<prefix> ascii "
 "stuff``**"
 msgstr ""
 
-#: cogs/fun/fun.py:330
+#: cogs/fun/fun.py:342
 msgid "Ask me a question..."
 msgstr ""
 
-#: cogs/fun/fun.py:347
+#: cogs/fun/fun.py:359
 msgid "Reversed:"
 msgstr ""
 
-#: cogs/fun/fun.py:367
+#: cogs/fun/fun.py:379
 #, python-brace-format
 msgid "I'd rate {thing} a **{num}.{deci}/ 100**"
 msgstr ""
 
-#: cogs/fun/fun.py:382
+#: cogs/fun/fun.py:394
 #, python-brace-format
 msgid "**{user}** is **1000%** hot :heart_eyes: :lips:"
 msgstr ""
 
-#: cogs/fun/fun.py:391
+#: cogs/fun/fun.py:403
 #, python-brace-format
 msgid "{user} is hot like a pineapple :pineapple:"
 msgstr ""
 
-#: cogs/fun/fun.py:407
+#: cogs/fun/fun.py:419
 #, python-brace-format
 msgid "**{user}** is **{hot:.2f}%** hot {emoji}"
 msgstr ""
 
-#: cogs/fun/fun.py:424
+#: cogs/fun/fun.py:436
 #, python-brace-format
 msgid "{member} is **0%** gay 👑"
 msgstr ""
 
-#: cogs/fun/fun.py:428
+#: cogs/fun/fun.py:440
 #, python-brace-format
 msgid "{member} is **{y}.{rand}%** gay {emj}"
 msgstr ""
 
-#: cogs/fun/fun.py:445
+#: cogs/fun/fun.py:457
 #, python-brace-format
 msgid "{slot} All matching, you won! 🎉"
 msgstr ""
 
-#: cogs/fun/fun.py:447
+#: cogs/fun/fun.py:459
 #, python-brace-format
 msgid "{slot} 2 in a row, you won! 🎉"
 msgstr ""
 
-#: cogs/fun/fun.py:449
+#: cogs/fun/fun.py:461
 #, python-brace-format
 msgid "{slot} No match, you lost 😢"
 msgstr ""
 
-#: cogs/fun/fun.py:460
+#: cogs/fun/fun.py:472
 msgid "Pick your move below: Rock, Paper or Scissors!"
 msgstr ""
 
-#: cogs/fun/fun.py:462
+#: cogs/fun/fun.py:474
 msgid "I'm waiting for you!"
 msgstr ""
 
@@ -2465,66 +2851,66 @@ msgstr ""
 msgid "~{wpm:.0f} WPM"
 msgstr ""
 
-#: cogs/moderation/automod.py:56
+#: cogs/moderation/automod.py:65
 #, python-brace-format
 msgid "{label} (N/A)"
 msgstr ""
 
-#: cogs/moderation/automod.py:77
+#: cogs/moderation/automod.py:86
 msgid "Action on a custom violation..."
 msgstr ""
 
-#: cogs/moderation/automod.py:97
+#: cogs/moderation/automod.py:106
 msgid "Exempt roles (select to replace)..."
 msgstr ""
 
-#: cogs/moderation/automod.py:116
+#: cogs/moderation/automod.py:125
 msgid "Exempt channels (select to replace)..."
 msgstr ""
 
-#: cogs/moderation/automod.py:147 cogs/moderation/automod.py:365
+#: cogs/moderation/automod.py:156 cogs/moderation/automod.py:374
 msgid "Anti-invite"
 msgstr ""
 
-#: cogs/moderation/automod.py:149
+#: cogs/moderation/automod.py:158
 msgid "Native: Keyword"
 msgstr ""
 
-#: cogs/moderation/automod.py:150
+#: cogs/moderation/automod.py:159
 msgid "Native: Spam"
 msgstr ""
 
-#: cogs/moderation/automod.py:151
+#: cogs/moderation/automod.py:160
 msgid "Native: Mentions"
 msgstr ""
 
-#: cogs/moderation/automod.py:183
+#: cogs/moderation/automod.py:192
 msgid "⚪ Unavailable"
 msgstr ""
 
-#: cogs/moderation/automod.py:184
+#: cogs/moderation/automod.py:193
 msgid "🟢 Enabled"
 msgstr ""
 
-#: cogs/moderation/automod.py:184
+#: cogs/moderation/automod.py:193
 msgid "🔴 Disabled"
 msgstr ""
 
-#: cogs/moderation/automod.py:187
+#: cogs/moderation/automod.py:196
 msgid "AutoMod control panel"
 msgstr ""
 
-#: cogs/moderation/automod.py:189
+#: cogs/moderation/automod.py:198
 msgid ""
 "Custom filters are enforced by Yasuho on every message. Native filters "
 "are Discord's own AutoMod, blocked before a message is ever posted."
 msgstr ""
 
-#: cogs/moderation/automod.py:196
+#: cogs/moderation/automod.py:205
 msgid "Custom filters (Yasuho)"
 msgstr ""
 
-#: cogs/moderation/automod.py:198
+#: cogs/moderation/automod.py:207
 #, python-brace-format
 msgid ""
 "Anti-link: {link}\n"
@@ -2532,11 +2918,11 @@ msgid ""
 "Anti-spam: {spam}"
 msgstr ""
 
-#: cogs/moderation/automod.py:209
+#: cogs/moderation/automod.py:218
 msgid "Native filters (Discord)"
 msgstr ""
 
-#: cogs/moderation/automod.py:211
+#: cogs/moderation/automod.py:220
 #, python-brace-format
 msgid ""
 "Keyword preset: {kw}\n"
@@ -2544,56 +2930,52 @@ msgid ""
 "Mention spam: {nmention}"
 msgstr ""
 
-#: cogs/moderation/automod.py:222
+#: cogs/moderation/automod.py:231
 msgid "Action on custom violation"
 msgstr ""
 
-#: cogs/moderation/automod.py:230
+#: cogs/moderation/automod.py:239
 msgid "Exempt roles"
 msgstr ""
 
-#: cogs/moderation/automod.py:232 cogs/moderation/automod.py:239
-msgid "None"
-msgstr ""
-
-#: cogs/moderation/automod.py:237
+#: cogs/moderation/automod.py:246
 msgid "Exempt channels"
 msgstr ""
 
-#: cogs/moderation/automod.py:246
+#: cogs/moderation/automod.py:255
 msgid "Native rules need the bot to have Manage Server."
 msgstr ""
 
-#: cogs/moderation/automod.py:256
+#: cogs/moderation/automod.py:265
 msgid "Something went wrong updating the panel."
 msgstr ""
 
-#: cogs/moderation/automod.py:270
+#: cogs/moderation/automod.py:279
 msgid ""
 "I couldn't change that rule. Discord's built-in AutoMod needs the bot to "
 "have the **Manage Server** permission."
 msgstr ""
 
-#: cogs/moderation/automod.py:352 cogs/moderation/automod.py:363
-#: cogs/moderation/automod.py:374
+#: cogs/moderation/automod.py:361 cogs/moderation/automod.py:372
+#: cogs/moderation/automod.py:383
 msgid "Auto-mod"
 msgstr ""
 
-#: cogs/moderation/automod.py:389
+#: cogs/moderation/automod.py:398
 msgid "Auto-mod status"
 msgstr ""
 
-#: cogs/moderation/automod.py:668
+#: cogs/moderation/automod.py:698
 #, python-brace-format
 msgid "{user} Discord invite links are not allowed here."
 msgstr ""
 
-#: cogs/moderation/automod.py:678
+#: cogs/moderation/automod.py:708
 #, python-brace-format
 msgid "{user} links are not allowed here."
 msgstr ""
 
-#: cogs/moderation/automod.py:702
+#: cogs/moderation/automod.py:734
 #, python-brace-format
 msgid "{user} stop spamming."
 msgstr ""
@@ -2645,7 +3027,7 @@ msgstr ""
 msgid "Page {current}/{total} - {count} warn(s)"
 msgstr ""
 
-#: cogs/moderation/moderation.py:156 cogs/moderation/moderation.py:1305
+#: cogs/moderation/moderation.py:156 cogs/moderation/moderation.py:1330
 msgid "No reason"
 msgstr ""
 
@@ -2687,13 +3069,13 @@ msgstr ""
 msgid "The reason can't be empty."
 msgstr ""
 
-#: cogs/moderation/moderation.py:302 cogs/moderation/moderation.py:1270
-#: cogs/moderation/moderation.py:1336 cogs/moderation/moderation.py:1358
+#: cogs/moderation/moderation.py:302 cogs/moderation/moderation.py:1295
+#: cogs/moderation/moderation.py:1361 cogs/moderation/moderation.py:1383
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr ""
 
-#: cogs/moderation/moderation.py:309 cogs/moderation/moderation.py:1364
+#: cogs/moderation/moderation.py:309 cogs/moderation/moderation.py:1389
 msgid "Updated by"
 msgstr ""
 
@@ -2716,16 +3098,16 @@ msgstr ""
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:546
+#: cogs/moderation/moderation.py:554
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:552
+#: cogs/moderation/moderation.py:560
 msgid "**🔴 Voice Kick Info**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:554
+#: cogs/moderation/moderation.py:562
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -2733,266 +3115,266 @@ msgid ""
 "Time: **{time}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:584
+#: cogs/moderation/moderation.py:592
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:603
+#: cogs/moderation/moderation.py:615
 msgid "Confirm ban"
 msgstr ""
 
-#: cogs/moderation/moderation.py:604
+#: cogs/moderation/moderation.py:616
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr ""
 
-#: cogs/moderation/moderation.py:609 cogs/moderation/moderation.py:718
-#: cogs/moderation/moderation.py:765
+#: cogs/moderation/moderation.py:621 cogs/moderation/moderation.py:730
+#: cogs/moderation/moderation.py:777
 msgid "Reason"
 msgstr ""
 
-#: cogs/moderation/moderation.py:614
+#: cogs/moderation/moderation.py:626
 msgid "Ban cancelled"
 msgstr ""
 
-#: cogs/moderation/moderation.py:615
+#: cogs/moderation/moderation.py:627
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr ""
 
-#: cogs/moderation/moderation.py:701
+#: cogs/moderation/moderation.py:713
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
 msgstr ""
 
-#: cogs/moderation/moderation.py:706
+#: cogs/moderation/moderation.py:718
 msgid "I can ban at most 200 users in one go."
 msgstr ""
 
-#: cogs/moderation/moderation.py:712
+#: cogs/moderation/moderation.py:724
 msgid "Confirm mass ban"
 msgstr ""
 
-#: cogs/moderation/moderation.py:714
+#: cogs/moderation/moderation.py:726
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr ""
 
-#: cogs/moderation/moderation.py:721
+#: cogs/moderation/moderation.py:733
 msgid "Mass ban cancelled"
 msgstr ""
 
-#: cogs/moderation/moderation.py:722
+#: cogs/moderation/moderation.py:734
 msgid "No action taken."
 msgstr ""
 
-#: cogs/moderation/moderation.py:741
+#: cogs/moderation/moderation.py:753
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:759
+#: cogs/moderation/moderation.py:771
 msgid "Mass ban complete"
 msgstr ""
 
-#: cogs/moderation/moderation.py:763
+#: cogs/moderation/moderation.py:775
 msgid "Banned"
 msgstr ""
 
-#: cogs/moderation/moderation.py:764
+#: cogs/moderation/moderation.py:776
 msgid "Failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:767
+#: cogs/moderation/moderation.py:779
 #, python-brace-format
 msgid "By {author}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:790
+#: cogs/moderation/moderation.py:802
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:800
+#: cogs/moderation/moderation.py:812
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:805
+#: cogs/moderation/moderation.py:817
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:817
+#: cogs/moderation/moderation.py:829
 msgid "Invalid amount. Maximum is 500."
 msgstr ""
 
-#: cogs/moderation/moderation.py:829
+#: cogs/moderation/moderation.py:841
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr ""
 
-#: cogs/moderation/moderation.py:894
+#: cogs/moderation/moderation.py:910
 msgid "Mute role is not defined"
 msgstr ""
 
-#: cogs/moderation/moderation.py:895
+#: cogs/moderation/moderation.py:911
 msgid "Creating role..."
 msgstr ""
 
-#: cogs/moderation/moderation.py:897
+#: cogs/moderation/moderation.py:913
 msgid "Mute role created!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:934
+#: cogs/moderation/moderation.py:951
 msgid "Already Muted"
 msgstr ""
 
-#: cogs/moderation/moderation.py:936
+#: cogs/moderation/moderation.py:953
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:946
+#: cogs/moderation/moderation.py:963
 msgid "Mute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:949
+#: cogs/moderation/moderation.py:966
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:989
+#: cogs/moderation/moderation.py:1006
 msgid "Unmute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:992
+#: cogs/moderation/moderation.py:1009
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1006
+#: cogs/moderation/moderation.py:1023
 msgid "Confirm mass role add"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1008
+#: cogs/moderation/moderation.py:1025
 #, python-brace-format
 msgid ""
 "Add the **{role}** role to **all** members of this server? This can take "
 "a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1015 cogs/moderation/moderation.py:1056
+#: cogs/moderation/moderation.py:1032 cogs/moderation/moderation.py:1085
 #: tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1025
+#: cogs/moderation/moderation.py:1054
 #, python-brace-format
-msgid "Added to all guilds members **`{role}`** role."
+msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1034
+#: cogs/moderation/moderation.py:1063
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1047
+#: cogs/moderation/moderation.py:1076
 msgid "Confirm mass role remove"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1049
+#: cogs/moderation/moderation.py:1078
 #, python-brace-format
 msgid ""
 "Remove the **{role}** role from **all** members of this server? This can "
 "take a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1066
+#: cogs/moderation/moderation.py:1107
 #, python-brace-format
-msgid "Removed to all guilds members **`{role}`** role."
-msgstr ""
-
-#: cogs/moderation/moderation.py:1075
-#, python-brace-format
-msgid "{emoji} **`{role}`** role has been removed to **{member}**"
-msgstr ""
-
-#: cogs/moderation/moderation.py:1088
-#, python-brace-format
-msgid "{role} moved."
-msgstr ""
-
-#: cogs/moderation/moderation.py:1090
-msgid "You do not have permission to do that"
-msgstr ""
-
-#: cogs/moderation/moderation.py:1092
-msgid "Failed to move role"
-msgstr ""
-
-#: cogs/moderation/moderation.py:1094
-msgid "Invalid argument"
+msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr ""
 
 #: cogs/moderation/moderation.py:1116
 #, python-brace-format
+msgid "{emoji} **`{role}`** role has been removed to **{member}**"
+msgstr ""
+
+#: cogs/moderation/moderation.py:1129
+#, python-brace-format
+msgid "{role} moved."
+msgstr ""
+
+#: cogs/moderation/moderation.py:1131
+msgid "You do not have permission to do that"
+msgstr ""
+
+#: cogs/moderation/moderation.py:1133
+msgid "Failed to move role"
+msgstr ""
+
+#: cogs/moderation/moderation.py:1135
+msgid "Invalid argument"
+msgstr ""
+
+#: cogs/moderation/moderation.py:1157
+#, python-brace-format
 msgid "{member} has no warns."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1120
+#: cogs/moderation/moderation.py:1161
 #, python-brace-format
 msgid "{member} has {count} warn(s)"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1165
+#: cogs/moderation/moderation.py:1193
 msgid "Auto-action"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1166
+#: cogs/moderation/moderation.py:1194
 msgid "Reached 3 warns - kicked"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1182
+#: cogs/moderation/moderation.py:1210
 #, python-brace-format
 msgid ""
 "{member} has 3 warns but I don't have permissions to kick them from the "
 "guild."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1188
+#: cogs/moderation/moderation.py:1216
 msgid "You have been kicked from the server!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1200
+#: cogs/moderation/moderation.py:1225
 msgid "Warns"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1220
+#: cogs/moderation/moderation.py:1245
 #, python-brace-format
 msgid "{member} has no warns!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1227
+#: cogs/moderation/moderation.py:1252
 #, python-brace-format
 msgid "Removed all warns for {member}."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1233
+#: cogs/moderation/moderation.py:1258
 #, python-brace-format
 msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1287
+#: cogs/moderation/moderation.py:1312
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1295
+#: cogs/moderation/moderation.py:1320
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1298
+#: cogs/moderation/moderation.py:1323
 msgid "No cases on record."
 msgstr ""
 
@@ -3062,7 +3444,7 @@ msgid "Content"
 msgstr ""
 
 #: cogs/moderation/modlog.py:423 cogs/moderation/modlog.py:464
-#: cogs/utility/extras.py:37
+#: cogs/utility/extras.py:46
 msgid "Jump"
 msgstr ""
 
@@ -3088,58 +3470,58 @@ msgstr ""
 msgid "[Go to message]({url})"
 msgstr ""
 
-#: cogs/music/music.py:104 cogs/music/music.py:359
+#: cogs/music/music.py:134 cogs/music/music.py:410
 msgid "The player is no longer active."
 msgstr ""
 
-#: cogs/music/music.py:111
+#: cogs/music/music.py:141
 msgid "Give me a song name or URL to add."
 msgstr ""
 
-#: cogs/music/music.py:118
+#: cogs/music/music.py:148
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr ""
 
-#: cogs/music/music.py:129
+#: cogs/music/music.py:160
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr ""
 
-#: cogs/music/music.py:135
+#: cogs/music/music.py:166
 msgid "Something went wrong adding that song."
 msgstr ""
 
-#: cogs/music/music.py:194 cogs/music/music.py:1046
+#: cogs/music/music.py:245 cogs/music/music.py:1503
 msgid "Nothing is playing right now."
 msgstr ""
 
-#: cogs/music/music.py:201
+#: cogs/music/music.py:252
 msgid "### 🎵 Now Playing"
 msgstr ""
 
-#: cogs/music/music.py:204
+#: cogs/music/music.py:255
 #, python-brace-format
 msgid "by **{author}**"
 msgstr ""
 
-#: cogs/music/music.py:208
+#: cogs/music/music.py:259
 msgid "⏸ Paused"
 msgstr ""
 
-#: cogs/music/music.py:208
+#: cogs/music/music.py:259
 msgid "▶ Playing"
 msgstr ""
 
-#: cogs/music/music.py:211
+#: cogs/music/music.py:262
 msgid "On (queue)"
 msgstr ""
 
-#: cogs/music/music.py:213
+#: cogs/music/music.py:264
 msgid "On (track)"
 msgstr ""
 
-#: cogs/music/music.py:219
+#: cogs/music/music.py:270
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -3148,331 +3530,335 @@ msgid ""
 "**Loop:** {loop}"
 msgstr ""
 
-#: cogs/music/music.py:234
+#: cogs/music/music.py:285
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr ""
 
-#: cogs/music/music.py:240
+#: cogs/music/music.py:291
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr ""
 
-#: cogs/music/music.py:245
+#: cogs/music/music.py:296
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr ""
 
-#: cogs/music/music.py:259
+#: cogs/music/music.py:310
 #, python-brace-format
 msgid ""
 "\n"
 "`+{count}` more in the queue"
 msgstr ""
 
-#: cogs/music/music.py:262
+#: cogs/music/music.py:313
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
 "{lines}"
 msgstr ""
 
-#: cogs/music/music.py:267
+#: cogs/music/music.py:318
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
 msgstr ""
 
-#: cogs/music/music.py:277
+#: cogs/music/music.py:328
 msgid "Pause/Resume"
 msgstr ""
 
-#: cogs/music/music.py:283
+#: cogs/music/music.py:334
 msgid "Skip"
 msgstr ""
 
-#: cogs/music/music.py:289
+#: cogs/music/music.py:340
 msgid "Vol -"
 msgstr ""
 
-#: cogs/music/music.py:295
+#: cogs/music/music.py:346
 msgid "Vol +"
 msgstr ""
 
-#: cogs/music/music.py:301
+#: cogs/music/music.py:352
 msgid "Loop"
 msgstr ""
 
-#: cogs/music/music.py:311
+#: cogs/music/music.py:362
 msgid "Shuffle"
 msgstr ""
 
-#: cogs/music/music.py:317 cogs/music/music.py:1034
+#: cogs/music/music.py:368 cogs/music/music.py:1491
 msgid "Queue"
 msgstr ""
 
-#: cogs/music/music.py:323
+#: cogs/music/music.py:374
 msgid "Add"
 msgstr ""
 
-#: cogs/music/music.py:329
+#: cogs/music/music.py:380
 msgid "Favorite"
 msgstr ""
 
-#: cogs/music/music.py:335
+#: cogs/music/music.py:386
 msgid "Disconnect"
 msgstr ""
 
-#: cogs/music/music.py:343
+#: cogs/music/music.py:394
 msgid "-# Use the buttons to control playback"
 msgstr ""
 
-#: cogs/music/music.py:370
+#: cogs/music/music.py:421
 msgid "You must be in my voice channel to use these controls."
 msgstr ""
 
-#: cogs/music/music.py:388
+#: cogs/music/music.py:439
 msgid "Something went wrong handling that action."
 msgstr ""
 
-#: cogs/music/music.py:407
+#: cogs/music/music.py:458
 msgid "Resumed."
 msgstr ""
 
-#: cogs/music/music.py:410
+#: cogs/music/music.py:461
 msgid "Paused."
 msgstr ""
 
-#: cogs/music/music.py:420
+#: cogs/music/music.py:476
 msgid "Skipped."
 msgstr ""
 
-#: cogs/music/music.py:423
+#: cogs/music/music.py:479
 msgid "There is nothing left to skip to."
 msgstr ""
 
-#: cogs/music/music.py:435 cogs/music/music.py:450
+#: cogs/music/music.py:491 cogs/music/music.py:506
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr ""
 
-#: cogs/music/music.py:460
+#: cogs/music/music.py:516
 msgid "off"
 msgstr ""
 
-#: cogs/music/music.py:463
+#: cogs/music/music.py:519
 msgid "on"
 msgstr ""
 
-#: cogs/music/music.py:466
+#: cogs/music/music.py:522
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr ""
 
-#: cogs/music/music.py:476
+#: cogs/music/music.py:532
 msgid "Add a few more tracks before shuffling."
 msgstr ""
 
-#: cogs/music/music.py:482 cogs/music/music.py:978
+#: cogs/music/music.py:538 cogs/music/music.py:1435
 msgid "Shuffled the queue."
 msgstr ""
 
-#: cogs/music/music.py:493 cogs/music/music.py:1010
+#: cogs/music/music.py:549 cogs/music/music.py:1467
 msgid "The queue is empty."
 msgstr ""
 
-#: cogs/music/music.py:497 cogs/music/music.py:1024
+#: cogs/music/music.py:553 cogs/music/music.py:1481
 #, python-brace-format
 msgid "`{index}.` {title} by `{author}`"
 msgstr ""
 
-#: cogs/music/music.py:504 cogs/music/music.py:1030
+#: cogs/music/music.py:560 cogs/music/music.py:1487
 #, python-brace-format
 msgid "*...and {count} more.*"
 msgstr ""
 
-#: cogs/music/music.py:523
+#: cogs/music/music.py:579
 msgid "Nothing is playing to favourite right now."
 msgstr ""
 
-#: cogs/music/music.py:529
+#: cogs/music/music.py:585
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:536 cogs/music/music.py:1212
+#: cogs/music/music.py:592 cogs/music/music.py:1671
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr ""
 
-#: cogs/music/music.py:578
+#: cogs/music/music.py:665
 msgid "I'm not connected to a voice channel."
 msgstr ""
 
-#: cogs/music/music.py:692
+#: cogs/music/music.py:676
+msgid "You must be in my voice channel to do that."
+msgstr ""
+
+#: cogs/music/music.py:945
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr ""
 
-#: cogs/music/music.py:819 cogs/music/music.py:1051
+#: cogs/music/music.py:1269 cogs/music/music.py:1508
 msgid "Here is the player."
 msgstr ""
 
-#: cogs/music/music.py:822
+#: cogs/music/music.py:1272
 msgid "Give me something to play, e.g. `play never gonna give you up`."
 msgstr ""
 
-#: cogs/music/music.py:830 cogs/music/music.py:865 cogs/music/music.py:1123
-#: cogs/music/music.py:1194
+#: cogs/music/music.py:1280 cogs/music/music.py:1315 cogs/music/music.py:1581
+#: cogs/music/music.py:1653
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr ""
 
-#: cogs/music/music.py:837 cogs/music/music.py:1135
+#: cogs/music/music.py:1287 cogs/music/music.py:1593
 msgid "You must be in a voice channel first."
 msgstr ""
 
-#: cogs/music/music.py:844 cogs/music/music.py:1142
+#: cogs/music/music.py:1294 cogs/music/music.py:1600
 msgid "I was unable to join your voice channel. Please try again."
 msgstr ""
 
-#: cogs/music/music.py:854
+#: cogs/music/music.py:1304
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr ""
 
-#: cogs/music/music.py:870 cogs/music/music.py:1200
+#: cogs/music/music.py:1320 cogs/music/music.py:1659
 msgid "Could not find any tracks for that query."
 msgstr ""
 
-#: cogs/music/music.py:881
+#: cogs/music/music.py:1331
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr ""
 
-#: cogs/music/music.py:889
+#: cogs/music/music.py:1339
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr ""
 
-#: cogs/music/music.py:905
+#: cogs/music/music.py:1356
 msgid "The player is already paused."
 msgstr ""
 
-#: cogs/music/music.py:908
+#: cogs/music/music.py:1361
 msgid "Paused the player."
 msgstr ""
 
-#: cogs/music/music.py:918
+#: cogs/music/music.py:1371
 msgid "The player is not paused."
 msgstr ""
 
-#: cogs/music/music.py:921
+#: cogs/music/music.py:1376
 msgid "Resumed the player."
 msgstr ""
 
-#: cogs/music/music.py:933
+#: cogs/music/music.py:1388
 msgid "There are no more tracks in the queue to skip to."
 msgstr ""
 
-#: cogs/music/music.py:937
+#: cogs/music/music.py:1392
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr ""
 
-#: cogs/music/music.py:942
+#: cogs/music/music.py:1398
 msgid "Skipped. The queue is now empty."
 msgstr ""
 
-#: cogs/music/music.py:952
+#: cogs/music/music.py:1409
 msgid "Stopped playback and cleared the queue."
 msgstr ""
 
-#: cogs/music/music.py:965
+#: cogs/music/music.py:1422
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr ""
 
-#: cogs/music/music.py:975
+#: cogs/music/music.py:1432
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr ""
 
-#: cogs/music/music.py:998
+#: cogs/music/music.py:1455
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr ""
 
-#: cogs/music/music.py:1016
+#: cogs/music/music.py:1473
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}`\n"
 msgstr ""
 
-#: cogs/music/music.py:1021
+#: cogs/music/music.py:1478
 msgid "**Up Next:**"
 msgstr ""
 
-#: cogs/music/music.py:1061
+#: cogs/music/music.py:1519
 msgid "Disconnected from the voice channel."
 msgstr ""
 
-#: cogs/music/music.py:1074
+#: cogs/music/music.py:1532
 msgid "You have no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:1077
+#: cogs/music/music.py:1535
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:1085 cogs/music/music.py:1240
+#: cogs/music/music.py:1543 cogs/music/music.py:1699
 msgid "Unknown title"
 msgstr ""
 
-#: cogs/music/music.py:1086
+#: cogs/music/music.py:1544
 msgid "Unknown artist"
 msgstr ""
 
-#: cogs/music/music.py:1090
+#: cogs/music/music.py:1548
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr ""
 
-#: cogs/music/music.py:1097
+#: cogs/music/music.py:1555
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr ""
 
-#: cogs/music/music.py:1129
+#: cogs/music/music.py:1587
 msgid "You have no saved favourites to play."
 msgstr ""
 
-#: cogs/music/music.py:1164
+#: cogs/music/music.py:1622
 msgid "None of your favourites could be loaded right now."
 msgstr ""
 
-#: cogs/music/music.py:1171
+#: cogs/music/music.py:1630
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1187
+#: cogs/music/music.py:1646
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr ""
 
-#: cogs/music/music.py:1206
+#: cogs/music/music.py:1665
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1224
+#: cogs/music/music.py:1683
 msgid "You have no saved favourites to remove."
 msgstr ""
 
-#: cogs/music/music.py:1228
+#: cogs/music/music.py:1687
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr ""
 
-#: cogs/music/music.py:1239
+#: cogs/music/music.py:1698
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr ""
@@ -3620,60 +4006,60 @@ msgstr ""
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ""
 
-#: cogs/system/errors.py:72
+#: cogs/system/errors.py:82
 msgid "Sorry, no similar commands found"
 msgstr ""
 
-#: cogs/system/errors.py:77
+#: cogs/system/errors.py:87
 msgid "**Invalid command entered. Did you mean:**"
 msgstr ""
 
-#: cogs/system/errors.py:99
+#: cogs/system/errors.py:109
 msgid "**Seems like you're missing a required argument:**"
 msgstr ""
 
-#: cogs/system/errors.py:100 cogs/system/errors.py:111
-#: cogs/system/errors.py:178 cogs/system/errors.py:204
+#: cogs/system/errors.py:110 cogs/system/errors.py:121
+#: cogs/system/errors.py:188 cogs/system/errors.py:214
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:110
+#: cogs/system/errors.py:120
 msgid "**Seems like you gave me a bad argument:**"
 msgstr ""
 
-#: cogs/system/errors.py:122
+#: cogs/system/errors.py:132
 msgid "**Seems like you are on cooldown:**"
 msgstr ""
 
-#: cogs/system/errors.py:123
+#: cogs/system/errors.py:133
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:132
+#: cogs/system/errors.py:142
 msgid "I need more permissions!"
 msgstr ""
 
-#: cogs/system/errors.py:138
+#: cogs/system/errors.py:148
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr ""
 
-#: cogs/system/errors.py:140
+#: cogs/system/errors.py:150
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
 msgstr ""
 
-#: cogs/system/errors.py:153
+#: cogs/system/errors.py:163
 msgid "**Seems like you gave me too many arguments:**"
 msgstr ""
 
-#: cogs/system/errors.py:155 cogs/system/errors.py:167
+#: cogs/system/errors.py:165 cogs/system/errors.py:177
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`"
@@ -3681,19 +4067,19 @@ msgid ""
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:165
+#: cogs/system/errors.py:175
 msgid "**Seems like you did something wrong:**"
 msgstr ""
 
-#: cogs/system/errors.py:177
+#: cogs/system/errors.py:187
 msgid "**Seems like you are missing permissions:**"
 msgstr ""
 
-#: cogs/system/errors.py:191
+#: cogs/system/errors.py:201
 msgid "**Seems like something went wrong while executing command:**"
 msgstr ""
 
-#: cogs/system/errors.py:193
+#: cogs/system/errors.py:203
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report the bug to bot owner` "
@@ -3702,72 +4088,73 @@ msgid ""
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:203
+#: cogs/system/errors.py:213
 msgid "**Seems like I am missing permissions:**"
 msgstr ""
 
-#: cogs/system/events.py:79
+#: cogs/system/events.py:85
 #, python-brace-format
 msgid "🌺 Beep boop **{guild}**! To get started type `{prefix}help`"
 msgstr ""
 
-#: cogs/system/events.py:117
+#: cogs/system/events.py:123
 msgid ""
 "You are blacklisted from bot. You can ask to be unblacklisted by send a "
 "message to <@228895251576782858>"
 msgstr ""
 
-#: cogs/system/help.py:127
+#: cogs/system/help.py:137
 msgid "Jump to a category..."
 msgstr ""
 
-#: cogs/system/help.py:174 cogs/system/help.py:429 cogs/system/help.py:444
+#: cogs/system/help.py:184 cogs/system/help.py:439 cogs/system/help.py:454
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/system/help.py:199 cogs/system/help.py:497 cogs/system/help.py:538
+#: cogs/system/help.py:209 cogs/system/help.py:507 cogs/system/help.py:523
+#: cogs/system/help.py:548
 msgid "No description provided."
 msgstr ""
 
-#: cogs/system/help.py:203
+#: cogs/system/help.py:213
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr ""
 
-#: cogs/system/help.py:219
+#: cogs/system/help.py:229
 msgid "No commands available."
 msgstr ""
 
-#: cogs/system/help.py:226
+#: cogs/system/help.py:236
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr ""
 
-#: cogs/system/help.py:296
+#: cogs/system/help.py:306
 msgid "Something went wrong opening the help menu."
 msgstr ""
 
-#: cogs/system/help.py:343
+#: cogs/system/help.py:353
 msgid "Collapse subcommands"
 msgstr ""
 
-#: cogs/system/help.py:343
+#: cogs/system/help.py:353
 msgid "Expand subcommands"
 msgstr ""
 
-#: cogs/system/help.py:362
+#: cogs/system/help.py:372
 msgid "Something went wrong updating that preference."
 msgstr ""
 
-#: cogs/system/help.py:377
+#: cogs/system/help.py:387
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr ""
 
-#: cogs/system/help.py:379
+#: cogs/system/help.py:389
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -3776,19 +4163,19 @@ msgid ""
 "`{prefix}help <command>` for a specific command."
 msgstr ""
 
-#: cogs/system/help.py:394
+#: cogs/system/help.py:404
 msgid "Enabled ✅"
 msgstr ""
 
-#: cogs/system/help.py:394
+#: cogs/system/help.py:404
 msgid "Disabled ❌"
 msgstr ""
 
-#: cogs/system/help.py:401
+#: cogs/system/help.py:411
 msgid "🏠 Server"
 msgstr ""
 
-#: cogs/system/help.py:403
+#: cogs/system/help.py:413
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -3796,123 +4183,131 @@ msgid ""
 "Leveling: {leveling}"
 msgstr ""
 
-#: cogs/system/help.py:415
+#: cogs/system/help.py:425
 msgid "🏠 Direct Messages"
 msgstr ""
 
-#: cogs/system/help.py:416
+#: cogs/system/help.py:426
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr ""
 
-#: cogs/system/help.py:437
+#: cogs/system/help.py:447
 msgid "📚 Categories"
 msgstr ""
 
-#: cogs/system/help.py:443
+#: cogs/system/help.py:453
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr ""
 
-#: cogs/system/help.py:448
+#: cogs/system/help.py:458
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/system/help.py:478 cogs/system/help.py:563
+#: cogs/system/help.py:488 cogs/system/help.py:573
 msgid "Help"
 msgstr ""
 
-#: cogs/system/help.py:480
+#: cogs/system/help.py:490
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr ""
 
-#: cogs/system/help.py:503 cogs/system/help.py:544
+#: cogs/system/help.py:513 cogs/system/help.py:554
 msgid "Aliases"
 msgstr ""
 
-#: cogs/system/help.py:516 cogs/system/help.py:519
+#: cogs/system/help.py:526 cogs/system/help.py:529
 msgid "Subcommands"
 msgstr ""
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:531
 #, python-brace-format
 msgid ""
 "This command has {count}. Toggle expansion in /settings, or use "
 "`{prefix}help {group} <subcommand>`."
 msgstr ""
 
-#: cogs/system/help.py:526
+#: cogs/system/help.py:536
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/utility/extras.py:28
+#: cogs/utility/extras.py:30
+msgid "I can only quote messages from this server."
+msgstr ""
+
+#: cogs/utility/extras.py:33
+msgid "You can't quote a message from a channel you can't see."
+msgstr ""
+
+#: cogs/utility/extras.py:37
 msgid "(no text)"
 msgstr ""
 
-#: cogs/utility/extras.py:65
+#: cogs/utility/extras.py:74
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
 "||`{secret}`||"
 msgstr ""
 
-#: cogs/utility/extras.py:71
+#: cogs/utility/extras.py:80
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
 "||`{secret}`||"
 msgstr ""
 
-#: cogs/utility/extras.py:76
+#: cogs/utility/extras.py:85
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr ""
 
-#: cogs/utility/extras.py:81
+#: cogs/utility/extras.py:90
 msgid "Something went wrong while generating your password."
 msgstr ""
 
-#: cogs/utility/extras.py:85
+#: cogs/utility/extras.py:94
 msgid "Sent you a DM"
 msgstr ""
 
-#: cogs/utility/extras.py:102
+#: cogs/utility/extras.py:111
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr ""
 
-#: cogs/utility/extras.py:112
+#: cogs/utility/extras.py:121
 msgid "Artist"
 msgstr ""
 
-#: cogs/utility/extras.py:113
+#: cogs/utility/extras.py:122
 msgid "Album"
 msgstr ""
 
-#: cogs/utility/extras.py:115
+#: cogs/utility/extras.py:124
 msgid "Duration"
 msgstr ""
 
-#: cogs/utility/extras.py:127
+#: cogs/utility/extras.py:136
 msgid "Uptime"
 msgstr ""
 
-#: cogs/utility/extras.py:143 cogs/utility/extras.py:159
+#: cogs/utility/extras.py:152 cogs/utility/extras.py:168
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr ""
 
-#: cogs/utility/extras.py:174
+#: cogs/utility/extras.py:205
 msgid "Invite me"
 msgstr ""
 
-#: cogs/utility/extras.py:175
+#: cogs/utility/extras.py:206
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr ""
@@ -3962,12 +4357,12 @@ msgstr ""
 msgid "**Is bot:** {value}"
 msgstr ""
 
-#: cogs/utility/info.py:46 cogs/utility/utility.py:153
+#: cogs/utility/info.py:46 cogs/utility/utility.py:171
 #: tools/arg_completion.py:272 tools/arg_completion.py:491
 msgid "Yes"
 msgstr ""
 
-#: cogs/utility/info.py:46 cogs/utility/utility.py:154
+#: cogs/utility/info.py:46 cogs/utility/utility.py:172
 #: tools/arg_completion.py:272 tools/arg_completion.py:492
 msgid "No"
 msgstr ""
@@ -4003,10 +4398,6 @@ msgstr ""
 
 #: cogs/utility/info.py:125
 msgid "Voice channels"
-msgstr ""
-
-#: cogs/utility/info.py:126
-msgid "Roles"
 msgstr ""
 
 #: cogs/utility/info.py:128
@@ -4057,40 +4448,40 @@ msgstr ""
 msgid "{ms} ms"
 msgstr ""
 
-#: cogs/utility/meta.py:33
+#: cogs/utility/meta.py:39
 #, python-brace-format
 msgid ""
 "## {city}\n"
 "{condition}"
 msgstr ""
 
-#: cogs/utility/meta.py:72 cogs/utility/meta.py:79
+#: cogs/utility/meta.py:79 cogs/utility/meta.py:86
 msgid "Could not fetch the Astronomy Picture of the Day right now."
 msgstr ""
 
-#: cogs/utility/meta.py:86
+#: cogs/utility/meta.py:93
 msgid "Astronomy Picture of the Day"
 msgstr ""
 
-#: cogs/utility/meta.py:106
+#: cogs/utility/meta.py:113
 #, python-brace-format
 msgid "APOD Requested by {user}"
 msgstr ""
 
-#: cogs/utility/meta.py:125
+#: cogs/utility/meta.py:133
 msgid "Could not fetch the weather right now."
 msgstr ""
 
-#: cogs/utility/meta.py:128
+#: cogs/utility/meta.py:136
 msgid "City not found."
 msgstr ""
 
-#: cogs/utility/meta.py:145
+#: cogs/utility/meta.py:153
 #, python-brace-format
 msgid "{status} - {desc}"
 msgstr ""
 
-#: cogs/utility/meta.py:149
+#: cogs/utility/meta.py:157
 #, python-brace-format
 msgid ""
 "**Temperature:** `{temp}C`\n"
@@ -4101,160 +4492,160 @@ msgid ""
 "**Pressure:** `{pressure}hPa`"
 msgstr ""
 
-#: cogs/utility/searchweb.py:47
+#: cogs/utility/searchweb.py:73
 msgid "Disambiguation"
 msgstr ""
 
-#: cogs/utility/searchweb.py:49
+#: cogs/utility/searchweb.py:75
 #, python-brace-format
 msgid "That term is ambiguous. Did you mean: {options}?"
 msgstr ""
 
-#: cogs/utility/searchweb.py:56
+#: cogs/utility/searchweb.py:82
 msgid "No page found."
 msgstr ""
 
-#: cogs/utility/searchweb.py:60
+#: cogs/utility/searchweb.py:86
 msgid "Something went wrong while searching Wikipedia."
 msgstr ""
 
-#: cogs/utility/searchweb.py:69
+#: cogs/utility/searchweb.py:95
 msgid "Lyrics are not configured (set geniusKey)."
 msgstr ""
 
-#: cogs/utility/searchweb.py:85
+#: cogs/utility/searchweb.py:111
 msgid "Something went wrong while fetching lyrics."
 msgstr ""
 
-#: cogs/utility/searchweb.py:89
+#: cogs/utility/searchweb.py:115
 msgid "No lyrics found."
 msgstr ""
 
-#: cogs/utility/searchweb.py:111
+#: cogs/utility/searchweb.py:137
 msgid "Provide an image URL or attach an image."
 msgstr ""
 
-#: cogs/utility/searchweb.py:117
+#: cogs/utility/searchweb.py:143
 msgid "Reverse image search"
 msgstr ""
 
-#: cogs/utility/searchweb.py:118
+#: cogs/utility/searchweb.py:144
 #, python-brace-format
 msgid "[Click here to search for the source]({link})"
 msgstr ""
 
-#: cogs/utility/searchweb.py:133
+#: cogs/utility/searchweb.py:159
 msgid "osu! is not configured."
 msgstr ""
 
-#: cogs/utility/searchweb.py:145
+#: cogs/utility/searchweb.py:171
 msgid "No osu! user found."
 msgstr ""
 
-#: cogs/utility/searchweb.py:149
+#: cogs/utility/searchweb.py:175
 #, python-brace-format
 msgid "osu! stats for {username}"
 msgstr ""
 
-#: cogs/utility/searchweb.py:155
+#: cogs/utility/searchweb.py:181
 msgid "PP"
 msgstr ""
 
-#: cogs/utility/searchweb.py:156
+#: cogs/utility/searchweb.py:182
 msgid "Accuracy"
 msgstr ""
 
-#: cogs/utility/searchweb.py:158
+#: cogs/utility/searchweb.py:184
 msgid "Playcount"
 msgstr ""
 
-#: cogs/utility/searchweb.py:159
+#: cogs/utility/searchweb.py:185
 msgid "Country"
 msgstr ""
 
-#: cogs/utility/searchweb.py:165
+#: cogs/utility/searchweb.py:191
 msgid "Something went wrong while fetching osu! data."
 msgstr ""
 
-#: cogs/utility/searchweb.py:179
+#: cogs/utility/searchweb.py:206
 msgid "No such Minecraft account."
 msgstr ""
 
-#: cogs/utility/searchweb.py:184
+#: cogs/utility/searchweb.py:211
 #, python-brace-format
 msgid "Minecraft account: {name}"
 msgstr ""
 
-#: cogs/utility/searchweb.py:187
+#: cogs/utility/searchweb.py:214
 msgid "UUID"
 msgstr ""
 
-#: cogs/utility/searchweb.py:196
+#: cogs/utility/searchweb.py:223
 msgid "Something went wrong while fetching Minecraft data."
 msgstr ""
 
-#: cogs/utility/utility.py:37
+#: cogs/utility/utility.py:38
 msgid "Give a question and options: `quickpoll question | option 1 | option 2`"
 msgstr ""
 
-#: cogs/utility/utility.py:40
+#: cogs/utility/utility.py:41
 msgid "A poll needs at least two options."
 msgstr ""
 
-#: cogs/utility/utility.py:42
+#: cogs/utility/utility.py:43
 msgid "A poll can have at most 10 options."
 msgstr ""
 
-#: cogs/utility/utility.py:44
+#: cogs/utility/utility.py:45
 msgid "The question must be 300 characters or fewer."
 msgstr ""
 
-#: cogs/utility/utility.py:46
+#: cogs/utility/utility.py:47
 msgid "Each option must be 55 characters or fewer."
 msgstr ""
 
-#: cogs/utility/utility.py:58
+#: cogs/utility/utility.py:59
 msgid "Create a poll"
 msgstr ""
 
-#: cogs/utility/utility.py:60
+#: cogs/utility/utility.py:61
 msgid "Question"
 msgstr ""
 
-#: cogs/utility/utility.py:67
+#: cogs/utility/utility.py:68
 msgid "Options (one per line, 2 to 10)"
 msgstr ""
 
-#: cogs/utility/utility.py:85 cogs/utility/utility.py:160
-#: cogs/utility/utility.py:187
+#: cogs/utility/utility.py:86 cogs/utility/utility.py:178
+#: cogs/utility/utility.py:205
 msgid "I could not create that poll here."
 msgstr ""
 
-#: cogs/utility/utility.py:96
+#: cogs/utility/utility.py:97
 msgid "Create poll"
 msgstr ""
 
-#: cogs/utility/utility.py:129
+#: cogs/utility/utility.py:147
 msgid "Nothing to snipe."
 msgstr ""
 
-#: cogs/utility/utility.py:146
+#: cogs/utility/utility.py:164
 msgid "Please give a question to ask."
 msgstr ""
 
-#: cogs/utility/utility.py:149
+#: cogs/utility/utility.py:167
 msgid "The poll question must be 300 characters or fewer."
 msgstr ""
 
-#: cogs/utility/utility.py:173
+#: cogs/utility/utility.py:191
 msgid "Click the button below to build a poll."
 msgstr ""
 
-#: cogs/utility/utility.py:209
+#: cogs/utility/utility.py:227
 msgid "auto -> en (unofficial)"
 msgstr ""
 
-#: cogs/utility/utility.py:214
+#: cogs/utility/utility.py:232
 msgid "Translation failed."
 msgstr ""
 
@@ -5074,16 +5465,8 @@ msgstr ""
 msgid "Edit title"
 msgstr ""
 
-#: tools/embed_creator.py:411
-msgid "Title"
-msgstr ""
-
 #: tools/embed_creator.py:433
 msgid "Edit description"
-msgstr ""
-
-#: tools/embed_creator.py:435
-msgid "Description"
 msgstr ""
 
 #: tools/embed_creator.py:469
@@ -5163,6 +5546,22 @@ msgstr ""
 
 #: tools/embed_creator.py:773
 msgid "Could not open the guide."
+msgstr ""
+
+#: tools/modchecks.py:27
+msgid "You can't do that to yourself."
+msgstr ""
+
+#: tools/modchecks.py:38
+msgid "You can't action the server owner."
+msgstr ""
+
+#: tools/modchecks.py:42
+msgid "You can't action someone whose role is equal to or above yours."
+msgstr ""
+
+#: tools/modchecks.py:46
+msgid "My highest role isn't above that member, so I can't act on them."
 msgstr ""
 
 #: tools/paginator.py:23 tools/paginator.py:49
