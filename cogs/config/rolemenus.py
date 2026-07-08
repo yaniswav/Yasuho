@@ -13,6 +13,7 @@ fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 
 import json
 import logging
+import re
 
 import discord
 from discord.ext import commands
@@ -25,6 +26,24 @@ from tools.views import AuthorView, LocaleModal
 log = logging.getLogger(__name__)
 
 MAX_MENUS_PER_GUILD = 25
+
+_CUSTOM_EMOJI = re.compile(r"^<a?:\w{2,32}:\d+>$")
+
+
+def valid_emoji(text):
+    """Cheap check that a string is a usable select-option emoji.
+
+    Accepts a custom-emoji token (<:name:id> / <a:name:id>) or a short string
+    holding a real (high-codepoint) unicode emoji. Rejects plain text so a bad
+    value can never make the posted menu fail to send. Not exhaustive, but it
+    keeps the common "typed a word" mistake out.
+    """
+    text = (text or "").strip()
+    if not text:
+        return False
+    if _CUSTOM_EMOJI.match(text):
+        return True
+    return len(text) <= 8 and any(ord(c) > 0x2000 for c in text)
 
 
 # ----------------------------------------------------------------------
@@ -159,6 +178,89 @@ class HeaderModal(LocaleModal):
             await self.builder._error(interaction)
 
 
+class RoleOptionModal(LocaleModal):
+    """Set the emoji + description shown for one role option."""
+
+    def __init__(self, builder, role_id):
+        super().__init__(title=_("Role option"))
+        self.builder = builder
+        self.role_id = role_id
+        opt = next(
+            (o for o in builder.draft.get("options", []) if o["role_id"] == role_id),
+            None,
+        )
+        self.emoji_field = discord.ui.TextInput(
+            label=_("Emoji (optional)"),
+            required=False,
+            max_length=64,
+            default=(opt.get("emoji") if opt else None),
+            placeholder=_("A single emoji, or leave blank"),
+        )
+        self.desc_field = discord.ui.TextInput(
+            label=_("Short description (optional)"),
+            required=False,
+            max_length=role_menus.MAX_DESCRIPTION,
+            default=(opt.get("description") if opt else None),
+        )
+        self.add_item(self.emoji_field)
+        self.add_item(self.desc_field)
+
+    async def on_submit(self, interaction):
+        try:
+            emoji = self.emoji_field.value.strip() or None
+            if emoji is not None and not valid_emoji(emoji):
+                return await interaction.response.send_message(
+                    _("That emoji isn't valid. Use a single emoji, or leave it blank."),
+                    ephemeral=True,
+                )
+            desc = self.desc_field.value.strip() or None
+            for opt in self.builder.draft.get("options", []):
+                if opt["role_id"] == self.role_id:
+                    opt["emoji"] = emoji
+                    opt["description"] = desc
+                    break
+            await self.builder._rerender(interaction)
+        except Exception:
+            log.exception("Role option modal failed")
+            await self.builder._error(interaction)
+
+
+class _CustomizeSelect(discord.ui.Select):
+    """Pick one of the chosen roles to give it an emoji + description."""
+
+    def __init__(self, builder):
+        self._owner = builder
+        options = []
+        for opt in builder.draft.get("options", [])[: role_menus.MAX_OPTIONS]:
+            desc = opt.get("description")
+            options.append(
+                discord.SelectOption(
+                    label=opt["label"][:100],
+                    value=str(opt["role_id"]),
+                    emoji=opt.get("emoji") if valid_emoji(opt.get("emoji") or "") else None,
+                    description=(desc[:100] if desc else _("no emoji/description yet")),
+                )
+            )
+        super().__init__(
+            placeholder=_("Customize a role (emoji + description)..."),
+            options=options or [discord.SelectOption(label=_("(pick roles first)"), value="_none")],
+            disabled=not options,
+            row=4,
+        )
+
+    async def callback(self, interaction):
+        try:
+            value = self.values[0]
+            if value == "_none":
+                return await interaction.response.defer()
+            await interaction.response.send_modal(
+                RoleOptionModal(self._owner, int(value))
+            )
+        except Exception:
+            log.exception("Role menu customize select failed")
+            await self._owner._error(interaction)
+
+
 class _RolePicker(discord.ui.RoleSelect):
     def __init__(self, builder):
         self._owner = builder
@@ -281,6 +383,7 @@ class RoleMenuBuilder(AuthorView):
         self.add_item(_RolePicker(self))
         self.add_item(_RuleSelect(self))
         self.add_item(_ChannelPicker(self))
+        self.add_item(_CustomizeSelect(self))
         self.add_item(_HeaderButton(self))
         self.add_item(_PostButton(self))
 
@@ -416,6 +519,9 @@ class RoleMenus(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # message ids of live menus, so on_raw_message_delete can prune the row
+        # without a DB hit on every unrelated deletion.
+        self._menu_ids = set()
 
     async def cog_load(self):
         # Re-register every stored menu as a persistent view so it survives a
@@ -436,10 +542,26 @@ class RoleMenus(commands.Cog):
                     RoleMenuView(row["message_id"], config),
                     message_id=row["message_id"],
                 )
+                self._menu_ids.add(row["message_id"])
             except Exception:
                 log.exception(
                     "Failed to register role menu for message %s", row["message_id"]
                 )
+
+    @commands.Cog.listener()
+    async def on_raw_message_delete(self, payload):
+        # Deleting the menu message is the natural way to remove a menu: drop its
+        # row so it does not linger. Guarded by the in-memory set so this is a
+        # no-op for every other deleted message.
+        if payload.message_id not in self._menu_ids:
+            return
+        self._menu_ids.discard(payload.message_id)
+        try:
+            await self.bot.db_pool.execute(
+                "DELETE FROM role_menus WHERE message_id = $1", payload.message_id
+            )
+        except Exception:
+            log.exception("Failed to delete role menu %s", payload.message_id)
 
     async def store_menu(self, message_id, guild_id, channel_id, config):
         await self.bot.db_pool.execute(
@@ -451,6 +573,7 @@ class RoleMenus(commands.Cog):
             channel_id,
             json.dumps(config),
         )
+        self._menu_ids.add(message_id)
 
     async def _menu_count(self, guild_id):
         return (
