@@ -655,6 +655,7 @@ class CustomCommands(commands.Cog):
         )
         self._cache.pop(guild_id, None)
         self._uses.pop(guild_id, None)
+        self._cd = {k: v for k, v in self._cd.items() if k[0] != guild_id}
 
     async def delete_command(self, guild_id, name):
         await self.bot.db_pool.execute(
@@ -664,6 +665,7 @@ class CustomCommands(commands.Cog):
         )
         self._cache.pop(guild_id, None)
         self._uses.pop(guild_id, None)
+        self._cd = {k: v for k, v in self._cd.items() if k[0] != guild_id}
 
     async def _bump_uses(self, guild_id, name):
         try:
@@ -675,6 +677,11 @@ class CustomCommands(commands.Cog):
             )
         except Exception:
             log.exception("Custom command uses bump failed")
+            return
+        # Keep the cached count live so the panel does not show a stale number.
+        guild_uses = self._uses.get(guild_id)
+        if guild_uses is not None and name in guild_uses:
+            guild_uses[name] += 1
 
     @commands.hybrid_command(name="customcommands", aliases=["cc", "customcommand"])
     @commands.guild_only()

@@ -130,20 +130,24 @@ class RoleMenuSelect(discord.ui.Select):
                 pass
 
         # Auto-remove any temporary role just added, via the shared timer system.
+        # Guarded so a DB hiccup here never leaves the interaction unanswered.
         reminder = interaction.client.get_cog("Reminder")
         if reminder is not None and added:
             by_id = {o["role_id"]: o for o in self.config.get("options", [])}
-            for role in added:
-                secs = int((by_id.get(role.id) or {}).get("temp_seconds") or 0)
-                if secs > 0:
-                    when = discord.utils.utcnow() + datetime.timedelta(seconds=secs)
-                    await reminder.create_timer(
-                        when,
-                        "temprole",
-                        guild_id=guild.id,
-                        user_id=member.id,
-                        role_id=role.id,
-                    )
+            try:
+                for role in added:
+                    secs = int((by_id.get(role.id) or {}).get("temp_seconds") or 0)
+                    if secs > 0:
+                        when = discord.utils.utcnow() + datetime.timedelta(seconds=secs)
+                        await reminder.create_timer(
+                            when,
+                            "temprole",
+                            guild_id=guild.id,
+                            user_id=member.id,
+                            role_id=role.id,
+                        )
+            except Exception:
+                log.exception("Failed to schedule temp-role removal")
 
         none = discord.AllowedMentions.none()
         parts = []
@@ -620,8 +624,18 @@ class RoleMenus(commands.Cog):
             if guild is None:
                 return
             member = guild.get_member(extra.get("user_id"))
+            if member is None:
+                # The member cache is empty after a restart (guilds are not
+                # chunked at startup), so fetch the member for a timer that
+                # outlived a restart. NotFound = they left, nothing to remove.
+                try:
+                    member = await guild.fetch_member(extra.get("user_id"))
+                except discord.NotFound:
+                    return
+                except discord.HTTPException:
+                    return
             role = guild.get_role(extra.get("role_id"))
-            if member is None or role is None:
+            if role is None:
                 return
             if role in member.roles:
                 await member.remove_roles(role, reason="Temporary self-role expired")
