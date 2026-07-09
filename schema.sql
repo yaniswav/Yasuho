@@ -341,11 +341,17 @@ CREATE TABLE IF NOT EXISTS anilist_follows (
 );
 
 -- Global high-water mark for the AniList activity poller: a single row holding
--- the id of the newest activity already fanned out. The poller fetches
--- activities with id greater than ``last_activity_id`` and advances it. The
--- fixed id + CHECK keep this table to exactly one row.  cogs/anilist/feed.py
+-- the newest activity already fanned out. AniList's Page.activities has NO
+-- id_greater argument, so the poller cursors on ``last_created_at``
+-- (createdAt_greater in unix seconds, the server-side filter) PLUS a client-side
+-- id high-water mark (``last_activity_id``): two activities can share the same
+-- createdAt second, so createdAt alone can duplicate or skip at the boundary -
+-- the real dedup is dropping ids <= last_activity_id. Both marks only ever
+-- advance, never regress. The fixed id + CHECK keep this table to exactly one
+-- row.  cogs/anilist/feed.py
 CREATE TABLE IF NOT EXISTS anilist_feed_state (
     id               SMALLINT    PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     last_activity_id BIGINT      NOT NULL DEFAULT 0,
+    last_created_at  BIGINT      NOT NULL DEFAULT 0,   -- createdAt_greater cursor (unix seconds)
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
