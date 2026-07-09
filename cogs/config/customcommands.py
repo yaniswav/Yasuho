@@ -430,7 +430,7 @@ class _EditButton(discord.ui.Button):
             return await interaction.response.send_message(
                 _("Pick a command first."), ephemeral=True
             )
-        response = (await self._owner.cog.get_commands(self._owner.guild.id)).get(name)
+        response = (await self._owner.cog.get_custom_commands(self._owner.guild.id)).get(name)
         if response is None:
             return await self._owner.refresh(interaction, selected=None)
         if response.get("type") == "embed":
@@ -550,7 +550,7 @@ class CustomCommandsPanel(AuthorView):
         return embed
 
     async def refresh(self, interaction, *, selected):
-        commands_map = await self.cog.get_commands(self.guild.id)
+        commands_map = await self.cog.get_custom_commands(self.guild.id)
         new = CustomCommandsPanel(
             self.cog, self.guild, self.author_id, dict(commands_map), selected=selected
         )
@@ -576,7 +576,7 @@ class CustomCommands(commands.Cog):
         # (guild_id, name, user_id) -> monotonic expiry for per-command cooldowns.
         self._cd = {}
 
-    async def get_commands(self, guild_id):
+    async def get_custom_commands(self, guild_id):
         """Return {name: response} for a guild (cached; loads on a miss)."""
         cached = self._cache.get(guild_id)
         if cached is not None:
@@ -598,7 +598,7 @@ class CustomCommands(commands.Cog):
 
     async def _resolve(self, guild_id, typed):
         """Resolve a typed name to (name, response) by name then alias, or (None, None)."""
-        cmds = await self.get_commands(guild_id)
+        cmds = await self.get_custom_commands(guild_id)
         if typed in cmds:
             return typed, cmds[typed]
         for name, resp in cmds.items():
@@ -632,12 +632,12 @@ class CustomCommands(commands.Cog):
         return clean[:5], None
 
     async def at_capacity(self, guild_id):
-        return len(await self.get_commands(guild_id)) >= cc.MAX_COMMANDS_PER_GUILD
+        return len(await self.get_custom_commands(guild_id)) >= cc.MAX_COMMANDS_PER_GUILD
 
     async def validate_new_name(self, guild_id, name):
         """Return a user-facing error string for a proposed name, or None."""
         reserved = set(self.bot.all_commands.keys())
-        existing = set(await self.get_commands(guild_id))
+        existing = set(await self.get_custom_commands(guild_id))
         key = cc.validate_name(name, reserved=reserved, existing=existing)
         if key is None:
             return None
@@ -688,7 +688,7 @@ class CustomCommands(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def customcommands(self, ctx):
         """Open the custom-commands builder."""
-        commands_map = await self.get_commands(ctx.guild.id)
+        commands_map = await self.get_custom_commands(ctx.guild.id)
         view = CustomCommandsPanel(self, ctx.guild, ctx.author.id, dict(commands_map))
         view.message = await ctx.send(embed=view.build_embed(), view=view)
 
