@@ -15,15 +15,15 @@ share a createdAt second, so the createdAt filter alone can duplicate or skip at
 the boundary; dropping ids ``<= last_activity_id`` is the real dedup. Both marks
 only ever advance.
 
-Rendering is deliberately minimal here: ``_render_activity`` /
-``_render_digest`` are the single method boundary a later lot swaps for a
-Components V2 layout, so that change stays local.
+Rendering lives behind two methods - ``_render_activity`` / ``_render_digest`` -
+which return ``channel.send`` kwargs. They now build polished Components V2
+layouts (:class:`ActivityCard` / :class:`ActivityDigest`); the poller, cursor
+and commands never touch rendering.
 """
 
 from __future__ import annotations
 
 import asyncio
-import datetime
 import logging
 import time
 import typing
@@ -35,12 +35,17 @@ from discord.ext import commands, tasks
 from .helpers import API_URL
 from tools import anilist_feed as af
 from tools.http import TIMEOUT
-from tools.i18n import _, ngettext
+from tools.i18n import N_, _, ngettext
 
 log = logging.getLogger(__name__)
 
-# AniList brand blue, the default embed accent when a media has no cover colour.
+# AniList brand blue, the accent for the management-command embeds.
 ANILIST_BLUE = 0x02A9FF
+
+# Accent for the activity/digest cards: the media's own cover colour when it has
+# one, else this fixed AniList blue (used for every text activity and any list
+# activity whose cover carries no colour).
+CARD_ACCENT = 0x3DB4F2
 
 # Poller cadence. 120s stays far below the (currently degraded 30/min) rate
 # limit even with several chunks per tick.
@@ -190,27 +195,318 @@ def _chunk_boundary(raw_activities):
 
 
 def _colour_from_media(media):
-    """Cover accent colour ("#aabbcc") as an int, else the AniList blue."""
+    """Cover accent colour ("#aabbcc") as an int, else the card blue.
 
-    colour = (media.get("coverImage") or {}).get("color")
-    if isinstance(colour, str) and colour.startswith("#"):
-        try:
-            return int(colour[1:], 16)
-        except ValueError:
-            pass
-    return ANILIST_BLUE
+    Parses the media's ``coverImage.color`` with the pure, defensive
+    :func:`tools.anilist_feed.parse_hex_colour`; a missing media, missing colour
+    or malformed value all fall back to :data:`CARD_ACCENT`.
+    """
+
+    colour = (media or {}).get("coverImage") or {}
+    return af.parse_hex_colour(colour.get("color")) or CARD_ACCENT
 
 
 def _media_title(media):
     """Best display title for a media dict (userPreferred first)."""
 
-    title = media.get("title") or {}
+    title = (media or {}).get("title") or {}
     return (
         title.get("userPreferred")
         or title.get("romaji")
         or title.get("english")
         or _("Unknown title")
     )
+
+
+# AniList ListActivity ``status`` is a lowercase verb phrase ("watched episode",
+# "plans to watch", ...). Each maps to a localisable action template; the
+# progress-bearing ones interpolate ``{progress}`` (normalised elsewhere), the
+# rest ignore it. ``N_`` marks the msgids for extraction at import time; ``_()``
+# resolves them at render time (the documented store-then-translate trick). An
+# UNKNOWN status is never in this map and degrades to its raw text (see
+# :func:`_list_action`), so a status AniList adds later renders verbatim instead
+# of crashing.
+_LIST_ACTION_TEMPLATES = {
+    "watched episode": N_("watched episode {progress} of"),
+    "rewatched episode": N_("rewatched episode {progress} of"),
+    "read chapter": N_("read chapter {progress} of"),
+    "reread chapter": N_("reread chapter {progress} of"),
+    "completed": N_("completed"),
+    "plans to watch": N_("plans to watch"),
+    "plans to read": N_("plans to read"),
+    "paused watching": N_("paused watching"),
+    "paused reading": N_("paused reading"),
+    "dropped": N_("dropped"),
+}
+
+
+def _list_action(status, progress):
+    """Localised action phrase for a ListActivity, e.g. 'watched episode 5 of'.
+
+    A known status maps to a template (with ``{progress}`` filled in where the
+    template uses it; templates without it simply ignore the argument). An
+    unknown status degrades to its raw text plus any progress so a newly-added
+    AniList status still renders. Internal whitespace is collapsed so a missing
+    progress never leaves a double space ('watched episode  of').
+    """
+
+    key = (status or "").strip().lower()
+    template = _LIST_ACTION_TEMPLATES.get(key)
+    if template is not None:
+        phrase = _(template).format(progress=progress)
+    else:
+        phrase = " ".join(part for part in (status or "", progress) if part)
+    return " ".join(phrase.split())
+
+
+def _bold_link(text, url):
+    """A bold masked link ``**[text](url)**``, or bold text when no url.
+
+    Square brackets are stripped from ``text`` so a title like
+    ``Re:Zero [Director's Cut]`` cannot break the ``[...]`` markup.
+    """
+
+    label = str(text or "").replace("[", "").replace("]", "")
+    if url:
+        return "**[{label}]({url})**".format(label=label, url=url)
+    return "**{label}**".format(label=label)
+
+
+def _card_subline(activity, media):
+    """Small ``-#`` metadata line, or ``None`` when there is nothing to show.
+
+    Assembles, in order and only when present: the media format, a relative
+    timestamp, and non-zero like / reply counts. ``media`` is ``None`` for text
+    activities (no format shown).
+    """
+
+    parts = []
+    fmt = (media or {}).get("format")
+    if fmt:
+        parts.append(str(fmt).replace("_", " "))
+    created = activity.get("created_at")
+    if created:
+        parts.append("<t:{ts}:R>".format(ts=int(created)))
+    likes = activity.get("like_count") or 0
+    if likes:
+        parts.append(ngettext("{n} like", "{n} likes", likes).format(n=likes))
+    replies = activity.get("reply_count") or 0
+    if replies:
+        parts.append(ngettext("{n} reply", "{n} replies", replies).format(n=replies))
+    if not parts:
+        return None
+    return "-# " + " - ".join(parts)
+
+
+def _user_summary(acts):
+    """Terse per-type counts for a digest line, e.g. '3 anime updates, 1 post'."""
+
+    counts = {"ANIME_LIST": 0, "MANGA_LIST": 0, "TEXT": 0}
+    for act in acts:
+        kind = act.get("type")
+        if kind in counts:
+            counts[kind] += 1
+    parts = []
+    if counts["ANIME_LIST"]:
+        n = counts["ANIME_LIST"]
+        parts.append(ngettext("{n} anime update", "{n} anime updates", n).format(n=n))
+    if counts["MANGA_LIST"]:
+        n = counts["MANGA_LIST"]
+        parts.append(ngettext("{n} manga update", "{n} manga updates", n).format(n=n))
+    if counts["TEXT"]:
+        n = counts["TEXT"]
+        parts.append(ngettext("{n} post", "{n} posts", n).format(n=n))
+    if not parts:  # only unexpected types seen: fall back to a plain total
+        n = len(acts)
+        parts.append(ngettext("{n} update", "{n} updates", n).format(n=n))
+    return ", ".join(parts)
+
+
+class ActivityCard(discord.ui.LayoutView):
+    """One AniList activity as a polished Components V2 card.
+
+    A coloured :class:`~discord.ui.Container` (the media's cover accent, else
+    :data:`CARD_ACCENT`) holds the update. A list activity renders a
+    :class:`~discord.ui.Section` - the cover as a :class:`~discord.ui.Thumbnail`
+    accessory beside a bold headline (username link + action + title link) and a
+    small subline - while a text activity drops the thumbnail and renders the
+    post body (plus any image via a :class:`~discord.ui.MediaGallery`) straight
+    in the container. A trailing :class:`~discord.ui.ActionRow` carries a single
+    'AniList' link button. Every field degrades independently, so a partial
+    activity dict (missing media, avatar, progress, ...) never raises.
+
+    Timeout / no leak: the only component is a link button, which is client-side
+    and never dispatched. discord.py stores a sent view only when it
+    ``is_dispatchable()`` (see ``abc.Messageable.send``); this view is not, so it
+    is never registered and no timeout task is ever created - the finite timeout
+    is a harmless placeholder that only starts mattering once Lot 4 adds the
+    dispatchable Like / Reply buttons to the same row.
+    """
+
+    def __init__(self, activity, *, timeout=600):
+        super().__init__(timeout=timeout)
+        try:
+            self._build(activity)
+        except Exception:  # a card must never break delivery of the whole batch
+            log.exception("AniList feed: failed to build an activity card")
+            self._fallback(_("An AniList update could not be rendered."))
+
+    def _fallback(self, message):
+        self.clear_items()
+        container = discord.ui.Container(accent_colour=CARD_ACCENT)
+        container.add_item(discord.ui.TextDisplay(message))
+        self.add_item(container)
+
+    def _build(self, activity):
+        if activity.get("kind") == "TextActivity":
+            container = discord.ui.Container(accent_colour=CARD_ACCENT)
+            self._build_text(container, activity)
+        else:
+            container = discord.ui.Container(
+                accent_colour=_colour_from_media(activity.get("media"))
+            )
+            self._build_list(container, activity)
+        self._add_link_row(container, activity)
+        self.add_item(container)
+
+    def _build_list(self, container, activity):
+        media = activity.get("media") or {}
+        user_link = _bold_link(
+            activity.get("user_name") or _("Someone"), activity.get("user_url")
+        )
+        title_link = _bold_link(
+            _media_title(media), media.get("siteUrl") or activity.get("site_url")
+        )
+        action = _list_action(
+            activity.get("status"), af.normalize_progress(activity.get("progress"))
+        )
+        # Collapse whitespace so a degenerate activity with no status at all
+        # (empty action) does not leave a double space between name and title.
+        headline = " ".join(
+            _("{user} {action} {title}")
+            .format(user=user_link, action=action, title=title_link)
+            .split()
+        )
+
+        texts = [discord.ui.TextDisplay(headline)]
+        subline = _card_subline(activity, media)
+        if subline:
+            texts.append(discord.ui.TextDisplay(subline))
+
+        cover = media.get("coverImage") or {}
+        thumb = cover.get("extraLarge") or cover.get("large")
+        if thumb:
+            # A Section requires an accessory; only build one when we have a
+            # cover to hang on it, otherwise degrade to plain text displays.
+            container.add_item(
+                discord.ui.Section(*texts, accessory=discord.ui.Thumbnail(thumb))
+            )
+        else:
+            for text in texts:
+                container.add_item(text)
+
+    def _build_text(self, container, activity):
+        user_link = _bold_link(
+            activity.get("user_name") or _("Someone"),
+            activity.get("user_url") or activity.get("site_url"),
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("{user} posted an update").format(user=user_link)
+            )
+        )
+        clean, image = af.convert_text(activity.get("text"))
+        if clean:
+            container.add_item(discord.ui.TextDisplay(clean))
+        if image:
+            gallery = discord.ui.MediaGallery()
+            gallery.add_item(media=image)
+            container.add_item(gallery)
+        subline = _card_subline(activity, None)
+        if subline:
+            container.add_item(discord.ui.TextDisplay(subline))
+
+    def _add_link_row(self, container, activity):
+        url = activity.get("site_url")
+        if not url:  # a link button needs a url; skip the row without one
+            return
+        container.add_item(discord.ui.Separator())
+        # One link button today. The row holds up to five, so Lot 4 fills the
+        # remaining slots with the Like and Reply buttons on this same row.
+        container.add_item(
+            discord.ui.ActionRow(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.link, label=_("AniList"), url=url
+                )
+            )
+        )
+
+
+class ActivityDigest(discord.ui.LayoutView):
+    """The coalesced remainder of a busy tick as one compact Components V2 card.
+
+    A single :data:`CARD_ACCENT` container: a heading ('...and N more updates')
+    and one terse line per user (bold profile link + per-type counts), capped at
+    :attr:`MAX_USERS` so a huge burst cannot blow the component budget - the
+    overflow collapses into a small '+N others' trailer. No thumbnails: compact
+    by design. Purely presentational (no interactive components), so it is never
+    stored or dispatched.
+    """
+
+    MAX_USERS = 10
+
+    def __init__(self, items, *, timeout=600):
+        super().__init__(timeout=timeout)
+        try:
+            self._build(items)
+        except Exception:
+            log.exception("AniList feed: failed to build the digest card")
+            self.clear_items()
+            container = discord.ui.Container(accent_colour=CARD_ACCENT)
+            container.add_item(
+                discord.ui.TextDisplay(_("More AniList activity"))
+            )
+            self.add_item(container)
+
+    def _build(self, items):
+        total = len(items)
+        users = list(af.group_by_user(items).values())
+
+        container = discord.ui.Container(accent_colour=CARD_ACCENT)
+        container.add_item(
+            discord.ui.TextDisplay(
+                "### "
+                + ngettext(
+                    "...and {count} more update",
+                    "...and {count} more updates",
+                    total,
+                ).format(count=total)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+
+        lines = []
+        for acts in users[: self.MAX_USERS]:
+            first = acts[0]
+            user_link = _bold_link(
+                first.get("user_name") or _("Someone"),
+                first.get("user_url") or first.get("site_url"),
+            )
+            lines.append(
+                _("{user} - {summary}").format(
+                    user=user_link, summary=_user_summary(acts)
+                )
+            )
+        extra = len(users) - self.MAX_USERS
+        if extra > 0:
+            lines.append(
+                "-# "
+                + ngettext("+{count} other", "+{count} others", extra).format(
+                    count=extra
+                )
+            )
+        container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+        self.add_item(container)
 
 
 def _normalize(raw):
@@ -634,80 +930,19 @@ class AniListFeed(commands.Cog):
                 await self._reset_failure(feed)
 
     # ------------------------------------------------------------------
-    # Rendering - the boundary Lot 3 replaces with Components V2.
+    # Rendering - the send-kwargs boundary. Both return a Components V2
+    # LayoutView (ActivityCard / ActivityDigest); the layout craft lives in
+    # those classes above, keeping this method boundary a one-liner.
     # ------------------------------------------------------------------
     def _render_activity(self, activity):
-        """Render one activity into send kwargs (``dict(embed=...)``)."""
+        """Render one activity into send kwargs (``dict(view=...)``)."""
 
-        if activity.get("kind") == "TextActivity":
-            return {"embed": self._text_embed(activity)}
-        return {"embed": self._list_embed(activity)}
-
-    def _list_embed(self, activity):
-        media = activity.get("media") or {}
-        status = (activity.get("status") or "").strip()
-        progress = af.normalize_progress(activity.get("progress"))
-        action = " ".join(part for part in (status, progress) if part)
-
-        embed = discord.Embed(
-            title=_media_title(media),
-            url=media.get("siteUrl") or activity.get("site_url"),
-            description=action or None,
-            colour=_colour_from_media(media),
-        )
-        embed.set_author(
-            name=activity.get("user_name") or _("Someone"),
-            url=activity.get("user_url"),
-            icon_url=activity.get("user_avatar"),
-        )
-        cover = media.get("coverImage") or {}
-        thumb = cover.get("extraLarge") or cover.get("large")
-        if thumb:
-            embed.set_thumbnail(url=thumb)
-        self._stamp(embed, activity)
-        return embed
-
-    def _text_embed(self, activity):
-        clean, image = af.convert_text(activity.get("text"))
-        embed = discord.Embed(description=clean or None, colour=ANILIST_BLUE)
-        embed.set_author(
-            name=activity.get("user_name") or _("Someone"),
-            url=activity.get("site_url") or activity.get("user_url"),
-            icon_url=activity.get("user_avatar"),
-        )
-        if image:
-            embed.set_image(url=image)
-        self._stamp(embed, activity)
-        return embed
+        return {"view": ActivityCard(activity)}
 
     def _render_digest(self, items):
-        """Render the coalesced remainder into a single compact digest embed."""
+        """Render the coalesced remainder into send kwargs (``dict(view=...)``)."""
 
-        lines = []
-        for acts in af.group_by_user(items).values():
-            name = acts[0].get("user_name") or _("Someone")
-            count = len(acts)
-            lines.append(
-                ngettext(
-                    "**{name}** posted {count} more update",
-                    "**{name}** posted {count} more updates",
-                    count,
-                ).format(name=name, count=count)
-            )
-        embed = discord.Embed(
-            title=_("More AniList activity"),
-            description="\n".join(lines) or None,
-            colour=ANILIST_BLUE,
-        )
-        return {"embed": embed}
-
-    @staticmethod
-    def _stamp(embed, activity):
-        created = activity.get("created_at")
-        if created:
-            embed.timestamp = datetime.datetime.fromtimestamp(
-                created, tz=datetime.timezone.utc
-            )
+        return {"view": ActivityDigest(items)}
 
     # ------------------------------------------------------------------
     # Management commands

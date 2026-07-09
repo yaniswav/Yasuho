@@ -221,6 +221,33 @@ def group_by_user(activities):
     return grouped
 
 
+# --- Colour parsing ---------------------------------------------------------
+
+# A CSS-style 6-digit hex colour, with or without the leading '#'. AniList's
+# ``coverImage.color`` is a free-form string ("#e4a15d") that may be absent,
+# empty or malformed, so parsing stays strict and defensive: anything that is
+# not exactly six hex digits yields ``None`` and the cog falls back to a brand
+# colour rather than raising.
+_HEX_COLOUR_RE = re.compile(r"^#?([0-9a-fA-F]{6})$")
+
+
+def parse_hex_colour(text):
+    """Parse a CSS hex colour string into a ``0xRRGGBB`` int, else ``None``.
+
+    Accepts ``"#e4a15d"`` or ``"e4a15d"`` (case-insensitive, surrounding
+    whitespace ignored). Returns ``None`` for anything that is not a 6-digit hex
+    colour - a missing/``None`` value, an empty string, a 3-digit shorthand, a
+    wrong length or a non-hex character - so the caller can substitute a default
+    accent. Pure and total: it never raises on junk input.
+    """
+    if not isinstance(text, str):
+        return None
+    match = _HEX_COLOUR_RE.match(text.strip())
+    if match is None:
+        return None
+    return int(match.group(1), 16)
+
+
 # --- Progress normalisation -------------------------------------------------
 
 _RANGE_DASH_RE = re.compile(r"\s*-\s*")

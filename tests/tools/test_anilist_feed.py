@@ -290,3 +290,50 @@ def test_normalize_progress_junk_passthrough():
     assert af.normalize_progress("") == ""
     assert af.normalize_progress(None) == ""
     assert af.normalize_progress("volume 3") == "volume 3"
+
+
+# ---------------------------------------------------------------------------
+# parse_hex_colour - the card accent parser (defensive against AniList junk)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_hex_colour_with_hash():
+    assert af.parse_hex_colour("#e4a15d") == 0xE4A15D
+
+
+def test_parse_hex_colour_without_hash():
+    assert af.parse_hex_colour("e4a15d") == 0xE4A15D
+
+
+def test_parse_hex_colour_is_case_insensitive():
+    assert af.parse_hex_colour("#E4A15D") == af.parse_hex_colour("#e4a15d")
+
+
+def test_parse_hex_colour_trims_whitespace():
+    assert af.parse_hex_colour("  #02a9ff  ") == 0x02A9FF
+
+
+def test_parse_hex_colour_black_and_white_edges():
+    # A literal 0x000000 must parse (falsy int, but not None) and 0xFFFFFF too.
+    assert af.parse_hex_colour("#000000") == 0x000000
+    assert af.parse_hex_colour("#ffffff") == 0xFFFFFF
+
+
+def test_parse_hex_colour_none_and_empty():
+    assert af.parse_hex_colour(None) is None
+    assert af.parse_hex_colour("") is None
+    assert af.parse_hex_colour("   ") is None
+
+
+def test_parse_hex_colour_non_string():
+    assert af.parse_hex_colour(0xE4A15D) is None
+    assert af.parse_hex_colour(("#e4a15d",)) is None
+
+
+def test_parse_hex_colour_rejects_bad_shapes():
+    assert af.parse_hex_colour("#abc") is None       # 3-digit shorthand
+    assert af.parse_hex_colour("#e4a15") is None      # 5 digits
+    assert af.parse_hex_colour("#e4a15dd") is None     # 7 digits
+    assert af.parse_hex_colour("#gggggg") is None      # non-hex chars
+    assert af.parse_hex_colour("e4 a1 5d") is None      # embedded spaces
+    assert af.parse_hex_colour("rgb(1,2,3)") is None    # not hex at all
