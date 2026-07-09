@@ -97,20 +97,41 @@ class AniListBase:
             """
         await self.bot.db_pool.execute(query, user_id, encrypted, expires)
 
-    async def _get_token(self, user_id):
-        """Return the decrypted access token, or None if missing/expired."""
+    async def _token_status(self, user_id):
+        """Classify a user's stored AniList token, without ever logging it.
+
+        Returns ``(status, token)`` where ``status`` is one of:
+
+          * ``"missing"`` - no linked account at all (no row);
+          * ``"relink"``  - a row exists but the token is expired or can no
+            longer be decrypted (key rotated / ciphertext tampered);
+          * ``"ok"``      - a live token, decrypted into the returned string.
+
+        The plaintext token is only ever handed back to the caller as a local
+        value; it is never logged or echoed. Callers that only need the token
+        (and treat every failure the same) can use :meth:`_get_token`.
+        """
 
         query = "SELECT token, expires FROM anilist_tokens WHERE user_id = $1;"
         row = await self.bot.db_pool.fetchrow(query, user_id)
         if row is None:
-            return None
+            return "missing", None
 
         if row["expires"] and row["expires"] < datetime.datetime.now(
             datetime.timezone.utc
         ):
-            return None
+            return "relink", None
 
-        return crypto.decrypt(row["token"])
+        token = crypto.decrypt(row["token"])
+        if not token:
+            return "relink", None
+        return "ok", token
+
+    async def _get_token(self, user_id):
+        """Return the decrypted access token, or None if missing/expired/invalid."""
+
+        _status, token = await self._token_status(user_id)
+        return token
 
     async def _viewer_entry(self, user_id, media_id):
         """Return ``(entry, logged_in)`` for the user's list entry on a media.

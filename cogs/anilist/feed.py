@@ -34,8 +34,11 @@ from discord.ext import commands, tasks
 
 from .helpers import API_URL
 from tools import anilist_feed as af
+from tools import i18n
+from tools.cooldowns import Cooldowns
 from tools.http import TIMEOUT
 from tools.i18n import N_, _, ngettext
+from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -151,6 +154,14 @@ class _RateLimited(Exception):
 
 class _FetchError(Exception):
     """Any non-429 network / HTTP / GraphQL failure while fetching."""
+
+
+class _AuthError(Exception):
+    """A 401 on an authenticated call: the user's AniList link is invalid now."""
+
+
+class _GoneError(Exception):
+    """A 400/404 (or data-less GraphQL error): the target activity is gone."""
 
 
 def _parse_retry_after(value, default=60):
@@ -322,6 +333,386 @@ def _user_summary(acts):
     return ", ".join(parts)
 
 
+# --- Interactive Like / Reply -----------------------------------------------
+#
+# The feed card carries two persistent buttons that act AS the clicking user,
+# through the AniList account they linked with ``/anilist login``. They are
+# :class:`discord.ui.DynamicItem` buttons so they keep working forever - even on
+# cards posted before a restart - because dispatch matches the custom_id against
+# a globally-registered template and rebuilds the item from the live message,
+# never from a stored (and long-gone) view. The activity id is the only state
+# and it rides inside the custom_id.
+
+# ``ToggleLikeV2`` returns a LikeableUnion; the two inline fragments read the
+# result for the only two activity kinds our feed ever renders (a MessageActivity
+# never appears here). ``LikeableType.ACTIVITY`` targets an activity by id.
+TOGGLE_LIKE_MUTATION = """
+mutation ($id: Int, $type: LikeableType) {
+  ToggleLikeV2(id: $id, type: $type) {
+    __typename
+    ... on ListActivity { isLiked likeCount }
+    ... on TextActivity { isLiked likeCount }
+  }
+}
+"""
+
+# ``SaveActivityReply`` posts a reply on the activity as the authenticated user.
+SAVE_REPLY_MUTATION = """
+mutation ($activityId: Int, $text: String) {
+  SaveActivityReply(activityId: $activityId, text: $text) {
+    id
+  }
+}
+"""
+
+# custom_id templates. The two literal prefixes are disjoint so discord.py's
+# fullmatch dispatch can never route a like click to the reply handler or vice
+# versa; ``aid`` is the activity id (a positive int, so the id part is short and
+# the whole id stays well under the 100-char custom_id limit).
+LIKE_TEMPLATE = r"alf:like:(?P<aid>\d+)"
+REPLY_TEMPLATE = r"alf:reply:(?P<aid>\d+)"
+
+# The longest reply AniList's box accepts comfortably; keeps us inside Discord's
+# modal input limit too.
+REPLY_MAX_LENGTH = 1500
+
+# One shared per-user debounce for both action buttons (not a durable rate
+# limit, just an in-memory anti-hammer). 3s between clicks per user.
+_ACTION_DEBOUNCE = Cooldowns(3.0)
+
+
+def _activity_url(activity_id):
+    """The canonical AniList permalink for an activity id.
+
+    Deterministic from the id alone, so the reply confirmation can link back to
+    the activity even on a card rebuilt after a restart (where the card object
+    no longer carries the original ``siteUrl``).
+    """
+
+    return "https://anilist.co/activity/{aid}".format(aid=activity_id)
+
+
+async def _authed_graphql(token, query, variables):
+    """POST an authenticated GraphQL request to AniList as the linked user.
+
+    The bearer token is placed ONLY in the Authorization header - never logged,
+    never echoed, never woven into a raised exception (the raised errors carry
+    fixed, tokenless messages). Maps AniList's responses to the typed feed
+    errors so the click handlers can render a clean, localised hint:
+
+      * 429            -> :class:`_RateLimited` (with Retry-After seconds);
+      * 401            -> :class:`_AuthError` (link revoked/invalid);
+      * 400 / 404      -> :class:`_GoneError` (activity deleted);
+      * a data-less GraphQL error -> :class:`_GoneError` (most often deleted);
+      * anything else  -> :class:`_FetchError` (generic failure).
+    """
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer " + token,
+    }
+    payload = {"query": query, "variables": variables}
+
+    try:
+        async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
+            async with session.post(API_URL, json=payload, headers=headers) as r:
+                status = r.status
+                if status == 429:
+                    raise _RateLimited(
+                        _parse_retry_after(r.headers.get("Retry-After"))
+                    )
+                if status == 401:
+                    raise _AuthError()
+                try:
+                    data = await r.json()
+                except Exception:
+                    data = None
+                if status in (400, 404):
+                    raise _GoneError()
+                if data is None:
+                    raise _FetchError("AniList HTTP %s with no JSON body" % status)
+    except (_RateLimited, _AuthError, _GoneError, _FetchError):
+        raise
+    except Exception as exc:
+        # aiohttp errors reference the URL/reason, never request headers, so the
+        # token cannot leak here; still, keep the message generic and tokenless.
+        raise _FetchError("network failure talking to AniList") from exc
+
+    # A logical GraphQL error with no data payload is, in practice, an activity
+    # that was deleted between the card being posted and the click.
+    if isinstance(data, dict) and data.get("errors") and not data.get("data"):
+        raise _GoneError()
+    return data
+
+
+async def _feed_ephemeral(interaction, message):
+    """Deliver an ephemeral reply to a feed-action interaction, first or follow-up."""
+
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+    except discord.HTTPException:
+        log.debug("AniList feed: could not deliver an ephemeral action reply")
+
+
+async def _check_debounce(interaction):
+    """Gate a click behind the per-user debounce.
+
+    Returns ``True`` when the click may proceed; otherwise sends an ephemeral
+    'slow down' and returns ``False``. Touches the window only on an allowed
+    click so a burst of denied clicks does not extend it indefinitely.
+    """
+
+    if _ACTION_DEBOUNCE.is_active(interaction.user.id):
+        await _feed_ephemeral(
+            interaction, _("You are clicking too fast - give it a moment.")
+        )
+        return False
+    _ACTION_DEBOUNCE.touch(interaction.user.id)
+    return True
+
+
+async def _resolve_token(interaction):
+    """Resolve the clicker's AniList token, or reply with the right hint.
+
+    Returns the decrypted token string on success (a local value only, never
+    logged), or ``None`` after having sent the appropriate ephemeral hint:
+    not linked -> point at ``/anilist login``; expired or undecryptable ->
+    ask them to re-link.
+    """
+
+    anilist = interaction.client.get_cog("AniList")
+    if anilist is None:
+        await _feed_ephemeral(
+            interaction, _("AniList actions are unavailable right now.")
+        )
+        return None
+
+    status, token = await anilist._token_status(interaction.user.id)
+    if status == "missing":
+        await _feed_ephemeral(
+            interaction,
+            _(
+                "Link your AniList account first with `/anilist login`, then "
+                "you can like and reply straight from the feed."
+            ),
+        )
+        return None
+    if status != "ok" or not token:
+        await _feed_ephemeral(
+            interaction,
+            _(
+                "Your AniList link is no longer valid - re-link it with "
+                "`/anilist login`."
+            ),
+        )
+        return None
+    return token
+
+
+async def _run_like(interaction, activity_id):
+    """Toggle the clicking user's like on the activity, then confirm ephemerally."""
+
+    # Component callbacks run in their own task, where the invocation locale was
+    # never set: resolve it first so every _() below renders in the user's tongue.
+    await i18n.apply_interaction_locale(interaction)
+    if not await _check_debounce(interaction):
+        return
+    token = await _resolve_token(interaction)
+    if token is None:
+        return
+
+    # The mutation is a network round-trip that can outlast the 3s window; defer
+    # first, then follow up with the outcome.
+    try:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+    except discord.HTTPException:
+        pass
+
+    try:
+        data = await _authed_graphql(
+            token, TOGGLE_LIKE_MUTATION, {"id": activity_id, "type": "ACTIVITY"}
+        )
+    except _RateLimited:
+        return await _feed_ephemeral(
+            interaction, _("AniList is rate limiting me right now - try again shortly.")
+        )
+    except _AuthError:
+        return await _feed_ephemeral(
+            interaction,
+            _(
+                "Your AniList link seems invalid now - re-link it with "
+                "`/anilist login`."
+            ),
+        )
+    except _GoneError:
+        return await _feed_ephemeral(
+            interaction, _("This activity no longer exists on AniList.")
+        )
+    except _FetchError:
+        return await _feed_ephemeral(
+            interaction, _("I could not reach AniList - try again shortly.")
+        )
+
+    result = ((data or {}).get("data") or {}).get("ToggleLikeV2") or {}
+    liked = bool(result.get("isLiked"))
+    count = result.get("likeCount") or 0
+    if liked:
+        message = ngettext(
+            "Liked - this activity now has {n} like.",
+            "Liked - this activity now has {n} likes.",
+            count,
+        ).format(n=count)
+    else:
+        message = ngettext(
+            "Like removed - this activity now has {n} like.",
+            "Like removed - this activity now has {n} likes.",
+            count,
+        ).format(n=count)
+    await _feed_ephemeral(interaction, message)
+
+
+async def _run_reply(interaction, activity_id):
+    """Open the reply modal for the clicking user (after locale + token checks)."""
+
+    await i18n.apply_interaction_locale(interaction)
+    if not await _check_debounce(interaction):
+        return
+    # Fail fast with a clear hint before the user types a whole reply; the modal
+    # re-fetches the token at submit time, so we deliberately drop this one and
+    # never park the decrypted secret on the modal object while they type.
+    if await _resolve_token(interaction) is None:
+        return
+
+    try:
+        await interaction.response.send_modal(_ReplyModal(activity_id))
+    except discord.HTTPException:
+        log.debug("AniList feed: could not open the reply modal")
+
+
+class _ReplyModal(LocaleModal):
+    """One paragraph field that posts an AniList reply as the submitting user."""
+
+    def __init__(self, activity_id):
+        super().__init__(title=_("Reply on AniList"))
+        self.activity_id = activity_id
+        self.reply_input = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            max_length=REPLY_MAX_LENGTH,
+            required=True,
+            placeholder=_("Write your reply..."),
+        )
+        self.add_item(
+            discord.ui.Label(text=_("Your reply"), component=self.reply_input)
+        )
+
+    async def on_submit(self, interaction):
+        # Defer first: posting the reply is a network round-trip.
+        try:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+        except discord.HTTPException:
+            pass
+
+        # Re-resolve the token now (it may have expired while typing), keeping the
+        # decrypted secret's lifetime confined to this submit task.
+        token = await _resolve_token(interaction)
+        if token is None:
+            return
+
+        text = (self.reply_input.value or "").strip()
+        if not text:
+            return await _feed_ephemeral(
+                interaction, _("Your reply was empty - nothing was posted.")
+            )
+
+        try:
+            data = await _authed_graphql(
+                token,
+                SAVE_REPLY_MUTATION,
+                {"activityId": self.activity_id, "text": text},
+            )
+        except _RateLimited:
+            return await _feed_ephemeral(
+                interaction,
+                _("AniList is rate limiting me right now - try again shortly."),
+            )
+        except _AuthError:
+            return await _feed_ephemeral(
+                interaction,
+                _(
+                    "Your AniList link seems invalid now - re-link it with "
+                    "`/anilist login`."
+                ),
+            )
+        except _GoneError:
+            return await _feed_ephemeral(
+                interaction, _("This activity no longer exists on AniList.")
+            )
+        except _FetchError:
+            return await _feed_ephemeral(
+                interaction, _("I could not reach AniList - try again shortly.")
+            )
+
+        reply = ((data or {}).get("data") or {}).get("SaveActivityReply") or {}
+        if not reply.get("id"):
+            return await _feed_ephemeral(
+                interaction, _("AniList did not accept that reply - try again shortly.")
+            )
+        await _feed_ephemeral(
+            interaction,
+            _("Your reply was posted. [See it on AniList]({url})").format(
+                url=_activity_url(self.activity_id)
+            ),
+        )
+
+
+class FeedLikeButton(discord.ui.DynamicItem[discord.ui.Button], template=LIKE_TEMPLATE):
+    """Persistent heart button that toggles the clicker's like on the activity."""
+
+    def __init__(self, activity_id):
+        self.activity_id = activity_id
+        super().__init__(
+            discord.ui.Button(
+                style=discord.ButtonStyle.secondary,
+                emoji="\N{HEAVY BLACK HEART}",
+                custom_id="alf:like:{aid}".format(aid=activity_id),
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["aid"]))
+
+    async def callback(self, interaction):
+        await _run_like(interaction, self.activity_id)
+
+
+class FeedReplyButton(
+    discord.ui.DynamicItem[discord.ui.Button], template=REPLY_TEMPLATE
+):
+    """Persistent speech-bubble button that opens the reply modal for the clicker."""
+
+    def __init__(self, activity_id):
+        self.activity_id = activity_id
+        super().__init__(
+            discord.ui.Button(
+                style=discord.ButtonStyle.secondary,
+                emoji="\N{SPEECH BALLOON}",
+                custom_id="alf:reply:{aid}".format(aid=activity_id),
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["aid"]))
+
+    async def callback(self, interaction):
+        await _run_reply(interaction, self.activity_id)
+
+
 class ActivityCard(discord.ui.LayoutView):
     """One AniList activity as a polished Components V2 card.
 
@@ -331,19 +722,23 @@ class ActivityCard(discord.ui.LayoutView):
     accessory beside a bold headline (username link + action + title link) and a
     small subline - while a text activity drops the thumbnail and renders the
     post body (plus any image via a :class:`~discord.ui.MediaGallery`) straight
-    in the container. A trailing :class:`~discord.ui.ActionRow` carries a single
-    'AniList' link button. Every field degrades independently, so a partial
-    activity dict (missing media, avatar, progress, ...) never raises.
+    in the container. A trailing :class:`~discord.ui.ActionRow` carries the
+    'AniList' link button plus the persistent Like and Reply buttons (see
+    :class:`FeedLikeButton` / :class:`FeedReplyButton`). Every field degrades
+    independently, so a partial activity dict (missing media, avatar, progress,
+    ...) never raises.
 
-    Timeout / no leak: the only component is a link button, which is client-side
-    and never dispatched. discord.py stores a sent view only when it
-    ``is_dispatchable()`` (see ``abc.Messageable.send``); this view is not, so it
-    is never registered and no timeout task is ever created - the finite timeout
-    is a harmless placeholder that only starts mattering once Lot 4 adds the
-    dispatchable Like / Reply buttons to the same row.
+    Persistence: the Like / Reply buttons are :class:`discord.ui.DynamicItem`
+    instances, so ``timeout=None`` and the card is persistent. discord.py stores
+    a sent view only when it ``is_dispatchable()`` (see ``abc.Messageable.send``);
+    this one now is, but it is fully dynamic (its only stateful items are the two
+    DynamicItems), so no per-message entry is retained and no timeout task is
+    created. The buttons keep working forever - on old cards, across restarts -
+    because dispatch matches their custom_id against the globally-registered
+    templates and rebuilds each item from the live message, never from this view.
     """
 
-    def __init__(self, activity, *, timeout=600):
+    def __init__(self, activity, *, timeout=None):
         super().__init__(timeout=timeout)
         try:
             self._build(activity)
@@ -366,7 +761,7 @@ class ActivityCard(discord.ui.LayoutView):
                 accent_colour=_colour_from_media(activity.get("media"))
             )
             self._build_list(container, activity)
-        self._add_link_row(container, activity)
+        self._add_action_row(container, activity)
         self.add_item(container)
 
     def _build_list(self, container, activity):
@@ -426,20 +821,30 @@ class ActivityCard(discord.ui.LayoutView):
         if subline:
             container.add_item(discord.ui.TextDisplay(subline))
 
-    def _add_link_row(self, container, activity):
+    def _add_action_row(self, container, activity):
+        # One ActionRow (max five buttons) with, in order: the 'AniList' link
+        # button (only when we have a url) and the persistent Like + Reply
+        # buttons keyed on the activity id. The activity id is present on every
+        # rendered activity (``_normalize`` drops id-less ones), but stay
+        # defensive so a degenerate dict cannot raise mid-build.
+        activity_id = activity.get("id")
         url = activity.get("site_url")
-        if not url:  # a link button needs a url; skip the row without one
-            return
-        container.add_item(discord.ui.Separator())
-        # One link button today. The row holds up to five, so Lot 4 fills the
-        # remaining slots with the Like and Reply buttons on this same row.
-        container.add_item(
-            discord.ui.ActionRow(
+
+        row = discord.ui.ActionRow()
+        if url:
+            row.add_item(
                 discord.ui.Button(
                     style=discord.ButtonStyle.link, label=_("AniList"), url=url
                 )
             )
-        )
+        if activity_id is not None:
+            row.add_item(FeedLikeButton(activity_id))
+            row.add_item(FeedReplyButton(activity_id))
+
+        if not row.children:  # nothing to show: no separator, no empty row
+            return
+        container.add_item(discord.ui.Separator())
+        container.add_item(row)
 
 
 class ActivityDigest(discord.ui.LayoutView):
@@ -561,8 +966,23 @@ class AniListFeed(commands.Cog):
         self._embargo_until = 0
         self._poll_feeds.start()
 
+    async def cog_load(self):
+        # Register the feed's Like / Reply DynamicItems process-wide so their
+        # clicks dispatch on EVERY card, including ones posted before this start
+        # (the whole point of DynamicItem - no per-message view is needed).
+        try:
+            self.bot.add_dynamic_items(FeedLikeButton, FeedReplyButton)
+        except Exception:
+            log.exception("AniList feed: failed to register the action buttons")
+
     def cog_unload(self):
         self._poll_feeds.cancel()
+        # Drop the dynamic-item registration so a clean reload does not leave a
+        # stale template behind (it is re-added by the next cog_load).
+        try:
+            self.bot.remove_dynamic_items(FeedLikeButton, FeedReplyButton)
+        except Exception:
+            log.exception("AniList feed: failed to remove the action buttons")
 
     # ------------------------------------------------------------------
     # GraphQL plumbing (one session per call, matching the codebase pattern)
