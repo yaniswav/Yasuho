@@ -56,6 +56,18 @@ _CENTER_RE = re.compile(r"~~~(.+?)~~~", re.DOTALL)
 # leaking a spoiler is the worst failure of this feature.
 _SPOILER_RE = re.compile(r"~!(.+?)!~", re.DOTALL)
 
+# Each converted spoiler is wrapped in these private sentinel characters instead
+# of a literal '||'. Downstream steps (image extraction, truncation) read spoiler
+# boundaries from the sentinels, so a stray '||' the user typed as prose
+# ("yes || no") can never masquerade as a spoiler bar and flip the parity. The
+# sentinels are swapped for real Discord '||' bars only at the very end, once
+# those boundary-sensitive steps have run. The sentinels keep the CONVERTER
+# internally consistent; a separate step (see convert_text) escapes user-typed
+# '|' so the FINAL string cannot mix user '||' with the emitted bars and shift
+# Discord's positional '||' pairing.
+_SPOILER_OPEN = "\x00"
+_SPOILER_CLOSE = "\x01"
+
 # __text__ is BOLD on AniList, but Discord renders __ as underline -> **text**.
 _BOLD_RE = re.compile(r"__(.+?)__", re.DOTALL)
 
@@ -84,14 +96,31 @@ def convert_text(raw, limit=TEXT_LIMIT):
       there is none. Images hidden inside a spoiler are removed from the text
       but never surfaced, so an author's hidden image cannot leak.
 
-    The conversion runs a fixed pipeline: normalise HTML, strip centered blocks,
-    convert spoilers, convert bold, extract/remove images, inline video embeds,
-    then tidy whitespace and truncate. Ordinary Discord-compatible markup
-    (``[text](url)`` links, bare urls) is left untouched.
+    The conversion runs a fixed pipeline: escape user-typed ``|`` (so a raw
+    ``||`` cannot pair with an emitted spoiler bar), normalise HTML, strip
+    centered blocks, convert spoilers, convert bold, extract/remove images,
+    inline video embeds, then tidy whitespace and truncate. Ordinary
+    Discord-compatible markup (``[text](url)`` links, bare urls) is left
+    untouched.
     """
     if not raw:
         return "", None
     text = str(raw)
+
+    # 0. Drop any stray sentinel characters so user text cannot forge a spoiler
+    #    boundary the converter relies on below.
+    text = text.replace(_SPOILER_OPEN, "").replace(_SPOILER_CLOSE, "")
+
+    # 0b. Escape every user-typed literal '|'. Sentinels keep the CONVERTER's own
+    #     spoiler bars internally consistent, but the final string still mixes
+    #     those emitted '||' with any '||' the user typed as prose, and Discord
+    #     pairs '||' markers positionally: an odd number of user '||' before an
+    #     emitted spoiler shifts the pairing so the emitted closing bar goes
+    #     unpaired and the hidden content renders in the clear. Escaping each pipe
+    #     ('|' -> '\|') makes user pipes render as literal '|' that can never pair
+    #     with an emitted bar. Applied to the whole raw text (spoiler content
+    #     included, where an escaped pipe is still correct).
+    text = text.replace("|", "\\|")
 
     # 1. HTML: <br> becomes a newline; drop any other tag AniList let through.
     text = _BR_RE.sub("\n", text)
@@ -100,20 +129,21 @@ def convert_text(raw, limit=TEXT_LIMIT):
     # 2. Centered blocks BEFORE spoilers (so ~~~...~~~ wins over a stray ~!...!~).
     text = _CENTER_RE.sub(r"\1", text)
 
-    # 3. Spoilers -> Discord spoiler bars.
-    text = _SPOILER_RE.sub(r"||\1||", text)
+    # 3. Spoilers -> sentinel-marked spans (converted to Discord '||' at the end).
+    text = _SPOILER_RE.sub(_SPOILER_OPEN + r"\1" + _SPOILER_CLOSE, text)
 
     # 4. Bold: AniList __ -> Discord ** (Discord's __ is underline).
     text = _BOLD_RE.sub(r"**\1**", text)
 
     # 5. Images: remove the markup, collect embed-eligible urls (http(s) and not
-    #    inside a spoiler). Parity of '||' before the match tells us whether the
-    #    image sits inside an open spoiler; those are dropped silently.
+    #    inside a spoiler). A pending open sentinel (more opens than closes before
+    #    the match) means the image sits in a spoiler; those are dropped silently.
     image_urls = []
 
     def _strip_image(match):
         url = (match.group(1) or "").strip()
-        inside_spoiler = match.string[: match.start()].count("||") % 2 == 1
+        before = match.string[: match.start()]
+        inside_spoiler = before.count(_SPOILER_OPEN) > before.count(_SPOILER_CLOSE)
         if not inside_spoiler and url.lower().startswith(("http://", "https://")):
             image_urls.append(url)
         return ""
@@ -129,6 +159,10 @@ def convert_text(raw, limit=TEXT_LIMIT):
     text = text.strip()
 
     text = _truncate(text, limit)
+
+    # 8. Now that image extraction and truncation have placed every boundary,
+    #    swap the sentinels for real Discord spoiler bars.
+    text = text.replace(_SPOILER_OPEN, "||").replace(_SPOILER_CLOSE, "||")
     return text, (image_urls[0] if image_urls else None)
 
 
@@ -137,19 +171,21 @@ def _truncate(text, limit):
 
     Returns ``text`` unchanged when it already fits. Otherwise it is cut to
     ``limit`` characters and ``...`` is appended. The critical edge: if the cut
-    lands inside an unclosed ``||`` spoiler, the partial content would be shown
-    in the clear - so we close the spoiler bar (append ``||``) BEFORE the
-    ellipsis, keeping the exposed fragment hidden. A cut that splits a ``||``
-    token leaves a lone trailing ``|``; that is dropped so it neither leaks nor
-    renders.
+    lands inside an unclosed spoiler span, the partial content would be shown in
+    the clear - so we close that span (append the close sentinel) BEFORE the
+    ellipsis, keeping the exposed fragment hidden. Spoiler state is read from the
+    converter's own sentinels, never from a raw ``||`` count, so a literal ``||``
+    the user typed cannot flip the parity and unhide a real spoiler. A cut that
+    splits a user's ``||`` leaves a lone trailing ``|``; that is dropped so it
+    neither leaks nor renders.
     """
     if len(text) <= limit:
         return text
     cut = text[:limit].rstrip()
     if cut.endswith("|") and not cut.endswith("||"):
         cut = cut[:-1].rstrip()
-    if cut.count("||") % 2 == 1:
-        cut += "||"
+    if cut.count(_SPOILER_OPEN) > cut.count(_SPOILER_CLOSE):
+        cut += _SPOILER_CLOSE
     return cut + "..."
 
 

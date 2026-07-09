@@ -48,6 +48,35 @@ def test_spoiler_multiline():
     assert text == "||line1\nline2||"
 
 
+def _unescaped_bar_count(text):
+    # Count '||' markers Discord would actually pair: two pipes NOT preceded by a
+    # neutralising backslash. Escaped user pipes ('\|\|') are excluded.
+    import re
+
+    return len(re.findall(r"(?<!\\)\|\|", text))
+
+
+def test_user_pipes_do_not_shift_spoiler_pairing():
+    # Regression: an odd number of user-typed '||' before an emitted spoiler used
+    # to shift Discord's positional '||' pairing and render the spoiler in the
+    # clear. User pipes are now escaped, so exactly ONE emitted pair remains and
+    # the secret sits between it.
+    text, _ = af.convert_text(
+        "Thoughts: yes || no. My hot take: ~!secret twist!~"
+    )
+    assert _unescaped_bar_count(text) == 2  # only the emitted spoiler pair
+    assert "||secret twist||" in text  # the secret stays wrapped by that pair
+    assert "\\|\\|" in text  # the prose '||' is neutralised, cannot pair
+
+
+def test_literal_pipes_inside_spoiler_stay_escaped_in_one_pair():
+    # A literal '||' inside a spoiler is escaped in place; the spoiler is still a
+    # single balanced emitted pair wrapping the (escaped) content.
+    text, _ = af.convert_text("~!a || b!~")
+    assert text == "||a \\|\\| b||"
+    assert _unescaped_bar_count(text) == 2  # exactly one balanced spoiler pair
+
+
 # ---------------------------------------------------------------------------
 # convert_text - bold / center
 # ---------------------------------------------------------------------------
@@ -122,6 +151,14 @@ def test_image_inside_spoiler_is_not_leaked():
     assert "secret.png" not in text
 
 
+def test_stray_pipes_do_not_unhide_spoiler_image():
+    # A literal '||' typed as prose must not flip spoiler parity and promote an
+    # image the author hid inside a spoiler.
+    text, image = af.convert_text("note || here ~!img(https://x/secret.png)!~")
+    assert image is None
+    assert "secret.png" not in text
+
+
 # ---------------------------------------------------------------------------
 # convert_text - videos, html, links
 # ---------------------------------------------------------------------------
@@ -173,13 +210,28 @@ def test_truncation_inside_open_spoiler_closes_the_bar():
 
 
 def test_truncation_split_pipe_is_dropped():
-    # Cutting between the two pipes of an opening '||' leaves a lone '|' that is
-    # dropped, so nothing dangles and the hidden tail never leaks.
+    # User-typed '||' is now escaped to '\|\|' before conversion (so it cannot
+    # pair with an emitted spoiler bar), so the cut lands inside that escape
+    # sequence rather than a raw '||'. What matters is unchanged: no bare '||'
+    # survives, the hidden tail never leaks, and nothing dangles as a spoiler.
     raw = "hello ||done||" + "z" * 50
-    text, _ = af.convert_text(raw, limit=7)  # cut lands mid-'||' -> "hello |"
-    assert text == "hello..."
-    assert "|" not in text
+    text, _ = af.convert_text(raw, limit=7)  # cut lands in the escaped '\|\|'
+    assert text == "hello \\..."  # escaped form: the lone '\' precedes the cut
+    assert "||" not in text  # no spoiler bar, hidden tail stays cut off
     assert "z" not in text
+
+
+def test_stray_pipes_do_not_leak_truncated_spoiler():
+    # A literal '||' typed as prose before a real spoiler that straddles the cut
+    # must not flip parity and leave the spoiler open, exposing it in the clear.
+    raw = "yes || no ~!" + "S" * 50 + "!~"
+    text, _ = af.convert_text(raw, limit=20)
+    # The spoiler bar is closed before the ellipsis; the hidden run stays wrapped.
+    assert text.endswith("||...")
+    # The user '||' is escaped ('\|\|', two chars wider), so the cut fits fewer
+    # S's inside the bar, but the emitted spoiler pair still wraps the run.
+    assert "\\|\\|" in text  # user prose pipes neutralised, cannot pair with a bar
+    assert "||" + "S" * 7 + "||..." in text
 
 
 # ---------------------------------------------------------------------------
