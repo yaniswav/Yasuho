@@ -33,12 +33,13 @@ import discord
 from discord.ext import commands, tasks
 
 from .helpers import API_URL
+from .queries import VIEWER_QUERY
 from tools import anilist_feed as af
-from tools import i18n
+from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
 from tools.http import TIMEOUT
 from tools.i18n import N_, _, ngettext
-from tools.views import LocaleModal
+from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -957,6 +958,521 @@ def _normalize(raw):
     return base
 
 
+# --- Management panel --------------------------------------------------------
+#
+# The interactive feed control panel opened by the bare ``/anilistfeed``
+# command (an :class:`~tools.views.AuthorView`). It edits ONE feed at a time -
+# ``selected_channel_id`` - defaulting to the guild's only feed, or its first
+# feed when there are two (a select lets the admin switch). Every mutation
+# writes straight to the DB through a cog helper, then the panel reloads its
+# state fresh from the DB and re-renders in place, mirroring the WelcomePanel
+# pattern in ``cogs/config/welcome.py``.
+
+_TYPE_LABELS = {
+    "ANIME_LIST": N_("Anime"),
+    "MANGA_LIST": N_("Manga"),
+    "TEXT": N_("Posts"),
+}
+
+
+class _FeedSwitchSelect(discord.ui.Select):
+    """Pick which of the guild's (up to two) feeds the panel is editing."""
+
+    def __init__(self, panel):
+        self._owner = panel
+        options = []
+        for feed in panel.feeds:
+            cid = feed["channel_id"]
+            options.append(
+                discord.SelectOption(
+                    label=panel.feed_option_label(cid)[:100],
+                    value=str(cid),
+                    default=cid == panel.selected_channel_id,
+                )
+            )
+        super().__init__(
+            placeholder=_("Switch feed..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0,
+        )
+
+    async def callback(self, interaction):
+        try:
+            await self._owner.reload_and_refresh(
+                interaction, selected_channel_id=int(self.values[0])
+            )
+        except Exception:
+            log.exception("AniList feed panel switch select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _FeedChannelSelect(discord.ui.ChannelSelect):
+    """No feed selected: create one here. A feed selected: move it here."""
+
+    def __init__(self, panel):
+        self._owner = panel
+        defaults = []
+        cid = panel.selected_channel_id
+        if cid:
+            # Only a text/news channel may be a default here: the select is
+            # restricted to those types, and Discord rejects a default value
+            # whose type is outside channel_types. A legacy thread-based feed
+            # (get_channel returns None for a thread) simply gets no default.
+            channel = panel.guild.get_channel(cid)
+            if channel is not None and channel.type in (
+                discord.ChannelType.text,
+                discord.ChannelType.news,
+            ):
+                defaults = [channel]
+        placeholder = (
+            _("Move this feed to...")
+            if cid is not None
+            else _("Pick a channel to create a feed...")
+        )
+        super().__init__(
+            channel_types=[discord.ChannelType.text, discord.ChannelType.news],
+            placeholder=placeholder,
+            min_values=1,
+            max_values=1,
+            default_values=defaults,
+            row=1,
+        )
+
+    async def callback(self, interaction):
+        try:
+            target = self.values[0]
+            cog = self._owner.cog
+            if self._owner.selected_channel_id is None:
+                error = await cog._create_feed(self._owner.guild.id, target.id)
+            else:
+                error = await cog._move_feed(
+                    self._owner.guild.id, self._owner.selected_channel_id, target.id
+                )
+            if error:
+                return await interactions.reply(interaction, error)
+            await self._owner.reload_and_refresh(
+                interaction, selected_channel_id=target.id
+            )
+        except Exception:
+            log.exception("AniList feed panel channel select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _TypeToggleButton(discord.ui.Button):
+    """One ANIME_LIST/MANGA_LIST/TEXT toggle; green on, grey off."""
+
+    def __init__(self, panel, type_key):
+        self._owner = panel
+        self.type_key = type_key
+        on = type_key in (panel.selected_feed["types"] or ())
+        super().__init__(
+            label=_(_TYPE_LABELS[type_key]),
+            style=(
+                discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
+            ),
+            row=2,
+        )
+
+    async def callback(self, interaction):
+        try:
+            types = set(self._owner.selected_feed["types"] or ())
+            on = self.type_key in types
+            if on and len(types) <= 1:
+                return await interactions.reply(
+                    interaction,
+                    _("At least one activity type must stay enabled."),
+                )
+            if on:
+                types.discard(self.type_key)
+            else:
+                types.add(self.type_key)
+            await self._owner.cog._set_types(
+                self._owner.guild.id, self._owner.selected_channel_id, types
+            )
+            await self._owner.reload_and_refresh(interaction)
+        except Exception:
+            log.exception("AniList feed panel type toggle failed")
+            await interactions.notify_failure(interaction)
+
+
+class _SelfAddToggleButton(discord.ui.Button):
+    """Flips whether members may join/leave the feed with ``/anilistfeed me``."""
+
+    def __init__(self, panel):
+        self._owner = panel
+        on = bool(panel.selected_feed["self_add"])
+        super().__init__(
+            label=_("Members can join: {state}").format(
+                state=_("On") if on else _("Off")
+            ),
+            style=(
+                discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
+            ),
+            row=2,
+        )
+
+    async def callback(self, interaction):
+        try:
+            await self._owner.cog._toggle_self_add(
+                self._owner.guild.id, self._owner.selected_channel_id
+            )
+            await self._owner.reload_and_refresh(interaction)
+        except Exception:
+            log.exception("AniList feed panel self-add toggle failed")
+            await interactions.notify_failure(interaction)
+
+
+class _EnableButton(discord.ui.Button):
+    """Enable/disable the selected feed; re-enabling clears fail_count."""
+
+    def __init__(self, panel):
+        self._owner = panel
+        enabled = bool(panel.selected_feed["enabled"])
+        super().__init__(
+            label=_("Disable") if enabled else _("Enable"),
+            style=(
+                discord.ButtonStyle.danger if enabled else discord.ButtonStyle.success
+            ),
+            row=3,
+        )
+
+    async def callback(self, interaction):
+        try:
+            enabled = bool(self._owner.selected_feed["enabled"])
+            await self._owner.cog._set_enabled(
+                self._owner.guild.id, self._owner.selected_channel_id, not enabled
+            )
+            await self._owner.reload_and_refresh(interaction)
+        except Exception:
+            log.exception("AniList feed panel enable toggle failed")
+            await interactions.notify_failure(interaction)
+
+
+class _DeleteConfirmView(AuthorView):
+    """Ephemeral Confirm/Cancel prompt for deleting the selected feed."""
+
+    def __init__(self, panel, timeout=30):
+        super().__init__(
+            panel.author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
+        self.panel = panel
+        self.confirm_button.label = _("Delete")
+        self.cancel_button.label = _("Cancel")
+
+    def build_embed(self):
+        return discord.Embed(
+            title=_("Delete this feed?"),
+            description=_(
+                "This permanently deletes the AniList feed in {channel} and "
+                "everyone it follows. This cannot be undone."
+            ).format(channel=self.panel.feed_label(self.panel.selected_channel_id)),
+            colour=0xE74C3C,
+        )
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
+    async def confirm_button(self, interaction, button):
+        try:
+            await self.panel.cog._delete_feed_rows(
+                self.panel.guild.id, self.panel.selected_channel_id
+            )
+            for child in self.children:
+                child.disabled = True
+            await interaction.response.edit_message(
+                content=_("Feed deleted."), embed=None, view=self
+            )
+            await self.panel.sync_message()
+        except Exception:
+            log.exception("AniList feed panel delete confirm failed")
+            await interactions.notify_failure(interaction)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel_button(self, interaction, button):
+        for child in self.children:
+            child.disabled = True
+        try:
+            await interaction.response.edit_message(
+                content=_("Cancelled."), embed=None, view=self
+            )
+        except discord.HTTPException:
+            pass
+
+
+class _DeleteButton(discord.ui.Button):
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(
+            label=_("Delete feed"), style=discord.ButtonStyle.danger, row=3
+        )
+
+    async def callback(self, interaction):
+        try:
+            view = _DeleteConfirmView(self._owner)
+            await interaction.response.send_message(
+                embed=view.build_embed(), view=view, ephemeral=True
+            )
+        except Exception:
+            log.exception("AniList feed panel delete launch failed")
+            await interactions.notify_failure(interaction)
+
+
+class AddFollowModal(LocaleModal):
+    """Ask for an AniList username, resolve it, then follow it on the feed."""
+
+    def __init__(self, panel):
+        super().__init__(title=_("Add a follow"))
+        self.panel = panel
+        self.username_field = discord.ui.TextInput(
+            label=_("AniList username"),
+            required=True,
+            max_length=50,
+        )
+        self.add_item(self.username_field)
+
+    async def on_submit(self, interaction):
+        try:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+        except discord.HTTPException:
+            pass
+        try:
+            cog = self.panel.cog
+            user_id, name, _url, error = await cog._resolve_anilist_user(
+                self.username_field.value
+            )
+            if error:
+                return await interactions.reply(interaction, error)
+            error = await cog._add_follow(
+                self.panel.guild.id,
+                self.panel.selected_channel_id,
+                user_id,
+                name,
+                interaction.user.id,
+            )
+            if error:
+                return await interactions.reply(interaction, error)
+            await self.panel.reload_and_refresh(interaction)
+            await interactions.reply(
+                interaction, _("Now following **{name}**.").format(name=name)
+            )
+        except Exception:
+            log.exception("AniList feed panel add-follow modal failed")
+            await interactions.notify_failure(interaction)
+
+
+class _AddFollowButton(discord.ui.Button):
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(label=_("Add follow"), style=discord.ButtonStyle.primary, row=3)
+
+    async def callback(self, interaction):
+        try:
+            if len(self._owner.follows) >= af.MAX_FOLLOWS_PER_FEED:
+                return await interactions.reply(
+                    interaction,
+                    _("This feed already follows the maximum of {max} users.").format(
+                        max=af.MAX_FOLLOWS_PER_FEED
+                    ),
+                )
+            await interaction.response.send_modal(AddFollowModal(self._owner))
+        except Exception:
+            log.exception("AniList feed panel add-follow launch failed")
+            await interactions.notify_failure(interaction)
+
+
+class _RemoveFollowSelect(discord.ui.Select):
+    """Pick a currently-followed user (by cached name) to unfollow."""
+
+    def __init__(self, panel):
+        self._owner = panel
+        options = [
+            discord.SelectOption(
+                label=(row["anilist_username"] or str(row["anilist_user_id"]))[:100],
+                value=str(row["anilist_user_id"]),
+            )
+            for row in panel.follows[:25]
+        ]
+        super().__init__(
+            placeholder=_("Remove a follow..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=4,
+        )
+
+    async def callback(self, interaction):
+        try:
+            user_id = int(self.values[0])
+            await self._owner.cog._remove_follow(
+                self._owner.guild.id, self._owner.selected_channel_id, user_id
+            )
+            await self._owner.reload_and_refresh(interaction)
+        except Exception:
+            log.exception("AniList feed panel remove-follow select failed")
+            await interactions.notify_failure(interaction)
+
+
+class AniListFeedPanel(AuthorView):
+    """Author-restricted AniList feed control panel (the panel entry point).
+
+    Edits exactly one feed at a time (``selected_channel_id``); with two feeds
+    a select (row 0) switches between them. With no feed at all only the
+    creation ChannelSelect (row 1) is shown. Every mutation persists through a
+    cog helper and the panel reloads fresh state from the DB before
+    re-rendering, so it can never drift from what is actually stored.
+    """
+
+    def __init__(
+        self, cog, guild, author_id, feeds, selected_channel_id, follows, timeout=180
+    ):
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
+        self.cog = cog
+        self.guild = guild
+        self.feeds = list(feeds)
+        self.selected_channel_id = selected_channel_id
+        self.follows = list(follows)
+
+        if len(self.feeds) >= 2:
+            self.add_item(_FeedSwitchSelect(self))
+        self.add_item(_FeedChannelSelect(self))
+
+        if self.selected_feed is not None:
+            for type_key in af.ALLOWED_TYPES:
+                self.add_item(_TypeToggleButton(self, type_key))
+            self.add_item(_SelfAddToggleButton(self))
+            self.add_item(_EnableButton(self))
+            self.add_item(_DeleteButton(self))
+            self.add_item(_AddFollowButton(self))
+            if self.follows:
+                self.add_item(_RemoveFollowSelect(self))
+
+    @property
+    def selected_feed(self):
+        for feed in self.feeds:
+            if feed["channel_id"] == self.selected_channel_id:
+                return feed
+        return None
+
+    def feed_label(self, channel_id):
+        """A clickable ``<#id>`` mention, for use in embed text."""
+
+        channel = self.guild.get_channel_or_thread(channel_id)
+        return channel.mention if channel is not None else str(channel_id)
+
+    def feed_option_label(self, channel_id):
+        """A plain-text label, for use in select option labels (no markdown)."""
+
+        channel = self.guild.get_channel_or_thread(channel_id)
+        return ("#" + channel.name) if channel is not None else str(channel_id)
+
+    def build_embed(self):
+        embed = discord.Embed(title=_("AniList activity feed"), colour=ANILIST_BLUE)
+
+        if not self.feeds:
+            embed.description = _(
+                "This server has no AniList feed yet. Pick a channel below to "
+                "create one (up to {max} per server)."
+            ).format(max=af.MAX_FEEDS_PER_GUILD)
+            embed.set_footer(text=_("Only you can use these controls."))
+            return embed
+
+        embed.description = _(
+            "Configure how AniList activity is mirrored into this server. "
+            "Every change saves instantly."
+        )
+        if len(self.feeds) >= 2:
+            embed.add_field(
+                name=_("Feeds"),
+                value=", ".join(
+                    self.feed_label(feed["channel_id"]) for feed in self.feeds
+                ),
+                inline=False,
+            )
+
+        feed = self.selected_feed
+        if feed is not None:
+            status = _("Enabled") if feed["enabled"] else _("Disabled")
+            if feed["fail_count"]:
+                status = _("{status} ({count} recent failures)").format(
+                    status=status, count=feed["fail_count"]
+                )
+            types = (
+                ", ".join(_(_TYPE_LABELS.get(t, t)) for t in (feed["types"] or ()))
+                or _("none")
+            )
+            self_add = _("On") if feed["self_add"] else _("Off")
+            if self.follows:
+                names = ", ".join(
+                    row["anilist_username"] or str(row["anilist_user_id"])
+                    for row in self.follows
+                )
+                if len(names) > 900:
+                    names = names[:900].rstrip() + "..."
+            else:
+                names = _("no one yet")
+
+            embed.add_field(
+                name=_("Channel"),
+                value=self.feed_label(feed["channel_id"]),
+                inline=True,
+            )
+            embed.add_field(name=_("Status"), value=status, inline=True)
+            embed.add_field(
+                name=_("Members can join"), value=self_add, inline=True
+            )
+            embed.add_field(name=_("Types"), value=types, inline=False)
+            embed.add_field(
+                name=_("Following ({count})").format(count=len(self.follows)),
+                value=names,
+                inline=False,
+            )
+
+        embed.set_footer(text=_("Only you can use these controls."))
+        return embed
+
+    async def _reloaded(self, selected_channel_id):
+        cog = self.cog
+        feeds = await cog._feeds_for_guild(self.guild.id)
+        if selected_channel_id is None:
+            selected_channel_id = self.selected_channel_id
+        channel_ids = {feed["channel_id"] for feed in feeds}
+        if selected_channel_id not in channel_ids:
+            selected_channel_id = feeds[0]["channel_id"] if feeds else None
+        follows = (
+            await cog._follows_for_feed(self.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else []
+        )
+        new = AniListFeedPanel(
+            cog, self.guild, self.author_id, feeds, selected_channel_id, follows
+        )
+        new.message = self.message
+        return new
+
+    async def reload_and_refresh(self, interaction, *, selected_channel_id=None):
+        """Reload feed/follow state from the DB and re-render in place."""
+
+        new = await self._reloaded(selected_channel_id)
+        self.stop()
+        await interactions.refresh_in_place(
+            interaction, self.message, embed=new.build_embed(), view=new
+        )
+
+    async def sync_message(self):
+        """Re-render the stored panel message directly (used by the delete confirm)."""
+
+        if self.message is None:
+            return
+        new = await self._reloaded(None)
+        self.stop()
+        try:
+            await self.message.edit(embed=new.build_embed(), view=new)
+        except discord.HTTPException:
+            pass
+
+
 class AniListFeed(commands.Cog):
     """Mirror followed AniList users' activity into per-guild feed channels."""
 
@@ -1369,10 +1885,263 @@ class AniListFeed(commands.Cog):
     # ------------------------------------------------------------------
     async def _feeds_for_guild(self, guild_id):
         return await self.bot.db_pool.fetch(
-            "SELECT channel_id, types, enabled, fail_count "
+            "SELECT channel_id, types, self_add, enabled, fail_count "
             "FROM anilist_feeds WHERE guild_id = $1 ORDER BY created_at;",
             guild_id,
         )
+
+    async def _follows_for_feed(self, guild_id, channel_id):
+        return await self.bot.db_pool.fetch(
+            "SELECT anilist_user_id, anilist_username FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 ORDER BY anilist_username;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _create_feed(self, guild_id, channel_id):
+        """Create a feed on ``channel_id``. Returns an error string, else None."""
+
+        exists = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+        )
+        if exists:
+            return _("{channel} is already an AniList feed.").format(
+                channel=f"<#{channel_id}>"
+            )
+        count = await self.bot.db_pool.fetchval(
+            "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;", guild_id
+        )
+        if count >= af.MAX_FEEDS_PER_GUILD:
+            return _(
+                "This server already has the maximum of {max} feeds. Delete "
+                "one first."
+            ).format(max=af.MAX_FEEDS_PER_GUILD)
+        await self.bot.db_pool.execute(
+            "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
+            guild_id,
+            channel_id,
+        )
+        return None
+
+    async def _move_feed(self, guild_id, old_channel_id, new_channel_id):
+        """Move a feed (and its follows) to a new channel, in one transaction.
+
+        ``channel_id`` is part of the primary key on both tables, so a move is
+        implemented as delete+insert of the feed row plus an UPDATE of its
+        follows' ``channel_id`` - all inside a single transaction so a failure
+        partway through can never leave the feed split across two channels.
+        Returns an error string, else None.
+        """
+
+        if old_channel_id == new_channel_id:
+            return None
+        exists = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            new_channel_id,
+        )
+        if exists:
+            return _("{channel} is already an AniList feed.").format(
+                channel=f"<#{new_channel_id}>"
+            )
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                row = await conn.fetchrow(
+                    "SELECT types, self_add, enabled, fail_count "
+                    "FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    old_channel_id,
+                )
+                if row is None:
+                    return _("That feed no longer exists.")
+                await conn.execute(
+                    "UPDATE anilist_follows SET channel_id = $3 "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    old_channel_id,
+                    new_channel_id,
+                )
+                await conn.execute(
+                    "DELETE FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    old_channel_id,
+                )
+                await conn.execute(
+                    "INSERT INTO anilist_feeds "
+                    "(guild_id, channel_id, types, self_add, enabled, fail_count) "
+                    "VALUES ($1, $2, $3, $4, $5, $6);",
+                    guild_id,
+                    new_channel_id,
+                    row["types"],
+                    row["self_add"],
+                    row["enabled"],
+                    row["fail_count"],
+                )
+        return None
+
+    async def _set_types(self, guild_id, channel_id, types):
+        ordered = sorted(types, key=af.ALLOWED_TYPES.index)
+        await self.bot.db_pool.execute(
+            "UPDATE anilist_feeds SET types = $3::text[] "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+            ordered,
+        )
+
+    async def _toggle_self_add(self, guild_id, channel_id):
+        await self.bot.db_pool.execute(
+            "UPDATE anilist_feeds SET self_add = NOT self_add "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _set_enabled(self, guild_id, channel_id, enabled):
+        await self.bot.db_pool.execute(
+            "UPDATE anilist_feeds SET enabled = $3, "
+            "fail_count = CASE WHEN $3 THEN 0 ELSE fail_count END "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+            enabled,
+        )
+
+    async def _delete_feed_rows(self, guild_id, channel_id):
+        """Delete a feed and its follows in one transaction.
+
+        Returns ``True`` when a feed row was actually deleted, else ``False``.
+        """
+
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM anilist_follows "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
+                result = await conn.execute(
+                    "DELETE FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
+        return result.split()[-1] != "0"
+
+    async def _resolve_anilist_user(self, username):
+        """Resolve a username via AniList's User(search).
+
+        Returns ``(user_id, name, url, error_message)`` - exactly one of
+        ``user_id`` or ``error_message`` is meaningfully set.
+        """
+
+        username = (username or "").strip()
+        if not username:
+            return None, None, None, _("Give me an AniList username to follow.")
+
+        try:
+            data = await self._graphql(USER_SEARCH_QUERY, {"name": username})
+        except _RateLimited:
+            return (
+                None,
+                None,
+                None,
+                _(
+                    "AniList is rate limiting me right now - try again in a "
+                    "minute."
+                ),
+            )
+        except _FetchError:
+            return (
+                None,
+                None,
+                None,
+                _("I could not reach AniList - try again shortly."),
+            )
+
+        user = ((data or {}).get("data") or {}).get("User")
+        if not user or user.get("id") is None:
+            return (
+                None,
+                None,
+                None,
+                _("I found no AniList user named **{name}**.").format(
+                    name=username
+                ),
+            )
+        return user["id"], user.get("name") or username, user.get("siteUrl"), None
+
+    async def _follow_count(self, guild_id, channel_id):
+        return await self.bot.db_pool.fetchval(
+            "SELECT COUNT(*) FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _follow_exists(self, guild_id, channel_id, user_id):
+        row = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
+            guild_id,
+            channel_id,
+            user_id,
+        )
+        return bool(row)
+
+    async def _insert_follow(self, guild_id, channel_id, user_id, name, added_by):
+        await self.bot.db_pool.execute(
+            "INSERT INTO anilist_follows "
+            "(guild_id, channel_id, anilist_user_id, anilist_username, added_by) "
+            "VALUES ($1, $2, $3, $4, $5) "
+            "ON CONFLICT (guild_id, channel_id, anilist_user_id) "
+            "DO UPDATE SET anilist_username = EXCLUDED.anilist_username;",
+            guild_id,
+            channel_id,
+            user_id,
+            name,
+            added_by,
+        )
+
+    async def _add_follow(self, guild_id, channel_id, user_id, name, added_by):
+        """Insert/refresh a follow, enforcing the per-feed cap.
+
+        Returns an error string when the feed is already at
+        :data:`af.MAX_FOLLOWS_PER_FEED`, else None.
+        """
+
+        if not await self._follow_exists(guild_id, channel_id, user_id):
+            count = await self._follow_count(guild_id, channel_id)
+            if count >= af.MAX_FOLLOWS_PER_FEED:
+                return _(
+                    "This feed already follows the maximum of {max} users."
+                ).format(max=af.MAX_FOLLOWS_PER_FEED)
+        await self._insert_follow(guild_id, channel_id, user_id, name, added_by)
+        return None
+
+    async def _remove_follow(self, guild_id, channel_id, user_id):
+        await self.bot.db_pool.execute(
+            "DELETE FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
+            guild_id,
+            channel_id,
+            user_id,
+        )
+
+    async def _open_panel(self, ctx):
+        feeds = await self._feeds_for_guild(ctx.guild.id)
+        selected_channel_id = feeds[0]["channel_id"] if feeds else None
+        follows = (
+            await self._follows_for_feed(ctx.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else []
+        )
+        view = AniListFeedPanel(
+            self, ctx.guild, ctx.author.id, feeds, selected_channel_id, follows
+        )
+        view.message = await ctx.send(embed=view.build_embed(), view=view)
 
     async def _resolve_target(self, ctx):
         """Pick the feed a follow/unfollow applies to.
@@ -1409,12 +2178,18 @@ class AniListFeed(commands.Cog):
 
     @commands.hybrid_group(name="anilistfeed", aliases=["alfeed"])
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
     async def anilistfeed(self, ctx: commands.Context):
-        """Manage this server's AniList activity feeds."""
+        """Open this server's AniList feed control panel."""
 
         if ctx.invoked_subcommand is None:
-            await self._send_feed_list(ctx)
+            # The panel is admin-only, but the `me` subcommand deliberately is
+            # NOT: a group-level manage_guild check runs before every subcommand
+            # (early_invoke), which would wrongly gate `me` too. So the gate
+            # lives here, on the bare-panel path only; each admin subcommand
+            # carries its own manage_guild check.
+            if not ctx.author.guild_permissions.manage_guild:
+                raise commands.MissingPermissions(["manage_guild"])
+            await self._open_panel(ctx)
 
     @anilistfeed.command(name="set")
     @commands.guild_only()
@@ -1486,68 +2261,16 @@ class AniListFeed(commands.Cog):
         if error:
             return await ctx.send(error)
 
-        username = username.strip()
-        if not username:
-            return await ctx.send(_("Give me an AniList username to follow."))
-
         async with ctx.typing():
-            try:
-                data = await self._graphql(USER_SEARCH_QUERY, {"name": username})
-            except _RateLimited:
-                return await ctx.send(
-                    _(
-                        "AniList is rate limiting me right now - try again in a "
-                        "minute."
-                    )
-                )
-            except _FetchError:
-                return await ctx.send(
-                    _("I could not reach AniList - try again shortly.")
-                )
+            user_id, name, url, error = await self._resolve_anilist_user(username)
+        if error:
+            return await ctx.send(error)
 
-        user = ((data or {}).get("data") or {}).get("User")
-        if not user or user.get("id") is None:
-            return await ctx.send(
-                _("I found no AniList user named **{name}**.").format(name=username)
-            )
-
-        user_id = user["id"]
-        name = user.get("name") or username
-        url = user.get("siteUrl")
-
-        exists = await self.bot.db_pool.fetchval(
-            "SELECT 1 FROM anilist_follows "
-            "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
-            ctx.guild.id,
-            channel_id,
-            user_id,
+        error = await self._add_follow(
+            ctx.guild.id, channel_id, user_id, name, ctx.author.id
         )
-        if not exists:
-            count = await self.bot.db_pool.fetchval(
-                "SELECT COUNT(*) FROM anilist_follows "
-                "WHERE guild_id = $1 AND channel_id = $2;",
-                ctx.guild.id,
-                channel_id,
-            )
-            if count >= af.MAX_FOLLOWS_PER_FEED:
-                return await ctx.send(
-                    _(
-                        "This feed already follows the maximum of {max} users."
-                    ).format(max=af.MAX_FOLLOWS_PER_FEED)
-                )
-
-        await self.bot.db_pool.execute(
-            "INSERT INTO anilist_follows "
-            "(guild_id, channel_id, anilist_user_id, anilist_username, added_by) "
-            "VALUES ($1, $2, $3, $4, $5) "
-            "ON CONFLICT (guild_id, channel_id, anilist_user_id) "
-            "DO UPDATE SET anilist_username = EXCLUDED.anilist_username;",
-            ctx.guild.id,
-            channel_id,
-            user_id,
-            name,
-            ctx.author.id,
-        )
+        if error:
+            return await ctx.send(error)
 
         embed = discord.Embed(title=_("Now following"), colour=ANILIST_BLUE)
         embed.add_field(
@@ -1584,6 +2307,80 @@ class AniListFeed(commands.Cog):
             )
         await ctx.send(
             _("Unfollowed **{name}**.").format(name=row["anilist_username"])
+        )
+
+    @anilistfeed.command(name="me")
+    @commands.guild_only()
+    async def anilistfeed_me(self, ctx: commands.Context):
+        """Join or leave this server's AniList feed with your linked account.
+
+        Toggle: already followed -> leave; not yet followed -> join. Requires
+        the feed's member self-add setting to be on, and your AniList account
+        linked with ``/anilist login``.
+        """
+
+        channel_id, error = await self._resolve_target(ctx)
+        if error:
+            return await ctx.send(error)
+
+        feed = await self.bot.db_pool.fetchrow(
+            "SELECT self_add FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
+            ctx.guild.id,
+            channel_id,
+        )
+        if feed is None or not feed["self_add"]:
+            return await ctx.send(
+                _(
+                    "This feed does not let members join themselves. Ask a "
+                    "moderator to turn on **Members can join** in "
+                    "`/anilistfeed`."
+                )
+            )
+
+        anilist = self.bot.get_cog("AniList")
+        if anilist is None:
+            return await ctx.send(_("AniList actions are unavailable right now."))
+
+        status, token = await anilist._token_status(ctx.author.id)
+        if status == "missing":
+            return await ctx.send(
+                _("Link your AniList account first with `/anilist login`.")
+            )
+        if status != "ok" or not token:
+            return await ctx.send(
+                _(
+                    "Your AniList link is no longer valid - re-link it with "
+                    "`/anilist login`."
+                )
+            )
+
+        async with ctx.typing():
+            data = await anilist._graphql(VIEWER_QUERY, {}, token=token)
+        viewer = ((data or {}).get("data") or {}).get("Viewer")
+        if not viewer or viewer.get("id") is None:
+            return await ctx.send(_("Could not resolve your AniList account."))
+
+        user_id = viewer["id"]
+        name = viewer.get("name") or ctx.author.display_name
+
+        if await self._follow_exists(ctx.guild.id, channel_id, user_id):
+            await self._remove_follow(ctx.guild.id, channel_id, user_id)
+            return await ctx.send(
+                _("You have left the AniList feed in <#{channel}>.").format(
+                    channel=channel_id
+                )
+            )
+
+        count = await self._follow_count(ctx.guild.id, channel_id)
+        if count >= af.MAX_FOLLOWS_PER_FEED:
+            return await ctx.send(
+                _("This feed is full right now - ask a moderator to make room.")
+            )
+        await self._insert_follow(ctx.guild.id, channel_id, user_id, name, ctx.author.id)
+        await ctx.send(
+            _("You have joined the AniList feed in <#{channel}>.").format(
+                channel=channel_id
+            )
         )
 
     @anilistfeed.command(name="list")
@@ -1651,22 +2448,9 @@ class AniListFeed(commands.Cog):
         """Delete a feed and its follows (default: this channel)."""
 
         target = channel or ctx.channel
-        async with self.bot.db_pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute(
-                    "DELETE FROM anilist_follows "
-                    "WHERE guild_id = $1 AND channel_id = $2;",
-                    ctx.guild.id,
-                    target.id,
-                )
-                result = await conn.execute(
-                    "DELETE FROM anilist_feeds "
-                    "WHERE guild_id = $1 AND channel_id = $2;",
-                    ctx.guild.id,
-                    target.id,
-                )
+        deleted = await self._delete_feed_rows(ctx.guild.id, target.id)
 
-        if result.split()[-1] == "0":
+        if not deleted:
             return await ctx.send(
                 _("{channel} is not an AniList feed.").format(
                     channel=target.mention
