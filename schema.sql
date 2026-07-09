@@ -305,3 +305,47 @@ CREATE TABLE IF NOT EXISTS role_menus (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS role_menus_guild_idx ON role_menus (guild_id);
+
+-- AniList activity feed: per-guild feed channels that mirror followed AniList
+-- users' new activities (list progress + text posts). A guild may configure up
+-- to 2 feed channels (MAX_FEEDS_PER_GUILD, enforced in code). ``types`` selects
+-- which activity kinds are posted (the private MESSAGE type is never mirrored);
+-- ``self_add`` lets a member with a linked AniList account add themselves;
+-- ``enabled``/``fail_count`` back the auto-disable of a feed whose channel keeps
+-- erroring. Guild lookups ride the (guild_id, ...) PK prefix, so no extra index.
+-- cogs/anilist/feed.py (owner cog, later lot)
+CREATE TABLE IF NOT EXISTS anilist_feeds (
+    guild_id   BIGINT      NOT NULL,
+    channel_id BIGINT      NOT NULL,                       -- a text channel OR thread id
+    types      TEXT[]      NOT NULL DEFAULT '{ANIME_LIST,MANGA_LIST,TEXT}',
+    self_add   BOOLEAN     NOT NULL DEFAULT FALSE,
+    enabled    BOOLEAN     NOT NULL DEFAULT TRUE,
+    fail_count INTEGER     NOT NULL DEFAULT 0,              -- consecutive delivery failures
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, channel_id)
+);
+
+-- The AniList users a feed follows (max 25 per feed, MAX_FOLLOWS_PER_FEED,
+-- enforced in code). One row per (feed, AniList user); ``anilist_user_id`` is
+-- AniList's numeric user id and ``anilist_username`` a cached display name for
+-- the setup panel. Lookups by feed ride the (guild_id, channel_id, ...) PK
+-- prefix.  cogs/anilist/feed.py (later lot)
+CREATE TABLE IF NOT EXISTS anilist_follows (
+    guild_id         BIGINT      NOT NULL,
+    channel_id       BIGINT      NOT NULL,
+    anilist_user_id  INTEGER     NOT NULL,                 -- AniList numeric user id
+    anilist_username TEXT,                                 -- cached name for the panel
+    added_by         BIGINT,                               -- Discord user who added them
+    added_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, channel_id, anilist_user_id)
+);
+
+-- Global high-water mark for the AniList activity poller: a single row holding
+-- the id of the newest activity already fanned out. The poller fetches
+-- activities with id greater than ``last_activity_id`` and advances it. The
+-- fixed id + CHECK keep this table to exactly one row.  cogs/anilist/feed.py
+CREATE TABLE IF NOT EXISTS anilist_feed_state (
+    id               SMALLINT    PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    last_activity_id BIGINT      NOT NULL DEFAULT 0,
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
