@@ -269,3 +269,70 @@ async def test_apply_interaction_locale_falls_back_to_default_on_error(
 
     await i18n.apply_interaction_locale(interaction)
     assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE == "en"
+
+
+# ---------------------------------------------------------------------------
+# locale (temporary-locale context manager)
+# ---------------------------------------------------------------------------
+
+
+def test_locale_sets_inside_and_restores_after():
+    assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE
+    with i18n.locale("fr"):
+        assert i18n.current_locale.get() == "fr"
+    assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE
+
+
+def test_locale_restores_even_when_body_raises():
+    # A raised render must not leak the locale into the next channel's cards.
+    assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE
+    with pytest.raises(ValueError):
+        with i18n.locale("ja"):
+            assert i18n.current_locale.get() == "ja"
+            raise ValueError("boom")
+    assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE
+
+
+# ---------------------------------------------------------------------------
+# resolve_guild_locale (background/poller resolution)
+# ---------------------------------------------------------------------------
+
+
+def _guild(guild_id=20, preferred_locale="en-US"):
+    return types.SimpleNamespace(id=guild_id, preferred_locale=preferred_locale)
+
+
+async def test_resolve_guild_setting_wins(fake_pool):
+    _serve(fake_pool, guild={"locale": "fr"})
+    guild = _guild(preferred_locale="ja")
+    loc = await i18n.resolve_guild_locale(_bot(fake_pool), guild)
+    assert loc == "fr"
+
+
+async def test_resolve_guild_falls_back_to_preferred_locale(fake_pool):
+    _serve(fake_pool, guild=None)
+    # No stored setting -> Discord's preferred_locale hint (normalized) wins.
+    guild = _guild(preferred_locale="fr-CA")
+    loc = await i18n.resolve_guild_locale(_bot(fake_pool), guild)
+    assert loc == "fr"
+
+
+async def test_resolve_guild_unknown_preferred_locale_falls_back_to_default(fake_pool):
+    _serve(fake_pool, guild=None)
+    guild = _guild(preferred_locale="xx")
+    loc = await i18n.resolve_guild_locale(_bot(fake_pool), guild)
+    assert loc == i18n.DEFAULT_LOCALE == "en"
+
+
+async def test_resolve_guild_none_returns_default(fake_pool):
+    loc = await i18n.resolve_guild_locale(_bot(fake_pool), None)
+    assert loc == i18n.DEFAULT_LOCALE == "en"
+    # A None guild must not touch settings at all.
+    assert not any("guild_settings" in q for _, q, _ in fake_pool.calls)
+
+
+async def test_resolve_guild_exception_returns_default():
+    # A bot without db_pool makes settings.get_guild raise; must swallow to default.
+    bot = types.SimpleNamespace()  # no db_pool -> AttributeError
+    loc = await i18n.resolve_guild_locale(bot, _guild())
+    assert loc == i18n.DEFAULT_LOCALE == "en"

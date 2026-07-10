@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextvars
 import gettext
 import os
+from contextlib import contextmanager
 from glob import glob
 
 DOMAIN = "yasuho"
@@ -118,6 +119,45 @@ async def resolve_locale(bot, *, user_id, guild_id=None, interaction=None):
         if loc:
             return loc
     return DEFAULT_LOCALE
+
+
+async def resolve_guild_locale(bot, guild):
+    """Resolve the locale for a background (non-interaction) guild render.
+
+    Chain: per-guild setting -> the guild's Discord-side ``preferred_locale``
+    (a community-server hint, so those guilds get the right language with zero
+    config) -> the default. ``guild`` may be None. Any failure falls back to
+    DEFAULT_LOCALE rather than raising into a poller tick.
+    """
+    from tools import settings  # local import avoids an import cycle
+
+    try:
+        if guild is not None:
+            loc = normalize(
+                await settings.get_guild(bot.db_pool, guild.id, "locale", None)
+            )
+            if loc:
+                return loc
+            loc = normalize(str(guild.preferred_locale))
+            if loc:
+                return loc
+    except Exception:
+        return DEFAULT_LOCALE
+    return DEFAULT_LOCALE
+
+
+@contextmanager
+def locale(loc):
+    """Temporarily set the active locale for the duration of the block.
+
+    The reset lives in ``finally`` so a raised render never leaks the locale
+    into the next channel's cards in the same poller tick (a different guild).
+    """
+    token = current_locale.set(loc)
+    try:
+        yield
+    finally:
+        current_locale.reset(token)
 
 
 async def apply_interaction_locale(interaction):

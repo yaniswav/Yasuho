@@ -1925,18 +1925,26 @@ class AniListFeed(commands.Cog):
             await self._record_failure(feed)
             return
 
+        # Resolve the destination guild's language once per channel and render
+        # every card/digest inside it: the LayoutViews call _() at construction
+        # time, so both the build and send must run under the locale context. A
+        # Thread exposes .guild too; an unresolvable guild falls back to default.
+        loc = await i18n.resolve_guild_locale(
+            self.bot, getattr(channel, "guild", None)
+        )
         try:
-            full, digest = af.plan_posts(items)
-            for activity in full:
-                await channel.send(
-                    allowed_mentions=discord.AllowedMentions.none(),
-                    **self._render_activity(activity),
-                )
-            if digest:
-                await channel.send(
-                    allowed_mentions=discord.AllowedMentions.none(),
-                    **self._render_digest(digest),
-                )
+            with i18n.locale(loc):
+                full, digest = af.plan_posts(items)
+                for activity in full:
+                    await channel.send(
+                        allowed_mentions=discord.AllowedMentions.none(),
+                        **self._render_activity(activity),
+                    )
+                if digest:
+                    await channel.send(
+                        allowed_mentions=discord.AllowedMentions.none(),
+                        **self._render_digest(digest),
+                    )
         except (discord.Forbidden, discord.NotFound):
             log.warning(
                 "AniList feed: delivery to channel %s failed (forbidden/gone)",
