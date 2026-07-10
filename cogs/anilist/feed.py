@@ -33,7 +33,7 @@ import discord
 from discord.ext import commands, tasks
 
 from .helpers import API_URL
-from .queries import VIEWER_QUERY
+from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
 from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
@@ -372,12 +372,50 @@ mutation ($activityId: Int, $text: String) {
 }
 """
 
-# custom_id templates. The two literal prefixes are disjoint so discord.py's
-# fullmatch dispatch can never route a like click to the reply handler or vice
-# versa; ``aid`` is the activity id (a positive int, so the id part is short and
-# the whole id stays well under the 100-char custom_id limit).
+# The clicking viewer's own status for a media, plus its title for the reply
+# copy. ``mediaListEntry`` resolves against the AUTHENTICATED viewer only when
+# the request carries that user's OAuth token - the same per-viewer resolution
+# the media editor and update wizard already rely on (see ``MEDIA_ENTRY_QUERY``
+# and ``SEARCH_ENTRY_QUERY`` in ``queries.py``, and ``AniListBase._viewer_entry``).
+# ``userPreferred`` honours the viewer's title-language setting; romaji is the
+# fallback. The follow-up add reuses ``SAVE_ENTRY_QUERY`` from ``queries.py``.
+ADD_LOOKUP_QUERY = """
+query ($id: Int) {
+  Media(id: $id) {
+    title { userPreferred romaji }
+    mediaListEntry { status }
+  }
+}
+"""
+
+# custom_id templates. The three literal prefixes are disjoint so discord.py's
+# fullmatch dispatch can never route a like click to the reply/add handler or
+# vice versa; ``aid`` is the activity id and ``mid`` the media id (both positive
+# ints, so each id part is short and the whole id stays well under the 100-char
+# custom_id limit).
 LIKE_TEMPLATE = r"alf:like:(?P<aid>\d+)"
 REPLY_TEMPLATE = r"alf:reply:(?P<aid>\d+)"
+ADD_TEMPLATE = r"alf:add:(?P<mid>\d+)"
+
+# Human-readable words for the viewer's current list status on a media, mirroring
+# the wording used by the media editor's status picker (see ``components.py``).
+# ``N_`` marks the msgids for extraction; ``_()`` resolves them at click time. An
+# unknown status degrades to its raw enum value.
+_ADD_STATUS_WORDS = {
+    "CURRENT": N_("Watching"),
+    "PLANNING": N_("Planning"),
+    "COMPLETED": N_("Completed"),
+    "DROPPED": N_("Dropped"),
+    "PAUSED": N_("Paused"),
+    "REPEATING": N_("Repeating"),
+}
+
+
+def _status_word(status):
+    """Localised word for an existing list status, or the raw enum if unknown."""
+
+    template = _ADD_STATUS_WORDS.get((status or "").upper())
+    return _(template) if template is not None else (status or "")
 
 # The longest reply AniList's box accepts comfortably; keeps us inside Discord's
 # modal input limit too.
@@ -582,6 +620,104 @@ async def _run_like(interaction, activity_id):
     await _feed_ephemeral(interaction, message)
 
 
+async def _run_add(interaction, media_id):
+    """Add the media to the clicking user's planning list, or say it is already there.
+
+    Mirrors :func:`_run_like` exactly: apply the invocation locale, gate on the
+    shared per-user debounce, then resolve the clicker's token (same not-linked /
+    re-link hints). It then acts AS the clicking user (Bearer): first an authed
+    lookup of their existing entry (``mediaListEntry`` resolves per-viewer), and
+    only when the media is not already on their list a ``SaveMediaListEntry`` to
+    PLANNING. The token stays a local; it is never logged or stored.
+    """
+
+    await i18n.apply_interaction_locale(interaction)
+    if not await _check_debounce(interaction):
+        return
+    token = await _resolve_token(interaction)
+    if token is None:
+        return
+
+    # Both round-trips can outlast the 3s window; defer, then follow up.
+    try:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+    except discord.HTTPException:
+        pass
+
+    # 1) Look up the viewer's existing entry (and the title) as themselves.
+    try:
+        data = await _authed_graphql(token, ADD_LOOKUP_QUERY, {"id": media_id})
+    except _RateLimited:
+        return await _feed_ephemeral(
+            interaction, _("AniList is rate limiting me right now - try again shortly.")
+        )
+    except _AuthError:
+        return await _feed_ephemeral(
+            interaction,
+            _(
+                "Your AniList link seems invalid now - re-link it with "
+                "`/anilist login`."
+            ),
+        )
+    except _GoneError:
+        return await _feed_ephemeral(
+            interaction, _("I couldn't find that title on AniList anymore.")
+        )
+    except _FetchError:
+        return await _feed_ephemeral(
+            interaction, _("I could not reach AniList - try again shortly.")
+        )
+
+    media = ((data or {}).get("data") or {}).get("Media") or {}
+    if not media:
+        return await _feed_ephemeral(
+            interaction, _("I couldn't find that title on AniList anymore.")
+        )
+    title = _media_title(media)
+    entry = media.get("mediaListEntry")
+    if entry:
+        return await _feed_ephemeral(
+            interaction,
+            _("**{title}** is already on your list ({status}).").format(
+                title=title, status=_status_word(entry.get("status"))
+            ),
+        )
+
+    # 2) Not tracked yet: add it to PLANNING as the clicking user.
+    try:
+        saved = await _authed_graphql(
+            token, SAVE_ENTRY_QUERY, {"mediaId": media_id, "status": "PLANNING"}
+        )
+    except _RateLimited:
+        return await _feed_ephemeral(
+            interaction, _("AniList is rate limiting me right now - try again shortly.")
+        )
+    except _AuthError:
+        return await _feed_ephemeral(
+            interaction,
+            _(
+                "Your AniList link seems invalid now - re-link it with "
+                "`/anilist login`."
+            ),
+        )
+    except _GoneError:
+        return await _feed_ephemeral(
+            interaction, _("I couldn't find that title on AniList anymore.")
+        )
+    except _FetchError:
+        return await _feed_ephemeral(
+            interaction, _("I could not reach AniList - try again shortly.")
+        )
+
+    if not ((saved or {}).get("data") or {}).get("SaveMediaListEntry"):
+        return await _feed_ephemeral(
+            interaction, _("I could not reach AniList - try again shortly.")
+        )
+    await _feed_ephemeral(
+        interaction, _("Added **{title}** to your planning.").format(title=title)
+    )
+
+
 async def _run_reply(interaction, activity_id):
     """Open the reply modal for the clicking user (after locale + token checks)."""
 
@@ -720,6 +856,32 @@ class FeedReplyButton(
         await _run_reply(interaction, self.activity_id)
 
 
+class FeedAddButton(discord.ui.DynamicItem[discord.ui.Button], template=ADD_TEMPLATE):
+    """Persistent plus button that adds the media to the clicker's planning list.
+
+    Keyed on the MEDIA id (not the activity id), so it only appears on list
+    activities that carry one; a click adds that title to the clicking user's
+    AniList planning list, or reports the status it is already tracked under.
+    """
+
+    def __init__(self, media_id):
+        self.media_id = media_id
+        super().__init__(
+            discord.ui.Button(
+                style=discord.ButtonStyle.secondary,
+                emoji="\N{HEAVY PLUS SIGN}",
+                custom_id="alf:add:{mid}".format(mid=media_id),
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["mid"]))
+
+    async def callback(self, interaction):
+        await _run_add(interaction, self.media_id)
+
+
 class ActivityCard(discord.ui.LayoutView):
     """One AniList activity as a polished Components V2 card.
 
@@ -731,9 +893,10 @@ class ActivityCard(discord.ui.LayoutView):
     post body (plus any image via a :class:`~discord.ui.MediaGallery`) straight
     in the container. A trailing :class:`~discord.ui.ActionRow` carries the
     'AniList' link button plus the persistent Like and Reply buttons (see
-    :class:`FeedLikeButton` / :class:`FeedReplyButton`). Every field degrades
-    independently, so a partial activity dict (missing media, avatar, progress,
-    ...) never raises.
+    :class:`FeedLikeButton` / :class:`FeedReplyButton`), and - on a list activity
+    with a media id - an Add-to-planning button (:class:`FeedAddButton`). Every
+    field degrades independently, so a partial activity dict (missing media,
+    avatar, progress, ...) never raises.
 
     Persistence: the Like / Reply buttons are :class:`discord.ui.DynamicItem`
     instances, so ``timeout=None`` and the card is persistent. discord.py stores
@@ -830,8 +993,11 @@ class ActivityCard(discord.ui.LayoutView):
 
     def _add_action_row(self, container, activity):
         # One ActionRow (max five buttons) with, in order: the 'AniList' link
-        # button (only when we have a url) and the persistent Like + Reply
-        # buttons keyed on the activity id. The activity id is present on every
+        # button (only when we have a url), the persistent Like + Reply buttons
+        # keyed on the activity id, and - only on a list activity that carries a
+        # media id - the persistent Add-to-planning button keyed on the MEDIA id
+        # (a text/digest card has no media, so it never gets one; this keeps the
+        # busiest row at 4 of 5 slots). The activity id is present on every
         # rendered activity (``_normalize`` drops id-less ones), but stay
         # defensive so a degenerate dict cannot raise mid-build.
         activity_id = activity.get("id")
@@ -847,6 +1013,10 @@ class ActivityCard(discord.ui.LayoutView):
         if activity_id is not None:
             row.add_item(FeedLikeButton(activity_id))
             row.add_item(FeedReplyButton(activity_id))
+        if activity.get("kind") == "ListActivity":
+            media_id = (activity.get("media") or {}).get("id")
+            if media_id is not None:
+                row.add_item(FeedAddButton(media_id))
 
         if not row.children:  # nothing to show: no separator, no empty row
             return
@@ -1582,7 +1752,7 @@ class AniListFeed(commands.Cog):
         # clicks dispatch on EVERY card, including ones posted before this start
         # (the whole point of DynamicItem - no per-message view is needed).
         try:
-            self.bot.add_dynamic_items(FeedLikeButton, FeedReplyButton)
+            self.bot.add_dynamic_items(FeedLikeButton, FeedReplyButton, FeedAddButton)
         except Exception:
             log.exception("AniList feed: failed to register the action buttons")
 
@@ -1591,7 +1761,9 @@ class AniListFeed(commands.Cog):
         # Drop the dynamic-item registration so a clean reload does not leave a
         # stale template behind (it is re-added by the next cog_load).
         try:
-            self.bot.remove_dynamic_items(FeedLikeButton, FeedReplyButton)
+            self.bot.remove_dynamic_items(
+                FeedLikeButton, FeedReplyButton, FeedAddButton
+            )
         except Exception:
             log.exception("AniList feed: failed to remove the action buttons")
 
