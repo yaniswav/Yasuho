@@ -16,8 +16,40 @@ from tools import anilist_feed as af
 def test_policy_constants():
     assert af.MAX_FEEDS_PER_GUILD == 2
     assert af.MAX_FOLLOWS_PER_FEED == 25
+    assert af.MAX_SUBS_PER_FEED == 50
     assert af.MAX_FULL_POSTS_PER_TICK == 5
     assert af.TEXT_LIMIT == 2048
+
+
+# ---------------------------------------------------------------------------
+# sub_cap_exceeded - the per-feed tracked-releases subscription cap
+# ---------------------------------------------------------------------------
+
+
+def test_sub_cap_blocks_a_new_title_at_the_cap():
+    # A genuinely NEW title (not already subscribed) is rejected once the feed is
+    # at the cap.
+    assert af.sub_cap_exceeded(af.MAX_SUBS_PER_FEED, already_subscribed=False) is True
+    assert (
+        af.sub_cap_exceeded(af.MAX_SUBS_PER_FEED + 1, already_subscribed=False) is True
+    )
+
+
+def test_sub_cap_allows_a_new_title_below_the_cap():
+    assert af.sub_cap_exceeded(0, already_subscribed=False) is False
+    assert (
+        af.sub_cap_exceeded(af.MAX_SUBS_PER_FEED - 1, already_subscribed=False)
+        is False
+    )
+
+
+def test_sub_cap_never_blocks_an_already_subscribed_title():
+    # Re-confirming an existing subscription only refreshes its cached title (no
+    # new row), so it is allowed even at or past the cap.
+    assert af.sub_cap_exceeded(af.MAX_SUBS_PER_FEED, already_subscribed=True) is False
+    assert (
+        af.sub_cap_exceeded(af.MAX_SUBS_PER_FEED + 5, already_subscribed=True) is False
+    )
 
 
 def test_message_type_excluded():

@@ -34,7 +34,7 @@ from discord.ext import commands, tasks
 
 from .components import EditEntryModal
 from .helpers import API_URL
-from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
+from .queries import SAVE_ENTRY_QUERY, SEARCH_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
 from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
@@ -1371,67 +1371,404 @@ class _SelfAddToggleButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class _ChaptersChannelToggleButton(discord.ui.Button):
-    """Flips whether new-chapter alerts are ALSO posted in this feed's channel.
+# --- Tracked-releases manager (per-feed explicit title subscriptions) --------
+#
+# The feed panel's "Tracked releases (N)" button opens this ephemeral manager for
+# the selected feed. A feed's subscriptions are the EXPLICIT titles whose new
+# episodes (ANIME) / chapters (MANGA) are posted in that channel - a circuit fully
+# independent of the DM opt-ins and of who the feed follows. The manager lists the
+# tracked titles, offers a modal-driven AniList search to add one (the top matches
+# become a confirm select), and a paginated select to remove one; every mutation
+# persists through a cog helper and re-renders the same ephemeral message. It is
+# ephemeral, so only the admin who opened it can see or click it; it still extends
+# AuthorView so its interaction_check applies the invoker's locale (as elsewhere).
 
-    Manage-guild gated exactly like its sibling toggles: the panel is only opened
-    from the admin-only bare-panel path and is author-restricted, so no per-button
-    permission check is needed. The MangaDex chapter poller reads this column
-    (``anilist_feeds.chapters_in_channel``) to decide which feeds to fan out to.
-    """
 
-    def __init__(self, panel):
-        self._owner = panel
-        on = bool(panel.selected_feed["chapters_in_channel"])
+class _TrackConfirmSelect(discord.ui.Select):
+    """Pick which AniList search match to subscribe the feed to."""
+
+    def __init__(self, view, candidates):
+        self._view = view
+        self._by_id = {}
+        options = []
+        for media in candidates[:25]:
+            mid = media.get("id")
+            mtype = media.get("type")
+            if mid is None or mtype not in ("ANIME", "MANGA"):
+                continue
+            title = (media.get("title") or {})
+            romaji = title.get("romaji") or title.get("english")
+            kind = _("Anime") if mtype == "ANIME" else _("Manga")
+            year = media.get("seasonYear") or "?"
+            label = "[{kind}] {romaji}".format(
+                kind=kind, romaji=romaji or _("Unknown title")
+            )
+            self._by_id[str(mid)] = media
+            options.append(
+                discord.SelectOption(
+                    label=label[:100],
+                    description=str(year)[:100],
+                    value=str(mid),
+                )
+            )
         super().__init__(
-            label=_("Chapter alerts here: {state}").format(
-                state=_("On") if on else _("Off")
-            ),
-            style=(
-                discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
-            ),
+            placeholder=_("Pick the title to track..."),
+            min_values=1,
+            max_values=1,
+            options=options,
         )
 
     async def callback(self, interaction):
         try:
-            await self._owner.cog._toggle_chapters_in_channel(
-                self._owner.guild.id, self._owner.selected_channel_id
-            )
-            await self._owner.reload_and_refresh(interaction)
+            media = self._by_id.get(self.values[0])
+            await self._view.confirm(interaction, media)
         except Exception:
-            log.exception("AniList feed panel chapters-in-channel toggle failed")
+            log.exception("AniList feed panel track-confirm select failed")
             await interactions.notify_failure(interaction)
 
 
-class _AiringChannelToggleButton(discord.ui.Button):
-    """Flips whether new-episode alerts are ALSO posted in this feed's channel.
+class _SubsBackButton(discord.ui.Button):
+    """Return from the confirm picker to the tracked-releases manager."""
 
-    Manage-guild gated exactly like its sibling toggles: the panel is only opened
-    from the admin-only bare-panel path and is author-restricted, so no per-button
-    permission check is needed. The AniList airing poller reads this column
-    (``anilist_feeds.airing_in_channel``) to decide which feeds to fan out to.
+    def __init__(self, view):
+        self._view = view
+        super().__init__(label=_("Back"), style=discord.ButtonStyle.secondary)
+
+    async def callback(self, interaction):
+        try:
+            await self._view.back(interaction)
+        except Exception:
+            log.exception("AniList feed panel track-confirm back failed")
+            await interactions.notify_failure(interaction)
+
+
+class _SubsConfirmView(AuthorView):
+    """Ephemeral confirm picker shown after a title search returns matches.
+
+    Turns the searched-for candidates into a single select; picking one inserts
+    the subscription (cap-enforced) and re-renders the manager, while Back simply
+    re-renders the manager unchanged. Reuses the manager's cog/guild/channel so it
+    can rebuild it in place on the SAME ephemeral message.
     """
 
-    def __init__(self, panel):
-        self._owner = panel
-        on = bool(panel.selected_feed["airing_in_channel"])
+    def __init__(self, cog, guild, author_id, channel_id, candidates, timeout=180):
         super().__init__(
-            label=_("Episode alerts here: {state}").format(
-                state=_("On") if on else _("Off")
-            ),
-            style=(
-                discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
-            ),
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
+        self.cog = cog
+        self.guild = guild
+        self.channel_id = channel_id
+        self.message = None
+        self.add_item(_TrackConfirmSelect(self, candidates))
+        self.add_item(_SubsBackButton(self))
+
+    async def confirm(self, interaction, media):
+        if media is None:
+            return await interactions.reply(
+                interaction, _("I couldn't read that selection - try again.")
+            )
+        mid = media.get("id")
+        mtype = media.get("type")
+        title = (media.get("title") or {})
+        cached = title.get("romaji") or title.get("english")
+        error = await self.cog._add_channel_sub(
+            self.guild.id, self.channel_id, mid, mtype, cached, interaction.user.id
+        )
+        note = (
+            error
+            if error
+            else _("Now tracking **{title}** in this feed.").format(
+                title=cached or str(mid)
+            )
+        )
+        self.stop()
+        await self.cog._render_subs_manager(
+            interaction, self.guild, self.author_id, self.channel_id, note=note
+        )
+
+    async def back(self, interaction):
+        self.stop()
+        await self.cog._render_subs_manager(
+            interaction, self.guild, self.author_id, self.channel_id
+        )
+
+
+class _TrackTitleModal(LocaleModal):
+    """Ask for a title, search AniList (unauthenticated), then show the matches."""
+
+    def __init__(self, manager):
+        super().__init__(title=_("Track a title"))
+        self.manager = manager
+        self.query_field = discord.ui.TextInput(
+            label=_("Title to search"),
+            required=True,
+            max_length=100,
+        )
+        self.add_item(self.query_field)
+
+    async def on_submit(self, interaction):
+        # Defer as a message update so we can edit the manager message in place
+        # after the (possibly slow) AniList search.
+        try:
+            await interaction.response.defer()
+        except discord.HTTPException:
+            pass
+        try:
+            await self.manager.run_search(interaction, self.query_field.value)
+        except Exception:
+            log.exception("AniList feed panel track-title modal failed")
+            await interactions.notify_failure(interaction)
+
+
+class _TrackTitleButton(discord.ui.Button):
+    """Open the search modal to add a title to this feed's tracked releases."""
+
+    def __init__(self, manager):
+        self._manager = manager
+        super().__init__(label=_("Track a title"), style=discord.ButtonStyle.primary)
+
+    async def callback(self, interaction):
+        try:
+            if self._manager.at_cap:
+                return await interactions.reply(
+                    interaction,
+                    _(
+                        "This feed already tracks the maximum of {max} titles. "
+                        "Remove one first."
+                    ).format(max=af.MAX_SUBS_PER_FEED),
+                )
+            await interaction.response.send_modal(_TrackTitleModal(self._manager))
+        except Exception:
+            log.exception("AniList feed panel track-title launch failed")
+            await interactions.notify_failure(interaction)
+
+
+class _RemoveSubSelect(discord.ui.Select):
+    """Pick a currently-tracked title (by cached name) to stop tracking."""
+
+    def __init__(self, manager, window):
+        self._manager = manager
+        options = []
+        for row in window:
+            mtype = row["media_type"]
+            kind = _("Anime") if mtype == "ANIME" else _("Manga")
+            title = row["title"] or str(row["media_id"])
+            options.append(
+                discord.SelectOption(
+                    label=title[:100],
+                    description=kind,
+                    value=str(row["media_id"]),
+                )
+            )
+        super().__init__(
+            placeholder=_("Stop tracking a title..."),
+            min_values=1,
+            max_values=1,
+            options=options,
         )
 
     async def callback(self, interaction):
         try:
-            await self._owner.cog._toggle_airing_in_channel(
-                self._owner.guild.id, self._owner.selected_channel_id
+            media_id = int(self.values[0])
+            await self._manager.cog._remove_channel_sub(
+                self._manager.guild.id, self._manager.channel_id, media_id
             )
-            await self._owner.reload_and_refresh(interaction)
+            # Stop the old view first so its timeout can never fire and clobber the
+            # re-rendered message with a stale, disabled layout.
+            self._manager.stop()
+            await self._manager.cog._render_subs_manager(
+                interaction,
+                self._manager.guild,
+                self._manager.author_id,
+                self._manager.channel_id,
+                page=self._manager.page,
+            )
         except Exception:
-            log.exception("AniList feed panel airing-in-channel toggle failed")
+            log.exception("AniList feed panel remove-sub select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _SubsPageButton(discord.ui.Button):
+    """Page the remove select through a feed's subscriptions (25 per page)."""
+
+    def __init__(self, manager, *, forward, disabled):
+        self._manager = manager
+        self._forward = forward
+        super().__init__(
+            label=_("Next") if forward else _("Previous"),
+            style=discord.ButtonStyle.secondary,
+            disabled=disabled,
+        )
+
+    async def callback(self, interaction):
+        try:
+            page = self._manager.page + (1 if self._forward else -1)
+            self._manager.stop()
+            await self._manager.cog._render_subs_manager(
+                interaction,
+                self._manager.guild,
+                self._manager.author_id,
+                self._manager.channel_id,
+                page=page,
+            )
+        except Exception:
+            log.exception("AniList feed panel subs paging failed")
+            await interactions.notify_failure(interaction)
+
+
+class _SubsManagerView(AuthorView):
+    """Ephemeral per-feed tracked-releases manager (list / add / remove).
+
+    Renders the feed's subscribed titles as an embed plus a remove select (paged
+    at 25 per page), a Track-a-title button and, when there is more than one page,
+    Previous/Next buttons. Every mutation persists through a cog helper and the
+    cog re-renders this same ephemeral message from fresh DB state, so the list
+    can never drift from what is stored.
+    """
+
+    PAGE_SIZE = 25
+
+    def __init__(
+        self, cog, guild, author_id, channel_id, subs, *, page=0, note=None,
+        timeout=180,
+    ):
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
+        self.cog = cog
+        self.guild = guild
+        self.channel_id = channel_id
+        self.subs = list(subs)
+        self.note = note
+        self.message = None
+        page_count = max(1, (len(self.subs) + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
+        self.page = max(0, min(page, page_count - 1))
+        self._page_count = page_count
+        self._build()
+
+    @property
+    def at_cap(self):
+        return len(self.subs) >= af.MAX_SUBS_PER_FEED
+
+    def _build(self):
+        start = self.page * self.PAGE_SIZE
+        window = self.subs[start : start + self.PAGE_SIZE]
+        if window:
+            self.add_item(_RemoveSubSelect(self, window))
+        self.add_item(_TrackTitleButton(self))
+        if self._page_count > 1:
+            self.add_item(
+                _SubsPageButton(self, forward=False, disabled=self.page == 0)
+            )
+            self.add_item(
+                _SubsPageButton(
+                    self, forward=True, disabled=self.page >= self._page_count - 1
+                )
+            )
+
+    def build_embed(self):
+        channel = self.guild.get_channel_or_thread(self.channel_id)
+        label = channel.mention if channel is not None else str(self.channel_id)
+        lines = []
+        for row in self.subs:
+            kind = _("Anime") if row["media_type"] == "ANIME" else _("Manga")
+            title = row["title"] or str(row["media_id"])
+            lines.append("- [{kind}] {title}".format(kind=kind, title=title))
+        listing = "\n".join(lines) if lines else _("No titles tracked yet.")
+        if len(listing) > 3500:
+            listing = listing[:3500].rstrip() + "\n..."
+        parts = []
+        if self.note:
+            # The note already carries its own inline emphasis (e.g. a bold title),
+            # so it is added as its own paragraph rather than re-wrapped in bold.
+            parts.append(self.note)
+        parts.append(
+            _(
+                "New episodes (anime) and chapters (manga) of these titles are "
+                "posted in {channel}, independently of any DM alerts. Up to {max} "
+                "titles per feed."
+            ).format(channel=label, max=af.MAX_SUBS_PER_FEED)
+        )
+        parts.append(listing)
+        embed = discord.Embed(
+            title=_("Tracked releases"),
+            description="\n\n".join(parts),
+            colour=ANILIST_BLUE,
+        )
+        embed.set_footer(
+            text=_("Tracking {count}/{max}").format(
+                count=len(self.subs), max=af.MAX_SUBS_PER_FEED
+            )
+        )
+        return embed
+
+    async def run_search(self, interaction, query):
+        """Search AniList for ``query`` and edit the manager into the confirm picker.
+
+        Runs UNAUTHENTICATED (no token at any point). No matches leaves the manager
+        in place with a note; matches replace it with a :class:`_SubsConfirmView` on
+        the SAME ephemeral message so the whole add flow stays on one message.
+        """
+
+        candidates = await self.cog._search_channel_candidates(query)
+        if not candidates:
+            self.stop()
+            return await self.cog._render_subs_manager(
+                interaction,
+                self.guild,
+                self.author_id,
+                self.channel_id,
+                page=self.page,
+                note=_("No AniList match for **{query}**.").format(
+                    query=(query or "").strip() or "?"
+                ),
+            )
+        confirm = _SubsConfirmView(
+            self.cog, self.guild, self.author_id, self.channel_id, candidates
+        )
+        confirm.message = self.message
+        self.stop()
+        try:
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title=_("Track a title"),
+                    description=_("Pick the exact title to track:"),
+                    colour=ANILIST_BLUE,
+                ),
+                view=confirm,
+            )
+        except discord.HTTPException:
+            log.debug("AniList feed: could not render the track-confirm picker")
+
+
+class _TrackedReleasesButton(discord.ui.Button):
+    """Open the ephemeral tracked-releases manager for the selected feed.
+
+    Manage-guild gated exactly like the sibling controls: the panel is only opened
+    from the admin-only bare-panel path and is author-restricted, so no per-button
+    permission check is needed. The count in the label is a snapshot from the last
+    panel render; the manager itself always shows live state.
+    """
+
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(
+            label=_("Tracked releases ({count})").format(count=panel.subs_count),
+            style=discord.ButtonStyle.secondary,
+        )
+
+    async def callback(self, interaction):
+        try:
+            panel = self._owner
+            await panel.cog._render_subs_manager(
+                interaction,
+                panel.guild,
+                panel.author_id,
+                panel.selected_channel_id,
+                new=True,
+            )
+        except Exception:
+            log.exception("AniList feed panel tracked-releases open failed")
             await interactions.notify_failure(interaction)
 
 
@@ -1668,7 +2005,15 @@ class AniListFeedPanel(discord.ui.LayoutView):
     """
 
     def __init__(
-        self, cog, guild, author_id, feeds, selected_channel_id, follows, timeout=180
+        self,
+        cog,
+        guild,
+        author_id,
+        feeds,
+        selected_channel_id,
+        follows,
+        subs_count=0,
+        timeout=180,
     ):
         super().__init__(timeout=timeout)
         self.cog = cog
@@ -1678,6 +2023,7 @@ class AniListFeedPanel(discord.ui.LayoutView):
         self.feeds = list(feeds)
         self.selected_channel_id = selected_channel_id
         self.follows = list(follows)
+        self.subs_count = subs_count
         self._build()
 
     async def interaction_check(self, interaction):
@@ -1805,16 +2151,11 @@ class AniListFeedPanel(discord.ui.LayoutView):
         type_row.add_item(_SelfAddToggleButton(self))
         container.add_item(type_row)
 
-        # In-channel alerts: opt this feed into ALSO posting MangaDex new-chapter
-        # and AniList new-episode alerts in its channel (in addition to any opt-in
-        # DMs). Their own row so they read as the distinct fan-out settings they
-        # are, not another activity type.
-        container.add_item(
-            discord.ui.ActionRow(
-                _ChaptersChannelToggleButton(self),
-                _AiringChannelToggleButton(self),
-            )
-        )
+        # Tracked releases: the feed's EXPLICIT title subscriptions (new episodes /
+        # chapters posted in this channel). A circuit independent of the DM opt-ins
+        # and of who the feed follows, so it gets its own button opening a dedicated
+        # manager rather than sitting among the activity-type toggles.
+        container.add_item(discord.ui.ActionRow(_TrackedReleasesButton(self)))
 
         # Follows: the followed-user list, then (when there are any) the remove
         # select, then the enable/delete/add-follow action row.
@@ -1862,8 +2203,19 @@ class AniListFeedPanel(discord.ui.LayoutView):
             if selected_channel_id is not None
             else []
         )
+        subs_count = (
+            await cog._channel_sub_count(self.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else 0
+        )
         new = AniListFeedPanel(
-            cog, self.guild, self.author_id, feeds, selected_channel_id, follows
+            cog,
+            self.guild,
+            self.author_id,
+            feeds,
+            selected_channel_id,
+            follows,
+            subs_count,
         )
         new.message = self.message
         return new
@@ -2310,8 +2662,7 @@ class AniListFeed(commands.Cog):
     # ------------------------------------------------------------------
     async def _feeds_for_guild(self, guild_id):
         return await self.bot.db_pool.fetch(
-            "SELECT channel_id, types, self_add, enabled, fail_count, "
-            "chapters_in_channel, airing_in_channel "
+            "SELECT channel_id, types, self_add, enabled, fail_count "
             "FROM anilist_feeds WHERE guild_id = $1 ORDER BY created_at;",
             guild_id,
         )
@@ -2375,8 +2726,7 @@ class AniListFeed(commands.Cog):
         async with self.bot.db_pool.acquire() as conn:
             async with conn.transaction():
                 row = await conn.fetchrow(
-                    "SELECT types, self_add, enabled, fail_count, "
-                    "chapters_in_channel, airing_in_channel "
+                    "SELECT types, self_add, enabled, fail_count "
                     "FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
                     old_channel_id,
@@ -2391,23 +2741,27 @@ class AniListFeed(commands.Cog):
                     new_channel_id,
                 )
                 await conn.execute(
+                    "UPDATE anilist_channel_subs SET channel_id = $3 "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    old_channel_id,
+                    new_channel_id,
+                )
+                await conn.execute(
                     "DELETE FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
                     old_channel_id,
                 )
                 await conn.execute(
                     "INSERT INTO anilist_feeds "
-                    "(guild_id, channel_id, types, self_add, enabled, fail_count, "
-                    "chapters_in_channel, airing_in_channel) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8);",
+                    "(guild_id, channel_id, types, self_add, enabled, fail_count) "
+                    "VALUES ($1, $2, $3, $4, $5, $6);",
                     guild_id,
                     new_channel_id,
                     row["types"],
                     row["self_add"],
                     row["enabled"],
                     row["fail_count"],
-                    row["chapters_in_channel"],
-                    row["airing_in_channel"],
                 )
         return None
 
@@ -2429,21 +2783,139 @@ class AniListFeed(commands.Cog):
             channel_id,
         )
 
-    async def _toggle_chapters_in_channel(self, guild_id, channel_id):
-        await self.bot.db_pool.execute(
-            "UPDATE anilist_feeds SET chapters_in_channel = NOT chapters_in_channel "
+    # ------------------------------------------------------------------
+    # Tracked-releases subscriptions (the per-feed explicit-title circuit)
+    # ------------------------------------------------------------------
+    async def _channel_subs_for_feed(self, guild_id, channel_id):
+        """Every tracked-release subscription of a feed, ordered for the panel."""
+
+        return await self.bot.db_pool.fetch(
+            "SELECT media_id, media_type, title FROM anilist_channel_subs "
+            "WHERE guild_id = $1 AND channel_id = $2 "
+            "ORDER BY media_type, lower(title), media_id;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _channel_sub_count(self, guild_id, channel_id):
+        return await self.bot.db_pool.fetchval(
+            "SELECT COUNT(*) FROM anilist_channel_subs "
             "WHERE guild_id = $1 AND channel_id = $2;",
             guild_id,
             channel_id,
         )
 
-    async def _toggle_airing_in_channel(self, guild_id, channel_id):
-        await self.bot.db_pool.execute(
-            "UPDATE anilist_feeds SET airing_in_channel = NOT airing_in_channel "
-            "WHERE guild_id = $1 AND channel_id = $2;",
+    async def _add_channel_sub(
+        self, guild_id, channel_id, media_id, media_type, title, added_by
+    ):
+        """Insert/refresh a subscription, enforcing the per-feed cap.
+
+        Returns an error string when the media type is unusable, no usable
+        display title survived (romaji/english both empty, which would store a
+        silent no-op), or the feed is already at
+        :data:`af.MAX_SUBS_PER_FEED` with this title not yet tracked;
+        else ``None`` after the upsert (which refreshes the cached title). Never
+        touches a token.
+        """
+
+        if (
+            media_id is None
+            or media_type not in ("ANIME", "MANGA")
+            or not (title and title.strip())
+        ):
+            # A subscription with no usable display title is unrecoverable: a
+            # MANGA can never be MangaDex-mapped (the search is seeded from this
+            # title), and the panel has nothing to render. Reject it rather than
+            # store a silent no-op the admin was told is tracked.
+            return _("I couldn't read that title - try searching again.")
+        already = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM anilist_channel_subs "
+            "WHERE guild_id = $1 AND channel_id = $2 AND media_id = $3;",
             guild_id,
             channel_id,
+            media_id,
         )
+        if af.sub_cap_exceeded(
+            await self._channel_sub_count(guild_id, channel_id), bool(already)
+        ):
+            return _(
+                "This feed already tracks the maximum of {max} titles. Remove "
+                "one first."
+            ).format(max=af.MAX_SUBS_PER_FEED)
+        await self.bot.db_pool.execute(
+            "INSERT INTO anilist_channel_subs "
+            "(guild_id, channel_id, media_id, media_type, title, added_by) "
+            "VALUES ($1, $2, $3, $4, $5, $6) "
+            "ON CONFLICT (guild_id, channel_id, media_id) DO UPDATE SET "
+            "media_type = EXCLUDED.media_type, title = EXCLUDED.title;",
+            guild_id,
+            channel_id,
+            media_id,
+            media_type,
+            title,
+            added_by,
+        )
+        return None
+
+    async def _remove_channel_sub(self, guild_id, channel_id, media_id):
+        await self.bot.db_pool.execute(
+            "DELETE FROM anilist_channel_subs "
+            "WHERE guild_id = $1 AND channel_id = $2 AND media_id = $3;",
+            guild_id,
+            channel_id,
+            media_id,
+        )
+
+    async def _search_channel_candidates(self, query):
+        """Cross-type AniList search (UNAUTHENTICATED) for subscribable titles.
+
+        Reuses the shared ``SEARCH_QUERY`` the update flow uses, so a candidate
+        carries the ``type`` (ANIME/MANGA) the subscription needs. Returns the raw
+        media dicts, or ``[]`` on an empty query or any AniList failure (the caller
+        treats both as "no match"). No token is ever used.
+        """
+
+        query = (query or "").strip()
+        if not query:
+            return []
+        try:
+            data = await self._graphql(SEARCH_QUERY, {"search": query})
+        except (_RateLimited, _FetchError):
+            return []
+        page = ((data or {}).get("data") or {}).get("Page") or {}
+        return page.get("media") or []
+
+    async def _render_subs_manager(
+        self, interaction, guild, author_id, channel_id, *, page=0, note=None, new=False
+    ):
+        """Render the ephemeral tracked-releases manager from fresh DB state.
+
+        ``new=True`` sends a fresh ephemeral message (the panel button's first
+        open); otherwise it edits the manager message in place (a remove / paging /
+        add / cancel step). Loads the feed's subscriptions, builds a
+        :class:`_SubsManagerView` and binds its ``message`` so the timeout cleanup
+        works.
+        """
+
+        subs = await self._channel_subs_for_feed(guild.id, channel_id)
+        view = _SubsManagerView(
+            self, guild, author_id, channel_id, subs, page=page, note=note
+        )
+        embed = view.build_embed()
+        if new:
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True
+            )
+            view.message = await interaction.original_response()
+            return view
+        if interaction.response.is_done():
+            view.message = await interaction.edit_original_response(
+                embed=embed, view=view
+            )
+        else:
+            await interaction.response.edit_message(embed=embed, view=view)
+            view.message = await interaction.original_response()
+        return view
 
     async def _set_enabled(self, guild_id, channel_id, enabled):
         await self.bot.db_pool.execute(
@@ -2465,6 +2937,12 @@ class AniListFeed(commands.Cog):
             async with conn.transaction():
                 await conn.execute(
                     "DELETE FROM anilist_follows "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
+                await conn.execute(
+                    "DELETE FROM anilist_channel_subs "
                     "WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
                     channel_id,
@@ -2584,8 +3062,19 @@ class AniListFeed(commands.Cog):
             if selected_channel_id is not None
             else []
         )
+        subs_count = (
+            await self._channel_sub_count(ctx.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else 0
+        )
         view = AniListFeedPanel(
-            self, ctx.guild, ctx.author.id, feeds, selected_channel_id, follows
+            self,
+            ctx.guild,
+            ctx.author.id,
+            feeds,
+            selected_channel_id,
+            follows,
+            subs_count,
         )
         view.message = await ctx.send(view=view)
 

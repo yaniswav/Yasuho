@@ -25,6 +25,7 @@ from cogs.anilist.chapters import (
     _deserialize_key,
     _search_title,
     _serialize_key,
+    _sub_media,
     plan_chapter_targets,
 )
 from cogs.anilist.feed import ADD_TEMPLATE, LIKE_TEMPLATE, REPLY_TEMPLATE
@@ -188,6 +189,11 @@ def test_cap_alerts_default_cap_is_module_constant():
 
 # ---------------------------------------------------------------------------
 # plan_chapter_targets - who receives an alert for a manga
+#
+# dm_lists_by_user maps a Discord user to the manga on their Reading list; the
+# channel_media map is now built from a feed's EXPLICIT title subscriptions
+# (anilist_channel_subs), not from its followed users' lists. The planner's shape
+# is unchanged: a media-id-set membership test per side.
 # ---------------------------------------------------------------------------
 
 
@@ -199,6 +205,7 @@ def test_plan_targets_dm_membership():
 
 
 def test_plan_targets_channel_membership():
+    # channel_media is the per-feed SUBSCRIBED media-id set.
     channel_media = {(1, 111): {10, 20}, (2, 222): {30}}
     dm_users, channels = plan_chapter_targets(10, {}, channel_media)
     assert dm_users == []
@@ -219,6 +226,37 @@ def test_plan_targets_no_match_is_empty():
     dm_users, channels = plan_chapter_targets(99, dm, channel_media)
     assert dm_users == []
     assert channels == []
+
+
+def test_plan_targets_dm_and_channel_are_independent():
+    # A media subscribed by a feed but on no DM user's list still fans out to the
+    # channel and to nobody's DMs (the two circuits are independent).
+    dm = {1: {10}}
+    channel_media = {(7, 70): {99}}
+    dm_users, channels = plan_chapter_targets(99, dm, channel_media)
+    assert dm_users == []
+    assert channels == [(7, 70)]
+
+
+# ---------------------------------------------------------------------------
+# _sub_media - the synthesised media for a channel-subscribed manga
+# ---------------------------------------------------------------------------
+
+
+def test_sub_media_carries_id_and_searchable_title():
+    media = _sub_media(4321, "Berserk")
+    assert media["id"] == 4321
+    # The cached title rides under romaji so the mapping search finds it exactly
+    # like a list-derived manga.
+    assert _search_title(media) == "Berserk"
+
+
+def test_sub_media_none_title_is_unsearchable_not_a_crash():
+    # A subscription that never captured a title yields a media the search simply
+    # skips (left unmapped, retried later), never a raise.
+    media = _sub_media(7, None)
+    assert media["id"] == 7
+    assert _search_title(media) is None
 
 
 # ---------------------------------------------------------------------------

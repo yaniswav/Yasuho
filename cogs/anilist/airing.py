@@ -185,14 +185,14 @@ def plan_airing_channel_posts(aired, channel_media):
 
     ``aired`` is the list of aired schedule rows actually processed this tick, each
     a dict carrying ``media_id`` (int) and ``episode`` (int). ``channel_media`` maps
-    a ``(guild_id, channel_id)`` feed key to the union of media ids its FOLLOWED
-    users are Watching.
+    a ``(guild_id, channel_id)`` feed key to the set of AniList media ids that feed
+    explicitly SUBSCRIBES to (``anilist_channel_subs``, media_type ANIME).
 
-    A feed channel gets ONE post per aired row whose media is in its union. Unlike
+    A feed channel gets ONE post per aired row whose media it subscribes to. Unlike
     the DM path (:func:`tools.anilist_feed.plan_airing_notifications`), this is NOT
     progress-gated: a guild post is for everyone in the channel, not tied to any one
-    member's progress, so an airing of a followed title is posted regardless of who
-    has watched what.
+    member's progress, so an airing of a subscribed title is posted regardless of
+    who has watched what.
 
     Returns a flat list of ``(guild_id, channel_id, media_id, episode)`` tuples in a
     stable order - aired-row order, then feed key ascending - so delivery and the
@@ -671,13 +671,13 @@ class AniListAiring(commands.Cog):
     async def _refresh_lists(self, anilist_user_ids, now):
         """Refresh every MISSING list this tick, plus a throttled slice of stale ones.
 
-        ``anilist_user_ids`` is the union of every tracked AniList user - the DM
-        opt-ins PLUS the followed users of every feed that opted into in-channel
-        alerts. A never-cached (missing) list is ALWAYS refreshed before the
-        schedules fetch. The airing cursor is global and advances over the union of
-        the cached lists, so leaving a tracked user out of the union would drag the
-        cursor past that user's airings and drop those episodes for good - worst
-        right after a restart, when every list is uncached. Genuinely
+        ``anilist_user_ids`` is every DM opt-in's AniList user (the channel fan-out
+        no longer derives from followed users' lists - it reads explicit
+        subscriptions instead). A never-cached (missing) list is ALWAYS refreshed
+        before the schedules fetch. The airing cursor is global and advances over
+        the tracked-media union, so leaving a tracked user out of the union would
+        drag the cursor past that user's airings and drop those episodes for good -
+        worst right after a restart, when every list is uncached. Genuinely
         stale-but-present lists keep serving their last-known entries meanwhile, so
         they stay throttled to :data:`MAX_LIST_REFRESHES_PER_TICK` per tick (the
         rest ride later ticks) and steady-state staleness cannot burst the rate
@@ -773,15 +773,21 @@ class AniListAiring(commands.Cog):
             "WHERE enabled = TRUE;"
         )
 
-    async def _load_channel_follows(self):
-        """Follows of every enabled feed that opted into in-channel airing alerts."""
+    async def _load_channel_subs(self):
+        """Explicit ANIME title subscriptions of every enabled feed.
+
+        The channel fan-out is driven ONLY by these rows now
+        (``anilist_channel_subs``): a feed posts a subscribed title's new episodes
+        in its channel, independently of the DM opt-ins and of who the feed
+        follows. A disabled feed is excluded (its channel must stay quiet).
+        """
 
         return await self.bot.db_pool.fetch(
-            "SELECT f.guild_id, f.channel_id, f.anilist_user_id "
-            "FROM anilist_follows f "
+            "SELECT s.guild_id, s.channel_id, s.media_id "
+            "FROM anilist_channel_subs s "
             "JOIN anilist_feeds fe "
-            "  ON fe.guild_id = f.guild_id AND fe.channel_id = f.channel_id "
-            "WHERE fe.enabled = TRUE AND fe.airing_in_channel = TRUE;"
+            "  ON fe.guild_id = s.guild_id AND fe.channel_id = s.channel_id "
+            "WHERE fe.enabled = TRUE AND s.media_type = 'ANIME';"
         )
 
     async def _load_cursor(self):
@@ -836,8 +842,8 @@ class AniListAiring(commands.Cog):
             return  # still under a 429 backoff
 
         optins = await self._load_optins()
-        channel_follows = await self._load_channel_follows()
-        if not optins and not channel_follows:
+        channel_subs = await self._load_channel_subs()
+        if not optins and not channel_subs:
             return  # nobody tracked -> no API call
 
         cursor = await self._load_cursor()
@@ -851,13 +857,13 @@ class AniListAiring(commands.Cog):
         self._spaced = False
         now_mono = time.monotonic()
 
-        # a. Tracked AniList users = every DM opt-in plus every followed user of a
-        # feed that opted into in-channel alerts. Refresh their public Watching
-        # lists (missing in full, stale throttled) before the schedules fetch: the
-        # cursor advances over the union of the cached lists, so a tracked user
-        # missing from the union would drag it past their airings (the C4 lesson).
+        # a. Tracked AniList users = every DM opt-in (the channel fan-out is driven
+        # by explicit subscriptions, not by followed users' lists). Refresh their
+        # public Watching lists (missing in full, stale throttled) before the
+        # schedules fetch: the cursor advances over the tracked-media union, so a
+        # tracked user missing from the union would drag it past their airings (the
+        # C4 lesson).
         tracked_users = {row["anilist_user_id"] for row in optins}
-        tracked_users.update(row["anilist_user_id"] for row in channel_follows)
         try:
             await self._refresh_lists(tracked_users, now_mono)
         except _RateLimited as exc:
@@ -872,9 +878,7 @@ class AniListAiring(commands.Cog):
         # list is refreshed above before we reach here (missing ones in full), so a
         # user is skipped only when their list fetch failed this tick - never merely
         # because it had not been cached yet. DM recipients keep the per-user
-        # {media_id: progress} the DM planner gates on; feed channels only need the
-        # media-id union of their followed users (channel posts are NOT
-        # progress-gated - a guild post is for everyone).
+        # {media_id: progress} the DM planner gates on.
         lists_by_user = {}
         union = set()
         for row in optins:
@@ -884,14 +888,16 @@ class AniListAiring(commands.Cog):
             lists_by_user[row["user_id"]] = cached
             union.update(cached.keys())
 
+        # Channel fan-out is driven ONLY by explicit subscriptions. Each subscribed
+        # media id joins the union BEFORE the schedules fetch (the C4 invariant), so
+        # the global cursor can never advance past a subscribed title's airing even
+        # when no opted-in user watches it. Channel posts are NOT progress-gated - a
+        # guild post is for everyone - so channel_media is a bare media-id set.
         channel_media = {}
-        for row in channel_follows:
-            cached = self._list_cache_get(row["anilist_user_id"])
-            if cached is None:
-                continue
+        for row in channel_subs:
             key = (row["guild_id"], row["channel_id"])
-            channel_media.setdefault(key, set()).update(cached.keys())
-            union.update(cached.keys())
+            channel_media.setdefault(key, set()).add(row["media_id"])
+            union.add(row["media_id"])
 
         if not union:
             return  # nothing tracked yet -> no schedules call
@@ -917,8 +923,9 @@ class AniListAiring(commands.Cog):
         new_cursor = af.advance_airing_cursor(cursor, fetched_ats, capped=capped)
 
         # e. Fan out: one progress-gated DM per (user, aired-row) the DM planner
-        # selects, then one post per (feed channel, aired-row) whose followed users
-        # watch the media (not progress-gated). Both index the same aired rows.
+        # selects, then one post per (feed channel, aired-row) whose feed
+        # subscribes to the media (not progress-gated). Both index the same aired
+        # rows.
         rows_by_key = {(r["media_id"], r["episode"]): r for r in aired}
         plan = af.plan_airing_notifications(aired, lists_by_user)
         if plan:

@@ -3,11 +3,13 @@
 Everything exercised here is pure and side-effect-free (no network, DB, Discord or
 Lavalink): the tuned poller constants the design leans on, and - the piece the
 guild-channel fan-out adds - :func:`plan_airing_channel_posts`, which decides which
-feed channels get a post for an aired episode. Its two contracts under test are the
-ones the fan-out invariants rest on: it is membership-only (NOT progress-gated,
-unlike the DM planner) and it emits at most ONE post per (feed channel, aired row)
-in a stable, deterministic order. Importing the cog module is enough; nothing in it
-runs at import time.
+feed channels get a post for an aired episode. Its ``channel_media`` map is now
+built from a feed's EXPLICIT title subscriptions (``anilist_channel_subs``), not
+from its followed users' lists, but the planner's shape is unchanged. Its two
+contracts under test are the ones the fan-out invariants rest on: it is
+membership-only (NOT progress-gated, unlike the DM planner) and it emits at most ONE
+post per (feed channel, aired row) in a stable, deterministic order. Importing the
+cog module is enough; nothing in it runs at import time.
 """
 
 from cogs.anilist import airing as ai
@@ -43,23 +45,25 @@ def test_channel_posts_single_channel_membership():
     aired = [{"media_id": 10, "episode": 3}]
     channel_media = {(1, 111): {10, 20}, (2, 222): {30}}
     posts = plan_airing_channel_posts(aired, channel_media)
-    assert posts == [(1, 111, 10, 3)]  # only the channel whose union has media 10
+    # only the channel subscribed to media 10 gets a post.
+    assert posts == [(1, 111, 10, 3)]
 
 
 def test_channel_posts_sorted_by_feed_key():
     aired = [{"media_id": 5, "episode": 7}]
     channel_media = {(2, 20): {5}, (1, 10): {5}, (1, 5): {5}}
     posts = plan_airing_channel_posts(aired, channel_media)
-    # every channel follows media 5 -> one post each, feed key ascending.
+    # every channel subscribes to media 5 -> one post each, feed key ascending.
     assert posts == [(1, 5, 5, 7), (1, 10, 5, 7), (2, 20, 5, 7)]
 
 
 def test_channel_posts_not_progress_gated():
     # channel_media carries no progress at all - it is a media-id set - so every
-    # aired episode of a followed title posts, unlike the progress-gated DM path.
+    # aired episode of a subscribed title posts, unlike the progress-gated DM path.
     aired = [{"media_id": 10, "episode": 1}, {"media_id": 10, "episode": 2}]
     channel_media = {(1, 111): {10}}
     posts = plan_airing_channel_posts(aired, channel_media)
+    # every aired episode of a subscribed title posts.
     assert posts == [(1, 111, 10, 1), (1, 111, 10, 2)]
 
 
@@ -72,8 +76,8 @@ def test_channel_posts_preserve_aired_row_order():
 
 
 def test_channel_posts_one_post_per_channel_per_row():
-    # Two feeds in the same guild both follow the media -> exactly one post each,
-    # never a duplicate for the same (guild, channel, media, episode).
+    # Two feeds in the same guild both subscribe to the media -> exactly one post
+    # each, never a duplicate for the same (guild, channel, media, episode).
     aired = [{"media_id": 42, "episode": 4}]
     channel_media = {(7, 100): {42}, (7, 200): {42, 43}}
     posts = plan_airing_channel_posts(aired, channel_media)
@@ -97,7 +101,7 @@ def test_channel_posts_empty_cases():
     assert plan_airing_channel_posts([{"media_id": 10, "episode": 1}], {}) == []
     # No airings this tick -> nothing, even with opted-in feeds.
     assert plan_airing_channel_posts([], {(1, 1): {10}}) == []
-    # An airing whose media no feed follows -> nothing.
+    # An airing whose media no feed subscribes to -> nothing.
     assert (
         plan_airing_channel_posts([{"media_id": 99, "episode": 1}], {(1, 1): {10}})
         == []

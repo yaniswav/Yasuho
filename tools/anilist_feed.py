@@ -23,7 +23,21 @@ import re
 # --- Feed policy ------------------------------------------------------------
 MAX_FEEDS_PER_GUILD = 2  # at most 2 feed channels per guild
 MAX_FOLLOWS_PER_FEED = 25  # at most 25 followed AniList users per feed
+MAX_SUBS_PER_FEED = 50  # at most 50 explicitly-subscribed titles per feed channel
 MAX_FULL_POSTS_PER_TICK = 5  # rich cards per channel per tick; the rest coalesce
+
+
+def sub_cap_exceeded(current_count, already_subscribed):
+    """True when adding a NEW title subscription would exceed the per-feed cap.
+
+    ``current_count`` is how many titles the feed already subscribes to;
+    ``already_subscribed`` is whether the title being added is one of them. An
+    already-subscribed title re-confirms harmlessly (it only refreshes the cached
+    display title, adds no row), so it is never blocked - only a genuinely new
+    title at or past :data:`MAX_SUBS_PER_FEED` is rejected. Pure and total.
+    """
+
+    return not already_subscribed and current_count >= MAX_SUBS_PER_FEED
 
 # Activity types a feed may post. AniList's private ``MESSAGE`` type (profile
 # wall posts / direct messages) is deliberately excluded: those are not public

@@ -3,10 +3,12 @@
 A user opts in with ``/anilist chapters``; from then on the poller DMs them a
 compact Components V2 card whenever a new chapter of a title on their CURRENT
 (Reading) AniList manga list drops on MangaDex, carrying a one-click **Read**
-button that bumps their AniList progress to that chapter. A guild admin may also
-flip ``chapters_in_channel`` on an AniList feed, and then the same alert is
-posted once in that feed's channel for every manga the feed's followed users
-read.
+button that bumps their AniList progress to that chapter. Independently, a guild
+admin may SUBSCRIBE a feed channel to specific manga titles from the feed panel
+(``anilist_channel_subs``, media_type MANGA), and then the same alert is posted
+once in that channel for each subscribed title. The two circuits are fully
+independent: the DM path is driven by users' personal lists, the channel path by
+the feed's explicit subscriptions, and they share no rows.
 
 Two moving parts live here, both wired from the package ``__init__``:
 
@@ -254,10 +256,11 @@ def plan_chapter_targets(media_id, dm_lists_by_user, channel_media):
 
     ``dm_lists_by_user`` maps a Discord user id to the set of AniList media ids on
     their cached Reading list; ``channel_media`` maps a ``(guild_id, channel_id)``
-    feed key to the union of media ids its followed users read. Returns
-    ``(dm_user_ids, channel_keys)`` - the DM opt-in users whose list contains
-    ``media_id`` and the feed channels whose followed users read it - each sorted
-    for deterministic delivery. Pure and total.
+    feed key to the set of AniList media ids that feed explicitly SUBSCRIBES to
+    (``anilist_channel_subs``, media_type MANGA). Returns ``(dm_user_ids,
+    channel_keys)`` - the DM opt-in users whose list contains ``media_id`` and the
+    feed channels subscribed to it - each sorted for deterministic delivery. Pure
+    and total.
     """
 
     dm_user_ids = sorted(
@@ -267,6 +270,20 @@ def plan_chapter_targets(media_id, dm_lists_by_user, channel_media):
         key for key, mids in channel_media.items() if media_id in mids
     )
     return dm_user_ids, channel_keys
+
+
+def _sub_media(media_id, title):
+    """Minimal AniList media dict for a channel-subscribed manga not on any list.
+
+    A feed may subscribe to a manga that no DM opt-in user reads, so it never
+    arrives via a cached Reading list. This synthesises just enough of a media
+    object for the pipeline: the id, and the cached display title under ``romaji``
+    so :func:`_search_title` can drive the MangaDex mapping search exactly as a
+    list-derived manga does. The chapter card degrades on the fields this omits
+    (cover, url, adult flag). Pure and total.
+    """
+
+    return {"id": media_id, "title": {"romaji": title}}
 
 
 # --- Read button ------------------------------------------------------------
@@ -841,15 +858,23 @@ class AniListChapters(commands.Cog):
             "WHERE enabled = TRUE;"
         )
 
-    async def _load_channel_follows(self):
-        """Follows of every enabled feed that opted into in-channel chapter alerts."""
+    async def _load_channel_subs(self):
+        """Explicit MANGA title subscriptions of every enabled feed (with cached title).
+
+        The channel fan-out is driven ONLY by these rows now
+        (``anilist_channel_subs``): a feed posts a subscribed manga's new chapters
+        in its channel, independently of the DM opt-ins and of who the feed
+        follows. The cached ``title`` seeds the MangaDex mapping search for a
+        subscribed manga no opted-in user reads. A disabled feed is excluded (its
+        channel must stay quiet).
+        """
 
         return await self.bot.db_pool.fetch(
-            "SELECT f.guild_id, f.channel_id, f.anilist_user_id "
-            "FROM anilist_follows f "
+            "SELECT s.guild_id, s.channel_id, s.media_id, s.title "
+            "FROM anilist_channel_subs s "
             "JOIN anilist_feeds fe "
-            "  ON fe.guild_id = f.guild_id AND fe.channel_id = f.channel_id "
-            "WHERE fe.enabled = TRUE AND fe.chapters_in_channel = TRUE;"
+            "  ON fe.guild_id = s.guild_id AND fe.channel_id = s.channel_id "
+            "WHERE fe.enabled = TRUE AND s.media_type = 'MANGA';"
         )
 
     async def _load_mappings(self, media_ids):
@@ -978,15 +1003,15 @@ class AniListChapters(commands.Cog):
             return  # still under a 429 backoff
 
         dm_optins = await self._load_dm_optins()
-        channel_follows = await self._load_channel_follows()
-        if not dm_optins and not channel_follows:
+        channel_subs = await self._load_channel_subs()
+        if not dm_optins and not channel_subs:
             return  # nobody tracked -> no API call
 
-        # a. Tracked AniList users = every DM opt-in plus every followed user of a
-        # feed that opted into in-channel alerts. Refresh their public Reading
-        # lists (missing in full, stale throttled), then build the tracked union.
+        # a. Tracked AniList users = every DM opt-in (the channel fan-out is driven
+        # by explicit subscriptions, not by followed users' lists). Refresh their
+        # public Reading lists (missing in full, stale throttled), then build the
+        # tracked union.
         tracked_users = {row["anilist_user_id"] for row in dm_optins}
-        tracked_users.update(row["anilist_user_id"] for row in channel_follows)
 
         self._spaced = False
         now_mono = time.monotonic()
@@ -1000,23 +1025,18 @@ class AniListChapters(commands.Cog):
             )
             return
 
-        # DM recipients keyed by Discord id, feed channels keyed by (guild, channel),
-        # and a media-id -> media-dict map for titles/covers. A user/channel whose
-        # list fetch failed this tick simply contributes nothing (never a crash).
+        # DM recipients keyed by Discord id, and a media-id -> media-dict map for
+        # titles/covers. A user whose list fetch failed this tick simply contributes
+        # nothing (never a crash). Populate media_by_id from the lists FIRST so a
+        # manga that is BOTH on a list and channel-subscribed keeps its rich
+        # list-derived media (cover/url/adult); the subscription only backfills the
+        # ones no list carries.
         dm_lists_by_user = {}
         for row in dm_optins:
             cached = self._list_cache_get(row["anilist_user_id"])
             if cached is None:
                 continue
             dm_lists_by_user[row["user_id"]] = set(cached.keys())
-
-        channel_media = {}
-        for row in channel_follows:
-            cached = self._list_cache_get(row["anilist_user_id"])
-            if cached is None:
-                continue
-            key = (row["guild_id"], row["channel_id"])
-            channel_media.setdefault(key, set()).update(cached.keys())
 
         media_by_id = {}
         for aid in tracked_users:
@@ -1025,6 +1045,19 @@ class AniListChapters(commands.Cog):
                 continue
             for mid, media in cached.items():
                 media_by_id.setdefault(mid, media)
+
+        # Channel fan-out is driven ONLY by explicit subscriptions. Each subscribed
+        # manga joins the tracked-media union with a minimal media dict carrying its
+        # cached title, so it enters the mapping-resolution pipeline (max 3
+        # searches/tick) exactly like a list-derived manga - the C4 invariant that
+        # keeps the shared cursors from advancing past a subscribed title's chapters.
+        channel_media = {}
+        for row in channel_subs:
+            key = (row["guild_id"], row["channel_id"])
+            channel_media.setdefault(key, set()).add(row["media_id"])
+            media_by_id.setdefault(
+                row["media_id"], _sub_media(row["media_id"], row["title"])
+            )
 
         union_media = set(media_by_id)
         if not union_media:

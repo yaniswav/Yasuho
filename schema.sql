@@ -460,10 +460,34 @@ CREATE TABLE IF NOT EXISTS mangadex_seen_chapters (
 CREATE INDEX IF NOT EXISTS mangadex_seen_chapters_prune_idx
     ON mangadex_seen_chapters (mangadex_id, first_seen_at);
 
--- Per-feed fan-out toggles for the airing/chapter trackers to post IN the feed
--- channel (in addition to, or instead of, the opt-in DMs). Added to the existing
--- anilist_feeds table, so they must be ALTER ... ADD COLUMN IF NOT EXISTS (the
--- whole schema is re-applied at startup). Both default FALSE so an existing feed
--- is unchanged until a guild opts in via a later lot's panel.  cogs/anilist
+-- RESERVED / NO LONGER READ. These two per-feed booleans backed the original
+-- in-channel-alerts model, where a feed derived its channel posts from its
+-- FOLLOWED users' lists. That model was replaced by explicit per-feed title
+-- subscriptions (anilist_channel_subs below): the airing/chapter pollers no
+-- longer read these columns and the feed panel no longer writes them. The
+-- columns are kept (not dropped) to avoid a destructive migration; they simply
+-- sit unused. Do not reintroduce reads without reviving that circuit.  cogs/anilist
 ALTER TABLE anilist_feeds ADD COLUMN IF NOT EXISTS chapters_in_channel BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE anilist_feeds ADD COLUMN IF NOT EXISTS airing_in_channel BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Explicit per-feed title subscriptions: the tracked-releases circuit. A feed
+-- channel SUBSCRIBES to specific AniList titles and the airing poller (media_type
+-- 'ANIME') / chapter poller (media_type 'MANGA') posts each new episode/chapter of
+-- a subscribed title once in that channel. This is fully INDEPENDENT of the DM
+-- opt-ins and of who the feed follows: the two circuits share no rows. Capped at
+-- 50 subscriptions per feed (MAX_SUBS_PER_FEED, enforced in code). ``title`` caches
+-- the chosen display title so the manage panel renders the list without an AniList
+-- call, and (for manga) seeds the MangaDex mapping search so a subscribed title the
+-- poller has never otherwise seen can still be resolved. ``media_type`` is the
+-- AniList MediaType ('ANIME' | 'MANGA'). Lookups by feed ride the
+-- (guild_id, channel_id, ...) PK prefix.  cogs/anilist/feed.py
+CREATE TABLE IF NOT EXISTS anilist_channel_subs (
+    guild_id   BIGINT      NOT NULL,
+    channel_id BIGINT      NOT NULL,                       -- a text channel OR thread id
+    media_id   INTEGER     NOT NULL,                       -- AniList numeric media id
+    media_type TEXT        NOT NULL,                       -- 'ANIME' | 'MANGA'
+    title      TEXT,                                       -- cached display title for the panel/search
+    added_by   BIGINT,                                     -- Discord user who subscribed it
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, channel_id, media_id)
+);
