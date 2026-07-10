@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import logging.handlers
 import os
+import sys
 
 import asyncpg
 import discord
@@ -210,10 +212,43 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
+def _attach_file_logging():
+    """Add a rotating file handler to the root logger, alongside stderr.
+
+    Everything (discord.*, our cogs, aiohttp.access) also lands in
+    logs/yasuho.log so the terminal output stays as-is but there is a durable
+    on-disk trail. This is bootstrap code: any failure here (permissions, disk)
+    must never stop the bot from starting, so it degrades to terminal-only
+    logging with a one-line warning.
+    """
+    try:
+        log_dir = os.path.join(os.path.dirname(__file__), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        handler = logging.handlers.RotatingFileHandler(
+            os.path.join(log_dir, "yasuho.log"),
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        )
+        handler.setFormatter(
+            logging.Formatter(
+                "[{asctime}] [{levelname:<8}] {name}: {message}",
+                "%Y-%m-%d %H:%M:%S",
+                style="{",
+            )
+        )
+        handler.setLevel(logging.INFO)
+        logging.getLogger().addHandler(handler)
+    except Exception as e:
+        # Fall back to terminal-only logging; startup must proceed regardless.
+        print(f"Warning: file logging disabled ({e}); using terminal only.", file=sys.stderr)
+
+
 async def main():
     # Configure logging ourselves since we use asyncio.run + bot.start (not bot.run,
     # which would call this for us). Routes discord.py + our own loggers to stderr.
     discord.utils.setup_logging(level=logging.INFO)
+    _attach_file_logging()
     enable_mobile_status()
     async with asyncpg.create_pool(
         POSTGRESQL_URI, min_size=5, max_size=20, command_timeout=60

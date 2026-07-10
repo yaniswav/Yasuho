@@ -23,6 +23,9 @@ lavalink/
 # i18n: intermediate per-language translation JSON (assembled into the .po files)
 locales/_work/
 
+# Runtime logs (rotating file handler in core.py)
+logs/
+
 # Test artifacts
 .pytest_cache/
 .coverage
