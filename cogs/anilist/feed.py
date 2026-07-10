@@ -46,6 +46,12 @@ log = logging.getLogger(__name__)
 # AniList brand blue, the accent for the management-command embeds.
 ANILIST_BLUE = 0x02A9FF
 
+# Accent colours for the feed management panel's Components V2 container: green
+# when the selected feed is enabled, red when disabled, and the neutral card
+# blue (:data:`CARD_ACCENT`) when no feed exists yet.
+PANEL_ENABLED = 0x2ECC71
+PANEL_DISABLED = 0xE74C3C
+
 # Accent for the activity/digest cards: the media's own cover colour when it has
 # one, else this fixed AniList blue (used for every text activity and any list
 # activity whose cover carries no colour).
@@ -995,7 +1001,6 @@ class _FeedSwitchSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=0,
         )
 
     async def callback(self, interaction):
@@ -1037,7 +1042,6 @@ class _FeedChannelSelect(discord.ui.ChannelSelect):
             min_values=1,
             max_values=1,
             default_values=defaults,
-            row=1,
         )
 
     async def callback(self, interaction):
@@ -1072,7 +1076,6 @@ class _TypeToggleButton(discord.ui.Button):
             style=(
                 discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
             ),
-            row=2,
         )
 
     async def callback(self, interaction):
@@ -1110,7 +1113,6 @@ class _SelfAddToggleButton(discord.ui.Button):
             style=(
                 discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
             ),
-            row=2,
         )
 
     async def callback(self, interaction):
@@ -1135,7 +1137,6 @@ class _EnableButton(discord.ui.Button):
             style=(
                 discord.ButtonStyle.danger if enabled else discord.ButtonStyle.success
             ),
-            row=3,
         )
 
     async def callback(self, interaction):
@@ -1203,7 +1204,7 @@ class _DeleteButton(discord.ui.Button):
     def __init__(self, panel):
         self._owner = panel
         super().__init__(
-            label=_("Delete feed"), style=discord.ButtonStyle.danger, row=3
+            label=_("Delete feed"), style=discord.ButtonStyle.danger
         )
 
     async def callback(self, interaction):
@@ -1263,7 +1264,7 @@ class AddFollowModal(LocaleModal):
 class _AddFollowButton(discord.ui.Button):
     def __init__(self, panel):
         self._owner = panel
-        super().__init__(label=_("Add follow"), style=discord.ButtonStyle.primary, row=3)
+        super().__init__(label=_("Add follow"), style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction):
         try:
@@ -1297,7 +1298,6 @@ class _RemoveFollowSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=4,
         )
 
     async def callback(self, interaction):
@@ -1312,41 +1312,90 @@ class _RemoveFollowSelect(discord.ui.Select):
             await interactions.notify_failure(interaction)
 
 
-class AniListFeedPanel(AuthorView):
+# Component types the panel disables on timeout (buttons + every select flavour;
+# ChannelSelect is NOT a subclass of ui.Select, so it must be listed explicitly).
+_DISABLEABLE = (discord.ui.Button, discord.ui.Select, discord.ui.ChannelSelect)
+
+
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    Mirrors :func:`tools.interactions.refresh_in_place` but never passes an embed:
+    a Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit first,
+    then falls back to editing the stored message when the interaction was
+    already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+class AniListFeedPanel(discord.ui.LayoutView):
     """Author-restricted AniList feed control panel (the panel entry point).
 
-    Edits exactly one feed at a time (``selected_channel_id``); with two feeds
-    a select (row 0) switches between them. With no feed at all only the
-    creation ChannelSelect (row 1) is shown. Every mutation persists through a
-    cog helper and the panel reloads fresh state from the DB before
-    re-rendering, so it can never drift from what is actually stored.
+    A single Components V2 :class:`~discord.ui.Container` whose accent tracks the
+    selected feed's state - green enabled, red disabled, neutral card blue when
+    no feed exists - giving it visual kinship with the activity cards it
+    configures. Edits exactly one feed at a time (``selected_channel_id``); with
+    two feeds a switch select sits under the header. With no feed at all only a
+    creation ChannelSelect is shown. Every mutation persists through a cog helper
+    and the panel reloads fresh state from the DB before re-rendering, so it can
+    never drift from what is actually stored.
+
+    LayoutView cannot subclass :class:`~tools.views.AuthorView` (that is a plain
+    ``discord.ui.View``), so the author gate and locale resolution are
+    reimplemented here in :meth:`interaction_check` exactly as AuthorView does
+    them, and :meth:`on_timeout` disables every control and edits the message.
     """
 
     def __init__(
         self, cog, guild, author_id, feeds, selected_channel_id, follows, timeout=180
     ):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(timeout=timeout)
         self.cog = cog
         self.guild = guild
+        self.author_id = author_id
+        self.message = None
         self.feeds = list(feeds)
         self.selected_channel_id = selected_channel_id
         self.follows = list(follows)
+        self._build()
 
-        if len(self.feeds) >= 2:
-            self.add_item(_FeedSwitchSelect(self))
-        self.add_item(_FeedChannelSelect(self))
+    async def interaction_check(self, interaction):
+        # Component callbacks run in their own task where get_context never set
+        # the locale; resolve it here so this check AND the callback localize.
+        await i18n.apply_interaction_locale(interaction)
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                _("This panel isn't for you."), ephemeral=True
+            )
+            return False
+        return True
 
-        if self.selected_feed is not None:
-            for type_key in af.ALLOWED_TYPES:
-                self.add_item(_TypeToggleButton(self, type_key))
-            self.add_item(_SelfAddToggleButton(self))
-            self.add_item(_EnableButton(self))
-            self.add_item(_DeleteButton(self))
-            self.add_item(_AddFollowButton(self))
-            if self.follows:
-                self.add_item(_RemoveFollowSelect(self))
+    def _disable_all(self):
+        """Disable every button/select in the layout (walks nested ActionRows)."""
+
+        for child in self.walk_children():
+            if isinstance(child, _DISABLEABLE):
+                child.disabled = True
+
+    async def on_timeout(self):
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
 
     @property
     def selected_feed(self):
@@ -1356,7 +1405,7 @@ class AniListFeedPanel(AuthorView):
         return None
 
     def feed_label(self, channel_id):
-        """A clickable ``<#id>`` mention, for use in embed text."""
+        """A clickable ``<#id>`` mention, for use in the panel's text."""
 
         channel = self.guild.get_channel_or_thread(channel_id)
         return channel.mention if channel is not None else str(channel_id)
@@ -1367,70 +1416,118 @@ class AniListFeedPanel(AuthorView):
         channel = self.guild.get_channel_or_thread(channel_id)
         return ("#" + channel.name) if channel is not None else str(channel_id)
 
-    def build_embed(self):
-        embed = discord.Embed(title=_("AniList activity feed"), colour=ANILIST_BLUE)
+    def _build(self):
+        """(Re)assemble the layout from the current feed/follow state."""
 
-        if not self.feeds:
-            embed.description = _(
-                "This server has no AniList feed yet. Pick a channel below to "
-                "create one (up to {max} per server)."
-            ).format(max=af.MAX_FEEDS_PER_GUILD)
-            embed.set_footer(text=_("Only you can use these controls."))
-            return embed
-
-        embed.description = _(
-            "Configure how AniList activity is mirrored into this server. "
-            "Every change saves instantly."
-        )
-        if len(self.feeds) >= 2:
-            embed.add_field(
-                name=_("Feeds"),
-                value=", ".join(
-                    self.feed_label(feed["channel_id"]) for feed in self.feeds
-                ),
-                inline=False,
-            )
-
+        self.clear_items()
         feed = self.selected_feed
-        if feed is not None:
-            status = _("Enabled") if feed["enabled"] else _("Disabled")
-            if feed["fail_count"]:
-                status = _("{status} ({count} recent failures)").format(
-                    status=status, count=feed["fail_count"]
-                )
-            types = (
-                ", ".join(_(_TYPE_LABELS.get(t, t)) for t in (feed["types"] or ()))
-                or _("none")
-            )
-            self_add = _("On") if feed["self_add"] else _("Off")
-            if self.follows:
-                names = ", ".join(
-                    row["anilist_username"] or str(row["anilist_user_id"])
-                    for row in self.follows
-                )
-                if len(names) > 900:
-                    names = names[:900].rstrip() + "..."
-            else:
-                names = _("no one yet")
 
-            embed.add_field(
-                name=_("Channel"),
-                value=self.feed_label(feed["channel_id"]),
-                inline=True,
-            )
-            embed.add_field(name=_("Status"), value=status, inline=True)
-            embed.add_field(
-                name=_("Members can join"), value=self_add, inline=True
-            )
-            embed.add_field(name=_("Types"), value=types, inline=False)
-            embed.add_field(
-                name=_("Following ({count})").format(count=len(self.follows)),
-                value=names,
-                inline=False,
-            )
+        if feed is None:
+            accent = PANEL_DISABLED if self.feeds else CARD_ACCENT
+        else:
+            accent = PANEL_ENABLED if feed["enabled"] else PANEL_DISABLED
+        container = discord.ui.Container(accent_colour=accent)
 
-        embed.set_footer(text=_("Only you can use these controls."))
-        return embed
+        # Zero-feed state: a friendly creation prompt plus the ChannelSelect.
+        if not self.feeds:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "### "
+                    + _("AniList activity feed")
+                    + "\n"
+                    + _(
+                        "This server has no AniList feed yet. Pick a channel "
+                        "below to create one (up to {max} per server)."
+                    ).format(max=af.MAX_FEEDS_PER_GUILD)
+                )
+            )
+            container.add_item(discord.ui.ActionRow(_FeedChannelSelect(self)))
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# " + _("Only you can use these controls.")
+                )
+            )
+            self.add_item(container)
+            return
+
+        # Header: title, a short reassurance, and the selected feed's channel +
+        # status line (fail_count only when it is non-zero). Reading order is
+        # header first (identity + state), then the scope selects right under it
+        # (switch feed / move channel), then the Types and Follows configuration,
+        # then the destructive actions - a clean top-down flow.
+        status = _("Enabled") if feed["enabled"] else _("Disabled")
+        if feed["fail_count"]:
+            status = _("{status} ({count} recent failures)").format(
+                status=status, count=feed["fail_count"]
+            )
+        header_lines = [
+            "### " + _("AniList activity feed"),
+            _(
+                "Configure how AniList activity is mirrored into this server. "
+                "Every change saves instantly."
+            ),
+            "**{channel}:** {mention}   **{status}:** {value}".format(
+                channel=_("Channel"),
+                mention=self.feed_label(feed["channel_id"]),
+                status=_("Status"),
+                value=status,
+            ),
+        ]
+        if len(self.feeds) >= 2:
+            header_lines.append(
+                "-# "
+                + _("Feeds")
+                + ": "
+                + ", ".join(self.feed_label(f["channel_id"]) for f in self.feeds)
+            )
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+
+        if len(self.feeds) >= 2:
+            container.add_item(discord.ui.ActionRow(_FeedSwitchSelect(self)))
+        container.add_item(discord.ui.ActionRow(_FeedChannelSelect(self)))
+
+        # Types: a label above the row of the three type toggles + the self-add
+        # toggle (the buttons themselves carry the on/off state via their colour).
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay("**" + _("Types") + "**"))
+        type_row = discord.ui.ActionRow()
+        for type_key in af.ALLOWED_TYPES:
+            type_row.add_item(_TypeToggleButton(self, type_key))
+        type_row.add_item(_SelfAddToggleButton(self))
+        container.add_item(type_row)
+
+        # Follows: the followed-user list, then (when there are any) the remove
+        # select, then the enable/delete/add-follow action row.
+        container.add_item(discord.ui.Separator())
+        if self.follows:
+            names = ", ".join(
+                row["anilist_username"] or str(row["anilist_user_id"])
+                for row in self.follows
+            )
+            if len(names) > 900:
+                names = names[:900].rstrip() + "..."
+        else:
+            names = _("no one yet")
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Following ({count})").format(count=len(self.follows))
+                + "**\n"
+                + names
+            )
+        )
+        if self.follows:
+            container.add_item(discord.ui.ActionRow(_RemoveFollowSelect(self)))
+        container.add_item(
+            discord.ui.ActionRow(
+                _EnableButton(self), _DeleteButton(self), _AddFollowButton(self)
+            )
+        )
+
+        container.add_item(
+            discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
+        )
+        self.add_item(container)
 
     async def _reloaded(self, selected_channel_id):
         cog = self.cog
@@ -1456,9 +1553,7 @@ class AniListFeedPanel(AuthorView):
 
         new = await self._reloaded(selected_channel_id)
         self.stop()
-        await interactions.refresh_in_place(
-            interaction, self.message, embed=new.build_embed(), view=new
-        )
+        await _refresh_layout(interaction, self.message, new)
 
     async def sync_message(self):
         """Re-render the stored panel message directly (used by the delete confirm)."""
@@ -1468,7 +1563,7 @@ class AniListFeedPanel(AuthorView):
         new = await self._reloaded(None)
         self.stop()
         try:
-            await self.message.edit(embed=new.build_embed(), view=new)
+            await self.message.edit(view=new)
         except discord.HTTPException:
             pass
 
@@ -2141,7 +2236,7 @@ class AniListFeed(commands.Cog):
         view = AniListFeedPanel(
             self, ctx.guild, ctx.author.id, feeds, selected_channel_id, follows
         )
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     async def _resolve_target(self, ctx):
         """Pick the feed a follow/unfollow applies to.
