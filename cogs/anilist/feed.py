@@ -1403,6 +1403,38 @@ class _ChaptersChannelToggleButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
+class _AiringChannelToggleButton(discord.ui.Button):
+    """Flips whether new-episode alerts are ALSO posted in this feed's channel.
+
+    Manage-guild gated exactly like its sibling toggles: the panel is only opened
+    from the admin-only bare-panel path and is author-restricted, so no per-button
+    permission check is needed. The AniList airing poller reads this column
+    (``anilist_feeds.airing_in_channel``) to decide which feeds to fan out to.
+    """
+
+    def __init__(self, panel):
+        self._owner = panel
+        on = bool(panel.selected_feed["airing_in_channel"])
+        super().__init__(
+            label=_("Episode alerts here: {state}").format(
+                state=_("On") if on else _("Off")
+            ),
+            style=(
+                discord.ButtonStyle.success if on else discord.ButtonStyle.secondary
+            ),
+        )
+
+    async def callback(self, interaction):
+        try:
+            await self._owner.cog._toggle_airing_in_channel(
+                self._owner.guild.id, self._owner.selected_channel_id
+            )
+            await self._owner.reload_and_refresh(interaction)
+        except Exception:
+            log.exception("AniList feed panel airing-in-channel toggle failed")
+            await interactions.notify_failure(interaction)
+
+
 class _EnableButton(discord.ui.Button):
     """Enable/disable the selected feed; re-enabling clears fail_count."""
 
@@ -1773,11 +1805,15 @@ class AniListFeedPanel(discord.ui.LayoutView):
         type_row.add_item(_SelfAddToggleButton(self))
         container.add_item(type_row)
 
-        # Chapter alerts: opt this feed into ALSO posting MangaDex new-chapter
-        # alerts in its channel (in addition to any opt-in DMs). Its own row so it
-        # reads as the distinct fan-out setting it is, not another activity type.
+        # In-channel alerts: opt this feed into ALSO posting MangaDex new-chapter
+        # and AniList new-episode alerts in its channel (in addition to any opt-in
+        # DMs). Their own row so they read as the distinct fan-out settings they
+        # are, not another activity type.
         container.add_item(
-            discord.ui.ActionRow(_ChaptersChannelToggleButton(self))
+            discord.ui.ActionRow(
+                _ChaptersChannelToggleButton(self),
+                _AiringChannelToggleButton(self),
+            )
         )
 
         # Follows: the followed-user list, then (when there are any) the remove
@@ -2275,7 +2311,7 @@ class AniListFeed(commands.Cog):
     async def _feeds_for_guild(self, guild_id):
         return await self.bot.db_pool.fetch(
             "SELECT channel_id, types, self_add, enabled, fail_count, "
-            "chapters_in_channel "
+            "chapters_in_channel, airing_in_channel "
             "FROM anilist_feeds WHERE guild_id = $1 ORDER BY created_at;",
             guild_id,
         )
@@ -2339,7 +2375,8 @@ class AniListFeed(commands.Cog):
         async with self.bot.db_pool.acquire() as conn:
             async with conn.transaction():
                 row = await conn.fetchrow(
-                    "SELECT types, self_add, enabled, fail_count "
+                    "SELECT types, self_add, enabled, fail_count, "
+                    "chapters_in_channel, airing_in_channel "
                     "FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
                     old_channel_id,
@@ -2360,14 +2397,17 @@ class AniListFeed(commands.Cog):
                 )
                 await conn.execute(
                     "INSERT INTO anilist_feeds "
-                    "(guild_id, channel_id, types, self_add, enabled, fail_count) "
-                    "VALUES ($1, $2, $3, $4, $5, $6);",
+                    "(guild_id, channel_id, types, self_add, enabled, fail_count, "
+                    "chapters_in_channel, airing_in_channel) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8);",
                     guild_id,
                     new_channel_id,
                     row["types"],
                     row["self_add"],
                     row["enabled"],
                     row["fail_count"],
+                    row["chapters_in_channel"],
+                    row["airing_in_channel"],
                 )
         return None
 
@@ -2392,6 +2432,14 @@ class AniListFeed(commands.Cog):
     async def _toggle_chapters_in_channel(self, guild_id, channel_id):
         await self.bot.db_pool.execute(
             "UPDATE anilist_feeds SET chapters_in_channel = NOT chapters_in_channel "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _toggle_airing_in_channel(self, guild_id, channel_id):
+        await self.bot.db_pool.execute(
+            "UPDATE anilist_feeds SET airing_in_channel = NOT airing_in_channel "
             "WHERE guild_id = $1 AND channel_id = $2;",
             guild_id,
             channel_id,

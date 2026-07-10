@@ -177,6 +177,42 @@ def _title_markup(media):
     return safe
 
 
+# --- Pure helpers (unit-tested; no network, DB or Discord) -------------------
+
+
+def plan_airing_channel_posts(aired, channel_media):
+    """Pick the ``(guild_id, channel_id, media_id, episode)`` channel posts to make.
+
+    ``aired`` is the list of aired schedule rows actually processed this tick, each
+    a dict carrying ``media_id`` (int) and ``episode`` (int). ``channel_media`` maps
+    a ``(guild_id, channel_id)`` feed key to the union of media ids its FOLLOWED
+    users are Watching.
+
+    A feed channel gets ONE post per aired row whose media is in its union. Unlike
+    the DM path (:func:`tools.anilist_feed.plan_airing_notifications`), this is NOT
+    progress-gated: a guild post is for everyone in the channel, not tied to any one
+    member's progress, so an airing of a followed title is posted regardless of who
+    has watched what.
+
+    Returns a flat list of ``(guild_id, channel_id, media_id, episode)`` tuples in a
+    stable order - aired-row order, then feed key ascending - so delivery and the
+    tests are deterministic. A row missing a media id or episode is skipped. Pure and
+    total.
+    """
+
+    posts = []
+    for row in aired:
+        media_id = row.get("media_id")
+        episode = row.get("episode")
+        if media_id is None or episode is None:
+            continue
+        for key in sorted(channel_media):
+            if media_id in channel_media[key]:
+                guild_id, channel_id = key
+                posts.append((guild_id, channel_id, media_id, episode))
+    return posts
+
+
 # --- Seen button ------------------------------------------------------------
 
 
@@ -632,12 +668,14 @@ class AniListAiring(commands.Cog):
                 out[mid] = entry.get("progress") or 0
         return out
 
-    async def _refresh_lists(self, optins, now):
+    async def _refresh_lists(self, anilist_user_ids, now):
         """Refresh every MISSING list this tick, plus a throttled slice of stale ones.
 
-        A never-cached (missing) list is ALWAYS refreshed before the schedules
-        fetch. The airing cursor is global and advances over the union of the
-        cached lists, so leaving an opted-in user out of the union would drag the
+        ``anilist_user_ids`` is the union of every tracked AniList user - the DM
+        opt-ins PLUS the followed users of every feed that opted into in-channel
+        alerts. A never-cached (missing) list is ALWAYS refreshed before the
+        schedules fetch. The airing cursor is global and advances over the union of
+        the cached lists, so leaving a tracked user out of the union would drag the
         cursor past that user's airings and drop those episodes for good - worst
         right after a restart, when every list is uncached. Genuinely
         stale-but-present lists keep serving their last-known entries meanwhile, so
@@ -650,12 +688,7 @@ class AniListAiring(commands.Cog):
 
         missing = []
         stale_present = []
-        seen = set()
-        for row in optins:
-            aid = row["anilist_user_id"]
-            if aid in seen:
-                continue
-            seen.add(aid)
+        for aid in sorted(anilist_user_ids):
             if aid not in self._list_cache:
                 missing.append(aid)
             elif self._list_is_stale(aid, now):
@@ -740,6 +773,17 @@ class AniListAiring(commands.Cog):
             "WHERE enabled = TRUE;"
         )
 
+    async def _load_channel_follows(self):
+        """Follows of every enabled feed that opted into in-channel airing alerts."""
+
+        return await self.bot.db_pool.fetch(
+            "SELECT f.guild_id, f.channel_id, f.anilist_user_id "
+            "FROM anilist_follows f "
+            "JOIN anilist_feeds fe "
+            "  ON fe.guild_id = f.guild_id AND fe.channel_id = f.channel_id "
+            "WHERE fe.enabled = TRUE AND fe.airing_in_channel = TRUE;"
+        )
+
     async def _load_cursor(self):
         row = await self.bot.db_pool.fetchrow(
             "SELECT last_airing_at FROM anilist_airing_state WHERE id = 1;"
@@ -792,8 +836,9 @@ class AniListAiring(commands.Cog):
             return  # still under a 429 backoff
 
         optins = await self._load_optins()
-        if not optins:
-            return  # nobody opted in -> no API call
+        channel_follows = await self._load_channel_follows()
+        if not optins and not channel_follows:
+            return  # nobody tracked -> no API call
 
         cursor = await self._load_cursor()
 
@@ -806,9 +851,15 @@ class AniListAiring(commands.Cog):
         self._spaced = False
         now_mono = time.monotonic()
 
-        # a/b. Lazily refresh a bounded number of stale per-user lists.
+        # a. Tracked AniList users = every DM opt-in plus every followed user of a
+        # feed that opted into in-channel alerts. Refresh their public Watching
+        # lists (missing in full, stale throttled) before the schedules fetch: the
+        # cursor advances over the union of the cached lists, so a tracked user
+        # missing from the union would drag it past their airings (the C4 lesson).
+        tracked_users = {row["anilist_user_id"] for row in optins}
+        tracked_users.update(row["anilist_user_id"] for row in channel_follows)
         try:
-            await self._refresh_lists(optins, now_mono)
+            await self._refresh_lists(tracked_users, now_mono)
         except _RateLimited as exc:
             self._embargo_until = now + exc.retry_after
             log.warning(
@@ -817,10 +868,13 @@ class AniListAiring(commands.Cog):
             )
             return
 
-        # Build the union of tracked media ids + per-Discord-user lists. Every
-        # opted-in list is refreshed above before we reach here (missing ones in
-        # full), so a user is skipped only when their list fetch failed this tick -
-        # never merely because it had not been cached yet.
+        # Build the tracked-media union plus the two fan-out maps. Every tracked
+        # list is refreshed above before we reach here (missing ones in full), so a
+        # user is skipped only when their list fetch failed this tick - never merely
+        # because it had not been cached yet. DM recipients keep the per-user
+        # {media_id: progress} the DM planner gates on; feed channels only need the
+        # media-id union of their followed users (channel posts are NOT
+        # progress-gated - a guild post is for everyone).
         lists_by_user = {}
         union = set()
         for row in optins:
@@ -829,6 +883,16 @@ class AniListAiring(commands.Cog):
                 continue
             lists_by_user[row["user_id"]] = cached
             union.update(cached.keys())
+
+        channel_media = {}
+        for row in channel_follows:
+            cached = self._list_cache_get(row["anilist_user_id"])
+            if cached is None:
+                continue
+            key = (row["guild_id"], row["channel_id"])
+            channel_media.setdefault(key, set()).update(cached.keys())
+            union.update(cached.keys())
+
         if not union:
             return  # nothing tracked yet -> no schedules call
 
@@ -852,15 +916,21 @@ class AniListAiring(commands.Cog):
 
         new_cursor = af.advance_airing_cursor(cursor, fetched_ats, capped=capped)
 
-        # e. Fan out one DM per (user, aired-row) the planner selects.
+        # e. Fan out: one progress-gated DM per (user, aired-row) the DM planner
+        # selects, then one post per (feed channel, aired-row) whose followed users
+        # watch the media (not progress-gated). Both index the same aired rows.
+        rows_by_key = {(r["media_id"], r["episode"]): r for r in aired}
         plan = af.plan_airing_notifications(aired, lists_by_user)
         if plan:
-            rows_by_key = {(r["media_id"], r["episode"]): r for r in aired}
             await self._deliver(plan, rows_by_key)
+        channel_posts = plan_airing_channel_posts(aired, channel_media)
+        if channel_posts:
+            await self._deliver_channel_posts(channel_posts, rows_by_key)
 
         # The cursor advances regardless of delivery outcome (a closed DM disables
         # the user, it does not re-queue the episode), so a stuck DM can never
-        # re-notify forever. Delivery is fully per-DM guarded, so it never raises.
+        # re-notify forever. Delivery is fully per-target guarded, so it never
+        # raises.
         if new_cursor != cursor:
             await self._save_cursor(new_cursor)
 
@@ -872,6 +942,15 @@ class AniListAiring(commands.Cog):
             if row is None:
                 continue
             await self._deliver_one(user_id, row)
+
+    async def _deliver_channel_posts(self, channel_posts, rows_by_key):
+        """Post each planned channel card. Never raises (each post is guarded)."""
+
+        for _guild_id, channel_id, media_id, episode in channel_posts:
+            row = rows_by_key.get((media_id, episode))
+            if row is None:
+                continue
+            await self._deliver_channel(channel_id, row)
 
     async def _deliver_one(self, user_id, row):
         """DM one user one airing card, disabling them on a closed-DM Forbidden."""
@@ -901,3 +980,41 @@ class AniListAiring(commands.Cog):
             log.warning("AniList airing: failed to DM user %s", user_id)
         except Exception:
             log.exception("AniList airing: unexpected error DMing user %s", user_id)
+
+    async def _deliver_channel(self, channel_id, row):
+        """Post one airing card once in a feed channel (guarded; never raises).
+
+        The card is the same :class:`AiringCard` the DM path sends; its Seen button
+        is per-clicker (it writes the CLICKER's own progress at click time), so it is
+        safe to post publicly. Rendered in the guild's locale.
+        """
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            log.warning(
+                "AniList airing: feed channel %s is unresolvable", channel_id
+            )
+            return
+
+        loc = await i18n.resolve_guild_locale(
+            self.bot, getattr(channel, "guild", None)
+        )
+        try:
+            with i18n.locale(loc):
+                await channel.send(
+                    view=AiringCard(row),
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+        except (discord.Forbidden, discord.NotFound):
+            log.warning(
+                "AniList airing: delivery to channel %s failed (forbidden/gone)",
+                channel_id,
+            )
+        except discord.HTTPException:
+            log.warning(
+                "AniList airing: HTTP error posting to channel %s", channel_id
+            )
+        except Exception:
+            log.exception(
+                "AniList airing: unexpected error posting to channel %s", channel_id
+            )

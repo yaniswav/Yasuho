@@ -265,11 +265,12 @@ class AniListBase:
 
         viewer = await self._graphql(VIEWER_QUERY, {}, token=access_token)
         viewer_data = ((viewer or {}).get("data") or {}).get("Viewer") or {}
-        # Re-point any existing airing opt-in at the freshly linked account: the
-        # poller keys off the stored numeric AniList id, so relinking a DIFFERENT
-        # account while alerts are on would otherwise keep it reading the old
-        # account's public list until the user toggled airing off then on.
+        # Re-point any existing airing / chapter opt-in at the freshly linked
+        # account: each poller keys off the stored numeric AniList id, so relinking
+        # a DIFFERENT account while alerts are on would otherwise keep it reading the
+        # old account's public list until the user toggled that tracker off then on.
         await self._repoint_airing_optin(user_id, viewer_data.get("id"))
+        await self._repoint_chapter_optin(user_id, viewer_data.get("id"))
         name = viewer_data.get("name")
         return name or _("AniList user")
 
@@ -293,6 +294,27 @@ class AniListBase:
             )
         except Exception:
             log.exception("AniList: could not re-point airing opt-in for %s", user_id)
+
+    async def _repoint_chapter_optin(self, user_id, anilist_user_id):
+        """Point ``user_id``'s existing chapter opt-in at their freshly linked account.
+
+        Best-effort and a no-op unless the user already has a chapter opt-in row:
+        linking never opts anyone in, it only re-targets a tracker that would
+        otherwise poll a stale AniList id. A missing viewer id is ignored so a
+        transient resolve failure cannot blank the stored id.
+        """
+
+        if anilist_user_id is None:
+            return
+        try:
+            await self.bot.db_pool.execute(
+                "UPDATE anilist_chapter_optins SET anilist_user_id = $2 "
+                "WHERE user_id = $1;",
+                user_id,
+                anilist_user_id,
+            )
+        except Exception:
+            log.exception("AniList: could not re-point chapter opt-in for %s", user_id)
 
     async def _search_candidates(self, title):
         """Return up to ~10 search candidates across both anime and manga.
