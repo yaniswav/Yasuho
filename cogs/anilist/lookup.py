@@ -3,9 +3,8 @@ import datetime
 import discord
 from discord.ext import commands
 
-from .components import SeasonView
 from .helpers import SEASONS, _clean_description, _current_season
-from .queries import CHARACTER_QUERY, PAGE_QUERY, STUDIO_QUERY
+from .queries import CHARACTER_QUERY, STUDIO_QUERY
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -71,32 +70,10 @@ class LookupMixin:
                 year = current_year
 
         async with ctx.typing():
-            data = await self._graphql(
-                PAGE_QUERY,
-                {
-                    "sort": ["POPULARITY_DESC"],
-                    "type": "ANIME",
-                    "season": season,
-                    "seasonYear": year,
-                },
-            )
-            media = (
-                ((data or {}).get("data") or {}).get("Page") or {}
-            ).get("media") or []
-            if not media:
-                return await ctx.send(
-                    _("No anime found for {season} {year}.").format(
-                        season=season.title(), year=year
-                    )
-                )
-
-            view = SeasonView(self, media, ctx.author.id, season, year)
-            view.message = await ctx.send(
-                content=_(
-                    "**{season} {year} anime** - pick one for details:"
-                ).format(season=season.title(), year=year),
-                view=view,
-            )
+            kwargs, view = await self._seasonal_payload(ctx.author.id, season, year)
+            message = await ctx.send(**kwargs)
+        if view is not None:
+            view.message = message
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)

@@ -156,22 +156,15 @@ class AccountMixin:
     """AniList account group: OAuth PIN flow plus list editing."""
 
     # ------------------------------------------------------------------
-    # Account group (OAuth PIN flow + list editing)
+    # Shared account helpers (reused by the commands and the /anilist hub)
     # ------------------------------------------------------------------
-    @commands.hybrid_group(name="anilist")
-    async def anilist(self, ctx):
-        """Link your AniList account and edit your lists."""
+    def _login_available(self):
+        """True when OAuth linking is fully configured (client + crypto key)."""
 
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+        return bool(self.client_id and self.client_secret and crypto.is_configured())
 
-    @anilist.command(name="login")
-    @commands.cooldown(1, 10, commands.BucketType.user)
-    async def anilist_login(self, ctx):
-        """Start linking your AniList account."""
-
-        if not self.client_id or not self.client_secret or not crypto.is_configured():
-            return await ctx.send(_("AniList account linking is not configured."))
+    def _login_instructions(self):
+        """The authorize-and-paste-a-code instructions shown by the login flow."""
 
         authorize_url = (
             "https://anilist.co/api/v2/oauth/authorize?client_id="
@@ -180,12 +173,129 @@ class AccountMixin:
             + REDIRECT_URI
             + "&response_type=code"
         )
-        instructions = _(
+        return _(
             "Authorize the bot here:\n"
             "{authorize_url}\n\n"
             "Authorize, copy the code AniList shows you, then press "
             "**Enter code** below (or run `/anilist code <code>`)."
         ).format(authorize_url=authorize_url)
+
+    async def _profile_view(self, name):
+        """Build the AniList profile payload for a resolved username.
+
+        Returns ``(error, kwargs)``: exactly one is set. ``error`` is a localised
+        string when the user cannot be found; ``kwargs`` is the LayoutView send
+        payload otherwise. Shared by the ``profile`` command and the hub's My
+        stats button.
+        """
+
+        data = await self._graphql(USER_STATS_QUERY, {"name": name})
+        user = ((data or {}).get("data") or {}).get("User")
+        if not user:
+            return _("No AniList user found."), None
+        return None, {
+            "view": AniListProfileView(user),
+            "allowed_mentions": discord.AllowedMentions.none(),
+        }
+
+    async def _profile_payload(self, user_id):
+        """Build the invoker's OWN profile payload (the hub's My stats button).
+
+        Returns ``(error, kwargs)`` like :meth:`_profile_view`; ``error`` also
+        covers a missing/expired link and an unresolvable viewer.
+        """
+
+        token = await self._get_token(user_id)
+        if not token:
+            return _("Link your account first with `/anilist login`."), None
+        viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
+        name = (
+            ((viewer or {}).get("data") or {}).get("Viewer") or {}
+        ).get("name")
+        if not name:
+            return _("Could not resolve your AniList account."), None
+        return await self._profile_view(name)
+
+    async def _list_payload(self, user_id, media_type, status):
+        """Fetch a user's list and build paginator embeds.
+
+        ``media_type`` is ``"anime"``/``"manga"`` and ``status`` an already-parsed
+        MediaListStatus. Returns ``(error, embeds)``: exactly one is set. Shared
+        by the ``list`` command and the hub's My list button.
+        """
+
+        token = await self._get_token(user_id)
+        if not token:
+            return _("Link your account first with `/anilist login`."), None
+
+        gql_type = media_type.upper()
+        unit = _("chapters") if gql_type == "MANGA" else _("episodes")
+
+        viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
+        user = ((viewer or {}).get("data") or {}).get("Viewer")
+        if not user:
+            return _("Could not reach your AniList account."), None
+
+        data = await self._graphql(
+            MEDIA_LIST_QUERY,
+            {"userId": user["id"], "type": gql_type, "status": status},
+            token=token,
+        )
+        collection = (
+            ((data or {}).get("data") or {}).get("MediaListCollection") or {}
+        )
+
+        lines = []
+        for lst in collection.get("lists") or []:
+            for entry in lst.get("entries") or []:
+                media = entry.get("media") or {}
+                name = (media.get("title") or {}).get("romaji") or _("Unknown")
+                total = (
+                    media.get("chapters")
+                    if gql_type == "MANGA"
+                    else media.get("episodes")
+                ) or "?"
+                lines.append(
+                    _("{name} - {progress}/{total} {unit}").format(
+                        name=name,
+                        progress=entry.get("progress", 0),
+                        total=total,
+                        unit=unit,
+                    )
+                )
+
+        if not lines:
+            return _("Nothing on your {status} {media_type} list.").format(
+                status=status.title(), media_type=media_type
+            ), None
+
+        embeds = paginate_lines(
+            lines,
+            title=_("{status} {media_type} list").format(
+                status=status.title(), media_type=media_type
+            ),
+        )
+        return None, embeds
+
+    # ------------------------------------------------------------------
+    # Account group (OAuth PIN flow + list editing)
+    # ------------------------------------------------------------------
+    @commands.hybrid_group(name="anilist")
+    async def anilist(self, ctx):
+        """Link your AniList account and edit your lists."""
+
+        if ctx.invoked_subcommand is None:
+            await self._open_hub(ctx)
+
+    @anilist.command(name="login")
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def anilist_login(self, ctx):
+        """Start linking your AniList account."""
+
+        if not self._login_available():
+            return await ctx.send(_("AniList account linking is not configured."))
+
+        instructions = self._login_instructions()
 
         view = LoginView(self, ctx.author.id)
 
@@ -202,7 +312,7 @@ class AccountMixin:
     async def anilist_code(self, ctx, *, code: str):
         """Finish linking with the PIN code AniList gave you."""
 
-        if not self.client_id or not self.client_secret or not crypto.is_configured():
+        if not self._login_available():
             return await ctx.send(_("AniList account linking is not configured."))
 
         # Hide the PIN if it was posted in a guild text channel.
@@ -329,17 +439,13 @@ class AccountMixin:
                         _("Could not resolve your AniList account.")
                     )
 
-            data = await self._graphql(USER_STATS_QUERY, {"name": name})
-            user = ((data or {}).get("data") or {}).get("User")
-            if not user:
-                return await ctx.send(_("No AniList user found."))
+            error, kwargs = await self._profile_view(name)
+            if error:
+                return await ctx.send(error)
 
             # A LayoutView carries its own content; send it with no embed and
             # suppress mentions since TextDisplay resolves them (unlike an embed).
-            await ctx.send(
-                view=AniListProfileView(user),
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
+            await ctx.send(**kwargs)
 
     @anilist.command(name="list")
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -361,62 +467,11 @@ class AccountMixin:
                 )
             )
 
-        token = await self._get_token(ctx.author.id)
-        if not token:
-            return await ctx.send(
-                _("Link your account first with `/anilist login`.")
-            )
-
-        gql_type = media_type.upper()
-        unit = _("chapters") if gql_type == "MANGA" else _("episodes")
-
         async with ctx.typing():
-            viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
-            user = ((viewer or {}).get("data") or {}).get("Viewer")
-            if not user:
-                return await ctx.send(_("Could not reach your AniList account."))
-
-            data = await self._graphql(
-                MEDIA_LIST_QUERY,
-                {"userId": user["id"], "type": gql_type, "status": status},
-                token=token,
+            error, embeds = await self._list_payload(
+                ctx.author.id, media_type, status
             )
-            collection = (
-                ((data or {}).get("data") or {}).get("MediaListCollection") or {}
-            )
+        if error:
+            return await ctx.send(error)
 
-            lines = []
-            for lst in collection.get("lists") or []:
-                for entry in lst.get("entries") or []:
-                    media = entry.get("media") or {}
-                    name = (media.get("title") or {}).get("romaji") or _("Unknown")
-                    total = (
-                        media.get("chapters")
-                        if gql_type == "MANGA"
-                        else media.get("episodes")
-                    ) or "?"
-                    lines.append(
-                        _("{name} - {progress}/{total} {unit}").format(
-                            name=name,
-                            progress=entry.get("progress", 0),
-                            total=total,
-                            unit=unit,
-                        )
-                    )
-
-            if not lines:
-                return await ctx.send(
-                    _("Nothing on your {status} {media_type} list.").format(
-                        status=status.title(), media_type=media_type
-                    )
-                )
-
-        await Paginator(
-            paginate_lines(
-                lines,
-                title=_("{status} {media_type} list").format(
-                    status=status.title(), media_type=media_type
-                ),
-            ),
-            author_id=ctx.author.id,
-        ).start(ctx)
+        await Paginator(embeds, author_id=ctx.author.id).start(ctx)

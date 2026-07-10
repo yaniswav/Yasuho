@@ -10,6 +10,7 @@ from .components import (
     OnListSelectView,
     ResultView,
     SeasonSelectView,
+    SeasonView,
     TypeView,
 )
 from .helpers import (
@@ -441,58 +442,121 @@ class AniListBase:
     # ------------------------------------------------------------------
     # Lookup commands (no auth required)
     # ------------------------------------------------------------------
+    async def _lookup_payload(self, author_id, search, media_type):
+        """Search AniList and build the interactive send payload.
+
+        Returns ``(kwargs, view)``: ``kwargs`` are the send arguments
+        (content/embed/view) and ``view`` is the AuthorView whose ``.message``
+        the caller binds once sent (``None`` for the no-result case). Shared by
+        the ``anime``/``manga`` command path (:meth:`_media_lookup`) and the
+        discoverability hub's Search button, so both re-enter the exact same
+        ResultSelect / MediaView experience without duplicating the fetch.
+        """
+
+        data = await self._graphql(
+            CANDIDATE_QUERY, {"search": search, "type": media_type}
+        )
+        candidates = (
+            ((data or {}).get("data") or {}).get("Page") or {}
+        ).get("media") or []
+        if not candidates:
+            return {"content": _("No result.")}, None
+
+        token = await self._get_token(author_id)
+
+        # A single match jumps straight to the full media view.
+        if len(candidates) == 1:
+            full = await self._graphql(MEDIA_QUERY, {"id": candidates[0]["id"]})
+            media = ((full or {}).get("data") or {}).get("Media")
+            if not media:
+                return {"content": _("No result.")}, None
+            view = MediaView(self, media, author_id, token=token)
+            return {"embed": view.overview_embed(), "view": view}, view
+
+        view = ResultView(self, candidates, author_id, media_type)
+        return {
+            "content": _(
+                "Found {count} results for **{search}** - pick one:"
+            ).format(count=len(candidates), search=search),
+            "view": view,
+        }, view
+
     async def _media_lookup(self, ctx, search, media_type):
         """Search AniList and present results via the interactive flow."""
 
         async with ctx.typing():
-            data = await self._graphql(
-                CANDIDATE_QUERY, {"search": search, "type": media_type}
+            kwargs, view = await self._lookup_payload(
+                ctx.author.id, search, media_type
             )
-            candidates = (
-                ((data or {}).get("data") or {}).get("Page") or {}
-            ).get("media") or []
-            if not candidates:
-                return await ctx.send(_("No result."))
+            message = await ctx.send(**kwargs)
+        if view is not None:
+            view.message = message
 
-            token = await self._get_token(ctx.author.id)
+    async def _browse_payload(self, author_id, variables, media_type, label):
+        """Run a PAGE_QUERY browse and build the picker payload.
 
-            # A single match jumps straight to the full media view.
-            if len(candidates) == 1:
-                full = await self._graphql(
-                    MEDIA_QUERY, {"id": candidates[0]["id"]}
-                )
-                media = ((full or {}).get("data") or {}).get("Media")
-                if not media:
-                    return await ctx.send(_("No result."))
-                view = MediaView(self, media, ctx.author.id, token=token)
-                view.message = await ctx.send(
-                    embed=view.overview_embed(), view=view
-                )
-                return
+        Returns ``(kwargs, view)`` like :meth:`_lookup_payload`. Shared by the
+        ``trending``/``popular`` commands (:meth:`_browse`) and the hub's browse
+        buttons.
+        """
 
-            view = ResultView(self, candidates, ctx.author.id, media_type)
-            view.message = await ctx.send(
-                content=_(
-                    "Found {count} results for **{search}** - pick one:"
-                ).format(count=len(candidates), search=search),
-                view=view,
-            )
+        data = await self._graphql(PAGE_QUERY, variables)
+        media = (
+            ((data or {}).get("data") or {}).get("Page") or {}
+        ).get("media") or []
+        if not media:
+            return {"content": _("No result.")}, None
+
+        view = ResultView(self, media, author_id, media_type)
+        return {
+            "content": _("**{label}** - pick one for details:").format(
+                label=label
+            ),
+            "view": view,
+        }, view
 
     async def _browse(self, ctx, variables, media_type, label):
         """Run a PAGE_QUERY browse and offer the results as a picker."""
 
         async with ctx.typing():
-            data = await self._graphql(PAGE_QUERY, variables)
-            media = (
-                ((data or {}).get("data") or {}).get("Page") or {}
-            ).get("media") or []
-            if not media:
-                return await ctx.send(_("No result."))
-
-            view = ResultView(self, media, ctx.author.id, media_type)
-            view.message = await ctx.send(
-                content=_("**{label}** - pick one for details:").format(
-                    label=label
-                ),
-                view=view,
+            kwargs, view = await self._browse_payload(
+                ctx.author.id, variables, media_type, label
             )
+            message = await ctx.send(**kwargs)
+        if view is not None:
+            view.message = message
+
+    async def _seasonal_payload(self, author_id, season, year):
+        """Fetch a season's anime and build the seasonal browser payload.
+
+        Returns ``(kwargs, view)`` like :meth:`_browse_payload`. Shared by the
+        ``seasonal`` command and the hub's Seasonal button (which passes the
+        current season), so both re-enter the same SeasonView navigation.
+        """
+
+        data = await self._graphql(
+            PAGE_QUERY,
+            {
+                "sort": ["POPULARITY_DESC"],
+                "type": "ANIME",
+                "season": season,
+                "seasonYear": year,
+            },
+        )
+        media = (
+            ((data or {}).get("data") or {}).get("Page") or {}
+        ).get("media") or []
+        if not media:
+            return {
+                "content": _("No anime found for {season} {year}.").format(
+                    season=season.title(), year=year
+                )
+            }, None
+
+        view = SeasonView(self, media, author_id, season, year)
+        return {
+            "content": _(
+                "**{season} {year} anime** - pick one for details:"
+            ).format(season=season.title(), year=year),
+            "view": view,
+        }, view
