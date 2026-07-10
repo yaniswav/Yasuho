@@ -301,3 +301,73 @@ def normalize_progress(progress):
     if not progress:
         return ""
     return _RANGE_DASH_RE.sub("-", str(progress).strip())
+
+
+# --- Airing tracker ---------------------------------------------------------
+#
+# The opt-in airing tracker (cogs/anilist/airing.py) DMs a user when a new
+# episode of a title on their CURRENT anime list airs. Its only non-trivial
+# decisions - who to notify, and how far to advance the poll cursor under page
+# truncation - live here as pure functions so the cog stays a thin I/O shell and
+# the logic is unit-tested with no bot, database or network.
+
+
+def plan_airing_notifications(aired, lists_by_user):
+    """Pick the ``(user_id, media_id, episode)`` notifications an aired batch yields.
+
+    ``aired`` is the list of aired schedule rows actually processed this tick,
+    each a dict carrying ``media_id`` (int) and ``episode`` (int). ``lists_by_user``
+    maps a Discord user id to that user's cached CURRENT anime list as
+    ``{media_id: progress}`` (``progress`` is how many episodes they have marked
+    watched; callers store an int, 0 for none).
+
+    A user is notified for an aired row when the row's media is on their cached
+    list AND their progress is strictly below the aired episode - i.e. the
+    episode is new to them. Progress is never regressed here (the Seen button
+    re-checks it at click time too); this only picks who has an unseen airing.
+
+    Returns a flat list of ``(user_id, media_id, episode)`` tuples in a stable
+    order - aired-row order, then user id ascending - so delivery and the tests
+    are deterministic. A row missing a media id or episode is skipped.
+    """
+    plan = []
+    for row in aired:
+        media_id = row.get("media_id")
+        episode = row.get("episode")
+        if media_id is None or episode is None:
+            continue
+        for user_id in sorted(lists_by_user):
+            progress = lists_by_user[user_id].get(media_id)
+            if progress is None:
+                continue  # media not on this user's cached list
+            if progress < episode:
+                plan.append((user_id, media_id, episode))
+    return plan
+
+
+def advance_airing_cursor(cursor, fetched_airing_ats, capped=False):
+    """New ``last_airing_at`` cursor after a poll, clamped under truncation.
+
+    ``cursor`` is the current high-water mark (unix seconds); ``fetched_airing_ats``
+    are the ``airingAt`` of every schedule row ACTUALLY fetched this tick (the
+    poll queries ``airingAt_greater = cursor`` sorted by TIME ascending, so these
+    are the oldest unseen airings first). ``capped`` is True when the fetch stopped
+    on the page cap with an unfetched tail still pending.
+
+    Normally the cursor advances to the maximum ``airingAt`` fetched and never
+    regresses. Under truncation (``capped``) the unfetched tail has an ``airingAt``
+    GREATER THAN OR EQUAL TO the last fetched row: a same-second sibling of that
+    last row can sit in the tail, and advancing to exactly the max would let the
+    strict ``airingAt_greater`` filter skip it next tick. So a capped advance stops
+    one second BELOW the max fetched and that whole final second is re-selected next
+    tick (the already-seen rows in it are simply re-sent; a page cap needs 250+
+    in-window airings, so this is a theoretical edge, never a normal path). An empty
+    fetch leaves the cursor untouched, so a row that lands in the window slightly
+    late is never skipped by an over-eager jump to ``now``.
+    """
+    if not fetched_airing_ats:
+        return cursor
+    top = max(fetched_airing_ats)
+    if capped:
+        top -= 1
+    return max(cursor, top)

@@ -355,3 +355,34 @@ CREATE TABLE IF NOT EXISTS anilist_feed_state (
     last_created_at  BIGINT      NOT NULL DEFAULT 0,   -- createdAt_greater cursor (unix seconds)
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- AniList airing tracker opt-ins: users who chose to be DMed when a new episode
+-- of a title on their CURRENT anime list airs (with a one-click Seen button that
+-- bumps their AniList progress). One row per Discord user; ``anilist_user_id``
+-- is their AniList numeric id, resolved once at opt-in from their token so the
+-- poller can read their PUBLIC list unauthenticated (no token at poll time).
+-- ``enabled`` is flipped off automatically when their DMs are closed (a
+-- Forbidden on delivery) and they can simply re-run the toggle to turn it back
+-- on. Lookups ride the PK.  cogs/anilist/airing.py
+CREATE TABLE IF NOT EXISTS anilist_airing_optins (
+    user_id         BIGINT      PRIMARY KEY,               -- Discord user id
+    anilist_user_id INTEGER     NOT NULL,                  -- AniList numeric user id
+    enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Global cursor for the AniList airing poller: a single row holding the newest
+-- ``airingAt`` (unix seconds) already fanned out to opted-in users. AniList only
+-- guarantees FUTURE airing data, so the poller scans a SHORT trailing window
+-- (airingAt_greater = cursor .. airingAt_lesser = now, sort TIME ascending) and
+-- advances the cursor to the max airingAt actually processed. Under page
+-- truncation the unfetched tail has HIGHER airingAt, so the cursor stops at the
+-- last fetched row and that tail rides the next tick (the strict airingAt_greater
+-- filter then excludes only what was already handled). The cursor only ever
+-- advances; the fixed id + CHECK keep this table to exactly one row.
+-- cogs/anilist/airing.py
+CREATE TABLE IF NOT EXISTS anilist_airing_state (
+    id             SMALLINT    PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    last_airing_at BIGINT      NOT NULL DEFAULT 0,   -- airingAt_greater cursor (unix seconds)
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);

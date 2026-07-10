@@ -389,3 +389,116 @@ def test_parse_hex_colour_rejects_bad_shapes():
     assert af.parse_hex_colour("#gggggg") is None      # non-hex chars
     assert af.parse_hex_colour("e4 a1 5d") is None      # embedded spaces
     assert af.parse_hex_colour("rgb(1,2,3)") is None    # not hex at all
+
+
+# ---------------------------------------------------------------------------
+# plan_airing_notifications - who gets a new-episode DM
+# ---------------------------------------------------------------------------
+
+
+def _aired(media_id, episode, airing_at=0):
+    return {"media_id": media_id, "episode": episode, "airing_at": airing_at}
+
+
+def test_airing_notifies_when_behind_the_aired_episode():
+    aired = [_aired(100, 5)]
+    lists = {42: {100: 4}}  # watched 4, episode 5 aired -> new to them
+    assert af.plan_airing_notifications(aired, lists) == [(42, 100, 5)]
+
+
+def test_airing_skips_when_already_at_or_past_the_episode():
+    aired = [_aired(100, 5)]
+    # progress == episode (already seen) and progress > episode (a re-air) both
+    # produce nothing: never re-notify what they have watched.
+    assert af.plan_airing_notifications(aired, {42: {100: 5}}) == []
+    assert af.plan_airing_notifications(aired, {42: {100: 7}}) == []
+
+
+def test_airing_skips_media_not_on_the_list():
+    aired = [_aired(100, 5)]
+    assert af.plan_airing_notifications(aired, {42: {200: 0}}) == []
+
+
+def test_airing_progress_zero_is_notified():
+    # A freshly added CURRENT entry with no progress (0) still gets episode 1.
+    aired = [_aired(100, 1)]
+    assert af.plan_airing_notifications(aired, {42: {100: 0}}) == [(42, 100, 1)]
+
+
+def test_airing_fans_out_to_every_tracking_user_in_stable_order():
+    aired = [_aired(100, 3)]
+    lists = {
+        7: {100: 2},    # behind -> notified
+        3: {100: 2},    # behind -> notified
+        9: {100: 3},    # caught up -> skipped
+        5: {200: 0},    # not tracking -> skipped
+    }
+    # Users are emitted in ascending id order for determinism.
+    assert af.plan_airing_notifications(aired, lists) == [(3, 100, 3), (7, 100, 3)]
+
+
+def test_airing_preserves_aired_row_order():
+    aired = [_aired(100, 5), _aired(200, 2)]
+    lists = {42: {100: 4, 200: 1}}
+    assert af.plan_airing_notifications(aired, lists) == [
+        (42, 100, 5),
+        (42, 200, 2),
+    ]
+
+
+def test_airing_skips_rows_missing_media_or_episode():
+    aired = [
+        {"media_id": None, "episode": 5},
+        {"media_id": 100, "episode": None},
+        _aired(100, 5),
+    ]
+    assert af.plan_airing_notifications(aired, {42: {100: 0}}) == [(42, 100, 5)]
+
+
+def test_airing_empty_inputs():
+    assert af.plan_airing_notifications([], {42: {100: 0}}) == []
+    assert af.plan_airing_notifications([_aired(100, 5)], {}) == []
+
+
+# ---------------------------------------------------------------------------
+# advance_airing_cursor - cursor maths, incl. page truncation
+# ---------------------------------------------------------------------------
+
+
+def test_cursor_unchanged_when_nothing_fetched():
+    # An empty window must NOT jump the cursor to now, or a late-arriving row in
+    # the window would be skipped forever.
+    assert af.advance_airing_cursor(1000, []) == 1000
+
+
+def test_cursor_advances_to_max_fetched_when_drained():
+    # Fully drained page (not truncated): advance to the newest airingAt seen.
+    assert af.advance_airing_cursor(1000, [1010, 1030, 1020]) == 1030
+
+
+def test_cursor_truncation_stops_below_last_fetched_second():
+    # Page cap hit (capped=True): only the oldest rows were fetched (sorted TIME
+    # ascending) and a same-second sibling of the last fetched row may still be in
+    # the unfetched tail, so the cursor stops one second BELOW the max fetched
+    # (1119). That whole final second is re-selected next tick and never skipped by
+    # the strict airingAt_greater filter.
+    fetched = [1100, 1110, 1120]
+    assert af.advance_airing_cursor(1000, fetched, capped=True) == 1119
+
+
+def test_cursor_uncapped_advances_to_max_even_when_page_looked_full():
+    # Not capped (a short final page ended the fetch): advance to the exact max;
+    # the one-second clamp is reserved for the truncation case only.
+    fetched = [1100, 1110, 1120]
+    assert af.advance_airing_cursor(1000, fetched) == 1120
+
+
+def test_cursor_never_regresses_below_current():
+    # Defensive: even a degenerate batch below the cursor cannot move it back.
+    assert af.advance_airing_cursor(2000, [1500, 1600]) == 2000
+
+
+def test_cursor_holds_at_current_when_only_boundary_fetched():
+    # A single fetched row equal to the cursor (should not happen with a strict
+    # filter, but stay total): no regression, no spurious advance.
+    assert af.advance_airing_cursor(1000, [1000]) == 1000

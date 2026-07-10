@@ -264,8 +264,35 @@ class AniListBase:
         await self._store_token(user_id, access_token, data.get("expires_in"))
 
         viewer = await self._graphql(VIEWER_QUERY, {}, token=access_token)
-        name = (((viewer or {}).get("data") or {}).get("Viewer") or {}).get("name")
+        viewer_data = ((viewer or {}).get("data") or {}).get("Viewer") or {}
+        # Re-point any existing airing opt-in at the freshly linked account: the
+        # poller keys off the stored numeric AniList id, so relinking a DIFFERENT
+        # account while alerts are on would otherwise keep it reading the old
+        # account's public list until the user toggled airing off then on.
+        await self._repoint_airing_optin(user_id, viewer_data.get("id"))
+        name = viewer_data.get("name")
         return name or _("AniList user")
+
+    async def _repoint_airing_optin(self, user_id, anilist_user_id):
+        """Point ``user_id``'s existing airing opt-in at their freshly linked account.
+
+        Best-effort and a no-op unless the user already has an airing opt-in row:
+        linking never opts anyone in, it only re-targets a tracker that would
+        otherwise poll a stale AniList id. A missing viewer id is ignored so a
+        transient resolve failure cannot blank the stored id.
+        """
+
+        if anilist_user_id is None:
+            return
+        try:
+            await self.bot.db_pool.execute(
+                "UPDATE anilist_airing_optins SET anilist_user_id = $2 "
+                "WHERE user_id = $1;",
+                user_id,
+                anilist_user_id,
+            )
+        except Exception:
+            log.exception("AniList: could not re-point airing opt-in for %s", user_id)
 
     async def _search_candidates(self, title):
         """Return up to ~10 search candidates across both anime and manga.

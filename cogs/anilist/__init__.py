@@ -3,6 +3,7 @@ import logging
 from discord.ext import commands
 
 from .account import AccountMixin
+from .airing import AiringMixin, AniListAiring
 from .base import AniListBase
 from .collection import CollectionMixin
 from .feed import AniListFeed
@@ -15,6 +16,7 @@ log = logging.getLogger(__name__)
 class AniList(
     LookupMixin,
     AccountMixin,
+    AiringMixin,
     HubMixin,
     CollectionMixin,
     AniListBase,
@@ -26,3 +28,4 @@ class AniList(
 async def setup(bot):
     await bot.add_cog(AniList(bot))
     await bot.add_cog(AniListFeed(bot))
+    await bot.add_cog(AniListAiring(bot))
