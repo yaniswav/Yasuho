@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-08 20:52+0000\n"
+"POT-Creation-Date: 2026-07-09 20:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -105,7 +105,7 @@ msgstr "La note doit être zéro ou un nombre positif."
 msgid "Provide a name or link your account with `/anilist login`."
 msgstr "Indiquez un nom ou liez votre compte avec `/anilist login`."
 
-#: cogs/anilist/account.py:329
+#: cogs/anilist/account.py:329 cogs/anilist/feed.py:2361
 msgid "Could not resolve your AniList account."
 msgstr "Impossible de récupérer votre compte AniList."
 
@@ -117,8 +117,8 @@ msgstr "Aucun utilisateur AniList trouvé."
 msgid "Media type must be `anime` or `manga`."
 msgstr "Le type de média doit être `anime` ou `manga`."
 
-#: cogs/anilist/account.py:367 cogs/anilist/base.py:225
-#: cogs/anilist/base.py:291 cogs/anilist/base.py:354
+#: cogs/anilist/account.py:367 cogs/anilist/base.py:246
+#: cogs/anilist/base.py:312 cogs/anilist/base.py:375
 #: cogs/anilist/components.py:326
 msgid "Link your account first with `/anilist login`."
 msgstr "Liez d'abord votre compte avec `/anilist login`."
@@ -158,79 +158,79 @@ msgstr "Aucun élément dans votre liste {status} {media_type}."
 msgid "{status} {media_type} list"
 msgstr "Liste {status} {media_type}"
 
-#: cogs/anilist/base.py:171
+#: cogs/anilist/base.py:192
 msgid "AniList user"
 msgstr "Utilisateur AniList"
 
-#: cogs/anilist/base.py:245 cogs/anilist/components.py:337
+#: cogs/anilist/base.py:266 cogs/anilist/components.py:337
 msgid "Could not update that entry."
 msgstr "Impossible de mettre à jour cette entrée."
 
-#: cogs/anilist/base.py:253
+#: cogs/anilist/base.py:274
 #, python-brace-format
 msgid "Set **{name}** to {unit} {progress} ({status})."
 msgstr "**{name}** défini sur {unit} {progress} ({status})."
 
-#: cogs/anilist/base.py:260
+#: cogs/anilist/base.py:281
 #, python-brace-format
 msgid "Set **{name}** to {status}."
 msgstr "**{name}** défini sur {status}."
 
-#: cogs/anilist/base.py:267
+#: cogs/anilist/base.py:288
 #, python-brace-format
 msgid "Completed **{name}** ({progress} {unit})."
 msgstr "**{name}** terminé ({progress} {unit})."
 
-#: cogs/anilist/base.py:271
+#: cogs/anilist/base.py:292
 #, python-brace-format
 msgid "Marked **{name}** as completed."
 msgstr "**{name}** marqué comme terminé."
 
-#: cogs/anilist/base.py:273
+#: cogs/anilist/base.py:294
 #, python-brace-format
 msgid "Scored **{name}** {score}."
 msgstr "**{name}** noté {score}."
 
-#: cogs/anilist/base.py:300 cogs/anilist/base.py:336
+#: cogs/anilist/base.py:321 cogs/anilist/base.py:357
 #: cogs/anilist/components.py:65 cogs/anilist/components.py:192
 #: cogs/anilist/components.py:445 cogs/anilist/components.py:530
 msgid "Could not load that title."
 msgstr "Impossible de charger ce titre."
 
-#: cogs/anilist/base.py:308 cogs/anilist/base.py:368
+#: cogs/anilist/base.py:329 cogs/anilist/base.py:389
 #, python-brace-format
 msgid "No result for **{title}**."
 msgstr "Aucun résultat pour **{title}**."
 
-#: cogs/anilist/base.py:319
+#: cogs/anilist/base.py:340
 #, python-brace-format
 msgid "Multiple matches for **{title}** - pick the right one:"
 msgstr "Plusieurs correspondances pour **{title}** - choisissez la bonne :"
 
-#: cogs/anilist/base.py:385
+#: cogs/anilist/base.py:406
 #, python-brace-format
 msgid "You track several titles matching **{title}** - which one?"
 msgstr "Vous suivez plusieurs titres correspondant à **{title}** - lequel ?"
 
-#: cogs/anilist/base.py:407
+#: cogs/anilist/base.py:428
 #, python-brace-format
 msgid "**{title}** - is it an anime or a manga?"
 msgstr "**{title}** - est-ce un anime ou un manga ?"
 
-#: cogs/anilist/base.py:417 cogs/anilist/components.py:394
+#: cogs/anilist/base.py:438 cogs/anilist/components.py:394
 msgid "Pick the exact title to update:"
 msgstr "Choisissez le titre exact à mettre à jour :"
 
-#: cogs/anilist/base.py:434 cogs/anilist/base.py:445 cogs/anilist/base.py:469
+#: cogs/anilist/base.py:455 cogs/anilist/base.py:466 cogs/anilist/base.py:490
 msgid "No result."
 msgstr "Aucun résultat."
 
-#: cogs/anilist/base.py:455
+#: cogs/anilist/base.py:476
 #, python-brace-format
 msgid "Found {count} results for **{search}** - pick one:"
 msgstr "{count} résultats trouvés pour **{search}** - choisissez-en un :"
 
-#: cogs/anilist/base.py:473
+#: cogs/anilist/base.py:494
 #, python-brace-format
 msgid "**{label}** - pick one for details:"
 msgstr "**{label}** - choisissez-en un pour les détails :"
@@ -316,7 +316,8 @@ msgid "Keep current status"
 msgstr "Conserver le statut actuel"
 
 #: cogs/anilist/components.py:264 cogs/anilist/components.py:700
-#: cogs/config/twitch.py:418 cogs/config/welcome.py:416
+#: cogs/anilist/feed.py:1421 cogs/config/twitch.py:418
+#: cogs/config/welcome.py:416
 msgid "Status"
 msgstr "Statut"
 
@@ -551,6 +552,533 @@ msgstr "Une erreur est survenue lors de la liaison de votre compte."
 #: cogs/anilist/components.py:1202
 msgid "Could not open the code form."
 msgstr "Impossible d'ouvrir le formulaire de code."
+
+#: cogs/anilist/feed.py:229 cogs/music/music.py:1558 cogs/music/music.py:1720
+msgid "Unknown title"
+msgstr "Titre inconnu"
+
+#: cogs/anilist/feed.py:242
+#, python-brace-format
+msgid "watched episode {progress} of"
+msgstr "a regardé l'épisode {progress} de"
+
+#: cogs/anilist/feed.py:243
+#, python-brace-format
+msgid "rewatched episode {progress} of"
+msgstr "a revu l'épisode {progress} de"
+
+#: cogs/anilist/feed.py:244
+#, python-brace-format
+msgid "read chapter {progress} of"
+msgstr "a lu le chapitre {progress} de"
+
+#: cogs/anilist/feed.py:245
+#, python-brace-format
+msgid "reread chapter {progress} of"
+msgstr "a relu le chapitre {progress} de"
+
+#: cogs/anilist/feed.py:246
+msgid "completed"
+msgstr "a terminé"
+
+#: cogs/anilist/feed.py:247
+msgid "plans to watch"
+msgstr "prévoit de regarder"
+
+#: cogs/anilist/feed.py:248
+msgid "plans to read"
+msgstr "prévoit de lire"
+
+#: cogs/anilist/feed.py:249
+msgid "paused watching"
+msgstr "a mis en pause le visionnage de"
+
+#: cogs/anilist/feed.py:250
+msgid "paused reading"
+msgstr "a mis en pause la lecture de"
+
+#: cogs/anilist/feed.py:251
+msgid "dropped"
+msgstr "a abandonné"
+
+#: cogs/anilist/feed.py:304
+#, python-brace-format
+msgid "{n} like"
+msgid_plural "{n} likes"
+msgstr[0] "{n} mention j'aime"
+msgstr[1] "{n} mentions j'aime"
+
+#: cogs/anilist/feed.py:307
+#, python-brace-format
+msgid "{n} reply"
+msgid_plural "{n} replies"
+msgstr[0] "{n} réponse"
+msgstr[1] "{n} réponses"
+
+#: cogs/anilist/feed.py:324
+#, python-brace-format
+msgid "{n} anime update"
+msgid_plural "{n} anime updates"
+msgstr[0] "{n} mise à jour anime"
+msgstr[1] "{n} mises à jour anime"
+
+#: cogs/anilist/feed.py:327
+#, python-brace-format
+msgid "{n} manga update"
+msgid_plural "{n} manga updates"
+msgstr[0] "{n} mise à jour manga"
+msgstr[1] "{n} mises à jour manga"
+
+#: cogs/anilist/feed.py:330
+#, python-brace-format
+msgid "{n} post"
+msgid_plural "{n} posts"
+msgstr[0] "{n} publication"
+msgstr[1] "{n} publications"
+
+#: cogs/anilist/feed.py:333
+#, python-brace-format
+msgid "{n} update"
+msgid_plural "{n} updates"
+msgstr[0] "{n} mise à jour"
+msgstr[1] "{n} mises à jour"
+
+#: cogs/anilist/feed.py:472
+msgid "You are clicking too fast - give it a moment."
+msgstr "Tu cliques trop vite - laisse-moi un instant."
+
+#: cogs/anilist/feed.py:491 cogs/anilist/feed.py:2342
+msgid "AniList actions are unavailable right now."
+msgstr "Les actions AniList sont indisponibles pour le moment."
+
+#: cogs/anilist/feed.py:500
+msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
+msgstr "Lie d'abord ton compte AniList avec `/anilist login`, tu pourras ensuite aimer et répondre directement depuis le flux."
+
+#: cogs/anilist/feed.py:509 cogs/anilist/feed.py:2352
+msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
+msgstr "Ton lien AniList n'est plus valide - relie-le avec `/anilist login`."
+
+#: cogs/anilist/feed.py:542 cogs/anilist/feed.py:641
+msgid "AniList is rate limiting me right now - try again shortly."
+msgstr "AniList me limite en ce moment - réessaie dans un instant."
+
+#: cogs/anilist/feed.py:548 cogs/anilist/feed.py:647
+msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
+msgstr "Ton lien AniList semble invalide maintenant - relie-le avec `/anilist login`."
+
+#: cogs/anilist/feed.py:554 cogs/anilist/feed.py:653
+msgid "This activity no longer exists on AniList."
+msgstr "Cette activité n'existe plus sur AniList."
+
+#: cogs/anilist/feed.py:558 cogs/anilist/feed.py:657 cogs/anilist/feed.py:2061
+msgid "I could not reach AniList - try again shortly."
+msgstr "Je n'ai pas pu joindre AniList - réessaie dans un instant."
+
+#: cogs/anilist/feed.py:566
+#, python-brace-format
+msgid "Liked - this activity now has {n} like."
+msgid_plural "Liked - this activity now has {n} likes."
+msgstr[0] "Aimé - cette activité a maintenant {n} mention j'aime."
+msgstr[1] "Aimé - cette activité a maintenant {n} mentions j'aime."
+
+#: cogs/anilist/feed.py:572
+#, python-brace-format
+msgid "Like removed - this activity now has {n} like."
+msgid_plural "Like removed - this activity now has {n} likes."
+msgstr[0] "Mention j'aime retirée - cette activité a maintenant {n} mention j'aime."
+msgstr[1] "Mention j'aime retirée - cette activité a maintenant {n} mentions j'aime."
+
+#: cogs/anilist/feed.py:601
+msgid "Reply on AniList"
+msgstr "Répondre sur AniList"
+
+#: cogs/anilist/feed.py:607
+msgid "Write your reply..."
+msgstr "Écris ta réponse..."
+
+#: cogs/anilist/feed.py:610
+msgid "Your reply"
+msgstr "Ta réponse"
+
+#: cogs/anilist/feed.py:629
+msgid "Your reply was empty - nothing was posted."
+msgstr "Ta réponse était vide - rien n'a été publié."
+
+#: cogs/anilist/feed.py:663
+msgid "AniList did not accept that reply - try again shortly."
+msgstr "AniList n'a pas accepté cette réponse - réessaie dans un instant."
+
+#: cogs/anilist/feed.py:667
+#, python-brace-format
+msgid "Your reply was posted. [See it on AniList]({url})"
+msgstr "Ta réponse a été publiée. [Voir sur AniList]({url})"
+
+#: cogs/anilist/feed.py:748
+msgid "An AniList update could not be rendered."
+msgstr "Une mise à jour AniList n'a pas pu être affichée."
+
+#: cogs/anilist/feed.py:771 cogs/anilist/feed.py:806 cogs/anilist/feed.py:898
+msgid "Someone"
+msgstr "Quelqu'un"
+
+#: cogs/anilist/feed.py:782
+#, python-brace-format
+msgid "{user} {action} {title}"
+msgstr "{user} {action} {title}"
+
+#: cogs/anilist/feed.py:811
+#, python-brace-format
+msgid "{user} posted an update"
+msgstr "{user} a publié une mise à jour"
+
+#: cogs/anilist/feed.py:838
+msgid "AniList"
+msgstr "AniList"
+
+#: cogs/anilist/feed.py:873
+msgid "More AniList activity"
+msgstr "Plus d'activité AniList"
+
+#: cogs/anilist/feed.py:886
+#, python-brace-format
+msgid "...and {count} more update"
+msgid_plural "...and {count} more updates"
+msgstr[0] "...et {count} mise à jour de plus"
+msgstr[1] "...et {count} mises à jour de plus"
+
+#: cogs/anilist/feed.py:902
+#, python-brace-format
+msgid "{user} - {summary}"
+msgstr "{user} - {summary}"
+
+#: cogs/anilist/feed.py:910
+#, python-brace-format
+msgid "+{count} other"
+msgid_plural "+{count} others"
+msgstr[0] "+{count} autre"
+msgstr[1] "+{count} autres"
+
+#: cogs/anilist/feed.py:972
+msgid "Anime"
+msgstr "Anime"
+
+#: cogs/anilist/feed.py:973
+msgid "Manga"
+msgstr "Manga"
+
+#: cogs/anilist/feed.py:974
+msgid "Posts"
+msgstr "Publications"
+
+#: cogs/anilist/feed.py:994
+msgid "Switch feed..."
+msgstr "Changer de flux..."
+
+#: cogs/anilist/feed.py:1030
+msgid "Move this feed to..."
+msgstr "Déplacer ce flux vers..."
+
+#: cogs/anilist/feed.py:1032
+msgid "Pick a channel to create a feed..."
+msgstr "Choisis un salon pour créer un flux..."
+
+#: cogs/anilist/feed.py:1085
+msgid "At least one activity type must stay enabled."
+msgstr "Au moins un type d'activité doit rester activé."
+
+#: cogs/anilist/feed.py:1107
+#, python-brace-format
+msgid "Members can join: {state}"
+msgstr "Les membres peuvent rejoindre : {state}"
+
+#: cogs/anilist/feed.py:1108 cogs/anilist/feed.py:1405
+#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
+#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
+msgid "On"
+msgstr "Activé"
+
+#: cogs/anilist/feed.py:1108 cogs/anilist/feed.py:1405
+#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
+#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
+#: cogs/music/music.py:269
+msgid "Off"
+msgstr "Désactivé"
+
+#: cogs/anilist/feed.py:1134 cogs/config/twitch.py:311
+#: cogs/config/welcome.py:204
+msgid "Disable"
+msgstr "Désactiver"
+
+#: cogs/anilist/feed.py:1134 cogs/config/twitch.py:311
+#: cogs/config/welcome.py:204
+msgid "Enable"
+msgstr "Activer"
+
+#: cogs/anilist/feed.py:1161
+msgid "Delete"
+msgstr "Supprimer"
+
+#: cogs/anilist/feed.py:1162 tools/arg_completion.py:219
+msgid "Cancel"
+msgstr "Annuler"
+
+#: cogs/anilist/feed.py:1166
+msgid "Delete this feed?"
+msgstr "Supprimer ce flux ?"
+
+#: cogs/anilist/feed.py:1168
+#, python-brace-format
+msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
+msgstr "Cela supprime définitivement le flux AniList dans {channel} ainsi que tous ses suivis. Cette action est irréversible."
+
+#: cogs/anilist/feed.py:1183
+msgid "Feed deleted."
+msgstr "Flux supprimé."
+
+#: cogs/anilist/feed.py:1196 cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:1085 tools/arg_completion.py:411
+msgid "Cancelled."
+msgstr "Annulé."
+
+#: cogs/anilist/feed.py:1206
+msgid "Delete feed"
+msgstr "Supprimer le flux"
+
+#: cogs/anilist/feed.py:1224
+msgid "Add a follow"
+msgstr "Ajouter un suivi"
+
+#: cogs/anilist/feed.py:1227
+msgid "AniList username"
+msgstr "Nom d'utilisateur AniList"
+
+#: cogs/anilist/feed.py:1256
+#, python-brace-format
+msgid "Now following **{name}**."
+msgstr "Suit maintenant **{name}**."
+
+#: cogs/anilist/feed.py:1266
+msgid "Add follow"
+msgstr "Ajouter le suivi"
+
+#: cogs/anilist/feed.py:1273 cogs/anilist/feed.py:2119
+#, python-brace-format
+msgid "This feed already follows the maximum of {max} users."
+msgstr "Ce flux suit déjà le maximum de {max} utilisateurs."
+
+#: cogs/anilist/feed.py:1296
+msgid "Remove a follow..."
+msgstr "Retirer un suivi..."
+
+#: cogs/anilist/feed.py:1371
+msgid "AniList activity feed"
+msgstr "Flux d'activité AniList"
+
+#: cogs/anilist/feed.py:1375
+#, python-brace-format
+msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
+msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous pour en créer un (jusqu'à {max} par serveur)."
+
+#: cogs/anilist/feed.py:1378 cogs/anilist/feed.py:1432
+#: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
+msgid "Only you can use these controls."
+msgstr "Vous seul pouvez utiliser ces commandes."
+
+#: cogs/anilist/feed.py:1382
+msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
+msgstr "Configure la façon dont l'activité AniList est relayée dans ce serveur. Chaque modification est enregistrée instantanément."
+
+#: cogs/anilist/feed.py:1387
+msgid "Feeds"
+msgstr "Flux"
+
+#: cogs/anilist/feed.py:1396 cogs/config/settings.py:53
+#: cogs/config/twitch.py:420 cogs/config/welcome.py:418
+#: cogs/moderation/automod.py:363 cogs/moderation/automod.py:374
+#: cogs/moderation/automod.py:385 cogs/moderation/automod.py:401
+#: cogs/moderation/automod.py:404
+msgid "Enabled"
+msgstr "Activé"
+
+#: cogs/anilist/feed.py:1396 cogs/config/settings.py:53
+#: cogs/config/twitch.py:422 cogs/config/welcome.py:420
+#: cogs/config/welcome.py:672 cogs/moderation/automod.py:363
+#: cogs/moderation/automod.py:374 cogs/moderation/automod.py:385
+#: cogs/moderation/automod.py:401 cogs/moderation/automod.py:404
+msgid "Disabled"
+msgstr "Désactivé"
+
+#: cogs/anilist/feed.py:1398
+#, python-brace-format
+msgid "{status} ({count} recent failures)"
+msgstr "{status} ({count} échecs récents)"
+
+#: cogs/anilist/feed.py:1403 cogs/anilist/feed.py:2421
+msgid "none"
+msgstr "aucun"
+
+#: cogs/anilist/feed.py:1414 cogs/anilist/feed.py:2429
+msgid "no one yet"
+msgstr "personne pour l'instant"
+
+#: cogs/anilist/feed.py:1417 cogs/config/announcements.py:262
+#: cogs/config/rolemenus.py:478 cogs/config/starboard.py:180
+#: cogs/config/twitch.py:426 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:651 cogs/moderation/modlog.py:416
+#: cogs/moderation/modlog.py:454
+msgid "Channel"
+msgstr "Salon"
+
+#: cogs/anilist/feed.py:1423
+msgid "Members can join"
+msgstr "Les membres peuvent rejoindre"
+
+#: cogs/anilist/feed.py:1425
+msgid "Types"
+msgstr "Types"
+
+#: cogs/anilist/feed.py:1427
+#, python-brace-format
+msgid "Following ({count})"
+msgstr "Suivis ({count})"
+
+#: cogs/anilist/feed.py:1910 cogs/anilist/feed.py:1946
+#: cogs/anilist/feed.py:2245
+#, python-brace-format
+msgid "{channel} is already an AniList feed."
+msgstr "{channel} est déjà un flux AniList."
+
+#: cogs/anilist/feed.py:1918
+#, python-brace-format
+msgid "This server already has the maximum of {max} feeds. Delete one first."
+msgstr "Ce serveur a déjà le maximum de {max} flux. Supprimes-en un d'abord."
+
+#: cogs/anilist/feed.py:1958
+msgid "That feed no longer exists."
+msgstr "Ce flux n'existe plus."
+
+#: cogs/anilist/feed.py:2042
+msgid "Give me an AniList username to follow."
+msgstr "Donne-moi un nom d'utilisateur AniList à suivre."
+
+#: cogs/anilist/feed.py:2052
+msgid "AniList is rate limiting me right now - try again in a minute."
+msgstr "AniList me limite en ce moment - réessaie dans une minute."
+
+#: cogs/anilist/feed.py:2070
+#, python-brace-format
+msgid "I found no AniList user named **{name}**."
+msgstr "Je n'ai trouvé aucun utilisateur AniList nommé **{name}**."
+
+#: cogs/anilist/feed.py:2164
+msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
+msgstr "Ce serveur n'a pas de flux AniList actif. Crée ou réactive-en un avec `/anilistfeed set` d'abord."
+
+#: cogs/anilist/feed.py:2175
+#, python-brace-format
+msgid "This server has several feeds. Run this in a feed channel ({channels})."
+msgstr "Ce serveur a plusieurs flux. Lance cette commande dans un salon de flux ({channels})."
+
+#: cogs/anilist/feed.py:2221
+#, python-brace-format
+msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
+msgstr "Ce serveur a déjà le maximum de {max} flux. Retires-en un avec `/anilistfeed remove` d'abord."
+
+#: cogs/anilist/feed.py:2231
+#, python-brace-format
+msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
+msgstr "Flux AniList créé dans {channel}. Ajoute des utilisateurs avec `/anilistfeed follow`."
+
+#: cogs/anilist/feed.py:2241
+#, python-brace-format
+msgid "AniList feed re-enabled in {channel}."
+msgstr "Flux AniList réactivé dans {channel}."
+
+#: cogs/anilist/feed.py:2250
+msgid "AniList feed"
+msgstr "Flux AniList"
+
+#: cogs/anilist/feed.py:2275
+msgid "Now following"
+msgstr "Suivis actuellement"
+
+#: cogs/anilist/feed.py:2277
+msgid "User"
+msgstr "Utilisateur"
+
+#: cogs/anilist/feed.py:2281
+msgid "Feed"
+msgstr "Flux"
+
+#: cogs/anilist/feed.py:2306
+#, python-brace-format
+msgid "This feed is not following **{name}**."
+msgstr "Ce flux ne suit pas **{name}**."
+
+#: cogs/anilist/feed.py:2309
+#, python-brace-format
+msgid "Unfollowed **{name}**."
+msgstr "Ne suit plus **{name}**."
+
+#: cogs/anilist/feed.py:2334
+msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
+msgstr "Ce flux ne permet pas aux membres de le rejoindre eux-mêmes. Demande à un modérateur d'activer **Les membres peuvent rejoindre** dans `/anilistfeed`."
+
+#: cogs/anilist/feed.py:2347
+msgid "Link your AniList account first with `/anilist login`."
+msgstr "Lie d'abord ton compte AniList avec `/anilist login`."
+
+#: cogs/anilist/feed.py:2369
+#, python-brace-format
+msgid "You have left the AniList feed in <#{channel}>."
+msgstr "Tu as quitté le flux AniList dans <#{channel}>."
+
+#: cogs/anilist/feed.py:2377
+msgid "This feed is full right now - ask a moderator to make room."
+msgstr "Ce flux est complet en ce moment - demande à un modérateur de faire de la place."
+
+#: cogs/anilist/feed.py:2381
+#, python-brace-format
+msgid "You have joined the AniList feed in <#{channel}>."
+msgstr "Tu as rejoint le flux AniList dans <#{channel}>."
+
+#: cogs/anilist/feed.py:2399
+msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
+msgstr "Ce serveur n'a pas encore de flux AniList. Crées-en un avec `/anilistfeed set`."
+
+#: cogs/anilist/feed.py:2415
+msgid "AniList feeds"
+msgstr "Flux AniList"
+
+#: cogs/anilist/feed.py:2422
+msgid "enabled"
+msgstr "activé"
+
+#: cogs/anilist/feed.py:2422
+msgid "disabled"
+msgstr "désactivé"
+
+#: cogs/anilist/feed.py:2432
+#, python-brace-format
+msgid ""
+"Status: {status}\n"
+"Types: {types}\n"
+"Following: {names}"
+msgstr ""
+"Statut : {status}\n"
+"Types : {types}\n"
+"Suivis : {names}"
+
+#: cogs/anilist/feed.py:2455
+#, python-brace-format
+msgid "{channel} is not an AniList feed."
+msgstr "{channel} n'est pas un flux AniList."
+
+#: cogs/anilist/feed.py:2460
+#, python-brace-format
+msgid "Removed the AniList feed in {channel}."
+msgstr "Flux AniList supprimé dans {channel}."
 
 #: cogs/anilist/lookup.py:39
 msgid "Trending anime"
@@ -993,13 +1521,6 @@ msgstr "Createur d'annonce"
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un role a mentionner), puis **Envoyer**. L'apercu n'est visible que par toi."
 
-#: cogs/config/announcements.py:262 cogs/config/rolemenus.py:478
-#: cogs/config/starboard.py:180 cogs/config/twitch.py:426
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:651
-#: cogs/moderation/modlog.py:416 cogs/moderation/modlog.py:454
-msgid "Channel"
-msgstr "Salon"
-
 #: cogs/config/announcements.py:263 cogs/config/buttonroles.py:433
 #: cogs/config/rolemenus.py:479 cogs/config/twitch.py:413
 #: cogs/config/welcome.py:414
@@ -1156,10 +1677,6 @@ msgstr "Boutons ({count})"
 #: cogs/config/buttonroles.py:429
 msgid "Post target"
 msgstr "Cible de publication"
-
-#: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
-msgid "Only you can use these controls."
-msgstr "Vous seul pouvez utiliser ces commandes."
 
 #: cogs/config/buttonroles.py:445
 msgid "Self-assignable roles"
@@ -2144,21 +2661,6 @@ msgstr "Utilisez `/starboard set <channel> [threshold]` pour configurer le starb
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "Utilisez `/welcome set <channel> <message>` pour configurer les messages de bienvenue. Variables : {user}, {server}, {count}."
 
-#: cogs/config/settings.py:53 cogs/config/twitch.py:420
-#: cogs/config/welcome.py:418 cogs/moderation/automod.py:363
-#: cogs/moderation/automod.py:374 cogs/moderation/automod.py:385
-#: cogs/moderation/automod.py:401 cogs/moderation/automod.py:404
-msgid "Enabled"
-msgstr "Activé"
-
-#: cogs/config/settings.py:53 cogs/config/twitch.py:422
-#: cogs/config/welcome.py:420 cogs/config/welcome.py:672
-#: cogs/moderation/automod.py:363 cogs/moderation/automod.py:374
-#: cogs/moderation/automod.py:385 cogs/moderation/automod.py:401
-#: cogs/moderation/automod.py:404
-msgid "Disabled"
-msgstr "Désactivé"
-
 #: cogs/config/settings.py:66
 msgid "Current state unknown"
 msgstr "État actuel inconnu"
@@ -2449,14 +2951,6 @@ msgstr "Style : Classique"
 msgid "Twitch alert placeholders"
 msgstr "Variables d'alerte Twitch"
 
-#: cogs/config/twitch.py:311 cogs/config/welcome.py:204
-msgid "Disable"
-msgstr "Désactiver"
-
-#: cogs/config/twitch.py:311 cogs/config/welcome.py:204
-msgid "Enable"
-msgstr "Activer"
-
 #: cogs/config/twitch.py:369
 msgid "Edit the alert embed..."
 msgstr "Modifier l'embed d'alerte..."
@@ -2630,17 +3124,6 @@ msgstr "Cela ne ressemble pas à une URL valide."
 #: cogs/config/welcome.py:117
 msgid "Select the welcome channel..."
 msgstr "Sélectionnez le salon de bienvenue..."
-
-#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-msgid "On"
-msgstr "Activé"
-
-#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-#: cogs/music/music.py:269
-msgid "Off"
-msgstr "Désactivé"
 
 #: cogs/config/welcome.py:167
 msgid "Manage GIFs"
@@ -3412,11 +3895,6 @@ msgstr "Confirmer l'ajout de rôle en masse"
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "Ajouter le rôle **{role}** à **tous** les membres de ce serveur ? Cela peut prendre un certain temps."
 
-#: cogs/moderation/moderation.py:1032 cogs/moderation/moderation.py:1085
-#: tools/arg_completion.py:411
-msgid "Cancelled."
-msgstr "Annulé."
-
 #: cogs/moderation/moderation.py:1054
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
@@ -3966,10 +4444,6 @@ msgstr "Vous n'avez pas encore de favoris enregistrés."
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} n'a pas encore de favoris enregistrés."
-
-#: cogs/music/music.py:1558 cogs/music/music.py:1720
-msgid "Unknown title"
-msgstr "Titre inconnu"
 
 #: cogs/music/music.py:1559
 msgid "Unknown artist"
@@ -5412,10 +5886,6 @@ msgstr "Saisir les détails"
 #: tools/arg_completion.py:218
 msgid "Run"
 msgstr "Lancer"
-
-#: tools/arg_completion.py:219
-msgid "Cancel"
-msgstr "Annuler"
 
 #: tools/arg_completion.py:262
 msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
