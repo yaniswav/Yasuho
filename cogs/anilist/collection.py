@@ -2,7 +2,8 @@
 
 Where the old ``/anilist list`` printed read-only paginated text embeds, this
 opens an author-restricted Components V2 :class:`CollectionView` for the
-invoker's OWN list: a status filter, an anime/manga toggle, a page-at-a-time
+invoker's OWN list: a status filter, an anime/manga segmented control, a
+page-at-a-time
 entry picker and - once an entry is picked - an entry card whose ActionRow
 (+1 / -1 / Complete / Drop / Edit) drives the SAME ``SaveMediaListEntry``
 plumbing the media editor uses. Every quick action patches the local entry from
@@ -87,19 +88,34 @@ class _StatusFilterSelect(discord.ui.Select):
         await self._owner._change_status(interaction, self.values[0])
 
 
-class _TypeToggleButton(discord.ui.Button):
-    """Flip the dashboard between the anime and manga list."""
+class _TypeTabButton(discord.ui.Button):
+    """One tab of the anime/manga segmented control.
 
-    def __init__(self, owner):
+    The ACTIVE type renders as a disabled primary tab - the dashboard's accent
+    style (matching the Edit action) - which reads as "you are here" and blocks
+    a pointless refetch. The INACTIVE type is an enabled secondary tab; clicking
+    it flips to the other type via the same seam the old single toggle used
+    (only the inactive tab is clickable, so a plain flip always lands on this
+    tab's type).
+    """
+
+    def __init__(self, owner, media_type):
         self._owner = owner
-        if owner.media_type == "anime":
-            super().__init__(
-                label=_("Anime"), emoji="📺", style=discord.ButtonStyle.secondary
-            )
-        else:
-            super().__init__(
-                label=_("Manga"), emoji="📚", style=discord.ButtonStyle.secondary
-            )
+        self._media_type = media_type
+        active = owner.media_type == media_type
+        label, emoji = (
+            (_("Anime"), "📺") if media_type == "anime" else (_("Manga"), "📚")
+        )
+        super().__init__(
+            label=label,
+            emoji=emoji,
+            style=(
+                discord.ButtonStyle.primary
+                if active
+                else discord.ButtonStyle.secondary
+            ),
+            disabled=active,
+        )
 
     async def callback(self, interaction):
         await self._owner._toggle_type(interaction)
@@ -239,7 +255,8 @@ class CollectionView(discord.ui.LayoutView):
     """Author-restricted Components V2 dashboard over the invoker's own list.
 
     A single AniList-blue :class:`~discord.ui.Container`: a header (type + status
-    + count), a status filter select and an anime/manga toggle, then the current
+    + count), a status filter select and an anime/manga segmented control, then
+    the current
     page of entries as a select (prev/next only when the list exceeds one page),
     and - once an entry is picked - its card (cover thumbnail, bold title link,
     status/progress line, score line) above a +1 / -1 / Complete / Drop / Edit
@@ -422,7 +439,11 @@ class CollectionView(discord.ui.LayoutView):
         container.add_item(discord.ui.TextDisplay(self._header_text()))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.ActionRow(_StatusFilterSelect(self)))
-        container.add_item(discord.ui.ActionRow(_TypeToggleButton(self)))
+        container.add_item(
+            discord.ui.ActionRow(
+                _TypeTabButton(self, "anime"), _TypeTabButton(self, "manga")
+            )
+        )
         container.add_item(discord.ui.Separator())
 
         if not self.entries:
