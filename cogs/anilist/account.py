@@ -1,4 +1,5 @@
 import logging
+import time
 
 import discord
 from discord import app_commands
@@ -8,6 +9,7 @@ from .components import LoginView
 from .helpers import REDIRECT_URI, _parse_status, _profile_colour
 from .queries import (
     AUTOCOMPLETE_QUERY,
+    LIST_ENTRIES_QUERY,
     USER_STATS_QUERY,
     VIEWER_QUERY,
 )
@@ -16,6 +18,52 @@ from tools.formats import random_colour
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
+
+
+# --- List-first autocomplete cache ------------------------------------------
+#
+# The update/status/score "title" autocomplete prefers titles the user already
+# tracks, so on a linked user's first keystroke it fetches their active
+# (CURRENT) list once and caches it here, keyed by Discord user id. A stale
+# cache is perfectly fine (this only feeds autocomplete), so entries live for a
+# short TTL and the map is swept past a hard size cap - mirroring the bounded
+# ``tools.cooldowns`` map. Times use ``time.monotonic()`` so a wall-clock change
+# can never skew the window.
+_LIST_CACHE_TTL = 60.0
+_LIST_CACHE_SWEEP_AT = 500
+# user_id -> (monotonic_ts, [(media_dict, search_lower), ...]).
+_list_cache: dict = {}
+
+
+def _list_cache_get(user_id, now):
+    """Return the cached ``[(media, search)]`` for a user, or None if stale/absent."""
+
+    hit = _list_cache.get(user_id)
+    if hit is None:
+        return None
+    ts, entries = hit
+    if now - ts >= _LIST_CACHE_TTL:
+        return None
+    return entries
+
+
+def _list_cache_put(user_id, entries, now):
+    """Cache a user's list entries, sweeping stale rows once past the size cap."""
+
+    _list_cache[user_id] = (now, entries)
+    if len(_list_cache) > _LIST_CACHE_SWEEP_AT:
+        cutoff = now - _LIST_CACHE_TTL
+        for key in [k for k, (ts, _e) in _list_cache.items() if ts < cutoff]:
+            del _list_cache[key]
+
+
+def _autocomplete_label(media):
+    """The ``[TYPE] Romaji (Year)`` choice label shared by list and global hits."""
+
+    mtype = media.get("type") or "?"
+    romaji = (media.get("title") or {}).get("romaji") or "Unknown"
+    year = media.get("seasonYear") or "?"
+    return f"[{mtype}] {romaji} ({year})"
 
 
 class AniListProfileView(discord.ui.LayoutView):
@@ -316,38 +364,152 @@ class AccountMixin:
 
         await self._edit_flow(ctx, title, "score", score)
 
+    async def _global_media(self, current):
+        """Run the global cross-type search and return its raw media dicts.
+
+        ``self._graphql`` already swallows network failures (returning None), so
+        this degrades to an empty list rather than raising - the shared
+        autocomplete callback treats that as "no global top-up".
+        """
+
+        data = await self._graphql(AUTOCOMPLETE_QUERY, {"search": current})
+        return (
+            ((data or {}).get("data") or {}).get("Page") or {}
+        ).get("media") or []
+
+    async def _current_list_entries(self, user_id, token):
+        """Return (and cache) the linked user's active list as ``[(media, search)]``.
+
+        One authed round-trip on a cache miss: resolve the viewer id, then fetch
+        their CURRENT anime+manga entries in a single call. ``search`` is the
+        lowercased romaji+english title for case-insensitive containment. A
+        transient failure returns ``[]`` WITHOUT caching, so the callback simply
+        falls back to global search and retries next keystroke; a genuinely empty
+        list IS cached so we do not re-fetch it every keystroke. Never raises.
+        """
+
+        now = time.monotonic()
+        cached = _list_cache_get(user_id, now)
+        if cached is not None:
+            return cached
+
+        try:
+            viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
+            vid = (
+                ((viewer or {}).get("data") or {}).get("Viewer") or {}
+            ).get("id")
+            if not vid:
+                return []
+
+            data = await self._graphql(
+                LIST_ENTRIES_QUERY, {"userId": vid, "status": "CURRENT"}, token=token
+            )
+            if not data or not data.get("data"):
+                return []
+            collection = (data.get("data") or {}).get("MediaListCollection") or {}
+
+            entries = []
+            seen = set()
+            for lst in collection.get("lists") or []:
+                for entry in lst.get("entries") or []:
+                    media = entry.get("media") or {}
+                    mid = media.get("id")
+                    if mid is None or mid in seen:
+                        continue
+                    seen.add(mid)
+                    title = media.get("title") or {}
+                    search = " ".join(
+                        p
+                        for p in (title.get("romaji"), title.get("english"))
+                        if p
+                    ).lower()
+                    entries.append((media, search))
+            _list_cache_put(user_id, entries, now)
+            return entries
+        except Exception:
+            log.exception("AniList list autocomplete fetch failed")
+            return []
+
+    async def _list_first_autocomplete(self, user_id, current, token):
+        """List-first choices: the user's tracked titles, topped up with global.
+
+        Their CURRENT entries come first (filtered by the typed text, or the head
+        of the list when empty), keeping the ``id:<n>`` sentinel values so command
+        resolution is untouched. If those alone fill 25 choices the global search
+        is skipped entirely (one fewer API call). Otherwise the remainder is
+        topped up with global results, deduped by media id.
+        """
+
+        entries = await self._current_list_entries(user_id, token)
+        lowered = current.lower()
+        matches = (
+            [m for (m, s) in entries if lowered in s]
+            if lowered
+            else [m for (m, _s) in entries]
+        )
+
+        choices = []
+        seen = set()
+        for media in matches[:25]:
+            choices.append(
+                app_commands.Choice(
+                    name=_autocomplete_label(media)[:100],
+                    value=f"id:{media.get('id')}",
+                )
+            )
+            seen.add(media.get("id"))
+
+        # List matches already fill the menu, or the query is too short for a
+        # meaningful global search: no global top-up.
+        if len(choices) >= 25 or len(current) < 2:
+            return choices
+
+        for media in await self._global_media(current):
+            if len(choices) >= 25:
+                break
+            mid = media.get("id")
+            if mid in seen:
+                continue
+            seen.add(mid)
+            choices.append(
+                app_commands.Choice(
+                    name=_autocomplete_label(media)[:100], value=f"id:{mid}"
+                )
+            )
+        return choices
+
     @anilist_update.autocomplete("title")
     @anilist_status.autocomplete("title")
     @anilist_score.autocomplete("title")
     async def _title_autocomplete(self, interaction, current):
-        """Live AniList search powering the update/status/score 'title' option.
+        """List-first search powering the update/status/score 'title' option.
 
-        Returns ``id:<mediaId>`` sentinels as choice values so a numeric title
-        (e.g. the anime "86") can never be mistaken for an id in the edit flow.
+        Linked users see the titles they already track first (an ~95% hit rate on
+        real updates), topped up with global search; unlinked users get the exact
+        global-only behaviour as before. Every value is an ``id:<mediaId>``
+        sentinel so a numeric title (e.g. the anime "86") can never be mistaken
+        for an id in the edit flow. Any AniList failure degrades to global-only,
+        then to no suggestions - the command still works without them.
         """
 
         try:
             current = (current or "").strip()
+            token = await self._get_token(interaction.user.id)
+            if token:
+                return await self._list_first_autocomplete(
+                    interaction.user.id, current, token
+                )
+
+            # Unlinked: byte-identical to the historical global-only behaviour.
             if len(current) < 2:
                 return []
-
-            data = await self._graphql(AUTOCOMPLETE_QUERY, {"search": current})
-            media = (
-                ((data or {}).get("data") or {}).get("Page") or {}
-            ).get("media") or []
-
-            choices = []
-            for item in media[:25]:
-                mtype = item.get("type") or "?"
-                romaji = (item.get("title") or {}).get("romaji") or "Unknown"
-                year = item.get("seasonYear") or "?"
-                label = f"[{mtype}] {romaji} ({year})"
-                choices.append(
-                    app_commands.Choice(
-                        name=label[:100], value=f"id:{item.get('id')}"
-                    )
+            return [
+                app_commands.Choice(
+                    name=_autocomplete_label(media)[:100],
+                    value=f"id:{media.get('id')}",
                 )
-            return choices
+                for media in (await self._global_media(current))[:25]
+            ]
         except Exception:
             log.exception("AniList title autocomplete failed")
             return []

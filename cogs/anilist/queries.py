@@ -204,6 +204,27 @@ query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
 }
 """
 
+# Lean fetch of a linked user's active (CURRENT) list across BOTH types in one
+# authed call, powering the list-first update/status autocomplete. Derived from
+# COLLECTION_QUERY but trimmed to only what a choice label needs (id/type/title/
+# year); omitting the type filter returns anime and manga together.
+LIST_ENTRIES_QUERY = """
+query ($userId: Int, $status: MediaListStatus) {
+  MediaListCollection(userId: $userId, status: $status) {
+    lists {
+      entries {
+        media {
+          id
+          type
+          title { romaji english }
+          seasonYear
+        }
+      }
+    }
+  }
+}
+"""
+
 # Lightweight fetch by id, used to resolve an autocomplete "id:<n>" sentinel.
 ID_MEDIA_QUERY = """
 query ($id: Int) {

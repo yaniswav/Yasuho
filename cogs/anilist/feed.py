@@ -32,6 +32,7 @@ import aiohttp
 import discord
 from discord.ext import commands, tasks
 
+from .components import EditEntryModal
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
@@ -382,7 +383,11 @@ mutation ($activityId: Int, $text: String) {
 ADD_LOOKUP_QUERY = """
 query ($id: Int) {
   Media(id: $id) {
-    title { userPreferred romaji }
+    id
+    type
+    title { userPreferred romaji english }
+    episodes
+    chapters
     mediaListEntry { status }
   }
 }
@@ -491,16 +496,24 @@ async def _authed_graphql(token, query, variables):
     return data
 
 
-async def _feed_ephemeral(interaction, message):
-    """Deliver an ephemeral reply to a feed-action interaction, first or follow-up."""
+async def _feed_ephemeral(interaction, message, *, view=None):
+    """Deliver an ephemeral reply to a feed-action interaction, first or follow-up.
 
+    Returns the sent message when the reply went out as a follow-up (so a caller
+    can bind ``view.message`` for a clean timeout), else ``None``. ``view`` is
+    only attached when provided - Discord rejects an explicit ``view=None``.
+    """
+
+    kwargs = {"ephemeral": True}
+    if view is not None:
+        kwargs["view"] = view
     try:
         if interaction.response.is_done():
-            await interaction.followup.send(message, ephemeral=True)
-        else:
-            await interaction.response.send_message(message, ephemeral=True)
+            return await interaction.followup.send(message, **kwargs)
+        await interaction.response.send_message(message, **kwargs)
     except discord.HTTPException:
         log.debug("AniList feed: could not deliver an ephemeral action reply")
+    return None
 
 
 async def _check_debounce(interaction):
@@ -620,6 +633,50 @@ async def _run_like(interaction, activity_id):
     await _feed_ephemeral(interaction, message)
 
 
+class _ConfigureEntryView(discord.ui.View):
+    """One-button ephemeral follow-up to configure a freshly added entry.
+
+    Attached to the "Added ... to your planning." confirmation, it turns a
+    two-step chore (add, then go find the entry to set progress/score) into one
+    gesture. The button opens the shared :class:`EditEntryModal` for the media
+    just added, pre-selected to PLANNING; the modal resolves the clicker's token
+    lazily at submit (never logged or stored). The confirmation is ephemeral, so
+    only the adding user can ever see or click this - no extra author gate is
+    needed.
+    """
+
+    def __init__(self, cog, media, *, timeout=120):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.media = media
+        self.message = None
+        self.configure.label = _("Set progress / score")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+    @discord.ui.button(
+        label="Set progress / score", style=discord.ButtonStyle.primary, emoji="✏️"
+    )
+    async def configure(self, interaction, button):
+        # (Label is localised in __init__; the decorator needs a placeholder.)
+        # Component callbacks run in their own task, where the invocation locale
+        # was never set: resolve it so the modal renders in the user's tongue.
+        await i18n.apply_interaction_locale(interaction)
+        try:
+            await interaction.response.send_modal(
+                EditEntryModal(self.cog, self.media, entry={"status": "PLANNING"})
+            )
+        except discord.HTTPException:
+            log.debug("AniList feed: could not open the configure-entry modal")
+
+
 async def _run_add(interaction, media_id):
     """Add the media to the clicking user's planning list, or say it is already there.
 
@@ -713,9 +770,21 @@ async def _run_add(interaction, media_id):
         return await _feed_ephemeral(
             interaction, _("I could not reach AniList - try again shortly.")
         )
-    await _feed_ephemeral(
-        interaction, _("Added **{title}** to your planning.").format(title=title)
+
+    # Offer a one-gesture follow-up: a single button that opens the pre-filled
+    # editor for the entry we just created, so setting progress/score never
+    # means hunting the title down again. The AniList cog owns the token/GraphQL
+    # helpers the modal needs; if it is somehow unavailable, the plain
+    # confirmation still stands.
+    cog = interaction.client.get_cog("AniList")
+    view = _ConfigureEntryView(cog, media) if cog is not None else None
+    sent = await _feed_ephemeral(
+        interaction,
+        _("Added **{title}** to your planning.").format(title=title),
+        view=view,
     )
+    if view is not None and sent is not None:
+        view.message = sent
 
 
 async def _run_reply(interaction, activity_id):
