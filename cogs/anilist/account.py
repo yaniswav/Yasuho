@@ -8,14 +8,12 @@ from .components import LoginView
 from .helpers import REDIRECT_URI, _parse_status, _profile_colour
 from .queries import (
     AUTOCOMPLETE_QUERY,
-    MEDIA_LIST_QUERY,
     USER_STATS_QUERY,
     VIEWER_QUERY,
 )
 from tools import crypto
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.paginator import Paginator, paginate_lines
 
 log = logging.getLogger(__name__)
 
@@ -216,67 +214,6 @@ class AccountMixin:
             return _("Could not resolve your AniList account."), None
         return await self._profile_view(name)
 
-    async def _list_payload(self, user_id, media_type, status):
-        """Fetch a user's list and build paginator embeds.
-
-        ``media_type`` is ``"anime"``/``"manga"`` and ``status`` an already-parsed
-        MediaListStatus. Returns ``(error, embeds)``: exactly one is set. Shared
-        by the ``list`` command and the hub's My list button.
-        """
-
-        token = await self._get_token(user_id)
-        if not token:
-            return _("Link your account first with `/anilist login`."), None
-
-        gql_type = media_type.upper()
-        unit = _("chapters") if gql_type == "MANGA" else _("episodes")
-
-        viewer = await self._graphql(VIEWER_QUERY, {}, token=token)
-        user = ((viewer or {}).get("data") or {}).get("Viewer")
-        if not user:
-            return _("Could not reach your AniList account."), None
-
-        data = await self._graphql(
-            MEDIA_LIST_QUERY,
-            {"userId": user["id"], "type": gql_type, "status": status},
-            token=token,
-        )
-        collection = (
-            ((data or {}).get("data") or {}).get("MediaListCollection") or {}
-        )
-
-        lines = []
-        for lst in collection.get("lists") or []:
-            for entry in lst.get("entries") or []:
-                media = entry.get("media") or {}
-                name = (media.get("title") or {}).get("romaji") or _("Unknown")
-                total = (
-                    media.get("chapters")
-                    if gql_type == "MANGA"
-                    else media.get("episodes")
-                ) or "?"
-                lines.append(
-                    _("{name} - {progress}/{total} {unit}").format(
-                        name=name,
-                        progress=entry.get("progress", 0),
-                        total=total,
-                        unit=unit,
-                    )
-                )
-
-        if not lines:
-            return _("Nothing on your {status} {media_type} list.").format(
-                status=status.title(), media_type=media_type
-            ), None
-
-        embeds = paginate_lines(
-            lines,
-            title=_("{status} {media_type} list").format(
-                status=status.title(), media_type=media_type
-            ),
-        )
-        return None, embeds
-
     # ------------------------------------------------------------------
     # Account group (OAuth PIN flow + list editing)
     # ------------------------------------------------------------------
@@ -452,7 +389,7 @@ class AccountMixin:
     async def anilist_list(
         self, ctx, media_type: str = "anime", status: str = "CURRENT"
     ):
-        """Show your anime/manga list, filtered by status (defaults to CURRENT)."""
+        """Open your interactive list dashboard, filtered by status (CURRENT)."""
 
         media_type = media_type.lower()
         if media_type not in ("anime", "manga"):
@@ -468,10 +405,10 @@ class AccountMixin:
             )
 
         async with ctx.typing():
-            error, embeds = await self._list_payload(
+            error, view = await self._collection_payload(
                 ctx.author.id, media_type, status
             )
         if error:
             return await ctx.send(error)
 
-        await Paginator(embeds, author_id=ctx.author.id).start(ctx)
+        view.message = await ctx.send(view=view)

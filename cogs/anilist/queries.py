@@ -177,14 +177,27 @@ mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus, $score: Float
 }
 """
 
-MEDIA_LIST_QUERY = """
+# The interactive collection dashboard's page fetch: every entry for a
+# (user, type, status), each carrying enough media + entry fields to render the
+# entry card and drive the quick actions (id/title/siteUrl/cover + episodes or
+# chapters, plus the viewer's own status/progress/score). One query per page.
+COLLECTION_QUERY = """
 query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
   MediaListCollection(userId: $userId, type: $type, status: $status) {
     lists {
       entries {
+        status
         progress
         score
-        media { title { romaji } episodes chapters }
+        media {
+          id
+          type
+          title { romaji english }
+          siteUrl
+          episodes
+          chapters
+          coverImage { large color }
+        }
       }
     }
   }

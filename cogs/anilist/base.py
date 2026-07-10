@@ -231,6 +231,46 @@ class AniListBase:
         except Exception:
             log.exception("AniList reply failed")
 
+    def _save_variables(self, media, field, value):
+        """Build the SaveMediaListEntry variables for a single-field quick edit.
+
+        ``field`` is one of ``progress``/``status``/``score``/``complete``.
+        ``progress`` also sets the status to CURRENT and ``complete`` sets it to
+        COMPLETED (plus the total progress when known), all in one mutation. This
+        is the pure mapping the media editor and the collection dashboard both
+        drive; keeping it in one place means both surfaces mutate identically.
+        """
+
+        variables = {"mediaId": media.get("id")}
+        if field == "progress":
+            variables["progress"] = value
+            variables["status"] = "CURRENT"
+        elif field == "status":
+            variables["status"] = value
+        elif field == "score":
+            variables["score"] = value
+        elif field == "complete":
+            variables["status"] = "COMPLETED"
+            total = _progress_max(media)
+            if total:
+                variables["progress"] = total
+        return variables
+
+    async def _save_entry(self, token, media, field, value):
+        """Run a single-field quick edit as ``token``'s owner; return the entry.
+
+        Resolves the shared :meth:`_save_variables` mapping, POSTs the mutation
+        with the caller-supplied (never logged) token, and returns the saved
+        ``SaveMediaListEntry`` dict (or ``None`` on failure). No user-facing side
+        effects: the caller owns the confirmation. Shared by :meth:`_apply_edit`
+        (which resolves the token then formats a reply) and the collection
+        dashboard (which patches its local state and re-renders in place).
+        """
+
+        variables = self._save_variables(media, field, value)
+        data = await self._graphql(SAVE_ENTRY_QUERY, variables, token=token)
+        return ((data or {}).get("data") or {}).get("SaveMediaListEntry")
+
     async def _apply_edit(self, sender, user_id, media, field, value):
         """Apply a single ``field`` edit to ``user_id``'s list entry for ``media``.
 
@@ -247,22 +287,7 @@ class AniListBase:
                 sender, _("Link your account first with `/anilist login`.")
             )
 
-        variables = {"mediaId": media.get("id")}
-        if field == "progress":
-            variables["progress"] = value
-            variables["status"] = "CURRENT"
-        elif field == "status":
-            variables["status"] = value
-        elif field == "score":
-            variables["score"] = value
-        elif field == "complete":
-            variables["status"] = "COMPLETED"
-            total = _progress_max(media)
-            if total:
-                variables["progress"] = total
-
-        data = await self._graphql(SAVE_ENTRY_QUERY, variables, token=token)
-        entry = ((data or {}).get("data") or {}).get("SaveMediaListEntry")
+        entry = await self._save_entry(token, media, field, value)
         if not entry:
             return await self._reply(sender, _("Could not update that entry."))
 

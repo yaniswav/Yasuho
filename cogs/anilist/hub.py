@@ -4,7 +4,7 @@ The bare ``anilist`` group used to print help; it now opens this hub, a single
 LayoutView that routes into the EXISTING lookup / browse / account flows. Nothing
 here re-implements those flows: each button re-enters a shared seam on the cog
 (``_lookup_payload`` / ``_browse_payload`` / ``_seasonal_payload`` for Discover;
-``_list_payload`` / ``_profile_payload`` / the login view for You) and posts the
+``_collection_payload`` / ``_profile_payload`` / the login view for You) and posts the
 result as a fresh interaction followup, so the hub message itself is only ever
 edited ``view=``-only. It is gated exactly like ``AniListFeedPanel`` (locale
 first, author-only, finite timeout that disables every control).
@@ -19,7 +19,6 @@ from .helpers import _current_season
 from .queries import VIEWER_QUERY
 from tools import i18n, interactions
 from tools.i18n import N_, _
-from tools.paginator import Paginator
 from tools.views import LocaleModal
 
 log = logging.getLogger(__name__)
@@ -163,19 +162,12 @@ class _HubListButton(discord.ui.Button):
     async def callback(self, interaction):
         try:
             await interaction.response.defer()
-            error, embeds = await self._hub.cog._list_payload(
+            error, view = await self._hub.cog._collection_payload(
                 interaction.user.id, "anime", "CURRENT"
             )
             if error:
                 return await interactions.reply(interaction, error)
-            # Mirror Paginator.start: a single page is sent without navigation.
-            paginator = Paginator(embeds, author_id=interaction.user.id)
-            if len(paginator.embeds) <= 1:
-                await interaction.followup.send(embed=paginator.embeds[0])
-            else:
-                paginator.message = await interaction.followup.send(
-                    embed=paginator.embeds[0], view=paginator
-                )
+            view.message = await interaction.followup.send(view=view)
         except Exception:
             log.exception("AniList hub list failed")
             await interactions.notify_failure(interaction)
