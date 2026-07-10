@@ -386,3 +386,84 @@ CREATE TABLE IF NOT EXISTS anilist_airing_state (
     last_airing_at BIGINT      NOT NULL DEFAULT 0,   -- airingAt_greater cursor (unix seconds)
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ============================================================
+-- MangaDex chapter alerts (tools/mangadex.py + a later poller/cog lot)
+-- ============================================================
+
+-- MangaDex chapter-alert opt-ins: mirrors anilist_airing_optins exactly, chapter
+-- flavour. Users who chose to be DMed when a new chapter of a title on their
+-- MangaDex-mapped manga list drops (with a one-click Read button, a later lot).
+-- One row per Discord user; ``anilist_user_id`` is their AniList numeric id,
+-- resolved once at opt-in so the poller can read their PUBLIC manga list
+-- unauthenticated (no token at poll time). ``enabled`` is flipped off
+-- automatically when their DMs are closed (a Forbidden on delivery) and they can
+-- re-run the toggle to turn it back on. Lookups ride the PK.
+-- cogs/anilist (chapters, later lot)
+CREATE TABLE IF NOT EXISTS anilist_chapter_optins (
+    user_id         BIGINT      PRIMARY KEY,               -- Discord user id
+    anilist_user_id INTEGER     NOT NULL,                  -- AniList numeric user id
+    enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- AniList media id -> MangaDex manga UUID mapping cache. MangaDex has NO
+-- AniList-id filter on /manga, so a mapping is resolved by a title search whose
+-- candidates are scanned for the exact attributes.links.al (see
+-- tools.mangadex.pick_mapping). That search is expensive and often fruitless for
+-- niche titles, so BOTH outcomes are cached: ``status = 'found'`` carries the
+-- resolved ``mangadex_id`` (a UUID), ``status = 'missing'`` stores it NULL and
+-- exists solely to STOP the poller re-searching that media every tick. A later
+-- lot may retry stale 'missing' rows using ``checked_at`` as the staleness clock.
+-- One row per AniList media; lookups ride the PK.  cogs/anilist (chapters lot)
+CREATE TABLE IF NOT EXISTS mangadex_mapping (
+    anilist_media_id INTEGER     PRIMARY KEY,               -- AniList numeric media id
+    mangadex_id      TEXT,                                  -- MangaDex manga UUID; NULL when missing
+    status           TEXT        NOT NULL DEFAULT 'missing', -- 'found' | 'missing'
+    checked_at       TIMESTAMPTZ NOT NULL DEFAULT now()      -- last search time (staleness clock)
+);
+
+-- Per-manga chapter-poll cursor: the newest ``readableAt`` already processed for
+-- a MangaDex manga. The MangaDex per-manga feed is ordered by readableAt desc;
+-- the poller alerts chapters newer than this cursor and then advances it (see
+-- tools.mangadex.plan_chapter_alerts). The cursor is stored as TEXT holding the
+-- RAW readableAt string exactly as MangaDex returned it: the pure planner returns
+-- that raw value and accepts it straight back, so a verbatim round-trip avoids any
+-- lossy timestamp reparse at the seam. NULL means "never anchored" -> the next
+-- poll is the anti-backfill first run (anchor the cursor, alert nothing). One row
+-- per manga; lookups ride the PK.  cogs/anilist (chapters lot)
+CREATE TABLE IF NOT EXISTS mangadex_chapter_state (
+    mangadex_id      TEXT        PRIMARY KEY,               -- MangaDex manga UUID
+    last_readable_at TEXT,                                  -- cursor: raw readableAt of the newest processed chapter
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Bounded "already-alerted" memory that partners the cursor above. The SAME
+-- logical chapter is uploaded once per scanlation group, and a LATER group upload
+-- of an already-alerted chapter arrives with a NEWER readableAt - so the cursor
+-- alone would re-alert it. This table remembers each alerted chapter identity so
+-- plan_chapter_alerts never re-alerts one, whatever its readableAt says. Design:
+-- one row PER SEEN CHAPTER (not a compact per-manga JSON blob) because that lets
+-- the poller (a) upsert a single identity without a read-modify-write race on a
+-- shared blob and (b) prune cheaply by age or per-manga count via the index below
+-- - ``first_seen_at`` is that pruning key. ``chapter_key`` is the serialized
+-- identity from tools.mangadex.chapter_key: the canonical chapter NUMBER (the
+-- volume is excluded - groups disagree on it), id-fallback for numberless rows.
+-- Stored as TEXT. Lookups/prunes ride the PK + index.
+-- cogs/anilist (chapters lot)
+CREATE TABLE IF NOT EXISTS mangadex_seen_chapters (
+    mangadex_id   TEXT        NOT NULL,                     -- MangaDex manga UUID
+    chapter_key   TEXT        NOT NULL,                     -- serialized chapter-number identity
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),       -- pruning key (prune by age / per-manga count)
+    PRIMARY KEY (mangadex_id, chapter_key)
+);
+CREATE INDEX IF NOT EXISTS mangadex_seen_chapters_prune_idx
+    ON mangadex_seen_chapters (mangadex_id, first_seen_at);
+
+-- Per-feed fan-out toggles for the airing/chapter trackers to post IN the feed
+-- channel (in addition to, or instead of, the opt-in DMs). Added to the existing
+-- anilist_feeds table, so they must be ALTER ... ADD COLUMN IF NOT EXISTS (the
+-- whole schema is re-applied at startup). Both default FALSE so an existing feed
+-- is unchanged until a guild opts in via a later lot's panel.  cogs/anilist
+ALTER TABLE anilist_feeds ADD COLUMN IF NOT EXISTS chapters_in_channel BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE anilist_feeds ADD COLUMN IF NOT EXISTS airing_in_channel BOOLEAN NOT NULL DEFAULT FALSE;
