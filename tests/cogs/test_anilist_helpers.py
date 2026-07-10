@@ -12,6 +12,8 @@ import datetime
 
 from cogs.anilist import helpers
 from cogs.anilist.helpers import (
+    DEFAULT_SCORE_FORMAT,
+    SCORE_FORMATS,
     SEASONS,
     VALID_STATUSES,
     _clean_description,
@@ -23,6 +25,9 @@ from cogs.anilist.helpers import (
     _parse_status,
     _progress_max,
     _step_season,
+    parse_score,
+    render_score,
+    score_hint,
 )
 
 # ---------------------------------------------------------------------------
@@ -333,3 +338,151 @@ def test_seasons_and_statuses_are_consistent():
     assert SEASONS == ("WINTER", "SPRING", "SUMMER", "FALL")
     # Every alias target must be a real AniList status.
     assert set(helpers._STATUS_ALIASES.values()) <= VALID_STATUSES
+
+
+# ---------------------------------------------------------------------------
+# render_score - the five AniList score formats
+# ---------------------------------------------------------------------------
+
+
+def test_render_score_unset_is_none_in_every_format():
+    # None and 0 both mean "unset" (AniList convention) in every format.
+    for fmt in SCORE_FORMATS:
+        assert render_score(None, fmt) is None
+        assert render_score(0, fmt) is None
+        assert render_score(0.0, fmt) is None
+
+
+def test_render_score_non_numeric_is_none():
+    assert render_score("abc", "POINT_100") is None
+
+
+def test_render_score_point_100():
+    assert render_score(85, "POINT_100") == "85"
+    assert render_score(85.0, "POINT_100") == "85"
+    assert render_score(100, "POINT_100") == "100"
+    assert render_score(1, "POINT_100") == "1"
+
+
+def test_render_score_point_10():
+    assert render_score(8, "POINT_10") == "8/10"
+    assert render_score(8.0, "POINT_10") == "8/10"
+    assert render_score(10, "POINT_10") == "10/10"
+
+
+def test_render_score_point_10_decimal():
+    assert render_score(8.5, "POINT_10_DECIMAL") == "8.5/10"
+    assert render_score(8, "POINT_10_DECIMAL") == "8.0/10"
+    assert render_score(10.0, "POINT_10_DECIMAL") == "10.0/10"
+
+
+def test_render_score_point_5_stars():
+    assert render_score(1, "POINT_5") == "★☆☆☆☆"
+    assert render_score(4, "POINT_5") == "★★★★☆"
+    assert render_score(5, "POINT_5") == "★★★★★"
+
+
+def test_render_score_point_3_faces():
+    assert render_score(1, "POINT_3") == "🙁"
+    assert render_score(2, "POINT_3") == "😐"
+    assert render_score(3, "POINT_3") == "🙂"
+
+
+def test_render_score_unknown_format_falls_back_to_point_100():
+    assert render_score(85, "GARBAGE") == "85"
+    assert render_score(85, None) == "85"
+
+
+def test_render_score_default_format_is_point_100():
+    assert render_score(85) == "85"
+    assert DEFAULT_SCORE_FORMAT == "POINT_100"
+
+
+# ---------------------------------------------------------------------------
+# parse_score - validation per format, 0 kept as unset
+# ---------------------------------------------------------------------------
+
+
+def test_parse_score_empty_and_none_and_malformed():
+    for fmt in SCORE_FORMATS:
+        assert parse_score(None, fmt) is None
+        assert parse_score("", fmt) is None
+        assert parse_score("   ", fmt) is None
+        assert parse_score("abc", fmt) is None
+
+
+def test_parse_score_zero_is_unset_not_rejected():
+    # 0 is a valid input meaning "clear the score" in every format.
+    for fmt in SCORE_FORMATS:
+        assert parse_score("0", fmt) == 0.0
+
+
+def test_parse_score_point_100():
+    assert parse_score("85", "POINT_100") == 85.0
+    assert parse_score("100", "POINT_100") == 100.0
+    assert parse_score("101", "POINT_100") is None
+    assert parse_score("-1", "POINT_100") is None
+    # POINT_100 is integer-only.
+    assert parse_score("85.5", "POINT_100") is None
+
+
+def test_parse_score_point_10():
+    assert parse_score("8", "POINT_10") == 8.0
+    assert parse_score("10", "POINT_10") == 10.0
+    assert parse_score("11", "POINT_10") is None
+    assert parse_score("8.5", "POINT_10") is None
+
+
+def test_parse_score_point_10_decimal():
+    assert parse_score("8.5", "POINT_10_DECIMAL") == 8.5
+    assert parse_score("8", "POINT_10_DECIMAL") == 8.0
+    assert parse_score("10.0", "POINT_10_DECIMAL") == 10.0
+    assert parse_score("10.5", "POINT_10_DECIMAL") is None
+    assert parse_score("-0.5", "POINT_10_DECIMAL") is None
+
+
+def test_parse_score_point_5():
+    assert parse_score("5", "POINT_5") == 5.0
+    assert parse_score("3", "POINT_5") == 3.0
+    assert parse_score("6", "POINT_5") is None
+    assert parse_score("3.5", "POINT_5") is None
+
+
+def test_parse_score_point_3():
+    assert parse_score("1", "POINT_3") == 1.0
+    assert parse_score("3", "POINT_3") == 3.0
+    assert parse_score("4", "POINT_3") is None
+    assert parse_score("2.5", "POINT_3") is None
+
+
+def test_parse_score_unknown_format_falls_back_to_point_100():
+    assert parse_score("85", "GARBAGE") == 85.0
+    assert parse_score("101", "GARBAGE") is None
+
+
+def test_parse_score_strips_whitespace():
+    assert parse_score("  85  ", "POINT_100") == 85.0
+
+
+# ---------------------------------------------------------------------------
+# score_hint - placeholder ranges
+# ---------------------------------------------------------------------------
+
+
+def test_score_hint_per_format():
+    assert score_hint("POINT_100") == "0-100"
+    assert score_hint("POINT_10") == "0-10"
+    assert score_hint("POINT_10_DECIMAL") == "0.0-10.0"
+    assert score_hint("POINT_5") == "0-5"
+    assert score_hint("POINT_3") == "1-3"
+
+
+def test_score_hint_unknown_and_default():
+    assert score_hint("GARBAGE") == "0-100"
+    assert score_hint() == "0-100"
+
+
+def test_score_formats_registry_is_the_five_anilist_formats():
+    assert SCORE_FORMATS == frozenset(
+        {"POINT_100", "POINT_10_DECIMAL", "POINT_10", "POINT_5", "POINT_3"}
+    )

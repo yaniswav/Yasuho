@@ -670,8 +670,14 @@ class _ConfigureEntryView(discord.ui.View):
         # was never set: resolve it so the modal renders in the user's tongue.
         await i18n.apply_interaction_locale(interaction)
         try:
+            score_format = await self.cog._get_score_format(interaction.user.id)
             await interaction.response.send_modal(
-                EditEntryModal(self.cog, self.media, entry={"status": "PLANNING"})
+                EditEntryModal(
+                    self.cog,
+                    self.media,
+                    entry={"status": "PLANNING"},
+                    score_format=score_format,
+                )
             )
         except discord.HTTPException:
             log.debug("AniList feed: could not open the configure-entry modal")

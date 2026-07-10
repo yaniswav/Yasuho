@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 
 import aiohttp
 import discord
@@ -15,11 +16,15 @@ from .components import (
 )
 from .helpers import (
     API_URL,
+    DEFAULT_SCORE_FORMAT,
     REDIRECT_URI,
+    SCORE_FORMATS,
     TOKEN_URL,
+    _format_score,
     _media_title,
     _media_unit,
     _progress_max,
+    render_score,
 )
 from .queries import (
     CANDIDATE_QUERY,
@@ -38,6 +43,43 @@ from tools.http import TIMEOUT
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
+
+
+# --- Score-format cache -----------------------------------------------------
+#
+# The viewer's list score format (mediaListOptions.scoreFormat) drives how every
+# ENTRY score is rendered/parsed. It changes rarely, so it is cached per Discord
+# user with a LONG TTL (~1h) and simply self-heals at expiry; a fresh format is
+# one authed call. Only the format STRING is ever cached - never a token. Times
+# use ``time.monotonic()`` so a wall-clock change can never skew the window, and
+# the map is swept past a hard size cap, mirroring the bounded ``account`` list
+# cache and ``tools.cooldowns``.
+_SCORE_FORMAT_TTL = 3600.0
+_SCORE_FORMAT_SWEEP_AT = 500
+# user_id -> (monotonic_ts, score_format_str).
+_score_format_cache: dict = {}
+
+
+def _score_format_get(user_id, now):
+    """Return the cached score format for a user, or None if stale/absent."""
+
+    hit = _score_format_cache.get(user_id)
+    if hit is None:
+        return None
+    ts, fmt = hit
+    if now - ts >= _SCORE_FORMAT_TTL:
+        return None
+    return fmt
+
+
+def _score_format_put(user_id, fmt, now):
+    """Cache a user's score format, sweeping stale rows once past the size cap."""
+
+    _score_format_cache[user_id] = (now, fmt)
+    if len(_score_format_cache) > _SCORE_FORMAT_SWEEP_AT:
+        cutoff = now - _SCORE_FORMAT_TTL
+        for key in [k for k, (ts, _f) in _score_format_cache.items() if ts < cutoff]:
+            del _score_format_cache[key]
 
 
 class AniListBase:
@@ -158,6 +200,39 @@ class AniListBase:
             ((data or {}).get("data") or {}).get("Media") or {}
         ).get("mediaListEntry")
         return entry, True
+
+    async def _get_score_format(self, user_id):
+        """Return the viewer's AniList score format, cached with a long TTL.
+
+        Falls back to POINT_100 silently on any failure (no linked account,
+        network error, unexpected shape) - that is exactly the behaviour the bot
+        had before it read the format at all. The fallback is NEVER cached, so a
+        fresh link or a transient blip self-heals on the next read; a real format
+        is cached for ~1h since a user changes it rarely. The token is resolved
+        only to authenticate the query and is never logged or cached.
+        """
+
+        now = time.monotonic()
+        cached = _score_format_get(user_id, now)
+        if cached is not None:
+            return cached
+
+        token = await self._get_token(user_id)
+        if not token:
+            return DEFAULT_SCORE_FORMAT
+
+        try:
+            data = await self._graphql(VIEWER_QUERY, {}, token=token)
+            options = (
+                ((data or {}).get("data") or {}).get("Viewer") or {}
+            ).get("mediaListOptions") or {}
+            fmt = options.get("scoreFormat")
+            if fmt in SCORE_FORMATS:
+                _score_format_put(user_id, fmt, now)
+                return fmt
+        except Exception:
+            log.exception("AniList score format fetch failed")
+        return DEFAULT_SCORE_FORMAT
 
     async def _exchange_code(self, user_id, code):
         """Exchange an OAuth PIN for a token and store it.
@@ -317,11 +392,14 @@ class AniListBase:
             else:
                 message = _("Marked **{name}** as completed.").format(name=name)
         else:
-            message = _("Scored **{name}** {score}.").format(
-                name=name, score=entry.get("score")
+            score_format = await self._get_score_format(user_id)
+            score = render_score(entry.get("score"), score_format) or _format_score(
+                entry.get("score")
             )
+            message = _("Scored **{name}** {score}.").format(name=name, score=score)
 
         await self._reply(sender, message)
+        return entry
 
     async def _media_by_id(self, media_id):
         """Fetch a lightweight media object by id (for the autocomplete path)."""

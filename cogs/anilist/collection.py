@@ -20,8 +20,14 @@ import logging
 
 import discord
 
-from .components import EditEntryModal
-from .helpers import _format_score, _media_title, _media_unit, _progress_max
+from .components import CompletePromptView, EditEntryModal
+from .helpers import (
+    DEFAULT_SCORE_FORMAT,
+    _media_title,
+    _media_unit,
+    _progress_max,
+    render_score,
+)
 from .queries import COLLECTION_QUERY, VIEWER_QUERY
 from tools import i18n, interactions
 from tools.i18n import _, ngettext
@@ -113,9 +119,9 @@ class _EntrySelect(discord.ui.Select):
             desc = "{progress}/{total}".format(
                 progress=progress, total=total if total else "?"
             )
-            score = _format_score(entry.get("score"))
-            if score and score != "0":
-                desc += "  ★ " + score
+            score = render_score(entry.get("score"), owner.score_format)
+            if score:
+                desc += "  " + score
             options.append(
                 discord.SelectOption(
                     label=_media_title(media)[:100],
@@ -257,6 +263,7 @@ class CollectionView(discord.ui.LayoutView):
         status,
         entries,
         *,
+        score_format=DEFAULT_SCORE_FORMAT,
         timeout=180,
     ):
         super().__init__(timeout=timeout)
@@ -265,6 +272,7 @@ class CollectionView(discord.ui.LayoutView):
         self.anilist_user_id = anilist_user_id
         self.media_type = media_type
         self.status = status
+        self.score_format = score_format
         self.message = None
         self.page = 0
         self.selected_media_id = None
@@ -387,8 +395,8 @@ class CollectionView(discord.ui.LayoutView):
             + " - "
             + progress_line,
         ]
-        score = _format_score(entry.get("score"))
-        if score and score != "0":
+        score = render_score(entry.get("score"), self.score_format)
+        if score:
             lines.append(_("Score: {score}").format(score=score))
         text = discord.ui.TextDisplay("\n".join(lines))
 
@@ -548,6 +556,7 @@ class CollectionView(discord.ui.LayoutView):
         """+1 / -1 the entry's progress, clamped to ``[0, total]``, then save."""
 
         entry = self._by_id.get(media.get("id"))
+        prior_status = (entry or {}).get("status")
         current = (entry or {}).get("progress") or 0
         new = current + delta
         if new < 0:
@@ -555,10 +564,18 @@ class CollectionView(discord.ui.LayoutView):
         maximum = _progress_max(media)
         if maximum is not None and new > maximum:
             new = maximum
-        await self._mutate(interaction, media, "progress", new)
+        saved = await self._mutate(interaction, media, "progress", new)
+        if delta > 0 and saved:
+            await self._maybe_prompt_complete(
+                interaction, media, saved, prior_status
+            )
 
     async def _mutate(self, interaction, media, field, value):
-        """Run a quick edit at click time, patch local state, re-render in place."""
+        """Run a quick edit at click time, patch local state, re-render in place.
+
+        Returns the saved ``SaveMediaListEntry`` dict on success (so the +1 path
+        can inspect the new progress/status), or ``None`` on any early exit.
+        """
 
         try:
             await interaction.response.defer()
@@ -567,13 +584,72 @@ class CollectionView(discord.ui.LayoutView):
         # Token at click time, like every other mutating AniList surface.
         token = await self.cog._get_token(self.author_id)
         if not token:
-            return await interactions.reply(
+            await interactions.reply(
                 interaction, _("Link your account first with `/anilist login`.")
             )
+            return None
         try:
             saved = await self.cog._save_entry(token, media, field, value)
         except Exception:
             log.exception("AniList collection mutation failed")
+            await interactions.notify_failure(interaction)
+            return None
+        if not saved:
+            await interactions.reply(
+                interaction, _("Could not update that entry.")
+            )
+            return None
+        self._patch_entry(media.get("id"), saved)
+        self._build()
+        await self._rerender(interaction)
+        return saved
+
+    async def _maybe_prompt_complete(self, interaction, media, saved, prior_status):
+        """Offer to complete when a +1 reached the finale without auto-completing.
+
+        Same rule as the media editor's +1: the total is known and now reached,
+        the entry was not already COMPLETED, and AniList did not auto-flip the
+        status in the save response. The one-shot button runs the dashboard's own
+        complete seam and refreshes the card in place.
+        """
+
+        total = _progress_max(media)
+        if not total or saved.get("progress") != total:
+            return
+        if prior_status == "COMPLETED" or saved.get("status") == "COMPLETED":
+            return
+
+        async def _confirm(prompt_interaction):
+            await self._complete_from_prompt(prompt_interaction, media)
+
+        view = CompletePromptView(
+            self.author_id, _confirm, label=_("Mark completed")
+        )
+        view.message = await interaction.followup.send(
+            _("That was the last {unit} - mark **{title}** as completed?").format(
+                unit=_media_unit(media), title=_media_title(media)
+            ),
+            view=view,
+            ephemeral=True,
+        )
+
+    async def _complete_from_prompt(self, interaction, media):
+        """Run the complete seam from the ephemeral prompt, refresh the dashboard.
+
+        The prompt interaction has already been consumed (its button disabled
+        itself in place), so this saves via follow-ups and edits the DASHBOARD
+        message directly rather than the ephemeral prompt.
+        """
+
+        token = await self.cog._get_token(self.author_id)
+        if not token:
+            return await interactions.reply(
+                interaction, _("Link your account first with `/anilist login`.")
+            )
+        try:
+            saved = await self.cog._save_entry(token, media, "complete", None)
+        except Exception:
+            log.exception("AniList collection completion prompt failed")
             return await interactions.notify_failure(interaction)
         if not saved:
             return await interactions.reply(
@@ -581,7 +657,11 @@ class CollectionView(discord.ui.LayoutView):
             )
         self._patch_entry(media.get("id"), saved)
         self._build()
-        await self._rerender(interaction)
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
 
     def _patch_entry(self, media_id, saved):
         """Fold a SaveMediaListEntry response into the cached entry in place."""
@@ -603,7 +683,9 @@ class CollectionView(discord.ui.LayoutView):
         try:
             entry = self._by_id.get(media.get("id"))
             await interaction.response.send_modal(
-                EditEntryModal(self.cog, media, entry=entry)
+                EditEntryModal(
+                    self.cog, media, entry=entry, score_format=self.score_format
+                )
             )
         except Exception:
             log.exception("AniList collection edit launch failed")
@@ -658,7 +740,14 @@ class CollectionMixin:
         entries = await self._fetch_collection(
             token, user["id"], media_type, status
         )
+        score_format = await self._get_score_format(user_id)
         view = CollectionView(
-            self, user_id, user["id"], media_type, status, entries
+            self,
+            user_id,
+            user["id"],
+            media_type,
+            status,
+            entries,
+            score_format=score_format,
         )
         return None, view

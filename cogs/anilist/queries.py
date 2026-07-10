@@ -162,7 +162,7 @@ query ($search: String) {
 """
 
 VIEWER_QUERY = """
-query { Viewer { id name } }
+query { Viewer { id name mediaListOptions { scoreFormat } } }
 """
 
 SAVE_ENTRY_QUERY = """

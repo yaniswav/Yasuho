@@ -193,7 +193,13 @@ def _format_fuzzy_date(date):
 
 
 def _format_score(score):
-    """Render a raw AniList score, dropping a trailing ``.0`` on whole numbers."""
+    """Render a raw AniList score, dropping a trailing ``.0`` on whole numbers.
+
+    Format-agnostic: returns the bare in-format number (e.g. ``"8"`` or
+    ``"8.5"``), so it stays the right editable value to pre-fill a text input
+    regardless of the viewer's score format. For decorated display use
+    :func:`render_score`.
+    """
 
     if score is None:
         return None
@@ -204,6 +210,128 @@ def _format_score(score):
     if value.is_integer():
         return str(int(value))
     return str(score)
+
+
+# --- Score formats ----------------------------------------------------------
+#
+# AniList users pick one of five list score formats (Viewer.mediaListOptions.
+# scoreFormat). A score is stored, returned and accepted BY THE MUTATION all in
+# the viewer's own format, so the bot renders/parses in that format directly and
+# never converts. ``POINT_100`` is the historical default and the silent
+# fallback whenever the format is unknown or cannot be fetched.
+DEFAULT_SCORE_FORMAT = "POINT_100"
+
+SCORE_FORMATS = frozenset(
+    {"POINT_100", "POINT_10_DECIMAL", "POINT_10", "POINT_5", "POINT_3"}
+)
+
+# POINT_3's three AniList faces (sad / neutral / happy), keyed by the 1-3 value.
+_POINT_3_FACES = {1: "🙁", 2: "😐", 3: "🙂"}
+
+# Short numeric-range placeholders shown in the score input (not translated:
+# they are bare digit ranges).
+_SCORE_HINTS = {
+    "POINT_100": "0-100",
+    "POINT_10": "0-10",
+    "POINT_10_DECIMAL": "0.0-10.0",
+    "POINT_5": "0-5",
+    "POINT_3": "1-3",
+}
+
+
+def _coerce_score(value):
+    """Best-effort float from a raw score value, or None if not numeric."""
+
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_format(score_format):
+    """Normalise a score format, falling back to the default when unknown."""
+
+    return score_format if score_format in SCORE_FORMATS else DEFAULT_SCORE_FORMAT
+
+
+def render_score(value, score_format=DEFAULT_SCORE_FORMAT):
+    """Render an ENTRY score for display in the viewer's score format.
+
+    Returns ``None`` for an unset score - both ``None`` and ``0`` (AniList's
+    "0 means no score" convention) - so callers can just skip a falsy result.
+    A set score renders as:
+
+      * POINT_100         -> ``"85"``
+      * POINT_10          -> ``"8/10"``
+      * POINT_10_DECIMAL  -> ``"8.5/10"``
+      * POINT_5           -> star glyphs, e.g. ``"★★★★☆"``
+      * POINT_3           -> a face emoji, e.g. ``"🙂"``
+
+    Unknown formats fall back to POINT_100 semantics.
+    """
+
+    num = _coerce_score(value)
+    if not num:  # None or 0.0 -> unset per AniList convention.
+        return None
+
+    fmt = _score_format(score_format)
+    if fmt == "POINT_10":
+        return "{}/10".format(int(round(num)))
+    if fmt == "POINT_10_DECIMAL":
+        return "{:.1f}/10".format(num)
+    if fmt == "POINT_5":
+        n = max(0, min(5, int(round(num))))
+        return "★" * n + "☆" * (5 - n)
+    if fmt == "POINT_3":
+        return _POINT_3_FACES.get(int(round(num)), _POINT_3_FACES[2])
+    return str(int(round(num)))  # POINT_100
+
+
+def parse_score(text, score_format=DEFAULT_SCORE_FORMAT):
+    """Parse score input in the viewer's format to a float, or None if invalid.
+
+    The returned value is sent to SaveMediaListEntry as-is (AniList interprets
+    it in the viewer's format). ``0`` is a valid input meaning "unset" and is
+    returned as ``0.0`` rather than rejected. Out-of-range or malformed input
+    (e.g. a decimal where the format is integer) returns ``None``. Unknown
+    formats fall back to POINT_100 semantics.
+    """
+
+    if text is None:
+        return None
+    text = text.strip()
+    if not text:
+        return None
+    try:
+        num = float(text)
+    except ValueError:
+        return None
+
+    fmt = _score_format(score_format)
+    if fmt == "POINT_10_DECIMAL":
+        lo, hi, integer = 0.0, 10.0, False
+    elif fmt == "POINT_10":
+        lo, hi, integer = 0.0, 10.0, True
+    elif fmt == "POINT_5":
+        lo, hi, integer = 0.0, 5.0, True
+    elif fmt == "POINT_3":
+        lo, hi, integer = 0.0, 3.0, True
+    else:  # POINT_100
+        lo, hi, integer = 0.0, 100.0, True
+
+    if num < lo or num > hi:
+        return None
+    if integer and not num.is_integer():
+        return None
+    return num
+
+
+def score_hint(score_format=DEFAULT_SCORE_FORMAT):
+    """Short numeric-range placeholder for the viewer's score format."""
+
+    return _SCORE_HINTS[_score_format(score_format)]
 
 
 def _current_season(now=None):

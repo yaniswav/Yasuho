@@ -3,6 +3,7 @@ import logging
 import discord
 
 from .helpers import (
+    DEFAULT_SCORE_FORMAT,
     _clean_description,
     _format_fuzzy_date,
     _format_ranking,
@@ -13,6 +14,9 @@ from .helpers import (
     _progress_max,
     _status_label,
     _step_season,
+    parse_score,
+    render_score,
+    score_hint,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
 from tools.i18n import _
@@ -226,13 +230,14 @@ class EditSelectView(AuthorView):
 class EditEntryModal(LocaleModal):
     """Edit status (a dropdown) + progress/score (fields), pre-filled from the entry."""
 
-    def __init__(self, cog, media, token=None, entry=None):
+    def __init__(self, cog, media, token=None, entry=None, score_format=None):
         super().__init__(
             title=_("Edit: {title}").format(title=_media_title(media))[:45]
         )
         self.cog = cog
         self.media = media
         self.token = token
+        self.score_format = score_format or DEFAULT_SCORE_FORMAT
         entry = entry or {}
 
         unit = _media_unit(media)
@@ -278,10 +283,13 @@ class EditEntryModal(LocaleModal):
             )
         )
 
+        # Pre-fill with the bare in-format number (editable, round-trips through
+        # parse_score); the placeholder shows the valid range for their format.
         score = _format_score(entry.get("score"))
         self.score_input = discord.ui.TextInput(
             required=False,
             max_length=6,
+            placeholder=score_hint(self.score_format),
             default=score if score and score != "0" else None,
         )
         self.add_item(discord.ui.Label(text=_("Score"), component=self.score_input))
@@ -292,16 +300,23 @@ class EditEntryModal(LocaleModal):
         progress_raw = (self.progress_input.value or "").strip()
         score_raw = (self.score_input.value or "").strip()
 
-        try:
-            if progress_raw:
+        if progress_raw:
+            try:
                 variables["progress"] = int(progress_raw)
-            if score_raw:
-                variables["score"] = float(score_raw)
-        except ValueError:
-            return await interaction.response.send_message(
-                _("Progress must be a whole number and score a number."),
-                ephemeral=True,
-            )
+            except ValueError:
+                return await interaction.response.send_message(
+                    _("Progress must be a whole number."), ephemeral=True
+                )
+        if score_raw:
+            parsed = parse_score(score_raw, self.score_format)
+            if parsed is None:
+                return await interaction.response.send_message(
+                    _("Score must be a number in the {hint} range.").format(
+                        hint=score_hint(self.score_format)
+                    ),
+                    ephemeral=True,
+                )
+            variables["score"] = parsed
 
         if status_values:
             variables["status"] = status_values[0]
@@ -341,12 +356,15 @@ class EditEntryModal(LocaleModal):
                 (entry.get("media") or {}).get("title") or {}
             ).get("romaji") or _media_title(self.media)
             unit = _media_unit(self.media)
+            score = render_score(
+                entry.get("score"), self.score_format
+            ) or _format_score(entry.get("score"))
             await interaction.response.send_message(
                 _("Updated **{name}** - {unit} {progress}, score {score}.").format(
                     name=name,
                     unit=unit,
                     progress=entry.get("progress"),
-                    score=entry.get("score"),
+                    score=score,
                 ),
                 ephemeral=True,
             )
@@ -450,8 +468,9 @@ class SeasonSelect(discord.ui.Select):
             entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, media.get("id")
             )
+            score_format = await self.cog._get_score_format(interaction.user.id)
             await interaction.response.send_modal(
-                EditEntryModal(self.cog, media, entry=entry)
+                EditEntryModal(self.cog, media, entry=entry, score_format=score_format)
             )
         except Exception:
             log.exception("AniList update season select failed")
@@ -534,8 +553,9 @@ class OnListSelect(discord.ui.Select):
             entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, media.get("id")
             )
+            score_format = await self.cog._get_score_format(interaction.user.id)
             await interaction.response.send_modal(
-                EditEntryModal(self.cog, media, entry=entry)
+                EditEntryModal(self.cog, media, entry=entry, score_format=score_format)
             )
         except Exception:
             log.exception("AniList update on-list select failed")
@@ -602,6 +622,47 @@ class StatusSelect(discord.ui.Select):
                 pass
         except Exception:
             log.exception("AniList status select failed")
+            try:
+                await interaction.followup.send(
+                    _("Something went wrong updating that entry."), ephemeral=True
+                )
+            except Exception:
+                pass
+
+
+class CompletePromptView(AuthorView):
+    """One-shot ephemeral prompt to mark an entry completed after +1 hits the end.
+
+    Author-gated and single-use: the button runs the supplied ``on_confirm``
+    coroutine once, then greys itself out; a short timeout disables it if
+    ignored. ``on_confirm`` owns the actual save and its acknowledgement - this
+    view only consumes the click to disable the button in place, so there is
+    exactly one response on the prompt interaction.
+    """
+
+    def __init__(self, author_id, on_confirm, *, label, timeout=120):
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This prompt isn't for you."
+        )
+        self._on_confirm = on_confirm
+        button = discord.ui.Button(
+            label=label, style=discord.ButtonStyle.success, emoji="✅"
+        )
+        button.callback = self._confirm
+        self.add_item(button)
+
+    async def _confirm(self, interaction):
+        try:
+            for child in self.children:
+                child.disabled = True
+            self.stop()
+            try:
+                await interaction.response.edit_message(view=self)
+            except discord.HTTPException:
+                pass
+            await self._on_confirm(interaction)
+        except Exception:
+            log.exception("AniList completion prompt failed")
             try:
                 await interaction.followup.send(
                     _("Something went wrong updating that entry."), ephemeral=True
@@ -781,7 +842,9 @@ class MediaView(AuthorView):
         )
         return embed
 
-    def _your_stats_value(self, viewer_entry, logged_in):
+    def _your_stats_value(
+        self, viewer_entry, logged_in, score_format=DEFAULT_SCORE_FORMAT
+    ):
         """Build the "Your stats" field text for the authenticated viewer."""
 
         if not logged_in:
@@ -813,8 +876,8 @@ class MediaView(AuthorView):
                 )
             )
 
-        score = _format_score(viewer_entry.get("score"))
-        if score and score != "0":
+        score = render_score(viewer_entry.get("score"), score_format)
+        if score:
             lines.append(_("Your score: {score}").format(score=score))
 
         progress = viewer_entry.get("progress")
@@ -842,12 +905,14 @@ class MediaView(AuthorView):
 
         return "\n".join(lines)
 
-    def stats_embed(self, viewer_entry=None, logged_in=False):
+    def stats_embed(
+        self, viewer_entry=None, logged_in=False, score_format=DEFAULT_SCORE_FORMAT
+    ):
         media = self.media
         embed = self._base_embed()
         embed.title = _("{title} - Stats").format(title=_media_title(media))
 
-        your_value = self._your_stats_value(viewer_entry, logged_in)
+        your_value = self._your_stats_value(viewer_entry, logged_in, score_format)
 
         mean = media.get("meanScore")
         average = media.get("averageScore")
@@ -1018,8 +1083,15 @@ class MediaView(AuthorView):
             viewer_entry, logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
+            score_format = (
+                await self.cog._get_score_format(interaction.user.id)
+                if logged_in
+                else DEFAULT_SCORE_FORMAT
+            )
             embed = self.stats_embed(
-                viewer_entry=viewer_entry, logged_in=logged_in
+                viewer_entry=viewer_entry,
+                logged_in=logged_in,
+                score_format=score_format,
             )
         except Exception:
             log.exception("AniList stats section failed")
@@ -1082,9 +1154,14 @@ class MediaView(AuthorView):
             viewer_entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
+            score_format = await self.cog._get_score_format(interaction.user.id)
             await interaction.response.send_modal(
                 EditEntryModal(
-                    self.cog, self.media, self.token, entry=viewer_entry
+                    self.cog,
+                    self.media,
+                    self.token,
+                    entry=viewer_entry,
+                    score_format=score_format,
                 )
             )
         except Exception:
@@ -1104,6 +1181,7 @@ class MediaView(AuthorView):
             entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
+            prior_status = (entry or {}).get("status")
             current = (entry or {}).get("progress") or 0
             new = current + delta
             if new < 0:
@@ -1111,9 +1189,11 @@ class MediaView(AuthorView):
             maximum = _progress_max(self.media)
             if maximum is not None and new > maximum:
                 new = maximum
-            await self.cog._apply_edit(
+            saved = await self.cog._apply_edit(
                 interaction, self.author_id, self.media, "progress", new
             )
+            if delta > 0 and saved:
+                await self._maybe_prompt_complete(interaction, saved, prior_status)
         except Exception:
             log.exception("AniList progress step failed")
             try:
@@ -1122,6 +1202,38 @@ class MediaView(AuthorView):
                 )
             except Exception:
                 pass
+
+    async def _maybe_prompt_complete(self, interaction, saved, prior_status):
+        """Offer to complete when a +1 reached the finale without auto-completing.
+
+        Sent as one ephemeral follow-up after the normal confirmation, with a
+        single one-shot button that runs the same "complete" seam as the
+        Complete button. Skipped when the total is unknown, when the new progress
+        has not reached it, when the entry was already COMPLETED, or when AniList
+        already flipped the status to COMPLETED in the save response.
+        """
+
+        total = _progress_max(self.media)
+        if not total or saved.get("progress") != total:
+            return
+        if prior_status == "COMPLETED" or saved.get("status") == "COMPLETED":
+            return
+
+        async def _confirm(prompt_interaction):
+            await self.cog._apply_edit(
+                prompt_interaction, self.author_id, self.media, "complete", None
+            )
+
+        view = CompletePromptView(
+            self.author_id, _confirm, label=_("Mark completed")
+        )
+        view.message = await interaction.followup.send(
+            _("That was the last {unit} - mark **{title}** as completed?").format(
+                unit=_media_unit(self.media), title=_media_title(self.media)
+            ),
+            view=view,
+            ephemeral=True,
+        )
 
 
 class LoginModal(LocaleModal, title="Enter your AniList code"):
