@@ -22,10 +22,21 @@ from discord.ext import commands
 from tools import custom_commands as cc
 from tools import embed_creator
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import N_, _
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
+
+# Quick-pick per-command cooldowns: (extractable label, value in seconds fed to
+# parse_cooldown). The custom seconds box overrides any pick. Labels are marked
+# with N_ (module-level) and translated at modal-build time with _(...).
+_COOLDOWN_PRESETS = (
+    (N_("None"), "0"),
+    (N_("10s"), "10"),
+    (N_("30s"), "30"),
+    (N_("1m"), "60"),
+    (N_("5m"), "300"),
+)
 
 PLACEHOLDERS = [
     ("{user}", "A mention of whoever ran the command"),
@@ -73,6 +84,47 @@ def parse_cooldown(raw):
         return 0
 
 
+def build_cooldown_fields(current):
+    """Build the shared cooldown picker (radio quick-pick + custom seconds box).
+
+    Returns ``(label_item, radio, custom_input)``. The radio preselects the
+    preset matching ``current`` when one does, otherwise it stays empty and the
+    custom box is prefilled with the exact seconds. Shared by the three
+    cooldown-carrying modals so the widget and its copy live in one place.
+    """
+    current = int(current or 0)
+    radio = discord.ui.RadioGroup(required=False)
+    matched = False
+    for label, value in _COOLDOWN_PRESETS:
+        is_current = int(value) == current
+        matched = matched or is_current
+        radio.add_option(label=_(label), value=value, default=is_current)
+    custom = discord.ui.TextInput(
+        label=_("Custom seconds"),
+        placeholder="0",
+        required=False,
+        max_length=5,
+    )
+    if current and not matched:
+        custom.default = str(current)
+    label_item = discord.ui.Label(
+        text=_("Cooldown seconds (optional)"),
+        component=radio,
+        description=_("Pick one, or type a custom value below to override."),
+    )
+    return label_item, radio, custom
+
+
+def resolve_cooldown(radio, custom):
+    """Resolve the cooldown picker: custom box wins, else the preset, else 0."""
+    raw = (custom.value or "").strip()
+    if raw:
+        return parse_cooldown(raw)
+    if radio.value is not None:
+        return parse_cooldown(radio.value)
+    return 0
+
+
 # ----------------------------------------------------------------------
 # Modals
 # ----------------------------------------------------------------------
@@ -101,16 +153,12 @@ class AddTextModal(LocaleModal):
             max_length=200,
             required=False,
         )
-        self.cooldown_field = discord.ui.TextInput(
-            label=_("Cooldown seconds (optional)"),
-            placeholder="0",
-            max_length=5,
-            required=False,
-        )
+        cooldown_label, self.cooldown_radio, self.cooldown_custom = build_cooldown_fields(0)
         self.add_item(self.name_field)
         self.add_item(self.content_field)
         self.add_item(self.aliases_field)
-        self.add_item(self.cooldown_field)
+        self.add_item(cooldown_label)
+        self.add_item(self.cooldown_custom)
 
     async def on_submit(self, interaction):
         try:
@@ -130,7 +178,7 @@ class AddTextModal(LocaleModal):
                     "type": "text",
                     "content": self.content_field.value.strip(),
                     "aliases": aliases,
-                    "cooldown": parse_cooldown(self.cooldown_field.value),
+                    "cooldown": resolve_cooldown(self.cooldown_radio, self.cooldown_custom),
                 },
                 interaction.user.id,
             )
@@ -162,15 +210,13 @@ class EditTextModal(LocaleModal):
             max_length=200,
             required=False,
         )
-        self.cooldown_field = discord.ui.TextInput(
-            label=_("Cooldown seconds (optional)"),
-            default=str(response.get("cooldown") or 0),
-            max_length=5,
-            required=False,
+        cooldown_label, self.cooldown_radio, self.cooldown_custom = build_cooldown_fields(
+            response.get("cooldown") or 0
         )
         self.add_item(self.content_field)
         self.add_item(self.aliases_field)
-        self.add_item(self.cooldown_field)
+        self.add_item(cooldown_label)
+        self.add_item(self.cooldown_custom)
 
     async def on_submit(self, interaction):
         try:
@@ -186,7 +232,7 @@ class EditTextModal(LocaleModal):
                     "type": "text",
                     "content": self.content_field.value.strip(),
                     "aliases": aliases,
-                    "cooldown": parse_cooldown(self.cooldown_field.value),
+                    "cooldown": resolve_cooldown(self.cooldown_radio, self.cooldown_custom),
                 },
                 interaction.user.id,
             )
@@ -214,15 +260,11 @@ class AddEmbedNameModal(LocaleModal):
             max_length=200,
             required=False,
         )
-        self.cooldown_field = discord.ui.TextInput(
-            label=_("Cooldown seconds (optional)"),
-            placeholder="0",
-            max_length=5,
-            required=False,
-        )
+        cooldown_label, self.cooldown_radio, self.cooldown_custom = build_cooldown_fields(0)
         self.add_item(self.name_field)
         self.add_item(self.aliases_field)
-        self.add_item(self.cooldown_field)
+        self.add_item(cooldown_label)
+        self.add_item(self.cooldown_custom)
 
     async def on_submit(self, interaction):
         try:
@@ -239,7 +281,7 @@ class AddEmbedNameModal(LocaleModal):
                 "name": name,
                 "embed": embed_creator.default_embed(),
                 "aliases": aliases,
-                "cooldown": parse_cooldown(self.cooldown_field.value),
+                "cooldown": resolve_cooldown(self.cooldown_radio, self.cooldown_custom),
             }
             view = CustomEmbedPanel(self.panel.cog, self.panel.guild, self.panel.author_id, draft)
             await interaction.response.send_message(

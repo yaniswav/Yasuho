@@ -630,15 +630,18 @@ class AddFieldModal(_EmbedModal):
             max_length=LIMIT_FIELD_VALUE,
             placeholder=self._placeholder_hint(),
         )
-        self.inline_field = discord.ui.TextInput(
-            label=_("Inline? (yes/no)"),
-            required=False,
-            max_length=5,
-            default="no",
-        )
+        self.inline_checkbox = discord.ui.Checkbox(default=False)
         self.add_item(self.name_field)
         self.add_item(self.value_field)
-        self.add_item(self.inline_field)
+        self.add_item(
+            discord.ui.Label(
+                text=_("Inline field"),
+                component=self.inline_checkbox,
+                description=_(
+                    "Place it beside other fields instead of on its own row."
+                ),
+            )
+        )
 
     async def on_submit(self, interaction):
         try:
@@ -651,18 +654,11 @@ class AddFieldModal(_EmbedModal):
                     ephemeral=True,
                 )
                 return
-            inline = self.inline_field.value.strip().lower() in (
-                "yes",
-                "y",
-                "true",
-                "1",
-                "on",
-            )
             fields.append(
                 {
                     "name": self.name_field.value.strip(),
                     "value": self.value_field.value.strip(),
-                    "inline": inline,
+                    "inline": self.inline_checkbox.value,
                 }
             )
             await self._commit(interaction)

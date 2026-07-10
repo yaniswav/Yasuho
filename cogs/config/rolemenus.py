@@ -21,7 +21,7 @@ from discord.ext import commands
 
 from tools import i18n, role_menus
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import N_, _
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -29,6 +29,18 @@ log = logging.getLogger(__name__)
 MAX_MENUS_PER_GUILD = 25
 
 _CUSTOM_EMOJI = re.compile(r"^<a?:\w{2,32}:\d+>$")
+
+# Quick-pick durations for a temporary self-role: (extractable label, value fed
+# to role_menus.parse_duration). The custom box overrides any pick. "Permanent"
+# maps to 0 seconds. Labels are marked with N_ (module-level) and translated at
+# modal-build time with _(...).
+_DURATION_PRESETS = (
+    (N_("1 hour"), "1h"),
+    (N_("12 hours"), "12h"),
+    (N_("1 day"), "1d"),
+    (N_("7 days"), "7d"),
+    (N_("Permanent"), "0"),
+)
 
 
 def valid_emoji(text):
@@ -240,16 +252,32 @@ class RoleOptionModal(LocaleModal):
             default=(opt.get("description") if opt else None),
         )
         temp = (opt or {}).get("temp_seconds") or 0
-        self.temp_field = discord.ui.TextInput(
-            label=_("Temporary? (optional)"),
-            placeholder=_("e.g. 2h, 30m, 1d - blank = permanent"),
+        # Quick-pick radio for the common durations; preselect the option that
+        # matches the current value when one does, else leave it empty and
+        # prefill the custom box with the exact current duration.
+        self.temp_radio = discord.ui.RadioGroup(required=False)
+        matched = False
+        for label, value in _DURATION_PRESETS:
+            is_current = role_menus.parse_duration(value) == temp
+            matched = matched or is_current
+            self.temp_radio.add_option(label=_(label), value=value, default=is_current)
+        self.temp_custom = discord.ui.TextInput(
+            label=_("Custom duration"),
+            placeholder=_("e.g. 2h, 30m, 1d"),
             required=False,
             max_length=10,
-            default=(_format_duration(temp) if temp else None),
+            default=(_format_duration(temp) if (temp and not matched) else None),
         )
         self.add_item(self.emoji_field)
         self.add_item(self.desc_field)
-        self.add_item(self.temp_field)
+        self.add_item(
+            discord.ui.Label(
+                text=_("Temporary? (optional)"),
+                component=self.temp_radio,
+                description=_("Pick one, or type a custom value below to override."),
+            )
+        )
+        self.add_item(self.temp_custom)
 
     async def on_submit(self, interaction):
         try:
@@ -260,7 +288,15 @@ class RoleOptionModal(LocaleModal):
                     ephemeral=True,
                 )
             desc = self.desc_field.value.strip() or None
-            temp_seconds = role_menus.parse_duration(self.temp_field.value)
+            # Custom box overrides the radio when filled (ColourModal-style
+            # precedence); otherwise the picked preset; otherwise permanent.
+            raw = (self.temp_custom.value or "").strip()
+            if raw:
+                temp_seconds = role_menus.parse_duration(raw)
+            elif self.temp_radio.value is not None:
+                temp_seconds = role_menus.parse_duration(self.temp_radio.value)
+            else:
+                temp_seconds = 0
             for opt in self.builder.draft.get("options", []):
                 if opt["role_id"] == self.role_id:
                     opt["emoji"] = emoji

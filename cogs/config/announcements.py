@@ -18,7 +18,7 @@ from discord.ext import commands
 from tools import embed_creator
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.time import FutureTime, ShortTime
+from tools.time import FutureTime, ShortTime, parse_timestamp_token
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -152,7 +152,7 @@ class ScheduleModal(LocaleModal):
         self.panel = panel
         self.when_field = discord.ui.TextInput(
             label=_("When"),
-            placeholder=_("e.g. 2h, tomorrow at 9am, in 3 days"),
+            placeholder=_("e.g. 2h, tomorrow at 9am, or a <t:...> tag"),
             max_length=100,
             required=True,
         )
@@ -167,19 +167,25 @@ class ScheduleModal(LocaleModal):
             else datetime.timezone.utc
         )
         now = interaction.created_at.astimezone(tzinfo)
-        try:
-            dt = ShortTime(raw, now=now, tzinfo=tzinfo).dt
-        except commands.BadArgument:
+        # A pasted Discord timestamp token wins outright (UTC); otherwise fall
+        # back to the existing ShortTime -> FutureTime natural-language parsing.
+        dt = parse_timestamp_token(raw)
+        if dt is None:
             try:
-                dt = FutureTime(raw, now=now, tzinfo=tzinfo).dt
+                dt = ShortTime(raw, now=now, tzinfo=tzinfo).dt
             except commands.BadArgument:
-                return await interaction.response.send_message(
-                    _(
-                        "I couldn't understand that time. Try something like "
-                        "`2h`, `tomorrow at 9am`, or `in 3 days`."
-                    ),
-                    ephemeral=True,
-                )
+                try:
+                    dt = FutureTime(raw, now=now, tzinfo=tzinfo).dt
+                except commands.BadArgument:
+                    return await interaction.response.send_message(
+                        _(
+                            "I couldn't understand that time. Try something like "
+                            "`2h`, `tomorrow at 9am`, or `in 3 days`."
+                        ),
+                        ephemeral=True,
+                    )
+        else:
+            dt = dt.astimezone(tzinfo)
         if dt <= now:
             return await interaction.response.send_message(
                 _("That time is in the past. Give me a moment in the future."),

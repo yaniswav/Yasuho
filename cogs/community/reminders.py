@@ -2,8 +2,10 @@ import asyncio
 import datetime
 import json
 import logging
+from typing import Optional
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from tools import modchecks
@@ -13,6 +15,7 @@ from tools.time import (
     ShortTime,
     UserFriendlyTime,
     human_timedelta,
+    parse_timestamp_token,
 )
 from tools.views import AuthorView, LocaleModal
 
@@ -42,7 +45,7 @@ class RemindModal(LocaleModal):
 
         self.when_input = discord.ui.TextInput(
             label=_("When"),
-            placeholder=_("e.g. 10m, tomorrow at 6pm, in 3 days"),
+            placeholder=_("e.g. 10m, tomorrow at 6pm, or a <t:...> tag"),
             style=discord.TextStyle.short,
             required=True,
             max_length=100,
@@ -67,19 +70,25 @@ class RemindModal(LocaleModal):
         tzinfo = await self.cog.get_tzinfo(interaction.user.id)
         now = interaction.created_at.astimezone(tzinfo)
 
-        try:
-            dt = ShortTime(when_raw, now=now, tzinfo=tzinfo).dt
-        except commands.BadArgument:
+        # A pasted Discord timestamp token wins outright (UTC); otherwise fall
+        # back to the existing ShortTime -> FutureTime natural-language parsing.
+        dt = parse_timestamp_token(when_raw)
+        if dt is None:
             try:
-                dt = FutureTime(when_raw, now=now, tzinfo=tzinfo).dt
+                dt = ShortTime(when_raw, now=now, tzinfo=tzinfo).dt
             except commands.BadArgument:
-                return await interaction.response.send_message(
-                    _(
-                        "I couldn't understand that time. Try something like "
-                        "`10m`, `tomorrow at 6pm`, or `in 3 days`."
-                    ),
-                    ephemeral=True,
-                )
+                try:
+                    dt = FutureTime(when_raw, now=now, tzinfo=tzinfo).dt
+                except commands.BadArgument:
+                    return await interaction.response.send_message(
+                        _(
+                            "I couldn't understand that time. Try something like "
+                            "`10m`, `tomorrow at 6pm`, or `in 3 days`."
+                        ),
+                        ephemeral=True,
+                    )
+        else:
+            dt = dt.astimezone(tzinfo)
 
         if dt <= now:
             return await interaction.response.send_message(
@@ -252,18 +261,29 @@ class Reminder(commands.Cog):
             log.exception("Error while calling timer")
 
     @commands.hybrid_command()
+    @app_commands.describe(
+        when=(
+            "What to remind you about (and when, e.g. '10m buy milk'). "
+            "Blank opens a form."
+        ),
+        at=(
+            "A Discord timestamp to fire at, e.g. a <t:...> tag. "
+            "Overrides the time in 'when'."
+        ),
+    )
     async def remind(
         self,
         ctx,
+        at: Optional[commands.Timestamp] = None,
         *,
-        when: UserFriendlyTime(commands.clean_content, default="something") = None,
+        when: str = None,
     ):
         """Reminds you of something after a certain amount of time."""
 
-        # No time supplied -> offer the interactive form. Slash invocations can
-        # open the modal straight away; prefix invocations have no interaction,
-        # so they get a button that opens it on click.
-        if when is None:
+        # Nothing at all supplied -> offer the interactive form. Slash
+        # invocations can open the modal straight away; prefix invocations have
+        # no interaction, so they get a button that opens it on click.
+        if at is None and when is None:
             if ctx.interaction is not None:
                 return await ctx.interaction.response.send_modal(
                     RemindModal(self, ctx.channel.id, ctx.author.id)
@@ -274,6 +294,33 @@ class Reminder(commands.Cog):
             )
             return
 
+        if at is not None:
+            # A native timestamp wins as the fire time; the free-text remainder
+            # (if any) is the message VERBATIM - no time parsing on it. Cleaned
+            # for parity with the natural-language path (defangs @mentions).
+            dt = at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            now = ctx.message.created_at.astimezone(datetime.timezone.utc)
+            if dt <= now:
+                return await ctx.send(
+                    _("That time is in the past. Give me a moment in the future.")
+                )
+            remainder = (when or "").strip()
+            if remainder:
+                message = await commands.clean_content().convert(ctx, remainder)
+            else:
+                message = _(DEFAULT_REMINDER_MESSAGE)
+        else:
+            # No 'at' -> byte-for-byte today's path: the very same converter,
+            # invoked manually, so 'when' still yields (dt, message) and raises
+            # the same BadArgument on a bad or past time.
+            result = await UserFriendlyTime(
+                commands.clean_content, default="something"
+            ).convert(ctx, when)
+            dt = result.dt
+            message = result.arg
+
         if await self._pending_reminder_count(ctx.author.id) >= MAX_PENDING_REMINDERS:
             return await ctx.send(
                 _(
@@ -283,15 +330,15 @@ class Reminder(commands.Cog):
             )
 
         await self.create_timer(
-            when.dt,
+            dt,
             "reminder",
             author_id=ctx.author.id,
             channel_id=ctx.channel.id,
-            message=when.arg,
+            message=message,
         )
         await ctx.send(
             _("Okay, reminding you {when}: {message}").format(
-                when=discord.utils.format_dt(when.dt, "R"), message=when.arg
+                when=discord.utils.format_dt(dt, "R"), message=message
             )
         )
 

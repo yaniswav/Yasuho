@@ -8,6 +8,7 @@ import parsedatetime as pdt
 from dateutil.relativedelta import relativedelta
 from discord import app_commands
 from discord.ext import commands
+from discord.utils import TIMESTAMP_PATTERN
 
 from .formats import format_dt, human_join, plural
 
@@ -19,6 +20,23 @@ if TYPE_CHECKING:
 units = pdt.pdtLocales['en_US'].units
 units['minutes'].append('mins')
 units['seconds'].append('secs')
+
+
+def parse_timestamp_token(argument: str) -> Optional[datetime.datetime]:
+    """Parse a pasted Discord timestamp token into an aware UTC datetime.
+
+    Accepts a bare ``<t:unix>`` or a styled ``<t:unix:R>`` markdown token (the
+    discord.py 2.7 canonical :data:`discord.utils.TIMESTAMP_PATTERN`) and returns
+    the moment it points at, in UTC. Returns ``None`` when the whole string is
+    not such a token, so callers can fall through to their existing parsing.
+
+    Discord provides no timezone with the token, so UTC is assumed (same caveat
+    as ``app_commands.Timestamp`` / ``commands.Timestamp``).
+    """
+    match = TIMESTAMP_PATTERN.fullmatch((argument or "").strip())
+    if match is None:
+        return None
+    return datetime.datetime.fromtimestamp(int(match.group(1)), tz=datetime.timezone.utc)
 
 
 class ShortTime:
