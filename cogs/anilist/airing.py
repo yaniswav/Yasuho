@@ -358,7 +358,8 @@ class AiringCard(discord.ui.LayoutView):
 
     A cover-accented :class:`~discord.ui.Container` holds the aired-episode line
     (title link + "Episode N of X just aired." + a relative timestamp). The cover
-    art is a :class:`~discord.ui.Thumbnail` accessory beside the text, OMITTED
+    art is a :class:`~discord.ui.Thumbnail` accessory beside the text (its
+    ``description`` alt text is the media title, for screen readers), OMITTED
     when the media is adult (the text stays, only the image is dropped). A trailing
     :class:`~discord.ui.ActionRow` carries the 'AniList' link button and the
     persistent :class:`AiringSeenButton`. Every field degrades independently, so a
@@ -403,7 +404,12 @@ class AiringCard(discord.ui.LayoutView):
             # A Section requires an accessory; only build one when we have a cover
             # to show (never for adult media), else degrade to plain text displays.
             container.add_item(
-                discord.ui.Section(*texts, accessory=discord.ui.Thumbnail(thumb))
+                discord.ui.Section(
+                    *texts,
+                    accessory=discord.ui.Thumbnail(
+                        thumb, description=str(_media_title(media))[:256]
+                    ),
+                )
             )
         else:
             for text in texts:

@@ -963,7 +963,8 @@ class ActivityCard(discord.ui.LayoutView):
     A coloured :class:`~discord.ui.Container` (the media's cover accent, else
     :data:`CARD_ACCENT`) holds the update. A list activity renders a
     :class:`~discord.ui.Section` - the cover as a :class:`~discord.ui.Thumbnail`
-    accessory beside a bold headline (username link + action + title link) and a
+    accessory (its ``description`` alt text is the media title, for screen
+    readers) beside a bold headline (username link + action + title link) and a
     small subline - while a text activity drops the thumbnail and renders the
     post body (plus any image via a :class:`~discord.ui.MediaGallery`) straight
     in the container. A trailing :class:`~discord.ui.ActionRow` carries the
@@ -1039,7 +1040,12 @@ class ActivityCard(discord.ui.LayoutView):
             # A Section requires an accessory; only build one when we have a
             # cover to hang on it, otherwise degrade to plain text displays.
             container.add_item(
-                discord.ui.Section(*texts, accessory=discord.ui.Thumbnail(thumb))
+                discord.ui.Section(
+                    *texts,
+                    accessory=discord.ui.Thumbnail(
+                        thumb, description=str(_media_title(media))[:256]
+                    ),
+                )
             )
         else:
             for text in texts:
@@ -1380,8 +1386,10 @@ class _SelfAddToggleButton(discord.ui.Button):
 # tracked titles, offers a modal-driven AniList search to add one (the top matches
 # become a confirm select), and a paginated select to remove one; every mutation
 # persists through a cog helper and re-renders the same ephemeral message. It is
-# ephemeral, so only the admin who opened it can see or click it; it still extends
-# AuthorView so its interaction_check applies the invoker's locale (as elsewhere).
+# ephemeral, so only the admin who opened it can see or click it; both views are
+# Components V2 LayoutViews built on the panel's house style, so - like the panel -
+# they extend _AuthorLayoutView, which reapplies the invoker's locale and the
+# author gate that AuthorView normally supplies (a LayoutView cannot subclass it).
 
 
 class _TrackConfirmSelect(discord.ui.Select):
@@ -1442,25 +1450,86 @@ class _SubsBackButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class _SubsConfirmView(AuthorView):
+class _AuthorLayoutView(discord.ui.LayoutView):
+    """A Components V2 LayoutView gated to its originating author.
+
+    LayoutView cannot subclass :class:`~tools.views.AuthorView` (that is a plain
+    ``discord.ui.View``), so - exactly like :class:`AniListFeedPanel` - the author
+    gate and locale resolution AuthorView normally supplies are reimplemented
+    here: :meth:`interaction_check` applies the clicker's locale then rejects
+    anyone but ``author_id`` (using the same registered deny wording), and
+    :meth:`on_timeout` disables every control and edits the bound ``message`` in
+    place. Subclasses assemble their own :class:`~discord.ui.Container` and set
+    ``self.message`` so the timeout cleanup has something to edit.
+    """
+
+    def __init__(self, author_id, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.message = None
+
+    async def interaction_check(self, interaction):
+        # Component callbacks run in their own task where get_context never set
+        # the locale; resolve it here so this check AND the callback localize.
+        await i18n.apply_interaction_locale(interaction)
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                _("This panel isn't for you."), ephemeral=True
+            )
+            return False
+        return True
+
+    def _disable_all(self):
+        """Disable every button/select in the layout (walks nested ActionRows)."""
+
+        for child in self.walk_children():
+            if isinstance(child, _DISABLEABLE):
+                child.disabled = True
+
+    async def on_timeout(self):
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
+class _SubsConfirmView(_AuthorLayoutView):
     """Ephemeral confirm picker shown after a title search returns matches.
 
-    Turns the searched-for candidates into a single select; picking one inserts
-    the subscription (cap-enforced) and re-renders the manager, while Back simply
-    re-renders the manager unchanged. Reuses the manager's cog/guild/channel so it
-    can rebuild it in place on the SAME ephemeral message.
+    A single ANILIST_BLUE :class:`~discord.ui.Container` in the panel's house
+    style: a ``###`` heading and short prompt, a :class:`_TrackConfirmSelect`
+    turning the searched-for candidates into one select, and a Back button.
+    Picking a match inserts the subscription (cap-enforced) and re-renders the
+    manager; Back simply re-renders the manager unchanged. Reuses the manager's
+    cog/guild/channel so it can rebuild it in place on the SAME ephemeral message.
     """
 
     def __init__(self, cog, guild, author_id, channel_id, candidates, timeout=180):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.channel_id = channel_id
-        self.message = None
-        self.add_item(_TrackConfirmSelect(self, candidates))
-        self.add_item(_SubsBackButton(self))
+        self._build(candidates)
+
+    def _build(self, candidates):
+        container = discord.ui.Container(accent_colour=ANILIST_BLUE)
+        container.add_item(
+            discord.ui.TextDisplay(
+                "### "
+                + _("Track a title")
+                + "\n"
+                + _("Pick the exact title to track:")
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(_TrackConfirmSelect(self, candidates)))
+        container.add_item(discord.ui.ActionRow(_SubsBackButton(self)))
+        container.add_item(
+            discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
+        )
+        self.add_item(container)
 
     async def confirm(self, interaction, media):
         if media is None:
@@ -1616,14 +1685,18 @@ class _SubsPageButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class _SubsManagerView(AuthorView):
+class _SubsManagerView(_AuthorLayoutView):
     """Ephemeral per-feed tracked-releases manager (list / add / remove).
 
-    Renders the feed's subscribed titles as an embed plus a remove select (paged
-    at 25 per page), a Track-a-title button and, when there is more than one page,
-    Previous/Next buttons. Every mutation persists through a cog helper and the
-    cog re-renders this same ephemeral message from fresh DB state, so the list
-    can never drift from what is stored.
+    A single ANILIST_BLUE :class:`~discord.ui.Container` in the panel's house
+    style: a ``###`` heading, an optional note paragraph, the "posted in
+    {channel}" explanation, the subscribed titles as a bullet list with a ``-#``
+    "Tracking N/max" subline, then the controls - a remove
+    :class:`~discord.ui.ActionRow` select (paged at 25 per page), a Track-a-title
+    button and, when there is more than one page, Previous/Next buttons. Every
+    mutation persists through a cog helper and the cog re-renders this same
+    ephemeral message from fresh DB state, so the list can never drift from what
+    is stored.
     """
 
     PAGE_SIZE = 25
@@ -1632,15 +1705,12 @@ class _SubsManagerView(AuthorView):
         self, cog, guild, author_id, channel_id, subs, *, page=0, note=None,
         timeout=180,
     ):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.channel_id = channel_id
         self.subs = list(subs)
         self.note = note
-        self.message = None
         page_count = max(1, (len(self.subs) + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
         self.page = max(0, min(page, page_count - 1))
         self._page_count = page_count
@@ -1651,24 +1721,24 @@ class _SubsManagerView(AuthorView):
         return len(self.subs) >= af.MAX_SUBS_PER_FEED
 
     def _build(self):
-        start = self.page * self.PAGE_SIZE
-        window = self.subs[start : start + self.PAGE_SIZE]
-        if window:
-            self.add_item(_RemoveSubSelect(self, window))
-        self.add_item(_TrackTitleButton(self))
-        if self._page_count > 1:
-            self.add_item(
-                _SubsPageButton(self, forward=False, disabled=self.page == 0)
-            )
-            self.add_item(
-                _SubsPageButton(
-                    self, forward=True, disabled=self.page >= self._page_count - 1
-                )
-            )
+        container = discord.ui.Container(accent_colour=ANILIST_BLUE)
 
-    def build_embed(self):
         channel = self.guild.get_channel_or_thread(self.channel_id)
         label = channel.mention if channel is not None else str(self.channel_id)
+        header_parts = ["### " + _("Tracked releases")]
+        if self.note:
+            # The note already carries its own inline emphasis (e.g. a bold
+            # title), so it is added as its own paragraph, not re-wrapped in bold.
+            header_parts.append(self.note)
+        header_parts.append(
+            _(
+                "New episodes (anime) and chapters (manga) of these titles are "
+                "posted in {channel}, independently of any DM alerts. Up to {max} "
+                "titles per feed."
+            ).format(channel=label, max=af.MAX_SUBS_PER_FEED)
+        )
+        container.add_item(discord.ui.TextDisplay("\n\n".join(header_parts)))
+
         lines = []
         for row in self.subs:
             kind = _("Anime") if row["media_type"] == "ANIME" else _("Manga")
@@ -1677,30 +1747,36 @@ class _SubsManagerView(AuthorView):
         listing = "\n".join(lines) if lines else _("No titles tracked yet.")
         if len(listing) > 3500:
             listing = listing[:3500].rstrip() + "\n..."
-        parts = []
-        if self.note:
-            # The note already carries its own inline emphasis (e.g. a bold title),
-            # so it is added as its own paragraph rather than re-wrapped in bold.
-            parts.append(self.note)
-        parts.append(
-            _(
-                "New episodes (anime) and chapters (manga) of these titles are "
-                "posted in {channel}, independently of any DM alerts. Up to {max} "
-                "titles per feed."
-            ).format(channel=label, max=af.MAX_SUBS_PER_FEED)
+        tracking = "-# " + _("Tracking {count}/{max}").format(
+            count=len(self.subs), max=af.MAX_SUBS_PER_FEED
         )
-        parts.append(listing)
-        embed = discord.Embed(
-            title=_("Tracked releases"),
-            description="\n\n".join(parts),
-            colour=ANILIST_BLUE,
-        )
-        embed.set_footer(
-            text=_("Tracking {count}/{max}").format(
-                count=len(self.subs), max=af.MAX_SUBS_PER_FEED
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(listing + "\n\n" + tracking))
+
+        # Controls: the remove select (own ActionRow, only when the page has
+        # rows), then a button row with Track-a-title plus, when paged, Prev/Next.
+        start = self.page * self.PAGE_SIZE
+        window = self.subs[start : start + self.PAGE_SIZE]
+        container.add_item(discord.ui.Separator())
+        if window:
+            container.add_item(discord.ui.ActionRow(_RemoveSubSelect(self, window)))
+        button_row = discord.ui.ActionRow()
+        button_row.add_item(_TrackTitleButton(self))
+        if self._page_count > 1:
+            button_row.add_item(
+                _SubsPageButton(self, forward=False, disabled=self.page == 0)
             )
+            button_row.add_item(
+                _SubsPageButton(
+                    self, forward=True, disabled=self.page >= self._page_count - 1
+                )
+            )
+        container.add_item(button_row)
+
+        container.add_item(
+            discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
         )
-        return embed
+        self.add_item(container)
 
     async def run_search(self, interaction, query):
         """Search AniList for ``query`` and edit the manager into the confirm picker.
@@ -1729,14 +1805,9 @@ class _SubsManagerView(AuthorView):
         confirm.message = self.message
         self.stop()
         try:
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title=_("Track a title"),
-                    description=_("Pick the exact title to track:"),
-                    colour=ANILIST_BLUE,
-                ),
-                view=confirm,
-            )
+            # A Components V2 message carries its content inside the view, so edit
+            # with ``view=`` only (Discord rejects an ``embed=`` on such an edit).
+            await interaction.edit_original_response(view=confirm)
         except discord.HTTPException:
             log.debug("AniList feed: could not render the track-confirm picker")
 
@@ -2238,6 +2309,48 @@ class AniListFeedPanel(discord.ui.LayoutView):
             await self.message.edit(view=new)
         except discord.HTTPException:
             pass
+
+
+class _FeedNoticeView(discord.ui.LayoutView):
+    """A one-shot ANILIST_BLUE notice card in the feed panel's house style.
+
+    Non-interactive replacement for the classic ``discord.Embed`` replies of the
+    ``/anilistfeed set`` / ``follow`` commands: a ``###`` heading over a body
+    block inside a single :class:`~discord.ui.Container`. Carries no components,
+    so it needs no author gating and spawns no timeout task.
+    """
+
+    def __init__(self, heading, body, *, timeout=None):
+        super().__init__(timeout=timeout)
+        container = discord.ui.Container(accent_colour=ANILIST_BLUE)
+        text = "### " + heading
+        if body:
+            text += "\n" + body
+        container.add_item(discord.ui.TextDisplay(text))
+        self.add_item(container)
+
+
+class _FeedListView(discord.ui.LayoutView):
+    """The ``/anilistfeed list`` output as a Components V2 card.
+
+    A ``###`` heading over one titled block per feed (channel label in bold, then
+    its status / types / follows lines), each block separated by a rule - the
+    house-style equivalent of the per-feed embed fields it replaces. ``blocks`` is
+    a list of ``(label, body)`` pairs. Non-interactive, so no gating or timeout.
+    """
+
+    def __init__(self, heading, blocks, *, timeout=None):
+        super().__init__(timeout=timeout)
+        container = discord.ui.Container(accent_colour=ANILIST_BLUE)
+        container.add_item(discord.ui.TextDisplay("### " + heading))
+        for label, body in blocks:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "**{label}**\n{body}".format(label=label, body=body)
+                )
+            )
+        self.add_item(container)
 
 
 class AniListFeed(commands.Cog):
@@ -2901,19 +3014,17 @@ class AniListFeed(commands.Cog):
         view = _SubsManagerView(
             self, guild, author_id, channel_id, subs, page=page, note=note
         )
-        embed = view.build_embed()
+        # A Components V2 LayoutView carries its content inside the view, so every
+        # send/edit passes ``view=`` only (no embed): Discord rejects an ``embed=``
+        # on a CV2 message and this manager is CV2 from its first render.
         if new:
-            await interaction.response.send_message(
-                embed=embed, view=view, ephemeral=True
-            )
+            await interaction.response.send_message(view=view, ephemeral=True)
             view.message = await interaction.original_response()
             return view
         if interaction.response.is_done():
-            view.message = await interaction.edit_original_response(
-                embed=embed, view=view
-            )
+            view.message = await interaction.edit_original_response(view=view)
         else:
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(view=view)
             view.message = await interaction.original_response()
         return view
 
@@ -3181,10 +3292,7 @@ class AniListFeed(commands.Cog):
                 channel=target.mention
             )
 
-        embed = discord.Embed(
-            title=_("AniList feed"), description=message, colour=ANILIST_BLUE
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(view=_FeedNoticeView(_("AniList feed"), message))
 
     @anilistfeed.command(name="follow")
     @commands.guild_only()
@@ -3207,14 +3315,11 @@ class AniListFeed(commands.Cog):
         if error:
             return await ctx.send(error)
 
-        embed = discord.Embed(title=_("Now following"), colour=ANILIST_BLUE)
-        embed.add_field(
-            name=_("User"),
-            value=f"[{name}]({url})" if url else name,
-            inline=True,
+        user_value = f"[{name}]({url})" if url else name
+        body = "**{user}:** {value}\n**{feed}:** <#{channel}>".format(
+            user=_("User"), value=user_value, feed=_("Feed"), channel=channel_id
         )
-        embed.add_field(name=_("Feed"), value=f"<#{channel_id}>", inline=True)
-        await ctx.send(embed=embed)
+        await ctx.send(view=_FeedNoticeView(_("Now following"), body))
 
     @anilistfeed.command(name="unfollow")
     @commands.guild_only()
@@ -3347,7 +3452,7 @@ class AniListFeed(commands.Cog):
                 row["anilist_username"]
             )
 
-        embed = discord.Embed(title=_("AniList feeds"), colour=ANILIST_BLUE)
+        blocks = []
         for feed in feeds:
             cid = feed["channel_id"]
             channel = ctx.guild.get_channel_or_thread(cid)
@@ -3366,9 +3471,9 @@ class AniListFeed(commands.Cog):
             value = _(
                 "Status: {status}\nTypes: {types}\nFollowing: {names}"
             ).format(status=status, types=types, names=following)
-            embed.add_field(name=label, value=value, inline=False)
+            blocks.append((label, value))
 
-        await ctx.send(embed=embed)
+        await ctx.send(view=_FeedListView(_("AniList feeds"), blocks))
 
     @anilistfeed.command(name="remove", aliases=["delete"])
     @commands.guild_only()

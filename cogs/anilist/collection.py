@@ -420,7 +420,12 @@ class CollectionView(discord.ui.LayoutView):
         cover = (media.get("coverImage") or {}).get("large")
         if cover:
             container.add_item(
-                discord.ui.Section(text, accessory=discord.ui.Thumbnail(cover))
+                discord.ui.Section(
+                    text,
+                    accessory=discord.ui.Thumbnail(
+                        cover, description=str(title)[:256]
+                    ),
+                )
             )
         else:
             container.add_item(text)

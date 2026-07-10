@@ -107,7 +107,12 @@ class AniListProfileView(discord.ui.LayoutView):
         )
         if avatar:
             container.add_item(
-                discord.ui.Section(header, accessory=discord.ui.Thumbnail(avatar))
+                discord.ui.Section(
+                    header,
+                    accessory=discord.ui.Thumbnail(
+                        avatar, description=str(display_name)[:256]
+                    ),
+                )
             )
         else:
             container.add_item(header)
