@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 20:50+0000\n"
+"POT-Creation-Date: 2026-07-10 08:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -105,7 +105,7 @@ msgstr "La puntuación debe ser cero o un número positivo."
 msgid "Provide a name or link your account with `/anilist login`."
 msgstr "Indica un nombre o vincula tu cuenta con `/anilist login`."
 
-#: cogs/anilist/account.py:329 cogs/anilist/feed.py:2361
+#: cogs/anilist/account.py:329 cogs/anilist/feed.py:2456
 msgid "Could not resolve your AniList account."
 msgstr "No se pudo encontrar tu cuenta de AniList."
 
@@ -316,7 +316,7 @@ msgid "Keep current status"
 msgstr "Mantener el estado actual"
 
 #: cogs/anilist/components.py:264 cogs/anilist/components.py:700
-#: cogs/anilist/feed.py:1421 cogs/config/twitch.py:418
+#: cogs/anilist/feed.py:1472 cogs/config/twitch.py:418
 #: cogs/config/welcome.py:416
 msgid "Status"
 msgstr "Estado"
@@ -553,347 +553,343 @@ msgstr "Algo salió mal al vincular tu cuenta."
 msgid "Could not open the code form."
 msgstr "No pude abrir el formulario de código."
 
-#: cogs/anilist/feed.py:229 cogs/music/music.py:1558 cogs/music/music.py:1720
+#: cogs/anilist/feed.py:235 cogs/music/music.py:1558 cogs/music/music.py:1720
 msgid "Unknown title"
 msgstr "Título desconocido"
 
-#: cogs/anilist/feed.py:242
+#: cogs/anilist/feed.py:248
 #, python-brace-format
 msgid "watched episode {progress} of"
 msgstr "vio el episodio {progress} de"
 
-#: cogs/anilist/feed.py:243
+#: cogs/anilist/feed.py:249
 #, python-brace-format
 msgid "rewatched episode {progress} of"
 msgstr "volvió a ver el episodio {progress} de"
 
-#: cogs/anilist/feed.py:244
+#: cogs/anilist/feed.py:250
 #, python-brace-format
 msgid "read chapter {progress} of"
 msgstr "leyó el capítulo {progress} de"
 
-#: cogs/anilist/feed.py:245
+#: cogs/anilist/feed.py:251
 #, python-brace-format
 msgid "reread chapter {progress} of"
 msgstr "volvió a leer el capítulo {progress} de"
 
-#: cogs/anilist/feed.py:246
+#: cogs/anilist/feed.py:252
 msgid "completed"
 msgstr "completó"
 
-#: cogs/anilist/feed.py:247
+#: cogs/anilist/feed.py:253
 msgid "plans to watch"
 msgstr "planea ver"
 
-#: cogs/anilist/feed.py:248
+#: cogs/anilist/feed.py:254
 msgid "plans to read"
 msgstr "planea leer"
 
-#: cogs/anilist/feed.py:249
+#: cogs/anilist/feed.py:255
 msgid "paused watching"
 msgstr "pausó"
 
-#: cogs/anilist/feed.py:250
+#: cogs/anilist/feed.py:256
 msgid "paused reading"
 msgstr "pausó la lectura de"
 
-#: cogs/anilist/feed.py:251
+#: cogs/anilist/feed.py:257
 msgid "dropped"
 msgstr "abandonó"
 
-#: cogs/anilist/feed.py:304
+#: cogs/anilist/feed.py:310
 #, python-brace-format
 msgid "{n} like"
 msgid_plural "{n} likes"
 msgstr[0] "{n} me gusta"
 msgstr[1] "{n} me gusta"
 
-#: cogs/anilist/feed.py:307
+#: cogs/anilist/feed.py:313
 #, python-brace-format
 msgid "{n} reply"
 msgid_plural "{n} replies"
 msgstr[0] "{n} respuesta"
 msgstr[1] "{n} respuestas"
 
-#: cogs/anilist/feed.py:324
+#: cogs/anilist/feed.py:330
 #, python-brace-format
 msgid "{n} anime update"
 msgid_plural "{n} anime updates"
 msgstr[0] "{n} actualización de anime"
 msgstr[1] "{n} actualizaciones de anime"
 
-#: cogs/anilist/feed.py:327
+#: cogs/anilist/feed.py:333
 #, python-brace-format
 msgid "{n} manga update"
 msgid_plural "{n} manga updates"
 msgstr[0] "{n} actualización de manga"
 msgstr[1] "{n} actualizaciones de manga"
 
-#: cogs/anilist/feed.py:330
+#: cogs/anilist/feed.py:336
 #, python-brace-format
 msgid "{n} post"
 msgid_plural "{n} posts"
 msgstr[0] "{n} publicación"
 msgstr[1] "{n} publicaciones"
 
-#: cogs/anilist/feed.py:333
+#: cogs/anilist/feed.py:339
 #, python-brace-format
 msgid "{n} update"
 msgid_plural "{n} updates"
 msgstr[0] "{n} actualización"
 msgstr[1] "{n} actualizaciones"
 
-#: cogs/anilist/feed.py:472
+#: cogs/anilist/feed.py:478
 msgid "You are clicking too fast - give it a moment."
 msgstr "Estás haciendo clic demasiado rápido - espera un momento."
 
-#: cogs/anilist/feed.py:491 cogs/anilist/feed.py:2342
+#: cogs/anilist/feed.py:497 cogs/anilist/feed.py:2437
 msgid "AniList actions are unavailable right now."
 msgstr "Las acciones de AniList no están disponibles en este momento."
 
-#: cogs/anilist/feed.py:500
+#: cogs/anilist/feed.py:506
 msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
 msgstr "Vincula tu cuenta de AniList primero con `/anilist login`, luego podrás dar me gusta y responder directamente desde el feed."
 
-#: cogs/anilist/feed.py:509 cogs/anilist/feed.py:2352
+#: cogs/anilist/feed.py:515 cogs/anilist/feed.py:2447
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Tu vinculación de AniList ya no es válida - vuelve a vincularla con `/anilist login`."
 
-#: cogs/anilist/feed.py:542 cogs/anilist/feed.py:641
+#: cogs/anilist/feed.py:548 cogs/anilist/feed.py:647
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/feed.py:548 cogs/anilist/feed.py:647
+#: cogs/anilist/feed.py:554 cogs/anilist/feed.py:653
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr "Tu vinculación de AniList parece inválida ahora - vuelve a vincularla con `/anilist login`."
 
-#: cogs/anilist/feed.py:554 cogs/anilist/feed.py:653
+#: cogs/anilist/feed.py:560 cogs/anilist/feed.py:659
 msgid "This activity no longer exists on AniList."
 msgstr "Esta actividad ya no existe en AniList."
 
-#: cogs/anilist/feed.py:558 cogs/anilist/feed.py:657 cogs/anilist/feed.py:2061
+#: cogs/anilist/feed.py:564 cogs/anilist/feed.py:663 cogs/anilist/feed.py:2156
 msgid "I could not reach AniList - try again shortly."
 msgstr "No pude contactar con AniList - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/feed.py:566
+#: cogs/anilist/feed.py:572
 #, python-brace-format
 msgid "Liked - this activity now has {n} like."
 msgid_plural "Liked - this activity now has {n} likes."
 msgstr[0] "Le diste me gusta - esta actividad ahora tiene {n} me gusta."
 msgstr[1] "Le diste me gusta - esta actividad ahora tiene {n} me gusta."
 
-#: cogs/anilist/feed.py:572
+#: cogs/anilist/feed.py:578
 #, python-brace-format
 msgid "Like removed - this activity now has {n} like."
 msgid_plural "Like removed - this activity now has {n} likes."
 msgstr[0] "Me gusta quitado - esta actividad ahora tiene {n} me gusta."
 msgstr[1] "Me gusta quitado - esta actividad ahora tiene {n} me gusta."
 
-#: cogs/anilist/feed.py:601
+#: cogs/anilist/feed.py:607
 msgid "Reply on AniList"
 msgstr "Responder en AniList"
 
-#: cogs/anilist/feed.py:607
+#: cogs/anilist/feed.py:613
 msgid "Write your reply..."
 msgstr "Escribe tu respuesta..."
 
-#: cogs/anilist/feed.py:610
+#: cogs/anilist/feed.py:616
 msgid "Your reply"
 msgstr "Tu respuesta"
 
-#: cogs/anilist/feed.py:629
+#: cogs/anilist/feed.py:635
 msgid "Your reply was empty - nothing was posted."
 msgstr "Tu respuesta estaba vacía - no se publicó nada."
 
-#: cogs/anilist/feed.py:663
+#: cogs/anilist/feed.py:669
 msgid "AniList did not accept that reply - try again shortly."
 msgstr "AniList no aceptó esa respuesta - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/feed.py:667
+#: cogs/anilist/feed.py:673
 #, python-brace-format
 msgid "Your reply was posted. [See it on AniList]({url})"
 msgstr "Tu respuesta fue publicada. [Verla en AniList]({url})"
 
-#: cogs/anilist/feed.py:748
+#: cogs/anilist/feed.py:754
 msgid "An AniList update could not be rendered."
 msgstr "No se pudo mostrar una actualización de AniList."
 
-#: cogs/anilist/feed.py:771 cogs/anilist/feed.py:806 cogs/anilist/feed.py:898
+#: cogs/anilist/feed.py:777 cogs/anilist/feed.py:812 cogs/anilist/feed.py:904
 msgid "Someone"
 msgstr "Alguien"
 
-#: cogs/anilist/feed.py:782
+#: cogs/anilist/feed.py:788
 #, python-brace-format
 msgid "{user} {action} {title}"
 msgstr "{user} {action} {title}"
 
-#: cogs/anilist/feed.py:811
+#: cogs/anilist/feed.py:817
 #, python-brace-format
 msgid "{user} posted an update"
 msgstr "{user} publicó una actualización"
 
-#: cogs/anilist/feed.py:838
+#: cogs/anilist/feed.py:844
 msgid "AniList"
 msgstr "AniList"
 
-#: cogs/anilist/feed.py:873
+#: cogs/anilist/feed.py:879
 msgid "More AniList activity"
 msgstr "Más actividad de AniList"
 
-#: cogs/anilist/feed.py:886
+#: cogs/anilist/feed.py:892
 #, python-brace-format
 msgid "...and {count} more update"
 msgid_plural "...and {count} more updates"
 msgstr[0] "...y {count} actualización más"
 msgstr[1] "...y {count} actualizaciones más"
 
-#: cogs/anilist/feed.py:902
+#: cogs/anilist/feed.py:908
 #, python-brace-format
 msgid "{user} - {summary}"
 msgstr "{user} - {summary}"
 
-#: cogs/anilist/feed.py:910
+#: cogs/anilist/feed.py:916
 #, python-brace-format
 msgid "+{count} other"
 msgid_plural "+{count} others"
 msgstr[0] "+{count} más"
 msgstr[1] "+{count} más"
 
-#: cogs/anilist/feed.py:972
+#: cogs/anilist/feed.py:978
 msgid "Anime"
 msgstr "Anime"
 
-#: cogs/anilist/feed.py:973
+#: cogs/anilist/feed.py:979
 msgid "Manga"
 msgstr "Manga"
 
-#: cogs/anilist/feed.py:974
+#: cogs/anilist/feed.py:980
 msgid "Posts"
 msgstr "Publicaciones"
 
-#: cogs/anilist/feed.py:994
+#: cogs/anilist/feed.py:1000
 msgid "Switch feed..."
 msgstr "Cambiar de feed..."
 
-#: cogs/anilist/feed.py:1030
+#: cogs/anilist/feed.py:1035
 msgid "Move this feed to..."
 msgstr "Mover este feed a..."
 
-#: cogs/anilist/feed.py:1032
+#: cogs/anilist/feed.py:1037
 msgid "Pick a channel to create a feed..."
 msgstr "Elige un canal para crear un feed..."
 
-#: cogs/anilist/feed.py:1085
+#: cogs/anilist/feed.py:1088
 msgid "At least one activity type must stay enabled."
 msgstr "Al menos un tipo de actividad debe permanecer activado."
 
-#: cogs/anilist/feed.py:1107
+#: cogs/anilist/feed.py:1110
 #, python-brace-format
 msgid "Members can join: {state}"
 msgstr "Los miembros pueden unirse: {state}"
 
-#: cogs/anilist/feed.py:1108 cogs/anilist/feed.py:1405
-#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
+#: cogs/anilist/feed.py:1111 cogs/config/welcome.py:142
+#: cogs/config/welcome.py:433 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:443
 msgid "On"
 msgstr "Activado"
 
-#: cogs/anilist/feed.py:1108 cogs/anilist/feed.py:1405
-#: cogs/config/welcome.py:142 cogs/config/welcome.py:433
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:443
-#: cogs/music/music.py:269
+#: cogs/anilist/feed.py:1111 cogs/config/welcome.py:142
+#: cogs/config/welcome.py:433 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:443 cogs/music/music.py:269
 msgid "Off"
 msgstr "Desactivado"
 
-#: cogs/anilist/feed.py:1134 cogs/config/twitch.py:311
+#: cogs/anilist/feed.py:1136 cogs/config/twitch.py:311
 #: cogs/config/welcome.py:204
 msgid "Disable"
 msgstr "Desactivar"
 
-#: cogs/anilist/feed.py:1134 cogs/config/twitch.py:311
+#: cogs/anilist/feed.py:1136 cogs/config/twitch.py:311
 #: cogs/config/welcome.py:204
 msgid "Enable"
 msgstr "Activar"
 
-#: cogs/anilist/feed.py:1161
+#: cogs/anilist/feed.py:1162
 msgid "Delete"
 msgstr "Eliminar"
 
-#: cogs/anilist/feed.py:1162 tools/arg_completion.py:219
+#: cogs/anilist/feed.py:1163 tools/arg_completion.py:219
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: cogs/anilist/feed.py:1166
+#: cogs/anilist/feed.py:1167
 msgid "Delete this feed?"
 msgstr "¿Eliminar este feed?"
 
-#: cogs/anilist/feed.py:1168
+#: cogs/anilist/feed.py:1169
 #, python-brace-format
 msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
 msgstr "Esto elimina permanentemente el feed de AniList en {channel} y a todos a quienes sigue. Esto no se puede deshacer."
 
-#: cogs/anilist/feed.py:1183
+#: cogs/anilist/feed.py:1184
 msgid "Feed deleted."
 msgstr "Feed eliminado."
 
-#: cogs/anilist/feed.py:1196 cogs/moderation/moderation.py:1032
+#: cogs/anilist/feed.py:1197 cogs/moderation/moderation.py:1032
 #: cogs/moderation/moderation.py:1085 tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr "Cancelado."
 
-#: cogs/anilist/feed.py:1206
+#: cogs/anilist/feed.py:1207
 msgid "Delete feed"
 msgstr "Eliminar feed"
 
-#: cogs/anilist/feed.py:1224
+#: cogs/anilist/feed.py:1225
 msgid "Add a follow"
 msgstr "Añadir un seguimiento"
 
-#: cogs/anilist/feed.py:1227
+#: cogs/anilist/feed.py:1228
 msgid "AniList username"
 msgstr "Nombre de usuario de AniList"
 
-#: cogs/anilist/feed.py:1256
+#: cogs/anilist/feed.py:1257
 #, python-brace-format
 msgid "Now following **{name}**."
 msgstr "Ahora siguiendo a **{name}**."
 
-#: cogs/anilist/feed.py:1266
+#: cogs/anilist/feed.py:1267
 msgid "Add follow"
 msgstr "Añadir seguimiento"
 
-#: cogs/anilist/feed.py:1273 cogs/anilist/feed.py:2119
+#: cogs/anilist/feed.py:1274 cogs/anilist/feed.py:2214
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr "Este feed ya sigue al máximo de {max} usuarios."
 
-#: cogs/anilist/feed.py:1296
+#: cogs/anilist/feed.py:1297
 msgid "Remove a follow..."
 msgstr "Quitar un seguimiento..."
 
-#: cogs/anilist/feed.py:1371
+#: cogs/anilist/feed.py:1380 cogs/community/usersettings.py:99
+#: cogs/config/rooms.py:1062 tools/views.py:22
+msgid "This panel isn't for you."
+msgstr "Este panel no es para ti."
+
+#: cogs/anilist/feed.py:1436 cogs/anilist/feed.py:1464
 msgid "AniList activity feed"
 msgstr "Feed de actividad de AniList"
 
-#: cogs/anilist/feed.py:1375
+#: cogs/anilist/feed.py:1439
 #, python-brace-format
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo para crear uno (hasta {max} por servidor)."
 
-#: cogs/anilist/feed.py:1378 cogs/anilist/feed.py:1432
+#: cogs/anilist/feed.py:1447 cogs/anilist/feed.py:1528
 #: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
 msgid "Only you can use these controls."
 msgstr "Solo tú puedes usar estos controles."
 
-#: cogs/anilist/feed.py:1382
-msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
-msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
-
-#: cogs/anilist/feed.py:1387
-msgid "Feeds"
-msgstr "Feeds"
-
-#: cogs/anilist/feed.py:1396 cogs/config/settings.py:53
+#: cogs/anilist/feed.py:1458 cogs/config/settings.py:53
 #: cogs/config/twitch.py:420 cogs/config/welcome.py:418
 #: cogs/moderation/automod.py:363 cogs/moderation/automod.py:374
 #: cogs/moderation/automod.py:385 cogs/moderation/automod.py:401
@@ -901,7 +897,7 @@ msgstr "Feeds"
 msgid "Enabled"
 msgstr "Activado"
 
-#: cogs/anilist/feed.py:1396 cogs/config/settings.py:53
+#: cogs/anilist/feed.py:1458 cogs/config/settings.py:53
 #: cogs/config/twitch.py:422 cogs/config/welcome.py:420
 #: cogs/config/welcome.py:672 cogs/moderation/automod.py:363
 #: cogs/moderation/automod.py:374 cogs/moderation/automod.py:385
@@ -909,20 +905,16 @@ msgstr "Activado"
 msgid "Disabled"
 msgstr "Desactivado"
 
-#: cogs/anilist/feed.py:1398
+#: cogs/anilist/feed.py:1460
 #, python-brace-format
 msgid "{status} ({count} recent failures)"
 msgstr "{status} ({count} fallos recientes)"
 
-#: cogs/anilist/feed.py:1403 cogs/anilist/feed.py:2421
-msgid "none"
-msgstr "ninguno"
+#: cogs/anilist/feed.py:1466
+msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
+msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
 
-#: cogs/anilist/feed.py:1414 cogs/anilist/feed.py:2429
-msgid "no one yet"
-msgstr "nadie todavía"
-
-#: cogs/anilist/feed.py:1417 cogs/config/announcements.py:262
+#: cogs/anilist/feed.py:1470 cogs/config/announcements.py:262
 #: cogs/config/rolemenus.py:478 cogs/config/starboard.py:180
 #: cogs/config/twitch.py:426 cogs/config/welcome.py:424
 #: cogs/config/welcome.py:651 cogs/moderation/modlog.py:416
@@ -930,136 +922,144 @@ msgstr "nadie todavía"
 msgid "Channel"
 msgstr "Canal"
 
-#: cogs/anilist/feed.py:1423
-msgid "Members can join"
-msgstr "Los miembros pueden unirse"
+#: cogs/anilist/feed.py:1479
+msgid "Feeds"
+msgstr "Feeds"
 
-#: cogs/anilist/feed.py:1425
+#: cogs/anilist/feed.py:1492
 msgid "Types"
 msgstr "Tipos"
 
-#: cogs/anilist/feed.py:1427
+#: cogs/anilist/feed.py:1510 cogs/anilist/feed.py:2524
+msgid "no one yet"
+msgstr "nadie todavía"
+
+#: cogs/anilist/feed.py:1514
 #, python-brace-format
 msgid "Following ({count})"
 msgstr "Siguiendo ({count})"
 
-#: cogs/anilist/feed.py:1910 cogs/anilist/feed.py:1946
-#: cogs/anilist/feed.py:2245
+#: cogs/anilist/feed.py:2005 cogs/anilist/feed.py:2041
+#: cogs/anilist/feed.py:2340
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "{channel} ya es un feed de AniList."
 
-#: cogs/anilist/feed.py:1918
+#: cogs/anilist/feed.py:2013
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "Este servidor ya tiene el máximo de {max} feeds. Elimina uno primero."
 
-#: cogs/anilist/feed.py:1958
+#: cogs/anilist/feed.py:2053
 msgid "That feed no longer exists."
 msgstr "Ese feed ya no existe."
 
-#: cogs/anilist/feed.py:2042
+#: cogs/anilist/feed.py:2137
 msgid "Give me an AniList username to follow."
 msgstr "Dame un nombre de usuario de AniList para seguir."
 
-#: cogs/anilist/feed.py:2052
+#: cogs/anilist/feed.py:2147
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un minuto."
 
-#: cogs/anilist/feed.py:2070
+#: cogs/anilist/feed.py:2165
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "No encontré ningún usuario de AniList llamado **{name}**."
 
-#: cogs/anilist/feed.py:2164
+#: cogs/anilist/feed.py:2259
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "Este servidor no tiene ningún feed de AniList activo. Crea uno o vuelve a activarlo primero con `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:2175
+#: cogs/anilist/feed.py:2270
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "Este servidor tiene varios feeds. Ejecuta esto en un canal de feed ({channels})."
 
-#: cogs/anilist/feed.py:2221
+#: cogs/anilist/feed.py:2316
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "Este servidor ya tiene el máximo de {max} feeds. Quita uno primero con `/anilistfeed remove`."
 
-#: cogs/anilist/feed.py:2231
+#: cogs/anilist/feed.py:2326
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "Feed de AniList creado en {channel}. Añade usuarios con `/anilistfeed follow`."
 
-#: cogs/anilist/feed.py:2241
+#: cogs/anilist/feed.py:2336
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "Feed de AniList reactivado en {channel}."
 
-#: cogs/anilist/feed.py:2250
+#: cogs/anilist/feed.py:2345
 msgid "AniList feed"
 msgstr "Feed de AniList"
 
-#: cogs/anilist/feed.py:2275
+#: cogs/anilist/feed.py:2370
 msgid "Now following"
 msgstr "Ahora siguiendo"
 
-#: cogs/anilist/feed.py:2277
+#: cogs/anilist/feed.py:2372
 msgid "User"
 msgstr "Usuario"
 
-#: cogs/anilist/feed.py:2281
+#: cogs/anilist/feed.py:2376
 msgid "Feed"
 msgstr "Feed"
 
-#: cogs/anilist/feed.py:2306
+#: cogs/anilist/feed.py:2401
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "Este feed no sigue a **{name}**."
 
-#: cogs/anilist/feed.py:2309
+#: cogs/anilist/feed.py:2404
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "Dejaste de seguir a **{name}**."
 
-#: cogs/anilist/feed.py:2334
+#: cogs/anilist/feed.py:2429
 msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
 msgstr "Este feed no permite que los miembros se unan por su cuenta. Pide a un moderador que active **Los miembros pueden unirse** en `/anilistfeed`."
 
-#: cogs/anilist/feed.py:2347
+#: cogs/anilist/feed.py:2442
 msgid "Link your AniList account first with `/anilist login`."
 msgstr "Vincula tu cuenta de AniList primero con `/anilist login`."
 
-#: cogs/anilist/feed.py:2369
+#: cogs/anilist/feed.py:2464
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "Has dejado el feed de AniList en <#{channel}>."
 
-#: cogs/anilist/feed.py:2377
+#: cogs/anilist/feed.py:2472
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "Este feed está lleno ahora mismo - pide a un moderador que haga espacio."
 
-#: cogs/anilist/feed.py:2381
+#: cogs/anilist/feed.py:2476
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "Te has unido al feed de AniList en <#{channel}>."
 
-#: cogs/anilist/feed.py:2399
+#: cogs/anilist/feed.py:2494
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "Este servidor todavía no tiene un feed de AniList. Crea uno con `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:2415
+#: cogs/anilist/feed.py:2510
 msgid "AniList feeds"
 msgstr "Feeds de AniList"
 
-#: cogs/anilist/feed.py:2422
+#: cogs/anilist/feed.py:2516
+msgid "none"
+msgstr "ninguno"
+
+#: cogs/anilist/feed.py:2517
 msgid "enabled"
 msgstr "activado"
 
-#: cogs/anilist/feed.py:2422
+#: cogs/anilist/feed.py:2517
 msgid "disabled"
 msgstr "desactivado"
 
-#: cogs/anilist/feed.py:2432
+#: cogs/anilist/feed.py:2527
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -1070,12 +1070,12 @@ msgstr ""
 "Tipos: {types}\n"
 "Siguiendo: {names}"
 
-#: cogs/anilist/feed.py:2455
+#: cogs/anilist/feed.py:2550
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "{channel} no es un feed de AniList."
 
-#: cogs/anilist/feed.py:2460
+#: cogs/anilist/feed.py:2555
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "Se quitó el feed de AniList en {channel}."
@@ -1414,11 +1414,6 @@ msgstr "Desactivar"
 #: cogs/community/usersettings.py:72
 msgid "Turn on"
 msgstr "Activar"
-
-#: cogs/community/usersettings.py:99 cogs/config/rooms.py:1062
-#: tools/views.py:22
-msgid "This panel isn't for you."
-msgstr "Este panel no es para ti."
 
 #: cogs/community/usersettings.py:107
 msgid "## Your preferences"
@@ -4269,7 +4264,7 @@ msgstr "No queda nada a lo que saltar."
 msgid "Volume set to {volume}%."
 msgstr "Volumen establecido en {volume}%."
 
-#: cogs/music/music.py:519 locales/command_strings.py:149
+#: cogs/music/music.py:519 locales/command_strings.py:159
 msgid "off"
 msgstr "desactivado"
 
@@ -5396,482 +5391,522 @@ msgid "Create a native yes/no poll (runs for 24 hours)."
 msgstr "Crea una encuesta nativa de sí/no (dura 24 horas)."
 
 #: locales/command_strings.py:30
+msgid "Create or re-enable an AniList feed on a channel (default: here)."
+msgstr "Crea o reactiva un feed de AniList en un canal (por defecto, aquí)."
+
+#: locales/command_strings.py:31
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
 msgstr "Elimina un panel de roles con botones por el ID de su mensaje (quita los botones)."
 
-#: locales/command_strings.py:31
+#: locales/command_strings.py:32
+msgid "Delete a feed and its follows (default: this channel)."
+msgstr "Elimina un feed y sus seguimientos (por defecto, este canal)."
+
+#: locales/command_strings.py:33
 msgid "Delete the Live streamer role and unlink it from the config."
 msgstr "Elimina el rol de streamer en directo y desvincúlalo de la configuración."
 
-#: locales/command_strings.py:32
+#: locales/command_strings.py:34
 msgid "Disable moderation logging for this guild."
 msgstr "Desactiva el registro de moderación para este servidor."
 
-#: locales/command_strings.py:33
+#: locales/command_strings.py:35
 msgid "Disable the starboard and wipe its configuration for this guild."
 msgstr "Desactiva el starboard y borra su configuración para este servidor."
 
-#: locales/command_strings.py:34
+#: locales/command_strings.py:36
 msgid "Disable the welcome message for your guild."
 msgstr "Desactiva el mensaje de bienvenida de tu servidor."
 
-#: locales/command_strings.py:35
+#: locales/command_strings.py:37
 msgid "Disconnect the player from the voice channel."
 msgstr "Desconecta el reproductor del canal de voz."
 
-#: locales/command_strings.py:36
+#: locales/command_strings.py:38
 msgid "Displays information about a member of the guild."
 msgstr "Muestra información sobre un miembro del servidor."
 
-#: locales/command_strings.py:37
+#: locales/command_strings.py:39
 msgid "Displays information about the bot."
 msgstr "Muestra información sobre el bot."
 
-#: locales/command_strings.py:38
+#: locales/command_strings.py:40
 msgid "Displays information about the current guild."
 msgstr "Muestra información sobre el servidor actual."
 
-#: locales/command_strings.py:39
+#: locales/command_strings.py:41
 msgid "Displays the avatar of a member."
 msgstr "Muestra el avatar de un miembro."
 
-#: locales/command_strings.py:40
+#: locales/command_strings.py:42
 msgid "Edit a profile field through a guided form (radio picker + value)."
 msgstr "Edita un campo del perfil mediante un formulario guiado (selector + valor)."
 
-#: locales/command_strings.py:41
+#: locales/command_strings.py:43
 msgid "Enable or disable Discord-invite filtering for this guild."
 msgstr "Activa o desactiva el filtrado de invitaciones de Discord para este servidor."
 
-#: locales/command_strings.py:42
+#: locales/command_strings.py:44
 msgid "Enable or disable link filtering for this guild."
 msgstr "Activa o desactiva el filtrado de enlaces para este servidor."
 
-#: locales/command_strings.py:43
+#: locales/command_strings.py:45
 msgid "Enable or disable spam filtering for this guild."
 msgstr "Activa o desactiva el filtro de spam para este servidor."
 
-#: locales/command_strings.py:44
+#: locales/command_strings.py:46
 msgid "Enable or disable the leveling system for this server."
 msgstr "Activa o desactiva el sistema de niveles para este servidor."
 
-#: locales/command_strings.py:45
+#: locales/command_strings.py:47
 msgid "Fetch the lyrics of a song using Genius."
 msgstr "Obtén la letra de una canción usando Genius."
 
-#: locales/command_strings.py:46
+#: locales/command_strings.py:48
 msgid "Finish linking with the PIN code AniList gave you."
 msgstr "Termina de vincular con el codigo PIN que te dio AniList."
 
-#: locales/command_strings.py:47
+#: locales/command_strings.py:49
+msgid "Follow an AniList user in this server's feed."
+msgstr "Sigue a un usuario de AniList en el feed de este servidor."
+
+#: locales/command_strings.py:50
 msgid "Gaming profile related commands."
 msgstr "Comandos relacionados con el perfil de gaming."
 
-#: locales/command_strings.py:48
+#: locales/command_strings.py:51
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
 msgstr "Actualizacion guiada: elige el titulo haciendo clic y luego edita un formulario prerellenado."
 
-#: locales/command_strings.py:49
+#: locales/command_strings.py:52
 msgid "Interactively browse and remove a member's warnings."
 msgstr "Explora y elimina de forma interactiva las advertencias de un miembro."
 
-#: locales/command_strings.py:50
+#: locales/command_strings.py:53
+msgid "Join or leave this server's AniList feed with your linked account."
+msgstr "Únete o sal del feed de AniList de este servidor con tu cuenta vinculada."
+
+#: locales/command_strings.py:54
 msgid "Kicks an annoying user. Requires kick members permission. Also bot must have this permission."
 msgstr "Expulsa a un usuario molesto. Requiere el permiso de expulsar miembros. El bot también debe tener este permiso."
 
-#: locales/command_strings.py:51
+#: locales/command_strings.py:55
 msgid "Link your AniList account and edit your lists."
 msgstr "Vincula tu cuenta de AniList y edita tus listas."
 
-#: locales/command_strings.py:52
+#: locales/command_strings.py:56
 msgid "List all reaction-role mappings for this guild."
 msgstr "Lista todas las asignaciones de roles por reacción de este servidor."
 
-#: locales/command_strings.py:53
+#: locales/command_strings.py:57
 msgid "List every blacklisted user."
 msgstr "Lista todos los usuarios en la lista negra."
 
-#: locales/command_strings.py:54
+#: locales/command_strings.py:58
 msgid "List every button-role panel set up in this guild."
 msgstr "Lista todos los paneles de roles con botones configurados en este servidor."
 
-#: locales/command_strings.py:55
+#: locales/command_strings.py:59
 msgid "List the available prefixes for your guild."
 msgstr "Lista los prefijos disponibles para tu servidor."
 
-#: locales/command_strings.py:56
+#: locales/command_strings.py:60
 msgid "List the configured autoroom hubs in this server."
 msgstr "Lista los hubs de autosalas configurados en este servidor."
 
-#: locales/command_strings.py:57
+#: locales/command_strings.py:61
+msgid "List this server's feeds, their types and followed users."
+msgstr "Lista los feeds de este servidor, sus tipos y los usuarios seguidos."
+
+#: locales/command_strings.py:62
 msgid "Look up a Minecraft account and render its skin."
 msgstr "Busca una cuenta de Minecraft y renderiza su skin."
 
-#: locales/command_strings.py:58
+#: locales/command_strings.py:63
 msgid "Look up a character on AniList."
 msgstr "Busca un personaje en AniList."
 
-#: locales/command_strings.py:59
+#: locales/command_strings.py:64
 msgid "Look up a manga on AniList."
 msgstr "Busca un manga en AniList."
 
-#: locales/command_strings.py:60
+#: locales/command_strings.py:65
 msgid "Look up an animation studio on AniList."
 msgstr "Busca un estudio de animacion en AniList."
 
-#: locales/command_strings.py:61
+#: locales/command_strings.py:66
 msgid "Look up an anime on AniList."
 msgstr "Busca un anime en AniList."
 
-#: locales/command_strings.py:62
+#: locales/command_strings.py:67
 msgid "Look up an osu! player's stats."
 msgstr "Busca las estadísticas de un jugador de osu!."
 
-#: locales/command_strings.py:63
+#: locales/command_strings.py:68
 msgid "Map an emoji on a message to a role."
 msgstr "Vincula un emoji de un mensaje a un rol."
 
-#: locales/command_strings.py:64
+#: locales/command_strings.py:69
 msgid "Move a role to the given position in the hierarchy."
 msgstr "Mueve un rol a la posición indicada en la jerarquía."
 
-#: locales/command_strings.py:65
+#: locales/command_strings.py:70
 msgid "Moves an annoying user to a channel."
 msgstr "Mueve a un usuario molesto a un canal."
 
-#: locales/command_strings.py:66
+#: locales/command_strings.py:71
 msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
 msgstr "Encuesta de opción múltiple: quickpoll pregunta | opción 1 | opción 2 ... (sin argumentos abre un formulario)."
 
-#: locales/command_strings.py:67
+#: locales/command_strings.py:72
 msgid "Mutes the specified member."
 msgstr "Silencia al miembro especificado."
 
-#: locales/command_strings.py:68
+#: locales/command_strings.py:73
 msgid "One of: track, all, off."
 msgstr "Uno de: track, all, off."
 
-#: locales/command_strings.py:69
+#: locales/command_strings.py:74
 msgid "Open the Twitch live-alert builder."
 msgstr "Abre el creador de alertas en directo de Twitch."
 
-#: locales/command_strings.py:70
+#: locales/command_strings.py:75
 msgid "Open the announcement builder."
 msgstr "Abre el creador de anuncios."
 
-#: locales/command_strings.py:71
+#: locales/command_strings.py:76
 msgid "Open the autoroom hub setup panel."
 msgstr "Abre el panel de configuración de hubs de autosalas."
 
-#: locales/command_strings.py:72
+#: locales/command_strings.py:77
 msgid "Open the custom-commands builder."
 msgstr "Abre el creador de comandos personalizados."
 
-#: locales/command_strings.py:73
+#: locales/command_strings.py:78
 msgid "Open the interactive AutoMod control panel."
 msgstr "Abre el panel de control interactivo de AutoMod."
 
-#: locales/command_strings.py:74
+#: locales/command_strings.py:79
 msgid "Open the interactive button-role builder."
 msgstr "Abre el creador interactivo de roles con botones."
 
-#: locales/command_strings.py:75
+#: locales/command_strings.py:80
 msgid "Open the interactive server-settings panel (also: setup)."
 msgstr "Abre el panel interactivo de configuración del servidor (también: setup)."
 
-#: locales/command_strings.py:76
+#: locales/command_strings.py:81
 msgid "Open the moderation-log control panel."
 msgstr "Abre el panel de control del registro de moderación."
 
-#: locales/command_strings.py:77
+#: locales/command_strings.py:82
 msgid "Open the self-role menu builder."
 msgstr "Abre el creador del menú de roles."
 
-#: locales/command_strings.py:78
+#: locales/command_strings.py:83
 msgid "Open the welcome control panel."
 msgstr "Abre el panel de control de bienvenida."
 
-#: locales/command_strings.py:79
+#: locales/command_strings.py:84
+msgid "Open this server's AniList feed control panel."
+msgstr "Abre el panel de control del feed de AniList de este servidor."
+
+#: locales/command_strings.py:85
 msgid "Open your personal settings panel."
 msgstr "Abre tu panel de configuración personal."
 
-#: locales/command_strings.py:80
+#: locales/command_strings.py:86
 msgid "Paginated moderation case history (optionally filtered to a member)."
 msgstr "Historial paginado de casos de moderación (opcionalmente filtrado por miembro)."
 
-#: locales/command_strings.py:81
+#: locales/command_strings.py:87
 msgid "Pause the current track."
 msgstr "Pausa la pista actual."
 
-#: locales/command_strings.py:82
+#: locales/command_strings.py:88
 msgid "Pick the language for the bot's replies to you."
 msgstr "Elige el idioma en el que el bot te responderá."
 
-#: locales/command_strings.py:83
+#: locales/command_strings.py:89
 msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
 msgstr "Juega una partida de tres en raya contra el bot. Tú eres X."
 
-#: locales/command_strings.py:84
+#: locales/command_strings.py:90
 msgid "Play a track or playlist, or add it to the queue."
 msgstr "Reproduce una pista o lista de reproducción, o añádela a la cola."
 
-#: locales/command_strings.py:85
+#: locales/command_strings.py:91
+msgid "Post a Verify button that grants a role (one click, one way)."
+msgstr "Publica un botón Verify que concede un rol (un clic, sin vuelta atrás)."
+
+#: locales/command_strings.py:92
 msgid "Prefix related commands."
 msgstr "Comandos relacionados con el prefijo."
 
-#: locales/command_strings.py:86
+#: locales/command_strings.py:93
 msgid "Purges messages. Requires manage messages permission"
 msgstr "Elimina mensajes en masa. Requiere el permiso de gestionar mensajes"
 
-#: locales/command_strings.py:87
+#: locales/command_strings.py:94
 msgid "Queue every track in your favourites and start playing."
 msgstr "Encola todas las pistas de tus favoritos y empieza a reproducir."
 
-#: locales/command_strings.py:88
+#: locales/command_strings.py:95
 msgid "Reaction-role related commands."
 msgstr "Comandos relacionados con roles por reacción."
 
-#: locales/command_strings.py:89
+#: locales/command_strings.py:96
 msgid "Reloads a single extension, or all configured extensions."
 msgstr "Recarga una sola extensión, o todas las extensiones configuradas."
 
-#: locales/command_strings.py:90
+#: locales/command_strings.py:97
 msgid "Reminds you of something after a certain amount of time."
 msgstr "Te recuerda algo después de un tiempo determinado."
 
-#: locales/command_strings.py:91
+#: locales/command_strings.py:98
 msgid "Remove a member from the live-alert watchlist."
 msgstr "Elimina a un miembro de la lista de alertas en directo."
 
-#: locales/command_strings.py:92
+#: locales/command_strings.py:99
 msgid "Remove a role to a specified member."
 msgstr "Elimina un rol a un miembro especificado."
 
-#: locales/command_strings.py:93
+#: locales/command_strings.py:100
 msgid "Remove a user from the bot-wide blacklist."
 msgstr "Elimina a un usuario de la lista negra global del bot."
 
-#: locales/command_strings.py:94
+#: locales/command_strings.py:101
 msgid "Remove a warn from a member of the guild."
 msgstr "Elimina una advertencia de un miembro del servidor."
 
-#: locales/command_strings.py:95
+#: locales/command_strings.py:102
 msgid "Remove an emoji-to-role mapping from a message."
 msgstr "Elimina un vínculo de emoji a rol de un mensaje."
 
-#: locales/command_strings.py:96
+#: locales/command_strings.py:103
 msgid "Remove auto role from your guild."
 msgstr "Elimina el rol automático de tu servidor."
 
-#: locales/command_strings.py:97
+#: locales/command_strings.py:104
 msgid "Remove the favourite at the given position in your list."
 msgstr "Elimina el favorito en la posición indicada de tu lista."
 
-#: locales/command_strings.py:98
+#: locales/command_strings.py:105
 msgid "Resume the player if it is paused."
 msgstr "Reanuda el reproductor si está pausado."
 
-#: locales/command_strings.py:99
+#: locales/command_strings.py:106
 msgid "Save the current track, or a searched track, to your favourites."
 msgstr "Guarda la pista actual, o una pista buscada, en tus favoritos."
 
-#: locales/command_strings.py:100
+#: locales/command_strings.py:107
 msgid "Score a title on your AniList list."
 msgstr "Puntua un titulo en tu lista de AniList."
 
-#: locales/command_strings.py:101
+#: locales/command_strings.py:108
 msgid "Search Wikipedia for a short summary of a topic."
 msgstr "Busca en Wikipedia un breve resumen de un tema."
 
-#: locales/command_strings.py:102
+#: locales/command_strings.py:109
 msgid "Set a role to a specified member."
 msgstr "Asigna un rol a un miembro específico."
 
-#: locales/command_strings.py:103
+#: locales/command_strings.py:110
 msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
 msgstr "Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, steam)."
 
-#: locales/command_strings.py:104
+#: locales/command_strings.py:111
 msgid "Set the channel where moderation logs are sent."
 msgstr "Establece el canal donde se envían los registros de moderación."
 
-#: locales/command_strings.py:105
+#: locales/command_strings.py:112
 msgid "Set the loop mode for the queue."
 msgstr "Establece el modo de repetición de la cola."
 
-#: locales/command_strings.py:106
+#: locales/command_strings.py:113
 msgid "Set the player volume (0-200)."
 msgstr "Ajusta el volumen del reproductor (0-200)."
 
-#: locales/command_strings.py:107
+#: locales/command_strings.py:114
 msgid "Set the server's default language (used when a member has not picked one)."
 msgstr "Establece el idioma predeterminado del servidor (se usa cuando un miembro no ha elegido uno)."
 
-#: locales/command_strings.py:108
+#: locales/command_strings.py:115
 msgid "Set the starboard channel and the star threshold."
 msgstr "Establece el canal de destacados y el umbral de estrellas."
 
-#: locales/command_strings.py:109
+#: locales/command_strings.py:116
 msgid "Set the status of a title on your list."
 msgstr "Establece el estado de un titulo en tu lista."
 
-#: locales/command_strings.py:110
+#: locales/command_strings.py:117
 msgid "Set the welcome channel and message (a simple fallback)."
 msgstr "Establece el canal y el mensaje de bienvenida (una alternativa sencilla)."
 
-#: locales/command_strings.py:111
+#: locales/command_strings.py:118
 msgid "Set your AFK status, with an optional message."
 msgstr "Configura tu estado AFK, con un mensaje opcional."
 
-#: locales/command_strings.py:112
+#: locales/command_strings.py:119
 msgid "Show AniList stats for a user (defaults to your linked account)."
 msgstr "Muestra las estadisticas de AniList de un usuario (por defecto, tu cuenta vinculada)."
 
-#: locales/command_strings.py:113
+#: locales/command_strings.py:120
 msgid "Show a collage of a user's avatar / server avatar / banner history."
 msgstr "Muestra un collage del historial de avatar / avatar de servidor / banner de un usuario."
 
-#: locales/command_strings.py:114
+#: locales/command_strings.py:121
 msgid "Show a single moderation case by its number."
 msgstr "Muestra un caso de moderación específico por su número."
 
-#: locales/command_strings.py:115
+#: locales/command_strings.py:122
 msgid "Show every member on the live-alert watchlist."
 msgstr "Muestra todos los miembros en la lista de seguimiento de alertas en directo."
 
-#: locales/command_strings.py:116
+#: locales/command_strings.py:123
 msgid "Show how many warns a member currently has."
 msgstr "Muestra cuántas advertencias tiene actualmente un miembro."
 
-#: locales/command_strings.py:117
+#: locales/command_strings.py:124
 msgid "Show the current auto-mod settings for this guild."
 msgstr "Muestra la configuración actual de auto-moderación de este servidor."
 
-#: locales/command_strings.py:118
+#: locales/command_strings.py:125
 msgid "Show the currently playing track and the next tracks in the queue."
 msgstr "Muestra la pista que se está reproduciendo y las siguientes en la cola."
 
-#: locales/command_strings.py:119
+#: locales/command_strings.py:126
 msgid "Show the interactive now-playing controller."
 msgstr "Muestra el controlador interactivo de reproducción actual."
 
-#: locales/command_strings.py:120
+#: locales/command_strings.py:127
 msgid "Show the last deleted message in this channel."
 msgstr "Muestra el último mensaje eliminado en este canal."
 
-#: locales/command_strings.py:121
+#: locales/command_strings.py:128
 msgid "Show the most-starred messages in this guild."
 msgstr "Muestra los mensajes con más estrellas de este servidor."
 
-#: locales/command_strings.py:122
+#: locales/command_strings.py:129
 msgid "Show your anime/manga list, filtered by status (defaults to CURRENT)."
 msgstr "Muestra tu lista de anime/manga, filtrada por estado (por defecto ACTUAL)."
 
-#: locales/command_strings.py:123
+#: locales/command_strings.py:130
 msgid "Show your saved favourite tracks, or another member's."
 msgstr "Muestra tus pistas favoritas guardadas, o las de otro miembro."
 
-#: locales/command_strings.py:124
+#: locales/command_strings.py:131
 msgid "Shows Astronomy Picture of the Day."
 msgstr "Muestra la foto astronómica del día."
 
-#: locales/command_strings.py:125
+#: locales/command_strings.py:132
 msgid "Shows the bot's websocket latency."
 msgstr "Muestra la latencia websocket del bot."
 
-#: locales/command_strings.py:126
+#: locales/command_strings.py:133
 msgid "Shows the current weather for a given city."
 msgstr "Muestra el clima actual de una ciudad indicada."
 
-#: locales/command_strings.py:127
+#: locales/command_strings.py:134
 msgid "Shows the ranked members of the guild."
 msgstr "Muestra los miembros clasificados del servidor."
 
-#: locales/command_strings.py:128
+#: locales/command_strings.py:135
 msgid "Shows your level and XP rank card, or another member's."
 msgstr "Muestra tu tarjeta de nivel y rango de XP, o la de otro miembro."
 
-#: locales/command_strings.py:129
+#: locales/command_strings.py:136
 msgid "Shuffle the upcoming tracks in the queue."
 msgstr "Mezcla las próximas pistas de la cola."
 
-#: locales/command_strings.py:130
+#: locales/command_strings.py:137
 msgid "Simulate a join for yourself to preview the welcome."
 msgstr "Simula tu propia entrada para previsualizar la bienvenida."
 
-#: locales/command_strings.py:131
+#: locales/command_strings.py:138
 msgid "Skip the current track and play the next one."
 msgstr "Salta la pista actual y reproduce la siguiente."
 
-#: locales/command_strings.py:132
+#: locales/command_strings.py:139
 msgid "Starboard related commands."
 msgstr "Comandos relacionados con el starboard."
 
-#: locales/command_strings.py:133
+#: locales/command_strings.py:140
 msgid "Start linking your AniList account."
 msgstr "Comienza a vincular tu cuenta de AniList."
 
-#: locales/command_strings.py:134
+#: locales/command_strings.py:141
+msgid "Stop following an AniList user (by stored name, case-insensitive)."
+msgstr "Deja de seguir a un usuario de AniList (por nombre guardado, sin distinguir mayúsculas)."
+
+#: locales/command_strings.py:142
 msgid "Stop playback and clear the queue (stays connected)."
 msgstr "Detiene la reproducción y vacía la cola (permanece conectada)."
 
-#: locales/command_strings.py:135
+#: locales/command_strings.py:143
 msgid "Tells you the newest members of the server."
 msgstr "Te indica los miembros más nuevos del servidor."
 
-#: locales/command_strings.py:136
+#: locales/command_strings.py:144
 msgid "Temporarily bans a member for the given duration."
 msgstr "Banea temporalmente a un miembro durante la duración indicada."
 
-#: locales/command_strings.py:137
+#: locales/command_strings.py:145
 msgid "The 1-based position of the favourite to remove."
 msgstr "La posición (empezando en 1) del favorito a eliminar."
 
-#: locales/command_strings.py:138
+#: locales/command_strings.py:146
 msgid "Translate text to English (auto-detect source language)."
 msgstr "Traduce texto al inglés (detecta automáticamente el idioma de origen)."
 
-#: locales/command_strings.py:139
+#: locales/command_strings.py:147
+msgid "Turn off verification (existing buttons will report it is off)."
+msgstr "Desactiva la verificación (los botones existentes indicarán que está desactivada)."
+
+#: locales/command_strings.py:148
 msgid "Un-mutes the specified member."
 msgstr "Quita el silencio al miembro especificado."
 
-#: locales/command_strings.py:140
+#: locales/command_strings.py:149
 msgid "Unbans a user. Requires ban members permission. Also bot must have this permission."
 msgstr "Desbanea a un usuario. Requiere el permiso de banear miembros. El bot también debe tener este permiso."
 
-#: locales/command_strings.py:141
+#: locales/command_strings.py:150
 msgid "Unlink your AniList account."
 msgstr "Desvincula tu cuenta de AniList."
 
-#: locales/command_strings.py:142
+#: locales/command_strings.py:151
 msgid "Update the amount of stars needed to reach the starboard."
 msgstr "Actualiza la cantidad de estrellas necesarias para llegar al starboard."
 
-#: locales/command_strings.py:143
+#: locales/command_strings.py:152
 msgid "Update the reason recorded on an existing case."
 msgstr "Actualiza el motivo registrado en un caso existente."
 
-#: locales/command_strings.py:144
+#: locales/command_strings.py:153
+msgid "Verification gate commands."
+msgstr "Comandos relacionados con la verificación de acceso."
+
+#: locales/command_strings.py:154
 msgid "View a member's gaming profile."
 msgstr "Consulta el perfil de videojuegos de un miembro."
 
-#: locales/command_strings.py:145
+#: locales/command_strings.py:155
 msgid "Volume level between 0 and 200 (100 is default)."
 msgstr "Nivel de volumen entre 0 y 200 (100 por defecto)."
 
-#: locales/command_strings.py:146
+#: locales/command_strings.py:156
 msgid "Warn a member of the guild (auto-kick at 3 warns)"
 msgstr "Advierte a un miembro del servidor (expulsión automática a las 3 advertencias)"
 
-#: locales/command_strings.py:147
+#: locales/command_strings.py:157
 msgid "Whose favourites to show (defaults to you)."
 msgstr "De quién mostrar los favoritos (por defecto, los tuyos)."
 
-#: locales/command_strings.py:148
+#: locales/command_strings.py:158
 msgid "all"
 msgstr "cola"
 
-#: locales/command_strings.py:150
+#: locales/command_strings.py:160
 msgid "track"
 msgstr "pista"
 
