@@ -20,6 +20,8 @@ test_music_vibes.
 
 import types
 
+import pytest
+
 from cogs.music import music
 
 # ---------------------------------------------------------------------------
@@ -186,3 +188,116 @@ def test_queued_track_count_none_safe_over_missing_lanes():
     assert music.queued_track_count(
         types.SimpleNamespace(tracks=None, autoplay_tracks=None)
     ) == 0
+
+
+# ---------------------------------------------------------------------------
+# seed_needs_youtube_resolution (which autoplay seeds need re-resolving)
+# ---------------------------------------------------------------------------
+
+# The stock YouTube Radio provider template sonolink formats the seed id into.
+_YT_PROVIDER = "https://www.youtube.com/watch?v={identifier}&list=RD{identifier}"
+
+
+def _seed(identifier="dQw4w9WgXcQ", source_name="youtube", title="t", author="a"):
+    """A minimal seed-track stand-in exposing the fields the predicate reads."""
+    return types.SimpleNamespace(
+        identifier=identifier, source_name=source_name, title=title, author=author
+    )
+
+
+def test_seed_needs_resolution_for_spotify_seed():
+    # A LavaSrc/Spotify seed under the YouTube Radio provider must be re-resolved:
+    # its 22-char id is what YouTube rejects with AllClientsFailedException.
+    spotify = _seed(identifier="1toNKayLMeCcVlsLGXJl7n", source_name="spotify")
+    assert music.seed_needs_youtube_resolution(spotify, _YT_PROVIDER) is True
+
+
+def test_seed_needs_no_resolution_for_youtube_seed():
+    # The live-verified working path: a YouTube seed is left to sonolink verbatim.
+    assert music.seed_needs_youtube_resolution(_seed(), _YT_PROVIDER) is False
+
+
+def test_seed_source_match_is_case_insensitive():
+    yt = _seed(source_name="YouTube")
+    assert music.seed_needs_youtube_resolution(yt, _YT_PROVIDER) is False
+
+
+def test_seed_needs_no_resolution_without_a_seed():
+    # No reference, or a reference with no identifier: leave it to sonolink, which
+    # raises AutoPlaySeedMissing. We must not swallow that contract.
+    assert music.seed_needs_youtube_resolution(None, _YT_PROVIDER) is False
+    assert music.seed_needs_youtube_resolution(
+        _seed(identifier=""), _YT_PROVIDER
+    ) is False
+    assert music.seed_needs_youtube_resolution(
+        _seed(identifier=None), _YT_PROVIDER
+    ) is False
+
+
+def test_seed_needs_no_resolution_for_non_youtube_provider():
+    # If the discovery provider is Spotify/Deezer recommendations (which accept
+    # their own ids), a Spotify seed is already correct: no re-resolution.
+    spotify = _seed(identifier="1toNKayLMeCcVlsLGXJl7n", source_name="spotify")
+    assert music.seed_needs_youtube_resolution(spotify, "sprec:{identifier}") is False
+    assert music.seed_needs_youtube_resolution(spotify, "dzrec:{identifier}") is False
+
+
+def test_seed_missing_source_name_resolves_under_youtube_provider():
+    # A seed with an id but an unknown/None source is not YouTube, so under the
+    # YouTube provider we re-resolve rather than risk a doomed query.
+    unknown = _seed(source_name=None)
+    assert music.seed_needs_youtube_resolution(unknown, _YT_PROVIDER) is True
+
+
+# ---------------------------------------------------------------------------
+# youtube_seed_query (the "{author} {title}" ytsearch text)
+# ---------------------------------------------------------------------------
+
+
+def test_youtube_seed_query_joins_author_and_title():
+    assert music.youtube_seed_query(_seed(author="Daft Punk", title="One More Time")) == (
+        "Daft Punk One More Time"
+    )
+
+
+def test_youtube_seed_query_falls_back_to_a_single_field():
+    assert music.youtube_seed_query(_seed(author="", title="Solo")) == "Solo"
+    assert music.youtube_seed_query(_seed(author="Artist", title="")) == "Artist"
+
+
+def test_youtube_seed_query_strips_and_is_none_safe():
+    assert music.youtube_seed_query(_seed(author="  a  ", title="  b  ")) == "a b"
+    # Neither field present -> empty, so the caller skips autoplay this cycle.
+    assert music.youtube_seed_query(types.SimpleNamespace()) == ""
+    assert music.youtube_seed_query(_seed(author=None, title=None)) == ""
+
+
+# ---------------------------------------------------------------------------
+# Shape guard: pin the private sonolink internals our handler subclass leans on.
+# Fails loudly if a sonolink upgrade renames/reshapes them, rather than silently
+# reverting to the broken non-YouTube autoplay. Skipped under the stub sonolink.
+# ---------------------------------------------------------------------------
+
+
+def test_autoplay_handler_pins_sonolink_internals():
+    autoplay_mod = pytest.importorskip(
+        "sonolink.gateway.player.handlers._autoplay"
+    )
+    handler_cls = autoplay_mod.AutoPlayHandler
+    # The overridable method and the discovery method we delegate to must exist.
+    assert callable(getattr(handler_cls, "_fill_auto_queue", None))
+    assert callable(getattr(handler_cls, "_apply_discovery", None))
+    # The instance state we read (seed set) and reference (settings) must exist.
+    assert "_seeds" in handler_cls.__slots__
+    assert "_settings" in handler_cls.__slots__
+    # Our subclass must actually derive from it and be what the Player swaps in.
+    assert music._YouTubeSeedAutoPlayHandler is not None
+    assert issubclass(music._YouTubeSeedAutoPlayHandler, handler_cls)
+    # AutoPlaySettings must still carry the id-templated provider we format and the
+    # int seed cap we bound against.
+    from sonolink.models.settings import AutoPlaySettings
+
+    settings = AutoPlaySettings.default()
+    assert "{identifier}" in str(settings.provider)
+    assert "youtube.com" in str(settings.provider).lower()
+    assert isinstance(settings.max_seeds, int)

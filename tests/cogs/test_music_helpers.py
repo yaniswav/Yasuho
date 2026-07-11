@@ -223,6 +223,145 @@ def test_controller_current_track_overrides_fallback():
 
 
 # ---------------------------------------------------------------------------
+# Regression: a GENUINE track change must UPDATE the controller. The keep vs
+# rerender vs repost decision must key off what the panel actually RENDERS, not
+# the live player.current (which sonolink advances to the new track before that
+# track's track_start event reaches the cog - so comparing against current
+# always matched and wrongly kept the panel stuck on the previous track).
+# ---------------------------------------------------------------------------
+
+
+def test_decide_controller_action_user_driven_reposts():
+    # dedupe=False (a /play-no-query or /nowplaying repost) always reposts fresh
+    # at the bottom of the channel, even if the same track is already shown.
+    assert (
+        music.decide_controller_action(
+            dedupe=False,
+            has_live_controller=True,
+            displayed_id="a",
+            incoming_id="a",
+            age_seconds=1.0,
+        )
+        == "repost"
+    )
+
+
+def test_decide_controller_action_no_live_controller_reposts():
+    # No controller (or its message is gone): nothing to keep or edit -> repost.
+    assert (
+        music.decide_controller_action(
+            dedupe=True,
+            has_live_controller=False,
+            displayed_id=None,
+            incoming_id="a",
+            age_seconds=None,
+        )
+        == "repost"
+    )
+
+
+def test_decide_controller_action_same_track_recent_keeps():
+    # Reconnect re-fire: the panel already shows this track and went up seconds
+    # ago -> keep the message untouched so it never flickers.
+    assert (
+        music.decide_controller_action(
+            dedupe=True,
+            has_live_controller=True,
+            displayed_id="a",
+            incoming_id="a",
+            age_seconds=2.0,
+        )
+        == "keep"
+    )
+
+
+def test_decide_controller_action_same_track_old_reposts():
+    # /loop track: the SAME track re-fires long after its panel went up -> repost
+    # so it returns to the channel bottom (preserves the loop-track behaviour).
+    assert (
+        music.decide_controller_action(
+            dedupe=True,
+            has_live_controller=True,
+            displayed_id="a",
+            incoming_id="a",
+            age_seconds=music.CONTROLLER_REFIRE_WINDOW + 1.0,
+        )
+        == "repost"
+    )
+
+
+def test_decide_controller_action_different_track_rerenders():
+    # The core bug: a genuine advance to a DIFFERENT track, even seconds after
+    # the previous track's panel went up, must update the panel - never keep it.
+    assert (
+        music.decide_controller_action(
+            dedupe=True,
+            has_live_controller=True,
+            displayed_id="a",
+            incoming_id="b",
+            age_seconds=1.0,
+        )
+        == "rerender"
+    )
+
+
+def test_decide_controller_action_empty_panel_rerenders_onto_track():
+    # Panel currently shows "nothing playing" (displayed_id None); a track start
+    # differs from None -> rerender the empty panel onto the new track.
+    assert (
+        music.decide_controller_action(
+            dedupe=True,
+            has_live_controller=True,
+            displayed_id=None,
+            incoming_id="a",
+            age_seconds=1.0,
+        )
+        == "rerender"
+    )
+
+
+def test_controller_rerender_updates_fallback_track_and_rendered_id():
+    """The fallback-track trap: on a genuine change during the current-is-None
+    race, _build reads ``player.current or self._track``, so the fallback must be
+    updated to the NEW track or the panel stays stuck on the previous one. This
+    exercises the pure build half of ``_rerender_for_track`` (the message edit is
+    live-only) and confirms ``_rendered_id`` tracks what was rendered.
+    """
+    import sonolink
+
+    def _mk(title, ident):
+        return types.SimpleNamespace(
+            title=title, uri=None, author="A", is_stream=False, length=1000,
+            identifier=ident, extras=types.SimpleNamespace(requester=None),
+        )
+
+    first = _mk("First Track", "id-first")
+    player = types.SimpleNamespace(
+        current=None, paused=False, volume=100,
+        queue=types.SimpleNamespace(mode=sonolink.QueueMode.NORMAL, tracks=[]),
+        channel=types.SimpleNamespace(name="G"), dj=None,
+        autoplay=sonolink.AutoPlayMode.ENABLED,
+    )
+    view = music.MusicController(None, player, track=first)
+    assert view._rendered_id == "id-first"
+
+    # A different track starts while player.current is still None (the race
+    # window). _rerender_for_track updates the fallback before _build; emulate
+    # that pure part here so the trap is covered without live discord I/O.
+    second = _mk("Second Track", "id-second")
+    view._track = second
+    view._build()
+
+    texts = [
+        c.content for c in view.walk_children()
+        if isinstance(c, discord.ui.TextDisplay)
+    ]
+    assert any("Second Track" in t for t in texts)
+    assert not any("First Track" in t for t in texts)
+    assert view._rendered_id == "id-second"
+
+
+# ---------------------------------------------------------------------------
 # Regression guard: no music UI class may shadow View._refresh
 # ---------------------------------------------------------------------------
 

@@ -20,6 +20,18 @@ from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorLayoutView, LocaleModal
 
+# sonolink's autoplay builds its discovery query from the seed track's raw
+# identifier, which only resolves for a YouTube seed (see
+# _YouTubeSeedAutoPlayHandler). We subclass its private handler to repair a
+# non-YouTube seed first. The import is guarded so cogs still import under the
+# stub sonolink on the 3.10 dev box, where these internals are absent.
+try:
+    from sonolink.gateway.player.handlers._autoplay import (
+        AutoPlayHandler as _SonoAutoPlayHandler,
+    )
+except Exception:  # pragma: no cover - stub sonolink lacks the internals
+    _SonoAutoPlayHandler = None
+
 log = logging.getLogger(__name__)
 
 E_VOICE = config_loader.getstr("Emojis", "voice")
@@ -57,6 +69,13 @@ AUTOPLAY_PREF_KEY = "music_autoplay"
 # spin forever skipping. The counter resets the instant any track plays normally.
 ANTI_MIX_SKIP_CAP = 3
 
+# How long (seconds) after a controller is posted a same-track track_start still
+# counts as a reconnect re-fire (keep the message, no flicker) rather than a
+# fresh play of that track. A /loop track iteration re-fires the SAME track long
+# after its panel went up, past this window, so it reposts the panel to the
+# channel bottom instead of silently keeping the old message.
+CONTROLLER_REFIRE_WINDOW = 30.0
+
 # Short per-user debounce on the station select: a zap runs two searches and
 # replaces playback, so a double-click would fire two competing replace
 # sequences. Touched only on an allowed click, so a burst collapses to one.
@@ -89,6 +108,14 @@ class Player(sonolink.Player):
         self.played_ids = vibes.PlayedTracks()
         self._radio_refilling = False
         self._automix_skips = 0
+        # Repair autoplay for non-YouTube seeds: swap sonolink's stock autoplay
+        # handler for our subclass, reusing the SAME settings object so the
+        # player.autoplay getter/setter (and _set_autoplay) keep operating on it.
+        # Guarded so a stub sonolink (no internals) leaves the base handler as-is.
+        if _YouTubeSeedAutoPlayHandler is not None:
+            self._autoplay_handler = _YouTubeSeedAutoPlayHandler(
+                self, settings=self._autoplay_handler._settings
+            )
 
 
 def format_clock(total_ms: int) -> str:
@@ -362,6 +389,161 @@ def _set_autoplay(player, enabled):
     )
 
 
+def youtube_seed_query(reference: typing.Any) -> str:
+    """Build a ``"{author} {title}"`` YouTube search query from a seed track.
+
+    Used to find a YouTube equivalent of a non-YouTube autoplay seed. Returns ``""``
+    when the track carries neither author nor title (nothing to search on). Pure and
+    None-safe, so the query shape is unit-tested without a node.
+    """
+    author = (getattr(reference, "author", "") or "").strip()
+    title = (getattr(reference, "title", "") or "").strip()
+    return " ".join(part for part in (author, title) if part)
+
+
+def _is_youtube_seed_source(source_name: typing.Any) -> bool:
+    """Whether a track's ``source_name`` is YouTube (its id already seeds a Radio mix)."""
+    return (source_name or "").strip().lower() == "youtube"
+
+
+def _is_youtube_radio_provider(provider: typing.Any) -> bool:
+    """Whether the autoplay provider is the YouTube Radio URL (needs a YouTube id)."""
+    return "youtube.com" in str(provider or "").lower()
+
+
+def seed_needs_youtube_resolution(reference: typing.Any, provider: typing.Any) -> bool:
+    """Whether an autoplay seed must be re-resolved to a YouTube track first.
+
+    sonolink formats the seed's raw ``identifier`` into the YouTube Radio URL, which
+    only loads when the seed came from YouTube. Returns True only when there IS a
+    usable seed, the discovery provider is that YouTube Radio URL, and the seed is
+    NOT a YouTube track (e.g. a Spotify/LavaSrc seed whose 22-char id YouTube rejects
+    with "AllClientsFailedException"). A YouTube seed, a missing seed, or a
+    non-YouTube provider (Spotify/Deezer recommendations accept their own ids) all
+    return False so sonolink's native flow runs unchanged. Pure, so the decision is
+    unit-tested without a node or a live player.
+    """
+    if reference is None or not getattr(reference, "identifier", None):
+        return False
+    if not _is_youtube_radio_provider(provider):
+        return False
+    return not _is_youtube_seed_source(getattr(reference, "source_name", None))
+
+
+if _SonoAutoPlayHandler is not None:
+
+    class _YouTubeSeedAutoPlayHandler(_SonoAutoPlayHandler):
+        """AutoPlay handler that repairs a non-YouTube seed before discovery.
+
+        sonolink's ``AutoPlayHandler`` builds its discovery query by formatting the
+        seed track's raw ``identifier`` into the YouTube Radio URL
+        (``watch?v={identifier}&list=RD{identifier}``). That only works for a YouTube
+        seed: a LavaSrc seed (e.g. Spotify) carries a 22-char provider id that
+        YouTube rejects ("AllClientsFailedException"), so autoplay silently yields
+        nothing once a Spotify playlist ends.
+
+        The YouTube-seeded path is left EXACTLY as sonolink ships it (delegated to
+        ``super()._fill_auto_queue``), so live-verified YouTube autoplay never
+        changes. For a non-YouTube seed we first resolve a YouTube equivalent via
+        ``ytsearch:{author} {title}`` and seed the Radio mix off THAT track's id.
+        Every failure path (no query, no node, empty search, node error) degrades to
+        "no autoplay this cycle" by returning None: playback has already ended, so
+        the skip path stops cleanly instead of crashing mid-nothing. Whatever this
+        produces is still vetted by the anti-mix guard in on_sonolink_track_start.
+
+        Instance-level only (no monkeypatching): the Player swaps this in for the
+        stock handler in ``__init__``. The private sonolink internals it leans on
+        are pinned by ``test_autoplay_handler_pins_sonolink_internals`` so a
+        sonolink refactor fails loudly rather than silently disabling the repair.
+        """
+
+        __slots__ = ()
+
+        async def _fill_auto_queue(self):
+            reference = self._player.current or (
+                self._player.queue.history[-1]
+                if self._player.queue.history
+                else None
+            )
+            if not seed_needs_youtube_resolution(
+                reference, self._settings.provider
+            ):
+                # Missing seed (super() raises AutoPlaySeedMissing, preserved) or a
+                # seed the provider already handles (YouTube): sonolink's own flow
+                # is correct, so run it verbatim and never break YouTube autoplay.
+                return await super()._fill_auto_queue()
+
+            shadow = await self._resolve_youtube_seed(reference)
+            if shadow is None or not shadow.identifier:
+                # No YouTube equivalent found: skip autoplay this cycle rather than
+                # firing a query doomed to fail. Playback has already ended.
+                log.info(
+                    "AutoPlay: no YouTube seed for %r by %r (source=%s), "
+                    "skipping this cycle",
+                    getattr(reference, "title", ""),
+                    getattr(reference, "author", ""),
+                    getattr(reference, "source_name", ""),
+                )
+                return None
+            return await self._fill_from_seed(shadow.identifier)
+
+        async def _resolve_youtube_seed(self, reference):
+            """Find a YouTube track equivalent to a non-YouTube seed, or None.
+
+            Runs a single ``ytsearch:{author} {title}`` on the player's node and
+            returns the first candidate. The search is naturally spaced (at most one
+            per autoplay cycle, already serialised by ``auto_play``'s lock) and any
+            failure degrades to None so the caller skips autoplay this cycle.
+            """
+            query = youtube_seed_query(reference)
+            if not query:
+                return None
+            try:
+                search = await self._player.node.search_track(
+                    query, source=SEARCH_SOURCE
+                )
+            except Exception:
+                log.exception("AutoPlay: YouTube seed search failed")
+                return None
+            return _first_track(search)
+
+        async def _fill_from_seed(self, identifier):
+            """Discover a Radio mix seeded by ``identifier`` (a YouTube video id).
+
+            Mirrors the tail of sonolink's ``_fill_auto_queue`` (seed bookkeeping,
+            the Radio query, de-dup against prior seeds) but seeds off the id we
+            resolved, then hands the winners to sonolink's own ``_apply_discovery``
+            so queueing / autoplay flagging / play stay identical. The resolved id is
+            added to ``_seeds`` so the seed video itself is filtered out of its own
+            Radio mix, exactly as the native path does. Any failure degrades to None.
+            """
+            if len(self._seeds) > self._settings.max_seeds:
+                self._seeds.clear()
+            self._seeds.add(identifier)
+            query = str(self._settings.provider).format(identifier=identifier)
+            # Wrap the search AND _apply_discovery together, exactly as sonolink's
+            # own _fill_auto_queue does: _apply_discovery calls player.play(), and
+            # a Lavalink REST hiccup there must degrade to "no autoplay this cycle"
+            # (return None -> skip() stops cleanly) rather than propagate out of
+            # skip() past the QueueEmpty/AutoPlaySeedMissing its callers expect.
+            try:
+                search = await self._player.node.search_track(query)
+                discovery = [
+                    track
+                    for track in _normalize_result_tracks(search)
+                    if track.identifier not in self._seeds
+                ]
+                if not discovery:
+                    return None
+                return await self._apply_discovery(discovery)
+            except Exception:
+                log.exception("AutoPlay: Radio discovery failed for resolved seed")
+                return None
+
+else:  # pragma: no cover - stub sonolink on the 3.10 dev box has no internals
+    _YouTubeSeedAutoPlayHandler = None
+
+
 def _track_looks_like_mix(track: typing.Any) -> bool:
     """True when ``track`` scores as an hour-long mix (None-safe field reads).
 
@@ -394,6 +576,48 @@ def decide_anti_mix_skip(
     if is_autoplay and is_mix and consecutive < cap:
         return True, consecutive + 1
     return False, 0
+
+
+def decide_controller_action(
+    *,
+    dedupe: bool,
+    has_live_controller: bool,
+    displayed_id: typing.Optional[str],
+    incoming_id: typing.Optional[str],
+    age_seconds: typing.Optional[float],
+    refire_window: float = CONTROLLER_REFIRE_WINDOW,
+) -> str:
+    """Decide how a controller (re)post should update the live now-playing panel.
+
+    Returns one of:
+
+    * ``"repost"`` - delete any previous controller and send a fresh message at
+      the bottom of the channel. Used for user-driven reposts (``/play`` with no
+      query, ``/nowplaying``), when there is no live controller to touch, and for
+      a /loop track re-fire (the SAME track starting again long after its panel
+      went up, which should come back to the channel bottom).
+    * ``"keep"`` - a reconnect re-fire of the track the panel ALREADY displays,
+      within ``refire_window`` seconds of the post: keep the message untouched so
+      it never flickers.
+    * ``"rerender"`` - a GENUINE change to a different track: edit the existing
+      panel in place so it reflects the new track without churning the channel.
+
+    The keep/rerender split turns on ``displayed_id`` - the identifier of the
+    track the controller's message currently RENDERS - NOT the player's live
+    ``current``. During a natural queue advance sonolink sets ``player.current``
+    to the new track BEFORE that track's track_start reaches this cog, so
+    comparing the incoming track against ``current`` always matched and wrongly
+    KEPT the stale panel on every real track change (the live-reported bug).
+    Comparing against what the panel actually rendered is what lets a real change
+    update. Pure, so the classification is unit-tested without a node.
+    """
+    if not dedupe or not has_live_controller:
+        return "repost"
+    if displayed_id is not None and displayed_id == incoming_id:
+        if age_seconds is not None and age_seconds < refire_window:
+            return "keep"
+        return "repost"
+    return "rerender"
 
 
 def radio_seen_ids(
@@ -616,8 +840,13 @@ class MusicController(discord.ui.LayoutView):
         # track until player.current catches up (see _build).
         self._track = track
         self.message: typing.Optional[discord.Message] = None
-        # When this view was created; _send_controller's dedupe keep-path only
-        # keeps a very recent controller (a reconnect re-fire arrives within
+        # Identifier of the track this panel's message currently RENDERS, set by
+        # _build. _send_controller compares an incoming track_start against THIS
+        # (not player.current, which has already advanced to the new track by the
+        # time its event lands) to tell a reconnect re-fire from a real change.
+        self._rendered_id: typing.Optional[str] = None
+        # When this view was created; _send_controller only keeps a very recent
+        # controller on a same-track re-fire (a reconnect re-fire arrives within
         # seconds), so a later same-track start (loop mode) still re-posts.
         self.created_at = time.monotonic()
         self._build()
@@ -639,6 +868,10 @@ class MusicController(discord.ui.LayoutView):
         # the brief window during a cold restore / track change where the
         # websocket track_start beat play()'s REST update and current is None.
         track = self.player.current or self._track
+        # Record what this render actually shows so _send_controller can tell a
+        # same-track re-fire from a genuine change without consulting the live
+        # player.current (which advances ahead of the track_start event).
+        self._rendered_id = getattr(track, "identifier", None)
         if track is None:
             self.add_item(discord.ui.TextDisplay(_("Nothing is playing right now.")))
             return
@@ -884,6 +1117,37 @@ class MusicController(discord.ui.LayoutView):
             await self.message.edit(view=self)
         except discord.HTTPException:
             log.exception("Failed to refresh the controller view")
+
+    async def _rerender_for_track(
+        self, track: typing.Optional[sonolink.models.Playable]
+    ) -> bool:
+        """Re-render the panel in place for a just-started track; True on success.
+
+        Unlike :meth:`_rerender` (a button-driven refresh that stands down when
+        nothing is playing), this updates the fallback track FIRST so the render
+        is correct even while player.current is still catching up - the
+        track_start event beats play()'s REST update, so current may briefly be
+        the OLD track or None, and rendering off the stale fallback is exactly the
+        trap that keeps the panel on the previous track. Returns False when there
+        is no bound message or the edit failed (the message was deleted out of
+        band), so the caller can fall back to a fresh repost.
+        """
+        if self.message is None:
+            return False
+        self._track = track
+        self._build()
+        try:
+            await self.message.edit(view=self)
+        except discord.HTTPException:
+            log.exception("Failed to re-render the controller for a new track")
+            return False
+        # This panel now shows a NEW track: restart the re-fire keep window from
+        # here so a reconnect re-fire of THIS track (arriving seconds later) is
+        # still kept without flicker, exactly as it would be for a freshly posted
+        # panel. Without this the window kept measuring from the first track's
+        # post, so a reconnect after any track change wrongly reposted.
+        self.created_at = time.monotonic()
+        return True
 
     async def _pause_resume(self, interaction: discord.Interaction) -> None:
         try:
@@ -1799,35 +2063,55 @@ class Music(commands.Cog):
         lock = self._controller_locks.setdefault(guild_id, asyncio.Lock())
         async with lock:
             existing = self._controllers.get(guild_id)
-            if (
-                dedupe
-                and existing is not None
-                and existing.message is not None
-                # Only a very recent controller counts as a duplicate: reconnect
-                # re-fires land within seconds of the original post, while a
-                # same-track loop iteration (QueueMode.LOOP) comes minutes later
-                # and SHOULD re-post so the panel returns to the channel bottom.
-                and time.monotonic() - existing.created_at < 30
-            ):
-                shown = existing.player.current or existing._track
-                # Match by source identifier, not encoded: Lavalink may
-                # re-serialise the track in its events, so the encoded base64
-                # of a re-fired track_start is not guaranteed to equal the one
-                # we decoded from the DB even for the same track.
-                shown_id = getattr(shown, "identifier", None)
-                if shown_id is not None and shown_id == getattr(
-                    track, "identifier", ""
-                ):
-                    # Same track already has a live controller - rebind it to
-                    # this (possibly new) player instance and keep the message.
-                    existing.player = player
+            incoming_id = getattr(track, "identifier", None)
+            action = decide_controller_action(
+                dedupe=dedupe,
+                has_live_controller=(
+                    existing is not None and existing.message is not None
+                ),
+                # What the panel actually RENDERS, not existing.player.current: a
+                # natural advance sets current to the new track BEFORE its
+                # track_start reaches us, so current already equals the incoming
+                # track and comparing against it wrongly kept the stale panel on
+                # every real change. _rendered_id is the identity of the track on
+                # screen, which only a genuine change actually differs from.
+                displayed_id=getattr(existing, "_rendered_id", None),
+                incoming_id=incoming_id,
+                age_seconds=(
+                    time.monotonic() - existing.created_at
+                    if existing is not None
+                    else None
+                ),
+            )
+
+            if action == "keep":
+                # Reconnect re-fire of the track already on screen: rebind to
+                # this (possibly new) Player instance and keep the message so the
+                # panel never flickers.
+                existing.player = player
+                player.controller = existing
+                log.debug(
+                    "Controller kept (re-fire) for guild %s: %s",
+                    guild_id,
+                    incoming_id,
+                )
+                return
+
+            if action == "rerender":
+                # Genuine change to a different track: update the existing panel
+                # in place (no delete+repost churn). Rebind first so the render
+                # reads this player, and thread the event's track through so the
+                # render is correct even before player.current catches up.
+                existing.player = player
+                if await existing._rerender_for_track(track):
                     player.controller = existing
                     log.debug(
-                        "Controller kept (dedupe) for guild %s: %s",
+                        "Controller re-rendered for guild %s: %s",
                         guild_id,
-                        shown_id,
+                        incoming_id,
                     )
                     return
+                # The message was gone/stale: fall through and repost a fresh one.
 
             for old in {player.controller, existing}:
                 if old is None:
