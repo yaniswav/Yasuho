@@ -1,4 +1,4 @@
-"""Unit tests for the pure building blocks of the Rythm-style autoplay lot.
+"""Unit tests for the pure building blocks of the autoplay feature.
 
 Everything here is side-effect free - no discord, sonolink node, database or
 voice connection is touched. It pins down the two pure predicates the cog and the

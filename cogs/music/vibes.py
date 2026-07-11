@@ -1,4 +1,4 @@
-"""Pure building blocks for the Rythm-style music UX.
+"""Pure building blocks for the guided music UX.
 
 This module owns the side-effect-free half of the "choose your vibe" flow so it
 can be unit-tested without discord, sonolink, a database or a live Lavalink node:
