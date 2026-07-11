@@ -62,6 +62,7 @@ async def save_state(
     controller_message_id=None,
     autoplay=True,
     radio_genre=None,
+    effect=None,
 ):
     """Upsert one guild's player state (best-effort; never raises)."""
     try:
@@ -70,8 +71,8 @@ async def save_state(
             INSERT INTO music_state (
                 guild_id, voice_channel_id, home_channel_id, dj_id, volume,
                 loop_mode, position_ms, paused, current_track, queue,
-                controller_message_id, autoplay, radio_genre, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now())
+                controller_message_id, autoplay, radio_genre, effect, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now())
             ON CONFLICT (guild_id) DO UPDATE SET
                 voice_channel_id      = EXCLUDED.voice_channel_id,
                 home_channel_id       = EXCLUDED.home_channel_id,
@@ -85,6 +86,7 @@ async def save_state(
                 controller_message_id = EXCLUDED.controller_message_id,
                 autoplay              = EXCLUDED.autoplay,
                 radio_genre           = EXCLUDED.radio_genre,
+                effect                = EXCLUDED.effect,
                 updated_at            = now()
             """,
             guild_id,
@@ -100,6 +102,7 @@ async def save_state(
             controller_message_id,
             autoplay,
             radio_genre,
+            effect,
         )
     except Exception:
         log.exception("Failed to persist music state for guild %s", guild_id)

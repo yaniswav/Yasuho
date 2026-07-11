@@ -85,36 +85,55 @@ def _save_state_kwargs(**overrides):
 
 async def test_save_state_persists_autoplay_flag(fake_pool):
     # The session autoplay mode rides along in the snapshot so a cold restart can
-    # restore it. radio_genre was appended after it, so autoplay is now the
-    # second-to-last bound parameter.
+    # restore it. radio_genre and effect were appended after it, so autoplay is
+    # now the third-to-last bound parameter.
     await music_state.save_state(fake_pool, **_save_state_kwargs(autoplay=False))
     assert len(fake_pool.calls) == 1
     kind, query, args = fake_pool.calls[0]
     assert kind == "execute"
     assert "autoplay" in query
-    assert args[-2] is False
+    assert args[-3] is False
 
 
 async def test_save_state_autoplay_defaults_true(fake_pool):
     # An older caller that omits the flag persists autoplay ON (the fallback).
     await music_state.save_state(fake_pool, **_save_state_kwargs())
     _, _query, args = fake_pool.calls[0]
-    assert args[-2] is True
+    assert args[-3] is True
 
 
 async def test_save_state_persists_radio_genre(fake_pool):
     # The active radio station key rides along so a cold restart resumes the
-    # station (controller picker + refill); it is the last bound parameter.
+    # station (controller picker + refill); effect was appended after it, so it
+    # is the second-to-last bound parameter.
     await music_state.save_state(
         fake_pool, **_save_state_kwargs(radio_genre="phonk")
     )
     _, query, args = fake_pool.calls[0]
     assert "radio_genre" in query
-    assert args[-1] == "phonk"
+    assert args[-2] == "phonk"
 
 
 async def test_save_state_radio_genre_defaults_none(fake_pool):
     # A normal (non-radio) session persists NULL, so a restart shows no station.
+    await music_state.save_state(fake_pool, **_save_state_kwargs())
+    _, _query, args = fake_pool.calls[0]
+    assert args[-2] is None
+
+
+async def test_save_state_persists_effect(fake_pool):
+    # The active audio-effect preset key rides along so a cold restart re-applies
+    # it; it is the last bound parameter.
+    await music_state.save_state(
+        fake_pool, **_save_state_kwargs(effect="nightcore")
+    )
+    _, query, args = fake_pool.calls[0]
+    assert "effect" in query
+    assert args[-1] == "nightcore"
+
+
+async def test_save_state_effect_defaults_none(fake_pool):
+    # A session with no effect persists NULL, so a restart plays unfiltered.
     await music_state.save_state(fake_pool, **_save_state_kwargs())
     _, _query, args = fake_pool.calls[0]
     assert args[-1] is None

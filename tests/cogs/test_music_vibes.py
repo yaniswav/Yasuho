@@ -809,6 +809,33 @@ def test_station_select_options_none_marks_nothing():
 
 
 # ---------------------------------------------------------------------------
+# effect_select_options  (controller effect picker; current preset marked)
+# ---------------------------------------------------------------------------
+
+
+def test_effect_select_options_one_per_preset_in_catalog_order():
+    from cogs.music import effects
+
+    opts = music.effect_select_options("nightcore")
+    assert [o.value for o in opts] == [p.key for p in effects.PRESET_CATALOG]
+
+
+def test_effect_select_options_marks_exactly_the_current_preset():
+    opts = music.effect_select_options("vaporwave")
+    defaults = [o for o in opts if o.default]
+    assert len(defaults) == 1
+    assert defaults[0].value == "vaporwave"
+
+
+def test_effect_select_options_none_defaults_to_off():
+    # No active effect preselects Off, so the picker opens on the clear option.
+    opts = music.effect_select_options(None)
+    defaults = [o for o in opts if o.default]
+    assert len(defaults) == 1
+    assert defaults[0].value == "off"
+
+
+# ---------------------------------------------------------------------------
 # parse_seek_target  (pure /seek argument parser)
 # ---------------------------------------------------------------------------
 

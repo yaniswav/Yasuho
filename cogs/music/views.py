@@ -34,7 +34,7 @@ import discord
 import sonolink
 import sonolink.models
 
-from cogs.music import vibes
+from cogs.music import effects, vibes
 from cogs.music.music import (
     MAX_FAVOURITES,
     Player,
@@ -43,6 +43,7 @@ from cogs.music.music import (
     _set_autoplay,
     can_go_previous,
     can_skip,
+    effect_select_options,
     format_duration,
     is_autoplay_track,
     purge_queue_lanes,
@@ -324,6 +325,13 @@ class MusicController(discord.ui.LayoutView):
                     emoji=station.emoji, label=station.label
                 )
             )
+        preset = self._effect_preset()
+        if preset is not None:
+            meta_lines.append(
+                _("**Effect:** {emoji} {label}").format(
+                    emoji=preset.emoji, label=preset.label
+                )
+            )
         requester_id = getattr(track.extras, "requester", None)
         if requester_id:
             meta_lines.append(
@@ -447,6 +455,12 @@ class MusicController(discord.ui.LayoutView):
                         else discord.ButtonStyle.secondary
                     ),
                 ),
+                self._make_button(
+                    self._effects,
+                    label=_("Effects"),
+                    emoji="🎛️",
+                    style=discord.ButtonStyle.secondary,
+                ),
             )
         )
 
@@ -472,6 +486,18 @@ class MusicController(discord.ui.LayoutView):
         """
         key = getattr(self.player, "radio_genre", None)
         return vibes.GENRES_BY_KEY.get(key) if key else None
+
+    def _effect_preset(self) -> typing.Optional["effects.Preset"]:
+        """The active audio-effect preset, or None when no effect is set.
+
+        Off (or an unknown/stale key) renders no line - only a real, active
+        effect earns the controller's "Effect:" row. Guards against a retired key
+        the same way :meth:`_station_genre` guards a removed genre.
+        """
+        key = getattr(self.player, "effect_preset", None)
+        if not key or key == effects.OFF_KEY:
+            return None
+        return effects.PRESETS_BY_KEY.get(key)
 
     def _disable_all(self) -> None:
         """Disable every button in the layout (walks nested ActionRows)."""
@@ -750,6 +776,23 @@ class MusicController(discord.ui.LayoutView):
             log.exception("Controller disconnect failed")
             await self._report_failure(interaction)
 
+    async def _effects(self, interaction: discord.Interaction) -> None:
+        """Open the ephemeral effect picker (keeps the controller budget flat).
+
+        A private one-select card is sent to the clicker instead of adding a
+        select row to the shared controller, so the panel stays identical for
+        everyone. The picker's own callback re-checks same-voice and runs the
+        cog's quota-gated apply seam.
+        """
+        try:
+            await interaction.response.send_message(
+                view=EffectsView(self.cog, self.player),
+                ephemeral=True,
+            )
+        except Exception:
+            log.exception("Controller effects launch failed")
+            await self._report_failure(interaction)
+
     async def _change_station(self, interaction: discord.Interaction, key: str) -> None:
         """Zap the station to ``key``: DJ-gated, replaces playback with the genre.
 
@@ -807,6 +850,56 @@ class MusicController(discord.ui.LayoutView):
         except Exception:
             log.exception("Controller station change failed")
             await self._report_failure(interaction)
+
+
+class _EffectsSelect(discord.ui.Select):
+    """The audio-effect picker shown in the controller's ephemeral effects card.
+
+    One option per preset in catalog order; the active preset (or Off when none
+    is set) is preselected. Choosing one re-checks same-voice, then delegates to
+    the cog's quota-gated apply seam and confirms ephemerally.
+    """
+
+    def __init__(self, cog: "Music", player: Player) -> None:
+        self._cog = cog
+        self._player = player
+        super().__init__(
+            placeholder=_("Pick an effect..."),
+            min_values=1,
+            max_values=1,
+            options=effect_select_options(getattr(player, "effect_preset", None)),
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            if not await _ensure_in_voice(self._player, interaction):
+                return
+            guild = getattr(self._player.channel, "guild", None)
+            if guild is None:
+                await interaction.response.send_message(
+                    _("The player is no longer active."), ephemeral=True
+                )
+                return
+            message = await self._cog._run_effect_change(
+                self._player, guild.id, interaction.user, self.values[0]
+            )
+            await interaction.response.send_message(message, ephemeral=True)
+        except Exception:
+            log.exception("Effect select failed")
+            await interactions.notify_failure(interaction)
+
+
+class EffectsView(discord.ui.View):
+    """Ephemeral one-select card for choosing an audio effect.
+
+    Sent privately from the controller's Effects button, so it needs no author
+    gate (only the clicker sees it) and no persistence (it lives for the
+    interaction). The select re-checks same-voice before applying.
+    """
+
+    def __init__(self, cog: "Music", player: Player, *, timeout: float = 120) -> None:
+        super().__init__(timeout=timeout)
+        self.add_item(_EffectsSelect(cog, player))
 
 
 class _ModalPlayContext:

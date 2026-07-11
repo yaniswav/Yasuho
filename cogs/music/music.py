@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import time
 import typing
 from datetime import datetime, timezone
@@ -11,10 +12,11 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import sponsorblock, vibes
+from cogs.music import effects, sponsorblock, vibes
 from tools import music_state, settings
-from tools.i18n import _
+from tools.i18n import _, ngettext
 from tools.paginator import Paginator, paginate_lines
+from tools.quotas import QuotaRegistry
 
 # sonolink's autoplay builds its discovery query from the seed track's raw
 # identifier, which only resolves for a YouTube seed (see
@@ -75,6 +77,18 @@ ANTI_MIX_SKIP_CAP = 3
 # channel bottom instead of silently keeping the old message.
 CONTROLLER_REFIRE_WINDOW = 30.0
 
+# How often (seconds) the idle loop folds and logs the QuotaRegistry snapshot.
+# The loop ticks every 60s; this gates the log to a ~10-minute heartbeat, and it
+# only ever logs when a counter is nonzero (see effects.stats_are_nonzero).
+QUOTA_LOG_INTERVAL = 600.0
+
+# Slash choices for /filter, built once from the effect catalog. Text (prefix)
+# callers pass the raw key/label and are resolved with effects.resolve_preset.
+EFFECT_CHOICES = [
+    app_commands.Choice(name=f"{preset.emoji} {preset.label}", value=preset.key)
+    for preset in effects.PRESET_CATALOG
+]
+
 
 class Player(sonolink.Player):
     """A sonolink player that also tracks the DJ, home text channel, and controller.
@@ -115,6 +129,9 @@ class Player(sonolink.Player):
         self.played_ids = vibes.PlayedTracks()
         self._radio_refilling = False
         self._automix_skips = 0
+        # Active audio-effect preset key (None = no effect). Set by the effects
+        # seam, read by the controller and the snapshot; restored on cold restart.
+        self.effect_preset: typing.Optional[str] = None
         # Repair autoplay for non-YouTube seeds: swap sonolink's stock autoplay
         # handler for our subclass, reusing the SAME settings object so the
         # player.autoplay getter/setter (and _set_autoplay) keep operating on it.
@@ -759,6 +776,30 @@ def station_select_options(
     ]
 
 
+def effect_select_options(
+    current_key: typing.Optional[str],
+) -> typing.List[discord.SelectOption]:
+    """Build the effect picker's options, marking ``current_key`` as default.
+
+    One option per preset in catalog order; the active preset (or Off when none
+    is set) is preselected so the ephemeral picker opens on the current state.
+    Extracted so the "current effect is marked" invariant is unit-tested without
+    a live view. Descriptions are translated here (in-task); labels are proper
+    names shown verbatim.
+    """
+    active = current_key or effects.OFF_KEY
+    return [
+        discord.SelectOption(
+            label=preset.label,
+            value=preset.key,
+            description=_(preset.description),
+            emoji=preset.emoji,
+            default=(preset.key == active),
+        )
+        for preset in effects.PRESET_CATALOG
+    ]
+
+
 class Music(commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
@@ -780,6 +821,12 @@ class Music(commands.Cog):
         # Strong refs to in-flight radio-refill tasks so they are not garbage
         # collected mid-await; each removes itself on completion.
         self._refill_tasks: typing.Set[asyncio.Task] = set()
+        # The chantier's shared quota registry (effects rate limit + the process-
+        # wide filtered-players ceiling; lyrics/vote-skip lots read it too). One
+        # instance per cog so its counters and bounded maps live for the process.
+        self.quotas = QuotaRegistry()
+        # Monotonic timestamp of the last quota-stats heartbeat log (see _idle_check).
+        self._last_quota_log = time.monotonic()
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -1100,14 +1147,22 @@ class Music(commands.Cog):
                 controller_message_id=controller_message_id,
                 autoplay=_autoplay_on(player),
                 radio_genre=getattr(player, "radio_genre", None),
+                effect=getattr(player, "effect_preset", None),
             )
         except Exception:
             log.exception("Failed to snapshot player state")
 
     async def _clear(self, guild_id: int) -> None:
-        """Forget a guild's persisted player state (best-effort)."""
+        """Forget a guild's persisted player state (best-effort).
+
+        Also the universal effect-ceiling release point: every disconnect / stop
+        / idle-teardown / restore-drop routes through here, so releasing the
+        guild's ``filtered_players`` slot (idempotent - a no-op when it held
+        none) keeps the process-wide ceiling honest without touching each path.
+        """
         self._controllers.pop(guild_id, None)
         self._controller_locks.pop(guild_id, None)
+        self.quotas.filtered_players.release(guild_id)
         await music_state.clear_state(self.bot.db_pool, guild_id)
 
     # ------------------------------------------------------------------
@@ -1365,6 +1420,14 @@ class Music(commands.Cog):
                         await self._teardown(voice_client)
                 else:
                     voice_client.idle_since = None
+            # Quota-stats heartbeat: fold the whole registry into one INFO line
+            # about every QUOTA_LOG_INTERVAL, and only when something has actually
+            # happened, so an idle process stays silent.
+            if now - self._last_quota_log >= QUOTA_LOG_INTERVAL:
+                self._last_quota_log = now
+                stats = self.quotas.stats()
+                if effects.stats_are_nonzero(stats):
+                    log.info("Music quota stats: %s", effects.format_quota_stats(stats))
         except Exception:
             log.exception("idle-timeout loop iteration failed")
 
@@ -1529,6 +1592,25 @@ class Music(commands.Cog):
             # not come back at full blast after a restart.
             volume=100 if row["volume"] is None else int(row["volume"]),
         )
+        # Re-apply the persisted audio effect, re-acquiring a filtered-players
+        # ceiling slot. A stale/unknown key is dropped (resolve_preset -> None);
+        # a FULL ceiling skips the effect and keeps playing, holding no slot -
+        # the session simply plays unfiltered until one frees and it is re-picked.
+        effect_key = row["effect"] if "effect" in row else None
+        if effect_key and effects.resolve_preset(effect_key) is not None:
+            result = await effects.apply_preset(
+                player, effect_key, quotas=self.quotas
+            )
+            if result == effects.RESULT_CEILING_FULL:
+                log.info(
+                    "Effect '%s' skipped on restore for guild %s: filtered-player "
+                    "ceiling full",
+                    effect_key,
+                    guild_id,
+                )
+            elif result == effects.RESULT_OK:
+                log.info("Restored effect '%s' for guild %s", effect_key, guild_id)
+
         # Post the controller explicitly: track_start may not fire at all for a
         # track restored paused, which used to leave no working controller.
         # dedupe=True lets _send_controller's per-guild lock resolve the race
@@ -2212,6 +2294,95 @@ class Music(commands.Cog):
         await player.disconnect()
         await self._clear(ctx.guild.id)
         await ctx.send(_("Disconnected from the voice channel."))
+
+    # ------------------------------------------------------------------
+    # Audio effects
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _has_manage_guild(actor: typing.Any) -> bool:
+        """True when ``actor`` is a Member holding the Manage Server permission."""
+        return (
+            isinstance(actor, discord.Member)
+            and actor.guild_permissions.manage_guild
+        )
+
+    @staticmethod
+    def _format_retry_delay(seconds: float) -> str:
+        """Humanise a quota retry_after (seconds) as a short, localised phrase."""
+        seconds = max(1, int(math.ceil(seconds)))
+        if seconds < 60:
+            return ngettext("{count} second", "{count} seconds", seconds).format(
+                count=seconds
+            )
+        minutes = int(math.ceil(seconds / 60))
+        return ngettext("{count} minute", "{count} minutes", minutes).format(
+            count=minutes
+        )
+
+    async def _run_effect_change(
+        self, player: Player, guild_id: int, actor: typing.Any, key: str
+    ) -> str:
+        """Gate, apply and confirm an effect change; return a translated line.
+
+        The single seam behind both /filter and the controller's ephemeral
+        picker. Same-voice is enforced by the callers. Here: resolve the preset,
+        spend the guild effects quota (unless the actor is the DJ or has Manage
+        Server, or the change is Off), apply through the effects seam (which owns
+        the filtered-players ceiling), then refresh the controller and snapshot.
+        Never raises - the effects seam swallows node errors and returns a code.
+        """
+        preset = effects.resolve_preset(key)
+        if preset is None:
+            return _("That effect isn't available.")
+        is_off = preset.key == effects.OFF_KEY
+        dj = getattr(player, "dj", None)
+        exempt = effects.is_effect_exempt(
+            dj.id if dj is not None else None,
+            actor.id,
+            self._has_manage_guild(actor),
+        )
+        # Quota gate: only an ordinary listener switching to a real effect pays.
+        if not is_off and not exempt and not self.quotas.effects_guild.check(guild_id):
+            delay = self._format_retry_delay(
+                self.quotas.effects_guild.retry_after(guild_id)
+            )
+            return _(
+                "You're changing effects too quickly. Try again in {delay}."
+            ).format(delay=delay)
+        result = await effects.apply_preset(player, preset.key, quotas=self.quotas)
+        if result == effects.RESULT_CEILING_FULL:
+            return _(
+                "A lot of servers are using effects right now - try again in a moment."
+            )
+        if result in (effects.RESULT_ERROR, effects.RESULT_UNKNOWN):
+            return _("Something went wrong applying that effect.")
+        # Success: charge the quota (non-off, non-exempt), refresh UI, persist.
+        if not is_off and not exempt:
+            self.quotas.effects_guild.hit(guild_id)
+        controller = getattr(player, "controller", None)
+        if controller is not None:
+            await controller._rerender()
+        await self._snapshot(player)
+        if is_off:
+            return _("Effects cleared.")
+        return _("Effect set to {emoji} {label}.").format(
+            emoji=preset.emoji, label=preset.label
+        )
+
+    @commands.hybrid_command(name="filter", aliases=["fx", "effect"])
+    @commands.guild_only()
+    @app_commands.describe(preset="The audio effect to apply, or Off to clear.")
+    @app_commands.choices(preset=EFFECT_CHOICES)
+    async def filter_command(self, ctx: commands.Context, *, preset: str) -> None:
+        """Apply an audio effect preset to the current playback (Off to clear)."""
+        player = await self._require_player(ctx)
+        if player is None:
+            return
+        message = await self._run_effect_change(
+            player, ctx.guild.id, ctx.author, preset
+        )
+        await ctx.send(message, ephemeral=True)
 
     # ------------------------------------------------------------------
     # Favourites / playlist commands
