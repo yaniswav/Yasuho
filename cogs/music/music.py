@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import vibes
+from cogs.music import sponsorblock, vibes
 from tools import music_state, settings
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
@@ -1188,6 +1188,19 @@ class Music(commands.Cog):
             )
 
     @commands.Cog.listener()
+    async def on_sonolink_unknown_event(
+        self, player: Player, data: dict
+    ) -> None:
+        """Log SponsorBlock plugin telemetry (segment skips) at debug.
+
+        sonolink surfaces every event type it does not model as
+        ``sonolink_unknown_event``; SponsorBlock's SegmentSkipped / SegmentsLoaded
+        and chapter events arrive here. Instrumentation only - no playback effect
+        and nothing user-facing.
+        """
+        sponsorblock.log_ws_event(player, data)
+
+    @commands.Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,
@@ -1443,6 +1456,9 @@ class Music(commands.Cog):
         player = guild.voice_client
         if not isinstance(player, Player):
             player = await channel.connect(cls=Player)
+        # Player birth: hand the node its SponsorBlock skip categories (best-effort,
+        # backgrounded so the 404 retry never stalls the restore).
+        sponsorblock.schedule_apply(player)
         player.home = home
         player.dj = dj
         player.queue.mode = loop_mode
@@ -1588,6 +1604,8 @@ class Music(commands.Cog):
             player.home = ctx.channel
             # Fresh session: seed autoplay from the starter's saved preference.
             await self._init_autoplay(player, ctx.author.id)
+            # Player birth: configure SponsorBlock skip categories on the node.
+            sponsorblock.schedule_apply(player)
 
         if player.home is None:
             player.home = ctx.channel
@@ -1835,6 +1853,8 @@ class Music(commands.Cog):
             player.home = interaction.channel
             # Fresh session: seed autoplay from the starter's saved preference.
             await self._init_autoplay(player, author.id)
+            # Player birth: configure SponsorBlock skip categories on the node.
+            sponsorblock.schedule_apply(player)
         if player.home is None:
             player.home = interaction.channel
 
@@ -2172,6 +2192,8 @@ class Music(commands.Cog):
             player.home = ctx.channel
             # Fresh session: seed autoplay from the starter's saved preference.
             await self._init_autoplay(player, ctx.author.id)
+            # Player birth: configure SponsorBlock skip categories on the node.
+            sponsorblock.schedule_apply(player)
 
         if player.home is None:
             player.home = ctx.channel
