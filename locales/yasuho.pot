@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-10 20:05+0000\n"
+"POT-Creation-Date: 2026-07-11 08:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,39 +17,39 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: cogs/anilist/account.py:121
+#: cogs/anilist/account.py:126
 #, python-brace-format
 msgid ""
 "### 📺 Anime\n"
 "**{count}** titles - **{days:.1f}** days watched - ★ **{score}**/100"
 msgstr ""
 
-#: cogs/anilist/account.py:134
+#: cogs/anilist/account.py:139
 #, python-brace-format
 msgid ""
 "### 📚 Manga\n"
 "**{count}** titles - **{chapters}** chapters - ★ **{score}**/100"
 msgstr ""
 
-#: cogs/anilist/account.py:151
+#: cogs/anilist/account.py:156
 #, python-brace-format
 msgid ""
 "### 🎭 Top genres\n"
 "{genres}"
 msgstr ""
 
-#: cogs/anilist/account.py:183
+#: cogs/anilist/account.py:188
 #, python-brace-format
 msgid ""
 "### ⭐ Favourites\n"
 "{lines}"
 msgstr ""
 
-#: cogs/anilist/account.py:196
+#: cogs/anilist/account.py:201
 msgid "-# AniList"
 msgstr ""
 
-#: cogs/anilist/account.py:223
+#: cogs/anilist/account.py:228
 #, python-brace-format
 msgid ""
 "Authorize the bot here:\n"
@@ -59,60 +59,60 @@ msgid ""
 "below (or run `/anilist code <code>`)."
 msgstr ""
 
-#: cogs/anilist/account.py:241
+#: cogs/anilist/account.py:246
 msgid "No AniList user found."
 msgstr ""
 
-#: cogs/anilist/account.py:256 cogs/anilist/base.py:411
+#: cogs/anilist/account.py:261 cogs/anilist/base.py:411
 #: cogs/anilist/base.py:465 cogs/anilist/base.py:528
-#: cogs/anilist/collection.py:549 cogs/anilist/collection.py:609
-#: cogs/anilist/collection.py:668 cogs/anilist/collection.py:756
+#: cogs/anilist/collection.py:554 cogs/anilist/collection.py:614
+#: cogs/anilist/collection.py:673 cogs/anilist/collection.py:761
 #: cogs/anilist/components.py:341
 msgid "Link your account first with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/account.py:262 cogs/anilist/account.py:538
-#: cogs/anilist/feed.py:3296
+#: cogs/anilist/account.py:267 cogs/anilist/account.py:543
+#: cogs/anilist/feed.py:3352
 msgid "Could not resolve your AniList account."
 msgstr ""
 
-#: cogs/anilist/account.py:281 cogs/anilist/account.py:301
+#: cogs/anilist/account.py:286 cogs/anilist/account.py:306
 #: cogs/anilist/hub.py:215
 msgid "AniList account linking is not configured."
 msgstr ""
 
-#: cogs/anilist/account.py:293
+#: cogs/anilist/account.py:298
 msgid "Check your DMs."
 msgstr ""
 
-#: cogs/anilist/account.py:313 cogs/anilist/components.py:1267
+#: cogs/anilist/account.py:318 cogs/anilist/components.py:1267
 msgid "That code did not work, try `/anilist login` again."
 msgstr ""
 
-#: cogs/anilist/account.py:318 cogs/anilist/components.py:1271
+#: cogs/anilist/account.py:323 cogs/anilist/components.py:1271
 #, python-brace-format
 msgid "Connected as {name}!"
 msgstr ""
 
-#: cogs/anilist/account.py:330
+#: cogs/anilist/account.py:335
 msgid "Your AniList account has been unlinked."
 msgstr ""
 
-#: cogs/anilist/account.py:350 cogs/anilist/account.py:564
+#: cogs/anilist/account.py:355 cogs/anilist/account.py:569
 msgid ""
 "Status must be one of: Watching/Reading, Completed, Planning, Paused, "
 "Dropped, Repeating."
 msgstr ""
 
-#: cogs/anilist/account.py:363
+#: cogs/anilist/account.py:368
 msgid "Score must be zero or a positive number."
 msgstr ""
 
-#: cogs/anilist/account.py:528
+#: cogs/anilist/account.py:533
 msgid "Provide a name or link your account with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/account.py:558
+#: cogs/anilist/account.py:563
 msgid "Media type must be `anime` or `manga`."
 msgstr ""
 
@@ -141,7 +141,7 @@ msgstr ""
 #: cogs/anilist/airing.py:314 cogs/anilist/chapters.py:347
 #: cogs/anilist/chapters.py:390 cogs/anilist/chapters.py:395
 #: cogs/anilist/feed.py:615 cogs/anilist/feed.py:731 cogs/anilist/feed.py:772
-#: cogs/anilist/feed.py:777 cogs/anilist/feed.py:874 cogs/anilist/feed.py:2985
+#: cogs/anilist/feed.py:777 cogs/anilist/feed.py:874 cogs/anilist/feed.py:3047
 msgid "I could not reach AniList - try again shortly."
 msgstr ""
 
@@ -159,51 +159,51 @@ msgstr ""
 msgid "Seen"
 msgstr ""
 
-#: cogs/anilist/airing.py:379
+#: cogs/anilist/airing.py:380
 msgid "A new episode just aired."
 msgstr ""
 
-#: cogs/anilist/airing.py:390
+#: cogs/anilist/airing.py:391
 #, python-brace-format
 msgid "Episode {episode} of **{title}** just aired."
 msgstr ""
 
-#: cogs/anilist/airing.py:394
+#: cogs/anilist/airing.py:395
 msgid "New episode"
 msgstr ""
 
-#: cogs/anilist/airing.py:416 cogs/anilist/feed.py:1085 cogs/anilist/hub.py:296
+#: cogs/anilist/airing.py:422 cogs/anilist/feed.py:1091 cogs/anilist/hub.py:296
 msgid "AniList"
 msgstr ""
 
-#: cogs/anilist/airing.py:460
+#: cogs/anilist/airing.py:466
 msgid ""
 "Airing alerts are now **off**. I will not DM you about new episodes "
 "anymore - run this again to turn them back on."
 msgstr ""
 
-#: cogs/anilist/airing.py:471
+#: cogs/anilist/airing.py:477
 msgid ""
 "Link your AniList account first with `/anilist login`, then run this "
 "again to turn on airing alerts."
 msgstr ""
 
-#: cogs/anilist/airing.py:479 cogs/anilist/chapters.py:578
-#: cogs/anilist/feed.py:566 cogs/anilist/feed.py:3287
+#: cogs/anilist/airing.py:485 cogs/anilist/chapters.py:584
+#: cogs/anilist/feed.py:566 cogs/anilist/feed.py:3343
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/airing.py:490 cogs/anilist/chapters.py:589
+#: cogs/anilist/airing.py:496 cogs/anilist/chapters.py:595
 msgid "Could not resolve your AniList account - try again shortly."
 msgstr ""
 
-#: cogs/anilist/airing.py:517
+#: cogs/anilist/airing.py:523
 msgid ""
 "-# Heads up: I could not see any titles on your Watching list. Make sure "
 "your AniList anime list is set to public."
 msgstr ""
 
-#: cogs/anilist/airing.py:523
+#: cogs/anilist/airing.py:529
 msgid ""
 "Airing alerts are now **on**. I will DM you when a new episode of a title"
 " on your **Watching** anime list airs, with a one-click Seen button.\n"
@@ -214,8 +214,8 @@ msgstr ""
 msgid "AniList user"
 msgstr ""
 
-#: cogs/anilist/base.py:416 cogs/anilist/collection.py:620
-#: cogs/anilist/collection.py:677 cogs/anilist/components.py:352
+#: cogs/anilist/base.py:416 cogs/anilist/collection.py:625
+#: cogs/anilist/collection.py:682 cogs/anilist/components.py:352
 msgid "Could not update that entry."
 msgstr ""
 
@@ -317,51 +317,51 @@ msgstr ""
 msgid "Read"
 msgstr ""
 
-#: cogs/anilist/chapters.py:470
+#: cogs/anilist/chapters.py:471
 msgid "A new chapter is out."
 msgstr ""
 
-#: cogs/anilist/chapters.py:481
+#: cogs/anilist/chapters.py:482
 #, python-brace-format
 msgid "Chapter {chapter} of **{title}** is out."
 msgstr ""
 
-#: cogs/anilist/chapters.py:485
+#: cogs/anilist/chapters.py:486
 msgid "New chapter"
 msgstr ""
 
-#: cogs/anilist/chapters.py:490
+#: cogs/anilist/chapters.py:491
 #, python-brace-format
 msgid "Vol. {volume}"
 msgstr ""
 
-#: cogs/anilist/chapters.py:511
+#: cogs/anilist/chapters.py:517
 msgid "Official site"
 msgstr ""
 
-#: cogs/anilist/chapters.py:511
+#: cogs/anilist/chapters.py:517
 msgid "MangaDex"
 msgstr ""
 
-#: cogs/anilist/chapters.py:559
+#: cogs/anilist/chapters.py:565
 msgid ""
 "Chapter alerts are now **off**. I will not DM you about new chapters "
 "anymore - run this again to turn them back on."
 msgstr ""
 
-#: cogs/anilist/chapters.py:570
+#: cogs/anilist/chapters.py:576
 msgid ""
 "Link your AniList account first with `/anilist login`, then run this "
 "again to turn on chapter alerts."
 msgstr ""
 
-#: cogs/anilist/chapters.py:616
+#: cogs/anilist/chapters.py:622
 msgid ""
 "-# Heads up: I could not see any titles on your Reading list. Make sure "
 "your AniList manga list is set to public."
 msgstr ""
 
-#: cogs/anilist/chapters.py:622
+#: cogs/anilist/chapters.py:628
 msgid ""
 "Chapter alerts are now **on**. I will DM you when a new chapter of a "
 "title on your **Reading** manga list drops, with a one-click Read button."
@@ -422,14 +422,14 @@ msgid "Filter by status..."
 msgstr ""
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1223 cogs/anilist/feed.py:1401
-#: cogs/anilist/feed.py:1554 cogs/anilist/feed.py:1674 cogs/anilist/hub.py:54
+#: cogs/anilist/feed.py:1229 cogs/anilist/feed.py:1410
+#: cogs/anilist/feed.py:1579 cogs/anilist/feed.py:1700 cogs/anilist/hub.py:54
 msgid "Anime"
 msgstr ""
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1224 cogs/anilist/feed.py:1401
-#: cogs/anilist/feed.py:1554 cogs/anilist/feed.py:1674 cogs/anilist/hub.py:55
+#: cogs/anilist/feed.py:1230 cogs/anilist/feed.py:1410
+#: cogs/anilist/feed.py:1579 cogs/anilist/feed.py:1700 cogs/anilist/hub.py:55
 msgid "Manga"
 msgstr ""
 
@@ -449,9 +449,9 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
-#: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2035
-#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:99
-#: cogs/config/rooms.py:1062 tools/views.py:22
+#: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2057
+#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:112
+#: cogs/config/rooms.py:1062 tools/views.py:22 tools/views.py:117
 msgid "This panel isn't for you."
 msgstr ""
 
@@ -482,26 +482,26 @@ msgstr ""
 msgid "Score: {score}"
 msgstr ""
 
-#: cogs/anilist/collection.py:452
+#: cogs/anilist/collection.py:457
 #, python-brace-format
 msgid "Nothing on your {status} {media_type} list."
 msgstr ""
 
-#: cogs/anilist/collection.py:471 tools/paginator.py:60
+#: cogs/anilist/collection.py:476 tools/paginator.py:60
 #, python-brace-format
 msgid "Page {current}/{total}"
 msgstr ""
 
-#: cogs/anilist/collection.py:647 cogs/anilist/components.py:1228
+#: cogs/anilist/collection.py:652 cogs/anilist/components.py:1228
 msgid "Mark completed"
 msgstr ""
 
-#: cogs/anilist/collection.py:650 cogs/anilist/components.py:1231
+#: cogs/anilist/collection.py:655 cogs/anilist/components.py:1231
 #, python-brace-format
 msgid "That was the last {unit} - mark **{title}** as completed?"
 msgstr ""
 
-#: cogs/anilist/collection.py:760
+#: cogs/anilist/collection.py:765
 msgid "Could not reach your AniList account."
 msgstr ""
 
@@ -542,7 +542,7 @@ msgid "Keep current status"
 msgstr ""
 
 #: cogs/anilist/components.py:269 cogs/anilist/components.py:761
-#: cogs/anilist/feed.py:2127 cogs/config/twitch.py:418
+#: cogs/anilist/feed.py:2149 cogs/config/twitch.py:418
 #: cogs/config/welcome.py:416
 msgid "Status"
 msgstr ""
@@ -784,8 +784,8 @@ msgstr ""
 msgid "Could not open the code form."
 msgstr ""
 
-#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1404 cogs/music/music.py:1558
-#: cogs/music/music.py:1720
+#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1413 cogs/music/music.py:2123
+#: cogs/music/music.py:2287
 msgid "Unknown title"
 msgstr ""
 
@@ -879,7 +879,7 @@ msgstr[1] ""
 msgid "You are clicking too fast - give it a moment."
 msgstr ""
 
-#: cogs/anilist/feed.py:548 cogs/anilist/feed.py:3277
+#: cogs/anilist/feed.py:548 cogs/anilist/feed.py:3333
 msgid "AniList actions are unavailable right now."
 msgstr ""
 
@@ -946,247 +946,248 @@ msgstr ""
 msgid "Your reply was posted. [See it on AniList]({url})"
 msgstr ""
 
-#: cogs/anilist/feed.py:992
+#: cogs/anilist/feed.py:993
 msgid "An AniList update could not be rendered."
 msgstr ""
 
-#: cogs/anilist/feed.py:1015 cogs/anilist/feed.py:1050
-#: cogs/anilist/feed.py:1149
+#: cogs/anilist/feed.py:1016 cogs/anilist/feed.py:1056
+#: cogs/anilist/feed.py:1155
 msgid "Someone"
 msgstr ""
 
-#: cogs/anilist/feed.py:1026
+#: cogs/anilist/feed.py:1027
 #, python-brace-format
 msgid "{user} {action} {title}"
 msgstr ""
 
-#: cogs/anilist/feed.py:1055
+#: cogs/anilist/feed.py:1061
 #, python-brace-format
 msgid "{user} posted an update"
 msgstr ""
 
-#: cogs/anilist/feed.py:1124
+#: cogs/anilist/feed.py:1130
 msgid "More AniList activity"
 msgstr ""
 
-#: cogs/anilist/feed.py:1137
+#: cogs/anilist/feed.py:1143
 #, python-brace-format
 msgid "...and {count} more update"
 msgid_plural "...and {count} more updates"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed.py:1153
+#: cogs/anilist/feed.py:1159
 #, python-brace-format
 msgid "{user} - {summary}"
 msgstr ""
 
-#: cogs/anilist/feed.py:1161
+#: cogs/anilist/feed.py:1167
 #, python-brace-format
 msgid "+{count} other"
 msgid_plural "+{count} others"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed.py:1225
+#: cogs/anilist/feed.py:1231
 msgid "Posts"
 msgstr ""
 
-#: cogs/anilist/feed.py:1245
+#: cogs/anilist/feed.py:1251
 msgid "Switch feed..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1280
+#: cogs/anilist/feed.py:1286
 msgid "Move this feed to..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1282
+#: cogs/anilist/feed.py:1288
 msgid "Pick a channel to create a feed..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1333
+#: cogs/anilist/feed.py:1339
 msgid "At least one activity type must stay enabled."
 msgstr ""
 
-#: cogs/anilist/feed.py:1355
+#: cogs/anilist/feed.py:1361
 #, python-brace-format
 msgid "Members can join: {state}"
 msgstr ""
 
-#: cogs/anilist/feed.py:1356 cogs/config/welcome.py:142
+#: cogs/anilist/feed.py:1362 cogs/config/welcome.py:142
 #: cogs/config/welcome.py:433 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:443
 msgid "On"
 msgstr ""
 
-#: cogs/anilist/feed.py:1356 cogs/config/welcome.py:142
+#: cogs/anilist/feed.py:1362 cogs/config/welcome.py:142
 #: cogs/config/welcome.py:433 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:443 cogs/music/music.py:269
+#: cogs/config/welcome.py:443 cogs/music/music.py:374
 msgid "Off"
 msgstr ""
 
-#: cogs/anilist/feed.py:1415
+#: cogs/anilist/feed.py:1424
 msgid "Pick the title to track..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1435
+#: cogs/anilist/feed.py:1444
 msgid "Back"
 msgstr ""
 
-#: cogs/anilist/feed.py:1468
+#: cogs/anilist/feed.py:1477 cogs/anilist/feed.py:1525
+#: cogs/anilist/feed.py:1553
+msgid "Track a title"
+msgstr ""
+
+#: cogs/anilist/feed.py:1479
+msgid "Pick the exact title to track:"
+msgstr ""
+
+#: cogs/anilist/feed.py:1486 cogs/anilist/feed.py:1733
+#: cogs/anilist/feed.py:2124 cogs/anilist/feed.py:2211 cogs/anilist/hub.py:312
+#: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
+msgid "Only you can use these controls."
+msgstr ""
+
+#: cogs/anilist/feed.py:1493
 msgid "I couldn't read that selection - try again."
 msgstr ""
 
-#: cogs/anilist/feed.py:1480
+#: cogs/anilist/feed.py:1505
 #, python-brace-format
 msgid "Now tracking **{title}** in this feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:1500 cogs/anilist/feed.py:1528
-#: cogs/anilist/feed.py:1734
-msgid "Track a title"
-msgstr ""
-
-#: cogs/anilist/feed.py:1503
+#: cogs/anilist/feed.py:1528
 msgid "Title to search"
 msgstr ""
 
-#: cogs/anilist/feed.py:1536 cogs/anilist/feed.py:2842
+#: cogs/anilist/feed.py:1561 cogs/anilist/feed.py:2906
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1564
+#: cogs/anilist/feed.py:1589
 msgid "Stop tracking a title..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1598
+#: cogs/anilist/feed.py:1623
 msgid "Next"
 msgstr ""
 
-#: cogs/anilist/feed.py:1598
+#: cogs/anilist/feed.py:1623
 msgid "Previous"
 msgstr ""
 
-#: cogs/anilist/feed.py:1677
-msgid "No titles tracked yet."
+#: cogs/anilist/feed.py:1684
+msgid "Tracked releases"
 msgstr ""
 
-#: cogs/anilist/feed.py:1687
+#: cogs/anilist/feed.py:1691
 #, python-brace-format
 msgid ""
 "New episodes (anime) and chapters (manga) of these titles are posted in "
 "{channel}, independently of any DM alerts. Up to {max} titles per feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:1694
-msgid "Tracked releases"
+#: cogs/anilist/feed.py:1703
+msgid "No titles tracked yet."
 msgstr ""
 
-#: cogs/anilist/feed.py:1699
+#: cogs/anilist/feed.py:1706
 #, python-brace-format
 msgid "Tracking {count}/{max}"
 msgstr ""
 
-#: cogs/anilist/feed.py:1722
+#: cogs/anilist/feed.py:1754
 #, python-brace-format
 msgid "No AniList match for **{query}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1735
-msgid "Pick the exact title to track:"
-msgstr ""
-
-#: cogs/anilist/feed.py:1756
+#: cogs/anilist/feed.py:1783
 #, python-brace-format
 msgid "Tracked releases ({count})"
 msgstr ""
 
-#: cogs/anilist/feed.py:1782 cogs/config/twitch.py:311
+#: cogs/anilist/feed.py:1809 cogs/config/twitch.py:311
 #: cogs/config/welcome.py:204
 msgid "Disable"
 msgstr ""
 
-#: cogs/anilist/feed.py:1782 cogs/config/twitch.py:311
+#: cogs/anilist/feed.py:1809 cogs/config/twitch.py:311
 #: cogs/config/welcome.py:204
 msgid "Enable"
 msgstr ""
 
-#: cogs/anilist/feed.py:1808
+#: cogs/anilist/feed.py:1835
 msgid "Delete"
 msgstr ""
 
-#: cogs/anilist/feed.py:1809 tools/arg_completion.py:219
+#: cogs/anilist/feed.py:1836 tools/arg_completion.py:219
 msgid "Cancel"
 msgstr ""
 
-#: cogs/anilist/feed.py:1813
+#: cogs/anilist/feed.py:1840
 msgid "Delete this feed?"
 msgstr ""
 
-#: cogs/anilist/feed.py:1815
+#: cogs/anilist/feed.py:1842
 #, python-brace-format
 msgid ""
 "This permanently deletes the AniList feed in {channel} and everyone it "
 "follows. This cannot be undone."
 msgstr ""
 
-#: cogs/anilist/feed.py:1830
+#: cogs/anilist/feed.py:1857
 msgid "Feed deleted."
 msgstr ""
 
-#: cogs/anilist/feed.py:1843 cogs/moderation/moderation.py:1032
+#: cogs/anilist/feed.py:1870 cogs/moderation/moderation.py:1032
 #: cogs/moderation/moderation.py:1085 tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr ""
 
-#: cogs/anilist/feed.py:1853
+#: cogs/anilist/feed.py:1880
 msgid "Delete feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:1871
+#: cogs/anilist/feed.py:1898
 msgid "Add a follow"
 msgstr ""
 
-#: cogs/anilist/feed.py:1874
+#: cogs/anilist/feed.py:1901
 msgid "AniList username"
 msgstr ""
 
-#: cogs/anilist/feed.py:1903
+#: cogs/anilist/feed.py:1930
 #, python-brace-format
 msgid "Now following **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1913
+#: cogs/anilist/feed.py:1940
 msgid "Add follow"
 msgstr ""
 
-#: cogs/anilist/feed.py:1920 cogs/anilist/feed.py:3043
+#: cogs/anilist/feed.py:1947 cogs/anilist/feed.py:3105
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr ""
 
-#: cogs/anilist/feed.py:1943
+#: cogs/anilist/feed.py:1970
 msgid "Remove a follow..."
 msgstr ""
 
-#: cogs/anilist/feed.py:2091 cogs/anilist/feed.py:2119
+#: cogs/anilist/feed.py:2113 cogs/anilist/feed.py:2141
 msgid "AniList activity feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:2094
+#: cogs/anilist/feed.py:2116
 #, python-brace-format
 msgid ""
 "This server has no AniList feed yet. Pick a channel below to create one "
 "(up to {max} per server)."
 msgstr ""
 
-#: cogs/anilist/feed.py:2102 cogs/anilist/feed.py:2189 cogs/anilist/hub.py:312
-#: cogs/config/buttonroles.py:437 cogs/moderation/modlog.py:167
-msgid "Only you can use these controls."
-msgstr ""
-
-#: cogs/anilist/feed.py:2113 cogs/config/settings.py:53
+#: cogs/anilist/feed.py:2135 cogs/config/settings.py:53
 #: cogs/config/twitch.py:420 cogs/config/welcome.py:418
 #: cogs/moderation/automod.py:363 cogs/moderation/automod.py:374
 #: cogs/moderation/automod.py:385 cogs/moderation/automod.py:401
@@ -1194,7 +1195,7 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:2113 cogs/config/settings.py:53
+#: cogs/anilist/feed.py:2135 cogs/config/settings.py:53
 #: cogs/config/twitch.py:422 cogs/config/welcome.py:420
 #: cogs/config/welcome.py:672 cogs/moderation/automod.py:363
 #: cogs/moderation/automod.py:374 cogs/moderation/automod.py:385
@@ -1202,18 +1203,18 @@ msgstr ""
 msgid "Disabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:2115
+#: cogs/anilist/feed.py:2137
 #, python-brace-format
 msgid "{status} ({count} recent failures)"
 msgstr ""
 
-#: cogs/anilist/feed.py:2121
+#: cogs/anilist/feed.py:2143
 msgid ""
 "Configure how AniList activity is mirrored into this server. Every change"
 " saves instantly."
 msgstr ""
 
-#: cogs/anilist/feed.py:2125 cogs/config/announcements.py:268
+#: cogs/anilist/feed.py:2147 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:514 cogs/config/starboard.py:180
 #: cogs/config/twitch.py:426 cogs/config/welcome.py:424
 #: cogs/config/welcome.py:651 cogs/moderation/modlog.py:416
@@ -1221,154 +1222,150 @@ msgstr ""
 msgid "Channel"
 msgstr ""
 
-#: cogs/anilist/feed.py:2134
+#: cogs/anilist/feed.py:2156
 msgid "Feeds"
 msgstr ""
 
-#: cogs/anilist/feed.py:2147
+#: cogs/anilist/feed.py:2169
 msgid "Types"
 msgstr ""
 
-#: cogs/anilist/feed.py:2171 cogs/anilist/feed.py:3364
+#: cogs/anilist/feed.py:2193 cogs/anilist/feed.py:3420
 msgid "no one yet"
 msgstr ""
 
-#: cogs/anilist/feed.py:2175
+#: cogs/anilist/feed.py:2197
 #, python-brace-format
 msgid "Following ({count})"
 msgstr ""
 
-#: cogs/anilist/feed.py:2687 cogs/anilist/feed.py:2723
-#: cogs/anilist/feed.py:3180
+#: cogs/anilist/feed.py:2751 cogs/anilist/feed.py:2787
+#: cogs/anilist/feed.py:3242
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:2695
+#: cogs/anilist/feed.py:2759
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:2735
+#: cogs/anilist/feed.py:2799
 msgid "That feed no longer exists."
 msgstr ""
 
-#: cogs/anilist/feed.py:2830 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:2894 tests/cogs/test_anilist_feed_subs.py:14
 msgid "I couldn't read that title - try searching again."
 msgstr ""
 
-#: cogs/anilist/feed.py:2966
+#: cogs/anilist/feed.py:3028
 msgid "Give me an AniList username to follow."
 msgstr ""
 
-#: cogs/anilist/feed.py:2976
+#: cogs/anilist/feed.py:3038
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr ""
 
-#: cogs/anilist/feed.py:2994
+#: cogs/anilist/feed.py:3056
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:3099
+#: cogs/anilist/feed.py:3161
 msgid ""
 "This server has no active AniList feed. Create or re-enable one with "
 "`/anilistfeed set` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:3110
+#: cogs/anilist/feed.py:3172
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr ""
 
-#: cogs/anilist/feed.py:3156
+#: cogs/anilist/feed.py:3218
 #, python-brace-format
 msgid ""
 "This server already has the maximum of {max} feeds. Remove one with "
 "`/anilistfeed remove` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:3166
+#: cogs/anilist/feed.py:3228
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr ""
 
-#: cogs/anilist/feed.py:3176
+#: cogs/anilist/feed.py:3238
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr ""
 
-#: cogs/anilist/feed.py:3185
+#: cogs/anilist/feed.py:3246
 msgid "AniList feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:3210
-msgid "Now following"
-msgstr ""
-
-#: cogs/anilist/feed.py:3212
+#: cogs/anilist/feed.py:3271
 msgid "User"
 msgstr ""
 
-#: cogs/anilist/feed.py:3216
+#: cogs/anilist/feed.py:3271
 msgid "Feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:3241
+#: cogs/anilist/feed.py:3273
+msgid "Now following"
+msgstr ""
+
+#: cogs/anilist/feed.py:3297
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:3244
+#: cogs/anilist/feed.py:3300
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:3269
+#: cogs/anilist/feed.py:3325
 msgid ""
 "This feed does not let members join themselves. Ask a moderator to turn "
 "on **Members can join** in `/anilistfeed`."
 msgstr ""
 
-#: cogs/anilist/feed.py:3282
+#: cogs/anilist/feed.py:3338
 msgid "Link your AniList account first with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/feed.py:3304
+#: cogs/anilist/feed.py:3360
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:3312
+#: cogs/anilist/feed.py:3368
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr ""
 
-#: cogs/anilist/feed.py:3316
+#: cogs/anilist/feed.py:3372
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:3334
+#: cogs/anilist/feed.py:3390
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr ""
 
-#: cogs/anilist/feed.py:3350
-msgid "AniList feeds"
-msgstr ""
-
-#: cogs/anilist/feed.py:3356
+#: cogs/anilist/feed.py:3412
 msgid "none"
 msgstr ""
 
-#: cogs/anilist/feed.py:3357
+#: cogs/anilist/feed.py:3413
 msgid "enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:3357
+#: cogs/anilist/feed.py:3413
 msgid "disabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:3367
+#: cogs/anilist/feed.py:3423
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -1376,12 +1373,16 @@ msgid ""
 "Following: {names}"
 msgstr ""
 
-#: cogs/anilist/feed.py:3390
+#: cogs/anilist/feed.py:3427
+msgid "AniList feeds"
+msgstr ""
+
+#: cogs/anilist/feed.py:3446
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:3395
+#: cogs/anilist/feed.py:3451
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr ""
@@ -1788,44 +1789,52 @@ msgstr ""
 msgid "Show every subcommand inline when you browse help."
 msgstr ""
 
-#: cogs/community/usersettings.py:72
+#: cogs/community/usersettings.py:59
+msgid "Music autoplay"
+msgstr ""
+
+#: cogs/community/usersettings.py:62
+msgid "Keep playing recommended tracks when your music queue runs out."
+msgstr ""
+
+#: cogs/community/usersettings.py:85
 msgid "Turn off"
 msgstr ""
 
-#: cogs/community/usersettings.py:72
+#: cogs/community/usersettings.py:85
 msgid "Turn on"
 msgstr ""
 
-#: cogs/community/usersettings.py:107
+#: cogs/community/usersettings.py:120
 msgid "## Your preferences"
 msgstr ""
 
-#: cogs/community/usersettings.py:111
+#: cogs/community/usersettings.py:124
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
 msgstr ""
 
-#: cogs/community/usersettings.py:121
+#: cogs/community/usersettings.py:134
 msgid "ON"
 msgstr ""
 
-#: cogs/community/usersettings.py:121
+#: cogs/community/usersettings.py:134
 msgid "OFF"
 msgstr ""
 
-#: cogs/community/usersettings.py:122
+#: cogs/community/usersettings.py:135
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 msgstr ""
 
-#: cogs/community/usersettings.py:138
+#: cogs/community/usersettings.py:151
 msgid "-# Only you can use these controls."
 msgstr ""
 
-#: cogs/community/usersettings.py:159
+#: cogs/community/usersettings.py:172
 msgid "Something went wrong updating that setting."
 msgstr ""
 
@@ -4538,58 +4547,64 @@ msgstr ""
 msgid "[Go to message]({url})"
 msgstr ""
 
-#: cogs/music/music.py:137 cogs/music/music.py:413
+#: cogs/music/music.py:230 cogs/music/music.py:537
 msgid "The player is no longer active."
 msgstr ""
 
-#: cogs/music/music.py:144
+#: cogs/music/music.py:237 cogs/music/music.py:861
 msgid "Give me a song name or URL to add."
 msgstr ""
 
-#: cogs/music/music.py:151
+#: cogs/music/music.py:244
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr ""
 
-#: cogs/music/music.py:163
+#: cogs/music/music.py:256
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr ""
 
-#: cogs/music/music.py:169
+#: cogs/music/music.py:262
 msgid "Something went wrong adding that song."
 msgstr ""
 
-#: cogs/music/music.py:248 cogs/music/music.py:1518
+#: cogs/music/music.py:341 cogs/music/music.py:2083
 msgid "Nothing is playing right now."
 msgstr ""
 
-#: cogs/music/music.py:255
+#: cogs/music/music.py:348
 msgid "### 🎵 Now Playing"
 msgstr ""
 
-#: cogs/music/music.py:258
+#: cogs/music/music.py:351
 #, python-brace-format
 msgid "by **{author}**"
 msgstr ""
 
-#: cogs/music/music.py:262
+#: cogs/music/music.py:360
+msgid ""
+"✨ I'm keeping the music going with recommendations based on this "
+"session's listening. Tap Autoplay below to turn it off."
+msgstr ""
+
+#: cogs/music/music.py:367
 msgid "⏸ Paused"
 msgstr ""
 
-#: cogs/music/music.py:262
+#: cogs/music/music.py:367
 msgid "▶ Playing"
 msgstr ""
 
-#: cogs/music/music.py:265
+#: cogs/music/music.py:370
 msgid "On (queue)"
 msgstr ""
 
-#: cogs/music/music.py:267
+#: cogs/music/music.py:372
 msgid "On (track)"
 msgstr ""
 
-#: cogs/music/music.py:273
+#: cogs/music/music.py:378
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -4598,338 +4613,455 @@ msgid ""
 "**Loop:** {loop}"
 msgstr ""
 
-#: cogs/music/music.py:288
+#: cogs/music/music.py:393
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr ""
 
-#: cogs/music/music.py:294
+#: cogs/music/music.py:399
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr ""
 
-#: cogs/music/music.py:299
+#: cogs/music/music.py:404
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr ""
 
-#: cogs/music/music.py:313
+#: cogs/music/music.py:418
 #, python-brace-format
 msgid ""
 "\n"
 "`+{count}` more in the queue"
 msgstr ""
 
-#: cogs/music/music.py:316
+#: cogs/music/music.py:421
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
 "{lines}"
 msgstr ""
 
-#: cogs/music/music.py:321
+#: cogs/music/music.py:426
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
 msgstr ""
 
-#: cogs/music/music.py:331
+#: cogs/music/music.py:436
 msgid "Pause/Resume"
 msgstr ""
 
-#: cogs/music/music.py:337
+#: cogs/music/music.py:442
 msgid "Skip"
 msgstr ""
 
-#: cogs/music/music.py:343
+#: cogs/music/music.py:448
 msgid "Vol -"
 msgstr ""
 
-#: cogs/music/music.py:349
+#: cogs/music/music.py:454
 msgid "Vol +"
 msgstr ""
 
-#: cogs/music/music.py:355
+#: cogs/music/music.py:460
 msgid "Loop"
 msgstr ""
 
-#: cogs/music/music.py:365
+#: cogs/music/music.py:470
 msgid "Shuffle"
 msgstr ""
 
-#: cogs/music/music.py:371 cogs/music/music.py:1506
+#: cogs/music/music.py:476 cogs/music/music.py:2071
 msgid "Queue"
 msgstr ""
 
-#: cogs/music/music.py:377
+#: cogs/music/music.py:482
 msgid "Add"
 msgstr ""
 
-#: cogs/music/music.py:383
+#: cogs/music/music.py:488
 msgid "Favorite"
 msgstr ""
 
-#: cogs/music/music.py:389
+#: cogs/music/music.py:494
 msgid "Disconnect"
 msgstr ""
 
-#: cogs/music/music.py:397
+#: cogs/music/music.py:509
+msgid "Autoplay"
+msgstr ""
+
+#: cogs/music/music.py:521
 msgid "-# Use the buttons to control playback"
 msgstr ""
 
-#: cogs/music/music.py:424
+#: cogs/music/music.py:548
 msgid "You must be in my voice channel to use these controls."
 msgstr ""
 
-#: cogs/music/music.py:442
+#: cogs/music/music.py:566
 msgid "Something went wrong handling that action."
 msgstr ""
 
-#: cogs/music/music.py:461
+#: cogs/music/music.py:585
 msgid "Resumed."
 msgstr ""
 
-#: cogs/music/music.py:464
+#: cogs/music/music.py:588
 msgid "Paused."
 msgstr ""
 
-#: cogs/music/music.py:479
+#: cogs/music/music.py:603
 msgid "Skipped."
 msgstr ""
 
-#: cogs/music/music.py:482
+#: cogs/music/music.py:606
 msgid "There is nothing left to skip to."
 msgstr ""
 
-#: cogs/music/music.py:494 cogs/music/music.py:509
+#: cogs/music/music.py:618 cogs/music/music.py:633
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr ""
 
-#: cogs/music/music.py:519 locales/command_strings.py:159
+#: cogs/music/music.py:643 locales/command_strings.py:159
 msgid "off"
 msgstr ""
 
-#: cogs/music/music.py:522
+#: cogs/music/music.py:646
 msgid "on"
 msgstr ""
 
-#: cogs/music/music.py:525
+#: cogs/music/music.py:649
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr ""
 
-#: cogs/music/music.py:535
+#: cogs/music/music.py:665
+msgid ""
+"Autoplay is on. I'll keep the music going with recommendations when the "
+"queue runs out."
+msgstr ""
+
+#: cogs/music/music.py:670
+msgid "Autoplay is off. Playback will stop once the queue is empty."
+msgstr ""
+
+#: cogs/music/music.py:681
 msgid "Add a few more tracks before shuffling."
 msgstr ""
 
-#: cogs/music/music.py:541 cogs/music/music.py:1450
+#: cogs/music/music.py:687 cogs/music/music.py:2015
 msgid "Shuffled the queue."
 msgstr ""
 
-#: cogs/music/music.py:552 cogs/music/music.py:1482
+#: cogs/music/music.py:698 cogs/music/music.py:2047
 msgid "The queue is empty."
 msgstr ""
 
-#: cogs/music/music.py:556 cogs/music/music.py:1496
+#: cogs/music/music.py:702 cogs/music/music.py:2061
 #, python-brace-format
 msgid "`{index}.` {title} by `{author}`"
 msgstr ""
 
-#: cogs/music/music.py:563 cogs/music/music.py:1502
+#: cogs/music/music.py:709 cogs/music/music.py:2067
 #, python-brace-format
 msgid "*...and {count} more.*"
 msgstr ""
 
-#: cogs/music/music.py:582
+#: cogs/music/music.py:728
 msgid "Nothing is playing to favourite right now."
 msgstr ""
 
-#: cogs/music/music.py:587
+#: cogs/music/music.py:733
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:592 cogs/music/music.py:1686
+#: cogs/music/music.py:738 cogs/music/music.py:2253
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr ""
 
-#: cogs/music/music.py:595 cogs/music/music.py:1692
+#: cogs/music/music.py:741 cogs/music/music.py:2259
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr ""
 
-#: cogs/music/music.py:667
-msgid "I'm not connected to a voice channel."
+#: cogs/music/music.py:826
+msgid "Pick a vibe..."
 msgstr ""
 
-#: cogs/music/music.py:678
-msgid "You must be in my voice channel to do that."
+#: cogs/music/music.py:844
+msgid "Search for music"
+msgstr ""
+
+#: cogs/music/music.py:848
+msgid "Song or URL"
+msgstr ""
+
+#: cogs/music/music.py:849
+msgid "A song name to search, or a full URL"
+msgstr ""
+
+#: cogs/music/music.py:869
+msgid "Something went wrong searching for that."
+msgstr ""
+
+#: cogs/music/music.py:879
+msgid "Search for music instead"
+msgstr ""
+
+#: cogs/music/music.py:912
+msgid "## 🎧 Choose your vibe"
+msgstr ""
+
+#: cogs/music/music.py:915
+msgid "Pick a genre and I'll spin up a mix, or search for a track."
+msgstr ""
+
+#: cogs/music/music.py:923
+msgid "-# Only you can use this menu."
+msgstr ""
+
+#: cogs/music/music.py:931
+msgid "That vibe isn't available right now."
 msgstr ""
 
 #: cogs/music/music.py:960
+msgid "## 👋 Welcome"
+msgstr ""
+
+#: cogs/music/music.py:963
+msgid "I'm all set to bring the music - let's get you into a room first."
+msgstr ""
+
+#: cogs/music/music.py:968
+msgid "To get started, join a voice channel:"
+msgstr ""
+
+#: cogs/music/music.py:974
+msgid "I couldn't find a voice channel here that you can join."
+msgstr ""
+
+#: cogs/music/music.py:979
+msgid "-# Once you join, this message will automatically update."
+msgstr ""
+
+#: cogs/music/music.py:1040
+msgid "I'm not connected to a voice channel."
+msgstr ""
+
+#: cogs/music/music.py:1051
+msgid "You must be in my voice channel to do that."
+msgstr ""
+
+#: cogs/music/music.py:1352
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr ""
 
-#: cogs/music/music.py:1284 cogs/music/music.py:1523
+#: cogs/music/music.py:1710 cogs/music/music.py:2088
 msgid "Here is the player."
 msgstr ""
 
-#: cogs/music/music.py:1287
-msgid "Give me something to play, e.g. `play never gonna give you up`."
-msgstr ""
-
-#: cogs/music/music.py:1295 cogs/music/music.py:1330 cogs/music/music.py:1596
-#: cogs/music/music.py:1668
+#: cogs/music/music.py:1750 cogs/music/music.py:1787 cogs/music/music.py:1843
+#: cogs/music/music.py:2161 cogs/music/music.py:2235
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr ""
 
-#: cogs/music/music.py:1302 cogs/music/music.py:1608
+#: cogs/music/music.py:1757 cogs/music/music.py:1838 cogs/music/music.py:2173
 msgid "You must be in a voice channel first."
 msgstr ""
 
-#: cogs/music/music.py:1309 cogs/music/music.py:1615
+#: cogs/music/music.py:1764 cogs/music/music.py:1857 cogs/music/music.py:2180
 msgid "I was unable to join your voice channel. Please try again."
 msgstr ""
 
-#: cogs/music/music.py:1319
+#: cogs/music/music.py:1776
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr ""
 
-#: cogs/music/music.py:1335 cogs/music/music.py:1674
+#: cogs/music/music.py:1792 cogs/music/music.py:2241
 msgid "Could not find any tracks for that query."
 msgstr ""
 
-#: cogs/music/music.py:1346
+#: cogs/music/music.py:1803
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr ""
 
-#: cogs/music/music.py:1354
+#: cogs/music/music.py:1811
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr ""
 
-#: cogs/music/music.py:1371
+#: cogs/music/music.py:1881
+#, python-brace-format
+msgid "I couldn't find any {genre} tracks right now."
+msgstr ""
+
+#: cogs/music/music.py:1902
+#, python-brace-format
+msgid "Added {count} {genre} track(s) to the queue."
+msgstr ""
+
+#: cogs/music/music.py:1909
+#, python-brace-format
+msgid "Starting a {genre} session with {count} track(s). Enjoy!"
+msgstr ""
+
+#: cogs/music/music.py:1936
 msgid "The player is already paused."
 msgstr ""
 
-#: cogs/music/music.py:1376
+#: cogs/music/music.py:1941
 msgid "Paused the player."
 msgstr ""
 
-#: cogs/music/music.py:1386
+#: cogs/music/music.py:1951
 msgid "The player is not paused."
 msgstr ""
 
-#: cogs/music/music.py:1391
+#: cogs/music/music.py:1956
 msgid "Resumed the player."
 msgstr ""
 
-#: cogs/music/music.py:1403
+#: cogs/music/music.py:1968
 msgid "There are no more tracks in the queue to skip to."
 msgstr ""
 
-#: cogs/music/music.py:1407
+#: cogs/music/music.py:1972
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr ""
 
-#: cogs/music/music.py:1413
+#: cogs/music/music.py:1978
 msgid "Skipped. The queue is now empty."
 msgstr ""
 
-#: cogs/music/music.py:1424
+#: cogs/music/music.py:1989
 msgid "Stopped playback and cleared the queue."
 msgstr ""
 
-#: cogs/music/music.py:1437
+#: cogs/music/music.py:2002
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr ""
 
-#: cogs/music/music.py:1447
+#: cogs/music/music.py:2012
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr ""
 
-#: cogs/music/music.py:1470
+#: cogs/music/music.py:2035
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr ""
 
-#: cogs/music/music.py:1488
+#: cogs/music/music.py:2053
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}`\n"
 msgstr ""
 
-#: cogs/music/music.py:1493
+#: cogs/music/music.py:2058
 msgid "**Up Next:**"
 msgstr ""
 
-#: cogs/music/music.py:1534
+#: cogs/music/music.py:2099
 msgid "Disconnected from the voice channel."
 msgstr ""
 
-#: cogs/music/music.py:1547
+#: cogs/music/music.py:2112
 msgid "You have no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:1550
+#: cogs/music/music.py:2115
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:1559
+#: cogs/music/music.py:2124
 msgid "Unknown artist"
 msgstr ""
 
-#: cogs/music/music.py:1563
+#: cogs/music/music.py:2128
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr ""
 
-#: cogs/music/music.py:1570
+#: cogs/music/music.py:2135
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr ""
 
-#: cogs/music/music.py:1602
+#: cogs/music/music.py:2167
 msgid "You have no saved favourites to play."
 msgstr ""
 
-#: cogs/music/music.py:1637
+#: cogs/music/music.py:2204
 msgid "None of your favourites could be loaded right now."
 msgstr ""
 
-#: cogs/music/music.py:1645
+#: cogs/music/music.py:2212
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1661
+#: cogs/music/music.py:2228
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr ""
 
-#: cogs/music/music.py:1680
+#: cogs/music/music.py:2247
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1704
+#: cogs/music/music.py:2271
 msgid "You have no saved favourites to remove."
 msgstr ""
 
-#: cogs/music/music.py:1708
+#: cogs/music/music.py:2275
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr ""
 
-#: cogs/music/music.py:1719
+#: cogs/music/music.py:2286
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
+msgstr ""
+
+#: cogs/music/vibes.py:64
+msgid "Dark, drift-ready beats"
+msgstr ""
+
+#: cogs/music/vibes.py:71
+msgid "Chill beats to relax and study"
+msgstr ""
+
+#: cogs/music/vibes.py:78
+msgid "Chart-topping hits"
+msgstr ""
+
+#: cogs/music/vibes.py:85
+msgid "Rap and hip-hop heat"
+msgstr ""
+
+#: cogs/music/vibes.py:92
+msgid "Festival-ready electronic energy"
+msgstr ""
+
+#: cogs/music/vibes.py:99
+msgid "Guitar-driven classics"
+msgstr ""
+
+#: cogs/music/vibes.py:106
+msgid "Smooth, laid-back jazz"
+msgstr ""
+
+#: cogs/music/vibes.py:113
+msgid "Anime openings and J-pop"
 msgstr ""
 
 #: cogs/system/admin.py:34
