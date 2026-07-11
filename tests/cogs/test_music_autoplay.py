@@ -104,3 +104,52 @@ def test_anti_mix_skip_resets_streak_on_a_normal_track():
 def test_anti_mix_skip_honours_a_custom_cap():
     assert music.decide_anti_mix_skip(True, True, 0, cap=1) == (True, 1)
     assert music.decide_anti_mix_skip(True, True, 1, cap=1) == (False, 0)
+
+
+# ---------------------------------------------------------------------------
+# can_skip (the "never kill playback on an empty skip" pre-check)
+# ---------------------------------------------------------------------------
+
+
+def _skip_player(
+    tracks=(), autoplay_tracks=(), mode=None, autoplay="disabled"
+):
+    """Minimal player/queue shape for can_skip; mirrors the sonolink surface."""
+    import sonolink
+
+    queue = types.SimpleNamespace(
+        tracks=list(tracks),
+        autoplay_tracks=list(autoplay_tracks),
+        mode=mode if mode is not None else sonolink.QueueMode.NORMAL,
+    )
+    ap = (
+        sonolink.AutoPlayMode.DISABLED
+        if autoplay == "disabled"
+        else sonolink.AutoPlayMode.ENABLED
+    )
+    return types.SimpleNamespace(queue=queue, autoplay=ap)
+
+
+def test_can_skip_false_when_nothing_can_follow():
+    # Empty lanes, no loop, autoplay off: a skip would stop playback -> refuse.
+    assert music.can_skip(_skip_player()) is False
+
+
+def test_can_skip_true_with_user_lane_tracks():
+    assert music.can_skip(_skip_player(tracks=["t"])) is True
+
+
+def test_can_skip_true_with_prestaged_autoplay_lane():
+    assert music.can_skip(_skip_player(autoplay_tracks=["r"])) is True
+
+
+def test_can_skip_true_when_autoplay_armed():
+    # Autoplay fetches a recommendation on skip, so there is somewhere to land.
+    assert music.can_skip(_skip_player(autoplay="enabled")) is True
+
+
+def test_can_skip_true_under_loop_modes():
+    import sonolink
+
+    assert music.can_skip(_skip_player(mode=sonolink.QueueMode.LOOP)) is True
+    assert music.can_skip(_skip_player(mode=sonolink.QueueMode.LOOP_ALL)) is True

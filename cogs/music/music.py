@@ -305,6 +305,36 @@ def _autoplay_on(player):
     return player.autoplay != sonolink.AutoPlayMode.DISABLED
 
 
+def can_skip(player):
+    """Whether a skip has somewhere to land, so it will not kill playback.
+
+    sonolink's ``skip()`` STOPS the player before raising ``QueueEmpty`` when
+    nothing can follow, so a bare "skip" on the last track silences the room and
+    only then reports there was nothing to skip to. Callers use this pre-check
+    to refuse the skip up front instead. A skip can land when:
+
+    * the user lane holds tracks, or
+    * the hidden autoplay lane holds pre-staged recommendations, or
+    * the queue loops (``LOOP`` re-serves the current track, ``LOOP_ALL``
+      restores from history), or
+    * native autoplay is armed (the skip fetches a recommendation).
+
+    Pure and total over the player/queue shapes the fakes mirror.
+    """
+
+    queue = player.queue
+    if getattr(queue, "tracks", None):
+        return True
+    if getattr(queue, "autoplay_tracks", None):
+        return True
+    if getattr(queue, "mode", None) in (
+        sonolink.QueueMode.LOOP,
+        sonolink.QueueMode.LOOP_ALL,
+    ):
+        return True
+    return _autoplay_on(player)
+
+
 def _set_autoplay(player, enabled):
     """Arm (ENABLED) or disarm (DISABLED) sonolink's native autoplay for a session.
 
@@ -807,6 +837,13 @@ class MusicController(discord.ui.LayoutView):
 
     async def _skip(self, interaction: discord.Interaction) -> None:
         try:
+            # Pre-check: sonolink stops playback BEFORE raising QueueEmpty, so a
+            # skip with nowhere to land must be refused up front, not caught.
+            if not can_skip(self.player):
+                await interaction.response.send_message(
+                    _("There is nothing left to skip to."), ephemeral=True
+                )
+                return
             await self.player.skip()
             await interaction.response.send_message(_("Skipped."), ephemeral=True)
         except sonolink.QueueEmpty:
@@ -2486,6 +2523,12 @@ class Music(commands.Cog):
         """Skip the current track and play the next one."""
         player = await self._require_player(ctx)
         if player is None:
+            return
+        # Pre-check: sonolink stops playback BEFORE raising QueueEmpty, so a skip
+        # with nowhere to land must be refused up front - never kill the current
+        # track just to say there was nothing after it.
+        if not can_skip(player):
+            await ctx.send(_("There are no more tracks in the queue to skip to."))
             return
         try:
             track = await player.skip()
