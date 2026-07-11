@@ -91,13 +91,27 @@ class Player(sonolink.Player):
         self._automix_skips = 0
 
 
+def format_clock(total_ms: int) -> str:
+    """Render a millisecond duration/position as ``mm:ss`` (or ``h:mm:ss``).
+
+    Hours only appear once the value crosses an hour, so a short track reads
+    ``03:42`` while a long one reads ``1:05:09``. Negative input is floored to
+    zero. Pure - shared by :func:`format_duration` and the /seek confirmation so
+    a track's length and a seek target always render identically.
+    """
+    total_seconds = max(total_ms, 0) // 1000
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
+
+
 def format_duration(track: sonolink.models.Playable) -> str:
-    """Return a track's duration as ``mm:ss`` (or ``LIVE`` for streams)."""
+    """Return a track's duration as ``mm:ss``/``h:mm:ss`` (or ``LIVE`` for streams)."""
     if track.is_stream:
         return "LIVE"
-    total_seconds = track.length // 1000
-    minutes, seconds = divmod(total_seconds, 60)
-    return f"{minutes:02d}:{seconds:02d}"
+    return format_clock(track.length)
 
 
 def _first_track(
@@ -2544,6 +2558,35 @@ class Music(commands.Cog):
         else:
             await self._clear(ctx.guild.id)
             await ctx.send(_("Skipped. The queue is now empty."))
+
+    @commands.hybrid_command(name="seek")
+    @commands.guild_only()
+    @app_commands.describe(
+        position="A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / -15."
+    )
+    async def seek(self, ctx: commands.Context, *, position: str) -> None:
+        """Jump to a position in the current track."""
+        player = await self._require_player(ctx)
+        if player is None:
+            return
+        track = player.current
+        if track is None:
+            await ctx.send(_("There's nothing playing right now."))
+            return
+        if track.is_stream:
+            await ctx.send(_("I can't seek within a live stream."))
+            return
+        target = vibes.parse_seek_target(position)
+        if target is None:
+            await ctx.send(
+                _("I couldn't read that position. Try `1:23`, `90`, or `+30`.")
+            )
+            return
+        target_ms = vibes.resolve_seek_ms(target, player.position, track.length)
+        await player.seek(target_ms)
+        await ctx.send(
+            _("Jumped to {position}.").format(position=format_clock(target_ms))
+        )
 
     @commands.hybrid_command(name="stop")
     @commands.guild_only()

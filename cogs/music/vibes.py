@@ -283,6 +283,111 @@ def interleave_results(
     return out
 
 
+# ---------------------------------------------------------------------------
+# /seek target parsing
+# ---------------------------------------------------------------------------
+#
+# The /seek command accepts several human spellings of a position and turns them
+# into a millisecond target. Parsing lives here, pure and discord-free, so every
+# accepted form and every rejected junk string is exercised without a voice
+# connection or a live node. The cog owns clamping the resolved target against
+# the current track and the actual player.seek() call.
+
+# Upper bounds on the colon-form fields, kept sane so a fat-fingered "999:99:99"
+# is refused rather than seeking hours past any real track. Seconds (and the
+# minutes field of an h:mm:ss form) must be a valid clock digit (< 60); a bare
+# m:ss minutes field is allowed up to a long-track ceiling; hours are capped at a
+# day. The player clamps the resolved target to the track length regardless.
+_SEEK_MAX_HOURS = 24
+_SEEK_MAX_MS_MINUTES = 600  # minutes field of a bare m:ss form (10h ceiling)
+
+# A relative nudge: a leading sign then whole seconds, tolerant of a space after
+# the sign ("+30", "- 15"). Absolute forms are handled by split-on-colon below.
+_SEEK_RELATIVE_RE = re.compile(r"^([+-])\s*(\d+)$")
+_SEEK_BARE_RE = re.compile(r"^\d+$")
+
+
+@dataclass(frozen=True)
+class SeekTarget:
+    """A parsed /seek request: a millisecond value plus whether it is relative.
+
+    ``relative`` targets carry a signed offset (``+30s`` -> ``+30000``) to add to
+    the live playback position; absolute targets carry a non-negative position
+    from the start of the track. Both are resolved to a final clamped position by
+    :func:`resolve_seek_ms`.
+    """
+
+    relative: bool
+    milliseconds: int
+
+
+def parse_seek_target(text: typing.Optional[str]) -> typing.Optional[SeekTarget]:
+    """Parse a /seek argument into a :class:`SeekTarget`, or None on junk.
+
+    Accepted forms (outer whitespace tolerated throughout):
+
+    * ``"1:23"`` - m:ss, absolute (seconds < 60)
+    * ``"01:02:03"`` - h:mm:ss, absolute (seconds and minutes < 60, hours capped)
+    * ``"90"`` - bare whole seconds, absolute
+    * ``"+30"`` / ``"-15"`` - a signed second offset, relative
+
+    Returns None for anything else - empty/blank input, non-numeric junk
+    ("abc"), a sign with no digits ("-x"), an out-of-range clock field ("1:99")
+    or an insanely large colon form. Pure and None-safe.
+    """
+    if text is None:
+        return None
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    match = _SEEK_RELATIVE_RE.match(stripped)
+    if match is not None:
+        sign, digits = match.groups()
+        milliseconds = int(digits) * 1000
+        if sign == "-":
+            milliseconds = -milliseconds
+        return SeekTarget(relative=True, milliseconds=milliseconds)
+
+    if _SEEK_BARE_RE.match(stripped):
+        return SeekTarget(relative=False, milliseconds=int(stripped) * 1000)
+
+    parts = [part.strip() for part in stripped.split(":")]
+    if not all(part.isdigit() for part in parts):
+        return None
+
+    if len(parts) == 2:
+        minutes, seconds = int(parts[0]), int(parts[1])
+        if seconds >= 60 or minutes >= _SEEK_MAX_MS_MINUTES:
+            return None
+        total_seconds = minutes * 60 + seconds
+        return SeekTarget(relative=False, milliseconds=total_seconds * 1000)
+
+    if len(parts) == 3:
+        hours, minutes, seconds = int(parts[0]), int(parts[1]), int(parts[2])
+        if seconds >= 60 or minutes >= 60 or hours >= _SEEK_MAX_HOURS:
+            return None
+        total_seconds = hours * 3600 + minutes * 60 + seconds
+        return SeekTarget(relative=False, milliseconds=total_seconds * 1000)
+
+    return None
+
+
+def resolve_seek_ms(target: SeekTarget, position_ms: int, length_ms: int) -> int:
+    """Resolve a :class:`SeekTarget` to a final position clamped to [0, length].
+
+    A relative target is added to the live ``position_ms``; an absolute one is
+    taken as-is. The result is clamped into ``[0, length_ms]`` so a nudge past
+    either end lands on the boundary rather than erroring or overshooting. Pure.
+    """
+    base = position_ms + target.milliseconds if target.relative else target.milliseconds
+    if base < 0:
+        return 0
+    if base > length_ms:
+        return length_ms
+    return base
+
+
 @dataclass(frozen=True)
 class Genre:
     """One entry in the vibe picker.

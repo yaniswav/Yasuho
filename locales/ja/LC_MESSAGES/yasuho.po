@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-11 13:36+0000\n"
+"POT-Creation-Date: 2026-07-11 14:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -784,8 +784,8 @@ msgstr "アカウントの連携中に問題が発生しました。"
 msgid "Could not open the code form."
 msgstr "コードフォームを開けませんでした。"
 
-#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1413 cogs/music/music.py:2648
-#: cogs/music/music.py:2814
+#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1413 cogs/music/music.py:2734
+#: cogs/music/music.py:2900
 msgid "Unknown title"
 msgstr "不明なタイトル"
 
@@ -1019,7 +1019,7 @@ msgstr "オン"
 
 #: cogs/anilist/feed.py:1362 cogs/config/welcome.py:142
 #: cogs/config/welcome.py:433 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:443 cogs/music/music.py:558
+#: cogs/config/welcome.py:443 cogs/music/music.py:602
 msgid "Off"
 msgstr "オフ"
 
@@ -4504,62 +4504,62 @@ msgstr "編集後"
 msgid "[Go to message]({url})"
 msgstr "[メッセージへ移動]({url})"
 
-#: cogs/music/music.py:411 cogs/music/music.py:745
+#: cogs/music/music.py:455 cogs/music/music.py:789
 msgid "The player is no longer active."
 msgstr "プレイヤーはもうアクティブではありません。"
 
-#: cogs/music/music.py:418 cogs/music/music.py:1191
+#: cogs/music/music.py:462 cogs/music/music.py:1242
 msgid "Give me a song name or URL to add."
 msgstr "追加する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:425
+#: cogs/music/music.py:469
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr "`{query}` に該当するものが見つかりませんでした。"
 
-#: cogs/music/music.py:440
+#: cogs/music/music.py:484
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "**{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:446
+#: cogs/music/music.py:490
 msgid "Something went wrong adding that song."
 msgstr "その曲の追加中に問題が発生しました。"
 
-#: cogs/music/music.py:525 cogs/music/music.py:2608
+#: cogs/music/music.py:569 cogs/music/music.py:2694
 msgid "Nothing is playing right now."
 msgstr "現在再生中の曲はありません。"
 
-#: cogs/music/music.py:532
+#: cogs/music/music.py:576
 msgid "### 🎵 Now Playing"
 msgstr "### 🎵 再生中"
 
-#: cogs/music/music.py:535
+#: cogs/music/music.py:579
 #, python-brace-format
 msgid "by **{author}**"
 msgstr "by **{author}**"
 
-#: cogs/music/music.py:544
+#: cogs/music/music.py:588
 msgid "✨ I'm keeping the music going with recommendations based on this session's listening. Tap Autoplay below to turn it off."
 msgstr "✨ このセッションの再生履歴をもとに、おすすめの曲で音楽を続けています。下のオートプレイをタップするとオフにできます。"
 
-#: cogs/music/music.py:551
+#: cogs/music/music.py:595
 msgid "⏸ Paused"
 msgstr "⏸ 一時停止中"
 
-#: cogs/music/music.py:551
+#: cogs/music/music.py:595
 msgid "▶ Playing"
 msgstr "▶ 再生中"
 
-#: cogs/music/music.py:554
+#: cogs/music/music.py:598
 msgid "On (queue)"
 msgstr "オン (キュー)"
 
-#: cogs/music/music.py:556
+#: cogs/music/music.py:600
 msgid "On (track)"
 msgstr "オン (トラック)"
 
-#: cogs/music/music.py:562
+#: cogs/music/music.py:606
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -4572,27 +4572,27 @@ msgstr ""
 "**音量:** `{volume}%`\n"
 "**ループ:** {loop}"
 
-#: cogs/music/music.py:577
+#: cogs/music/music.py:621
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr "**チャンネル:** {emoji} {channel}"
 
-#: cogs/music/music.py:583
+#: cogs/music/music.py:627
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr "**DJ:** {dj}"
 
-#: cogs/music/music.py:588
+#: cogs/music/music.py:632
 #, python-brace-format
 msgid "**Station:** {emoji} {label}"
 msgstr "**ステーション:** {emoji} {label}"
 
-#: cogs/music/music.py:595
+#: cogs/music/music.py:639
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr "**リクエスト者:** <@{requester_id}>"
 
-#: cogs/music/music.py:609
+#: cogs/music/music.py:653
 #, python-brace-format
 msgid ""
 "\n"
@@ -4601,7 +4601,7 @@ msgstr ""
 "\n"
 "`+{count}` 件がキューにあります"
 
-#: cogs/music/music.py:612
+#: cogs/music/music.py:656
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
@@ -4610,7 +4610,7 @@ msgstr ""
 "**次の曲 ({count})**\n"
 "{lines}"
 
-#: cogs/music/music.py:617
+#: cogs/music/music.py:661
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
@@ -4618,430 +4618,447 @@ msgstr ""
 "**次の曲**\n"
 "キューに曲がありません。曲を追加して音楽を続けましょう!"
 
-#: cogs/music/music.py:627
+#: cogs/music/music.py:671
 msgid "Pause/Resume"
 msgstr "一時停止/再開"
 
-#: cogs/music/music.py:633
+#: cogs/music/music.py:677
 msgid "Skip"
 msgstr "スキップ"
 
-#: cogs/music/music.py:639
+#: cogs/music/music.py:683
 msgid "Vol -"
 msgstr "音量 -"
 
-#: cogs/music/music.py:645
+#: cogs/music/music.py:689
 msgid "Vol +"
 msgstr "音量 +"
 
-#: cogs/music/music.py:651
+#: cogs/music/music.py:695
 msgid "Loop"
 msgstr "ループ"
 
-#: cogs/music/music.py:661
+#: cogs/music/music.py:705
 msgid "Shuffle"
 msgstr "シャッフル"
 
-#: cogs/music/music.py:667 cogs/music/music.py:2596
+#: cogs/music/music.py:711 cogs/music/music.py:2682
 msgid "Queue"
 msgstr "キュー"
 
-#: cogs/music/music.py:673
+#: cogs/music/music.py:717
 msgid "Add"
 msgstr "追加"
 
-#: cogs/music/music.py:679
+#: cogs/music/music.py:723
 msgid "Favorite"
 msgstr "お気に入り"
 
-#: cogs/music/music.py:685
+#: cogs/music/music.py:729
 msgid "Disconnect"
 msgstr "切断"
 
-#: cogs/music/music.py:700
+#: cogs/music/music.py:744
 msgid "Autoplay"
 msgstr "オートプレイ"
 
-#: cogs/music/music.py:720
+#: cogs/music/music.py:764
 msgid "-# Use the buttons to control playback"
 msgstr "-# ボタンを使って再生を操作してください"
 
-#: cogs/music/music.py:756
+#: cogs/music/music.py:800
 msgid "You must be in my voice channel to use these controls."
 msgstr "これらの操作を使うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:774
+#: cogs/music/music.py:818
 msgid "Something went wrong handling that action."
 msgstr "そのアクションの処理中に問題が発生しました。"
 
-#: cogs/music/music.py:793
+#: cogs/music/music.py:837
 msgid "Resumed."
 msgstr "再開しました。"
 
-#: cogs/music/music.py:796
+#: cogs/music/music.py:840
 msgid "Paused."
 msgstr "一時停止しました。"
 
-#: cogs/music/music.py:811
-msgid "Skipped."
-msgstr "スキップしました。"
-
-#: cogs/music/music.py:814
+#: cogs/music/music.py:858 cogs/music/music.py:865
 msgid "There is nothing left to skip to."
 msgstr "スキップする曲が残っていません。"
 
-#: cogs/music/music.py:826 cogs/music/music.py:841
+#: cogs/music/music.py:862
+msgid "Skipped."
+msgstr "スキップしました。"
+
+#: cogs/music/music.py:877 cogs/music/music.py:892
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:851 locales/command_strings.py:159
+#: cogs/music/music.py:902 locales/command_strings.py:159
 msgid "off"
 msgstr "オフ"
 
-#: cogs/music/music.py:854
+#: cogs/music/music.py:905
 msgid "on"
 msgstr "オン"
 
-#: cogs/music/music.py:857
+#: cogs/music/music.py:908
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr "キューのループを {state} にしました。"
 
-#: cogs/music/music.py:873
+#: cogs/music/music.py:924
 msgid "Autoplay is on. I'll keep the music going with recommendations when the queue runs out."
 msgstr "オートプレイがオンになりました。キューが空になったらおすすめの曲で音楽を続けます。"
 
-#: cogs/music/music.py:878
+#: cogs/music/music.py:929
 msgid "Autoplay is off. Playback will stop once the queue is empty."
 msgstr "オートプレイがオフになりました。キューが空になると再生は停止します。"
 
-#: cogs/music/music.py:889
+#: cogs/music/music.py:940
 msgid "Add a few more tracks before shuffling."
 msgstr "シャッフルする前にもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:895 cogs/music/music.py:2540
+#: cogs/music/music.py:946 cogs/music/music.py:2626
 msgid "Shuffled the queue."
 msgstr "キューをシャッフルしました。"
 
-#: cogs/music/music.py:906 cogs/music/music.py:2572
+#: cogs/music/music.py:957 cogs/music/music.py:2658
 msgid "The queue is empty."
 msgstr "キューは空です。"
 
-#: cogs/music/music.py:910 cogs/music/music.py:2586
+#: cogs/music/music.py:961 cogs/music/music.py:2672
 #, python-brace-format
 msgid "`{index}.` {title} by `{author}`"
 msgstr "`{index}.` {title} by `{author}`"
 
-#: cogs/music/music.py:917 cogs/music/music.py:2592
+#: cogs/music/music.py:968 cogs/music/music.py:2678
 #, python-brace-format
 msgid "*...and {count} more.*"
 msgstr "*...他 {count} 件。*"
 
-#: cogs/music/music.py:936
+#: cogs/music/music.py:987
 msgid "Nothing is playing to favourite right now."
 msgstr "現在お気に入りに追加できる再生中の曲はありません。"
 
-#: cogs/music/music.py:941
+#: cogs/music/music.py:992
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr "**{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:946 cogs/music/music.py:2780
+#: cogs/music/music.py:997 cogs/music/music.py:2866
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "お気に入りはすでに上限({max}件)に達しています。まずいくつか削除してください。"
 
-#: cogs/music/music.py:949 cogs/music/music.py:2786
+#: cogs/music/music.py:1000 cogs/music/music.py:2872
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** はすでにお気に入りに入っています。"
 
-#: cogs/music/music.py:992
+#: cogs/music/music.py:1043
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "ステーションを変更できるのは DJ ({dj}) だけです。"
 
-#: cogs/music/music.py:1002 cogs/music/music.py:1261
+#: cogs/music/music.py:1053 cogs/music/music.py:1312
 msgid "That vibe isn't available right now."
 msgstr "その気分は今は選べません。"
 
-#: cogs/music/music.py:1012 cogs/music/music.py:2418
+#: cogs/music/music.py:1063 cogs/music/music.py:2469
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "{genre}の曲は今のところ見つかりませんでした。"
 
-#: cogs/music/music.py:1019 cogs/music/music.py:2427
+#: cogs/music/music.py:1070 cogs/music/music.py:2478
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "{genre} ステーションに切り替えました ({count}曲)。"
 
-#: cogs/music/music.py:1092
+#: cogs/music/music.py:1143
 msgid "Pick a vibe..."
 msgstr "気分を選択..."
 
-#: cogs/music/music.py:1137
+#: cogs/music/music.py:1188
 msgid "You are changing the station too fast - give it a moment."
 msgstr "ステーションの変更が早すぎます。少し待ってくださいね。"
 
-#: cogs/music/music.py:1156
+#: cogs/music/music.py:1207
 msgid "Change station..."
 msgstr "ステーションを変更..."
 
-#: cogs/music/music.py:1174
+#: cogs/music/music.py:1225
 msgid "Search for music"
 msgstr "音楽を検索"
 
-#: cogs/music/music.py:1178
+#: cogs/music/music.py:1229
 msgid "Song or URL"
 msgstr "曲名またはURL"
 
-#: cogs/music/music.py:1179
+#: cogs/music/music.py:1230
 msgid "A song name to search, or a full URL"
 msgstr "検索する曲名、または完全なURL"
 
-#: cogs/music/music.py:1199
+#: cogs/music/music.py:1250
 msgid "Something went wrong searching for that."
 msgstr "検索中に問題が発生しました。"
 
-#: cogs/music/music.py:1209
+#: cogs/music/music.py:1260
 msgid "Search for music instead"
 msgstr "代わりに音楽を検索"
 
-#: cogs/music/music.py:1242
+#: cogs/music/music.py:1293
 msgid "## 🎧 Choose your vibe"
 msgstr "## 🎧 気分を選んでください"
 
-#: cogs/music/music.py:1245
+#: cogs/music/music.py:1296
 msgid "Pick a genre and I'll spin up a mix, or search for a track."
 msgstr "ジャンルを選ぶとミックスを用意します。曲を検索することもできます。"
 
-#: cogs/music/music.py:1253
+#: cogs/music/music.py:1304
 msgid "-# Only you can use this menu."
 msgstr "-# このメニューはあなただけが使用できます。"
 
-#: cogs/music/music.py:1290
+#: cogs/music/music.py:1341
 msgid "## 👋 Welcome"
 msgstr "## 👋 ウェルカム"
 
-#: cogs/music/music.py:1293
+#: cogs/music/music.py:1344
 msgid "I'm all set to bring the music - let's get you into a room first."
 msgstr "音楽を流す準備はできています。まずはボイスチャンネルに入ってください。"
 
-#: cogs/music/music.py:1298
+#: cogs/music/music.py:1349
 msgid "To get started, join a voice channel:"
 msgstr "まずはボイスチャンネルに参加してください:"
 
-#: cogs/music/music.py:1304
+#: cogs/music/music.py:1355
 msgid "I couldn't find a voice channel here that you can join."
 msgstr "参加できるボイスチャンネルが見つかりませんでした。"
 
-#: cogs/music/music.py:1309
+#: cogs/music/music.py:1360
 msgid "-# Once you join, this message will automatically update."
 msgstr "-# 参加すると、このメッセージは自動的に更新されます。"
 
-#: cogs/music/music.py:1373
+#: cogs/music/music.py:1424
 msgid "I'm not connected to a voice channel."
 msgstr "ボイスチャンネルに接続していません。"
 
-#: cogs/music/music.py:1384
+#: cogs/music/music.py:1435
 msgid "You must be in my voice channel to do that."
 msgstr "それを行うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:1720
+#: cogs/music/music.py:1771
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "**{title}** の再生に問題が発生したため、スキップします。"
 
-#: cogs/music/music.py:2101 cogs/music/music.py:2613
+#: cogs/music/music.py:2152 cogs/music/music.py:2699
 msgid "Here is the player."
 msgstr "プレイヤーはこちらです。"
 
-#: cogs/music/music.py:2141 cogs/music/music.py:2178 cogs/music/music.py:2387
-#: cogs/music/music.py:2686 cogs/music/music.py:2762
+#: cogs/music/music.py:2192 cogs/music/music.py:2229 cogs/music/music.py:2438
+#: cogs/music/music.py:2772 cogs/music/music.py:2848
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "音楽は現在利用できません - Lavalinkノードが接続されていません。"
 
-#: cogs/music/music.py:2148 cogs/music/music.py:2382 cogs/music/music.py:2698
+#: cogs/music/music.py:2199 cogs/music/music.py:2433 cogs/music/music.py:2784
 msgid "You must be in a voice channel first."
 msgstr "まずボイスチャンネルに参加する必要があります。"
 
-#: cogs/music/music.py:2155 cogs/music/music.py:2401 cogs/music/music.py:2705
+#: cogs/music/music.py:2206 cogs/music/music.py:2452 cogs/music/music.py:2791
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "あなたのボイスチャンネルに参加できませんでした。もう一度お試しください。"
 
-#: cogs/music/music.py:2167
+#: cogs/music/music.py:2218
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "プレイヤーはすでに {channel} でアクティブです。"
 
-#: cogs/music/music.py:2183 cogs/music/music.py:2768
+#: cogs/music/music.py:2234 cogs/music/music.py:2854
 msgid "Could not find any tracks for that query."
 msgstr "そのクエリに該当するトラックが見つかりませんでした。"
 
-#: cogs/music/music.py:2194
+#: cogs/music/music.py:2245
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr "プレイリスト **{name}** ({count} トラック) をキューに追加しました。"
 
-#: cogs/music/music.py:2202
+#: cogs/music/music.py:2253
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "`{author}` の **{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:2434
+#: cogs/music/music.py:2485
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "{genre}のセッションを{count}件のトラックでスタートします。楽しんでください！"
 
-#: cogs/music/music.py:2461
+#: cogs/music/music.py:2512
 msgid "The player is already paused."
 msgstr "プレイヤーはすでに一時停止しています。"
 
-#: cogs/music/music.py:2466
+#: cogs/music/music.py:2517
 msgid "Paused the player."
 msgstr "プレイヤーを一時停止しました。"
 
-#: cogs/music/music.py:2476
+#: cogs/music/music.py:2527
 msgid "The player is not paused."
 msgstr "プレイヤーは一時停止していません。"
 
-#: cogs/music/music.py:2481
+#: cogs/music/music.py:2532
 msgid "Resumed the player."
 msgstr "プレイヤーを再開しました。"
 
-#: cogs/music/music.py:2493
+#: cogs/music/music.py:2545 cogs/music/music.py:2550
 msgid "There are no more tracks in the queue to skip to."
 msgstr "キューにスキップできるトラックがもうありません。"
 
-#: cogs/music/music.py:2497
+#: cogs/music/music.py:2554
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "`{author}` の **{title}** にスキップしました。"
 
-#: cogs/music/music.py:2503
+#: cogs/music/music.py:2560
 msgid "Skipped. The queue is now empty."
 msgstr "スキップしました。キューは空になりました。"
 
-#: cogs/music/music.py:2514
+#: cogs/music/music.py:2574
+msgid "There's nothing playing right now."
+msgstr "今は何も再生されていません。"
+
+#: cogs/music/music.py:2577
+msgid "I can't seek within a live stream."
+msgstr "ライブ配信内では移動できません。"
+
+#: cogs/music/music.py:2582
+msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
+msgstr "その位置を読み取れませんでした。`1:23`、`90`、`+30` の形式で試してくださいね。"
+
+#: cogs/music/music.py:2588
+#, python-brace-format
+msgid "Jumped to {position}."
+msgstr "{position} にジャンプしました。"
+
+#: cogs/music/music.py:2600
 msgid "Stopped playback and cleared the queue."
 msgstr "再生を停止してキューをクリアしました。"
 
-#: cogs/music/music.py:2527
+#: cogs/music/music.py:2613
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:2537
+#: cogs/music/music.py:2623
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "シャッフルする前に、キューにもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:2560
+#: cogs/music/music.py:2646
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "ループモードを `{mode}` に設定しました。"
 
-#: cogs/music/music.py:2578
+#: cogs/music/music.py:2664
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}`\n"
 msgstr "**再生中:** `{author}` の {title}\n"
 
-#: cogs/music/music.py:2583
+#: cogs/music/music.py:2669
 msgid "**Up Next:**"
 msgstr "**次の曲:**"
 
-#: cogs/music/music.py:2624
+#: cogs/music/music.py:2710
 msgid "Disconnected from the voice channel."
 msgstr "ボイスチャンネルから切断しました。"
 
-#: cogs/music/music.py:2637
+#: cogs/music/music.py:2723
 msgid "You have no saved favourites yet."
 msgstr "保存されたお気に入りはまだありません。"
 
-#: cogs/music/music.py:2640
+#: cogs/music/music.py:2726
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} には保存されたお気に入りがまだありません。"
 
-#: cogs/music/music.py:2649
+#: cogs/music/music.py:2735
 msgid "Unknown artist"
 msgstr "不明なアーティスト"
 
-#: cogs/music/music.py:2653
+#: cogs/music/music.py:2739
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr "`{index}.` {label} by `{author}`"
 
-#: cogs/music/music.py:2660
+#: cogs/music/music.py:2746
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr "{name} のお気に入り"
 
-#: cogs/music/music.py:2692
+#: cogs/music/music.py:2778
 msgid "You have no saved favourites to play."
 msgstr "再生できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:2729
+#: cogs/music/music.py:2815
 msgid "None of your favourites could be loaded right now."
 msgstr "現在、お気に入りを1つも読み込めませんでした。"
 
-#: cogs/music/music.py:2739
+#: cogs/music/music.py:2825
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr "お気に入りから {count} トラックをキューに追加しました。"
 
-#: cogs/music/music.py:2755
+#: cogs/music/music.py:2841
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "再生中の曲がありません - 保存する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:2774
+#: cogs/music/music.py:2860
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "`{author}` の **{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:2798
+#: cogs/music/music.py:2884
 msgid "You have no saved favourites to remove."
 msgstr "削除できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:2802
+#: cogs/music/music.py:2888
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "1から {max} までの数を選んでください。"
 
-#: cogs/music/music.py:2813
+#: cogs/music/music.py:2899
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** をお気に入りから削除しました。"
 
-#: cogs/music/vibes.py:327
+#: cogs/music/vibes.py:432
 msgid "Dark, drift-ready beats"
 msgstr "ドリフト向けのダークなビート"
 
-#: cogs/music/vibes.py:335
+#: cogs/music/vibes.py:440
 msgid "Chill beats to relax and study"
 msgstr "リラックスや勉強にぴったりなチルビート"
 
-#: cogs/music/vibes.py:343
+#: cogs/music/vibes.py:448
 msgid "Chart-topping hits"
 msgstr "話題のヒット曲"
 
-#: cogs/music/vibes.py:351
+#: cogs/music/vibes.py:456
 msgid "Rap and hip-hop heat"
 msgstr "熱いラップ&ヒップホップ"
 
-#: cogs/music/vibes.py:359
+#: cogs/music/vibes.py:464
 msgid "Festival-ready electronic energy"
 msgstr "フェス仕様のエレクトロサウンド"
 
-#: cogs/music/vibes.py:367
+#: cogs/music/vibes.py:472
 msgid "Guitar-driven classics"
 msgstr "ギターが主役のクラシックロック"
 
-#: cogs/music/vibes.py:375
+#: cogs/music/vibes.py:480
 msgid "Smooth, laid-back jazz"
 msgstr "スムーズで落ち着いたジャズ"
 
-#: cogs/music/vibes.py:383
+#: cogs/music/vibes.py:488
 msgid "Anime openings and J-pop"
 msgstr "アニメOPとJ-POP"
 

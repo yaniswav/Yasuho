@@ -87,10 +87,10 @@ def test_format_duration_over_ten_minutes_not_truncated():
     assert music.format_duration(track) == "10:30"
 
 
-def test_format_duration_long_track_minutes_grow():
-    # 3661000 ms -> 3661 s -> 61 min 1 s -> "61:01".
+def test_format_duration_long_track_rolls_into_hours():
+    # 3661000 ms -> 3661 s -> 1 h 1 min 1 s -> "1:01:01" once past an hour.
     track = types.SimpleNamespace(is_stream=False, length=3661000)
-    assert music.format_duration(track) == "61:01"
+    assert music.format_duration(track) == "1:01:01"
 
 
 # ---------------------------------------------------------------------------

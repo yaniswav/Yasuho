@@ -806,3 +806,155 @@ def test_station_select_options_marks_exactly_the_current_genre():
 def test_station_select_options_none_marks_nothing():
     opts = music.station_select_options(None)
     assert all(not o.default for o in opts)
+
+
+# ---------------------------------------------------------------------------
+# parse_seek_target  (pure /seek argument parser)
+# ---------------------------------------------------------------------------
+
+
+def test_seek_parse_mm_ss_absolute():
+    target = vibes.parse_seek_target("1:23")
+    assert target == vibes.SeekTarget(relative=False, milliseconds=83_000)
+
+
+def test_seek_parse_h_mm_ss_absolute():
+    target = vibes.parse_seek_target("01:02:03")
+    assert target == vibes.SeekTarget(
+        relative=False, milliseconds=(3600 + 120 + 3) * 1000
+    )
+
+
+def test_seek_parse_bare_seconds_absolute():
+    target = vibes.parse_seek_target("90")
+    assert target == vibes.SeekTarget(relative=False, milliseconds=90_000)
+
+
+def test_seek_parse_relative_plus():
+    target = vibes.parse_seek_target("+30")
+    assert target == vibes.SeekTarget(relative=True, milliseconds=30_000)
+
+
+def test_seek_parse_relative_minus():
+    target = vibes.parse_seek_target("-30")
+    assert target == vibes.SeekTarget(relative=True, milliseconds=-30_000)
+
+
+def test_seek_parse_relative_tolerates_space_after_sign():
+    assert vibes.parse_seek_target("- 15") == vibes.SeekTarget(
+        relative=True, milliseconds=-15_000
+    )
+
+
+def test_seek_parse_strips_outer_whitespace():
+    assert vibes.parse_seek_target("  1:23  ") == vibes.SeekTarget(
+        relative=False, milliseconds=83_000
+    )
+
+
+def test_seek_parse_tolerates_space_around_colon():
+    assert vibes.parse_seek_target("1 : 23") == vibes.SeekTarget(
+        relative=False, milliseconds=83_000
+    )
+
+
+def test_seek_parse_seconds_boundary_59_ok():
+    assert vibes.parse_seek_target("1:59") == vibes.SeekTarget(
+        relative=False, milliseconds=119_000
+    )
+
+
+def test_seek_parse_seconds_boundary_60_rejected():
+    assert vibes.parse_seek_target("1:60") is None
+
+
+def test_seek_parse_hmmss_minutes_60_rejected():
+    assert vibes.parse_seek_target("1:60:00") is None
+
+
+def test_seek_parse_hmmss_seconds_99_rejected():
+    assert vibes.parse_seek_target("1:99") is None
+
+
+def test_seek_parse_hours_out_of_range_rejected():
+    assert vibes.parse_seek_target("24:00:00") is None
+
+
+def test_seek_parse_mmss_minutes_ceiling_rejected():
+    assert vibes.parse_seek_target("600:00") is None
+
+
+def test_seek_parse_junk_letters_none():
+    assert vibes.parse_seek_target("abc") is None
+
+
+def test_seek_parse_sign_without_digits_none():
+    assert vibes.parse_seek_target("-x") is None
+
+
+def test_seek_parse_empty_none():
+    assert vibes.parse_seek_target("") is None
+
+
+def test_seek_parse_blank_none():
+    assert vibes.parse_seek_target("   ") is None
+
+
+def test_seek_parse_none_input_none():
+    assert vibes.parse_seek_target(None) is None
+
+
+def test_seek_parse_empty_colon_field_none():
+    assert vibes.parse_seek_target("1:") is None
+    assert vibes.parse_seek_target(":30") is None
+
+
+def test_seek_parse_four_colon_parts_none():
+    assert vibes.parse_seek_target("1:2:3:4") is None
+
+
+# ---------------------------------------------------------------------------
+# resolve_seek_ms  (pure relative/absolute resolution + clamp)
+# ---------------------------------------------------------------------------
+
+
+def test_seek_resolve_absolute_passthrough():
+    target = vibes.SeekTarget(relative=False, milliseconds=40_000)
+    assert vibes.resolve_seek_ms(target, position_ms=10_000, length_ms=200_000) == 40_000
+
+
+def test_seek_resolve_relative_adds_to_position():
+    target = vibes.SeekTarget(relative=True, milliseconds=30_000)
+    assert vibes.resolve_seek_ms(target, position_ms=50_000, length_ms=200_000) == 80_000
+
+
+def test_seek_resolve_relative_underflow_clamps_to_zero():
+    target = vibes.SeekTarget(relative=True, milliseconds=-90_000)
+    assert vibes.resolve_seek_ms(target, position_ms=10_000, length_ms=200_000) == 0
+
+
+def test_seek_resolve_absolute_overflow_clamps_to_length():
+    target = vibes.SeekTarget(relative=False, milliseconds=999_000)
+    assert vibes.resolve_seek_ms(target, position_ms=0, length_ms=200_000) == 200_000
+
+
+def test_seek_resolve_relative_overflow_clamps_to_length():
+    target = vibes.SeekTarget(relative=True, milliseconds=500_000)
+    assert vibes.resolve_seek_ms(target, position_ms=180_000, length_ms=200_000) == 200_000
+
+
+# ---------------------------------------------------------------------------
+# format_clock  (shared mm:ss / h:mm:ss renderer)
+# ---------------------------------------------------------------------------
+
+
+def test_format_clock_under_an_hour_is_mm_ss():
+    assert music.format_clock(83_000) == "01:23"
+
+
+def test_format_clock_over_an_hour_shows_hours():
+    assert music.format_clock((3600 + 65) * 1000) == "1:01:05"
+
+
+def test_format_clock_negative_floors_to_zero():
+    assert music.format_clock(-5_000) == "00:00"
