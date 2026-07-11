@@ -97,19 +97,14 @@ def _first_track(
     return data
 
 
-def select_playable(
+def _normalize_result_tracks(
     result: typing.Optional[typing.Any],
-    limit: int,
-    *,
-    seen_ids: typing.Optional[typing.Iterable[str]] = None,
 ) -> typing.List[sonolink.models.Playable]:
-    """Return up to ``limit`` non-stream, de-duplicated tracks from a search result.
+    """Flatten a search result's Playlist / list / single-track shapes to a list.
 
-    The multi-track sibling of :func:`_first_track`: it normalises the Playlist /
-    list / single-track shapes, skips live streams (a genre mix should be
-    seekable tracks, not endless radio), and drops any track whose source
-    identifier is already in ``seen_ids`` - seeded by the caller with what is
-    already queued or playing so a genre pick never double-queues a track. Pure.
+    Returns the raw candidate tracks (no filtering) or ``[]`` when the result is
+    absent, errored or empty. Pure - the shared normaliser behind
+    :func:`select_playable` and the genre ladder.
     """
     if (
         result is None
@@ -120,19 +115,40 @@ def select_playable(
         return []
     data = result.result
     if isinstance(data, sonolink.models.Playlist):
-        candidates = list(data.tracks)
-    elif isinstance(data, list):
-        candidates = list(data)
-    else:
-        candidates = [data]
+        return list(data.tracks)
+    if isinstance(data, list):
+        return list(data)
+    return [data]
 
+
+def filter_tracks(
+    tracks: typing.Sequence[sonolink.models.Playable],
+    limit: int,
+    *,
+    seen_ids: typing.Optional[typing.Iterable[str]] = None,
+    max_duration_ms: typing.Optional[int] = None,
+    reject: typing.Optional[typing.Callable[[sonolink.models.Playable], bool]] = None,
+) -> typing.List[sonolink.models.Playable]:
+    """Return up to ``limit`` non-stream, de-duplicated tracks from ``tracks``.
+
+    Skips live streams (a genre seed should be seekable tracks, not endless
+    radio), drops any track whose source identifier is already in ``seen_ids``
+    (seeded with what is already queued or playing so a genre pick never
+    double-queues a track), rejects anything longer than ``max_duration_ms`` when
+    given, and drops any track for which ``reject`` returns True (used to plug in
+    the mix detector). Pure - the list-based primitive the genre ladder tiers over.
+    """
     seen = set(seen_ids or ())
     picked: typing.List[sonolink.models.Playable] = []
-    for track in candidates:
+    for track in tracks:
         if getattr(track, "is_stream", False):
             continue
         identifier = getattr(track, "identifier", None)
         if identifier is not None and identifier in seen:
+            continue
+        if max_duration_ms is not None and (getattr(track, "length", 0) or 0) > max_duration_ms:
+            continue
+        if reject is not None and reject(track):
             continue
         if identifier is not None:
             seen.add(identifier)
@@ -140,6 +156,85 @@ def select_playable(
         if len(picked) >= limit:
             break
     return picked
+
+
+def select_playable(
+    result: typing.Optional[typing.Any],
+    limit: int,
+    *,
+    seen_ids: typing.Optional[typing.Iterable[str]] = None,
+    max_duration_ms: typing.Optional[int] = None,
+    reject: typing.Optional[typing.Callable[[sonolink.models.Playable], bool]] = None,
+) -> typing.List[sonolink.models.Playable]:
+    """Return up to ``limit`` non-stream, de-duplicated tracks from a search result.
+
+    The multi-track sibling of :func:`_first_track`: normalises the Playlist /
+    list / single-track shapes then runs :func:`filter_tracks`. ``max_duration_ms``
+    and ``reject`` are optional and default to the original behaviour, so existing
+    callers keep working unchanged. Pure.
+    """
+    return filter_tracks(
+        _normalize_result_tracks(result),
+        limit,
+        seen_ids=seen_ids,
+        max_duration_ms=max_duration_ms,
+        reject=reject,
+    )
+
+
+# Genre-seed ladder ceilings. The strict tier treats a single track past
+# GENRE_TRACK_MAX_MS as a mix even without a keyword tell (an individual song
+# almost never runs this long); the middle tier relaxes to GENRE_MIX_MAX_MS, the
+# same 20-minute line the mix detector calls near-certain.
+GENRE_TRACK_MAX_MS = 15 * 60 * 1000  # 15 min
+GENRE_MIX_MAX_MS = 20 * 60 * 1000  # 20 min
+
+
+def choose_genre_tracks(
+    tracks: typing.Sequence[sonolink.models.Playable],
+    limit: int,
+    *,
+    seen_ids: typing.Optional[typing.Iterable[str]] = None,
+) -> typing.Tuple[int, typing.List[sonolink.models.Playable]]:
+    """Pick genre-seed tracks from interleaved candidates via a 3-tier ladder.
+
+    Returns ``(tier, tracks)`` where ``tier`` is:
+
+    * 1 - strict: reject anything the mix detector flags OR longer than
+      :data:`GENRE_TRACK_MAX_MS` (individual songs only).
+    * 2 - duration-only: reject anything longer than :data:`GENRE_MIX_MAX_MS`.
+    * 3 - raw: only streams and duplicates are dropped.
+
+    The ladder descends a tier only when the current one yields fewer than three
+    tracks, so a good query stays on the strict tier and a thin one still seeds
+    something rather than nothing. Pure, so the tier choice is unit-tested without
+    a node. The caller logs the chosen tier.
+    """
+
+    def _is_mix(track: sonolink.models.Playable) -> bool:
+        return vibes.looks_like_mix(
+            getattr(track, "title", "") or "",
+            getattr(track, "author", "") or "",
+            getattr(track, "length", 0),
+        )
+
+    strict = filter_tracks(
+        tracks,
+        limit,
+        seen_ids=seen_ids,
+        max_duration_ms=GENRE_TRACK_MAX_MS,
+        reject=_is_mix,
+    )
+    if len(strict) >= 3:
+        return 1, strict
+
+    duration_only = filter_tracks(
+        tracks, limit, seen_ids=seen_ids, max_duration_ms=GENRE_MIX_MAX_MS
+    )
+    if len(duration_only) >= 3:
+        return 2, duration_only
+
+    return 3, filter_tracks(tracks, limit, seen_ids=seen_ids)
 
 
 def _loop_to_int(mode) -> int:
@@ -1867,7 +1962,15 @@ class Music(commands.Cog):
 
         already_playing = player.current is not None
 
-        result = await self._search(genre.query)
+        # Run both curated queries and blend them so a session is neither all this
+        # month's virals nor all evergreen classics, then filter the blend down the
+        # mix-detector ladder so hour-long compilations do not seed the queue.
+        result_trending = await self._search(vibes.resolve_query(genre.query_trending))
+        result_alltime = await self._search(vibes.resolve_query(genre.query_alltime))
+        candidates = vibes.interleave_results(
+            _normalize_result_tracks(result_trending),
+            _normalize_result_tracks(result_alltime),
+        )
         seen_ids = {
             track.identifier
             for track in player.queue.tracks
@@ -1875,7 +1978,16 @@ class Music(commands.Cog):
         }
         if already_playing and getattr(player.current, "identifier", None):
             seen_ids.add(player.current.identifier)
-        tracks = select_playable(result, vibes.TRACKS_PER_GENRE, seen_ids=seen_ids)
+        tier, tracks = choose_genre_tracks(
+            candidates, vibes.TRACKS_PER_GENRE, seen_ids=seen_ids
+        )
+        log.info(
+            "Genre seed for %s: tier %d (%d candidates -> %d tracks)",
+            genre.key,
+            tier,
+            len(candidates),
+            len(tracks),
+        )
         if not tracks:
             await interaction.followup.send(
                 _("I couldn't find any {genre} tracks right now.").format(

@@ -18,20 +18,248 @@ never drift and are exercised in isolation by ``tests/cogs/test_music_vibes.py``
 
 from __future__ import annotations
 
+import datetime
+import itertools
+import re
 import time
 import typing
+import unicodedata
 from dataclasses import dataclass
 
 from tools.i18n import N_
 
 # How many playable tracks the vibe picker enqueues per genre pick. Kept small so
-# a pick seeds a session without flooding the queue; the curated query returns a
-# mix, so the top few already span the genre.
+# a pick seeds a session without flooding the queue; the curated queries return a
+# spread of individual tracks, so the top few already span the genre.
 TRACKS_PER_GENRE = 7
 
 # How long (seconds) a pending "join a voice channel" watch stays live. Doubles
 # as the join card's own view timeout so the card and its watch expire together.
 WATCH_TTL = 300.0
+
+
+# ---------------------------------------------------------------------------
+# Mix / compilation detector
+# ---------------------------------------------------------------------------
+#
+# A plain genre search ("phonk mix") is dominated by hour-long DJ compilations and
+# "full album" uploads rather than individual songs, which makes for a poor seed:
+# one pick then fills the queue with two or three 60-minute blobs. :func:`looks_like_mix`
+# scores a candidate against several concordant signals and flags it once the total
+# crosses :data:`MIX_SCORE_THRESHOLD`, so the vibe picker can prefer real tracks.
+#
+# It is deliberately WEIGHTED, not a keyword blacklist: a single weak signal (a
+# normal-length song that merely has the word "mix", "radio" or "nonstop" in its
+# title, or an artist channel whose name ends in "Mix") never flags on its own; a
+# keyword paired with an abnormal duration, or several weak signals together, does.
+# Weights and the threshold were tuned against the live local Lavalink node across
+# all eight genres (see the lot R1 eval), so every genre yields a full page of
+# individual tracks with no obvious compilation slipping through.
+
+# Duration is the single strongest tell. A track past ~8 minutes is a strong
+# suspect; past ~20 minutes it is a near-certain compilation on its own.
+MIX_LONG_MS = 8 * 60 * 1000  # 8 min  -> strong suspicion (partial weight)
+MIX_VERY_LONG_MS = 20 * 60 * 1000  # 20 min -> near-certain (crosses threshold alone)
+
+# A candidate is treated as a mix once its accumulated score reaches this. Tuned so
+# that: a lone weak keyword (1) or a lone author tell (1) stays well under it; an
+# 8-20 min duration (2) plus any keyword (1+) crosses it; a >=20 min duration (4)
+# or any single unambiguous "full album"/"compilation"/"playlist" phrase (3) crosses
+# it by itself.
+MIX_SCORE_THRESHOLD = 3
+
+# Points awarded per duration bracket (graduated, not additive across brackets).
+_DURATION_VERY_LONG_POINTS = 4
+_DURATION_LONG_POINTS = 2
+
+# Unambiguous compilation phrases (multilingual, accent-folded). Any one of these
+# is enough on its own: they essentially never appear in a single-song title.
+#
+# The English superlative fragment "best of" is deliberately NOT here (it moved to
+# the medium list - see below - because it collides with real English singles the
+# genre queries surface). The Spanish/Portuguese/French superlatives are kept strong:
+# none of the eight configured genres searches in those languages, so they never
+# reach a genre seed, and on the music platforms they overwhelmingly title
+# compilations. Revisit if a Romance-language genre is ever added.
+_STRONG_TITLE_PATTERNS = tuple(
+    re.compile(p)
+    for p in (
+        r"\bfull album\b",
+        r"\balbum complet[oa]?\b",  # es/pt "album completo", fr "album complet"
+        r"\bcompilation\b",
+        r"\bcompilacao\b",  # pt
+        r"\bcompilacion\b",  # es
+        r"\brecopilacion\b",  # es "recopilacion" (compilation)
+        r"\bgreatest hits\b",
+        r"\bgrandes exitos\b",  # es
+        r"\blo mejor de\b",  # es
+        r"\blos mejores\b",  # es
+        r"\bas melhores\b",  # pt
+        r"\bles meilleur",  # fr "les meilleurs/meilleures ..."
+        r"\bdj set\b",
+        r"\bmega ?mix\b",
+        r"\bmegamix\b",
+        r"\bmedley\b",
+        r"\bplaylist\b",
+    )
+)
+_STRONG_TITLE_POINTS = 3
+
+# Medium signals: tracklist counts, hour-length markers, year ranges, "mixtape", and
+# the "best of" superlative fragment. Strong hints, but each can (rarely) show up in
+# a legitimate single-song title, so on their own they sit one weak signal short of
+# the threshold.
+#
+# "best of" is medium, NOT strong: unlike a complete compilation label, it is a
+# grammatical fragment that continues into a noun which routinely forms a real song
+# title - "Best of You" (Foo Fighters), "The Best of Me" (Bryan Adams), "Best of My
+# Love" (The Emotions), "Best of Both Worlds" (Van Halen). A genuine "Best Of ..."
+# compilation is always album-length, so the duration bracket (+2/+4) corroborates it
+# past the threshold anyway; a 4-minute single titled "Best of ..." must not be
+# dropped from a genre seed on the phrase alone.
+_MEDIUM_TITLE_PATTERNS = tuple(
+    re.compile(p)
+    for p in (
+        r"\bbest of\b",
+        r"\bmixtape\b",
+        r"\btop\s?\d{1,3}\b",  # top 20 / top 50 / top 100 tracklist count
+        r"\b(?:19|20)\d{2}\s*[-/]\s*(?:19|20)\d{2}\b",  # 2010-2020 span
+        r"\b\d{1,2}\s*(?:hours?|hrs?|heures?|horas|stunden)\b",  # N hours (multi-lang)
+        r"\bone hour\b",
+    )
+)
+_MEDIUM_TITLE_POINTS = 2
+
+# Weak signals: words that appear in plenty of legitimate single tracks (remixes,
+# radio edits, songs that happen to contain a year). Worth only a nudge; they flag
+# only when they pile up or land on top of an abnormal duration.
+_WEAK_TITLE_PATTERNS = tuple(
+    re.compile(p)
+    for p in (
+        r"\bmix\b",  # "(Extended Mix)", "PHONK MIX", ...
+        r"\bmixes\b",
+        r"\bmezcla\b",  # es "mix"
+        r"\bnon[- ]?stop\b",
+        r"\bradio\b",
+        r"\b(?:19|20)\d{2}\b",  # a bare 4-digit year token
+    )
+)
+_WEAK_TITLE_POINTS = 1
+
+# Author channel tells. A channel whose name ends in "Mix"/"Radio"/"Compilation"
+# is a compilation factory; "and N more" is Lavalink's multi-artist credit, which a
+# stitched-together compilation carries. Weak on their own (a real artist channel
+# can end in "Mix").
+_AUTHOR_SUFFIXES = ("mix", "mixes", "radio", "compilation")
+_AUTHOR_MULTI = re.compile(r"\band \d+ more\b")
+_AUTHOR_POINTS = 1
+
+
+def _fold(text: str) -> str:
+    """Lowercase ``text`` and strip accents to ASCII for keyword matching.
+
+    Folds so the ASCII patterns above match accented real-world titles
+    ("recopilacion" matches "recopilacion", "heures" any case). Pure.
+    """
+    if not text:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", text)
+    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return stripped.lower()
+
+
+def mix_score(title: str, author: str, duration_ms: typing.Optional[float]) -> int:
+    """Return the accumulated mix-suspicion score for a candidate track.
+
+    Higher means more likely to be an hour-long compilation rather than a single
+    song. Exposed alongside :func:`looks_like_mix` so the threshold can be reasoned
+    about and tested directly. Pure and None-safe.
+    """
+    score = 0
+
+    try:
+        duration = int(duration_ms) if duration_ms else 0
+    except (TypeError, ValueError):
+        duration = 0
+    if duration >= MIX_VERY_LONG_MS:
+        score += _DURATION_VERY_LONG_POINTS
+    elif duration >= MIX_LONG_MS:
+        score += _DURATION_LONG_POINTS
+
+    folded_title = _fold(title or "")
+    for pattern in _STRONG_TITLE_PATTERNS:
+        if pattern.search(folded_title):
+            score += _STRONG_TITLE_POINTS
+    for pattern in _MEDIUM_TITLE_PATTERNS:
+        if pattern.search(folded_title):
+            score += _MEDIUM_TITLE_POINTS
+    for pattern in _WEAK_TITLE_PATTERNS:
+        if pattern.search(folded_title):
+            score += _WEAK_TITLE_POINTS
+
+    folded_author = _fold(author or "")
+    if any(folded_author.endswith(suffix) for suffix in _AUTHOR_SUFFIXES):
+        score += _AUTHOR_POINTS
+    if _AUTHOR_MULTI.search(folded_author):
+        score += _AUTHOR_POINTS
+
+    return score
+
+
+def looks_like_mix(
+    title: str, author: str, duration_ms: typing.Optional[float]
+) -> bool:
+    """True when a candidate scores as an hour-long mix/compilation, not a song.
+
+    Weighted, not a blacklist: see :data:`MIX_SCORE_THRESHOLD`. Pure and None-safe,
+    so the vibe picker can filter real Lavalink results without a live node in
+    tests.
+    """
+    return mix_score(title, author, duration_ms) >= MIX_SCORE_THRESHOLD
+
+
+def current_year(now: typing.Optional[datetime.datetime] = None) -> int:
+    """Return the current UTC year, injectable for tests.
+
+    Kept here so the trending queries can splice in the year at runtime rather than
+    baking a stale literal into the source.
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    return now.year
+
+
+def resolve_query(template: str, *, now: typing.Optional[datetime.datetime] = None) -> str:
+    """Fill a query template's ``{year}`` placeholder with the current year.
+
+    Templates without a placeholder pass through unchanged, so the same call works
+    for both the recency-tuned trending query and the evergreen all-time one. Pure.
+    """
+    return template.format(year=current_year(now))
+
+
+def interleave_results(
+    a: typing.Sequence[typing.Any], b: typing.Sequence[typing.Any]
+) -> typing.List[typing.Any]:
+    """Alternate two track lists into one, deduped by identifier, order preserved.
+
+    Emits ``a[0], b[0], a[1], b[1], ...`` and drops any track whose ``identifier``
+    was already emitted, so blending the trending and all-time queries keeps both
+    voices without ever queueing the same track twice. Tracks with no identifier
+    are always kept (they cannot be deduped). Pure.
+    """
+    out: typing.List[typing.Any] = []
+    seen: set = set()
+    for pair in itertools.zip_longest(a, b):
+        for track in pair:
+            if track is None:
+                continue
+            identifier = getattr(track, "identifier", None)
+            if identifier is not None:
+                if identifier in seen:
+                    continue
+                seen.add(identifier)
+            out.append(track)
+    return out
 
 
 @dataclass(frozen=True)
@@ -42,74 +270,95 @@ class Genre:
     ``label`` is the genre's proper name and stays untranslated by design.
     ``description`` is short descriptive text marked with ``N_`` so pybabel
     collects it; render it through ``_(genre.description)`` at display time.
-    ``query`` is a curated search string tuned to return a good genre mix.
+
+    Two curated search queries, both tuned (against the live node) to return
+    individual tracks rather than hour-long compilations, are blended by the cog:
+
+    * ``query_trending`` leans on recency (it may carry a ``{year}`` placeholder
+      filled at runtime by :func:`resolve_query`, so no stale year is baked in).
+    * ``query_alltime`` is evergreen, so a fresh session is not all one month's
+      virals.
+
+    The cog runs both, interleaves them (:func:`interleave_results`) and filters
+    the blend down the mix-detector ladder.
     """
 
     key: str
     emoji: str
     label: str
-    query: str
+    query_trending: str
+    query_alltime: str
     description: str
 
 
 # The eight international genres offered on a bare /play. Labels are proper names
-# (untranslated); queries are ASCII, curated to return a good mix from a plain
-# YouTube search; descriptions are N_-marked for translation at render time.
+# (untranslated); queries are ASCII, curated (and measured against the live node)
+# to return individual tracks rather than hour-long compilations; descriptions are
+# N_-marked for translation at render time. ``{year}`` in a trending query is filled
+# at runtime, never hardcoded.
 GENRE_CATALOG: tuple[Genre, ...] = (
     Genre(
         key="phonk",
         emoji="\N{RACING CAR}",
         label="Phonk",
-        query="phonk mix 2025",
+        query_trending="phonk sped up {year}",
+        query_alltime="phonk edit audio",
         description=N_("Dark, drift-ready beats"),
     ),
     Genre(
         key="lofi",
         emoji="\N{HOT BEVERAGE}",
         label="Lofi",
-        query="lofi hip hop radio beats to relax study",
+        query_trending="lofi type beat {year}",
+        query_alltime="lofi hip hop track",
         description=N_("Chill beats to relax and study"),
     ),
     Genre(
         key="pop",
         emoji="\N{MICROPHONE}",
         label="Pop",
-        query="top pop hits 2025 playlist",
+        query_trending="new pop single {year}",
+        query_alltime="pop hit single",
         description=N_("Chart-topping hits"),
     ),
     Genre(
         key="hiphop",
         emoji="\N{FIRE}",
         label="Hip-Hop",
-        query="best hip hop rap mix 2025",
+        query_trending="hip hop rap song {year}",
+        query_alltime="hip hop rap single",
         description=N_("Rap and hip-hop heat"),
     ),
     Genre(
         key="edm",
         emoji="\N{HIGH VOLTAGE SIGN}",
         label="Electro/EDM",
-        query="edm festival electro house mix 2025",
+        query_trending="edm single {year}",
+        query_alltime="electro house single",
         description=N_("Festival-ready electronic energy"),
     ),
     Genre(
         key="rock",
         emoji="\N{GUITAR}",
         label="Rock",
-        query="rock classics greatest hits playlist",
+        query_trending="new rock single {year}",
+        query_alltime="classic rock single",
         description=N_("Guitar-driven classics"),
     ),
     Genre(
         key="jazz",
         emoji="\N{SAXOPHONE}",
         label="Jazz",
-        query="smooth jazz relaxing playlist",
+        query_trending="jazz track {year}",
+        query_alltime="jazz standard track",
         description=N_("Smooth, laid-back jazz"),
     ),
     Genre(
         key="jpop",
         emoji="\N{CHERRY BLOSSOM}",
         label="J-Pop/Anime",
-        query="best anime openings jpop mix",
+        query_trending="jpop song {year}",
+        query_alltime="jpop hit single",
         description=N_("Anime openings and J-pop"),
     ),
 )
