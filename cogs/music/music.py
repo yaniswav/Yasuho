@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import effects, lyrics, sponsorblock, vibes
+from cogs.music import effects, lyrics, sponsorblock, vibes, voteskip
 from tools import music_state, settings
 from tools.i18n import _, ngettext
 from tools.paginator import Paginator, paginate_lines
@@ -829,6 +829,10 @@ class Music(commands.Cog):
         # process-wide synced_lyrics ceiling. Lives on the cog so its loops and
         # its bounded map span the process; torn down in cog_unload.
         self.lyrics_sessions = lyrics.LyricsSessions(self.quotas.synced_lyrics)
+        # Live democratic skip votes (lot P6), at most one per guild. In-memory
+        # and self-limiting (a 30s vote, self-detaching on pass / expiry / track
+        # change / teardown), so it needs no quota slot; cleaned via _clear.
+        self.skip_votes = voteskip.SkipVotes()
         # Monotonic timestamp of the last quota-stats heartbeat log (see _idle_check).
         self._last_quota_log = time.monotonic()
         self._idle_check.start()
@@ -1171,6 +1175,9 @@ class Music(commands.Cog):
         # End any live synced-lyrics session (idempotent; releases its ceiling
         # slot) - every disconnect / stop / idle-teardown / restore-drop lands here.
         await self.lyrics_sessions.stop(guild_id)
+        # Cancel a live skip vote the same way (idempotent) - playback for this
+        # guild is going away, so a pending vote can no longer resolve.
+        await self.skip_votes.clear(guild_id)
         await music_state.clear_state(self.bot.db_pool, guild_id)
 
     # ------------------------------------------------------------------
@@ -1185,12 +1192,15 @@ class Music(commands.Cog):
         guild_id = player.channel.guild.id if player.channel else None
         log.debug("Track start: %s (guild=%s)", track.title, guild_id)
 
-        # A new track is playing: end a synced-lyrics session whose track this is
-        # not (a reconnect re-fire of the same track keeps it - see notify_track).
+        # A new track is playing: end a synced-lyrics session and cancel any live
+        # skip vote whose track this is not (a reconnect re-fire of the same track
+        # keeps both - the ids match; see notify_track). Done before the anti-mix
+        # guard below so a genuine change proactively finalises a stale vote/session
+        # rather than leaving it to time out.
         if guild_id is not None:
-            await self.lyrics_sessions.notify_track(
-                guild_id, getattr(track, "identifier", None)
-            )
+            track_id = getattr(track, "identifier", None)
+            await self.lyrics_sessions.notify_track(guild_id, track_id)
+            await self.skip_votes.notify_track(guild_id, track_id)
 
         # Anti-mix guard: sonolink autoplay occasionally surfaces an hour-long
         # mix/compilation instead of a song. Skip it before it ever posts a
@@ -2064,6 +2074,65 @@ class Music(commands.Cog):
         await self._snapshot(player)
         await ctx.send(_("Resumed the player."))
 
+    def _skip_exempt(self, player: Player, actor: typing.Any) -> bool:
+        """Whether ``actor`` skips instantly, bypassing a vote (DJ or Manage Server).
+
+        Reuses the P4 effects exemption predicate (:func:`effects.is_effect_exempt`)
+        and the shared :meth:`_has_manage_guild` helper rather than re-deriving the
+        DJ / manager gate, so "who is trusted to drive the room" stays one rule.
+        """
+        dj = getattr(player, "dj", None)
+        return effects.is_effect_exempt(
+            dj.id if dj is not None else None,
+            getattr(actor, "id", 0),
+            self._has_manage_guild(actor),
+        )
+
+    async def _request_skip(
+        self, player: Player, actor: typing.Any, fallback_channel: typing.Any
+    ) -> str:
+        """Route a skip request: instant skip, or open/join a public vote.
+
+        Returns :data:`voteskip.SKIP_INSTANT` when the caller should perform its
+        own (unchanged) skip - a privileged actor, a room of two or fewer humans,
+        or a player with nothing playing - or a vote-record outcome (which the
+        caller acks ephemerally) when a public vote was opened or joined instead.
+        The exempt / threshold decision is the pure :func:`voteskip.skip_mode`.
+        """
+        if getattr(player, "current", None) is None:
+            return voteskip.SKIP_INSTANT
+        channel = getattr(player, "channel", None)
+        humans = voteskip.count_humans(getattr(channel, "members", ()))
+        mode = voteskip.skip_mode(humans, exempt=self._skip_exempt(player, actor))
+        if mode == voteskip.SKIP_INSTANT:
+            return voteskip.SKIP_INSTANT
+        return await self.skip_votes.open(self, player, actor, fallback_channel)
+
+    async def _execute_skip(
+        self, player: Player
+    ) -> typing.Tuple[str, typing.Optional[sonolink.models.Playable]]:
+        """The shared skip engine behind /skip and a passed vote (can_skip precheck).
+
+        Returns ``(result, track)``: :data:`voteskip.SKIP_RESULT_NONE` when there
+        is nothing to skip to (playback is left untouched),
+        :data:`voteskip.SKIP_RESULT_ADVANCED` with the new track, or
+        :data:`voteskip.SKIP_RESULT_ENDED` when the skip emptied the queue (state
+        cleared). sonolink stops the player BEFORE raising QueueEmpty, so the
+        can_skip precheck refuses up front instead of silencing the room.
+        """
+        if not can_skip(player):
+            return voteskip.SKIP_RESULT_NONE, None
+        try:
+            track = await player.skip()
+        except sonolink.QueueEmpty:
+            return voteskip.SKIP_RESULT_NONE, None
+        if track:
+            return voteskip.SKIP_RESULT_ADVANCED, track
+        guild = getattr(player, "guild", None)
+        if guild is not None:
+            await self._clear(guild.id)
+        return voteskip.SKIP_RESULT_ENDED, None
+
     @commands.hybrid_command(name="skip", aliases=["next"])
     @commands.guild_only()
     async def skip(self, ctx: commands.Context) -> None:
@@ -2071,25 +2140,24 @@ class Music(commands.Cog):
         player = await self._require_player(ctx)
         if player is None:
             return
-        # Pre-check: sonolink stops playback BEFORE raising QueueEmpty, so a skip
-        # with nowhere to land must be refused up front - never kill the current
-        # track just to say there was nothing after it.
-        if not can_skip(player):
-            await ctx.send(_("There are no more tracks in the queue to skip to."))
+        # Scaled vote-skip (lot P6): a non-exempt member in a room of more than two
+        # humans opens (or joins) a public vote instead of skipping outright; the
+        # DJ, Manage-Server members, and tiny rooms keep the instant skip below,
+        # byte-identical to before.
+        decision = await self._request_skip(player, ctx.author, ctx.channel)
+        if decision != voteskip.SKIP_INSTANT:
+            await ctx.send(voteskip.skip_ack(decision), ephemeral=True)
             return
-        try:
-            track = await player.skip()
-        except sonolink.QueueEmpty:
+        result, track = await self._execute_skip(player)
+        if result == voteskip.SKIP_RESULT_NONE:
             await ctx.send(_("There are no more tracks in the queue to skip to."))
-            return
-        if track:
+        elif result == voteskip.SKIP_RESULT_ADVANCED:
             await ctx.send(
                 _("Skipped to **{title}** by `{author}`.").format(
                     title=track.title, author=track.author
                 )
             )
         else:
-            await self._clear(ctx.guild.id)
             await ctx.send(_("Skipped. The queue is now empty."))
 
     async def _play_previous(

@@ -34,7 +34,7 @@ import discord
 import sonolink
 import sonolink.models
 
-from cogs.music import effects, vibes
+from cogs.music import effects, vibes, voteskip
 from cogs.music.music import (
     MAX_FAVOURITES,
     Player,
@@ -587,6 +587,17 @@ class MusicController(discord.ui.LayoutView):
 
     async def _skip(self, interaction: discord.Interaction) -> None:
         try:
+            # Scaled vote-skip (lot P6): a non-exempt member in a room of more than
+            # two humans opens (or joins) a public vote; the DJ, Manage-Server
+            # members and tiny rooms keep the instant skip below, byte-identical.
+            decision = await self.cog._request_skip(
+                self.player, interaction.user, interaction.channel
+            )
+            if decision != voteskip.SKIP_INSTANT:
+                await interaction.response.send_message(
+                    voteskip.skip_ack(decision), ephemeral=True
+                )
+                return
             # Pre-check: sonolink stops playback BEFORE raising QueueEmpty, so a
             # skip with nowhere to land must be refused up front, not caught.
             if not can_skip(self.player):
