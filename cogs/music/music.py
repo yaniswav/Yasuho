@@ -11,12 +11,13 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
+from cogs.music import vibes
 from tools import interactions, music_state
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +90,51 @@ def _first_track(
     if isinstance(data, list):
         return data[0] if data else None
     return data
+
+
+def select_playable(
+    result: typing.Optional[typing.Any],
+    limit: int,
+    *,
+    seen_ids: typing.Optional[typing.Iterable[str]] = None,
+) -> typing.List[sonolink.models.Playable]:
+    """Return up to ``limit`` non-stream, de-duplicated tracks from a search result.
+
+    The multi-track sibling of :func:`_first_track`: it normalises the Playlist /
+    list / single-track shapes, skips live streams (a genre mix should be
+    seekable tracks, not endless radio), and drops any track whose source
+    identifier is already in ``seen_ids`` - seeded by the caller with what is
+    already queued or playing so a genre pick never double-queues a track. Pure.
+    """
+    if (
+        result is None
+        or result.is_error()
+        or result.is_empty()
+        or result.result is None
+    ):
+        return []
+    data = result.result
+    if isinstance(data, sonolink.models.Playlist):
+        candidates = list(data.tracks)
+    elif isinstance(data, list):
+        candidates = list(data)
+    else:
+        candidates = [data]
+
+    seen = set(seen_ids or ())
+    picked: typing.List[sonolink.models.Playable] = []
+    for track in candidates:
+        if getattr(track, "is_stream", False):
+            continue
+        identifier = getattr(track, "identifier", None)
+        if identifier is not None and identifier in seen:
+            continue
+        if identifier is not None:
+            seen.add(identifier)
+        picked.append(track)
+        if len(picked) >= limit:
+            break
+    return picked
 
 
 def _loop_to_int(mode) -> int:
@@ -614,6 +660,228 @@ class MusicController(discord.ui.LayoutView):
             await self._report_failure(interaction)
 
 
+def joinable_voice_channels(
+    guild: discord.Guild,
+    member: discord.Member,
+    *,
+    limit: int = 5,
+) -> typing.List[discord.VoiceChannel]:
+    """Return up to ``limit`` of ``guild``'s voice channels ``member`` may join.
+
+    Honours each channel's view + connect permissions so the join card never
+    lists a room the member cannot actually enter. Ordered by channel position
+    (``guild.voice_channels`` is already position-sorted).
+    """
+    channels: typing.List[discord.VoiceChannel] = []
+    for channel in guild.voice_channels:
+        perms = channel.permissions_for(member)
+        if perms.view_channel and perms.connect:
+            channels.append(channel)
+            if len(channels) >= limit:
+                break
+    return channels
+
+
+class _ModalPlayContext:
+    """A minimal ``commands.Context`` stand-in for the vibe search modal.
+
+    It exposes exactly the attributes :meth:`Music._play_query` reads - ``author``,
+    ``channel``, ``voice_client`` and an awaitable ``send`` - so a modal submit runs
+    the byte-identical ``/play <query>`` body without a real Context (a modal
+    submit interaction cannot build one). The modal defers ephemerally before
+    handing this over, so ``send`` posts ephemeral followups and the search
+    feedback stays self-contained.
+    """
+
+    def __init__(self, interaction: discord.Interaction) -> None:
+        self._interaction = interaction
+        self.author = interaction.user
+        self.channel = interaction.channel
+
+    @property
+    def voice_client(self) -> typing.Optional[sonolink.Player]:
+        guild = self._interaction.guild
+        return guild.voice_client if guild is not None else None
+
+    async def send(self, content: typing.Optional[str] = None, **kwargs: typing.Any) -> None:
+        kwargs.setdefault("ephemeral", True)
+        await self._interaction.followup.send(content, **kwargs)
+
+
+class _GenreSelect(discord.ui.Select):
+    """The eight-genre picker; choosing one starts or extends that genre's mix."""
+
+    def __init__(self, card: "VibeCard") -> None:
+        self._card = card
+        options = [
+            discord.SelectOption(
+                label=genre.label,
+                value=genre.key,
+                description=_(genre.description),
+                emoji=genre.emoji,
+            )
+            for genre in vibes.GENRE_CATALOG
+        ]
+        super().__init__(
+            placeholder=_("Pick a vibe..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            await self._card._pick_genre(interaction, self.values[0])
+        except Exception:
+            log.exception("Vibe card genre select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _VibeSearchModal(LocaleModal):
+    """Free-text search from the vibe card, routed through the /play <query> path."""
+
+    def __init__(self, cog: "Music", author_id: int) -> None:
+        super().__init__(title=_("Search for music"))
+        self.cog = cog
+        self.author_id = author_id
+        self.query_field = discord.ui.TextInput(
+            label=_("Song or URL"),
+            placeholder=_("A song name to search, or a full URL"),
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=400,
+        )
+        self.add_item(self.query_field)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        try:
+            query = self.query_field.value.strip()
+            if not query:
+                await interaction.response.send_message(
+                    _("Give me a song name or URL to add."), ephemeral=True
+                )
+                return
+            await interaction.response.defer(ephemeral=True)
+            await self.cog._play_query(_ModalPlayContext(interaction), query)
+        except Exception:
+            log.exception("Vibe search modal submit failed")
+            await interactions.notify_failure(
+                interaction, _("Something went wrong searching for that.")
+            )
+
+
+class _VibeSearchButton(discord.ui.Button):
+    """Open the free-text search modal from the vibe card."""
+
+    def __init__(self, card: "VibeCard") -> None:
+        self._card = card
+        super().__init__(
+            label=_("Search for music instead"),
+            style=discord.ButtonStyle.secondary,
+            emoji="\N{RIGHT-POINTING MAGNIFYING GLASS}",
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            await interaction.response.send_modal(
+                _VibeSearchModal(self._card.cog, self._card.author_id)
+            )
+        except Exception:
+            log.exception("Vibe card search launch failed")
+            await interactions.notify_failure(interaction)
+
+
+class VibeCard(AuthorLayoutView):
+    """The "choose your vibe" card: a genre picker plus a free-search escape hatch.
+
+    A single accent :class:`~discord.ui.Container` in the music controller's house
+    style - a heading, a genre :class:`_GenreSelect`, a separator and a
+    :class:`_VibeSearchButton`. Author-gated through
+    :class:`~tools.views.AuthorLayoutView`. Picking a genre delegates to the cog's
+    playback seams; the search button opens a modal routed through the exact
+    ``/play <query>`` path.
+    """
+
+    def __init__(self, cog: "Music", author_id: int, *, timeout: float = 180) -> None:
+        super().__init__(author_id, timeout=timeout)
+        self.cog = cog
+        self._build()
+
+    def _build(self) -> None:
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(discord.ui.TextDisplay(_("## 🎧 Choose your vibe")))
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("Pick a genre and I'll spin up a mix, or search for a track.")
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(_GenreSelect(self)))
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(_VibeSearchButton(self)))
+        container.add_item(
+            discord.ui.TextDisplay(_("-# Only you can use this menu."))
+        )
+        self.add_item(container)
+
+    async def _pick_genre(self, interaction: discord.Interaction, key: str) -> None:
+        genre = vibes.GENRES_BY_KEY.get(key)
+        if genre is None:
+            await interaction.response.send_message(
+                _("That vibe isn't available right now."), ephemeral=True
+            )
+            return
+        await self.cog._start_genre(interaction, genre)
+
+
+class JoinVoiceCard(AuthorLayoutView):
+    """The auto-updating "join a voice channel" welcome card.
+
+    Shown on a bare /play when the invoker is not in voice. It lists up to five
+    voice channels they may connect to; a cog-side voice-state watch edits this
+    same message into the vibe card the instant they join (see
+    :meth:`Music._fire_voice_watch`). It carries no interactive components - the
+    author gate is inert - but it keeps AuthorLayoutView's timeout cleanup so the
+    card retires gracefully once the join window (``WATCH_TTL``) elapses.
+    """
+
+    def __init__(
+        self,
+        author_id: int,
+        channels: typing.Sequence[discord.VoiceChannel],
+        *,
+        timeout: float = vibes.WATCH_TTL,
+    ) -> None:
+        super().__init__(author_id, timeout=timeout)
+        self._build(channels)
+
+    def _build(self, channels: typing.Sequence[discord.VoiceChannel]) -> None:
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(discord.ui.TextDisplay(_("## 👋 Welcome")))
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("I'm all set to bring the music - let's get you into a room first.")
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        if channels:
+            lines = [_("To get started, join a voice channel:")]
+            lines.extend(f"- {channel.mention}" for channel in channels)
+            container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+        else:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("I couldn't find a voice channel here that you can join.")
+                )
+            )
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("-# Once you join, this message will automatically update.")
+            )
+        )
+        self.add_item(container)
+
+
 class Music(commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
@@ -627,6 +895,11 @@ class Music(commands.Cog):
         # object instances. The lock serialises delete+post per guild.
         self._controllers: typing.Dict[int, MusicController] = {}
         self._controller_locks: typing.Dict[int, asyncio.Lock] = {}
+        # Bounded, in-memory map of open "join a voice channel" cards awaiting the
+        # invoker to join voice, so on_voice_state_update can swap each into the
+        # vibe card exactly once. Lost on restart by design (the orphan card just
+        # times out on its own view timeout).
+        self._pending_watches = vibes.PendingVoiceWatches()
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -1005,7 +1278,19 @@ class Music(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ) -> None:
-        """Leave the channel a short while after the last human leaves."""
+        """React to voice joins/leaves.
+
+        Two concerns share this listener: fire a pending "join a voice channel"
+        watch the moment the invoker joins (or moves into) any voice channel of
+        this guild, then run the empty-channel auto-disconnect.
+        """
+        if (
+            not member.bot
+            and after.channel is not None
+            and after.channel != before.channel
+        ):
+            await self._fire_voice_watch(member)
+
         if member.bot:
             return
 
@@ -1272,24 +1557,69 @@ class Music(commands.Cog):
     ) -> None:
         """Play a track or playlist, or add it to the queue.
 
-        Called with no query, this re-posts the now-playing controller at the
-        bottom of the channel so it is not buried under newer messages.
+        Called with no query this re-posts the now-playing controller when
+        something is playing; otherwise it opens the "choose your vibe" picker
+        (when you are in a voice channel) or an auto-updating join-a-channel
+        prompt (when you are not).
         """
         if not query or not query.strip():
-            player = ctx.voice_client
-            if isinstance(player, sonolink.Player) and player.current:
-                player.home = ctx.channel
-                await self._send_controller(player)
-                if ctx.interaction is not None:
-                    await ctx.send(_("Here is the player."), ephemeral=True)
-                return
-            await ctx.send(
-                _("Give me something to play, e.g. `play never gonna give you up`.")
-            )
+            await self._play_no_query(ctx)
             return
 
         await ctx.defer()
+        await self._play_query(ctx, query)
 
+    async def _play_no_query(self, ctx: commands.Context) -> None:
+        """Handle a bare /play: repost the controller, or offer the vibe / join card.
+
+        The already-playing branch preserves the original behaviour (re-post the
+        now-playing controller at the bottom of the channel). With nothing playing,
+        a member in a voice channel gets the vibe picker and a member not in voice
+        gets the auto-updating join prompt.
+        """
+        player = ctx.voice_client
+        if isinstance(player, sonolink.Player) and player.current:
+            player.home = ctx.channel
+            await self._send_controller(player)
+            if ctx.interaction is not None:
+                await ctx.send(_("Here is the player."), ephemeral=True)
+            return
+
+        author = ctx.author
+        if (
+            isinstance(author, discord.Member)
+            and author.voice is not None
+            and author.voice.channel is not None
+        ):
+            await self._send_vibe_card(ctx)
+        else:
+            await self._send_join_card(ctx)
+
+    async def _send_vibe_card(self, ctx: commands.Context) -> None:
+        """Post the "choose your vibe" card, gated to the invoker."""
+        view = VibeCard(self, ctx.author.id)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def _send_join_card(self, ctx: commands.Context) -> None:
+        """Post the auto-updating "join a voice channel" card and arm its watch."""
+        channels = joinable_voice_channels(ctx.guild, ctx.author)
+        view = JoinVoiceCard(ctx.author.id, channels)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+        # Overwrites any earlier pending watch for this user in this guild, so only
+        # the latest join card auto-updates (the older one just times out).
+        self._pending_watches.add(ctx.guild.id, ctx.author.id, view)
+
+    async def _play_query(self, ctx, query: str) -> None:
+        """Search for ``query`` and queue the result - the shared /play <query> body.
+
+        Extracted verbatim from the play command so the vibe card's "Search for
+        music instead" modal runs the identical path through a minimal ctx adapter
+        (:class:`_ModalPlayContext`). The caller has already deferred.
+        """
         if not self._nodes_available():
             await ctx.send(
                 _("Music is currently unavailable - no Lavalink node is connected.")
@@ -1359,6 +1689,112 @@ class Music(commands.Cog):
         if not player.current:
             await player.play(player.queue.get())
         await self._snapshot(player)
+
+    async def _start_genre(self, interaction: discord.Interaction, genre) -> None:
+        """Join the author's voice channel and seed it with a genre's tracks.
+
+        Reuses the exact playback seams: the same connect
+        (``channel.connect(cls=Player)``), the same search entry point
+        (:meth:`_search`), and the same queue/play/snapshot calls the play command
+        uses. When something is already playing the tracks are appended to the
+        queue and nothing is interrupted; otherwise playback starts and the
+        existing track_start -> controller flow takes over. All feedback is
+        ephemeral.
+        """
+        author = interaction.user
+        if (
+            not isinstance(author, discord.Member)
+            or author.voice is None
+            or author.voice.channel is None
+        ):
+            await interaction.response.send_message(
+                _("You must be in a voice channel first."), ephemeral=True
+            )
+            return
+        if not self._nodes_available():
+            await interaction.response.send_message(
+                _("Music is currently unavailable - no Lavalink node is connected."),
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        player = interaction.guild.voice_client
+        if not isinstance(player, sonolink.Player):
+            try:
+                player = await author.voice.channel.connect(cls=Player)
+            except discord.ClientException:
+                log.exception("Failed to connect to the voice channel")
+                await interaction.followup.send(
+                    _("I was unable to join your voice channel. Please try again."),
+                    ephemeral=True,
+                )
+                return
+            player.dj = author
+            player.home = interaction.channel
+        if player.home is None:
+            player.home = interaction.channel
+
+        already_playing = player.current is not None
+
+        result = await self._search(genre.query)
+        seen_ids = {
+            track.identifier
+            for track in player.queue.tracks
+            if getattr(track, "identifier", None)
+        }
+        if already_playing and getattr(player.current, "identifier", None):
+            seen_ids.add(player.current.identifier)
+        tracks = select_playable(result, vibes.TRACKS_PER_GENRE, seen_ids=seen_ids)
+        if not tracks:
+            await interaction.followup.send(
+                _("I couldn't find any {genre} tracks right now.").format(
+                    genre=genre.label
+                ),
+                ephemeral=True,
+            )
+            return
+
+        for track in tracks:
+            track.extras.requester = author.id
+            player.queue.put(track)
+
+        if not player.current:
+            await player.play(player.queue.get())
+        await self._snapshot(player)
+
+        if already_playing:
+            # Refresh the live controller so its "Up Next" reflects the appended
+            # tracks; playback itself is never interrupted.
+            if player.controller is not None:
+                await player.controller._rerender()
+            await interaction.followup.send(
+                _("Added {count} {genre} track(s) to the queue.").format(
+                    count=len(tracks), genre=genre.label
+                ),
+                ephemeral=True,
+            )
+        else:
+            await interaction.followup.send(
+                _("Starting a {genre} session with {count} track(s). Enjoy!").format(
+                    genre=genre.label, count=len(tracks)
+                ),
+                ephemeral=True,
+            )
+
+    async def _fire_voice_watch(self, member: discord.Member) -> None:
+        """Swap a member's open join card into the vibe card once they join voice."""
+        view = self._pending_watches.pop(member.guild.id, member.id)
+        if view is None:
+            return
+        try:
+            card = VibeCard(self, member.id)
+            await view.message.edit(view=card)
+            card.message = view.message
+            view.stop()
+        except discord.HTTPException:
+            log.exception("Failed to swap the join card into the vibe card")
 
     @commands.hybrid_command(name="pause")
     @commands.guild_only()

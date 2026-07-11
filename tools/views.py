@@ -85,6 +85,56 @@ class AuthorView(discord.ui.View):
                 pass
 
 
+# Component types a LayoutView disables on timeout (buttons + every select
+# flavour; ChannelSelect is NOT a subclass of ui.Select, so list it explicitly).
+_DISABLEABLE = (discord.ui.Button, discord.ui.Select, discord.ui.ChannelSelect)
+
+
+class AuthorLayoutView(discord.ui.LayoutView):
+    """A Components V2 LayoutView gated to its originating author.
+
+    LayoutView cannot subclass :class:`AuthorView` (that is a plain
+    ``discord.ui.View``), so the author gate and locale resolution AuthorView
+    normally supplies are reimplemented here: :meth:`interaction_check` applies
+    the clicker's locale then rejects anyone but ``author_id`` (using the same
+    registered deny wording, see ``_DENY_STRINGS``), and :meth:`on_timeout`
+    disables every control and edits the bound ``message`` in place. Subclasses
+    assemble their own :class:`~discord.ui.Container` and set ``self.message`` so
+    the timeout cleanup has something to edit.
+    """
+
+    def __init__(self, author_id, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.message = None
+
+    async def interaction_check(self, interaction):
+        # Component callbacks run in their own task where get_context never set
+        # the locale; resolve it here so this check AND the callback localize.
+        await i18n.apply_interaction_locale(interaction)
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                _("This panel isn't for you."), ephemeral=True
+            )
+            return False
+        return True
+
+    def _disable_all(self):
+        """Disable every button/select in the layout (walks nested ActionRows)."""
+
+        for child in self.walk_children():
+            if isinstance(child, _DISABLEABLE):
+                child.disabled = True
+
+    async def on_timeout(self):
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 class LocaleModal(discord.ui.Modal):
     """A Modal whose submit callback runs in the interaction's resolved locale.
 

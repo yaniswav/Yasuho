@@ -40,7 +40,7 @@ from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
 from tools.http import TIMEOUT
 from tools.i18n import N_, _, ngettext
-from tools.views import AuthorView, LocaleModal
+from tools.views import _DISABLEABLE, AuthorLayoutView, AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -1388,8 +1388,9 @@ class _SelfAddToggleButton(discord.ui.Button):
 # persists through a cog helper and re-renders the same ephemeral message. It is
 # ephemeral, so only the admin who opened it can see or click it; both views are
 # Components V2 LayoutViews built on the panel's house style, so - like the panel -
-# they extend _AuthorLayoutView, which reapplies the invoker's locale and the
-# author gate that AuthorView normally supplies (a LayoutView cannot subclass it).
+# they extend AuthorLayoutView (tools.views), which reapplies the invoker's locale
+# and the author gate that AuthorView normally supplies (a LayoutView cannot
+# subclass it).
 
 
 class _TrackConfirmSelect(discord.ui.Select):
@@ -1450,52 +1451,7 @@ class _SubsBackButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class _AuthorLayoutView(discord.ui.LayoutView):
-    """A Components V2 LayoutView gated to its originating author.
-
-    LayoutView cannot subclass :class:`~tools.views.AuthorView` (that is a plain
-    ``discord.ui.View``), so - exactly like :class:`AniListFeedPanel` - the author
-    gate and locale resolution AuthorView normally supplies are reimplemented
-    here: :meth:`interaction_check` applies the clicker's locale then rejects
-    anyone but ``author_id`` (using the same registered deny wording), and
-    :meth:`on_timeout` disables every control and edits the bound ``message`` in
-    place. Subclasses assemble their own :class:`~discord.ui.Container` and set
-    ``self.message`` so the timeout cleanup has something to edit.
-    """
-
-    def __init__(self, author_id, *, timeout=180):
-        super().__init__(timeout=timeout)
-        self.author_id = author_id
-        self.message = None
-
-    async def interaction_check(self, interaction):
-        # Component callbacks run in their own task where get_context never set
-        # the locale; resolve it here so this check AND the callback localize.
-        await i18n.apply_interaction_locale(interaction)
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                _("This panel isn't for you."), ephemeral=True
-            )
-            return False
-        return True
-
-    def _disable_all(self):
-        """Disable every button/select in the layout (walks nested ActionRows)."""
-
-        for child in self.walk_children():
-            if isinstance(child, _DISABLEABLE):
-                child.disabled = True
-
-    async def on_timeout(self):
-        self._disable_all()
-        if self.message is not None:
-            try:
-                await self.message.edit(view=self)
-            except discord.HTTPException:
-                pass
-
-
-class _SubsConfirmView(_AuthorLayoutView):
+class _SubsConfirmView(AuthorLayoutView):
     """Ephemeral confirm picker shown after a title search returns matches.
 
     A single ANILIST_BLUE :class:`~discord.ui.Container` in the panel's house
@@ -1685,7 +1641,7 @@ class _SubsPageButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class _SubsManagerView(_AuthorLayoutView):
+class _SubsManagerView(AuthorLayoutView):
     """Ephemeral per-feed tracked-releases manager (list / add / remove).
 
     A single ANILIST_BLUE :class:`~discord.ui.Container` in the panel's house
@@ -2027,11 +1983,6 @@ class _RemoveFollowSelect(discord.ui.Select):
         except Exception:
             log.exception("AniList feed panel remove-follow select failed")
             await interactions.notify_failure(interaction)
-
-
-# Component types the panel disables on timeout (buttons + every select flavour;
-# ChannelSelect is NOT a subclass of ui.Select, so it must be listed explicitly).
-_DISABLEABLE = (discord.ui.Button, discord.ui.Select, discord.ui.ChannelSelect)
 
 
 async def _refresh_layout(interaction, message, view):
