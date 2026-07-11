@@ -414,6 +414,19 @@ def radio_seen_ids(
     return seen
 
 
+def queued_track_count(queue: typing.Any) -> int:
+    """Count the tracks waiting in BOTH lanes of a sonolink queue.
+
+    Sums the user lane (``tracks``) and the hidden autoplay lane
+    (``autoplay_tracks``). The CURRENT track belongs to neither lane, so it is
+    never counted - clearing the queue leaves it playing. None-safe over both
+    fields, so it is total over the queue shapes the fakes mirror. Pure.
+    """
+    tracks = getattr(queue, "tracks", None) or ()
+    autoplay = getattr(queue, "autoplay_tracks", None) or ()
+    return len(tracks) + len(autoplay)
+
+
 def purge_queue_lanes(queue: typing.Any) -> None:
     """Clear BOTH the user lane and the hidden autoplay lane of a sonolink queue.
 
@@ -2624,6 +2637,28 @@ class Music(commands.Cog):
             return
         player.queue.shuffle()
         await ctx.send(_("Shuffled the queue."))
+
+    @commands.hybrid_command(name="clearqueue", aliases=["cq", "clearq"])
+    @commands.guild_only()
+    async def clearqueue(self, ctx: commands.Context) -> None:
+        """Clear the upcoming queue while the current track keeps playing."""
+        player = await self._require_player(ctx)
+        if player is None:
+            return
+        count = queued_track_count(player.queue)
+        if count == 0:
+            await ctx.send(_("The queue is already empty."))
+            return
+        # Empties both the user lane and the hidden autoplay lane; the current
+        # track is never touched, so playback keeps going. In radio mode the
+        # station stays set and restocks at the natural track boundary - that is
+        # the intended radio semantics, so we do not clear player.radio_genre.
+        purge_queue_lanes(player.queue)
+        # Persist the purge so a restart restores the now-empty queue.
+        await self._snapshot(player)
+        await ctx.send(
+            _("Cleared {count} track(s) from the queue.").format(count=count)
+        )
 
     @commands.hybrid_command(name="loop")
     @commands.guild_only()

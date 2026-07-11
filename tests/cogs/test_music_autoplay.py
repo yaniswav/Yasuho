@@ -153,3 +153,36 @@ def test_can_skip_true_under_loop_modes():
 
     assert music.can_skip(_skip_player(mode=sonolink.QueueMode.LOOP)) is True
     assert music.can_skip(_skip_player(mode=sonolink.QueueMode.LOOP_ALL)) is True
+
+
+# ---------------------------------------------------------------------------
+# queued_track_count (the /clearqueue counter)
+# ---------------------------------------------------------------------------
+
+
+def _count_queue(tracks=(), autoplay_tracks=()):
+    """Minimal queue shape for queued_track_count; mirrors the sonolink lanes."""
+    return types.SimpleNamespace(
+        tracks=list(tracks),
+        autoplay_tracks=list(autoplay_tracks),
+    )
+
+
+def test_queued_track_count_sums_both_lanes():
+    # The user lane and the hidden autoplay lane are both counted.
+    assert music.queued_track_count(
+        _count_queue(tracks=["a", "b"], autoplay_tracks=["r"])
+    ) == 3
+
+
+def test_queued_track_count_zero_on_empty_lanes():
+    assert music.queued_track_count(_count_queue()) == 0
+
+
+def test_queued_track_count_none_safe_over_missing_lanes():
+    # Missing/None lanes coerce to empty rather than raising, so the counter is
+    # total over the queue shapes the fakes mirror.
+    assert music.queued_track_count(types.SimpleNamespace()) == 0
+    assert music.queued_track_count(
+        types.SimpleNamespace(tracks=None, autoplay_tracks=None)
+    ) == 0
