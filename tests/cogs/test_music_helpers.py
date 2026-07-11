@@ -26,7 +26,7 @@ import types
 
 import discord
 
-from cogs.music import music
+from cogs.music import music, views
 
 
 def _result(*, is_error=False, is_empty=False, result=None):
@@ -373,7 +373,7 @@ def test_music_ui_classes_do_not_shadow_refresh():
     View/Modal/LayoutView subclass that defines its own ``_refresh`` overrides it
     with an incompatible signature and crashes the gateway (the music
     controller's method was renamed to ``_rerender`` to fix this). Any UI class
-    defined in the music module must not reintroduce that name.
+    defined in the music package's views module must not reintroduce that name.
     """
     ui_bases = tuple(
         base
@@ -382,10 +382,10 @@ def test_music_ui_classes_do_not_shadow_refresh():
         if base is not None
     )
     checked = []
-    for obj in vars(music).values():
+    for obj in vars(views).values():
         if (
             inspect.isclass(obj)
-            and obj.__module__ == music.__name__
+            and obj.__module__ == views.__name__
             and issubclass(obj, ui_bases)
         ):
             checked.append(obj)
