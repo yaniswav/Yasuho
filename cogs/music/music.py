@@ -13,6 +13,7 @@ from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
 from cogs.music import effects, lyrics, sponsorblock, vibes, voteskip
+from cogs.music.playlists_shared import ServerPlaylistMixin
 from tools import music_state, settings
 from tools.i18n import _, ngettext
 from tools.paginator import Paginator, paginate_lines
@@ -800,7 +801,7 @@ def effect_select_options(
     ]
 
 
-class Music(commands.Cog):
+class Music(ServerPlaylistMixin, commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
     def __init__(self, bot: commands.Bot) -> None:

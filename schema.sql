@@ -238,6 +238,25 @@ CREATE TABLE IF NOT EXISTS music_favorites (
 );
 CREATE INDEX IF NOT EXISTS music_favorites_user_idx ON music_favorites (user_id, added_at DESC);
 
+-- Shared server playlists: a named snapshot of a guild's current track + queue
+-- (Lavalink `encoded` strings, the music_state precedent) that any member can
+-- load later. `name_norm` is a casefolded, whitespace-clean key so the primary
+-- key enforces one playlist per name per guild, case-insensitively. Hard-capped
+-- in code (25 playlists/guild, 200 tracks each), so the table and its stored
+-- blobs stay bounded.  music/playlists_shared.py
+CREATE TABLE IF NOT EXISTS guild_playlists (
+    guild_id    BIGINT NOT NULL,
+    name        TEXT   NOT NULL,             -- display name as typed
+    name_norm   TEXT   NOT NULL,             -- casefolded uniqueness key
+    creator_id  BIGINT NOT NULL,
+    tracks      TEXT[] NOT NULL DEFAULT '{}',-- encoded blobs, in play order
+    track_count INTEGER NOT NULL DEFAULT 0,
+    total_ms    BIGINT  NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, name_norm)
+);
+CREATE INDEX IF NOT EXISTS guild_playlists_guild_idx ON guild_playlists (guild_id, created_at DESC);
+
 -- Live player state, persisted so playback survives a (fast) bot restart.
 -- One row per guild with an active player; cleared on disconnect/stop. Tracks
 -- are stored as Lavalink `encoded` strings so they restore exactly (decoded via
