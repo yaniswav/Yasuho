@@ -1672,8 +1672,29 @@ class Music(commands.Cog):
             await self._play_no_query(ctx)
             return
 
+        # Opt-in search picker: for a NON-URL slash query when the member enabled
+        # it, this shows the top matches and returns True (fully handled). It
+        # returns False for a URL, a prefix invocation or the preference OFF (the
+        # default), so the two lines below run byte-identically to before.
+        if await search.maybe_play_picker(self, ctx, query):
+            return
+
         await ctx.defer()
         await self._play_query(ctx, query)
+
+    @commands.hybrid_command(name="search")
+    @commands.guild_only()
+    @app_commands.describe(
+        query="What to search for - a song, album, artist or playlist."
+    )
+    async def search_cmd(self, ctx: commands.Context, *, query: str) -> None:
+        """Browse tracks, albums, artists and playlists, and queue any of them.
+
+        Opens an ephemeral tabbed browser powered by the LavaSearch plugin. No
+        voice channel is needed to browse; you are only asked to join when you
+        pick something to play.
+        """
+        await search.run_search(self, ctx, query)
 
     async def _play_no_query(self, ctx: commands.Context) -> None:
         """Handle a bare /play: repost the controller, or offer the vibe / join card.
@@ -2754,12 +2775,15 @@ async def setup(bot: commands.Bot) -> None:
 # UI layer
 # ---------------------------------------------------------------------------
 # The interactive Discord UI (now-playing controller, queue view, vibe / join
-# cards, their modals and selects) lives in views.py. It is imported here at the
-# BOTTOM, after this module's engine helpers are defined, because views.py
-# imports those helpers; music.py is always the package's import entry point (the
-# loaded extension), so the import cycle resolves music-first. These view classes
-# are re-bound into this module's namespace so the cog's call sites - and the
-# test suite, which references them as cogs.music.music.<name> - keep working.
+# cards, their modals and selects) lives in views.py, and the /search browser and
+# /play picker in search.py. Both are imported here at the BOTTOM, after this
+# module's engine helpers are defined, because views.py imports those helpers at
+# module load (and search.py imports _ModalPlayContext from views lazily, only
+# inside its pick callbacks); music.py is always the package's import entry point
+# (the loaded extension), so the cycle resolves music-first. The view classes are
+# re-bound into this module's namespace so the cog's call sites - and the test
+# suite, which references them as cogs.music.music.<name> - keep working.
+from cogs.music import search
 from cogs.music.views import (
     JoinVoiceCard,
     MusicController,

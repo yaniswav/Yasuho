@@ -63,6 +63,20 @@ PREFS = [
         ),
         default=True,
     ),
+    # Opt-in /play picker. The key MUST match cogs/music/search.py's
+    # SEARCH_PICKER_PREF_KEY; the music cog reads it (by literal, like the keys
+    # above) when /play gets a plain text query. Default OFF so /play is
+    # unchanged until a member turns this on.
+    Preference(
+        key="music_search_picker",
+        label=N_("Play search picker"),
+        emoji="🔎",
+        description=N_(
+            "On /play, choose from the top matches instead of instantly queuing "
+            "the first."
+        ),
+        default=False,
+    ),
 ]
 
 
