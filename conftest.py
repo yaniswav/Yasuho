@@ -76,6 +76,11 @@ def _install_sonolink_stub() -> None:
         LOOP = "loop"
         LOOP_ALL = "loop_all"
 
+    class AutoPlayMode:
+        ENABLED = "enabled"
+        PARTIAL = "partial"
+        DISABLED = "disabled"
+
     class Playable:
         pass
 
@@ -98,6 +103,7 @@ def _install_sonolink_stub() -> None:
     sonolink.Client = Client
     sonolink.QueueEmpty = QueueEmpty
     sonolink.QueueMode = QueueMode
+    sonolink.AutoPlayMode = AutoPlayMode
     sonolink.models = models
     sonolink.gateway = gateway
     sonolink.rest = rest

@@ -50,6 +50,19 @@ PREFS = [
         description=N_("Show every subcommand inline when you browse help."),
         default=False,
     ),
+    # Seeds a new music session's autoplay mode. The key MUST match
+    # cogs/music/music.py's AUTOPLAY_PREF_KEY; the music cog reads it (by literal,
+    # like leveling/help read their keys) when a session starts, and only then -
+    # changing it here never flips a session that is already playing.
+    Preference(
+        key="music_autoplay",
+        label=N_("Music autoplay"),
+        emoji="✨",
+        description=N_(
+            "Keep playing recommended tracks when your music queue runs out."
+        ),
+        default=True,
+    ),
 ]
 
 

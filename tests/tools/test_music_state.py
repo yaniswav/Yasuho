@@ -62,3 +62,40 @@ async def test_save_controller_message_id_updates_only_that_column(fake_pool):
     assert "UPDATE music_state" in query
     assert "controller_message_id" in query
     assert args == (111, 222)
+
+
+def _save_state_kwargs(**overrides):
+    """Minimal valid save_state kwargs, overridable per test."""
+    base = dict(
+        guild_id=1,
+        voice_channel_id=2,
+        home_channel_id=3,
+        dj_id=4,
+        volume=100,
+        loop_mode=0,
+        position_ms=0,
+        paused=False,
+        current_track="enc",
+        queue=[],
+        controller_message_id=None,
+    )
+    base.update(overrides)
+    return base
+
+
+async def test_save_state_persists_autoplay_flag(fake_pool):
+    # The session autoplay mode rides along in the snapshot so a cold restart can
+    # restore it; it is the last bound parameter of the upsert.
+    await music_state.save_state(fake_pool, **_save_state_kwargs(autoplay=False))
+    assert len(fake_pool.calls) == 1
+    kind, query, args = fake_pool.calls[0]
+    assert kind == "execute"
+    assert "autoplay" in query
+    assert args[-1] is False
+
+
+async def test_save_state_autoplay_defaults_true(fake_pool):
+    # An older caller that omits the flag persists autoplay ON (the fallback).
+    await music_state.save_state(fake_pool, **_save_state_kwargs())
+    _, _query, args = fake_pool.calls[0]
+    assert args[-1] is True

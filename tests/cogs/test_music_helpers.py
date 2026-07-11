@@ -184,6 +184,7 @@ def test_controller_renders_from_fallback_track_before_current_set():
         current=None, paused=False, volume=100,
         queue=types.SimpleNamespace(mode=sonolink.QueueMode.NORMAL, tracks=[]),
         channel=types.SimpleNamespace(name="General"), dj=None,
+        autoplay=sonolink.AutoPlayMode.ENABLED,
     )
     view = music.MusicController(None, player, track=track)
     texts = [
@@ -210,6 +211,7 @@ def test_controller_current_track_overrides_fallback():
         current=live, paused=False, volume=100,
         queue=types.SimpleNamespace(mode=sonolink.QueueMode.NORMAL, tracks=[]),
         channel=types.SimpleNamespace(name="G"), dj=None,
+        autoplay=sonolink.AutoPlayMode.ENABLED,
     )
     view = music.MusicController(None, player, track=stale)
     texts = [

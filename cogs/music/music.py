@@ -12,7 +12,7 @@ from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
 from cogs.music import vibes
-from tools import interactions, music_state
+from tools import interactions, music_state, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -45,6 +45,11 @@ RESTORE_CONCURRENCY = 5
 
 # Cap a user's saved favourites so the table cannot grow without bound.
 MAX_FAVOURITES = 100
+
+# Per-user preference key (JSONB in user_settings, owned by the UserSettings cog)
+# that seeds a NEW session's autoplay mode. Kept in sync with the matching
+# Preference in cogs/community/usersettings.py - both must use this exact string.
+AUTOPLAY_PREF_KEY = "music_autoplay"
 
 
 class Player(sonolink.Player):
@@ -153,6 +158,48 @@ def _int_to_loop(value):
     if value == music_state.LOOP_QUEUE:
         return sonolink.QueueMode.LOOP_ALL
     return sonolink.QueueMode.NORMAL
+
+
+def resolve_session_autoplay(user_pref):
+    """Initial autoplay for a NEW session: the starter's saved preference, ON if unset.
+
+    Deliverable-4's personal preference seeds a new session only (it never flips a
+    live one); a missing preference (``None``) falls back to ON so autoplaying
+    recommendations is the default experience. Pure so the precedence is unit-tested
+    without a database or a live player.
+    """
+    if user_pref is None:
+        return True
+    return bool(user_pref)
+
+
+def is_autoplay_track(track):
+    """True when ``track`` was sourced by sonolink autoplay (a recommendation).
+
+    Reads the read-only ``Playable.autoplay`` flag sonolink stamps on every
+    autoplay-discovered track (in ``AutoPlayHandler._apply_discovery`` and
+    ``Queue.put_autoplay``), so the controller shows its recommendation notice
+    only on autoplay-sourced tracks. Pure and None-safe.
+    """
+    return bool(getattr(track, "autoplay", False))
+
+
+def _autoplay_on(player):
+    """Whether sonolink's native autoplay is currently armed for this session."""
+    return player.autoplay != sonolink.AutoPlayMode.DISABLED
+
+
+def _set_autoplay(player, enabled):
+    """Arm (ENABLED) or disarm (DISABLED) sonolink's native autoplay for a session.
+
+    ENABLED pre-fills a hidden autoplay lane when the queue empties, so playback
+    continues gaplessly with recommendations seeded by what the session has played.
+    Our players keep history enabled (sonolink requires it for autoplay), so this
+    setter never raises.
+    """
+    player.autoplay = (
+        sonolink.AutoPlayMode.ENABLED if enabled else sonolink.AutoPlayMode.DISABLED
+    )
 
 
 class AddSongModal(LocaleModal, title="Add a song"):
@@ -303,6 +350,18 @@ class MusicController(discord.ui.LayoutView):
         container.add_item(
             discord.ui.TextDisplay(_("by **{author}**").format(author=track.author))
         )
+        # Recommendation notice: only when THIS track came from autoplay, so a
+        # user-queued track never claims to be a pick. sonolink stamps the flag on
+        # every autoplay-sourced track (see is_autoplay_track).
+        if is_autoplay_track(track):
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _(
+                        "✨ I'm keeping the music going with recommendations based on "
+                        "this session's listening. Tap Autoplay below to turn it off."
+                    )
+                )
+            )
         container.add_item(discord.ui.Separator())
 
         status = _("⏸ Paused") if self.player.paused else _("▶ Playing")
@@ -435,6 +494,25 @@ class MusicController(discord.ui.LayoutView):
                     label=_("Disconnect"),
                     emoji="⏹️",
                     style=discord.ButtonStyle.danger,
+                ),
+            )
+        )
+
+        # Autoplay toggle on its own row (the two rows above are already full at
+        # five buttons each). Green when armed, grey when off, so the button shows
+        # the current session state at a glance - the controller house style.
+        autoplay_on = _autoplay_on(self.player)
+        container.add_item(
+            discord.ui.ActionRow(
+                self._make_button(
+                    self._autoplay_toggle,
+                    label=_("Autoplay"),
+                    emoji="✨",
+                    style=(
+                        discord.ButtonStyle.success
+                        if autoplay_on
+                        else discord.ButtonStyle.secondary
+                    ),
                 ),
             )
         )
@@ -572,6 +650,28 @@ class MusicController(discord.ui.LayoutView):
             )
         except Exception:
             log.exception("Controller loop toggle failed")
+            await self._report_failure(interaction)
+
+    async def _autoplay_toggle(self, interaction: discord.Interaction) -> None:
+        try:
+            enabled = not _autoplay_on(self.player)
+            _set_autoplay(self.player, enabled)
+            # Persist right away so a restart restores the same autoplay mode,
+            # mirroring how pause/resume snapshot their flag immediately.
+            await self.cog._snapshot(self.player)
+            await self._rerender()
+            if enabled:
+                message = _(
+                    "Autoplay is on. I'll keep the music going with recommendations "
+                    "when the queue runs out."
+                )
+            else:
+                message = _(
+                    "Autoplay is off. Playback will stop once the queue is empty."
+                )
+            await interaction.response.send_message(message, ephemeral=True)
+        except Exception:
+            log.exception("Controller autoplay toggle failed")
             await self._report_failure(interaction)
 
     async def _shuffle(self, interaction: discord.Interaction) -> None:
@@ -1127,6 +1227,24 @@ class Music(commands.Cog):
                 self.bot.db_pool, guild_id, message.id
             )
 
+    async def _init_autoplay(self, player: Player, member_id: int) -> None:
+        """Seed a NEW session's autoplay from the member who started it.
+
+        The default is that member's saved personal preference (deliverable 4),
+        falling back to ON when it is unset. This seeds a session's INITIAL state
+        only; the controller toggle flips it live afterwards and never re-reads the
+        preference. Best-effort: a settings read hiccup must not break playback, so
+        it degrades to ON.
+        """
+        try:
+            pref = await settings.get_user(
+                self.bot.db_pool, member_id, AUTOPLAY_PREF_KEY, True
+            )
+        except Exception:
+            log.exception("Failed to read autoplay preference for %s", member_id)
+            pref = True
+        _set_autoplay(player, resolve_session_autoplay(pref))
+
     # ------------------------------------------------------------------
     # Restart persistence (snapshot live players, restore them on startup)
     # ------------------------------------------------------------------
@@ -1180,6 +1298,7 @@ class Music(commands.Cog):
                     if getattr(t, "encoded", None)
                 ],
                 controller_message_id=controller_message_id,
+                autoplay=_autoplay_on(player),
             )
         except Exception:
             log.exception("Failed to snapshot player state")
@@ -1514,6 +1633,12 @@ class Music(commands.Cog):
         player.queue.mode = loop_mode
         for track in queue_tracks or []:
             player.queue.put(track)
+        # Restore the persisted session autoplay mode so a cold restart resumes
+        # with the same behaviour. Defensive ON default if the column somehow
+        # predates this row (it is added by schema.sql's additive migration).
+        _set_autoplay(
+            player, bool(row["autoplay"]) if "autoplay" in row else True
+        )
 
         position = music_state.extrapolate_position(
             row["position_ms"],
@@ -1641,6 +1766,8 @@ class Music(commands.Cog):
                 return
             player.dj = ctx.author
             player.home = ctx.channel
+            # Fresh session: seed autoplay from the starter's saved preference.
+            await self._init_autoplay(player, ctx.author.id)
 
         if player.home is None:
             player.home = ctx.channel
@@ -1733,6 +1860,8 @@ class Music(commands.Cog):
                 return
             player.dj = author
             player.home = interaction.channel
+            # Fresh session: seed autoplay from the starter's saved preference.
+            await self._init_autoplay(player, author.id)
         if player.home is None:
             player.home = interaction.channel
 
@@ -2053,6 +2182,8 @@ class Music(commands.Cog):
                 return
             player.dj = ctx.author
             player.home = ctx.channel
+            # Fresh session: seed autoplay from the starter's saved preference.
+            await self._init_autoplay(player, ctx.author.id)
 
         if player.home is None:
             player.home = ctx.channel
