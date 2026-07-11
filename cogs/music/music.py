@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import effects, sponsorblock, vibes
+from cogs.music import effects, lyrics, sponsorblock, vibes
 from tools import music_state, settings
 from tools.i18n import _, ngettext
 from tools.paginator import Paginator, paginate_lines
@@ -825,12 +825,17 @@ class Music(commands.Cog):
         # wide filtered-players ceiling; lyrics/vote-skip lots read it too). One
         # instance per cog so its counters and bounded maps live for the process.
         self.quotas = QuotaRegistry()
+        # Live synced-lyrics sessions (lot P5), one per guild, bounded by the
+        # process-wide synced_lyrics ceiling. Lives on the cog so its loops and
+        # its bounded map span the process; torn down in cog_unload.
+        self.lyrics_sessions = lyrics.LyricsSessions(self.quotas.synced_lyrics)
         # Monotonic timestamp of the last quota-stats heartbeat log (see _idle_check).
         self._last_quota_log = time.monotonic()
         self._idle_check.start()
 
     def cog_unload(self) -> None:
         self._idle_check.cancel()
+        self.lyrics_sessions.shutdown()
 
     def _client(self) -> typing.Optional[sonolink.Client]:
         return getattr(self.bot, "sl_client", None)
@@ -1163,6 +1168,9 @@ class Music(commands.Cog):
         self._controllers.pop(guild_id, None)
         self._controller_locks.pop(guild_id, None)
         self.quotas.filtered_players.release(guild_id)
+        # End any live synced-lyrics session (idempotent; releases its ceiling
+        # slot) - every disconnect / stop / idle-teardown / restore-drop lands here.
+        await self.lyrics_sessions.stop(guild_id)
         await music_state.clear_state(self.bot.db_pool, guild_id)
 
     # ------------------------------------------------------------------
@@ -1176,6 +1184,13 @@ class Music(commands.Cog):
         track = event.track
         guild_id = player.channel.guild.id if player.channel else None
         log.debug("Track start: %s (guild=%s)", track.title, guild_id)
+
+        # A new track is playing: end a synced-lyrics session whose track this is
+        # not (a reconnect re-fire of the same track keeps it - see notify_track).
+        if guild_id is not None:
+            await self.lyrics_sessions.notify_track(
+                guild_id, getattr(track, "identifier", None)
+            )
 
         # Anti-mix guard: sonolink autoplay occasionally surfaces an hour-long
         # mix/compilation instead of a song. Skip it before it ever posts a
@@ -2383,6 +2398,90 @@ class Music(commands.Cog):
             player, ctx.guild.id, ctx.author, preset
         )
         await ctx.send(message, ephemeral=True)
+
+    # ------------------------------------------------------------------
+    # Lyrics
+    # ------------------------------------------------------------------
+
+    async def _start_lyrics_follow(
+        self, player: Player, result: lyrics.LyricsResult
+    ) -> str:
+        """Start (or replace) this guild's synced-lyrics session; return a code.
+
+        The seam the static card's Follow button calls. Posts the live message in
+        the player's home (music) channel and drives it off the timed lines. Only
+        a timed result with a home channel can follow; a full process-wide ceiling
+        refuses cleanly (:data:`lyrics.START_CEILING_FULL`) and the card says so.
+        """
+        channel = getattr(player, "home", None)
+        guild = getattr(getattr(player, "channel", None), "guild", None)
+        if channel is None or guild is None or not result.is_timed:
+            return lyrics.START_UNAVAILABLE
+        session = await self.lyrics_sessions.start(
+            guild_id=guild.id,
+            player=player,
+            channel=channel,
+            result=result,
+            track=getattr(player, "current", None),
+        )
+        return lyrics.START_OK if session is not None else lyrics.START_CEILING_FULL
+
+    @commands.hybrid_command(name="lyrics", aliases=["ly"])
+    @commands.guild_only()
+    async def lyrics_command(self, ctx: commands.Context) -> None:
+        """Show the lyrics for the current track, with an optional live follow."""
+        # Read-only: anyone may look up lyrics (no DJ / same-voice gate). The
+        # synced follow, which posts publicly, re-checks same-voice on its button.
+        player = await self._require_player(ctx, in_channel=False)
+        if player is None:
+            return
+        if player.current is None:
+            await ctx.send(_("There's nothing playing right now."), ephemeral=True)
+            return
+
+        # Two-axis rate limit, charged once PER FETCH (never per synced edit):
+        # per user (stop one person hammering) and per guild (stop a whole guild
+        # hammering the provider). Check both before touching the node; refuse
+        # cleanly with a localised retry delay.
+        user_id = ctx.author.id
+        guild_id = ctx.guild.id
+        if not self.quotas.lyrics_user.check(user_id):
+            delay = self._format_retry_delay(
+                self.quotas.lyrics_user.retry_after(user_id)
+            )
+            await ctx.send(
+                _(
+                    "You've looked up lyrics too many times. Try again in {delay}."
+                ).format(delay=delay),
+                ephemeral=True,
+            )
+            return
+        if not self.quotas.lyrics_guild.check(guild_id):
+            delay = self._format_retry_delay(
+                self.quotas.lyrics_guild.retry_after(guild_id)
+            )
+            await ctx.send(
+                _(
+                    "This server has looked up too many lyrics. Try again in {delay}."
+                ).format(delay=delay),
+                ephemeral=True,
+            )
+            return
+
+        await ctx.defer(ephemeral=True)
+        # Charge both axes for the fetch we are about to make: the provider is hit
+        # regardless of whether any lyrics come back.
+        self.quotas.lyrics_user.hit(user_id)
+        self.quotas.lyrics_guild.hit(guild_id)
+        result = await lyrics.fetch_lyrics(player)
+        if not result.has_lyrics:
+            await ctx.send(
+                _("I couldn't find any lyrics for this track."), ephemeral=True
+            )
+            return
+        await ctx.send(
+            view=lyrics.StaticLyricsCard(self, player, result), ephemeral=True
+        )
 
     # ------------------------------------------------------------------
     # Favourites / playlist commands
