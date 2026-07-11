@@ -70,3 +70,37 @@ def test_is_autoplay_track_missing_attr_is_false():
     # A stand-in without the flag (or None) reads as not-autoplay, never crashes.
     assert music.is_autoplay_track(types.SimpleNamespace()) is False
     assert music.is_autoplay_track(None) is False
+
+
+# ---------------------------------------------------------------------------
+# decide_anti_mix_skip (bounded auto-skip of autoplay-sourced mixes)
+# ---------------------------------------------------------------------------
+
+
+def test_anti_mix_skip_skips_an_autoplay_mix_and_counts():
+    # An autoplay-sourced mix is skipped and the consecutive streak increments.
+    assert music.decide_anti_mix_skip(True, True, 0) == (True, 1)
+    assert music.decide_anti_mix_skip(True, True, 2) == (True, 3)
+
+
+def test_anti_mix_skip_gives_up_at_the_cap():
+    # At the cap we stop skipping: the mix is allowed to play and the streak
+    # resets, so a run of nothing-but-mixes can never loop forever skipping.
+    assert music.decide_anti_mix_skip(True, True, music.ANTI_MIX_SKIP_CAP) == (
+        False,
+        0,
+    )
+
+
+def test_anti_mix_skip_resets_streak_on_a_normal_track():
+    # Autoplay track that is not a mix -> play, reset.
+    assert music.decide_anti_mix_skip(True, False, 2) == (False, 0)
+    # A mix that is NOT autoplay-sourced (a user pick) is never auto-skipped.
+    assert music.decide_anti_mix_skip(False, True, 2) == (False, 0)
+    # A plain user track resets too.
+    assert music.decide_anti_mix_skip(False, False, 1) == (False, 0)
+
+
+def test_anti_mix_skip_honours_a_custom_cap():
+    assert music.decide_anti_mix_skip(True, True, 0, cap=1) == (True, 1)
+    assert music.decide_anti_mix_skip(True, True, 1, cap=1) == (False, 0)

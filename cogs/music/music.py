@@ -14,6 +14,7 @@ from sonolink.rest.enums import TrackSourceType
 from cogs.music import vibes
 from tools import interactions, music_state, settings
 from tools.config_loader import config_loader
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
@@ -51,6 +52,16 @@ MAX_FAVOURITES = 100
 # Preference in cogs/community/usersettings.py - both must use this exact string.
 AUTOPLAY_PREF_KEY = "music_autoplay"
 
+# Most consecutive suspected-mix autoplay tracks the controller will auto-skip
+# before it gives up and lets one play, so a run of nothing-but-mixes can never
+# spin forever skipping. The counter resets the instant any track plays normally.
+ANTI_MIX_SKIP_CAP = 3
+
+# Short per-user debounce on the station select: a zap runs two searches and
+# replaces playback, so a double-click would fire two competing replace
+# sequences. Touched only on an allowed click, so a burst collapses to one.
+_STATION_DEBOUNCE = Cooldowns(2.0)
+
 
 class Player(sonolink.Player):
     """A sonolink player that also tracks the DJ, home text channel, and controller.
@@ -68,6 +79,16 @@ class Player(sonolink.Player):
         # Monotonic timestamp of when this player first became idle, or None
         # while it is active. Maintained by the cog's idle-timeout loop.
         self.idle_since: typing.Optional[float] = None
+        # Radio-mode session state. ``radio_genre`` is the active station's genre
+        # key (None outside radio mode); every genre pick sets it and playing an
+        # explicit query clears it. ``played_ids`` is the bounded set the refill
+        # excludes so a station never loops the same tracks. The two private
+        # counters guard the refill (one in-flight at a time) and the anti-mix
+        # auto-skip streak.
+        self.radio_genre: typing.Optional[str] = None
+        self.played_ids = vibes.PlayedTracks()
+        self._radio_refilling = False
+        self._automix_skips = 0
 
 
 def format_duration(track: sonolink.models.Playable) -> str:
@@ -297,6 +318,71 @@ def _set_autoplay(player, enabled):
     )
 
 
+def _track_looks_like_mix(track: typing.Any) -> bool:
+    """True when ``track`` scores as an hour-long mix (None-safe field reads).
+
+    The single-track adapter over :func:`vibes.looks_like_mix` used by the
+    anti-mix auto-skip guard, mirroring the closure the genre ladder uses.
+    """
+    return vibes.looks_like_mix(
+        getattr(track, "title", "") or "",
+        getattr(track, "author", "") or "",
+        getattr(track, "length", 0),
+    )
+
+
+def decide_anti_mix_skip(
+    is_autoplay: bool,
+    is_mix: bool,
+    consecutive: int,
+    *,
+    cap: int = ANTI_MIX_SKIP_CAP,
+) -> typing.Tuple[bool, int]:
+    """Decide whether to auto-skip a suspected mix, and the new streak counter.
+
+    Returns ``(should_skip, new_count)``. An autoplay-sourced track that looks
+    like an hour-long mix is skipped while fewer than ``cap`` skips have happened
+    back-to-back; each skip increments the streak. The moment a track is allowed
+    to play - a real song, a user-queued track, or the ``cap`` being reached -
+    the streak resets to 0, so at most ``cap`` mixes are ever skipped in a row.
+    Pure, so the bound is unit-tested without a node.
+    """
+    if is_autoplay and is_mix and consecutive < cap:
+        return True, consecutive + 1
+    return False, 0
+
+
+def radio_seen_ids(
+    played_ids: typing.Iterable[str],
+    queued_ids: typing.Iterable[typing.Optional[str]],
+    current_id: typing.Optional[str],
+) -> typing.Set[str]:
+    """Identifiers a radio refill must exclude, as a set.
+
+    A refill appends to the user lane, so it must skip everything already played
+    this session (so a station never loops), everything still queued (so it never
+    double-queues), and the current track. Falsy identifiers are dropped. Pure.
+    """
+    seen: typing.Set[str] = {i for i in played_ids if i}
+    seen.update(i for i in queued_ids if i)
+    if current_id:
+        seen.add(current_id)
+    return seen
+
+
+def purge_queue_lanes(queue: typing.Any) -> None:
+    """Clear BOTH the user lane and the hidden autoplay lane of a sonolink queue.
+
+    ``Queue.clear()`` empties only the user lane; a radio zap must also drop the
+    staged autoplay picks so the new station starts from a clean queue. The
+    autoplay lane exposes no public clear, so its deque is emptied directly
+    (verified against the installed sonolink ``Queue`` source, which stores it as
+    ``_autoplay_items``).
+    """
+    queue.clear()
+    queue._autoplay_items.clear()
+
+
 class AddSongModal(LocaleModal, title="Add a song"):
     """Modal that queues a track from a search query or a full URL.
 
@@ -343,6 +429,9 @@ class AddSongModal(LocaleModal, title="Add a song"):
 
             track.extras.requester = interaction.user.id
             player.queue.put(track)
+            # An explicit add turns a radio session into a normal one: the station
+            # select disappears on the rerender below.
+            player.radio_genre = None
             if not player.current:
                 await player.play(player.queue.get())
             await self.cog._snapshot(player)
@@ -493,6 +582,13 @@ class MusicController(discord.ui.LayoutView):
             meta_lines.append(
                 _("**DJ:** {dj}").format(dj=self.player.dj.mention)
             )
+        station = self._station_genre()
+        if station is not None:
+            meta_lines.append(
+                _("**Station:** {emoji} {label}").format(
+                    emoji=station.emoji, label=station.label
+                )
+            )
         requester_id = getattr(track.extras, "requester", None)
         if requester_id:
             meta_lines.append(
@@ -612,11 +708,28 @@ class MusicController(discord.ui.LayoutView):
             )
         )
 
+        # Radio mode only: the DJ-gated station picker. Shown solely while a
+        # radio session is live (a genre key is set); it disappears the moment a
+        # user plays an explicit query and the session turns normal.
+        if station is not None:
+            container.add_item(
+                discord.ui.ActionRow(_StationSelect(self, station.key))
+            )
+
         container.add_item(
             discord.ui.TextDisplay(_("-# Use the buttons to control playback"))
         )
 
         self.add_item(container)
+
+    def _station_genre(self) -> typing.Optional["vibes.Genre"]:
+        """The active station's Genre, or None outside radio mode.
+
+        Guards against a stale key by validating it against the catalog, so a
+        removed genre simply drops the station UI rather than rendering blanks.
+        """
+        key = getattr(self.player, "radio_genre", None)
+        return vibes.GENRES_BY_KEY.get(key) if key else None
 
     def _disable_all(self) -> None:
         """Disable every button in the layout (walks nested ActionRows)."""
@@ -854,6 +967,64 @@ class MusicController(discord.ui.LayoutView):
             log.exception("Controller disconnect failed")
             await self._report_failure(interaction)
 
+    async def _change_station(self, interaction: discord.Interaction, key: str) -> None:
+        """Zap the station to ``key``: DJ-gated, replaces playback with the genre.
+
+        The base same-voice ``interaction_check`` has already run. This adds a
+        short debounce (a zap is expensive) and the DJ gate - only the session
+        DJ or a member with Manage Server may change the station - then runs the
+        shared replace sequence (:meth:`Music._apply_genre` with ``replace=True``)
+        and confirms ephemerally. When no DJ is assigned (e.g. a restored session
+        whose DJ left the guild) the gate is open to the channel's listeners.
+        """
+        try:
+            if not await _check_station_debounce(interaction):
+                return
+
+            dj = self.player.dj
+            user = interaction.user
+            is_manager = (
+                isinstance(user, discord.Member)
+                and user.guild_permissions.manage_guild
+            )
+            if dj is not None and not is_manager and user.id != dj.id:
+                await interaction.response.send_message(
+                    _("Only the DJ ({dj}) can change the station.").format(
+                        dj=dj.mention
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            genre = vibes.GENRES_BY_KEY.get(key)
+            if genre is None:
+                await interaction.response.send_message(
+                    _("That vibe isn't available right now."), ephemeral=True
+                )
+                return
+
+            await interaction.response.defer(ephemeral=True)
+            _tier, tracks = await self.cog._apply_genre(
+                self.player, genre, user.id, replace=True
+            )
+            if not tracks:
+                await interaction.followup.send(
+                    _("I couldn't find any {genre} tracks right now.").format(
+                        genre=genre.label
+                    ),
+                    ephemeral=True,
+                )
+                return
+            await interaction.followup.send(
+                _("Switched to the {genre} station ({count} track(s)).").format(
+                    genre=genre.label, count=len(tracks)
+                ),
+                ephemeral=True,
+            )
+        except Exception:
+            log.exception("Controller station change failed")
+            await self._report_failure(interaction)
+
 
 def joinable_voice_channels(
     guild: discord.Guild,
@@ -929,6 +1100,70 @@ class _GenreSelect(discord.ui.Select):
             await self._card._pick_genre(interaction, self.values[0])
         except Exception:
             log.exception("Vibe card genre select failed")
+            await interactions.notify_failure(interaction)
+
+
+def station_select_options(
+    current_key: typing.Optional[str],
+) -> typing.List[discord.SelectOption]:
+    """Build the station select's options, marking ``current_key`` as default.
+
+    One option per catalog genre; exactly the current station is preselected so
+    the picker opens showing where the session already is. Extracted so the
+    "current genre is marked" invariant is unit-tested without a live view.
+    """
+    return [
+        discord.SelectOption(
+            label=genre.label,
+            value=genre.key,
+            description=_(genre.description),
+            emoji=genre.emoji,
+            default=(genre.key == current_key),
+        )
+        for genre in vibes.GENRE_CATALOG
+    ]
+
+
+async def _check_station_debounce(interaction: discord.Interaction) -> bool:
+    """Gate a station-select click behind the per-user debounce.
+
+    Returns True when the click may proceed; otherwise sends an ephemeral 'slow
+    down' and returns False. The window is touched only on an allowed click, so a
+    burst of denied clicks never extends it - the same shape as the AniList feed's
+    action debounce.
+    """
+    if _STATION_DEBOUNCE.is_active(interaction.user.id):
+        await interaction.response.send_message(
+            _("You are changing the station too fast - give it a moment."),
+            ephemeral=True,
+        )
+        return False
+    _STATION_DEBOUNCE.touch(interaction.user.id)
+    return True
+
+
+class _StationSelect(discord.ui.Select):
+    """The DJ-gated station picker shown on a radio-mode controller.
+
+    Same eight genres as the vibe card; the live station is preselected. Choosing
+    one delegates to the controller's zap handler, which debounces, DJ-gates and
+    replaces playback with the new genre.
+    """
+
+    def __init__(self, controller: "MusicController", current_key: str) -> None:
+        self._controller = controller
+        super().__init__(
+            placeholder=_("Change station..."),
+            min_values=1,
+            max_values=1,
+            options=station_select_options(current_key),
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            await self._controller._change_station(interaction, self.values[0])
+        except Exception:
+            log.exception("Station select failed")
             await interactions.notify_failure(interaction)
 
 
@@ -1095,6 +1330,9 @@ class Music(commands.Cog):
         # vibe card exactly once. Lost on restart by design (the orphan card just
         # times out on its own view timeout).
         self._pending_watches = vibes.PendingVoiceWatches()
+        # Strong refs to in-flight radio-refill tasks so they are not garbage
+        # collected mid-await; each removes itself on completion.
+        self._refill_tasks: typing.Set[asyncio.Task] = set()
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -1394,6 +1632,7 @@ class Music(commands.Cog):
                 ],
                 controller_message_id=controller_message_id,
                 autoplay=_autoplay_on(player),
+                radio_genre=getattr(player, "radio_genre", None),
             )
         except Exception:
             log.exception("Failed to snapshot player state")
@@ -1412,24 +1651,58 @@ class Music(commands.Cog):
     async def on_sonolink_track_start(
         self, player: Player, event: sonolink.gateway.TrackStartEvent
     ) -> None:
-        log.debug(
-            "Track start: %s (guild=%s)",
-            event.track.title,
-            player.channel.guild.id if player.channel else None,
+        track = event.track
+        guild_id = player.channel.guild.id if player.channel else None
+        log.debug("Track start: %s (guild=%s)", track.title, guild_id)
+
+        # Anti-mix guard: sonolink autoplay occasionally surfaces an hour-long
+        # mix/compilation instead of a song. Skip it before it ever posts a
+        # controller, bounded so a run of nothing-but-mixes cannot loop forever
+        # skipping; the streak resets the instant a track plays normally.
+        should_skip, player._automix_skips = decide_anti_mix_skip(
+            is_autoplay_track(track),
+            _track_looks_like_mix(track),
+            getattr(player, "_automix_skips", 0),
         )
+        if should_skip:
+            log.info(
+                "Auto-skipping suspected mix '%s' by '%s' (%d in a row, guild=%s)",
+                getattr(track, "title", ""),
+                getattr(track, "author", ""),
+                player._automix_skips,
+                guild_id,
+            )
+            try:
+                await player.skip()
+            except (sonolink.QueueEmpty, sonolink.AutoPlaySeedMissing):
+                # Nothing to skip to (empty lane, autoplay off or no seed): the
+                # player has stopped itself, so just stand down.
+                pass
+            return
+
+        # Remember what actually played so a radio refill never re-seeds it.
+        player.played_ids.add(getattr(track, "identifier", None))
+
         if getattr(player, "home", None) is not None:
             # Pass the event's track so the controller renders even while
             # play()'s REST update is still in flight and player.current is not
             # set yet. dedupe=True: the per-guild lock in _send_controller
             # resolves any race with the explicit restore post or a reconnect
             # re-fire - the second poster keeps the first one's message.
-            await self._send_controller(player, event.track, dedupe=True)
+            await self._send_controller(player, track, dedupe=True)
         # Snapshot AFTER the controller work so a reconnect that swapped in a
         # fresh Player instance persists the rebound controller's message id,
         # not None (which would defeat the next restart's stale delete). Pass
         # the event's track: player.current may still be the previous track (or
         # None) while play()'s REST update is in flight.
-        await self._snapshot(player, event.track)
+        await self._snapshot(player, track)
+
+        # Radio refill: top the station's user lane back up while it is winding
+        # down (a track start with the lane nearly empty), so playback stays
+        # on-genre instead of falling through to generic autoplay. Guarded so two
+        # rapid starts cannot double-refill.
+        if getattr(player, "radio_genre", None) and len(player.queue.tracks) <= 1:
+            self._schedule_radio_refill(player)
 
     @commands.Cog.listener()
     async def on_sonolink_track_exception(
@@ -1515,6 +1788,24 @@ class Music(commands.Cog):
         channel = player.channel
         if channel is None:
             return
+
+        # DJ handoff: when the current DJ leaves the player's channel, pass the
+        # role to the first remaining human so control never dies with them.
+        # Runs before, and independent of, the empty-channel sleep below - if the
+        # room is now empty the handoff clears the DJ (None) and that block then
+        # handles the disconnect.
+        dj = getattr(player, "dj", None)
+        if (
+            dj is not None
+            and before.channel == channel
+            and after.channel != channel
+            and member.id == dj.id
+        ):
+            player.dj = vibes.next_dj(channel.members, leaving_id=member.id)
+            await self._snapshot(player)
+            controller = getattr(player, "controller", None)
+            if controller is not None:
+                await controller._rerender()
 
         humans = [m for m in channel.members if not m.bot]
         if humans:
@@ -1734,6 +2025,11 @@ class Music(commands.Cog):
         _set_autoplay(
             player, bool(row["autoplay"]) if "autoplay" in row else True
         )
+        # Restore the radio station so the controller shows its picker again and
+        # the refill keeps the genre going. Validate the key still exists in the
+        # catalog (a genre could be retired between versions), else drop to None.
+        radio_key = row["radio_genre"] if "radio_genre" in row else None
+        player.radio_genre = radio_key if radio_key in vibes.GENRES_BY_KEY else None
 
         position = music_state.extrapolate_position(
             row["position_ms"],
@@ -1908,20 +2204,173 @@ class Music(commands.Cog):
                 )
             )
 
+        # An explicit query ends radio mode: a station session becomes a normal
+        # one and the controller drops its station select on the next rerender.
+        player.radio_genre = None
         if not player.current:
             await player.play(player.queue.get())
         await self._snapshot(player)
 
+    async def _search_genre_tracks(self, genre, seen_ids):
+        """Run both curated queries, blend them and pick genre tracks (tier, list).
+
+        Runs the trending + all-time searches, interleaves them so a session is
+        neither all this month's virals nor all evergreen classics, then filters
+        the blend down the mix-detector ladder excluding ``seen_ids``. The shared
+        search core behind both the initial seed/zap (:meth:`_apply_genre`) and
+        the radio refill (:meth:`_radio_refill`).
+        """
+        result_trending = await self._search(vibes.resolve_query(genre.query_trending))
+        result_alltime = await self._search(vibes.resolve_query(genre.query_alltime))
+        candidates = vibes.interleave_results(
+            _normalize_result_tracks(result_trending),
+            _normalize_result_tracks(result_alltime),
+        )
+        return choose_genre_tracks(
+            candidates, vibes.TRACKS_PER_GENRE, seen_ids=seen_ids
+        )
+
+    async def _apply_genre(self, player, genre, requester_id, *, replace):
+        """Seed ``genre`` onto ``player``; the shared vibe-card / station-select core.
+
+        Returns ``(tier, tracks)``; an empty ``tracks`` means the search found
+        nothing (the caller reports it) and the player is left untouched.
+
+        ``replace=True`` is the radio zap: purge BOTH queue lanes (the user lane
+        and the hidden autoplay lane) and start the new genre immediately,
+        replacing whatever was playing - without touching the cog's restore
+        snapshot the way ``/stop`` would. ``replace=False`` is the start-from-
+        silence path: playback only kicks off when nothing is current. Either way
+        the tracks are radio-tagged and ``player.radio_genre`` is set (before the
+        play, so the reposted controller shows the new station), and a fresh
+        snapshot is written. The seed excludes the current track and everything
+        played this session; the non-replace path also excludes what is queued
+        (the replace path is about to purge it).
+        """
+        seen = radio_seen_ids(
+            player.played_ids,
+            () if replace else (getattr(t, "identifier", None) for t in player.queue.tracks),
+            getattr(player.current, "identifier", None),
+        )
+        tier, tracks = await self._search_genre_tracks(genre, seen)
+        log.info(
+            "Genre seed for %s: tier %d (%d tracks, replace=%s)",
+            genre.key,
+            tier,
+            len(tracks),
+            replace,
+        )
+        if not tracks:
+            return tier, []
+
+        if replace:
+            purge_queue_lanes(player.queue)
+            # Single-track LOOP makes queue.get() re-serve the OUTGOING track
+            # (its current_track survives the purge), so the zap would replay the
+            # old song forever and strand the new station in the lane. A station
+            # is a stream, not a one-track loop: drop LOOP to NORMAL so get()
+            # serves the new genre. LOOP_ALL still serves the new track (its lane
+            # is non-empty), so leave it untouched.
+            if player.queue.mode == sonolink.QueueMode.LOOP:
+                player.queue.mode = sonolink.QueueMode.NORMAL
+        for track in tracks:
+            track.extras.requester = requester_id
+            track.extras.radio = True
+            player.queue.put(track)
+        player.radio_genre = genre.key
+        if replace or not player.current:
+            await player.play(player.queue.get())
+        await self._snapshot(player)
+        return tier, tracks
+
+    def _schedule_radio_refill(self, player) -> None:
+        """Kick off a background radio refill unless one is already in flight.
+
+        The in-flight flag is set synchronously (no await between the check and
+        the set), so two track-start handlers racing on the same player can never
+        both launch a refill.
+        """
+        if getattr(player, "_radio_refilling", False):
+            return
+        player._radio_refilling = True
+        task = asyncio.create_task(self._radio_refill(player))
+        self._refill_tasks.add(task)
+        task.add_done_callback(self._refill_tasks.discard)
+
+    async def _radio_refill(self, player) -> None:
+        """Append TRACKS_PER_GENRE more of the station's genre to the user lane.
+
+        Excludes every identifier already played this session, everything still
+        queued and the current track, so the station keeps moving rather than
+        looping. Fills the USER lane (``queue.put``) so the tracks show in
+        "Up Next" and keep the player off the idle path. If it finds nothing new
+        it does NOT stop - an ENABLED autoplay session then fills the gap, and an
+        autoplay-off session simply ends, respecting that choice.
+        """
+        try:
+            key = getattr(player, "radio_genre", None)
+            genre = vibes.GENRES_BY_KEY.get(key) if key else None
+            if genre is None:
+                return
+            guild_id = player.channel.guild.id if player.channel else None
+            seen = radio_seen_ids(
+                player.played_ids,
+                (getattr(t, "identifier", None) for t in player.queue.tracks),
+                getattr(player.current, "identifier", None),
+            )
+            tier, tracks = await self._search_genre_tracks(genre, seen)
+            if not tracks:
+                log.info(
+                    "Radio refill for %s: nothing new, leaving to autoplay (guild=%s)",
+                    genre.key,
+                    guild_id,
+                )
+                return
+            # The station can change or end while our two searches are in flight:
+            # a zap moves radio_genre to a new key, and an explicit query / Add /
+            # favourites clears it to None. Either way these stale-genre tracks
+            # must not be injected into what is now a different (or normal)
+            # session, so bail if the station is no longer the one we searched.
+            if getattr(player, "radio_genre", None) != key:
+                log.info(
+                    "Radio refill for %s: station changed mid-search, discarding "
+                    "(guild=%s)",
+                    genre.key,
+                    guild_id,
+                )
+                return
+            dj = getattr(player, "dj", None)
+            requester_id = dj.id if dj is not None else None
+            for track in tracks:
+                if requester_id is not None:
+                    track.extras.requester = requester_id
+                track.extras.radio = True
+                player.queue.put(track)
+            log.info(
+                "Radio refill for %s: tier %d, +%d track(s) (guild=%s)",
+                genre.key,
+                tier,
+                len(tracks),
+                guild_id,
+            )
+            await self._snapshot(player)
+            controller = getattr(player, "controller", None)
+            if controller is not None:
+                await controller._rerender()
+        except Exception:
+            log.exception("Radio refill failed")
+        finally:
+            player._radio_refilling = False
+
     async def _start_genre(self, interaction: discord.Interaction, genre) -> None:
-        """Join the author's voice channel and seed it with a genre's tracks.
+        """Join the author's voice channel and start (or zap to) a genre station.
 
         Reuses the exact playback seams: the same connect
-        (``channel.connect(cls=Player)``), the same search entry point
-        (:meth:`_search`), and the same queue/play/snapshot calls the play command
-        uses. When something is already playing the tracks are appended to the
-        queue and nothing is interrupted; otherwise playback starts and the
-        existing track_start -> controller flow takes over. All feedback is
-        ephemeral.
+        (``channel.connect(cls=Player)``) and the same search/queue/play/snapshot
+        core (:meth:`_apply_genre`) the controller station select uses. When
+        something is already playing the pick REPLACES it (the radio zap);
+        otherwise it starts a fresh session and the existing track_start ->
+        controller flow takes over. All feedback is ephemeral.
         """
         author = interaction.user
         if (
@@ -1960,33 +2409,9 @@ class Music(commands.Cog):
         if player.home is None:
             player.home = interaction.channel
 
-        already_playing = player.current is not None
-
-        # Run both curated queries and blend them so a session is neither all this
-        # month's virals nor all evergreen classics, then filter the blend down the
-        # mix-detector ladder so hour-long compilations do not seed the queue.
-        result_trending = await self._search(vibes.resolve_query(genre.query_trending))
-        result_alltime = await self._search(vibes.resolve_query(genre.query_alltime))
-        candidates = vibes.interleave_results(
-            _normalize_result_tracks(result_trending),
-            _normalize_result_tracks(result_alltime),
-        )
-        seen_ids = {
-            track.identifier
-            for track in player.queue.tracks
-            if getattr(track, "identifier", None)
-        }
-        if already_playing and getattr(player.current, "identifier", None):
-            seen_ids.add(player.current.identifier)
-        tier, tracks = choose_genre_tracks(
-            candidates, vibes.TRACKS_PER_GENRE, seen_ids=seen_ids
-        )
-        log.info(
-            "Genre seed for %s: tier %d (%d candidates -> %d tracks)",
-            genre.key,
-            tier,
-            len(candidates),
-            len(tracks),
+        replace = player.current is not None
+        _tier, tracks = await self._apply_genre(
+            player, genre, author.id, replace=replace
         )
         if not tracks:
             await interaction.followup.send(
@@ -1997,22 +2422,10 @@ class Music(commands.Cog):
             )
             return
 
-        for track in tracks:
-            track.extras.requester = author.id
-            player.queue.put(track)
-
-        if not player.current:
-            await player.play(player.queue.get())
-        await self._snapshot(player)
-
-        if already_playing:
-            # Refresh the live controller so its "Up Next" reflects the appended
-            # tracks; playback itself is never interrupted.
-            if player.controller is not None:
-                await player.controller._rerender()
+        if replace:
             await interaction.followup.send(
-                _("Added {count} {genre} track(s) to the queue.").format(
-                    count=len(tracks), genre=genre.label
+                _("Switched to the {genre} station ({count} track(s)).").format(
+                    genre=genre.label, count=len(tracks)
                 ),
                 ephemeral=True,
             )
@@ -2316,6 +2729,8 @@ class Music(commands.Cog):
             await ctx.send(_("None of your favourites could be loaded right now."))
             return
 
+        # Playing favourites is an explicit choice: it ends any radio session.
+        player.radio_genre = None
         if not player.current:
             await player.play(player.queue.get())
         await self._snapshot(player)

@@ -614,3 +614,195 @@ def test_ladder_respects_seen_ids_and_limit():
     tier, picked = music.choose_genre_tracks(tracks, 3, seen_ids={"s0", "s1"})
     assert tier == 1
     assert [t.identifier for t in picked] == ["s2", "s3", "s4"]
+
+
+# ---------------------------------------------------------------------------
+# next_dj  (radio DJ-handoff target selection)
+# ---------------------------------------------------------------------------
+
+
+def _member(member_id, *, bot=False):
+    return types.SimpleNamespace(id=member_id, bot=bot)
+
+
+def test_next_dj_picks_first_human_in_order():
+    members = [_member(1), _member(2), _member(3)]
+    assert vibes.next_dj(members).id == 1
+
+
+def test_next_dj_skips_bots():
+    members = [_member(99, bot=True), _member(7)]
+    assert vibes.next_dj(members).id == 7
+
+
+def test_next_dj_excludes_the_leaver():
+    # The departing DJ may still be in the cached member list; it is skipped so
+    # the role never hands back to the person leaving.
+    members = [_member(1), _member(2)]
+    assert vibes.next_dj(members, leaving_id=1).id == 2
+
+
+def test_next_dj_none_when_room_empties():
+    assert vibes.next_dj([_member(1)], leaving_id=1) is None
+    assert vibes.next_dj([_member(9, bot=True)]) is None
+    assert vibes.next_dj([]) is None
+
+
+# ---------------------------------------------------------------------------
+# PlayedTracks  (bounded per-session played-id set for the radio refill)
+# ---------------------------------------------------------------------------
+
+
+def test_played_tracks_membership_and_iteration():
+    played = vibes.PlayedTracks(cap=10)
+    played.add("a")
+    played.add("b")
+    assert "a" in played and "b" in played
+    assert len(played) == 2
+    assert set(played) == {"a", "b"}
+
+
+def test_played_tracks_ignores_blank_identifiers():
+    played = vibes.PlayedTracks()
+    played.add(None)
+    played.add("")
+    assert len(played) == 0
+
+
+def test_played_tracks_repeat_refreshes_recency():
+    # Re-adding a known id moves it to the newest slot rather than duplicating,
+    # so it is not the one evicted next.
+    played = vibes.PlayedTracks(cap=2)
+    played.add("a")
+    played.add("b")
+    played.add("a")  # a is now newest; b is oldest
+    played.add("c")  # evicts the oldest (b)
+    assert "a" in played and "c" in played
+    assert "b" not in played
+    assert len(played) == 2
+
+
+def test_played_tracks_bounds_evict_oldest_first():
+    played = vibes.PlayedTracks(cap=3)
+    for i in range(5):
+        played.add(f"id{i}")
+    assert len(played) == 3
+    assert set(played) == {"id2", "id3", "id4"}
+    assert "id0" not in played and "id1" not in played
+
+
+def test_played_tracks_default_cap_is_the_module_constant():
+    assert vibes.PlayedTracks()._cap == vibes.PLAYED_IDS_CAP
+    assert vibes.PLAYED_IDS_CAP > 0
+
+
+# ---------------------------------------------------------------------------
+# radio_seen_ids  (radio-refill exclusion set)
+# ---------------------------------------------------------------------------
+
+
+def test_radio_seen_ids_unions_played_queued_and_current():
+    seen = music.radio_seen_ids(["p1", "p2"], ["q1", "q2"], "cur")
+    assert seen == {"p1", "p2", "q1", "q2", "cur"}
+
+
+def test_radio_seen_ids_drops_falsy_ids():
+    seen = music.radio_seen_ids(["", "p"], [None, "", "q"], None)
+    assert seen == {"p", "q"}
+
+
+def test_radio_seen_ids_without_current():
+    assert music.radio_seen_ids(["p"], ["q"], None) == {"p", "q"}
+
+
+def test_radio_seen_ids_accepts_a_played_set():
+    # The live caller passes a PlayedTracks instance (iterable of ids).
+    played = vibes.PlayedTracks()
+    played.add("x")
+    played.add("y")
+    assert music.radio_seen_ids(played, [], "z") == {"x", "y", "z"}
+
+
+# ---------------------------------------------------------------------------
+# purge_queue_lanes  (radio zap: clear BOTH queue lanes)
+# ---------------------------------------------------------------------------
+
+
+def test_purge_queue_lanes_clears_user_and_autoplay_lanes():
+    import collections
+
+    user = collections.deque(["a", "b"])
+    autoplay = collections.deque(["x", "y"])
+    # clear() empties only the user lane (sonolink's real behaviour); the helper
+    # must additionally drain the autoplay deque.
+    queue = types.SimpleNamespace(
+        _items=user, _autoplay_items=autoplay, clear=user.clear
+    )
+    music.purge_queue_lanes(queue)
+    assert len(user) == 0
+    assert len(autoplay) == 0
+
+
+def test_purge_queue_lanes_empties_both_lanes_on_a_real_sonolink_queue():
+    # Pin the helper against the ACTUAL sonolink Queue (not a stand-in): clear()
+    # drains only the user lane, so the autoplay lane must be emptied directly.
+    from sonolink.gateway.queue.queue import Queue
+
+    queue = Queue()
+    queue._items.extend(["u1", "u2"])
+    queue._autoplay_items.extend(["a1", "a2"])
+    music.purge_queue_lanes(queue)
+    assert len(queue._items) == 0
+    assert len(queue._autoplay_items) == 0
+
+
+def test_zap_queue_prep_serves_the_new_station_under_single_track_loop():
+    # Regression for the LOOP-mode zap: under QueueMode.LOOP the real Queue.get()
+    # re-serves the OUTGOING current_track (which survives purge_queue_lanes), so
+    # a station switch would replay the old song forever and strand the new
+    # tracks. _apply_genre(replace=True) drops LOOP to NORMAL after purging; this
+    # locks in that get() then serves the newly queued station track instead.
+    from sonolink.gateway.enums import QueueMode
+    from sonolink.gateway.queue.queue import Queue
+
+    queue = Queue()
+    queue._current_track = "OLD"
+    queue._mode = QueueMode.LOOP
+
+    # The zap prep: purge both lanes, then queue the new station's tracks.
+    music.purge_queue_lanes(queue)
+    queue._items.extend(["NEW1", "NEW2"])
+
+    # The trap: without the reset, LOOP re-serves the outgoing track.
+    assert queue.get() == "OLD"
+
+    # The fix: normalising LOOP makes get() serve the new station's first track.
+    queue._current_track = "OLD"
+    queue._mode = QueueMode.LOOP
+    music.purge_queue_lanes(queue)
+    queue._items.extend(["NEW1", "NEW2"])
+    if queue.mode == QueueMode.LOOP:
+        queue.mode = QueueMode.NORMAL
+    assert queue.get() == "NEW1"
+
+
+# ---------------------------------------------------------------------------
+# station_select_options  (controller station picker; current genre marked)
+# ---------------------------------------------------------------------------
+
+
+def test_station_select_options_one_per_genre_in_catalog_order():
+    opts = music.station_select_options("lofi")
+    assert [o.value for o in opts] == [g.key for g in vibes.GENRE_CATALOG]
+
+
+def test_station_select_options_marks_exactly_the_current_genre():
+    opts = music.station_select_options("phonk")
+    defaults = [o for o in opts if o.default]
+    assert len(defaults) == 1
+    assert defaults[0].value == "phonk"
+
+
+def test_station_select_options_none_marks_nothing():
+    opts = music.station_select_options(None)
+    assert all(not o.default for o in opts)

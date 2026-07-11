@@ -218,6 +218,27 @@ def looks_like_mix(
     return mix_score(title, author, duration_ms) >= MIX_SCORE_THRESHOLD
 
 
+def next_dj(
+    members: typing.Sequence[typing.Any], *, leaving_id: typing.Optional[int] = None
+) -> typing.Optional[typing.Any]:
+    """First non-bot member to inherit the DJ role, or None for an empty room.
+
+    Used by the voice-state listener when the current DJ leaves the player's
+    channel: control passes to the first remaining human (channel order), and a
+    room with no humans left yields None so the empty-channel disconnect logic
+    can take over. ``leaving_id`` drops the departing member even if the voice
+    cache has not evicted them yet, so the handoff never re-picks the leaver.
+    Pure and bot-safe (skips anything whose ``bot`` attribute is truthy).
+    """
+    for member in members:
+        if getattr(member, "bot", False):
+            continue
+        if leaving_id is not None and getattr(member, "id", None) == leaving_id:
+            continue
+        return member
+    return None
+
+
 def current_year(now: typing.Optional[datetime.datetime] = None) -> int:
     """Return the current UTC year, injectable for tests.
 
@@ -365,6 +386,50 @@ GENRE_CATALOG: tuple[Genre, ...] = (
 
 # Fast lookup from a select value back to its Genre.
 GENRES_BY_KEY: dict[str, Genre] = {genre.key: genre for genre in GENRE_CATALOG}
+
+
+# How many played-track identifiers a radio session remembers so its refill
+# never re-seeds a track it has already played. Bounded so a marathon session
+# cannot grow the set without bound; a restart forgets it (an accepted, at-worst
+# one-repeat trade-off - the set is not persisted).
+PLAYED_IDS_CAP = 500
+
+
+class PlayedTracks:
+    """Bounded, insertion-ordered set of the identifiers a radio session played.
+
+    A radio refill excludes everything already heard this session so a station
+    does not loop the same handful of tracks. The set is capped at ``cap``:
+    adding past it evicts the oldest identifier first, so a long session stays
+    bounded in memory. Re-adding a known identifier refreshes its recency (moves
+    it to the newest slot) rather than duplicating it. Pure and None/empty-safe
+    (a blank identifier is ignored), so it is unit-tested without a live player.
+    """
+
+    def __init__(self, cap: int = PLAYED_IDS_CAP) -> None:
+        self._cap = cap
+        # dict preserves insertion order (py3.7+); the value is unused.
+        self._ids: dict[str, None] = {}
+
+    def add(self, identifier: typing.Optional[str]) -> None:
+        """Record ``identifier`` as played, evicting the oldest past the cap."""
+        if not identifier:
+            return
+        # Drop-then-set so a repeat moves to the newest slot instead of aging out.
+        self._ids.pop(identifier, None)
+        self._ids[identifier] = None
+        while len(self._ids) > self._cap:
+            oldest = next(iter(self._ids))
+            del self._ids[oldest]
+
+    def __contains__(self, identifier: object) -> bool:
+        return identifier in self._ids
+
+    def __iter__(self) -> typing.Iterator[str]:
+        return iter(self._ids)
+
+    def __len__(self) -> int:
+        return len(self._ids)
 
 
 class PendingVoiceWatches:

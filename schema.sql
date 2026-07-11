@@ -257,11 +257,13 @@ CREATE TABLE IF NOT EXISTS music_state (
     queue                 TEXT[]      NOT NULL DEFAULT '{}', -- upcoming tracks, encoded
     controller_message_id BIGINT,                            -- now-playing controller, to delete the stale one on restore
     autoplay              BOOLEAN     NOT NULL DEFAULT TRUE,  -- session autoplay mode, restored on cold restart
+    radio_genre           TEXT,                              -- active radio station genre key (NULL outside radio mode), restored on cold restart
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Migrate pre-existing installs (no-op on a fresh database):
 ALTER TABLE music_state ADD COLUMN IF NOT EXISTS controller_message_id BIGINT;
 ALTER TABLE music_state ADD COLUMN IF NOT EXISTS autoplay BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE music_state ADD COLUMN IF NOT EXISTS radio_genre TEXT;
 
 -- Lavalink session id per node, so a restarting bot can resume the SAME Lavalink
 -- session (players kept alive by resume_timeout) instead of a fresh one - the
