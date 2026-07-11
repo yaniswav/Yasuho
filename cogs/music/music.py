@@ -40,6 +40,10 @@ SEARCH_SOURCE = TrackSourceType.YOUTUBE
 # an empty queue, or is alone in its voice channel. See the idle-timeout loop.
 IDLE_TIMEOUT = 300
 
+# Per-player history cap (sonolink defaults to unbounded): enough for
+# Back-stepping, autoplay seeding and LOOP_ALL restore, hard-bounded memory.
+HISTORY_MAX_ITEMS = 100
+
 # Only resume a persisted player younger than this (seconds). Scopes the
 # survive-restart behaviour to a quick restart, so the bot never rejoins a
 # channel and starts blasting music after a long downtime.
@@ -81,6 +85,19 @@ class Player(sonolink.Player):
     """
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        # Scale guard: sonolink's history deque is UNBOUNDED by default
+        # (HistorySettings.max_items=None), so a marathon session would grow one
+        # Playable per track forever. 100 covers Back-stepping, autoplay seeding
+        # and LOOP_ALL restore in practice while hard-bounding memory per player.
+        # Guarded so a stub sonolink (no HistorySettings) keeps working.
+        if "history_settings" not in kwargs:
+            history_cls = getattr(
+                getattr(sonolink, "models", None), "HistorySettings", None
+            )
+            if history_cls is not None:
+                kwargs["history_settings"] = history_cls(
+                    enabled=True, max_items=HISTORY_MAX_ITEMS
+                )
         super().__init__(*args, **kwargs)
         self.dj: typing.Optional[discord.Member] = None
         self.home: typing.Optional[discord.abc.MessageableChannel] = None
@@ -364,6 +381,27 @@ def can_skip(player):
     ):
         return True
     return _autoplay_on(player)
+
+
+def can_go_previous(player):
+    """Whether there is a genuinely previous track to step back to.
+
+    The pure sibling of :func:`can_skip` for the Back control. sonolink's history
+    holds the tracks played STRICTLY BEFORE the current one, newest at the right
+    end: the current track is never in history - it is pushed there only when the
+    NEXT track is popped (see sonolink ``Queue.pop`` / ``History._push``). So a
+    non-empty history means exactly one thing - there is a previous track that
+    ``Player.previous()`` will pop and replay. An empty history (the first track
+    of a session, or a fresh cold-restore whose history has not rebuilt yet) means
+    there is nothing sensible to go back to, so callers refuse up front instead of
+    letting ``Player.previous()`` raise ``HistoryEmpty`` after it has already moved
+    the current track to the queue front.
+
+    ``bool(history)`` reads sonolink ``ReadableCollection.__bool__`` (``len > 0``),
+    so a plain-list fake and the real ``History`` behave identically. Pure,
+    None-safe, and total over the player/queue shapes the fakes mirror.
+    """
+    return bool(getattr(player.queue, "history", None))
 
 
 def _set_autoplay(player, enabled):
@@ -1956,6 +1994,75 @@ class Music(commands.Cog):
         else:
             await self._clear(ctx.guild.id)
             await ctx.send(_("Skipped. The queue is now empty."))
+
+    async def _play_previous(
+        self, player: Player
+    ) -> typing.Optional[sonolink.models.Playable]:
+        """Step back to the previous track; the shared /previous + Back seam.
+
+        The single engine implementation both the command and the controller
+        button call. Returns the now-playing previous track on success, or None
+        for a clean refusal - either there is nothing to go back to, or the most
+        recent history entry can no longer be dispatched (its ``encoded`` blob is
+        gone). On a None return playback, the queue and history are left EXACTLY
+        as they were: the encoded guard peeks the candidate BEFORE any state is
+        mutated, so a dead entry never silences the room.
+
+        On success this defers to ``Player.previous()`` (sonolink's
+        ``queue.previous()`` + a direct ``play()``): the current track is pushed
+        to the FRONT of the user lane so a natural end returns the listener to
+        where they were (the Rythm/Spotify convention), and the previous track is
+        dispatched through the direct ``play()`` path - a REPLACED end reason on
+        the outgoing track, no autoplay fire - the same seam the radio zap uses in
+        ``_apply_genre``. Repeated calls step further back through history. A
+        successful step writes a fresh snapshot (both the queue and the current
+        track changed). Re-recording the replayed track in ``played_ids`` (via its
+        own track_start) is harmless and accepted: the bounded set simply refreshes
+        that id's recency.
+        """
+        if not can_go_previous(player):
+            return None
+        # Peek the exact entry Player.previous() will pop (history's right end)
+        # and refuse up front if it can no longer be dispatched, so the queue /
+        # history mutation inside previous() never runs against a dead track.
+        candidate = player.queue.history[-1]
+        if not getattr(candidate, "encoded", None):
+            return None
+        try:
+            track = await player.previous()
+        except sonolink.HistoryEmpty:
+            # Unreachable after can_go_previous under the single-threaded loop
+            # (nothing mutates history between the check and here), but mirrored
+            # on skip's QueueEmpty catch so a future refactor cannot silence the
+            # room by surprise.
+            return None
+        await self._snapshot(player)
+        return track
+
+    @commands.hybrid_command(name="previous", aliases=["back"])
+    @commands.guild_only()
+    async def previous(self, ctx: commands.Context) -> None:
+        """Replay the previous track and requeue the current one."""
+        player = await self._require_player(ctx)
+        if player is None:
+            return
+        # Pre-check so the "nothing before this" case gets its own precise
+        # message; a None from _play_previous past this gate means the history
+        # entry is no longer playable (mirrors skip's can_skip pre-check).
+        if not can_go_previous(player):
+            await ctx.send(_("There's no previous track to go back to."))
+            return
+        track = await self._play_previous(player)
+        if track is None:
+            await ctx.send(
+                _("I can't go back - the previous track is no longer available.")
+            )
+            return
+        await ctx.send(
+            _("Went back to **{title}** by `{author}`.").format(
+                title=track.title, author=track.author
+            )
+        )
 
     @commands.hybrid_command(name="seek")
     @commands.guild_only()

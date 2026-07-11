@@ -41,6 +41,7 @@ from cogs.music.music import (
     _autoplay_on,
     _first_track,
     _set_autoplay,
+    can_go_previous,
     can_skip,
     format_duration,
     is_autoplay_track,
@@ -423,12 +424,19 @@ class MusicController(discord.ui.LayoutView):
             )
         )
 
-        # Autoplay toggle on its own row (the two rows above are already full at
-        # five buttons each). Green when armed, grey when off, so the button shows
-        # the current session state at a glance - the controller house style.
+        # Third row: Back then the Autoplay toggle. Back belongs beside Skip, but
+        # the first row is already full at five buttons, so the previous-track
+        # control lands here. Autoplay is green when armed, grey when off, so the
+        # button shows the current session state at a glance - the house style.
         autoplay_on = _autoplay_on(self.player)
         container.add_item(
             discord.ui.ActionRow(
+                self._make_button(
+                    self._back,
+                    label=_("Back"),
+                    emoji="⏮️",
+                    style=discord.ButtonStyle.secondary,
+                ),
                 self._make_button(
                     self._autoplay_toggle,
                     label=_("Autoplay"),
@@ -568,6 +576,35 @@ class MusicController(discord.ui.LayoutView):
             )
         except Exception:
             log.exception("Controller skip failed")
+            await self._report_failure(interaction)
+
+    async def _back(self, interaction: discord.Interaction) -> None:
+        try:
+            # Pre-check so the "nothing before this" case gets its own message,
+            # mirroring the skip button; the shared cog seam does the replay so
+            # both surfaces run one implementation. No _rerender here: the direct
+            # play() fires a track_start that refreshes the controller through the
+            # normal event path, exactly like skip.
+            if not can_go_previous(self.player):
+                await interaction.response.send_message(
+                    _("There's no previous track to go back to."), ephemeral=True
+                )
+                return
+            track = await self.cog._play_previous(self.player)
+            if track is None:
+                await interaction.response.send_message(
+                    _("I can't go back - the previous track is no longer available."),
+                    ephemeral=True,
+                )
+                return
+            await interaction.response.send_message(
+                _("Went back to **{title}** by `{author}`.").format(
+                    title=track.title, author=track.author
+                ),
+                ephemeral=True,
+            )
+        except Exception:
+            log.exception("Controller back failed")
             await self._report_failure(interaction)
 
     async def _volume_down(self, interaction: discord.Interaction) -> None:

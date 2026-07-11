@@ -158,6 +158,125 @@ def test_can_skip_true_under_loop_modes():
 
 
 # ---------------------------------------------------------------------------
+# can_go_previous (the "is there a track to step back to" Back pre-check)
+# ---------------------------------------------------------------------------
+
+
+def _previous_player(history=()):
+    """Minimal player/queue shape for can_go_previous.
+
+    ``history`` mirrors sonolink's History collection: a non-empty sequence means
+    there is a strictly-previous track to replay. ``bool()`` over a plain list
+    matches ``History.__bool__`` (``len > 0``), so this fake is faithful to the
+    real surface.
+    """
+    return types.SimpleNamespace(queue=types.SimpleNamespace(history=list(history)))
+
+
+def test_can_go_previous_false_on_empty_history():
+    # No track played before the current one: nothing to go back to -> refuse.
+    assert music.can_go_previous(_previous_player()) is False
+
+
+def test_can_go_previous_true_with_a_prior_track():
+    assert music.can_go_previous(_previous_player(history=["prev"])) is True
+
+
+def test_can_go_previous_true_with_several_prior_tracks():
+    assert music.can_go_previous(_previous_player(history=["a", "b", "c"])) is True
+
+
+def test_can_go_previous_none_safe_over_missing_history():
+    # A queue with no history attribute coerces to False rather than raising, so
+    # the predicate is total over the shapes the fakes mirror.
+    player = types.SimpleNamespace(queue=types.SimpleNamespace())
+    assert music.can_go_previous(player) is False
+
+
+def test_can_go_previous_mirrors_real_history_semantics():
+    # Pin against the REAL sonolink History: the CURRENT track is never in
+    # history (it enters only when the NEXT track is popped), so on the first
+    # track - current set, history empty - there is no previous to step back to.
+    from sonolink.gateway.queue import Queue
+
+    queue = Queue()
+    queue._current_track = types.SimpleNamespace(encoded="A", title="A")
+    player = types.SimpleNamespace(queue=queue)
+    assert music.can_go_previous(player) is False
+
+    # Once that track advances, sonolink pushes it to history; now the PREVIOUS
+    # track is present and Back has somewhere to land.
+    queue._history._push(types.SimpleNamespace(encoded="A", title="A"))
+    assert music.can_go_previous(player) is True
+
+
+# ---------------------------------------------------------------------------
+# _play_previous (the shared /previous + Back engine seam)
+# ---------------------------------------------------------------------------
+#
+# The reinsertion of the current track to the queue front and the actual replay
+# are sonolink's Player.previous() (queue.previous() + a direct play()), so they
+# are exercised live on the running bot, not here. What is worth pinning is the
+# seam's own decision logic: it must refuse (return None) WITHOUT touching
+# playback when there is nothing playable to go back to, and only otherwise
+# replay + snapshot.
+
+
+class _FakePreviousPlayer:
+    """Fake player exposing just the surface ``_play_previous`` touches."""
+
+    def __init__(self, history=()):
+        self.queue = types.SimpleNamespace(history=list(history))
+        self.previous_calls = 0
+        self.now_playing = types.SimpleNamespace(title="P", author="art", encoded="P")
+
+    async def previous(self):
+        self.previous_calls += 1
+        return self.now_playing
+
+
+class _SnapshotCog:
+    """Cog stand-in that records _snapshot calls so the seam can be driven bare."""
+
+    def __init__(self):
+        self.snapshots = 0
+
+    async def _snapshot(self, player):
+        self.snapshots += 1
+
+
+async def test_play_previous_replays_and_snapshots_on_success():
+    playable = types.SimpleNamespace(title="P", author="art", encoded="enc-P")
+    player = _FakePreviousPlayer(history=[playable])
+    cog = _SnapshotCog()
+    result = await music.Music._play_previous(cog, player)
+    assert result is player.now_playing
+    assert player.previous_calls == 1
+    assert cog.snapshots == 1
+
+
+async def test_play_previous_refuses_when_encoded_missing():
+    # The most-recent history entry can no longer be dispatched: refuse cleanly
+    # and leave playback untouched (previous() never runs, no snapshot written).
+    dead = types.SimpleNamespace(title="X", author="a", encoded=None)
+    player = _FakePreviousPlayer(history=[dead])
+    cog = _SnapshotCog()
+    result = await music.Music._play_previous(cog, player)
+    assert result is None
+    assert player.previous_calls == 0
+    assert cog.snapshots == 0
+
+
+async def test_play_previous_refuses_on_empty_history():
+    player = _FakePreviousPlayer(history=[])
+    cog = _SnapshotCog()
+    result = await music.Music._play_previous(cog, player)
+    assert result is None
+    assert player.previous_calls == 0
+    assert cog.snapshots == 0
+
+
+# ---------------------------------------------------------------------------
 # queued_track_count (the /clearqueue counter)
 # ---------------------------------------------------------------------------
 
