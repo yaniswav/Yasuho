@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-11 14:15+0000\n"
+"POT-Creation-Date: 2026-07-11 14:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -784,8 +784,8 @@ msgstr ""
 msgid "Could not open the code form."
 msgstr ""
 
-#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1413 cogs/music/music.py:2769
-#: cogs/music/music.py:2935
+#: cogs/anilist/feed.py:236 cogs/anilist/feed.py:1413 cogs/music/music.py:2987
+#: cogs/music/music.py:3153
 msgid "Unknown title"
 msgstr ""
 
@@ -1021,7 +1021,7 @@ msgstr ""
 
 #: cogs/anilist/feed.py:1362 cogs/config/welcome.py:142
 #: cogs/config/welcome.py:433 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:443 cogs/music/music.py:615
+#: cogs/config/welcome.py:443 cogs/music/music.py:676
 msgid "Off"
 msgstr ""
 
@@ -1070,7 +1070,7 @@ msgstr ""
 msgid "Stop tracking a title..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1623
+#: cogs/anilist/feed.py:1623 cogs/music/music.py:1342
 msgid "Next"
 msgstr ""
 
@@ -4547,64 +4547,68 @@ msgstr ""
 msgid "[Go to message]({url})"
 msgstr ""
 
-#: cogs/music/music.py:468 cogs/music/music.py:802
+#: cogs/music/music.py:480 cogs/music/music.py:529
 msgid "The player is no longer active."
 msgstr ""
 
-#: cogs/music/music.py:475 cogs/music/music.py:1255
+#: cogs/music/music.py:491
+msgid "You must be in my voice channel to use these controls."
+msgstr ""
+
+#: cogs/music/music.py:536 cogs/music/music.py:1496
 msgid "Give me a song name or URL to add."
 msgstr ""
 
-#: cogs/music/music.py:482
+#: cogs/music/music.py:543
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr ""
 
-#: cogs/music/music.py:497
+#: cogs/music/music.py:558
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr ""
 
-#: cogs/music/music.py:503
+#: cogs/music/music.py:564
 msgid "Something went wrong adding that song."
 msgstr ""
 
-#: cogs/music/music.py:582 cogs/music/music.py:2729
+#: cogs/music/music.py:643 cogs/music/music.py:2947
 msgid "Nothing is playing right now."
 msgstr ""
 
-#: cogs/music/music.py:589
+#: cogs/music/music.py:650
 msgid "### 🎵 Now Playing"
 msgstr ""
 
-#: cogs/music/music.py:592
+#: cogs/music/music.py:653
 #, python-brace-format
 msgid "by **{author}**"
 msgstr ""
 
-#: cogs/music/music.py:601
+#: cogs/music/music.py:662
 msgid ""
 "✨ I'm keeping the music going with recommendations based on this "
 "session's listening. Tap Autoplay below to turn it off."
 msgstr ""
 
-#: cogs/music/music.py:608
+#: cogs/music/music.py:669
 msgid "⏸ Paused"
 msgstr ""
 
-#: cogs/music/music.py:608
+#: cogs/music/music.py:669
 msgid "▶ Playing"
 msgstr ""
 
-#: cogs/music/music.py:611
+#: cogs/music/music.py:672
 msgid "On (queue)"
 msgstr ""
 
-#: cogs/music/music.py:613
+#: cogs/music/music.py:674
 msgid "On (track)"
 msgstr ""
 
-#: cogs/music/music.py:619
+#: cogs/music/music.py:680
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -4613,465 +4617,477 @@ msgid ""
 "**Loop:** {loop}"
 msgstr ""
 
-#: cogs/music/music.py:634
+#: cogs/music/music.py:695
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr ""
 
-#: cogs/music/music.py:640
+#: cogs/music/music.py:701
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr ""
 
-#: cogs/music/music.py:645
+#: cogs/music/music.py:706
 #, python-brace-format
 msgid "**Station:** {emoji} {label}"
 msgstr ""
 
-#: cogs/music/music.py:652
+#: cogs/music/music.py:713
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr ""
 
-#: cogs/music/music.py:666
+#: cogs/music/music.py:727
 #, python-brace-format
 msgid ""
 "\n"
 "`+{count}` more in the queue"
 msgstr ""
 
-#: cogs/music/music.py:669
+#: cogs/music/music.py:730
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
 "{lines}"
 msgstr ""
 
-#: cogs/music/music.py:674
+#: cogs/music/music.py:735
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
 msgstr ""
 
-#: cogs/music/music.py:684
+#: cogs/music/music.py:745
 msgid "Pause/Resume"
 msgstr ""
 
-#: cogs/music/music.py:690
+#: cogs/music/music.py:751
 msgid "Skip"
 msgstr ""
 
-#: cogs/music/music.py:696
+#: cogs/music/music.py:757
 msgid "Vol -"
 msgstr ""
 
-#: cogs/music/music.py:702
+#: cogs/music/music.py:763
 msgid "Vol +"
 msgstr ""
 
-#: cogs/music/music.py:708
+#: cogs/music/music.py:769
 msgid "Loop"
 msgstr ""
 
-#: cogs/music/music.py:718
+#: cogs/music/music.py:779
 msgid "Shuffle"
 msgstr ""
 
-#: cogs/music/music.py:724 cogs/music/music.py:2717
+#: cogs/music/music.py:785
 msgid "Queue"
 msgstr ""
 
-#: cogs/music/music.py:730
+#: cogs/music/music.py:791
 msgid "Add"
 msgstr ""
 
-#: cogs/music/music.py:736
+#: cogs/music/music.py:797
 msgid "Favorite"
 msgstr ""
 
-#: cogs/music/music.py:742
+#: cogs/music/music.py:803
 msgid "Disconnect"
 msgstr ""
 
-#: cogs/music/music.py:757
+#: cogs/music/music.py:818
 msgid "Autoplay"
 msgstr ""
 
-#: cogs/music/music.py:777
+#: cogs/music/music.py:838
 msgid "-# Use the buttons to control playback"
 msgstr ""
 
-#: cogs/music/music.py:813
-msgid "You must be in my voice channel to use these controls."
-msgstr ""
-
-#: cogs/music/music.py:831
+#: cogs/music/music.py:873 cogs/music/music.py:1385
 msgid "Something went wrong handling that action."
 msgstr ""
 
-#: cogs/music/music.py:850
+#: cogs/music/music.py:892
 msgid "Resumed."
 msgstr ""
 
-#: cogs/music/music.py:853
+#: cogs/music/music.py:895
 msgid "Paused."
 msgstr ""
 
-#: cogs/music/music.py:871 cogs/music/music.py:878
+#: cogs/music/music.py:913 cogs/music/music.py:920
 msgid "There is nothing left to skip to."
 msgstr ""
 
-#: cogs/music/music.py:875
+#: cogs/music/music.py:917
 msgid "Skipped."
 msgstr ""
 
-#: cogs/music/music.py:890 cogs/music/music.py:905
+#: cogs/music/music.py:932 cogs/music/music.py:947
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr ""
 
-#: cogs/music/music.py:915 locales/command_strings.py:159
+#: cogs/music/music.py:957 locales/command_strings.py:159
 msgid "off"
 msgstr ""
 
-#: cogs/music/music.py:918
+#: cogs/music/music.py:960
 msgid "on"
 msgstr ""
 
-#: cogs/music/music.py:921
+#: cogs/music/music.py:963
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr ""
 
-#: cogs/music/music.py:937
+#: cogs/music/music.py:979
 msgid ""
 "Autoplay is on. I'll keep the music going with recommendations when the "
 "queue runs out."
 msgstr ""
 
-#: cogs/music/music.py:942
+#: cogs/music/music.py:984
 msgid "Autoplay is off. Playback will stop once the queue is empty."
 msgstr ""
 
-#: cogs/music/music.py:953
+#: cogs/music/music.py:995
 msgid "Add a few more tracks before shuffling."
 msgstr ""
 
-#: cogs/music/music.py:959 cogs/music/music.py:2639
+#: cogs/music/music.py:1001 cogs/music/music.py:2880
 msgid "Shuffled the queue."
 msgstr ""
 
-#: cogs/music/music.py:970 cogs/music/music.py:2693
-msgid "The queue is empty."
-msgstr ""
-
-#: cogs/music/music.py:974 cogs/music/music.py:2707
-#, python-brace-format
-msgid "`{index}.` {title} by `{author}`"
-msgstr ""
-
-#: cogs/music/music.py:981 cogs/music/music.py:2713
-#, python-brace-format
-msgid "*...and {count} more.*"
-msgstr ""
-
-#: cogs/music/music.py:1000
+#: cogs/music/music.py:1035
 msgid "Nothing is playing to favourite right now."
 msgstr ""
 
-#: cogs/music/music.py:1005
+#: cogs/music/music.py:1040
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1010 cogs/music/music.py:2901
+#: cogs/music/music.py:1045 cogs/music/music.py:3119
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr ""
 
-#: cogs/music/music.py:1013 cogs/music/music.py:2907
+#: cogs/music/music.py:1048 cogs/music/music.py:3125
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr ""
 
-#: cogs/music/music.py:1056
+#: cogs/music/music.py:1091
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr ""
 
-#: cogs/music/music.py:1066 cogs/music/music.py:1325
+#: cogs/music/music.py:1101 cogs/music/music.py:1566
 msgid "That vibe isn't available right now."
 msgstr ""
 
-#: cogs/music/music.py:1076 cogs/music/music.py:2482
+#: cogs/music/music.py:1111 cogs/music/music.py:2723
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr ""
 
-#: cogs/music/music.py:1083 cogs/music/music.py:2491
+#: cogs/music/music.py:1118 cogs/music/music.py:2732
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr ""
 
-#: cogs/music/music.py:1156
+#: cogs/music/music.py:1191
 msgid "Pick a vibe..."
 msgstr ""
 
-#: cogs/music/music.py:1201
+#: cogs/music/music.py:1236
 msgid "You are changing the station too fast - give it a moment."
 msgstr ""
 
-#: cogs/music/music.py:1220
-msgid "Change station..."
+#: cogs/music/music.py:1280
+msgid "### 🎶 Queue"
 msgstr ""
 
-#: cogs/music/music.py:1238
-msgid "Search for music"
+#: cogs/music/music.py:1286
+#, python-brace-format
+msgid "**Now Playing:** {title} by `{author}` `{duration}`"
 msgstr ""
 
-#: cogs/music/music.py:1242
-msgid "Song or URL"
-msgstr ""
-
-#: cogs/music/music.py:1243
-msgid "A song name to search, or a full URL"
-msgstr ""
-
-#: cogs/music/music.py:1263
-msgid "Something went wrong searching for that."
-msgstr ""
-
-#: cogs/music/music.py:1273
-msgid "Search for music instead"
+#: cogs/music/music.py:1295
+msgid "**Now Playing:** Nothing right now."
 msgstr ""
 
 #: cogs/music/music.py:1306
-msgid "## 🎧 Choose your vibe"
+msgid "The queue is empty. Add a track to keep the music going!"
 msgstr ""
 
-#: cogs/music/music.py:1309
-msgid "Pick a genre and I'll spin up a mix, or search for a track."
-msgstr ""
-
-#: cogs/music/music.py:1317
-msgid "-# Only you can use this menu."
-msgstr ""
-
-#: cogs/music/music.py:1354
-msgid "## 👋 Welcome"
-msgstr ""
-
-#: cogs/music/music.py:1357
-msgid "I'm all set to bring the music - let's get you into a room first."
-msgstr ""
-
-#: cogs/music/music.py:1362
-msgid "To get started, join a voice channel:"
-msgstr ""
-
-#: cogs/music/music.py:1368
-msgid "I couldn't find a voice channel here that you can join."
-msgstr ""
-
-#: cogs/music/music.py:1373
-msgid "-# Once you join, this message will automatically update."
-msgstr ""
-
-#: cogs/music/music.py:1437
-msgid "I'm not connected to a voice channel."
-msgstr ""
-
-#: cogs/music/music.py:1448
-msgid "You must be in my voice channel to do that."
-msgstr ""
-
-#: cogs/music/music.py:1784
+#: cogs/music/music.py:1311
 #, python-brace-format
-msgid "There was a problem playing **{title}**, skipping it."
+msgid "{index}. {title} by {author} ({duration})"
 msgstr ""
 
-#: cogs/music/music.py:2165 cogs/music/music.py:2734
-msgid "Here is the player."
-msgstr ""
-
-#: cogs/music/music.py:2205 cogs/music/music.py:2242 cogs/music/music.py:2451
-#: cogs/music/music.py:2807 cogs/music/music.py:2883
-msgid "Music is currently unavailable - no Lavalink node is connected."
-msgstr ""
-
-#: cogs/music/music.py:2212 cogs/music/music.py:2446 cogs/music/music.py:2819
-msgid "You must be in a voice channel first."
-msgstr ""
-
-#: cogs/music/music.py:2219 cogs/music/music.py:2465 cogs/music/music.py:2826
-msgid "I was unable to join your voice channel. Please try again."
-msgstr ""
-
-#: cogs/music/music.py:2231
+#: cogs/music/music.py:1322
 #, python-brace-format
-msgid "The player is already active in {channel}."
+msgid "-# Page {page}/{pages} - {count} track(s)"
 msgstr ""
 
-#: cogs/music/music.py:2247 cogs/music/music.py:2889
-msgid "Could not find any tracks for that query."
+#: cogs/music/music.py:1335
+msgid "Prev"
 msgstr ""
 
-#: cogs/music/music.py:2258
-#, python-brace-format
-msgid "Added the playlist **{name}** ({count} tracks) to the queue."
+#: cogs/music/music.py:1349
+msgid "Add track"
 msgstr ""
 
-#: cogs/music/music.py:2266
-#, python-brace-format
-msgid "Added **{title}** by `{author}` to the queue."
+#: cogs/music/music.py:1355
+msgid "Clear queue"
 msgstr ""
 
-#: cogs/music/music.py:2498
-#, python-brace-format
-msgid "Starting a {genre} session with {count} track(s). Enjoy!"
-msgstr ""
-
-#: cogs/music/music.py:2525
-msgid "The player is already paused."
-msgstr ""
-
-#: cogs/music/music.py:2530
-msgid "Paused the player."
-msgstr ""
-
-#: cogs/music/music.py:2540
-msgid "The player is not paused."
-msgstr ""
-
-#: cogs/music/music.py:2545
-msgid "Resumed the player."
-msgstr ""
-
-#: cogs/music/music.py:2558 cogs/music/music.py:2563
-msgid "There are no more tracks in the queue to skip to."
-msgstr ""
-
-#: cogs/music/music.py:2567
-#, python-brace-format
-msgid "Skipped to **{title}** by `{author}`."
-msgstr ""
-
-#: cogs/music/music.py:2573
-msgid "Skipped. The queue is now empty."
-msgstr ""
-
-#: cogs/music/music.py:2587
-msgid "There's nothing playing right now."
-msgstr ""
-
-#: cogs/music/music.py:2590
-msgid "I can't seek within a live stream."
-msgstr ""
-
-#: cogs/music/music.py:2595
-msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
-msgstr ""
-
-#: cogs/music/music.py:2601
-#, python-brace-format
-msgid "Jumped to {position}."
-msgstr ""
-
-#: cogs/music/music.py:2613
-msgid "Stopped playback and cleared the queue."
-msgstr ""
-
-#: cogs/music/music.py:2626
-#, python-brace-format
-msgid "Set the volume to {volume}%."
-msgstr ""
-
-#: cogs/music/music.py:2636
-msgid "Add a few more tracks to the queue before shuffling."
-msgstr ""
-
-#: cogs/music/music.py:2650
+#: cogs/music/music.py:1433 cogs/music/music.py:2891
 msgid "The queue is already empty."
 msgstr ""
 
-#: cogs/music/music.py:2660
+#: cogs/music/music.py:1442 cogs/music/music.py:2901
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr ""
 
-#: cogs/music/music.py:2681
+#: cogs/music/music.py:1461
+msgid "Change station..."
+msgstr ""
+
+#: cogs/music/music.py:1479
+msgid "Search for music"
+msgstr ""
+
+#: cogs/music/music.py:1483
+msgid "Song or URL"
+msgstr ""
+
+#: cogs/music/music.py:1484
+msgid "A song name to search, or a full URL"
+msgstr ""
+
+#: cogs/music/music.py:1504
+msgid "Something went wrong searching for that."
+msgstr ""
+
+#: cogs/music/music.py:1514
+msgid "Search for music instead"
+msgstr ""
+
+#: cogs/music/music.py:1547
+msgid "## 🎧 Choose your vibe"
+msgstr ""
+
+#: cogs/music/music.py:1550
+msgid "Pick a genre and I'll spin up a mix, or search for a track."
+msgstr ""
+
+#: cogs/music/music.py:1558
+msgid "-# Only you can use this menu."
+msgstr ""
+
+#: cogs/music/music.py:1595
+msgid "## 👋 Welcome"
+msgstr ""
+
+#: cogs/music/music.py:1598
+msgid "I'm all set to bring the music - let's get you into a room first."
+msgstr ""
+
+#: cogs/music/music.py:1603
+msgid "To get started, join a voice channel:"
+msgstr ""
+
+#: cogs/music/music.py:1609
+msgid "I couldn't find a voice channel here that you can join."
+msgstr ""
+
+#: cogs/music/music.py:1614
+msgid "-# Once you join, this message will automatically update."
+msgstr ""
+
+#: cogs/music/music.py:1678
+msgid "I'm not connected to a voice channel."
+msgstr ""
+
+#: cogs/music/music.py:1689
+msgid "You must be in my voice channel to do that."
+msgstr ""
+
+#: cogs/music/music.py:2025
+#, python-brace-format
+msgid "There was a problem playing **{title}**, skipping it."
+msgstr ""
+
+#: cogs/music/music.py:2406 cogs/music/music.py:2952
+msgid "Here is the player."
+msgstr ""
+
+#: cogs/music/music.py:2446 cogs/music/music.py:2483 cogs/music/music.py:2692
+#: cogs/music/music.py:3025 cogs/music/music.py:3101
+msgid "Music is currently unavailable - no Lavalink node is connected."
+msgstr ""
+
+#: cogs/music/music.py:2453 cogs/music/music.py:2687 cogs/music/music.py:3037
+msgid "You must be in a voice channel first."
+msgstr ""
+
+#: cogs/music/music.py:2460 cogs/music/music.py:2706 cogs/music/music.py:3044
+msgid "I was unable to join your voice channel. Please try again."
+msgstr ""
+
+#: cogs/music/music.py:2472
+#, python-brace-format
+msgid "The player is already active in {channel}."
+msgstr ""
+
+#: cogs/music/music.py:2488 cogs/music/music.py:3107
+msgid "Could not find any tracks for that query."
+msgstr ""
+
+#: cogs/music/music.py:2499
+#, python-brace-format
+msgid "Added the playlist **{name}** ({count} tracks) to the queue."
+msgstr ""
+
+#: cogs/music/music.py:2507
+#, python-brace-format
+msgid "Added **{title}** by `{author}` to the queue."
+msgstr ""
+
+#: cogs/music/music.py:2739
+#, python-brace-format
+msgid "Starting a {genre} session with {count} track(s). Enjoy!"
+msgstr ""
+
+#: cogs/music/music.py:2766
+msgid "The player is already paused."
+msgstr ""
+
+#: cogs/music/music.py:2771
+msgid "Paused the player."
+msgstr ""
+
+#: cogs/music/music.py:2781
+msgid "The player is not paused."
+msgstr ""
+
+#: cogs/music/music.py:2786
+msgid "Resumed the player."
+msgstr ""
+
+#: cogs/music/music.py:2799 cogs/music/music.py:2804
+msgid "There are no more tracks in the queue to skip to."
+msgstr ""
+
+#: cogs/music/music.py:2808
+#, python-brace-format
+msgid "Skipped to **{title}** by `{author}`."
+msgstr ""
+
+#: cogs/music/music.py:2814
+msgid "Skipped. The queue is now empty."
+msgstr ""
+
+#: cogs/music/music.py:2828
+msgid "There's nothing playing right now."
+msgstr ""
+
+#: cogs/music/music.py:2831
+msgid "I can't seek within a live stream."
+msgstr ""
+
+#: cogs/music/music.py:2836
+msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
+msgstr ""
+
+#: cogs/music/music.py:2842
+#, python-brace-format
+msgid "Jumped to {position}."
+msgstr ""
+
+#: cogs/music/music.py:2854
+msgid "Stopped playback and cleared the queue."
+msgstr ""
+
+#: cogs/music/music.py:2867
+#, python-brace-format
+msgid "Set the volume to {volume}%."
+msgstr ""
+
+#: cogs/music/music.py:2877
+msgid "Add a few more tracks to the queue before shuffling."
+msgstr ""
+
+#: cogs/music/music.py:2922
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr ""
 
-#: cogs/music/music.py:2699
-#, python-brace-format
-msgid "**Now Playing:** {title} by `{author}`\n"
-msgstr ""
-
-#: cogs/music/music.py:2704
-msgid "**Up Next:**"
-msgstr ""
-
-#: cogs/music/music.py:2745
+#: cogs/music/music.py:2963
 msgid "Disconnected from the voice channel."
 msgstr ""
 
-#: cogs/music/music.py:2758
+#: cogs/music/music.py:2976
 msgid "You have no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:2761
+#: cogs/music/music.py:2979
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr ""
 
-#: cogs/music/music.py:2770
+#: cogs/music/music.py:2988
 msgid "Unknown artist"
 msgstr ""
 
-#: cogs/music/music.py:2774
+#: cogs/music/music.py:2992
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr ""
 
-#: cogs/music/music.py:2781
+#: cogs/music/music.py:2999
 #, python-brace-format
 msgid "{name}'s Favourites"
 msgstr ""
 
-#: cogs/music/music.py:2813
+#: cogs/music/music.py:3031
 msgid "You have no saved favourites to play."
 msgstr ""
 
-#: cogs/music/music.py:2850
+#: cogs/music/music.py:3068
 msgid "None of your favourites could be loaded right now."
 msgstr ""
 
-#: cogs/music/music.py:2860
+#: cogs/music/music.py:3078
 #, python-brace-format
 msgid "Queued {count} track(s) from your favourites."
 msgstr ""
 
-#: cogs/music/music.py:2876
+#: cogs/music/music.py:3094
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr ""
 
-#: cogs/music/music.py:2895
+#: cogs/music/music.py:3113
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr ""
 
-#: cogs/music/music.py:2919
+#: cogs/music/music.py:3137
 msgid "You have no saved favourites to remove."
 msgstr ""
 
-#: cogs/music/music.py:2923
+#: cogs/music/music.py:3141
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr ""
 
-#: cogs/music/music.py:2934
+#: cogs/music/music.py:3152
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr ""

@@ -440,6 +440,62 @@ def purge_queue_lanes(queue: typing.Any) -> None:
     queue._autoplay_items.clear()
 
 
+# How many upcoming tracks the queue view lists per page.
+QUEUE_PAGE_SIZE = 10
+
+
+def queue_page(
+    total: int, page: int, per_page: int = QUEUE_PAGE_SIZE
+) -> typing.Tuple[int, int, int, int]:
+    """Resolve the paginated slice of ``total`` queued tracks for ``page``.
+
+    Returns ``(clamped_page, total_pages, start, end)`` where ``[start:end]``
+    slices the upcoming-tracks list for the requested page. ``page`` is
+    0-indexed and clamped into ``[0, total_pages - 1]`` so a queue that shrank
+    under the viewer never lands on a blank page; ``total_pages`` is at least 1
+    even for an empty queue. Pure - the queue view's paging math lives here so it
+    can be tested without any discord objects.
+    """
+    safe_total = max(total, 0)
+    total_pages = max(1, (safe_total + per_page - 1) // per_page)
+    clamped = max(0, min(page, total_pages - 1))
+    start = clamped * per_page
+    end = min(start + per_page, safe_total)
+    return clamped, total_pages, start, end
+
+
+async def _ensure_in_voice(
+    player: "Player", interaction: discord.Interaction
+) -> bool:
+    """Reject anyone not currently in ``player``'s voice channel.
+
+    Shared by the now-playing controller and the queue view: both are room
+    surfaces (anyone in the voice channel may drive them), not author-gated
+    panels. Sends the refusal ephemerally and returns ``False`` when the player
+    is gone or the clicker is not in its channel.
+    """
+    channel = getattr(player, "channel", None)
+    if channel is None:
+        await interaction.response.send_message(
+            _("The player is no longer active."), ephemeral=True
+        )
+        return False
+
+    user = interaction.user
+    if (
+        not isinstance(user, discord.Member)
+        or user.voice is None
+        or user.voice.channel != channel
+    ):
+        await interaction.response.send_message(
+            _("You must be in my voice channel to use these controls."),
+            ephemeral=True,
+        )
+        return False
+
+    return True
+
+
 class AddSongModal(LocaleModal, title="Add a song"):
     """Modal that queues a track from a search query or a full URL.
 
@@ -455,14 +511,19 @@ class AddSongModal(LocaleModal, title="Add a song"):
         max_length=400,
     )
 
-    def __init__(self, cog: "Music", controller: "MusicController") -> None:
+    def __init__(
+        self, cog: "Music", owner: 'typing.Union["MusicController", "QueueView"]'
+    ) -> None:
         super().__init__()
         self.cog = cog
-        self.controller = controller
+        # The surface that opened this modal: the now-playing controller or the
+        # queue view. Both expose ``.player`` and a no-arg async ``_rerender()``
+        # that edits their own bound message, so the add flow works from either.
+        self.owner = owner
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         try:
-            player = self.controller.player
+            player = self.owner.player
             if not isinstance(player, sonolink.Player) or player.channel is None:
                 await interaction.response.send_message(
                     _("The player is no longer active."), ephemeral=True
@@ -496,7 +557,7 @@ class AddSongModal(LocaleModal, title="Add a song"):
             await interaction.response.send_message(
                 _("Queued **{title}**.").format(title=track.title), ephemeral=True
             )
-            await self.controller._rerender()
+            await self.owner._rerender()
         except Exception:
             log.exception("Add-song modal submit failed")
             await interactions.notify_failure(
@@ -796,26 +857,7 @@ class MusicController(discord.ui.LayoutView):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow members currently in the player's voice channel."""
-        channel = getattr(self.player, "channel", None)
-        if channel is None:
-            await interaction.response.send_message(
-                _("The player is no longer active."), ephemeral=True
-            )
-            return False
-
-        user = interaction.user
-        if (
-            not isinstance(user, discord.Member)
-            or user.voice is None
-            or user.voice.channel != channel
-        ):
-            await interaction.response.send_message(
-                _("You must be in my voice channel to use these controls."),
-                ephemeral=True,
-            )
-            return False
-
-        return True
+        return await _ensure_in_voice(self.player, interaction)
 
     async def on_timeout(self) -> None:
         self._disable_all()
@@ -964,23 +1006,16 @@ class MusicController(discord.ui.LayoutView):
 
     async def _show_queue(self, interaction: discord.Interaction) -> None:
         try:
-            upcoming = self.player.queue.tracks
-            if not upcoming:
-                await interaction.response.send_message(
-                    _("The queue is empty."), ephemeral=True
-                )
-                return
-            lines = [
-                _("`{index}.` {title} by `{author}`").format(
-                    index=index, title=track.title, author=track.author
-                )
-                for index, track in enumerate(upcoming[:10], start=1)
-            ]
-            if len(upcoming) > 10:
-                lines.append(
-                    _("*...and {count} more.*").format(count=len(upcoming) - 10)
-                )
-            await interaction.response.send_message("\n".join(lines), ephemeral=True)
+            view = QueueView(self.cog, self.player)
+            await interaction.response.send_message(
+                view=view,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            # Bind the sent (ephemeral) message so an out-of-band add-track
+            # refresh has something to edit; button clicks edit in place via the
+            # component interaction and do not depend on this.
+            view.message = await interaction.original_response()
         except Exception:
             log.exception("Controller queue failed")
             await self._report_failure(interaction)
@@ -1204,6 +1239,212 @@ async def _check_station_debounce(interaction: discord.Interaction) -> bool:
         return False
     _STATION_DEBOUNCE.touch(interaction.user.id)
     return True
+
+
+class QueueView(discord.ui.LayoutView):
+    """The upcoming queue as a paginated Components V2 layout.
+
+    A single accent :class:`~discord.ui.Container` in the controller's house
+    style: a "Queue" heading, the now-playing line, the upcoming tracks paged
+    ten at a time, and one action row (Prev / Next / Add track / Clear queue).
+    Like the controller it is a room surface, not an author-gated panel - anyone
+    in the player's voice channel may drive it (see :func:`_ensure_in_voice`).
+
+    Every render re-reads ``player.queue.tracks`` live, so the view never shows
+    stale state after an add or a clear, and the page index is re-clamped by
+    :func:`queue_page` whenever the queue shrinks under the viewer.
+    """
+
+    def __init__(self, cog: "Music", player: Player, *, timeout: float = 180) -> None:
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.player = player
+        self.page = 0
+        self.message: typing.Optional[discord.Message] = None
+        self._build()
+
+    def _make_button(
+        self,
+        handler: typing.Callable[
+            [discord.Interaction], typing.Awaitable[None]
+        ],
+        **kwargs: typing.Any,
+    ) -> _ControllerButton:
+        return _ControllerButton(handler, **kwargs)
+
+    def _build(self) -> None:
+        """(Re)assemble the layout from the player's live queue state."""
+        self.clear_items()
+        container = discord.ui.Container(accent_colour=random_colour())
+
+        container.add_item(discord.ui.TextDisplay(_("### 🎶 Queue")))
+
+        current = self.player.current
+        if current is not None:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("**Now Playing:** {title} by `{author}` `{duration}`").format(
+                        title=current.title[:120],
+                        author=current.author,
+                        duration=format_duration(current),
+                    )
+                )
+            )
+        else:
+            container.add_item(
+                discord.ui.TextDisplay(_("**Now Playing:** Nothing right now."))
+            )
+        container.add_item(discord.ui.Separator())
+
+        upcoming = self.player.queue.tracks
+        total = len(upcoming)
+        self.page, total_pages, start, end = queue_page(total, self.page)
+
+        if total == 0:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("The queue is empty. Add a track to keep the music going!")
+                )
+            )
+        else:
+            lines = [
+                _("{index}. {title} by {author} ({duration})").format(
+                    index=index,
+                    title=track.title[:60],
+                    author=track.author,
+                    duration=format_duration(track),
+                )
+                for index, track in enumerate(upcoming[start:end], start=start + 1)
+            ]
+            container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("-# Page {page}/{pages} - {count} track(s)").format(
+                        page=self.page + 1, pages=total_pages, count=total
+                    )
+                )
+            )
+        container.add_item(discord.ui.Separator())
+
+        single_page = total_pages <= 1
+        has_queued = queued_track_count(self.player.queue) > 0
+        container.add_item(
+            discord.ui.ActionRow(
+                self._make_button(
+                    self._prev,
+                    label=_("Prev"),
+                    emoji="◀️",
+                    style=discord.ButtonStyle.secondary,
+                    disabled=single_page or self.page <= 0,
+                ),
+                self._make_button(
+                    self._next,
+                    label=_("Next"),
+                    emoji="▶️",
+                    style=discord.ButtonStyle.secondary,
+                    disabled=single_page or self.page >= total_pages - 1,
+                ),
+                self._make_button(
+                    self._add,
+                    label=_("Add track"),
+                    emoji="➕",
+                    style=discord.ButtonStyle.success,
+                ),
+                self._make_button(
+                    self._clear,
+                    label=_("Clear queue"),
+                    emoji="🗑️",
+                    style=discord.ButtonStyle.danger,
+                    disabled=not has_queued,
+                ),
+            )
+        )
+
+        self.add_item(container)
+
+    def _disable_all(self) -> None:
+        """Disable every button in the layout (walks nested ActionRows)."""
+        for child in self.walk_children():
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Only allow members currently in the player's voice channel."""
+        return await _ensure_in_voice(self.player, interaction)
+
+    async def on_timeout(self) -> None:
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                log.exception("Failed to disable the queue view on timeout")
+
+    async def _report_failure(self, interaction: discord.Interaction) -> None:
+        await interactions.notify_failure(
+            interaction, _("Something went wrong handling that action.")
+        )
+
+    async def _rerender(self) -> None:
+        """Re-render in place off the live queue (used by the add-track modal)."""
+        if self.message is None:
+            return
+        self._build()
+        try:
+            await self.message.edit(view=self)
+        except discord.HTTPException:
+            log.exception("Failed to refresh the queue view")
+
+    async def _rerender_from(self, interaction: discord.Interaction) -> None:
+        """Re-render in place, editing the message the click landed on."""
+        self._build()
+        await interaction.response.edit_message(view=self)
+
+    async def _prev(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page -= 1
+            await self._rerender_from(interaction)
+        except Exception:
+            log.exception("Queue view prev failed")
+            await self._report_failure(interaction)
+
+    async def _next(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page += 1
+            await self._rerender_from(interaction)
+        except Exception:
+            log.exception("Queue view next failed")
+            await self._report_failure(interaction)
+
+    async def _add(self, interaction: discord.Interaction) -> None:
+        try:
+            await interaction.response.send_modal(AddSongModal(self.cog, self))
+        except Exception:
+            log.exception("Queue view add-track failed")
+            await self._report_failure(interaction)
+
+    async def _clear(self, interaction: discord.Interaction) -> None:
+        try:
+            # Same semantics as the /clearqueue command: count both lanes, purge
+            # both lanes, persist, then confirm - reusing its exact wordings.
+            count = queued_track_count(self.player.queue)
+            if count == 0:
+                await interaction.response.send_message(
+                    _("The queue is already empty."), ephemeral=True
+                )
+                return
+            purge_queue_lanes(self.player.queue)
+            await self.cog._snapshot(self.player)
+            # Refresh this surface off the now-empty queue, then confirm.
+            self._build()
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(
+                _("Cleared {count} track(s) from the queue.").format(count=count),
+                ephemeral=True,
+            )
+        except Exception:
+            log.exception("Queue view clear failed")
+            await self._report_failure(interaction)
 
 
 class _StationSelect(discord.ui.Select):
@@ -2688,37 +2929,14 @@ class Music(commands.Cog):
         if player is None:
             return
 
-        upcoming = player.queue.tracks
-        if not upcoming and not player.current:
-            await ctx.send(_("The queue is empty."))
-            return
-
-        lines: list[str] = []
-        if player.current:
-            lines.append(
-                _("**Now Playing:** {title} by `{author}`\n").format(
-                    title=player.current.title, author=player.current.author
-                )
-            )
-        if upcoming:
-            lines.append(_("**Up Next:**"))
-            for index, track in enumerate(upcoming[:10], start=1):
-                lines.append(
-                    _("`{index}.` {title} by `{author}`").format(
-                        index=index, title=track.title, author=track.author
-                    )
-                )
-            if len(upcoming) > 10:
-                lines.append(
-                    _("*...and {count} more.*").format(count=len(upcoming) - 10)
-                )
-
-        embed = discord.Embed(
-            title=_("Queue"),
-            description="\n".join(lines),
-            colour=random_colour(),
+        # Always post the interactive view, even for an empty queue: the
+        # empty-state still offers the Add-track affordance, so a viewer can
+        # populate the queue straight from the surface (the controller's Queue
+        # button reaches the same view).
+        view = QueueView(self, player)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
         )
-        await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="nowplaying", aliases=["np", "current"])
     @commands.guild_only()
