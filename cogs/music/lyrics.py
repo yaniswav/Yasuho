@@ -44,8 +44,10 @@ import asyncio
 import bisect
 import dataclasses
 import logging
+import re
 import time
 import typing
+import urllib.parse
 
 import discord
 
@@ -374,14 +376,57 @@ def should_edit(*, last_index: int, current_index: int) -> bool:
 def lyrics_path(session_id: str, guild_id: int) -> str:
     """Return the plugin's per-player lyrics REST path (pure).
 
-    Mirrors ``sponsorblock.categories_path``: the leading slash is what makes
-    sonolink's REST client prepend ``/v4``, yielding the full
-    ``/v4/sessions/{sessionId}/players/{guildId}/lyrics``. That route fetches
-    lyrics for the track the player is CURRENTLY playing (verified live: it 400s
-    with "Not currently playing anything" when idle), so it works across every
-    source the node can play, not only YouTube.
+    FALLBACK ONLY. For youtube-sourced tracks the plugin feeds the raw
+    youtube.com watch id to its YouTube Music lookup, which knows nothing about
+    watch ids - a near-guaranteed LyricsNotFoundException 404 (the P5 scout's
+    core finding, re-confirmed live when SCH/Gambi lookups failed). The primary
+    path is client-side search-then-fetch (:func:`search_lyrics_path` +
+    :func:`video_lyrics_path`); this session route only remains as a last try,
+    where the plugin's own ISRC path can win for non-youtube sources.
     """
     return f"/sessions/{session_id}/players/{guild_id}/lyrics"
+
+
+def search_lyrics_path(query: str) -> str:
+    """The plugin's search route: ``/v4/lyrics/search/{query}`` (pure)."""
+    return "/lyrics/search/" + urllib.parse.quote(query, safe="")
+
+
+def video_lyrics_path(video_id: str) -> str:
+    """The plugin's fetch route for a YouTube MUSIC video id (pure)."""
+    return "/lyrics/" + urllib.parse.quote(str(video_id), safe="")
+
+
+# Bracketed title noise that pollutes a YouTube Music search ("(Clip officiel)",
+# "[Official Video]"...). Only chunks containing one of these markers are
+# stripped - "(2022 Remaster)" or "(avec Ninho)" carry real signal and stay.
+_TITLE_NOISE = re.compile(
+    r"[\(\[][^)\]]*(?:official|officiel|clip|video|lyric|paroles|audio|"
+    r"visuali[sz]er|\bmv\b)[^)\]]*[\)\]]",
+    re.IGNORECASE,
+)
+# The " - Topic" suffix of auto-generated YouTube artist channels.
+_TOPIC_SUFFIX = re.compile(r"\s*-\s*Topic\s*$", re.IGNORECASE)
+
+
+def search_query_for(track: typing.Any) -> str:
+    """Build the YouTube Music search query for a track: cleaned title + author.
+
+    Pure. Strips bracketed upload noise from the title and the ``- Topic``
+    suffix from auto-generated channel names; collapses whitespace. Returns an
+    empty string when the track carries no usable title (caller skips the
+    search).
+    """
+    title = _TITLE_NOISE.sub(" ", str(getattr(track, "title", "") or ""))
+    if not title.strip():
+        return ""  # no usable title -> nothing to search on
+    author = _TOPIC_SUFFIX.sub("", str(getattr(track, "author", "") or ""))
+    return " ".join(f"{title} {author}".split())
+
+
+# How many search candidates to try before giving up: the right song is almost
+# always first, but a live/sped-up variant can shadow it.
+SEARCH_CANDIDATES = 3
 
 
 def _node_of(player: typing.Any) -> typing.Any:
@@ -406,24 +451,52 @@ async def fetch_lyrics(
 ) -> LyricsResult:
     """Fetch the current track's lyrics via sonolink's authenticated REST seam.
 
+    PRIMARY path is the scout-proven search-then-fetch: the plugin's
+    ``/v4/lyrics/{videoId}`` wants YouTube MUSIC video ids, so we search the
+    cleaned "title author" first and try the top candidates. The per-player
+    session route only runs as a LAST resort (its internal lookup feeds raw
+    watch ids for youtube-sourced tracks and 404s - the SCH/Gambi regression).
+
     Best-effort: any node error (no player, no lyrics, a 4xx from the plugin) is
     logged once at debug and degrades to :data:`KIND_NONE` - the feature is
     read-only and must never propagate a failure into the command. Reuses
     ``node.send`` (the node's credentialed client), so no credentials are handled
-    or logged here. ``skip_track_source`` maps to the plugin's ``skipTrackSource``
-    query flag (skip the track's own source lyrics and go straight to fallback).
+    or logged here.
     """
     node = _node_of(player)
     if node is None:
-        return _NONE_RESULT
-    try:
-        session_id = node.session_id
-    except Exception:
         return _NONE_RESULT
     guild_id = _guild_id_of(player)
     if guild_id is None:
         return _NONE_RESULT
 
+    # 1) Search-then-fetch off the track's own metadata (source-agnostic).
+    track = getattr(player, "current", None)
+    query = search_query_for(track) if track is not None else ""
+    if query:
+        try:
+            candidates = await node.send("GET", search_lyrics_path(query))
+        except Exception as exc:
+            log.debug("Lyrics search failed for guild %s (%s)", guild_id, exc)
+            candidates = None
+        for candidate in (candidates or [])[:SEARCH_CANDIDATES]:
+            video_id = (candidate or {}).get("videoId")
+            if not video_id:
+                continue
+            try:
+                payload = await node.send("GET", video_lyrics_path(video_id))
+            except Exception:
+                continue  # this candidate has no lyrics; try the next
+            result = parse_lyrics(payload)
+            if result.kind != KIND_NONE:
+                return result
+
+    # 2) Last resort: the plugin's own per-player lookup (ISRC path can win for
+    # non-youtube sources even when the name search found nothing).
+    try:
+        session_id = node.session_id
+    except Exception:
+        return _NONE_RESULT
     path = lyrics_path(session_id, guild_id)
     params = {"skipTrackSource": "true" if skip_track_source else "false"}
     try:

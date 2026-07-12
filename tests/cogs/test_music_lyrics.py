@@ -737,3 +737,129 @@ async def test_start_noops_when_already_stopped():
     await session.start()
     assert channel.sent == 0
     assert session._task is None
+
+
+# ---------------------------------------------------------------------------
+# Search-then-fetch recipe (the SCH/Gambi regression fix)
+# ---------------------------------------------------------------------------
+
+
+def _meta_track(title, author):
+    return types.SimpleNamespace(title=title, author=author)
+
+
+def test_search_query_strips_bracketed_upload_noise():
+    q = lyrics.search_query_for(_meta_track("A7 (Clip Officiel)", "SCH"))
+    assert q == "A7 SCH"
+    q = lyrics.search_query_for(_meta_track("POPOPOP [Official Video]", "Gambi"))
+    assert q == "POPOPOP Gambi"
+
+
+def test_search_query_keeps_meaningful_brackets():
+    # Remaster years and featured artists carry real search signal.
+    q = lyrics.search_query_for(
+        _meta_track("Never Gonna Give You Up (2022 Remaster)", "Rick Astley")
+    )
+    assert "(2022 Remaster)" in q
+    q = lyrics.search_query_for(_meta_track("Mayday (avec Ninho)", "SCH"))
+    assert "(avec Ninho)" in q
+
+
+def test_search_query_strips_topic_suffix():
+    assert lyrics.search_query_for(_meta_track("A7", "SCH - Topic")) == "A7 SCH"
+
+
+def test_search_query_empty_title_yields_empty():
+    assert lyrics.search_query_for(_meta_track("", "SCH")) == ""
+    assert lyrics.search_query_for(_meta_track(None, None)) == ""
+
+
+def test_search_and_video_paths_are_quoted():
+    assert lyrics.search_lyrics_path("SCH A7") == "/lyrics/search/SCH%20A7"
+    assert (
+        lyrics.search_lyrics_path("a/b?c") == "/lyrics/search/a%2Fb%3Fc"
+    )
+    assert lyrics.video_lyrics_path("jQShQsMWepM") == "/lyrics/jQShQsMWepM"
+
+
+class _RoutedNode:
+    """Scripted node: maps GET paths to payloads or exceptions."""
+
+    def __init__(self, routes):
+        self.routes = routes
+        self.calls = []
+        self.session_id = "sess"
+
+    async def send(self, method, path, params=None):
+        self.calls.append(path)
+        result = self.routes.get(path, KeyError(path))
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+def _routed_player(node, title="A7", author="SCH"):
+    return types.SimpleNamespace(
+        node=node,
+        guild=types.SimpleNamespace(id=1),
+        current=_meta_track(title, author),
+    )
+
+
+def _timed_payload():
+    return {
+        "type": "timed",
+        "source": "Musixmatch",
+        "lines": [{"line": "x", "range": {"start": 0, "end": 1000}}],
+    }
+
+
+def test_fetch_prefers_search_then_fetch(anyio_run=None):
+    import asyncio as _a
+
+    node = _RoutedNode({
+        "/lyrics/search/A7%20SCH": [{"videoId": "vid1", "title": "A7"}],
+        "/lyrics/vid1": _timed_payload(),
+    })
+    result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
+    assert result.kind == lyrics.KIND_TIMED
+    # jamais la route session quand la recherche a gagne
+    assert not any(p.startswith("/sessions/") for p in node.calls)
+
+
+def test_fetch_tries_next_candidate_on_404():
+    import asyncio as _a
+
+    node = _RoutedNode({
+        "/lyrics/search/A7%20SCH": [
+            {"videoId": "dead"},
+            {"videoId": "vid2"},
+        ],
+        "/lyrics/dead": RuntimeError("404"),
+        "/lyrics/vid2": _timed_payload(),
+    })
+    result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
+    assert result.kind == lyrics.KIND_TIMED
+
+
+def test_fetch_falls_back_to_session_route_when_search_dry():
+    import asyncio as _a
+
+    node = _RoutedNode({
+        "/lyrics/search/A7%20SCH": [],
+        "/sessions/sess/players/1/lyrics": _timed_payload(),
+    })
+    result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
+    assert result.kind == lyrics.KIND_TIMED
+    assert any(p.startswith("/sessions/") for p in node.calls)
+
+
+def test_fetch_all_paths_dry_degrades_to_none():
+    import asyncio as _a
+
+    node = _RoutedNode({
+        "/lyrics/search/A7%20SCH": RuntimeError("boom"),
+        "/sessions/sess/players/1/lyrics": RuntimeError("404"),
+    })
+    result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
+    assert result.kind == lyrics.KIND_NONE
