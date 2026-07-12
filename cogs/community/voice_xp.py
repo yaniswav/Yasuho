@@ -66,12 +66,44 @@ SESSION_CAP = 8192
 # and RETURNING hands back each member's NEW total so the caller can detect
 # level-ups (old = new - the gain it recorded). EXCLUDED.xp is the per-row
 # proposed gain, added onto the stored total on conflict.
+#
+# L6: the SAME round trip also credits both period rollups (xp_period,
+# weekly + monthly - $4/$5, scalar) for every credited member. period_key
+# depends only on the wall-clock instant, not on the row, so - unlike
+# guild_id/user_id/gain - it is the SAME for every row in one sweep tick and
+# needs no third array. This is ONE parameterized SQL command (a WITH query
+# whose CTEs are the three upserts), never three statements joined by ';':
+# asyncpg's extended query protocol (used whenever arguments are passed)
+# prepares exactly one command, so a multi-statement string would raise
+# "cannot insert multiple commands into a prepared statement". PostgreSQL
+# guarantees every data-modifying CTE in a WITH clause executes exactly once,
+# in full, even when the primary SELECT never reads its output (see
+# "Data-Modifying Statements in WITH" in the Postgres docs) - so `week`/
+# `month` below run unconditionally even though only `xp_grant` is selected
+# from. NOTE: the CTE is named `xp_grant`, not `grant` - GRANT is a reserved
+# SQL keyword and Postgres rejects it unquoted as a CTE name ("syntax error
+# at or near 'grant'"), confirmed live.
 _BATCH_GRANT_QUERY = """
-    INSERT INTO levels (guild_id, user_id, xp)
-    SELECT * FROM unnest($1::bigint[], $2::bigint[], $3::bigint[])
-    ON CONFLICT (guild_id, user_id)
-    DO UPDATE SET xp = levels.xp + EXCLUDED.xp
-    RETURNING guild_id, user_id, xp;
+    WITH batch(guild_id, user_id, gain) AS (
+        SELECT * FROM unnest($1::bigint[], $2::bigint[], $3::bigint[])
+    ), xp_grant AS (
+        INSERT INTO levels (guild_id, user_id, xp)
+        SELECT guild_id, user_id, gain FROM batch
+        ON CONFLICT (guild_id, user_id)
+        DO UPDATE SET xp = levels.xp + EXCLUDED.xp
+        RETURNING guild_id, user_id, xp
+    ), week AS (
+        INSERT INTO xp_period (guild_id, user_id, period_key, xp)
+        SELECT guild_id, user_id, $4, gain FROM batch
+        ON CONFLICT (guild_id, user_id, period_key)
+        DO UPDATE SET xp = xp_period.xp + EXCLUDED.xp
+    ), month AS (
+        INSERT INTO xp_period (guild_id, user_id, period_key, xp)
+        SELECT guild_id, user_id, $5, gain FROM batch
+        ON CONFLICT (guild_id, user_id, period_key)
+        DO UPDATE SET xp = xp_period.xp + EXCLUDED.xp
+    )
+    SELECT guild_id, user_id, xp FROM xp_grant;
     """
 
 
@@ -317,8 +349,9 @@ class VoiceXP(commands.Cog):
             return
 
         guild_ids, user_ids, gains = leveling.build_voice_grant_payload(credits)
+        week_key, month_key = leveling.current_period_keys(wall_now)
         rows = await self.bot.db_pool.fetch(
-            _BATCH_GRANT_QUERY, guild_ids, user_ids, gains
+            _BATCH_GRANT_QUERY, guild_ids, user_ids, gains, week_key, month_key
         )
         self._stats["credited"] += len(credits)
         self._stats["writes"] += 1
@@ -327,6 +360,16 @@ class VoiceXP(commands.Cog):
             len(credits),
             evicted,
         )
+
+        # L6 lazy retention: piggyback the prune-decision on this tick, once
+        # per DISTINCT guild actually credited (not once per session) - the
+        # common case is a cache hit (a tuple compare, zero DB) on every one
+        # of them, so this never adds a real round trip except on the rare
+        # tick where a guild's week or month just rolled over.
+        for credited_guild_id in {c[0] for c in credits}:
+            await leveling_cog.maybe_prune_expired_periods(
+                credited_guild_id, wall_now
+            )
 
         # Level-up handful: the ONLY per-user awaits in the sweep, gated by the
         # PURE level_up_between test so a member who merely gained XP without

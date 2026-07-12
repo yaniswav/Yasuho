@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 21:33+0000\n"
+"POT-Creation-Date: 2026-07-12 21:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -2033,7 +2033,7 @@ msgstr "Τα μέλη κρατούν πλέον κάθε ρόλο ανταμοι
 msgid "Reward mode updated"
 msgstr "Η λειτουργία ανταμοιβών ενημερώθηκε"
 
-#: cogs/community/leveling.py:82
+#: cogs/community/leveling.py:96
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2042,60 +2042,92 @@ msgstr ""
 "{marker} **{name}**\n"
 "Επίπεδο **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:98
+#: cogs/community/leveling.py:105
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"{xp} XP"
+msgstr ""
+"{marker} **{name}**\n"
+"{xp} XP"
+
+#: cogs/community/leveling.py:123
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - επίπεδο **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:722
+#: cogs/community/leveling.py:132
+#, python-brace-format
+msgid "**#{rank}** {name} - {xp} XP"
+msgstr "**#{rank}** {name} - {xp} XP"
+
+#: cogs/community/leveling.py:841
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... και κέρδισε {roles}"
 
-#: cogs/community/leveling.py:730
+#: cogs/community/leveling.py:849
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
 
-#: cogs/community/leveling.py:737
+#: cogs/community/leveling.py:856
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
 
-#: cogs/community/leveling.py:948
+#: cogs/community/leveling.py:1067
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Κατάταξη | {name}"
 
-#: cogs/community/leveling.py:952 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:1071 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr "Κατάταξη"
 
-#: cogs/community/leveling.py:953 cogs/utility/searchweb.py:142
+#: cogs/community/leveling.py:1072 cogs/utility/searchweb.py:142
 msgid "Level"
 msgstr "Επίπεδο"
 
-#: cogs/community/leveling.py:954
+#: cogs/community/leveling.py:1073
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:956
+#: cogs/community/leveling.py:1075
 msgid "XP for next level"
 msgstr "XP για το επόμενο επίπεδο"
 
-#: cogs/community/leveling.py:978 cogs/community/leveling.py:1004
+#: cogs/community/leveling.py:1103
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Πίνακας κατάταξης | {guild}"
 
-#: cogs/community/leveling.py:979
+#: cogs/community/leveling.py:1108
 msgid "No one has earned any XP yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
 
-#: cogs/community/leveling.py:989
+#: cogs/community/leveling.py:1119 cogs/community/leveling.py:1173
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Χρήστης {uid}"
+
+#: cogs/community/leveling.py:1153
+#, python-brace-format
+msgid "Weekly leaderboard | {guild}"
+msgstr "Εβδομαδιαία κατάταξη | {guild}"
+
+#: cogs/community/leveling.py:1154
+msgid "No one has earned any XP this week yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP αυτή την εβδομάδα ακόμα!"
+
+#: cogs/community/leveling.py:1156
+#, python-brace-format
+msgid "Monthly leaderboard | {guild}"
+msgstr "Μηνιαία κατάταξη | {guild}"
+
+#: cogs/community/leveling.py:1159
+msgid "No one has earned any XP this month yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP αυτόν τον μήνα ακόμα!"
 
 #: cogs/community/profiles.py:15
 msgid "Switch friend code"

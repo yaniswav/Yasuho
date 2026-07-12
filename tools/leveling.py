@@ -18,6 +18,7 @@ import random
 import re
 import string
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 # Grant / cooldown defaults, matching the original hard-coded values. These are
 # also the level_config table's column defaults (schema.sql), so a freshly
@@ -678,6 +679,95 @@ def compute_multiplier(snapshot, channel_id, category_id, role_ids, now):
         event_factor = snapshot.event_factor
 
     return snapshot.global_factor * channel_factor * role_factor * event_factor
+
+
+# ============================================================
+# Period leaderboards (leveling L6): weekly/monthly XP rollups that ride the
+# SAME grant statements as the lifetime `levels` table (see xp_period in
+# schema.sql) - NO destructive resets, a period simply rolls to a new key.
+# Pure period-key maths and the lazy-prune decision live here; the writes
+# (both hot paths), the reads (/top weekly|monthly) and the per-guild "last
+# seen period" marker all live in the cog (cogs/community/leveling.py).
+# ============================================================
+
+PERIOD_WEEKLY = "weekly"
+PERIOD_MONTHLY = "monthly"
+PERIOD_KINDS = (PERIOD_WEEKLY, PERIOD_MONTHLY)
+
+# How many PRIOR periods (beyond the current one) a guild's xp_period rows
+# survive before the lazy prune drops them. Generous enough that a period
+# which just rolled over is never pruned out from under an in-flight read,
+# small enough that a guild's row count never grows without bound.
+PRUNE_PERIODS_BACK = 3
+
+
+def iso_week_period_key(now):
+    """The ISO year-week period key for ``now`` (e.g. ``"W2026-28"``).
+
+    Built from ``now.isocalendar()`` (ISO 8601: weeks run Monday..Sunday, and
+    the ISO YEAR a week belongs to can differ from the calendar year right at
+    the Dec/Jan boundary - e.g. Dec 29 2025 falls in ISO week 2026-W01), so
+    the key always names the week the timestamp actually falls in, never a
+    calendar-year mismatch. Zero-padded on both fields so keys for the same
+    ISO year sort lexically in chronological order (W2026-02 < W2026-10).
+    """
+    iso_year, iso_week, _iso_weekday = now.isocalendar()
+    return f"W{iso_year:04d}-{iso_week:02d}"
+
+
+def month_period_key(now):
+    """The calendar-month period key for ``now`` (e.g. ``"M2026-07"``).
+
+    Zero-padded like :func:`iso_week_period_key`, for the same lexical-sort
+    reason (and so the 'W'/'M' prefixes never collide with each other).
+    """
+    return f"M{now.year:04d}-{now.month:02d}"
+
+
+def current_period_keys(now):
+    """Both period keys (weekly, monthly) for the current instant ``now``.
+
+    The single place that pairs them, so a grant statement or a read can
+    never accidentally compute one key from a different ``now`` than the
+    other (a message grant writes BOTH in the same round trip - see the cog).
+    """
+    return iso_week_period_key(now), month_period_key(now)
+
+
+def weekly_prune_cutoff_key(now, periods_back=PRUNE_PERIODS_BACK):
+    """The oldest WEEKLY period key a prune must still KEEP (rows with a key
+    strictly less than this are dropped). Subtracting whole weeks keeps the
+    ISO year/week maths exact across a year boundary - unlike subtracting
+    calendar months, a week is a fixed 7 days, so plain timedelta arithmetic
+    is correct here.
+    """
+    return iso_week_period_key(now - timedelta(weeks=periods_back))
+
+
+def monthly_prune_cutoff_key(now, periods_back=PRUNE_PERIODS_BACK):
+    """The oldest MONTHLY period key a prune must still KEEP. Calendar months
+    are not a fixed number of days, so this walks back whole months by
+    integer arithmetic (a zero-based month-of-all-time index, rolling the
+    year over every 12) rather than subtracting a timedelta.
+    """
+    month_index = (now.year * 12 + (now.month - 1)) - periods_back
+    year, month0 = divmod(month_index, 12)
+    return f"M{year:04d}-{month0 + 1:02d}"
+
+
+def period_marker_changed(previous, current):
+    """Whether a guild's cached "last seen period" marker is stale.
+
+    ``previous`` is whatever the cog's per-guild marker cache holds for a
+    guild (``None`` for a guild never marked - cold since restart, or evicted
+    under cache pressure); ``current`` is the freshly computed ``(week_key,
+    month_key)`` pair. True exactly when the lazy prune should fire: either
+    the guild has never been marked, or at least one of the two periods
+    rolled over since the marker was last set. A plain identity/tuple
+    compare - called on every grant-eligible message and every voice-sweep
+    tick that credited a guild, so it must stay allocation-free, and does.
+    """
+    return previous is None or previous != current
 
 
 def build_voice_grant_payload(credits):

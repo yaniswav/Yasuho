@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 21:33+0000\n"
+"POT-Creation-Date: 2026-07-12 21:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -2033,7 +2033,7 @@ msgstr "メンバーは獲得したすべての報酬ロールを保持するよ
 msgid "Reward mode updated"
 msgstr "報酬モードを更新しました"
 
-#: cogs/community/leveling.py:82
+#: cogs/community/leveling.py:96
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2042,60 +2042,92 @@ msgstr ""
 "{marker} **{name}**\n"
 "レベル **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:98
+#: cogs/community/leveling.py:105
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"{xp} XP"
+msgstr ""
+"{marker} **{name}**\n"
+"{xp} XP"
+
+#: cogs/community/leveling.py:123
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - レベル **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:722
+#: cogs/community/leveling.py:132
+#, python-brace-format
+msgid "**#{rank}** {name} - {xp} XP"
+msgstr "**#{rank}** {name} - {xp} XP"
+
+#: cogs/community/leveling.py:841
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling.py:730
+#: cogs/community/leveling.py:849
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} がレベル **{level}** に到達しました！ ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling.py:737
+#: cogs/community/leveling.py:856
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} がレベル **{level}** に到達しました!"
 
-#: cogs/community/leveling.py:948
+#: cogs/community/leveling.py:1067
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "ランク | {name}"
 
-#: cogs/community/leveling.py:952 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:1071 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr "ランク"
 
-#: cogs/community/leveling.py:953 cogs/utility/searchweb.py:142
+#: cogs/community/leveling.py:1072 cogs/utility/searchweb.py:142
 msgid "Level"
 msgstr "レベル"
 
-#: cogs/community/leveling.py:954
+#: cogs/community/leveling.py:1073
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:956
+#: cogs/community/leveling.py:1075
 msgid "XP for next level"
 msgstr "次のレベルまでのXP"
 
-#: cogs/community/leveling.py:978 cogs/community/leveling.py:1004
+#: cogs/community/leveling.py:1103
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "リーダーボード | {guild}"
 
-#: cogs/community/leveling.py:979
+#: cogs/community/leveling.py:1108
 msgid "No one has earned any XP yet!"
 msgstr "まだ誰もXPを獲得していません!"
 
-#: cogs/community/leveling.py:989
+#: cogs/community/leveling.py:1119 cogs/community/leveling.py:1173
 #, python-brace-format
 msgid "User {uid}"
 msgstr "ユーザー {uid}"
+
+#: cogs/community/leveling.py:1153
+#, python-brace-format
+msgid "Weekly leaderboard | {guild}"
+msgstr "週間ランキング | {guild}"
+
+#: cogs/community/leveling.py:1154
+msgid "No one has earned any XP this week yet!"
+msgstr "今週はまだ誰もXPを獲得していません！"
+
+#: cogs/community/leveling.py:1156
+#, python-brace-format
+msgid "Monthly leaderboard | {guild}"
+msgstr "月間ランキング | {guild}"
+
+#: cogs/community/leveling.py:1159
+msgid "No one has earned any XP this month yet!"
+msgstr "今月はまだ誰もXPを獲得していません！"
 
 #: cogs/community/profiles.py:15
 msgid "Switch friend code"

@@ -262,10 +262,13 @@ async def test_organic_message_grants_xp(fake_pool):
     assert len(writes) == 1
     _method, query, args = writes[0]
     assert "INSERT INTO levels" in query
-    guild_id, user_id, gain = args
+    guild_id, user_id, gain, week_key, month_key = args
     assert (guild_id, user_id) == (1, 2)
     assert 15 <= gain <= 25
     assert msg.channel.sends == []  # no level-up announce mid-band
+    # L6: the same round trip also carries both period keys for xp_period.
+    assert week_key.startswith("W")
+    assert month_key.startswith("M")
 
 
 async def test_grant_honours_per_guild_xp_range(fake_pool):
@@ -1309,3 +1312,219 @@ async def test_active_event_boosts_the_grant(fake_pool):
         if c[0] == "execute" and "event_factor = NULL" in c[1]
     ]
     assert nulls == []  # a still-active event is never nulled
+
+
+# ---------------------------------------------------------------------------
+# Period leaderboards (L6): the grant query gaining period rows, the lazy
+# prune marker (maybe_prune_expired_periods), and the /top weekly|monthly
+# read shaping.
+# ---------------------------------------------------------------------------
+#
+# Period-key maths itself (ISO week edges, month rollover) is covered in
+# tests/tools/test_leveling_service.py; these pin the COG side: a message
+# grant carries BOTH period keys in the SAME round trip as the lifetime
+# levels write (one fetchval call, never two), the lazy prune fires only
+# once per rolled-over period (a cache hit is zero DB), and the `levels`
+# command's period branch reads xp_period and shapes entries WITHOUT a
+# "level" key while leaving the bare invocation byte-for-byte unchanged.
+
+
+def _execute_calls(fake_pool):
+    return [c for c in fake_pool.calls if c[0] == "execute"]
+
+
+def _xp_period_deletes(fake_pool):
+    return [c for c in _execute_calls(fake_pool) if "xp_period" in c[1]]
+
+
+async def test_organic_message_grant_query_is_one_round_trip_for_all_three_writes(
+    fake_pool,
+):
+    """One fetchval call carries the lifetime levels write AND both period
+    upserts (a single multi-CTE SQL command), never three separate queries."""
+    fake_pool.fetchval_return = 11000  # mid-band, no level-up noise
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    writes = _fetchval_calls(fake_pool)
+    assert len(writes) == 1
+    _method, query, _args = writes[0]
+    assert "INSERT INTO levels" in query
+    assert query.count("INSERT INTO xp_period") == 2  # the week AND month CTEs
+
+
+async def test_maybe_prune_expired_periods_fires_on_first_check_for_a_guild(
+    fake_pool,
+):
+    cog = Leveling(_make_bot(fake_pool))
+    now = discord.utils.utcnow()
+
+    await cog.maybe_prune_expired_periods(1, now)
+
+    deletes = _xp_period_deletes(fake_pool)
+    assert len(deletes) == 1
+    assert deletes[0][2][0] == 1  # guild_id
+    assert cog._period_markers.get(1) == leveling.current_period_keys(now)
+
+
+async def test_maybe_prune_expired_periods_is_a_cache_hit_when_unchanged(fake_pool):
+    cog = Leveling(_make_bot(fake_pool))
+    now = discord.utils.utcnow()
+    await cog.maybe_prune_expired_periods(1, now)
+    fake_pool.calls.clear()
+
+    await cog.maybe_prune_expired_periods(1, now)  # same instant -> same period
+
+    assert fake_pool.calls == []  # zero DB on the cache-hit path
+
+
+async def test_maybe_prune_expired_periods_refires_when_the_period_rolls_over(
+    fake_pool,
+):
+    cog = Leveling(_make_bot(fake_pool))
+    now = discord.utils.utcnow()
+    await cog.maybe_prune_expired_periods(1, now)
+    fake_pool.calls.clear()
+
+    later = now + datetime.timedelta(days=8)  # rolls the ISO week (and maybe month)
+    await cog.maybe_prune_expired_periods(1, later)
+
+    assert len(_xp_period_deletes(fake_pool)) == 1
+    assert cog._period_markers.get(1) == leveling.current_period_keys(later)
+
+
+async def test_maybe_prune_expired_periods_survives_db_error(fake_pool):
+    async def boom(*args, **kwargs):
+        raise RuntimeError("db down")
+
+    fake_pool.execute = boom
+    cog = Leveling(_make_bot(fake_pool))
+
+    await cog.maybe_prune_expired_periods(1)  # must not raise
+
+    # The marker is still set despite the failed DELETE, so a persistently
+    # failing guild does not retry the DELETE on every single message.
+    assert cog._period_markers.get(1) is not None
+
+
+async def test_on_message_grant_triggers_the_first_period_prune(fake_pool):
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    assert len(_xp_period_deletes(fake_pool)) == 1
+    assert 1 in cog._period_markers
+
+
+async def test_on_message_second_grant_same_period_skips_the_prune(fake_pool):
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, cooldown_seconds=0)  # both messages earn
+
+    await cog.on_message(_FakeMessage(content="one", guild_id=1, author_id=2))
+    await cog.on_message(_FakeMessage(content="two", guild_id=1, author_id=3))
+
+    assert len(_xp_period_deletes(fake_pool)) == 1  # only the first grant fired it
+
+
+# ---------------------------------------------------------------------------
+# /top weekly|monthly reads (the `levels` command's LeaderboardView).
+# ---------------------------------------------------------------------------
+
+
+class _FakeLBMember:
+    def __init__(self, uid, name):
+        self.id = uid
+        self.display_name = name
+        self.display_avatar = types.SimpleNamespace(url=f"https://avatar/{uid}")
+
+
+class _FakeLBGuild:
+    def __init__(self, guild_id=1, name="guild", members=None):
+        self.id = guild_id
+        self.name = name
+        self._members = {m.id: m for m in (members or [])}
+
+    def get_member(self, uid):
+        return self._members.get(uid)
+
+
+def _lb_route_fetch(fake_pool, levels_rows=None, period_rows=None):
+    """Routes `fetch` by target table, mirroring `_route_fetch` above."""
+
+    async def fetch(query, *args):
+        fake_pool.calls.append(("fetch", query, args))
+        if "FROM xp_period" in query:
+            return period_rows or []
+        if "FROM levels" in query:
+            return levels_rows or []
+        return []
+
+    fake_pool.fetch = fetch
+
+
+async def test_levels_bare_invocation_reads_the_lifetime_table_and_shows_levels(
+    fake_pool, make_context
+):
+    member = _FakeLBMember(2, "Ada")
+    _lb_route_fetch(fake_pool, levels_rows=[{"user_id": 2, "xp": 2500}])
+    cog = Leveling(_make_bot(fake_pool))
+    ctx = make_context(guild=_FakeLBGuild(1, members=[member]))
+
+    await cog.levels.callback(cog, ctx, period=None)
+
+    fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
+    assert len(fetches) == 1
+    query, args = fetches[0][1], fetches[0][2]
+    assert "FROM levels" in query and "xp_period" not in query
+    assert args == (1,)  # only guild_id - unchanged from before L6
+    view = ctx.sends[0][1]["view"]
+    container = view.children[0]
+    assert "Leaderboard | guild" in container.children[0].content
+    # A single entry -> no remainder, so the podium Section sits at index 2
+    # (title TextDisplay, Separator, Section).
+    assert "Level **5**" in container.children[2].children[0].content
+
+
+async def test_levels_weekly_reads_xp_period_for_the_current_week_and_hides_level(
+    fake_pool, make_context
+):
+    member = _FakeLBMember(2, "Ada")
+    now = discord.utils.utcnow()
+    week_key, _month_key = leveling.current_period_keys(now)
+    _lb_route_fetch(fake_pool, period_rows=[{"user_id": 2, "xp": 300}])
+    cog = Leveling(_make_bot(fake_pool))
+    ctx = make_context(guild=_FakeLBGuild(1, members=[member]))
+
+    await cog.levels.callback(cog, ctx, period="weekly")
+
+    fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
+    assert len(fetches) == 1
+    query, args = fetches[0][1], fetches[0][2]
+    assert "FROM xp_period" in query
+    assert args == (1, week_key)
+    view = ctx.sends[0][1]["view"]
+    text = view.children[0].children[2].children[0].content
+    assert "Level" not in text  # period views show XP, never a lifetime level
+    assert "300 XP" in text
+
+
+async def test_levels_monthly_empty_period_sends_the_period_specific_empty_embed(
+    fake_pool, make_context
+):
+    now = discord.utils.utcnow()
+    _week_key, month_key = leveling.current_period_keys(now)
+    _lb_route_fetch(fake_pool, period_rows=[])
+    cog = Leveling(_make_bot(fake_pool))
+    ctx = make_context(guild=_FakeLBGuild(1))
+
+    await cog.levels.callback(cog, ctx, period="monthly")
+
+    fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
+    assert fetches[0][2] == (1, month_key)
+    embed = ctx.sends[0][1]["embed"]
+    assert "this month" in embed.description

@@ -860,3 +860,106 @@ def test_compute_multiplier_role_ids_may_be_any_iterable():
         leveling.compute_multiplier(snapshot, 1, None, (rid for rid in [20]), _NOW)
         == 2.0
     )
+
+
+# ---------------------------------------------------------------------------
+# Period leaderboards (L6): period-key maths, prune cutoffs, marker staleness.
+# ---------------------------------------------------------------------------
+
+
+def _dt(year, month, day):
+    return datetime.datetime(year, month, day, tzinfo=datetime.timezone.utc)
+
+
+def test_iso_week_period_key_format():
+    # 2026-07-12 is a Sunday in ISO week 28 of 2026.
+    assert leveling.iso_week_period_key(_dt(2026, 7, 12)) == "W2026-28"
+
+
+def test_iso_week_period_key_crosses_forward_into_next_iso_year():
+    """Dec 29-31 2025 already belong to ISO week 2026-W01 (the ISO year a
+    late-December date falls in can run AHEAD of the calendar year)."""
+    assert leveling.iso_week_period_key(_dt(2025, 12, 29)) == "W2026-01"
+    assert leveling.iso_week_period_key(_dt(2025, 12, 31)) == "W2026-01"
+
+
+def test_iso_week_period_key_start_of_year_can_belong_to_the_prior_iso_year():
+    """Jan 1 2023 still belongs to ISO week 2022-W52 (the ISO year can run
+    BEHIND the calendar year at the other side of the same boundary)."""
+    assert leveling.iso_week_period_key(_dt(2023, 1, 1)) == "W2022-52"
+    assert leveling.iso_week_period_key(_dt(2023, 1, 2)) == "W2023-01"  # the Monday after
+
+
+def test_month_period_key_format():
+    assert leveling.month_period_key(_dt(2026, 7, 12)) == "M2026-07"
+    assert leveling.month_period_key(_dt(2026, 1, 1)) == "M2026-01"
+
+
+def test_current_period_keys_pairs_both_from_the_same_instant():
+    now = _dt(2026, 7, 12)
+    assert leveling.current_period_keys(now) == ("W2026-28", "M2026-07")
+
+
+def test_weekly_prune_cutoff_key_subtracts_whole_weeks():
+    now = _dt(2026, 7, 12)  # W2026-28
+    assert leveling.weekly_prune_cutoff_key(now) == "W2026-25"  # 3 weeks back
+
+
+def test_weekly_prune_cutoff_key_crosses_a_year_boundary():
+    now = _dt(2026, 1, 12)  # early January, ISO week 2026-W03
+    assert leveling.weekly_prune_cutoff_key(now) == "W2025-52"  # rolled into the prior ISO year
+
+
+def test_monthly_prune_cutoff_key_within_the_same_year():
+    assert (
+        leveling.monthly_prune_cutoff_key(_dt(2026, 7, 1), periods_back=3)
+        == "M2026-04"
+    )
+
+
+def test_monthly_prune_cutoff_key_handles_year_rollover():
+    assert (
+        leveling.monthly_prune_cutoff_key(_dt(2026, 2, 1), periods_back=3)
+        == "M2025-11"
+    )
+    assert (
+        leveling.monthly_prune_cutoff_key(_dt(2026, 1, 1), periods_back=1)
+        == "M2025-12"
+    )
+
+
+def test_prune_cutoff_keys_sort_lexically_before_the_current_period_key():
+    """The cutoff must sort STRICTLY before the current period key of the
+    same kind, so a ``period_key < cutoff`` DELETE never touches the
+    current (or the still-kept, recent) periods."""
+    now = _dt(2026, 7, 12)
+    week_key, month_key = leveling.current_period_keys(now)
+    assert leveling.weekly_prune_cutoff_key(now) < week_key
+    assert leveling.monthly_prune_cutoff_key(now) < month_key
+
+
+def test_period_marker_changed_none_previous_is_always_stale():
+    assert leveling.period_marker_changed(None, ("W2026-28", "M2026-07")) is True
+
+
+def test_period_marker_changed_same_pair_is_not_stale():
+    current = ("W2026-28", "M2026-07")
+    assert leveling.period_marker_changed(current, current) is False
+
+
+def test_period_marker_changed_week_rollover_is_stale():
+    assert (
+        leveling.period_marker_changed(
+            ("W2026-28", "M2026-07"), ("W2026-29", "M2026-07")
+        )
+        is True
+    )
+
+
+def test_period_marker_changed_month_rollover_is_stale():
+    assert (
+        leveling.period_marker_changed(
+            ("W2026-31", "M2026-07"), ("W2026-31", "M2026-08")
+        )
+        is True
+    )

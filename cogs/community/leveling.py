@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+from typing import Literal, Optional
 
 import discord
 from discord.ext import commands
@@ -40,6 +41,13 @@ _NO_XP_CACHE_CAP = 2048
 # leveling enabled AND boosts/an event configured - see self._multipliers.
 _MULTIPLIER_CACHE_CAP = 2048
 
+# Per-guild "last seen period" marker cache ceiling (L6). Same sizing
+# rationale as _NO_XP_CACHE_CAP/_MULTIPLIER_CACHE_CAP: comfortably above any
+# plausible number of guilds with leveling enabled - see self._period_markers
+# and maybe_prune_expired_periods. An evicted guild simply re-prunes on its
+# next grant (a rare, harmless extra DELETE), never a correctness issue.
+_PERIOD_MARKER_CACHE_CAP = 2048
+
 # The full set of level_config columns the hot-path LevelConfig mirror is built
 # from. EVERY read that refreshes a cached config - cog_load's bulk SELECT and
 # each writer's RETURNING - must project ALL of them, or a writer that omits one
@@ -64,7 +72,10 @@ class LeaderboardView(discord.ui.LayoutView):
     """
 
     def __init__(self, title, entries, *, timeout=180):
-        # entries: list of dicts with rank, name, level, xp, avatar_url.
+        # entries: list of dicts with rank, name, xp, avatar_url. The all-time
+        # view also carries a "level" key; the L6 period views (weekly/monthly)
+        # omit it - _build branches on ``"level" in entry`` and renders XP only
+        # when it is absent, so never index entry["level"] unconditionally.
         super().__init__(timeout=timeout)
         self.message = None
         self._build(title, entries)
@@ -79,12 +90,23 @@ class LeaderboardView(discord.ui.LayoutView):
 
         for entry in podium:
             marker = _MEDALS.get(entry["rank"], "**#{rank}**".format(rank=entry["rank"]))
-            text = _("{marker} **{name}**\nLevel **{level}** - {xp} XP").format(
-                marker=marker,
-                name=entry["name"],
-                level=entry["level"],
-                xp=entry["xp"],
-            )
+            if "level" in entry:
+                # All-time view: levels are lifetime-only, so this is the ONLY
+                # branch that ever shows one - byte-for-byte the original text.
+                text = _("{marker} **{name}**\nLevel **{level}** - {xp} XP").format(
+                    marker=marker,
+                    name=entry["name"],
+                    level=entry["level"],
+                    xp=entry["xp"],
+                )
+            else:
+                # Period view (L6, /top weekly|monthly): no lifetime level to
+                # show, just the XP earned within the current period.
+                text = _("{marker} **{name}**\n{xp} XP").format(
+                    marker=marker,
+                    name=entry["name"],
+                    xp=entry["xp"],
+                )
             container.add_item(
                 discord.ui.Section(
                     discord.ui.TextDisplay(text),
@@ -94,15 +116,25 @@ class LeaderboardView(discord.ui.LayoutView):
 
         if remainder:
             container.add_item(discord.ui.Separator())
-            lines = [
-                _("**#{rank}** {name} - level **{level}** ({xp} XP)").format(
-                    rank=entry["rank"],
-                    name=entry["name"],
-                    level=entry["level"],
-                    xp=entry["xp"],
-                )
-                for entry in remainder
-            ]
+            lines = []
+            for entry in remainder:
+                if "level" in entry:
+                    lines.append(
+                        _("**#{rank}** {name} - level **{level}** ({xp} XP)").format(
+                            rank=entry["rank"],
+                            name=entry["name"],
+                            level=entry["level"],
+                            xp=entry["xp"],
+                        )
+                    )
+                else:
+                    lines.append(
+                        _("**#{rank}** {name} - {xp} XP").format(
+                            rank=entry["rank"],
+                            name=entry["name"],
+                            xp=entry["xp"],
+                        )
+                    )
             container.add_item(discord.ui.TextDisplay("\n".join(lines)))
 
         self.add_item(container)
@@ -152,6 +184,13 @@ class Leveling(commands.Cog):
         # cogs/community/level_config_ui.py after every boost/event write),
         # same BoundedLRU sizing rationale.
         self._multipliers: BoundedLRU = BoundedLRU(_MULTIPLIER_CACHE_CAP)
+        # Per-guild "last seen period" marker (L6): the (week_key, month_key)
+        # pair this guild's most recent grant/credit already observed. Read
+        # by maybe_prune_expired_periods to decide, in O(1) with zero DB on
+        # the common case, whether a period just rolled over for this guild
+        # and its xp_period rows are due for a lazy prune. Bounded like
+        # self._no_xp / self._multipliers above (same rationale).
+        self._period_markers: BoundedLRU = BoundedLRU(_PERIOD_MARKER_CACHE_CAP)
 
     async def cog_load(self):
         """Load every enabled guild's leveling config once, at startup.
@@ -472,6 +511,46 @@ class Leveling(commands.Cog):
                 "Failed to lazily clear expired XP event for guild %s", guild_id
             )
 
+    async def maybe_prune_expired_periods(self, guild_id, now=None):
+        """Lazily drop a guild's stale xp_period rows (L6 retention).
+
+        Fires a DELETE ONLY on the first grant/credit of a NEW period for
+        this guild (week or month rolled over since the marker was last set)
+        - never a background timer, never on every grant. The common case
+        (nothing rolled over since the last check) is a single BoundedLRU
+        read plus a tuple compare via tools.leveling.period_marker_changed:
+        zero DB, so this is safe to await from both hot paths (on_message
+        and the voice sweep, once per credited guild - see their call
+        sites). Never raises: a failed prune only leaves a few extra
+        periods' worth of rows until the NEXT rollover retries it, and the
+        marker is updated regardless so a persistently-failing guild does
+        not retry the DELETE on every single message.
+        """
+        now = now or discord.utils.utcnow()
+        current = leveling.current_period_keys(now)
+        previous = self._period_markers.get(guild_id)
+        if not leveling.period_marker_changed(previous, current):
+            return
+        self._period_markers[guild_id] = current
+        try:
+            await self.bot.db_pool.execute(
+                """
+                DELETE FROM xp_period
+                WHERE guild_id = $1
+                  AND (
+                      (period_key LIKE 'W%' AND period_key < $2)
+                      OR (period_key LIKE 'M%' AND period_key < $3)
+                  );
+                """,
+                guild_id,
+                leveling.weekly_prune_cutoff_key(now),
+                leveling.monthly_prune_cutoff_key(now),
+            )
+        except Exception:
+            log.exception(
+                "Failed to prune expired xp_period rows for guild %s", guild_id
+            )
+
     def is_enabled(self, guild_id):
         """Whether leveling is currently ON for a guild (in-memory, no DB).
 
@@ -561,6 +640,10 @@ class Leveling(commands.Cog):
         # ``is_trivial`` attribute check: the role-id generator is never built
         # and compute_multiplier is never even called, so a guild with no
         # multiplier configuration pays ZERO extra allocation here.
+        # Wall-clock "now", shared by the multiplier event check AND the L6
+        # period-key maths below - one clock read per message, not two.
+        now = discord.utils.utcnow()
+
         multiplier_snapshot = self._multipliers.get(message.guild.id)
         if multiplier_snapshot is None:
             multiplier_snapshot = await self.refresh_multiplier_snapshot(
@@ -577,7 +660,7 @@ class Leveling(commands.Cog):
                 message.channel.id,
                 getattr(message.channel, "category_id", None),
                 role_ids,
-                discord.utils.utcnow(),
+                now,
             )
             gain = leveling.apply_multiplier(gain, multiplier)
             if gain <= 0:
@@ -589,17 +672,53 @@ class Leveling(commands.Cog):
                 return
 
         try:
+            # L6: a grant credits the lifetime `levels` total AND both period
+            # rollups (xp_period, weekly + monthly) in ONE round trip. This is
+            # a SINGLE parameterized SQL command (a WITH query whose CTEs are
+            # themselves the three upserts) rather than three separate
+            # statements joined by ';': asyncpg's extended query protocol
+            # (used whenever arguments are passed) prepares exactly ONE
+            # command, so a multi-statement string WOULD raise
+            # "cannot insert multiple commands into a prepared statement".
+            # PostgreSQL guarantees every data-modifying CTE in a WITH clause
+            # executes exactly once, in full, even when the primary SELECT
+            # never reads its output (see "Data-Modifying Statements in
+            # WITH" in the Postgres docs) - so `week`/`month` below run
+            # unconditionally even though only `xp_grant` is selected from.
+            # NOTE: the CTE is named `xp_grant`, not `grant` - GRANT is a
+            # reserved SQL keyword and Postgres rejects it unquoted as a CTE
+            # name ("syntax error at or near 'grant'"), confirmed live.
+            week_key, month_key = leveling.current_period_keys(now)
             query = """
-                INSERT INTO levels (guild_id, user_id, xp)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (guild_id, user_id)
-                DO UPDATE SET xp = levels.xp + $3
-                RETURNING xp;
+                WITH xp_grant AS (
+                    INSERT INTO levels (guild_id, user_id, xp)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (guild_id, user_id)
+                    DO UPDATE SET xp = levels.xp + $3
+                    RETURNING xp
+                ), week AS (
+                    INSERT INTO xp_period (guild_id, user_id, period_key, xp)
+                    VALUES ($1, $2, $4, $3)
+                    ON CONFLICT (guild_id, user_id, period_key)
+                    DO UPDATE SET xp = xp_period.xp + $3
+                ), month AS (
+                    INSERT INTO xp_period (guild_id, user_id, period_key, xp)
+                    VALUES ($1, $2, $5, $3)
+                    ON CONFLICT (guild_id, user_id, period_key)
+                    DO UPDATE SET xp = xp_period.xp + $3
+                )
+                SELECT xp FROM xp_grant;
                 """
 
             new_xp = await self.bot.db_pool.fetchval(
-                query, message.guild.id, message.author.id, gain
+                query,
+                message.guild.id,
+                message.author.id,
+                gain,
+                week_key,
+                month_key,
             )
+            await self.maybe_prune_expired_periods(message.guild.id, now)
             new_level = leveling.level_up_between(new_xp - gain, new_xp)
 
             if new_level is not None:
@@ -961,48 +1080,108 @@ class Leveling(commands.Cog):
 
     @commands.hybrid_command(aliases=["leaderboard", "top"])
     @commands.guild_only()
-    async def levels(self, ctx):
-        """Shows the ranked members of the guild."""
+    @discord.app_commands.describe(
+        period="Leave empty for the all-time leaderboard, or pick weekly/monthly."
+    )
+    async def levels(
+        self, ctx, period: Optional[Literal["weekly", "monthly"]] = None
+    ):
+        """Shows the ranked members of the guild (add weekly/monthly for a
+        rolling period leaderboard instead of the all-time one)."""
 
-        query = """
-            SELECT user_id, xp FROM levels
-            WHERE guild_id = $1
-            ORDER BY xp DESC
-            LIMIT 50;
-            """
+        if period is None:
+            # UNCHANGED byte-for-byte from before the L6 period leaderboards:
+            # the bare invocation's query, title and entry shape (level shown)
+            # are exactly what they always were.
+            query = """
+                SELECT user_id, xp FROM levels
+                WHERE guild_id = $1
+                ORDER BY xp DESC
+                LIMIT 50;
+                """
+            rows = await self.bot.db_pool.fetch(query, ctx.guild.id)
+            title = _("Leaderboard | {guild}").format(guild=ctx.guild.name)
 
-        rows = await self.bot.db_pool.fetch(query, ctx.guild.id)
+            if not rows:
+                embed = discord.Embed(
+                    title=title,
+                    description=_("No one has earned any XP yet!"),
+                    colour=random_colour(),
+                )
+                return await ctx.send(embed=embed)
 
-        if not rows:
-            embed = discord.Embed(
-                title=_("Leaderboard | {guild}").format(guild=ctx.guild.name),
-                description=_("No one has earned any XP yet!"),
-                colour=random_colour(),
+            entries = []
+            for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
+                uid = row["user_id"]
+                xp = row["xp"]
+                member = ctx.guild.get_member(uid)
+                name = (
+                    member.display_name if member else _("User {uid}").format(uid=uid)
+                )
+                avatar_url = (
+                    member.display_avatar.url if member else _DEFAULT_AVATAR_URL
+                )
+                entries.append(
+                    {
+                        "rank": index,
+                        "name": name,
+                        "level": self.level_for_xp(xp),
+                        "xp": xp,
+                        "avatar_url": avatar_url,
+                    }
+                )
+        else:
+            # L6 period view: reads xp_period for the CURRENT period key
+            # (guild_id, period_key) -> the covering index
+            # xp_period_guild_period_xp_idx serves this as a pure range scan,
+            # no sort. Levels are lifetime-only, so entries here carry XP but
+            # no "level" key - LeaderboardView renders that shape without it.
+            now = discord.utils.utcnow()
+            week_key, month_key = leveling.current_period_keys(now)
+            period_key = (
+                week_key if period == leveling.PERIOD_WEEKLY else month_key
             )
-            return await ctx.send(embed=embed)
+            query = """
+                SELECT user_id, xp FROM xp_period
+                WHERE guild_id = $1 AND period_key = $2
+                ORDER BY xp DESC
+                LIMIT 50;
+                """
+            rows = await self.bot.db_pool.fetch(query, ctx.guild.id, period_key)
 
-        entries = []
-        for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
-            uid = row["user_id"]
-            xp = row["xp"]
-            member = ctx.guild.get_member(uid)
-            name = member.display_name if member else _("User {uid}").format(uid=uid)
-            avatar_url = member.display_avatar.url if member else _DEFAULT_AVATAR_URL
-            entries.append(
-                {
-                    "rank": index,
-                    "name": name,
-                    "level": self.level_for_xp(xp),
-                    "xp": xp,
-                    "avatar_url": avatar_url,
-                }
-            )
+            if period == leveling.PERIOD_WEEKLY:
+                title = _("Weekly leaderboard | {guild}").format(guild=ctx.guild.name)
+                empty_text = _("No one has earned any XP this week yet!")
+            else:
+                title = _("Monthly leaderboard | {guild}").format(
+                    guild=ctx.guild.name
+                )
+                empty_text = _("No one has earned any XP this month yet!")
+
+            if not rows:
+                embed = discord.Embed(
+                    title=title, description=empty_text, colour=random_colour()
+                )
+                return await ctx.send(embed=embed)
+
+            entries = []
+            for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
+                uid = row["user_id"]
+                xp = row["xp"]
+                member = ctx.guild.get_member(uid)
+                name = (
+                    member.display_name if member else _("User {uid}").format(uid=uid)
+                )
+                avatar_url = (
+                    member.display_avatar.url if member else _DEFAULT_AVATAR_URL
+                )
+                entries.append(
+                    {"rank": index, "name": name, "xp": xp, "avatar_url": avatar_url}
+                )
 
         # A LayoutView carries its own content: send it with no embed/content, and
         # suppress mentions since TextDisplay resolves them (unlike an embed).
-        view = LeaderboardView(
-            _("Leaderboard | {guild}").format(guild=ctx.guild.name), entries
-        )
+        view = LeaderboardView(title, entries)
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )

@@ -198,6 +198,35 @@ CREATE TABLE IF NOT EXISTS level_no_xp (
 );
 CREATE INDEX IF NOT EXISTS level_no_xp_guild_idx ON level_no_xp (guild_id);
 
+-- Per-(guild, user, period) XP rollup (leveling L6): weekly/monthly
+-- leaderboards alongside the lifetime `levels` table above. NO destructive
+-- resets - a period simply rolls to a new key once it ends; old rows are
+-- pruned LAZILY (see below), never wiped by a reset job. Written by the SAME
+-- statements as every `levels` grant, IN THE SAME round trip (a single
+-- multi-CTE SQL command - see cogs/community/leveling.py's on_message and
+-- cogs/community/voice_xp.py's batched sweep upsert), never a separate query.
+-- ``period_key`` is pure date maths from UTC "now" (tools.leveling.
+-- current_period_keys): ``W<iso_year>-<iso_week>`` (ISO year-week, e.g.
+-- 'W2026-28') for the weekly view, ``M<year>-<month>`` (e.g. 'M2026-07') for
+-- the monthly view, both zero-padded so period keys of the same kind sort
+-- lexically in chronological order - a grant writes BOTH keys every time.
+-- Retention: rows older than ~3 periods (tools.leveling.PRUNE_PERIODS_BACK)
+-- are dropped by a cheap DELETE piggybacked on the first grant/credit of a
+-- NEW period per guild - decided by an in-memory "last seen period" marker
+-- on the Leveling cog (tools.leveling.period_marker_changed), never a
+-- background timer.  cogs/community/leveling.py, cogs/community/voice_xp.py
+CREATE TABLE IF NOT EXISTS xp_period (
+    guild_id   BIGINT  NOT NULL,
+    user_id    BIGINT  NOT NULL,
+    period_key TEXT    NOT NULL,   -- 'W<iso_year>-<iso_week>' | 'M<year>-<month>'
+    xp         INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, user_id, period_key)
+);
+-- /top weekly|monthly: WHERE guild_id AND period_key ORDER BY xp DESC LIMIT N
+-- -> index range scan, no sort (mirrors levels_guild_xp_idx below).
+CREATE INDEX IF NOT EXISTS xp_period_guild_period_xp_idx
+    ON xp_period (guild_id, period_key, xp DESC);
+
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
     guild_id   BIGINT  PRIMARY KEY,
