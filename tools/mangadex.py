@@ -98,21 +98,28 @@ def search_manga_request(title, limit=SEARCH_LIMIT):
     return url, params, _headers()
 
 
-def manga_feed_request(mangadex_id, language=DEFAULT_LANGUAGE, limit=FEED_LIMIT):
+def manga_feed_request(mangadex_id, language=DEFAULT_LANGUAGE, limit=FEED_LIMIT, offset=0):
     """Build the per-manga chapter-feed request for one manga UUID.
 
     Returns ``(url, params, headers)`` for
     ``GET /manga/{uuid}/feed?translatedLanguage[]=<lang>&order[readableAt]=desc``.
     The response is normalised by :func:`parse_chapter_feed`. This is the ONLY
     supported chapter source (the global ``/chapter`` feed is gap-unsafe).
+
+    ``offset`` (clamped to >= 0) lets the caller page BACKWARD through the
+    newest-first feed: the cog walks pages of ``limit`` until it reaches a chapter
+    at or below its stored cursor, so a manga whose round-robin poll interval
+    widened past a single page cannot silently skip the older overflow.
     """
 
     limit = max(1, min(int(limit), 100))
+    offset = max(0, int(offset))
     url = "{base}/manga/{uuid}/feed".format(base=BASE_URL, uuid=mangadex_id)
     params = [
         ("translatedLanguage[]", str(language)),
         ("order[readableAt]", "desc"),
         ("limit", str(limit)),
+        ("offset", str(offset)),
     ]
     return url, params, _headers()
 

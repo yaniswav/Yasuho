@@ -85,6 +85,14 @@ REQUEST_SPACING = 2.0
 # Auto-disable a feed after this many consecutive delivery failures.
 MAX_DELIVERY_FAILURES = 10
 
+# AniList's ``userId_in`` array filter accepts up to ~10k ids. The poller already
+# chunks the followed-id union by ``PER_PAGE`` (50) per request, so no single
+# request's ``userId_in`` ever approaches that cap - each chunk carries at most 50
+# ids. This threshold is a pure operational signal: if the TOTAL followed union
+# ever grows this large the request count (ceil(union / 50) chunks per tick) is
+# worth an operator's attention long before the API filter itself is a concern.
+IN_FILTER_WARN_AT = 9000
+
 
 # --- GraphQL ----------------------------------------------------------------
 
@@ -2560,6 +2568,18 @@ class AniListFeed(commands.Cog):
             followed_ids.add(row["anilist_user_id"])
         if not followed_ids:
             return  # nobody followed anywhere -> no API call
+
+        # Operational guard: the followed union drives the per-tick request count
+        # (ceil(len / PER_PAGE) chunks) and, in the limit, AniList's ~10k userId_in
+        # cap. Chunking keeps each request tiny, so this only ever warns; it never
+        # drops a follow.
+        if len(followed_ids) >= IN_FILTER_WARN_AT:
+            log.warning(
+                "AniList feed: %s followed users is approaching AniList's ~10k "
+                "userId_in cap (%s chunk requests/tick); consider sharding feeds",
+                len(followed_ids),
+                -(-len(followed_ids) // PER_PAGE),
+            )
 
         last_id, last_created = await self._load_state()
 

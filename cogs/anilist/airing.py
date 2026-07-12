@@ -59,6 +59,7 @@ from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
 from tools import i18n
+from tools import round_robin as rr
 from tools.http import TIMEOUT
 from tools.i18n import _
 
@@ -86,9 +87,34 @@ MAX_SCHEDULE_PAGES = 5
 LIST_TTL = 1800.0
 LIST_SWEEP_AT = 500
 
-# At most this many stale per-user list refreshes per tick, so a large opt-in
-# base cannot burst the rate limit: the rest refresh on later ticks (staggered).
-MAX_LIST_REFRESHES_PER_TICK = 5
+# CONSTANT per-tick watch-list request budget, covering missing AND stale
+# refreshes together (missing prioritised so the warmup completes). Sized so a
+# 1000-guild cold start cannot burst the rate limit: at most this many public
+# list fetches per tick regardless of how many users opted in, the rest riding
+# later ticks through the fair round-robin wheel. The warmup after a cold start
+# then takes ceil(missing / LIST_FETCH_BUDGET) ticks; raising this shortens the
+# warmup linearly at the cost of more requests per tick. This paces THIS poller on
+# its own - the burst is REQUEST_SPACING-spaced and averages far below the degraded
+# 30/min over the 600s tick (during the warmup the schedules fetch is held, so the
+# budget is the ONLY request cost of a warming tick). It does NOT bound the
+# AGGREGATE across the airing/chapters/feed pollers, which all share the one
+# unauthenticated AniList endpoint and can briefly overlap when their ticks coincide;
+# that spike is absorbed by the per-poller 429 embargo (each backs off and holds its
+# cursor, so no airing is lost), and the chapters poller is phase-staggered off
+# airing (chapters.POLL_PHASE_OFFSET) so the two B2 pollers' AniList bursts never
+# overlap. The in-memory cache also means a restart re-runs this warmup (a bounded
+# ceil(N / budget)-tick window of no airing DMs before the cursor releases).
+LIST_FETCH_BUDGET = 10
+
+# After this many CONSECUTIVE list-fetch failures for one tracked user (no success
+# in between), the poller caches an EMPTY watch-list for that user so its
+# permanently-failing fetch cannot hold the GLOBAL airing cursor - and thus every
+# user's airing notifications - forever. The trigger is a genuinely dead input: a
+# deleted / renamed / deactivated AniList account, or a chronically timing-out
+# profile. A dead account has no airings to lose; a healthy user hit by a transient
+# blip re-caches its real list on the next success, which clears the counter, so it
+# is never silently dropped. See :meth:`AniListAiring._refresh_lists`.
+LIST_FAIL_THRESHOLD = 3
 
 
 # --- GraphQL ----------------------------------------------------------------
@@ -211,6 +237,31 @@ def plan_airing_channel_posts(aired, channel_media):
                 guild_id, channel_id = key
                 posts.append((guild_id, channel_id, media_id, episode))
     return posts
+
+
+def warmup_status(tracked_user_ids, cached_user_ids):
+    """Decide whether the GLOBAL airing cursor must be held this tick (C4 gate).
+
+    ``tracked_user_ids`` is every tracked AniList user (the DM opt-ins whose
+    Watching list feeds the tracked-media union); ``cached_user_ids`` is whatever
+    is currently in the per-user list cache (a set/dict of AniList ids).
+
+    Returns ``(loaded, total, holding)``. ``holding`` is ``True`` while ANY tracked
+    user's list is not yet cached, and in that state the airing poller MUST hold the
+    global cursor - skip the schedules fetch AND the cursor advance entirely for the
+    tick. This is the C4 invariant made explicit: the cursor advances over the
+    tracked-media union, so letting it move while a tracked user's media is still
+    missing from the union would drag it past that user's airings and drop those
+    episodes for good (worst right after a cold start, when the in-memory cache is
+    empty and every list is missing). Holding until the union is complete loses zero
+    episodes at the cost of a bounded, few-ticks warmup. ``loaded`` / ``total`` drive
+    the INFO warmup-progress log. Pure and total.
+    """
+
+    tracked = set(tracked_user_ids)
+    total = len(tracked)
+    loaded = sum(1 for aid in tracked if aid in cached_user_ids)
+    return loaded, total, loaded < total
 
 
 # --- Seen button ------------------------------------------------------------
@@ -546,11 +597,21 @@ class AniListAiring(commands.Cog):
         self.bot = bot
         # Unix timestamp before which the poller stays quiet (429 embargo).
         self._embargo_until = 0
-        # Per-tick request pacing flag (reset each tick in _tick).
+        # Per-tick request pacing flag + counter (both reset each tick in _tick).
         self._spaced = False
+        self._req_count = 0
         # anilist_user_id -> (monotonic_ts, {media_id: progress}). Bounded cache,
         # swept past a hard size cap - the house pattern (see cogs/anilist/account).
         self._list_cache: dict = {}
+        # anilist_user_id -> consecutive list-fetch failures since its last success.
+        # Drives the LIST_FAIL_THRESHOLD escape hatch so one permanently-failing list
+        # can never freeze the global cursor for everyone (see _refresh_lists).
+        self._list_fail_counts: dict = {}
+        # Fair round-robin wheel markers for the watch-list refresh budget: one for
+        # the missing (never-cached) slice, one for the stale slice. In-memory only
+        # (a restart restarts the wheel, which is harmless); see tools.round_robin.
+        self._missing_wheel_after = None
+        self._stale_wheel_after = None
         self._poll_airing.start()
 
     async def cog_load(self):
@@ -618,6 +679,7 @@ class AniListAiring(commands.Cog):
         if self._spaced:
             await asyncio.sleep(REQUEST_SPACING)
         self._spaced = True
+        self._req_count += 1
 
     # ------------------------------------------------------------------
     # Per-user CURRENT-list cache (bounded, house pattern)
@@ -675,41 +737,88 @@ class AniListAiring(commands.Cog):
         return out
 
     async def _refresh_lists(self, anilist_user_ids, now):
-        """Refresh every MISSING list this tick, plus a throttled slice of stale ones.
+        """Refresh watch-lists under a CONSTANT per-tick budget, missing first.
 
         ``anilist_user_ids`` is every DM opt-in's AniList user (the channel fan-out
         no longer derives from followed users' lists - it reads explicit
-        subscriptions instead). A never-cached (missing) list is ALWAYS refreshed
-        before the schedules fetch. The airing cursor is global and advances over
-        the tracked-media union, so leaving a tracked user out of the union would
-        drag the cursor past that user's airings and drop those episodes for good -
-        worst right after a restart, when every list is uncached. Genuinely
-        stale-but-present lists keep serving their last-known entries meanwhile, so
-        they stay throttled to :data:`MAX_LIST_REFRESHES_PER_TICK` per tick (the
-        rest ride later ticks) and steady-state staleness cannot burst the rate
-        limit. Requests are paced by :meth:`_space`. A single user's non-429 failure
-        is skipped; a 429 propagates so the tick can set an embargo across the
-        whole poll.
+        subscriptions instead). Splits them into never-cached (missing) and
+        cached-but-stale, then spends at most :data:`LIST_FETCH_BUDGET` requests
+        this tick: MISSING lists first - so the warmup completes and the caller can
+        release the held global cursor - then STALE ones with whatever budget
+        remains. Both slices are drawn through a fair round-robin wheel
+        (:func:`tools.round_robin.next_batch`), so a single user whose list keeps
+        failing to load can never starve the rest, and a 1000-guild cold start
+        cannot burst the rate limit: the remainder rides later ticks. The caller
+        (:meth:`_tick`) HOLDS the global cursor until every missing list is loaded,
+        so a deferred user's airings are never skipped - only delayed by the
+        warmup. Requests are paced by :meth:`_space`. A single user's non-429
+        failure is skipped (it stays missing/stale and retries on a later tick),
+        EXCEPT that after :data:`LIST_FAIL_THRESHOLD` consecutive failures its list is
+        cached EMPTY (with a WARNING) so a permanently-dead account cannot hold the
+        global cursor for everyone forever; a later success re-caches the real list
+        and clears the counter. A 429 propagates so the tick can set an embargo across
+        the whole poll.
         """
 
-        missing = []
-        stale_present = []
-        for aid in sorted(anilist_user_ids):
-            if aid not in self._list_cache:
-                missing.append(aid)
-            elif self._list_is_stale(aid, now):
-                stale_present.append(aid)
+        missing = [aid for aid in anilist_user_ids if aid not in self._list_cache]
+        stale = [
+            aid
+            for aid in anilist_user_ids
+            if aid in self._list_cache and self._list_is_stale(aid, now)
+        ]
 
-        for aid in missing + stale_present[:MAX_LIST_REFRESHES_PER_TICK]:
+        to_fetch = []
+        if missing:
+            batch, self._missing_wheel_after = rr.next_batch(
+                missing, self._missing_wheel_after, LIST_FETCH_BUDGET
+            )
+            to_fetch.extend(batch)
+        remaining = LIST_FETCH_BUDGET - len(to_fetch)
+        if remaining > 0 and stale:
+            batch, self._stale_wheel_after = rr.next_batch(
+                stale, self._stale_wheel_after, remaining
+            )
+            to_fetch.extend(batch)
+
+        for aid in to_fetch:
             await self._space()
             try:
                 entries = await self._fetch_public_list(aid)
             except _FetchError as exc:
-                log.warning(
-                    "AniList airing: list refresh failed for user %s (%s)", aid, exc
-                )
+                fails = self._list_fail_counts.get(aid, 0) + 1
+                self._list_fail_counts[aid] = fails
+                if fails >= LIST_FAIL_THRESHOLD:
+                    # Escape hatch (do NOT remove): a list that raises on EVERY tick -
+                    # a deleted / renamed / deactivated account, or a chronically
+                    # timing-out profile - would otherwise keep warmup_status HOLDING
+                    # the global cursor forever, blacking out airing for EVERYONE. So
+                    # after LIST_FAIL_THRESHOLD straight failures cache it EMPTY: the
+                    # warmup then counts it loaded and the cursor releases. A dead
+                    # account has no airings to lose; a later success re-caches the
+                    # real list and clears the counter, so a healthy user hit by a
+                    # transient blip is never silently dropped.
+                    log.warning(
+                        "AniList airing: list refresh failed %s times running for "
+                        "user %s (%s); caching an empty list so one dead account "
+                        "cannot hold the global cursor - a later success restores it",
+                        fails,
+                        aid,
+                        exc,
+                    )
+                    self._list_cache_put(aid, {}, now)
+                    self._list_fail_counts.pop(aid, None)
+                else:
+                    log.warning(
+                        "AniList airing: list refresh failed for user %s (%s), "
+                        "attempt %s/%s",
+                        aid,
+                        exc,
+                        fails,
+                        LIST_FAIL_THRESHOLD,
+                    )
                 continue
             self._list_cache_put(aid, entries, now)
+            self._list_fail_counts.pop(aid, None)
 
     async def _fetch_schedules(self, media_ids, cursor, now):
         """Fetch aired schedules in ``(cursor, now]``, paginating on full pages.
@@ -861,14 +970,15 @@ class AniListAiring(commands.Cog):
             return
 
         self._spaced = False
+        self._req_count = 0
         now_mono = time.monotonic()
 
         # a. Tracked AniList users = every DM opt-in (the channel fan-out is driven
         # by explicit subscriptions, not by followed users' lists). Refresh their
-        # public Watching lists (missing in full, stale throttled) before the
-        # schedules fetch: the cursor advances over the tracked-media union, so a
-        # tracked user missing from the union would drag it past their airings (the
-        # C4 lesson).
+        # public Watching lists under a constant per-tick budget (missing first,
+        # then stale) before the schedules fetch: the cursor advances over the
+        # tracked-media union, so a tracked user missing from the union would drag
+        # it past their airings (the C4 lesson).
         tracked_users = {row["anilist_user_id"] for row in optins}
         try:
             await self._refresh_lists(tracked_users, now_mono)
@@ -880,11 +990,31 @@ class AniListAiring(commands.Cog):
             )
             return
 
-        # Build the tracked-media union plus the two fan-out maps. Every tracked
-        # list is refreshed above before we reach here (missing ones in full), so a
-        # user is skipped only when their list fetch failed this tick - never merely
-        # because it had not been cached yet. DM recipients keep the per-user
-        # {media_id: progress} the DM planner gates on.
+        # Warmup gate (C4). The airing cursor is GLOBAL, so it must not advance
+        # while any tracked user's watch-list is still missing from the union - that
+        # would skip their airings for good. Until every missing list has loaded
+        # across successive budgeted ticks, HOLD: skip the schedules fetch AND the
+        # cursor advance entirely for this tick. A cold start (empty in-memory
+        # cache) thus loses zero episodes at the cost of a bounded warmup of
+        # ceil(missing / LIST_FETCH_BUDGET) ticks; channel-sub airings share the one
+        # cursor, so they wait on the warmup too.
+        loaded, total, holding = warmup_status(tracked_users, self._list_cache)
+        if holding:
+            log.info(
+                "AniList airing: warming up - %s/%s watch-lists loaded, %s to go; "
+                "holding the global cursor this tick (requests=%s)",
+                loaded,
+                total,
+                total - loaded,
+                self._req_count,
+            )
+            return
+
+        # Build the tracked-media union plus the two fan-out maps. The warmup gate
+        # above guarantees every tracked user's list is cached before we reach here
+        # (the tick returns early while any is still missing), so a user contributes
+        # its cached list unless the cache entry is empty. DM recipients keep the
+        # per-user {media_id: progress} the DM planner gates on.
         lists_by_user = {}
         union = set()
         for row in optins:
@@ -946,6 +1076,22 @@ class AniListAiring(commands.Cog):
         # raises.
         if new_cursor != cursor:
             await self._save_cursor(new_cursor)
+
+        # Per-tick instrumentation, logged only on a tick that actually spent
+        # requests (the quotas-heartbeat precedent: cheap, and quiet when idle).
+        if self._req_count:
+            log.info(
+                "AniList airing: tick stats %s",
+                {
+                    "requests": self._req_count,
+                    "tracked_users": total,
+                    "union_media": len(union),
+                    "aired_rows": len(aired),
+                    "dm_notifications": len(plan),
+                    "channel_posts": len(channel_posts),
+                    "cursor_advanced": new_cursor != cursor,
+                },
+            )
 
     async def _deliver(self, plan, rows_by_key):
         """DM each planned notification. Never raises (each DM is guarded)."""

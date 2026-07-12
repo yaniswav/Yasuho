@@ -65,6 +65,7 @@ from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import i18n
 from tools import mangadex as md
+from tools import round_robin as rr
 from tools.http import TIMEOUT
 from tools.i18n import _
 
@@ -82,10 +83,49 @@ POLL_SECONDS = 1800
 LIST_TTL = 1800.0
 LIST_SWEEP_AT = 500
 
-# At most this many stale per-user list refreshes per tick, so a large tracked
-# base cannot burst the rate limit: the rest refresh on later ticks (staggered).
-# A never-cached (missing) list is ALWAYS refreshed regardless (the C4 lesson).
-MAX_LIST_REFRESHES_PER_TICK = 5
+# CONSTANT per-tick watch-list request budget, covering missing AND stale
+# refreshes together (missing prioritised). Unlike airing, deferring a never-cached
+# user here is SAFE - the chapter cursors are PER-MANGA, so a not-yet-loaded user
+# only delays THEIR manga entering the round-robin feed wheel; it can never drag a
+# shared cursor past anyone's chapters (there is no shared cursor). So this budget
+# simply staggers a 1000-guild cold start's list fetches over ceil(missing/budget)
+# ticks with no hold and no episode loss.
+LIST_FETCH_BUDGET = 10
+
+# CONSTANT per-tick MangaDex feed-request budget. There is NO batch chapter
+# endpoint (see tools.mangadex), so each tracked+mapped manga costs its OWN feed
+# request; polling every manga every tick is O(M) and 429-storms at scale. Instead
+# a fair round-robin wheel polls at most this many manga per tick, so the request
+# count is CONSTANT regardless of how many manga are tracked. The trade is a longer
+# effective per-manga poll interval of ceil(mapped / FEED_BUDGET) ticks (logged at
+# INFO when it exceeds one tick): alert latency degrades linearly and predictably
+# instead of the request count exploding. Raising this shortens the interval
+# linearly at the cost of more MangaDex requests per tick.
+FEED_BUDGET = 25
+
+# Safety cap on feed PAGES fetched per manga per tick. The MangaDex feed is
+# newest-first with no ``readableAt_greater`` filter, so :meth:`_fetch_feed` pages
+# BACKWARD (``md.FEED_LIMIT`` rows each) from the newest chapter down to the manga's
+# stored cursor. This matters because the round-robin wheel widens a manga's
+# effective poll interval to ceil(mapped / FEED_BUDGET) ticks: a fast updater (or a
+# bulk import) can drop MORE than one page of chapters between two polls, and
+# fetching only the newest page would let the per-manga cursor jump to the newest
+# chapter and SILENTLY skip the older overflow. ``MAX_FEED_PAGES * md.FEED_LIMIT`` is
+# the largest single-tick catch-up handled with zero loss; a rarer one-time burst
+# beyond it (a licensor dump) hits the cap, which is LOGGED (never silent) and stays
+# delivery-capped by MAX_ALERTS_PER_MANGA. Paging is adaptive - a normally-quiet
+# manga stops after the first (short or already-at-cursor) page - so this never costs
+# extra requests at the common scale where the interval is a single tick.
+MAX_FEED_PAGES = 6
+
+# Initial phase offset (seconds) applied before the chapters poller's FIRST tick so
+# its AniList list-refresh burst never overlaps the airing poller's - both hit the
+# same unauthenticated AniList endpoint, and the per-poller budgets bound each
+# poller's rate but not the aggregate. 60s exceeds a tick's spaced AniList burst, and
+# because the 1800s chapters cadence is a whole multiple of airing's 600s the offset
+# is preserved every cycle, so the two B2 pollers stay decorrelated for good. The
+# feed poller (dominant AniList user, out of B2 scope) is left to its own lot.
+POLL_PHASE_OFFSET = 60
 
 # At most this many AniList -> MangaDex title searches per tick. A search is the
 # single most expensive call here (a /manga query whose whole candidate page is
@@ -645,11 +685,19 @@ class AniListChapters(commands.Cog):
         self.bot = bot
         # Unix timestamp before which the poller stays quiet (429 embargo).
         self._embargo_until = 0
-        # Per-tick request pacing flag (reset each tick in _tick).
+        # Per-tick request pacing flag + counter (both reset each tick in _tick).
         self._spaced = False
+        self._req_count = 0
         # anilist_user_id -> (monotonic_ts, {media_id: media_dict}). Bounded cache,
         # swept past a hard size cap - the house pattern (see cogs/anilist/account).
         self._list_cache: dict = {}
+        # Fair round-robin wheel markers (tools.round_robin), in-memory only (a
+        # restart restarts the wheel, which is harmless): two for the watch-list
+        # refresh budget (missing + stale slices) and one for the per-manga feed
+        # poll budget over the mapped-manga set.
+        self._missing_wheel_after = None
+        self._stale_wheel_after = None
+        self._feed_wheel_after = None
         self._poll_chapters.start()
 
     async def cog_load(self):
@@ -748,11 +796,68 @@ class AniListChapters(commands.Cog):
         url, params, headers = md.search_manga_request(title)
         return await self._mangadex_get(url, params, headers)
 
-    async def _fetch_feed(self, mangadex_id):
-        """Fetch one manga's newest chapters (the only supported chapter source)."""
+    async def _fetch_feed_page(self, mangadex_id, offset):
+        """GET one page of a manga's chapter feed at ``offset`` (newest-first)."""
 
-        url, params, headers = md.manga_feed_request(mangadex_id)
+        url, params, headers = md.manga_feed_request(mangadex_id, offset=offset)
         return await self._mangadex_get(url, params, headers)
+
+    async def _fetch_feed(self, mangadex_id, cursor):
+        """Fetch a manga's chapters back to ``cursor``, paging newest-first.
+
+        MangaDex has no batch endpoint and no ``readableAt_greater`` filter, so the
+        only source is the per-manga feed ordered ``readableAt`` DESC. One
+        ``md.FEED_LIMIT`` page suffices when a manga is polled every tick, but under
+        the round-robin feed wheel a manga's effective interval widens to
+        ceil(mapped / FEED_BUDGET) ticks, so a fast updater (or a bulk import) can
+        drop MORE than one page between polls. Fetching only the newest page there
+        would let the per-manga cursor jump to the newest chapter and SILENTLY skip
+        the older overflow. So this pages BACKWARD (increasing offset) until a page
+        reaches already-processed ground (its oldest dated row is at or below the
+        cursor) or the feed ends, bounded by :data:`MAX_FEED_PAGES`. On the first run
+        (``cursor`` is None) a single page anchors the cursor with no backfill.
+        Hitting the cap with a still-full page above the cursor is a pathological
+        one-time burst (beyond ``MAX_FEED_PAGES * md.FEED_LIMIT`` chapters between two
+        polls of the SAME manga); it is LOGGED rather than left silent, and delivery
+        stays capped by MAX_ALERTS_PER_MANGA. Returns the accumulated normalised
+        chapter dicts (the planner reorders internally). Requests are paced by
+        :meth:`_space`; may raise :class:`_RateLimited` / :class:`_FetchError`.
+        """
+
+        cursor_ts = md._to_epoch(cursor)
+        chapters = []
+        capped = False
+        for page in range(MAX_FEED_PAGES):
+            await self._space()
+            page_chapters = md.parse_chapter_feed(
+                await self._fetch_feed_page(mangadex_id, page * md.FEED_LIMIT)
+            )
+            chapters.extend(page_chapters)
+            if len(page_chapters) < md.FEED_LIMIT:
+                break  # short page -> reached the end of the feed
+            if cursor_ts is None:
+                break  # first run: one page anchors the cursor (anti-backfill)
+            page_ts = [
+                ts
+                for ts in (md._to_epoch(c.get("readableAt")) for c in page_chapters)
+                if ts is not None
+            ]
+            if page_ts and min(page_ts) <= cursor_ts:
+                break  # oldest row on this page is old ground: contiguous, no gap
+        else:
+            capped = True
+        if capped:
+            log.warning(
+                "AniList chapters: feed page cap (%s x %s) reached for manga %s; a "
+                "burst of more than %s chapters since the last poll may skip the "
+                "oldest overflow (delivery stays capped at %s/tick)",
+                MAX_FEED_PAGES,
+                md.FEED_LIMIT,
+                mangadex_id,
+                MAX_FEED_PAGES * md.FEED_LIMIT,
+                MAX_ALERTS_PER_MANGA,
+            )
+        return chapters
 
     async def _space(self):
         """Pace successive requests within a tick under the rate limits.
@@ -765,6 +870,7 @@ class AniListChapters(commands.Cog):
         if self._spaced:
             await asyncio.sleep(REQUEST_SPACING)
         self._spaced = True
+        self._req_count += 1
 
     # ------------------------------------------------------------------
     # Per-user CURRENT manga-list cache (bounded, house pattern)
@@ -823,28 +929,44 @@ class AniListChapters(commands.Cog):
         return out
 
     async def _refresh_lists(self, anilist_user_ids, now):
-        """Refresh every MISSING list this tick, plus a throttled slice of stale ones.
+        """Refresh reading-lists under a CONSTANT per-tick budget, missing first.
 
-        A never-cached (missing) list is ALWAYS refreshed (the C4 lesson): a manga
-        only its owner tracks would otherwise never enter the union, so its
-        chapters would be missed - worst right after a restart, when every list is
-        uncached. Genuinely stale-but-present lists keep serving their last-known
-        entries meanwhile, so they stay throttled to
-        :data:`MAX_LIST_REFRESHES_PER_TICK` per tick (the rest ride later ticks).
-        Requests are paced by :meth:`_space`. A single user's non-429 failure is
-        skipped; a 429 propagates so the tick can set an embargo across the whole
-        poll.
+        Splits the tracked users into never-cached (missing) and cached-but-stale,
+        then spends at most :data:`LIST_FETCH_BUDGET` requests this tick: MISSING
+        lists first, then STALE ones with whatever budget remains, each slice drawn
+        through a fair round-robin wheel (:func:`tools.round_robin.next_batch`) so no
+        user can starve the rest and a 1000-guild cold start cannot burst the rate
+        limit. Deferring a never-cached user is SAFE here - unlike airing there is NO
+        shared cursor to drag past their chapters; the chapter cursors are per-manga,
+        so a not-yet-loaded user merely delays THEIR manga entering the feed wheel,
+        and once loaded that manga picks up from its own per-manga cursor (or a
+        first-run anchor) with no loss. So this refresh never holds anything; it just
+        staggers the fetches. Requests are paced by :meth:`_space`. A single user's
+        non-429 failure is skipped (retried later); a 429 propagates so the tick can
+        set an embargo across the whole poll.
         """
 
-        missing = []
-        stale_present = []
-        for aid in sorted(anilist_user_ids):
-            if aid not in self._list_cache:
-                missing.append(aid)
-            elif self._list_is_stale(aid, now):
-                stale_present.append(aid)
+        missing = [aid for aid in anilist_user_ids if aid not in self._list_cache]
+        stale = [
+            aid
+            for aid in anilist_user_ids
+            if aid in self._list_cache and self._list_is_stale(aid, now)
+        ]
 
-        for aid in missing + stale_present[:MAX_LIST_REFRESHES_PER_TICK]:
+        to_fetch = []
+        if missing:
+            batch, self._missing_wheel_after = rr.next_batch(
+                missing, self._missing_wheel_after, LIST_FETCH_BUDGET
+            )
+            to_fetch.extend(batch)
+        remaining = LIST_FETCH_BUDGET - len(to_fetch)
+        if remaining > 0 and stale:
+            batch, self._stale_wheel_after = rr.next_batch(
+                stale, self._stale_wheel_after, remaining
+            )
+            to_fetch.extend(batch)
+
+        for aid in to_fetch:
             await self._space()
             try:
                 entries = await self._fetch_public_list(aid)
@@ -997,6 +1119,11 @@ class AniListChapters(commands.Cog):
     @_poll_chapters.before_loop
     async def _before_poll(self):
         await self.bot.wait_until_ready()
+        # Phase-stagger off the airing poller so their AniList list-refresh bursts,
+        # which share the one unauthenticated endpoint, never overlap (see
+        # POLL_PHASE_OFFSET). Chapters are not latency-critical, so a one-time delay
+        # before the first tick is free.
+        await asyncio.sleep(POLL_PHASE_OFFSET)
 
     @_poll_chapters.error
     async def _poll_error(self, error):
@@ -1015,11 +1142,13 @@ class AniListChapters(commands.Cog):
 
         # a. Tracked AniList users = every DM opt-in (the channel fan-out is driven
         # by explicit subscriptions, not by followed users' lists). Refresh their
-        # public Reading lists (missing in full, stale throttled), then build the
-        # tracked union.
+        # public Reading lists under a constant per-tick budget (missing first, then
+        # stale; no hold - per-manga cursors make deferring a user safe), then build
+        # the tracked union.
         tracked_users = {row["anilist_user_id"] for row in dm_optins}
 
         self._spaced = False
+        self._req_count = 0
         now_mono = time.monotonic()
         try:
             await self._refresh_lists(tracked_users, now_mono)
@@ -1087,12 +1216,38 @@ class AniListChapters(commands.Cog):
         if not mdx_to_media:
             return  # no mapped manga to poll yet
 
-        # c/d/e/f. Poll each mapped manga's feed, plan, persist, cap and fan out.
-        for mangadex_id in sorted(mdx_to_media):
+        # c/d/e/f. Poll a CONSTANT round-robin slice of the mapped manga this tick,
+        # plan, persist, cap and fan out. There is no batch chapter endpoint, so each
+        # manga costs its own feed request(s); the wheel bounds the per-tick request
+        # budget to FEED_BUDGET manga no matter how many are tracked. Cursor safety
+        # has TWO halves, both PER-MANGA (cursor + seen memory live per manga - see
+        # _process_manga / mangadex_chapter_state): a manga NOT polled this tick keeps
+        # its DB cursor untouched and catches up when the wheel next reaches it; a
+        # manga that IS polled pages BACKWARD to its own stored cursor (_fetch_feed),
+        # so even when the widened interval let more than one md.FEED_LIMIT page of
+        # chapters accumulate, its cursor never jumps past un-fetched overflow. The
+        # cost is a per-manga poll interval of ceil(mapped / FEED_BUDGET) ticks.
+        mapped = sorted(mdx_to_media)
+        interval = rr.poll_interval_ticks(len(mapped), FEED_BUDGET)
+        if interval > 1:
+            log.info(
+                "AniList chapters: %s mapped manga tracked, each polled once every "
+                "~%s ticks (~%.1fh) at %s feeds/tick",
+                len(mapped),
+                interval,
+                interval * POLL_SECONDS / 3600.0,
+                FEED_BUDGET,
+            )
+        batch, self._feed_wheel_after = rr.next_batch(
+            mapped, self._feed_wheel_after, FEED_BUDGET
+        )
+        for mangadex_id in batch:
             media_id = mdx_to_media[mangadex_id]
-            await self._space()
+            # Read the cursor once and thread it through: _fetch_feed pages back to
+            # it, then _process_manga plans against the SAME value (no double read).
+            cursor = await self._load_chapter_cursor(mangadex_id)
             try:
-                payload = await self._fetch_feed(mangadex_id)
+                chapters = await self._fetch_feed(mangadex_id, cursor)
             except _RateLimited as exc:
                 self._embargo_until = now + exc.retry_after
                 log.warning(
@@ -1109,14 +1264,30 @@ class AniListChapters(commands.Cog):
                 )
                 continue
 
-            chapters = md.parse_chapter_feed(payload)
             await self._process_manga(
                 mangadex_id,
                 media_id,
+                cursor,
                 chapters,
                 media_by_id.get(media_id) or {},
                 dm_lists_by_user,
                 channel_media,
+            )
+
+        # Per-tick instrumentation, logged only on a tick that actually spent
+        # requests (the quotas-heartbeat precedent: cheap, quiet when idle).
+        if self._req_count:
+            log.info(
+                "AniList chapters: tick stats %s",
+                {
+                    "requests": self._req_count,
+                    "tracked_users": len(tracked_users),
+                    "union_media": len(union_media),
+                    "mapped_manga": len(mapped),
+                    "feeds_polled": len(batch),
+                    "poll_interval_ticks": interval,
+                    "wheel_after": self._feed_wheel_after,
+                },
             )
 
     async def _resolve_new_mappings(self, union_media, media_by_id, mapping_rows, now):
@@ -1169,6 +1340,7 @@ class AniListChapters(commands.Cog):
         self,
         mangadex_id,
         media_id,
+        cursor,
         chapters,
         media,
         dm_lists_by_user,
@@ -1176,15 +1348,16 @@ class AniListChapters(commands.Cog):
     ):
         """Plan, persist and fan out one manga's feed for this tick.
 
-        Loads the manga's cursor + seen memory, runs the pure planner (which
-        anchors silently on the first run), persists the advanced cursor and the
-        fresh seen rows, prunes the seen memory, caps the alerts newest-first and
-        fans each survivor out to the DM recipients and feed channels that track it.
-        Delivery is fully guarded, so a closed DM or a dead channel never aborts the
-        rest of the manga or the tick.
+        ``cursor`` is the manga's stored ``last_readable_at``, already read by
+        :meth:`_tick` (which threaded it into :meth:`_fetch_feed` to page back to it),
+        so it is passed in rather than re-read here. Loads the seen memory, runs the
+        pure planner (which anchors silently on the first run), persists the advanced
+        cursor and the fresh seen rows, prunes the seen memory, caps the alerts
+        newest-first and fans each survivor out to the DM recipients and feed channels
+        that track it. Delivery is fully guarded, so a closed DM or a dead channel
+        never aborts the rest of the manga or the tick.
         """
 
-        cursor = await self._load_chapter_cursor(mangadex_id)
         seen = await self._load_seen(mangadex_id)
         alerts, new_cursor, new_seen = md.plan_chapter_alerts(chapters, cursor, seen)
 

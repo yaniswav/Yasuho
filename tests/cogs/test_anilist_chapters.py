@@ -30,6 +30,7 @@ from cogs.anilist.chapters import (
 )
 from cogs.anilist.feed import ADD_TEMPLATE, LIKE_TEMPLATE, REPLY_TEMPLATE
 from tools import mangadex as md
+from tools import round_robin as rr
 
 # ---------------------------------------------------------------------------
 # documented constants (guard the tuned values the design leans on)
@@ -40,7 +41,10 @@ def test_documented_constants():
     assert POLL_SECONDS == 1800
     assert MAX_ALERTS_PER_MANGA == 3
     assert ch.MAX_MAPPING_SEARCHES_PER_TICK == 3
-    assert ch.MAX_LIST_REFRESHES_PER_TICK == 5
+    assert ch.LIST_FETCH_BUDGET == 10
+    assert ch.FEED_BUDGET == 25
+    assert ch.MAX_FEED_PAGES == 6
+    assert ch.POLL_PHASE_OFFSET == 60
     assert ch.SEEN_PRUNE_DAYS == 90
     assert ch.SEEN_PRUNE_KEEP == 200
 
@@ -308,3 +312,305 @@ def test_read_template_rejects_non_numeric_chapter():
     assert _TEMPLATES["read"].fullmatch("alf:read:42:Extra") is None
     assert _TEMPLATES["read"].fullmatch("alf:read:42:") is None
     assert _TEMPLATES["read"].fullmatch("alf:read::5") is None
+
+
+# ---------------------------------------------------------------------------
+# Feed round-robin wheel over the mapped-manga set (the O(M) -> O(budget) fix)
+#
+# There is no batch chapter endpoint, so each mapped manga costs its own feed
+# request. The poller polls only a FEED_BUDGET slice per tick via the pure
+# tools.round_robin wheel, so the request count is constant. These tests pin the
+# properties the poller relies on: every manga is polled within ceil(M/budget)
+# ticks (no starvation), the request count is bounded, and the wheel stays correct
+# as the mapped set mutates (mappings resolve / subscriptions drop).
+# ---------------------------------------------------------------------------
+
+
+def _drive_wheel(manga_seq, budget, ticks):
+    """Run the feed wheel over a (possibly per-tick changing) mapped set.
+
+    ``manga_seq`` is a callable ``tick -> iterable of mangadex ids`` giving the
+    mapped set on each tick. Returns ``(polls_per_tick, poll_counts)`` - the batch
+    served each tick and how many times each id was polled in total.
+    """
+
+    after = None
+    polls_per_tick = []
+    poll_counts = {}
+    for t in range(ticks):
+        mapped = sorted(manga_seq(t))
+        batch, after = rr.next_batch(mapped, after, budget)
+        polls_per_tick.append(batch)
+        for mid in batch:
+            poll_counts[mid] = poll_counts.get(mid, 0) + 1
+    return polls_per_tick, poll_counts
+
+
+def test_feed_wheel_polls_every_manga_within_one_cycle_no_starvation():
+    manga = ["m{:03d}".format(i) for i in range(125)]  # 125 tracked manga
+    budget = ch.FEED_BUDGET  # 25
+    cycle = rr.poll_interval_ticks(len(manga), budget)
+    assert cycle == 5  # ceil(125/25); at POLL_SECONDS=1800 -> ~2.5h per manga
+
+    polls_per_tick, poll_counts = _drive_wheel(lambda _t: manga, budget, cycle)
+
+    # Constant per-tick request budget, never exceeded.
+    assert all(len(batch) == budget for batch in polls_per_tick)
+    # Every manga polled exactly once within the cycle - full coverage, no
+    # starvation, no duplicate work.
+    assert set(poll_counts) == set(manga)
+    assert all(count == 1 for count in poll_counts.values())
+
+
+def test_feed_wheel_effective_interval_matches_formula():
+    # The interval the poller logs is ceil(M / budget) ticks.
+    assert rr.poll_interval_ticks(2000, ch.FEED_BUDGET) == 80  # 2000 manga / 25
+    assert rr.poll_interval_ticks(25, ch.FEED_BUDGET) == 1  # fits in one tick
+    assert rr.poll_interval_ticks(26, ch.FEED_BUDGET) == 2  # one over -> two ticks
+    assert rr.poll_interval_ticks(0, ch.FEED_BUDGET) == 0  # nothing tracked
+
+
+def test_feed_wheel_budget_ge_set_polls_all_every_tick():
+    # When the mapped set fits inside the budget, every manga is polled every tick
+    # (interval 1) - no degradation at small scale.
+    manga = ["a", "b", "c"]
+    _polls, counts = _drive_wheel(lambda _t: manga, ch.FEED_BUDGET, 4)
+    assert counts == {"a": 4, "b": 4, "c": 4}
+
+
+def test_feed_wheel_stable_when_manga_added_mid_cycle():
+    # A newly-mapped manga entering the wheel mid-cycle is picked up within one
+    # further cycle and never starves the incumbents.
+    base = ["m{:02d}".format(i) for i in range(40)]  # 40 manga, budget 25
+
+    def seq(t):
+        # From tick 2 onward a brand-new manga id joins the mapped set.
+        return base + (["NEW"] if t >= 2 else [])
+
+    _polls, counts = _drive_wheel(seq, ch.FEED_BUDGET, 6)
+    # The new manga was polled at least once (entered the wheel, not starved).
+    assert counts.get("NEW", 0) >= 1
+    # Every incumbent still got polled too.
+    assert all(counts.get(mid, 0) >= 1 for mid in base)
+
+
+def test_feed_wheel_stable_when_marker_manga_removed():
+    # If the manga that was the resume marker is unsubscribed before the next tick,
+    # the wheel resumes cleanly at the next id (bisect-by-value), no crash, no skip.
+    manga = ["a", "b", "c", "d", "e"]
+    batch1, after = rr.next_batch(manga, None, 2)
+    assert batch1 == ["a", "b"]
+    assert after == "b"
+    # 'b' (the marker) is removed from the set before the next tick.
+    batch2, after = rr.next_batch(["a", "c", "d", "e"], after, 2)
+    assert batch2 == ["c", "d"]  # resumes strictly after the removed marker value
+
+
+# ---------------------------------------------------------------------------
+# Deferred-user / round-robin cursor safety (why chapters need no warmup hold)
+#
+# The chapter cursor + seen memory are PER MANGA (mangadex_chapter_state /
+# mangadex_seen_chapters), driven by the pure tools.mangadex.plan_chapter_alerts.
+# A manga NOT polled on a tick is simply never handed to the planner, so its cursor
+# and seen set are untouched and it loses nothing - it catches up whenever the wheel
+# reaches it. This is the exact property that makes deferring a never-cached user
+# safe (their manga only enters the wheel later), UNLIKE airing's single global
+# cursor. We encode it against the real planner.
+# ---------------------------------------------------------------------------
+
+
+def _chapter(num, readable_at, cid=None):
+    return {
+        "id": cid or "id-{}".format(num),
+        "chapter": str(num),
+        "volume": None,
+        "readableAt": readable_at,
+        "title": None,
+        "externalUrl": None,
+    }
+
+
+def test_unpolled_manga_keeps_its_cursor_and_loses_no_chapter():
+    """A manga skipped on a tick keeps its per-manga cursor; nothing is lost.
+
+    Tick 1 anchors on the first run (alerts nothing, seeds the cursor). Between
+    ticks the manga is NOT polled for several ticks while new chapters drop; because
+    its cursor is never advanced by anyone else (no shared cursor), when it IS polled
+    again the planner still alerts exactly the new chapters, in order, once each.
+    """
+
+    # First-ever poll: anti-backfill anchor on the two chapters present. No alerts,
+    # cursor moves to the newest readableAt, both keys remembered.
+    initial = [
+        _chapter(1, "2023-01-01T00:00:00Z"),
+        _chapter(2, "2023-01-02T00:00:00Z"),
+    ]
+    alerts, cursor, seen = md.plan_chapter_alerts(initial, None, set())
+    assert alerts == []  # first run anchors silently
+    anchored_cursor, anchored_seen = cursor, seen
+
+    # Now imagine the wheel does NOT reach this manga for a while. Its DB cursor and
+    # seen set simply stay put (we hold anchored_cursor / anchored_seen unchanged),
+    # while chapters 3 and 4 are published upstream.
+    later_feed = [
+        _chapter(2, "2023-01-02T00:00:00Z"),
+        _chapter(3, "2023-01-03T00:00:00Z"),
+        _chapter(4, "2023-01-04T00:00:00Z"),
+    ]
+
+    # When the wheel finally reaches it again, it catches up from its OWN untouched
+    # cursor - alerting exactly the chapters newer than the anchor, none skipped.
+    alerts2, cursor2, _seen2 = md.plan_chapter_alerts(
+        later_feed, anchored_cursor, anchored_seen
+    )
+    assert [c["chapter"] for c in alerts2] == ["3", "4"]  # zero loss across the gap
+    assert cursor2 == "2023-01-04T00:00:00Z"
+
+
+def test_deferred_user_manga_only_enters_the_wheel_later_others_unaffected():
+    """A not-yet-loaded user's manga is simply absent from the mapped set for a few
+    ticks, then joins the wheel; the manga already in the wheel are unaffected and
+    keep their own cursors. This is the round-robin analogue of the deferred-user
+    safety argument: no shared state couples the deferred manga to the rest.
+    """
+
+    incumbents = ["m{:02d}".format(i) for i in range(30)]
+
+    def seq(t):
+        # The deferred user's manga 'LATE' only appears from tick 3 (their list
+        # finally loaded and it got mapped).
+        return incumbents + (["LATE"] if t >= 3 else [])
+
+    _polls, counts = _drive_wheel(seq, ch.FEED_BUDGET, 8)
+    # Incumbents were polled throughout; the late manga still got polled once it
+    # entered - its lateness cost only its own delay, nothing else's.
+    assert counts.get("LATE", 0) >= 1
+    assert all(counts.get(mid, 0) >= 1 for mid in incumbents)
+
+
+# ---------------------------------------------------------------------------
+# _fetch_feed backward pagination (the MAJOR fix). Under the widened round-robin
+# interval a manga can drop MORE than one FEED_LIMIT page of chapters between polls.
+# Fetching only the newest page would let the per-manga cursor jump to the newest
+# chapter and SILENTLY skip the older overflow. _fetch_feed pages BACKWARD to the
+# stored cursor so nothing outside the newest page is lost. These drive the REAL cog
+# method with a stubbed per-page fetch (offset -> raw rows).
+# ---------------------------------------------------------------------------
+
+# Chapter readableAt values are monotonic epoch ints (chapter n is newer than n-1),
+# which _to_epoch accepts directly and which sidesteps calendar-range limits.
+_EPOCH_BASE = 1_700_000_000
+
+
+def _raw_row(num):
+    """A raw MangaDex feed row (pre-parse_chapter_feed) for chapter ``num``."""
+
+    return {
+        "id": "id-{}".format(num),
+        "attributes": {
+            "chapter": str(num),
+            "volume": None,
+            "readableAt": _EPOCH_BASE + num,
+            "title": None,
+            "externalUrl": None,
+        },
+    }
+
+
+def _desc_rows(highest):
+    """Raw rows for chapters ``highest..1``, newest-first (as MangaDex returns)."""
+
+    return [_raw_row(n) for n in range(highest, 0, -1)]
+
+
+def _paged(rows, limit):
+    """Slice ``rows`` into a ``{offset: page}`` map of ``limit``-sized pages."""
+
+    pages = {}
+    for p in range((len(rows) + limit - 1) // limit or 1):
+        pages[p * limit] = rows[p * limit:(p + 1) * limit]
+    return pages
+
+
+def _chapters_cog_with_pages(pages):
+    """A bare AniListChapters whose _fetch_feed_page serves ``pages`` by offset.
+
+    Records the offsets requested so a test can assert where paging stopped. No task
+    loop, bot or DB is constructed; _fetch_feed only needs _space + _fetch_feed_page.
+    """
+
+    cog = object.__new__(ch.AniListChapters)
+    cog._req_count = 0
+    requested = []
+
+    async def _no_space():
+        cog._req_count += 1
+
+    cog._space = _no_space
+
+    async def _page(_mangadex_id, offset):
+        requested.append(offset)
+        return {"data": pages.get(offset, [])}
+
+    cog._fetch_feed_page = _page
+    return cog, requested
+
+
+async def test_fetch_feed_pages_back_past_one_page_and_loses_no_chapter():
+    # 12 new chapters, all newer than the cursor, FEED_LIMIT=5 per page. A single
+    # newest page would drop chapters 1..7 when the cursor jumps; paging back to the
+    # cursor fetches all 12.
+    limit = md.FEED_LIMIT
+    cog, requested = _chapters_cog_with_pages(_paged(_desc_rows(12), limit))
+
+    cursor = _EPOCH_BASE  # older than every chapter
+    got = await cog._fetch_feed("uuid", cursor)
+    assert sorted(int(c["chapter"]) for c in got) == list(range(1, 13))
+    # Pages at offset 0, 5, 10 requested; offset 10 is a short page (2 rows) -> stop.
+    assert requested == [0, 5, 10]
+
+
+async def test_fetch_feed_stops_once_it_reaches_processed_ground():
+    # The cursor sits at chapter 6, so paging stops as soon as a page's oldest row is
+    # at/below it - it must not keep fetching older pages needlessly.
+    limit = md.FEED_LIMIT
+    rows = _desc_rows(12)
+    cog, requested = _chapters_cog_with_pages(_paged(rows, limit))
+
+    cursor = _EPOCH_BASE + 6  # chapter 6's readableAt
+    got = await cog._fetch_feed("uuid", cursor)
+    # Page 0 = ch 12..8 (oldest 8 > cursor -> continue); page 1 = ch 7..3 (oldest 3
+    # <= cursor -> stop). The third page is never requested.
+    assert requested == [0, 5]
+    assert {int(c["chapter"]) for c in got} == set(range(3, 13))
+    # Handed to the planner (got is already normalised by _fetch_feed), exactly the
+    # chapters strictly newer than the cursor alert - none skipped, none duplicated.
+    alerts, _c, _s = md.plan_chapter_alerts(got, cursor, set())
+    assert [c["chapter"] for c in alerts] == ["7", "8", "9", "10", "11", "12"]
+
+
+async def test_fetch_feed_first_run_fetches_a_single_page_only():
+    # cursor is None (first ever poll): one page anchors the cursor with no backfill,
+    # even though the page is full - never walk the whole back-catalogue.
+    limit = md.FEED_LIMIT
+    cog, requested = _chapters_cog_with_pages(_paged(_desc_rows(12), limit))
+
+    got = await cog._fetch_feed("uuid", None)
+    assert requested == [0]  # single anchor page
+    assert len(got) == limit
+
+
+async def test_fetch_feed_page_cap_is_logged_not_silent(caplog):
+    # A burst larger than MAX_FEED_PAGES * FEED_LIMIT above the cursor hits the cap:
+    # paging stops at MAX_FEED_PAGES and LOGS a warning (the overflow is not silent),
+    # while delivery stays bounded by MAX_ALERTS_PER_MANGA downstream.
+    limit = md.FEED_LIMIT
+    total = ch.MAX_FEED_PAGES * limit + limit  # one full page beyond the cap
+    cog, requested = _chapters_cog_with_pages(_paged(_desc_rows(total), limit))
+
+    cursor = _EPOCH_BASE  # below everything, so every fetched page is full and above
+    with caplog.at_level("WARNING"):
+        got = await cog._fetch_feed("uuid", cursor)
+    assert len(requested) == ch.MAX_FEED_PAGES  # stopped exactly at the cap
+    assert len(got) == ch.MAX_FEED_PAGES * limit
+    assert "feed page cap" in caplog.text
