@@ -29,6 +29,8 @@ imports identically under the stub and the real sonolink.
 """
 
 import asyncio
+import json
+import time
 import types
 
 from cogs.music import lyrics
@@ -280,7 +282,7 @@ def test_next_wake_sleeps_to_next_boundary_mid_line():
     # start, offset by the drift margin so the wake lands just past it.
     lines = _lines(1000, 5000, 9000)
     # position 2000 (inside line 0): next allowed boundary is 5000.
-    assert lyrics.next_wake(lines, 2000, min_gap=2.5, max_sleep=8.0) == (
+    assert lyrics.next_wake(lines, 2000, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == (
         (5000 - 2000) / 1000.0 + lyrics.DRIFT_MARGIN
     )
 
@@ -289,7 +291,7 @@ def test_next_wake_exactly_on_boundary_aims_at_the_following_line():
     # Sitting exactly on a line's start (just transitioned to it): aim at the
     # NEXT line, again drift-offset. 4000 -> 8000 is 4s, well past the gap.
     lines = _lines(0, 4000, 8000)
-    assert lyrics.next_wake(lines, 4000, min_gap=2.5, max_sleep=8.0) == (
+    assert lyrics.next_wake(lines, 4000, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == (
         (8000 - 4000) / 1000.0 + lyrics.DRIFT_MARGIN
     )
 
@@ -298,28 +300,28 @@ def test_next_wake_machine_gun_lines_coalesce_to_first_allowed():
     # A burst closer together than MIN_EDIT_GAP: every boundary within the gap is
     # skipped, the wake aims at the first start at or beyond position + gap.
     lines = _lines(0, 500, 1000, 1500, 2000, 2500, 3000)
-    # From 0 with a 2.5s gap, threshold is 2500 -> first allowed start is 2500.
-    sleep = lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0)
-    assert sleep == 2.5 + lyrics.DRIFT_MARGIN
-    assert sleep >= 2.5  # the min-gap floor is honoured
+    # From 0 with the 1.5s floor, threshold is 1500 -> first allowed start is 1500.
+    sleep = lyrics.next_wake(lines, 0, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0)
+    assert sleep == 1.5 + lyrics.DRIFT_MARGIN
+    assert sleep >= 1.5  # the min-gap floor is honoured
 
 
 def test_next_wake_no_upcoming_line_falls_back_to_max_sleep():
     # Position past every line (an outro): nothing to aim at, re-check after max.
     lines = _lines(1000, 3000, 5000)
-    assert lyrics.next_wake(lines, 9000, min_gap=2.5, max_sleep=8.0) == 8.0
+    assert lyrics.next_wake(lines, 9000, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == 8.0
     # A last line whose only remaining boundary is within the gap also falls back.
-    assert lyrics.next_wake(lines, 5000, min_gap=2.5, max_sleep=8.0) == 8.0
+    assert lyrics.next_wake(lines, 5000, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == 8.0
 
 
 def test_next_wake_empty_lines_is_max_sleep():
-    assert lyrics.next_wake((), 1234, min_gap=2.5, max_sleep=8.0) == 8.0
+    assert lyrics.next_wake((), 1234, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == 8.0
 
 
 def test_next_wake_far_boundary_clamped_to_max_sleep():
     # The next boundary is 20s out: clamp to max so drift/seek can't strand us.
     lines = _lines(0, 20000)
-    assert lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0) == 8.0
+    assert lyrics.next_wake(lines, 0, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == 8.0
 
 
 def test_next_wake_drift_margin_lands_after_the_transition():
@@ -327,7 +329,7 @@ def test_next_wake_drift_margin_lands_after_the_transition():
     # wake fires AFTER the nominal start (extrapolation trails the node by ~ms).
     lines = _lines(0, 6000)
     raw = (6000 - 0) / 1000.0
-    assert lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0) == raw + lyrics.DRIFT_MARGIN
+    assert lyrics.next_wake(lines, 0, min_gap=lyrics.MIN_EDIT_GAP, max_sleep=8.0) == raw + lyrics.DRIFT_MARGIN
 
 
 # ---------------------------------------------------------------------------
@@ -863,3 +865,336 @@ def test_fetch_all_paths_dry_degrades_to_none():
     })
     result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
     assert result.kind == lyrics.KIND_NONE
+
+
+# ---------------------------------------------------------------------------
+# Tighter edit floor (MIN_EDIT_GAP 2.5 -> 1.5)
+# ---------------------------------------------------------------------------
+
+
+def test_min_edit_gap_is_1_5():
+    # The floor was lowered from 2.5s so the bold line turns over more tightly;
+    # the SCALE STORY re-derives the per-channel edit budget against this value.
+    assert lyrics.MIN_EDIT_GAP == 1.5
+
+
+def test_next_wake_default_floor_coalesces_at_1_5():
+    # Using the module default min_gap, a machine-gun burst coalesces at 1.5s.
+    lines = _lines(0, 500, 1000, 1500, 2000)
+    assert lyrics.next_wake(lines, 0) == 1.5 + lyrics.DRIFT_MARGIN
+
+
+# ---------------------------------------------------------------------------
+# Position truth: sonolink self-interpolates; the session must not re-extrapolate
+# ---------------------------------------------------------------------------
+
+
+async def test_session_reads_player_position_without_double_extrapolation():
+    # sonolink's Player.position already interpolates the last playerUpdate on a
+    # monotonic clock and freezes when paused (verified in _base.py:355-373), so
+    # the session reads it as-is and layers NO clock of its own. With a fixed fake
+    # position, repeated reads are identical - a local extrapolation would drift.
+    player = _FakeSessionPlayer(position=4321, track=_track("T1"))
+    session = _make_session([0.0], player)
+    first = session._effective_position_ms()
+    time.sleep(0.02)
+    assert session._effective_position_ms() == first == 4321
+
+
+# ---------------------------------------------------------------------------
+# Offset calibration: pure maths (clamp, signed render)
+# ---------------------------------------------------------------------------
+
+
+def test_clamp_offset_within_and_at_bounds():
+    assert lyrics.clamp_offset(0) == 0
+    assert lyrics.clamp_offset(5000) == 5000
+    assert lyrics.clamp_offset(-5000) == -5000
+    assert lyrics.clamp_offset(lyrics.OFFSET_LIMIT_MS) == lyrics.OFFSET_LIMIT_MS
+    assert lyrics.clamp_offset(-lyrics.OFFSET_LIMIT_MS) == -lyrics.OFFSET_LIMIT_MS
+
+
+def test_clamp_offset_beyond_bounds_clamps():
+    assert lyrics.clamp_offset(999999) == lyrics.OFFSET_LIMIT_MS
+    assert lyrics.clamp_offset(-999999) == -lyrics.OFFSET_LIMIT_MS
+
+
+def test_format_offset_signed_one_decimal():
+    assert lyrics.format_offset(1000) == "+1.0"
+    assert lyrics.format_offset(-5000) == "-5.0"
+    assert lyrics.format_offset(2500) == "+2.5"
+    assert lyrics.format_offset(-30000) == "-30.0"
+    assert lyrics.format_offset(0) == "+0.0"
+    # ASCII hyphen-minus only, never a Unicode minus sign (U+2212).
+    assert "\u2212" not in lyrics.format_offset(-5000)
+
+
+# ---------------------------------------------------------------------------
+# Offset calibration: selection shift and per-session reset
+# ---------------------------------------------------------------------------
+
+
+def test_session_offset_defaults_to_zero():
+    session = _make_session([0.0], _FakeSessionPlayer(position=0, track=_track("T1")))
+    assert session.offset_ms == 0
+
+
+def test_offset_shifts_effective_position_and_selection():
+    # Lines at 1000/3000/5000. At position 1000 the current line is index 0; a
+    # +2000ms offset advances the effective position to 3000 (index 1); a large
+    # negative offset pulls it before the first line.
+    player = _FakeSessionPlayer(position=1000, track=_track("T1"))
+    session = _make_session([0.0], player)
+    idx = lyrics.current_line_index(session.lines, session._effective_position_ms())
+    assert idx == 0
+    session.offset_ms = 2000
+    assert session._effective_position_ms() == 3000
+    assert lyrics.current_line_index(session.lines, session._effective_position_ms()) == 1
+    session.offset_ms = -2000
+    assert (
+        lyrics.current_line_index(session.lines, session._effective_position_ms())
+        == lyrics.BEFORE_FIRST
+    )
+
+
+def test_offset_resets_per_track_new_session():
+    # A new track is always a NEW session object, so a calibrated offset never
+    # leaks across a track change (a new cut resets to 0).
+    s1 = _make_session([0.0], _FakeSessionPlayer(position=0, track=_track("T1")))
+    s1.offset_ms = 7000
+    s2 = _make_session([0.0], _FakeSessionPlayer(position=0, track=_track("T2")))
+    assert s1.offset_ms == 7000
+    assert s2.offset_ms == 0
+
+
+# ---------------------------------------------------------------------------
+# Offset calibration: the button interaction (same-voice gate, edit, clamp)
+# ---------------------------------------------------------------------------
+
+
+class _FakeResponse:
+    def __init__(self):
+        self.edited = 0
+        self.deferred = 0
+        self.messages = []
+
+    async def edit_message(self, **kwargs):
+        self.edited += 1
+
+    async def defer(self):
+        self.deferred += 1
+
+    async def send_message(self, content=None, **kwargs):
+        self.messages.append(content)
+
+
+class _FakeInteraction:
+    def __init__(self, user):
+        self.user = user
+        self.response = _FakeResponse()
+
+
+def _voice_interaction(session):
+    """An interaction from a member in the player's voice channel (allowed)."""
+    member = types.SimpleNamespace(
+        voice=types.SimpleNamespace(channel=session.player.channel)
+    )
+    return _FakeInteraction(member)
+
+
+def _outside_interaction():
+    """An interaction from a member not in any voice channel (refused)."""
+    return _FakeInteraction(types.SimpleNamespace(voice=None))
+
+
+async def test_offset_button_shifts_selection_and_edits():
+    player = _FakeSessionPlayer(position=1000, track=_track("T1"))  # index 0
+    session = _make_session([5.0], player)
+    interaction = _voice_interaction(session)
+    await session.shift_offset_from_interaction(interaction, delta_ms=2000)
+    assert session.offset_ms == 2000
+    # Effective 3000 -> line index 1 ("second") now current; re-primed for the loop.
+    assert session._last_index == 1
+    assert "**second**" in session._last_body
+    assert session._last_edit_ts == 5.0
+    assert interaction.response.edited == 1  # edited via the interaction, immediately
+    assert session._wake.is_set()  # loop nudged to re-plan its schedule
+
+
+async def test_offset_button_refuses_outside_voice():
+    player = _FakeSessionPlayer(position=1000, track=_track("T1"))
+    session = _make_session([0.0], player)
+    interaction = _outside_interaction()
+    await session.shift_offset_from_interaction(interaction, delta_ms=5000)
+    assert session.offset_ms == 0  # untouched
+    assert interaction.response.messages  # an ephemeral refusal was sent
+    assert interaction.response.edited == 0
+
+
+async def test_offset_button_clamps_over_repeated_clicks():
+    player = _FakeSessionPlayer(position=0, track=_track("T1"))
+    session = _make_session([0.0], player)
+    interaction = _voice_interaction(session)
+    for _ in range(10):  # 10 x +5s would be 50s without the clamp
+        await session.shift_offset_from_interaction(
+            interaction, delta_ms=lyrics.OFFSET_STEP_LARGE_MS
+        )
+    assert session.offset_ms == lyrics.OFFSET_LIMIT_MS
+
+
+async def test_offset_button_noops_when_stopped():
+    player = _FakeSessionPlayer(position=0, track=_track("T1"))
+    session = _make_session([0.0], player)
+    session._stopped = True
+    interaction = _voice_interaction(session)
+    await session.shift_offset_from_interaction(interaction, delta_ms=5000)
+    assert session.offset_ms == 0  # a stopped session is not revived
+    assert interaction.response.edited == 0
+    assert interaction.response.deferred == 1
+
+
+# ---------------------------------------------------------------------------
+# Offset calibration: the card render (footer + button rows)
+# ---------------------------------------------------------------------------
+
+
+def test_card_footer_shows_signed_offset_when_nonzero():
+    session = _make_session([0.0], _FakeSessionPlayer(position=0, track=_track("T1")))
+    session._card.set_state(body="x")
+    assert "Lyrics offset" not in json.dumps(session._card.to_components())
+    session.offset_ms = -1000
+    session._card.set_state(body="x")
+    assert "Lyrics offset: -1.0s" in json.dumps(session._card.to_components())
+
+
+def _button_labels(view):
+    """Every button (component type 2) label in a rendered view, in tree order."""
+    out = []
+
+    def walk(node):
+        if isinstance(node, list):
+            for child in node:
+                walk(child)
+        elif isinstance(node, dict):
+            if node.get("type") == 2:
+                out.append(node.get("label"))
+            for value in node.values():
+                walk(value)
+
+    walk(view.to_components())
+    return out
+
+
+def test_card_has_offset_row_and_stop_when_active_dropped_when_stopped():
+    session = _make_session([0.0], _FakeSessionPlayer(position=0, track=_track("T1")))
+    session._card.set_state(body="x")
+    # Calibration steps first (a group), then Stop on its own row; total legal.
+    assert _button_labels(session._card) == ["-5s", "-1s", "+1s", "+5s", "Stop"]
+    session._card.set_state(body="x", stopped=True)
+    assert _button_labels(session._card) == []  # a stopped card drops all buttons
+
+
+# ---------------------------------------------------------------------------
+# Smarter candidate pick: title similarity, variant markers, ranking
+# ---------------------------------------------------------------------------
+
+
+def test_title_similarity_bounds():
+    assert lyrics.title_similarity("A7", "A7") == 1.0
+    assert lyrics.title_similarity("A7", "Bohemian Rhapsody") == 0.0
+    assert lyrics.title_similarity("A7", "") == 0.0
+    # Shared tokens over the union: {never,gonna} of {never,gonna,give|run} = 0.5.
+    assert lyrics.title_similarity("Never Gonna Give", "Never Gonna Run") == 0.5
+
+
+def test_title_similarity_ignores_order_and_upload_noise():
+    # Word order does not matter, and bracketed upload noise is stripped both sides.
+    assert lyrics.title_similarity("A7 SCH", "SCH A7") == 1.0
+    assert lyrics.title_similarity("A7 (Clip Officiel)", "A7") == 1.0
+
+
+def test_has_variant_marker_truth():
+    for good in [
+        "Song (sped up)",
+        "Song - Sped Up",
+        "Song (spedup)",
+        "Song (Slowed + Reverb)",
+        "Song (Live)",
+        "Song (Nightcore)",
+        "Song (Radio Remix)",
+    ]:
+        assert lyrics._has_variant_marker(good), good
+    for plain in ["Song", "A7", "Bohemian Rhapsody", "Thriller"]:
+        assert not lyrics._has_variant_marker(plain), plain
+
+
+def test_rank_candidates_exact_non_variant_first():
+    cands = [
+        {"videoId": "live", "title": "A7 (Live)"},
+        {"videoId": "studio", "title": "A7"},
+    ]
+    assert [c["videoId"] for c in lyrics.rank_candidates(cands, "A7")] == [
+        "studio",
+        "live",
+    ]
+
+
+def test_rank_candidates_deprioritizes_sped_up():
+    cands = [
+        {"videoId": "fast", "title": "Blinding Lights (sped up)"},
+        {"videoId": "orig", "title": "Blinding Lights"},
+    ]
+    ranked = lyrics.rank_candidates(cands, "Blinding Lights")
+    assert ranked[0]["videoId"] == "orig"
+
+
+def test_rank_candidates_keeps_variant_when_playing_is_variant():
+    # The playing upload is itself a sped-up cut: the marker carries real signal,
+    # so a sped-up candidate is NOT penalised and wins on the exact title match.
+    cands = [
+        {"videoId": "orig", "title": "Blinding Lights"},
+        {"videoId": "fast", "title": "Blinding Lights (sped up)"},
+    ]
+    ranked = lyrics.rank_candidates(cands, "Blinding Lights (sped up)")
+    assert ranked[0]["videoId"] == "fast"
+
+
+def test_rank_candidates_foreign_junk_last():
+    cands = [
+        {"videoId": "junk", "title": "Totally Unrelated Track"},
+        {"videoId": "match", "title": "A7"},
+    ]
+    assert lyrics.rank_candidates(cands, "A7")[0]["videoId"] == "match"
+
+
+def test_rank_candidates_drops_unfetchable():
+    cands = [
+        {"title": "A7"},  # no videoId
+        None,  # not a mapping
+        {"videoId": "", "title": "A7"},  # empty videoId
+        {"videoId": "keep", "title": "A7"},
+    ]
+    assert [c["videoId"] for c in lyrics.rank_candidates(cands, "A7")] == ["keep"]
+
+
+def test_rank_candidates_stable_within_a_tier_and_limited():
+    cands = [{"videoId": f"v{i}", "title": "A7"} for i in range(5)]
+    ranked = lyrics.rank_candidates(cands, "A7", limit=3)
+    assert [c["videoId"] for c in ranked] == ["v0", "v1", "v2"]
+
+
+def test_fetch_ranks_studio_before_live_variant():
+    import asyncio as _a
+
+    node = _RoutedNode({
+        "/lyrics/search/A7%20SCH": [
+            {"videoId": "live", "title": "A7 (Live)"},
+            {"videoId": "studio", "title": "A7"},
+        ],
+        "/lyrics/studio": _timed_payload(),
+        "/lyrics/live": _timed_payload(),
+    })
+    result = _a.run(lyrics.fetch_lyrics(_routed_player(node)))
+    assert result.kind == lyrics.KIND_TIMED
+    # The non-variant studio cut is fetched first; the live variant is never tried.
+    assert node.calls == ["/lyrics/search/A7%20SCH", "/lyrics/studio"]

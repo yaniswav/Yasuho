@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 06:49+0000\n"
+"POT-Creation-Date: 2026-07-12 07:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4593,68 +4593,89 @@ msgstr ""
 msgid "Smooth the lows and even the volume for gentle listening."
 msgstr ""
 
-#: cogs/music/lyrics.py:485 cogs/music/views.py:299
+#: cogs/music/lyrics.py:648 cogs/music/views.py:299
 #, python-brace-format
 msgid "by **{author}**"
 msgstr ""
 
-#: cogs/music/lyrics.py:531
+#: cogs/music/lyrics.py:694
 msgid "### 🎤 Lyrics"
 msgstr ""
 
-#: cogs/music/lyrics.py:542 cogs/music/lyrics.py:667
+#: cogs/music/lyrics.py:705 cogs/music/lyrics.py:830
 #, python-brace-format
 msgid "-# Lyrics from {source}"
 msgstr ""
 
-#: cogs/music/lyrics.py:545
+#: cogs/music/lyrics.py:708
 #, python-brace-format
 msgid "-# Page {current} of {total}"
 msgstr ""
 
-#: cogs/music/lyrics.py:550
+#: cogs/music/lyrics.py:713
 msgid "-# Live sync isn't available for this track."
 msgstr ""
 
-#: cogs/music/lyrics.py:579
+#: cogs/music/lyrics.py:742
 msgid "Follow along"
 msgstr ""
 
-#: cogs/music/lyrics.py:606 cogs/music/lyrics.py:910 cogs/music/views.py:100
-#: cogs/music/voteskip.py:192
+#: cogs/music/lyrics.py:769 cogs/music/lyrics.py:1134 cogs/music/lyrics.py:1157
+#: cogs/music/views.py:100 cogs/music/voteskip.py:192
 msgid "You must be in my voice channel to use these controls."
 msgstr ""
 
-#: cogs/music/lyrics.py:614
+#: cogs/music/lyrics.py:777
 msgid "the music channel"
 msgstr ""
 
-#: cogs/music/lyrics.py:615
+#: cogs/music/lyrics.py:778
 #, python-brace-format
 msgid "Now following the lyrics in {channel}."
 msgstr ""
 
-#: cogs/music/lyrics.py:620
+#: cogs/music/lyrics.py:783
 msgid "A lot of servers are following lyrics right now - try again in a moment."
 msgstr ""
 
-#: cogs/music/lyrics.py:623
+#: cogs/music/lyrics.py:786
 msgid "I can't follow the lyrics here right now."
 msgstr ""
 
-#: cogs/music/lyrics.py:657
+#: cogs/music/lyrics.py:820
 msgid "### 🎤 Live Lyrics"
 msgstr ""
 
-#: cogs/music/lyrics.py:672
+#: cogs/music/lyrics.py:836
+#, python-brace-format
+msgid "-# Lyrics offset: {offset}s"
+msgstr ""
+
+#: cogs/music/lyrics.py:843
 msgid "-# Stopped following the lyrics."
 msgstr ""
 
-#: cogs/music/lyrics.py:677
+#: cogs/music/lyrics.py:848
 msgid "-# Following along - the lyrics update as the song plays."
 msgstr ""
 
-#: cogs/music/lyrics.py:684
+#: cogs/music/lyrics.py:861
+msgid "-5s"
+msgstr ""
+
+#: cogs/music/lyrics.py:869
+msgid "-1s"
+msgstr ""
+
+#: cogs/music/lyrics.py:877
+msgid "+1s"
+msgstr ""
+
+#: cogs/music/lyrics.py:885
+msgid "+5s"
+msgstr ""
+
+#: cogs/music/lyrics.py:896
 msgid "Stop"
 msgstr ""
 

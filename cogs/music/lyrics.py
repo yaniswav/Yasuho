@@ -28,11 +28,11 @@ pure :func:`next_wake` scheduler) rather than polling on a fixed clock, so the
 bold line turns over exactly at the transition instead of lagging up to a tick.
 Each wake reads the extrapolated player position, picks the current line - O(1),
 no I/O - and edits its one Discord message only when that line index actually
-changed since the last edit. The scheduler enforces a ``MIN_EDIT_GAP`` (2.5 s)
+changed since the last edit. The scheduler enforces a ``MIN_EDIT_GAP`` (1.5 s)
 floor between edits (machine-gun rap lines coalesce onto the first allowed
 transition) and a ``MAX_TICK_SLEEP`` (8 s) ceiling (a periodic re-check so a
 seek, a pause or clock drift can never strand the session), which bounds a
-session to at most one edit per 2.5 s. The number of live sessions is capped
+session to at most one autonomous edit per 1.5 s. The number of live sessions is capped
 process-wide by the ``synced_lyrics`` :class:`~tools.quotas.GlobalCeiling` (25),
 acquired per session and released on every stop path, so the background work and
 the per-cog session map are bounded by 25 regardless of guild count.
@@ -43,6 +43,7 @@ from __future__ import annotations
 import asyncio
 import bisect
 import dataclasses
+import functools
 import logging
 import re
 import time
@@ -67,9 +68,11 @@ log = logging.getLogger(__name__)
 # Minimum seconds between two edits of a synced session's message. The scheduler
 # never wakes to edit sooner than this after the previous edit, so a run of
 # machine-gun lines coalesces onto the first transition this floor allows. At the
-# 2.5 s floor a channel sees at most one edit / 2.5 s (0.4 / s), comfortably under
-# Discord's per-channel edit budget (5 / 5 s = 1 / s).
-MIN_EDIT_GAP = 2.5
+# 1.5 s floor a channel sees at most one autonomous edit / 1.5 s (0.67 / s), still
+# under Discord's per-channel edit budget (5 / 5 s = 1 / s). (The offset buttons
+# add user-paced edits on top, but those are interaction-driven and rate-limited
+# by Discord's own bucket - see the SCALE STORY.)
+MIN_EDIT_GAP = 1.5
 
 # Longest a session ever sleeps before re-checking. It caps the lag after a seek,
 # a resume or extrapolation drift (worst case <= this), and is the fallback sleep
@@ -82,6 +85,16 @@ MAX_TICK_SLEEP = 8.0
 # nominal line start makes the edit land on the new line rather than a hair
 # before it (which would render the old line and need a second edit to correct).
 DRIFT_MARGIN = 0.15
+
+# Per-session manual calibration. Musixmatch times its lines against the YouTube
+# MUSIC audio, but the track actually playing is often the music VIDEO (intros,
+# skits, outros) - a roughly constant offset no scheduler can infer. The live card
+# gives listeners buttons to nudge a per-session ``offset_ms`` (added to the
+# player position before line selection) until the bold line lands on the beat.
+# The steps the buttons apply and the symmetric bound they clamp to:
+OFFSET_STEP_SMALL_MS = 1000
+OFFSET_STEP_LARGE_MS = 5000
+OFFSET_LIMIT_MS = 30000
 
 # Context around the current line in the synced window: how many lines to show
 # before it and after it. The current line renders bold between them.
@@ -250,6 +263,20 @@ def current_line_index(lines: typing.Sequence[TimedLine], position_ms: int) -> i
     return (
         bisect.bisect_right(lines, position_ms, key=lambda line: line.start_ms) - 1
     )
+
+
+def clamp_offset(offset_ms: int, *, limit: int = OFFSET_LIMIT_MS) -> int:
+    """Clamp a calibration offset to +/- ``limit`` ms (pure, symmetric)."""
+    return max(-limit, min(int(offset_ms), limit))
+
+
+def format_offset(offset_ms: int) -> str:
+    """Render an offset (ms) as signed seconds with one decimal, e.g. ``+1.0`` (pure).
+
+    Uses an ASCII sign and never a Unicode minus; the footer template appends the
+    trailing ``s`` so this returns only the number ("+2.5", "-5.0", "+0.0").
+    """
+    return f"{offset_ms / 1000.0:+.1f}"
 
 
 def _fmt_line(content: str, *, bold: bool) -> str:
@@ -424,9 +451,71 @@ def search_query_for(track: typing.Any) -> str:
     return " ".join(f"{title} {author}".split())
 
 
-# How many search candidates to try before giving up: the right song is almost
-# always first, but a live/sped-up variant can shadow it.
+# How many search candidates to fetch-and-try before giving up: the right song is
+# almost always near the top once ranked, but a live/sped-up variant can shadow it.
 SEARCH_CANDIDATES = 3
+
+# Title markers of a re-timed variant (sped up, slowed, live, remix, nightcore).
+# When the PLAYING title carries none of these, a candidate that does is a
+# different recording with different line timings even if its lyrics match, so it
+# is deprioritised. When the playing title IS such a variant, the marker carries
+# real signal and is not penalised. Word-bounded so "live" does not match "livin".
+_VARIANT_MARKERS = re.compile(
+    r"\b(?:sped[\s-]?up|slowed|nightcore|remix|live)\b",
+    re.IGNORECASE,
+)
+
+
+def _has_variant_marker(title: str) -> bool:
+    """True when a title names a re-timed variant (pure)."""
+    return bool(_VARIANT_MARKERS.search(title or ""))
+
+
+def _title_tokens(title: str) -> typing.Set[str]:
+    """Casefolded alphanumeric token set of a title, upload noise stripped (pure)."""
+    cleaned = _TITLE_NOISE.sub(" ", title or "")
+    cleaned = _TOPIC_SUFFIX.sub("", cleaned)
+    return {tok for tok in re.split(r"[^0-9a-z]+", cleaned.casefold()) if tok}
+
+
+def title_similarity(a: str, b: str) -> float:
+    """Token-set (Jaccard) similarity of two titles in [0, 1] (pure).
+
+    Casefolded token overlap over token union: identical titles score 1.0,
+    disjoint 0.0, a shared subset in between. Robust to word order and to trailing
+    upload noise (both sides go through :func:`_title_tokens`). Empty on either
+    side scores 0.0 (nothing to compare).
+    """
+    ta, tb = _title_tokens(a), _title_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def rank_candidates(
+    candidates: typing.Any,
+    playing_title: str,
+    *,
+    limit: int = SEARCH_CANDIDATES,
+) -> list:
+    """Order search candidates best-first for the playing title, top ``limit`` (pure).
+
+    Sort key, ascending: (variant penalty, -similarity, original index). So a
+    non-variant candidate always precedes a penalised variant one; within a tier a
+    higher title similarity wins; ties keep the search engine's own order (stable).
+    Candidates that are not mappings or carry no ``videoId`` are dropped (they can
+    never be fetched, so they must not consume a try slot). Never raises.
+    """
+    scored: list[tuple[int, float, int, typing.Any]] = []
+    playing_is_variant = _has_variant_marker(playing_title)
+    for index, cand in enumerate(candidates or ()):
+        if not isinstance(cand, typing.Mapping) or not cand.get("videoId"):
+            continue
+        title = str(cand.get("title") or "")
+        penalty = 1 if (not playing_is_variant and _has_variant_marker(title)) else 0
+        scored.append((penalty, -title_similarity(playing_title, title), index, cand))
+    scored.sort(key=lambda item: item[:3])
+    return [cand for _, _, _, cand in scored[:limit]]
 
 
 def _node_of(player: typing.Any) -> typing.Any:
@@ -470,7 +559,9 @@ async def fetch_lyrics(
     if guild_id is None:
         return _NONE_RESULT
 
-    # 1) Search-then-fetch off the track's own metadata (source-agnostic).
+    # 1) Search-then-fetch off the track's own metadata (source-agnostic). Rank the
+    # results by title similarity (deprioritising re-timed variants) before trying,
+    # so an exact match beats a live/sped-up cover the search may have surfaced first.
     track = getattr(player, "current", None)
     query = search_query_for(track) if track is not None else ""
     if query:
@@ -479,10 +570,9 @@ async def fetch_lyrics(
         except Exception as exc:
             log.debug("Lyrics search failed for guild %s (%s)", guild_id, exc)
             candidates = None
-        for candidate in (candidates or [])[:SEARCH_CANDIDATES]:
-            video_id = (candidate or {}).get("videoId")
-            if not video_id:
-                continue
+        playing_title = str(getattr(track, "title", "") or "")
+        for candidate in rank_candidates(candidates, playing_title):
+            video_id = candidate.get("videoId")  # ranker guarantees a truthy id
             try:
                 payload = await node.send("GET", video_lyrics_path(video_id))
             except Exception:
@@ -740,6 +830,14 @@ class SyncedLyricsCard(discord.ui.LayoutView):
                     _("-# Lyrics from {source}").format(source=self._session.source)
                 )
             )
+        if self._session.offset_ms:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("-# Lyrics offset: {offset}s").format(
+                        offset=format_offset(self._session.offset_ms)
+                    )
+                )
+            )
         if self._stopped:
             container.add_item(
                 discord.ui.TextDisplay(_("-# Stopped following the lyrics."))
@@ -750,6 +848,47 @@ class SyncedLyricsCard(discord.ui.LayoutView):
                     _("-# Following along - the lyrics update as the song plays.")
                 )
             )
+            # Row 1: cooperative calibration - shift the per-session offset so the
+            # bold line lands on the beat when the video's timing differs from the
+            # lyrics' (open to anyone in voice, same gate as Stop).
+            container.add_item(
+                discord.ui.ActionRow(
+                    _DelegateButton(
+                        functools.partial(
+                            self._session.shift_offset_from_interaction,
+                            delta_ms=-OFFSET_STEP_LARGE_MS,
+                        ),
+                        label=_("-5s"),
+                        style=discord.ButtonStyle.secondary,
+                    ),
+                    _DelegateButton(
+                        functools.partial(
+                            self._session.shift_offset_from_interaction,
+                            delta_ms=-OFFSET_STEP_SMALL_MS,
+                        ),
+                        label=_("-1s"),
+                        style=discord.ButtonStyle.secondary,
+                    ),
+                    _DelegateButton(
+                        functools.partial(
+                            self._session.shift_offset_from_interaction,
+                            delta_ms=OFFSET_STEP_SMALL_MS,
+                        ),
+                        label=_("+1s"),
+                        style=discord.ButtonStyle.secondary,
+                    ),
+                    _DelegateButton(
+                        functools.partial(
+                            self._session.shift_offset_from_interaction,
+                            delta_ms=OFFSET_STEP_LARGE_MS,
+                        ),
+                        label=_("+5s"),
+                        style=discord.ButtonStyle.secondary,
+                    ),
+                )
+            )
+            # Row 2: Stop (kept on its own row so the four calibration steps read
+            # as one group and the row budget stays comfortably legal).
             container.add_item(
                 discord.ui.ActionRow(
                     _DelegateButton(
@@ -812,6 +951,11 @@ class SyncedLyricsSession:
         self._clock = clock
         self._min_edit_gap = min_edit_gap
         self._max_tick_sleep = max_tick_sleep
+        # Per-session calibration offset (ms), added to the player position before
+        # line selection. Starts at 0 for every session; a new track is always a
+        # new session, so the offset resets on track change (a new cut). The
+        # calibration buttons shift it, clamped to +/- OFFSET_LIMIT_MS.
+        self.offset_ms = 0
         self.message: typing.Optional[discord.Message] = None
         self._card = SyncedLyricsCard(self)
         self._task: typing.Optional[asyncio.Task] = None
@@ -823,7 +967,14 @@ class SyncedLyricsSession:
         self._wake = asyncio.Event()
 
     def _position_ms(self) -> int:
+        # sonolink's Player.position already interpolates the last playerUpdate on
+        # a monotonic wall clock and freezes when paused (verified in _base.py), so
+        # we read it as the source of truth and do NOT extrapolate again here.
         return int(getattr(self.player, "position", 0) or 0)
+
+    def _effective_position_ms(self) -> int:
+        """Player position shifted by the calibration offset, for line selection."""
+        return self._position_ms() + self.offset_ms
 
     def _is_paused(self) -> bool:
         """True when the player is paused (its position is frozen).
@@ -861,7 +1012,7 @@ class SyncedLyricsSession:
             return self._max_tick_sleep
         return next_wake(
             self.lines,
-            self._position_ms(),
+            self._effective_position_ms(),
             min_gap=self._min_edit_gap,
             max_sleep=self._max_tick_sleep,
         )
@@ -886,7 +1037,7 @@ class SyncedLyricsSession:
         """
         if self._stopped:
             return
-        index = current_line_index(self.lines, self._position_ms())
+        index = current_line_index(self.lines, self._effective_position_ms())
         self._last_body = render_window(self.lines, index)
         self._last_index = index
         self._last_edit_ts = self._clock()
@@ -929,7 +1080,7 @@ class SyncedLyricsSession:
             return
         if self._is_paused():
             return
-        index = current_line_index(self.lines, self._position_ms())
+        index = current_line_index(self.lines, self._effective_position_ms())
         if not should_edit(last_index=self._last_index, current_index=index):
             return
         self._last_index = index
@@ -986,6 +1137,39 @@ class SyncedLyricsSession:
             return
         await interaction.response.defer()
         await self.stop(finalize=True)
+
+    async def shift_offset_from_interaction(
+        self, interaction: discord.Interaction, *, delta_ms: int
+    ) -> None:
+        """Calibration button handler: nudge the offset and resync immediately.
+
+        Cooperative, not destructive - any listener in the voice channel may
+        calibrate (same-voice gate only, matching Stop). Shifts the per-session
+        offset by ``delta_ms`` (clamped to +/- OFFSET_LIMIT_MS), re-picks the
+        current line under the new offset, edits the message via the interaction
+        (immediate feedback, one interaction-driven edit) and re-primes the loop's
+        last-edit state so its next autonomous tick does not re-edit the same line.
+        A :meth:`nudge` wakes the loop so it re-plans its schedule around the new
+        effective position at once.
+        """
+        if not _in_players_voice(self.player, interaction.user):
+            await interaction.response.send_message(
+                _("You must be in my voice channel to use these controls."),
+                ephemeral=True,
+            )
+            return
+        if self._stopped:
+            # Raced with a stop/finalise: acknowledge without reviving the message.
+            await interaction.response.defer()
+            return
+        self.offset_ms = clamp_offset(self.offset_ms + delta_ms)
+        index = current_line_index(self.lines, self._effective_position_ms())
+        self._last_index = index
+        self._last_body = render_window(self.lines, index)
+        self._last_edit_ts = self._clock()
+        self._card.set_state(body=self._last_body)
+        await interaction.response.edit_message(view=self._card)
+        self.nudge()
 
 
 # ---------------------------------------------------------------------------
