@@ -23,13 +23,19 @@ Layering mirrors ``sponsorblock.py`` / ``effects.py``:
 * The Discord UI (the two Components V2 cards) and the per-guild session machinery
   live here too, self-contained, so ``lyrics.py`` stays a leaf the cog imports.
 
-Scale. A synced session does in-process work every ``TICK_INTERVAL`` seconds
-(read the extrapolated player position, pick the current line - O(1), no I/O) but
-only *edits* its one Discord message at most once per ``EDIT_INTERVAL`` (>= 5 s)
-AND only when the current line actually changes. The number of live sessions is
-capped process-wide by the ``synced_lyrics`` :class:`~tools.quotas.GlobalCeiling`
-(25), acquired per session and released on every stop path, so the background
-work and the per-cog session map are bounded by 25 regardless of guild count.
+Scale. A synced session sleeps precisely until the next line boundary (via the
+pure :func:`next_wake` scheduler) rather than polling on a fixed clock, so the
+bold line turns over exactly at the transition instead of lagging up to a tick.
+Each wake reads the extrapolated player position, picks the current line - O(1),
+no I/O - and edits its one Discord message only when that line index actually
+changed since the last edit. The scheduler enforces a ``MIN_EDIT_GAP`` (2.5 s)
+floor between edits (machine-gun rap lines coalesce onto the first allowed
+transition) and a ``MAX_TICK_SLEEP`` (8 s) ceiling (a periodic re-check so a
+seek, a pause or clock drift can never strand the session), which bounds a
+session to at most one edit per 2.5 s. The number of live sessions is capped
+process-wide by the ``synced_lyrics`` :class:`~tools.quotas.GlobalCeiling` (25),
+acquired per session and released on every stop path, so the background work and
+the per-cog session map are bounded by 25 regardless of guild count.
 """
 
 from __future__ import annotations
@@ -56,16 +62,24 @@ log = logging.getLogger(__name__)
 # Tunables. Every knob lives here so the cadence is documented in one place.
 # ---------------------------------------------------------------------------
 
-# Minimum seconds between edits of a synced session's message. The task floor is
-# 5 s; 6 s leaves headroom under Discord's per-channel edit budget (5 / 5 s) even
-# in the pathological case of a line changing on every tick.
-EDIT_INTERVAL = 6.0
+# Minimum seconds between two edits of a synced session's message. The scheduler
+# never wakes to edit sooner than this after the previous edit, so a run of
+# machine-gun lines coalesces onto the first transition this floor allows. At the
+# 2.5 s floor a channel sees at most one edit / 2.5 s (0.4 / s), comfortably under
+# Discord's per-channel edit budget (5 / 5 s = 1 / s).
+MIN_EDIT_GAP = 2.5
 
-# How often the session's loop wakes to re-read the position and re-decide. This
-# is in-process only (an int read plus a comparison), so a tight-ish tick keeps
-# the highlighted line fresh without ever driving an edit faster than the
-# interval above.
-TICK_INTERVAL = 2.0
+# Longest a session ever sleeps before re-checking. It caps the lag after a seek,
+# a resume or extrapolation drift (worst case <= this), and is the fallback sleep
+# when there is no upcoming line boundary to aim at (an outro, or a paused
+# player). Purely in-process work on wake, so a periodic re-check is cheap.
+MAX_TICK_SLEEP = 8.0
+
+# Lavalink pushes a position update only every ~5 s, so the locally extrapolated
+# position can trail the node's by a few hundred ms. Waking this much AFTER the
+# nominal line start makes the edit land on the new line rather than a hair
+# before it (which would render the old line and need a second edit to correct).
+DRIFT_MARGIN = 0.15
 
 # Context around the current line in the synced window: how many lines to show
 # before it and after it. The current line renders bold between them.
@@ -307,25 +321,49 @@ def paginate_text(text: str, *, limit: int = PAGE_CHAR_LIMIT) -> list[str]:
     return pages or [""]
 
 
-def should_edit(
+def next_wake(
+    lines: typing.Sequence[TimedLine],
+    position_ms: int,
     *,
-    now: float,
-    last_edit_ts: float,
-    last_index: int,
-    current_index: int,
-    interval: float = EDIT_INTERVAL,
-) -> bool:
-    """Decide whether the synced message should be edited this tick (pure, O(1)).
+    min_gap: float = MIN_EDIT_GAP,
+    max_sleep: float = MAX_TICK_SLEEP,
+) -> float:
+    """Seconds to sleep until the next useful edit for a session (pure, O(log n)).
 
-    Two gates, both must pass: the current line must have CHANGED since the last
-    edit (no point re-sending the same window), and at least ``interval`` seconds
-    must have elapsed since the last edit (the rate cap that bounds edits/sec). A
-    rapid run of line changes therefore collapses to one edit per interval, and
-    that edit always shows the line live at the moment it fires.
+    Returns the time from ``position_ms`` to the next line transition worth
+    editing at, offset by :data:`DRIFT_MARGIN` so the wake lands just after the
+    boundary. Two clamps shape it:
+
+    * ``min_gap`` floor - only a transition at least ``min_gap`` seconds ahead of
+      the current position (the moment of the last edit, in steady state) counts.
+      A burst of lines closer together than the gap coalesces: the scheduler skips
+      to the FIRST transition the floor allows, so a channel is never edited more
+      than once per ``min_gap``.
+    * ``max_sleep`` ceiling - the wait is capped so a seek, a pause or clock drift
+      can never strand the session past this, and it is the fallback when there is
+      NO upcoming allowed transition (an outro, an empty list, or a position past
+      the last line): re-check after ``max_sleep`` rather than sleep forever.
+
+    ``lines`` is sorted ascending by ``start_ms``. Pure - no clock, no I/O.
     """
-    if current_index == last_index:
-        return False
-    return (now - last_edit_ts) >= interval
+    threshold = position_ms + int(min_gap * 1000)
+    idx = bisect.bisect_left(lines, threshold, key=lambda line: line.start_ms)
+    if idx < len(lines):
+        sleep = (lines[idx].start_ms - position_ms) / 1000.0 + DRIFT_MARGIN
+        return max(min_gap, min(sleep, max_sleep))
+    return max_sleep
+
+
+def should_edit(*, last_index: int, current_index: int) -> bool:
+    """True when the rendered line changed since the last edit (pure, O(1)).
+
+    The one remaining edit gate: the time floor now lives in :func:`next_wake`
+    (which decides WHEN the loop wakes), so all this dedupe does is suppress a
+    redundant edit when the wake landed on the same line as last time - a
+    max_sleep re-check mid-line, or a wake nudged by a seek that did not cross a
+    boundary. Every edit therefore shows a genuinely new line.
+    """
+    return current_index != last_index
 
 
 # ---------------------------------------------------------------------------
@@ -661,12 +699,16 @@ class SyncedLyricsSession:
     """Drives ONE public message that follows playback for a single guild.
 
     Holds the timed lines, the player it follows and the message it edits. A
-    background loop wakes every ``tick_interval`` seconds to read the player's
-    (self-extrapolating) position, pick the current line and - via
-    :func:`should_edit` - edit the message at most once per ``edit_interval`` and
-    only when the line changed. It stops itself when the track ends, changes or
-    the player disconnects; external stops (the Stop button, a track change, the
-    cog's teardown) go through :meth:`stop`, which is idempotent.
+    background loop sleeps until the next line boundary (via :func:`next_wake`),
+    reads the player's (self-extrapolating) position, picks the current line and -
+    via :func:`should_edit` - edits the message when the line index changed. The
+    scheduler bounds edits to at most one per ``min_edit_gap`` and re-checks at
+    least every ``max_tick_sleep`` so a seek or pause never strands it; a paused
+    player is detected (its position is frozen) and skipped without an edit. A
+    :meth:`nudge` from the cog's /seek wakes the loop early for a prompt resync.
+    It stops itself when the track ends, changes or the player disconnects;
+    external stops (the Stop button, a track change, the cog's teardown) go
+    through :meth:`stop`, which is idempotent.
 
     The process-wide ``synced_lyrics`` ceiling slot is owned by the registry: it
     acquires on start and releases via :meth:`LyricsSessions._detach` on every
@@ -683,8 +725,8 @@ class SyncedLyricsSession:
         track: typing.Any,
         registry: "LyricsSessions",
         clock: typing.Callable[[], float] = time.monotonic,
-        edit_interval: float = EDIT_INTERVAL,
-        tick_interval: float = TICK_INTERVAL,
+        min_edit_gap: float = MIN_EDIT_GAP,
+        max_tick_sleep: float = MAX_TICK_SLEEP,
     ) -> None:
         self.guild_id = guild_id
         self.player = player
@@ -695,8 +737,8 @@ class SyncedLyricsSession:
         self.track_id = getattr(track, "identifier", None)
         self._registry = registry
         self._clock = clock
-        self._edit_interval = edit_interval
-        self._tick_interval = tick_interval
+        self._min_edit_gap = min_edit_gap
+        self._max_tick_sleep = max_tick_sleep
         self.message: typing.Optional[discord.Message] = None
         self._card = SyncedLyricsCard(self)
         self._task: typing.Optional[asyncio.Task] = None
@@ -704,9 +746,52 @@ class SyncedLyricsSession:
         self._last_index = BEFORE_FIRST
         self._last_edit_ts = 0.0
         self._last_body = ""
+        # Set by nudge() (a seek) to wake the sleeping loop early for a resync.
+        self._wake = asyncio.Event()
 
     def _position_ms(self) -> int:
         return int(getattr(self.player, "position", 0) or 0)
+
+    def _is_paused(self) -> bool:
+        """True when the player is paused (its position is frozen).
+
+        The loop must not edit while paused: the extrapolated position stops
+        advancing, so re-picking the current line would either be a no-op (same
+        index) or, if the seam kept advancing on wall clock, wrongly race ahead.
+        Duck-typed so this module needs no import from the cog.
+        """
+        return bool(getattr(self.player, "paused", False))
+
+    def nudge(self) -> None:
+        """Wake the loop early so the next tick resyncs at once (best-effort).
+
+        Called by the cog after a /seek: the position jumped, so re-picking the
+        current line right away lands the bold line on the new spot instead of
+        waiting out the current sleep. A no-op when the loop is not running (the
+        loop clears the flag on its next wake), so it is always safe to call.
+        """
+        self._wake.set()
+
+    async def _sleep(self, delay: float) -> None:
+        """Sleep ``delay`` seconds, returning early if :meth:`nudge` fires."""
+        try:
+            await asyncio.wait_for(self._wake.wait(), timeout=delay)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            self._wake.clear()
+
+    def _next_sleep(self) -> float:
+        """Seconds to sleep before the next tick, honouring pause and the schedule."""
+        if self._is_paused():
+            # Position is frozen: nothing to aim at, just re-check periodically.
+            return self._max_tick_sleep
+        return next_wake(
+            self.lines,
+            self._position_ms(),
+            min_gap=self._min_edit_gap,
+            max_sleep=self._max_tick_sleep,
+        )
 
     def _is_terminated(self, track: typing.Any) -> bool:
         """True when the session should end: player gone, or the track changed."""
@@ -748,7 +833,7 @@ class SyncedLyricsSession:
     async def _run(self) -> None:
         try:
             while not self._stopped:
-                await asyncio.sleep(self._tick_interval)
+                await self._sleep(self._next_sleep())
                 await self._tick_once()
         except asyncio.CancelledError:  # external stop cancelled us; cleanup done
             pass
@@ -757,25 +842,25 @@ class SyncedLyricsSession:
             await self.stop(finalize=True)
 
     async def _tick_once(self) -> None:
-        """One loop iteration: end if the track is gone, else maybe edit."""
+        """One loop iteration: end if the track is gone, else maybe edit.
+
+        The scheduler already enforced the time floor by choosing when to wake, so
+        the only edit gate left here is the line-index dedupe. A paused player is
+        skipped without an edit (its frozen position would render a stale line).
+        """
         if self._stopped:
             return
         track = getattr(self.player, "current", None)
         if self._is_terminated(track):
             await self.stop(finalize=True)
             return
+        if self._is_paused():
+            return
         index = current_line_index(self.lines, self._position_ms())
-        now = self._clock()
-        if not should_edit(
-            now=now,
-            last_edit_ts=self._last_edit_ts,
-            last_index=self._last_index,
-            current_index=index,
-            interval=self._edit_interval,
-        ):
+        if not should_edit(last_index=self._last_index, current_index=index):
             return
         self._last_index = index
-        self._last_edit_ts = now
+        self._last_edit_ts = self._clock()
         self._last_body = render_window(self.lines, index)
         await self._edit(self._last_body)
 

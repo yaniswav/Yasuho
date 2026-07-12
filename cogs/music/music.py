@@ -2276,6 +2276,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         target_ms = vibes.resolve_seek_ms(target, player.position, track.length)
         await player.seek(target_ms)
+        # Nudge a live synced-lyrics session so it resyncs to the new position at
+        # once rather than waiting out its current sleep (best-effort: no-op when
+        # no session is following in this guild).
+        session = self.lyrics_sessions.get(ctx.guild.id)
+        if session is not None:
+            session.nudge()
         await ctx.send(
             _("Jumped to {position}.").format(position=format_clock(target_ms))
         )

@@ -13,13 +13,16 @@ What is deterministic without a backend is covered here:
   ``timestamp``), plain text, and malformed / empty payloads;
 * current-line selection by position, at the boundaries;
 * window rendering (bold current line, before-first preview, instrumental gap);
-* text pagination and the edit-cadence decision helper;
+* text pagination, the line-boundary scheduler (``next_wake`` truth table: mid-
+  line, on-boundary, machine-gun coalescing, outro/empty fallback, drift margin)
+  and the line-index dedupe (``should_edit``);
 * the fetch seam, driven against a fake ``player``/``node`` that records the
   ``node.send`` call (path, params) and the best-effort "never raises" contract;
 * the session machinery - replace-not-duplicate, the process-wide ceiling
   (bounded, released on every stop path), ``notify_track`` and ``shutdown`` -
-  and one deterministic ``_tick_once`` drive (edit only when the line changed AND
-  the interval elapsed; auto-stop on track change / disconnect) with fakes.
+  and one deterministic ``_tick_once`` drive (edit only when the line index
+  changed; skip while paused; auto-stop on track change / disconnect), plus the
+  pause / nudge scheduling hooks, with fakes.
 
 ``lyrics.py`` duck-types the player/node and imports no sonolink types, so it
 imports identically under the stub and the real sonolink.
@@ -268,35 +271,81 @@ def test_paginate_empty_returns_one_empty_page():
 
 
 # ---------------------------------------------------------------------------
-# should_edit (edit-cadence decision)
+# next_wake (line-boundary scheduler)
+# ---------------------------------------------------------------------------
+
+
+def test_next_wake_sleeps_to_next_boundary_mid_line():
+    # Lines spaced well beyond MIN_EDIT_GAP: from mid-line, sleep to the next
+    # start, offset by the drift margin so the wake lands just past it.
+    lines = _lines(1000, 5000, 9000)
+    # position 2000 (inside line 0): next allowed boundary is 5000.
+    assert lyrics.next_wake(lines, 2000, min_gap=2.5, max_sleep=8.0) == (
+        (5000 - 2000) / 1000.0 + lyrics.DRIFT_MARGIN
+    )
+
+
+def test_next_wake_exactly_on_boundary_aims_at_the_following_line():
+    # Sitting exactly on a line's start (just transitioned to it): aim at the
+    # NEXT line, again drift-offset. 4000 -> 8000 is 4s, well past the gap.
+    lines = _lines(0, 4000, 8000)
+    assert lyrics.next_wake(lines, 4000, min_gap=2.5, max_sleep=8.0) == (
+        (8000 - 4000) / 1000.0 + lyrics.DRIFT_MARGIN
+    )
+
+
+def test_next_wake_machine_gun_lines_coalesce_to_first_allowed():
+    # A burst closer together than MIN_EDIT_GAP: every boundary within the gap is
+    # skipped, the wake aims at the first start at or beyond position + gap.
+    lines = _lines(0, 500, 1000, 1500, 2000, 2500, 3000)
+    # From 0 with a 2.5s gap, threshold is 2500 -> first allowed start is 2500.
+    sleep = lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0)
+    assert sleep == 2.5 + lyrics.DRIFT_MARGIN
+    assert sleep >= 2.5  # the min-gap floor is honoured
+
+
+def test_next_wake_no_upcoming_line_falls_back_to_max_sleep():
+    # Position past every line (an outro): nothing to aim at, re-check after max.
+    lines = _lines(1000, 3000, 5000)
+    assert lyrics.next_wake(lines, 9000, min_gap=2.5, max_sleep=8.0) == 8.0
+    # A last line whose only remaining boundary is within the gap also falls back.
+    assert lyrics.next_wake(lines, 5000, min_gap=2.5, max_sleep=8.0) == 8.0
+
+
+def test_next_wake_empty_lines_is_max_sleep():
+    assert lyrics.next_wake((), 1234, min_gap=2.5, max_sleep=8.0) == 8.0
+
+
+def test_next_wake_far_boundary_clamped_to_max_sleep():
+    # The next boundary is 20s out: clamp to max so drift/seek can't strand us.
+    lines = _lines(0, 20000)
+    assert lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0) == 8.0
+
+
+def test_next_wake_drift_margin_lands_after_the_transition():
+    # The returned sleep is strictly greater than the raw time-to-boundary, so the
+    # wake fires AFTER the nominal start (extrapolation trails the node by ~ms).
+    lines = _lines(0, 6000)
+    raw = (6000 - 0) / 1000.0
+    assert lyrics.next_wake(lines, 0, min_gap=2.5, max_sleep=8.0) == raw + lyrics.DRIFT_MARGIN
+
+
+# ---------------------------------------------------------------------------
+# should_edit (line-index dedupe; the time floor now lives in next_wake)
 # ---------------------------------------------------------------------------
 
 
 def test_should_edit_false_when_line_unchanged():
-    # Same index: never edit, no matter how much time has passed.
-    assert not lyrics.should_edit(
-        now=1000.0, last_edit_ts=0.0, last_index=2, current_index=2, interval=6.0
-    )
+    # Same index: never edit, the wake landed on the same line (a re-check).
+    assert not lyrics.should_edit(last_index=2, current_index=2)
 
 
-def test_should_edit_false_when_changed_but_too_soon():
-    assert not lyrics.should_edit(
-        now=3.0, last_edit_ts=0.0, last_index=1, current_index=2, interval=6.0
-    )
+def test_should_edit_true_when_line_changed():
+    assert lyrics.should_edit(last_index=1, current_index=2)
 
 
-def test_should_edit_true_when_changed_and_interval_elapsed():
-    assert lyrics.should_edit(
-        now=6.0, last_edit_ts=0.0, last_index=1, current_index=2, interval=6.0
-    )
-
-
-def test_should_edit_boundary_exactly_interval():
-    # Exactly the interval counts as elapsed (>=).
-    assert lyrics.should_edit(
-        now=6.0, last_edit_ts=0.0, last_index=lyrics.BEFORE_FIRST,
-        current_index=0, interval=6.0,
-    )
+def test_should_edit_true_from_before_first_to_first_line():
+    assert lyrics.should_edit(last_index=lyrics.BEFORE_FIRST, current_index=0)
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +602,6 @@ def _make_session(clock_holder, player):
         track=_track("T1"),
         registry=_FakeRegistry(),
         clock=lambda: clock_holder[0],
-        edit_interval=6.0,
     )
     # Prime the state ``start()`` would set, without spinning the background loop.
     session.message = _FakeMessage()
@@ -571,24 +619,50 @@ async def test_tick_no_edit_when_line_unchanged():
     assert session.message.edits == 0
 
 
-async def test_tick_no_edit_when_changed_but_too_soon():
-    clock = [3.0]  # 3s since last edit at 0.0, interval is 6s
-    player = _FakeSessionPlayer(position=3000, track=_track("T1"))  # index 1
-    session = _make_session(clock, player)
-    await session._tick_once()
-    assert session.message.edits == 0
-    assert session._last_index == 0  # unchanged: no edit committed
-
-
-async def test_tick_edits_when_changed_and_interval_elapsed():
-    clock = [6.0]
+async def test_tick_edits_when_line_changed():
+    # The scheduler owns the time floor now: the tick edits whenever the wake
+    # landed on a new line, regardless of the clock.
+    clock = [3.0]
     player = _FakeSessionPlayer(position=3000, track=_track("T1"))  # index 1
     session = _make_session(clock, player)
     await session._tick_once()
     assert session.message.edits == 1
     assert session._last_index == 1
-    assert session._last_edit_ts == 6.0
+    assert session._last_edit_ts == 3.0
     assert "**second**" in session._last_body
+
+
+async def test_tick_no_edit_when_paused():
+    # A paused player's position is frozen; the tick must skip editing even when
+    # the (stale) position would pick a different line than last time.
+    clock = [6.0]
+    player = _FakeSessionPlayer(position=3000, track=_track("T1"))  # index 1
+    player.paused = True
+    session = _make_session(clock, player)
+    await session._tick_once()
+    assert session.message.edits == 0
+    assert session._last_index == 0  # untouched while paused
+
+
+def test_next_sleep_is_max_when_paused():
+    # A paused session re-checks at the ceiling rather than aiming at a boundary
+    # its frozen position will never reach.
+    clock = [0.0]
+    player = _FakeSessionPlayer(position=0, track=_track("T1"))
+    player.paused = True
+    session = _make_session(clock, player)
+    assert session._next_sleep() == lyrics.MAX_TICK_SLEEP
+
+
+async def test_nudge_wakes_the_sleep_early():
+    # nudge() sets the wake flag _sleep waits on, so a long sleep returns at once
+    # (a seek resyncs immediately) and the flag is cleared for the next cycle.
+    clock = [0.0]
+    player = _FakeSessionPlayer(position=0, track=_track("T1"))
+    session = _make_session(clock, player)
+    session.nudge()
+    await asyncio.wait_for(session._sleep(1000.0), timeout=1.0)  # returns promptly
+    assert not session._wake.is_set()  # cleared, ready to arm again
 
 
 async def test_tick_stops_on_track_change():
