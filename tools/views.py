@@ -86,8 +86,17 @@ class AuthorView(discord.ui.View):
 
 
 # Component types a LayoutView disables on timeout (buttons + every select
-# flavour; ChannelSelect is NOT a subclass of ui.Select, so list it explicitly).
-_DISABLEABLE = (discord.ui.Button, discord.ui.Select, discord.ui.ChannelSelect)
+# flavour). None of ChannelSelect/RoleSelect/UserSelect/MentionableSelect are
+# subclasses of ui.Select (they share a private BaseSelect instead), so each is
+# listed explicitly - otherwise a RoleSelect etc. would stay clickable forever.
+_DISABLEABLE = (
+    discord.ui.Button,
+    discord.ui.Select,
+    discord.ui.ChannelSelect,
+    discord.ui.RoleSelect,
+    discord.ui.UserSelect,
+    discord.ui.MentionableSelect,
+)
 
 
 class AuthorLayoutView(discord.ui.LayoutView):

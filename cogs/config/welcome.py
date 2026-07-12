@@ -7,7 +7,7 @@ from discord.ext import commands
 from tools import embed_creator, settings, welcome_card
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +17,10 @@ log = logging.getLogger(__name__)
 # non-embed controls below.
 PLACEHOLDER_HINT = "{mention} {user} {server} {count} {membercount}"
 ASSET_HINT = "https://... or {avatar}"
+
+# Fallback/accent colour for the panel and its GIF sub-panel when the
+# configured welcome embed carries no colour of its own (Discord blurple).
+PANEL_ACCENT_DEFAULT = 0x5865F2
 
 
 def _default_config():
@@ -118,7 +122,6 @@ class WelcomeChannelSelect(discord.ui.ChannelSelect):
             min_values=1,
             max_values=1,
             default_values=defaults,
-            row=0,
         )
 
     async def callback(self, interaction):
@@ -145,7 +148,6 @@ class _ToggleButton(discord.ui.Button):
                 if on
                 else discord.ButtonStyle.secondary
             ),
-            row=2,
         )
 
     async def callback(self, interaction):
@@ -163,16 +165,12 @@ class _ToggleButton(discord.ui.Button):
 class _ManageGifsButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
-        super().__init__(
-            label=_("Manage GIFs"), style=discord.ButtonStyle.primary, row=2
-        )
+        super().__init__(label=_("Manage GIFs"), style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction):
         try:
             view = ManageGifsView(self.panel)
-            await interaction.response.send_message(
-                embed=view.build_embed(), view=view, ephemeral=True
-            )
+            await interaction.response.send_message(view=view, ephemeral=True)
         except Exception:
             log.exception("Welcome manage-GIFs launch failed")
             await self.panel._error(interaction)
@@ -181,9 +179,7 @@ class _ManageGifsButton(discord.ui.Button):
 class _PreviewButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
-        super().__init__(
-            label=_("Preview"), style=discord.ButtonStyle.primary, row=2
-        )
+        super().__init__(label=_("Preview"), style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction):
         try:
@@ -207,7 +203,6 @@ class _EnableButton(discord.ui.Button):
                 if enabled
                 else discord.ButtonStyle.success
             ),
-            row=3,
         )
 
     async def callback(self, interaction):
@@ -244,7 +239,6 @@ class RemoveGifSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=1,
         )
 
     async def callback(self, interaction):
@@ -263,120 +257,138 @@ class RemoveGifSelect(discord.ui.Select):
             await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
 
-class ManageGifsView(AuthorView):
-    """Small ephemeral flow to add/remove GIFs in the random pool."""
+class _AddGifButton(discord.ui.Button):
+    def __init__(self, manage_view):
+        self.manage_view = manage_view
+        super().__init__(label=_("Add GIF"), style=discord.ButtonStyle.success)
 
-    def __init__(self, panel, timeout=180):
-        super().__init__(
-            panel.author_id,
-            timeout=timeout,
-            deny_message="This panel isn't for you.",
-        )
-        self.panel = panel
-        self.cog = panel.cog
-        self.guild = panel.guild
-        self.config = panel.config
-        # The decorator label is fixed at class-definition time (before any
-        # locale is set), so translate it per instance against the live locale.
-        self.add_button.label = _("Add GIF")
-        if self.config.get("gifs"):
-            self.add_item(RemoveGifSelect(self))
-
-    def build_embed(self):
-        gifs = self.config.get("gifs") or []
-        embed = discord.Embed(
-            title=_("Manage welcome GIFs"),
-            description=_(
-                "Add image/GIF URLs to the random pool, or remove one below. "
-                "Turn on **Random GIF** on the main panel to use the pool."
-            ),
-            colour=0x5865F2,
-        )
-        if gifs:
-            lines = [f"{i + 1}. {url}" for i, url in enumerate(gifs[:15])]
-            if len(gifs) > 15:
-                lines.append(_("...and {count} more").format(count=len(gifs) - 15))
-            value = "\n".join(lines)
-            embed.add_field(
-                name=_("Pool ({count})").format(count=len(gifs)),
-                value=value[:1024],
-                inline=False,
-            )
-        else:
-            embed.add_field(
-                name=_("Pool (0)"),
-                value=_("No GIFs yet. Add one to build the random pool."),
-                inline=False,
-            )
-        return embed
-
-    @discord.ui.button(
-        label="Add GIF", style=discord.ButtonStyle.success, row=0
-    )
-    async def add_button(self, interaction, button):
+    async def callback(self, interaction):
         try:
-            await interaction.response.send_modal(AddGifModal(self))
+            await interaction.response.send_modal(AddGifModal(self.manage_view))
         except Exception:
             log.exception("Welcome add-GIF launch failed")
             await embed_creator.notify_failure(
                 interaction, _("Could not open the form.")
             )
 
+
+class ManageGifsView(AuthorLayoutView):
+    """Small ephemeral Components V2 flow to add/remove GIFs in the random pool."""
+
+    def __init__(self, panel, timeout=180):
+        super().__init__(panel.author_id, timeout=timeout)
+        self.panel = panel
+        self.cog = panel.cog
+        self.guild = panel.guild
+        self.config = panel.config
+        self._build()
+
+    def _build(self):
+        gifs = self.config.get("gifs") or []
+        container = discord.ui.Container(accent_colour=PANEL_ACCENT_DEFAULT)
+        container.add_item(
+            discord.ui.TextDisplay(
+                "### "
+                + _("Manage welcome GIFs")
+                + "\n"
+                + _(
+                    "Add image/GIF URLs to the random pool, or remove one below. "
+                    "Turn on **Random GIF** on the main panel to use the pool."
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        if gifs:
+            lines = [f"{i + 1}. {url}" for i, url in enumerate(gifs[:15])]
+            if len(gifs) > 15:
+                lines.append(_("...and {count} more").format(count=len(gifs) - 15))
+            value = "\n".join(lines)[:1024]
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "**"
+                    + _("Pool ({count})").format(count=len(gifs))
+                    + "**\n"
+                    + value
+                )
+            )
+        else:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "**"
+                    + _("Pool (0)")
+                    + "**\n"
+                    + _("No GIFs yet. Add one to build the random pool.")
+                )
+            )
+        container.add_item(discord.ui.ActionRow(_AddGifButton(self)))
+        if gifs:
+            container.add_item(discord.ui.ActionRow(RemoveGifSelect(self)))
+        self.add_item(container)
+
     async def refresh(self, interaction):
         """Re-render this ephemeral view and sync the main panel summary."""
 
         new = ManageGifsView(self.panel)
         self.stop()
-        embed = new.build_embed()
         try:
             if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=new)
+                await interaction.response.edit_message(view=new)
             else:
-                await interaction.edit_original_response(
-                    embed=embed, view=new
-                )
+                await interaction.edit_original_response(view=new)
         except discord.HTTPException:
             pass
         await self.panel.sync_message()
 
 
 # ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+# ----------------------------------------------------------------------
 # Main control panel
 # ----------------------------------------------------------------------
-class WelcomePanel(AuthorView):
+class WelcomePanel(AuthorLayoutView):
     """Author-restricted welcome control panel (the single entry point).
 
-    This View is the embed_creator.EmbedEditorHost for the welcome embed: it
+    A single Components V2 :class:`~discord.ui.Container` whose accent tracks
+    the configured welcome embed's own colour (falling back to Discord
+    blurple), in the house style established by the AniList feed panel. This
+    View is the embed_creator.EmbedEditorHost for the welcome embed: it
     exposes ``embed_config`` (the config["embed"] sub-blob the shared modals
     mutate) and ``on_embed_changed`` (persist + refresh). ``placeholder_hint``
     and ``asset_hint`` feed the shared modals' input placeholders.
     """
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
-        super().__init__(
-            author_id,
-            timeout=timeout,
-            deny_message="This panel isn't for you.",
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.config = config
         # Read by the embed_creator modals via getattr.
         self.placeholder_hint = PLACEHOLDER_HINT
         self.asset_hint = ASSET_HINT
-
-        self.add_item(WelcomeChannelSelect(self))
-        self.add_item(
-            embed_creator.make_edit_select(
-                self, placeholder=_("Edit the welcome embed..."), row=1
-            )
-        )
-        self.add_item(_ToggleButton(self, "card", _("Card")))
-        self.add_item(_ToggleButton(self, "random_gif", _("Random GIF")))
-        self.add_item(_ToggleButton(self, "ping", _("Ping")))
-        self.add_item(_ManageGifsButton(self))
-        self.add_item(_PreviewButton(self))
-        self.add_item(_EnableButton(self))
+        self._build()
 
     # -- embed_creator.EmbedEditorHost contract -------------------------
     @property
@@ -395,67 +407,92 @@ class WelcomePanel(AuthorView):
         await self.cog.save(self.guild.id, self.config)
         await self._rerender(interaction)
 
-    def build_embed(self):
+    def _build(self):
+        """(Re)assemble the layout from the current config."""
+
         config = self.config
         embed_cfg = config.get("embed") or {}
         enabled = bool(config.get("enabled"))
         colour = embed_cfg.get("color")
 
-        embed = discord.Embed(
-            title=_("Welcome system"),
-            description=_(
-                "Design the greeting new members receive. Use the menus below; "
-                "every change saves instantly. Hit **Preview** to see it live."
-            ),
-            colour=colour if isinstance(colour, int) else 0x5865F2,
+        container = discord.ui.Container(
+            accent_colour=colour if isinstance(colour, int) else PANEL_ACCENT_DEFAULT
         )
 
         cid = config.get("channel_id")
         channel_value = f"<#{cid}>" if cid else _("*Not set.*")
-        embed.add_field(
-            name=_("Status"),
-            value=(
-                ("\U0001F7E2 " + _("Enabled"))
-                if enabled
-                else ("\U0001F534 " + _("Disabled"))
+        status_value = (
+            ("\U0001F7E2 " + _("Enabled"))
+            if enabled
+            else ("\U0001F534 " + _("Disabled"))
+        )
+
+        header_lines = [
+            "### " + _("Welcome system"),
+            _(
+                "Design the greeting new members receive. Use the menus below; "
+                "every change saves instantly. Hit **Preview** to see it live."
             ),
-            inline=True,
-        )
-        embed.add_field(name=_("Channel"), value=channel_value, inline=True)
-        embed.add_field(
-            name=_("GIF pool"),
-            value=_("{count} saved").format(count=len(config.get("gifs") or [])),
-            inline=True,
-        )
+            "**{status}:** {status_value}   **{channel}:** {channel_value}".format(
+                status=_("Status"),
+                status_value=status_value,
+                channel=_("Channel"),
+                channel_value=channel_value,
+            ),
+            "**{pool}:** {pool_value}".format(
+                pool=_("GIF pool"),
+                pool_value=_("{count} saved").format(
+                    count=len(config.get("gifs") or [])
+                ),
+            ),
+            "**{card}:** {card_value}   **{rgif}:** {rgif_value}   "
+            "**{ping}:** {ping_value}".format(
+                card=_("Card"),
+                card_value=_("On") if config.get("card") else _("Off"),
+                rgif=_("Random GIF"),
+                rgif_value=_("On") if config.get("random_gif") else _("Off"),
+                ping=_("Ping"),
+                ping_value=_("On") if config.get("ping") else _("Off"),
+            ),
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
 
-        embed.add_field(
-            name=_("Card"),
-            value=_("On") if config.get("card") else _("Off"),
-            inline=True,
-        )
-        embed.add_field(
-            name=_("Random GIF"),
-            value=_("On") if config.get("random_gif") else _("Off"),
-            inline=True,
-        )
-        embed.add_field(
-            name=_("Ping"),
-            value=_("On") if config.get("ping") else _("Off"),
-            inline=True,
-        )
-
-        embed.add_field(
-            name=_("Embed"),
-            value=embed_creator.summarise(embed_cfg),
-            inline=False,
-        )
-
-        embed.set_footer(
-            text=_("Only you can use these controls. Placeholders: {placeholders}").format(
-                placeholders=PLACEHOLDER_HINT
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Embed") + "**\n" + embed_creator.summarise(embed_cfg)
             )
         )
-        return embed
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(WelcomeChannelSelect(self)))
+        container.add_item(
+            discord.ui.ActionRow(
+                embed_creator.make_edit_select(
+                    self, placeholder=_("Edit the welcome embed...")
+                )
+            )
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                _ToggleButton(self, "card", _("Card")),
+                _ToggleButton(self, "random_gif", _("Random GIF")),
+                _ToggleButton(self, "ping", _("Ping")),
+                _ManageGifsButton(self),
+                _PreviewButton(self),
+            )
+        )
+        container.add_item(discord.ui.ActionRow(_EnableButton(self)))
+
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# "
+                + _(
+                    "Only you can use these controls. Placeholders: {placeholders}"
+                ).format(placeholders=PLACEHOLDER_HINT)
+            )
+        )
+        self.add_item(container)
 
     async def _rerender(self, interaction):
         """Rebuild a fresh panel from current config and show it in place."""
@@ -463,9 +500,7 @@ class WelcomePanel(AuthorView):
         new = WelcomePanel(self.cog, self.guild, self.author_id, self.config)
         new.message = self.message
         self.stop()
-        await embed_creator.refresh_in_place(
-            interaction, self.message, embed=new.build_embed(), view=new
-        )
+        await _refresh_layout(interaction, self.message, new)
 
     async def sync_message(self):
         """Re-render the stored panel message (used by the GIF sub-panel)."""
@@ -476,7 +511,7 @@ class WelcomePanel(AuthorView):
         new.message = self.message
         self.stop()
         try:
-            await self.message.edit(embed=new.build_embed(), view=new)
+            await self.message.edit(view=new)
         except discord.HTTPException:
             pass
 
@@ -630,7 +665,7 @@ class Welcome(commands.Cog):
 
         config = await self.get_config(ctx.guild.id)
         view = WelcomePanel(self, ctx.guild, ctx.author.id, config)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     @welcome.command(name="set")
     @commands.guild_only()

@@ -9,7 +9,7 @@ from tools import embed_creator, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -159,7 +159,6 @@ class TwitchChannelSelect(discord.ui.ChannelSelect):
             min_values=1,
             max_values=1,
             default_values=defaults,
-            row=0,
         )
 
     async def callback(self, interaction):
@@ -188,7 +187,6 @@ class TwitchRoleSelect(discord.ui.RoleSelect):
             min_values=0,
             max_values=1,
             default_values=defaults,
-            row=1,
         )
 
     async def callback(self, interaction):
@@ -221,7 +219,6 @@ class _MessageSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=2,
         )
 
     async def callback(self, interaction):
@@ -240,9 +237,7 @@ class _StyleButton(discord.ui.Button):
         self.panel = panel
         style = panel.config.get("style", "embed")
         label = _("Style: Embed") if style == "embed" else _("Style: Classic")
-        super().__init__(
-            label=label, style=discord.ButtonStyle.secondary, row=3
-        )
+        super().__init__(label=label, style=discord.ButtonStyle.secondary)
 
     async def callback(self, interaction):
         try:
@@ -261,9 +256,7 @@ class _PlaceholdersButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
         super().__init__(
-            label=_("Placeholders"),
-            style=discord.ButtonStyle.secondary,
-            row=3,
+            label=_("Placeholders"), style=discord.ButtonStyle.secondary
         )
 
     async def callback(self, interaction):
@@ -288,9 +281,7 @@ class _PlaceholdersButton(discord.ui.Button):
 class _PreviewButton(discord.ui.Button):
     def __init__(self, panel):
         self.panel = panel
-        super().__init__(
-            label=_("Preview"), style=discord.ButtonStyle.primary, row=3
-        )
+        super().__init__(label=_("Preview"), style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction):
         try:
@@ -314,7 +305,6 @@ class _EnableButton(discord.ui.Button):
                 if enabled
                 else discord.ButtonStyle.success
             ),
-            row=4,
         )
 
     async def callback(self, interaction):
@@ -330,15 +320,43 @@ class _EnableButton(discord.ui.Button):
 
 
 # ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+# ----------------------------------------------------------------------
 # Main control panel
 # ----------------------------------------------------------------------
-class TwitchPanel(AuthorView):
+class TwitchPanel(AuthorLayoutView):
     """Author-restricted Twitch live-alert builder (the single entry point).
 
+    A single Components V2 :class:`~discord.ui.Container` whose accent tracks
+    the configured alert embed's own colour (falling back to Twitch's brand
+    purple), in the house style established by the AniList feed panel.
     Satisfies the embed_creator.EmbedEditorHost protocol: it exposes the
-    ``embed_config`` sub-blob the shared modals/edit-select mutate, plus an async
-    ``on_embed_changed`` that persists and refreshes. ``placeholder_hint`` and
-    ``asset_hint`` are read by the shared modals via getattr.
+    ``embed_config`` sub-blob the shared modals/edit-select mutate, plus an
+    async ``on_embed_changed`` that persists and refreshes. ``placeholder_hint``
+    and ``asset_hint`` are read by the shared modals via getattr.
     """
 
     # Surfaced to the shared embed_creator modals (read via getattr).
@@ -350,29 +368,11 @@ class TwitchPanel(AuthorView):
     colour_names = {**embed_creator.COLOUR_NAMES, "twitch": TWITCH_PURPLE, "purple": TWITCH_PURPLE}
 
     def __init__(self, cog, guild, author_id, config, timeout=180):
-        super().__init__(
-            author_id,
-            timeout=timeout,
-            deny_message="This panel isn't for you.",
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.config = config
-
-        self.add_item(TwitchChannelSelect(self))
-        self.add_item(TwitchRoleSelect(self))
-        if config.get("style") == "text":
-            self.add_item(_MessageSelect(self))
-        else:
-            self.add_item(
-                embed_creator.make_edit_select(
-                    self, placeholder=_("Edit the alert embed..."), row=2
-                )
-            )
-        self.add_item(_StyleButton(self))
-        self.add_item(_PlaceholdersButton(self))
-        self.add_item(_PreviewButton(self))
-        self.add_item(_EnableButton(self))
+        self._build()
 
     # -- EmbedEditorHost contract ---------------------------------------
     @property
@@ -392,50 +392,60 @@ class TwitchPanel(AuthorView):
         await self.cog.save(self.guild.id, self.config)
         await self._rerender(interaction)
 
-    def build_embed(self):
+    def _build(self):
+        """(Re)assemble the layout from the current config."""
+
         config = self.config
         embed_cfg = config.get("embed") or {}
         enabled = bool(config.get("enabled"))
         style = config.get("style", "embed")
         colour = embed_cfg.get("color")
 
-        embed = discord.Embed(
-            title=_("Twitch live alerts"),
-            description=_(
-                "Design the alert that fires when a watched member goes live "
-                "on Twitch. Every change saves instantly - hit **Preview** to "
-                "see it, and add streamers with `/twitch watch`."
-            ),
-            colour=colour if isinstance(colour, int) else TWITCH_PURPLE,
+        container = discord.ui.Container(
+            accent_colour=colour if isinstance(colour, int) else TWITCH_PURPLE
         )
 
         cid = config.get("channel_id")
         channel_value = f"<#{cid}>" if cid else _("*Not set.*")
         rid = config.get("role_id")
         role_value = f"<@&{rid}>" if rid else _("*None (legacy lookup).*")
+        status_value = (
+            ("\U0001F7E2 " + _("Enabled"))
+            if enabled
+            else ("\U0001F534 " + _("Disabled"))
+        )
+        style_value = _("Embed") if style == "embed" else _("Classic message")
 
-        embed.add_field(
-            name=_("Status"),
-            value=(
-                ("\U0001F7E2 " + _("Enabled"))
-                if enabled
-                else ("\U0001F534 " + _("Disabled"))
+        header_lines = [
+            "### " + _("Twitch live alerts"),
+            _(
+                "Design the alert that fires when a watched member goes live "
+                "on Twitch. Every change saves instantly - hit **Preview** to "
+                "see it, and add streamers with `/twitch watch`."
             ),
-            inline=True,
-        )
-        embed.add_field(name=_("Channel"), value=channel_value, inline=True)
-        embed.add_field(
-            name=_("Style"),
-            value=_("Embed") if style == "embed" else _("Classic message"),
-            inline=True,
-        )
-        embed.add_field(name=_("Live role"), value=role_value, inline=False)
+            "**{status}:** {status_value}   **{channel}:** {channel_value}   "
+            "**{style}:** {style_value}".format(
+                status=_("Status"),
+                status_value=status_value,
+                channel=_("Channel"),
+                channel_value=channel_value,
+                style=_("Style"),
+                style_value=style_value,
+            ),
+            "**{role}:** {role_value}".format(
+                role=_("Live role"), role_value=role_value
+            ),
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
 
         if style == "text":
             text = config.get("text") or _("*none*")
             if len(text) > 200:
                 text = text[:197] + "..."
-            embed.add_field(name=_("Message"), value=text, inline=False)
+            container.add_item(
+                discord.ui.TextDisplay("**" + _("Message") + "**\n" + text)
+            )
         else:
             summary = embed_creator.summarise(embed_cfg)
             content_line = config.get("text")
@@ -446,14 +456,39 @@ class TwitchPanel(AuthorView):
                 summary += "\n" + _("**Content line:** {preview}").format(
                     preview=preview
                 )
-            embed.add_field(name=_("Embed"), value=summary, inline=False)
+            container.add_item(
+                discord.ui.TextDisplay("**" + _("Embed") + "**\n" + summary)
+            )
 
-        embed.set_footer(
-            text=_("Only you can use these controls. Placeholders: {placeholders}").format(
-                placeholders=PLACEHOLDER_HINT
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(TwitchChannelSelect(self)))
+        container.add_item(discord.ui.ActionRow(TwitchRoleSelect(self)))
+        if style == "text":
+            container.add_item(discord.ui.ActionRow(_MessageSelect(self)))
+        else:
+            container.add_item(
+                discord.ui.ActionRow(
+                    embed_creator.make_edit_select(
+                        self, placeholder=_("Edit the alert embed...")
+                    )
+                )
+            )
+        container.add_item(
+            discord.ui.ActionRow(
+                _StyleButton(self), _PlaceholdersButton(self), _PreviewButton(self)
             )
         )
-        return embed
+        container.add_item(discord.ui.ActionRow(_EnableButton(self)))
+
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# "
+                + _(
+                    "Only you can use these controls. Placeholders: {placeholders}"
+                ).format(placeholders=PLACEHOLDER_HINT)
+            )
+        )
+        self.add_item(container)
 
     async def _rerender(self, interaction):
         """Rebuild a fresh panel from current config and show it in place."""
@@ -461,10 +496,7 @@ class TwitchPanel(AuthorView):
         new = TwitchPanel(self.cog, self.guild, self.author_id, self.config)
         new.message = self.message
         self.stop()
-        embed = new.build_embed()
-        await embed_creator.refresh_in_place(
-            interaction, self.message, embed=embed, view=new
-        )
+        await _refresh_layout(interaction, self.message, new)
 
     async def _error(self, interaction):
         await embed_creator.notify_failure(interaction)
@@ -651,7 +683,7 @@ class Twitch(commands.Cog):
 
         config = await self.get_config(ctx.guild.id)
         view = TwitchPanel(self, ctx.guild, ctx.author.id, config)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     @twitch.command(name="watch", aliases=["add"])
     @commands.guild_only()
