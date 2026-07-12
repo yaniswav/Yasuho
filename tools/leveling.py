@@ -89,6 +89,22 @@ def level_up_between(old_xp, new_xp):
     return new_level if new_level > old_level else None
 
 
+def level_down_between(old_xp, new_xp):
+    """The new level if going from ``old_xp`` to ``new_xp`` leveled DOWN, else None.
+
+    The mirror of :func:`level_up_between` for the admin XP tools (L5): an
+    admin ``/xp take`` or ``/xp set`` that removes enough XP to drop below a
+    level threshold returns the freshly reached (lower) level, so the caller
+    reads ``if level is not None: reconcile_roles``. Returns ``None`` when the
+    change did not cross a threshold downward (a same-level edit, or any upward
+    move - that is :func:`level_up_between`'s job). Organic activity never calls
+    this: XP is only ever removed by an explicit admin action.
+    """
+    old_level = level_for_xp(old_xp)
+    new_level = level_for_xp(new_xp)
+    return new_level if new_level < old_level else None
+
+
 @dataclass(frozen=True)
 class LevelConfig:
     """Immutable per-guild leveling settings (mirrors one level_config row).
@@ -768,6 +784,36 @@ def period_marker_changed(previous, current):
     tick that credited a guild, so it must stay allocation-free, and does.
     """
     return previous is None or previous != current
+
+
+# ============================================================
+# Leaderboard pagination (leveling L5): the /levels (lifetime AND weekly/
+# monthly) views walk pages of this many ranks. Page 0 keeps the Components V2
+# podium (top avatars as Sections); page 1+ drops it for a plain ranked list.
+# The pure page maths mirror cogs/music/music.py's queue_page so the two paged
+# surfaces clamp identically - a leaderboard that shrank between clicks (a reset,
+# a period rollover) never lands the viewer on a blank page.
+# ============================================================
+
+LEADERBOARD_PAGE_SIZE = 15
+
+
+def leaderboard_page(total, page, per_page=LEADERBOARD_PAGE_SIZE):
+    """Resolve the paginated slice of ``total`` ranked members for ``page``.
+
+    Returns ``(clamped_page, total_pages, start, end)`` where ``[start:end]``
+    slices the ranked entry list for the requested page. ``page`` is 0-indexed
+    and clamped into ``[0, total_pages - 1]`` so a leaderboard that shrank under
+    the viewer never lands on a blank page; ``total_pages`` is at least 1 even
+    for an empty board. Pure - mirrors queue_page so the leveling view's paging
+    math is unit-tested without any discord objects.
+    """
+    safe_total = max(total, 0)
+    total_pages = max(1, (safe_total + per_page - 1) // per_page)
+    clamped = max(0, min(page, total_pages - 1))
+    start = clamped * per_page
+    end = min(start + per_page, safe_total)
+    return clamped, total_pages, start, end
 
 
 def build_voice_grant_payload(credits):

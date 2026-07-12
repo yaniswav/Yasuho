@@ -384,3 +384,69 @@ async def test_add_null_insert_from_a_lost_cap_race_reports_maximum(fake_pool):
     await cog.levelrewards_add.callback(cog, ctx, 5, role)
 
     assert any("maximum" in c[0][0] for c in ctx.sends)
+
+
+# ---------------------------------------------------------------------------
+# reconcile_for_level (leveling L5): the cog-level application of the level-DOWN
+# decision, used by an admin XP edit that dropped a member below a tier.
+# ---------------------------------------------------------------------------
+
+
+async def test_reconcile_for_level_stack_keeps_every_role(fake_pool):
+    """Stack mode is a no-op: earned roles are kept even when XP is removed."""
+    low = _FakeRole(20, position=5)
+    high = _FakeRole(30, position=6)
+    guild = _FakeGuild(1, roles=[low, high])
+    member = _FakeMember(2, roles=[low, high])
+    fake_pool.fetch_return = _rows((5, 20), (10, 30))
+    fake_pool.fetchval_return = "stack"
+
+    cog = LevelRewards(_make_bot(fake_pool))
+    added, removed = await cog.reconcile_for_level(guild, member, 5)
+
+    assert added == []
+    assert removed == []
+    assert member.removed == []  # nothing stripped in stack mode
+
+
+async def test_reconcile_for_level_replace_strips_the_higher_tier(fake_pool):
+    low = _FakeRole(20, position=5)
+    high = _FakeRole(30, position=6)
+    guild = _FakeGuild(1, roles=[low, high])
+    member = _FakeMember(2, roles=[low, high])
+    fake_pool.fetch_return = _rows((5, 20), (10, 30))
+    fake_pool.fetchval_return = "replace"
+
+    cog = LevelRewards(_make_bot(fake_pool))
+    # dropped from level 10 down to level 5: the level-10 role is recomputed away.
+    added, removed = await cog.reconcile_for_level(guild, member, 5)
+
+    assert added == []
+    assert removed == [high]
+    assert member.removed == [high]
+
+
+async def test_reconcile_for_level_no_rules_is_empty_and_skips_mode(fake_pool):
+    guild = _FakeGuild(1)
+    member = _FakeMember(2)
+    fake_pool.fetch_return = []
+
+    cog = LevelRewards(_make_bot(fake_pool))
+    added, removed = await cog.reconcile_for_level(guild, member, 5)
+
+    assert added == []
+    assert removed == []
+    # Only the rules fetch ran - no mode lookup when there is nothing to do.
+    assert [c[0] for c in fake_pool.calls] == ["fetch"]
+
+
+async def test_reconcile_for_level_db_failure_is_swallowed(fake_pool):
+    async def boom(*args, **kwargs):
+        raise RuntimeError("db down")
+
+    fake_pool.fetch = boom
+    cog = LevelRewards(_make_bot(fake_pool))
+
+    added, removed = await cog.reconcile_for_level(_FakeGuild(1), _FakeMember(2), 5)
+
+    assert added == [] and removed == []

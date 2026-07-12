@@ -963,3 +963,81 @@ def test_period_marker_changed_month_rollover_is_stale():
         )
         is True
     )
+
+
+# ---------------------------------------------------------------------------
+# level_down_between truth table (leveling L5 - the admin XP tools' mirror of
+# level_up_between; only an explicit admin action ever removes XP).
+# ---------------------------------------------------------------------------
+
+
+def test_level_down_between_truth_table():
+    cases = [
+        # (old_xp, new_xp, expected) - level_for_xp: 10000 -> 10, 9900 -> 9.
+        (10000, 9900, 9),      # dropped exactly one level
+        (10000, 0, 0),         # reset to zero -> level 0
+        (2500, 100, 1),        # 25 -> ... 100 XP is level 1
+        (10000, 10000, None),  # no change -> no drop
+        (10000, 10500, None),  # went UP -> that is level_up_between's job
+        (150, 120, None),      # both inside level 1 -> no threshold crossed
+    ]
+    for old_xp, new_xp, expected in cases:
+        assert leveling.level_down_between(old_xp, new_xp) == expected, (
+            f"old={old_xp} new={new_xp}"
+        )
+
+
+def test_level_down_between_is_the_inverse_gate_of_level_up_between():
+    """For a strict move, at most one of up/down fires, never both."""
+    for old_xp in range(0, 5000, 137):
+        for new_xp in range(0, 5000, 211):
+            up = leveling.level_up_between(old_xp, new_xp)
+            down = leveling.level_down_between(old_xp, new_xp)
+            assert not (up is not None and down is not None)
+
+
+# ---------------------------------------------------------------------------
+# leaderboard_page pager maths (leveling L5) - mirrors queue_page's clamping.
+# ---------------------------------------------------------------------------
+
+
+def test_leaderboard_page_empty_board_is_one_clamped_page():
+    clamped, total_pages, start, end = leveling.leaderboard_page(0, 0)
+    assert (clamped, total_pages, start, end) == (0, 1, 0, 0)
+
+
+def test_leaderboard_page_single_full_page():
+    # Exactly the page size -> one page, whole slice.
+    clamped, total_pages, start, end = leveling.leaderboard_page(15, 0)
+    assert (clamped, total_pages, start, end) == (0, 1, 0, 15)
+
+
+def test_leaderboard_page_second_page_slice():
+    # 50 members, page 1 (0-indexed) -> ranks 16..30.
+    clamped, total_pages, start, end = leveling.leaderboard_page(50, 1)
+    assert total_pages == 4  # 50 / 15 -> 4 pages
+    assert (clamped, start, end) == (1, 15, 30)
+
+
+def test_leaderboard_page_last_partial_page():
+    clamped, total_pages, start, end = leveling.leaderboard_page(50, 3)
+    assert (clamped, total_pages, start, end) == (3, 4, 45, 50)
+
+
+def test_leaderboard_page_over_high_index_clamps_down():
+    # A board that shrank under the viewer: asking for page 9 of a 20-member
+    # board lands on the last real page, never a blank one.
+    clamped, total_pages, start, end = leveling.leaderboard_page(20, 9)
+    assert total_pages == 2
+    assert clamped == 1
+    assert (start, end) == (15, 20)
+
+
+def test_leaderboard_page_negative_index_clamps_to_zero():
+    clamped, _pages, start, end = leveling.leaderboard_page(30, -3)
+    assert clamped == 0
+    assert (start, end) == (0, 15)
+
+
+def test_leaderboard_page_default_size_is_15():
+    assert leveling.LEADERBOARD_PAGE_SIZE == 15

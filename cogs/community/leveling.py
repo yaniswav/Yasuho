@@ -10,8 +10,9 @@ from PIL import Image, ImageDraw, ImageFont
 from tools import leveling, leveling_gate, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import _, ngettext
 from tools.lru_cache import BoundedLRU
+from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -22,10 +23,11 @@ _FONT_PATH = os.path.join("ressources", "fonts", "impact.ttf")
 # real avatar is available for the Section thumbnail accessory.
 _DEFAULT_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png"
 
-# Components V2 budget: how many ranks get their own avatar Section (podium) and
-# how many total ranks the single-page layout shows (the rest go in a text list).
+# Components V2 budget: how many ranks get their own avatar Section (podium) on
+# page 0. The remaining ranks on the page (and every rank on later pages) render
+# as a plain text list. The per-page rank count itself lives in
+# tools.leveling.LEADERBOARD_PAGE_SIZE (the pager's home).
 _PODIUM_SLOTS = 5
-_LEADERBOARD_CAP = 15
 
 # Medal glyphs for the top three; lower ranks fall back to a plain number.
 _MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD PLACE MEDAL}"}
@@ -61,83 +63,171 @@ _CONFIG_COLUMNS = (
 )
 
 
-class LeaderboardView(discord.ui.LayoutView):
-    """Single-page Components V2 podium for the guild XP leaderboard.
+class _PagerButton(discord.ui.Button):
+    """A leaderboard pager button whose click delegates to a bound handler.
 
-    The top ranks each become a :class:`discord.ui.Section` with the member's
-    avatar as a :class:`discord.ui.Thumbnail` accessory; the remaining ranks are
-    collapsed into one :class:`discord.ui.TextDisplay` list to respect the V2
-    component budget. It is purely presentational (no interactive components), so
-    it carries no author gating.
+    Components V2 layouts cannot use the ``@discord.ui.button`` decorator
+    (buttons live inside :class:`discord.ui.ActionRow` children), so Prev/Next
+    are plain instances that forward their click to a coroutine on the owning
+    view - the same shape as the music cog's ``_ControllerButton``.
     """
 
-    def __init__(self, title, entries, *, timeout=180):
-        # entries: list of dicts with rank, name, xp, avatar_url. The all-time
-        # view also carries a "level" key; the L6 period views (weekly/monthly)
-        # omit it - _build branches on ``"level" in entry`` and renders XP only
-        # when it is absent, so never index entry["level"] unconditionally.
-        super().__init__(timeout=timeout)
-        self.message = None
-        self._build(title, entries)
+    def __init__(self, handler, **kwargs):
+        super().__init__(**kwargs)
+        self._handler = handler
 
-    def _build(self, title, entries):
+    async def callback(self, interaction):
+        await self._handler(interaction)
+
+
+class LeaderboardView(AuthorLayoutView):
+    """Paginated Components V2 podium for the guild XP leaderboard.
+
+    Page 0 keeps the podium: the top :data:`_PODIUM_SLOTS` ranks each become a
+    :class:`discord.ui.Section` with the member's avatar as a
+    :class:`discord.ui.Thumbnail` accessory, and the rest of the page collapses
+    into one :class:`discord.ui.TextDisplay` ranked list (the V2 component
+    budget). Page 1+ drops the avatars entirely for a single plain ranked list -
+    a member scrolling past the top 15 wants the numbers, not fifteen more
+    thumbnails. Prev/Next walk pages of :data:`~tools.leveling.LEADERBOARD_PAGE_SIZE`
+    and are author-gated through :class:`~tools.views.AuthorLayoutView` (only the
+    member who ran /levels drives them), so a busy channel never has strangers
+    flipping each other's boards. The pager row only appears when there is more
+    than one page, so a board of 15 or fewer renders exactly as it did before L5.
+    """
+
+    def __init__(self, author_id, title, entries, *, timeout=180):
+        # entries: list of dicts with rank, name, xp, avatar_url - the FULL
+        # ranked list (up to the query's LIMIT), sliced per page here. The
+        # all-time view also carries a "level" key; the period views
+        # (weekly/monthly) omit it - the render branches on ``"level" in entry``
+        # and shows XP only when it is absent, so never index entry["level"]
+        # unconditionally.
+        super().__init__(author_id, timeout=timeout)
+        self.title = title
+        self.entries = entries
+        self.page = 0
+        self._build()
+
+    def _entry_line(self, entry):
+        """One plain ranked line (used by the page-0 remainder AND page 1+)."""
+        if "level" in entry:
+            return _("**#{rank}** {name} - level **{level}** ({xp} XP)").format(
+                rank=entry["rank"],
+                name=entry["name"],
+                level=entry["level"],
+                xp=entry["xp"],
+            )
+        return _("**#{rank}** {name} - {xp} XP").format(
+            rank=entry["rank"], name=entry["name"], xp=entry["xp"]
+        )
+
+    def _podium_text(self, entry):
+        """The Section text for a top-ranked member on page 0."""
+        marker = _MEDALS.get(entry["rank"], "**#{rank}**".format(rank=entry["rank"]))
+        if "level" in entry:
+            # All-time view: levels are lifetime-only, so this is the ONLY branch
+            # that ever shows one - byte-for-byte the original text.
+            return _("{marker} **{name}**\nLevel **{level}** - {xp} XP").format(
+                marker=marker,
+                name=entry["name"],
+                level=entry["level"],
+                xp=entry["xp"],
+            )
+        # Period view (weekly/monthly): no lifetime level, just the period XP.
+        return _("{marker} **{name}**\n{xp} XP").format(
+            marker=marker, name=entry["name"], xp=entry["xp"]
+        )
+
+    def _build(self):
+        self.clear_items()
+        total = len(self.entries)
+        self.page, total_pages, start, end = leveling.leaderboard_page(
+            total, self.page
+        )
+        page_entries = self.entries[start:end]
+
         container = discord.ui.Container(accent_colour=random_colour())
-        container.add_item(discord.ui.TextDisplay("## {title}".format(title=title)))
+        container.add_item(
+            discord.ui.TextDisplay("## {title}".format(title=self.title))
+        )
         container.add_item(discord.ui.Separator())
 
-        podium = entries[:_PODIUM_SLOTS]
-        remainder = entries[_PODIUM_SLOTS:]
-
-        for entry in podium:
-            marker = _MEDALS.get(entry["rank"], "**#{rank}**".format(rank=entry["rank"]))
-            if "level" in entry:
-                # All-time view: levels are lifetime-only, so this is the ONLY
-                # branch that ever shows one - byte-for-byte the original text.
-                text = _("{marker} **{name}**\nLevel **{level}** - {xp} XP").format(
-                    marker=marker,
-                    name=entry["name"],
-                    level=entry["level"],
-                    xp=entry["xp"],
+        if self.page == 0:
+            # Page 0 keeps the podium: avatars for the top ranks, the rest as a
+            # plain list - byte-for-byte the pre-L5 single-page layout.
+            podium = page_entries[:_PODIUM_SLOTS]
+            remainder = page_entries[_PODIUM_SLOTS:]
+            for entry in podium:
+                container.add_item(
+                    discord.ui.Section(
+                        discord.ui.TextDisplay(self._podium_text(entry)),
+                        accessory=discord.ui.Thumbnail(entry["avatar_url"]),
+                    )
                 )
-            else:
-                # Period view (L6, /top weekly|monthly): no lifetime level to
-                # show, just the XP earned within the current period.
-                text = _("{marker} **{name}**\n{xp} XP").format(
-                    marker=marker,
-                    name=entry["name"],
-                    xp=entry["xp"],
+            if remainder:
+                container.add_item(discord.ui.Separator())
+                container.add_item(
+                    discord.ui.TextDisplay(
+                        "\n".join(self._entry_line(e) for e in remainder)
+                    )
                 )
+        else:
+            # Page 1+: a single plain ranked list, no avatars.
             container.add_item(
-                discord.ui.Section(
-                    discord.ui.TextDisplay(text),
-                    accessory=discord.ui.Thumbnail(entry["avatar_url"]),
+                discord.ui.TextDisplay(
+                    "\n".join(self._entry_line(e) for e in page_entries)
                 )
             )
 
-        if remainder:
+        if total_pages > 1:
             container.add_item(discord.ui.Separator())
-            lines = []
-            for entry in remainder:
-                if "level" in entry:
-                    lines.append(
-                        _("**#{rank}** {name} - level **{level}** ({xp} XP)").format(
-                            rank=entry["rank"],
-                            name=entry["name"],
-                            level=entry["level"],
-                            xp=entry["xp"],
-                        )
+            members = ngettext(
+                "{count} member", "{count} members", total
+            ).format(count=total)
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("-# Page {page}/{pages} - {members}").format(
+                        page=self.page + 1, pages=total_pages, members=members
                     )
-                else:
-                    lines.append(
-                        _("**#{rank}** {name} - {xp} XP").format(
-                            rank=entry["rank"],
-                            name=entry["name"],
-                            xp=entry["xp"],
-                        )
-                    )
-            container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+                )
+            )
+            container.add_item(
+                discord.ui.ActionRow(
+                    _PagerButton(
+                        self._prev,
+                        label=_("Prev"),
+                        emoji="◀️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page <= 0,
+                    ),
+                    _PagerButton(
+                        self._next,
+                        label=_("Next"),
+                        emoji="▶️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page >= total_pages - 1,
+                    ),
+                )
+            )
 
         self.add_item(container)
+
+    async def _prev(self, interaction):
+        try:
+            self.page -= 1
+            self._build()
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            log.exception("Leaderboard prev failed")
+
+    async def _next(self, interaction):
+        try:
+            self.page += 1
+            self._build()
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            log.exception("Leaderboard next failed")
 
 
 class Leveling(commands.Cog):
@@ -789,6 +879,74 @@ class Leveling(commands.Cog):
             granted=granted,
         )
 
+    async def apply_admin_xp_change(self, *, guild, member, channel, old_xp, new_xp):
+        """Route an admin XP edit (/xp give|take|set|reset) through the reward +
+        announce seams, the L5 sibling of :meth:`credit_voice_levelup`.
+
+        The admin's action is message-independent, so ``channel`` is where a
+        "channel"-mode announce lands (the command's own channel). Behaviour by
+        direction:
+
+        * level UP: behaves exactly like a message/voice level-up - reward roles
+          are granted (:meth:`_apply_level_rewards`) and, when leveling is
+          enabled for the guild, the level-up is announced per its announce_mode
+          and the member's own opt-out. Rewards are granted even if leveling is
+          currently OFF (rewards are a separate opt-in); only the announce is
+          skipped in that case (no cached config to route it).
+        * level DOWN: roles are RECONCILED instead (:meth:`_reconcile_level_down`)
+          - in replace mode the tier is recomputed (roles above the new level are
+          removed), while in stack mode nothing is removed (earned roles are kept
+          on XP loss, the documented convention). A downward move is never
+          announced.
+        * no threshold crossed: nothing to do.
+
+        Admin edits deliberately do NOT touch xp_period (periods track organic
+        activity only - see schema.sql's xp_period), so this seam concerns only
+        the lifetime level. Never raises into the caller: each awaited step has
+        its own guard (grant/announce are already swallowing seams, and the
+        reconcile below is wrapped), so a reward/announce hiccup never undoes the
+        XP write the admin command already committed.
+        """
+        up_level = leveling.level_up_between(old_xp, new_xp)
+        if up_level is not None:
+            old_level = leveling.level_for_xp(old_xp)
+            granted = await self._apply_level_rewards(
+                guild, member, old_level, up_level
+            )
+            config = self.get_config(guild.id)
+            if config is not None:
+                await self._announce_levelup(
+                    member=member,
+                    channel=channel,
+                    guild=guild,
+                    config=config,
+                    new_level=up_level,
+                    granted=granted,
+                )
+            return
+
+        down_level = leveling.level_down_between(old_xp, new_xp)
+        if down_level is not None:
+            await self._reconcile_level_down(guild, member, down_level)
+
+    async def _reconcile_level_down(self, guild, member, new_level):
+        """Reconcile a member's reward roles after an admin XP edit dropped them
+        below a tier (see :meth:`apply_admin_xp_change`). Cross-cog seam mirroring
+        :meth:`_apply_level_rewards`: a missing or failing LevelRewards cog must
+        never break the admin command, so this always returns quietly and
+        swallows errors (the reward cog also guards internally, and stack mode is
+        a no-op there anyway).
+        """
+        rewards_cog = self.bot.get_cog("LevelRewards")
+        if rewards_cog is None:
+            return
+        try:
+            await rewards_cog.reconcile_for_level(guild, member, new_level)
+        except Exception:
+            log.exception(
+                "Failed to reconcile level-down rewards for %s", member.id
+            )
+
     async def _announce_levelup(
         self, *, member, channel, guild, config, new_level, granted
     ):
@@ -1111,7 +1269,10 @@ class Leveling(commands.Cog):
                 return await ctx.send(embed=embed)
 
             entries = []
-            for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
+            # Build EVERY fetched row into an entry (the view pages them 15 at a
+            # time); the pre-L5 code sliced to the first page here, which the
+            # pager now owns - see LeaderboardView.
+            for index, row in enumerate(rows, start=1):
                 uid = row["user_id"]
                 xp = row["xp"]
                 member = ctx.guild.get_member(uid)
@@ -1165,7 +1326,8 @@ class Leveling(commands.Cog):
                 return await ctx.send(embed=embed)
 
             entries = []
-            for index, row in enumerate(rows[:_LEADERBOARD_CAP], start=1):
+            # Same as the lifetime branch: build every fetched row, the view pages.
+            for index, row in enumerate(rows, start=1):
                 uid = row["user_id"]
                 xp = row["xp"]
                 member = ctx.guild.get_member(uid)
@@ -1180,8 +1342,9 @@ class Leveling(commands.Cog):
                 )
 
         # A LayoutView carries its own content: send it with no embed/content, and
-        # suppress mentions since TextDisplay resolves them (unlike an embed).
-        view = LeaderboardView(title, entries)
+        # suppress mentions since TextDisplay resolves them (unlike an embed). The
+        # pager is author-gated, so it is bound to whoever invoked /levels.
+        view = LeaderboardView(ctx.author.id, title, entries)
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )

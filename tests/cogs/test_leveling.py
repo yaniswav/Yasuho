@@ -21,7 +21,7 @@ import types
 import discord
 import pytest
 
-from cogs.community.leveling import Leveling
+from cogs.community.leveling import LeaderboardView, Leveling
 from tools import leveling, settings
 
 
@@ -1528,3 +1528,230 @@ async def test_levels_monthly_empty_period_sends_the_period_specific_empty_embed
     assert fetches[0][2] == (1, month_key)
     embed = ctx.sends[0][1]["embed"]
     assert "this month" in embed.description
+
+
+# ---------------------------------------------------------------------------
+# Admin XP routing (L5): apply_admin_xp_change - the seam the /xp cog calls
+# after a manual XP write. A level UP grants roles + announces (like a message
+# level-up); a level DOWN reconciles roles and NEVER announces; no crossing is a
+# no-op. Admin edits never touch xp_period (the /xp cog's own DB writes prove
+# that; this seam only concerns the lifetime level).
+# ---------------------------------------------------------------------------
+
+
+class _ReconcileRewardsCog(_FakeRewardsCog):
+    """A rewards cog that also records reconcile_for_level (the level-DOWN seam)."""
+
+    def __init__(self, granted=None):
+        super().__init__(granted=granted)
+        self.reconcile_calls = []
+
+    async def reconcile_for_level(self, guild, member, level):
+        self.reconcile_calls.append((guild.id, member.id, level))
+        return [], []
+
+
+async def test_apply_admin_xp_change_up_grants_roles_and_announces(fake_pool):
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _ReconcileRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool, get_cog=lambda n: rewards_cog if n == "LevelRewards" else None
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1)  # config present -> announce enabled
+    member = _FakeMsgAuthor(2)
+    channel = _FakeChannel(channel_id=100)
+
+    await cog.apply_admin_xp_change(
+        guild=_voice_guild(1), member=member, channel=channel,
+        old_xp=9975, new_xp=10000,  # level 9 -> 10
+    )
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # grant_for_levelup, up span
+    assert rewards_cog.reconcile_calls == []  # not the down path
+    assert len(channel.sends) == 1
+    text = channel.sends[0][0][0]
+    assert "reached level **10**" in text
+    assert "<@&55>" in text
+
+
+async def test_apply_admin_xp_change_up_without_config_grants_but_no_announce(
+    fake_pool,
+):
+    """Leveling OFF for the guild: reward roles still apply (a separate opt-in),
+    but there is no cached config to route an announce, so nothing is sent."""
+    rewards_cog = _ReconcileRewardsCog(granted=[_FakeGrantedRole(55)])
+    bot = _make_bot(
+        fake_pool, get_cog=lambda n: rewards_cog if n == "LevelRewards" else None
+    )
+    cog = Leveling(bot)  # NOT enabled -> get_config returns None
+    member = _FakeMsgAuthor(2)
+    channel = _FakeChannel(channel_id=100)
+
+    await cog.apply_admin_xp_change(
+        guild=_voice_guild(1), member=member, channel=channel,
+        old_xp=9975, new_xp=10000,
+    )
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # roles granted regardless
+    assert channel.sends == []  # but no announce without a config
+
+
+async def test_apply_admin_xp_change_down_reconciles_and_never_announces(fake_pool):
+    rewards_cog = _ReconcileRewardsCog()
+    bot = _make_bot(
+        fake_pool, get_cog=lambda n: rewards_cog if n == "LevelRewards" else None
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1)
+    member = _FakeMsgAuthor(2)
+    channel = _FakeChannel(channel_id=100)
+
+    await cog.apply_admin_xp_change(
+        guild=_voice_guild(1), member=member, channel=channel,
+        old_xp=10000, new_xp=9900,  # level 10 -> 9
+    )
+
+    assert rewards_cog.reconcile_calls == [(1, 2, 9)]  # reconcile to the new level
+    assert rewards_cog.calls == []  # grant_for_levelup NOT called on a down move
+    assert channel.sends == []  # a downward move is never announced
+
+
+async def test_apply_admin_xp_change_no_crossing_is_a_noop(fake_pool):
+    rewards_cog = _ReconcileRewardsCog(granted=[_FakeGrantedRole(55)])
+    bot = _make_bot(
+        fake_pool, get_cog=lambda n: rewards_cog if n == "LevelRewards" else None
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1)
+    member = _FakeMsgAuthor(2)
+    channel = _FakeChannel(channel_id=100)
+
+    await cog.apply_admin_xp_change(
+        guild=_voice_guild(1), member=member, channel=channel,
+        old_xp=10500, new_xp=10600,  # both level 10
+    )
+
+    assert rewards_cog.calls == []
+    assert rewards_cog.reconcile_calls == []
+    assert channel.sends == []
+
+
+async def test_apply_admin_xp_change_down_without_rewards_cog_is_quiet(fake_pool):
+    """No LevelRewards cog loaded: a level-down reconcile is skipped silently."""
+    cog = Leveling(_make_bot(fake_pool))  # default get_cog -> None
+    member = _FakeMsgAuthor(2)
+    channel = _FakeChannel(channel_id=100)
+
+    await cog.apply_admin_xp_change(
+        guild=_voice_guild(1), member=member, channel=channel,
+        old_xp=10000, new_xp=0,
+    )  # must not raise
+
+    assert channel.sends == []
+
+
+# ---------------------------------------------------------------------------
+# Leaderboard pagination (L5): LeaderboardView pages of 15. Page 0 keeps the
+# podium (avatar Sections); page 1+ is a plain ranked list. Prev/Next are
+# author-gated (AuthorLayoutView) and only appear past one page.
+# ---------------------------------------------------------------------------
+
+
+def _lb_entries(n, with_level=True):
+    entries = []
+    for i in range(1, n + 1):
+        entry = {"rank": i, "name": f"u{i}", "xp": 100000 - i, "avatar_url": f"a{i}"}
+        if with_level:
+            entry["level"] = 5
+        entries.append(entry)
+    return entries
+
+
+def _action_rows(container):
+    return [c for c in container.children if isinstance(c, discord.ui.ActionRow)]
+
+
+def _sections(container):
+    return [c for c in container.children if isinstance(c, discord.ui.Section)]
+
+
+def test_leaderboard_single_page_has_no_pager():
+    view = LeaderboardView(1, "Board", _lb_entries(15))  # exactly one page
+    container = view.children[0]
+    assert _action_rows(container) == []  # no Prev/Next on a single page
+    assert len(_sections(container)) == 5  # podium still present
+
+
+def test_leaderboard_multipage_page_zero_has_podium_and_pager():
+    view = LeaderboardView(1, "Board", _lb_entries(30))
+    container = view.children[0]
+    rows = _action_rows(container)
+    assert len(rows) == 1
+    buttons = list(rows[0].children)
+    assert len(buttons) == 2
+    assert buttons[0].disabled is True   # Prev disabled on page 0
+    assert buttons[1].disabled is False  # Next enabled
+    assert len(_sections(container)) == 5  # page 0 keeps the podium
+
+
+async def test_leaderboard_next_drops_podium_for_a_plain_list(make_interaction):
+    view = LeaderboardView(1, "Board", _lb_entries(30))
+    interaction = make_interaction(user_id=1)
+
+    await view._next(interaction)
+
+    assert view.page == 1
+    container = view.children[0]
+    assert _sections(container) == []  # page 1+ is a plain ranked list, no avatars
+    # The plain list carries the page's absolute ranks (16..30).
+    list_text = container.children[2].content
+    assert "**#16**" in list_text
+    assert "**#30**" in list_text
+    buttons = list(_action_rows(container)[0].children)
+    assert buttons[0].disabled is False  # Prev now enabled
+    assert buttons[1].disabled is True   # Next disabled on the last page (2 of 2)
+    assert interaction.edits  # edited in place
+
+
+async def test_leaderboard_prev_from_page_one_returns_to_podium(make_interaction):
+    view = LeaderboardView(1, "Board", _lb_entries(30))
+    view.page = 1
+    view._build()
+
+    await view._prev(make_interaction(user_id=1))
+
+    assert view.page == 0
+    assert len(_sections(view.children[0])) == 5  # podium is back
+
+
+def test_leaderboard_period_entries_paginate_without_a_level_key():
+    """Period views omit the 'level' key; a later page still renders each row."""
+    view = LeaderboardView(1, "Board", _lb_entries(20, with_level=False))
+    view.page = 1
+    view._build()
+    container = view.children[0]
+    list_text = container.children[2].content
+    assert "**#16**" in list_text
+    assert "level" not in list_text.lower()  # period rows show XP, never a level
+
+
+def test_leaderboard_is_author_gated():
+    """The pager is author-gated (AuthorLayoutView), so only the invoker drives it."""
+    view = LeaderboardView(4242, "Board", _lb_entries(30))
+    assert view.author_id == 4242
+
+
+async def test_levels_builds_every_row_and_paginates(fake_pool, make_context):
+    members = [_FakeLBMember(i, f"u{i}") for i in range(1, 21)]
+    rows = [{"user_id": i, "xp": 50000 - i} for i in range(1, 21)]
+    _lb_route_fetch(fake_pool, levels_rows=rows)
+    cog = Leveling(_make_bot(fake_pool))
+    ctx = make_context(guild=_FakeLBGuild(1, members=members))
+
+    await cog.levels.callback(cog, ctx, period=None)
+
+    view = ctx.sends[0][1]["view"]
+    assert len(view.entries) == 20  # ALL rows built, not sliced to one page
+    assert view.author_id == ctx.author.id  # pager bound to the invoker
+    assert len(_action_rows(view.children[0])) == 1  # 20 > 15 -> pager present

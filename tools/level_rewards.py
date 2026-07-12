@@ -88,6 +88,40 @@ def decide_role_changes(rules, mode, old_level, new_level, held_role_ids):
     return to_add, to_remove
 
 
+def reconcile_to_level(rules, mode, level, held_role_ids):
+    """The ``(to_add, to_remove)`` sets to make a member's reward roles match
+    ``level`` again after an admin XP edit MOVED them below a tier (leveling L5).
+
+    This is the level-DOWN counterpart to :func:`decide_role_changes` (which
+    only ever fires on a level UP - it returns two empty sets when
+    ``new_level <= old_level``). The two directions are deliberately different:
+
+    * :data:`STACK` mode is a total no-op here - both sets come back empty.
+      Earned roles are KEPT even when an admin removes XP (the documented
+      convention: a member who genuinely reached a tier does not lose its role
+      just because their number went down), and nothing is force-added on a
+      downward move either.
+    * :data:`REPLACE` mode RECOMPUTES the tier: it removes any reward role the
+      member holds that is no longer owed at ``level`` (the higher tiers they
+      fell below) and adds the new tier's role(s) if somehow not already held.
+      ``to_remove`` is limited to roles that appear in ``rules`` at some level,
+      so a member's unrelated roles are never touched.
+
+    ``held_role_ids`` is the set of role ids the member currently holds, so the
+    result is a genuine diff (idempotent: re-running after applying it yields two
+    empty sets).
+    """
+    if mode != REPLACE:
+        return frozenset(), frozenset()
+    rules = list(rules)
+    held = frozenset(held_role_ids)
+    owed = owed_role_ids(rules, level, REPLACE)
+    to_add = owed - held
+    all_reward_role_ids = frozenset(rid for _lvl, rid in rules)
+    to_remove = (held & all_reward_role_ids) - owed
+    return to_add, to_remove
+
+
 def group_by_level(rules):
     """``{level: [role_id, ...]}`` from a rule list, for the list-card rendering.
 

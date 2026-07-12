@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 21:56+0000\n"
+"POT-Creation-Date: 2026-07-12 22:18+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -579,10 +579,11 @@ msgid "No matching titles of that type."
 msgstr ""
 
 #: cogs/anilist/components.py:421 cogs/anilist/components.py:425
-#: cogs/community/level_config_ui.py:275 cogs/community/level_config_ui.py:354
-#: cogs/community/level_rewards.py:117 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:544 cogs/config/welcome.py:98
-#: cogs/config/welcome.py:263 cogs/config/welcome.py:484
+#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:275
+#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:117
+#: cogs/config/announcements.py:298 cogs/config/rolemenus.py:544
+#: cogs/config/welcome.py:98 cogs/config/welcome.py:263
+#: cogs/config/welcome.py:484
 msgid "Something went wrong."
 msgstr ""
 
@@ -1071,7 +1072,8 @@ msgstr ""
 msgid "Stop tracking a title..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1631 cogs/music/views.py:1134
+#: cogs/anilist/feed.py:1631 cogs/community/leveling.py:206
+#: cogs/music/views.py:1134
 msgid "Next"
 msgstr ""
 
@@ -1123,7 +1125,8 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: cogs/anilist/feed.py:1844 tools/arg_completion.py:219
+#: cogs/anilist/feed.py:1844 cogs/community/level_admin.py:66
+#: cogs/community/level_admin.py:174 tools/arg_completion.py:219
 msgid "Cancel"
 msgstr ""
 
@@ -1564,6 +1567,130 @@ msgstr ""
 msgid "Server default language set to **{lang}**."
 msgstr ""
 
+#: cogs/community/level_admin.py:62
+msgid "Reset XP"
+msgstr ""
+
+#: cogs/community/level_admin.py:78
+#, python-brace-format
+msgid "Reset {member}'s XP - they had **{xp} XP**."
+msgstr ""
+
+#: cogs/community/level_admin.py:98 cogs/community/level_admin.py:187
+msgid "Cancelled - no XP was changed."
+msgstr ""
+
+#: cogs/community/level_admin.py:113
+msgid "Confirm full XP reset"
+msgstr ""
+
+#: cogs/community/level_admin.py:118
+msgid "Type the server name to confirm"
+msgstr ""
+
+#: cogs/community/level_admin.py:131
+msgid "That doesn't match the server name - nothing was reset."
+msgstr ""
+
+#: cogs/community/level_admin.py:145
+#, python-brace-format
+msgid "{count} member's XP"
+msgid_plural "{count} members' XP"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/level_admin.py:149
+#, python-brace-format
+msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
+msgstr ""
+
+#: cogs/community/level_admin.py:156
+msgid "Something went wrong resetting XP."
+msgstr ""
+
+#: cogs/community/level_admin.py:170
+msgid "Reset ALL XP"
+msgstr ""
+
+#: cogs/community/level_admin.py:255
+msgid "XP updated"
+msgstr ""
+
+#: cogs/community/level_admin.py:257
+#, python-brace-format
+msgid "{member} now has **{xp} XP** (was {old_xp})."
+msgstr ""
+
+#: cogs/community/level_admin.py:261
+msgid "Level up"
+msgstr ""
+
+#: cogs/community/level_admin.py:262 cogs/community/level_admin.py:269
+#, python-brace-format
+msgid "Level {old} -> **{new}**"
+msgstr ""
+
+#: cogs/community/level_admin.py:268
+msgid "Level down"
+msgstr ""
+
+#: cogs/community/level_admin.py:275 cogs/community/leveling.py:1230
+#: cogs/utility/searchweb.py:142
+msgid "Level"
+msgstr ""
+
+#: cogs/community/level_admin.py:276
+#, python-brace-format
+msgid "**{level}** (unchanged)"
+msgstr ""
+
+#: cogs/community/level_admin.py:350
+msgid "Admin XP tools"
+msgstr ""
+
+#: cogs/community/level_admin.py:352
+msgid ""
+"- `/xp give <member> <amount>` - add XP\n"
+"- `/xp take <member> <amount>` - remove XP\n"
+"- `/xp set <member> <amount>` - set an exact total\n"
+"- `/xp reset <member>` - reset one member (confirm)\n"
+"- `/xp resetall` - reset the whole server (double confirm)"
+msgstr ""
+
+#: cogs/community/level_admin.py:374 cogs/community/level_admin.py:394
+#, python-brace-format
+msgid "The amount must be between {min} and {max}."
+msgstr ""
+
+#: cogs/community/level_admin.py:414
+#, python-brace-format
+msgid "The XP total must be between {min} and {max}."
+msgstr ""
+
+#: cogs/community/level_admin.py:428
+msgid "Reset this member's XP?"
+msgstr ""
+
+#: cogs/community/level_admin.py:430
+#, python-brace-format
+msgid ""
+"This resets {member}'s XP to **0** and removes them from the leaderboard."
+" This can't be undone."
+msgstr ""
+
+#: cogs/community/level_admin.py:448
+msgid "Reset ALL XP in this server?"
+msgstr ""
+
+#: cogs/community/level_admin.py:450
+#, python-brace-format
+msgid ""
+"This wipes **every** member's XP and every weekly/monthly leaderboard for"
+" **{guild}**. This can't be undone.\n"
+"\n"
+"Press the button below, then type the server name to confirm."
+msgstr ""
+
 #: cogs/community/level_config_ui.py:63
 msgid "The message can't be empty."
 msgstr ""
@@ -1987,154 +2114,166 @@ msgstr ""
 msgid "**Level {level}** -> {roles}"
 msgstr ""
 
-#: cogs/community/level_rewards.py:344
+#: cogs/community/level_rewards.py:398
 msgid "That role isn't from this server."
 msgstr ""
 
-#: cogs/community/level_rewards.py:347
+#: cogs/community/level_rewards.py:401
 msgid "You can't use @everyone as a level reward."
 msgstr ""
 
-#: cogs/community/level_rewards.py:350
+#: cogs/community/level_rewards.py:404
 msgid "The level must be 1 or higher."
 msgstr ""
 
-#: cogs/community/level_rewards.py:363 cogs/community/level_rewards.py:404
+#: cogs/community/level_rewards.py:417 cogs/community/level_rewards.py:458
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr ""
 
-#: cogs/community/level_rewards.py:396
+#: cogs/community/level_rewards.py:450
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr ""
 
-#: cogs/community/level_rewards.py:411
+#: cogs/community/level_rewards.py:465
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr ""
 
-#: cogs/community/level_rewards.py:417
+#: cogs/community/level_rewards.py:471
 msgid ""
 "I can add it, but that role is above me - move my role up so I can "
 "actually assign it."
 msgstr ""
 
-#: cogs/community/level_rewards.py:422
+#: cogs/community/level_rewards.py:476
 msgid "Level reward added"
 msgstr ""
 
-#: cogs/community/level_rewards.py:436
+#: cogs/community/level_rewards.py:490
 msgid "This server has no level rewards configured yet."
 msgstr ""
 
-#: cogs/community/level_rewards.py:441
+#: cogs/community/level_rewards.py:495
 msgid "Pick a reward rule to remove:"
 msgstr ""
 
-#: cogs/community/level_rewards.py:485
+#: cogs/community/level_rewards.py:539
 msgid ""
 "Members now keep only the roles from the highest level reward they've "
 "reached."
 msgstr ""
 
-#: cogs/community/level_rewards.py:490
+#: cogs/community/level_rewards.py:544
 msgid "Members now keep every level reward role they've ever earned."
 msgstr ""
 
-#: cogs/community/level_rewards.py:494
+#: cogs/community/level_rewards.py:548
 msgid "Reward mode updated"
 msgstr ""
 
-#: cogs/community/leveling.py:96
+#: cogs/community/leveling.py:115
+#, python-brace-format
+msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
+msgstr ""
+
+#: cogs/community/leveling.py:121
+#, python-brace-format
+msgid "**#{rank}** {name} - {xp} XP"
+msgstr ""
+
+#: cogs/community/leveling.py:131
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
 "Level **{level}** - {xp} XP"
 msgstr ""
 
-#: cogs/community/leveling.py:105
+#: cogs/community/leveling.py:138
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
 "{xp} XP"
 msgstr ""
 
-#: cogs/community/leveling.py:123
+#: cogs/community/leveling.py:186
 #, python-brace-format
-msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
+msgid "{count} member"
+msgid_plural "{count} members"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/leveling.py:190
+#, python-brace-format
+msgid "-# Page {page}/{pages} - {members}"
 msgstr ""
 
-#: cogs/community/leveling.py:132
-#, python-brace-format
-msgid "**#{rank}** {name} - {xp} XP"
+#: cogs/community/leveling.py:199 cogs/music/views.py:1127
+msgid "Prev"
 msgstr ""
 
-#: cogs/community/leveling.py:841
+#: cogs/community/leveling.py:999
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr ""
 
-#: cogs/community/leveling.py:849
+#: cogs/community/leveling.py:1007
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr ""
 
-#: cogs/community/leveling.py:856
+#: cogs/community/leveling.py:1014
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr ""
 
-#: cogs/community/leveling.py:1067
+#: cogs/community/leveling.py:1225
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr ""
 
-#: cogs/community/leveling.py:1071 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:1229 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr ""
 
-#: cogs/community/leveling.py:1072 cogs/utility/searchweb.py:142
-msgid "Level"
-msgstr ""
-
-#: cogs/community/leveling.py:1073
+#: cogs/community/leveling.py:1231
 msgid "XP"
 msgstr ""
 
-#: cogs/community/leveling.py:1075
+#: cogs/community/leveling.py:1233
 msgid "XP for next level"
 msgstr ""
 
-#: cogs/community/leveling.py:1103
+#: cogs/community/leveling.py:1261
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr ""
 
-#: cogs/community/leveling.py:1108
+#: cogs/community/leveling.py:1266
 msgid "No one has earned any XP yet!"
 msgstr ""
 
-#: cogs/community/leveling.py:1119 cogs/community/leveling.py:1173
+#: cogs/community/leveling.py:1280 cogs/community/leveling.py:1335
 #, python-brace-format
 msgid "User {uid}"
 msgstr ""
 
-#: cogs/community/leveling.py:1153
+#: cogs/community/leveling.py:1314
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr ""
 
-#: cogs/community/leveling.py:1154
+#: cogs/community/leveling.py:1315
 msgid "No one has earned any XP this week yet!"
 msgstr ""
 
-#: cogs/community/leveling.py:1156
+#: cogs/community/leveling.py:1317
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr ""
 
-#: cogs/community/leveling.py:1159
+#: cogs/community/leveling.py:1320
 msgid "No one has earned any XP this month yet!"
 msgstr ""
 
@@ -5953,10 +6092,6 @@ msgstr ""
 #: cogs/music/views.py:1114
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} track(s)"
-msgstr ""
-
-#: cogs/music/views.py:1127
-msgid "Prev"
 msgstr ""
 
 #: cogs/music/views.py:1141

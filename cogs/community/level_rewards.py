@@ -227,64 +227,118 @@ class LevelRewards(commands.Cog):
             if not to_add and not to_remove:
                 return []
 
-            granted = []
-            stale_role_ids = set()
-            for role_id in to_add:
-                role = guild.get_role(role_id)
-                if role is None:
-                    stale_role_ids.add(role_id)
-                    continue
-                if not _assignable(role, guild):
-                    log.debug(
-                        "Cannot assign level-reward role %s in guild %s "
-                        "(above my top role or managed)",
-                        role_id,
-                        guild.id,
-                    )
-                    continue
-                try:
-                    await member.add_roles(role, reason="Level reward")
-                    granted.append(role)
-                except discord.HTTPException:
-                    log.debug(
-                        "Failed to add level-reward role %s to %s",
-                        role_id,
-                        member.id,
-                    )
-
-            for role_id in to_remove:
-                role = guild.get_role(role_id)
-                if role is None:
-                    stale_role_ids.add(role_id)
-                    continue
-                if not _assignable(role, guild):
-                    log.debug(
-                        "Cannot remove level-reward role %s in guild %s "
-                        "(above my top role or managed)",
-                        role_id,
-                        guild.id,
-                    )
-                    continue
-                try:
-                    await member.remove_roles(
-                        role, reason="Level reward (replace mode)"
-                    )
-                except discord.HTTPException:
-                    log.debug(
-                        "Failed to remove level-reward role %s from %s",
-                        role_id,
-                        member.id,
-                    )
-
-            if stale_role_ids:
-                await self._prune_stale_rules(guild.id, stale_role_ids)
-
+            granted, _removed = await self._apply_role_changes(
+                guild, member, to_add, to_remove
+            )
             return granted
         except Exception:
             log.exception(
                 "Level-reward grant failed for %s in guild %s", member.id, guild.id
             )
             return []
+
+    async def reconcile_for_level(self, guild, member, level):
+        """Recompute ``member``'s reward roles after an admin XP edit dropped
+        them to ``level`` (leveling L5 - the level-DOWN case). Returns
+        ``(added, removed)`` role lists.
+
+        In stack mode this is a no-op in BOTH lists: earned roles are KEPT even
+        when an admin removes XP (the documented convention - see
+        tools.level_rewards.reconcile_to_level). In replace mode the tier is
+        recomputed: reward roles above the new level are removed and the new
+        tier's role(s) (re)added. Never raises - a missing/failing lookup is
+        logged and swallowed so an admin XP edit is never broken by a reward
+        hiccup (the Leveling cog also wraps this call). The UP case still routes
+        through :meth:`grant_for_levelup`, never here.
+        """
+        try:
+            rows = await self.bot.db_pool.fetch(
+                "SELECT level, role_id FROM level_rewards WHERE guild_id = $1;",
+                guild.id,
+            )
+            if not rows:
+                return [], []
+            mode = await self._fetch_mode(guild.id)
+            rules = [(row["level"], row["role_id"]) for row in rows]
+            held = {r.id for r in member.roles}
+            to_add, to_remove = level_rewards.reconcile_to_level(
+                rules, mode, level, held
+            )
+            if not to_add and not to_remove:
+                return [], []
+            return await self._apply_role_changes(guild, member, to_add, to_remove)
+        except Exception:
+            log.exception(
+                "Level-reward reconcile failed for %s in guild %s",
+                member.id,
+                guild.id,
+            )
+            return [], []
+
+    async def _apply_role_changes(self, guild, member, to_add, to_remove):
+        """Apply a computed ``(to_add, to_remove)`` reward-role diff to a member.
+
+        Shared by :meth:`grant_for_levelup` (level UP) and
+        :meth:`reconcile_for_level` (level DOWN after an admin XP edit): resolves
+        each role id, skips one the bot cannot manage (above its top role, or
+        managed) with a debug log, swallows a per-role ``HTTPException`` so one
+        bad role never blocks the rest, and lazily prunes any rule row pointing
+        at a since-deleted role. Returns ``(added, removed)`` role lists (the
+        roles actually applied), so the caller can build an announce suffix.
+        """
+        added = []
+        removed = []
+        stale_role_ids = set()
+        for role_id in to_add:
+            role = guild.get_role(role_id)
+            if role is None:
+                stale_role_ids.add(role_id)
+                continue
+            if not _assignable(role, guild):
+                log.debug(
+                    "Cannot assign level-reward role %s in guild %s "
+                    "(above my top role or managed)",
+                    role_id,
+                    guild.id,
+                )
+                continue
+            try:
+                await member.add_roles(role, reason="Level reward")
+                added.append(role)
+            except discord.HTTPException:
+                log.debug(
+                    "Failed to add level-reward role %s to %s",
+                    role_id,
+                    member.id,
+                )
+
+        for role_id in to_remove:
+            role = guild.get_role(role_id)
+            if role is None:
+                stale_role_ids.add(role_id)
+                continue
+            if not _assignable(role, guild):
+                log.debug(
+                    "Cannot remove level-reward role %s in guild %s "
+                    "(above my top role or managed)",
+                    role_id,
+                    guild.id,
+                )
+                continue
+            try:
+                await member.remove_roles(role, reason="Level reward (replace mode)")
+                removed.append(role)
+            except discord.HTTPException:
+                log.debug(
+                    "Failed to remove level-reward role %s from %s",
+                    role_id,
+                    member.id,
+                )
+
+        if stale_role_ids:
+            await self._prune_stale_rules(guild.id, stale_role_ids)
+
+        return added, removed
 
     async def _prune_stale_rules(self, guild_id, role_ids):
         """Drop rule rows for roles that no longer exist (lazy prune, INFO log)."""

@@ -217,3 +217,78 @@ def test_group_by_level_groups_and_preserves_role_order():
 
 def test_group_by_level_empty_input():
     assert lr.group_by_level([]) == {}
+
+
+# ---------------------------------------------------------------------------
+# reconcile_to_level - the level-DOWN decision for the admin XP tools (L5).
+# The UP case still routes through decide_role_changes; this fires only when an
+# admin edit dropped a member below a tier.
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_stack_is_a_total_no_op():
+    """Stack mode KEEPS earned roles on XP loss - the documented convention -
+    so both sets come back empty regardless of what is held or owed."""
+    rules = [(1, 10), (5, 20), (10, 30)]
+    # Member held the top two tiers but an admin dropped them to level 5.
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.STACK, 5, held_role_ids=[10, 20, 30]
+    )
+    assert to_add == frozenset()
+    assert to_remove == frozenset()
+
+
+def test_reconcile_replace_removes_tiers_above_the_new_level():
+    """Replace mode recomputes the tier: a member dropped from level 10 to 5
+    keeps only the level-5 tier and loses the level-10 role."""
+    rules = [(1, 10), (5, 20), (10, 30)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.REPLACE, 5, held_role_ids=[20, 30]
+    )
+    assert to_add == frozenset()   # already holds the owed (level-5) role
+    assert to_remove == {30}       # the level-10 tier is stripped
+
+
+def test_reconcile_replace_adds_the_new_tier_if_somehow_unheld():
+    rules = [(1, 10), (5, 20), (10, 30)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.REPLACE, 5, held_role_ids=[30]
+    )
+    assert to_add == {20}      # the new tier is (re)granted
+    assert to_remove == {30}   # the higher tier is removed
+
+
+def test_reconcile_replace_never_touches_unrelated_roles():
+    rules = [(1, 10), (5, 20)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.REPLACE, 1, held_role_ids=[10, 20, 999]
+    )
+    assert to_remove == {20}   # 999 is not a reward role -> left alone
+    assert 999 not in to_remove
+
+
+def test_reconcile_replace_down_to_zero_strips_every_reward_role():
+    rules = [(1, 10), (5, 20)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.REPLACE, 0, held_role_ids=[10, 20]
+    )
+    assert to_add == frozenset()
+    assert to_remove == {10, 20}
+
+
+def test_reconcile_unknown_mode_behaves_like_stack():
+    rules = [(1, 10), (5, 20)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, "not-a-mode", 1, held_role_ids=[10, 20]
+    )
+    assert to_add == frozenset()
+    assert to_remove == frozenset()
+
+
+def test_reconcile_replace_is_idempotent():
+    rules = [(1, 10), (5, 20)]
+    to_add, to_remove = lr.reconcile_to_level(
+        rules, lr.REPLACE, 1, held_role_ids=[10]
+    )
+    assert to_add == frozenset()
+    assert to_remove == frozenset()
