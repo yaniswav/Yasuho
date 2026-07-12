@@ -14,10 +14,24 @@ The method is a ``@staticmethod`` with no dependencies, so it is called directly
 on the class - no cog instance, bot, pool, or event loop required.
 """
 
+import json
 import types
 
+import pytest
+
 from cogs.community.leveling import Leveling
-from tools import leveling
+from tools import leveling, settings
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    """tools.settings caches user/guild blobs in a process-global singleton
+    (see tests/tools/test_settings.py); the new level-up-reward tests below are
+    the first in this module to exercise settings.get_user, so an entry left by
+    an earlier test (or an earlier run in this same file) must never leak in."""
+    settings._cache.clear()
+    yield
+    settings._cache.clear()
 
 
 def test_zero_xp_is_level_zero():
@@ -117,12 +131,18 @@ class _FakeMessage:
         self.channel = _FakeChannel()
 
 
-def _make_bot(fake_pool, prefixes=None, default_prefix="?", bot_user_id=999):
+def _make_bot(
+    fake_pool, prefixes=None, default_prefix="?", bot_user_id=999, get_cog=None
+):
     return types.SimpleNamespace(
         db_pool=fake_pool,
         prefixes=prefixes if prefixes is not None else {},
         default_prefix=default_prefix,
         user=types.SimpleNamespace(id=bot_user_id),
+        # Cross-cog seam the reward-grant hook uses (bot.get_cog("LevelRewards")).
+        # Defaults to "no such cog", matching a bot where LevelRewards never
+        # loaded - the on_message path must tolerate that silently.
+        get_cog=get_cog or (lambda name: None),
     )
 
 
@@ -318,3 +338,159 @@ def test_is_enabled_reflects_the_config_map(fake_pool):
     assert cog.is_enabled(5) is False
     _enable(cog, 5)
     assert cog.is_enabled(5) is True
+
+
+# ---------------------------------------------------------------------------
+# Level-reward announce integration (cross-cog seam: bot.get_cog("LevelRewards"))
+# ---------------------------------------------------------------------------
+#
+# The pure add/remove decision math lives in tools/level_rewards.py and the
+# cog-level role application in tests/cogs/test_level_rewards.py; these tests
+# only pin the Leveling side of the seam: the reward cog is called on every
+# level-up (never per message), roles are granted regardless of the announce
+# opt-out, the announce message gains a suffix only when something was granted
+# AND announcing is on, and a rewards-cog failure never breaks the announce.
+
+
+class _FakeGrantedRole:
+    def __init__(self, role_id):
+        self.id = role_id
+        self.mention = f"<@&{role_id}>"
+
+
+class _FakeRewardsCog:
+    """Stand-in for cogs.community.level_rewards.LevelRewards."""
+
+    def __init__(self, granted=None, raises=None):
+        self.granted = list(granted or [])
+        self.raises = raises
+        self.calls = []
+
+    async def grant_for_levelup(self, guild, member, old_level, new_level):
+        self.calls.append((guild.id, member.id, old_level, new_level))
+        if self.raises is not None:
+            raise self.raises
+        return self.granted
+
+
+def _route_fetchval(fake_pool, xp_value, user_settings_raw=None):
+    """A query-aware fetchval stub: routes the XP upsert and the settings.get_user
+    read to their own configured return values (the single global
+    ``fetchval_return`` FakePool offers cannot serve both in the same test, since
+    a level-up in on_message calls fetchval twice for two different purposes).
+    """
+
+    async def fetchval(query, *args):
+        fake_pool.calls.append(("fetchval", query, args))
+        if "INSERT INTO levels" in query:
+            return xp_value
+        if "user_settings" in query:
+            return user_settings_raw
+        return None
+
+    fake_pool.fetchval = fetchval
+
+
+async def test_levelup_grants_roles_and_appends_announce_suffix(fake_pool):
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1, xp_min=1, xp_max=1)  # deterministic +1 XP per message
+    _route_fetchval(fake_pool, xp_value=10000)  # old=9999 (lvl 9) -> new=10000 (lvl 10)
+
+    msg = _FakeMessage(content="hello", guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # old_level, new_level passed through
+    assert len(msg.channel.sends) == 1
+    text = msg.channel.sends[0][0][0]
+    assert "reached level **10**" in text
+    assert "<@&55>" in text  # the granted role's mention is in the suffix
+
+    # The reward-role mention must NOT mass-ping every holder of that role: the
+    # send suppresses role/@everyone pings while keeping the leveler's own ping.
+    allowed = msg.channel.sends[0][1]["allowed_mentions"]
+    assert allowed.roles is False
+    assert allowed.everyone is False
+    assert allowed.users is True
+
+
+async def test_levelup_opt_out_still_grants_roles_but_skips_announce(fake_pool):
+    """The announce opt-out controls only the announce MESSAGE - reward roles
+    are granted either way (grant_for_levelup runs outside the opt-out gate)."""
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval(
+        fake_pool,
+        xp_value=10000,
+        user_settings_raw=json.dumps({"levelup_announce": False}),
+    )
+
+    msg = _FakeMessage(content="hello", guild_id=1, author_id=3)
+    await cog.on_message(msg)
+
+    assert rewards_cog.calls == [(1, 3, 9, 10)]  # still granted
+    assert msg.channel.sends == []  # but nothing announced
+
+
+async def test_levelup_without_rewards_cog_announces_plain(fake_pool):
+    """No LevelRewards cog loaded: get_cog returns None, announce is unaffected."""
+    bot = _make_bot(fake_pool)  # default get_cog -> always None
+    cog = Leveling(bot)
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(content="hello", guild_id=1, author_id=4)
+    await cog.on_message(msg)
+
+    assert len(msg.channel.sends) == 1
+    text = msg.channel.sends[0][0][0]
+    assert "reached level **10**" in text
+    assert "earned" not in text
+
+
+async def test_rewards_cog_failure_does_not_break_the_announce(fake_pool):
+    rewards_cog = _FakeRewardsCog(raises=RuntimeError("boom"))
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(content="hello", guild_id=1, author_id=5)
+    await cog.on_message(msg)  # must not raise
+
+    assert len(msg.channel.sends) == 1
+    text = msg.channel.sends[0][0][0]
+    assert "reached level **10**" in text
+    assert "earned" not in text  # the failed grant produced no roles to suffix
+
+
+async def test_no_levelup_never_calls_the_rewards_cog(fake_pool):
+    """Mid-band messages (no level crossed) must not touch the rewards seam at
+    all - grants happen on level-up only, never per message (SCALE STORY)."""
+    rewards_cog = _FakeRewardsCog(granted=[_FakeGrantedRole(55)])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1)
+    fake_pool.fetchval_return = 11000  # mid-band, no level crossed (see above)
+
+    msg = _FakeMessage(content="hello", guild_id=1, author_id=6)
+    await cog.on_message(msg)
+
+    assert rewards_cog.calls == []

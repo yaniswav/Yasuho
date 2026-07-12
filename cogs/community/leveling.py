@@ -250,14 +250,53 @@ class Leveling(commands.Cog):
             )
             new_level = leveling.level_up_between(new_xp - gain, new_xp)
 
-            if new_level is not None and await settings.get_user(
-                self.bot.db_pool, message.author.id, "levelup_announce", True
-            ):
-                await message.channel.send(
-                    _("{user} reached level **{level}**!").format(
-                        user=message.author.mention, level=new_level
+            if new_level is not None:
+                # Reward roles are granted regardless of the announce opt-out
+                # below - that setting controls only the announce MESSAGE, never
+                # whether earned roles are handed out. Cross-cog seam (mirrors
+                # rolemenus.py's get_cog("Reminder")): a missing or failing
+                # LevelRewards cog must never break the level-up itself.
+                granted = []
+                rewards_cog = self.bot.get_cog("LevelRewards")
+                if rewards_cog is not None:
+                    try:
+                        old_level = leveling.level_for_xp(new_xp - gain)
+                        granted = await rewards_cog.grant_for_levelup(
+                            message.guild, message.author, old_level, new_level
+                        )
+                    except Exception:
+                        log.exception(
+                            "Failed to grant level rewards for %s",
+                            message.author.id,
+                        )
+
+                if await settings.get_user(
+                    self.bot.db_pool, message.author.id, "levelup_announce", True
+                ):
+                    if granted:
+                        text = _(
+                            "{user} reached level **{level}**! ... and earned "
+                            "{roles}"
+                        ).format(
+                            user=message.author.mention,
+                            level=new_level,
+                            roles=", ".join(r.mention for r in granted),
+                        )
+                    else:
+                        text = _("{user} reached level **{level}**!").format(
+                            user=message.author.mention, level=new_level
+                        )
+                    # Ping only the member who leveled up. The granted-roles
+                    # suffix embeds role mentions (<@&id>); with the bot's mention
+                    # permissions those would notify EVERY holder of a reward role
+                    # (a mass ping) on each level-up, so roles/@everyone are
+                    # suppressed while the member's own mention is kept.
+                    await message.channel.send(
+                        text,
+                        allowed_mentions=discord.AllowedMentions(
+                            everyone=False, roles=False, users=True
+                        ),
                     )
-                )
 
         except Exception:
             log.exception("Failed to update XP")

@@ -116,8 +116,31 @@ CREATE TABLE IF NOT EXISTS level_config (
     xp_max              INTEGER NOT NULL DEFAULT 25,
     announce_mode       TEXT    NOT NULL DEFAULT 'channel',  -- off | channel | dm | fixed
     announce_channel_id BIGINT,                              -- target channel for announce_mode = 'fixed' (later lot)
-    announce_template   TEXT                                 -- custom level-up message template (later lot)
+    announce_template   TEXT,                                -- custom level-up message template (later lot)
+    rewards_mode        TEXT    NOT NULL DEFAULT 'stack'      -- stack | replace (level_rewards.py)
 );
+-- Migrate pre-existing installs (no-op on a fresh database): level_config already
+-- exists on any deploy that shipped the L0/L1 leveling lot, so CREATE TABLE IF NOT
+-- EXISTS above never adds rewards_mode there - the ALTER is what actually installs
+-- the column on those databases (every rewards_mode read/write would error without it).
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS rewards_mode TEXT NOT NULL DEFAULT 'stack';
+
+-- Level-up role rewards (L2): one row per (guild, level, role) rule. A member who
+-- reaches `level` is owed `role_id`. `rewards_mode` on level_config (above)
+-- decides whether a member keeps every earned reward role ('stack', the default)
+-- or only the roles tied to the single highest level they have reached
+-- ('replace'). Capped at 25 rules per guild in code (tools/level_rewards.py).
+-- Reconciliation is on-demand only: a rule added for a level a member already
+-- passed is granted the next time THEY level up, never by a retroactive sweep.
+-- A grant that hits a since-deleted role prunes that role's row(s) lazily and
+-- logs INFO (cogs/community/level_rewards.py).
+CREATE TABLE IF NOT EXISTS level_rewards (
+    guild_id BIGINT  NOT NULL,
+    level    INTEGER NOT NULL,
+    role_id  BIGINT  NOT NULL,
+    PRIMARY KEY (guild_id, level, role_id)
+);
+CREATE INDEX IF NOT EXISTS level_rewards_guild_idx ON level_rewards (guild_id);
 
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
