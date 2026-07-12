@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 18:00+0000\n"
+"POT-Creation-Date: 2026-07-12 18:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -450,7 +450,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2065
-#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:126
+#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:140
 #: cogs/config/rooms.py:1062 tools/views.py:22 tools/views.py:117
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -579,9 +579,10 @@ msgid "No matching titles of that type."
 msgstr "Δεν υπάρχουν τίτλοι αυτού του τύπου που να ταιριάζουν."
 
 #: cogs/anilist/components.py:421 cogs/anilist/components.py:425
-#: cogs/community/level_rewards.py:117 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:544 cogs/config/welcome.py:98
-#: cogs/config/welcome.py:263 cogs/config/welcome.py:484
+#: cogs/community/level_config_ui.py:165 cogs/community/level_rewards.py:117
+#: cogs/config/announcements.py:298 cogs/config/rolemenus.py:544
+#: cogs/config/welcome.py:98 cogs/config/welcome.py:263
+#: cogs/config/welcome.py:484
 msgid "Something went wrong."
 msgstr "Κάτι πήγε στραβά."
 
@@ -1550,6 +1551,194 @@ msgstr "Άγνωστη γλώσσα. Διαθέσιμες: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Η προεπιλεγμένη γλώσσα του διακομιστή ορίστηκε σε **{lang}**."
 
+#: cogs/community/level_config_ui.py:47
+msgid "The message can't be empty."
+msgstr "Το μήνυμα δεν μπορεί να είναι κενό."
+
+#: cogs/community/level_config_ui.py:49
+#, python-brace-format
+msgid "That message has a stray '{' or '}' - check the placeholders."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:52
+#, python-brace-format
+msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:59
+#, python-brace-format
+msgid "The message is too long (max {max} characters)."
+msgstr "Το μήνυμα είναι πολύ μεγάλο (έως {max} χαρακτήρες)."
+
+#: cogs/community/level_config_ui.py:68
+msgid "Off - level-ups are never announced."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:70
+msgid "DM - the member is messaged directly."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:73
+#, python-brace-format
+msgid "Fixed channel: <#{channel_id}>"
+msgstr "Σταθερό κανάλι: <#{channel_id}>"
+
+#: cogs/community/level_config_ui.py:77
+msgid "Fixed channel (none set yet - falls back to the message's own channel)."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:80
+msgid "Channel - announced where the message was sent."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:85
+#, python-brace-format
+msgid "Custom: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:86
+#, python-brace-format
+msgid "Default: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:124
+msgid "Channel/category"
+msgstr "Κανάλι/κατηγορία"
+
+#: cogs/community/level_config_ui.py:125 cogs/community/level_config_ui.py:129
+msgid "Unknown (deleted)"
+msgstr "Άγνωστο (διαγράφηκε)"
+
+#: cogs/community/level_config_ui.py:128 cogs/config/buttonroles.py:215
+#: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
+msgid "Role"
+msgstr "Ρόλος"
+
+#: cogs/community/level_config_ui.py:138
+msgid "Pick a no-XP zone to remove..."
+msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση..."
+
+#: cogs/community/level_config_ui.py:158
+msgid "Removed that no-XP zone."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:196 cogs/community/level_config_ui.py:202
+msgid "(deleted)"
+msgstr "(διαγράφηκε)"
+
+#: cogs/community/level_config_ui.py:221
+#, python-brace-format
+msgid "No-XP zones | {guild}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:230
+msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
+msgstr "Δεν έχουν ρυθμιστεί ζώνες χωρίς XP. Χρησιμοποίησε το `/levelconfig noxp add` για να εξαιρέσεις κανάλι, κατηγορία ή ρόλο."
+
+#: cogs/community/level_config_ui.py:240
+#, python-brace-format
+msgid ""
+"**Channels & categories**\n"
+"{lines}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:250
+#, python-brace-format
+msgid ""
+"**Roles**\n"
+"{lines}"
+msgstr ""
+"**Ρόλοι**\n"
+"{lines}"
+
+#: cogs/community/level_config_ui.py:268
+#, python-brace-format
+msgid "Level config | {guild}"
+msgstr "Ρυθμίσεις επιπέδων | {guild}"
+
+#: cogs/community/level_config_ui.py:275
+msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:281
+#, python-brace-format
+msgid ""
+"**No-XP zones ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+"**Ζώνες χωρίς XP ({count}/{max})**\n"
+"{summary}"
+
+#: cogs/community/level_config_ui.py:291
+#, python-brace-format
+msgid ""
+"**Announce mode**\n"
+"{mode}\n"
+"**Announce message**\n"
+"{template}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:376
+msgid "Give exactly one of a channel/category or a role."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:381
+msgid "You can't use @everyone as a no-XP zone."
+msgstr "Δεν μπορείς να χρησιμοποιήσεις το @everyone ως ζώνη χωρίς XP."
+
+#: cogs/community/level_config_ui.py:397 cogs/community/level_config_ui.py:434
+#, python-brace-format
+msgid "This server already has the maximum of {max} no-XP zones."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ζωνών χωρίς XP."
+
+#: cogs/community/level_config_ui.py:426
+#, python-brace-format
+msgid "{target} is already a no-XP zone."
+msgstr "Το {target} είναι ήδη ζώνη χωρίς XP."
+
+#: cogs/community/level_config_ui.py:443
+msgid "No-XP zone added"
+msgstr "Η ζώνη χωρίς XP προστέθηκε"
+
+#: cogs/community/level_config_ui.py:444
+#, python-brace-format
+msgid "{target} will no longer earn XP."
+msgstr "Το {target} δεν θα δίνει πια XP."
+
+#: cogs/community/level_config_ui.py:458
+msgid "This server has no no-XP zones configured yet."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ζώνες χωρίς XP."
+
+#: cogs/community/level_config_ui.py:462
+msgid "Pick a no-XP zone to remove:"
+msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση:"
+
+#: cogs/community/level_config_ui.py:492
+msgid "Give a channel when setting the fixed mode."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:497 cogs/community/level_config_ui.py:520
+msgid "The leveling system isn't loaded right now."
+msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
+
+#: cogs/community/level_config_ui.py:505
+msgid "Announce mode updated"
+msgstr "Η λειτουργία ανακοινώσεων ενημερώθηκε"
+
+#: cogs/community/level_config_ui.py:526
+#, python-brace-format
+msgid "The level-up message was reset to the default: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:546
+msgid "Level-up message updated"
+msgstr "Το μήνυμα ανόδου επιπέδου ενημερώθηκε"
+
+#: cogs/community/level_config_ui.py:547
+#, python-brace-format
+msgid "Preview: {preview}"
+msgstr "Προεπισκόπηση: {preview}"
+
 #: cogs/community/level_rewards.py:78
 msgid "Unknown role (deleted)"
 msgstr "Άγνωστος ρόλος (διαγράφηκε)"
@@ -1650,7 +1839,7 @@ msgstr "Τα μέλη κρατούν πλέον κάθε ρόλο ανταμοι
 msgid "Reward mode updated"
 msgstr "Η λειτουργία ανταμοιβών ενημερώθηκε"
 
-#: cogs/community/leveling.py:58
+#: cogs/community/leveling.py:65
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -1659,52 +1848,57 @@ msgstr ""
 "{marker} **{name}**\n"
 "Επίπεδο **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:74
+#: cogs/community/leveling.py:81
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - επίπεδο **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:278
+#: cogs/community/leveling.py:463
+#, python-brace-format
+msgid "{base} ... and earned {roles}"
+msgstr "{base} ... και κέρδισε {roles}"
+
+#: cogs/community/leveling.py:471
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
 
-#: cogs/community/leveling.py:286
+#: cogs/community/leveling.py:478
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
 
-#: cogs/community/leveling.py:471
+#: cogs/community/leveling.py:689
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Κατάταξη | {name}"
 
-#: cogs/community/leveling.py:475 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:693 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr "Κατάταξη"
 
-#: cogs/community/leveling.py:476 cogs/utility/searchweb.py:142
+#: cogs/community/leveling.py:694 cogs/utility/searchweb.py:142
 msgid "Level"
 msgstr "Επίπεδο"
 
-#: cogs/community/leveling.py:477
+#: cogs/community/leveling.py:695
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:479
+#: cogs/community/leveling.py:697
 msgid "XP for next level"
 msgstr "XP για το επόμενο επίπεδο"
 
-#: cogs/community/leveling.py:501 cogs/community/leveling.py:527
+#: cogs/community/leveling.py:719 cogs/community/leveling.py:745
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Πίνακας κατάταξης | {guild}"
 
-#: cogs/community/leveling.py:502
+#: cogs/community/leveling.py:720
 msgid "No one has earned any XP yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
 
-#: cogs/community/leveling.py:512
+#: cogs/community/leveling.py:730
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Χρήστης {uid}"
@@ -1871,43 +2065,51 @@ msgstr "Ανακοινώσεις ανόδου επιπέδου"
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Λάβε ping στη συνομιλία όταν φτάνεις σε νέο επίπεδο."
 
-#: cogs/community/usersettings.py:48
+#: cogs/community/usersettings.py:52
+msgid "Level-up ping"
+msgstr "Ping ανόδου επιπέδου"
+
+#: cogs/community/usersettings.py:55
+msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
+msgstr ""
+
+#: cogs/community/usersettings.py:62
 msgid "Expanded help"
 msgstr "Εκτεταμένη βοήθεια"
 
-#: cogs/community/usersettings.py:50
+#: cogs/community/usersettings.py:64
 msgid "Show every subcommand inline when you browse help."
 msgstr "Εμφάνιση κάθε υποεντολής inline όταν περιηγείσαι στη βοήθεια."
 
-#: cogs/community/usersettings.py:59
+#: cogs/community/usersettings.py:73
 msgid "Music autoplay"
 msgstr "Αυτόματη αναπαραγωγή μουσικής"
 
-#: cogs/community/usersettings.py:62
+#: cogs/community/usersettings.py:76
 msgid "Keep playing recommended tracks when your music queue runs out."
 msgstr "Συνέχισε να παίζεις προτεινόμενα κομμάτια όταν αδειάσει η ουρά μουσικής σου."
 
-#: cogs/community/usersettings.py:72
+#: cogs/community/usersettings.py:86
 msgid "Play search picker"
 msgstr "Επιλογέας αναζήτησης στο play"
 
-#: cogs/community/usersettings.py:75
+#: cogs/community/usersettings.py:89
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "Στο /play, διάλεξε ανάμεσα στα κορυφαία αποτελέσματα αντί να παίζει αμέσως το πρώτο."
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:113
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:113
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:134
+#: cogs/community/usersettings.py:148
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:138
+#: cogs/community/usersettings.py:152
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1915,15 +2117,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:162
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:162
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:149
+#: cogs/community/usersettings.py:163
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1932,11 +2134,11 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:165
+#: cogs/community/usersettings.py:179
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:186
+#: cogs/community/usersettings.py:200
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
@@ -2092,11 +2294,6 @@ msgstr "Πρόσθεσε έναν ρόλο ως κουμπί..."
 #: cogs/config/buttonroles.py:194
 msgid "Channel to post the panel in..."
 msgstr "Κανάλι για δημοσίευση του πάνελ..."
-
-#: cogs/config/buttonroles.py:215 cogs/config/reactionroles.py:53
-#: cogs/config/reactionroles.py:184
-msgid "Role"
-msgstr "Ρόλος"
 
 #: cogs/config/buttonroles.py:221
 msgid "Remove a role button..."

@@ -17,6 +17,7 @@ on the class - no cog instance, bot, pool, or event loop required.
 import json
 import types
 
+import discord
 import pytest
 
 from cogs.community.leveling import Leveling
@@ -107,7 +108,9 @@ def test_is_staticmethod_callable_without_instance():
 
 
 class _FakeChannel:
-    def __init__(self):
+    def __init__(self, channel_id=100, category_id=None):
+        self.id = channel_id
+        self.category_id = category_id
         self.sends = []
 
     async def send(self, *args, **kwargs):
@@ -115,20 +118,40 @@ class _FakeChannel:
 
 
 class _FakeMsgAuthor:
-    def __init__(self, uid, is_bot=False):
+    def __init__(self, uid, is_bot=False, role_ids=(), display_name=None):
         self.id = uid
         self.bot = is_bot
         self.mention = f"<@{uid}>"
+        self.display_name = display_name or f"user-{uid}"
+        self.roles = [types.SimpleNamespace(id=rid) for rid in role_ids]
+        self.dm_sends = []
+
+    async def send(self, *args, **kwargs):
+        self.dm_sends.append((args, kwargs))
 
 
 class _FakeMessage:
-    def __init__(self, content="hello", guild_id=1, author_id=2, is_bot=False):
+    def __init__(
+        self,
+        content="hello",
+        guild_id=1,
+        author_id=2,
+        is_bot=False,
+        channel_id=100,
+        category_id=None,
+        role_ids=(),
+        guild_channels=None,
+    ):
         self.content = content
-        self.guild = (
-            types.SimpleNamespace(id=guild_id) if guild_id is not None else None
-        )
-        self.author = _FakeMsgAuthor(author_id, is_bot)
-        self.channel = _FakeChannel()
+        if guild_id is not None:
+            channels = dict(guild_channels or {})
+            guild = types.SimpleNamespace(id=guild_id, name="guild")
+            guild.get_channel = channels.get
+            self.guild = guild
+        else:
+            self.guild = None
+        self.author = _FakeMsgAuthor(author_id, is_bot, role_ids=role_ids)
+        self.channel = _FakeChannel(channel_id, category_id)
 
 
 def _make_bot(
@@ -494,3 +517,436 @@ async def test_no_levelup_never_calls_the_rewards_cog(fake_pool):
     await cog.on_message(msg)
 
     assert rewards_cog.calls == []
+
+
+# ---------------------------------------------------------------------------
+# No-XP zones (L3) hot-path integration.
+# ---------------------------------------------------------------------------
+#
+# The pure decision (is_no_xp_message) is covered in
+# tests/tools/test_leveling_service.py; these tests pin the COG side of the
+# seam: the snapshot is loaded from the DB at most ONCE per guild (a genuine
+# cache, not a per-message query), a muted channel/category/role blocks the
+# grant AND never even starts the cooldown, and refresh_no_xp_snapshot (the
+# cross-cog hook cogs/community/level_config_ui.py calls after every write)
+# makes a change visible on the very next message.
+
+
+def _no_xp_fetch_calls(fake_pool):
+    return [c for c in fake_pool.calls if c[0] == "fetch"]
+
+
+async def test_no_xp_snapshot_is_loaded_once_then_cached(fake_pool):
+    """A guild with no no-xp rows configured (fetch_return == [], the default)
+    still costs exactly one `fetch` for its first message and zero for later
+    ones - the cache holds the EMPTY snapshot, not a sentinel that re-queries."""
+    fake_pool.fetchval_return = 11000  # mid-band, no level-up noise
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(content="one", guild_id=1, author_id=2))
+    await cog.on_message(_FakeMessage(content="two", guild_id=1, author_id=3))
+
+    assert len(_no_xp_fetch_calls(fake_pool)) == 1
+    assert 1 in cog._no_xp
+
+
+async def test_no_xp_channel_blocks_grant_and_never_touches_cooldown(fake_pool):
+    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(content="hi", guild_id=1, author_id=2, channel_id=100)
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []  # no XP grant query at all
+    assert len(cog._cooldowns) == 0  # the cooldown was never started either
+
+
+async def test_no_xp_category_blocks_every_channel_inside_it(fake_pool):
+    fake_pool.fetch_return = [{"kind": "channel", "target_id": 50}]  # a category id
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, channel_id=999, category_id=50
+    )
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []
+
+
+async def test_no_xp_role_blocks_grant(fake_pool):
+    fake_pool.fetch_return = [{"kind": "role", "target_id": 77}]
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(content="hi", guild_id=1, author_id=2, role_ids=[77, 88])
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []
+
+
+async def test_no_xp_zone_does_not_affect_an_unrelated_channel(fake_pool):
+    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(content="hi", guild_id=1, author_id=2, channel_id=200)
+    await cog.on_message(msg)
+
+    assert len(_fetchval_calls(fake_pool)) == 1  # earned XP normally
+
+
+async def test_refresh_no_xp_snapshot_reloads_from_the_db(fake_pool):
+    """The cross-cog hook: after a level_no_xp write, the caller re-reads the
+    guild's rows and the NEW snapshot takes effect immediately, no restart."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    fake_pool.fetch_return = []
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2, channel_id=100))
+    assert 1 in cog._no_xp
+    assert cog._no_xp[1].channels == frozenset()
+
+    # A channel gets muted; the config UI cog calls this after the DB write.
+    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    await cog.refresh_no_xp_snapshot(1)
+    assert cog._no_xp[1].channels == frozenset({100})
+
+    # The NEXT message in that channel is blocked without any further fetch.
+    fetches_before = len(_no_xp_fetch_calls(fake_pool))
+    msg = _FakeMessage(guild_id=1, author_id=3, channel_id=100)
+    await cog.on_message(msg)
+    assert len(_no_xp_fetch_calls(fake_pool)) == fetches_before  # cache hit
+    assert msg.channel.sends == []
+
+
+async def test_no_xp_empty_snapshot_short_circuits_before_the_membership_test(
+    fake_pool, monkeypatch
+):
+    """HOT PATH allocation guard: a guild that configured NO zones must not even
+    CALL is_no_xp_message (so the role-id generator is never built and
+    Member.roles is never touched) - the `no_xp.channels or no_xp.roles` guard
+    `and`-short-circuits first. This is the proxy for "zero allocations in the
+    common case": the membership test, and the generator handed to it, are
+    skipped entirely."""
+    calls = []
+    real = leveling.is_no_xp_message
+    monkeypatch.setattr(
+        leveling,
+        "is_no_xp_message",
+        lambda *a, **k: (calls.append(a), real(*a, **k))[1],
+    )
+    fake_pool.fetch_return = []  # no zones -> the EMPTY snapshot is cached
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2, role_ids=[7, 8]))
+
+    assert calls == []  # short-circuited before is_no_xp_message
+    assert len(_fetchval_calls(fake_pool)) == 1  # still earned XP normally
+
+
+async def test_no_xp_nonempty_snapshot_does_run_the_membership_test(
+    fake_pool, monkeypatch
+):
+    """The other side of the guard: a guild that DID configure a zone reaches
+    is_no_xp_message (here with an unrelated role, so the message still earns)."""
+    calls = []
+    real = leveling.is_no_xp_message
+    monkeypatch.setattr(
+        leveling,
+        "is_no_xp_message",
+        lambda *a, **k: (calls.append(a), real(*a, **k))[1],
+    )
+    fake_pool.fetch_return = [{"kind": "role", "target_id": 999}]  # a zone exists
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2, role_ids=[7, 8]))
+
+    assert len(calls) == 1  # the membership test ran (unrelated role -> allowed)
+    assert len(_fetchval_calls(fake_pool)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Announce control (L3): mode routing + the levelup_ping "no ping" flavour.
+# ---------------------------------------------------------------------------
+#
+# resolve_announce_target/render_announce_template's pure decisions are
+# covered in tests/tools/test_leveling_service.py; these drive
+# _announce_levelup end to end through on_message against fakes for each
+# route, proving the opt-out gate applies in every mode and levelup_ping
+# swaps a mention for plain text without changing anything else.
+
+
+def _route_fetchval_multi(fake_pool, xp_value, user_prefs):
+    """Like _route_fetchval but serves DISTINCT per-user settings blobs, so a
+    test can pin both levelup_announce and levelup_ping independently. Reads
+    the level_config-less path: only the XP upsert and user_settings queries
+    are routed (the cog never reads level_config directly - config is already
+    in cog._configs for these tests, per _enable)."""
+
+    async def fetchval(query, *args):
+        fake_pool.calls.append(("fetchval", query, args))
+        if "INSERT INTO levels" in query:
+            return xp_value
+        if "user_settings" in query:
+            user_id = args[0]
+            return json.dumps(user_prefs.get(user_id, {}))
+        return None
+
+    fake_pool.fetchval = fetchval
+
+
+async def test_announce_mode_off_grants_roles_but_sends_nothing(fake_pool):
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool, get_cog=lambda name: rewards_cog if name == "LevelRewards" else None
+    )
+    cog = Leveling(bot)
+    _enable(cog, 1, xp_min=1, xp_max=1, announce_mode="off")
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # roles still granted
+    assert msg.channel.sends == []
+
+
+async def test_announce_mode_dm_sends_to_the_member_not_the_channel(fake_pool):
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1, announce_mode="dm")
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert msg.channel.sends == []
+    assert len(msg.author.dm_sends) == 1
+    assert "reached level **10**" in msg.author.dm_sends[0][0][0]
+
+
+async def test_announce_mode_dm_closed_dms_is_quiet(fake_pool):
+    """discord.Forbidden on the DM (closed DMs) never breaks the level-up."""
+
+    class _ClosedDMAuthor(_FakeMsgAuthor):
+        async def send(self, *args, **kwargs):
+            raise discord.Forbidden(
+                types.SimpleNamespace(status=403, reason="Forbidden"), "Cannot send"
+            )
+
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1, announce_mode="dm")
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    msg.author = _ClosedDMAuthor(2)
+    await cog.on_message(msg)  # must not raise
+
+
+async def test_announce_mode_fixed_sends_to_the_configured_channel(fake_pool):
+    fixed_channel = _FakeChannel(channel_id=555)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(
+        cog, 1, xp_min=1, xp_max=1, announce_mode="fixed", announce_channel_id=555
+    )
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2, guild_channels={555: fixed_channel})
+    await cog.on_message(msg)
+
+    assert msg.channel.sends == []  # NOT the message's own channel
+    assert len(fixed_channel.sends) == 1
+    assert "reached level **10**" in fixed_channel.sends[0][0][0]
+
+
+async def test_announce_mode_fixed_with_deleted_channel_is_quiet(fake_pool):
+    """The fixed channel is missing from the guild cache (deleted) - no crash,
+    no fallback send anywhere else (roles are still granted by the caller)."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(
+        cog, 1, xp_min=1, xp_max=1, announce_mode="fixed", announce_channel_id=555
+    )
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)  # no channel 555 registered
+    await cog.on_message(msg)  # must not raise
+
+    assert msg.channel.sends == []
+
+
+async def test_announce_opt_out_applies_in_dm_mode_too(fake_pool):
+    """The per-user opt-out is checked before the mode routing, so it silences
+    every route, not just the default channel one."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1, announce_mode="dm")
+    _route_fetchval(
+        fake_pool, xp_value=10000, user_settings_raw=json.dumps({"levelup_announce": False})
+    )
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert msg.channel.sends == []
+    assert msg.author.dm_sends == []
+
+
+async def test_announce_opt_out_applies_in_fixed_mode_too(fake_pool):
+    """Fixed mode is gated by the SAME opt-out: an opted-out member gets nothing
+    in the fixed channel, the origin channel, or a DM (roles still granted)."""
+    fixed_channel = _FakeChannel(channel_id=555)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(
+        cog, 1, xp_min=1, xp_max=1, announce_mode="fixed", announce_channel_id=555
+    )
+    _route_fetchval(
+        fake_pool,
+        xp_value=10000,
+        user_settings_raw=json.dumps({"levelup_announce": False}),
+    )
+
+    msg = _FakeMessage(guild_id=1, author_id=2, guild_channels={555: fixed_channel})
+    await cog.on_message(msg)
+
+    assert fixed_channel.sends == []
+    assert msg.channel.sends == []
+    assert msg.author.dm_sends == []
+
+
+async def test_levelup_ping_off_is_plain_text_in_dm_mode_too(fake_pool):
+    """ping-off applies in every mode: a DM announce names the member without a
+    mention just like the channel route does."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1, announce_mode="dm")
+    _route_fetchval_multi(
+        fake_pool, xp_value=10000, user_prefs={2: {"levelup_ping": False}}
+    )
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert msg.channel.sends == []
+    text = msg.author.dm_sends[0][0][0]
+    assert msg.author.mention not in text
+    assert msg.author.display_name in text
+
+
+async def test_levelup_ping_off_names_the_member_without_mentioning_them(fake_pool):
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval_multi(
+        fake_pool, xp_value=10000, user_prefs={2: {"levelup_ping": False}}
+    )
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    text = msg.channel.sends[0][0][0]
+    assert msg.author.mention not in text
+    assert msg.author.display_name in text
+
+
+async def test_levelup_ping_default_on_mentions_the_member(fake_pool):
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert msg.author.mention in msg.channel.sends[0][0][0]
+
+
+async def test_custom_announce_template_is_rendered_with_the_roles_suffix(fake_pool):
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool, get_cog=lambda name: rewards_cog if name == "LevelRewards" else None
+    )
+    cog = Leveling(bot)
+    _enable(
+        cog,
+        1,
+        xp_min=1,
+        xp_max=1,
+        announce_template="Woo {user}, level {level} in {guild}!",
+    )
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    text = msg.channel.sends[0][0][0]
+    assert "Woo <@2>, level 10 in guild!" in text
+    assert "and earned <@&55>" in text
+
+
+# ---------------------------------------------------------------------------
+# set_announce_mode / set_announce_template: the level_config writers used by
+# cogs/community/level_config_ui.py. Mirrors set_enabled's own tests plus the
+# `enabled`-seeded-from-legacy-JSONB upsert shape level_rewards_mode pins.
+# ---------------------------------------------------------------------------
+
+
+async def test_set_announce_mode_writes_row_and_caches_config(fake_pool):
+    fake_pool.fetchrow_return = _level_config_row(
+        1, announce_mode="dm", announce_channel_id=None
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    await cog.set_announce_mode(1, "dm")
+
+    assert cog._configs[1].announce_mode == "dm"
+    writes = [c for c in fake_pool.calls if c[0] == "fetchrow"]
+    assert len(writes) == 1
+    _method, query, args = writes[0]
+    assert "INSERT INTO level_config" in query
+    assert "COALESCE" in query  # enabled seeded from legacy JSONB, never clobbered
+    assert "enabled = " not in query.split("RETURNING")[0].split("DO UPDATE")[1]
+    assert args == (1, "dm", None)
+
+
+async def test_set_announce_mode_fixed_stores_the_channel_id(fake_pool):
+    fake_pool.fetchrow_return = _level_config_row(
+        1, announce_mode="fixed", announce_channel_id=999
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    await cog.set_announce_mode(1, "fixed", 999)
+
+    assert cog._configs[1].announce_mode == "fixed"
+    assert cog._configs[1].announce_channel_id == 999
+
+
+async def test_set_announce_mode_disabled_row_drops_the_guild_from_the_cache(fake_pool):
+    fake_pool.fetchrow_return = _level_config_row(1, enabled=False)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+    await cog.set_announce_mode(1, "channel")
+    assert not cog.is_enabled(1)
+
+
+async def test_set_announce_template_writes_row_and_caches_config(fake_pool):
+    fake_pool.fetchrow_return = _level_config_row(
+        1, announce_template="gg {user}"
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    await cog.set_announce_template(1, "gg {user}")
+
+    assert cog._configs[1].announce_template == "gg {user}"
+    writes = [c for c in fake_pool.calls if c[0] == "fetchrow"]
+    _method, query, args = writes[0]
+    assert "INSERT INTO level_config" in query
+    assert args == (1, "gg {user}")
+
+
+async def test_set_announce_template_none_resets_it(fake_pool):
+    fake_pool.fetchrow_return = _level_config_row(1, announce_template=None)
+    cog = Leveling(_make_bot(fake_pool))
+    await cog.set_announce_template(1, None)
+    assert cog._configs[1].announce_template is None

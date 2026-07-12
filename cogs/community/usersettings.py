@@ -43,6 +43,20 @@ PREFS = [
         description=N_("Get pinged in chat when you reach a new level."),
         default=True,
     ),
+    # Only affects HOW you're referenced in a level-up announce (a mention vs
+    # your plain name) - it never silences the announce itself, that's the
+    # preference above. The key MUST match cogs/community/leveling.py's
+    # _announce_levelup read (by literal, like every other preference here).
+    Preference(
+        key="levelup_ping",
+        label=N_("Level-up ping"),
+        emoji="📣",
+        description=N_(
+            "Ping you by mention in level-up announcements. Turn off to be "
+            "named without a ping."
+        ),
+        default=True,
+    ),
     Preference(
         key="help_expand",
         label=N_("Expanded help"),

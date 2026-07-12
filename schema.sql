@@ -142,6 +142,27 @@ CREATE TABLE IF NOT EXISTS level_rewards (
 );
 CREATE INDEX IF NOT EXISTS level_rewards_guild_idx ON level_rewards (guild_id);
 
+-- No-XP zones (L3): channels/categories and roles where messages never earn
+-- XP. ``kind = 'channel'`` rows match EITHER a text channel id OR a category
+-- id (a category is itself a channel on Discord's side, so muting a whole
+-- category is one row, not one per channel inside it - see
+-- tools/leveling.py NoXpSnapshot); ``kind = 'role'`` rows match any role the
+-- message author holds. Capped at 50 entries/guild
+-- (tools.leveling.MAX_NO_XP_PER_GUILD), enforced RACE-SAFELY by the same
+-- WHERE-COUNT INSERT guard as level_rewards. HOT PATH: on_message never
+-- queries this table directly - the Leveling cog loads a guild's rows once
+-- (on its first grant-eligible message, or immediately after any write here)
+-- into an in-memory NoXpSnapshot (two frozensets) capped to ~2048 guilds via
+-- tools.lru_cache.BoundedLRU, so the steady-state per-message cost is pure set
+-- membership, zero DB.  cogs/community/leveling.py, cogs/community/level_config_ui.py
+CREATE TABLE IF NOT EXISTS level_no_xp (
+    guild_id  BIGINT NOT NULL,
+    kind      TEXT   NOT NULL,   -- 'channel' | 'role'
+    target_id BIGINT NOT NULL,
+    PRIMARY KEY (guild_id, kind, target_id)
+);
+CREATE INDEX IF NOT EXISTS level_no_xp_guild_idx ON level_no_xp (guild_id);
+
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
     guild_id   BIGINT  PRIMARY KEY,

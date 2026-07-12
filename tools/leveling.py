@@ -15,6 +15,7 @@ pins zero drift against those literals.
 from __future__ import annotations
 
 import random
+import string
 from dataclasses import dataclass
 
 # Grant / cooldown defaults, matching the original hard-coded values. These are
@@ -136,3 +137,196 @@ def resolve_config(row, legacy_enabled):
         config = LevelConfig.from_row(row)
         return config if config.enabled else None
     return DEFAULT_ENABLED_CONFIG if legacy_enabled else None
+
+
+# ============================================================
+# No-XP zones (L3): channels/categories and roles that earn no XP.
+# ============================================================
+#
+# The decisions below are pure and allocation-light on purpose: on_message's
+# no-xp check runs for every grant-eligible message in every enabled guild, so
+# it must never touch the DB and should avoid allocating a new set per message.
+# The stateful per-guild cache (a BoundedLRU of NoXpSnapshot) lives on the
+# Leveling cog; this module only holds the value object and the pure check.
+
+# Discord caps a single select at 25 options; the admin "remove an entry"
+# picker (cogs/community/level_config_ui.py) lists every configured entry in
+# one select, mirroring level_rewards.MAX_REWARDS_PER_GUILD. A generous cap
+# above that Discord limit still keeps a guild's snapshot tiny.
+MAX_NO_XP_PER_GUILD = 50
+
+NO_XP_CHANNEL = "channel"
+NO_XP_ROLE = "role"
+NO_XP_KINDS = (NO_XP_CHANNEL, NO_XP_ROLE)
+
+
+def can_add_no_xp_entry(existing_count, cap=MAX_NO_XP_PER_GUILD):
+    """Whether one more no-xp entry may be added given the guild's current count."""
+    return existing_count < cap
+
+
+@dataclass(frozen=True)
+class NoXpSnapshot:
+    """A guild's no-xp zones as two frozensets, ready for O(1) hot-path checks.
+
+    ``channels`` holds BOTH text-channel ids and category ids under the SAME
+    ``kind='channel'`` row - a category is itself a GuildChannel on Discord's
+    side, so muting a whole category is one row, not one per channel inside it.
+    The hot-path check (:func:`is_no_xp_message`) tests a message's channel id
+    OR its category id against this single set; see that function's docstring
+    for why this is the deliberate design (not a third 'category' kind).
+    ``roles`` holds role ids; a message author holding ANY of those roles earns
+    no XP, wherever they post.
+    """
+
+    channels: frozenset = frozenset()
+    roles: frozenset = frozenset()
+
+    @classmethod
+    def from_rows(cls, rows):
+        """Build from level_no_xp rows (or any mapping with 'kind'/'target_id')."""
+        channels = frozenset(
+            r["target_id"] for r in rows if r["kind"] == NO_XP_CHANNEL
+        )
+        roles = frozenset(r["target_id"] for r in rows if r["kind"] == NO_XP_ROLE)
+        return cls(channels=channels, roles=roles)
+
+
+# Shared immutable value for "this guild has no no-xp zones configured" - the
+# overwhelming majority of guilds that use any. Safe to share (frozen).
+EMPTY_NO_XP_SNAPSHOT = NoXpSnapshot()
+
+
+def is_no_xp_message(snapshot, channel_id, category_id, role_ids):
+    """Whether a message posted under these ids must earn zero XP.
+
+    Pure set membership, allocation-free: the message's channel id OR its
+    category id (so a category-level mute covers every channel inside it, see
+    :class:`NoXpSnapshot`) hits ``snapshot.channels``, OR any id in
+    ``role_ids`` (the author's role ids) is in ``snapshot.roles``. ``role_ids``
+    may be any iterable; an empty snapshot short-circuits both checks without
+    ever iterating ``role_ids`` at all, so a guild with no rules configured
+    (the overwhelming majority) pays only two ``in frozenset()`` tests.
+    """
+    if channel_id in snapshot.channels:
+        return True
+    if category_id is not None and category_id in snapshot.channels:
+        return True
+    if snapshot.roles:
+        for role_id in role_ids:
+            if role_id in snapshot.roles:
+                return True
+    return False
+
+
+# ============================================================
+# Announce control (L3): mode routing + custom template validation/render.
+# ============================================================
+
+DEFAULT_ANNOUNCE_TEMPLATE = "{user} reached level **{level}**!"
+
+# The only placeholders a custom announce_template may use. Deliberately small
+# (no attribute/index access via "{user.x}", no positional "{}" / "{0}") so a
+# template can never reach into an object's internals - see
+# validate_announce_template, the sole gate that lets a template be SET.
+ANNOUNCE_PLACEHOLDERS = frozenset({"user", "level", "guild"})
+
+MAX_ANNOUNCE_TEMPLATE_LEN = 300
+
+# Hard ceiling on a RENDERED announce (Discord's own message limit). A validated
+# template can never approach this - its output is bounded by the 300-char
+# template plus a mention and a guild name - so this only ever trips on a stale
+# or corrupt stored value (e.g. an abusive format spec that predates the
+# validation tightening); render then falls back to the default. See
+# render_announce_template.
+MAX_RENDERED_ANNOUNCE_LEN = 2000
+
+_template_formatter = string.Formatter()
+
+
+def validate_announce_template(template):
+    """Validate a candidate announce_template. Returns ``(ok, reason)``.
+
+    ``reason`` is ``None`` on success, else one of ``"empty"`` / ``"too_long"``
+    / ``"malformed"`` / ``"unknown_placeholder"`` - a short code the cog turns
+    into a localized message (this module has no i18n dependency, like every
+    other tools/*.py pure decision engine). Uses ``string.Formatter.parse``
+    rather than a hand-rolled regex so a malformed brace pair (e.g. a lone
+    ``"{"``) is caught HERE, at SET time, instead of surfacing as a
+    ``ValueError`` out of ``str.format`` on the hot announce path.
+    """
+    if template is None:
+        return False, "empty"
+    stripped = template.strip()
+    if not stripped:
+        return False, "empty"
+    if len(stripped) > MAX_ANNOUNCE_TEMPLATE_LEN:
+        return False, "too_long"
+    try:
+        fields = set()
+        for _literal, name, spec, conv in _template_formatter.parse(stripped):
+            if name is None:
+                continue
+            # A placeholder must be BARE. parse() reports a format spec and a
+            # conversion SEPARATELY from the name, so the name-only allow-list
+            # below would otherwise wave through "{level:>9999999}" (name=level,
+            # spec=">9999999" - renders to a multi-megabyte string, a memory
+            # DoS) or "{user!r}" (name=user, conv="r"). Reject any non-empty
+            # spec or any conversion here, at SET time.
+            if spec or conv is not None:
+                return False, "unknown_placeholder"
+            fields.add(name)
+    except ValueError:
+        return False, "malformed"
+    if fields - ANNOUNCE_PLACEHOLDERS:
+        return False, "unknown_placeholder"
+    return True, None
+
+
+def render_announce_template(template, *, user_text, level, guild_name):
+    """Render a (previously validated) template against the allowed mapping.
+
+    Falls back to :data:`DEFAULT_ANNOUNCE_TEMPLATE` when ``template`` is falsy
+    or somehow fails to render (defensive only - :func:`validate_announce_template`
+    is the real gate and runs once at SET time; this never re-validates on the
+    hot announce path, it only guards against a stored value going stale, e.g.
+    a future placeholder-set shrink). It ALSO falls back when the rendered text
+    blows past :data:`MAX_RENDERED_ANNOUNCE_LEN`, so a stored template carrying an
+    abusive format spec (which format_map honours WITHOUT raising) can never
+    emit a multi-megabyte string - belt-and-suspenders behind the validation.
+    """
+    mapping = {"user": user_text, "level": level, "guild": guild_name}
+    source = template or DEFAULT_ANNOUNCE_TEMPLATE
+    try:
+        rendered = source.format_map(mapping)
+    except (KeyError, IndexError, ValueError):
+        return DEFAULT_ANNOUNCE_TEMPLATE.format_map(mapping)
+    if len(rendered) > MAX_RENDERED_ANNOUNCE_LEN:
+        return DEFAULT_ANNOUNCE_TEMPLATE.format_map(mapping)
+    return rendered
+
+
+def resolve_announce_target(mode, source_channel_id, fixed_channel_id):
+    """Where a level-up announce should go, given the guild's announce_mode.
+
+    Returns a ``(route, channel_id)`` pair: ``route`` is one of ``"off"`` /
+    ``"channel"`` / ``"dm"`` / ``"fixed"``; ``channel_id`` is the channel to
+    send to for ``"channel"``/``"fixed"`` (``None`` for ``"off"`` and ``"dm"`` -
+    the DM target is the leveled-up member, not a channel). An unrecognised
+    mode, and a ``"fixed"`` mode with no configured channel, both fall back to
+    ``"channel"`` (the original, always-safe behaviour) - mirroring
+    ``tools.level_rewards``'s "unknown mode behaves like the safer default".
+    This is the ONLY decision made here: whether the member opted out of
+    announces entirely is a separate, outer gate the cog checks first (the
+    existing ``levelup_announce`` per-user preference), so this function is
+    never even called for an opted-out member.
+    """
+    if mode == "off":
+        return "off", None
+    if mode == "dm":
+        return "dm", None
+    if mode == "fixed":
+        if fixed_channel_id is None:
+            return "channel", source_channel_id
+        return "fixed", fixed_channel_id
+    return "channel", source_channel_id

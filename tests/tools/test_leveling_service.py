@@ -186,3 +186,263 @@ def test_resolve_config_falls_back_to_legacy_when_no_row():
         == leveling.LevelConfig(enabled=True)
     )
     assert leveling.resolve_config(None, legacy_enabled=False) is None
+
+
+# ---------------------------------------------------------------------------
+# No-XP zones (L3): NoXpSnapshot.from_rows + is_no_xp_message.
+# ---------------------------------------------------------------------------
+
+
+def _no_xp_row(kind, target_id):
+    return {"kind": kind, "target_id": target_id}
+
+
+def test_from_rows_splits_by_kind():
+    rows = [
+        _no_xp_row("channel", 10),
+        _no_xp_row("channel", 20),
+        _no_xp_row("role", 30),
+    ]
+    snapshot = leveling.NoXpSnapshot.from_rows(rows)
+    assert snapshot.channels == {10, 20}
+    assert snapshot.roles == {30}
+
+
+def test_from_rows_empty_yields_empty_snapshot():
+    snapshot = leveling.NoXpSnapshot.from_rows([])
+    assert snapshot.channels == frozenset()
+    assert snapshot.roles == frozenset()
+
+
+def test_is_no_xp_message_empty_snapshot_never_blocks():
+    assert (
+        leveling.is_no_xp_message(
+            leveling.EMPTY_NO_XP_SNAPSHOT, 1, 2, [3, 4]
+        )
+        is False
+    )
+
+
+def test_is_no_xp_message_channel_hit():
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({10}))
+    assert leveling.is_no_xp_message(snapshot, 10, None, []) is True
+    assert leveling.is_no_xp_message(snapshot, 99, None, []) is False
+
+
+def test_is_no_xp_message_category_hit():
+    """A category id in `channels` mutes every channel inside it (no per-
+    channel row needed) - see NoXpSnapshot's docstring for the design call."""
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({50}))
+    assert leveling.is_no_xp_message(snapshot, 999, 50, []) is True
+    # A channel not in the muted category, with no category at all, is fine.
+    assert leveling.is_no_xp_message(snapshot, 999, None, []) is False
+    assert leveling.is_no_xp_message(snapshot, 999, 51, []) is False
+
+
+def test_is_no_xp_message_role_hit():
+    snapshot = leveling.NoXpSnapshot(roles=frozenset({7}))
+    assert leveling.is_no_xp_message(snapshot, 1, None, [7]) is True
+    assert leveling.is_no_xp_message(snapshot, 1, None, [8, 9]) is False
+    assert leveling.is_no_xp_message(snapshot, 1, None, []) is False
+
+
+def test_is_no_xp_message_channel_and_role_both_configured():
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({10}), roles=frozenset({7}))
+    # Either alone is enough to block.
+    assert leveling.is_no_xp_message(snapshot, 10, None, []) is True
+    assert leveling.is_no_xp_message(snapshot, 1, None, [7]) is True
+    assert leveling.is_no_xp_message(snapshot, 1, None, [8]) is False
+
+
+def test_can_add_no_xp_entry_below_and_at_cap():
+    assert leveling.can_add_no_xp_entry(0) is True
+    assert leveling.can_add_no_xp_entry(leveling.MAX_NO_XP_PER_GUILD - 1) is True
+    assert leveling.can_add_no_xp_entry(leveling.MAX_NO_XP_PER_GUILD) is False
+    assert leveling.can_add_no_xp_entry(leveling.MAX_NO_XP_PER_GUILD + 1) is False
+
+
+# ---------------------------------------------------------------------------
+# Announce template validation (validate_announce_template truth table).
+# ---------------------------------------------------------------------------
+
+
+def test_validate_template_accepts_every_allowed_placeholder():
+    ok, reason = leveling.validate_announce_template(
+        "{user} hit level {level} in {guild}!"
+    )
+    assert ok is True
+    assert reason is None
+
+
+def test_validate_template_accepts_a_subset_of_placeholders():
+    ok, reason = leveling.validate_announce_template("gg {user}")
+    assert ok is True
+    assert reason is None
+
+
+def test_validate_template_accepts_no_placeholders_at_all():
+    ok, reason = leveling.validate_announce_template("Nice work, everyone!")
+    assert (ok, reason) == (True, None)
+
+
+def test_validate_template_rejects_none():
+    assert leveling.validate_announce_template(None) == (False, "empty")
+
+
+def test_validate_template_rejects_empty_and_whitespace():
+    assert leveling.validate_announce_template("") == (False, "empty")
+    assert leveling.validate_announce_template("   ") == (False, "empty")
+
+
+def test_validate_template_rejects_too_long():
+    too_long = "x" * (leveling.MAX_ANNOUNCE_TEMPLATE_LEN + 1)
+    assert leveling.validate_announce_template(too_long) == (False, "too_long")
+
+
+def test_validate_template_accepts_exactly_the_length_cap():
+    exact = "x" * leveling.MAX_ANNOUNCE_TEMPLATE_LEN
+    ok, reason = leveling.validate_announce_template(exact)
+    assert (ok, reason) == (True, None)
+
+
+def test_validate_template_rejects_unknown_placeholder():
+    ok, reason = leveling.validate_announce_template("{user} says {secret}")
+    assert (ok, reason) == (False, "unknown_placeholder")
+
+
+def test_validate_template_rejects_attribute_access():
+    """Only the bare {user}/{level}/{guild} names are allowed - no "{user.x}"
+    attribute/index reach-through, a safety boundary."""
+    ok, reason = leveling.validate_announce_template("{user.mention}")
+    assert (ok, reason) == (False, "unknown_placeholder")
+
+
+def test_validate_template_rejects_positional_fields():
+    for template in ("{} says hi", "{0} says hi"):
+        ok, reason = leveling.validate_announce_template(template)
+        assert (ok, reason) == (False, "unknown_placeholder"), template
+
+
+def test_validate_template_rejects_format_spec():
+    """A format spec on an allowed name must be rejected at SET time: it parses
+    as name='level'/spec='>9999999' and would render to a multi-megabyte string
+    (a memory DoS) - the name-only allow-list would otherwise wave it through."""
+    for template in ("{level:>9999999}", "{level:>10}", "{user:^80}", "{level:{user}}"):
+        ok, reason = leveling.validate_announce_template(template)
+        assert (ok, reason) == (False, "unknown_placeholder"), template
+
+
+def test_validate_template_rejects_conversion():
+    """A conversion ("{user!r}"/"{user!s}") is likewise reported separately from
+    the name by parse(), so it too must be rejected - only bare placeholders."""
+    for template in ("{user!r}", "{user!s}", "{level!a}"):
+        ok, reason = leveling.validate_announce_template(template)
+        assert (ok, reason) == (False, "unknown_placeholder"), template
+
+
+def test_validate_template_rejects_index_access():
+    """Index reach-through ("{user[0]}") is caught by the name allow-list."""
+    ok, reason = leveling.validate_announce_template("{user[0]}")
+    assert (ok, reason) == (False, "unknown_placeholder")
+
+
+def test_validate_template_rejects_malformed_braces():
+    ok, reason = leveling.validate_announce_template("gg {user")
+    assert (ok, reason) == (False, "malformed")
+
+
+def test_validate_template_accepts_escaped_literal_braces():
+    ok, reason = leveling.validate_announce_template("{{not a placeholder}} {user}")
+    assert (ok, reason) == (True, None)
+
+
+# ---------------------------------------------------------------------------
+# render_announce_template.
+# ---------------------------------------------------------------------------
+
+
+def test_render_template_fills_every_placeholder():
+    text = leveling.render_announce_template(
+        "{user} hit {level} in {guild}!",
+        user_text="<@2>",
+        level=5,
+        guild_name="Test Guild",
+    )
+    assert text == "<@2> hit 5 in Test Guild!"
+
+
+def test_render_template_none_falls_back_to_default():
+    text = leveling.render_announce_template(
+        None, user_text="<@2>", level=5, guild_name="G"
+    )
+    assert text == leveling.DEFAULT_ANNOUNCE_TEMPLATE.format(
+        user="<@2>", level=5, guild="G"
+    )
+
+
+def test_render_template_survives_a_stale_malformed_template():
+    """Defensive fallback: a template that somehow reaches render() malformed
+    (should never happen post-validation) never raises, it degrades to the
+    default instead."""
+    text = leveling.render_announce_template(
+        "gg {user", user_text="<@2>", level=5, guild_name="G"
+    )
+    assert text == leveling.DEFAULT_ANNOUNCE_TEMPLATE.format(
+        user="<@2>", level=5, guild="G"
+    )
+
+
+def test_render_template_escaped_braces_stay_literal():
+    text = leveling.render_announce_template(
+        "{{hi}} {user}", user_text="<@2>", level=5, guild_name="G"
+    )
+    assert text == "{hi} <@2>"
+
+
+def test_render_template_caps_an_abusive_format_spec():
+    """Defensive: a STORED template with an abusive format spec (which
+    format_map honours WITHOUT raising, so the except clause never fires) can
+    never emit a giant string - render caps it and falls back to the default.
+    Validation blocks such a template at SET time; this is the second line."""
+    text = leveling.render_announce_template(
+        "{level:>9999999}", user_text="<@2>", level=5, guild_name="G"
+    )
+    assert len(text) <= leveling.MAX_RENDERED_ANNOUNCE_LEN
+    assert text == leveling.DEFAULT_ANNOUNCE_TEMPLATE.format(
+        user="<@2>", level=5, guild="G"
+    )
+
+
+# ---------------------------------------------------------------------------
+# resolve_announce_target routing decision.
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_announce_target_off():
+    assert leveling.resolve_announce_target("off", 111, 222) == ("off", None)
+
+
+def test_resolve_announce_target_channel():
+    assert leveling.resolve_announce_target("channel", 111, 222) == ("channel", 111)
+
+
+def test_resolve_announce_target_dm():
+    assert leveling.resolve_announce_target("dm", 111, 222) == ("dm", None)
+
+
+def test_resolve_announce_target_fixed_with_channel_configured():
+    assert leveling.resolve_announce_target("fixed", 111, 222) == ("fixed", 222)
+
+
+def test_resolve_announce_target_fixed_without_channel_configured_falls_back():
+    """A 'fixed' mode with no announce_channel_id set falls back to the
+    source channel (the original, always-safe behaviour) rather than going
+    silent."""
+    assert leveling.resolve_announce_target("fixed", 111, None) == ("channel", 111)
+
+
+def test_resolve_announce_target_unknown_mode_falls_back_to_channel():
+    assert leveling.resolve_announce_target("not-a-real-mode", 111, 222) == (
+        "channel",
+        111,
+    )

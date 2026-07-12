@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 18:00+0000\n"
+"POT-Creation-Date: 2026-07-12 18:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -450,7 +450,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2065
-#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:126
+#: cogs/anilist/hub.py:264 cogs/community/usersettings.py:140
 #: cogs/config/rooms.py:1062 tools/views.py:22 tools/views.py:117
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -579,9 +579,10 @@ msgid "No matching titles of that type."
 msgstr "No hay títulos coincidentes de ese tipo."
 
 #: cogs/anilist/components.py:421 cogs/anilist/components.py:425
-#: cogs/community/level_rewards.py:117 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:544 cogs/config/welcome.py:98
-#: cogs/config/welcome.py:263 cogs/config/welcome.py:484
+#: cogs/community/level_config_ui.py:165 cogs/community/level_rewards.py:117
+#: cogs/config/announcements.py:298 cogs/config/rolemenus.py:544
+#: cogs/config/welcome.py:98 cogs/config/welcome.py:263
+#: cogs/config/welcome.py:484
 msgid "Something went wrong."
 msgstr "Algo salió mal."
 
@@ -1550,6 +1551,194 @@ msgstr "Idioma desconocido. Disponibles: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Idioma predeterminado del servidor establecido en **{lang}**."
 
+#: cogs/community/level_config_ui.py:47
+msgid "The message can't be empty."
+msgstr "El mensaje no puede estar vacío."
+
+#: cogs/community/level_config_ui.py:49
+#, python-brace-format
+msgid "That message has a stray '{' or '}' - check the placeholders."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:52
+#, python-brace-format
+msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:59
+#, python-brace-format
+msgid "The message is too long (max {max} characters)."
+msgstr "El mensaje es demasiado largo (máx. {max} caracteres)."
+
+#: cogs/community/level_config_ui.py:68
+msgid "Off - level-ups are never announced."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:70
+msgid "DM - the member is messaged directly."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:73
+#, python-brace-format
+msgid "Fixed channel: <#{channel_id}>"
+msgstr "Canal fijo: <#{channel_id}>"
+
+#: cogs/community/level_config_ui.py:77
+msgid "Fixed channel (none set yet - falls back to the message's own channel)."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:80
+msgid "Channel - announced where the message was sent."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:85
+#, python-brace-format
+msgid "Custom: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:86
+#, python-brace-format
+msgid "Default: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:124
+msgid "Channel/category"
+msgstr "Canal/categoría"
+
+#: cogs/community/level_config_ui.py:125 cogs/community/level_config_ui.py:129
+msgid "Unknown (deleted)"
+msgstr "Desconocido (eliminado)"
+
+#: cogs/community/level_config_ui.py:128 cogs/config/buttonroles.py:215
+#: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
+msgid "Role"
+msgstr "Rol"
+
+#: cogs/community/level_config_ui.py:138
+msgid "Pick a no-XP zone to remove..."
+msgstr "Elige una zona sin XP a eliminar..."
+
+#: cogs/community/level_config_ui.py:158
+msgid "Removed that no-XP zone."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:196 cogs/community/level_config_ui.py:202
+msgid "(deleted)"
+msgstr "(eliminado)"
+
+#: cogs/community/level_config_ui.py:221
+#, python-brace-format
+msgid "No-XP zones | {guild}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:230
+msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
+msgstr "Aún no hay zonas sin XP. Usa `/levelconfig noxp add` para silenciar un canal, una categoría o un rol."
+
+#: cogs/community/level_config_ui.py:240
+#, python-brace-format
+msgid ""
+"**Channels & categories**\n"
+"{lines}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:250
+#, python-brace-format
+msgid ""
+"**Roles**\n"
+"{lines}"
+msgstr ""
+"**Roles**\n"
+"{lines}"
+
+#: cogs/community/level_config_ui.py:268
+#, python-brace-format
+msgid "Level config | {guild}"
+msgstr "Config de niveles | {guild}"
+
+#: cogs/community/level_config_ui.py:275
+msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:281
+#, python-brace-format
+msgid ""
+"**No-XP zones ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+"**Zonas sin XP ({count}/{max})**\n"
+"{summary}"
+
+#: cogs/community/level_config_ui.py:291
+#, python-brace-format
+msgid ""
+"**Announce mode**\n"
+"{mode}\n"
+"**Announce message**\n"
+"{template}"
+msgstr ""
+
+#: cogs/community/level_config_ui.py:376
+msgid "Give exactly one of a channel/category or a role."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:381
+msgid "You can't use @everyone as a no-XP zone."
+msgstr "No puedes usar @everyone como zona sin XP."
+
+#: cogs/community/level_config_ui.py:397 cogs/community/level_config_ui.py:434
+#, python-brace-format
+msgid "This server already has the maximum of {max} no-XP zones."
+msgstr "Este servidor ya tiene el máximo de {max} zonas sin XP."
+
+#: cogs/community/level_config_ui.py:426
+#, python-brace-format
+msgid "{target} is already a no-XP zone."
+msgstr "{target} ya es una zona sin XP."
+
+#: cogs/community/level_config_ui.py:443
+msgid "No-XP zone added"
+msgstr "Zona sin XP añadida"
+
+#: cogs/community/level_config_ui.py:444
+#, python-brace-format
+msgid "{target} will no longer earn XP."
+msgstr "{target} ya no dará XP."
+
+#: cogs/community/level_config_ui.py:458
+msgid "This server has no no-XP zones configured yet."
+msgstr "Este servidor aún no tiene zonas sin XP."
+
+#: cogs/community/level_config_ui.py:462
+msgid "Pick a no-XP zone to remove:"
+msgstr "Elige una zona sin XP a eliminar:"
+
+#: cogs/community/level_config_ui.py:492
+msgid "Give a channel when setting the fixed mode."
+msgstr ""
+
+#: cogs/community/level_config_ui.py:497 cogs/community/level_config_ui.py:520
+msgid "The leveling system isn't loaded right now."
+msgstr "El sistema de niveles no está cargado ahora mismo."
+
+#: cogs/community/level_config_ui.py:505
+msgid "Announce mode updated"
+msgstr "Modo de anuncio actualizado"
+
+#: cogs/community/level_config_ui.py:526
+#, python-brace-format
+msgid "The level-up message was reset to the default: \"{template}\""
+msgstr ""
+
+#: cogs/community/level_config_ui.py:546
+msgid "Level-up message updated"
+msgstr "Mensaje de subida de nivel actualizado"
+
+#: cogs/community/level_config_ui.py:547
+#, python-brace-format
+msgid "Preview: {preview}"
+msgstr "Vista previa: {preview}"
+
 #: cogs/community/level_rewards.py:78
 msgid "Unknown role (deleted)"
 msgstr "Rol desconocido (eliminado)"
@@ -1650,7 +1839,7 @@ msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan gan
 msgid "Reward mode updated"
 msgstr "Modo de recompensa actualizado"
 
-#: cogs/community/leveling.py:58
+#: cogs/community/leveling.py:65
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -1659,52 +1848,57 @@ msgstr ""
 "{marker} **{name}**\n"
 "Nivel **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:74
+#: cogs/community/leveling.py:81
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - nivel **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:278
+#: cogs/community/leveling.py:463
+#, python-brace-format
+msgid "{base} ... and earned {roles}"
+msgstr "{base} ... y ganó {roles}"
+
+#: cogs/community/leveling.py:471
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "¡{user} alcanzó el nivel **{level}**! ... y ganó {roles}"
 
-#: cogs/community/leveling.py:286
+#: cogs/community/leveling.py:478
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "¡{user} alcanzó el nivel **{level}**!"
 
-#: cogs/community/leveling.py:471
+#: cogs/community/leveling.py:689
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling.py:475 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:693 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr "Rango"
 
-#: cogs/community/leveling.py:476 cogs/utility/searchweb.py:142
+#: cogs/community/leveling.py:694 cogs/utility/searchweb.py:142
 msgid "Level"
 msgstr "Nivel"
 
-#: cogs/community/leveling.py:477
+#: cogs/community/leveling.py:695
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:479
+#: cogs/community/leveling.py:697
 msgid "XP for next level"
 msgstr "XP para el siguiente nivel"
 
-#: cogs/community/leveling.py:501 cogs/community/leveling.py:527
+#: cogs/community/leveling.py:719 cogs/community/leveling.py:745
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Clasificación | {guild}"
 
-#: cogs/community/leveling.py:502
+#: cogs/community/leveling.py:720
 msgid "No one has earned any XP yet!"
 msgstr "¡Nadie ha ganado XP todavía!"
 
-#: cogs/community/leveling.py:512
+#: cogs/community/leveling.py:730
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Usuario {uid}"
@@ -1871,43 +2065,51 @@ msgstr "Anuncios de subida de nivel"
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Recibe una mención en el chat cuando alcances un nuevo nivel."
 
-#: cogs/community/usersettings.py:48
+#: cogs/community/usersettings.py:52
+msgid "Level-up ping"
+msgstr "Ping de subida de nivel"
+
+#: cogs/community/usersettings.py:55
+msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
+msgstr ""
+
+#: cogs/community/usersettings.py:62
 msgid "Expanded help"
 msgstr "Ayuda ampliada"
 
-#: cogs/community/usersettings.py:50
+#: cogs/community/usersettings.py:64
 msgid "Show every subcommand inline when you browse help."
 msgstr "Muestra todos los subcomandos en línea al navegar por la ayuda."
 
-#: cogs/community/usersettings.py:59
+#: cogs/community/usersettings.py:73
 msgid "Music autoplay"
 msgstr "Reproducción automática de música"
 
-#: cogs/community/usersettings.py:62
+#: cogs/community/usersettings.py:76
 msgid "Keep playing recommended tracks when your music queue runs out."
 msgstr "Sigue reproduciendo canciones recomendadas cuando se acabe tu cola de música."
 
-#: cogs/community/usersettings.py:72
+#: cogs/community/usersettings.py:86
 msgid "Play search picker"
 msgstr "Selector de búsqueda en play"
 
-#: cogs/community/usersettings.py:75
+#: cogs/community/usersettings.py:89
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "En /play, elige entre los mejores resultados en lugar de poner el primero al instante."
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:113
 msgid "Turn off"
 msgstr "Desactivar"
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:113
 msgid "Turn on"
 msgstr "Activar"
 
-#: cogs/community/usersettings.py:134
+#: cogs/community/usersettings.py:148
 msgid "## Your preferences"
 msgstr "## Tus preferencias"
 
-#: cogs/community/usersettings.py:138
+#: cogs/community/usersettings.py:152
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1915,15 +2117,15 @@ msgstr ""
 "Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:162
 msgid "ON"
 msgstr "ACTIVADO"
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:162
 msgid "OFF"
 msgstr "DESACTIVADO"
 
-#: cogs/community/usersettings.py:149
+#: cogs/community/usersettings.py:163
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1932,11 +2134,11 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:165
+#: cogs/community/usersettings.py:179
 msgid "-# Only you can use these controls."
 msgstr "-# Solo tú puedes usar estos controles."
 
-#: cogs/community/usersettings.py:186
+#: cogs/community/usersettings.py:200
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
@@ -2092,11 +2294,6 @@ msgstr "Añade un rol como botón..."
 #: cogs/config/buttonroles.py:194
 msgid "Channel to post the panel in..."
 msgstr "Canal en el que publicar el panel..."
-
-#: cogs/config/buttonroles.py:215 cogs/config/reactionroles.py:53
-#: cogs/config/reactionroles.py:184
-msgid "Role"
-msgstr "Rol"
 
 #: cogs/config/buttonroles.py:221
 msgid "Remove a role button..."

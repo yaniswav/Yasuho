@@ -10,6 +10,7 @@ from tools import leveling, leveling_gate, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.lru_cache import BoundedLRU
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,12 @@ _LEADERBOARD_CAP = 15
 
 # Medal glyphs for the top three; lower ranks fall back to a plain number.
 _MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD PLACE MEDAL}"}
+
+# No-xp snapshot cache ceiling (tools.lru_cache.BoundedLRU): comfortably above
+# any plausible number of guilds with leveling enabled AND no-xp zones
+# configured, so eviction is a rare, harmless extra DB read rather than a
+# steady-state cost - see NoXpSnapshot's cog-level cache, self._no_xp below.
+_NO_XP_CACHE_CAP = 2048
 
 
 class LeaderboardView(discord.ui.LayoutView):
@@ -108,6 +115,18 @@ class Leveling(commands.Cog):
         # known after login, so this is filled lazily on first use (on_message
         # never fires before the bot is ready).
         self._mention_prefixes: tuple[str, ...] | None = None
+        # Per-guild no-xp-zone snapshot (tools.leveling.NoXpSnapshot: two
+        # frozensets of channel/category ids and role ids), loaded from
+        # level_no_xp on a guild's first grant-eligible message and kept live by
+        # refresh_no_xp_snapshot (called on every level_no_xp write, from
+        # cogs/community/level_config_ui.py). Bounded, unlike self._configs:
+        # every ENABLED guild eventually gets an entry here (even an empty one,
+        # once it earns its first XP), so this is genuinely unbounded by guild
+        # count and needs the same size-cap tools.settings uses for user blobs.
+        # An evicted guild simply re-reads its (usually tiny) row set on its
+        # next grant-eligible message - a rare, harmless extra query, never a
+        # per-message cost (SCALE STORY).
+        self._no_xp: BoundedLRU = BoundedLRU(_NO_XP_CACHE_CAP)
 
     async def cog_load(self):
         """Load every enabled guild's leveling config once, at startup.
@@ -172,11 +191,110 @@ class Leveling(commands.Cog):
             guild_id,
             bool(enabled),
         )
+        self._cache_config_row(guild_id, row)
+
+    def _cache_config_row(self, guild_id, row):
+        """Resolve a level_config RETURNING row into the hot-path config map.
+
+        Shared by every writer of level_config (set_enabled, set_announce_mode,
+        set_announce_template): a row that leaves the guild enabled refreshes
+        its cached :class:`~tools.leveling.LevelConfig`, a disabled one (or a
+        somehow-missing row) drops the guild from the map entirely - mirroring
+        cog_load's own read-through resolution so the cache never disagrees
+        with what resolve_config would compute from the same row.
+        """
         config = leveling.resolve_config(row, False)
         if config is not None:
             self._configs[guild_id] = config
         else:
             self._configs.pop(guild_id, None)
+
+    async def set_announce_mode(self, guild_id, mode, channel_id=None):
+        """Persist announce_mode (+ optional fixed-mode channel), refresh cache.
+
+        Mirrors set_enabled's upsert shape but only ever touches the announce
+        columns: the INSERT seeds ``enabled`` from the legacy
+        guild_settings.leveling_enabled JSONB flag (the same seed
+        LevelRewards.levelrewards_mode uses), so a guild whose leveling is
+        currently ON only through that legacy bool is never masked by a fresh
+        row defaulting to FALSE; the UPDATE branch never writes ``enabled`` at
+        all, so this can never itself turn leveling on or off.
+        """
+        row = await self.bot.db_pool.fetchrow(
+            """
+            INSERT INTO level_config (guild_id, enabled, announce_mode, announce_channel_id)
+            VALUES (
+                $1,
+                COALESCE(
+                    (SELECT (settings->>'leveling_enabled')::boolean
+                     FROM guild_settings WHERE guild_id = $1),
+                    FALSE
+                ),
+                $2,
+                $3
+            )
+            ON CONFLICT (guild_id) DO UPDATE
+                SET announce_mode = $2, announce_channel_id = $3
+            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
+                      announce_mode, announce_channel_id, announce_template;
+            """,
+            guild_id,
+            mode,
+            channel_id,
+        )
+        self._cache_config_row(guild_id, row)
+
+    async def set_announce_template(self, guild_id, template):
+        """Persist a custom announce_template (``None`` resets to the default).
+
+        Same upsert shape and ``enabled``-preserving seed as set_announce_mode;
+        this is the only other announce column set_announce_mode does not
+        touch, kept separate so `/levelconfig announce template` never has to
+        also pass a mode.
+        """
+        row = await self.bot.db_pool.fetchrow(
+            """
+            INSERT INTO level_config (guild_id, enabled, announce_template)
+            VALUES (
+                $1,
+                COALESCE(
+                    (SELECT (settings->>'leveling_enabled')::boolean
+                     FROM guild_settings WHERE guild_id = $1),
+                    FALSE
+                ),
+                $2
+            )
+            ON CONFLICT (guild_id) DO UPDATE SET announce_template = $2
+            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
+                      announce_mode, announce_channel_id, announce_template;
+            """,
+            guild_id,
+            template,
+        )
+        self._cache_config_row(guild_id, row)
+
+    async def refresh_no_xp_snapshot(self, guild_id):
+        """Reload a guild's no-xp rows from the DB and refresh the hot-path cache.
+
+        Two callers: cogs/community/level_config_ui.py invokes this after EVERY
+        level_no_xp write (add/remove), so the very next message in that guild
+        sees the change immediately - no restart, no reliance on cache
+        eviction or a TTL. The on_message hot path below also calls this
+        itself, exactly once, on a cold cache miss (a guild's first
+        grant-eligible message, or one that follows this guild's snapshot
+        being evicted under cache pressure).
+        """
+        rows = await self.bot.db_pool.fetch(
+            "SELECT kind, target_id FROM level_no_xp WHERE guild_id = $1;",
+            guild_id,
+        )
+        snapshot = (
+            leveling.NoXpSnapshot.from_rows(rows)
+            if rows
+            else leveling.EMPTY_NO_XP_SNAPSHOT
+        )
+        self._no_xp[guild_id] = snapshot
+        return snapshot
 
     def is_enabled(self, guild_id):
         """Whether leveling is currently ON for a guild (in-memory, no DB).
@@ -229,6 +347,30 @@ class Leveling(commands.Cog):
         ):
             return
 
+        # No-xp zones (L3): a guild's snapshot is loaded once (a DB read) and
+        # then lives in self._no_xp for every later message, so this is a plain
+        # cache read except on a guild's very first grant-eligible message (or
+        # right after a cold eviction). The check itself is pure set
+        # membership (tools.leveling.is_no_xp_message) - zero DB, zero
+        # allocation beyond the tiny role-id generator below.
+        no_xp = self._no_xp.get(message.guild.id)
+        if no_xp is None:
+            no_xp = await self.refresh_no_xp_snapshot(message.guild.id)
+        # The common case (a guild that configured NO zones) is a single
+        # truthiness check on two empty frozensets: `and` short-circuits before
+        # the role-id generator is built and before is_no_xp_message is even
+        # called, so a no-zone guild pays ZERO allocations here (and never
+        # touches the fresh-list-building Member.roles property). Only a guild
+        # that actually muted a channel/category/role pays for the membership
+        # test - the pure set lookups in tools.leveling.is_no_xp_message.
+        if (no_xp.channels or no_xp.roles) and leveling.is_no_xp_message(
+            no_xp,
+            message.channel.id,
+            getattr(message.channel, "category_id", None),
+            (role.id for role in getattr(message.author, "roles", ())),
+        ):
+            return
+
         key = (message.guild.id, message.author.id)
         if self._cooldowns.is_active(key, seconds=config.cooldown_seconds):
             return
@@ -270,36 +412,112 @@ class Leveling(commands.Cog):
                             message.author.id,
                         )
 
-                if await settings.get_user(
-                    self.bot.db_pool, message.author.id, "levelup_announce", True
-                ):
-                    if granted:
-                        text = _(
-                            "{user} reached level **{level}**! ... and earned "
-                            "{roles}"
-                        ).format(
-                            user=message.author.mention,
-                            level=new_level,
-                            roles=", ".join(r.mention for r in granted),
-                        )
-                    else:
-                        text = _("{user} reached level **{level}**!").format(
-                            user=message.author.mention, level=new_level
-                        )
-                    # Ping only the member who leveled up. The granted-roles
-                    # suffix embeds role mentions (<@&id>); with the bot's mention
-                    # permissions those would notify EVERY holder of a reward role
-                    # (a mass ping) on each level-up, so roles/@everyone are
-                    # suppressed while the member's own mention is kept.
-                    await message.channel.send(
-                        text,
-                        allowed_mentions=discord.AllowedMentions(
-                            everyone=False, roles=False, users=True
-                        ),
-                    )
+                await self._announce_levelup(message, config, new_level, granted)
 
         except Exception:
             log.exception("Failed to update XP")
+
+    async def _announce_levelup(self, message, config, new_level, granted):
+        """Tell the member (or not) about a level-up, per the guild's and the
+        member's own settings. Never raises - called from on_message's already
+        try/except-wrapped block, but every awaited step here has its own
+        narrower handling so one bad destination (a closed DM, a deleted fixed
+        channel) never masks another.
+
+        Gate order: the per-user ``levelup_announce`` opt-out is checked FIRST
+        and applies in EVERY mode (an opted-out member gets no message
+        anywhere - reward roles were already granted by the caller, regardless).
+        Only then does the guild's announce_mode decide WHERE, and the
+        per-user ``levelup_ping`` preference decides whether the member is
+        pinged or just named in the text.
+        """
+        if not await settings.get_user(
+            self.bot.db_pool, message.author.id, "levelup_announce", True
+        ):
+            return
+
+        route, target_channel_id = leveling.resolve_announce_target(
+            config.announce_mode, message.channel.id, config.announce_channel_id
+        )
+        if route == "off":
+            return
+
+        ping = await settings.get_user(
+            self.bot.db_pool, message.author.id, "levelup_ping", True
+        )
+        user_text = message.author.mention if ping else message.author.display_name
+
+        if config.announce_template:
+            # A custom template replaces the whole sentence, so the granted-
+            # roles suffix (translatable on its own) is appended afterwards
+            # rather than folded into one combined msgid - the default,
+            # no-custom-template branch below keeps the original single
+            # sentences verbatim for translators.
+            base_text = leveling.render_announce_template(
+                config.announce_template,
+                user_text=user_text,
+                level=new_level,
+                guild_name=message.guild.name,
+            )
+            if granted:
+                text = _("{base} ... and earned {roles}").format(
+                    base=base_text,
+                    roles=", ".join(r.mention for r in granted),
+                )
+            else:
+                text = base_text
+        elif granted:
+            text = _(
+                "{user} reached level **{level}**! ... and earned {roles}"
+            ).format(
+                user=user_text,
+                level=new_level,
+                roles=", ".join(r.mention for r in granted),
+            )
+        else:
+            text = _("{user} reached level **{level}**!").format(
+                user=user_text, level=new_level
+            )
+
+        # Ping only the member who leveled up (or no one, per levelup_ping).
+        # The granted-roles suffix embeds role mentions (<@&id>); with the
+        # bot's mention permissions those would notify EVERY holder of a
+        # reward role (a mass ping) on each level-up, so roles/@everyone stay
+        # suppressed regardless of destination.
+        allowed_mentions = discord.AllowedMentions(
+            everyone=False, roles=False, users=True
+        )
+
+        try:
+            if route == "channel":
+                await message.channel.send(text, allowed_mentions=allowed_mentions)
+            elif route == "fixed":
+                target = message.guild.get_channel(target_channel_id)
+                if target is not None:
+                    await target.send(text, allowed_mentions=allowed_mentions)
+                else:
+                    # The configured fixed channel was deleted (or the bot lost
+                    # sight of it). DECIDED behaviour: drop the announce quietly
+                    # rather than fall back to the message's own channel -
+                    # "fixed" exists precisely to keep level-ups OUT of arbitrary
+                    # channels, so spraying them into the origin channel on a
+                    # deletion would be the more surprising outcome. Roles were
+                    # already granted; an admin re-points the channel to resume
+                    # announces. Logged for observability.
+                    log.debug(
+                        "Level-up fixed announce channel %s missing in guild %s",
+                        target_channel_id,
+                        message.guild.id,
+                    )
+            elif route == "dm":
+                await message.author.send(text, allowed_mentions=allowed_mentions)
+        except discord.Forbidden:
+            # Closed DMs, or the bot lost access to the fixed channel: quiet -
+            # roles were already granted regardless, and this is routine
+            # enough (any member can close their DMs) to not warrant a log.
+            pass
+        except discord.HTTPException:
+            log.debug("Failed to send level-up announce (route=%s)", route)
 
     @staticmethod
     def _load_font(size):
