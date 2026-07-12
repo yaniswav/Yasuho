@@ -3,7 +3,6 @@ import urllib.parse
 
 import aiohttp
 import discord
-import lyricsgenius
 import requests
 import wikipedia
 from discord.ext import commands
@@ -84,46 +83,6 @@ class SearchWeb(commands.Cog):
             except Exception:
                 log.exception("failed to fetch wikipedia summary")
                 await ctx.send(_("Something went wrong while searching Wikipedia."))
-
-    @commands.hybrid_command()
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def lyrics(self, ctx, *, song: str):
-        """Fetch the lyrics of a song using Genius."""
-
-        token = config_loader.get("APITokens", "geniusKey", fallback=None)
-        if not token:
-            return await ctx.send(_("Lyrics are not configured (set geniusKey)."))
-
-        async with ctx.typing():
-
-            def _l():
-                genius = lyricsgenius.Genius(
-                    token, verbose=False, remove_section_headers=True
-                )
-                s = genius.search_song(song)
-                return s.lyrics if s else None
-
-            try:
-                lyrics = await self.bot.loop.run_in_executor(None, _l)
-            except Exception:
-                log.exception("failed to fetch lyrics")
-                return await ctx.send(
-                    _("Something went wrong while fetching lyrics.")
-                )
-
-            if not lyrics:
-                return await ctx.send(_("No lyrics found."))
-
-            if len(lyrics) <= 4096:
-                embed = discord.Embed(
-                    title=song,
-                    description=lyrics,
-                    colour=random_colour(),
-                )
-                return await ctx.send(embed=embed)
-
-            for i in range(0, len(lyrics), 1990):
-                await ctx.send(lyrics[i : i + 1990])
 
     @commands.hybrid_command(aliases=["saucefinder", "imgsource"])
     @commands.cooldown(1, 5, commands.BucketType.user)
