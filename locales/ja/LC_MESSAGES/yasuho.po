@@ -1558,12 +1558,12 @@ msgstr "メッセージを空にはできません。"
 #: cogs/community/level_config_ui.py:49
 #, python-brace-format
 msgid "That message has a stray '{' or '}' - check the placeholders."
-msgstr ""
+msgstr "メッセージに対になっていない '{' か '}' があります。プレースホルダーを確認してください。"
 
 #: cogs/community/level_config_ui.py:52
 #, python-brace-format
 msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
-msgstr ""
+msgstr "使用できるプレースホルダーは {user}、{level}、{guild} のみです。"
 
 #: cogs/community/level_config_ui.py:59
 #, python-brace-format
@@ -1572,11 +1572,11 @@ msgstr "メッセージが長すぎます (最大 {max} 文字)。"
 
 #: cogs/community/level_config_ui.py:68
 msgid "Off - level-ups are never announced."
-msgstr ""
+msgstr "オフ - レベルアップは通知されません。"
 
 #: cogs/community/level_config_ui.py:70
 msgid "DM - the member is messaged directly."
-msgstr ""
+msgstr "DM - メンバーに直接送信します。"
 
 #: cogs/community/level_config_ui.py:73
 #, python-brace-format
@@ -1585,21 +1585,21 @@ msgstr "固定チャンネル: <#{channel_id}>"
 
 #: cogs/community/level_config_ui.py:77
 msgid "Fixed channel (none set yet - falls back to the message's own channel)."
-msgstr ""
+msgstr "固定チャンネル (未設定 - メッセージのチャンネルにフォールバック)。"
 
 #: cogs/community/level_config_ui.py:80
 msgid "Channel - announced where the message was sent."
-msgstr ""
+msgstr "チャンネル - メッセージが送られた場所で通知します。"
 
 #: cogs/community/level_config_ui.py:85
 #, python-brace-format
 msgid "Custom: \"{template}\""
-msgstr ""
+msgstr "カスタム: \"{template}\""
 
 #: cogs/community/level_config_ui.py:86
 #, python-brace-format
 msgid "Default: \"{template}\""
-msgstr ""
+msgstr "デフォルト: \"{template}\""
 
 #: cogs/community/level_config_ui.py:124
 msgid "Channel/category"
@@ -1620,7 +1620,7 @@ msgstr "削除するXP対象外ゾーンを選択..."
 
 #: cogs/community/level_config_ui.py:158
 msgid "Removed that no-XP zone."
-msgstr ""
+msgstr "XP対象外ゾーンを削除しました。"
 
 #: cogs/community/level_config_ui.py:196 cogs/community/level_config_ui.py:202
 msgid "(deleted)"
@@ -1629,7 +1629,7 @@ msgstr "(削除済み)"
 #: cogs/community/level_config_ui.py:221
 #, python-brace-format
 msgid "No-XP zones | {guild}"
-msgstr ""
+msgstr "XP対象外ゾーン | {guild}"
 
 #: cogs/community/level_config_ui.py:230
 msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
@@ -1641,6 +1641,8 @@ msgid ""
 "**Channels & categories**\n"
 "{lines}"
 msgstr ""
+"**チャンネルとカテゴリー**\n"
+"{lines}"
 
 #: cogs/community/level_config_ui.py:250
 #, python-brace-format
@@ -1658,7 +1660,7 @@ msgstr "レベル設定 | {guild}"
 
 #: cogs/community/level_config_ui.py:275
 msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
-msgstr ""
+msgstr "XP対象外ゾーンは未設定です。`/levelconfig noxp add` で追加できます。"
 
 #: cogs/community/level_config_ui.py:281
 #, python-brace-format
@@ -1677,10 +1679,14 @@ msgid ""
 "**Announce message**\n"
 "{template}"
 msgstr ""
+"**通知モード**\n"
+"{mode}\n"
+"**通知メッセージ**\n"
+"{template}"
 
 #: cogs/community/level_config_ui.py:376
 msgid "Give exactly one of a channel/category or a role."
-msgstr ""
+msgstr "チャンネル/カテゴリーかロールのどちらか一方だけを指定してください。"
 
 #: cogs/community/level_config_ui.py:381
 msgid "You can't use @everyone as a no-XP zone."
@@ -1715,7 +1721,7 @@ msgstr "削除するXP対象外ゾーンを選択:"
 
 #: cogs/community/level_config_ui.py:492
 msgid "Give a channel when setting the fixed mode."
-msgstr ""
+msgstr "固定モードにするときはチャンネルを指定してください。"
 
 #: cogs/community/level_config_ui.py:497 cogs/community/level_config_ui.py:520
 msgid "The leveling system isn't loaded right now."
@@ -1728,7 +1734,7 @@ msgstr "通知モードを更新しました"
 #: cogs/community/level_config_ui.py:526
 #, python-brace-format
 msgid "The level-up message was reset to the default: \"{template}\""
-msgstr ""
+msgstr "レベルアップメッセージをデフォルトに戻しました: \"{template}\""
 
 #: cogs/community/level_config_ui.py:546
 msgid "Level-up message updated"
@@ -2071,7 +2077,7 @@ msgstr "レベルアップ時のメンション"
 
 #: cogs/community/usersettings.py:55
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
-msgstr ""
+msgstr "レベルアップ通知でメンションします。オフにするとメンションなしで名前が表示されます。"
 
 #: cogs/community/usersettings.py:62
 msgid "Expanded help"
