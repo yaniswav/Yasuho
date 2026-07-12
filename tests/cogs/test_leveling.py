@@ -950,3 +950,105 @@ async def test_set_announce_template_none_resets_it(fake_pool):
     cog = Leveling(_make_bot(fake_pool))
     await cog.set_announce_template(1, None)
     assert cog._configs[1].announce_template is None
+
+
+# ---------------------------------------------------------------------------
+# Voice XP level-up routing (credit_voice_levelup): the seam the VoiceXP cog
+# calls per credited member who crossed a level. It must behave IDENTICALLY to a
+# message level-up - grant reward roles regardless of the announce opt-out, and
+# announce per the guild's announce_mode - only here the origin "channel" is the
+# VOICE channel's own text chat (the `channel` passed in).
+# ---------------------------------------------------------------------------
+
+
+def _voice_guild(guild_id=1, channels=None):
+    channels = channels or {}
+    return types.SimpleNamespace(
+        id=guild_id, name="guild", get_channel=channels.get
+    )
+
+
+async def test_credit_voice_levelup_announces_to_the_voice_channel_and_grants(
+    fake_pool,
+):
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    member = _FakeMsgAuthor(2)
+    voice_channel = _FakeChannel(channel_id=777)  # a voice channel's text chat
+    guild = _voice_guild(1)
+    config = leveling.LevelConfig(enabled=True, announce_mode="channel")
+
+    await cog.credit_voice_levelup(
+        guild=guild,
+        member=member,
+        channel=voice_channel,
+        config=config,
+        old_xp=9975,  # level 9
+        new_xp=10000,  # level 10 -> crossed
+    )
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # old_level, new_level passed
+    assert len(voice_channel.sends) == 1
+    text = voice_channel.sends[0][0][0]
+    assert "reached level **10**" in text
+    assert "<@&55>" in text  # granted role mention in the suffix
+    # Role/@everyone pings stay suppressed (no mass ping of the reward role).
+    allowed = voice_channel.sends[0][1]["allowed_mentions"]
+    assert allowed.roles is False and allowed.everyone is False
+
+
+async def test_credit_voice_levelup_no_threshold_crossed_is_a_noop(fake_pool):
+    rewards_cog = _FakeRewardsCog(granted=[_FakeGrantedRole(55)])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    member = _FakeMsgAuthor(2)
+    voice_channel = _FakeChannel(channel_id=777)
+    config = leveling.LevelConfig(enabled=True, announce_mode="channel")
+
+    # Both totals sit inside level 10 -> not a level-up.
+    await cog.credit_voice_levelup(
+        guild=_voice_guild(1),
+        member=member,
+        channel=voice_channel,
+        config=config,
+        old_xp=10975,
+        new_xp=11000,
+    )
+
+    assert rewards_cog.calls == []  # the reward seam is never touched
+    assert voice_channel.sends == []  # nothing announced
+
+
+async def test_credit_voice_levelup_respects_announce_off(fake_pool):
+    """announce_mode 'off' still grants roles but sends nothing (parity with the
+    message path)."""
+    reward_role = _FakeGrantedRole(55)
+    rewards_cog = _FakeRewardsCog(granted=[reward_role])
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: rewards_cog if name == "LevelRewards" else None,
+    )
+    cog = Leveling(bot)
+    member = _FakeMsgAuthor(2)
+    voice_channel = _FakeChannel(channel_id=777)
+    config = leveling.LevelConfig(enabled=True, announce_mode="off")
+
+    await cog.credit_voice_levelup(
+        guild=_voice_guild(1),
+        member=member,
+        channel=voice_channel,
+        config=config,
+        old_xp=9975,
+        new_xp=10000,
+    )
+
+    assert rewards_cog.calls == [(1, 2, 9, 10)]  # roles still granted
+    assert voice_channel.sends == []  # but nothing announced

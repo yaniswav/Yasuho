@@ -446,3 +446,157 @@ def test_resolve_announce_target_unknown_mode_falls_back_to_channel():
         "channel",
         111,
     )
+
+
+# ---------------------------------------------------------------------------
+# Voice XP (L7): rate validation, eligibility truth table, credit maths,
+# batch-payload building, and the LevelConfig voice fields.
+# ---------------------------------------------------------------------------
+
+
+def test_validate_voice_xp_rate_accepts_the_bounds_and_inside():
+    assert leveling.validate_voice_xp_rate(
+        leveling.MIN_VOICE_XP_PER_MINUTE
+    ) == (True, None)
+    assert leveling.validate_voice_xp_rate(
+        leveling.MAX_VOICE_XP_PER_MINUTE
+    ) == (True, None)
+    assert leveling.validate_voice_xp_rate(5) == (True, None)
+
+
+def test_validate_voice_xp_rate_rejects_out_of_range():
+    for bad in (0, -1, leveling.MAX_VOICE_XP_PER_MINUTE + 1, 1000):
+        assert leveling.validate_voice_xp_rate(bad) == (False, "out_of_range"), bad
+
+
+def test_validate_voice_xp_rate_rejects_bool_and_non_int():
+    # bool is an int subclass: True == 1 would slip through the range test, so
+    # it is rejected explicitly (an admin can never set the rate to "True").
+    for bad in (True, False, 5.0, "5", None):
+        assert leveling.validate_voice_xp_rate(bad) == (False, "out_of_range"), bad
+
+
+def _eligible_kwargs(**overrides):
+    """The all-eligible base case; each test flips exactly one flag."""
+    base = dict(
+        enabled=True,
+        in_voice=True,
+        human_count=2,
+        is_afk_channel=False,
+        self_deaf=False,
+        self_mute=False,
+        is_no_xp=False,
+    )
+    base.update(overrides)
+    return base
+
+
+def test_is_voice_xp_eligible_all_conditions_met():
+    assert leveling.is_voice_xp_eligible(**_eligible_kwargs()) is True
+
+
+def test_is_voice_xp_eligible_truth_table_each_blocker():
+    # (override, expected) - flipping any single blocker makes it ineligible.
+    cases = [
+        (dict(enabled=False), False),          # leveling/voice XP off
+        (dict(in_voice=False), False),         # not in a voice channel
+        (dict(human_count=1), False),          # alone (below VOICE_MIN_HUMANS)
+        (dict(human_count=0), False),          # empty channel
+        (dict(is_afk_channel=True), False),    # parked in the AFK channel
+        (dict(self_deaf=True), False),         # self-deafened
+        (dict(self_mute=True), False),         # self-muted
+        (dict(is_no_xp=True), False),          # a no-XP zone / role (L3 reuse)
+        (dict(human_count=3), True),           # more than two humans is fine
+    ]
+    for override, expected in cases:
+        assert (
+            leveling.is_voice_xp_eligible(**_eligible_kwargs(**override)) is expected
+        ), override
+
+
+def test_voice_min_humans_is_two():
+    """A member alone earns nothing; a pair earns - the anti-farm floor."""
+    assert leveling.VOICE_MIN_HUMANS == 2
+    assert leveling.is_voice_xp_eligible(**_eligible_kwargs(human_count=1)) is False
+    assert leveling.is_voice_xp_eligible(**_eligible_kwargs(human_count=2)) is True
+
+
+def test_voice_credit_full_window_eligible():
+    """A full sweep window credits interval/60 minutes at the given rate."""
+    xp, consumed = leveling.voice_credit(300, 5, 300, eligible=True)
+    assert (xp, consumed) == (25, 300)  # 5 minutes x 5 XP
+
+
+def test_voice_credit_honours_the_rate():
+    xp, consumed = leveling.voice_credit(300, 10, 300, eligible=True)
+    assert (xp, consumed) == (50, 300)
+
+
+def test_voice_credit_ineligible_credits_nothing_but_advances_marker():
+    """Ineligible time is NOT banked: zero XP, yet the marker still advances by
+    the whole minutes consumed (so the next sweep starts fresh)."""
+    xp, consumed = leveling.voice_credit(300, 5, 300, eligible=False)
+    assert (xp, consumed) == (0, 300)
+
+
+def test_voice_credit_partial_minutes_floor_and_carry():
+    """150s = 2 whole minutes credited; the 30s remainder carries (marker only
+    advances by the 120s consumed, not the full 150s)."""
+    xp, consumed = leveling.voice_credit(150, 5, 300, eligible=True)
+    assert (xp, consumed) == (10, 120)
+
+
+def test_voice_credit_under_a_minute_is_a_no_op():
+    """Less than a whole minute credits nothing and leaves the marker put."""
+    assert leveling.voice_credit(59, 5, 300, eligible=True) == (0, 0)
+    assert leveling.voice_credit(0, 5, 300, eligible=True) == (0, 0)
+
+
+def test_voice_credit_caps_credited_minutes_no_catch_up_banking():
+    """A returning session (an hour of elapsed time after a missed sweep) is
+    capped at interval/60 credited minutes, and the excess is CONSUMED (marker
+    jumps forward the whole hour), never banked into future sweeps."""
+    xp, consumed = leveling.voice_credit(3600, 5, 300, eligible=True)
+    assert xp == 25  # capped at 5 minutes x 5 XP, not 60 minutes
+    assert consumed == 3600  # all 60 whole minutes consumed -> marker to now
+
+
+def test_voice_credit_marker_never_passes_now():
+    """consumed_seconds (the marker advance) is always <= elapsed, so advancing
+    the marker by it can never push it past the present."""
+    for elapsed in (0, 59, 60, 125, 300, 301, 5000):
+        _xp, consumed = leveling.voice_credit(elapsed, 5, 300, eligible=True)
+        assert consumed <= elapsed
+
+
+def test_build_voice_grant_payload_folds_triples_into_parallel_arrays():
+    credits = [(1, 2, 10), (1, 3, 20), (5, 7, 5)]
+    guild_ids, user_ids, gains = leveling.build_voice_grant_payload(credits)
+    assert guild_ids == [1, 1, 5]
+    assert user_ids == [2, 3, 7]
+    assert gains == [10, 20, 5]
+
+
+def test_build_voice_grant_payload_empty():
+    assert leveling.build_voice_grant_payload([]) == ([], [], [])
+
+
+def test_from_row_reads_voice_xp_columns():
+    cfg = leveling.LevelConfig.from_row(
+        _row(voice_xp_enabled=True, voice_xp_per_minute=12)
+    )
+    assert cfg.voice_xp_enabled is True
+    assert cfg.voice_xp_per_minute == 12
+
+
+def test_from_row_defaults_voice_xp_when_absent_or_null():
+    # Absent (a row written before the columns existed) -> field defaults.
+    cfg = leveling.LevelConfig.from_row({"enabled": True})
+    assert cfg.voice_xp_enabled is False
+    assert cfg.voice_xp_per_minute == leveling.DEFAULT_VOICE_XP_PER_MINUTE
+    # SQL NULL -> the same defaults.
+    cfg2 = leveling.LevelConfig.from_row(
+        _row(voice_xp_enabled=None, voice_xp_per_minute=None)
+    )
+    assert cfg2.voice_xp_enabled is False
+    assert cfg2.voice_xp_per_minute == leveling.DEFAULT_VOICE_XP_PER_MINUTE

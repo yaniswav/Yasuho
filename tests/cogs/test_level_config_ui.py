@@ -73,6 +73,9 @@ class _FakeLevelingCog:
         self.refresh_calls = []
         self.set_announce_mode_calls = []
         self.set_announce_template_calls = []
+        self.set_voice_xp_enabled_calls = []
+        self.set_voice_xp_rate_calls = []
+        self.enabled = False  # what is_enabled reports back
 
     async def refresh_no_xp_snapshot(self, guild_id):
         self.refresh_calls.append(guild_id)
@@ -82,6 +85,15 @@ class _FakeLevelingCog:
 
     async def set_announce_template(self, guild_id, template):
         self.set_announce_template_calls.append((guild_id, template))
+
+    async def set_voice_xp_enabled(self, guild_id, enabled):
+        self.set_voice_xp_enabled_calls.append((guild_id, enabled))
+
+    async def set_voice_xp_rate(self, guild_id, rate):
+        self.set_voice_xp_rate_calls.append((guild_id, rate))
+
+    def is_enabled(self, guild_id):
+        return self.enabled
 
 
 def _make_bot(fake_pool, leveling_cog=None):
@@ -471,3 +483,81 @@ async def test_overview_does_not_crash_with_no_config_row(fake_pool):
     ctx.invoked_subcommand = None
     await cog.levelconfig.callback(cog, ctx)
     assert len(ctx.sends) == 1
+
+
+# ---------------------------------------------------------------------------
+# voicexp on/off/rate: delegation to the Leveling cog + rate validation.
+# The cog never writes voice_xp columns directly - it always routes through
+# Leveling.set_voice_xp_* so the hot-path config cache the VoiceXP sweep reads
+# stays in step (mirrors the announce commands' delegation).
+# ---------------------------------------------------------------------------
+
+
+def _embed_descriptions(ctx):
+    return [
+        kwargs["embed"].description
+        for _args, kwargs in ctx.sends
+        if "embed" in kwargs
+    ]
+
+
+async def test_voicexp_on_delegates_and_confirms(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    leveling_cog.enabled = True  # server leveling is on -> no nudge
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_voicexp_on.callback(cog, ctx)
+    assert leveling_cog.set_voice_xp_enabled_calls == [(1, True)]
+    descs = _embed_descriptions(ctx)
+    assert descs and all("leveling is off" not in d for d in descs)
+
+
+async def test_voicexp_on_nudges_when_server_leveling_is_off(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    leveling_cog.enabled = False  # leveling off -> voice XP grants nothing yet
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_voicexp_on.callback(cog, ctx)
+    assert leveling_cog.set_voice_xp_enabled_calls == [(1, True)]
+    assert any("leveling is off" in d for d in _embed_descriptions(ctx))
+
+
+async def test_voicexp_off_delegates(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_voicexp_off.callback(cog, ctx)
+    assert leveling_cog.set_voice_xp_enabled_calls == [(1, False)]
+
+
+async def test_voicexp_on_without_leveling_cog_is_a_friendly_refusal(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog=None))
+    ctx = _Ctx()
+    await cog.levelconfig_voicexp_on.callback(cog, ctx)
+    assert any("isn't loaded" in c[0][0] for c in ctx.sends if c[0])
+
+
+async def test_voicexp_rate_valid_delegates(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_voicexp_rate.callback(cog, ctx, 10)
+    assert leveling_cog.set_voice_xp_rate_calls == [(1, 10)]
+
+
+async def test_voicexp_rate_out_of_range_is_refused_without_a_write(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    for bad in (0, 61, -5):
+        ctx = _Ctx()
+        await cog.levelconfig_voicexp_rate.callback(cog, ctx, bad)
+        assert leveling_cog.set_voice_xp_rate_calls == []  # never written
+        assert any("between" in c[0][0] for c in ctx.sends if c[0]), bad
+
+
+async def test_voicexp_rate_accepts_the_bounds(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    for good in (1, 60):
+        await cog.levelconfig_voicexp_rate.callback(cog, _Ctx(), good)
+    assert leveling_cog.set_voice_xp_rate_calls == [(1, 1), (1, 60)]

@@ -35,6 +35,18 @@ _MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD
 # steady-state cost - see NoXpSnapshot's cog-level cache, self._no_xp below.
 _NO_XP_CACHE_CAP = 2048
 
+# The full set of level_config columns the hot-path LevelConfig mirror is built
+# from. EVERY read that refreshes a cached config - cog_load's bulk SELECT and
+# each writer's RETURNING - must project ALL of them, or a writer that omits one
+# would silently reset that knob in the cache (LevelConfig.from_row defaults an
+# absent column) until the next restart. Kept in one place so a new column added
+# to the cached config (voice_xp_* here) lands in every query at once.
+_CONFIG_COLUMNS = (
+    "enabled, cooldown_seconds, xp_min, xp_max, "
+    "announce_mode, announce_channel_id, announce_template, "
+    "voice_xp_enabled, voice_xp_per_minute"
+)
+
 
 class LeaderboardView(discord.ui.LayoutView):
     """Single-page Components V2 podium for the guild XP leaderboard.
@@ -144,9 +156,7 @@ class Leveling(commands.Cog):
         try:
             configs: dict[int, leveling.LevelConfig] = {}
             rows = await self.bot.db_pool.fetch(
-                "SELECT guild_id, enabled, cooldown_seconds, xp_min, xp_max, "
-                "announce_mode, announce_channel_id, announce_template "
-                "FROM level_config;"
+                f"SELECT guild_id, {_CONFIG_COLUMNS} FROM level_config;"
             )
             configured = set()
             for row in rows:
@@ -181,12 +191,11 @@ class Leveling(commands.Cog):
         Called by the Settings cog through bot.get_cog (the house cross-cog seam).
         """
         row = await self.bot.db_pool.fetchrow(
-            """
+            f"""
             INSERT INTO level_config (guild_id, enabled)
             VALUES ($1, $2)
             ON CONFLICT (guild_id) DO UPDATE SET enabled = $2
-            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
-                      announce_mode, announce_channel_id, announce_template;
+            RETURNING {_CONFIG_COLUMNS};
             """,
             guild_id,
             bool(enabled),
@@ -221,7 +230,7 @@ class Leveling(commands.Cog):
         all, so this can never itself turn leveling on or off.
         """
         row = await self.bot.db_pool.fetchrow(
-            """
+            f"""
             INSERT INTO level_config (guild_id, enabled, announce_mode, announce_channel_id)
             VALUES (
                 $1,
@@ -235,8 +244,7 @@ class Leveling(commands.Cog):
             )
             ON CONFLICT (guild_id) DO UPDATE
                 SET announce_mode = $2, announce_channel_id = $3
-            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
-                      announce_mode, announce_channel_id, announce_template;
+            RETURNING {_CONFIG_COLUMNS};
             """,
             guild_id,
             mode,
@@ -253,7 +261,7 @@ class Leveling(commands.Cog):
         also pass a mode.
         """
         row = await self.bot.db_pool.fetchrow(
-            """
+            f"""
             INSERT INTO level_config (guild_id, enabled, announce_template)
             VALUES (
                 $1,
@@ -265,13 +273,95 @@ class Leveling(commands.Cog):
                 $2
             )
             ON CONFLICT (guild_id) DO UPDATE SET announce_template = $2
-            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
-                      announce_mode, announce_channel_id, announce_template;
+            RETURNING {_CONFIG_COLUMNS};
             """,
             guild_id,
             template,
         )
         self._cache_config_row(guild_id, row)
+
+    async def set_voice_xp_enabled(self, guild_id, enabled):
+        """Persist the voice-XP on/off flag and refresh the hot-path config cache.
+
+        Same upsert shape and ``enabled``-preserving legacy-JSONB seed as
+        set_announce_mode (so toggling voice XP for a guild that turned leveling
+        on only through the legacy bool never masks that flag with a fresh
+        FALSE row); the UPDATE branch touches ONLY voice_xp_enabled, never the
+        leveling ``enabled`` flag. Called by cogs/community/level_config_ui.py
+        through bot.get_cog("Leveling"), the house cross-cog seam, so the
+        VoiceXP cog reads the change through this same cached config on its very
+        next sweep - no restart.
+        """
+        row = await self.bot.db_pool.fetchrow(
+            f"""
+            INSERT INTO level_config (guild_id, enabled, voice_xp_enabled)
+            VALUES (
+                $1,
+                COALESCE(
+                    (SELECT (settings->>'leveling_enabled')::boolean
+                     FROM guild_settings WHERE guild_id = $1),
+                    FALSE
+                ),
+                $2
+            )
+            ON CONFLICT (guild_id) DO UPDATE SET voice_xp_enabled = $2
+            RETURNING {_CONFIG_COLUMNS};
+            """,
+            guild_id,
+            bool(enabled),
+        )
+        self._cache_config_row(guild_id, row)
+
+    async def set_voice_xp_rate(self, guild_id, rate):
+        """Persist the per-minute voice-XP rate (validated 1..60 by the caller).
+
+        Mirrors set_voice_xp_enabled's upsert; only voice_xp_per_minute is
+        written, so it never turns leveling or voice XP on or off by itself.
+        """
+        row = await self.bot.db_pool.fetchrow(
+            f"""
+            INSERT INTO level_config (guild_id, enabled, voice_xp_per_minute)
+            VALUES (
+                $1,
+                COALESCE(
+                    (SELECT (settings->>'leveling_enabled')::boolean
+                     FROM guild_settings WHERE guild_id = $1),
+                    FALSE
+                ),
+                $2
+            )
+            ON CONFLICT (guild_id) DO UPDATE SET voice_xp_per_minute = $2
+            RETURNING {_CONFIG_COLUMNS};
+            """,
+            guild_id,
+            int(rate),
+        )
+        self._cache_config_row(guild_id, row)
+
+    def get_config(self, guild_id):
+        """The cached :class:`~tools.leveling.LevelConfig` for a guild, or None.
+
+        The public O(1) read-through the VoiceXP cog leans on: it hands back the
+        SAME frozen config the on_message hot path uses (leveling on/off folded
+        into presence, plus the voice_xp knobs), with zero DB and zero awaits, so
+        the voice listener's non-matching path stays allocation-free. None means
+        leveling is off for the guild (absent from the enabled-config map).
+        """
+        return self._configs.get(guild_id)
+
+    async def ensure_no_xp_snapshot(self, guild_id):
+        """Return a guild's no-xp snapshot, loading it once on a cold miss.
+
+        The cached-or-load accessor the VoiceXP sweep reuses so a voice member in
+        a muted channel/category or holding a muted role earns no XP either - the
+        SAME L3 snapshot the message path enforces. A hit is a plain BoundedLRU
+        read (no DB); only a guild's first use (or one right after a cold
+        eviction) pays the single DB read refresh_no_xp_snapshot does.
+        """
+        snapshot = self._no_xp.get(guild_id)
+        if snapshot is None:
+            snapshot = await self.refresh_no_xp_snapshot(guild_id)
+        return snapshot
 
     async def refresh_no_xp_snapshot(self, guild_id):
         """Reload a guild's no-xp rows from the DB and refresh the hot-path cache.
@@ -395,34 +485,83 @@ class Leveling(commands.Cog):
             if new_level is not None:
                 # Reward roles are granted regardless of the announce opt-out
                 # below - that setting controls only the announce MESSAGE, never
-                # whether earned roles are handed out. Cross-cog seam (mirrors
-                # rolemenus.py's get_cog("Reminder")): a missing or failing
-                # LevelRewards cog must never break the level-up itself.
-                granted = []
-                rewards_cog = self.bot.get_cog("LevelRewards")
-                if rewards_cog is not None:
-                    try:
-                        old_level = leveling.level_for_xp(new_xp - gain)
-                        granted = await rewards_cog.grant_for_levelup(
-                            message.guild, message.author, old_level, new_level
-                        )
-                    except Exception:
-                        log.exception(
-                            "Failed to grant level rewards for %s",
-                            message.author.id,
-                        )
-
-                await self._announce_levelup(message, config, new_level, granted)
+                # whether earned roles are handed out.
+                old_level = leveling.level_for_xp(new_xp - gain)
+                granted = await self._apply_level_rewards(
+                    message.guild, message.author, old_level, new_level
+                )
+                await self._announce_levelup(
+                    member=message.author,
+                    channel=message.channel,
+                    guild=message.guild,
+                    config=config,
+                    new_level=new_level,
+                    granted=granted,
+                )
 
         except Exception:
             log.exception("Failed to update XP")
 
-    async def _announce_levelup(self, message, config, new_level, granted):
+    async def _apply_level_rewards(self, guild, member, old_level, new_level):
+        """Grant (and in replace mode remove) reward roles for a level-up.
+
+        Returns the roles actually ADDED (``list``), for the announce suffix.
+        Cross-cog seam (mirrors rolemenus.py's get_cog("Reminder")) shared by the
+        message path (on_message) and the voice path (credit_voice_levelup): a
+        missing or failing LevelRewards cog must never break the level-up itself,
+        so this always returns a list and swallows errors (the reward cog also
+        guards internally).
+        """
+        rewards_cog = self.bot.get_cog("LevelRewards")
+        if rewards_cog is None:
+            return []
+        try:
+            return await rewards_cog.grant_for_levelup(
+                guild, member, old_level, new_level
+            )
+        except Exception:
+            log.exception("Failed to grant level rewards for %s", member.id)
+            return []
+
+    async def credit_voice_levelup(
+        self, *, guild, member, channel, config, old_xp, new_xp
+    ):
+        """Route a voice-earned level-up through the SAME reward + announce seams.
+
+        Called by cogs/community/voice_xp.py once per credited member who crossed
+        a level in a sweep, so a voice level-up behaves exactly like a message
+        one: reward roles are granted regardless of the announce opt-out, and the
+        announce follows the guild's announce_mode - with "channel" mode targeting
+        the VOICE channel's own text chat (the ``channel`` passed here). Never
+        raises (reused inside the cog's already-guarded sweep, and every awaited
+        step has its own narrower handling).
+        """
+        new_level = leveling.level_up_between(old_xp, new_xp)
+        if new_level is None:
+            return
+        old_level = leveling.level_for_xp(old_xp)
+        granted = await self._apply_level_rewards(guild, member, old_level, new_level)
+        await self._announce_levelup(
+            member=member,
+            channel=channel,
+            guild=guild,
+            config=config,
+            new_level=new_level,
+            granted=granted,
+        )
+
+    async def _announce_levelup(
+        self, *, member, channel, guild, config, new_level, granted
+    ):
         """Tell the member (or not) about a level-up, per the guild's and the
         member's own settings. Never raises - called from on_message's already
-        try/except-wrapped block, but every awaited step here has its own
-        narrower handling so one bad destination (a closed DM, a deleted fixed
-        channel) never masks another.
+        try/except-wrapped block (and the voice sweep's), but every awaited step
+        here has its own narrower handling so one bad destination (a closed DM, a
+        deleted fixed channel) never masks another.
+
+        ``member`` is the leveler, ``channel`` the origin channel a "channel"-mode
+        announce lands in (a text channel for a message level-up, the voice
+        channel's own text chat for a voice one), and ``guild`` their guild.
 
         Gate order: the per-user ``levelup_announce`` opt-out is checked FIRST
         and applies in EVERY mode (an opted-out member gets no message
@@ -432,20 +571,20 @@ class Leveling(commands.Cog):
         pinged or just named in the text.
         """
         if not await settings.get_user(
-            self.bot.db_pool, message.author.id, "levelup_announce", True
+            self.bot.db_pool, member.id, "levelup_announce", True
         ):
             return
 
         route, target_channel_id = leveling.resolve_announce_target(
-            config.announce_mode, message.channel.id, config.announce_channel_id
+            config.announce_mode, channel.id, config.announce_channel_id
         )
         if route == "off":
             return
 
         ping = await settings.get_user(
-            self.bot.db_pool, message.author.id, "levelup_ping", True
+            self.bot.db_pool, member.id, "levelup_ping", True
         )
-        user_text = message.author.mention if ping else message.author.display_name
+        user_text = member.mention if ping else member.display_name
 
         if config.announce_template:
             # A custom template replaces the whole sentence, so the granted-
@@ -457,7 +596,7 @@ class Leveling(commands.Cog):
                 config.announce_template,
                 user_text=user_text,
                 level=new_level,
-                guild_name=message.guild.name,
+                guild_name=guild.name,
             )
             if granted:
                 text = _("{base} ... and earned {roles}").format(
@@ -490,27 +629,27 @@ class Leveling(commands.Cog):
 
         try:
             if route == "channel":
-                await message.channel.send(text, allowed_mentions=allowed_mentions)
+                await channel.send(text, allowed_mentions=allowed_mentions)
             elif route == "fixed":
-                target = message.guild.get_channel(target_channel_id)
+                target = guild.get_channel(target_channel_id)
                 if target is not None:
                     await target.send(text, allowed_mentions=allowed_mentions)
                 else:
                     # The configured fixed channel was deleted (or the bot lost
                     # sight of it). DECIDED behaviour: drop the announce quietly
-                    # rather than fall back to the message's own channel -
-                    # "fixed" exists precisely to keep level-ups OUT of arbitrary
-                    # channels, so spraying them into the origin channel on a
-                    # deletion would be the more surprising outcome. Roles were
-                    # already granted; an admin re-points the channel to resume
-                    # announces. Logged for observability.
+                    # rather than fall back to the origin channel - "fixed" exists
+                    # precisely to keep level-ups OUT of arbitrary channels, so
+                    # spraying them into the origin channel on a deletion would be
+                    # the more surprising outcome. Roles were already granted; an
+                    # admin re-points the channel to resume announces. Logged for
+                    # observability.
                     log.debug(
                         "Level-up fixed announce channel %s missing in guild %s",
                         target_channel_id,
-                        message.guild.id,
+                        guild.id,
                     )
             elif route == "dm":
-                await message.author.send(text, allowed_mentions=allowed_mentions)
+                await member.send(text, allowed_mentions=allowed_mentions)
         except discord.Forbidden:
             # Closed DMs, or the bot lost access to the fixed channel: quiet -
             # roles were already granted regardless, and this is routine

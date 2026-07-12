@@ -88,14 +88,23 @@ def _describe_announce_template(config):
     )
 
 
+def _describe_voice_xp(config):
+    """One-line, human description of the guild's voice-XP setting."""
+    if config.voice_xp_enabled:
+        return _("On - {rate} XP per eligible minute in voice.").format(
+            rate=config.voice_xp_per_minute
+        )
+    return _("Off - no XP for time spent in voice.")
+
+
 async def _fetch_config(pool, guild_id):
     """This guild's LevelConfig, read fresh (bypassing the enabled gate that
     resolve_config applies - an admin configuring no-xp zones or announce
     settings before ever turning leveling ON must still see/edit them)."""
     row = await pool.fetchrow(
         "SELECT enabled, cooldown_seconds, xp_min, xp_max, announce_mode, "
-        "announce_channel_id, announce_template FROM level_config "
-        "WHERE guild_id = $1;",
+        "announce_channel_id, announce_template, voice_xp_enabled, "
+        "voice_xp_per_minute FROM level_config WHERE guild_id = $1;",
         guild_id,
     )
     return leveling.LevelConfig.from_row(row) if row is not None else leveling.LevelConfig()
@@ -291,6 +300,14 @@ class LevelConfigOverviewView(discord.ui.LayoutView):
                 _("**Announce mode**\n{mode}\n**Announce message**\n{template}").format(
                     mode=_describe_announce_mode(config),
                     template=_describe_announce_template(config),
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**Voice XP**\n{voice}").format(
+                    voice=_describe_voice_xp(config)
                 )
             )
         )
@@ -548,6 +565,82 @@ class LevelConfigUI(commands.Cog):
             colour=random_colour(),
         )
         await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+
+    # -- voicexp subgroup ------------------------------------------------
+    @levelconfig.group(name="voicexp")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_voicexp(self, ctx):
+        """Manage XP earned for time spent in voice channels."""
+        if ctx.invoked_subcommand is None:
+            await self._send_overview(ctx)
+
+    async def _apply_voice_xp_toggle(self, ctx, enabled):
+        """Shared body of the on/off subcommands: delegate to the Leveling cog
+        (so its hot-path config cache stays in step) and confirm, nudging the
+        admin when leveling itself is off (voice XP grants nothing until it is
+        on)."""
+        leveling_cog = self.bot.get_cog("Leveling")
+        if leveling_cog is None:
+            await ctx.send(_("The leveling system isn't loaded right now."))
+            return
+        await leveling_cog.set_voice_xp_enabled(ctx.guild.id, enabled)
+        if enabled:
+            title = _("Voice XP enabled")
+            desc = _("Members now earn XP for time spent together in voice.")
+            if not leveling_cog.is_enabled(ctx.guild.id):
+                desc = desc + "\n" + _(
+                    "Heads up: server leveling is off, so no voice XP is "
+                    "granted until you turn leveling on."
+                )
+        else:
+            title = _("Voice XP disabled")
+            desc = _("Members no longer earn XP for time in voice.")
+        embed = discord.Embed(title=title, description=desc, colour=random_colour())
+        await ctx.send(embed=embed)
+
+    @levelconfig_voicexp.command(name="on")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_voicexp_on(self, ctx):
+        """Turn voice XP on: members earn XP for time in voice."""
+        await self._apply_voice_xp_toggle(ctx, True)
+
+    @levelconfig_voicexp.command(name="off")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_voicexp_off(self, ctx):
+        """Turn voice XP off."""
+        await self._apply_voice_xp_toggle(ctx, False)
+
+    @levelconfig_voicexp.command(name="rate")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_voicexp_rate(self, ctx, rate: int):
+        """Set how much XP a member earns per eligible minute in voice (1-60)."""
+        if not leveling.validate_voice_xp_rate(rate)[0]:
+            await ctx.send(
+                _(
+                    "The rate must be between {min} and {max} XP per minute."
+                ).format(
+                    min=leveling.MIN_VOICE_XP_PER_MINUTE,
+                    max=leveling.MAX_VOICE_XP_PER_MINUTE,
+                )
+            )
+            return
+        leveling_cog = self.bot.get_cog("Leveling")
+        if leveling_cog is None:
+            await ctx.send(_("The leveling system isn't loaded right now."))
+            return
+        await leveling_cog.set_voice_xp_rate(ctx.guild.id, rate)
+        embed = discord.Embed(
+            title=_("Voice XP rate updated"),
+            description=_(
+                "Members now earn **{rate}** XP per eligible minute in voice."
+            ).format(rate=rate),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

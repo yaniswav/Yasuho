@@ -117,13 +117,17 @@ CREATE TABLE IF NOT EXISTS level_config (
     announce_mode       TEXT    NOT NULL DEFAULT 'channel',  -- off | channel | dm | fixed
     announce_channel_id BIGINT,                              -- target channel for announce_mode = 'fixed' (later lot)
     announce_template   TEXT,                                -- custom level-up message template (later lot)
-    rewards_mode        TEXT    NOT NULL DEFAULT 'stack'      -- stack | replace (level_rewards.py)
+    rewards_mode        TEXT    NOT NULL DEFAULT 'stack',     -- stack | replace (level_rewards.py)
+    voice_xp_enabled    BOOLEAN NOT NULL DEFAULT FALSE,       -- opt-in: earn XP for time in voice (voice_xp.py)
+    voice_xp_per_minute INTEGER NOT NULL DEFAULT 5            -- XP per eligible minute in voice (bounds 1..60)
 );
 -- Migrate pre-existing installs (no-op on a fresh database): level_config already
 -- exists on any deploy that shipped the L0/L1 leveling lot, so CREATE TABLE IF NOT
--- EXISTS above never adds rewards_mode there - the ALTER is what actually installs
--- the column on those databases (every rewards_mode read/write would error without it).
+-- EXISTS above never adds these later columns there - the ALTERs are what actually
+-- install them on those databases (every read/write would error without them).
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS rewards_mode TEXT NOT NULL DEFAULT 'stack';
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_per_minute INTEGER NOT NULL DEFAULT 5;
 
 -- Level-up role rewards (L2): one row per (guild, level, role) rule. A member who
 -- reaches `level` is owed `role_id`. `rewards_mode` on level_config (above)

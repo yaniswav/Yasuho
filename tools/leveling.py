@@ -26,6 +26,19 @@ DEFAULT_XP_MIN = 15
 DEFAULT_XP_MAX = 25
 DEFAULT_ANNOUNCE_MODE = "channel"
 
+# Voice XP (L7): per-guild opt-in reward for time spent in voice. The rate is XP
+# awarded PER ELIGIBLE MINUTE (see is_voice_xp_eligible); the bounds are enforced
+# at set time (validate_voice_xp_rate). These are also the level_config column
+# defaults (schema.sql), so a freshly enabled guild behaves like the default.
+DEFAULT_VOICE_XP_PER_MINUTE = 5
+MIN_VOICE_XP_PER_MINUTE = 1
+MAX_VOICE_XP_PER_MINUTE = 60
+
+# A voice channel earns its occupants XP only when at least this many non-bot
+# humans share it: XP is a reward for HANGING OUT TOGETHER, never for sitting
+# alone in a channel to farm it. See is_voice_xp_eligible.
+VOICE_MIN_HUMANS = 2
+
 # Where a level-up is announced. Only "channel" is wired into the cog this lot
 # (the original behaviour: announce in the channel the message was sent in); the
 # rest are reserved for later lots and live here so the value set has one home.
@@ -91,6 +104,8 @@ class LevelConfig:
     announce_mode: str = DEFAULT_ANNOUNCE_MODE
     announce_channel_id: int | None = None
     announce_template: str | None = None
+    voice_xp_enabled: bool = False
+    voice_xp_per_minute: int = DEFAULT_VOICE_XP_PER_MINUTE
 
     @classmethod
     def from_row(cls, row):
@@ -113,6 +128,10 @@ class LevelConfig:
             announce_mode=_value("announce_mode", cls.announce_mode),
             announce_channel_id=row.get("announce_channel_id"),
             announce_template=row.get("announce_template"),
+            voice_xp_enabled=bool(_value("voice_xp_enabled", cls.voice_xp_enabled)),
+            voice_xp_per_minute=_value(
+                "voice_xp_per_minute", cls.voice_xp_per_minute
+            ),
         )
 
 
@@ -330,3 +349,101 @@ def resolve_announce_target(mode, source_channel_id, fixed_channel_id):
             return "channel", source_channel_id
         return "fixed", fixed_channel_id
     return "channel", source_channel_id
+
+
+# ============================================================
+# Voice XP (L7): rate validation, eligibility predicate, credit maths.
+# ============================================================
+#
+# The cog (cogs/community/voice_xp.py) owns the in-memory sessions, the periodic
+# sweep, and the batched DB write; this module holds only the pure decisions the
+# sweep leans on - none touch discord, the DB, or the clock, so the eligibility
+# truth table and the credit arithmetic are trivially unit-tested.
+
+
+def validate_voice_xp_rate(rate):
+    """Validate a candidate voice XP per-minute rate. Returns ``(ok, reason)``.
+
+    ``reason`` is ``None`` on success or ``"out_of_range"`` (a short code the cog
+    turns into a localized message, like validate_announce_template - this module
+    carries no i18n dependency). A bool is rejected explicitly: ``True``/``False``
+    are ``int`` subclasses in Python and would otherwise slip through the range
+    test as 1/0.
+    """
+    if not isinstance(rate, int) or isinstance(rate, bool):
+        return False, "out_of_range"
+    if rate < MIN_VOICE_XP_PER_MINUTE or rate > MAX_VOICE_XP_PER_MINUTE:
+        return False, "out_of_range"
+    return True, None
+
+
+def is_voice_xp_eligible(
+    *,
+    enabled,
+    in_voice,
+    human_count,
+    is_afk_channel,
+    self_deaf,
+    self_mute,
+    is_no_xp,
+):
+    """Whether a member should earn voice XP for the window ending now.
+
+    A single boolean predicate over the state SAMPLED AT CREDIT TIME (the sweep
+    reads live voice state, then asks this): voice XP must be ON for the guild
+    (``enabled`` folds in "leveling on AND voice_xp on"), the member must still be
+    IN a voice channel, NOT alone (at least :data:`VOICE_MIN_HUMANS` non-bot
+    humans share it), NOT parked in the guild's AFK channel, NOT self-deafened or
+    self-muted (a proxy for "actually present"), and the channel/category/role
+    must not be a no-XP zone (the L3 snapshot, reused here). Any one failing means
+    the window's minutes are simply not credited - see :func:`voice_credit`.
+    """
+    return (
+        enabled
+        and in_voice
+        and human_count >= VOICE_MIN_HUMANS
+        and not is_afk_channel
+        and not self_deaf
+        and not self_mute
+        and not is_no_xp
+    )
+
+
+def voice_credit(elapsed_seconds, rate, interval_seconds, *, eligible):
+    """XP to award and marker advance for one swept voice window.
+
+    Returns ``(xp, consumed_seconds)``. ``elapsed_seconds`` is the wall time since
+    this session was last credited; only WHOLE minutes count (partial minutes
+    floor and their sub-minute remainder carries to the next sweep by advancing
+    the marker only by the whole minutes consumed). Credited minutes are capped at
+    ``interval_seconds // 60`` so a returning session (a missed sweep, an outage)
+    can never BANK catch-up XP: the excess whole minutes past the cap are still
+    CONSUMED (the marker advances past them, up to but never beyond ``now``) but
+    are not paid out. An ineligible window credits nothing yet still advances the
+    marker by its whole minutes, so ineligible time is never banked either.
+    """
+    whole_minutes = int(elapsed_seconds // 60)
+    if whole_minutes <= 0:
+        return 0, 0
+    cap_minutes = max(interval_seconds // 60, 0)
+    credited_minutes = min(whole_minutes, cap_minutes) if eligible else 0
+    consumed_seconds = whole_minutes * 60
+    return credited_minutes * rate, consumed_seconds
+
+
+def build_voice_grant_payload(credits):
+    """Fold ``(guild_id, user_id, gain)`` triples into three parallel arrays.
+
+    The sweep's single batched upsert feeds these to ``unnest($1, $2, $3)`` so one
+    round-trip credits every member who earned XP this tick (see the cog). Kept
+    pure so the array-building is unit-tested without a DB. Order is preserved;
+    an empty input yields three empty lists (the cog skips the write entirely).
+    """
+    guild_ids: list[int] = []
+    user_ids: list[int] = []
+    gains: list[int] = []
+    for guild_id, user_id, gain in credits:
+        guild_ids.append(guild_id)
+        user_ids.append(user_id)
+        gains.append(gain)
+    return guild_ids, user_ids, gains
