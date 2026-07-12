@@ -12,6 +12,8 @@ from typing import Literal, Optional
 import discord
 from discord.ext import commands
 
+from tools import backup
+from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorView
@@ -20,6 +22,7 @@ log = logging.getLogger(__name__)
 
 # Repo root: this file is cogs/system/admin.py, so three levels up.
 REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+BACKUPS_DIR = os.path.join(REPO_DIR, "backups")
 
 
 class UpdateSelect(discord.ui.Select):
@@ -415,6 +418,30 @@ class Admin(commands.Cog):
 
             await ctx.send(embed=embed)
 
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def backup(self, ctx):
+        """Take an on-demand pg_dump now, then rotate old dumps.
+
+        Same seam as the startup backup. Owner-only; the reply names the file,
+        its size and how many old dumps were rotated. On failure it replies
+        briefly without leaking the DSN or any pg_dump internals.
+        """
+        async with ctx.typing():
+            result = await backup.run_backup(
+                config_loader.get("Database", "PostgreSQL"), BACKUPS_DIR
+            )
+        if not result.ok:
+            log.warning("?backup failed: %s", result.error)
+            return await ctx.send("Backup failed. Check the logs.")
+        await ctx.send(
+            "Backup saved: `{name}` ({size}), {deleted} old dump(s) rotated.".format(
+                name=os.path.basename(result.path),
+                size=backup.human_size(result.size or 0),
+                deleted=result.deleted,
+            )
+        )
 
     def _resolve_ext(self, name):
         """Resolve a short cog name to a currently-loaded extension path."""

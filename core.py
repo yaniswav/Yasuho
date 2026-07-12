@@ -9,7 +9,7 @@ import discord
 import sonolink
 from discord.ext import commands
 
-from tools import i18n, music_state
+from tools import backup, i18n, music_state
 from tools.config_loader import config_loader
 from tools.mobile_status import enable_mobile_status
 from tools.translator import YasuhoTranslator
@@ -19,6 +19,12 @@ log = logging.getLogger(__name__)
 DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 TOKEN = config_loader.get("Bot_Token", "Token")
 POSTGRESQL_URI = config_loader.get("Database", "PostgreSQL")
+BACKUPS_DIR = os.path.join(os.path.dirname(__file__), "backups")
+
+# Strong references to fire-and-forget background tasks (the startup backup),
+# so the loop does not garbage-collect a task that is still running. Mirrors the
+# sponsorblock._pending pattern.
+_background_tasks: set[asyncio.Task] = set()
 
 
 def _module_has_setup(path):
@@ -116,12 +122,43 @@ class Yasuho(commands.Bot):
                 i18n.current_locale.set(i18n.DEFAULT_LOCALE)
         return ctx
 
+    def _schedule_startup_backup(self) -> None:
+        """Kick off a pg_dump in the background; never blocks or fails startup.
+
+        run_backup never raises, so the wrapper only translates its result into
+        one INFO line on success (path + human size) or one WARNING on failure.
+        The task is held in _background_tasks so it is not garbage-collected
+        while running (the sponsorblock strong-ref pattern).
+        """
+
+        async def _run():
+            result = await backup.run_backup(POSTGRESQL_URI, BACKUPS_DIR)
+            if result.ok:
+                log.info(
+                    "Startup backup written: %s (%d bytes, %d rotated)",
+                    result.path,
+                    result.size or 0,
+                    result.deleted,
+                )
+            else:
+                log.warning("Startup backup failed: %s", result.error)
+
+        task = asyncio.ensure_future(_run())
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+
     async def setup_hook(self) -> None:
         # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
         schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
         if os.path.exists(schema_path):
             with open(schema_path, "r", encoding="utf-8") as fp:
                 await self.db_pool.execute(fp.read())
+
+        # The DB is confirmed up (schema applied). Take a backup in the
+        # background: fire-and-forget so it never delays readiness, with a strong
+        # ref + done-callback so the loop cannot drop the task mid-run and so a
+        # failure is logged rather than swallowed silently.
+        self._schedule_startup_backup()
 
         self.prefixes = dict(
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")

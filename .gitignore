@@ -44,3 +44,4 @@ Thumbs.db
 CLAUDE.md
 # Local Claude Code skills / config (workflow tooling, not bot code)
 .claude/
+backups/
