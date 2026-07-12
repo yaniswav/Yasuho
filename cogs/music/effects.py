@@ -265,6 +265,25 @@ def is_effect_exempt(
     return dj_id is not None and actor_id == dj_id
 
 
+def can_control_playback(
+    dj_id: int | None, actor_id: int, has_manage_guild: bool
+) -> bool:
+    """True when ``actor`` may drive the shared playback controls.
+
+    The single decision behind every DJ-locked control (pause / volume / loop /
+    shuffle / disconnect / back / seek / clear-queue / effects and their mirror
+    commands). It is the SAME "trusted to drive the room" rule as
+    :func:`is_effect_exempt` - the session DJ or a Manage-Server member - with one
+    addition: a session with no DJ (``dj_id`` is None - a restored session, or the
+    DJ left the guild) OPENS the gate to the whole room, the radio/vote precedent
+    that "no DJ -> no gate". Pure: same-voice is enforced separately by the caller,
+    so an open gate still only ever reaches listeners already in the channel.
+    """
+    if dj_id is None:
+        return True
+    return is_effect_exempt(dj_id, actor_id, has_manage_guild)
+
+
 # ---------------------------------------------------------------------------
 # Application seam (the only sonolink-touching code).
 # ---------------------------------------------------------------------------

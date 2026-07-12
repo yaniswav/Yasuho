@@ -105,6 +105,34 @@ async def _ensure_in_voice(
     return True
 
 
+async def _ensure_can_control(
+    cog: "Music", player: "Player", interaction: discord.Interaction
+) -> bool:
+    """DJ/mod gate for a playback-control surface; same-voice is checked separately.
+
+    Returns True when the clicker may drive playback: the session DJ, a
+    Manage-Server member, or anyone when the session has no DJ (the radio/vote
+    precedent that "no DJ -> no gate"). Otherwise sends the ephemeral refusal and
+    returns False. Reuses the cog's single :meth:`Music._can_control` predicate so
+    a button gate can never drift from its mirror command, and the message matches
+    the ``control=True`` command refusal verbatim.
+    """
+    if cog._can_control(player, interaction.user):
+        return True
+    dj = getattr(player, "dj", None)
+    # _can_control returns True when the session has no DJ, so dj is a real member
+    # on this deny path; guard anyway so a racing clear never crashes .mention.
+    if dj is None:
+        return True
+    await interaction.response.send_message(
+        _("Only the DJ ({dj}) or a moderator can control playback.").format(
+            dj=dj.mention
+        ),
+        ephemeral=True,
+    )
+    return False
+
+
 class AddSongModal(LocaleModal, title="Add a song"):
     """Modal that queues a track from a search query or a full URL.
 
@@ -568,6 +596,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _pause_resume(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             if self.player.paused:
                 await self.player.resume()
                 message = _("Resumed.")
@@ -617,6 +647,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _back(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             # Pre-check so the "nothing before this" case gets its own message,
             # mirroring the skip button; the shared cog seam does the replay so
             # both surfaces run one implementation. No _rerender here: the direct
@@ -646,6 +678,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _volume_down(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             new_volume = max(0, self.player.volume - 10)
             await self.player.set_volume(new_volume)
             await self._rerender()
@@ -658,6 +692,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _volume_up(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             # Cap the button at 150 to spare ears, but never snap a higher
             # volume (set via the volume command, 0-1000) back down.
             current = self.player.volume
@@ -673,6 +709,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _loop_toggle(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             if self.player.queue.mode == sonolink.QueueMode.LOOP_ALL:
                 self.player.queue.mode = sonolink.QueueMode.NORMAL
                 state = _("off")
@@ -689,6 +727,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _autoplay_toggle(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             enabled = not _autoplay_on(self.player)
             _set_autoplay(self.player, enabled)
             # Persist right away so a restart restores the same autoplay mode,
@@ -711,6 +751,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _shuffle(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             if len(self.player.queue.tracks) < 2:
                 await interaction.response.send_message(
                     _("Add a few more tracks before shuffling."), ephemeral=True
@@ -776,6 +818,8 @@ class MusicController(discord.ui.LayoutView):
 
     async def _disconnect(self, interaction: discord.Interaction) -> None:
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             self._disable_all()
             await interaction.response.edit_message(view=self)
             guild = getattr(self.player.channel, "guild", None)
@@ -796,6 +840,8 @@ class MusicController(discord.ui.LayoutView):
         cog's quota-gated apply seam.
         """
         try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             await interaction.response.send_message(
                 view=EffectsView(self.cog, self.player),
                 ephemeral=True,
@@ -818,20 +864,19 @@ class MusicController(discord.ui.LayoutView):
             if not await _check_station_debounce(interaction):
                 return
 
-            dj = self.player.dj
+            # Same single DJ/mod decision as every other control (no-DJ opens the
+            # gate); the station keeps its own specific refusal wording.
             user = interaction.user
-            is_manager = (
-                isinstance(user, discord.Member)
-                and user.guild_permissions.manage_guild
-            )
-            if dj is not None and not is_manager and user.id != dj.id:
-                await interaction.response.send_message(
-                    _("Only the DJ ({dj}) can change the station.").format(
-                        dj=dj.mention
-                    ),
-                    ephemeral=True,
-                )
-                return
+            if not self.cog._can_control(self.player, user):
+                dj = self.player.dj
+                if dj is not None:
+                    await interaction.response.send_message(
+                        _("Only the DJ ({dj}) can change the station.").format(
+                            dj=dj.mention
+                        ),
+                        ephemeral=True,
+                    )
+                    return
 
             genre = vibes.GENRES_BY_KEY.get(key)
             if genre is None:
@@ -884,6 +929,8 @@ class _EffectsSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction) -> None:
         try:
             if not await _ensure_in_voice(self._player, interaction):
+                return
+            if not await _ensure_can_control(self._cog, self._player, interaction):
                 return
             guild = getattr(self._player.channel, "guild", None)
             if guild is None:
@@ -1170,6 +1217,10 @@ class QueueView(discord.ui.LayoutView):
 
     async def _clear(self, interaction: discord.Interaction) -> None:
         try:
+            # Destructive: DJ-gated to match /clearqueue and the controller
+            # controls (Prev/Next/Add stay open to the room; only the purge locks).
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
             # Same semantics as the /clearqueue command: count both lanes, purge
             # both lanes, persist, then confirm - reusing its exact wordings.
             count = queued_track_count(self.player.queue)

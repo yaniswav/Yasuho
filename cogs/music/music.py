@@ -142,6 +142,41 @@ class Player(sonolink.Player):
                 self, settings=self._autoplay_handler._settings
             )
 
+    async def on_voice_state_update(self, data: typing.Any) -> None:
+        """Follow a server-initiated move by syncing the discord.py channel ref.
+
+        THE fix for the "bot snaps back when dragged" bug. sonolink's ``DpyPlayer``
+        forwards the new channel to Lavalink on a move (so the audio follows) but
+        NEVER updates the inherited ``discord.VoiceProtocol`` ``channel`` attribute
+        - it only writes its private ``_connection.channel_id`` (see sonolink
+        ``handlers/_events.py::on_voice_state_update``). discord.py, in turn, hands
+        a custom VoiceProtocol its own voice-state events verbatim and never
+        touches ``channel`` (``state.py::parse_voice_state_update``). So after a
+        drag ``player.channel`` stays pinned to the ORIGINAL room, and everything
+        that reads it misbehaves: the same-voice gates refuse the people actually
+        with the bot, the DJ handoff / empty-channel auto-leave / idle check read
+        the wrong room, the snapshot persists the wrong ``voice_channel_id``, and -
+        worst - the websocket-close self-heal ``connect()``s back to the stale
+        channel, literally dragging the bot to its old room.
+
+        We delegate to sonolink first (audio + its connection channel_id), then
+        point ``self.channel`` at the new channel so all of the above sees the room
+        the bot is really in. This is a subclass-level seam (no module
+        monkeypatching). A None channel_id (a real disconnect / kick) is left to
+        sonolink and discord.py cleanup, which remove the voice client entirely.
+        Best-effort: a resolution hiccup never propagates into the gateway.
+        """
+        await super().on_voice_state_update(data)
+        try:
+            channel_id = data.get("channel_id") if isinstance(data, dict) else None
+            new_channel = resolve_voice_channel(getattr(self, "_guild", None), channel_id)
+            if new_channel is not None and new_channel != getattr(
+                self, "channel", None
+            ):
+                self.channel = new_channel
+        except Exception:
+            log.exception("Failed to sync player channel after a voice-state update")
+
 
 def format_clock(total_ms: int) -> str:
     """Render a millisecond duration/position as ``mm:ss`` (or ``h:mm:ss``).
@@ -801,6 +836,42 @@ def effect_select_options(
     ]
 
 
+def resolve_voice_channel(guild: typing.Any, channel_id: typing.Any) -> typing.Any:
+    """Resolve a voice-state payload's ``channel_id`` to a channel via ``guild``.
+
+    Returns the channel object or None (a falsy id - a disconnect - or a missing
+    guild / unknown channel). Pure over the guild's ``get_channel`` seam so the
+    move-follow channel sync in :meth:`Player.on_voice_state_update` is unit tested
+    without a real gateway player.
+    """
+    if not channel_id or guild is None:
+        return None
+    return guild.get_channel(int(channel_id))
+
+
+def is_bot_channel_move(
+    is_own: bool,
+    before_channel_id: typing.Optional[int],
+    after_channel_id: typing.Optional[int],
+) -> bool:
+    """True when this voice-state change is OUR bot moving between two channels.
+
+    A move has a real channel on BOTH sides and they differ - a mod dragging the
+    bot from one room to another. A fresh connect (None -> B) and a disconnect /
+    kick (B -> None) are NOT moves (sonolink's ``connect`` and the disconnect /
+    cleanup paths own those, and the empty-channel auto-leave handles a leave), so
+    both are excluded. Pure so the voice-state listener's bot-move branch is unit
+    tested without a gateway. See :meth:`Player.on_voice_state_update` for the
+    protocol-level channel sync this pairs with.
+    """
+    return (
+        is_own
+        and before_channel_id is not None
+        and after_channel_id is not None
+        and before_channel_id != after_channel_id
+    )
+
+
 class Music(ServerPlaylistMixin, commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
@@ -863,7 +934,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             and any(getattr(n, "is_connected", False) for n in client.nodes)
         )
 
-    async def _require_player(self, ctx, *, in_channel=True):
+    async def _require_player(self, ctx, *, in_channel=True, control=False):
         """Return the connected player, or None after telling the user why not.
 
         With ``in_channel`` (the default, for control actions like skip/stop/
@@ -871,6 +942,14 @@ class Music(ServerPlaylistMixin, commands.Cog):
         bystander cannot drive playback from anywhere - the controller buttons
         already enforce this, and this makes the commands match. Read-only
         callers (queue) pass ``in_channel=False``.
+
+        ``control`` adds the DJ/mod gate on top of same-voice for the DJ-locked
+        mirror commands (pause/resume/volume/loop/shuffle/disconnect/stop/previous/
+        seek/clearqueue/filter): only the session DJ or a Manage-Server member may
+        drive them, and a session with no DJ opens the gate to the room. Gated
+        identically to the controller buttons (:meth:`_can_control`) so typing the
+        command can never bypass the button gate. The refusal is ephemeral and
+        only formats the DJ mention when a DJ exists (a None DJ opens the gate).
         """
         player = ctx.voice_client
         if not isinstance(player, sonolink.Player):
@@ -887,6 +966,19 @@ class Music(ServerPlaylistMixin, commands.Cog):
             ):
                 await ctx.send(_("You must be in my voice channel to do that."))
                 return None
+        if control and not self._can_control(player, ctx.author):
+            dj = getattr(player, "dj", None)
+            # A None DJ opens the gate in _can_control, so dj is a real member on
+            # this deny path; guard anyway so a racing clear never crashes .mention.
+            if dj is None:
+                return player
+            await ctx.send(
+                _(
+                    "Only the DJ ({dj}) or a moderator can control playback."
+                ).format(dj=dj.mention),
+                ephemeral=True,
+            )
+            return None
         return player
 
     async def _search(
@@ -1328,9 +1420,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
     ) -> None:
         """React to voice joins/leaves.
 
-        Two concerns share this listener: fire a pending "join a voice channel"
+        Three concerns share this listener: fire a pending "join a voice channel"
         watch the moment the invoker joins (or moves into) any voice channel of
-        this guild, then run the empty-channel auto-disconnect.
+        this guild; follow OUR OWN bot's move (persist + refresh the controller
+        when a mod drags it to another room); then run the DJ handoff and the
+        empty-channel auto-disconnect for a departing human.
         """
         if (
             not member.bot
@@ -1338,6 +1432,28 @@ class Music(ServerPlaylistMixin, commands.Cog):
             and after.channel != before.channel
         ):
             await self._fire_voice_watch(member)
+
+        # The bot itself was dragged to another channel. Player.on_voice_state_update
+        # has already pointed player.channel at the new room (and sonolink moved the
+        # audio); here we persist the new voice_channel_id and refresh the controller
+        # so the panel shows the room the bot is really in. Runs BEFORE the member.bot
+        # early-return, which otherwise skips every bot voice event.
+        bot_user = self.bot.user
+        if bot_user is not None and is_bot_channel_move(
+            member.id == bot_user.id,
+            before.channel.id if before.channel is not None else None,
+            after.channel.id if after.channel is not None else None,
+        ):
+            player = member.guild.voice_client
+            if isinstance(player, sonolink.Player):
+                # Belt-and-suspenders: make the channel ref the new room even if this
+                # listener happened to run before the protocol handler updated it, so
+                # the snapshot never persists the stale voice_channel_id.
+                player.channel = after.channel
+                await self._snapshot(player)
+                controller = getattr(player, "controller", None)
+                if controller is not None:
+                    await controller._rerender()
 
         if member.bot:
             return
@@ -2026,6 +2142,24 @@ class Music(ServerPlaylistMixin, commands.Cog):
             player.home = interaction.channel
 
         replace = player.current is not None
+        # A pick that REPLACES a live session is the same destructive station zap
+        # as the controller's station select, so it takes the same DJ/mod gate
+        # (only the DJ or a Manage-Server member may zap; a no-DJ session opens).
+        # Starting from silence stays open - the vibe card is the /play entry for
+        # everyone. Reuses the station wording (no new msgid), the whole-room seam
+        # via _can_control, so this can never drift from _change_station.
+        if replace and not self._can_control(player, author):
+            dj = getattr(player, "dj", None)
+            # replace implies a live session and _can_control opens on a None DJ,
+            # so dj is a real member here; guard anyway against a racing clear.
+            if dj is not None:
+                await interaction.followup.send(
+                    _("Only the DJ ({dj}) can change the station.").format(
+                        dj=dj.mention
+                    ),
+                    ephemeral=True,
+                )
+                return
         _tier, tracks = await self._apply_genre(
             player, genre, author.id, replace=replace
         )
@@ -2070,7 +2204,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def pause(self, ctx: commands.Context) -> None:
         """Pause the current track."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         if player.paused:
@@ -2085,7 +2219,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def resume(self, ctx: commands.Context) -> None:
         """Resume the player if it is paused."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         if not player.paused:
@@ -2105,6 +2239,23 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """
         dj = getattr(player, "dj", None)
         return effects.is_effect_exempt(
+            dj.id if dj is not None else None,
+            getattr(actor, "id", 0),
+            self._has_manage_guild(actor),
+        )
+
+    def _can_control(self, player: Player, actor: typing.Any) -> bool:
+        """Whether ``actor`` may drive the DJ-locked playback controls for ``player``.
+
+        THE single gate behind every DJ-locked command and controller button:
+        reuses the effects "trusted to drive the room" predicate plus the
+        no-DJ-opens fallback (:func:`effects.can_control_playback`), threading the
+        shared :meth:`_has_manage_guild` check so the rule lives in exactly one
+        place and a button gate can never drift from its mirror command. Same-voice
+        is enforced separately (``_require_player``/``_ensure_in_voice``).
+        """
+        dj = getattr(player, "dj", None)
+        return effects.can_control_playback(
             dj.id if dj is not None else None,
             getattr(actor, "id", 0),
             self._has_manage_guild(actor),
@@ -2230,7 +2381,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def previous(self, ctx: commands.Context) -> None:
         """Replay the previous track and requeue the current one."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         # Pre-check so the "nothing before this" case gets its own precise
@@ -2258,7 +2409,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     )
     async def seek(self, ctx: commands.Context, *, position: str) -> None:
         """Jump to a position in the current track."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         track = player.current
@@ -2290,7 +2441,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def stop(self, ctx: commands.Context) -> None:
         """Stop playback and clear the queue (stays connected)."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         await player.stop(clear_queue=True)
@@ -2304,7 +2455,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         self, ctx: commands.Context, value: commands.Range[int, 0, 200]
     ) -> None:
         """Set the player volume (0-200)."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         await player.set_volume(value)
@@ -2314,7 +2465,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def shuffle(self, ctx: commands.Context) -> None:
         """Shuffle the upcoming tracks in the queue."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         if len(player.queue.tracks) < 2:
@@ -2327,7 +2478,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def clearqueue(self, ctx: commands.Context) -> None:
         """Clear the upcoming queue while the current track keeps playing."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         count = queued_track_count(player.queue)
@@ -2354,7 +2505,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         mode: typing.Literal["track", "all", "off"] = "track",
     ) -> None:
         """Set the loop mode for the queue."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         mapping = {
@@ -2399,7 +2550,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     async def disconnect(self, ctx: commands.Context) -> None:
         """Disconnect the player from the voice channel."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         await player.disconnect()
@@ -2487,7 +2638,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @app_commands.choices(preset=EFFECT_CHOICES)
     async def filter_command(self, ctx: commands.Context, *, preset: str) -> None:
         """Apply an audio effect preset to the current playback (Off to clear)."""
-        player = await self._require_player(ctx)
+        player = await self._require_player(ctx, control=True)
         if player is None:
             return
         message = await self._run_effect_change(
