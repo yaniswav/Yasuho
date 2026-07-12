@@ -23,6 +23,18 @@ def test_touch_refreshes_the_window():
     assert cd.is_active("k", now=105.0) is True
 
 
+def test_seconds_override_wins_over_the_instance_window():
+    """A per-check ``seconds`` override lets one map serve per-caller windows."""
+    cd = Cooldowns(60)  # instance default
+    cd.touch("k", now=1000.0)
+    # A shorter override expires the key sooner than the instance's 60s.
+    assert cd.is_active("k", now=1030.0, seconds=10) is False
+    # A longer override keeps it active past the instance's 60s.
+    assert cd.is_active("k", now=1090.0, seconds=120) is True
+    # A zero override means "never cooling": any elapsed time reads inactive.
+    assert cd.is_active("k", now=1000.0, seconds=0) is False
+
+
 def test_sweep_bounds_the_map():
     cd = Cooldowns(10, sweep_at=3)
     cd.touch("a", now=0.0)

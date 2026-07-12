@@ -97,6 +97,28 @@ CREATE TABLE IF NOT EXISTS levels (
     PRIMARY KEY (guild_id, user_id)
 );
 
+-- Per-guild leveling configuration: the knobs the XP grant path reads. Split out
+-- of the guild_settings.leveling_enabled JSONB bool so leveling gains real
+-- per-guild settings without bloating that shared blob. READ-THROUGH migration:
+-- the Leveling cog prefers a row here when one exists and otherwise falls back to
+-- the legacy leveling_enabled JSONB value (tools/leveling.py resolve_config), so a
+-- guild that had leveling on keeps it on until its next toggle writes a row - and a
+-- row always wins, so switching leveling OFF via this table is never undone by a
+-- stale JSONB true. `enabled`, `cooldown_seconds` and the `xp_min`/`xp_max` band
+-- are wired into the grant path now; `announce_mode` (off|channel|dm|fixed),
+-- `announce_channel_id` and `announce_template` are reserved for later lots. One
+-- row per guild; lookups ride the PK.  leveling.py, cogs/config/settings.py
+CREATE TABLE IF NOT EXISTS level_config (
+    guild_id            BIGINT  PRIMARY KEY,
+    enabled             BOOLEAN NOT NULL DEFAULT FALSE,
+    cooldown_seconds    INTEGER NOT NULL DEFAULT 60,
+    xp_min              INTEGER NOT NULL DEFAULT 15,
+    xp_max              INTEGER NOT NULL DEFAULT 25,
+    announce_mode       TEXT    NOT NULL DEFAULT 'channel',  -- off | channel | dm | fixed
+    announce_channel_id BIGINT,                              -- target channel for announce_mode = 'fixed' (later lot)
+    announce_template   TEXT                                 -- custom level-up message template (later lot)
+);
+
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
     guild_id   BIGINT  PRIMARY KEY,

@@ -30,11 +30,19 @@ class Cooldowns:
         self._sweep_at = sweep_at
         self._seen: dict = {}
 
-    def is_active(self, key, *, now: float | None = None) -> bool:
-        """True while ``key`` was last touched within the cooldown window."""
+    def is_active(
+        self, key, *, now: float | None = None, seconds: float | None = None
+    ) -> bool:
+        """True while ``key`` was last touched within the cooldown window.
+
+        ``seconds`` overrides the instance window for this one check, so a single
+        map can debounce keys under per-caller windows (leveling reads a per-guild
+        cooldown); it defaults to the instance ``seconds`` when omitted.
+        """
         now = time.monotonic() if now is None else now
+        window = self.seconds if seconds is None else seconds
         last = self._seen.get(key)
-        return last is not None and (now - last) < self.seconds
+        return last is not None and (now - last) < window
 
     def touch(self, key, *, now: float | None = None) -> None:
         """Record ``key`` as used now, sweeping stale entries past the size cap."""

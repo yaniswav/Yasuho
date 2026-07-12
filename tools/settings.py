@@ -1,20 +1,81 @@
 """Per-user and per-guild settings, stored as small JSONB blobs.
 
-Cached in-process so hot paths (e.g. leveling's on_message) don't hit the DB on
-every event. For this single-process bot the cache is authoritative: writes go
-through set_* which update both the DB and the cache.
+Cached in-process so hot paths (e.g. leveling's on_message, i18n's locale
+lookup) don't hit the DB on every event. For this single-process bot the cache is
+authoritative: writes go through set_* which update both the DB and the cache.
+
+The cache is SIZE-BOUNDED (see :class:`SettingsCache`): a plain dict grew one
+entry per id ever seen and never shrank, and user ids are unbounded, so the map
+could grow for the whole life of the process. Each scope now rides its own
+least-recently-used cache (tools.lru_cache.BoundedLRU) with a cap; an evicted id
+just re-reads from the DB on its next access, so bounding changes nothing a caller
+can observe beyond the (rare) extra read after an eviction.
 """
 
 from __future__ import annotations
 
 import json
 
-# (table_name, id_value) -> settings dict
-_cache: dict = {}
+from tools.lru_cache import BoundedLRU
 
 # Fixed table identifiers - never user input, so safe to interpolate into SQL.
 _USER = ("user_settings", "user_id")
 _GUILD = ("guild_settings", "guild_id")
+
+# Cache ceilings. Guild blobs are naturally bounded by guild count, so the guild
+# cap is only a safety ceiling comfortably above any plausible membership; user
+# blobs are genuinely unbounded (any user who runs a command has their locale
+# read), so the user cap is the firm bound that keeps the map from growing for
+# the whole life of the process. Both are generous: exceeding a cap only trades a
+# slot for a cheap DB re-read of the least-recently-used id, never a wrong value.
+_USER_CACHE_CAP = 8192
+_GUILD_CACHE_CAP = 4096
+
+
+class SettingsCache:
+    """Bounded cache for the settings blobs, split by scope with per-scope caps.
+
+    Keyed by the same ``(table, id_val)`` tuples the module has always used, so it
+    is a drop-in for the former plain dict (``key in cache``, ``cache[key]``,
+    ``cache[key] = data``, ``cache.setdefault``, ``cache.clear``). Internally it
+    routes each key to the user or guild :class:`BoundedLRU` by its table name, so
+    a flood of user ids can never evict hot guild blobs and vice versa.
+    """
+
+    def __init__(self, *, user_cap=_USER_CACHE_CAP, guild_cap=_GUILD_CACHE_CAP):
+        self._user = BoundedLRU(user_cap)
+        self._guild = BoundedLRU(guild_cap)
+
+    def _bucket(self, key):
+        table = key[0]
+        if table == _USER[0]:
+            return self._user
+        if table == _GUILD[0]:
+            return self._guild
+        raise KeyError(f"unknown settings scope: {table!r}")
+
+    def __contains__(self, key):
+        return key in self._bucket(key)
+
+    def __getitem__(self, key):
+        return self._bucket(key)[key]
+
+    def __setitem__(self, key, value):
+        self._bucket(key)[key] = value
+
+    def setdefault(self, key, default):
+        return self._bucket(key).setdefault(key, default)
+
+    def clear(self):
+        self._user.clear()
+        self._guild.clear()
+
+    def __len__(self):
+        return len(self._user) + len(self._guild)
+
+
+# (table_name, id_value) -> settings dict, size-bounded per scope.
+_cache = SettingsCache()
 
 
 async def _load(pool, spec, id_val):

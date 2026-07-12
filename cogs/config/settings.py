@@ -266,12 +266,7 @@ class ConfigPanel(AuthorView):
         try:
             current = self.state.get("leveling")
             new_value = True if current is _UNKNOWN else not bool(current)
-            await settings.set_guild(
-                self.cog.bot.db_pool,
-                self.guild.id,
-                "leveling_enabled",
-                new_value,
-            )
+            await self.cog._set_leveling_enabled(self.guild.id, new_value)
             self.state["leveling"] = new_value
             await self._rerender(interaction)
         except Exception:
@@ -284,6 +279,20 @@ class Settings(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def _set_leveling_enabled(self, guild_id, enabled):
+        """Persist a leveling on/off toggle through the Leveling cog.
+
+        The Leveling cog owns the level_config table and the hot-path config cache,
+        so the toggle is delegated to it in one call: it writes the row (the new
+        source of truth) AND refreshes the in-memory map so the change applies on
+        the very next message, no restart. Cross-cog by name is the house seam (see
+        the many bot.get_cog call sites); if the Leveling cog is not loaded there is
+        nothing to level, so this is a guarded no-op.
+        """
+        cog = self.bot.get_cog("Leveling")
+        if cog is not None:
+            await cog.set_enabled(guild_id, bool(enabled))
 
     @commands.hybrid_group()
     @commands.guild_only()
@@ -433,8 +442,14 @@ class Settings(commands.Cog):
         state["autorole"] = self.bot.autoroles.get(gid)
 
         try:
-            state["leveling"] = bool(
-                await settings.get_guild(pool, gid, "leveling_enabled", False)
+            # Read the authoritative in-memory answer from the Leveling cog, which
+            # already resolved level_config with the legacy JSONB fallback at load;
+            # _UNKNOWN if that cog is not loaded (nothing to level).
+            leveling_cog = self.bot.get_cog("Leveling")
+            state["leveling"] = (
+                leveling_cog.is_enabled(gid)
+                if leveling_cog is not None
+                else _UNKNOWN
             )
         except Exception:
             log.exception("Config panel: failed to read leveling setting")
@@ -508,9 +523,7 @@ class Settings(commands.Cog):
     async def config_leveling(self, ctx, mode: bool):
         """Enable or disable the leveling system for this server."""
 
-        await settings.set_guild(
-            self.bot.db_pool, ctx.guild.id, "leveling_enabled", mode
-        )
+        await self._set_leveling_enabled(ctx.guild.id, mode)
         embed = discord.Embed(
             title=_("Leveling"),
             description=(

@@ -412,13 +412,20 @@ class YasuhoHelp(commands.HelpCommand):
         guild = self.context.guild
         if guild is not None:
             try:
-                enabled = await settings.get_guild(
-                    bot.db_pool, guild.id, "leveling_enabled", False
-                )
+                # Prefer the Leveling cog's in-memory read-through (level_config
+                # with the legacy JSONB fallback resolved at load); fall back to the
+                # raw JSONB bool only if that cog is not loaded.
+                leveling_cog = bot.get_cog("Leveling")
+                if leveling_cog is not None:
+                    enabled = leveling_cog.is_enabled(guild.id)
+                else:
+                    enabled = await settings.get_guild(
+                        bot.db_pool, guild.id, "leveling_enabled", False
+                    )
                 leveling = _("Enabled ✅") if enabled else _("Disabled ❌")
             except Exception:
                 log.exception(
-                    "Failed to read leveling_enabled for guild %s", guild.id
+                    "Failed to read leveling state for guild %s", guild.id
                 )
                 leveling = _("Unknown")
             embed.add_field(

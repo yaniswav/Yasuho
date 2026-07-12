@@ -1,13 +1,12 @@
 import io
 import logging
 import os
-import random
 
 import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from tools import settings
+from tools import leveling, leveling_gate, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
@@ -88,32 +87,154 @@ class LeaderboardView(discord.ui.LayoutView):
 class Leveling(commands.Cog):
     """XP and leveling commands."""
 
-    COOLDOWN = 60
-
     def __init__(self, bot):
         self.bot = bot
-        self._cooldowns = Cooldowns(self.COOLDOWN)
+        # The sweep baseline for the debounce map is the default cooldown; the
+        # ACTUAL window is per-guild and passed to is_active() on each check.
+        self._cooldowns = Cooldowns(leveling.DEFAULT_COOLDOWN_SECONDS)
+        # Per-guild leveling config for guilds with leveling ON, mirrored in memory
+        # so the on_message hot path answers "can this guild earn XP, and with what
+        # knobs?" with a single dict.get (zero awaits, zero allocations) instead of
+        # a per-message settings read. Membership == enabled: a guild absent from
+        # the map earns no XP, and a present guild hands its whole config
+        # (cooldown, xp band) back in that same lookup. Most guilds leave leveling
+        # off (the default), so the miss branch short-circuits the overwhelming
+        # majority of messages bot-wide. Loaded once in cog_load and kept live by
+        # set_enabled (the config toggle). level_config (the DB) is the source of
+        # truth; this map is a hot-path mirror, rebuilt on every restart. Bounded by
+        # the number of guilds that ENABLE leveling, so it needs no eviction.
+        self._configs: dict[int, leveling.LevelConfig] = {}
+        # The two bot-mention command prefixes, cached once. bot.user is only
+        # known after login, so this is filled lazily on first use (on_message
+        # never fires before the bot is ready).
+        self._mention_prefixes: tuple[str, ...] | None = None
+
+    async def cog_load(self):
+        """Load every enabled guild's leveling config once, at startup.
+
+        Runs during load_extension (setup_hook), before the gateway delivers any
+        message, so the hot path sees a populated map from the very first event.
+        Two reads, both over small tables: the level_config rows (the new source of
+        truth), then the legacy guild_settings.leveling_enabled bool as a
+        READ-THROUGH fallback for guilds that turned leveling on before level_config
+        existed and have not re-toggled since. A level_config row always wins, so a
+        guild that later switched leveling OFF via the new table is never
+        resurrected by its stale JSONB value. A failure here only leaves leveling
+        dormant until the next toggle - it is logged and never blocks startup.
+        """
+        try:
+            configs: dict[int, leveling.LevelConfig] = {}
+            rows = await self.bot.db_pool.fetch(
+                "SELECT guild_id, enabled, cooldown_seconds, xp_min, xp_max, "
+                "announce_mode, announce_channel_id, announce_template "
+                "FROM level_config;"
+            )
+            configured = set()
+            for row in rows:
+                gid = row["guild_id"]
+                configured.add(gid)  # a row exists -> legacy fallback must skip it
+                config = leveling.resolve_config(row, False)
+                if config is not None:
+                    configs[gid] = config
+            legacy = await self.bot.db_pool.fetch(
+                "SELECT guild_id FROM guild_settings "
+                "WHERE settings @> '{\"leveling_enabled\": true}'::jsonb;"
+            )
+            for row in legacy:
+                gid = row["guild_id"]
+                if gid not in configured:
+                    configs[gid] = leveling.resolve_config(None, True)
+            self._configs = configs
+            log.info("Leveling enabled in %d guild(s)", len(self._configs))
+        except Exception:
+            log.exception("Failed to load leveling config")
+
+    async def set_enabled(self, guild_id, enabled):
+        """Persist a leveling on/off toggle and refresh the hot-path config cache.
+
+        Writes the level_config row (the source of truth) and updates the in-memory
+        map so the change takes effect on the very next message, no restart. Only
+        ``enabled`` is written, so any per-guild knobs a later lot may have set are
+        preserved by the upsert; RETURNING the whole row keeps the cached config in
+        step with what the DB now holds. This is the ONLY writer of
+        level_config.enabled - the legacy JSONB bool is deliberately no longer
+        written (read-through in cog_load handles guilds that predate this table).
+        Called by the Settings cog through bot.get_cog (the house cross-cog seam).
+        """
+        row = await self.bot.db_pool.fetchrow(
+            """
+            INSERT INTO level_config (guild_id, enabled)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE SET enabled = $2
+            RETURNING enabled, cooldown_seconds, xp_min, xp_max,
+                      announce_mode, announce_channel_id, announce_template;
+            """,
+            guild_id,
+            bool(enabled),
+        )
+        config = leveling.resolve_config(row, False)
+        if config is not None:
+            self._configs[guild_id] = config
+        else:
+            self._configs.pop(guild_id, None)
+
+    def is_enabled(self, guild_id):
+        """Whether leveling is currently ON for a guild (in-memory, no DB).
+
+        The authoritative read-through answer: the map already reflects level_config
+        with the JSONB fallback resolved at load, so config panels and help can show
+        the true state without a query. A guild is enabled iff it is in the map.
+        """
+        return guild_id in self._configs
+
+    def _command_prefixes(self, guild_id):
+        """Prefixes that mark a message as a command in this guild.
+
+        Mirrors core.get_prefix (when_mentioned_or): the guild's text prefix (or
+        the bot default) plus the two bot-mention forms. Only built for messages
+        in leveling-enabled guilds (a minority), so the small tuple allocation
+        stays off the bulk of the hot path.
+        """
+        if self._mention_prefixes is None and self.bot.user is not None:
+            uid = self.bot.user.id
+            self._mention_prefixes = (f"<@{uid}>", f"<@!{uid}>")
+        text_prefix = self.bot.prefixes.get(guild_id) or self.bot.default_prefix
+        return (text_prefix, *(self._mention_prefixes or ()))
 
     @staticmethod
     def level_for_xp(xp):
-        return int((xp / 100) ** 0.5)
+        # Thin delegate to the pure service so the XP curve lives in exactly one
+        # place (tools/leveling.py); rank / levels and the tests call this off the
+        # class, so the staticmethod contract is kept.
+        return leveling.level_for_xp(xp)
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        # Cheap, synchronous gate first: on_message runs for every message on
+        # every guild, and the vast majority are in guilds with leveling OFF, so
+        # they must cost ZERO awaits and ZERO allocations here.
         if message.author.bot or message.guild is None:
             return
+        # One dict.get gates the message AND hands back the per-guild config
+        # (cooldown, xp band) in the same lookup: None means leveling is off here.
+        config = self._configs.get(message.guild.id)
+        if config is None:
+            return
 
-        if not await settings.get_guild(
-            self.bot.db_pool, message.guild.id, "leveling_enabled", False
+        # A message that invokes (or merely looks like) a prefix command earns no
+        # XP. Slash commands are interactions and never reach on_message, so only
+        # the text-prefix / mention forms are checked here.
+        if leveling_gate.is_command_invocation(
+            message.content, self._command_prefixes(message.guild.id)
         ):
             return
 
         key = (message.guild.id, message.author.id)
-        if self._cooldowns.is_active(key):
+        if self._cooldowns.is_active(key, seconds=config.cooldown_seconds):
             return
 
         self._cooldowns.touch(key)
-        gain = random.randint(15, 25)
+        gain = leveling.grant_amount(config.xp_min, config.xp_max)
 
         try:
             query = """
@@ -127,10 +248,9 @@ class Leveling(commands.Cog):
             new_xp = await self.bot.db_pool.fetchval(
                 query, message.guild.id, message.author.id, gain
             )
-            old_level = self.level_for_xp(new_xp - gain)
-            new_level = self.level_for_xp(new_xp)
+            new_level = leveling.level_up_between(new_xp - gain, new_xp)
 
-            if new_level > old_level and await settings.get_user(
+            if new_level is not None and await settings.get_user(
                 self.bot.db_pool, message.author.id, "levelup_announce", True
             ):
                 await message.channel.send(
@@ -270,9 +390,9 @@ class Leveling(commands.Cog):
             )
             or 0
         )
-        level = self.level_for_xp(xp)
-        cur_threshold = level**2 * 100
-        next_threshold = (level + 1) ** 2 * 100
+        level = leveling.level_for_xp(xp)
+        cur_threshold = leveling.xp_for_level(level)
+        next_threshold = leveling.xp_for_level(level + 1)
         needed = next_threshold - xp
 
         # Rank position within the guild (uses levels_guild_xp_idx).
