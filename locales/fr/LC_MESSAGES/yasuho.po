@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-12 20:01+0000\n"
+"POT-Creation-Date: 2026-07-12 21:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -579,10 +579,10 @@ msgid "No matching titles of that type."
 msgstr "Aucun titre correspondant de ce type."
 
 #: cogs/anilist/components.py:421 cogs/anilist/components.py:425
-#: cogs/community/level_config_ui.py:174 cogs/community/level_rewards.py:117
-#: cogs/config/announcements.py:298 cogs/config/rolemenus.py:544
-#: cogs/config/welcome.py:98 cogs/config/welcome.py:263
-#: cogs/config/welcome.py:484
+#: cogs/community/level_config_ui.py:275 cogs/community/level_config_ui.py:354
+#: cogs/community/level_rewards.py:117 cogs/config/announcements.py:298
+#: cogs/config/rolemenus.py:544 cogs/config/welcome.py:98
+#: cogs/config/welcome.py:263 cogs/config/welcome.py:484
 msgid "Something went wrong."
 msgstr "Une erreur est survenue."
 
@@ -1551,100 +1551,158 @@ msgstr "Langue inconnue. Disponibles : {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Langue par défaut du serveur définie sur **{lang}**."
 
-#: cogs/community/level_config_ui.py:47
+#: cogs/community/level_config_ui.py:63
 msgid "The message can't be empty."
 msgstr "Le message ne peut pas être vide."
 
-#: cogs/community/level_config_ui.py:49
+#: cogs/community/level_config_ui.py:65
 #, python-brace-format
 msgid "That message has a stray '{' or '}' - check the placeholders."
 msgstr "Ce message a un '{' ou '}' isolé - vérifie les placeholders."
 
-#: cogs/community/level_config_ui.py:52
+#: cogs/community/level_config_ui.py:68
 #, python-brace-format
 msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
 msgstr "Seuls ces placeholders sont autorisés : {user}, {level}, {guild}."
 
-#: cogs/community/level_config_ui.py:59
+#: cogs/community/level_config_ui.py:75
 #, python-brace-format
 msgid "The message is too long (max {max} characters)."
 msgstr "Le message est trop long ({max} caractères max)."
 
-#: cogs/community/level_config_ui.py:68
+#: cogs/community/level_config_ui.py:84
 msgid "Off - level-ups are never announced."
 msgstr "Off - les level-ups ne sont jamais annoncés."
 
-#: cogs/community/level_config_ui.py:70
+#: cogs/community/level_config_ui.py:86
 msgid "DM - the member is messaged directly."
 msgstr "MP - le membre reçoit un message privé."
 
-#: cogs/community/level_config_ui.py:73
+#: cogs/community/level_config_ui.py:89
 #, python-brace-format
 msgid "Fixed channel: <#{channel_id}>"
 msgstr "Salon fixe : <#{channel_id}>"
 
-#: cogs/community/level_config_ui.py:77
+#: cogs/community/level_config_ui.py:93
 msgid "Fixed channel (none set yet - falls back to the message's own channel)."
 msgstr "Salon fixe (aucun défini - repli sur le salon du message)."
 
-#: cogs/community/level_config_ui.py:80
+#: cogs/community/level_config_ui.py:96
 msgid "Channel - announced where the message was sent."
 msgstr "Salon - annoncé là où le message a été envoyé."
 
-#: cogs/community/level_config_ui.py:85
+#: cogs/community/level_config_ui.py:101
 #, python-brace-format
 msgid "Custom: \"{template}\""
 msgstr "Personnalisé : \"{template}\""
 
-#: cogs/community/level_config_ui.py:86
+#: cogs/community/level_config_ui.py:102
 #, python-brace-format
 msgid "Default: \"{template}\""
 msgstr "Par défaut : \"{template}\""
 
-#: cogs/community/level_config_ui.py:94
+#: cogs/community/level_config_ui.py:110
 #, python-brace-format
 msgid "On - {rate} XP per eligible minute in voice."
 msgstr "On - {rate} XP par minute éligible en vocal."
 
-#: cogs/community/level_config_ui.py:97
+#: cogs/community/level_config_ui.py:113
 msgid "Off - no XP for time spent in voice."
 msgstr "Off - pas d'XP pour le temps passé en vocal."
 
-#: cogs/community/level_config_ui.py:133
+#: cogs/community/level_config_ui.py:122
+msgid "The multiplier must be a plain number."
+msgstr "Le multiplicateur doit être un nombre simple."
+
+#: cogs/community/level_config_ui.py:129
+#, python-brace-format
+msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
+msgstr "Le multiplicateur doit être entre {min} et {max} (0 coupe totalement l'XP)."
+
+#: cogs/community/level_config_ui.py:144
+#, python-brace-format
+msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
+msgstr "L'événement doit durer entre 1 minute et {max_days} jours (ex. \"2h\" ou \"3d\")."
+
+#: cogs/community/level_config_ui.py:148
+msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
+msgstr "Je n'ai pas compris cette durée - essaie \"2h\" ou \"3d\"."
+
+#: cogs/community/level_config_ui.py:162
+#, python-brace-format
+msgid "Server-wide: **{factor}x**"
+msgstr "Tout le serveur : **x{factor}**"
+
+#: cogs/community/level_config_ui.py:168 cogs/community/level_config_ui.py:174
+#: cogs/community/level_config_ui.py:384 cogs/community/level_config_ui.py:390
+msgid "(deleted)"
+msgstr "(supprimé)"
+
+#: cogs/community/level_config_ui.py:195
+msgid "No XP event running. Use `/levelconfig event set` to start one."
+msgstr "Aucun événement XP en cours. Utilise `/levelconfig event set` pour en lancer un."
+
+#: cogs/community/level_config_ui.py:196
+#, python-brace-format
+msgid "**{factor}x** XP until {when}."
+msgstr "XP **x{factor}** jusqu'à {when}."
+
+#: cogs/community/level_config_ui.py:234
 msgid "Channel/category"
 msgstr "Salon/catégorie"
 
-#: cogs/community/level_config_ui.py:134 cogs/community/level_config_ui.py:138
+#: cogs/community/level_config_ui.py:235 cogs/community/level_config_ui.py:239
+#: cogs/community/level_config_ui.py:314 cogs/community/level_config_ui.py:318
 msgid "Unknown (deleted)"
 msgstr "Inconnu (supprimé)"
 
-#: cogs/community/level_config_ui.py:137 cogs/config/buttonroles.py:215
+#: cogs/community/level_config_ui.py:238 cogs/config/buttonroles.py:215
 #: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
 msgid "Role"
 msgstr "Rôle"
 
-#: cogs/community/level_config_ui.py:147
+#: cogs/community/level_config_ui.py:248
 msgid "Pick a no-XP zone to remove..."
 msgstr "Choisis une zone sans XP à retirer..."
 
-#: cogs/community/level_config_ui.py:167
+#: cogs/community/level_config_ui.py:268
 msgid "Removed that no-XP zone."
 msgstr "Zone sans XP retirée."
 
-#: cogs/community/level_config_ui.py:205 cogs/community/level_config_ui.py:211
-msgid "(deleted)"
-msgstr "(supprimé)"
+#: cogs/community/level_config_ui.py:309
+msgid "Global boost"
+msgstr "Boost global"
 
-#: cogs/community/level_config_ui.py:230
+#: cogs/community/level_config_ui.py:310
+msgid "Server-wide"
+msgstr "Tout le serveur"
+
+#: cogs/community/level_config_ui.py:313
+msgid "Channel/category boost"
+msgstr "Boost de salon/catégorie"
+
+#: cogs/community/level_config_ui.py:317
+msgid "Role boost"
+msgstr "Boost de rôle"
+
+#: cogs/community/level_config_ui.py:327
+msgid "Pick an XP boost to remove..."
+msgstr "Choisis un boost d'XP à retirer..."
+
+#: cogs/community/level_config_ui.py:347
+msgid "Removed that XP boost."
+msgstr "Boost d'XP retiré."
+
+#: cogs/community/level_config_ui.py:409
 #, python-brace-format
 msgid "No-XP zones | {guild}"
 msgstr "Zones sans XP | {guild}"
 
-#: cogs/community/level_config_ui.py:239
+#: cogs/community/level_config_ui.py:418
 msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
 msgstr "Aucune zone sans XP configurée. Utilise `/levelconfig noxp add` pour exclure un salon, une catégorie ou un rôle."
 
-#: cogs/community/level_config_ui.py:249
+#: cogs/community/level_config_ui.py:428 cogs/community/level_config_ui.py:483
 #, python-brace-format
 msgid ""
 "**Channels & categories**\n"
@@ -1653,7 +1711,7 @@ msgstr ""
 "**Salons et catégories**\n"
 "{lines}"
 
-#: cogs/community/level_config_ui.py:259
+#: cogs/community/level_config_ui.py:438 cogs/community/level_config_ui.py:493
 #, python-brace-format
 msgid ""
 "**Roles**\n"
@@ -1662,16 +1720,34 @@ msgstr ""
 "**Rôles**\n"
 "{lines}"
 
-#: cogs/community/level_config_ui.py:277
+#: cogs/community/level_config_ui.py:459
+#, python-brace-format
+msgid "XP boosts | {guild}"
+msgstr "Boosts d'XP | {guild}"
+
+#: cogs/community/level_config_ui.py:468
+msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
+msgstr "Aucun boost d'XP configuré. Utilise `/levelconfig boost add` pour booster ou réduire l'XP globalement, par salon ou par rôle."
+
+#: cogs/community/level_config_ui.py:499 cogs/community/level_config_ui.py:596
+#, python-brace-format
+msgid ""
+"**XP event**\n"
+"{event}"
+msgstr ""
+"**Événement XP**\n"
+"{event}"
+
+#: cogs/community/level_config_ui.py:534
 #, python-brace-format
 msgid "Level config | {guild}"
 msgstr "Config de niveaux | {guild}"
 
-#: cogs/community/level_config_ui.py:284
+#: cogs/community/level_config_ui.py:541
 msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
 msgstr "Aucune zone sans XP configurée. Utilise `/levelconfig noxp add`."
 
-#: cogs/community/level_config_ui.py:290
+#: cogs/community/level_config_ui.py:547
 #, python-brace-format
 msgid ""
 "**No-XP zones ({count}/{max})**\n"
@@ -1680,7 +1756,7 @@ msgstr ""
 "**Zones sans XP ({count}/{max})**\n"
 "{summary}"
 
-#: cogs/community/level_config_ui.py:300
+#: cogs/community/level_config_ui.py:557
 #, python-brace-format
 msgid ""
 "**Announce mode**\n"
@@ -1693,7 +1769,7 @@ msgstr ""
 "**Message d'annonce**\n"
 "{template}"
 
-#: cogs/community/level_config_ui.py:309
+#: cogs/community/level_config_ui.py:566
 #, python-brace-format
 msgid ""
 "**Voice XP**\n"
@@ -1702,101 +1778,160 @@ msgstr ""
 "**XP vocal**\n"
 "{voice}"
 
-#: cogs/community/level_config_ui.py:393
+#: cogs/community/level_config_ui.py:576
+msgid "No XP boosts configured. Use `/levelconfig boost add`."
+msgstr "Aucun boost d'XP configuré. Utilise `/levelconfig boost add`."
+
+#: cogs/community/level_config_ui.py:586
+#, python-brace-format
+msgid ""
+"**XP boosts ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+"**Boosts d'XP ({count}/{max})**\n"
+"{summary}"
+
+#: cogs/community/level_config_ui.py:723
 msgid "Give exactly one of a channel/category or a role."
 msgstr "Donne exactement un salon/catégorie OU un rôle."
 
-#: cogs/community/level_config_ui.py:398
+#: cogs/community/level_config_ui.py:728
 msgid "You can't use @everyone as a no-XP zone."
 msgstr "Tu ne peux pas utiliser @everyone comme zone sans XP."
 
-#: cogs/community/level_config_ui.py:414 cogs/community/level_config_ui.py:451
+#: cogs/community/level_config_ui.py:744 cogs/community/level_config_ui.py:781
 #, python-brace-format
 msgid "This server already has the maximum of {max} no-XP zones."
 msgstr "Ce serveur a déjà le maximum de {max} zones sans XP."
 
-#: cogs/community/level_config_ui.py:443
+#: cogs/community/level_config_ui.py:773
 #, python-brace-format
 msgid "{target} is already a no-XP zone."
 msgstr "{target} est déjà une zone sans XP."
 
-#: cogs/community/level_config_ui.py:460
+#: cogs/community/level_config_ui.py:790
 msgid "No-XP zone added"
 msgstr "Zone sans XP ajoutée"
 
-#: cogs/community/level_config_ui.py:461
+#: cogs/community/level_config_ui.py:791
 #, python-brace-format
 msgid "{target} will no longer earn XP."
 msgstr "{target} ne rapportera plus d'XP."
 
-#: cogs/community/level_config_ui.py:475
+#: cogs/community/level_config_ui.py:805
 msgid "This server has no no-XP zones configured yet."
 msgstr "Ce serveur n'a pas encore de zone sans XP."
 
-#: cogs/community/level_config_ui.py:479
+#: cogs/community/level_config_ui.py:809
 msgid "Pick a no-XP zone to remove:"
 msgstr "Choisis une zone sans XP à retirer :"
 
-#: cogs/community/level_config_ui.py:509
+#: cogs/community/level_config_ui.py:839
 msgid "Give a channel when setting the fixed mode."
 msgstr "Donne un salon quand tu choisis le mode fixe."
 
-#: cogs/community/level_config_ui.py:514 cogs/community/level_config_ui.py:537
-#: cogs/community/level_config_ui.py:585 cogs/community/level_config_ui.py:633
+#: cogs/community/level_config_ui.py:844 cogs/community/level_config_ui.py:867
+#: cogs/community/level_config_ui.py:915 cogs/community/level_config_ui.py:963
 msgid "The leveling system isn't loaded right now."
 msgstr "Le système de niveaux n'est pas chargé pour le moment."
 
-#: cogs/community/level_config_ui.py:522
+#: cogs/community/level_config_ui.py:852
 msgid "Announce mode updated"
 msgstr "Mode d'annonce mis à jour"
 
-#: cogs/community/level_config_ui.py:543
+#: cogs/community/level_config_ui.py:873
 #, python-brace-format
 msgid "The level-up message was reset to the default: \"{template}\""
 msgstr "Le message de level-up a été réinitialisé : \"{template}\""
 
-#: cogs/community/level_config_ui.py:563
+#: cogs/community/level_config_ui.py:893
 msgid "Level-up message updated"
 msgstr "Message de level-up mis à jour"
 
-#: cogs/community/level_config_ui.py:564
+#: cogs/community/level_config_ui.py:894
 #, python-brace-format
 msgid "Preview: {preview}"
 msgstr "Aperçu : {preview}"
 
-#: cogs/community/level_config_ui.py:589
+#: cogs/community/level_config_ui.py:919
 msgid "Voice XP enabled"
 msgstr "XP vocal activé"
 
-#: cogs/community/level_config_ui.py:590
+#: cogs/community/level_config_ui.py:920
 msgid "Members now earn XP for time spent together in voice."
 msgstr "Les membres gagnent désormais de l'XP pour le temps passé ensemble en vocal."
 
-#: cogs/community/level_config_ui.py:593
+#: cogs/community/level_config_ui.py:923
 msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
 msgstr "Attention : le système de niveaux du serveur est désactivé, aucun XP vocal ne sera donné tant qu'il n'est pas activé."
 
-#: cogs/community/level_config_ui.py:597
+#: cogs/community/level_config_ui.py:927
 msgid "Voice XP disabled"
 msgstr "XP vocal désactivé"
 
-#: cogs/community/level_config_ui.py:598
+#: cogs/community/level_config_ui.py:928
 msgid "Members no longer earn XP for time in voice."
 msgstr "Les membres ne gagnent plus d'XP pour le temps passé en vocal."
 
-#: cogs/community/level_config_ui.py:624
+#: cogs/community/level_config_ui.py:954
 #, python-brace-format
 msgid "The rate must be between {min} and {max} XP per minute."
 msgstr "Le taux doit être entre {min} et {max} XP par minute."
 
-#: cogs/community/level_config_ui.py:637
+#: cogs/community/level_config_ui.py:967
 msgid "Voice XP rate updated"
 msgstr "Taux d'XP vocal mis à jour"
 
-#: cogs/community/level_config_ui.py:639
+#: cogs/community/level_config_ui.py:969
 #, python-brace-format
 msgid "Members now earn **{rate}** XP per eligible minute in voice."
 msgstr "Les membres gagnent désormais **{rate}** XP par minute éligible en vocal."
+
+#: cogs/community/level_config_ui.py:1002
+msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
+msgstr "Donne au plus un salon/catégorie OU un rôle - aucun des deux pour un boost global."
+
+#: cogs/community/level_config_ui.py:1010
+msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
+msgstr "Tu ne peux pas cibler @everyone directement - laisse salon et rôle vides pour un boost global."
+
+#: cogs/community/level_config_ui.py:1036
+msgid "the whole server"
+msgstr "tout le serveur"
+
+#: cogs/community/level_config_ui.py:1067
+#, python-brace-format
+msgid "This server already has the maximum of {max} XP boosts."
+msgstr "Ce serveur a déjà le maximum de {max} boosts d'XP."
+
+#: cogs/community/level_config_ui.py:1075
+msgid "XP boost set"
+msgstr "Boost d'XP défini"
+
+#: cogs/community/level_config_ui.py:1077
+#, python-brace-format
+msgid "{target} now has a **{factor}x** XP multiplier."
+msgstr "{target} a maintenant un multiplicateur d'XP de **x{factor}**."
+
+#: cogs/community/level_config_ui.py:1090
+msgid "This server has no XP boosts configured yet."
+msgstr "Ce serveur n'a pas encore de boost d'XP."
+
+#: cogs/community/level_config_ui.py:1093
+msgid "Pick an XP boost to remove:"
+msgstr "Choisis un boost d'XP à retirer :"
+
+#: cogs/community/level_config_ui.py:1111
+msgid "XP event"
+msgstr "Événement XP"
+
+#: cogs/community/level_config_ui.py:1182
+msgid "XP event started"
+msgstr "Événement XP lancé"
+
+#: cogs/community/level_config_ui.py:1194
+msgid "The XP event was stopped."
+msgstr "L'événement XP a été arrêté."
 
 #: cogs/community/level_rewards.py:78
 msgid "Unknown role (deleted)"
@@ -1898,7 +2033,7 @@ msgstr "Les membres gardent désormais tous les rôles de récompense gagnés."
 msgid "Reward mode updated"
 msgstr "Mode de récompense mis à jour"
 
-#: cogs/community/leveling.py:77
+#: cogs/community/leveling.py:82
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -1907,57 +2042,57 @@ msgstr ""
 "{marker} **{name}**\n"
 "Niveau **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:93
+#: cogs/community/leveling.py:98
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - niveau **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:602
+#: cogs/community/leveling.py:722
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... et a gagné {roles}"
 
-#: cogs/community/leveling.py:610
+#: cogs/community/leveling.py:730
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} a atteint le niveau **{level}** ! ... et a gagné {roles}"
 
-#: cogs/community/leveling.py:617
+#: cogs/community/leveling.py:737
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} a atteint le niveau **{level}** !"
 
-#: cogs/community/leveling.py:828
+#: cogs/community/leveling.py:948
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rang | {name}"
 
-#: cogs/community/leveling.py:832 cogs/utility/searchweb.py:139
+#: cogs/community/leveling.py:952 cogs/utility/searchweb.py:139
 msgid "Rank"
 msgstr "Rang"
 
-#: cogs/community/leveling.py:833 cogs/utility/searchweb.py:142
+#: cogs/community/leveling.py:953 cogs/utility/searchweb.py:142
 msgid "Level"
 msgstr "Niveau"
 
-#: cogs/community/leveling.py:834
+#: cogs/community/leveling.py:954
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:836
+#: cogs/community/leveling.py:956
 msgid "XP for next level"
 msgstr "XP pour le prochain niveau"
 
-#: cogs/community/leveling.py:858 cogs/community/leveling.py:884
+#: cogs/community/leveling.py:978 cogs/community/leveling.py:1004
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Classement | {guild}"
 
-#: cogs/community/leveling.py:859
+#: cogs/community/leveling.py:979
 msgid "No one has earned any XP yet!"
 msgstr "Personne n'a encore gagné d'XP !"
 
-#: cogs/community/leveling.py:869
+#: cogs/community/leveling.py:989
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Utilisateur {uid}"

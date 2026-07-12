@@ -1,8 +1,8 @@
-"""Level-up no-XP zones and announce control (leveling L3): the ``/levelconfig``
-admin group.
+"""Level-up no-XP zones, announce control, and XP multipliers (leveling L3+L4):
+the ``/levelconfig`` admin group.
 
-Two independent knobs, both consumed by cogs/community/leveling.py's on_message
-hot path:
+Independent knobs, all consumed by cogs/community/leveling.py's on_message hot
+path (and, for voice XP and boosts/events, cogs/community/voice_xp.py's sweep):
 
 * NO-XP ZONES (``level_no_xp``): channels/categories and roles where messages
   never earn XP. This cog owns the table (add/remove/list, capped at
@@ -15,6 +15,12 @@ hot path:
   through ``Leveling.set_announce_mode`` / ``set_announce_template`` (the same
   cross-cog seam cogs/config/settings.py uses for the enabled toggle), because
   the Leveling cog's ``_configs`` hot-path cache must stay in step with the DB.
+* XP BOOSTS + EVENT (L4, ``xp_multipliers`` and level_config's ``event_factor``
+  / ``event_ends_at``): boost or reduce XP globally, per channel/category, per
+  role, or via a timed event. This cog owns both tables/columns directly (like
+  level_no_xp) and, after every write, calls
+  ``Leveling.refresh_multiplier_snapshot`` so the change is live on the very
+  next message/sweep tick - no restart.
 
 Cross-cog seam, matching the house pattern (cogs/community/level_rewards.py,
 cogs/config/settings.py): looked up by name via ``bot.get_cog("Leveling")``,
@@ -27,6 +33,7 @@ fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 
 from __future__ import annotations
 
+import datetime
 import logging
 import typing
 
@@ -34,9 +41,18 @@ import discord
 from discord.ext import commands
 
 from tools import leveling
-from tools.formats import random_colour
+from tools.formats import format_dt, random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorView
+
+try:
+    # The house duration converter (tools/time.py), reused elsewhere (reminders,
+    # rolemenus, announcements). Preferred whenever importable; a tiny pure
+    # fallback parser (tools.leveling.parse_short_duration) covers the
+    # (never-expected-in-production) case it is not - see the event command.
+    from tools.time import ShortTime
+except ImportError:  # pragma: no cover - defensive only
+    ShortTime = None
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +111,91 @@ def _describe_voice_xp(config):
             rate=config.voice_xp_per_minute
         )
     return _("Off - no XP for time spent in voice.")
+
+
+# ----------------------------------------------------------------------
+# XP multipliers (L4): boost/reduce XP globally, per channel/category, per
+# role, plus a timed double-XP event.
+# ----------------------------------------------------------------------
+
+_MULTIPLIER_ERRORS = {
+    "invalid": N_("The multiplier must be a plain number."),
+}
+
+
+def _multiplier_error_message(reason):
+    if reason == "out_of_range":
+        return _(
+            "The multiplier must be between {min} and {max} (0 mutes XP "
+            "entirely)."
+        ).format(
+            min=leveling.MIN_MULTIPLIER_FACTOR, max=leveling.MAX_MULTIPLIER_FACTOR
+        )
+    return _(_MULTIPLIER_ERRORS.get(reason, _MULTIPLIER_ERRORS["invalid"]))
+
+
+def _duration_error_message(reason):
+    if reason == "out_of_range":
+        # MIN_EVENT_DURATION_SECONDS is a fixed 60s (1 minute) design constant
+        # - see tools/leveling.py - so this is spelled out directly rather
+        # than pluralized dynamically, matching the other bound messages in
+        # this file (e.g. the voice-XP rate refusal).
+        return _(
+            "The event must last between 1 minute and {max_days} days (e.g. "
+            "\"2h\" or \"3d\")."
+        ).format(max_days=leveling.MAX_EVENT_DURATION_SECONDS // 86400)
+    return _(
+        "I couldn't understand that duration - try something like \"2h\" or "
+        "\"3d\"."
+    )
+
+
+def _multiplier_lines(guild, rows):
+    """(global_line_or_None, channel_lines, role_lines) rendered for the list
+    card and the overview panel, resolving deleted targets to a placeholder
+    rather than a broken mention (mirrors _no_xp_lines)."""
+    global_line = None
+    channel_lines = []
+    role_lines = []
+    for kind, target_id, factor in rows:
+        if kind == leveling.MULTIPLIER_GLOBAL:
+            global_line = _("Server-wide: **{factor}x**").format(factor=factor)
+        elif kind == leveling.MULTIPLIER_CHANNEL:
+            channel = guild.get_channel(target_id)
+            text = (
+                channel.mention
+                if channel is not None
+                else f"`{target_id}` " + _("(deleted)")
+            )
+            channel_lines.append(f"- {text}: **{factor}x**")
+        else:
+            role = guild.get_role(target_id)
+            text = (
+                role.mention if role is not None else f"`{target_id}` " + _("(deleted)")
+            )
+            role_lines.append(f"- {text}: **{factor}x**")
+    return global_line, channel_lines, role_lines
+
+
+def _describe_event(event_factor, event_ends_at):
+    """One-line, human description of the guild's timed double-XP event.
+
+    An already-expired stored row (``event_ends_at`` in the past) is
+    described as "no event running" - the SAME "ignored at read time" rule
+    tools.leveling.compute_multiplier applies, so the admin panel never
+    shows a stale event as still active even in the short window before the
+    next lazy-null refresh (cogs/community/leveling.py's
+    refresh_multiplier_snapshot).
+    """
+    if (
+        event_factor is None
+        or event_ends_at is None
+        or event_ends_at <= discord.utils.utcnow()
+    ):
+        return _("No XP event running. Use `/levelconfig event set` to start one.")
+    return _("**{factor}x** XP until {when}.").format(
+        factor=event_factor, when=format_dt(event_ends_at, "R")
+    )
 
 
 async def _fetch_config(pool, guild_id):
@@ -190,6 +291,84 @@ class _RemoveNoXpView(AuthorView):
 
 
 # ----------------------------------------------------------------------
+# Admin UX: "remove a boost" picker (L4)
+# ----------------------------------------------------------------------
+class _RemoveMultiplierSelect(discord.ui.Select):
+    """Lists every configured boost (global/channel/role) so the admin can
+    pick one to delete. One option per row; the cap
+    (MAX_MULTIPLIERS_PER_GUILD == 25) keeps this within Discord's own
+    25-option select limit with no truncation needed - same precedent as
+    _RemoveRewardSelect."""
+
+    def __init__(self, cog, guild, rows):
+        self.cog = cog
+        self.guild = guild
+        options = []
+        for kind, target_id, factor in rows[:25]:
+            if kind == leveling.MULTIPLIER_GLOBAL:
+                label = _("Global boost")
+                desc = _("Server-wide")
+            elif kind == leveling.MULTIPLIER_CHANNEL:
+                obj = guild.get_channel(target_id)
+                label = _("Channel/category boost")
+                desc = obj.name if obj is not None else _("Unknown (deleted)")
+            else:
+                obj = guild.get_role(target_id)
+                label = _("Role boost")
+                desc = obj.name if obj is not None else _("Unknown (deleted)")
+            options.append(
+                discord.SelectOption(
+                    label=f"{label} ({factor}x)"[:100],
+                    value=f"{kind}:{target_id}",
+                    description=desc[:100],
+                )
+            )
+        super().__init__(
+            placeholder=_("Pick an XP boost to remove..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0,
+        )
+
+    async def callback(self, interaction):
+        try:
+            kind, target_id_str = self.values[0].split(":")
+            target_id = int(target_id_str)
+            await self.cog.bot.db_pool.execute(
+                "DELETE FROM xp_multipliers WHERE guild_id = $1 AND kind = $2 "
+                "AND target_id = $3;",
+                self.guild.id,
+                kind,
+                target_id,
+            )
+            await self.cog.refresh_multiplier_cache(self.guild.id)
+            await interaction.response.edit_message(
+                content=_("Removed that XP boost."),
+                view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except Exception:
+            log.exception("XP boost remove select failed")
+            await interaction.response.edit_message(
+                content=_("Something went wrong."), view=None
+            )
+        finally:
+            # Terminal action: mirrors _RemoveNoXpSelect / _RemoveRewardSelect.
+            self._owner.stop()
+
+
+class _RemoveMultiplierView(AuthorView):
+    def __init__(self, cog, guild, author_id, rows, timeout=120):
+        super().__init__(
+            author_id, timeout=timeout, deny_message="This panel isn't for you."
+        )
+        select = _RemoveMultiplierSelect(cog, guild, rows)
+        select._owner = self
+        self.add_item(select)
+
+
+# ----------------------------------------------------------------------
 # CV2 cards
 # ----------------------------------------------------------------------
 def _no_xp_lines(guild, rows):
@@ -262,15 +441,93 @@ class NoXpListView(discord.ui.LayoutView):
         self.add_item(container)
 
 
-class LevelConfigOverviewView(discord.ui.LayoutView):
-    """Single-page Components V2 landing card: no-xp zones + announce settings."""
+class MultiplierListView(discord.ui.LayoutView):
+    """Single-page Components V2 card: every configured XP boost plus the
+    active timed event, for this guild."""
 
-    def __init__(self, guild, rows, config, *, timeout=180):
+    def __init__(
+        self, guild, rows, event_factor, event_ends_at, *, timeout=180
+    ):
         super().__init__(timeout=timeout)
         self.message = None
-        self._build(guild, rows, config)
+        self._build(guild, rows, event_factor, event_ends_at)
 
-    def _build(self, guild, rows, config):
+    def _build(self, guild, rows, event_factor, event_ends_at):
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "## " + _("XP boosts | {guild}").format(guild=guild.name)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+
+        if not rows:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _(
+                        "No XP boosts configured yet. Use `/levelconfig boost "
+                        "add` to boost or reduce XP globally, per channel, or "
+                        "per role."
+                    )
+                )
+            )
+        else:
+            global_line, channel_lines, role_lines = _multiplier_lines(guild, rows)
+            if global_line:
+                container.add_item(discord.ui.TextDisplay(global_line))
+                if channel_lines or role_lines:
+                    container.add_item(discord.ui.Separator())
+            if channel_lines:
+                container.add_item(
+                    discord.ui.TextDisplay(
+                        _("**Channels & categories**\n{lines}").format(
+                            lines="\n".join(channel_lines)
+                        )
+                    )
+                )
+            if role_lines:
+                if channel_lines:
+                    container.add_item(discord.ui.Separator())
+                container.add_item(
+                    discord.ui.TextDisplay(
+                        _("**Roles**\n{lines}").format(lines="\n".join(role_lines))
+                    )
+                )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**XP event**\n{event}").format(
+                    event=_describe_event(event_factor, event_ends_at)
+                )
+            )
+        )
+        self.add_item(container)
+
+
+class LevelConfigOverviewView(discord.ui.LayoutView):
+    """Single-page Components V2 landing card: no-xp zones, announce settings,
+    voice XP, XP boosts and the active timed event."""
+
+    def __init__(
+        self,
+        guild,
+        rows,
+        config,
+        multiplier_rows,
+        event_factor,
+        event_ends_at,
+        *,
+        timeout=180,
+    ):
+        super().__init__(timeout=timeout)
+        self.message = None
+        self._build(
+            guild, rows, config, multiplier_rows, event_factor, event_ends_at
+        )
+
+    def _build(
+        self, guild, rows, config, multiplier_rows, event_factor, event_ends_at
+    ):
         container = discord.ui.Container(accent_colour=random_colour())
         container.add_item(
             discord.ui.TextDisplay(
@@ -311,6 +568,36 @@ class LevelConfigOverviewView(discord.ui.LayoutView):
                 )
             )
         )
+        container.add_item(discord.ui.Separator())
+        global_line, channel_boost_lines, role_boost_lines = _multiplier_lines(
+            guild, multiplier_rows
+        )
+        boost_summary = (
+            _("No XP boosts configured. Use `/levelconfig boost add`.")
+            if not multiplier_rows
+            else "\n".join(
+                ([global_line] if global_line else [])
+                + channel_boost_lines
+                + role_boost_lines
+            )
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**XP boosts ({count}/{max})**\n{summary}").format(
+                    count=len(multiplier_rows),
+                    max=leveling.MAX_MULTIPLIERS_PER_GUILD,
+                    summary=boost_summary,
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**XP event**\n{event}").format(
+                    event=_describe_event(event_factor, event_ends_at)
+                )
+            )
+        )
         self.add_item(container)
 
 
@@ -318,7 +605,8 @@ class LevelConfigOverviewView(discord.ui.LayoutView):
 # Cog
 # ----------------------------------------------------------------------
 class LevelConfigUI(commands.Cog):
-    """No-XP zones + level-up announce control: the ``/levelconfig`` group."""
+    """No-XP zones, level-up announce control, and XP boosts/events: the
+    ``/levelconfig`` group."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -335,6 +623,15 @@ class LevelConfigUI(commands.Cog):
         if leveling_cog is not None:
             await leveling_cog.refresh_no_xp_snapshot(guild_id)
 
+    async def refresh_multiplier_cache(self, guild_id):
+        """The L4 sibling of refresh_no_xp_cache: pushes the just-written
+        xp_multipliers rows OR level_config event columns into the Leveling
+        cog's multiplier snapshot cache immediately. Called after every
+        boost add/remove and every event set/off."""
+        leveling_cog = self.bot.get_cog("Leveling")
+        if leveling_cog is not None:
+            await leveling_cog.refresh_multiplier_snapshot(guild_id)
+
     # -- shared reads ----------------------------------------------------
     async def _fetch_no_xp_rows(self, guild_id):
         rows = await self.bot.db_pool.fetch(
@@ -343,10 +640,35 @@ class LevelConfigUI(commands.Cog):
         )
         return [(row["kind"], row["target_id"]) for row in rows]
 
+    async def _fetch_multiplier_rows(self, guild_id):
+        rows = await self.bot.db_pool.fetch(
+            "SELECT kind, target_id, factor FROM xp_multipliers "
+            "WHERE guild_id = $1;",
+            guild_id,
+        )
+        return [(row["kind"], row["target_id"], row["factor"]) for row in rows]
+
+    async def _fetch_event(self, guild_id):
+        """(event_factor, event_ends_at) for a guild, or (None, None) when no
+        level_config row exists yet (an admin may configure an event before
+        ever turning leveling on, same as the no-xp/announce settings)."""
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT event_factor, event_ends_at FROM level_config "
+            "WHERE guild_id = $1;",
+            guild_id,
+        )
+        if row is None:
+            return None, None
+        return row["event_factor"], row["event_ends_at"]
+
     async def _send_overview(self, ctx):
         rows = await self._fetch_no_xp_rows(ctx.guild.id)
         config = await _fetch_config(self.bot.db_pool, ctx.guild.id)
-        view = LevelConfigOverviewView(ctx.guild, rows, config)
+        multiplier_rows = await self._fetch_multiplier_rows(ctx.guild.id)
+        event_factor, event_ends_at = await self._fetch_event(ctx.guild.id)
+        view = LevelConfigOverviewView(
+            ctx.guild, rows, config, multiplier_rows, event_factor, event_ends_at
+        )
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
@@ -354,6 +676,14 @@ class LevelConfigUI(commands.Cog):
     async def _send_noxp_list(self, ctx):
         rows = await self._fetch_no_xp_rows(ctx.guild.id)
         view = NoXpListView(ctx.guild, rows)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def _send_boost_list(self, ctx):
+        rows = await self._fetch_multiplier_rows(ctx.guild.id)
+        event_factor, event_ends_at = await self._fetch_event(ctx.guild.id)
+        view = MultiplierListView(ctx.guild, rows, event_factor, event_ends_at)
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
@@ -641,6 +971,227 @@ class LevelConfigUI(commands.Cog):
             colour=random_colour(),
         )
         await ctx.send(embed=embed)
+
+    # -- boost subgroup (L4) -----------------------------------------------
+    @levelconfig.group(name="boost")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_boost(self, ctx):
+        """Manage XP boosts: global, per channel/category, or per role."""
+        if ctx.invoked_subcommand is None:
+            await self._send_boost_list(ctx)
+
+    @levelconfig_boost.command(name="add")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_boost_add(
+        self,
+        ctx: commands.Context,
+        factor: float,
+        channel: typing.Optional[
+            typing.Union[discord.TextChannel, discord.CategoryChannel]
+        ] = None,
+        role: typing.Optional[discord.Role] = None,
+    ):
+        """Boost or reduce XP (0-5x). Give a channel/category OR a role, or
+        neither for a server-wide boost. Re-running this on the same target
+        just updates its factor."""
+        if channel is not None and role is not None:
+            await ctx.send(
+                _(
+                    "Give at most one of a channel/category or a role - "
+                    "give neither for a server-wide boost."
+                )
+            )
+            return
+        if role is not None and role.is_default():
+            await ctx.send(
+                _(
+                    "You can't target @everyone directly - leave both the "
+                    "channel and role empty for a server-wide boost instead."
+                )
+            )
+            return
+
+        ok, reason = leveling.validate_multiplier_factor(factor)
+        if not ok:
+            await ctx.send(_multiplier_error_message(reason))
+            return
+
+        if channel is not None:
+            kind, target_id, target_text = (
+                leveling.MULTIPLIER_CHANNEL,
+                channel.id,
+                channel.mention,
+            )
+        elif role is not None:
+            kind, target_id, target_text = (
+                leveling.MULTIPLIER_ROLE,
+                role.id,
+                role.mention,
+            )
+        else:
+            kind = leveling.MULTIPLIER_GLOBAL
+            target_id = leveling.GLOBAL_MULTIPLIER_TARGET_ID
+            target_text = _("the whole server")
+
+        # Race-safe: an existing (guild, kind, target) row always upserts its
+        # factor - adjusting a boost is never blocked by the cap. The cap
+        # only ever refuses a genuinely NEW row once the guild already has
+        # MAX_MULTIPLIERS_PER_GUILD configured, across every kind.
+        inserted = await self.bot.db_pool.fetchval(
+            """
+            INSERT INTO xp_multipliers (guild_id, kind, target_id, factor)
+            SELECT $1, $2, $3, $4
+            WHERE (SELECT COUNT(*) FROM xp_multipliers WHERE guild_id = $1) < $5
+               OR EXISTS (
+                   SELECT 1 FROM xp_multipliers
+                   WHERE guild_id = $1 AND kind = $2 AND target_id = $3
+               )
+            ON CONFLICT (guild_id, kind, target_id)
+                DO UPDATE SET factor = EXCLUDED.factor
+            RETURNING kind;
+            """,
+            ctx.guild.id,
+            kind,
+            target_id,
+            factor,
+            leveling.MAX_MULTIPLIERS_PER_GUILD,
+        )
+        if inserted is None:
+            # A concurrent add filled the last slot between the pre-check and
+            # the atomic INSERT (only reachable for a genuinely new target -
+            # an existing target always matches the EXISTS branch and upserts).
+            await ctx.send(
+                _(
+                    "This server already has the maximum of {max} XP boosts."
+                ).format(max=leveling.MAX_MULTIPLIERS_PER_GUILD)
+            )
+            return
+
+        await self.refresh_multiplier_cache(ctx.guild.id)
+
+        embed = discord.Embed(
+            title=_("XP boost set"),
+            description=_(
+                "{target} now has a **{factor}x** XP multiplier."
+            ).format(target=target_text, factor=factor),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+
+    @levelconfig_boost.command(name="remove")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_boost_remove(self, ctx):
+        """Pick an XP boost to remove from a list of every one configured."""
+        rows = await self._fetch_multiplier_rows(ctx.guild.id)
+        if not rows:
+            await ctx.send(_("This server has no XP boosts configured yet."))
+            return
+        view = _RemoveMultiplierView(self, ctx.guild, ctx.author.id, rows)
+        view.message = await ctx.send(_("Pick an XP boost to remove:"), view=view)
+
+    @levelconfig_boost.command(name="list")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_boost_list(self, ctx):
+        """Show every XP boost configured for this server."""
+        await self._send_boost_list(ctx)
+
+    # -- event subgroup (L4) -------------------------------------------------
+    @levelconfig.group(name="event")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_event(self, ctx):
+        """Manage the timed double-XP (or reduced-XP) event."""
+        if ctx.invoked_subcommand is None:
+            event_factor, event_ends_at = await self._fetch_event(ctx.guild.id)
+            embed = discord.Embed(
+                title=_("XP event"),
+                description=_describe_event(event_factor, event_ends_at),
+                colour=random_colour(),
+            )
+            await ctx.send(embed=embed)
+
+    async def _write_event(self, guild_id, factor, ends_at):
+        """Upsert level_config's event columns, seeding ``enabled`` from the
+        legacy JSONB flag on INSERT (never touching it on UPDATE) - the same
+        precedent as level_rewards_mode/set_voice_xp_enabled, so starting/
+        stopping an event for a guild that enabled leveling only through the
+        legacy bool never masks that flag with a fresh FALSE row. Always
+        refreshes the Leveling cog's multiplier snapshot afterwards."""
+        await self.bot.db_pool.execute(
+            """
+            INSERT INTO level_config (guild_id, enabled, event_factor, event_ends_at)
+            VALUES (
+                $1,
+                COALESCE(
+                    (SELECT (settings->>'leveling_enabled')::boolean
+                     FROM guild_settings WHERE guild_id = $1),
+                    FALSE
+                ),
+                $2,
+                $3
+            )
+            ON CONFLICT (guild_id) DO UPDATE
+                SET event_factor = $2, event_ends_at = $3;
+            """,
+            guild_id,
+            factor,
+            ends_at,
+        )
+        await self.refresh_multiplier_cache(guild_id)
+
+    @levelconfig_event.command(name="set")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_event_set(
+        self, ctx: commands.Context, factor: float, duration: str
+    ):
+        """Start a timed XP event - e.g. `/levelconfig event set 2 2h`
+        doubles XP for 2 hours (max 14 days)."""
+        ok, reason = leveling.validate_multiplier_factor(factor)
+        if not ok:
+            await ctx.send(_multiplier_error_message(reason))
+            return
+
+        now = discord.utils.utcnow()
+        if ShortTime is not None:
+            try:
+                ends_at = ShortTime(duration, now=now).dt
+            except commands.BadArgument:
+                await ctx.send(_duration_error_message("malformed"))
+                return
+            seconds = (ends_at - now).total_seconds()
+        else:  # pragma: no cover - defensive only, see the module import above
+            seconds = leveling.parse_short_duration(duration)
+            if seconds is None:
+                await ctx.send(_duration_error_message("malformed"))
+                return
+            ends_at = now + datetime.timedelta(seconds=seconds)
+
+        ok, reason = leveling.validate_event_duration(seconds)
+        if not ok:
+            await ctx.send(_duration_error_message(reason))
+            return
+
+        await self._write_event(ctx.guild.id, factor, ends_at)
+
+        embed = discord.Embed(
+            title=_("XP event started"),
+            description=_describe_event(factor, ends_at),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
+
+    @levelconfig_event.command(name="off")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_event_off(self, ctx):
+        """Stop the active XP event (if any)."""
+        await self._write_event(ctx.guild.id, None, None)
+        await ctx.send(_("The XP event was stopped."))
 
 
 async def setup(bot):

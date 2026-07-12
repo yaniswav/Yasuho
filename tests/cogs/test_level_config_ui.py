@@ -10,6 +10,7 @@ a null insert, the cross-cog refresh_no_xp_snapshot push after every write, the
 commands' delegation to the Leveling cog (never a direct level_config write).
 """
 
+import datetime
 import types
 
 import discord
@@ -71,6 +72,7 @@ class _FakeLevelingCog:
 
     def __init__(self):
         self.refresh_calls = []
+        self.multiplier_refresh_calls = []
         self.set_announce_mode_calls = []
         self.set_announce_template_calls = []
         self.set_voice_xp_enabled_calls = []
@@ -79,6 +81,9 @@ class _FakeLevelingCog:
 
     async def refresh_no_xp_snapshot(self, guild_id):
         self.refresh_calls.append(guild_id)
+
+    async def refresh_multiplier_snapshot(self, guild_id):
+        self.multiplier_refresh_calls.append(guild_id)
 
     async def set_announce_mode(self, guild_id, mode, channel_id=None):
         self.set_announce_mode_calls.append((guild_id, mode, channel_id))
@@ -561,3 +566,276 @@ async def test_voicexp_rate_accepts_the_bounds(fake_pool):
     for good in (1, 60):
         await cog.levelconfig_voicexp_rate.callback(cog, _Ctx(), good)
     assert leveling_cog.set_voice_xp_rate_calls == [(1, 1), (1, 60)]
+
+
+# ---------------------------------------------------------------------------
+# XP boosts (L4): /levelconfig boost add/remove/list.
+# ---------------------------------------------------------------------------
+
+
+def _route_boost_add(fake_pool, inserted="global"):
+    async def fetchval(query, *args):
+        fake_pool.calls.append(("fetchval", query, args))
+        if "INSERT INTO xp_multipliers" in query:
+            return inserted
+        return None
+
+    fake_pool.fetchval = fetchval
+
+
+async def test_boost_add_rejects_both_channel_and_role(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    channel = _FakeChannel(10)
+    role = _FakeRole(20)
+    ctx = _Ctx()
+    await cog.levelconfig_boost_add.callback(cog, ctx, 2.0, channel, role)
+    assert any("at most one" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+
+
+async def test_boost_add_rejects_everyone_role(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    everyone = _FakeRole(1, name="@everyone", default=True)
+    ctx = _Ctx()
+    await cog.levelconfig_boost_add.callback(cog, ctx, 2.0, None, everyone)
+    assert any("everyone" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+
+
+async def test_boost_add_rejects_out_of_range_factor(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx()
+    await cog.levelconfig_boost_add.callback(cog, ctx, 5.1, None, None)
+    assert any("between" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+
+
+async def test_boost_add_accepts_zero_factor(fake_pool):
+    """0.0 is a valid, explicitly supported 'mute XP' factor - never refused."""
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted="global")
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 0.0, None, None)
+
+    assert leveling_cog.multiplier_refresh_calls == [1]
+    assert any("boost set" in c[1]["embed"].title.lower() for c in ctx.sends)
+
+
+async def test_boost_add_neither_channel_nor_role_is_a_global_boost(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted="global")
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 2.0, None, None)
+
+    inserts = [c for c in fake_pool.calls if "INSERT INTO xp_multipliers" in c[1]]
+    _method, query, args = inserts[0]
+    assert args[1] == leveling.MULTIPLIER_GLOBAL
+    assert args[2] == leveling.GLOBAL_MULTIPLIER_TARGET_ID
+    assert args[3] == 2.0
+    assert leveling_cog.multiplier_refresh_calls == [1]
+
+
+async def test_boost_add_channel_uses_the_channel_kind(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    channel = _FakeChannel(10)
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted="channel")
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 3.0, channel, None)
+
+    inserts = [c for c in fake_pool.calls if "INSERT INTO xp_multipliers" in c[1]]
+    _method, _query, args = inserts[0]
+    assert args[1] == leveling.MULTIPLIER_CHANNEL
+    assert args[2] == 10
+
+
+async def test_boost_add_role_uses_the_role_kind(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    role = _FakeRole(77)
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted="role")
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 1.5, None, role)
+
+    inserts = [c for c in fake_pool.calls if "INSERT INTO xp_multipliers" in c[1]]
+    _method, _query, args = inserts[0]
+    assert args[1] == leveling.MULTIPLIER_ROLE
+    assert args[2] == 77
+
+
+async def test_boost_add_insert_carries_the_race_safe_cap_and_update_guard(fake_pool):
+    """The atomic INSERT allows a room-available OR already-existing target,
+    and upserts the factor on conflict - so re-adding an existing boost edits
+    it rather than erroring."""
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted="global")
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 2.0, None, None)
+
+    inserts = [c for c in fake_pool.calls if "INSERT INTO xp_multipliers" in c[1]]
+    _method, query, args = inserts[0]
+    flat = " ".join(query.split())
+    assert "WHERE (SELECT COUNT(*) FROM xp_multipliers WHERE guild_id = $1) < $5" in flat
+    assert "OR EXISTS" in flat
+    assert "DO UPDATE SET factor = EXCLUDED.factor" in flat
+    assert args[4] == leveling.MAX_MULTIPLIERS_PER_GUILD
+
+
+async def test_boost_add_null_insert_reports_the_maximum(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+    _route_boost_add(fake_pool, inserted=None)  # blocked: new target, at cap
+
+    await cog.levelconfig_boost_add.callback(cog, ctx, 2.0, None, None)
+
+    assert any("maximum" in c[0][0] for c in ctx.sends)
+    assert leveling_cog.multiplier_refresh_calls == []  # never refreshed
+
+
+async def test_boost_remove_with_no_boosts_configured(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx()
+    await cog.levelconfig_boost_remove.callback(cog, ctx)
+    assert any("no XP boosts" in c[0][0] for c in ctx.sends)
+
+
+async def test_boost_remove_opens_a_picker_when_boosts_exist(fake_pool):
+    fake_pool.fetch_return = [{"kind": "global", "target_id": 0, "factor": 2.0}]
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx()
+    await cog.levelconfig_boost_remove.callback(cog, ctx)
+    assert len(ctx.sends) == 1
+    _args, kwargs = ctx.sends[0]
+    assert "view" in kwargs
+
+
+async def test_boost_remove_select_deletes_and_refreshes_cache(fake_pool, make_interaction):
+    from cogs.community.level_config_ui import _RemoveMultiplierSelect
+
+    guild = _FakeGuild(guild_id=1)
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+
+    select = _RemoveMultiplierSelect(
+        cog, guild, [(leveling.MULTIPLIER_GLOBAL, leveling.GLOBAL_MULTIPLIER_TARGET_ID, 2.0)]
+    )
+    select._values = [f"{leveling.MULTIPLIER_GLOBAL}:{leveling.GLOBAL_MULTIPLIER_TARGET_ID}"]
+    select._owner = types.SimpleNamespace(stop=lambda: None)
+
+    interaction = make_interaction()
+    await select.callback(interaction)
+
+    deletes = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(deletes) == 1
+    _method, query, args = deletes[0]
+    assert "DELETE FROM xp_multipliers" in query
+    assert args == (1, leveling.MULTIPLIER_GLOBAL, leveling.GLOBAL_MULTIPLIER_TARGET_ID)
+    assert leveling_cog.multiplier_refresh_calls == [1]
+    assert len(interaction.edits) == 1
+
+
+async def test_boost_list_empty_does_not_crash(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx()
+    await cog.levelconfig_boost_list.callback(cog, ctx)
+    assert len(ctx.sends) == 1
+
+
+async def test_boost_list_with_entries_does_not_crash(fake_pool):
+    channel = _FakeChannel(10)
+    role = _FakeRole(20)
+    fake_pool.fetch_return = [
+        {"kind": "global", "target_id": 0, "factor": 2.0},
+        {"kind": "channel", "target_id": 10, "factor": 1.5},
+        {"kind": "role", "target_id": 20, "factor": 3.0},
+    ]
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx(guild=_FakeGuild(channels=[channel], roles=[role]))
+    await cog.levelconfig_boost_list.callback(cog, ctx)
+    assert len(ctx.sends) == 1
+
+
+# ---------------------------------------------------------------------------
+# XP event (L4): /levelconfig event set/off.
+# ---------------------------------------------------------------------------
+
+
+async def test_event_set_rejects_out_of_range_factor(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_event_set.callback(cog, ctx, 5.1, "2h")
+    assert any("between" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+    assert leveling_cog.multiplier_refresh_calls == []
+
+
+async def test_event_set_rejects_a_malformed_duration(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_event_set.callback(cog, ctx, 2.0, "not a duration")
+    assert any("couldn't understand" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+
+
+async def test_event_set_rejects_a_too_long_duration(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx()
+    await cog.levelconfig_event_set.callback(cog, ctx, 2.0, "40d")  # > 14 days
+    assert any("between" in c[0][0] for c in ctx.sends)
+    assert fake_pool.calls == []
+
+
+async def test_event_set_writes_the_upsert_and_refreshes_the_cache(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=7))
+
+    await cog.levelconfig_event_set.callback(cog, ctx, 2.0, "2h")
+
+    upserts = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(upserts) == 1
+    _method, query, args = upserts[0]
+    assert "INSERT INTO level_config" in query
+    assert "COALESCE" in query  # enabled seeded from legacy JSONB, never clobbered
+    assert "guild_settings" in query
+    assert args[0] == 7
+    assert args[1] == 2.0
+    assert isinstance(args[2], datetime.datetime)
+    assert leveling_cog.multiplier_refresh_calls == [7]
+    assert any("event started" in c[1]["embed"].title.lower() for c in ctx.sends)
+
+
+async def test_event_off_nulls_the_columns_and_refreshes_the_cache(fake_pool):
+    leveling_cog = _FakeLevelingCog()
+    cog = LevelConfigUI(_make_bot(fake_pool, leveling_cog))
+    ctx = _Ctx(guild=_FakeGuild(guild_id=1))
+
+    await cog.levelconfig_event_off.callback(cog, ctx)
+
+    upserts = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(upserts) == 1
+    _method, _query, args = upserts[0]
+    assert args == (1, None, None)
+    assert leveling_cog.multiplier_refresh_calls == [1]
+    assert any("stopped" in c[0][0] for c in ctx.sends)
+
+
+async def test_event_status_shows_no_event_by_default(fake_pool):
+    cog = LevelConfigUI(_make_bot(fake_pool))
+    ctx = _Ctx()
+    ctx.invoked_subcommand = None
+    await cog.levelconfig_event.callback(cog, ctx)
+    embed = ctx.sends[0][1]["embed"]
+    assert "No XP event running" in embed.description

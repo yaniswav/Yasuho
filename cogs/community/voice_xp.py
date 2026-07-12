@@ -39,6 +39,7 @@ import logging
 import time
 from dataclasses import dataclass
 
+import discord
 from discord.ext import commands, tasks
 
 from tools import leveling
@@ -213,6 +214,8 @@ class VoiceXP(commands.Cog):
             now = time.monotonic()
 
         snapshots: dict[int, object] = {}  # per-guild no-xp snapshot memo
+        multiplier_snapshots: dict[int, object] = {}  # per-guild multiplier memo
+        wall_now = discord.utils.utcnow()  # for the multiplier event check only
         credits: list[tuple[int, int, int]] = []  # (guild_id, user_id, gain)
         # (guild_id, user_id) -> (member, channel, config, gain) for level-up routing.
         pending: dict[tuple[int, int], tuple] = {}
@@ -263,9 +266,37 @@ class VoiceXP(commands.Cog):
                     self_mute=voice.self_mute,
                     is_no_xp=is_no_xp,
                 )
+                # XP multipliers (L4): applied to the per-minute RATE, once,
+                # before voice_credit multiplies it by the whole-minute count
+                # (see tools.leveling.apply_multiplier's docstring for why
+                # rounding happens here and not on the aggregated total). The
+                # common case (no boosts/event configured) is a single
+                # ``is_trivial`` check - zero extra allocation, zero rate
+                # change.
+                if guild_id not in multiplier_snapshots:
+                    multiplier_snapshots[
+                        guild_id
+                    ] = await leveling_cog.ensure_multiplier_snapshot(guild_id)
+                multiplier_snapshot = multiplier_snapshots[guild_id]
+                rate = config.voice_xp_per_minute
+                if not multiplier_snapshot.is_trivial:
+                    role_ids = (
+                        (r.id for r in member.roles)
+                        if multiplier_snapshot.roles
+                        else ()
+                    )
+                    multiplier = leveling.compute_multiplier(
+                        multiplier_snapshot,
+                        channel.id,
+                        getattr(channel, "category_id", None),
+                        role_ids,
+                        wall_now,
+                    )
+                    rate = leveling.apply_multiplier(rate, multiplier)
+
                 gain, consumed = leveling.voice_credit(
                     now - session.last_credit,
-                    config.voice_xp_per_minute,
+                    rate,
                     VOICE_SWEEP_INTERVAL,
                     eligible=eligible,
                 )

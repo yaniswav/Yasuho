@@ -15,8 +15,9 @@ pins zero drift against those literals.
 from __future__ import annotations
 
 import random
+import re
 import string
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Grant / cooldown defaults, matching the original hard-coded values. These are
 # also the level_config table's column defaults (schema.sql), so a freshly
@@ -429,6 +430,254 @@ def voice_credit(elapsed_seconds, rate, interval_seconds, *, eligible):
     credited_minutes = min(whole_minutes, cap_minutes) if eligible else 0
     consumed_seconds = whole_minutes * 60
     return credited_minutes * rate, consumed_seconds
+
+
+def apply_multiplier(value, multiplier):
+    """Multiply an XP amount by an effective multiplier - one rounding rule
+    shared by BOTH hot paths (see cogs/community/leveling.py's on_message and
+    cogs/community/voice_xp.py's sweep). Rounds to the nearest whole XP and
+    floors at 0: a multiplier of 0.0 (or any factor small enough that
+    ``value * multiplier`` rounds down to zero) means the message/window earns
+    literally 0 XP, never an artificial floor of 1 - "mute XP via multiplier" is
+    an explicitly supported outcome (the Lurkr rule, see xp_multipliers in
+    schema.sql). In the voice path this is applied ONCE to the per-minute RATE
+    (``config.voice_xp_per_minute * multiplier``), not to the aggregated
+    per-tick total - so a session credited for several minutes in one sweep
+    tick never compounds rounding drift across those minutes; the effective,
+    already-rounded rate is what tools.leveling.voice_credit then multiplies by
+    the whole-minute count.
+    """
+    return max(0, round(value * multiplier))
+
+
+# ============================================================
+# XP multipliers (leveling L4): boost/reduce XP per channel, per role,
+# globally, and via a timed double-XP event. The Lurkr stacking rule:
+# effective = global_factor * channel_factor * role_factor * event_factor,
+# each tier defaulting to 1.0 when unconfigured. See MultiplierSnapshot and
+# compute_multiplier below for the full contract.
+# ============================================================
+
+MIN_MULTIPLIER_FACTOR = 0.0
+MAX_MULTIPLIER_FACTOR = 5.0
+
+# Same 25-cap precedent as level_rewards / level_no_xp's admin pickers
+# (Discord's own 25-option select limit); counted across every kind
+# (global + channel + role) for a guild, so the "boost remove" picker never
+# needs pagination.
+MAX_MULTIPLIERS_PER_GUILD = 25
+
+MULTIPLIER_GLOBAL = "global"
+MULTIPLIER_CHANNEL = "channel"
+MULTIPLIER_ROLE = "role"
+MULTIPLIER_KINDS = (MULTIPLIER_GLOBAL, MULTIPLIER_CHANNEL, MULTIPLIER_ROLE)
+
+# xp_multipliers.target_id for the single 'global' row a guild may have (the
+# PK (guild_id, kind, target_id) then enforces AT MOST ONE global row per
+# guild, the same way level_no_xp's PK enforces one row per (kind, target)).
+GLOBAL_MULTIPLIER_TARGET_ID = 0
+
+# Timed double-XP event bounds (level_config.event_factor / event_ends_at).
+# The floor keeps an admin from setting a near-instant event that expires
+# before anyone notices; the ceiling (14 days) is the locked design bound.
+MIN_EVENT_DURATION_SECONDS = 60
+MAX_EVENT_DURATION_SECONDS = 14 * 24 * 3600
+
+
+def validate_multiplier_factor(factor):
+    """Validate a candidate boost/event factor. Returns ``(ok, reason)``.
+
+    ``reason`` is ``None`` on success or one of ``"invalid"`` / ``"out_of_range"``
+    - short codes the cog turns into localized text (this module carries no
+    i18n dependency, like validate_announce_template / validate_voice_xp_rate).
+    A bool is rejected explicitly (an ``int`` subclass in Python) so an admin
+    can never set a factor to "True"/"False". 0.0 is IN range - muting XP via
+    a zero factor is an explicitly supported outcome.
+    """
+    if isinstance(factor, bool) or not isinstance(factor, (int, float)):
+        return False, "invalid"
+    if factor < MIN_MULTIPLIER_FACTOR or factor > MAX_MULTIPLIER_FACTOR:
+        return False, "out_of_range"
+    return True, None
+
+
+def validate_event_duration(seconds):
+    """Validate a candidate event duration in whole seconds. Returns ``(ok,
+    reason)`` with the same short-code contract as validate_multiplier_factor.
+    """
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+        return False, "invalid"
+    if seconds < MIN_EVENT_DURATION_SECONDS or seconds > MAX_EVENT_DURATION_SECONDS:
+        return False, "out_of_range"
+    return True, None
+
+
+def can_add_multiplier(existing_count, cap=MAX_MULTIPLIERS_PER_GUILD):
+    """Whether one more multiplier rule may be added given the guild's count."""
+    return existing_count < cap
+
+
+# A tiny fallback duration parser (Nd/Nh/Nm/Ns, any subset, concatenated - e.g.
+# "2h", "3d", "1d12h"), used ONLY if tools.time.ShortTime cannot be imported
+# (see cogs/community/level_config_ui.py's event command - the house
+# ShortTime converter is preferred whenever it is importable). Deliberately
+# tiny: no relativedelta, no "weeks"/"months"/"years" units, just the four a
+# double-XP event realistically needs.
+_DURATION_RE = re.compile(
+    r"""
+    (?:(?P<days>[0-9]{1,4})d)?
+    (?:(?P<hours>[0-9]{1,4})h)?
+    (?:(?P<minutes>[0-9]{1,5})m)?
+    (?:(?P<seconds>[0-9]{1,5})s)?
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+
+def parse_short_duration(text):
+    """Parse a fallback ``NdNhNmNs``-shaped duration string into whole seconds.
+
+    Returns ``None`` when nothing at all matched (an empty string, garbage, or
+    a string with no recognised unit) - mirroring ShortTime's own "no groups
+    matched" rejection, so the caller can turn a ``None`` into the same
+    "invalid duration" refusal regardless of which parser ran.
+    """
+    if not text:
+        return None
+    match = _DURATION_RE.fullmatch(text.strip())
+    if match is None or not match.group(0):
+        return None
+    parts = match.groupdict()
+    days = int(parts["days"] or 0)
+    hours = int(parts["hours"] or 0)
+    minutes = int(parts["minutes"] or 0)
+    seconds = int(parts["seconds"] or 0)
+    total = days * 86400 + hours * 3600 + minutes * 60 + seconds
+    return total or None
+
+
+@dataclass(frozen=True)
+class MultiplierSnapshot:
+    """A guild's full XP-multiplier configuration, ready for O(1) hot-path use.
+
+    Mirrors NoXpSnapshot's role in the L3 lot: a single cached, immutable
+    object per guild (see the Leveling cog's ``self._multipliers`` BoundedLRU)
+    that both hot paths (on_message's grant and the voice sweep's per-minute
+    credit) read with zero DB and minimal allocation on the common "nothing
+    configured" case (see :attr:`is_trivial`).
+
+    ``channels`` holds BOTH text-channel ids and category ids under the SAME
+    ``kind='channel'`` row, exactly like NoXpSnapshot.channels - a category is
+    itself a GuildChannel on Discord's side, so boosting a whole category is
+    one row. ``roles`` holds role-id -> factor. ``global_factor`` is the
+    single ``kind='global'`` row's factor, or 1.0 when unconfigured.
+    ``event_factor`` / ``event_ends_at`` mirror level_config's own columns;
+    ``event_ends_at`` is ``None`` when no event is running OR the stored one
+    has already expired (the cog lazily nulls an expired row at refresh time -
+    see refresh_multiplier_snapshot - so this snapshot never itself needs to
+    re-check expiry against a clock; compute_multiplier's own ``now`` check is
+    the belt to that suspenders, for the (short) window between expiry and the
+    next refresh).
+    """
+
+    global_factor: float = 1.0
+    channels: dict = field(default_factory=dict)
+    roles: dict = field(default_factory=dict)
+    event_factor: float | None = None
+    event_ends_at: object = None  # datetime.datetime | None
+
+    @property
+    def is_trivial(self):
+        """True when this guild has NO multiplier configuration at all - the
+        overwhelming majority of guilds. Both hot paths check this FIRST (a
+        single attribute read) so the common case pays zero further work: no
+        role-id generator is built, compute_multiplier is never even called,
+        and the grant/rate passes through completely unchanged - mirroring the
+        no-xp snapshot's own ``no_xp.channels or no_xp.roles`` short circuit.
+        """
+        return (
+            self.global_factor == 1.0
+            and not self.channels
+            and not self.roles
+            and self.event_factor is None
+        )
+
+    @classmethod
+    def from_rows(cls, rows, event_factor=None, event_ends_at=None):
+        """Build from xp_multipliers rows (kind/target_id/factor) plus the
+        guild's level_config event columns (read separately - see the cog)."""
+        global_factor = 1.0
+        channels: dict = {}
+        roles: dict = {}
+        for row in rows:
+            kind = row["kind"]
+            factor = row["factor"]
+            if kind == MULTIPLIER_GLOBAL:
+                global_factor = factor
+            elif kind == MULTIPLIER_CHANNEL:
+                channels[row["target_id"]] = factor
+            elif kind == MULTIPLIER_ROLE:
+                roles[row["target_id"]] = factor
+        return cls(
+            global_factor=global_factor,
+            channels=channels,
+            roles=roles,
+            event_factor=event_factor,
+            event_ends_at=event_ends_at,
+        )
+
+
+# Shared immutable value for "this guild has no multiplier configuration at
+# all" - the overwhelming majority. Safe to share (frozen, is_trivial == True).
+EMPTY_MULTIPLIER_SNAPSHOT = MultiplierSnapshot()
+
+
+def compute_multiplier(snapshot, channel_id, category_id, role_ids, now):
+    """The effective XP multiplier for a grant, per the Lurkr stacking rule:
+
+        effective = global_factor * channel_factor * role_factor * event_factor
+
+    Each tier defaults to 1.0 when this guild has no rule for it.
+
+    ``channel_factor`` is the entry for ``channel_id`` OR - only when there is
+    no channel-specific entry - the entry for ``category_id``: a channel-level
+    rule always wins over its category (mirrors NoXpSnapshot's own
+    channel-or-category lookup order in is_no_xp_message, so the two L3/L4
+    "which wins" rules read identically).
+
+    ``role_factor`` is the HIGHEST factor among every role in ``role_ids``
+    that has its own entry - NOT a product across roles: a member holding two
+    boosted roles gets the bigger boost, never a stacked/multiplied one. A
+    member with no matching role contributes 1.0.
+
+    ``event_factor`` applies only while ``snapshot.event_ends_at`` is set AND
+    strictly in the future relative to ``now`` (``now < event_ends_at``); at
+    or past the boundary the event is treated as expired and contributes 1.0
+    - this function never mutates anything, so an actually-expired event still
+    stored in a stale snapshot is simply ignored here, belt-and-suspenders
+    behind the cog's own lazy-null refresh.
+    """
+    channel_factor = snapshot.channels.get(channel_id)
+    if channel_factor is None and category_id is not None:
+        channel_factor = snapshot.channels.get(category_id)
+    if channel_factor is None:
+        channel_factor = 1.0
+
+    role_factor = 1.0
+    if snapshot.roles:
+        matched = [snapshot.roles[rid] for rid in role_ids if rid in snapshot.roles]
+        if matched:
+            role_factor = max(matched)
+
+    event_factor = 1.0
+    if (
+        snapshot.event_factor is not None
+        and snapshot.event_ends_at is not None
+        and now < snapshot.event_ends_at
+    ):
+        event_factor = snapshot.event_factor
+
+    return snapshot.global_factor * channel_factor * role_factor * event_factor
 
 
 def build_voice_grant_payload(credits):

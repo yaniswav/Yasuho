@@ -14,6 +14,7 @@ The method is a ``@staticmethod`` with no dependencies, so it is called directly
 on the class - no cog instance, bot, pool, or event loop required.
 """
 
+import datetime
 import json
 import types
 
@@ -180,6 +181,24 @@ def _enable(cog, guild_id=1, **overrides):
 
 def _fetchval_calls(fake_pool):
     return [c for c in fake_pool.calls if c[0] == "fetchval"]
+
+
+def _route_fetch(fake_pool, no_xp_rows=None, multiplier_rows=None):
+    """A query-aware `fetch` stub: routes the no-xp snapshot query and the L4
+    xp_multipliers query to their own configured rows. Needed as soon as ANY
+    test exercises on_message, since a grant-eligible message loads BOTH
+    snapshots (the single global `fetch_return` FakePool offers cannot serve
+    two different row shapes in the same test)."""
+
+    async def fetch(query, *args):
+        fake_pool.calls.append(("fetch", query, args))
+        if "level_no_xp" in query:
+            return no_xp_rows or []
+        if "xp_multipliers" in query:
+            return multiplier_rows or []
+        return []
+
+    fake_pool.fetch = fetch
 
 
 async def test_disabled_guild_grants_no_xp_and_hits_no_db(fake_pool):
@@ -533,7 +552,7 @@ async def test_no_levelup_never_calls_the_rewards_cog(fake_pool):
 
 
 def _no_xp_fetch_calls(fake_pool):
-    return [c for c in fake_pool.calls if c[0] == "fetch"]
+    return [c for c in fake_pool.calls if c[0] == "fetch" and "level_no_xp" in c[1]]
 
 
 async def test_no_xp_snapshot_is_loaded_once_then_cached(fake_pool):
@@ -541,6 +560,7 @@ async def test_no_xp_snapshot_is_loaded_once_then_cached(fake_pool):
     still costs exactly one `fetch` for its first message and zero for later
     ones - the cache holds the EMPTY snapshot, not a sentinel that re-queries."""
     fake_pool.fetchval_return = 11000  # mid-band, no level-up noise
+    _route_fetch(fake_pool)
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
 
@@ -552,7 +572,7 @@ async def test_no_xp_snapshot_is_loaded_once_then_cached(fake_pool):
 
 
 async def test_no_xp_channel_blocks_grant_and_never_touches_cooldown(fake_pool):
-    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 100}])
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
 
@@ -564,7 +584,8 @@ async def test_no_xp_channel_blocks_grant_and_never_touches_cooldown(fake_pool):
 
 
 async def test_no_xp_category_blocks_every_channel_inside_it(fake_pool):
-    fake_pool.fetch_return = [{"kind": "channel", "target_id": 50}]  # a category id
+    # a category id
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 50}])
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
 
@@ -577,7 +598,7 @@ async def test_no_xp_category_blocks_every_channel_inside_it(fake_pool):
 
 
 async def test_no_xp_role_blocks_grant(fake_pool):
-    fake_pool.fetch_return = [{"kind": "role", "target_id": 77}]
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "role", "target_id": 77}])
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
 
@@ -588,7 +609,7 @@ async def test_no_xp_role_blocks_grant(fake_pool):
 
 
 async def test_no_xp_zone_does_not_affect_an_unrelated_channel(fake_pool):
-    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 100}])
     fake_pool.fetchval_return = 11000
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
@@ -602,16 +623,16 @@ async def test_no_xp_zone_does_not_affect_an_unrelated_channel(fake_pool):
 async def test_refresh_no_xp_snapshot_reloads_from_the_db(fake_pool):
     """The cross-cog hook: after a level_no_xp write, the caller re-reads the
     guild's rows and the NEW snapshot takes effect immediately, no restart."""
+    _route_fetch(fake_pool)
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
 
-    fake_pool.fetch_return = []
     await cog.on_message(_FakeMessage(guild_id=1, author_id=2, channel_id=100))
     assert 1 in cog._no_xp
     assert cog._no_xp[1].channels == frozenset()
 
     # A channel gets muted; the config UI cog calls this after the DB write.
-    fake_pool.fetch_return = [{"kind": "channel", "target_id": 100}]
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 100}])
     await cog.refresh_no_xp_snapshot(1)
     assert cog._no_xp[1].channels == frozenset({100})
 
@@ -639,7 +660,7 @@ async def test_no_xp_empty_snapshot_short_circuits_before_the_membership_test(
         "is_no_xp_message",
         lambda *a, **k: (calls.append(a), real(*a, **k))[1],
     )
-    fake_pool.fetch_return = []  # no zones -> the EMPTY snapshot is cached
+    _route_fetch(fake_pool)  # no zones -> the EMPTY snapshot is cached
     fake_pool.fetchval_return = 11000
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
@@ -662,7 +683,7 @@ async def test_no_xp_nonempty_snapshot_does_run_the_membership_test(
         "is_no_xp_message",
         lambda *a, **k: (calls.append(a), real(*a, **k))[1],
     )
-    fake_pool.fetch_return = [{"kind": "role", "target_id": 999}]  # a zone exists
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "role", "target_id": 999}])
     fake_pool.fetchval_return = 11000
     cog = Leveling(_make_bot(fake_pool))
     _enable(cog, 1)
@@ -1052,3 +1073,239 @@ async def test_credit_voice_levelup_respects_announce_off(fake_pool):
 
     assert rewards_cog.calls == [(1, 2, 9, 10)]  # roles still granted
     assert voice_channel.sends == []  # but nothing announced
+
+
+# ---------------------------------------------------------------------------
+# XP multipliers (L4) hot-path integration.
+# ---------------------------------------------------------------------------
+#
+# The pure stacking rule (compute_multiplier) is covered in
+# tests/tools/test_leveling_service.py; these tests pin the COG side of the
+# seam: the snapshot (xp_multipliers rows + the level_config event columns) is
+# loaded at most ONCE per guild (a genuine cache), a boost scales the grant, a
+# 0x boost skips the write entirely (but still starts the cooldown), and
+# refresh_multiplier_snapshot (the cross-cog hook
+# cogs/community/level_config_ui.py calls after every boost/event write) makes
+# a change visible on the very next message.
+
+
+def _multiplier_fetch_calls(fake_pool):
+    return [c for c in fake_pool.calls if c[0] == "fetch" and "xp_multipliers" in c[1]]
+
+
+def _event_fetchrow_calls(fake_pool):
+    return [
+        c for c in fake_pool.calls if c[0] == "fetchrow" and "event_factor" in c[1]
+    ]
+
+
+async def test_multiplier_snapshot_is_loaded_once_then_cached(fake_pool):
+    """A guild with no boosts/event configured (the default empty rows/row)
+    still costs exactly one xp_multipliers fetch + one event fetchrow for its
+    first message, and zero for later ones."""
+    fake_pool.fetchval_return = 11000  # mid-band, no level-up noise
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(content="one", guild_id=1, author_id=2))
+    await cog.on_message(_FakeMessage(content="two", guild_id=1, author_id=3))
+
+    assert len(_multiplier_fetch_calls(fake_pool)) == 1
+    assert len(_event_fetchrow_calls(fake_pool)) == 1
+    assert 1 in cog._multipliers
+    assert cog._multipliers[1].is_trivial
+
+
+async def test_multiplier_global_boost_scales_the_grant(fake_pool):
+    fake_pool.fetchval_return = 11000
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[
+            {"kind": "global", "target_id": 0, "factor": 2.0}
+        ],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)  # deterministic +10 XP before boost
+
+    await cog.on_message(_FakeMessage(content="hi", guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 20  # 10 base x 2.0 global boost
+
+
+async def test_multiplier_channel_boost_beats_no_boost_elsewhere(fake_pool):
+    fake_pool.fetchval_return = 11000
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[{"kind": "channel", "target_id": 100, "factor": 3.0}],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    msg = _FakeMessage(content="hi", guild_id=1, author_id=2, channel_id=100)
+    await cog.on_message(msg)
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 30  # 10 base x 3.0 channel boost
+
+
+async def test_multiplier_role_boost_uses_the_highest_matching_role(fake_pool):
+    fake_pool.fetchval_return = 11000
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[
+            {"kind": "role", "target_id": 7, "factor": 2.0},
+            {"kind": "role", "target_id": 8, "factor": 4.0},
+        ],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, role_ids=[7, 8]
+    )
+    await cog.on_message(msg)
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 40  # highest of the two matching roles (4.0), not a product
+
+
+async def test_multiplier_zero_factor_skips_the_write_but_starts_the_cooldown(fake_pool):
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[{"kind": "global", "target_id": 0, "factor": 0.0}],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    msg = _FakeMessage(content="hi", guild_id=1, author_id=2)
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []  # no INSERT INTO levels at all
+    assert len(cog._cooldowns) == 1  # but the cooldown DID start
+
+
+async def test_multiplier_trivial_snapshot_short_circuits_compute_multiplier(
+    fake_pool, monkeypatch
+):
+    """HOT PATH allocation guard: a guild with no multiplier configuration at
+    all must not even CALL compute_multiplier (so the role-id generator is
+    never built) - mirrors the no-xp empty-snapshot short circuit."""
+    calls = []
+    real = leveling.compute_multiplier
+    monkeypatch.setattr(
+        leveling,
+        "compute_multiplier",
+        lambda *a, **k: (calls.append(a), real(*a, **k))[1],
+    )
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)  # no boosts, no event
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2, role_ids=[7, 8]))
+
+    assert calls == []
+    assert len(_fetchval_calls(fake_pool)) == 1  # still earned XP normally
+
+
+async def test_multiplier_nontrivial_snapshot_does_call_compute_multiplier(
+    fake_pool, monkeypatch
+):
+    calls = []
+    real = leveling.compute_multiplier
+    monkeypatch.setattr(
+        leveling,
+        "compute_multiplier",
+        lambda *a, **k: (calls.append(a), real(*a, **k))[1],
+    )
+    fake_pool.fetchval_return = 11000
+    _route_fetch(
+        fake_pool, multiplier_rows=[{"kind": "global", "target_id": 0, "factor": 1.5}]
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    assert len(calls) == 1
+
+
+async def test_refresh_multiplier_snapshot_reloads_from_the_db(fake_pool):
+    """The cross-cog hook: after an xp_multipliers/event write, the caller
+    re-reads the guild's rows and the NEW snapshot takes effect immediately,
+    no restart."""
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+    assert 1 in cog._multipliers
+    assert cog._multipliers[1].is_trivial
+
+    # A global boost gets added; the config UI cog calls this after the write.
+    _route_fetch(
+        fake_pool, multiplier_rows=[{"kind": "global", "target_id": 0, "factor": 2.0}]
+    )
+    await cog.refresh_multiplier_snapshot(1)
+    assert cog._multipliers[1].global_factor == 2.0
+
+    # The NEXT message picks up the boost without any further fetch.
+    fetches_before = len(_multiplier_fetch_calls(fake_pool))
+    msg = _FakeMessage(guild_id=1, author_id=3)
+    await cog.on_message(msg)
+    assert len(_multiplier_fetch_calls(fake_pool)) == fetches_before  # cache hit
+    (_method, _query, args), = [
+        c
+        for c in _fetchval_calls(fake_pool)
+        if c[2][1] == 3  # the second author's grant
+    ]
+    assert args[2] == 20  # 10 base x 2.0 boost
+
+
+async def test_expired_event_is_lazily_nulled_and_ignored(fake_pool):
+    """An event whose stored end time has already passed is treated as absent
+    AND lazily nulled in level_config (no background timer needed)."""
+    past = discord.utils.utcnow() - datetime.timedelta(hours=1)
+    fake_pool.fetchval_return = 11000
+    fake_pool.fetchrow_return = {"event_factor": 2.0, "event_ends_at": past}
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    assert cog._multipliers[1].event_factor is None
+    assert cog._multipliers[1].event_ends_at is None
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 10  # unaffected by the expired event
+
+    nulls = [
+        c
+        for c in fake_pool.calls
+        if c[0] == "execute" and "event_factor = NULL" in c[1]
+    ]
+    assert len(nulls) == 1
+    assert nulls[0][2] == (1,)
+
+
+async def test_active_event_boosts_the_grant(fake_pool):
+    future = discord.utils.utcnow() + datetime.timedelta(hours=1)
+    fake_pool.fetchval_return = 11000
+    fake_pool.fetchrow_return = {"event_factor": 2.0, "event_ends_at": future}
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 20  # 10 base x 2.0 active event
+    nulls = [
+        c
+        for c in fake_pool.calls
+        if c[0] == "execute" and "event_factor = NULL" in c[1]
+    ]
+    assert nulls == []  # a still-active event is never nulled

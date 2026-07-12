@@ -11,6 +11,8 @@ These pin the four contracts the cog leans on:
   read-through precedence and default-filling.
 """
 
+import datetime
+
 from tools import leveling
 
 # ---------------------------------------------------------------------------
@@ -600,3 +602,261 @@ def test_from_row_defaults_voice_xp_when_absent_or_null():
     )
     assert cfg2.voice_xp_enabled is False
     assert cfg2.voice_xp_per_minute == leveling.DEFAULT_VOICE_XP_PER_MINUTE
+
+
+# ---------------------------------------------------------------------------
+# XP multipliers (L4): apply_multiplier, validation, duration parsing,
+# MultiplierSnapshot.from_rows / is_trivial, and the compute_multiplier
+# stacking truth table (the Lurkr rule).
+# ---------------------------------------------------------------------------
+
+
+def test_apply_multiplier_rounds_to_nearest_and_floors_at_zero():
+    assert leveling.apply_multiplier(10, 1.0) == 10
+    assert leveling.apply_multiplier(10, 2.0) == 20
+    assert leveling.apply_multiplier(10, 0.5) == 5
+    assert leveling.apply_multiplier(10, 0.04) == 0  # rounds down to zero
+    assert leveling.apply_multiplier(10, 0.0) == 0  # explicit mute
+
+
+def test_apply_multiplier_never_goes_negative():
+    """A pathological negative multiplier (should never reach here past
+    validation) still floors at 0 rather than going negative."""
+    assert leveling.apply_multiplier(10, -1.0) == 0
+
+
+def test_validate_multiplier_factor_accepts_the_bounds_and_inside():
+    assert leveling.validate_multiplier_factor(leveling.MIN_MULTIPLIER_FACTOR) == (
+        True,
+        None,
+    )
+    assert leveling.validate_multiplier_factor(leveling.MAX_MULTIPLIER_FACTOR) == (
+        True,
+        None,
+    )
+    assert leveling.validate_multiplier_factor(1.0) == (True, None)
+    assert leveling.validate_multiplier_factor(2) == (True, None)  # plain int
+
+
+def test_validate_multiplier_factor_rejects_out_of_range():
+    for bad in (-0.1, leveling.MAX_MULTIPLIER_FACTOR + 0.1, 100):
+        assert leveling.validate_multiplier_factor(bad) == (False, "out_of_range")
+
+
+def test_validate_multiplier_factor_rejects_bool_and_non_numeric():
+    for bad in (True, False, "2", None, [2]):
+        assert leveling.validate_multiplier_factor(bad) == (False, "invalid")
+
+
+def test_can_add_multiplier_below_and_at_cap():
+    assert leveling.can_add_multiplier(0) is True
+    assert leveling.can_add_multiplier(leveling.MAX_MULTIPLIERS_PER_GUILD - 1) is True
+    assert leveling.can_add_multiplier(leveling.MAX_MULTIPLIERS_PER_GUILD) is False
+    assert (
+        leveling.can_add_multiplier(leveling.MAX_MULTIPLIERS_PER_GUILD + 1) is False
+    )
+
+
+def test_validate_event_duration_accepts_the_bounds_and_inside():
+    assert leveling.validate_event_duration(leveling.MIN_EVENT_DURATION_SECONDS) == (
+        True,
+        None,
+    )
+    assert leveling.validate_event_duration(leveling.MAX_EVENT_DURATION_SECONDS) == (
+        True,
+        None,
+    )
+    assert leveling.validate_event_duration(3600) == (True, None)
+
+
+def test_validate_event_duration_rejects_out_of_range():
+    assert leveling.validate_event_duration(
+        leveling.MIN_EVENT_DURATION_SECONDS - 1
+    ) == (False, "out_of_range")
+    assert leveling.validate_event_duration(
+        leveling.MAX_EVENT_DURATION_SECONDS + 1
+    ) == (False, "out_of_range")
+
+
+def test_validate_event_duration_rejects_bool_and_non_numeric():
+    for bad in (True, False, "3600", None):
+        assert leveling.validate_event_duration(bad) == (False, "invalid")
+
+
+def test_parse_short_duration_reads_every_unit():
+    assert leveling.parse_short_duration("2h") == 2 * 3600
+    assert leveling.parse_short_duration("3d") == 3 * 86400
+    assert leveling.parse_short_duration("1d12h") == 86400 + 12 * 3600
+    assert leveling.parse_short_duration("30m") == 30 * 60
+    assert leveling.parse_short_duration("45s") == 45
+
+
+def test_parse_short_duration_rejects_empty_and_garbage():
+    assert leveling.parse_short_duration("") is None
+    assert leveling.parse_short_duration(None) is None
+    assert leveling.parse_short_duration("not a duration") is None
+    assert leveling.parse_short_duration("0h") is None  # matches, but zero total
+
+
+# ---------------------------------------------------------------------------
+# MultiplierSnapshot: from_rows + is_trivial.
+# ---------------------------------------------------------------------------
+
+
+def _mult_row(kind, target_id, factor):
+    return {"kind": kind, "target_id": target_id, "factor": factor}
+
+
+def test_multiplier_snapshot_from_rows_splits_by_kind():
+    rows = [
+        _mult_row(leveling.MULTIPLIER_GLOBAL, leveling.GLOBAL_MULTIPLIER_TARGET_ID, 2.0),
+        _mult_row(leveling.MULTIPLIER_CHANNEL, 10, 1.5),
+        _mult_row(leveling.MULTIPLIER_ROLE, 20, 3.0),
+    ]
+    snapshot = leveling.MultiplierSnapshot.from_rows(rows)
+    assert snapshot.global_factor == 2.0
+    assert snapshot.channels == {10: 1.5}
+    assert snapshot.roles == {20: 3.0}
+    assert snapshot.event_factor is None
+    assert snapshot.event_ends_at is None
+
+
+def test_multiplier_snapshot_from_rows_empty_yields_defaults():
+    snapshot = leveling.MultiplierSnapshot.from_rows([])
+    assert snapshot.global_factor == 1.0
+    assert snapshot.channels == {}
+    assert snapshot.roles == {}
+
+
+def test_multiplier_snapshot_from_rows_carries_the_event_through():
+    now = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    snapshot = leveling.MultiplierSnapshot.from_rows([], event_factor=2.0, event_ends_at=now)
+    assert snapshot.event_factor == 2.0
+    assert snapshot.event_ends_at == now
+
+
+def test_empty_multiplier_snapshot_is_trivial():
+    assert leveling.EMPTY_MULTIPLIER_SNAPSHOT.is_trivial is True
+
+
+def test_multiplier_snapshot_is_trivial_truth_table():
+    assert leveling.MultiplierSnapshot().is_trivial is True
+    assert leveling.MultiplierSnapshot(global_factor=2.0).is_trivial is False
+    assert leveling.MultiplierSnapshot(channels={10: 1.5}).is_trivial is False
+    assert leveling.MultiplierSnapshot(roles={20: 1.5}).is_trivial is False
+    now = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    assert (
+        leveling.MultiplierSnapshot(event_factor=2.0, event_ends_at=now).is_trivial
+        is False
+    )
+
+
+# ---------------------------------------------------------------------------
+# compute_multiplier: the Lurkr stacking truth table.
+# ---------------------------------------------------------------------------
+
+_NOW = datetime.datetime(2026, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+_FUTURE = _NOW + datetime.timedelta(hours=1)
+_PAST = _NOW - datetime.timedelta(hours=1)
+
+
+def test_compute_multiplier_empty_snapshot_is_neutral():
+    assert (
+        leveling.compute_multiplier(
+            leveling.EMPTY_MULTIPLIER_SNAPSHOT, 1, None, [], _NOW
+        )
+        == 1.0
+    )
+
+
+def test_compute_multiplier_global_alone():
+    snapshot = leveling.MultiplierSnapshot(global_factor=2.0)
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 2.0
+
+
+def test_compute_multiplier_channel_alone():
+    snapshot = leveling.MultiplierSnapshot(channels={10: 3.0})
+    assert leveling.compute_multiplier(snapshot, 10, None, [], _NOW) == 3.0
+    # A different, unconfigured channel is unaffected.
+    assert leveling.compute_multiplier(snapshot, 99, None, [], _NOW) == 1.0
+
+
+def test_compute_multiplier_category_alone():
+    """A category-level entry applies to every channel inside it, mirroring
+    NoXpSnapshot's own channel-or-category lookup."""
+    snapshot = leveling.MultiplierSnapshot(channels={50: 0.5})
+    assert leveling.compute_multiplier(snapshot, 999, 50, [], _NOW) == 0.5
+    assert leveling.compute_multiplier(snapshot, 999, None, [], _NOW) == 1.0
+    assert leveling.compute_multiplier(snapshot, 999, 51, [], _NOW) == 1.0
+
+
+def test_compute_multiplier_channel_wins_over_category():
+    """A channel-specific entry always wins over its category's entry - the
+    locked design's tie-break rule."""
+    snapshot = leveling.MultiplierSnapshot(channels={10: 3.0, 50: 0.5})  # 10 in cat 50
+    assert leveling.compute_multiplier(snapshot, 10, 50, [], _NOW) == 3.0
+
+
+def test_compute_multiplier_role_alone():
+    snapshot = leveling.MultiplierSnapshot(roles={20: 2.5})
+    assert leveling.compute_multiplier(snapshot, 1, None, [20], _NOW) == 2.5
+    assert leveling.compute_multiplier(snapshot, 1, None, [99], _NOW) == 1.0
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 1.0
+
+
+def test_compute_multiplier_role_uses_the_highest_not_a_product():
+    """A member holding TWO boosted roles gets the bigger boost, never a
+    stacked/multiplied one - the locked design's highest-role rule."""
+    snapshot = leveling.MultiplierSnapshot(roles={20: 2.0, 21: 3.0, 22: 1.5})
+    assert leveling.compute_multiplier(snapshot, 1, None, [20, 21, 22], _NOW) == 3.0
+    assert leveling.compute_multiplier(snapshot, 1, None, [20, 22], _NOW) == 2.0
+
+
+def test_compute_multiplier_event_alone_while_active():
+    snapshot = leveling.MultiplierSnapshot(event_factor=2.0, event_ends_at=_FUTURE)
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 2.0
+
+
+def test_compute_multiplier_event_expiry_boundary():
+    """The event is active strictly BEFORE its ends_at, and expired AT and
+    after it - an inclusive-exclusive boundary."""
+    snapshot = leveling.MultiplierSnapshot(event_factor=2.0, event_ends_at=_NOW)
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 1.0  # at == expired
+    assert (
+        leveling.compute_multiplier(snapshot, 1, None, [], _NOW - datetime.timedelta(seconds=1))
+        == 2.0
+    )  # one second before -> still active
+
+
+def test_compute_multiplier_event_already_expired_is_ignored():
+    snapshot = leveling.MultiplierSnapshot(event_factor=2.0, event_ends_at=_PAST)
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 1.0
+
+
+def test_compute_multiplier_every_tier_stacks_multiplicatively():
+    """The full Lurkr stacking rule: effective = global * channel * role *
+    event, every tier multiplied together."""
+    snapshot = leveling.MultiplierSnapshot(
+        global_factor=2.0,
+        channels={10: 1.5},
+        roles={20: 2.0},
+        event_factor=2.0,
+        event_ends_at=_FUTURE,
+    )
+    effective = leveling.compute_multiplier(snapshot, 10, None, [20], _NOW)
+    assert effective == 2.0 * 1.5 * 2.0 * 2.0
+
+
+def test_compute_multiplier_zero_factor_mutes_everything():
+    snapshot = leveling.MultiplierSnapshot(global_factor=0.0)
+    assert leveling.compute_multiplier(snapshot, 1, None, [], _NOW) == 0.0
+    assert leveling.apply_multiplier(20, 0.0) == 0
+
+
+def test_compute_multiplier_role_ids_may_be_any_iterable():
+    """A generator (the hot-path shape) works exactly like a list."""
+    snapshot = leveling.MultiplierSnapshot(roles={20: 2.0})
+    assert (
+        leveling.compute_multiplier(snapshot, 1, None, (rid for rid in [20]), _NOW)
+        == 2.0
+    )

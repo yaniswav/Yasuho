@@ -119,7 +119,9 @@ CREATE TABLE IF NOT EXISTS level_config (
     announce_template   TEXT,                                -- custom level-up message template (later lot)
     rewards_mode        TEXT    NOT NULL DEFAULT 'stack',     -- stack | replace (level_rewards.py)
     voice_xp_enabled    BOOLEAN NOT NULL DEFAULT FALSE,       -- opt-in: earn XP for time in voice (voice_xp.py)
-    voice_xp_per_minute INTEGER NOT NULL DEFAULT 5            -- XP per eligible minute in voice (bounds 1..60)
+    voice_xp_per_minute INTEGER NOT NULL DEFAULT 5,           -- XP per eligible minute in voice (bounds 1..60)
+    event_factor        REAL,                                 -- active timed double-XP event's multiplier, NULL = no event (L4)
+    event_ends_at       TIMESTAMPTZ                            -- when the event above expires; an expired row is ignored at read time and lazily nulled (no timer) (L4)
 );
 -- Migrate pre-existing installs (no-op on a fresh database): level_config already
 -- exists on any deploy that shipped the L0/L1 leveling lot, so CREATE TABLE IF NOT
@@ -128,6 +130,35 @@ CREATE TABLE IF NOT EXISTS level_config (
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS rewards_mode TEXT NOT NULL DEFAULT 'stack';
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_per_minute INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_factor REAL;
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_ends_at TIMESTAMPTZ;
+
+-- Per-guild XP multipliers (L4, the Lurkr rule): boost or reduce XP globally,
+-- per channel/category, or per role. ``kind = 'global'`` always uses
+-- ``target_id = 0`` (tools.leveling.GLOBAL_MULTIPLIER_TARGET_ID), so the PK
+-- caps a guild at exactly one global row; ``kind = 'channel'`` rows match
+-- EITHER a text channel id OR a category id (same one-row-per-category design
+-- as level_no_xp - see that table's comment); ``kind = 'role'`` rows match a
+-- member's held roles. ``factor`` is bounded 0.0..5.0 in code
+-- (tools.leveling.validate_multiplier_factor) - 0.0 is a valid, explicitly
+-- supported "mute XP via multiplier" outcome. Capped at 25 rows/guild across
+-- every kind (tools.leveling.MAX_MULTIPLIERS_PER_GUILD), enforced RACE-SAFELY
+-- by the same WHERE-COUNT INSERT guard as level_rewards/level_no_xp. Stacking
+-- (effective = global * channel * role * event, channel-beats-category,
+-- highest-role-wins) is computed by tools.leveling.compute_multiplier against
+-- a per-guild MultiplierSnapshot cached in-memory
+-- (cogs/community/leveling.py's ``self._multipliers``, a BoundedLRU beside the
+-- no-xp snapshot cache) - the hot paths (on_message, the voice sweep) never
+-- query this table directly.  cogs/community/leveling.py,
+-- cogs/community/voice_xp.py, cogs/community/level_config_ui.py
+CREATE TABLE IF NOT EXISTS xp_multipliers (
+    guild_id  BIGINT NOT NULL,
+    kind      TEXT   NOT NULL,   -- 'global' | 'channel' | 'role'
+    target_id BIGINT NOT NULL DEFAULT 0,  -- 0 for 'global'
+    factor    REAL   NOT NULL,
+    PRIMARY KEY (guild_id, kind, target_id)
+);
+CREATE INDEX IF NOT EXISTS xp_multipliers_guild_idx ON xp_multipliers (guild_id);
 
 -- Level-up role rewards (L2): one row per (guild, level, role) rule. A member who
 -- reaches `level` is owed `role_id`. `rewards_mode` on level_config (above)

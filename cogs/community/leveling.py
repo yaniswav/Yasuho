@@ -35,6 +35,11 @@ _MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD
 # steady-state cost - see NoXpSnapshot's cog-level cache, self._no_xp below.
 _NO_XP_CACHE_CAP = 2048
 
+# XP-multiplier snapshot cache ceiling (L4). Same sizing rationale as
+# _NO_XP_CACHE_CAP: comfortably above any plausible number of guilds with
+# leveling enabled AND boosts/an event configured - see self._multipliers.
+_MULTIPLIER_CACHE_CAP = 2048
+
 # The full set of level_config columns the hot-path LevelConfig mirror is built
 # from. EVERY read that refreshes a cached config - cog_load's bulk SELECT and
 # each writer's RETURNING - must project ALL of them, or a writer that omits one
@@ -139,6 +144,14 @@ class Leveling(commands.Cog):
         # next grant-eligible message - a rare, harmless extra query, never a
         # per-message cost (SCALE STORY).
         self._no_xp: BoundedLRU = BoundedLRU(_NO_XP_CACHE_CAP)
+        # Per-guild XP-multiplier snapshot (tools.leveling.MultiplierSnapshot:
+        # global/channel/role factors plus the active timed event, see that
+        # class's docstring), the L4 sibling of self._no_xp above - same
+        # cached-or-load contract (ensure_multiplier_snapshot), same
+        # write-path refresh hook (refresh_multiplier_snapshot, called by
+        # cogs/community/level_config_ui.py after every boost/event write),
+        # same BoundedLRU sizing rationale.
+        self._multipliers: BoundedLRU = BoundedLRU(_MULTIPLIER_CACHE_CAP)
 
     async def cog_load(self):
         """Load every enabled guild's leveling config once, at startup.
@@ -386,6 +399,79 @@ class Leveling(commands.Cog):
         self._no_xp[guild_id] = snapshot
         return snapshot
 
+    async def ensure_multiplier_snapshot(self, guild_id):
+        """Return a guild's XP-multiplier snapshot, loading it once on a cold
+        miss. The L4 sibling of ensure_no_xp_snapshot: reused by the VoiceXP
+        sweep (credit_voice_levelup's caller) so a boosted/reduced voice
+        channel or role applies the SAME multiplier a message grant would. A
+        hit is a plain BoundedLRU read (no DB); only a guild's first use (or
+        one right after a cold eviction) pays the refresh's DB reads.
+        """
+        snapshot = self._multipliers.get(guild_id)
+        if snapshot is None:
+            snapshot = await self.refresh_multiplier_snapshot(guild_id)
+        return snapshot
+
+    async def refresh_multiplier_snapshot(self, guild_id):
+        """Reload a guild's xp_multipliers rows AND its level_config event
+        columns from the DB, and refresh the hot-path cache. Two callers:
+        cogs/community/level_config_ui.py invokes this after EVERY
+        xp_multipliers write (boost add/remove) and every event write
+        (set/off), so the very next message/sweep tick sees the change
+        immediately - no restart. The on_message hot path and the VoiceXP
+        sweep also call this themselves, exactly once, on a cold cache miss.
+
+        If the stored event has already expired (``event_ends_at`` in the
+        past), it is lazily NULLED here (one best-effort UPDATE, never
+        blocking or raising into the caller) so a stale expired event does not
+        linger forever in level_config without a background timer - see
+        schema.sql's ``event_ends_at`` comment. The cached snapshot always
+        reflects the ALREADY-expired state (event_factor/event_ends_at both
+        None), matching what compute_multiplier's own ``now`` check would
+        have decided anyway.
+        """
+        rows = await self.bot.db_pool.fetch(
+            "SELECT kind, target_id, factor FROM xp_multipliers "
+            "WHERE guild_id = $1;",
+            guild_id,
+        )
+        event_row = await self.bot.db_pool.fetchrow(
+            "SELECT event_factor, event_ends_at FROM level_config "
+            "WHERE guild_id = $1;",
+            guild_id,
+        )
+        event_factor = event_row["event_factor"] if event_row else None
+        event_ends_at = event_row["event_ends_at"] if event_row else None
+        if event_ends_at is not None and event_ends_at <= discord.utils.utcnow():
+            await self._clear_expired_event(guild_id)
+            event_factor, event_ends_at = None, None
+
+        snapshot = (
+            leveling.MultiplierSnapshot.from_rows(rows, event_factor, event_ends_at)
+            if (rows or event_factor is not None)
+            else leveling.EMPTY_MULTIPLIER_SNAPSHOT
+        )
+        self._multipliers[guild_id] = snapshot
+        return snapshot
+
+    async def _clear_expired_event(self, guild_id):
+        """Best-effort lazy null of an expired timed event (see
+        refresh_multiplier_snapshot). Never raises into the caller - a failure
+        here only means the stale row is retried on the next refresh; the
+        cached snapshot is corrected regardless, so no message ever earns the
+        expired event's factor even if this write itself fails.
+        """
+        try:
+            await self.bot.db_pool.execute(
+                "UPDATE level_config SET event_factor = NULL, "
+                "event_ends_at = NULL WHERE guild_id = $1;",
+                guild_id,
+            )
+        except Exception:
+            log.exception(
+                "Failed to lazily clear expired XP event for guild %s", guild_id
+            )
+
     def is_enabled(self, guild_id):
         """Whether leveling is currently ON for a guild (in-memory, no DB).
 
@@ -467,6 +553,40 @@ class Leveling(commands.Cog):
 
         self._cooldowns.touch(key)
         gain = leveling.grant_amount(config.xp_min, config.xp_max)
+
+        # XP multipliers (L4): a per-guild snapshot lives in self._multipliers,
+        # loaded once and refreshed on every admin write - the SAME cached-or-
+        # load contract as the no-xp snapshot just above. The common case (no
+        # boosts and no event configured anywhere in this guild) is a single
+        # ``is_trivial`` attribute check: the role-id generator is never built
+        # and compute_multiplier is never even called, so a guild with no
+        # multiplier configuration pays ZERO extra allocation here.
+        multiplier_snapshot = self._multipliers.get(message.guild.id)
+        if multiplier_snapshot is None:
+            multiplier_snapshot = await self.refresh_multiplier_snapshot(
+                message.guild.id
+            )
+        if not multiplier_snapshot.is_trivial:
+            role_ids = (
+                (role.id for role in getattr(message.author, "roles", ()))
+                if multiplier_snapshot.roles
+                else ()
+            )
+            multiplier = leveling.compute_multiplier(
+                multiplier_snapshot,
+                message.channel.id,
+                getattr(message.channel, "category_id", None),
+                role_ids,
+                discord.utils.utcnow(),
+            )
+            gain = leveling.apply_multiplier(gain, multiplier)
+            if gain <= 0:
+                # A multiplier that rounds the grant down to zero (e.g. a 0.0
+                # boost) earns literally nothing THIS message - skip the write
+                # entirely (it would be a no-op INSERT anyway: xp = xp + 0
+                # never crosses a level threshold). The cooldown was already
+                # touched above, so this message still counts against it.
+                return
 
         try:
             query = """

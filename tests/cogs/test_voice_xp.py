@@ -64,9 +64,10 @@ class _Guild:
 class _FakeLeveling:
     """Stand-in for the Leveling cog's cross-cog surface the VoiceXP cog reads."""
 
-    def __init__(self, configs=None, snapshots=None):
+    def __init__(self, configs=None, snapshots=None, multiplier_snapshots=None):
         self._configs = configs or {}
         self._snapshots = snapshots or {}
+        self._multiplier_snapshots = multiplier_snapshots or {}
         self.levelup_calls = []
 
     def get_config(self, guild_id):
@@ -74,6 +75,11 @@ class _FakeLeveling:
 
     async def ensure_no_xp_snapshot(self, guild_id):
         return self._snapshots.get(guild_id, leveling.EMPTY_NO_XP_SNAPSHOT)
+
+    async def ensure_multiplier_snapshot(self, guild_id):
+        return self._multiplier_snapshots.get(
+            guild_id, leveling.EMPTY_MULTIPLIER_SNAPSHOT
+        )
 
     async def credit_voice_levelup(self, **kwargs):
         self.levelup_calls.append(kwargs)
@@ -196,7 +202,7 @@ def test_start_session_evicts_oldest_at_the_cap(fake_pool, monkeypatch):
 # ---------------------------------------------------------------------------
 def _wire_sweep(fake_pool, *, rate=5, humans=2, channel_id=10, category_id=None,
                 self_deaf=False, self_mute=False, afk=False, snapshot=None,
-                returned_xp=11000, roles=()):
+                multiplier_snapshot=None, returned_xp=11000, roles=()):
     """Build a one-guild, one-eligible-member scenario. Returns (cog, lvl, member,
     session). The member shares channel `channel_id` with `humans` non-bot
     people. `returned_xp` is the batch RETURNING total for that member."""
@@ -214,7 +220,14 @@ def _wire_sweep(fake_pool, *, rate=5, humans=2, channel_id=10, category_id=None,
     channel.members = [member, *others, *bot_padding]
     guild._members = {m.id: m for m in [member, *others]}
     snapshots = {1: snapshot} if snapshot is not None else None
-    lvl = _FakeLeveling(configs={1: _cfg(rate=rate)}, snapshots=snapshots)
+    multiplier_snapshots = (
+        {1: multiplier_snapshot} if multiplier_snapshot is not None else None
+    )
+    lvl = _FakeLeveling(
+        configs={1: _cfg(rate=rate)},
+        snapshots=snapshots,
+        multiplier_snapshots=multiplier_snapshots,
+    )
     bot = _FakeBot(lvl, fake_pool, guilds=[guild])
     fake_pool.fetch_return = [
         {"guild_id": 1, "user_id": 2, "xp": returned_xp}
@@ -308,6 +321,81 @@ async def test_sweep_no_xp_category_is_ineligible(fake_pool):
     cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
     await cog._run_sweep(now=1000.0)
     assert _fetch_calls(fake_pool) == []
+
+
+# ---------------------------------------------------------------------------
+# The sweep: XP multipliers (L4) applied to the per-minute rate.
+# ---------------------------------------------------------------------------
+def test_wire_sweep_default_multiplier_is_trivial(fake_pool):
+    """Sanity check on the fixture itself: the default scenario has no
+    multiplier configured, so EMPTY_MULTIPLIER_SNAPSHOT applies."""
+    _cog, lvl, _m, _g = _wire_sweep(fake_pool)
+    assert lvl._multiplier_snapshots == {}
+
+
+async def test_sweep_global_boost_scales_the_credited_rate(fake_pool):
+    snap = leveling.MultiplierSnapshot(global_factor=2.0)
+    cog, _lvl, _m, _g = _wire_sweep(fake_pool, rate=5, multiplier_snapshot=snap)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)  # 300s == a full 5-minute window
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args == ([1], [2], [50])  # 5 minutes x (5 rate x 2.0) == 50
+
+
+async def test_sweep_channel_boost_applies_to_the_members_channel(fake_pool):
+    snap = leveling.MultiplierSnapshot(channels={10: 0.5})
+    cog, _lvl, _m, _g = _wire_sweep(
+        fake_pool, rate=10, channel_id=10, multiplier_snapshot=snap
+    )
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args == ([1], [2], [25])  # 5 minutes x (10 rate x 0.5) == 25
+
+
+async def test_sweep_role_boost_uses_the_highest_matching_role(fake_pool):
+    snap = leveling.MultiplierSnapshot(roles={77: 2.0, 88: 3.0})
+    cog, _lvl, _m, _g = _wire_sweep(
+        fake_pool, rate=5, roles=[77, 88], multiplier_snapshot=snap
+    )
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args == ([1], [2], [75])  # 5 minutes x (5 rate x 3.0 highest) == 75
+
+
+async def test_sweep_zero_factor_credits_nothing_but_still_advances_the_marker(
+    fake_pool,
+):
+    snap = leveling.MultiplierSnapshot(global_factor=0.0)
+    cog, _lvl, _m, _g = _wire_sweep(fake_pool, rate=5, multiplier_snapshot=snap)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    assert _fetch_calls(fake_pool) == []  # nothing credited -> no write
+    assert cog._sessions[(1, 2)].last_credit == 1000.0  # marker still advanced
+
+
+async def test_sweep_trivial_multiplier_snapshot_leaves_the_rate_unchanged(
+    fake_pool,
+):
+    """The default (no boosts configured) scenario credits exactly the
+    configured rate - proving the multiplier hook is a true no-op when
+    nothing is configured."""
+    cog, _lvl, _m, _g = _wire_sweep(fake_pool, rate=5)  # no multiplier_snapshot
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args == ([1], [2], [25])  # unaffected: 5 minutes x 5 rate
 
 
 # ---------------------------------------------------------------------------
