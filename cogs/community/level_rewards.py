@@ -392,6 +392,9 @@ class LevelRewards(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        level="The level that grants the role.", role="The role to grant."
+    )
     async def levelrewards_add(self, ctx, level: int, role: discord.Role):
         """Grant a role automatically when a member reaches a level."""
         if role.guild.id != ctx.guild.id:
@@ -505,6 +508,7 @@ class LevelRewards(commands.Cog):
     @levelrewards.command(name="mode")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(mode="stack (keep every reward) or replace (latest only).")
     async def levelrewards_mode(
         self, ctx, mode: Literal["stack", "replace"]
     ):

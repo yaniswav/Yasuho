@@ -346,6 +346,11 @@ class Reminder(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
+    @app_commands.describe(
+        member="The member to ban.",
+        duration="How long the ban lasts, e.g. 1d or 2h30m.",
+        reason="Why they're being banned.",
+    )
     async def tempban(
         self,
         ctx,

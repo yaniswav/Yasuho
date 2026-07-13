@@ -113,6 +113,7 @@ class Language(commands.Cog):
     @language.command(name="server", aliases=["guild", "default"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(code="The language code to set as the server default.")
     async def language_server(self, ctx, code):
         """Set the server's default language (used when a member has not picked one)."""
         resolved = i18n.normalize(code)

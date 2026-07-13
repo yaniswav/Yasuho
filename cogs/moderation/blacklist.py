@@ -21,12 +21,13 @@ class Blacklist(commands.Cog):
 
     @commands.hybrid_group(name="blacklist", aliases=["bl"])
     async def blacklist(self, ctx):
-        """Bot-wide blacklist related commands."""
+        """Manage the bot-wide blacklist: add, remove, list."""
 
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     @blacklist.command(name="add")
+    @discord.app_commands.describe(user="The user to blacklist.")
     async def blacklist_add(self, ctx, user: discord.User):
         """Add a user to the bot-wide blacklist."""
 
@@ -47,6 +48,7 @@ class Blacklist(commands.Cog):
                 log.exception("Failed to ban %s in %s", user, g)
 
     @blacklist.command(name="remove")
+    @discord.app_commands.describe(user="The user to remove from the blacklist.")
     async def blacklist_remove(self, ctx, user: discord.User):
         """Remove a user from the bot-wide blacklist."""
 

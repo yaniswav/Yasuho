@@ -3211,6 +3211,7 @@ class AniListFeed(commands.Cog):
     @anilistfeed.command(name="set")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(channel="The channel for the feed (defaults to here).")
     async def anilistfeed_set(
         self,
         ctx: commands.Context,
@@ -3268,6 +3269,7 @@ class AniListFeed(commands.Cog):
     @anilistfeed.command(name="follow")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(username="The AniList username to follow.")
     async def anilistfeed_follow(self, ctx: commands.Context, *, username: str):
         """Follow an AniList user in this server's feed."""
 
@@ -3295,6 +3297,7 @@ class AniListFeed(commands.Cog):
     @anilistfeed.command(name="unfollow")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(username="The AniList username to stop following.")
     async def anilistfeed_unfollow(self, ctx: commands.Context, *, username: str):
         """Stop following an AniList user (by stored name, case-insensitive)."""
 
@@ -3449,6 +3452,7 @@ class AniListFeed(commands.Cog):
     @anilistfeed.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(channel="The feed's channel (defaults to here).")
     async def anilistfeed_remove(
         self,
         ctx: commands.Context,

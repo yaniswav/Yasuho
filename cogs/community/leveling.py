@@ -1170,8 +1170,9 @@ class Leveling(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
+    @discord.app_commands.describe(member="Whose rank to show (defaults to you).")
     async def rank(self, ctx, member: discord.Member = None):
-        """Shows your level and XP rank card, or another member's."""
+        """Show your level and XP rank card, or another member's."""
 
         member = member or ctx.author
 
@@ -1244,7 +1245,7 @@ class Leveling(commands.Cog):
     async def levels(
         self, ctx, period: Optional[Literal["weekly", "monthly"]] = None
     ):
-        """Shows the ranked members of the guild (add weekly/monthly for a
+        """Show the ranked members of the guild (add weekly/monthly for a
         rolling period leaderboard instead of the all-time one)."""
 
         if period is None:

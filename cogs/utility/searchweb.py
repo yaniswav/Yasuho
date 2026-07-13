@@ -48,6 +48,7 @@ class SearchWeb(commands.Cog):
 
     @commands.hybrid_command(aliases=["wikipedia"])
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(query="The topic to search for.")
     async def wiki(self, ctx, *, query: str):
         """Search Wikipedia for a short summary of a topic."""
 
@@ -86,6 +87,7 @@ class SearchWeb(commands.Cog):
 
     @commands.hybrid_command(aliases=["saucefinder", "imgsource"])
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(url="The image URL (omit to use your attached image).")
     async def imagesource(self, ctx, url: str = None):
         """Build a Google reverse image search link for an image URL or attachment."""
 
@@ -110,6 +112,7 @@ class SearchWeb(commands.Cog):
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(username="The osu! username to look up.")
     async def osu(self, ctx, *, username: str):
         """Look up an osu! player's stats."""
 
@@ -151,6 +154,7 @@ class SearchWeb(commands.Cog):
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(username="The Minecraft username to look up.")
     async def minecraft(self, ctx, username: str):
         """Look up a Minecraft account and render its skin."""
 

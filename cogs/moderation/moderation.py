@@ -466,8 +466,9 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(aliases=["newmembers"])
     @commands.guild_only()
+    @discord.app_commands.describe(count="How many members to show (max 25, default 5).")
     async def newusers(self, ctx, *, count=5):
-        """Tells you the newest members of the server.
+        """Show the newest members of the server.
         This is useful to check if any suspicious members have
         joined.
         The count parameter can only be up to 25.
@@ -499,8 +500,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(target="The member to kick.", reason="Why they're being kicked.")
     async def _kick(self, ctx, target: discord.User, *, reason: str = None):
-        """Kicks an annoying user. Requires kick members permission. Also bot must have this permission."""
+        """Kick a member from the server."""
 
         if reason is None:
             reason = "No reason specified"
@@ -538,8 +540,11 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(
+        user="The member to disconnect from voice.", reason="Why they're being removed."
+    )
     async def _voicekick(self, ctx, user: discord.Member, *, reason: str = None):
-        """Kicks an annoying user. Requires kick members permission. Also bot must have this permission."""
+        """Disconnect a member from their voice channel."""
 
         if reason is None:
             reason = "No reason specified"
@@ -582,8 +587,11 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(
+        user="The member to move.", room="The name of the voice channel to move them to."
+    )
     async def _move(self, ctx, user: discord.Member, room: str):
-        """Moves an annoying user to a channel."""
+        """Move a member to a different voice channel."""
 
         channel = discord.utils.get(ctx.guild.voice_channels, name=room)
         try:
@@ -601,8 +609,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
+    @discord.app_commands.describe(target="The member to ban.", reason="Why they're being banned.")
     async def _ban(self, ctx, target: discord.User, *, reason: str = None):
-        """Bans an annoying user. Requires ban members permission. Also bot must have this permission."""
+        """Ban a member from the server."""
 
         if reason is None:
             reason = "No reason specified"
@@ -664,8 +673,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
+    @discord.app_commands.describe(target="The user to unban.", reason="Why they're being unbanned.")
     async def _unban(self, ctx, target: discord.User, *, reason: str = None):
-        """Unbans a user. Requires ban members permission. Also bot must have this permission."""
+        """Unban a user from the server."""
 
         if reason is None:
             reason = "No reason specified"
@@ -791,8 +801,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     @commands.has_permissions(manage_messages=True)
+    @discord.app_commands.describe(count="How many messages to delete (1 to 999).")
     async def _purge(self, ctx, count: int):
-        """Purges messages. Requires manage messages permission"""
+        """Delete a number of recent messages in this channel."""
 
         if ctx.interaction:
             await ctx.interaction.response.defer()
@@ -818,12 +829,16 @@ class Moderation(commands.Cog):
             delete_after=3,
         )
 
-    @commands.hybrid_command(description="Clears X messages.")
+    @commands.hybrid_command(description="Delete a number of a member's recent messages.")
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     @commands.has_permissions(manage_messages=True)
+    @discord.app_commands.describe(
+        num="How many of the member's messages to delete (max 500).",
+        target="The member whose messages to delete.",
+    )
     async def clean(self, ctx, num: int, target: discord.Member):
-        """Clears X messages of a member"""
+        """Delete a number of a member's recent messages."""
 
         if num > 500 or num < 0:
             return await ctx.send(_("Invalid amount. Maximum is 500."))
@@ -893,8 +908,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_roles=True)
+    @discord.app_commands.describe(user="The member to mute.", reason="Why they're being muted.")
     async def mute(self, ctx, user: discord.Member, *, reason: str = None):
-        """Mutes the specified member."""
+        """Mute a member."""
 
         if reason is None:
             reason = "No reason specified"
@@ -974,8 +990,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_roles=True)
+    @discord.app_commands.describe(user="The member to unmute.")
     async def unmute(self, ctx, user: discord.Member):
-        """Un-mutes the specified member."""
+        """Unmute a member."""
 
         role = await self._get_mute_role_id(ctx.guild.id)
 
@@ -1015,8 +1032,12 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        member="The member to give the role to (or -all for everyone).",
+        role="The role to give.",
+    )
     async def addrole(self, ctx, member, role: discord.Role):
-        """Set a role to a specified member."""
+        """Give a role to a member."""
 
         if member == "-all":
             confirm = discord.Embed(
@@ -1068,8 +1089,12 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        member="The member to remove the role from (or -all for everyone).",
+        role="The role to remove.",
+    )
     async def removerole(self, ctx, member, role: discord.Role):
-        """Remove a role to a specified member."""
+        """Remove a role from a member."""
 
         if member == "-all":
             confirm = discord.Embed(
@@ -1121,6 +1146,9 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        role="The role to move.", pos="The position to move it to in the role hierarchy."
+    )
     async def moverole(self, ctx, role: discord.Role, pos: int):
         """Move a role to the given position in the hierarchy."""
 
@@ -1137,6 +1165,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(member="The member to check.")
     async def warninfo(self, ctx, member: discord.Member = None):
         """Show how many warns a member currently has."""
 
@@ -1166,8 +1195,9 @@ class Moderation(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(member="The member to warn.", reason="Why they're being warned.")
     async def warn(self, ctx, member: discord.Member = None, *, reason: str = None):
-        """Warn a member of the guild (auto-kick at 3 warns)"""
+        """Warn a member (auto-kicks at 3 warns)."""
 
         if member is None:
             return await ctx.send_help(ctx.command)
@@ -1229,8 +1259,11 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(aliases=["rmwarn", "removewarn"])
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(
+        member="The member to remove warns from.", num="How many warns to remove (default 1)."
+    )
     async def delwarn(self, ctx, member: discord.Member = None, num: int = 1):
-        """Remove a warn from a member of the guild."""
+        """Remove a warn from a member."""
 
         if member is None:
             return await ctx.send_help(ctx.command)
@@ -1263,6 +1296,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="warnings", aliases=["warns"])
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
+    @discord.app_commands.describe(member="Whose warnings to browse (defaults to you).")
     async def warnings(self, ctx, member: discord.Member = None):
         """Interactively browse and remove a member's warnings."""
 
@@ -1282,6 +1316,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="case")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
+    @discord.app_commands.describe(number="The case number to look up.")
     async def case(self, ctx, number: int):
         """Show a single moderation case by its number."""
 
@@ -1300,6 +1335,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="cases", aliases=["history"])
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
+    @discord.app_commands.describe(member="Only show cases for this member (optional).")
     async def cases(self, ctx, member: discord.Member = None):
         """Paginated moderation case history (optionally filtered to a member)."""
 
@@ -1344,6 +1380,9 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="reason")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
+    @discord.app_commands.describe(
+        case_number="The case to update.", new_reason="The new reason to record."
+    )
     async def reason(self, ctx, case_number: int, *, new_reason: str = None):
         """Update the reason recorded on an existing case."""
 

@@ -341,7 +341,7 @@ class Settings(commands.Cog):
     @commands.hybrid_group()
     @commands.guild_only()
     async def prefix(self, ctx):
-        """Prefix related commands."""
+        """Manage the command prefix: set or view it."""
 
 
         if ctx.invoked_subcommand is None:
@@ -350,8 +350,9 @@ class Settings(commands.Cog):
     @prefix.command(name="set")
     @commands.cooldown(1.0, 15.0, commands.BucketType.user)
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(prefix="The new command prefix (max 10 characters).")
     async def set_prefix(self, ctx, prefix: str):
-        """Assign a Prefix to Yasuho for use in your guild."""
+        """Set the command prefix for your guild."""
 
         # Reject a blank or whitespace-only prefix (which would break parsing)
         # and cap the length; a trailing space is kept on purpose (e.g. "y ").
@@ -399,7 +400,7 @@ class Settings(commands.Cog):
     @commands.hybrid_group(aliases=["auto-role"])
     @commands.guild_only()
     async def autorole(self, ctx):
-        """Auto-role related commands."""
+        """Manage the auto-role: set, remove, or view it."""
 
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
@@ -407,8 +408,9 @@ class Settings(commands.Cog):
     @autorole.command(name="set")
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(role="The role to grant new members automatically.")
     async def autorole_set(self, ctx, role: discord.Role):
-        """Assign an auto role to your guild."""
+        """Assign an auto-role to your guild."""
 
         await db.upsert_guild_value(
             self.bot.db_pool, "autorole", "role_id", ctx.guild.id, role.id
@@ -426,7 +428,7 @@ class Settings(commands.Cog):
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(manage_guild=True)
     async def autorole_rm(self, ctx):
-        """Remove auto role from your guild."""
+        """Remove the auto-role from your guild."""
 
         query = """DELETE FROM autorole WHERE guild_id = $1 ;"""
 
@@ -448,7 +450,7 @@ class Settings(commands.Cog):
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(manage_guild=True)
     async def autorole_info(self, ctx):
-        """Auto-role of your guild."""
+        """Show the auto-role for your guild."""
 
         query = """
 
@@ -564,6 +566,7 @@ class Settings(commands.Cog):
     @config.command(name="leveling")
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(mode="True to enable, False to disable.")
     async def config_leveling(self, ctx, mode: bool):
         """Enable or disable the leveling system for this server."""
 

@@ -252,6 +252,7 @@ class AvatarHistory(commands.Cog):
         return embed, buf
 
     @commands.hybrid_command(aliases=["avh"])
+    @discord.app_commands.describe(member="Whose history to show (defaults to you).")
     async def avatarhistory(self, ctx, member: discord.User = None):
         """Show a collage of a user's avatar / server avatar / banner history."""
 

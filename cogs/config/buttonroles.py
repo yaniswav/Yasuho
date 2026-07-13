@@ -988,6 +988,7 @@ class ButtonRoles(commands.Cog):
     @buttonrole.command(name="delete")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(message_id="The ID of the button-role panel message.")
     async def buttonrole_delete(self, ctx, message_id: str):
         """Delete a button-role panel by its message ID (strips the buttons)."""
 

@@ -141,7 +141,7 @@ class ReactionRoles(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def reactionrole(self, ctx):
-        """Reaction-role related commands."""
+        """Manage reaction roles: add, remove, list."""
 
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
@@ -207,6 +207,11 @@ class ReactionRoles(commands.Cog):
     @reactionrole.command(name="add")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        message_id="The ID of the message to react to (blank opens a builder).",
+        emoji="The emoji members react with.",
+        role="The role that emoji grants.",
+    )
     async def reactionrole_add(
         self,
         ctx,
@@ -243,6 +248,10 @@ class ReactionRoles(commands.Cog):
     @reactionrole.command(name="remove")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        message_id="The message the mapping is on.",
+        emoji="The emoji to unmap.",
+    )
     async def reactionrole_remove(self, ctx, message_id: str, emoji: str):
         """Remove an emoji-to-role mapping from a message."""
 

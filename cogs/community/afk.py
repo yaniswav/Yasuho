@@ -23,6 +23,7 @@ class AFK(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
+    @discord.app_commands.describe(message="Why you're away (shown to anyone who pings you).")
     async def afk(self, ctx, *, message: str = "AFK"):
         """Set your AFK status, with an optional message."""
 

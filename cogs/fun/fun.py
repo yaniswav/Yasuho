@@ -127,7 +127,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(3, 90, commands.BucketType.user)
     async def give_hug(self, ctx, member: discord.Member = None):
-        """Give a hug to your secret crush ッ"""
+        """Give someone a hug."""
         if not member:
             return await ctx.send(_("You can't hug the air..."))
 
@@ -181,7 +181,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def cat(self, ctx):
-        """Sends a random cat image"""
+        """Send a random cat picture."""
 
         async with ctx.typing():
             try:
@@ -198,7 +198,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def dog(self, ctx):
-        """ Sends a random dog picture"""
+        """Send a random dog picture."""
         async with ctx.typing():
             try:
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
@@ -214,7 +214,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def fox(self, ctx):
-        """ Sends a random fox picture"""
+        """Send a random fox picture."""
         async with ctx.typing():
             try:
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
@@ -230,7 +230,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 10.0, commands.BucketType.user)
     async def say(self, ctx, *, args: str):
-        """The bot say what you want."""
+        """Make Yasuho repeat your message."""
         message = "".join(args)
 
         try:
@@ -278,7 +278,7 @@ class Fun(commands.Cog):
     @commands.command()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def bigmoji(self, ctx, *, emoji):
-        """Makes big an emoji"""
+        """Make an emoji bigger."""
         # Verify if the emoji is a custom emoji
         if emoji.startswith(("<:", "<a:")) and emoji.endswith(">"):
             m = re.search(r":(\d+)>$", emoji)
@@ -314,7 +314,7 @@ class Fun(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def ascii(self, ctx, *, msg: str):
-        "Convert text to ascii art"
+        "Convert text to ASCII art."
         if not (ctx.invoked_subcommand):
             if msg:
                 msg = str(figlet_format(msg.strip(), font="big"))
@@ -337,7 +337,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     async def eight_ball(self, ctx, yesnoquestion=None):
-        """Answer to a yes/no question."""
+        """Answer a yes/no question."""
         if yesnoquestion is None:
             await ctx.send(_("Ask me a question..."))
 
@@ -354,7 +354,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def reverse(self, ctx, *, text):
-        """Gives you reversed text"""
+        """Reverse your text."""
         embed = discord.Embed(color=random_colour())
         embed.add_field(name=_("Reversed:"), value=f"```{text[::-1]}```")
         embed.set_footer(
@@ -366,7 +366,7 @@ class Fun(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def rate(self, ctx, *, thing: commands.clean_content):
-        """Rates what you desire"""
+        """Rate anything you want, out of 100."""
         async with ctx.typing():
             await asyncio.sleep(2)
             num = random.randint(0, 100)
@@ -384,7 +384,7 @@ class Fun(commands.Cog):
     @commands.command(aliases=["howhot", "hot"])
     @commands.guild_only()
     async def hotcalc(self, ctx, *, user: discord.Member = None):
-        """Returns a random percent for how hot is a discord user"""
+        """Rate how hot a member is."""
 
         if user is None:
             user = ctx.author
@@ -421,10 +421,10 @@ class Fun(commands.Cog):
             )
         )
 
-    @commands.command(description="Calculate how gay you are!")
+    @commands.command(description="Rate how gay a member is.")
     @commands.guild_only()
     async def gaycalc(self, ctx, member: discord.Member = None):
-        """Returns a random percent for how gay is a discord user"""
+        """Rate how gay a member is."""
         member = member or ctx.author
         y = random.randint(0, 99)
         emj = ""
@@ -445,7 +445,7 @@ class Fun(commands.Cog):
     @commands.command(aliases=["slots", "bet"])
     @commands.guild_only()
     async def slot(self, ctx):
-        """Roll the slot machine"""
+        """Roll the slot machine."""
         emojis = config_loader.getlist("Slots", "slot_emojis")
         a = random.choice(emojis)
         b = random.choice(emojis)
@@ -464,7 +464,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     @commands.cooldown(1.0, 3.0, commands.BucketType.user)
     async def pfc(self, ctx):
-        """Play Rock Paper Scissors with Yasuho!"""
+        """Play Rock Paper Scissors against Yasuho."""
         em = discord.Embed(
             color=random_colour(),
             timestamp=discord.utils.utcnow(),

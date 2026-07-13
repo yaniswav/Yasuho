@@ -399,12 +399,13 @@ class AutoMod(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def automod(self, ctx):
-        """Automatic moderation related commands."""
+        """Manage auto-moderation: link/invite/spam filters and the control panel."""
 
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     @automod.command(name="antilink")
+    @discord.app_commands.describe(mode="True to enable, False to disable.")
     async def automod_antilink(self, ctx, mode: bool):
         """Enable or disable link filtering for this guild."""
 
@@ -416,6 +417,7 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=embed)
 
     @automod.command(name="antiinvite")
+    @discord.app_commands.describe(mode="True to enable, False to disable.")
     async def automod_antiinvite(self, ctx, mode: bool):
         """Enable or disable Discord-invite filtering for this guild."""
 
@@ -427,6 +429,7 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=embed)
 
     @automod.command(name="antispam")
+    @discord.app_commands.describe(mode="True to enable, False to disable.")
     async def automod_antispam(self, ctx, mode: bool):
         """Enable or disable spam filtering for this guild."""
 

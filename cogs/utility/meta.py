@@ -66,7 +66,7 @@ class Meta(commands.Cog):
     @commands.hybrid_command()
     async def apod(self, ctx):
         """
-        Shows Astronomy Picture of the Day.
+        Show NASA's Astronomy Picture of the Day.
         """
         async with ctx.typing():
             try:
@@ -120,8 +120,9 @@ class Meta(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
+    @discord.app_commands.describe(city="The city to look up.")
     async def weather(self, ctx, city: str):
-        """Shows the current weather for a given city."""
+        """Show the current weather for a given city."""
         async with ctx.typing():
             try:
                 async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:

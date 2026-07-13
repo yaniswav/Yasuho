@@ -72,8 +72,9 @@ class Info(commands.Cog):
 
     @commands.hybrid_command(name="userinfo", aliases=["whois", "ui"])
     @commands.guild_only()
+    @discord.app_commands.describe(member="Whose info to show (defaults to you).")
     async def userinfo(self, ctx, member: discord.Member = None):
-        """Displays information about a member of the guild."""
+        """Show information about a member of the guild."""
 
         member = member or ctx.author
 
@@ -97,7 +98,7 @@ class Info(commands.Cog):
     @commands.hybrid_command(name="serverinfo", aliases=["guildinfo", "si"])
     @commands.guild_only()
     async def serverinfo(self, ctx):
-        """Displays information about the current guild."""
+        """Show information about the current guild."""
 
         guild = ctx.guild
 
@@ -133,8 +134,9 @@ class Info(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="avatar", aliases=["av", "pfp"])
+    @discord.app_commands.describe(member="Whose avatar to show (defaults to you).")
     async def avatar(self, ctx, member: discord.Member = None):
-        """Displays the avatar of a member."""
+        """Show the avatar of a member."""
 
         member = member or ctx.author
 
@@ -148,7 +150,7 @@ class Info(commands.Cog):
 
     @commands.hybrid_command(name="ping")
     async def ping(self, ctx):
-        """Shows the bot's websocket latency."""
+        """Show the bot's websocket latency."""
 
         embed = discord.Embed(
             title=_("Pong!"),
@@ -162,7 +164,7 @@ class Info(commands.Cog):
 
     @commands.hybrid_command(name="botinfo", aliases=["about", "info"])
     async def botinfo(self, ctx):
-        """Displays information about the bot."""
+        """Show information about the bot."""
 
         total_users = sum(
             g.member_count for g in self.bot.guilds if g.member_count is not None

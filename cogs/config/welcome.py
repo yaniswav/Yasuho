@@ -670,6 +670,10 @@ class Welcome(commands.Cog):
     @welcome.command(name="set")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        channel="Where to post the welcome message.",
+        message="The message text (supports {mention} {user} {server} {count} {membercount}).",
+    )
     async def welcome_set(self, ctx, channel: discord.TextChannel, *, message: str):
         """Set the welcome channel and message (a simple fallback).
 

@@ -324,6 +324,7 @@ class ModLog(commands.Cog):
         view.message = await ctx.send(view=view)
 
     @modlog.command(name="set")
+    @discord.app_commands.describe(channel="The channel to send moderation logs to.")
     async def modlog_set(self, ctx, channel: discord.TextChannel):
         """Set the channel where moderation logs are sent."""
 

@@ -299,6 +299,7 @@ class AccountMixin:
 
     @anilist.command(name="code")
     @commands.cooldown(1, 10, commands.BucketType.user)
+    @app_commands.describe(code="The PIN code AniList showed you.")
     async def anilist_code(self, ctx, *, code: str):
         """Finish linking with the PIN code AniList gave you."""
 
@@ -338,6 +339,7 @@ class AccountMixin:
 
     @anilist.command(name="update")
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @app_commands.describe(title="The anime or manga title to update.")
     async def anilist_update(self, ctx, *, title: str):
         """Guided update: pick the title by clicking, then edit a pre-filled form."""
 
@@ -345,6 +347,10 @@ class AccountMixin:
 
     @anilist.command(name="status")
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @app_commands.describe(
+        status="Watching/Reading, Completed, Planning, Paused, Dropped, or Repeating.",
+        title="The anime or manga title to update.",
+    )
     async def anilist_status(self, ctx, status: str, *, title: str):
         """Set the status of a title on your list."""
 
@@ -361,6 +367,9 @@ class AccountMixin:
 
     @anilist.command(name="score")
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @app_commands.describe(
+        score="The score to give it.", title="The anime or manga title to score."
+    )
     async def anilist_score(self, ctx, score: float, *, title: str):
         """Score a title on your AniList list."""
 
@@ -521,6 +530,7 @@ class AccountMixin:
 
     @anilist.command(name="profile")
     @commands.cooldown(1, 10, commands.BucketType.user)
+    @app_commands.describe(name="The AniList username to look up (defaults to you).")
     async def anilist_profile(self, ctx, *, name: str = None):
         """Show AniList stats for a user (defaults to your linked account)."""
 
@@ -553,6 +563,10 @@ class AccountMixin:
 
     @anilist.command(name="list")
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @app_commands.describe(
+        media_type="anime or manga (defaults to anime).",
+        status="The list status to open (defaults to CURRENT).",
+    )
     async def anilist_list(
         self, ctx, media_type: str = "anime", status: str = "CURRENT"
     ):

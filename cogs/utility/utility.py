@@ -156,6 +156,7 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
+    @discord.app_commands.describe(question="The yes/no question to ask.")
     async def poll(self, ctx, *, question: str):
         """Create a native yes/no poll (runs for 24 hours)."""
 
@@ -178,6 +179,9 @@ class Utility(commands.Cog):
             await ctx.send(_("I could not create that poll here."))
 
     @commands.hybrid_command()
+    @discord.app_commands.describe(
+        args="question | option 1 | option 2 ... (blank opens a form)."
+    )
     async def quickpoll(self, ctx, *, args: str = None):
         """Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."""
 
@@ -205,6 +209,7 @@ class Utility(commands.Cog):
             await ctx.send(_("I could not create that poll here."))
 
     @commands.hybrid_command()
+    @discord.app_commands.describe(text="The text to translate.")
     async def translate(self, ctx, *, text: str):
         """Translate text to English (auto-detect source language)."""
 

@@ -709,6 +709,10 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_noxp.command(name="add")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        channel="A channel/category that should earn no XP.",
+        role="A role that should earn no XP.",
+    )
     async def levelconfig_noxp_add(
         self,
         ctx: commands.Context,
@@ -828,6 +832,10 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_announce.command(name="mode")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        mode="off, channel, dm, or fixed.",
+        channel="The channel to announce in (required for fixed mode).",
+    )
     async def levelconfig_announce_mode(
         self,
         ctx: commands.Context,
@@ -858,6 +866,9 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_announce.command(name="template")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        text="The message template, using {user} {level} {guild} (blank resets it)."
+    )
     async def levelconfig_announce_template(
         self, ctx: commands.Context, text: typing.Optional[str] = None
     ):
@@ -946,6 +957,7 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_voicexp.command(name="rate")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(rate="XP earned per eligible minute in voice (1-60).")
     async def levelconfig_voicexp_rate(self, ctx, rate: int):
         """Set how much XP a member earns per eligible minute in voice (1-60)."""
         if not leveling.validate_voice_xp_rate(rate)[0]:
@@ -984,6 +996,11 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_boost.command(name="add")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        factor="The XP multiplier (0-5x).",
+        channel="A channel/category to boost (omit for a role or server-wide boost).",
+        role="A role to boost (omit for a channel or server-wide boost).",
+    )
     async def levelconfig_boost_add(
         self,
         ctx: commands.Context,
@@ -1146,6 +1163,10 @@ class LevelConfigUI(commands.Cog):
     @levelconfig_event.command(name="set")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        factor="The XP multiplier for the event (e.g. 2 for double XP).",
+        duration="How long the event runs, e.g. 2h (max 14 days).",
+    )
     async def levelconfig_event_set(
         self, ctx: commands.Context, factor: float, duration: str
     ):

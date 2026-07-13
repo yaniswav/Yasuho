@@ -107,13 +107,14 @@ class Profiles(commands.Cog):
     @commands.hybrid_group(name="profile")
     @commands.guild_only()
     async def profile(self, ctx):
-        """Gaming profile related commands."""
+        """Manage gaming profiles: view, set, edit, or clear."""
 
         if ctx.invoked_subcommand is None:
             await self.profile_view(ctx, ctx.author)
 
     @profile.command(name="view")
     @commands.guild_only()
+    @discord.app_commands.describe(member="Whose profile to view (defaults to you).")
     async def profile_view(self, ctx, member: discord.Member = None):
         """View a member's gaming profile."""
 
@@ -167,6 +168,10 @@ class Profiles(commands.Cog):
 
     @profile.command(name="set")
     @commands.guild_only()
+    @discord.app_commands.describe(
+        field="switch, 3ds, battletag, riot, or steam.",
+        value="Your ID for that field.",
+    )
     async def profile_set(self, ctx, field: str, *, value: str):
         """Set one of your profile fields (switch, 3ds, battletag, riot, steam)."""
 

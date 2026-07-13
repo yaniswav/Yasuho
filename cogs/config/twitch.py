@@ -688,6 +688,10 @@ class Twitch(commands.Cog):
     @twitch.command(name="watch", aliases=["add"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        member="The member to watch for going live.",
+        channel="Where to post their alert (defaults to the configured channel).",
+    )
     async def twitch_watch(
         self,
         ctx: commands.Context,
@@ -735,6 +739,7 @@ class Twitch(commands.Cog):
     @twitch.command(name="unwatch", aliases=["remove", "del"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(member="The member to stop watching.")
     async def twitch_unwatch(
         self, ctx: commands.Context, member: discord.Member
     ):

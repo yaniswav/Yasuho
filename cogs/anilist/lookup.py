@@ -123,6 +123,7 @@ class LookupMixin:
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(search="The anime title to look up.")
     async def anime(self, ctx, *, search: str):
         """Look up an anime on AniList."""
 
@@ -130,6 +131,7 @@ class LookupMixin:
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(search="The manga title to look up.")
     async def manga(self, ctx, *, search: str):
         """Look up a manga on AniList."""
 
@@ -161,6 +163,10 @@ class LookupMixin:
 
     @commands.hybrid_command()
     @commands.cooldown(1, 10, commands.BucketType.user)
+    @discord.app_commands.describe(
+        season="WINTER, SPRING, SUMMER, or FALL (defaults to the current season).",
+        year="The year to browse (defaults to the current year).",
+    )
     async def seasonal(self, ctx, season: str = None, year: int = None):
         """Browse anime from a season (defaults to the current season)."""
 
@@ -186,6 +192,7 @@ class LookupMixin:
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(search="The character name to look up.")
     async def character(self, ctx, *, search: str):
         """Look up a character on AniList."""
 
@@ -199,6 +206,7 @@ class LookupMixin:
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
+    @discord.app_commands.describe(search="The studio name to look up.")
     async def studio(self, ctx, *, search: str):
         """Look up an animation studio on AniList."""
 

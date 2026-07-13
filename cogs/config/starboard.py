@@ -185,7 +185,7 @@ class Starboard(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def starboard(self, ctx):
-        """Starboard related commands."""
+        """Manage the starboard: set up, adjust, disable, or view the top messages."""
 
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
@@ -193,6 +193,10 @@ class Starboard(commands.Cog):
     @starboard.command(name="set")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        channel="The channel where starred messages are posted.",
+        threshold="How many stars a message needs (default 3).",
+    )
     async def starboard_set(
         self, ctx, channel: discord.TextChannel = None, threshold: int = 3
     ):
@@ -226,6 +230,7 @@ class Starboard(commands.Cog):
     @starboard.command(name="threshold")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(value="How many stars a message needs to reach the starboard.")
     async def starboard_threshold(self, ctx, value: int):
         """Update the amount of stars needed to reach the starboard."""
 
@@ -269,6 +274,7 @@ class Starboard(commands.Cog):
 
     @starboard.command(name="top", aliases=["leaderboard"])
     @commands.guild_only()
+    @discord.app_commands.describe(limit="How many messages to show (max 25, default 10).")
     async def starboard_top(self, ctx, limit: int = 10):
         """Show the most-starred messages in this guild."""
 

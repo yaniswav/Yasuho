@@ -95,7 +95,7 @@ class Verification(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def verify(self, ctx):
-        """Verification gate commands."""
+        """Manage the verification gate: set it up or disable it."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
@@ -103,6 +103,11 @@ class Verification(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     @commands.bot_has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        role="The role granted on verification.",
+        channel="Where to post the Verify button (defaults to here).",
+        message="A custom message on the verify embed.",
+    )
     async def verify_setup(
         self,
         ctx,
