@@ -4,10 +4,10 @@ import discord
 from discord.ext import commands
 
 from tools import db, settings
-from tools.embed_creator import notify_failure
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorView
+from tools.interactions import notify_failure
+from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +54,32 @@ def _onoff(value):
 
 
 # ----------------------------------------------------------------------
-# Interactive server-settings panel (discord.ui)
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+# ----------------------------------------------------------------------
+# Interactive server-settings panel (Components V2)
 # ----------------------------------------------------------------------
 class ConfigSelect(discord.ui.Select):
     """Pick a feature: Leveling toggles in place, others point to a command."""
@@ -118,57 +143,39 @@ class ConfigSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=0,
         )
 
     async def callback(self, interaction):
         await self.panel.handle_select(interaction, self.values[0])
 
 
-class ConfigPanel(AuthorView):
-    """Author-restricted overview of every server feature, with quick controls."""
+class ConfigPanel(AuthorLayoutView):
+    """Author-restricted overview of every server feature, with quick controls.
+
+    A single Components V2 :class:`~discord.ui.Container` in the house style
+    established by the welcome/Twitch panels: a Section (guild icon thumbnail
+    accessory + summary lines) holds every feature's current state, and one
+    ActionRow carries the feature select. Re-renders are view=-only edits (see
+    ``_refresh_layout``); the deny wording matches AuthorLayoutView's default
+    ("This panel isn't for you.", the same wording the old AuthorView-based
+    panel used explicitly), so it is left unset here.
+    """
 
     def __init__(self, cog, author_id, guild, state, timeout=180):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.state = state
-        self.add_item(ConfigSelect(self))
+        self._build()
 
     # -- rendering ------------------------------------------------------
-    def build_embed(self):
+    def _build(self):
         state = self.state
-        embed = discord.Embed(
-            title=("⚙️ " + _("Configuration") + f" · {self.guild.name}")[:256],
-            description=_(
-                "An overview of every feature for this server. Use the menu "
-                "below to toggle **Leveling** or jump to a feature's setup "
-                "command."
-            ),
-            colour=random_colour(),
-        )
-        icon = getattr(self.guild, "icon", None)
-        if icon is not None:
-            embed.set_thumbnail(url=icon.url)
-
-        embed.add_field(
-            name="💬 " + _("Prefix"),
-            value=f"`{state['prefix']}`",
-            inline=True,
-        )
-        embed.add_field(
-            name="📈 " + _("Leveling"),
-            value=_onoff(state["leveling"]),
-            inline=True,
-        )
+        container = discord.ui.Container(accent_colour=random_colour())
 
         role_id = state["autorole"]
-        embed.add_field(
-            name="🎭 " + _("Auto-role"),
-            value=(f"🟢 <@&{role_id}>" if role_id else "🔴 " + _("Not set up")),
-            inline=True,
+        autorole_value = (
+            f"🟢 <@&{role_id}>" if role_id else "🔴 " + _("Not set up")
         )
 
         starboard = state["starboard"]
@@ -179,9 +186,6 @@ class ConfigPanel(AuthorView):
         else:
             channel_id, threshold = starboard
             starboard_value = f"🟢 <#{channel_id}> · {threshold} ⭐"
-        embed.add_field(
-            name="⭐ " + _("Starboard"), value=starboard_value, inline=True
-        )
 
         automod = state["automod"]
         if automod is _UNKNOWN:
@@ -196,9 +200,6 @@ class ConfigPanel(AuthorView):
                 + _("Anti-spam")
                 + f" {'🟢' if antispam else '🔴'}"
             )
-        embed.add_field(
-            name="🛡️ " + _("AutoMod"), value=automod_value, inline=True
-        )
 
         modlog = state["modlog"]
         if modlog is _UNKNOWN:
@@ -207,9 +208,6 @@ class ConfigPanel(AuthorView):
             modlog_value = f"🟢 <#{modlog}>"
         else:
             modlog_value = "🔴 " + _("Not set up")
-        embed.add_field(
-            name="📝 " + _("Mod-log"), value=modlog_value, inline=True
-        )
 
         welcome = state["welcome"]
         if welcome is _UNKNOWN:
@@ -218,18 +216,66 @@ class ConfigPanel(AuthorView):
             welcome_value = f"🟢 <#{welcome}>"
         else:
             welcome_value = "🔴 " + _("Not set up")
-        embed.add_field(
-            name="👋 " + _("Welcome"), value=welcome_value, inline=True
+
+        field_lines = [
+            "**💬 {label}:** `{value}`".format(
+                label=_("Prefix"), value=state["prefix"]
+            ),
+            "**📈 {label}:** {value}".format(
+                label=_("Leveling"), value=_onoff(state["leveling"])
+            ),
+            "**🎭 {label}:** {value}".format(
+                label=_("Auto-role"), value=autorole_value
+            ),
+            "**⭐ {label}:** {value}".format(
+                label=_("Starboard"), value=starboard_value
+            ),
+            "**🛡️ {label}:** {value}".format(
+                label=_("AutoMod"), value=automod_value
+            ),
+            "**📝 {label}:** {value}".format(
+                label=_("Mod-log"), value=modlog_value
+            ),
+            "**👋 {label}:** {value}".format(
+                label=_("Welcome"), value=welcome_value
+            ),
+        ]
+
+        header_text = discord.ui.TextDisplay(
+            "### ⚙️ "
+            + _("Configuration")
+            + f" · {self.guild.name}"
+            + "\n"
+            + _(
+                "An overview of every feature for this server. Use the menu "
+                "below to toggle **Leveling** or jump to a feature's setup "
+                "command."
+            )
+            + "\n\n"
+            + "\n".join(field_lines)
         )
 
-        embed.set_footer(
-            text=(
-                _("Only you can use these controls")
+        icon = getattr(self.guild, "icon", None)
+        if icon is not None:
+            container.add_item(
+                discord.ui.Section(
+                    header_text, accessory=discord.ui.Thumbnail(icon.url)
+                )
+            )
+        else:
+            container.add_item(header_text)
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(ConfigSelect(self)))
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# "
+                + _("Only you can use these controls")
                 + " · "
                 + _("times out after 3 min")
             )
         )
-        return embed
+        self.add_item(container)
 
     async def _rerender(self, interaction):
         """Rebuild from current state so the select's labels stay accurate."""
@@ -239,9 +285,7 @@ class ConfigPanel(AuthorView):
         )
         new.message = self.message
         self.stop()
-        await interaction.response.edit_message(
-            embed=new.build_embed(), view=new
-        )
+        await _refresh_layout(interaction, self.message, new)
 
     # -- callbacks ------------------------------------------------------
     async def handle_select(self, interaction, key):
@@ -515,7 +559,7 @@ class Settings(commands.Cog):
 
         state = await self._config_state(ctx.guild)
         view = ConfigPanel(self, ctx.author.id, ctx.guild, state)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     @config.command(name="leveling")
     @commands.cooldown(1.0, 5.0, commands.BucketType.user)
