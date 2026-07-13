@@ -112,18 +112,22 @@ class AuthorLayoutView(discord.ui.LayoutView):
     the timeout cleanup has something to edit.
     """
 
-    def __init__(self, author_id, *, timeout=180):
+    def __init__(self, author_id, *, timeout=180, deny_message="This panel isn't for you."):
         super().__init__(timeout=timeout)
         self.author_id = author_id
         self.message = None
+        self._deny_message = deny_message
 
     async def interaction_check(self, interaction):
         # Component callbacks run in their own task where get_context never set
         # the locale; resolve it here so this check AND the callback localize.
         await i18n.apply_interaction_locale(interaction)
         if interaction.user.id != self.author_id:
+            # Translate in the clicker's locale (the stored wording is a
+            # registered N_ literal, see _DENY_STRINGS). Overridable per view so
+            # a migrated surface can keep its original deny wording.
             await interaction.response.send_message(
-                _("This panel isn't for you."), ephemeral=True
+                _(self._deny_message), ephemeral=True
             )
             return False
         return True
