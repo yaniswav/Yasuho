@@ -1,9 +1,13 @@
 """Self-assignable role buttons - a modern take on reaction roles.
 
 The admin builds a panel through an interactive, author-restricted builder
-(open with the ``buttonrole`` command). The panel embed is composed with the
-shared ``tools.embed_creator`` toolkit (title/description/colour/author/footer/
-thumbnail/image/fields), and every role button is customisable (label, emoji and
+(open with the ``buttonrole`` command), rendered as a Components V2 Container in
+the house style established by the settings/welcome/Twitch panels. The FINISHED
+panel posted to a channel (or attached to an existing message) stays a classic
+``discord.Embed`` - that embed is the product self-assigners see and click, not
+an admin control surface, and its content is still composed with the shared
+``tools.embed_creator`` toolkit (title/description/colour/author/footer/
+thumbnail/image/fields). Every role button is customisable (label, emoji and
 ButtonStyle). The finished panel can be posted to a channel or attached to an
 existing message the bot itself authored.
 
@@ -26,7 +30,7 @@ from tools.formats import random_colour
 from tools.i18n import _
 from tools.message_ref import parse_message_ref
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -172,43 +176,44 @@ class ButtonRoleView(discord.ui.View):
 class _AddRoleSelect(discord.ui.RoleSelect):
     """Pick a role to turn into a new button (opens the customise modal)."""
 
-    def __init__(self):
+    def __init__(self, panel):
+        self.panel = panel
         super().__init__(
             placeholder=_("Add a role as a button..."),
             min_values=1,
             max_values=1,
-            row=1,
         )
 
     async def callback(self, interaction):
-        await self.view.on_add_role(interaction, self.values[0])
+        await self.panel.on_add_role(interaction, self.values[0])
 
 
 class _TargetChannelSelect(discord.ui.ChannelSelect):
     """Pick the channel a freshly posted panel should land in."""
 
-    def __init__(self, builder):
-        channel = builder.guild.get_channel(builder.target_channel_id)
+    def __init__(self, panel):
+        self.panel = panel
+        channel = panel.guild.get_channel(panel.target_channel_id)
         super().__init__(
             channel_types=[discord.ChannelType.text, discord.ChannelType.news],
             placeholder=_("Channel to post the panel in..."),
             min_values=1,
             max_values=1,
             default_values=[channel] if channel is not None else [],
-            row=2,
         )
 
     async def callback(self, interaction):
-        await self.view.on_target_selected(interaction, self.values[0])
+        await self.panel.on_target_selected(interaction, self.values[0])
 
 
 class _RemoveButtonSelect(discord.ui.Select):
     """List the configured buttons so the admin can remove one."""
 
-    def __init__(self, builder):
+    def __init__(self, panel):
+        self.panel = panel
         options = []
-        for index, button in enumerate(builder.config["buttons"][:25]):
-            role = builder.guild.get_role(button["role_id"])
+        for index, button in enumerate(panel.config["buttons"][:25]):
+            role = panel.guild.get_role(button["role_id"])
             name = button.get("label") or (role.name if role else str(button["role_id"]))
             options.append(
                 discord.SelectOption(
@@ -222,19 +227,18 @@ class _RemoveButtonSelect(discord.ui.Select):
             min_values=1,
             max_values=1,
             options=options,
-            row=3,
         )
 
     async def callback(self, interaction):
         try:
             index = int(self.values[0])
-            buttons = self.view.config["buttons"]
+            buttons = self.panel.config["buttons"]
             if 0 <= index < len(buttons):
                 buttons.pop(index)
-            await self.view._rerender(interaction)
+            await self.panel._rerender(interaction)
         except Exception:
             log.exception("Button-role remove select failed")
-            await self.view._error(interaction)
+            await self.panel._error(interaction)
 
 
 class AddButtonModal(LocaleModal):
@@ -324,34 +328,144 @@ class AttachModal(LocaleModal):
 
 
 # ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+# ----------------------------------------------------------------------
+# Terminal (non-interactive) card shown after posting/attaching/cancelling
+# ----------------------------------------------------------------------
+class _DoneView(discord.ui.LayoutView):
+    """A one-shot card in the builder's house style, shown once the builder is done.
+
+    Mirrors the AniList feed panel's ``_FeedNoticeView`` notice pattern: a single
+    heading-over-body Container with no components, so it needs no author gating
+    or timeout task - the builder flow has ended.
+    """
+
+    def __init__(self, heading, body, *, colour, timeout=None):
+        super().__init__(timeout=timeout)
+        container = discord.ui.Container(accent_colour=colour)
+        text = "### " + heading
+        if body:
+            text += "\n" + body
+        container.add_item(discord.ui.TextDisplay(text))
+        self.add_item(container)
+
+
+# ----------------------------------------------------------------------
+# Action buttons (admin-facing, author-restricted)
+# ----------------------------------------------------------------------
+class _PostButton(discord.ui.Button):
+    def __init__(self, panel):
+        self.panel = panel
+        # Not _()-wrapped: preserved verbatim from the pre-CV2 literal label.
+        super().__init__(label="Post panel", style=discord.ButtonStyle.success)
+
+    async def callback(self, interaction):
+        try:
+            await self.panel._do_post(interaction)
+        except Exception:
+            log.exception("Button-role post failed")
+            await self.panel._error(interaction)
+
+
+class _AttachButton(discord.ui.Button):
+    def __init__(self, panel):
+        self.panel = panel
+        super().__init__(label="Attach to message", style=discord.ButtonStyle.primary)
+
+    async def callback(self, interaction):
+        try:
+            if not self.panel._assignable_buttons():
+                await interaction.response.send_message(
+                    _("Add at least one assignable role button before attaching."),
+                    ephemeral=True,
+                )
+                return
+            await interaction.response.send_modal(AttachModal(self.panel))
+        except Exception:
+            log.exception("Button-role attach launch failed")
+            await self.panel._error(interaction)
+
+
+class _PreviewButton(discord.ui.Button):
+    def __init__(self, panel):
+        self.panel = panel
+        super().__init__(label="Preview", style=discord.ButtonStyle.secondary)
+
+    async def callback(self, interaction):
+        try:
+            buttons = self.panel._assignable_buttons() or (
+                self.panel.config["buttons"] or []
+            )
+            embed = self.panel._render_panel_embed(buttons)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception:
+            log.exception("Button-role preview failed")
+            await self.panel._error(interaction)
+
+
+class _CancelButton(discord.ui.Button):
+    def __init__(self, panel):
+        self.panel = panel
+        super().__init__(label="Cancel", style=discord.ButtonStyle.danger)
+
+    async def callback(self, interaction):
+        try:
+            await self.panel._do_cancel(interaction)
+        except Exception:
+            log.exception("Button-role cancel failed")
+            await self.panel._error(interaction)
+
+
+# ----------------------------------------------------------------------
 # Builder view (the single entry point for admins)
 # ----------------------------------------------------------------------
-class BuilderView(AuthorView):
+class BuilderView(AuthorLayoutView):
     """Author-restricted builder that designs, posts or attaches a panel.
 
-    Satisfies the embed_creator.EmbedEditorHost protocol (embed_config +
-    on_embed_changed) so the shared edit dropdown drops straight in. The config
-    blob is {"embed": <embed_creator sub-blob>, "buttons": [...]} and is reused
-    by reference across rebuilds so the embed editor always mutates a stable ref.
+    A single Components V2 :class:`~discord.ui.Container` in the house style
+    established by the settings/welcome/Twitch panels. Satisfies the
+    embed_creator.EmbedEditorHost protocol (embed_config + on_embed_changed) so
+    the shared edit dropdown drops straight in. The config blob is
+    {"embed": <embed_creator sub-blob>, "buttons": [...]} and is reused by
+    reference across rebuilds so the embed editor always mutates a stable ref.
+    The deny wording matches AuthorLayoutView's default ("This panel isn't for
+    you.", the same wording the old AuthorView-based builder used explicitly),
+    so it is left unset here.
     """
 
     # No interpolation tokens for button-role panels.
     placeholder_hint = ""
 
     def __init__(self, cog, guild, author_id, target_channel_id, config, timeout=180):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.target_channel_id = target_channel_id
         self.config = config
-
-        self.add_item(embed_creator.make_edit_select(self, row=0))
-        self.add_item(_AddRoleSelect())
-        self.add_item(_TargetChannelSelect(self))
-        if self.config["buttons"]:
-            self.add_item(_RemoveButtonSelect(self))
+        self._build()
 
     # ---- EmbedEditorHost contract ----
     @property
@@ -387,20 +501,29 @@ class BuilderView(AuthorView):
             for b in buttons
         ]
 
-    # ---- status embed ----
-    def build_embed(self):
+    # ---- layout ----
+    def _accent_colour(self):
         embed_cfg = self.config.get("embed") or {}
         colour = embed_cfg.get("color")
-        embed = discord.Embed(
-            title=_("Button role builder"),
-            description=_(
+        return colour if isinstance(colour, int) else random_colour()
+
+    def _build(self):
+        """(Re)assemble the layout from the current config."""
+
+        embed_cfg = self.config.get("embed") or {}
+        container = discord.ui.Container(accent_colour=self._accent_colour())
+
+        header_lines = [
+            "### " + _("Button role builder"),
+            _(
                 "Design the panel below. Edit the embed, add role buttons, then "
                 "**Post panel** to a channel or **Attach to message** to drop the "
                 "buttons onto a message I already sent. Every change is kept until "
                 "you post."
             ),
-            colour=colour if isinstance(colour, int) else random_colour(),
-        )
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
 
         buttons = self.config.get("buttons") or []
         if buttons:
@@ -414,28 +537,49 @@ class BuilderView(AuthorView):
             value = "\n".join(lines)
         else:
             value = _("*No buttons yet. Pick a role below to add one.*")
-        embed.add_field(
-            name=_("Buttons ({count})").format(count=len(buttons)),
-            value=value[:1024],
-            inline=False,
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Buttons ({count})").format(count=len(buttons))
+                + "**\n"
+                + value[:1024]
+            )
         )
 
-        embed.add_field(
-            name=_("Embed"),
-            value=embed_creator.summarise(embed_cfg),
-            inline=False,
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Embed") + "**\n" + embed_creator.summarise(embed_cfg)
+            )
         )
-        embed.add_field(
-            name=_("Post target"),
-            value=(
-                f"<#{self.target_channel_id}>"
-                if self.target_channel_id
-                else _("*Not set.*")
-            ),
-            inline=False,
+
+        target_value = (
+            f"<#{self.target_channel_id}>"
+            if self.target_channel_id
+            else _("*Not set.*")
         )
-        embed.set_footer(text=_("Only you can use these controls."))
-        return embed
+        container.add_item(
+            discord.ui.TextDisplay("**" + _("Post target") + "**\n" + target_value)
+        )
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(embed_creator.make_edit_select(self)))
+        container.add_item(discord.ui.ActionRow(_AddRoleSelect(self)))
+        container.add_item(discord.ui.ActionRow(_TargetChannelSelect(self)))
+        if buttons:
+            container.add_item(discord.ui.ActionRow(_RemoveButtonSelect(self)))
+        container.add_item(
+            discord.ui.ActionRow(
+                _PostButton(self),
+                _AttachButton(self),
+                _PreviewButton(self),
+                _CancelButton(self),
+            )
+        )
+
+        container.add_item(
+            discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
+        )
+        self.add_item(container)
 
     def _render_panel_embed(self, buttons):
         """The single public-facing embed (embed_creator render + a fallback)."""
@@ -489,51 +633,13 @@ class BuilderView(AuthorView):
             log.exception("Button-role target select failed")
             await self._error(interaction)
 
-    # ---- action buttons ----
-    @discord.ui.button(label="Post panel", style=discord.ButtonStyle.success, row=4)
-    async def post_button(self, interaction, button):
-        try:
-            await self._do_post(interaction)
-        except Exception:
-            log.exception("Button-role post failed")
-            await self._error(interaction)
-
-    @discord.ui.button(label="Attach to message", style=discord.ButtonStyle.primary, row=4)
-    async def attach_button(self, interaction, button):
-        try:
-            if not self._assignable_buttons():
-                await interaction.response.send_message(
-                    _("Add at least one assignable role button before attaching."),
-                    ephemeral=True,
-                )
-                return
-            await interaction.response.send_modal(AttachModal(self))
-        except Exception:
-            log.exception("Button-role attach launch failed")
-            await self._error(interaction)
-
-    @discord.ui.button(label="Preview", style=discord.ButtonStyle.secondary, row=4)
-    async def preview_button(self, interaction, button):
-        try:
-            buttons = self._assignable_buttons() or (self.config["buttons"] or [])
-            embed = self._render_panel_embed(buttons)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        except Exception:
-            log.exception("Button-role preview failed")
-            await self._error(interaction)
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, row=4)
-    async def cancel_button(self, interaction, button):
-        try:
-            embed = discord.Embed(
-                title=_("Cancelled"),
-                description=_("Panel building was cancelled."),
-                colour=random_colour(),
-            )
-            await self._finish(interaction, embed)
-        except Exception:
-            log.exception("Button-role cancel failed")
-            await self._error(interaction)
+    # ---- action buttons (see _PostButton / _AttachButton / _PreviewButton /
+    # _CancelButton above; the Container holds instances of those instead of
+    # the @discord.ui.button decorators a plain View would use) ----
+    async def _do_cancel(self, interaction):
+        await self._finish(
+            interaction, _("Cancelled"), _("Panel building was cancelled.")
+        )
 
     # ---- post / attach ----
     async def _do_post(self, interaction):
@@ -586,22 +692,19 @@ class BuilderView(AuthorView):
         await self._persist(panel.id, channel.id, assignable, rows)
 
         skipped = len(buttons) - len(assignable)
-        done = discord.Embed(
-            title=_("Panel posted"),
-            description=_("Your button-role panel is live in {channel}.").format(
-                channel=channel.mention
-            ),
-            colour=random_colour(),
+        body = _("Your button-role panel is live in {channel}.").format(
+            channel=channel.mention
         )
         if skipped:
-            done.add_field(
-                name=_("Skipped"),
-                value=_("{count} role(s) I can't assign were left off.").format(
+            body += (
+                "\n\n**"
+                + _("Skipped")
+                + "**\n"
+                + _("{count} role(s) I can't assign were left off.").format(
                     count=skipped
-                ),
-                inline=False,
+                )
             )
-        await self._finish(interaction, done)
+        await self._finish(interaction, _("Panel posted"), body)
 
     async def _do_attach(self, interaction, raw):
         assignable = self._assignable_buttons()
@@ -693,14 +796,10 @@ class BuilderView(AuthorView):
 
         await self._persist(target.id, channel.id, assignable, rows)
 
-        done = discord.Embed(
-            title=_("Buttons attached"),
-            description=_(
-                "Added the role button(s) to [that message]({link}) in {channel}."
-            ).format(link=target.jump_url, channel=channel.mention),
-            colour=random_colour(),
-        )
-        await self._finish(interaction, done)
+        body = _(
+            "Added the role button(s) to [that message]({link}) in {channel}."
+        ).format(link=target.jump_url, channel=channel.mention)
+        await self._finish(interaction, _("Buttons attached"), body)
 
     # ---- persistence ----
     async def _persist(self, message_id, channel_id, buttons, rows):
@@ -746,6 +845,8 @@ class BuilderView(AuthorView):
 
     # ---- view plumbing ----
     async def _rerender(self, interaction):
+        """Rebuild a fresh panel from current config and show it in place."""
+
         new = BuilderView(
             self.cog,
             self.guild,
@@ -755,17 +856,19 @@ class BuilderView(AuthorView):
         )
         new.message = self.message
         self.stop()
-        await embed_creator.refresh_in_place(
-            interaction, self.message, embed=new.build_embed(), view=new
-        )
+        await _refresh_layout(interaction, self.message, new)
 
-    async def _finish(self, interaction, embed):
-        for child in self.children:
-            child.disabled = True
+    async def _finish(self, interaction, heading, body):
+        """Replace the builder with a non-interactive terminal card in place.
+
+        Used once the builder flow has ended (posted / attached / cancelled);
+        there is nothing left to configure, so the card carries no components
+        (see _DoneView) instead of a disabled-but-still-there Container.
+        """
+
         self.stop()
-        await embed_creator.refresh_in_place(
-            interaction, self.message, embed=embed, view=self
-        )
+        done = _DoneView(heading, body, colour=self._accent_colour())
+        await _refresh_layout(interaction, self.message, done)
 
     async def _error(self, interaction):
         await embed_creator.notify_failure(interaction)
@@ -820,7 +923,7 @@ class ButtonRoles(commands.Cog):
     async def _open_builder(self, ctx):
         config = _default_panel_config()
         view = BuilderView(self, ctx.guild, ctx.author.id, ctx.channel.id, config)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     @commands.hybrid_group(aliases=["br"])
     @commands.guild_only()

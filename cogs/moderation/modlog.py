@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from tools import db, embed_creator, settings
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +76,6 @@ class LogChannelSelect(discord.ui.ChannelSelect):
             placeholder=_("Select the log channel..."),
             min_values=1,
             max_values=1,
-            row=0,
         )
 
     async def callback(self, interaction):
@@ -109,7 +108,6 @@ class EventSelect(discord.ui.Select):
             min_values=0,
             max_values=len(EVENT_KEYS),  # all six event keys
             options=options,
-            row=1,
         )
 
     async def callback(self, interaction):
@@ -123,26 +121,73 @@ class EventSelect(discord.ui.Select):
             await embed_creator.notify_failure(interaction)
 
 
-class ModLogPanel(AuthorView):
-    """Author-restricted control panel for the mod-log: channel + event toggles."""
+class _DisableButton(discord.ui.Button):
+    def __init__(self, panel):
+        self.panel = panel
+        # Not _()-wrapped: preserved verbatim from the pre-CV2 literal label.
+        super().__init__(label="Disable logging", style=discord.ButtonStyle.danger)
+
+    async def callback(self, interaction):
+        try:
+            await self.panel.cog._disable(interaction.guild.id)
+            self.panel.channel_id = None
+            await self.panel._rerender(interaction)
+        except Exception:
+            log.exception("Mod-log panel disable failed")
+            await embed_creator.notify_failure(interaction)
+
+
+# ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+class ModLogPanel(AuthorLayoutView):
+    """Author-restricted control panel for the mod-log: channel + event toggles.
+
+    A single Components V2 :class:`~discord.ui.Container` in the house style
+    established by the settings/welcome/Twitch panels. The deny wording
+    matches AuthorLayoutView's default ("This panel isn't for you.", the same
+    wording the old AuthorView-based panel used explicitly), so it is left
+    unset here.
+    """
 
     def __init__(self, cog, author_id, *, channel_id, events, timeout=180):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.channel_id = channel_id
         # ``events`` is None (unset -> everything enabled) or an explicit list.
         self.events = events
-        self.add_item(LogChannelSelect(self))
-        self.add_item(EventSelect(self))
+        self._build()
 
     def _enabled_set(self):
         if self.events is None:
             return set(EVENT_KEYS)
         return set(self.events)
 
-    def build_embed(self):
+    def _build(self):
+        """(Re)assemble the layout from the current channel/events state."""
+
         enabled = self._enabled_set()
         if self.channel_id:
             channel_value = f"<#{self.channel_id}>"
@@ -154,18 +199,36 @@ class ModLogPanel(AuthorView):
             for key in EVENT_KEYS
         ]
 
-        embed = discord.Embed(
-            title=_("Mod-log settings"),
-            description=_(
+        container = discord.ui.Container(accent_colour=0x5865F2)
+        header_lines = [
+            "### " + _("Mod-log settings"),
+            _(
                 "Choose where server events are logged and which events to "
                 "record. Changes apply instantly."
             ),
-            colour=0x5865F2,
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Log channel") + ":** " + channel_value
+            )
         )
-        embed.add_field(name=_("Log channel"), value=channel_value, inline=False)
-        embed.add_field(name=_("Events"), value="\n".join(lines), inline=False)
-        embed.set_footer(text=_("Only you can use these controls."))
-        return embed
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Events") + "**\n" + "\n".join(lines)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(LogChannelSelect(self)))
+        container.add_item(discord.ui.ActionRow(EventSelect(self)))
+        container.add_item(discord.ui.ActionRow(_DisableButton(self)))
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# " + _("Only you can use these controls.")
+            )
+        )
+        self.add_item(container)
 
     async def _rerender(self, interaction):
         """Re-render with a fresh panel so option defaults reflect new state."""
@@ -178,21 +241,7 @@ class ModLogPanel(AuthorView):
         )
         new.message = self.message
         self.stop()
-        await interaction.response.edit_message(
-            embed=new.build_embed(), view=new
-        )
-
-    @discord.ui.button(
-        label="Disable logging", style=discord.ButtonStyle.danger, row=2
-    )
-    async def disable_button(self, interaction, button):
-        try:
-            await self.cog._disable(interaction.guild.id)
-            self.channel_id = None
-            await self._rerender(interaction)
-        except Exception:
-            log.exception("Mod-log panel disable failed")
-            await embed_creator.notify_failure(interaction)
+        await _refresh_layout(interaction, self.message, new)
 
 
 class ModLog(commands.Cog):
@@ -272,7 +321,7 @@ class ModLog(commands.Cog):
         view = ModLogPanel(
             self, ctx.author.id, channel_id=channel_id, events=events
         )
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     @modlog.command(name="set")
     async def modlog_set(self, ctx, channel: discord.TextChannel):

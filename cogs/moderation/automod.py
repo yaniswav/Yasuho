@@ -9,7 +9,7 @@ from discord.ext import commands
 from tools import db, interactions, modactions, settings
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -49,12 +49,12 @@ def _action_options(current):
 class _AutoModToggle(discord.ui.Button):
     """A single on/off rule button; green when on, greyed-out when unavailable."""
 
-    def __init__(self, panel, key, label, *, native, row):
+    def __init__(self, panel, key, label, *, native):
         self.panel = panel
         self.key = key
         self.native = native
         self.base_label = label
-        super().__init__(label=label, row=row)
+        super().__init__(label=label)
         self.refresh()
 
     def refresh(self):
@@ -80,18 +80,14 @@ class _AutoModToggle(discord.ui.Button):
 class _ActionSelect(discord.ui.Select):
     """Choose what happens to a member who trips a custom filter."""
 
-    def __init__(self, panel, row):
+    def __init__(self, panel):
         self.panel = panel
         super().__init__(
             placeholder=_("Action on a custom violation..."),
             min_values=1,
             max_values=1,
             options=_action_options(panel.state["action"]),
-            row=row,
         )
-
-    def refresh(self):
-        self.options = _action_options(self.panel.state["action"])
 
     async def callback(self, interaction):
         await self.panel.set_action(interaction, self.values[0])
@@ -100,14 +96,13 @@ class _ActionSelect(discord.ui.Select):
 class _ExemptRoleSelect(discord.ui.RoleSelect):
     """Roles whose members bypass the custom filters."""
 
-    def __init__(self, panel, row, defaults):
+    def __init__(self, panel, defaults):
         self.panel = panel
         super().__init__(
             placeholder=_("Exempt roles (select to replace)..."),
             min_values=0,
             max_values=25,
             default_values=defaults,
-            row=row,
         )
 
     async def callback(self, interaction):
@@ -119,7 +114,7 @@ class _ExemptRoleSelect(discord.ui.RoleSelect):
 class _ExemptChannelSelect(discord.ui.ChannelSelect):
     """Channels in which the custom filters are not enforced."""
 
-    def __init__(self, panel, row, defaults):
+    def __init__(self, panel, defaults):
         self.panel = panel
         super().__init__(
             placeholder=_("Exempt channels (select to replace)..."),
@@ -131,7 +126,6 @@ class _ExemptChannelSelect(discord.ui.ChannelSelect):
             min_values=0,
             max_values=25,
             default_values=defaults,
-            row=row,
         )
 
     async def callback(self, interaction):
@@ -140,125 +134,182 @@ class _ExemptChannelSelect(discord.ui.ChannelSelect):
         )
 
 
-class AutoModPanel(AuthorView):
-    """Author-restricted control panel for every custom + native AutoMod rule."""
+# ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+def _mark(value):
+    if value is None:
+        return _("⚪ Unavailable")
+    return _("🟢 Enabled") if value else _("🔴 Disabled")
+
+
+class AutoModPanel(AuthorLayoutView):
+    """Author-restricted control panel for every custom + native AutoMod rule.
+
+    A single Components V2 :class:`~discord.ui.Container` in the house style
+    established by the settings/welcome/Twitch panels. The deny wording
+    matches AuthorLayoutView's default ("This panel isn't for you.", the same
+    wording the old AuthorView-based panel used explicitly), so it is left
+    unset here.
+    """
 
     def __init__(self, cog, guild, author_id, state, timeout=180):
-        super().__init__(
-            author_id, timeout=timeout, deny_message="This panel isn't for you."
-        )
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.state = state
-
-        self._toggles = [
-            _AutoModToggle(self, "link", _("Anti-link"), native=False, row=0),
-            _AutoModToggle(self, "invite", _("Anti-invite"), native=False, row=0),
-            _AutoModToggle(self, "spam", _("Anti-spam"), native=False, row=0),
-            _AutoModToggle(self, "kw", _("Native: Keyword"), native=True, row=1),
-            _AutoModToggle(self, "nspam", _("Native: Spam"), native=True, row=1),
-            _AutoModToggle(self, "nmention", _("Native: Mentions"), native=True, row=1),
-        ]
-        for toggle in self._toggles:
-            self.add_item(toggle)
-
-        self._action_select = _ActionSelect(self, row=2)
-        self.add_item(self._action_select)
-
-        role_defaults = [
-            r
-            for r in (guild.get_role(i) for i in state["exempt_roles"])
-            if r is not None
-        ]
-        channel_defaults = [
-            c
-            for c in (guild.get_channel(i) for i in state["exempt_channels"])
-            if c is not None
-        ]
-        self.add_item(_ExemptRoleSelect(self, row=3, defaults=role_defaults))
-        self.add_item(
-            _ExemptChannelSelect(self, row=4, defaults=channel_defaults)
-        )
+        self._build()
 
     # -- rendering ------------------------------------------------------
-    def _refresh_components(self):
-        for toggle in self._toggles:
-            toggle.refresh()
-        self._action_select.refresh()
+    def _build(self):
+        """(Re)assemble the layout from the current state."""
 
-    def embed(self):
-        def mark(value):
-            if value is None:
-                return _("⚪ Unavailable")
-            return _("🟢 Enabled") if value else _("🔴 Disabled")
+        state = self.state
+        container = discord.ui.Container(accent_colour=random_colour())
 
-        embed = discord.Embed(
-            title=_("AutoMod control panel"),
-            description=_(
+        header_lines = [
+            "### " + _("AutoMod control panel"),
+            _(
                 "Custom filters are enforced by Yasuho on every message. "
                 "Native filters are Discord's own AutoMod, blocked before a "
                 "message is ever posted."
             ),
-            colour=random_colour(),
-        )
-        embed.add_field(
-            name=_("Custom filters (Yasuho)"),
-            value=_(
-                "Anti-link: {link}\n"
-                "Anti-invite: {invite}\n"
-                "Anti-spam: {spam}"
-            ).format(
-                link=mark(self.state["link"]),
-                invite=mark(self.state["invite"]),
-                spam=mark(self.state["spam"]),
-            ),
-            inline=True,
-        )
-        embed.add_field(
-            name=_("Native filters (Discord)"),
-            value=_(
-                "Keyword preset: {kw}\n"
-                "Spam: {nspam}\n"
-                "Mention spam: {nmention}"
-            ).format(
-                kw=mark(self.state["kw"]),
-                nspam=mark(self.state["nspam"]),
-                nmention=mark(self.state["nmention"]),
-            ),
-            inline=True,
-        )
-        embed.add_field(
-            name=_("Action on custom violation"),
-            value=self.state["action"].title(),
-            inline=False,
-        )
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
 
-        roles = self.state["exempt_roles"]
-        channels = self.state["exempt_channels"]
-        embed.add_field(
-            name=_("Exempt roles"),
-            value=(
-                ", ".join(f"<@&{r}>" for r in roles) if roles else _("None")
-            ),
-            inline=False,
-        )
-        embed.add_field(
-            name=_("Exempt channels"),
-            value=(
-                ", ".join(f"<#{c}>" for c in channels) if channels else _("None")
-            ),
-            inline=False,
-        )
-
-        if any(self.state[k] is None for k in ("kw", "nspam", "nmention")):
-            embed.set_footer(
-                text=_("Native rules need the bot to have Manage Server.")
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Custom filters (Yasuho)")
+                + "**\n"
+                + _(
+                    "Anti-link: {link}\n"
+                    "Anti-invite: {invite}\n"
+                    "Anti-spam: {spam}"
+                ).format(
+                    link=_mark(state["link"]),
+                    invite=_mark(state["invite"]),
+                    spam=_mark(state["spam"]),
+                )
             )
-        return embed
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Native filters (Discord)")
+                + "**\n"
+                + _(
+                    "Keyword preset: {kw}\n"
+                    "Spam: {nspam}\n"
+                    "Mention spam: {nmention}"
+                ).format(
+                    kw=_mark(state["kw"]),
+                    nspam=_mark(state["nspam"]),
+                    nmention=_mark(state["nmention"]),
+                )
+            )
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Action on custom violation")
+                + ":** "
+                + state["action"].title()
+            )
+        )
 
-    async def _refresh_message(self, interaction):
-        self._refresh_components()
-        await interaction.response.edit_message(embed=self.embed(), view=self)
+        roles = state["exempt_roles"]
+        channels = state["exempt_channels"]
+        roles_value = ", ".join(f"<@&{r}>" for r in roles) if roles else _("None")
+        channels_value = (
+            ", ".join(f"<#{c}>" for c in channels) if channels else _("None")
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Exempt roles") + ":** " + roles_value
+            )
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Exempt channels") + ":** " + channels_value
+            )
+        )
+
+        container.add_item(discord.ui.Separator())
+
+        custom_toggles = [
+            _AutoModToggle(self, "link", _("Anti-link"), native=False),
+            _AutoModToggle(self, "invite", _("Anti-invite"), native=False),
+            _AutoModToggle(self, "spam", _("Anti-spam"), native=False),
+        ]
+        native_toggles = [
+            _AutoModToggle(self, "kw", _("Native: Keyword"), native=True),
+            _AutoModToggle(self, "nspam", _("Native: Spam"), native=True),
+            _AutoModToggle(self, "nmention", _("Native: Mentions"), native=True),
+        ]
+        container.add_item(discord.ui.ActionRow(*custom_toggles))
+        container.add_item(discord.ui.ActionRow(*native_toggles))
+
+        container.add_item(discord.ui.ActionRow(_ActionSelect(self)))
+
+        role_defaults = [
+            r
+            for r in (self.guild.get_role(i) for i in state["exempt_roles"])
+            if r is not None
+        ]
+        channel_defaults = [
+            c
+            for c in (self.guild.get_channel(i) for i in state["exempt_channels"])
+            if c is not None
+        ]
+        container.add_item(
+            discord.ui.ActionRow(_ExemptRoleSelect(self, defaults=role_defaults))
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                _ExemptChannelSelect(self, defaults=channel_defaults)
+            )
+        )
+
+        if any(state[k] is None for k in ("kw", "nspam", "nmention")):
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# " + _("Native rules need the bot to have Manage Server.")
+                )
+            )
+
+        self.add_item(container)
+
+    async def _rerender(self, interaction):
+        """Rebuild a fresh panel from current state and show it in place."""
+
+        new = AutoModPanel(self.cog, self.guild, self.author_id, dict(self.state))
+        new.message = self.message
+        self.stop()
+        await _refresh_layout(interaction, self.message, new)
 
     async def _safe_fail(self, interaction):
         await interactions.notify_failure(
@@ -286,7 +337,7 @@ class AutoModPanel(AuthorView):
             else:
                 await self.cog.set_custom_rule(self.guild.id, key, target)
                 self.state[key] = target
-            await self._refresh_message(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("AutoMod panel toggle failed")
             await self._safe_fail(interaction)
@@ -299,7 +350,7 @@ class AutoModPanel(AuthorView):
                 self.cog.bot.db_pool, self.guild.id, "automod_action", value
             )
             self.state["action"] = value
-            await self._refresh_message(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("AutoMod panel action update failed")
             await self._safe_fail(interaction)
@@ -314,7 +365,7 @@ class AutoModPanel(AuthorView):
                 self.cog.bot.db_pool, self.guild.id, key, ids
             )
             self.state[state_key] = ids
-            await self._refresh_message(interaction)
+            await self._rerender(interaction)
         except Exception:
             log.exception("AutoMod panel exemption update failed")
             await self._safe_fail(interaction)
@@ -411,7 +462,7 @@ class AutoMod(commands.Cog):
 
         state = await self._panel_state(ctx.guild)
         view = AutoModPanel(self, ctx.guild, ctx.author.id, state)
-        view.message = await ctx.send(embed=view.embed(), view=view)
+        view.message = await ctx.send(view=view)
 
     # ------------------------------------------------------------------
     # Custom-rule settings (cached, mirrors the original pattern)

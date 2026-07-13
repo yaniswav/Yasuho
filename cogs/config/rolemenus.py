@@ -22,7 +22,7 @@ from discord.ext import commands
 from tools import i18n, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -333,7 +333,6 @@ class _CustomizeSelect(discord.ui.Select):
             placeholder=_("Customize a role (emoji + description)..."),
             options=options or [discord.SelectOption(label=_("(pick roles first)"), value="_none")],
             disabled=not options,
-            row=4,
         )
 
     async def callback(self, interaction):
@@ -362,7 +361,6 @@ class _RolePicker(discord.ui.RoleSelect):
             min_values=0,
             max_values=role_menus.MAX_OPTIONS,
             default_values=defaults[: role_menus.MAX_OPTIONS],
-            row=0,
         )
 
     async def callback(self, interaction):
@@ -400,7 +398,7 @@ class _RuleSelect(discord.ui.Select):
                 emoji="\U0001F518",
             ),
         ]
-        super().__init__(placeholder=_("Selection rule..."), options=options, row=1)
+        super().__init__(placeholder=_("Selection rule..."), options=options)
 
     async def callback(self, interaction):
         try:
@@ -426,7 +424,6 @@ class _ChannelPicker(discord.ui.ChannelSelect):
             min_values=1,
             max_values=1,
             default_values=defaults,
-            row=2,
         )
 
     async def callback(self, interaction):
@@ -441,7 +438,7 @@ class _ChannelPicker(discord.ui.ChannelSelect):
 class _HeaderButton(discord.ui.Button):
     def __init__(self, builder):
         self._owner = builder
-        super().__init__(label=_("Edit header"), style=discord.ButtonStyle.primary, row=3)
+        super().__init__(label=_("Edit header"), style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction):
         await interaction.response.send_modal(HeaderModal(self._owner))
@@ -450,7 +447,7 @@ class _HeaderButton(discord.ui.Button):
 class _PostButton(discord.ui.Button):
     def __init__(self, builder):
         self._owner = builder
-        super().__init__(label=_("Post menu"), style=discord.ButtonStyle.success, row=3)
+        super().__init__(label=_("Post menu"), style=discord.ButtonStyle.success)
 
     async def callback(self, interaction):
         try:
@@ -460,20 +457,111 @@ class _PostButton(discord.ui.Button):
             await self._owner._error(interaction)
 
 
-class RoleMenuBuilder(AuthorView):
-    """Author-restricted builder that composes and posts a self-role menu."""
+# ----------------------------------------------------------------------
+# Edit a LayoutView panel in place with view=-only (no embed/content)
+# ----------------------------------------------------------------------
+async def _refresh_layout(interaction, message, view):
+    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
+
+    A Components V2 message carries its content inside the view and Discord
+    rejects an ``embed=`` on such an edit. Tries the live interaction edit
+    first, then falls back to editing the stored message when the interaction
+    was already answered (e.g. a deferred modal submit).
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        pass
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            pass
+
+
+class RoleMenuBuilder(AuthorLayoutView):
+    """Author-restricted builder that composes and posts a self-role menu.
+
+    A single Components V2 :class:`~discord.ui.Container` in the house style
+    established by the settings/welcome/Twitch panels. The deny wording
+    matches AuthorLayoutView's default ("This panel isn't for you.", the same
+    wording the old AuthorView-based builder used explicitly), so it is left
+    unset here. Note ``header_embed`` is unrelated to this panel: it builds the
+    classic embed for the posted public menu message (see ``post``), which
+    stays a plain embed since it is the product self-assigners see, not an
+    admin control surface.
+    """
 
     def __init__(self, cog, guild, author_id, draft, timeout=600):
-        super().__init__(author_id, timeout=timeout, deny_message="This panel isn't for you.")
+        super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.draft = draft
-        self.add_item(_RolePicker(self))
-        self.add_item(_RuleSelect(self))
-        self.add_item(_ChannelPicker(self))
-        self.add_item(_CustomizeSelect(self))
-        self.add_item(_HeaderButton(self))
-        self.add_item(_PostButton(self))
+        self._build()
+
+    def _build(self):
+        """(Re)assemble the layout from the current draft."""
+
+        draft = self.draft
+        options = draft.get("options") or []
+        container = discord.ui.Container(accent_colour=random_colour())
+
+        header_lines = [
+            "### " + _("Role menu builder"),
+            _(
+                "Pick the roles to offer, choose the rule, set a channel, then "
+                "**Post menu**. Members set their roles from a single dropdown."
+            ),
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
+
+        roles_value = (
+            " ".join(f"<@&{o['role_id']}>" for o in options)[:1024] or _("*None yet.*")
+        )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**"
+                + _("Roles ({count})").format(count=len(options))
+                + "**\n"
+                + roles_value
+            )
+        )
+
+        rule_value = (
+            _("Pick exactly one") if draft.get("exclusive") else _("Pick any")
+        )
+        cid = draft.get("channel_id")
+        channel_value = f"<#{cid}>" if cid else _("*Not set.*")
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**{rule_label}:** {rule_value}   "
+                "**{channel_label}:** {channel_value}".format(
+                    rule_label=_("Rule"),
+                    rule_value=rule_value,
+                    channel_label=_("Channel"),
+                    channel_value=channel_value,
+                )
+            )
+        )
+
+        header_value = (draft.get("title") or _("*default*"))[:256]
+        container.add_item(
+            discord.ui.TextDisplay("**" + _("Header") + ":** " + header_value)
+        )
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(_RolePicker(self)))
+        container.add_item(discord.ui.ActionRow(_RuleSelect(self)))
+        container.add_item(discord.ui.ActionRow(_ChannelPicker(self)))
+        container.add_item(discord.ui.ActionRow(_CustomizeSelect(self)))
+        container.add_item(
+            discord.ui.ActionRow(_HeaderButton(self), _PostButton(self))
+        )
+        self.add_item(container)
 
     def header_embed(self):
         """The embed that heads the posted menu (title + description + roles)."""
@@ -489,54 +577,13 @@ class RoleMenuBuilder(AuthorView):
             embed.add_field(name=_("Roles"), value=" ".join(lines)[:1024], inline=False)
         return embed
 
-    def build_embed(self):
-        embed = discord.Embed(
-            title=_("Role menu builder"),
-            description=_(
-                "Pick the roles to offer, choose the rule, set a channel, then "
-                "**Post menu**. Members set their roles from a single dropdown."
-            ),
-            colour=random_colour(),
-        )
-        options = self.draft.get("options") or []
-        embed.add_field(
-            name=_("Roles ({count})").format(count=len(options)),
-            value=(" ".join(f"<@&{o['role_id']}>" for o in options)[:1024] or _("*None yet.*")),
-            inline=False,
-        )
-        embed.add_field(
-            name=_("Rule"),
-            value=_("Pick exactly one") if self.draft.get("exclusive") else _("Pick any"),
-            inline=True,
-        )
-        cid = self.draft.get("channel_id")
-        embed.add_field(
-            name=_("Channel"),
-            value=f"<#{cid}>" if cid else _("*Not set.*"),
-            inline=True,
-        )
-        embed.add_field(
-            name=_("Header"),
-            value=(self.draft.get("title") or _("*default*"))[:256],
-            inline=False,
-        )
-        return embed
-
     async def _rerender(self, interaction):
+        """Rebuild a fresh panel from current draft and show it in place."""
+
         new = RoleMenuBuilder(self.cog, self.guild, self.author_id, self.draft)
         new.message = self.message
         self.stop()
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=new.build_embed(), view=new)
-                return
-        except discord.HTTPException:
-            pass
-        if self.message is not None:
-            try:
-                await self.message.edit(embed=new.build_embed(), view=new)
-            except discord.HTTPException:
-                pass
+        await _refresh_layout(interaction, self.message, new)
 
     async def _error(self, interaction):
         try:
@@ -586,8 +633,7 @@ class RoleMenuBuilder(AuthorView):
         await self.cog.store_menu(message.id, self.guild.id, channel.id, config)
         self.cog.bot.add_view(view, message_id=message.id)
 
-        for child in self.children:
-            child.disabled = True
+        self._disable_all()
         self.stop()
         try:
             await interaction.response.edit_message(view=self)
@@ -719,7 +765,7 @@ class RoleMenus(commands.Cog):
             "channel_id": ctx.channel.id,
         }
         view = RoleMenuBuilder(self, ctx.guild, ctx.author.id, draft)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+        view.message = await ctx.send(view=view)
 
 
 async def setup(bot):
