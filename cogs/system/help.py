@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from tools import interactions, settings
 from tools.formats import random_colour
-from tools.i18n import _, ngettext
+from tools.i18n import N_, _, ngettext
 from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
@@ -35,35 +35,56 @@ CV2_CONTROL_RESERVE = 400
 # navigation edits in place again until the channel buries it once more.
 REPOST_AFTER_MESSAGES = 4
 
-# Curated, top-level help taxonomy: (emoji, display name, member cog classes).
-# Each entry groups one or more cog *class names* (what ``bot.get_cog`` expects)
-# under a single, human-friendly category so the menu stays tidy instead of
-# showing one category per cog. Cogs not listed here but with visible commands
-# are swept into the "Other" catch-all (see ``build_categories``).
+# Curated, top-level help taxonomy: one entry per line the home page shows.
+# Each entry is ``(emoji, display name, home-page description, member cogs)``:
+#
+#   * ``emoji`` / ``name`` - the dropdown option and page heading (the names are
+#     bare literals, rendered as-is; they are intentionally NOT translated, which
+#     keeps the taxonomy a stable, language-neutral spine for both users and the
+#     guard test in tests/cogs/test_help_taxonomy.py).
+#   * ``description`` - a one-line blurb under the entry on the home page. It IS
+#     user-facing prose, so it is marked with ``N_`` here (extracted, stored in
+#     English) and translated at render time with ``_(...)`` in ``_build_home``,
+#     the module-constant-then-translate-at-use pattern (see tools.i18n.mark).
+#   * the trailing list holds one or more cog *class names* (what ``bot.get_cog``
+#     expects) grouped under this single, human-friendly category.
+#
+# The order is member-relevance first (what a fresh member opens help for -
+# music, games, anime, levels) and the admin-facing categories last. Every cog
+# with visible commands MUST live in exactly one category (or in EXCLUDED_COGS);
+# anything unclaimed is swept into the "Other" catch-all (see
+# ``build_categories``) and, redundantly, flagged by the guard test - so "Other"
+# should now always be empty.
 CATEGORIES = [
-    ("🔨", "Moderation", ["Moderation", "AutoMod", "ModLog", "Blacklist"]),
     (
-        "⚙️",
-        "Server Config",
-        [
-            "Settings",
-            "Welcome",
-            "ReactionRoles",
-            "RoleMenus",
-            "Starboard",
-            "TemporaryRooms",
-            "Twitch",
-            "Announcements",
-            "CustomCommands",
-            "Verification",
-            "ButtonRoles",
-        ],
+        "🎵",
+        "Music",
+        N_("Play music, queue tracks, tune filters and see lyrics."),
+        ["Music"],
     ),
     (
-        "📈",
-        "Community",
+        "🎮",
+        "Fun & Games",
+        N_("Memes, dice, minigames and quick laughs."),
+        ["Fun", "Games"],
+    ),
+    (
+        "🎬",
+        "Anime & Manga",
+        N_("Search AniList, track your list and get airing alerts."),
+        ["AniList", "AniListFeed"],
+    ),
+    (
+        "✨",
+        "Levels & XP",
+        N_("Earn XP, climb the leaderboard and set up rewards."),
+        ["Leveling", "LevelRewards", "LevelConfigUI", "LevelAdmin"],
+    ),
+    (
+        "👤",
+        "Profile & Personal",
+        N_("Your profile, reminders, AFK and personal preferences."),
         [
-            "Leveling",
             "Profiles",
             "AFK",
             "Reminder",
@@ -72,16 +93,49 @@ CATEGORIES = [
             "Language",
         ],
     ),
-    ("🎮", "Fun & Games", ["Fun", "Games"]),
-    ("📺", "AniList", ["AniList", "AniListFeed"]),
-    ("🔧", "Tools & Info", ["Info", "Meta", "Utility", "Extras", "SearchWeb"]),
-    ("🎵", "Music", ["Music"]),
+    (
+        "🧰",
+        "Tools & Info",
+        N_("Server info, polls, translations and handy utilities."),
+        ["Info", "Meta", "Utility", "Extras", "SearchWeb"],
+    ),
+    (
+        "🛡️",
+        "Moderation",
+        N_("Kicks, bans, warnings, automod and mod logs."),
+        ["Moderation", "AutoMod", "ModLog", "Blacklist"],
+    ),
+    (
+        "⚙️",
+        "Server Setup",
+        N_("Welcome messages, starboard, custom commands and more."),
+        [
+            "Settings",
+            "Welcome",
+            "Announcements",
+            "CustomCommands",
+            "Starboard",
+            "TemporaryRooms",
+            "Twitch",
+        ],
+    ),
+    (
+        "🎭",
+        "Roles & Access",
+        N_("Reaction roles, role menus, button roles and verification."),
+        ["ReactionRoles", "RoleMenus", "ButtonRoles", "Verification"],
+    ),
 ]
 OTHER_EMOJI = "🧩"
 OTHER_NAME = "Other"
+# The catch-all's blurb. It should never render (nothing is unclaimed), but the
+# code path stays as a safety net, so it carries a description like any category.
+OTHER_DESCRIPTION = N_("Anything not yet sorted into a category.")
 
-# Cogs never surfaced as a category (the help cog wires itself in separately).
-EXCLUDED_COGS = {"Help"}
+# Cogs never surfaced as a category: the help cog wires itself in separately, and
+# Admin is owner-only (all its commands are hidden, so it never surfaces anyway -
+# listing it here states the intent and lets the guard test treat it as claimed).
+EXCLUDED_COGS = {"Help", "Admin"}
 
 
 def _visible_commands(cmds):
@@ -94,7 +148,7 @@ def build_categories(bot):
 
     Returns an ordered list of dicts::
 
-        {"emoji": str, "name": str,
+        {"emoji": str, "name": str, "description": str,
          "groups": [(cog_label, [commands]), ...], "total": int}
 
     Only the visible (non-hidden) commands of cogs that actually exist are
@@ -108,7 +162,7 @@ def build_categories(bot):
     resolved = []
     claimed = set(EXCLUDED_COGS)
 
-    for emoji, name, cog_names in CATEGORIES:
+    for emoji, name, description, cog_names in CATEGORIES:
         groups = []
         total = 0
         for cog_name in cog_names:
@@ -123,7 +177,13 @@ def build_categories(bot):
             total += len(cmds)
         if total:
             resolved.append(
-                {"emoji": emoji, "name": name, "groups": groups, "total": total}
+                {
+                    "emoji": emoji,
+                    "name": name,
+                    "description": description,
+                    "groups": groups,
+                    "total": total,
+                }
             )
 
     # Catch-all: cogs (and cog-less commands) not claimed by the taxonomy.
@@ -148,6 +208,7 @@ def build_categories(bot):
             {
                 "emoji": OTHER_EMOJI,
                 "name": OTHER_NAME,
+                "description": OTHER_DESCRIPTION,
                 "groups": other_groups,
                 "total": other_total,
             }
@@ -462,8 +523,10 @@ class HelpView(AuthorLayoutView):
         container.add_item(discord.ui.TextDisplay(server_block))
 
         # Curated categories. A CV2 TextDisplay has no per-field 1024-char cap
-        # (unlike the old embed fields), so every line goes in one block: the
-        # emoji, name and total visible-command count per category.
+        # (unlike the old embed fields), so every line goes in one block: per
+        # category the emoji + name + visible-command count, then a one-line
+        # ``-#`` subtext blurb (translated here from the ``N_`` source stored in
+        # CATEGORIES) so the home reads like a phone home screen, not a list.
         categories = self.categories
         lines = []
         total = 0
@@ -475,6 +538,10 @@ class HelpView(AuthorLayoutView):
             lines.append(
                 f"{category['emoji']} **{category['name']}** - {count}"
             )
+            # Bind before translating: babel's token-based extractor would
+            # otherwise capture the literal "description" as a bogus msgid.
+            blurb = category["description"]
+            lines.append("-# " + _(blurb))
         container.add_item(
             discord.ui.TextDisplay(
                 "**" + _("📚 Categories") + "**\n" + "\n".join(lines)
