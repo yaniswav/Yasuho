@@ -2332,7 +2332,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             emoji=preset.emoji, label=preset.label
         )
 
-    @commands.hybrid_command(name="filter", aliases=["fx", "effect"])
+    @commands.hybrid_command(name="filter", aliases=["fx", "effect", "effects", "filters"])
     @commands.guild_only()
     @app_commands.describe(preset="The audio effect to apply, or Off to clear.")
     @app_commands.choices(preset=EFFECT_CHOICES)

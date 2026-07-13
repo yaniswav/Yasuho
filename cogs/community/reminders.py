@@ -260,7 +260,7 @@ class Reminder(commands.Cog):
         except Exception:
             log.exception("Error while calling timer")
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(aliases=["remindme", "reminder"])
     @app_commands.describe(
         when=(
             "What to remind you about (and when, e.g. '10m buy milk'). "

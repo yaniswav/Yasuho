@@ -208,7 +208,7 @@ class Utility(commands.Cog):
             log.exception("Failed to send native quickpoll")
             await ctx.send(_("I could not create that poll here."))
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(aliases=["tr"])
     @discord.app_commands.describe(text="The text to translate.")
     async def translate(self, ctx, *, text: str):
         """Translate text to English (auto-detect source language)."""

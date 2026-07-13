@@ -1168,7 +1168,7 @@ class Leveling(commands.Cog):
         buf.seek(0)
         return buf
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(aliases=["level", "lvl"])
     @commands.guild_only()
     @discord.app_commands.describe(member="Whose rank to show (defaults to you).")
     async def rank(self, ctx, member: discord.Member = None):
