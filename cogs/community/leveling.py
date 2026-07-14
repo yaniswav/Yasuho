@@ -91,7 +91,7 @@ class LeaderboardView(AuthorLayoutView):
     a member scrolling past the top 15 wants the numbers, not fifteen more
     thumbnails. Prev/Next walk pages of :data:`~tools.leveling.LEADERBOARD_PAGE_SIZE`
     and are author-gated through :class:`~tools.views.AuthorLayoutView` (only the
-    member who ran /levels drives them), so a busy channel never has strangers
+    member who ran /leaderboard drives them), so a busy channel never has strangers
     flipping each other's boards. The pager row only appears when there is more
     than one page, so a board of 15 or fewer renders exactly as it did before L5.
     """
@@ -366,7 +366,7 @@ class Leveling(commands.Cog):
         Mirrors set_enabled's upsert shape but only ever touches the announce
         columns: the INSERT seeds ``enabled`` from the legacy
         guild_settings.leveling_enabled JSONB flag (the same seed
-        LevelRewards.levelrewards_mode uses), so a guild whose leveling is
+        LevelRewards.cmd_mode uses), so a guild whose leveling is
         currently ON only through that legacy bool is never masked by a fresh
         row defaulting to FALSE; the UPDATE branch never writes ``enabled`` at
         all, so this can never itself turn leveling on or off.
@@ -667,7 +667,7 @@ class Leveling(commands.Cog):
     @staticmethod
     def level_for_xp(xp):
         # Thin delegate to the pure service so the XP curve lives in exactly one
-        # place (tools/leveling.py); rank / levels and the tests call this off the
+        # place (tools/leveling.py); rank / leaderboard and the tests call this off the
         # class, so the staticmethod contract is kept.
         return leveling.level_for_xp(xp)
 
@@ -880,8 +880,9 @@ class Leveling(commands.Cog):
         )
 
     async def apply_admin_xp_change(self, *, guild, member, channel, old_xp, new_xp):
-        """Route an admin XP edit (/xp give|take|set|reset) through the reward +
-        announce seams, the L5 sibling of :meth:`credit_voice_levelup`.
+        """Route an admin XP edit (/levelconfig xp give|take|set|reset) through
+        the reward + announce seams, the L5 sibling of
+        :meth:`credit_voice_levelup`.
 
         The admin's action is message-independent, so ``channel`` is where a
         "channel"-mode announce lands (the command's own channel). Behaviour by
@@ -1237,12 +1238,12 @@ class Leveling(commands.Cog):
                 )
                 await ctx.send(embed=embed)
 
-    @commands.hybrid_command(aliases=["leaderboard", "top"])
+    @commands.hybrid_command(name="leaderboard", aliases=["levels", "top"])
     @commands.guild_only()
     @discord.app_commands.describe(
         period="Leave empty for the all-time leaderboard, or pick weekly/monthly."
     )
-    async def levels(
+    async def leaderboard(
         self, ctx, period: Optional[Literal["weekly", "monthly"]] = None
     ):
         """Show the ranked members of the guild (add weekly/monthly for a
@@ -1344,7 +1345,7 @@ class Leveling(commands.Cog):
 
         # A LayoutView carries its own content: send it with no embed/content, and
         # suppress mentions since TextDisplay resolves them (unlike an embed). The
-        # pager is author-gated, so it is bound to whoever invoked /levels.
+        # pager is author-gated, so it is bound to whoever invoked /leaderboard.
         view = LeaderboardView(ctx.author.id, title, entries)
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()

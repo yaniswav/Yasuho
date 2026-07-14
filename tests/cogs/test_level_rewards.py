@@ -278,8 +278,8 @@ async def test_db_failure_is_swallowed_and_returns_empty(fake_pool):
 
 
 # ---------------------------------------------------------------------------
-# The `/levelrewards mode` command must not silently disable leveling for a
-# guild that enabled it only through the LEGACY guild_settings JSONB (no
+# The `/levelconfig rewards mode` command must not silently disable leveling for
+# a guild that enabled it only through the LEGACY guild_settings JSONB (no
 # level_config row yet): a fresh level_config row would default enabled=FALSE
 # and mask that flag on the next restart. The upsert seeds `enabled` from the
 # legacy flag on INSERT and never touches it on UPDATE.
@@ -299,7 +299,7 @@ async def test_mode_upsert_seeds_enabled_from_legacy_jsonb(fake_pool):
     cog = LevelRewards(_make_bot(fake_pool))
     ctx = _ModeCtx(guild_id=7)
 
-    await cog.levelrewards_mode.callback(cog, ctx, "replace")
+    await cog.cmd_mode(ctx, "replace")
 
     upserts = [c for c in fake_pool.calls if c[0] == "execute"]
     assert len(upserts) == 1
@@ -315,7 +315,7 @@ async def test_mode_upsert_seeds_enabled_from_legacy_jsonb(fake_pool):
 
 
 # ---------------------------------------------------------------------------
-# The `/levelrewards add` cap is enforced RACE-SAFELY inside the INSERT (a WHERE
+# The `/levelconfig rewards add` cap is enforced RACE-SAFELY inside the INSERT (a WHERE
 # COUNT guard), not just by the advisory pre-check, and a null insert is
 # disambiguated into "already a reward" vs "at the maximum".
 # ---------------------------------------------------------------------------
@@ -344,7 +344,7 @@ async def test_add_insert_carries_the_atomic_cap_guard(fake_pool):
     _route_add(fake_pool, count=0, inserted=5)
 
     cog = LevelRewards(_make_bot(fake_pool))
-    await cog.levelrewards_add.callback(cog, ctx, 5, role)
+    await cog.cmd_add(ctx, 5, role)
 
     inserts = [c for c in fake_pool.calls if "INSERT INTO level_rewards" in c[1]]
     assert len(inserts) == 1
@@ -365,7 +365,7 @@ async def test_add_null_insert_with_existing_rule_reports_duplicate(fake_pool):
     _route_add(fake_pool, count=1, inserted=None, exists=1)  # row already present
 
     cog = LevelRewards(_make_bot(fake_pool))
-    await cog.levelrewards_add.callback(cog, ctx, 5, role)
+    await cog.cmd_add(ctx, 5, role)
 
     assert any("already a level" in c[0][0] for c in ctx.sends)
 
@@ -381,7 +381,7 @@ async def test_add_null_insert_from_a_lost_cap_race_reports_maximum(fake_pool):
     _route_add(fake_pool, count=0, inserted=None, exists=None)
 
     cog = LevelRewards(_make_bot(fake_pool))
-    await cog.levelrewards_add.callback(cog, ctx, 5, role)
+    await cog.cmd_add(ctx, 5, role)
 
     assert any("maximum" in c[0][0] for c in ctx.sends)
 

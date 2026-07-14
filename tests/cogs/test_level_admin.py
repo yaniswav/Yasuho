@@ -1,4 +1,4 @@
-"""Unit tests for cogs.community.level_admin.LevelAdmin (the /xp group, L5).
+"""Unit tests for cogs.community.level_admin.LevelAdmin (the /levelconfig xp group, L5).
 
 The pure value maths live in tests/tools/test_level_admin.py; these drive the
 COG side against fakes: give/take/set write ONLY the lifetime levels row (never
@@ -105,7 +105,7 @@ async def test_give_adds_writes_absolute_total_and_routes(fake_pool):
     ctx = _FakeCtx(guild=_FakeGuild(1))
     member = _FakeMember(2)
 
-    await cog.xp_give.callback(cog, ctx, member, 50)
+    await cog.cmd_give(ctx, member, 50)
 
     writes = _level_writes(fake_pool)
     assert len(writes) == 1
@@ -130,7 +130,7 @@ async def test_take_floors_at_zero(fake_pool):
     ctx = _FakeCtx()
     member = _FakeMember(2)
 
-    await cog.xp_take.callback(cog, ctx, member, 100)  # would be -70
+    await cog.cmd_take(ctx, member, 100)  # would be -70
 
     assert _level_writes(fake_pool)[0][2] == (1, 2, 0)  # never negative
     assert lv.calls[0]["old_xp"] == 30
@@ -143,7 +143,7 @@ async def test_set_writes_the_exact_total(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, lv))
     ctx = _FakeCtx()
 
-    await cog.xp_set.callback(cog, ctx, _FakeMember(2), 0)  # soft reset to 0
+    await cog.cmd_set(ctx, _FakeMember(2), 0)  # soft reset to 0
 
     assert _level_writes(fake_pool)[0][2] == (1, 2, 0)
     assert lv.calls[0]["old_xp"] == 5000 and lv.calls[0]["new_xp"] == 0
@@ -153,7 +153,7 @@ async def test_give_out_of_range_amount_is_refused_before_any_db(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     ctx = _FakeCtx()
 
-    await cog.xp_give.callback(cog, ctx, _FakeMember(2), 0)  # below MIN 1
+    await cog.cmd_give(ctx, _FakeMember(2), 0)  # below MIN 1
 
     assert fake_pool.calls == []  # no read, no write
     assert any("between" in c[0][0] for c in ctx.sends)
@@ -163,7 +163,7 @@ async def test_give_amount_over_max_is_refused(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     ctx = _FakeCtx()
 
-    await cog.xp_give.callback(cog, ctx, _FakeMember(2), 1_000_001)
+    await cog.cmd_give(ctx, _FakeMember(2), 1_000_001)
 
     assert fake_pool.calls == []
 
@@ -172,7 +172,7 @@ async def test_set_negative_is_refused(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     ctx = _FakeCtx()
 
-    await cog.xp_set.callback(cog, ctx, _FakeMember(2), -1)
+    await cog.cmd_set(ctx, _FakeMember(2), -1)
 
     assert fake_pool.calls == []
 
@@ -183,7 +183,7 @@ async def test_set_zero_is_allowed(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     ctx = _FakeCtx()
 
-    await cog.xp_set.callback(cog, ctx, _FakeMember(2), 0)
+    await cog.cmd_set(ctx, _FakeMember(2), 0)
 
     assert len(_level_writes(fake_pool)) == 1
 
@@ -194,7 +194,7 @@ async def test_adjust_without_leveling_cog_still_writes(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, leveling_cog=None))
     ctx = _FakeCtx()
 
-    await cog.xp_give.callback(cog, ctx, _FakeMember(2), 50)
+    await cog.cmd_give(ctx, _FakeMember(2), 50)
 
     assert _level_writes(fake_pool)[0][2] == (1, 2, 150)
     assert "embed" in ctx.sends[0][1]
@@ -207,7 +207,7 @@ async def test_routing_failure_never_breaks_the_command(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, lv))
     ctx = _FakeCtx()
 
-    await cog.xp_give.callback(cog, ctx, _FakeMember(2), 50)  # must not raise
+    await cog.cmd_give(ctx, _FakeMember(2), 50)  # must not raise
 
     assert len(_level_writes(fake_pool)) == 1
     assert ctx.sends  # still confirmed to the admin

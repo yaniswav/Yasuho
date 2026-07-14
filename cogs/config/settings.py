@@ -563,25 +563,6 @@ class Settings(commands.Cog):
         view = ConfigPanel(self, ctx.author.id, ctx.guild, state)
         view.message = await ctx.send(view=view)
 
-    @config.command(name="leveling")
-    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
-    @commands.has_permissions(manage_guild=True)
-    @discord.app_commands.describe(mode="True to enable, False to disable.")
-    async def config_leveling(self, ctx, mode: bool):
-        """Enable or disable the leveling system for this server."""
-
-        await self._set_leveling_enabled(ctx.guild.id, mode)
-        embed = discord.Embed(
-            title=_("Leveling"),
-            description=(
-                _("Leveling enabled for this server.")
-                if mode
-                else _("Leveling disabled for this server.")
-            ),
-            colour=random_colour(),
-        )
-        await ctx.send(embed=embed)
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Settings(bot))

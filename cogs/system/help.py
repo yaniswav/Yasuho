@@ -297,7 +297,7 @@ def _group_blocks(help_command, group, expand):
         else:
             value = _(
                 "This command has {count}. "
-                "Toggle expansion in /settings, or use "
+                "Toggle expansion in /preferences, or use "
                 "`{prefix}help {group} <subcommand>`."
             ).format(
                 count=ngettext(

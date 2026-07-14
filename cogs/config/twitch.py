@@ -786,11 +786,11 @@ class Twitch(commands.Cog):
         )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
-    @twitch.command(name="createrole", aliases=["setup-role"])
+    @twitch.command(name="addrole", aliases=["createrole", "setup-role"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(manage_roles=True)
-    async def twitch_createrole(self, ctx: commands.Context):
+    async def twitch_addrole(self, ctx: commands.Context):
         """Create a Live streamer role and link it to the alert config."""
 
         existing = discord.utils.get(ctx.guild.roles, name=LEGACY_ROLE_NAME)

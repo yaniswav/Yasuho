@@ -935,11 +935,11 @@ class ButtonRoles(commands.Cog):
         if ctx.invoked_subcommand is None:
             await self._open_builder(ctx)
 
-    @buttonrole.command(name="create")
+    @buttonrole.command(name="add", aliases=["create"])
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     @commands.bot_has_permissions(manage_roles=True)
-    async def buttonrole_create(self, ctx):
+    async def buttonrole_add(self, ctx):
         """Open the interactive button-role builder."""
 
         await self._open_builder(ctx)
@@ -985,11 +985,11 @@ class ButtonRoles(commands.Cog):
             paginate_lines(lines, title=_("Button roles")), author_id=ctx.author.id
         ).start(ctx)
 
-    @buttonrole.command(name="delete")
+    @buttonrole.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     @discord.app_commands.describe(message_id="The ID of the button-role panel message.")
-    async def buttonrole_delete(self, ctx, message_id: str):
+    async def buttonrole_remove(self, ctx, message_id: str):
         """Delete a button-role panel by its message ID (strips the buttons)."""
 
         try:

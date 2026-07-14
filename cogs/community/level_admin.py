@@ -1,4 +1,4 @@
-"""Admin XP tools (leveling L5): the ``/xp`` group.
+"""Admin XP tools (leveling L5): the ``/levelconfig xp`` group.
 
 A Manage-Server admin adjusts a member's lifetime XP directly - ``give`` /
 ``take`` / ``set`` a member's total, ``reset`` one member (single confirm), or
@@ -29,7 +29,6 @@ from __future__ import annotations
 import logging
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 from tools import interactions, level_admin, leveling
@@ -44,7 +43,7 @@ log = logging.getLogger(__name__)
 # Confirmation surfaces (reset: one button; resetall: button + name modal)
 # ----------------------------------------------------------------------
 class _ResetConfirmView(AuthorView):
-    """Single Confirm/Cancel prompt for ``/xp reset`` (one member).
+    """Single Confirm/Cancel prompt for ``/levelconfig xp reset`` (one member).
 
     Author-gated: only the admin who ran the command may confirm. Both buttons
     are built in ``__init__`` (which runs in the command's task, where the
@@ -101,7 +100,7 @@ class _ResetConfirmView(AuthorView):
 
 
 class _ResetAllModal(LocaleModal):
-    """Second gate for ``/xp resetall``: the admin must type the server name.
+    """Second gate for ``/levelconfig xp resetall``: the admin must type the server name.
 
     Opened from the danger button below (a component interaction, so this works
     for a prefix invocation too - the button click carries the interaction the
@@ -158,7 +157,7 @@ class _ResetAllModal(LocaleModal):
 
 
 class _ResetAllView(AuthorView):
-    """First gate for ``/xp resetall``: a danger button that opens the modal."""
+    """First gate for ``/levelconfig xp resetall``: a danger button that opens the modal."""
 
     def __init__(self, cog, author_id, guild, *, timeout=60):
         super().__init__(
@@ -193,7 +192,16 @@ class _ResetAllView(AuthorView):
 # Cog
 # ----------------------------------------------------------------------
 class LevelAdmin(commands.Cog):
-    """The /xp admin group: give, take, set, reset, resetall."""
+    """Admin XP command bodies: give, take, set, reset, resetall.
+
+    This cog owns the logic; it registers no command group of its own. The
+    LevelConfigUI cog surfaces these bodies as ``/levelconfig xp {give,take,set,
+    reset,resetall}``, parenting them under its ``levelconfig`` group and
+    delegating straight to the ``cmd_*`` methods here (a hybrid group cannot
+    cleanly parent children that live in another cog, so registration lives on
+    levelconfig and the logic - including the reset/resetall confirm flows -
+    stays here).
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -289,7 +297,7 @@ class LevelAdmin(commands.Cog):
         )
 
     async def _perform_reset(self, guild, member, channel):
-        """Zero one member's lifetime XP (the /xp reset confirm action).
+        """Zero one member's lifetime XP (the /levelconfig xp reset confirm action).
 
         Deletes their `levels` row entirely (a true reset drops them off the
         board) and routes the level-DOWN reconcile so replace-mode tiers are
@@ -322,7 +330,7 @@ class LevelAdmin(commands.Cog):
     async def _perform_reset_all(self, guild_id):
         """Wipe EVERY member's lifetime XP AND every period rollup for a guild.
 
-        The nuclear ``/xp resetall`` action (behind the two-step confirm). Two
+        The nuclear ``/levelconfig xp resetall`` action (behind the two-step confirm). Two
         indexed DELETEs; roles are deliberately NOT reconciled here - a mass
         role sweep across the whole guild is a different, much heavier operation
         and out of scope for a reset (see the cog docstring / residual risks).
@@ -339,34 +347,25 @@ class LevelAdmin(commands.Cog):
         )
         return count or 0
 
-    # -- command group ---------------------------------------------------
-    @commands.hybrid_group(name="xp")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    async def xp(self, ctx):
-        """Admin XP tools: give, take, set, or reset a member's XP."""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(
-                title=_("Admin XP tools"),
-                description=_(
-                    "- `/xp give <member> <amount>` - add XP\n"
-                    "- `/xp take <member> <amount>` - remove XP\n"
-                    "- `/xp set <member> <amount>` - set an exact total\n"
-                    "- `/xp reset <member>` - reset one member (confirm)\n"
-                    "- `/xp resetall` - reset the whole server (double confirm)"
-                ),
-                colour=random_colour(),
-            )
-            await ctx.send(embed=embed)
+    # -- admin command bodies (registered as /levelconfig xp *) --------------
+    # Plain methods, not commands: the LevelConfigUI cog registers the matching
+    # /levelconfig xp subcommands (same checks + describe) and delegates here.
+    async def cmd_overview(self, ctx):
+        """The group landing card (prefix `?levelconfig xp` with no subcommand)."""
+        embed = discord.Embed(
+            title=_("Admin XP tools"),
+            description=_(
+                "- `/levelconfig xp give <member> <amount>` - add XP\n"
+                "- `/levelconfig xp take <member> <amount>` - remove XP\n"
+                "- `/levelconfig xp set <member> <amount>` - set an exact total\n"
+                "- `/levelconfig xp reset <member>` - reset one member (confirm)\n"
+                "- `/levelconfig xp resetall` - reset the whole server (double confirm)"
+            ),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
 
-    @xp.command(name="give")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @app_commands.describe(
-        member="The member to give XP to.",
-        amount="How much XP to add (1 to 1000000).",
-    )
-    async def xp_give(self, ctx, member: discord.Member, amount: int):
+    async def cmd_give(self, ctx, member: discord.Member, amount: int):
         """Give a member XP (adds to their current total)."""
         ok, _reason = level_admin.validate_adjust_amount(amount)
         if not ok:
@@ -379,14 +378,7 @@ class LevelAdmin(commands.Cog):
             return
         await self._adjust(ctx, member, level_admin.GIVE, amount)
 
-    @xp.command(name="take")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @app_commands.describe(
-        member="The member to take XP from.",
-        amount="How much XP to remove (1 to 1000000).",
-    )
-    async def xp_take(self, ctx, member: discord.Member, amount: int):
+    async def cmd_take(self, ctx, member: discord.Member, amount: int):
         """Take XP from a member (floors at 0)."""
         ok, _reason = level_admin.validate_adjust_amount(amount)
         if not ok:
@@ -399,14 +391,7 @@ class LevelAdmin(commands.Cog):
             return
         await self._adjust(ctx, member, level_admin.TAKE, amount)
 
-    @xp.command(name="set")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @app_commands.describe(
-        member="The member whose XP to set.",
-        amount="The exact XP total to set (0 to 10000000).",
-    )
-    async def xp_set(self, ctx, member: discord.Member, amount: int):
+    async def cmd_set(self, ctx, member: discord.Member, amount: int):
         """Set a member's XP to an exact total."""
         ok, _reason = level_admin.validate_set_xp(amount)
         if not ok:
@@ -418,11 +403,7 @@ class LevelAdmin(commands.Cog):
             return
         await self._adjust(ctx, member, level_admin.SET, amount)
 
-    @xp.command(name="reset")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @app_commands.describe(member="The member whose XP to reset to 0.")
-    async def xp_reset(self, ctx, member: discord.Member):
+    async def cmd_reset(self, ctx, member: discord.Member):
         """Reset one member's XP to 0 (asks for confirmation first)."""
         embed = discord.Embed(
             title=_("Reset this member's XP?"),
@@ -439,10 +420,7 @@ class LevelAdmin(commands.Cog):
             allowed_mentions=discord.AllowedMentions.none(),
         )
 
-    @xp.command(name="resetall")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    async def xp_resetall(self, ctx):
+    async def cmd_resetall(self, ctx):
         """Reset EVERY member's XP for this server (double confirmation)."""
         embed = discord.Embed(
             title=_("Reset ALL XP in this server?"),

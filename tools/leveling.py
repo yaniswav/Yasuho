@@ -787,7 +787,7 @@ def period_marker_changed(previous, current):
 
 
 # ============================================================
-# Leaderboard pagination (leveling L5): the /levels (lifetime AND weekly/
+# Leaderboard pagination (leveling L5): the /leaderboard (lifetime AND weekly/
 # monthly) views walk pages of this many ranks. Page 0 keeps the Components V2
 # podium (top avatars as Sections); page 1+ drops it for a plain ranked list.
 # The pure page maths mirror cogs/music/music.py's queue_page so the two paged

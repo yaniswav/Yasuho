@@ -632,6 +632,22 @@ class LevelConfigUI(commands.Cog):
         if leveling_cog is not None:
             await leveling_cog.refresh_multiplier_snapshot(guild_id)
 
+    async def _require(self, ctx, cog_name):
+        """Return a sibling cog by name, or send a friendly refusal and None.
+
+        The seam behind the folded /levelconfig rewards and /levelconfig xp
+        subcommands: their bodies live in the LevelRewards / LevelAdmin cogs
+        (fine-grained by concern), and each wrapper delegates to a cmd_* method
+        there. Looked up by name - the same house cross-cog pattern the announce
+        and voice-XP commands already use for the Leveling cog - and guarded so a
+        missing sibling degrades to a refusal rather than a crash (never happens
+        in production, keeps this cog testable in isolation).
+        """
+        cog = self.bot.get_cog(cog_name)
+        if cog is None:
+            await ctx.send(_("The leveling system isn't loaded right now."))
+        return cog
+
     # -- shared reads ----------------------------------------------------
     async def _fetch_no_xp_rows(self, guild_id):
         rows = await self.bot.db_pool.fetch(
@@ -693,9 +709,39 @@ class LevelConfigUI(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def levelconfig(self, ctx):
-        """Manage no-XP zones and level-up announce settings."""
+        """The one leveling admin group: enable, rewards, XP, no-XP zones,
+        announce, voice XP, boosts and events."""
         if ctx.invoked_subcommand is None:
             await self._send_overview(ctx)
+
+    # -- enable toggle -------------------------------------------------
+    @levelconfig.command(name="enable")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
+    @discord.app_commands.describe(mode="True to enable, False to disable.")
+    async def levelconfig_enable(self, ctx, mode: bool):
+        """Enable or disable the leveling system for this server."""
+        # Same L0 seam the config panel and its /config leveling predecessor
+        # used: Leveling.set_enabled writes level_config AND refreshes the
+        # hot-path _configs map (membership == enabled), so the toggle takes
+        # effect on the very next message with no restart. The in-panel toggle
+        # in cogs/config/settings.py routes through the same method, so both
+        # sites stay in step.
+        leveling_cog = await self._require(ctx, "Leveling")
+        if leveling_cog is None:
+            return
+        await leveling_cog.set_enabled(ctx.guild.id, mode)
+        embed = discord.Embed(
+            title=_("Leveling"),
+            description=(
+                _("Leveling enabled for this server.")
+                if mode
+                else _("Leveling disabled for this server.")
+            ),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
 
     # -- noxp subgroup -------------------------------------------------
     @levelconfig.group(name="noxp")
@@ -1213,6 +1259,136 @@ class LevelConfigUI(commands.Cog):
         """Stop the active XP event (if any)."""
         await self._write_event(ctx.guild.id, None, None)
         await ctx.send(_("The XP event was stopped."))
+
+    # -- rewards subgroup (L2) ---------------------------------------------
+    # Thin wrappers over the LevelRewards cog's cmd_* bodies (see
+    # cogs/community/level_rewards.py). The checks and describe live here (this
+    # is where the command is registered); the logic lives there.
+    @levelconfig.group(name="rewards")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_rewards(self, ctx):
+        """Manage level-up role rewards."""
+        if ctx.invoked_subcommand is None:
+            cog = await self._require(ctx, "LevelRewards")
+            if cog is not None:
+                await cog.cmd_list(ctx)
+
+    @levelconfig_rewards.command(name="add")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(manage_roles=True)
+    @discord.app_commands.describe(
+        level="The level that grants the role.", role="The role to grant."
+    )
+    async def levelconfig_rewards_add(self, ctx, level: int, role: discord.Role):
+        """Grant a role automatically when a member reaches a level."""
+        cog = await self._require(ctx, "LevelRewards")
+        if cog is not None:
+            await cog.cmd_add(ctx, level, role)
+
+    @levelconfig_rewards.command(name="remove")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_rewards_remove(self, ctx):
+        """Pick a level reward to remove from a list of every rule set up."""
+        cog = await self._require(ctx, "LevelRewards")
+        if cog is not None:
+            await cog.cmd_remove(ctx)
+
+    @levelconfig_rewards.command(name="list")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_rewards_list(self, ctx):
+        """Show every level reward configured for this server."""
+        cog = await self._require(ctx, "LevelRewards")
+        if cog is not None:
+            await cog.cmd_list(ctx)
+
+    @levelconfig_rewards.command(name="mode")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        mode="stack (keep every reward) or replace (latest only)."
+    )
+    async def levelconfig_rewards_mode(
+        self, ctx, mode: typing.Literal["stack", "replace"]
+    ):
+        """Set whether members keep every earned reward, or only the latest."""
+        cog = await self._require(ctx, "LevelRewards")
+        if cog is not None:
+            await cog.cmd_mode(ctx, mode)
+
+    # -- xp subgroup (L5) --------------------------------------------------
+    # Thin wrappers over the LevelAdmin cog's cmd_* bodies (see
+    # cogs/community/level_admin.py), including the reset/resetall confirm flows.
+    @levelconfig.group(name="xp")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_xp(self, ctx):
+        """Admin XP tools: give, take, set, or reset a member's XP."""
+        if ctx.invoked_subcommand is None:
+            cog = await self._require(ctx, "LevelAdmin")
+            if cog is not None:
+                await cog.cmd_overview(ctx)
+
+    @levelconfig_xp.command(name="give")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        member="The member to give XP to.",
+        amount="How much XP to add (1 to 1000000).",
+    )
+    async def levelconfig_xp_give(self, ctx, member: discord.Member, amount: int):
+        """Give a member XP (adds to their current total)."""
+        cog = await self._require(ctx, "LevelAdmin")
+        if cog is not None:
+            await cog.cmd_give(ctx, member, amount)
+
+    @levelconfig_xp.command(name="take")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        member="The member to take XP from.",
+        amount="How much XP to remove (1 to 1000000).",
+    )
+    async def levelconfig_xp_take(self, ctx, member: discord.Member, amount: int):
+        """Take XP from a member (floors at 0)."""
+        cog = await self._require(ctx, "LevelAdmin")
+        if cog is not None:
+            await cog.cmd_take(ctx, member, amount)
+
+    @levelconfig_xp.command(name="set")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        member="The member whose XP to set.",
+        amount="The exact XP total to set (0 to 10000000).",
+    )
+    async def levelconfig_xp_set(self, ctx, member: discord.Member, amount: int):
+        """Set a member's XP to an exact total."""
+        cog = await self._require(ctx, "LevelAdmin")
+        if cog is not None:
+            await cog.cmd_set(ctx, member, amount)
+
+    @levelconfig_xp.command(name="reset")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(member="The member whose XP to reset to 0.")
+    async def levelconfig_xp_reset(self, ctx, member: discord.Member):
+        """Reset one member's XP to 0 (asks for confirmation first)."""
+        cog = await self._require(ctx, "LevelAdmin")
+        if cog is not None:
+            await cog.cmd_reset(ctx, member)
+
+    @levelconfig_xp.command(name="resetall")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_xp_resetall(self, ctx):
+        """Reset EVERY member's XP for this server (double confirmation)."""
+        cog = await self._require(ctx, "LevelAdmin")
+        if cog is not None:
+            await cog.cmd_resetall(ctx)
 
 
 async def setup(bot):

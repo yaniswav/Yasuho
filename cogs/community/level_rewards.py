@@ -1,7 +1,7 @@
 """Level-up role rewards (leveling L2) - MEE6's number-one paywalled feature.
 
-An admin sets up rules via the ``/levelrewards`` group: "reach level N, get
-role R". A member who levels up (dispatched from the Leveling cog's on_message
+An admin sets up rules via the ``/levelconfig rewards`` group: "reach level N,
+get role R". A member who levels up (dispatched from the Leveling cog's on_message
 grant path, tools/leveling.level_up_between) is reconciled against those rules
 here: :meth:`LevelRewards.grant_for_levelup` computes which roles to add and
 (in 'replace' mode) remove, applies what it actually can, and hands the
@@ -168,8 +168,8 @@ class LevelRewardsListView(discord.ui.LayoutView):
             container.add_item(
                 discord.ui.TextDisplay(
                     _(
-                        "No level rewards configured yet. Use `/levelrewards "
-                        "add` to create one."
+                        "No level rewards configured yet. Use `/levelconfig "
+                        "rewards add` to create one."
                     )
                 )
             )
@@ -191,7 +191,17 @@ class LevelRewardsListView(discord.ui.LayoutView):
 # Cog
 # ----------------------------------------------------------------------
 class LevelRewards(commands.Cog):
-    """Automatic role grants on level-up, plus the /levelrewards admin group."""
+    """Automatic role grants on level-up, plus the level-reward admin bodies.
+
+    This cog owns the grant engine (``grant_for_levelup`` / ``reconcile_for_level``,
+    looked up on the hot path by ``bot.get_cog("LevelRewards")``) and the admin
+    command BODIES (``cmd_add`` / ``cmd_remove`` / ``cmd_list`` / ``cmd_mode``).
+    It no longer registers a command group of its own: those bodies are surfaced
+    as ``/levelconfig rewards {add,remove,list,mode}`` by the LevelConfigUI cog,
+    which parents them under its ``levelconfig`` group and delegates straight to
+    the methods here (a hybrid group cannot cleanly parent children that live in
+    a different cog, so the skeleton owns registration and this cog owns logic).
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -379,23 +389,13 @@ class LevelRewards(commands.Cog):
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
 
-    # -- command group ---------------------------------------------------
-    @commands.hybrid_group(name="levelrewards", aliases=["lvlrewards"])
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    async def levelrewards(self, ctx):
-        """Manage level-up role rewards."""
-        if ctx.invoked_subcommand is None:
-            await self._send_list(ctx)
-
-    @levelrewards.command(name="add")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @commands.bot_has_permissions(manage_roles=True)
-    @discord.app_commands.describe(
-        level="The level that grants the role.", role="The role to grant."
-    )
-    async def levelrewards_add(self, ctx, level: int, role: discord.Role):
+    # -- admin command bodies (registered as /levelconfig rewards *) ---------
+    # These are plain methods, not commands: the LevelConfigUI cog registers the
+    # matching /levelconfig rewards subcommands (with the same checks + describe)
+    # and delegates straight here. Keeping the bodies in this cog keeps the
+    # reward logic in one module (fine-grained by concern) while the group tree
+    # lives on levelconfig.
+    async def cmd_add(self, ctx, level: int, role: discord.Role):
         """Grant a role automatically when a member reaches a level."""
         if role.guild.id != ctx.guild.id:
             await ctx.send(_("That role isn't from this server."))
@@ -482,10 +482,7 @@ class LevelRewards(commands.Cog):
         )
         await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
 
-    @levelrewards.command(name="remove")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    async def levelrewards_remove(self, ctx):
+    async def cmd_remove(self, ctx):
         """Pick a level reward to remove from a list of every rule set up."""
         rules = await self._fetch_rules(ctx.guild.id)
         if not rules:
@@ -498,20 +495,11 @@ class LevelRewards(commands.Cog):
             _("Pick a reward rule to remove:"), view=view
         )
 
-    @levelrewards.command(name="list")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    async def levelrewards_list(self, ctx):
+    async def cmd_list(self, ctx):
         """Show every level reward configured for this server."""
         await self._send_list(ctx)
 
-    @levelrewards.command(name="mode")
-    @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
-    @discord.app_commands.describe(mode="stack (keep every reward) or replace (latest only).")
-    async def levelrewards_mode(
-        self, ctx, mode: Literal["stack", "replace"]
-    ):
+    async def cmd_mode(self, ctx, mode: Literal["stack", "replace"]):
         """Set whether members keep every earned reward, or only the latest."""
         # rewards_mode shares level_config with the leveling on/off flag. Creating
         # that row here for a guild that enabled leveling ONLY through the legacy

@@ -89,7 +89,7 @@ def test_level_boundaries_are_exact():
 
 
 def test_is_staticmethod_callable_without_instance():
-    """Guard the call contract the rank/levels/on_message paths depend on."""
+    """Guard the call contract the rank/leaderboard/on_message paths depend on."""
     assert isinstance(
         Leveling.__dict__["level_for_xp"], staticmethod
     )
@@ -1475,7 +1475,7 @@ async def test_levels_bare_invocation_reads_the_lifetime_table_and_shows_levels(
     cog = Leveling(_make_bot(fake_pool))
     ctx = make_context(guild=_FakeLBGuild(1, members=[member]))
 
-    await cog.levels.callback(cog, ctx, period=None)
+    await cog.leaderboard.callback(cog, ctx, period=None)
 
     fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
     assert len(fetches) == 1
@@ -1500,7 +1500,7 @@ async def test_levels_weekly_reads_xp_period_for_the_current_week_and_hides_leve
     cog = Leveling(_make_bot(fake_pool))
     ctx = make_context(guild=_FakeLBGuild(1, members=[member]))
 
-    await cog.levels.callback(cog, ctx, period="weekly")
+    await cog.leaderboard.callback(cog, ctx, period="weekly")
 
     fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
     assert len(fetches) == 1
@@ -1522,7 +1522,7 @@ async def test_levels_monthly_empty_period_sends_the_period_specific_empty_embed
     cog = Leveling(_make_bot(fake_pool))
     ctx = make_context(guild=_FakeLBGuild(1))
 
-    await cog.levels.callback(cog, ctx, period="monthly")
+    await cog.leaderboard.callback(cog, ctx, period="monthly")
 
     fetches = [c for c in fake_pool.calls if c[0] == "fetch"]
     assert fetches[0][2] == (1, month_key)
@@ -1531,11 +1531,11 @@ async def test_levels_monthly_empty_period_sends_the_period_specific_empty_embed
 
 
 # ---------------------------------------------------------------------------
-# Admin XP routing (L5): apply_admin_xp_change - the seam the /xp cog calls
-# after a manual XP write. A level UP grants roles + announces (like a message
-# level-up); a level DOWN reconciles roles and NEVER announces; no crossing is a
-# no-op. Admin edits never touch xp_period (the /xp cog's own DB writes prove
-# that; this seam only concerns the lifetime level).
+# Admin XP routing (L5): apply_admin_xp_change - the seam the /levelconfig xp cog
+# calls after a manual XP write. A level UP grants roles + announces (like a
+# message level-up); a level DOWN reconciles roles and NEVER announces; no
+# crossing is a no-op. Admin edits never touch xp_period (the /levelconfig xp
+# cog's own DB writes prove that; this seam only concerns the lifetime level).
 # ---------------------------------------------------------------------------
 
 
@@ -1749,7 +1749,7 @@ async def test_levels_builds_every_row_and_paginates(fake_pool, make_context):
     cog = Leveling(_make_bot(fake_pool))
     ctx = make_context(guild=_FakeLBGuild(1, members=members))
 
-    await cog.levels.callback(cog, ctx, period=None)
+    await cog.leaderboard.callback(cog, ctx, period=None)
 
     view = ctx.sends[0][1]["view"]
     assert len(view.entries) == 20  # ALL rows built, not sliced to one page

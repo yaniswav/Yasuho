@@ -228,9 +228,9 @@ class UserSettings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="settings")
-    async def settings_cmd(self, ctx):
-        """Open your personal settings panel."""
+    @commands.hybrid_command(name="preferences", aliases=["settings"])
+    async def preferences_cmd(self, ctx):
+        """Open your personal preferences panel."""
         states = {}
         for pref in PREFS:
             states[pref.key] = await settings.get_user(
