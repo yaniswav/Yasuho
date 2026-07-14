@@ -8,7 +8,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from tools import modchecks
 from tools.i18n import _
 from tools.time import (
     FutureTime,
@@ -339,49 +338,6 @@ class Reminder(commands.Cog):
         await ctx.send(
             _("Okay, reminding you {when}: {message}").format(
                 when=discord.utils.format_dt(dt, "R"), message=message
-            )
-        )
-
-    @commands.hybrid_command()
-    @commands.guild_only()
-    @commands.has_permissions(ban_members=True)
-    @commands.bot_has_permissions(ban_members=True)
-    @app_commands.describe(
-        member="The member to ban.",
-        duration="How long the ban lasts, e.g. 1d or 2h30m.",
-        reason="Why they're being banned.",
-    )
-    async def tempban(
-        self,
-        ctx,
-        member: discord.User,
-        duration: ShortTime,
-        *,
-        reason: str = None,
-    ):
-        """Temporarily bans a member for the given duration."""
-
-        err = modchecks.hierarchy_error(ctx, member)
-        if err:
-            return await ctx.send(err)
-
-        try:
-            await ctx.guild.ban(member, reason=reason)
-        except discord.Forbidden:
-            return await ctx.send(
-                _("I don't have permission to ban that member.")
-            )
-        except discord.HTTPException:
-            return await ctx.send(_("Sorry, I couldn't ban that member."))
-        await self.create_timer(
-            duration.dt,
-            "tempban",
-            guild_id=ctx.guild.id,
-            user_id=member.id,
-        )
-        await ctx.send(
-            _("Banned {member} until {time}.").format(
-                member=member, time=discord.utils.format_dt(duration.dt, "F")
             )
         )
 

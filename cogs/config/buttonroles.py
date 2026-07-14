@@ -25,7 +25,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, i18n
+from tools import embed_creator, i18n, interactions
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.message_ref import parse_message_ref
@@ -339,17 +339,9 @@ async def _refresh_layout(interaction, message, view):
     was already answered (e.g. a deferred modal submit).
     """
 
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(view=view)
-        except discord.HTTPException:
-            pass
+    await interactions.refresh_layout(
+        interaction, message, view, surface="button-roles panel"
+    )
 
 
 # ----------------------------------------------------------------------

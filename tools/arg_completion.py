@@ -323,7 +323,7 @@ class _CompletionView(AuthorView):
             try:
                 await self.message.edit(embed=self.build_embed(), view=self)
             except discord.HTTPException:
-                log.debug("arg completion: refresh edit failed", exc_info=True)
+                log.warning("arg completion: refresh edit failed", exc_info=True)
 
     async def _report(self, interaction):
         await interactions.notify_failure(

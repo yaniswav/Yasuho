@@ -19,6 +19,7 @@ from .helpers import (
     score_hint,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY, SAVE_ENTRY_QUERY
+from tools import interactions
 from tools.i18n import _
 from tools.views import AuthorView, LocaleModal
 
@@ -1256,10 +1257,9 @@ class LoginModal(LocaleModal, title="Enter your AniList code"):
     async def on_submit(self, interaction):
         # Defer first: the token exchange is a network round-trip that can exceed
         # the 3s interaction window, which would otherwise fail the modal submit.
-        try:
-            await interaction.response.defer(ephemeral=True, thinking=True)
-        except discord.HTTPException:
-            pass
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="anilist login code modal"
+        )
         try:
             name = await self.cog._exchange_code(self.author_id, self.code.value)
             if name is None:

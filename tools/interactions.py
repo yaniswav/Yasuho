@@ -37,6 +37,59 @@ async def notify_failure(interaction, message: str = "Something went wrong.") ->
     await reply(interaction, message, ephemeral=True)
 
 
+async def defer(
+    interaction, *, ephemeral: bool = False, thinking: bool = False, surface: str = "interaction"
+) -> bool:
+    """Best-effort ``response.defer`` that LOGS a failure instead of hiding it.
+
+    Callers defer before a slow round-trip, then follow up. A defer that fails is
+    not benign: the interaction has expired or was already answered, and the
+    follow-up almost always fails too - exactly the invisible failure that leaves a
+    user on Discord's "Something went wrong" with an empty log. So the failure is
+    logged at warning (with ``surface`` for triage), never silently swallowed.
+    Returns ``True`` when the defer landed, ``False`` otherwise (callers may ignore
+    it; it is there for those that want to bail early).
+    """
+
+    try:
+        await interaction.response.defer(ephemeral=ephemeral, thinking=thinking)
+        return True
+    except discord.HTTPException:
+        log.warning("interactions.defer failed on %s", surface, exc_info=True)
+        return False
+
+
+async def refresh_layout(interaction, message, view, *, surface: str = "panel") -> None:
+    """View-only in-place refresh of a Components V2 (LayoutView) panel.
+
+    A Components V2 message carries its content inside the view, so Discord rejects
+    an ``embed=`` on such an edit; this never passes one (the embed-carrying variant
+    is :func:`refresh_in_place`). Tries the live interaction edit first; when the
+    interaction was already answered (e.g. a deferred modal submit) it falls back to
+    editing the stored message. A first-attempt failure is an expected fallthrough
+    to that fallback and stays at DEBUG; a failure of the FINAL fallback means the
+    refresh never landed, so it is logged at warning with ``surface``.
+    """
+
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=view)
+            return
+    except discord.HTTPException:
+        log.debug(
+            "interactions.refresh_layout: live edit failed on %s, falling back",
+            surface,
+            exc_info=True,
+        )
+    if message is not None:
+        try:
+            await message.edit(view=view)
+        except discord.HTTPException:
+            log.warning(
+                "interactions.refresh_layout: could not refresh %s", surface, exc_info=True
+            )
+
+
 async def refresh_in_place(interaction, message, *, embed, view) -> None:
     """Edit the panel in place, handling the response.is_done() fork.
 

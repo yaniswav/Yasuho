@@ -19,7 +19,7 @@ import re
 import discord
 from discord.ext import commands
 
-from tools import i18n, role_menus
+from tools import i18n, interactions, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorLayoutView, LocaleModal
@@ -469,17 +469,9 @@ async def _refresh_layout(interaction, message, view):
     was already answered (e.g. a deferred modal submit).
     """
 
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(view=view)
-        except discord.HTTPException:
-            pass
+    await interactions.refresh_layout(
+        interaction, message, view, surface="role-menus panel"
+    )
 
 
 class RoleMenuBuilder(AuthorLayoutView):

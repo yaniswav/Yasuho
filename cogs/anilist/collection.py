@@ -513,7 +513,9 @@ class CollectionView(discord.ui.LayoutView):
             try:
                 await self.message.edit(view=self)
             except discord.HTTPException:
-                pass
+                log.warning(
+                    "AniList collection: could not refresh the dashboard", exc_info=True
+                )
 
     # -- callbacks -----------------------------------------------------
     async def _change_status(self, interaction, status):
@@ -544,10 +546,7 @@ class CollectionView(discord.ui.LayoutView):
         round-trip that can outlast the 3s window.
         """
 
-        try:
-            await interaction.response.defer()
-        except discord.HTTPException:
-            pass
+        await interactions.defer(interaction, surface="anilist collection reload")
         token = await self.cog._get_token(self.author_id)
         if not token:
             return await interactions.reply(
@@ -603,10 +602,7 @@ class CollectionView(discord.ui.LayoutView):
         can inspect the new progress/status), or ``None`` on any early exit.
         """
 
-        try:
-            await interaction.response.defer()
-        except discord.HTTPException:
-            pass
+        await interactions.defer(interaction, surface="anilist collection mutate")
         # Token at click time, like every other mutating AniList surface.
         token = await self.cog._get_token(self.author_id)
         if not token:

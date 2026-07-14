@@ -6,7 +6,7 @@ from discord.ext import commands
 from tools import db, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.interactions import notify_failure
+from tools.interactions import notify_failure, refresh_layout
 from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
@@ -65,17 +65,7 @@ async def _refresh_layout(interaction, message, view):
     was already answered (e.g. a deferred modal submit).
     """
 
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(view=view)
-        except discord.HTTPException:
-            pass
+    await refresh_layout(interaction, message, view, surface="config panel")
 
 
 # ----------------------------------------------------------------------
@@ -251,6 +241,8 @@ class ConfigPanel(AuthorLayoutView):
                 "below to toggle **Leveling** or jump to a feature's setup "
                 "command."
             )
+            + " "
+            + _("Full leveling setup lives in `/levelconfig`.")
             + "\n\n"
             + "\n".join(field_lines)
         )

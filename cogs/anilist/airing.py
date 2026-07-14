@@ -58,7 +58,7 @@ from .feed import (
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
-from tools import i18n
+from tools import i18n, interactions
 from tools import round_robin as rr
 from tools.http import TIMEOUT
 from tools.i18n import _
@@ -288,10 +288,9 @@ async def _run_seen(interaction, media_id, episode):
         return
 
     # Both round-trips can outlast the 3s window; defer, then follow up.
-    try:
-        await interaction.response.defer(ephemeral=True, thinking=True)
-    except discord.HTTPException:
-        pass
+    await interactions.defer(
+        interaction, ephemeral=True, thinking=True, surface="anilist airing seen"
+    )
 
     # 1) Look up the viewer's current progress + the title, as themselves.
     try:

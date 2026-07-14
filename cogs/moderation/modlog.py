@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import db, embed_creator, settings
+from tools import db, embed_creator, interactions, settings
 from tools.i18n import _
 from tools.views import AuthorLayoutView
 
@@ -149,17 +149,9 @@ async def _refresh_layout(interaction, message, view):
     was already answered (e.g. a deferred modal submit).
     """
 
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(view=view)
-        except discord.HTTPException:
-            pass
+    await interactions.refresh_layout(
+        interaction, message, view, surface="modlog panel"
+    )
 
 
 class ModLogPanel(AuthorLayoutView):

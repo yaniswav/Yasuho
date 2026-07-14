@@ -10,6 +10,7 @@ from tools.formats import random_colour
 from tools.i18n import _
 from tools.interactions import notify_failure
 from tools.paginator import Paginator, paginate_lines
+from tools.time import ShortTime
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -704,6 +705,56 @@ class Moderation(commands.Cog):
         embed = modactions.case_embed(num, "unban", target, ctx.author, reason)
         await ctx.send(embed=embed)
         await self._post_modlog(ctx.guild, embed)
+
+    @commands.hybrid_command()
+    @commands.guild_only()
+    @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
+    @discord.app_commands.describe(
+        member="The member to ban.",
+        duration="How long the ban lasts, e.g. 1d or 2h30m.",
+        reason="Why they're being banned.",
+    )
+    async def tempban(
+        self,
+        ctx,
+        member: discord.User,
+        duration: ShortTime,
+        *,
+        reason: str = None,
+    ):
+        """Temporarily bans a member for the given duration."""
+
+        err = modchecks.hierarchy_error(ctx, member)
+        if err:
+            return await ctx.send(err)
+
+        try:
+            await ctx.guild.ban(member, reason=reason)
+        except discord.Forbidden:
+            return await ctx.send(
+                _("I don't have permission to ban that member.")
+            )
+        except discord.HTTPException:
+            return await ctx.send(_("Sorry, I couldn't ban that member."))
+
+        # The delayed unban rides the Reminder cog's timer machinery (it schedules
+        # a "tempban" row and its dispatcher fires the unban when it expires); this
+        # cog only needs to enqueue it through the shared cross-cog seam.
+        reminder = self.bot.get_cog("Reminder")
+        if reminder is None:
+            return await ctx.send(_("Scheduling is unavailable right now."))
+        await reminder.create_timer(
+            duration.dt,
+            "tempban",
+            guild_id=ctx.guild.id,
+            user_id=member.id,
+        )
+        await ctx.send(
+            _("Banned {member} until {time}.").format(
+                member=member, time=discord.utils.format_dt(duration.dt, "F")
+            )
+        )
 
     @commands.command(name="massban", aliases=["bulkban", "hackban"])
     @commands.guild_only()

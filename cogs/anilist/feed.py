@@ -593,10 +593,9 @@ async def _run_like(interaction, activity_id):
 
     # The mutation is a network round-trip that can outlast the 3s window; defer
     # first, then follow up with the outcome.
-    try:
-        await interaction.response.defer(ephemeral=True, thinking=True)
-    except discord.HTTPException:
-        pass
+    await interactions.defer(
+        interaction, ephemeral=True, thinking=True, surface="anilist feed like"
+    )
 
     try:
         data = await _authed_graphql(
@@ -710,10 +709,9 @@ async def _run_add(interaction, media_id):
         return
 
     # Both round-trips can outlast the 3s window; defer, then follow up.
-    try:
-        await interaction.response.defer(ephemeral=True, thinking=True)
-    except discord.HTTPException:
-        pass
+    await interactions.defer(
+        interaction, ephemeral=True, thinking=True, surface="anilist feed add"
+    )
 
     # 1) Look up the viewer's existing entry (and the title) as themselves.
     try:
@@ -837,10 +835,9 @@ class _ReplyModal(LocaleModal):
 
     async def on_submit(self, interaction):
         # Defer first: posting the reply is a network round-trip.
-        try:
-            await interaction.response.defer(ephemeral=True, thinking=True)
-        except discord.HTTPException:
-            pass
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="anilist feed reply modal"
+        )
 
         # Re-resolve the token now (it may have expired while typing), keeping the
         # decrypted secret's lifetime confined to this submit task.
@@ -1542,10 +1539,7 @@ class _TrackTitleModal(LocaleModal):
     async def on_submit(self, interaction):
         # Defer as a message update so we can edit the manager message in place
         # after the (possibly slow) AniList search.
-        try:
-            await interaction.response.defer()
-        except discord.HTTPException:
-            pass
+        await interactions.defer(interaction, surface="anilist feed track-title modal")
         try:
             await self.manager.run_search(interaction, self.query_field.value)
         except Exception:
@@ -1773,7 +1767,9 @@ class _SubsManagerView(AuthorLayoutView):
             # with ``view=`` only (Discord rejects an ``embed=`` on such an edit).
             await interaction.edit_original_response(view=confirm)
         except discord.HTTPException:
-            log.debug("AniList feed: could not render the track-confirm picker")
+            log.warning(
+                "AniList feed: could not render the track-confirm picker", exc_info=True
+            )
 
 
 class _TrackedReleasesButton(discord.ui.Button):
@@ -1913,10 +1909,9 @@ class AddFollowModal(LocaleModal):
         self.add_item(self.username_field)
 
     async def on_submit(self, interaction):
-        try:
-            await interaction.response.defer(ephemeral=True, thinking=True)
-        except discord.HTTPException:
-            pass
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="anilist feed add-follow modal"
+        )
         try:
             cog = self.panel.cog
             user_id, name, _url, error = await cog._resolve_anilist_user(
@@ -2003,17 +1998,9 @@ async def _refresh_layout(interaction, message, view):
     already answered (e.g. a deferred modal submit).
     """
 
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
-            return
-    except discord.HTTPException:
-        pass
-    if message is not None:
-        try:
-            await message.edit(view=view)
-        except discord.HTTPException:
-            pass
+    await interactions.refresh_layout(
+        interaction, message, view, surface="anilist feed panel"
+    )
 
 
 class AniListFeedPanel(discord.ui.LayoutView):

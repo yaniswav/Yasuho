@@ -56,10 +56,7 @@ class HubSearchModal(LocaleModal):
         self.add_item(discord.ui.Label(text=_("Type"), component=self.kind))
 
     async def on_submit(self, interaction):
-        try:
-            await interaction.response.defer(thinking=True)
-        except discord.HTTPException:
-            pass
+        await interactions.defer(interaction, thinking=True, surface="anilist hub search modal")
         try:
             query = (self.query_input.value or "").strip()
             media_type = self.kind.value or "ANIME"
