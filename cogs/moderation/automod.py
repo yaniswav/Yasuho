@@ -26,7 +26,7 @@ from cogs.moderation.automod_panel import (
     VALID_ACTIONS,
     AutoModPanel,
 )
-from tools import db, modactions, settings
+from tools import db, modactions, settings, warn_escalation
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -358,18 +358,21 @@ class AutoMod(commands.Cog):
             except discord.HTTPException:
                 log.exception("AutoMod failed to kick member")
         elif action == "warn":
-            # A real warn: bump the shared 3-strike counter and auto-kick on the
-            # third, exactly like the warn command (via modactions.bump_warn).
+            # A real warn: bump the shared (monotonic) counter and escalate per
+            # the guild's configurable warn policy, exactly like the warn
+            # command (bump_warn + load_escalation_policy + the shared action
+            # applier). Both surfaces stay in lockstep this way.
             new_count = await modactions.bump_warn(
                 self.bot.db_pool, guild.id, member.id
             )
-            if new_count >= 3:
-                try:
-                    await guild.kick(member, reason="AutoMod: reached 3 warns")
-                except discord.Forbidden:
-                    pass
-                except discord.HTTPException:
-                    log.exception("AutoMod failed to auto-kick at 3 warns")
+            policy, _default = await modactions.load_escalation_policy(
+                self.bot.db_pool, guild.id
+            )
+            rule = warn_escalation.action_for_count(policy, new_count)
+            if rule is not None:
+                await modactions.apply_escalation_action(
+                    self.bot, guild, member, rule
+                )
 
         try:
             await message.channel.send(notice, delete_after=5)

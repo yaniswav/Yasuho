@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 13:09+0000\n"
+"POT-Creation-Date: 2026-07-14 14:39+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1143,8 +1143,8 @@ msgstr "Esto elimina permanentemente el feed de AniList en {channel} y a todos a
 msgid "Feed deleted."
 msgstr "Feed eliminado."
 
-#: cogs/anilist/feed.py:1874 cogs/moderation/moderation.py:1104
-#: cogs/moderation/moderation.py:1161 tools/arg_completion.py:411
+#: cogs/anilist/feed.py:1874 cogs/moderation/moderation.py:1110
+#: cogs/moderation/moderation.py:1167 tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr "Cancelado."
 
@@ -2678,7 +2678,7 @@ msgstr "El envío falló, inténtalo de nuevo."
 msgid "Announcement sent to {channel}."
 msgstr "Anuncio enviado a {channel}."
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:746
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:752
 msgid "Scheduling is unavailable right now."
 msgstr "La programación no está disponible en este momento."
 
@@ -3907,10 +3907,12 @@ msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "La configuración completa de niveles vive en `/levelconfig`."
 
 #: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Solo tú puedes usar estos controles"
 
 #: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expira después de 3 min"
 
@@ -4659,17 +4661,17 @@ msgstr "Filtrado de invitaciones"
 msgid "Spam filtering"
 msgstr "Filtrado de spam"
 
-#: cogs/moderation/automod.py:417
+#: cogs/moderation/automod.py:420
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} los enlaces de invitación de Discord no están permitidos aquí."
 
-#: cogs/moderation/automod.py:427
+#: cogs/moderation/automod.py:430
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} los enlaces no están permitidos aquí."
 
-#: cogs/moderation/automod.py:454
+#: cogs/moderation/automod.py:457
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} más despacio - estás enviando mensajes demasiado rápido."
@@ -4731,10 +4733,10 @@ msgid "Warn"
 msgstr "Advertencia"
 
 #: cogs/moderation/automod_panel.py:90
-msgid "Remove it and add a warning (auto-kick at three)."
-msgstr "Eliminarlo y añadir una advertencia (expulsión automática a las tres)."
+msgid "Remove it and add a warning (escalates per your warn rules)."
+msgstr "Eliminarlo y añadir una advertencia (escala según tus reglas)."
 
-#: cogs/moderation/automod_panel.py:94
+#: cogs/moderation/automod_panel.py:94 cogs/moderation/warn_config.py:52
 msgid "Timeout"
 msgstr "Aislamiento"
 
@@ -4742,7 +4744,7 @@ msgstr "Aislamiento"
 msgid "Remove it and time the member out for 10 minutes."
 msgstr "Eliminarlo y aislar al miembro durante 10 minutos."
 
-#: cogs/moderation/automod_panel.py:98
+#: cogs/moderation/automod_panel.py:98 cogs/moderation/warn_config.py:58
 msgid "Kick"
 msgstr "Expulsión"
 
@@ -4828,7 +4830,7 @@ msgstr "Los miembros con un rol exento, y los mensajes en un canal exento, se sa
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Los filtros nativos requieren que Yasuho tenga el permiso Gestionar servidor."
 
-#: cogs/moderation/automod_panel.py:415
+#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Algo salió mal al actualizar el panel."
 
@@ -4854,24 +4856,24 @@ msgstr "Lista negra"
 msgid "The blacklist is empty."
 msgstr "La lista negra está vacía."
 
-#: cogs/moderation/moderation.py:98
+#: cogs/moderation/moderation.py:104
 msgid "Select a warn to remove..."
 msgstr "Selecciona una advertencia para eliminar..."
 
-#: cogs/moderation/moderation.py:120
+#: cogs/moderation/moderation.py:126
 #, python-brace-format
 msgid "Warnings - {member}"
 msgstr "Advertencias - {member}"
 
-#: cogs/moderation/moderation.py:127
+#: cogs/moderation/moderation.py:133
 msgid "No warnings on record."
 msgstr "No hay advertencias registradas."
 
-#: cogs/moderation/moderation.py:131
+#: cogs/moderation/moderation.py:137
 msgid "*No reason provided*"
 msgstr "*No se proporcionó ningún motivo*"
 
-#: cogs/moderation/moderation.py:134
+#: cogs/moderation/moderation.py:140
 #, python-brace-format
 msgid ""
 "**Case #{case}** - {reason}\n"
@@ -4880,72 +4882,72 @@ msgstr ""
 "**Caso #{case}** - {reason}\n"
 "por {mod} - {when}"
 
-#: cogs/moderation/moderation.py:144
+#: cogs/moderation/moderation.py:150
 #, python-brace-format
 msgid "Page {current}/{total} - {count} warn(s)"
 msgstr "Página {current}/{total} - {count} advertencia(s)"
 
-#: cogs/moderation/moderation.py:157 cogs/moderation/moderation.py:1417
+#: cogs/moderation/moderation.py:163 cogs/moderation/moderation.py:1449
 msgid "No reason"
 msgstr "Sin motivo"
 
-#: cogs/moderation/moderation.py:160
+#: cogs/moderation/moderation.py:166
 #, python-brace-format
 msgid "Case #{case}"
 msgstr "Caso #{case}"
 
-#: cogs/moderation/moderation.py:171
+#: cogs/moderation/moderation.py:177
 msgid "No warnings"
 msgstr "Sin advertencias"
 
-#: cogs/moderation/moderation.py:192
+#: cogs/moderation/moderation.py:198
 msgid "Couldn't select that warn, please try again."
 msgstr "No pude seleccionar esa advertencia, por favor inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:216 tools/paginator.py:94
+#: cogs/moderation/moderation.py:222 tools/paginator.py:94
 msgid "Couldn't turn the page, please try again."
 msgstr "No se pudo cambiar de página, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:225
+#: cogs/moderation/moderation.py:231
 msgid "Pick a warn from the dropdown first."
 msgstr "Elige primero una advertencia del menú desplegable."
 
-#: cogs/moderation/moderation.py:248
+#: cogs/moderation/moderation.py:254
 msgid "Couldn't remove that warn, please try again."
 msgstr "No pude eliminar esa advertencia, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:265
+#: cogs/moderation/moderation.py:271
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr "Editar motivo - caso #{number}"
 
-#: cogs/moderation/moderation.py:281
+#: cogs/moderation/moderation.py:287
 msgid "New reason"
 msgstr "Nuevo motivo"
 
-#: cogs/moderation/moderation.py:289
+#: cogs/moderation/moderation.py:295
 msgid "The reason can't be empty."
 msgstr "El motivo no puede estar vacío."
 
-#: cogs/moderation/moderation.py:303 cogs/moderation/moderation.py:1381
-#: cogs/moderation/moderation.py:1451 cogs/moderation/moderation.py:1473
+#: cogs/moderation/moderation.py:309 cogs/moderation/moderation.py:1413
+#: cogs/moderation/moderation.py:1483 cogs/moderation/moderation.py:1505
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "No se encontró el caso #{number} en este servidor."
 
-#: cogs/moderation/moderation.py:310 cogs/moderation/moderation.py:1479
+#: cogs/moderation/moderation.py:316 cogs/moderation/moderation.py:1511
 msgid "Updated by"
 msgstr "Actualizado por"
 
-#: cogs/moderation/moderation.py:319
+#: cogs/moderation/moderation.py:325
 msgid "Sorry, I couldn't update that reason."
 msgstr "Lo siento, no pude actualizar ese motivo."
 
-#: cogs/moderation/moderation.py:337
+#: cogs/moderation/moderation.py:343
 msgid "## New Members"
 msgstr "## Nuevos miembros"
 
-#: cogs/moderation/moderation.py:342
+#: cogs/moderation/moderation.py:348
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
@@ -4954,20 +4956,20 @@ msgstr ""
 "**{member}** (ID: {id})\n"
 "se unió {joined}, cuenta creada {created}"
 
-#: cogs/moderation/moderation.py:379
+#: cogs/moderation/moderation.py:385
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr "**:x: Lo siento, me faltan permisos para hacer esto.**"
 
-#: cogs/moderation/moderation.py:560
+#: cogs/moderation/moderation.py:566
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr "Expulsión | {mod} expulsó a {target}"
 
-#: cogs/moderation/moderation.py:566
+#: cogs/moderation/moderation.py:572
 msgid "**🔴 Voice Kick Info**"
 msgstr "**🔴 Información de expulsión de voz**"
 
-#: cogs/moderation/moderation.py:568
+#: cogs/moderation/moderation.py:574
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -4978,48 +4980,48 @@ msgstr ""
 "Motivo: **{reason}**\n"
 "Hora: **{time}**"
 
-#: cogs/moderation/moderation.py:601
+#: cogs/moderation/moderation.py:607
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr "{user} ha sido movido a {channel}"
 
-#: cogs/moderation/moderation.py:625
+#: cogs/moderation/moderation.py:631
 msgid "Confirm ban"
 msgstr "Confirmar baneo"
 
-#: cogs/moderation/moderation.py:626
+#: cogs/moderation/moderation.py:632
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "¿Seguro que quieres banear a {target} (`{id}`)?"
 
-#: cogs/moderation/moderation.py:631 cogs/moderation/moderation.py:791
-#: cogs/moderation/moderation.py:838
+#: cogs/moderation/moderation.py:637 cogs/moderation/moderation.py:797
+#: cogs/moderation/moderation.py:844
 msgid "Reason"
 msgstr "Motivo"
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:642
 msgid "Ban cancelled"
 msgstr "Baneo cancelado"
 
-#: cogs/moderation/moderation.py:637
+#: cogs/moderation/moderation.py:643
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr "No se tomó ninguna acción contra {target}."
 
-#: cogs/moderation/moderation.py:736
+#: cogs/moderation/moderation.py:742
 msgid "I don't have permission to ban that member."
 msgstr "No tengo permiso para banear a ese miembro."
 
-#: cogs/moderation/moderation.py:739
+#: cogs/moderation/moderation.py:745
 msgid "Sorry, I couldn't ban that member."
 msgstr "Lo siento, no pude banear a ese miembro."
 
-#: cogs/moderation/moderation.py:754
+#: cogs/moderation/moderation.py:760
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "Se ha baneado a {member} hasta {time}."
 
-#: cogs/moderation/moderation.py:774
+#: cogs/moderation/moderation.py:780
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
@@ -5027,221 +5029,208 @@ msgstr ""
 "Dame al menos un ID de usuario para banear.\n"
 "Uso: `massban <id1> <id2> ... [reason]`"
 
-#: cogs/moderation/moderation.py:779
+#: cogs/moderation/moderation.py:785
 msgid "I can ban at most 200 users in one go."
 msgstr "Puedo banear como máximo a 200 usuarios de una vez."
 
-#: cogs/moderation/moderation.py:785
+#: cogs/moderation/moderation.py:791
 msgid "Confirm mass ban"
 msgstr "Confirmar baneo masivo"
 
-#: cogs/moderation/moderation.py:787
+#: cogs/moderation/moderation.py:793
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr "¿Seguro que quieres banear a **{count}** usuario(s) por id?"
 
-#: cogs/moderation/moderation.py:794
+#: cogs/moderation/moderation.py:800
 msgid "Mass ban cancelled"
 msgstr "Baneo masivo cancelado"
 
-#: cogs/moderation/moderation.py:795
+#: cogs/moderation/moderation.py:801
 msgid "No action taken."
 msgstr "No se realizó ninguna acción."
 
-#: cogs/moderation/moderation.py:814
+#: cogs/moderation/moderation.py:820
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr "**:x: Lo siento, no pude banear a esos usuarios (¿faltan permisos?).**"
 
-#: cogs/moderation/moderation.py:832
+#: cogs/moderation/moderation.py:838
 msgid "Mass ban complete"
 msgstr "Baneo masivo completado"
 
-#: cogs/moderation/moderation.py:836
+#: cogs/moderation/moderation.py:842
 msgid "Banned"
 msgstr "Baneado"
 
-#: cogs/moderation/moderation.py:837
+#: cogs/moderation/moderation.py:843
 msgid "Failed"
 msgstr "Fallido"
 
-#: cogs/moderation/moderation.py:840
+#: cogs/moderation/moderation.py:846
 #, python-brace-format
 msgid "By {author}"
 msgstr "Por {author}"
 
-#: cogs/moderation/moderation.py:864
+#: cogs/moderation/moderation.py:870
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ":warning: | **El número no puede ser menor que 0 ni mayor que 999**"
 
-#: cogs/moderation/moderation.py:874
+#: cogs/moderation/moderation.py:880
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr "**:x: Lo siento, me faltan permisos para hacer esto**"
 
-#: cogs/moderation/moderation.py:879
+#: cogs/moderation/moderation.py:885
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr "{emoji} **¡Eliminado con éxito!**"
 
-#: cogs/moderation/moderation.py:895
+#: cogs/moderation/moderation.py:901
 msgid "Invalid amount. Maximum is 500."
 msgstr "Cantidad no válida. El máximo es 500."
 
-#: cogs/moderation/moderation.py:907
+#: cogs/moderation/moderation.py:913
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Eliminé **{deleted}/{num}** mensajes posibles para ti."
 
-#: cogs/moderation/moderation.py:977
+#: cogs/moderation/moderation.py:983
 msgid "Mute role is not defined"
 msgstr "El rol de silencio no está definido"
 
-#: cogs/moderation/moderation.py:978
+#: cogs/moderation/moderation.py:984
 msgid "Creating role..."
 msgstr "Creando rol..."
 
-#: cogs/moderation/moderation.py:980
+#: cogs/moderation/moderation.py:986
 msgid "Mute role created!"
 msgstr "¡Rol de silencio creado!"
 
-#: cogs/moderation/moderation.py:1018
+#: cogs/moderation/moderation.py:1024
 msgid "Already Muted"
 msgstr "Ya silenciado"
 
-#: cogs/moderation/moderation.py:1020
+#: cogs/moderation/moderation.py:1026
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: ¡{user} ya está silenciado!"
 
-#: cogs/moderation/moderation.py:1030
+#: cogs/moderation/moderation.py:1036
 msgid "Mute failed"
 msgstr "Error al silenciar"
 
-#: cogs/moderation/moderation.py:1033
+#: cogs/moderation/moderation.py:1039
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: No se pudo silenciar a {user}, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:1074
+#: cogs/moderation/moderation.py:1080
 msgid "Unmute failed"
 msgstr "Error al quitar el silencio"
 
-#: cogs/moderation/moderation.py:1077
+#: cogs/moderation/moderation.py:1083
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: No se pudo quitar el silencio a {user}, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:1095
+#: cogs/moderation/moderation.py:1101
 msgid "Confirm mass role add"
 msgstr "Confirmar adición masiva de rol"
 
-#: cogs/moderation/moderation.py:1097
+#: cogs/moderation/moderation.py:1103
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "¿Añadir el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
 
-#: cogs/moderation/moderation.py:1126
+#: cogs/moderation/moderation.py:1132
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** añadido a {done} miembro(s) ({failed} fallidos)."
 
-#: cogs/moderation/moderation.py:1135
+#: cogs/moderation/moderation.py:1141
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Se ha añadido el rol **`{role}`** a **{member}**"
 
-#: cogs/moderation/moderation.py:1152
+#: cogs/moderation/moderation.py:1158
 msgid "Confirm mass role remove"
 msgstr "Confirmar eliminación masiva de roles"
 
-#: cogs/moderation/moderation.py:1154
+#: cogs/moderation/moderation.py:1160
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "¿Quitar el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
 
-#: cogs/moderation/moderation.py:1183
+#: cogs/moderation/moderation.py:1189
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** eliminado de {done} miembro(s) ({failed} fallidos)."
 
-#: cogs/moderation/moderation.py:1192
+#: cogs/moderation/moderation.py:1198
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "Se ha eliminado el rol {emoji} **`{role}`** a **{member}**"
 
-#: cogs/moderation/moderation.py:1208
+#: cogs/moderation/moderation.py:1214
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} movido."
 
-#: cogs/moderation/moderation.py:1210
+#: cogs/moderation/moderation.py:1216
 msgid "You do not have permission to do that"
 msgstr "No tienes permiso para hacer eso"
 
-#: cogs/moderation/moderation.py:1212
+#: cogs/moderation/moderation.py:1218
 msgid "Failed to move role"
 msgstr "No se pudo mover el rol"
 
-#: cogs/moderation/moderation.py:1214
+#: cogs/moderation/moderation.py:1220
 msgid "Invalid argument"
 msgstr "Argumento no válido"
 
-#: cogs/moderation/moderation.py:1237
+#: cogs/moderation/moderation.py:1243
 #, python-brace-format
 msgid "{member} has no warns."
 msgstr "{member} no tiene advertencias."
 
-#: cogs/moderation/moderation.py:1241
+#: cogs/moderation/moderation.py:1247
 #, python-brace-format
 msgid "{member} has {count} warn(s)"
 msgstr "{member} tiene {count} advertencia(s)"
 
-#: cogs/moderation/moderation.py:1274
-msgid "Auto-action"
-msgstr "Acción automática"
-
-#: cogs/moderation/moderation.py:1275
-msgid "Reached 3 warns - kicked"
-msgstr "Alcanzó 3 advertencias - expulsado"
-
-#: cogs/moderation/moderation.py:1291
-#, python-brace-format
-msgid "{member} has 3 warns but I don't have permissions to kick them from the guild."
-msgstr "{member} tiene 3 advertencias, pero no tengo permisos para expulsarlo del servidor."
-
-#: cogs/moderation/moderation.py:1297
-msgid "You have been kicked from the server!"
-msgstr "¡Has sido expulsado del servidor!"
-
-#: cogs/moderation/moderation.py:1306
+#: cogs/moderation/moderation.py:1288
 msgid "Warns"
 msgstr "Avisos"
 
-#: cogs/moderation/moderation.py:1329
+#: cogs/moderation/moderation.py:1300
+msgid "Auto-action"
+msgstr "Acción automática"
+
+#: cogs/moderation/moderation.py:1337
 #, python-brace-format
 msgid "{member} has no warns!"
 msgstr "¡{member} no tiene advertencias!"
 
-#: cogs/moderation/moderation.py:1336
+#: cogs/moderation/moderation.py:1344
 #, python-brace-format
 msgid "Removed all warns for {member}."
 msgstr "Se eliminaron todas las advertencias de {member}."
 
-#: cogs/moderation/moderation.py:1342
+#: cogs/moderation/moderation.py:1350
 #, python-brace-format
 msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
 msgstr "Eliminé {num} advertencia(s) de {member}. [{remaining} advertencias]"
 
-#: cogs/moderation/moderation.py:1399
+#: cogs/moderation/moderation.py:1431
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Historial de casos - {guild}"
 
-#: cogs/moderation/moderation.py:1407
+#: cogs/moderation/moderation.py:1439
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Historial de casos - {member}"
 
-#: cogs/moderation/moderation.py:1410
+#: cogs/moderation/moderation.py:1442
 msgid "No cases on record."
 msgstr "No hay casos registrados."
 
@@ -5352,6 +5341,178 @@ msgstr "Después"
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Ir al mensaje]({url})"
+
+#: cogs/moderation/warn_config.py:54
+msgid "Time the member out (default 10 minutes, up to 28 days)."
+msgstr "Aislar al miembro (10 minutos por defecto, hasta 28 días)."
+
+#: cogs/moderation/warn_config.py:60
+msgid "Kick the member from the server."
+msgstr "Expulsar al miembro del servidor."
+
+#: cogs/moderation/warn_config.py:64
+msgid "Ban"
+msgstr "Baneo"
+
+#: cogs/moderation/warn_config.py:66
+msgid "Ban the member from the server."
+msgstr "Banear al miembro del servidor."
+
+#: cogs/moderation/warn_config.py:85
+#, python-brace-format
+msgid "{n} day(s)"
+msgstr "{n} día(s)"
+
+#: cogs/moderation/warn_config.py:87
+#, python-brace-format
+msgid "{n} hour(s)"
+msgstr "{n} hora(s)"
+
+#: cogs/moderation/warn_config.py:88
+#, python-brace-format
+msgid "{n} minute(s)"
+msgstr "{n} minuto(s)"
+
+#: cogs/moderation/warn_config.py:101
+#, python-brace-format
+msgid "Reached {count} warns - timed out for {duration}"
+msgstr "Alcanzó {count} advertencias - aislado durante {duration}"
+
+#: cogs/moderation/warn_config.py:105
+#, python-brace-format
+msgid "Reached {count} warns - banned"
+msgstr "Alcanzó {count} advertencias - baneado"
+
+#: cogs/moderation/warn_config.py:106
+#, python-brace-format
+msgid "Reached {count} warns - kicked"
+msgstr "Alcanzó {count} advertencias - expulsado"
+
+#: cogs/moderation/warn_config.py:115
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't time them out (check my permissions and role position)."
+msgstr "{member} alcanzó {count} advertencias, pero no pude aislarlo (revisa mis permisos y la posición de mi rol)."
+
+#: cogs/moderation/warn_config.py:120
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't ban them (check my permissions and role position)."
+msgstr "{member} alcanzó {count} advertencias, pero no pude banearlo (revisa mis permisos y la posición de mi rol)."
+
+#: cogs/moderation/warn_config.py:124
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't kick them (check my permissions and role position)."
+msgstr "{member} alcanzó {count} advertencias, pero no pude expulsarlo (revisa mis permisos y la posición de mi rol)."
+
+#: cogs/moderation/warn_config.py:134
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been timed out for {duration}."
+msgstr "Alcanzaste {count} advertencias en {guild} y has sido aislado durante {duration}."
+
+#: cogs/moderation/warn_config.py:138
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been banned."
+msgstr "Alcanzaste {count} advertencias en {guild} y has sido baneado."
+
+#: cogs/moderation/warn_config.py:141
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been kicked."
+msgstr "Alcanzaste {count} advertencias en {guild} y has sido expulsado."
+
+#: cogs/moderation/warn_config.py:151
+#, python-brace-format
+msgid "{action} for {duration}"
+msgstr "{action} durante {duration}"
+
+#: cogs/moderation/warn_config.py:198
+msgid "Action for the next rule..."
+msgstr "Acción para la próxima regla..."
+
+#: cogs/moderation/warn_config.py:214
+msgid "Add / update rule"
+msgstr "Añadir / actualizar regla"
+
+#: cogs/moderation/warn_config.py:229
+msgid "Reset to default"
+msgstr "Restablecer por defecto"
+
+#: cogs/moderation/warn_config.py:249
+#, python-brace-format
+msgid "At {n} warns"
+msgstr "Con {n} advertencias"
+
+#: cogs/moderation/warn_config.py:257
+msgid "Remove a rule..."
+msgstr "Eliminar una regla..."
+
+#: cogs/moderation/warn_config.py:276
+msgid "Add or update a warn rule"
+msgstr "Añadir o actualizar una regla de advertencia"
+
+#: cogs/moderation/warn_config.py:280
+msgid "Number of warns, e.g. 3"
+msgstr "Número de advertencias, p. ej. 3"
+
+#: cogs/moderation/warn_config.py:286
+#, python-brace-format
+msgid "Number of warns ({min}-{max})"
+msgstr "Número de advertencias ({min}-{max})"
+
+#: cogs/moderation/warn_config.py:294
+msgid "e.g. 10m, 1h, 1d (timeout only; blank = 10 minutes)"
+msgstr "p. ej. 10m, 1h, 1d (solo aislamiento; vacío = 10 minutos)"
+
+#: cogs/moderation/warn_config.py:300
+msgid "Timeout duration"
+msgstr "Duración del aislamiento"
+
+#: cogs/moderation/warn_config.py:310
+msgid "The number of warns must be a whole number."
+msgstr "El número de advertencias debe ser un número entero."
+
+#: cogs/moderation/warn_config.py:315
+#, python-brace-format
+msgid "The number of warns must be between {min} and {max}."
+msgstr "El número de advertencias debe estar entre {min} y {max}."
+
+#: cogs/moderation/warn_config.py:330
+msgid "I couldn't read that timeout duration - try something like \"10m\", \"1h\", or \"1d\"."
+msgstr "No pude entender esa duración de aislamiento - prueba algo como \"10m\", \"1h\" o \"1d\"."
+
+#: cogs/moderation/warn_config.py:375
+msgid "**No escalation rules.** Warns are recorded, but no automatic action is taken. Add a rule below, or reset to the default."
+msgstr "**Sin reglas de escalada.** Las advertencias se registran, pero no se toma ninguna acción automática. Añade una regla abajo, o restablece el valor por defecto."
+
+#: cogs/moderation/warn_config.py:381
+#, python-brace-format
+msgid "**At {n} warns** -> {detail}"
+msgstr "**Con {n} advertencias** -> {detail}"
+
+#: cogs/moderation/warn_config.py:387
+msgid "This is the default (kick at 3 warns)."
+msgstr "Este es el valor por defecto (expulsión a las 3 advertencias)."
+
+#: cogs/moderation/warn_config.py:397
+#, python-brace-format
+msgid "Warn escalation - {guild}"
+msgstr "Escalada de advertencias - {guild}"
+
+#: cogs/moderation/warn_config.py:400
+msgid "Decide what happens as a member piles up warns: at each threshold Yasuho can time them out, kick, or ban them."
+msgstr "Decide qué pasa cuando un miembro acumula advertencias: en cada umbral, Yasuho puede aislarlo, expulsarlo o banearlo."
+
+#: cogs/moderation/warn_config.py:409
+msgid "Current rules"
+msgstr "Reglas actuales"
+
+#: cogs/moderation/warn_config.py:418
+#, python-brace-format
+msgid "A rule fires the moment a member's warn count lands exactly on its threshold, so editing rules never re-punishes past warns. Thresholds are unique; up to {max} rules."
+msgstr "Una regla se activa cuando el contador de advertencias de un miembro alcanza exactamente su umbral, así que editar reglas nunca vuelve a castigar advertencias pasadas. Los umbrales son únicos; hasta {max} reglas."
+
+#: cogs/moderation/warn_config.py:493
+#, python-brace-format
+msgid "This server already has the maximum of {max} escalation rules."
+msgstr "Este servidor ya tiene el máximo de {max} reglas de escalada."
 
 #: cogs/music/effects.py:171
 msgid "Clear every effect and hear the track as it is."

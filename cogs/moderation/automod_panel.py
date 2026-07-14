@@ -87,7 +87,7 @@ ACTION_CHOICES = [
         "warn",
         N_("Warn"),
         "⚠️",
-        N_("Remove it and add a warning (auto-kick at three)."),
+        N_("Remove it and add a warning (escalates per your warn rules)."),
     ),
     (
         "mute",

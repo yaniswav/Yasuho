@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 13:09+0000\n"
+"POT-Creation-Date: 2026-07-14 14:39+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1143,8 +1143,8 @@ msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο 
 msgid "Feed deleted."
 msgstr "Η ροή διαγράφηκε."
 
-#: cogs/anilist/feed.py:1874 cogs/moderation/moderation.py:1104
-#: cogs/moderation/moderation.py:1161 tools/arg_completion.py:411
+#: cogs/anilist/feed.py:1874 cogs/moderation/moderation.py:1110
+#: cogs/moderation/moderation.py:1167 tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr "Ακυρώθηκε."
 
@@ -2678,7 +2678,7 @@ msgstr "Η αποστολή απέτυχε, δοκίμασε ξανά."
 msgid "Announcement sent to {channel}."
 msgstr "Η ανακοίνωση στάλθηκε στο {channel}."
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:746
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:752
 msgid "Scheduling is unavailable right now."
 msgstr "Ο προγραμματισμός δεν είναι διαθέσιμος αυτή τη στιγμή."
 
@@ -3907,10 +3907,12 @@ msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "Η πλήρης ρύθμιση του συστήματος επιπέδων βρίσκεται στο `/levelconfig`."
 
 #: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
 
 #: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
 
@@ -4659,17 +4661,17 @@ msgstr "Φιλτράρισμα προσκλήσεων"
 msgid "Spam filtering"
 msgstr "Φιλτράρισμα spam"
 
-#: cogs/moderation/automod.py:417
+#: cogs/moderation/automod.py:420
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι πρόσκλησης Discord δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:427
+#: cogs/moderation/automod.py:430
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:454
+#: cogs/moderation/automod.py:457
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} πιο αργά - στέλνεις μηνύματα πολύ γρήγορα."
@@ -4731,10 +4733,10 @@ msgid "Warn"
 msgstr "Προειδοποίηση"
 
 #: cogs/moderation/automod_panel.py:90
-msgid "Remove it and add a warning (auto-kick at three)."
-msgstr "Αφαίρεσέ το και πρόσθεσε προειδοποίηση (αυτόματο kick στις τρεις)."
+msgid "Remove it and add a warning (escalates per your warn rules)."
+msgstr "Αφαίρεσέ το και πρόσθεσε warn (κλιμακώνεται κατά τους κανόνες σου)."
 
-#: cogs/moderation/automod_panel.py:94
+#: cogs/moderation/automod_panel.py:94 cogs/moderation/warn_config.py:52
 msgid "Timeout"
 msgstr "Timeout"
 
@@ -4742,7 +4744,7 @@ msgstr "Timeout"
 msgid "Remove it and time the member out for 10 minutes."
 msgstr "Αφαίρεσέ το και βάλε το μέλος σε timeout για 10 λεπτά."
 
-#: cogs/moderation/automod_panel.py:98
+#: cogs/moderation/automod_panel.py:98 cogs/moderation/warn_config.py:58
 msgid "Kick"
 msgstr "Kick"
 
@@ -4828,7 +4830,7 @@ msgstr "Τα μέλη με εξαιρούμενο ρόλο, και τα μηνύ
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Τα εγγενή φίλτρα απαιτούν η Yasuho να έχει το δικαίωμα Διαχείρισης διακομιστή."
 
-#: cogs/moderation/automod_panel.py:415
+#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
 
@@ -4854,24 +4856,24 @@ msgstr "Μαύρη λίστα"
 msgid "The blacklist is empty."
 msgstr "Η μαύρη λίστα είναι κενή."
 
-#: cogs/moderation/moderation.py:98
+#: cogs/moderation/moderation.py:104
 msgid "Select a warn to remove..."
 msgstr "Επίλεξε μια προειδοποίηση για αφαίρεση..."
 
-#: cogs/moderation/moderation.py:120
+#: cogs/moderation/moderation.py:126
 #, python-brace-format
 msgid "Warnings - {member}"
 msgstr "Προειδοποιήσεις - {member}"
 
-#: cogs/moderation/moderation.py:127
+#: cogs/moderation/moderation.py:133
 msgid "No warnings on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις."
 
-#: cogs/moderation/moderation.py:131
+#: cogs/moderation/moderation.py:137
 msgid "*No reason provided*"
 msgstr "*Δεν δόθηκε λόγος*"
 
-#: cogs/moderation/moderation.py:134
+#: cogs/moderation/moderation.py:140
 #, python-brace-format
 msgid ""
 "**Case #{case}** - {reason}\n"
@@ -4880,72 +4882,72 @@ msgstr ""
 "**Υπόθεση #{case}** - {reason}\n"
 "από {mod} - {when}"
 
-#: cogs/moderation/moderation.py:144
+#: cogs/moderation/moderation.py:150
 #, python-brace-format
 msgid "Page {current}/{total} - {count} warn(s)"
 msgstr "Σελίδα {current}/{total} - {count} προειδοποίηση/εις"
 
-#: cogs/moderation/moderation.py:157 cogs/moderation/moderation.py:1417
+#: cogs/moderation/moderation.py:163 cogs/moderation/moderation.py:1449
 msgid "No reason"
 msgstr "Χωρίς λόγο"
 
-#: cogs/moderation/moderation.py:160
+#: cogs/moderation/moderation.py:166
 #, python-brace-format
 msgid "Case #{case}"
 msgstr "Υπόθεση #{case}"
 
-#: cogs/moderation/moderation.py:171
+#: cogs/moderation/moderation.py:177
 msgid "No warnings"
 msgstr "Καμία προειδοποίηση"
 
-#: cogs/moderation/moderation.py:192
+#: cogs/moderation/moderation.py:198
 msgid "Couldn't select that warn, please try again."
 msgstr "Δεν ήταν δυνατή η επιλογή αυτής της προειδοποίησης, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:216 tools/paginator.py:94
+#: cogs/moderation/moderation.py:222 tools/paginator.py:94
 msgid "Couldn't turn the page, please try again."
 msgstr "Δεν ήταν δυνατή η αλλαγή σελίδας, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:225
+#: cogs/moderation/moderation.py:231
 msgid "Pick a warn from the dropdown first."
 msgstr "Διάλεξε πρώτα μια προειδοποίηση από το αναπτυσσόμενο μενού."
 
-#: cogs/moderation/moderation.py:248
+#: cogs/moderation/moderation.py:254
 msgid "Couldn't remove that warn, please try again."
 msgstr "Δεν ήταν δυνατή η αφαίρεση αυτής της προειδοποίησης, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:265
+#: cogs/moderation/moderation.py:271
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr "Επεξεργασία λόγου - υπόθεση #{number}"
 
-#: cogs/moderation/moderation.py:281
+#: cogs/moderation/moderation.py:287
 msgid "New reason"
 msgstr "Νέος λόγος"
 
-#: cogs/moderation/moderation.py:289
+#: cogs/moderation/moderation.py:295
 msgid "The reason can't be empty."
 msgstr "Ο λόγος δεν μπορεί να είναι κενός."
 
-#: cogs/moderation/moderation.py:303 cogs/moderation/moderation.py:1381
-#: cogs/moderation/moderation.py:1451 cogs/moderation/moderation.py:1473
+#: cogs/moderation/moderation.py:309 cogs/moderation/moderation.py:1413
+#: cogs/moderation/moderation.py:1483 cogs/moderation/moderation.py:1505
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "Δεν βρέθηκε υπόθεση #{number} σε αυτόν τον διακομιστή."
 
-#: cogs/moderation/moderation.py:310 cogs/moderation/moderation.py:1479
+#: cogs/moderation/moderation.py:316 cogs/moderation/moderation.py:1511
 msgid "Updated by"
 msgstr "Ενημερώθηκε από"
 
-#: cogs/moderation/moderation.py:319
+#: cogs/moderation/moderation.py:325
 msgid "Sorry, I couldn't update that reason."
 msgstr "Συγγνώμη, δεν μπόρεσα να ενημερώσω αυτόν τον λόγο."
 
-#: cogs/moderation/moderation.py:337
+#: cogs/moderation/moderation.py:343
 msgid "## New Members"
 msgstr "## Νέα μέλη"
 
-#: cogs/moderation/moderation.py:342
+#: cogs/moderation/moderation.py:348
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
@@ -4954,20 +4956,20 @@ msgstr ""
 "**{member}** (ID: {id})\n"
 "μπήκε {joined}, δημιουργήθηκε {created}"
 
-#: cogs/moderation/moderation.py:379
+#: cogs/moderation/moderation.py:385
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό!**"
 
-#: cogs/moderation/moderation.py:560
+#: cogs/moderation/moderation.py:566
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr "Kick | Ο/Η {mod} έδιωξε τον/την {target}"
 
-#: cogs/moderation/moderation.py:566
+#: cogs/moderation/moderation.py:572
 msgid "**🔴 Voice Kick Info**"
 msgstr "**🔴 Πληροφορίες Voice Kick**"
 
-#: cogs/moderation/moderation.py:568
+#: cogs/moderation/moderation.py:574
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -4978,48 +4980,48 @@ msgstr ""
 "Λόγος: **{reason}**\n"
 "Ώρα: **{time}**"
 
-#: cogs/moderation/moderation.py:601
+#: cogs/moderation/moderation.py:607
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr "Ο/Η {user} μετακινήθηκε στο {channel}"
 
-#: cogs/moderation/moderation.py:625
+#: cogs/moderation/moderation.py:631
 msgid "Confirm ban"
 msgstr "Επιβεβαίωση ban"
 
-#: cogs/moderation/moderation.py:626
+#: cogs/moderation/moderation.py:632
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban τον/την {target} (`{id}`);"
 
-#: cogs/moderation/moderation.py:631 cogs/moderation/moderation.py:791
-#: cogs/moderation/moderation.py:838
+#: cogs/moderation/moderation.py:637 cogs/moderation/moderation.py:797
+#: cogs/moderation/moderation.py:844
 msgid "Reason"
 msgstr "Λόγος"
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:642
 msgid "Ban cancelled"
 msgstr "Το ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:637
+#: cogs/moderation/moderation.py:643
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr "Δεν έγινε καμία ενέργεια κατά του/της {target}."
 
-#: cogs/moderation/moderation.py:736
+#: cogs/moderation/moderation.py:742
 msgid "I don't have permission to ban that member."
 msgstr "Δεν έχω δικαίωμα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:739
+#: cogs/moderation/moderation.py:745
 msgid "Sorry, I couldn't ban that member."
 msgstr "Συγγνώμη, δεν μπόρεσα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:754
+#: cogs/moderation/moderation.py:760
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "Ο/Η {member} αποκλείστηκε μέχρι {time}."
 
-#: cogs/moderation/moderation.py:774
+#: cogs/moderation/moderation.py:780
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
@@ -5027,221 +5029,208 @@ msgstr ""
 "Δώσε μου τουλάχιστον ένα id χρήστη για ban.\n"
 "Χρήση: `massban <id1> <id2> ... [reason]`"
 
-#: cogs/moderation/moderation.py:779
+#: cogs/moderation/moderation.py:785
 msgid "I can ban at most 200 users in one go."
 msgstr "Μπορώ να κάνω ban το πολύ 200 χρήστες με τη μία."
 
-#: cogs/moderation/moderation.py:785
+#: cogs/moderation/moderation.py:791
 msgid "Confirm mass ban"
 msgstr "Επιβεβαίωση μαζικού ban"
 
-#: cogs/moderation/moderation.py:787
+#: cogs/moderation/moderation.py:793
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban **{count}** χρήστη/ες με id;"
 
-#: cogs/moderation/moderation.py:794
+#: cogs/moderation/moderation.py:800
 msgid "Mass ban cancelled"
 msgstr "Το μαζικό ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:795
+#: cogs/moderation/moderation.py:801
 msgid "No action taken."
 msgstr "Δεν έγινε καμία ενέργεια."
 
-#: cogs/moderation/moderation.py:814
+#: cogs/moderation/moderation.py:820
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr "**:x: Συγγνώμη, δεν μπόρεσα να κάνω ban αυτούς τους χρήστες (λείπουν δικαιώματα;).**"
 
-#: cogs/moderation/moderation.py:832
+#: cogs/moderation/moderation.py:838
 msgid "Mass ban complete"
 msgstr "Το μαζικό ban ολοκληρώθηκε"
 
-#: cogs/moderation/moderation.py:836
+#: cogs/moderation/moderation.py:842
 msgid "Banned"
 msgstr "Έγινε ban"
 
-#: cogs/moderation/moderation.py:837
+#: cogs/moderation/moderation.py:843
 msgid "Failed"
 msgstr "Απέτυχε"
 
-#: cogs/moderation/moderation.py:840
+#: cogs/moderation/moderation.py:846
 #, python-brace-format
 msgid "By {author}"
 msgstr "Από {author}"
 
-#: cogs/moderation/moderation.py:864
+#: cogs/moderation/moderation.py:870
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ":warning: | **Ο αριθμός δεν μπορεί να είναι μικρότερος από 0 και μεγαλύτερος από 999**"
 
-#: cogs/moderation/moderation.py:874
+#: cogs/moderation/moderation.py:880
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό**"
 
-#: cogs/moderation/moderation.py:879
+#: cogs/moderation/moderation.py:885
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr "{emoji} **Διαγράφηκε με επιτυχία!**"
 
-#: cogs/moderation/moderation.py:895
+#: cogs/moderation/moderation.py:901
 msgid "Invalid amount. Maximum is 500."
 msgstr "Μη έγκυρη ποσότητα. Το μέγιστο είναι 500."
 
-#: cogs/moderation/moderation.py:907
+#: cogs/moderation/moderation.py:913
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Διαγράφηκαν **{deleted}/{num}** πιθανά μηνύματα για εσένα."
 
-#: cogs/moderation/moderation.py:977
+#: cogs/moderation/moderation.py:983
 msgid "Mute role is not defined"
 msgstr "Ο ρόλος mute δεν έχει οριστεί"
 
-#: cogs/moderation/moderation.py:978
+#: cogs/moderation/moderation.py:984
 msgid "Creating role..."
 msgstr "Δημιουργία ρόλου..."
 
-#: cogs/moderation/moderation.py:980
+#: cogs/moderation/moderation.py:986
 msgid "Mute role created!"
 msgstr "Ο ρόλος mute δημιουργήθηκε!"
 
-#: cogs/moderation/moderation.py:1018
+#: cogs/moderation/moderation.py:1024
 msgid "Already Muted"
 msgstr "Ήδη σε σίγαση"
 
-#: cogs/moderation/moderation.py:1020
+#: cogs/moderation/moderation.py:1026
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: Ο/Η {user} είναι ήδη σε σίγαση!"
 
-#: cogs/moderation/moderation.py:1030
+#: cogs/moderation/moderation.py:1036
 msgid "Mute failed"
 msgstr "Η σίγαση απέτυχε"
 
-#: cogs/moderation/moderation.py:1033
+#: cogs/moderation/moderation.py:1039
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η σίγαση του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1074
+#: cogs/moderation/moderation.py:1080
 msgid "Unmute failed"
 msgstr "Η κατάργηση σίγασης απέτυχε"
 
-#: cogs/moderation/moderation.py:1077
+#: cogs/moderation/moderation.py:1083
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η κατάργηση σίγασης του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1095
+#: cogs/moderation/moderation.py:1101
 msgid "Confirm mass role add"
 msgstr "Επιβεβαίωση μαζικής προσθήκης ρόλου"
 
-#: cogs/moderation/moderation.py:1097
+#: cogs/moderation/moderation.py:1103
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "Προσθήκη του ρόλου **{role}** σε **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1126
+#: cogs/moderation/moderation.py:1132
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "Προστέθηκε το **{role}** σε {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1135
+#: cogs/moderation/moderation.py:1141
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** προστέθηκε στον/στην **{member}**"
 
-#: cogs/moderation/moderation.py:1152
+#: cogs/moderation/moderation.py:1158
 msgid "Confirm mass role remove"
 msgstr "Επιβεβαίωση μαζικής αφαίρεσης ρόλου"
 
-#: cogs/moderation/moderation.py:1154
+#: cogs/moderation/moderation.py:1160
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "Αφαίρεση του ρόλου **{role}** από **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1183
+#: cogs/moderation/moderation.py:1189
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "Αφαιρέθηκε το **{role}** από {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1192
+#: cogs/moderation/moderation.py:1198
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** αφαιρέθηκε από τον/την **{member}**"
 
-#: cogs/moderation/moderation.py:1208
+#: cogs/moderation/moderation.py:1214
 #, python-brace-format
 msgid "{role} moved."
 msgstr "Ο ρόλος {role} μετακινήθηκε."
 
-#: cogs/moderation/moderation.py:1210
+#: cogs/moderation/moderation.py:1216
 msgid "You do not have permission to do that"
 msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
 
-#: cogs/moderation/moderation.py:1212
+#: cogs/moderation/moderation.py:1218
 msgid "Failed to move role"
 msgstr "Αποτυχία μετακίνησης ρόλου"
 
-#: cogs/moderation/moderation.py:1214
+#: cogs/moderation/moderation.py:1220
 msgid "Invalid argument"
 msgstr "Μη έγκυρο όρισμα"
 
-#: cogs/moderation/moderation.py:1237
+#: cogs/moderation/moderation.py:1243
 #, python-brace-format
 msgid "{member} has no warns."
 msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις."
 
-#: cogs/moderation/moderation.py:1241
+#: cogs/moderation/moderation.py:1247
 #, python-brace-format
 msgid "{member} has {count} warn(s)"
 msgstr "Ο/Η {member} έχει {count} προειδοποίηση/εις"
 
-#: cogs/moderation/moderation.py:1274
-msgid "Auto-action"
-msgstr "Αυτόματη ενέργεια"
-
-#: cogs/moderation/moderation.py:1275
-msgid "Reached 3 warns - kicked"
-msgstr "Έφτασε τις 3 προειδοποιήσεις - διώχθηκε"
-
-#: cogs/moderation/moderation.py:1291
-#, python-brace-format
-msgid "{member} has 3 warns but I don't have permissions to kick them from the guild."
-msgstr "Ο/Η {member} έχει 3 προειδοποιήσεις αλλά δεν έχω δικαιώματα να τον/την διώξω από τον διακομιστή."
-
-#: cogs/moderation/moderation.py:1297
-msgid "You have been kicked from the server!"
-msgstr "Διώχθηκες από τον διακομιστή!"
-
-#: cogs/moderation/moderation.py:1306
+#: cogs/moderation/moderation.py:1288
 msgid "Warns"
 msgstr "Προειδοποιήσεις"
 
-#: cogs/moderation/moderation.py:1329
+#: cogs/moderation/moderation.py:1300
+msgid "Auto-action"
+msgstr "Αυτόματη ενέργεια"
+
+#: cogs/moderation/moderation.py:1337
 #, python-brace-format
 msgid "{member} has no warns!"
 msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις!"
 
-#: cogs/moderation/moderation.py:1336
+#: cogs/moderation/moderation.py:1344
 #, python-brace-format
 msgid "Removed all warns for {member}."
 msgstr "Αφαιρέθηκαν όλες οι προειδοποιήσεις για τον/την {member}."
 
-#: cogs/moderation/moderation.py:1342
+#: cogs/moderation/moderation.py:1350
 #, python-brace-format
 msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
 msgstr "Αφαιρέθηκαν {num} προειδοποίηση/εις για τον/την {member}. [{remaining} προειδοποιήσεις]"
 
-#: cogs/moderation/moderation.py:1399
+#: cogs/moderation/moderation.py:1431
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Ιστορικό υποθέσεων - {guild}"
 
-#: cogs/moderation/moderation.py:1407
+#: cogs/moderation/moderation.py:1439
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Ιστορικό υποθέσεων - {member}"
 
-#: cogs/moderation/moderation.py:1410
+#: cogs/moderation/moderation.py:1442
 msgid "No cases on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες υποθέσεις."
 
@@ -5352,6 +5341,178 @@ msgstr "Μετά"
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Μετάβαση στο μήνυμα]({url})"
+
+#: cogs/moderation/warn_config.py:54
+msgid "Time the member out (default 10 minutes, up to 28 days)."
+msgstr "Βάλε το μέλος σε timeout (προεπιλογή 10 λεπτά, έως 28 ημέρες)."
+
+#: cogs/moderation/warn_config.py:60
+msgid "Kick the member from the server."
+msgstr "Κάνε kick το μέλος από τον διακομιστή."
+
+#: cogs/moderation/warn_config.py:64
+msgid "Ban"
+msgstr "Ban"
+
+#: cogs/moderation/warn_config.py:66
+msgid "Ban the member from the server."
+msgstr "Κάνε ban το μέλος από τον διακομιστή."
+
+#: cogs/moderation/warn_config.py:85
+#, python-brace-format
+msgid "{n} day(s)"
+msgstr "{n} ημέρα(ες)"
+
+#: cogs/moderation/warn_config.py:87
+#, python-brace-format
+msgid "{n} hour(s)"
+msgstr "{n} ώρα(ες)"
+
+#: cogs/moderation/warn_config.py:88
+#, python-brace-format
+msgid "{n} minute(s)"
+msgstr "{n} λεπτό(ά)"
+
+#: cogs/moderation/warn_config.py:101
+#, python-brace-format
+msgid "Reached {count} warns - timed out for {duration}"
+msgstr "Έφτασε τα {count} warns - timeout για {duration}"
+
+#: cogs/moderation/warn_config.py:105
+#, python-brace-format
+msgid "Reached {count} warns - banned"
+msgstr "Έφτασε τα {count} warns - έγινε ban"
+
+#: cogs/moderation/warn_config.py:106
+#, python-brace-format
+msgid "Reached {count} warns - kicked"
+msgstr "Έφτασε τα {count} warns - έγινε kick"
+
+#: cogs/moderation/warn_config.py:115
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't time them out (check my permissions and role position)."
+msgstr "Το μέλος {member} έφτασε τα {count} warns, αλλά δεν μπόρεσα να του βάλω timeout (έλεγξε τα δικαιώματα και τη θέση του ρόλου μου)."
+
+#: cogs/moderation/warn_config.py:120
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't ban them (check my permissions and role position)."
+msgstr "Το μέλος {member} έφτασε τα {count} warns, αλλά δεν μπόρεσα να το κάνω ban (έλεγξε τα δικαιώματα και τη θέση του ρόλου μου)."
+
+#: cogs/moderation/warn_config.py:124
+#, python-brace-format
+msgid "{member} reached {count} warns, but I couldn't kick them (check my permissions and role position)."
+msgstr "Το μέλος {member} έφτασε τα {count} warns, αλλά δεν μπόρεσα να το κάνω kick (έλεγξε τα δικαιώματα και τη θέση του ρόλου μου)."
+
+#: cogs/moderation/warn_config.py:134
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been timed out for {duration}."
+msgstr "Έφτασες τα {count} warns στο {guild} και μπήκες σε timeout για {duration}."
+
+#: cogs/moderation/warn_config.py:138
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been banned."
+msgstr "Έφτασες τα {count} warns στο {guild} και έγινες ban."
+
+#: cogs/moderation/warn_config.py:141
+#, python-brace-format
+msgid "You reached {count} warns in {guild} and have been kicked."
+msgstr "Έφτασες τα {count} warns στο {guild} και έγινες kick."
+
+#: cogs/moderation/warn_config.py:151
+#, python-brace-format
+msgid "{action} for {duration}"
+msgstr "{action} για {duration}"
+
+#: cogs/moderation/warn_config.py:198
+msgid "Action for the next rule..."
+msgstr "Ενέργεια για τον επόμενο κανόνα..."
+
+#: cogs/moderation/warn_config.py:214
+msgid "Add / update rule"
+msgstr "Προσθήκη / ενημέρωση κανόνα"
+
+#: cogs/moderation/warn_config.py:229
+msgid "Reset to default"
+msgstr "Επαναφορά προεπιλογής"
+
+#: cogs/moderation/warn_config.py:249
+#, python-brace-format
+msgid "At {n} warns"
+msgstr "Στα {n} warns"
+
+#: cogs/moderation/warn_config.py:257
+msgid "Remove a rule..."
+msgstr "Αφαίρεση κανόνα..."
+
+#: cogs/moderation/warn_config.py:276
+msgid "Add or update a warn rule"
+msgstr "Προσθήκη ή ενημέρωση κανόνα warn"
+
+#: cogs/moderation/warn_config.py:280
+msgid "Number of warns, e.g. 3"
+msgstr "Αριθμός warns, π.χ. 3"
+
+#: cogs/moderation/warn_config.py:286
+#, python-brace-format
+msgid "Number of warns ({min}-{max})"
+msgstr "Αριθμός warns ({min}-{max})"
+
+#: cogs/moderation/warn_config.py:294
+msgid "e.g. 10m, 1h, 1d (timeout only; blank = 10 minutes)"
+msgstr "π.χ. 10m, 1h, 1d (μόνο timeout; κενό = 10 λεπτά)"
+
+#: cogs/moderation/warn_config.py:300
+msgid "Timeout duration"
+msgstr "Διάρκεια timeout"
+
+#: cogs/moderation/warn_config.py:310
+msgid "The number of warns must be a whole number."
+msgstr "Ο αριθμός των warns πρέπει να είναι ακέραιος."
+
+#: cogs/moderation/warn_config.py:315
+#, python-brace-format
+msgid "The number of warns must be between {min} and {max}."
+msgstr "Ο αριθμός των warns πρέπει να είναι μεταξύ {min} και {max}."
+
+#: cogs/moderation/warn_config.py:330
+msgid "I couldn't read that timeout duration - try something like \"10m\", \"1h\", or \"1d\"."
+msgstr "Δεν κατάλαβα αυτή τη διάρκεια timeout - δοκίμασε κάτι σαν \"10m\", \"1h\" ή \"1d\"."
+
+#: cogs/moderation/warn_config.py:375
+msgid "**No escalation rules.** Warns are recorded, but no automatic action is taken. Add a rule below, or reset to the default."
+msgstr "**Χωρίς κανόνες κλιμάκωσης.** Τα warns καταγράφονται, αλλά δεν γίνεται καμία αυτόματη ενέργεια. Πρόσθεσε έναν κανόνα παρακάτω, ή επανάφερε την προεπιλογή."
+
+#: cogs/moderation/warn_config.py:381
+#, python-brace-format
+msgid "**At {n} warns** -> {detail}"
+msgstr "**Στα {n} warns** -> {detail}"
+
+#: cogs/moderation/warn_config.py:387
+msgid "This is the default (kick at 3 warns)."
+msgstr "Αυτή είναι η προεπιλογή (kick στα 3 warns)."
+
+#: cogs/moderation/warn_config.py:397
+#, python-brace-format
+msgid "Warn escalation - {guild}"
+msgstr "Κλιμάκωση warns - {guild}"
+
+#: cogs/moderation/warn_config.py:400
+msgid "Decide what happens as a member piles up warns: at each threshold Yasuho can time them out, kick, or ban them."
+msgstr "Αποφάσισε τι συμβαίνει όταν ένα μέλος μαζεύει warns: σε κάθε όριο η Yasuho μπορεί να του βάλει timeout, να το κάνει kick ή ban."
+
+#: cogs/moderation/warn_config.py:409
+msgid "Current rules"
+msgstr "Τρέχοντες κανόνες"
+
+#: cogs/moderation/warn_config.py:418
+#, python-brace-format
+msgid "A rule fires the moment a member's warn count lands exactly on its threshold, so editing rules never re-punishes past warns. Thresholds are unique; up to {max} rules."
+msgstr "Ένας κανόνας ενεργοποιείται τη στιγμή που ο μετρητής warns ενός μέλους φτάνει ακριβώς στο όριό του, οπότε η επεξεργασία κανόνων δεν ξανατιμωρεί παλιά warns. Τα όρια είναι μοναδικά; έως {max} κανόνες."
+
+#: cogs/moderation/warn_config.py:493
+#, python-brace-format
+msgid "This server already has the maximum of {max} escalation rules."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} κανόνων κλιμάκωσης."
 
 #: cogs/music/effects.py:171
 msgid "Clear every effect and hear the track as it is."

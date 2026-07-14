@@ -6,10 +6,13 @@ embed to the guild's mod-log via ModLog.post_action(guild, embed).
 
 from __future__ import annotations
 
+import datetime
 import logging
 
 import asyncpg
 import discord
+
+from tools import settings, warn_escalation
 
 log = logging.getLogger(__name__)
 
@@ -88,36 +91,88 @@ async def create_case(
 async def bump_warn(pool, guild_id, user_id):
     """Add one warn to a member and return the new running count.
 
-    On reaching 3 the counter is reset to 0 and 3 is returned, signalling the
-    caller to auto-kick; below the threshold the new count (1 or 2) is stored
-    and returned. This is the single home of the 3-strike rule, shared by the
-    warn command and AutoMod so both stay in lockstep.
+    The running count is MONOTONIC - it is never auto-reset. It used to reset
+    at 3 (the old hardcoded auto-kick), but configurable escalation needs the
+    count to keep climbing so a higher threshold (e.g. ban at 7) can ever be
+    reached. WHICH action fires at a given count is now decided by the caller
+    against the guild's policy (tools.warn_escalation); this function is purely
+    "add one warn, return the new total". Shared by the warn command and
+    AutoMod so both count identically.
+
+    The increment is atomic (``warns_count + 1`` inside the UPDATE with a
+    ``RETURNING``), so two warns racing on the same member can never lose one -
+    a real improvement over the former read-then-write.
     """
-    current = (
-        await pool.fetchval(
-            "SELECT warns_count FROM warns WHERE guild_id = $1 AND user_id = $2",
-            guild_id,
-            user_id,
-        )
-        or 0
-    )
-    new_count = current + 1
-    if new_count >= 3:
-        await pool.execute(
-            "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 0) "
-            "ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = 0",
-            guild_id,
-            user_id,
-        )
-        return 3
-    await pool.execute(
-        "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, $3) "
-        "ON CONFLICT (guild_id, user_id) DO UPDATE SET warns_count = $3",
+    return await pool.fetchval(
+        "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) "
+        "ON CONFLICT (guild_id, user_id) DO UPDATE "
+        "SET warns_count = warns.warns_count + 1 "
+        "RETURNING warns_count",
         guild_id,
         user_id,
-        new_count,
     )
-    return new_count
+
+
+async def load_escalation_policy(pool, guild_id):
+    """Resolve a guild's warn-escalation policy from settings.
+
+    Returns ``(policy, showing_default)``: ``policy`` is always a usable list of
+    rules (:func:`tools.warn_escalation.resolve_policy`); ``showing_default`` is
+    True when the guild has no stored policy (unconfigured -> kick at 3) OR its
+    stored payload was malformed and we fell back to the default. A malformed
+    payload is logged here once, so both the warn command and AutoMod get the
+    same behaviour and logging. The hot path (the warn write) ignores the second
+    value; only the config panel uses it (to badge the default).
+    """
+    raw = await settings.get_guild(
+        pool, guild_id, warn_escalation.SETTINGS_KEY, None
+    )
+    policy, malformed = warn_escalation.resolve_policy(raw)
+    if malformed:
+        log.warning(
+            "Guild %s has a malformed warn_escalation payload; falling back to "
+            "the default policy (kick at 3).",
+            guild_id,
+        )
+    return policy, (raw is None or malformed)
+
+
+async def apply_escalation_action(bot, guild, member, rule):
+    """Apply a fired warn-escalation rule's action to a member. Never raises.
+
+    Shared by the warn command and AutoMod so both escalate identically. Mirrors
+    the historical auto-kick: for a kick/ban it suppresses the matching ModLog
+    gateway listener so the action is logged once (by the caller's warn-case
+    embed), not twice; a timeout has no such listener. Returns ``True`` on
+    success and ``False`` on any failure (role hierarchy, missing permissions,
+    member already gone), so the caller can degrade to a clear notice while the
+    warn itself stays recorded.
+    """
+    action = rule["action"]
+    reason = f"Warn escalation: reached {rule['threshold']} warns"
+    try:
+        if action == warn_escalation.TIMEOUT:
+            seconds = rule.get("duration") or warn_escalation.DEFAULT_TIMEOUT_SECONDS
+            await member.timeout(
+                datetime.timedelta(seconds=seconds), reason=reason
+            )
+        elif action == warn_escalation.KICK:
+            funnel_suppress(bot, guild.id, member.id, "remove")
+            await guild.kick(member, reason=reason)
+        elif action == warn_escalation.BAN:
+            funnel_suppress(bot, guild.id, member.id, "ban")
+            await guild.ban(member, reason=reason)
+        else:  # pragma: no cover - resolve_policy never yields another action
+            return False
+        return True
+    except Exception:
+        log.exception(
+            "Warn escalation action %s failed for %s in guild %s",
+            action,
+            member.id,
+            guild.id,
+        )
+        return False
 
 
 def case_embed(case_number, action, target, moderator, reason, expires=None):

@@ -4,7 +4,13 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
-from tools import db, modactions, modchecks
+from cogs.moderation.warn_config import (
+    WarnConfigPanel,
+    escalation_dm,
+    escalation_failure_notice,
+    escalation_summary,
+)
+from tools import db, modactions, modchecks, warn_escalation
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -1248,14 +1254,16 @@ class Moderation(commands.Cog):
     @commands.has_permissions(kick_members=True)
     @discord.app_commands.describe(member="The member to warn.", reason="Why they're being warned.")
     async def warn(self, ctx, member: discord.Member = None, *, reason: str = None):
-        """Warn a member (auto-kicks at 3 warns)."""
+        """Warn a member (escalates per this server's warn rules)."""
 
         if member is None:
             return await ctx.send_help(ctx.command)
 
         # Every warn is recorded as its own case for history/auditing, while the
-        # warns_count row (bumped here) stays the source of truth for the
-        # 3-strike auto-kick threshold. bump_warn is shared with AutoMod.
+        # warns_count row (bumped here, monotonic) is the running total the
+        # escalation policy keys on. bump_warn is shared with AutoMod so both
+        # count identically; the escalation policy is per-guild configurable
+        # (defaulting to kick at 3 for an unconfigured server).
         num = await modactions.create_case(
             self.bot.db_pool,
             ctx.guild.id,
@@ -1268,44 +1276,44 @@ class Moderation(commands.Cog):
             self.bot.db_pool, ctx.guild.id, member.id
         )
 
-        if new_count >= 3:
-            embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
-            embed.add_field(
-                name=_("Auto-action"),
-                value=_("Reached 3 warns - kicked"),
-                inline=False,
-            )
+        policy, _default = await modactions.load_escalation_policy(
+            self.bot.db_pool, ctx.guild.id
+        )
+        rule = warn_escalation.action_for_count(policy, new_count)
 
-            # Suppress the ModLog leave listener so this auto-kick is logged once
-            # (the case embed above), not twice.
-            modactions.funnel_suppress(self.bot, ctx.guild.id, member.id, "remove")
+        embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
 
-            try:
-                await member.kick(reason="Auto-kick: reached 3 warns")
-            except Exception:
-                log.exception("Failed to kick member at 3 warns")
-                await ctx.send(embed=embed)
-                await self._post_modlog(ctx.guild, embed)
-                return await ctx.send(
-                    _(
-                        "{member} has 3 warns but I don't have permissions "
-                        "to kick them from the guild."
-                    ).format(member=member.mention)
-                )
-
-            try:
-                await member.send(_("You have been kicked from the server!"))
-            except Exception:
-                log.exception("Failed to DM kicked member")
-
+        # No rule fires at this exact count: record the warn and show the total.
+        if rule is None:
+            embed.add_field(name=_("Warns"), value=str(new_count), inline=False)
             await ctx.send(embed=embed)
             await self._post_modlog(ctx.guild, embed)
             return
 
-        embed = modactions.case_embed(num, "warn", member, ctx.author, reason)
-        embed.add_field(name=_("Warns"), value=f"{new_count}/3", inline=False)
+        # A threshold was crossed - apply its action. The action rides this warn
+        # case (no separate case row, exactly like the historical auto-kick); a
+        # failure degrades to a clear notice while the warn stays recorded.
+        ok = await modactions.apply_escalation_action(
+            self.bot, ctx.guild, member, rule
+        )
+        embed.add_field(
+            name=_("Auto-action"),
+            value=escalation_summary(new_count, rule),
+            inline=False,
+        )
         await ctx.send(embed=embed)
         await self._post_modlog(ctx.guild, embed)
+
+        if not ok:
+            await ctx.send(
+                escalation_failure_notice(member.mention, new_count, rule)
+            )
+            return
+
+        try:
+            await member.send(escalation_dm(ctx.guild.name, new_count, rule))
+        except Exception:
+            log.exception("Failed to DM member after warn escalation")
 
     @commands.hybrid_command(aliases=["rmwarn", "removewarn"])
     @commands.guild_only()
@@ -1344,7 +1352,12 @@ class Moderation(commands.Cog):
             )
         )
 
-    @commands.hybrid_command(name="warnings", aliases=["warns"])
+    @commands.hybrid_group(
+        name="warnings",
+        aliases=["warns"],
+        fallback="view",
+        invoke_without_command=True,
+    )
     @commands.guild_only()
     @commands.has_permissions(kick_members=True)
     @discord.app_commands.describe(member="Whose warnings to browse (defaults to you).")
@@ -1363,6 +1376,25 @@ class Moderation(commands.Cog):
 
         view = WarningsView(self, ctx.guild, member, rows, ctx.author.id)
         view.message = await ctx.send(embed=view.embed(), view=view)
+
+    @warnings.command(name="config")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def warnings_config(self, ctx):
+        """Configure this server's warn escalation rules (threshold -> action)."""
+
+        # manage_guild-gated (the browse fallback keeps its kick_members gate;
+        # invoke_without_command=True means a subcommand runs only its own
+        # checks, so this needs manage_guild only - see the command-tree notes).
+        policy, _default = await modactions.load_escalation_policy(
+            self.bot.db_pool, ctx.guild.id
+        )
+        state = {
+            "policy": policy,
+            "pending_action": warn_escalation.TIMEOUT,
+        }
+        view = WarnConfigPanel(self, ctx.guild, ctx.author.id, state)
+        view.message = await ctx.send(view=view)
 
     @commands.hybrid_command(name="case")
     @commands.guild_only()

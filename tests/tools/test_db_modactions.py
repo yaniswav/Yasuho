@@ -273,37 +273,43 @@ async def test_create_case_reraises_after_exhausting_retries():
 
 
 class _WarnPool:
-    """Fake pool for bump_warn: fetchval returns a preset current count and
-    execute records the (query, args) that were issued."""
+    """Fake pool for the monotonic bump_warn: a single fetchval with RETURNING
+    warns_count. The DB computes the increment, so the fetchval return value IS
+    the new running count; we record the (query, args) issued for assertions."""
 
-    def __init__(self, current):
-        self.fetchval_return = current
-        self.executed = None
+    def __init__(self, new_count):
+        self.new_count = new_count
+        self.calls = []
 
     async def fetchval(self, query, *args):
-        return self.fetchval_return
-
-    async def execute(self, query, *args):
-        self.executed = (query, args)
-        return "INSERT 0 1"
+        self.calls.append((query, args))
+        return self.new_count
 
 
-async def test_bump_warn_first_warn_stores_one():
-    pool = _WarnPool(current=0)
-    assert await modactions.bump_warn(pool, 1, 2) == 1
-    query, args = pool.executed
-    assert "warns_count = $3" in query
-    assert args == (1, 2, 1)
-
-
-async def test_bump_warn_null_current_treated_as_zero():
-    pool = _WarnPool(current=None)
+async def test_bump_warn_increments_and_returns_new_count():
+    pool = _WarnPool(new_count=1)
     assert await modactions.bump_warn(pool, 1, 2) == 1
 
+    # A single atomic upsert with an in-statement increment and RETURNING - no
+    # read-then-write, so two racing warns can never lose one.
+    assert len(pool.calls) == 1
+    query, args = pool.calls[0]
+    assert "warns_count + 1" in query
+    assert "RETURNING warns_count" in query
+    assert args == (1, 2)
 
-async def test_bump_warn_third_resets_and_signals_kick():
-    pool = _WarnPool(current=2)
+
+async def test_bump_warn_is_monotonic_no_reset_at_three():
+    # The counter no longer resets at 3 - the DB returns the true running total
+    # (3 here) and bump_warn passes it straight through.
+    pool = _WarnPool(new_count=3)
     assert await modactions.bump_warn(pool, 1, 2) == 3
-    query, args = pool.executed
-    assert "warns_count = 0" in query
-    assert args == (1, 2)  # reset path takes no count argument
+    query, _args = pool.calls[0]
+    assert "= 0" not in query  # the old reset-to-zero path is gone
+
+
+async def test_bump_warn_keeps_climbing_past_three():
+    # A monotonic count is what lets a higher threshold (e.g. ban at 7) ever be
+    # reached; the old bump_warn capped/reset at 3 and could never return this.
+    pool = _WarnPool(new_count=7)
+    assert await modactions.bump_warn(pool, 1, 2) == 7
