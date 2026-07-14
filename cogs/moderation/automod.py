@@ -1,26 +1,36 @@
+"""Hybrid auto-moderation engine + command group.
+
+This module is the ENGINE half of the AutoMod feature: message scanning (links /
+invites / spam), Discord native-rule management, the settings cache, and the
+``/automod`` command group. The Components V2 control panel and its display
+catalog live in the sibling ``automod_panel.py`` (the presentation concern,
+mirroring the music.py -> views.py split); this module imports the panel and the
+action catalog from there, and the panel calls back into this cog - a one-way
+import with no cycle.
+
+Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the fancy
+ellipsis anywhere in this file.
+"""
+
 import datetime
 import logging
 import re
 import time
+from typing import Literal
 
 import discord
 from discord.ext import commands
 
-from tools import db, interactions, modactions, settings
+from cogs.moderation.automod_panel import (
+    DEFAULT_ACTION,
+    VALID_ACTIONS,
+    AutoModPanel,
+)
+from tools import db, modactions, settings
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
-
-# Friendly names used both in the action <Select> and the case action string.
-ACTION_CHOICES = [
-    ("delete", "Delete message", "🗑️"),
-    ("warn", "Warn", "⚠️"),
-    ("mute", "Mute (10m timeout)", "🔇"),
-    ("kick", "Kick", "👢"),
-]
-VALID_ACTIONS = {value for value, _label, _emoji in ACTION_CHOICES}
 
 # Anti-spam sliding window: keep the last _SPAM_WINDOW seconds of a member's
 # message timestamps and trip when more than _SPAM_THRESHOLD land inside it.
@@ -32,339 +42,8 @@ _SPAM_THRESHOLD = 5
 _SPAM_SWEEP_AT = 1000
 
 
-def _action_options(current):
-    """Options for the panel's action <Select>, current value pre-selected."""
-
-    return [
-        discord.SelectOption(
-            label=label, value=value, emoji=emoji, default=value == current
-        )
-        for value, label, emoji in ACTION_CHOICES
-    ]
-
-
-# ----------------------------------------------------------------------
-# Interactive panel components (discord.ui)
-# ----------------------------------------------------------------------
-class _AutoModToggle(discord.ui.Button):
-    """A single on/off rule button; green when on, greyed-out when unavailable."""
-
-    def __init__(self, panel, key, label, *, native):
-        self.panel = panel
-        self.key = key
-        self.native = native
-        self.base_label = label
-        super().__init__(label=label)
-        self.refresh()
-
-    def refresh(self):
-        state = self.panel.state.get(self.key)
-        if state is None:
-            # Native rule we can't read/manage (missing permission) -> disabled.
-            self.disabled = True
-            self.label = _("{label} (N/A)").format(label=self.base_label)
-            self.style = discord.ButtonStyle.secondary
-        else:
-            self.disabled = False
-            self.label = self.base_label
-            self.style = (
-                discord.ButtonStyle.success
-                if state
-                else discord.ButtonStyle.secondary
-            )
-
-    async def callback(self, interaction):
-        await self.panel.toggle(interaction, self.key, self.native)
-
-
-class _ActionSelect(discord.ui.Select):
-    """Choose what happens to a member who trips a custom filter."""
-
-    def __init__(self, panel):
-        self.panel = panel
-        super().__init__(
-            placeholder=_("Action on a custom violation..."),
-            min_values=1,
-            max_values=1,
-            options=_action_options(panel.state["action"]),
-        )
-
-    async def callback(self, interaction):
-        await self.panel.set_action(interaction, self.values[0])
-
-
-class _ExemptRoleSelect(discord.ui.RoleSelect):
-    """Roles whose members bypass the custom filters."""
-
-    def __init__(self, panel, defaults):
-        self.panel = panel
-        super().__init__(
-            placeholder=_("Exempt roles (select to replace)..."),
-            min_values=0,
-            max_values=25,
-            default_values=defaults,
-        )
-
-    async def callback(self, interaction):
-        await self.panel.set_exempt(
-            interaction, "roles", [r.id for r in self.values]
-        )
-
-
-class _ExemptChannelSelect(discord.ui.ChannelSelect):
-    """Channels in which the custom filters are not enforced."""
-
-    def __init__(self, panel, defaults):
-        self.panel = panel
-        super().__init__(
-            placeholder=_("Exempt channels (select to replace)..."),
-            channel_types=[
-                discord.ChannelType.text,
-                discord.ChannelType.news,
-                discord.ChannelType.forum,
-            ],
-            min_values=0,
-            max_values=25,
-            default_values=defaults,
-        )
-
-    async def callback(self, interaction):
-        await self.panel.set_exempt(
-            interaction, "channels", [c.id for c in self.values]
-        )
-
-
-# ----------------------------------------------------------------------
-# Edit a LayoutView panel in place with view=-only (no embed/content)
-# ----------------------------------------------------------------------
-async def _refresh_layout(interaction, message, view):
-    """Edit a LayoutView panel in place with ``view=`` only (no embed/content).
-
-    A Components V2 message carries its content inside the view and Discord
-    rejects an ``embed=`` on such an edit. Tries the live interaction edit
-    first, then falls back to editing the stored message when the interaction
-    was already answered (e.g. a deferred modal submit).
-    """
-
-    await interactions.refresh_layout(
-        interaction, message, view, surface="automod panel"
-    )
-
-
-def _mark(value):
-    if value is None:
-        return _("⚪ Unavailable")
-    return _("🟢 Enabled") if value else _("🔴 Disabled")
-
-
-class AutoModPanel(AuthorLayoutView):
-    """Author-restricted control panel for every custom + native AutoMod rule.
-
-    A single Components V2 :class:`~discord.ui.Container` in the house style
-    established by the settings/welcome/Twitch panels. The deny wording
-    matches AuthorLayoutView's default ("This panel isn't for you.", the same
-    wording the old AuthorView-based panel used explicitly), so it is left
-    unset here.
-    """
-
-    def __init__(self, cog, guild, author_id, state, timeout=180):
-        super().__init__(author_id, timeout=timeout)
-        self.cog = cog
-        self.guild = guild
-        self.state = state
-        self._build()
-
-    # -- rendering ------------------------------------------------------
-    def _build(self):
-        """(Re)assemble the layout from the current state."""
-
-        state = self.state
-        container = discord.ui.Container(accent_colour=random_colour())
-
-        header_lines = [
-            "### " + _("AutoMod control panel"),
-            _(
-                "Custom filters are enforced by Yasuho on every message. "
-                "Native filters are Discord's own AutoMod, blocked before a "
-                "message is ever posted."
-            ),
-        ]
-        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
-        container.add_item(discord.ui.Separator())
-
-        container.add_item(
-            discord.ui.TextDisplay(
-                "**"
-                + _("Custom filters (Yasuho)")
-                + "**\n"
-                + _(
-                    "Anti-link: {link}\n"
-                    "Anti-invite: {invite}\n"
-                    "Anti-spam: {spam}"
-                ).format(
-                    link=_mark(state["link"]),
-                    invite=_mark(state["invite"]),
-                    spam=_mark(state["spam"]),
-                )
-            )
-        )
-        container.add_item(
-            discord.ui.TextDisplay(
-                "**"
-                + _("Native filters (Discord)")
-                + "**\n"
-                + _(
-                    "Keyword preset: {kw}\n"
-                    "Spam: {nspam}\n"
-                    "Mention spam: {nmention}"
-                ).format(
-                    kw=_mark(state["kw"]),
-                    nspam=_mark(state["nspam"]),
-                    nmention=_mark(state["nmention"]),
-                )
-            )
-        )
-        container.add_item(
-            discord.ui.TextDisplay(
-                "**"
-                + _("Action on custom violation")
-                + ":** "
-                + state["action"].title()
-            )
-        )
-
-        roles = state["exempt_roles"]
-        channels = state["exempt_channels"]
-        roles_value = ", ".join(f"<@&{r}>" for r in roles) if roles else _("None")
-        channels_value = (
-            ", ".join(f"<#{c}>" for c in channels) if channels else _("None")
-        )
-        container.add_item(
-            discord.ui.TextDisplay(
-                "**" + _("Exempt roles") + ":** " + roles_value
-            )
-        )
-        container.add_item(
-            discord.ui.TextDisplay(
-                "**" + _("Exempt channels") + ":** " + channels_value
-            )
-        )
-
-        container.add_item(discord.ui.Separator())
-
-        custom_toggles = [
-            _AutoModToggle(self, "link", _("Anti-link"), native=False),
-            _AutoModToggle(self, "invite", _("Anti-invite"), native=False),
-            _AutoModToggle(self, "spam", _("Anti-spam"), native=False),
-        ]
-        native_toggles = [
-            _AutoModToggle(self, "kw", _("Native: Keyword"), native=True),
-            _AutoModToggle(self, "nspam", _("Native: Spam"), native=True),
-            _AutoModToggle(self, "nmention", _("Native: Mentions"), native=True),
-        ]
-        container.add_item(discord.ui.ActionRow(*custom_toggles))
-        container.add_item(discord.ui.ActionRow(*native_toggles))
-
-        container.add_item(discord.ui.ActionRow(_ActionSelect(self)))
-
-        role_defaults = [
-            r
-            for r in (self.guild.get_role(i) for i in state["exempt_roles"])
-            if r is not None
-        ]
-        channel_defaults = [
-            c
-            for c in (self.guild.get_channel(i) for i in state["exempt_channels"])
-            if c is not None
-        ]
-        container.add_item(
-            discord.ui.ActionRow(_ExemptRoleSelect(self, defaults=role_defaults))
-        )
-        container.add_item(
-            discord.ui.ActionRow(
-                _ExemptChannelSelect(self, defaults=channel_defaults)
-            )
-        )
-
-        if any(state[k] is None for k in ("kw", "nspam", "nmention")):
-            container.add_item(
-                discord.ui.TextDisplay(
-                    "-# " + _("Native rules need the bot to have Manage Server.")
-                )
-            )
-
-        self.add_item(container)
-
-    async def _rerender(self, interaction):
-        """Rebuild a fresh panel from current state and show it in place."""
-
-        new = AutoModPanel(self.cog, self.guild, self.author_id, dict(self.state))
-        new.message = self.message
-        self.stop()
-        await _refresh_layout(interaction, self.message, new)
-
-    async def _safe_fail(self, interaction):
-        await interactions.notify_failure(
-            interaction, _("Something went wrong updating the panel.")
-        )
-
-    # -- callbacks ------------------------------------------------------
-    async def toggle(self, interaction, key, native):
-        try:
-            target = not bool(self.state.get(key))
-            if native:
-                ok, new_state = await self.cog.set_native_rule(
-                    self.guild, key, target
-                )
-                if not ok:
-                    return await interaction.response.send_message(
-                        _(
-                            "I couldn't change that rule. Discord's built-in "
-                            "AutoMod needs the bot to have the **Manage Server** "
-                            "permission."
-                        ),
-                        ephemeral=True,
-                    )
-                self.state[key] = new_state
-            else:
-                await self.cog.set_custom_rule(self.guild.id, key, target)
-                self.state[key] = target
-            await self._rerender(interaction)
-        except Exception:
-            log.exception("AutoMod panel toggle failed")
-            await self._safe_fail(interaction)
-
-    async def set_action(self, interaction, value):
-        try:
-            if value not in VALID_ACTIONS:
-                value = "delete"
-            await settings.set_guild(
-                self.cog.bot.db_pool, self.guild.id, "automod_action", value
-            )
-            self.state["action"] = value
-            await self._rerender(interaction)
-        except Exception:
-            log.exception("AutoMod panel action update failed")
-            await self._safe_fail(interaction)
-
-    async def set_exempt(self, interaction, kind, ids):
-        try:
-            if kind == "roles":
-                key, state_key = "automod_exempt_roles", "exempt_roles"
-            else:
-                key, state_key = "automod_exempt_channels", "exempt_channels"
-            await settings.set_guild(
-                self.cog.bot.db_pool, self.guild.id, key, ids
-            )
-            self.state[state_key] = ids
-            await self._rerender(interaction)
-        except Exception:
-            log.exception("AutoMod panel exemption update failed")
-            await self._safe_fail(interaction)
-
-
 class AutoMod(commands.Cog):
-    """Hybrid auto-moderation: custom message scanning + Discord's native AutoMod."""
+    """Hybrid auto-moderation: Yasuho's message scanning plus Discord's native AutoMod."""
 
     # Generic links (kept for backward compatibility) and Discord invites.
     url_re = re.compile(r"https?://\S+|discord\.gg/\S+", re.IGNORECASE)
@@ -387,77 +66,69 @@ class AutoMod(commands.Cog):
         self._spam = {}
         self._settings = {}
 
+    # ------------------------------------------------------------------
+    # Command group
+    # ------------------------------------------------------------------
     @commands.hybrid_group(name="automod")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def automod(self, ctx):
-        """Manage auto-moderation: link/invite/spam filters and the control panel."""
+        """Open the AutoMod control panel, or manage a single filter."""
 
+        # Bare prefix invoke opens the panel, matching the house config /
+        # levelconfig panels. Slash users reach it via `/automod panel` (a group
+        # itself is never directly invokable in Discord's UI).
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+            await self._open_panel(ctx)
 
-    @automod.command(name="antilink")
-    @discord.app_commands.describe(mode="True to enable, False to disable.")
-    async def automod_antilink(self, ctx, mode: bool):
-        """Enable or disable link filtering for this guild."""
+    async def _open_panel(self, ctx):
+        state = await self._panel_state(ctx.guild)
+        view = AutoModPanel(self, ctx.guild, ctx.author.id, state)
+        view.message = await ctx.send(view=view)
 
-        await self.set_custom_rule(ctx.guild.id, "link", mode)
-        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
-        embed.add_field(
-            name=_("Anti-link"), value=_("Enabled") if mode else _("Disabled")
+    def _toggle_embed(self, feature, on):
+        """A consistent one-shot confirmation for the single-filter commands."""
+
+        return discord.Embed(
+            title=_("AutoMod"),
+            description=_("{feature} is now {state}.").format(
+                feature=feature, state=_("enabled") if on else _("disabled")
+            ),
+            colour=random_colour(),
         )
-        await ctx.send(embed=embed)
 
-    @automod.command(name="antiinvite")
-    @discord.app_commands.describe(mode="True to enable, False to disable.")
-    async def automod_antiinvite(self, ctx, mode: bool):
-        """Enable or disable Discord-invite filtering for this guild."""
+    @automod.command(name="links", aliases=["antilink"])
+    @discord.app_commands.describe(state="Turn link filtering on or off.")
+    async def automod_links(self, ctx, state: Literal["on", "off"]):
+        """Turn link filtering on or off for this server."""
 
-        await self.set_custom_rule(ctx.guild.id, "invite", mode)
-        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
-        embed.add_field(
-            name=_("Anti-invite"), value=_("Enabled") if mode else _("Disabled")
-        )
-        await ctx.send(embed=embed)
+        on = state == "on"
+        await self.set_custom_rule(ctx.guild.id, "link", on)
+        await ctx.send(embed=self._toggle_embed(_("Link filtering"), on))
 
-    @automod.command(name="antispam")
-    @discord.app_commands.describe(mode="True to enable, False to disable.")
-    async def automod_antispam(self, ctx, mode: bool):
-        """Enable or disable spam filtering for this guild."""
+    @automod.command(name="invites", aliases=["antiinvite"])
+    @discord.app_commands.describe(state="Turn invite filtering on or off.")
+    async def automod_invites(self, ctx, state: Literal["on", "off"]):
+        """Turn Discord-invite filtering on or off for this server."""
 
-        await self.set_custom_rule(ctx.guild.id, "spam", mode)
-        embed = discord.Embed(title=_("Auto-mod"), colour=random_colour())
-        embed.add_field(
-            name=_("Anti-spam"), value=_("Enabled") if mode else _("Disabled")
-        )
-        await ctx.send(embed=embed)
+        on = state == "on"
+        await self.set_custom_rule(ctx.guild.id, "invite", on)
+        await ctx.send(embed=self._toggle_embed(_("Invite filtering"), on))
 
-    @automod.command(name="status")
-    async def automod_status(self, ctx):
-        """Show the current auto-mod settings for this guild."""
+    @automod.command(name="spam", aliases=["antispam"])
+    @discord.app_commands.describe(state="Turn spam filtering on or off.")
+    async def automod_spam(self, ctx, state: Literal["on", "off"]):
+        """Turn spam filtering on or off for this server."""
 
-        s = await self.get_settings(ctx.guild.id)
-        antilink = bool(s["antilink"]) if s else False
-        antispam = bool(s["antispam"]) if s else False
-
-        embed = discord.Embed(
-            title=_("Auto-mod status"), colour=random_colour()
-        )
-        embed.add_field(
-            name=_("Anti-link"), value=_("Enabled") if antilink else _("Disabled")
-        )
-        embed.add_field(
-            name=_("Anti-spam"), value=_("Enabled") if antispam else _("Disabled")
-        )
-        await ctx.send(embed=embed)
+        on = state == "on"
+        await self.set_custom_rule(ctx.guild.id, "spam", on)
+        await ctx.send(embed=self._toggle_embed(_("Spam filtering"), on))
 
     @automod.command(name="panel")
     async def automod_panel(self, ctx):
         """Open the interactive AutoMod control panel."""
 
-        state = await self._panel_state(ctx.guild)
-        view = AutoModPanel(self, ctx.guild, ctx.author.id, state)
-        view.message = await ctx.send(view=view)
+        await self._open_panel(ctx)
 
     # ------------------------------------------------------------------
     # Custom-rule settings (cached, mirrors the original pattern)
@@ -481,7 +152,7 @@ class AutoMod(commands.Cog):
         self._settings[guild_id] = data
 
     async def set_custom_rule(self, guild_id, key, value):
-        """Persist a custom-rule toggle (anti-link / anti-invite / anti-spam)."""
+        """Persist a custom-rule toggle (link / invite / spam filtering)."""
 
         if key == "invite":
             await settings.set_guild(
@@ -498,7 +169,9 @@ class AutoMod(commands.Cog):
     async def _panel_state(self, guild):
         pool = self.bot.db_pool
         s = await self.get_settings(guild.id)
-        action = await settings.get_guild(pool, guild.id, "automod_action", "delete")
+        action = await settings.get_guild(
+            pool, guild.id, "automod_action", DEFAULT_ACTION
+        )
         exempt_roles = (
             await settings.get_guild(pool, guild.id, "automod_exempt_roles", [])
             or []
@@ -519,7 +192,7 @@ class AutoMod(commands.Cog):
             "kw": native["kw"],
             "nspam": native["nspam"],
             "nmention": native["nmention"],
-            "action": action if action in VALID_ACTIONS else "delete",
+            "action": action if action in VALID_ACTIONS else DEFAULT_ACTION,
             "exempt_roles": list(exempt_roles),
             "exempt_channels": list(exempt_channels),
         }
@@ -655,10 +328,10 @@ class AutoMod(commands.Cog):
         guild = message.guild
         member = message.author
         action = await settings.get_guild(
-            self.bot.db_pool, guild.id, "automod_action", "delete"
+            self.bot.db_pool, guild.id, "automod_action", DEFAULT_ACTION
         )
         if action not in VALID_ACTIONS:
-            action = "delete"
+            action = DEFAULT_ACTION
 
         # The offending message always goes, whatever the escalation level.
         try:
@@ -741,7 +414,7 @@ class AutoMod(commands.Cog):
                 message,
                 kind="invite",
                 notice=_(
-                    "{user} Discord invite links are not allowed here."
+                    "{user} Discord invite links aren't allowed here."
                 ).format(user=message.author.mention),
                 reason="Posted a Discord invite link",
             )
@@ -751,7 +424,7 @@ class AutoMod(commands.Cog):
             await self._handle_violation(
                 message,
                 kind="link",
-                notice=_("{user} links are not allowed here.").format(
+                notice=_("{user} links aren't allowed here.").format(
                     user=message.author.mention
                 ),
                 reason="Posted a disallowed link",
@@ -777,9 +450,9 @@ class AutoMod(commands.Cog):
                 await self._handle_violation(
                     message,
                     kind="spam",
-                    notice=_("{user} stop spamming.").format(
-                        user=message.author.mention
-                    ),
+                    notice=_(
+                        "{user} slow down - you're sending messages too fast."
+                    ).format(user=message.author.mention),
                     reason="Spamming messages",
                 )
 

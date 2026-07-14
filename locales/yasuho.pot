@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 12:20+0000\n"
+"POT-Creation-Date: 2026-07-14 12:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1194,17 +1194,12 @@ msgstr ""
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
 #: cogs/config/twitch.py:405 cogs/config/welcome.py:417
-#: cogs/moderation/automod.py:407 cogs/moderation/automod.py:419
-#: cogs/moderation/automod.py:431 cogs/moderation/automod.py:447
-#: cogs/moderation/automod.py:450
 msgid "Enabled"
 msgstr ""
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
 #: cogs/config/twitch.py:407 cogs/config/welcome.py:419
-#: cogs/config/welcome.py:703 cogs/moderation/automod.py:407
-#: cogs/moderation/automod.py:419 cogs/moderation/automod.py:431
-#: cogs/moderation/automod.py:447 cogs/moderation/automod.py:450
+#: cogs/config/welcome.py:703
 msgid "Disabled"
 msgstr ""
 
@@ -1362,11 +1357,11 @@ msgstr ""
 msgid "none"
 msgstr ""
 
-#: cogs/anilist/feed.py:3423
+#: cogs/anilist/feed.py:3423 cogs/moderation/automod.py:95
 msgid "enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:3423
+#: cogs/anilist/feed.py:3423 cogs/moderation/automod.py:95
 msgid "disabled"
 msgstr ""
 
@@ -2604,7 +2599,7 @@ msgid "Ping"
 msgstr ""
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod.py:238 cogs/moderation/automod.py:240
+#: cogs/moderation/automod_panel.py:319 cogs/moderation/automod_panel.py:321
 msgid "None"
 msgstr ""
 
@@ -3830,6 +3825,7 @@ msgid "Role granted to new members"
 msgstr ""
 
 #: cogs/config/settings.py:107 cogs/config/settings.py:224
+#: cogs/moderation/automod.py:93
 msgid "AutoMod"
 msgstr ""
 
@@ -3874,13 +3870,11 @@ msgstr ""
 msgid "Not set up"
 msgstr ""
 
-#: cogs/config/settings.py:188 cogs/moderation/automod.py:256
-#: cogs/moderation/automod.py:407 cogs/moderation/automod.py:447
+#: cogs/config/settings.py:188
 msgid "Anti-link"
 msgstr ""
 
-#: cogs/config/settings.py:190 cogs/moderation/automod.py:258
-#: cogs/moderation/automod.py:431 cogs/moderation/automod.py:450
+#: cogs/config/settings.py:190
 msgid "Anti-spam"
 msgstr ""
 
@@ -3898,11 +3892,11 @@ msgstr ""
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr ""
 
-#: cogs/config/settings.py:265
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
 msgid "Only you can use these controls"
 msgstr ""
 
-#: cogs/config/settings.py:267
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
 msgid "times out after 3 min"
 msgstr ""
 
@@ -4605,133 +4599,205 @@ msgstr ""
 msgid "~{wpm:.0f} WPM"
 msgstr ""
 
-#: cogs/moderation/automod.py:65
+#: cogs/moderation/automod.py:94
+#, python-brace-format
+msgid "{feature} is now {state}."
+msgstr ""
+
+#: cogs/moderation/automod.py:107
+msgid "Link filtering"
+msgstr ""
+
+#: cogs/moderation/automod.py:116
+msgid "Invite filtering"
+msgstr ""
+
+#: cogs/moderation/automod.py:125
+msgid "Spam filtering"
+msgstr ""
+
+#: cogs/moderation/automod.py:417
+#, python-brace-format
+msgid "{user} Discord invite links aren't allowed here."
+msgstr ""
+
+#: cogs/moderation/automod.py:427
+#, python-brace-format
+msgid "{user} links aren't allowed here."
+msgstr ""
+
+#: cogs/moderation/automod.py:454
+#, python-brace-format
+msgid "{user} slow down - you're sending messages too fast."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:43
+msgid "Links"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:43
+msgid "Deletes any link posted by a non-moderator."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:47
+msgid "Invites"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:48
+msgid "Deletes Discord invite links (discord.gg/...)."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:53 cogs/moderation/automod_panel.py:68
+msgid "Spam"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:54
+msgid "Trips on a burst of messages sent in just a few seconds."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:62
+msgid "Keywords"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:63
+msgid "Discord's built-in profanity and slur presets."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:69
+msgid "Discord's own detection of repeated, spammy content."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:74
+msgid "Mentions"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:75
+msgid "Blocks messages that ping five or more people."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:85
+msgid "Delete only"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:85
+msgid "Just remove the offending message."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:88
+msgid "Warn"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:90
+msgid "Remove it and add a warning (auto-kick at three)."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:94
+msgid "Timeout"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:96
+msgid "Remove it and time the member out for 10 minutes."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:98
+msgid "Kick"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:98
+msgid "Remove it and kick the member."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:110
+msgid "⚪ Unavailable"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:111
+msgid "🟢 Enabled"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:111
+msgid "🔴 Disabled"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:150
 #, python-brace-format
 msgid "{label} (N/A)"
 msgstr ""
 
-#: cogs/moderation/automod.py:86
-msgid "Action on a custom violation..."
+#: cogs/moderation/automod_panel.py:171
+msgid "Action when a filter trips..."
 msgstr ""
 
-#: cogs/moderation/automod.py:102
+#: cogs/moderation/automod_panel.py:187
 msgid "Exempt roles (select to replace)..."
 msgstr ""
 
-#: cogs/moderation/automod.py:120
+#: cogs/moderation/automod_panel.py:205
 msgid "Exempt channels (select to replace)..."
 msgstr ""
 
-#: cogs/moderation/automod.py:156
-msgid "⚪ Unavailable"
-msgstr ""
-
-#: cogs/moderation/automod.py:157
-msgid "🟢 Enabled"
-msgstr ""
-
-#: cogs/moderation/automod.py:157
-msgid "🔴 Disabled"
-msgstr ""
-
-#: cogs/moderation/automod.py:185
-msgid "AutoMod control panel"
-msgstr ""
-
-#: cogs/moderation/automod.py:187
-msgid ""
-"Custom filters are enforced by Yasuho on every message. Native filters "
-"are Discord's own AutoMod, blocked before a message is ever posted."
-msgstr ""
-
-#: cogs/moderation/automod.py:198
-msgid "Custom filters (Yasuho)"
-msgstr ""
-
-#: cogs/moderation/automod.py:201
+#: cogs/moderation/automod_panel.py:285
 #, python-brace-format
-msgid ""
-"Anti-link: {link}\n"
-"Anti-invite: {invite}\n"
-"Anti-spam: {spam}"
+msgid "AutoMod - {guild}"
 msgstr ""
 
-#: cogs/moderation/automod.py:214
+#: cogs/moderation/automod_panel.py:288
+msgid ""
+"Keeping the server tidy: Yasuho scans each message for the content "
+"filters, while Discord's native filters block matches before they are "
+"ever posted."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:299
+msgid "Content filters"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:300
+msgid "Checked by Yasuho on every message."
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:309
 msgid "Native filters (Discord)"
 msgstr ""
 
-#: cogs/moderation/automod.py:217
-#, python-brace-format
-msgid ""
-"Keyword preset: {kw}\n"
-"Spam: {nspam}\n"
-"Mention spam: {nmention}"
+#: cogs/moderation/automod_panel.py:310
+msgid "Enforced by Discord before a message is posted."
 msgstr ""
 
-#: cogs/moderation/automod.py:230
-msgid "Action on custom violation"
+#: cogs/moderation/automod_panel.py:329
+msgid "When a content filter trips"
 msgstr ""
 
-#: cogs/moderation/automod.py:244
+#: cogs/moderation/automod_panel.py:331
+msgid "Action"
+msgstr ""
+
+#: cogs/moderation/automod_panel.py:333
 msgid "Exempt roles"
 msgstr ""
 
-#: cogs/moderation/automod.py:249
+#: cogs/moderation/automod_panel.py:335
 msgid "Exempt channels"
 msgstr ""
 
-#: cogs/moderation/automod.py:257 cogs/moderation/automod.py:419
-msgid "Anti-invite"
+#: cogs/moderation/automod_panel.py:339
+msgid ""
+"Members with an exempt role, and messages in an exempt channel, skip the "
+"content filters entirely."
 msgstr ""
 
-#: cogs/moderation/automod.py:261
-msgid "Native: Keyword"
+#: cogs/moderation/automod_panel.py:389
+msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr ""
 
-#: cogs/moderation/automod.py:262
-msgid "Native: Spam"
-msgstr ""
-
-#: cogs/moderation/automod.py:263
-msgid "Native: Mentions"
-msgstr ""
-
-#: cogs/moderation/automod.py:292
-msgid "Native rules need the bot to have Manage Server."
-msgstr ""
-
-#: cogs/moderation/automod.py:308
+#: cogs/moderation/automod_panel.py:415
 msgid "Something went wrong updating the panel."
 msgstr ""
 
-#: cogs/moderation/automod.py:322
+#: cogs/moderation/automod_panel.py:429
 msgid ""
-"I couldn't change that rule. Discord's built-in AutoMod needs the bot to "
-"have the **Manage Server** permission."
-msgstr ""
-
-#: cogs/moderation/automod.py:405 cogs/moderation/automod.py:417
-#: cogs/moderation/automod.py:429
-msgid "Auto-mod"
-msgstr ""
-
-#: cogs/moderation/automod.py:444
-msgid "Auto-mod status"
-msgstr ""
-
-#: cogs/moderation/automod.py:744
-#, python-brace-format
-msgid "{user} Discord invite links are not allowed here."
-msgstr ""
-
-#: cogs/moderation/automod.py:754
-#, python-brace-format
-msgid "{user} links are not allowed here."
-msgstr ""
-
-#: cogs/moderation/automod.py:780
-#, python-brace-format
-msgid "{user} stop spamming."
+"Yasuho needs the **Manage Server** permission to change Discord's native "
+"filters."
 msgstr ""
 
 #: cogs/moderation/blacklist.py:42
