@@ -512,6 +512,81 @@ class WelcomePanel(AuthorLayoutView):
 
 
 # ----------------------------------------------------------------------
+# Read-only status card
+# ----------------------------------------------------------------------
+class WelcomeStatusView(discord.ui.LayoutView):
+    """Single-page Components V2 card: the current welcome configuration for a
+    guild (read-only, no controls)."""
+
+    def __init__(self, guild, config, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.message = None
+        self._build(guild, config)
+
+    def _build(self, guild, config):
+        embed_cfg = config.get("embed") or {}
+        enabled = bool(config.get("enabled"))
+        colour = embed_cfg.get("color")
+
+        container = discord.ui.Container(
+            accent_colour=colour if isinstance(colour, int) else PANEL_ACCENT_DEFAULT
+        )
+
+        cid = config.get("channel_id")
+        channel_value = f"<#{cid}>" if cid else _("*Not set.*")
+        status_value = (
+            ("\U0001F7E2 " + _("Enabled"))
+            if enabled
+            else ("\U0001F534 " + _("Disabled"))
+        )
+
+        container.add_item(
+            discord.ui.TextDisplay(
+                "## " + _("Welcome | {guild}").format(guild=guild.name)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        header_lines = [
+            "**{status}:** {status_value}   **{channel}:** {channel_value}".format(
+                status=_("Status"),
+                status_value=status_value,
+                channel=_("Channel"),
+                channel_value=channel_value,
+            ),
+            "**{card}:** {card_value}   **{rgif}:** {rgif_value}   "
+            "**{ping}:** {ping_value}".format(
+                card=_("Card"),
+                card_value=_("On") if config.get("card") else _("Off"),
+                rgif=_("Random GIF"),
+                rgif_value=_("On") if config.get("random_gif") else _("Off"),
+                ping=_("Ping"),
+                ping_value=_("On") if config.get("ping") else _("Off"),
+            ),
+            "**{pool}:** {pool_value}".format(
+                pool=_("GIF pool"),
+                pool_value=_("{count} saved").format(
+                    count=len(config.get("gifs") or [])
+                ),
+            ),
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(header_lines)))
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Embed") + "**\n" + embed_creator.summarise(embed_cfg)
+            )
+        )
+        if not enabled or not cid:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# " + _("Use `/welcome` to open the full builder.")
+                )
+            )
+        self.add_item(container)
+
+
+# ----------------------------------------------------------------------
 # Cog
 # ----------------------------------------------------------------------
 class Welcome(commands.Cog):
@@ -705,6 +780,18 @@ class Welcome(commands.Cog):
             inline=False,
         )
         await ctx.send(embed=embed)
+
+    @welcome.command(name="status")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_status(self, ctx):
+        """Show the current welcome configuration."""
+
+        config = await self.get_config(ctx.guild.id)
+        view = WelcomeStatusView(ctx.guild, config)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     @welcome.command(name="test")
     @commands.guild_only()

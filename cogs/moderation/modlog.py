@@ -236,6 +236,59 @@ class ModLogPanel(AuthorLayoutView):
         await _refresh_layout(interaction, self.message, new)
 
 
+class ModLogStatusView(discord.ui.LayoutView):
+    """Single-page Components V2 card: the current mod-log configuration for a
+    guild (read-only, no controls)."""
+
+    def __init__(self, guild, channel_id, events, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.message = None
+        self._build(guild, channel_id, events)
+
+    def _build(self, guild, channel_id, events):
+        enabled_set = set(events) if events is not None else set(EVENT_KEYS)
+        enabled = channel_id is not None
+        channel_value = f"<#{channel_id}>" if channel_id else _("*Not set.*")
+        status_value = (
+            ("\U0001F7E2 " + _("Enabled"))
+            if enabled
+            else ("\U0001F534 " + _("Disabled"))
+        )
+        lines = [
+            f"{'🟢' if key in enabled_set else '⚪'} {EVENT_LABELS[key]}"
+            for key in EVENT_KEYS
+        ]
+
+        container = discord.ui.Container(accent_colour=0x5865F2)
+        container.add_item(
+            discord.ui.TextDisplay(
+                "## " + _("Mod-log | {guild}").format(guild=guild.name)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**Status:** {status}\n**Log channel:** {channel}").format(
+                    status=status_value, channel=channel_value
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Events") + "**\n" + "\n".join(lines)
+            )
+        )
+        if not enabled:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# " + _("Use `/modlog set` to choose a log channel.")
+                )
+            )
+        self.add_item(container)
+
+
 class ModLog(commands.Cog):
     """Logs moderation actions and server events to a configured channel."""
 
@@ -341,6 +394,18 @@ class ModLog(commands.Cog):
             colour=EVENT_COLOURS["leave"],
         )
         await ctx.send(embed=embed)
+
+    @modlog.command(name="status")
+    async def modlog_status(self, ctx):
+        """Show the current moderation-log configuration."""
+
+        await self.get_log_channel(ctx.guild)
+        channel_id = self._channels.get(ctx.guild.id)
+        events = await self._get_events(ctx.guild.id)
+        view = ModLogStatusView(ctx.guild, channel_id, events)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     # -- channel resolution + send funnel -------------------------------
     async def get_log_channel(self, guild):

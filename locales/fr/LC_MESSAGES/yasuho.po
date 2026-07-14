@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 12:59+0000\n"
+"POT-Creation-Date: 2026-07-14 13:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -544,7 +544,7 @@ msgstr "Conserver le statut actuel"
 
 #: cogs/anilist/components.py:270 cogs/anilist/components.py:762
 #: cogs/anilist/feed.py:2144 cogs/config/twitch.py:420
-#: cogs/config/welcome.py:429
+#: cogs/config/welcome.py:429 cogs/config/welcome.py:551
 msgid "Status"
 msgstr "Statut"
 
@@ -1016,13 +1016,16 @@ msgstr "Les membres peuvent rejoindre : {state}"
 
 #: cogs/anilist/feed.py:1367 cogs/config/welcome.py:145
 #: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
 msgid "On"
 msgstr "Activé"
 
 #: cogs/anilist/feed.py:1367 cogs/config/welcome.py:145
 #: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/music/views.py:322
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+#: cogs/music/views.py:322
 msgid "Off"
 msgstr "Désactivé"
 
@@ -1185,13 +1188,16 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous pour en créer un (jusqu'à {max} par serveur)."
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
-#: cogs/config/twitch.py:405 cogs/config/welcome.py:417
+#: cogs/config/twitch.py:405 cogs/config/verification.py:94
+#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
+#: cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "Activé"
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
-#: cogs/config/twitch.py:407 cogs/config/welcome.py:419
-#: cogs/config/welcome.py:703
+#: cogs/config/twitch.py:407 cogs/config/verification.py:96
+#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
+#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "Désactivé"
 
@@ -1207,8 +1213,8 @@ msgstr "Configure la façon dont l'activité AniList est relayée dans ce serveu
 #: cogs/anilist/feed.py:2142 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
 #: cogs/config/twitch.py:422 cogs/config/welcome.py:431
-#: cogs/config/welcome.py:682 cogs/moderation/modlog.py:458
-#: cogs/moderation/modlog.py:496
+#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
+#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
 msgid "Channel"
 msgstr "Salon"
 
@@ -1763,6 +1769,7 @@ msgstr "Tout le serveur : **x{factor}**"
 
 #: cogs/community/level_config_ui.py:168 cogs/community/level_config_ui.py:174
 #: cogs/community/level_config_ui.py:384 cogs/community/level_config_ui.py:390
+#: cogs/config/verification.py:99
 msgid "(deleted)"
 msgstr "(supprimé)"
 
@@ -2389,7 +2396,7 @@ msgstr "ex. 10m, demain à 18h, ou une balise <t:...>"
 
 #: cogs/community/reminders.py:57 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:35
-#: cogs/config/twitch.py:439 cogs/config/welcome.py:684
+#: cogs/config/twitch.py:439 cogs/config/welcome.py:759
 msgid "Message"
 msgstr "Message"
 
@@ -2626,12 +2633,13 @@ msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un rol
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:401
-#: cogs/config/welcome.py:415
+#: cogs/config/verification.py:101 cogs/config/welcome.py:415
+#: cogs/config/welcome.py:536 cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr "*Non défini.*"
 
 #: cogs/config/announcements.py:273 cogs/config/welcome.py:446
-#: cogs/config/welcome.py:472
+#: cogs/config/welcome.py:472 cogs/config/welcome.py:562
 msgid "Ping"
 msgstr "Mention"
 
@@ -2642,7 +2650,7 @@ msgstr "Aucun"
 
 #: cogs/config/announcements.py:278 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:409 cogs/config/twitch.py:452
-#: cogs/config/welcome.py:455
+#: cogs/config/welcome.py:455 cogs/config/welcome.py:576
 msgid "Embed"
 msgstr "Embed"
 
@@ -2656,7 +2664,7 @@ msgid "Pick a target channel first."
 msgstr "Choisis d'abord un salon cible."
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:671
-#: cogs/config/rolemenus.py:602 cogs/config/verification.py:129
+#: cogs/config/rolemenus.py:602 cogs/config/verification.py:175
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "Je ne peux pas envoyer de messages dans {channel}."
@@ -4218,25 +4226,43 @@ msgstr "Une erreur est survenue, veuillez réessayer."
 msgid "You are verified. Welcome!"
 msgstr "Vous êtes vérifié. Bienvenue !"
 
-#: cogs/config/verification.py:122
+#: cogs/config/verification.py:106
+#, python-brace-format
+msgid "Verification | {guild}"
+msgstr "Vérification | {guild}"
+
+#: cogs/config/verification.py:112
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Role granted:** {role}"
+msgstr ""
+"**Statut :** {status}\n"
+"**Rôle accordé :** {role}"
+
+#: cogs/config/verification.py:121
+msgid "Use `/verify setup` to turn on verification."
+msgstr "Utilise `/verify setup` pour activer la vérification."
+
+#: cogs/config/verification.py:168
 #, python-brace-format
 msgid "I can't assign {role} - it must be below my highest role and not managed."
 msgstr "Je ne peux pas attribuer {role} - il doit être en dessous de mon rôle le plus élevé et ne pas être géré par une intégration."
 
-#: cogs/config/verification.py:135
+#: cogs/config/verification.py:181
 msgid "Verification"
 msgstr "Vérification"
 
-#: cogs/config/verification.py:138
+#: cogs/config/verification.py:184
 msgid "Click the button below to verify and unlock the server."
 msgstr "Cliquez sur le bouton ci-dessous pour vérifier et déverrouiller le serveur."
 
-#: cogs/config/verification.py:144
+#: cogs/config/verification.py:190
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr "La vérification est configurée - cliquer attribue {role} dans {channel}."
 
-#: cogs/config/verification.py:155
+#: cogs/config/verification.py:201
 msgid "Verification disabled."
 msgstr "Vérification désactivée."
 
@@ -4310,20 +4336,22 @@ msgstr "Système de bienvenue"
 msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
 msgstr "Concevez le message d'accueil que reçoivent les nouveaux membres. Utilisez les menus ci-dessous ; chaque modification est enregistrée instantanément. Appuyez sur **Aperçu** pour le voir en direct."
 
-#: cogs/config/welcome.py:435
+#: cogs/config/welcome.py:435 cogs/config/welcome.py:566
 msgid "GIF pool"
 msgstr "Pool de GIF"
 
-#: cogs/config/welcome.py:436
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:567
 #, python-brace-format
 msgid "{count} saved"
 msgstr "{count} enregistré(s)"
 
 #: cogs/config/welcome.py:442 cogs/config/welcome.py:470
+#: cogs/config/welcome.py:558
 msgid "Card"
 msgstr "Carte"
 
 #: cogs/config/welcome.py:444 cogs/config/welcome.py:471
+#: cogs/config/welcome.py:560
 msgid "Random GIF"
 msgstr "GIF aléatoire"
 
@@ -4331,24 +4359,33 @@ msgstr "GIF aléatoire"
 msgid "Edit the welcome embed..."
 msgstr "Modifier l'embed de bienvenue..."
 
-#: cogs/config/welcome.py:596
+#: cogs/config/welcome.py:545
+#, python-brace-format
+msgid "Welcome | {guild}"
+msgstr "Bienvenue | {guild}"
+
+#: cogs/config/welcome.py:583
+msgid "Use `/welcome` to open the full builder."
+msgstr "Utilise `/welcome` pour ouvrir le constructeur complet."
+
+#: cogs/config/welcome.py:671
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "Bienvenue {mention} !"
 
-#: cogs/config/welcome.py:681 cogs/config/welcome.py:701
+#: cogs/config/welcome.py:756 cogs/config/welcome.py:776
 msgid "Welcome message"
 msgstr "Message de bienvenue"
 
-#: cogs/config/welcome.py:688
+#: cogs/config/welcome.py:763
 msgid "Use /welcome to open the full builder."
 msgstr "Utilisez /welcome pour ouvrir le créateur complet."
 
-#: cogs/config/welcome.py:704
+#: cogs/config/welcome.py:779
 msgid "Welcome messages have been turned off."
 msgstr "Les messages de bienvenue ont été désactivés."
 
-#: cogs/config/welcome.py:768
+#: cogs/config/welcome.py:855
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Bienvenue {member} !"
@@ -5208,8 +5245,8 @@ msgstr "Historique des cas - {member}"
 msgid "No cases on record."
 msgstr "Aucun cas enregistré."
 
-#: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:469
-#: cogs/moderation/modlog.py:510
+#: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:534
+#: cogs/moderation/modlog.py:575
 #, python-brace-format
 msgid "ID: {id}"
 msgstr "ID : {id}"
@@ -5238,62 +5275,80 @@ msgstr "Choisissez où les événements du serveur sont journalisés et lesquels
 msgid "Log channel"
 msgstr "Salon de journalisation"
 
-#: cogs/moderation/modlog.py:211
+#: cogs/moderation/modlog.py:211 cogs/moderation/modlog.py:279
 msgid "Events"
 msgstr "Événements"
 
-#: cogs/moderation/modlog.py:325 cogs/moderation/modlog.py:339
+#: cogs/moderation/modlog.py:265
+#, python-brace-format
+msgid "Mod-log | {guild}"
+msgstr "Logs de modération | {guild}"
+
+#: cogs/moderation/modlog.py:271
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Log channel:** {channel}"
+msgstr ""
+"**Statut :** {status}\n"
+"**Salon de logs :** {channel}"
+
+#: cogs/moderation/modlog.py:286
+msgid "Use `/modlog set` to choose a log channel."
+msgstr "Utilise `/modlog set` pour choisir un salon de logs."
+
+#: cogs/moderation/modlog.py:378 cogs/moderation/modlog.py:392
 msgid "Mod log"
 msgstr "Mod-log"
 
-#: cogs/moderation/modlog.py:326
+#: cogs/moderation/modlog.py:379
 #, python-brace-format
 msgid "Mod-log channel set to {channel}."
 msgstr "Salon du mod-log défini sur {channel}."
 
-#: cogs/moderation/modlog.py:340
+#: cogs/moderation/modlog.py:393
 msgid "Mod-log has been disabled for this guild."
 msgstr "Le mod-log a été désactivé pour ce serveur."
 
-#: cogs/moderation/modlog.py:436
+#: cogs/moderation/modlog.py:501
 msgid "Account created"
 msgstr "Compte créé"
 
-#: cogs/moderation/modlog.py:450
+#: cogs/moderation/modlog.py:515
 msgid "Message Deleted"
 msgstr "Message supprimé"
 
-#: cogs/moderation/modlog.py:456 cogs/moderation/modlog.py:494
+#: cogs/moderation/modlog.py:521 cogs/moderation/modlog.py:559
 msgid "Author"
 msgstr "Auteur"
 
-#: cogs/moderation/modlog.py:460
+#: cogs/moderation/modlog.py:525
 msgid "Content"
 msgstr "Contenu"
 
-#: cogs/moderation/modlog.py:465 cogs/moderation/modlog.py:506
+#: cogs/moderation/modlog.py:530 cogs/moderation/modlog.py:571
 #: cogs/utility/extras.py:46
 msgid "Jump"
 msgstr "Aller"
 
-#: cogs/moderation/modlog.py:466
+#: cogs/moderation/modlog.py:531
 #, python-brace-format
 msgid "[Go to location]({url})"
 msgstr "[Aller à l'emplacement]({url})"
 
-#: cogs/moderation/modlog.py:488
+#: cogs/moderation/modlog.py:553
 msgid "Message Edited"
 msgstr "Message modifié"
 
-#: cogs/moderation/modlog.py:498
+#: cogs/moderation/modlog.py:563
 msgid "Before"
 msgstr "Avant"
 
-#: cogs/moderation/modlog.py:501
+#: cogs/moderation/modlog.py:566
 msgid "After"
 msgstr "Après"
 
-#: cogs/moderation/modlog.py:507
+#: cogs/moderation/modlog.py:572
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Aller au message]({url})"

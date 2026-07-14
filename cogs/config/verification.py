@@ -78,6 +78,52 @@ class VerifyView(discord.ui.View):
         self.add_item(VerifyButton())
 
 
+class VerifyStatusView(discord.ui.LayoutView):
+    """Single-page Components V2 card: the current verification configuration
+    for a guild (read-only, no controls)."""
+
+    def __init__(self, guild, role_id, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.message = None
+        self._build(guild, role_id)
+
+    def _build(self, guild, role_id):
+        role = guild.get_role(role_id) if role_id else None
+        enabled = role is not None
+        status_value = (
+            ("\U0001F7E2 " + _("Enabled"))
+            if enabled
+            else ("\U0001F534 " + _("Disabled"))
+        )
+        if role_id and role is None:
+            role_value = f"`{role_id}` " + _("(deleted)")
+        else:
+            role_value = role.mention if role is not None else _("*Not set.*")
+
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "## " + _("Verification | {guild}").format(guild=guild.name)
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("**Status:** {status}\n**Role granted:** {role}").format(
+                    status=status_value, role=role_value
+                )
+            )
+        )
+        if not enabled:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# " + _("Use `/verify setup` to turn on verification.")
+                )
+            )
+        self.add_item(container)
+
+
 class Verification(commands.Cog):
     """A one-click verification gate that grants a role."""
 
@@ -153,6 +199,19 @@ class Verification(commands.Cog):
         """Turn off verification (existing buttons will report it is off)."""
         await settings.set_guild(self.bot.db_pool, ctx.guild.id, "verify_role", None)
         await ctx.send(_("Verification disabled."))
+
+    @verify.command(name="status")
+    @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
+    async def verify_status(self, ctx):
+        """Show the current verification configuration."""
+        role_id = await settings.get_guild(
+            self.bot.db_pool, ctx.guild.id, "verify_role", None
+        )
+        view = VerifyStatusView(ctx.guild, role_id)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
 
 async def setup(bot):

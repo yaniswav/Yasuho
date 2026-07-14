@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 12:59+0000\n"
+"POT-Creation-Date: 2026-07-14 13:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -544,7 +544,7 @@ msgstr ""
 
 #: cogs/anilist/components.py:270 cogs/anilist/components.py:762
 #: cogs/anilist/feed.py:2144 cogs/config/twitch.py:420
-#: cogs/config/welcome.py:429
+#: cogs/config/welcome.py:429 cogs/config/welcome.py:551
 msgid "Status"
 msgstr ""
 
@@ -1018,13 +1018,16 @@ msgstr ""
 
 #: cogs/anilist/feed.py:1367 cogs/config/welcome.py:145
 #: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
 msgid "On"
 msgstr ""
 
 #: cogs/anilist/feed.py:1367 cogs/config/welcome.py:145
 #: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/music/views.py:322
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+#: cogs/music/views.py:322
 msgid "Off"
 msgstr ""
 
@@ -1193,13 +1196,16 @@ msgid ""
 msgstr ""
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
-#: cogs/config/twitch.py:405 cogs/config/welcome.py:417
+#: cogs/config/twitch.py:405 cogs/config/verification.py:94
+#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
+#: cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr ""
 
 #: cogs/anilist/feed.py:2130 cogs/config/settings.py:53
-#: cogs/config/twitch.py:407 cogs/config/welcome.py:419
-#: cogs/config/welcome.py:703
+#: cogs/config/twitch.py:407 cogs/config/verification.py:96
+#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
+#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr ""
 
@@ -1217,8 +1223,8 @@ msgstr ""
 #: cogs/anilist/feed.py:2142 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
 #: cogs/config/twitch.py:422 cogs/config/welcome.py:431
-#: cogs/config/welcome.py:682 cogs/moderation/modlog.py:458
-#: cogs/moderation/modlog.py:496
+#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
+#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
 msgid "Channel"
 msgstr ""
 
@@ -1773,6 +1779,7 @@ msgstr ""
 
 #: cogs/community/level_config_ui.py:168 cogs/community/level_config_ui.py:174
 #: cogs/community/level_config_ui.py:384 cogs/community/level_config_ui.py:390
+#: cogs/config/verification.py:99
 msgid "(deleted)"
 msgstr ""
 
@@ -2395,7 +2402,7 @@ msgstr ""
 
 #: cogs/community/reminders.py:57 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:35
-#: cogs/config/twitch.py:439 cogs/config/welcome.py:684
+#: cogs/config/twitch.py:439 cogs/config/welcome.py:759
 msgid "Message"
 msgstr ""
 
@@ -2638,12 +2645,13 @@ msgstr ""
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:401
-#: cogs/config/welcome.py:415
+#: cogs/config/verification.py:101 cogs/config/welcome.py:415
+#: cogs/config/welcome.py:536 cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr ""
 
 #: cogs/config/announcements.py:273 cogs/config/welcome.py:446
-#: cogs/config/welcome.py:472
+#: cogs/config/welcome.py:472 cogs/config/welcome.py:562
 msgid "Ping"
 msgstr ""
 
@@ -2654,7 +2662,7 @@ msgstr ""
 
 #: cogs/config/announcements.py:278 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:409 cogs/config/twitch.py:452
-#: cogs/config/welcome.py:455
+#: cogs/config/welcome.py:455 cogs/config/welcome.py:576
 msgid "Embed"
 msgstr ""
 
@@ -2668,7 +2676,7 @@ msgid "Pick a target channel first."
 msgstr ""
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:671
-#: cogs/config/rolemenus.py:602 cogs/config/verification.py:129
+#: cogs/config/rolemenus.py:602 cogs/config/verification.py:175
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr ""
@@ -4266,25 +4274,41 @@ msgstr ""
 msgid "You are verified. Welcome!"
 msgstr ""
 
-#: cogs/config/verification.py:122
+#: cogs/config/verification.py:106
+#, python-brace-format
+msgid "Verification | {guild}"
+msgstr ""
+
+#: cogs/config/verification.py:112
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Role granted:** {role}"
+msgstr ""
+
+#: cogs/config/verification.py:121
+msgid "Use `/verify setup` to turn on verification."
+msgstr ""
+
+#: cogs/config/verification.py:168
 #, python-brace-format
 msgid "I can't assign {role} - it must be below my highest role and not managed."
 msgstr ""
 
-#: cogs/config/verification.py:135
+#: cogs/config/verification.py:181
 msgid "Verification"
 msgstr ""
 
-#: cogs/config/verification.py:138
+#: cogs/config/verification.py:184
 msgid "Click the button below to verify and unlock the server."
 msgstr ""
 
-#: cogs/config/verification.py:144
+#: cogs/config/verification.py:190
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr ""
 
-#: cogs/config/verification.py:155
+#: cogs/config/verification.py:201
 msgid "Verification disabled."
 msgstr ""
 
@@ -4362,20 +4386,22 @@ msgid ""
 "change saves instantly. Hit **Preview** to see it live."
 msgstr ""
 
-#: cogs/config/welcome.py:435
+#: cogs/config/welcome.py:435 cogs/config/welcome.py:566
 msgid "GIF pool"
 msgstr ""
 
-#: cogs/config/welcome.py:436
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:567
 #, python-brace-format
 msgid "{count} saved"
 msgstr ""
 
 #: cogs/config/welcome.py:442 cogs/config/welcome.py:470
+#: cogs/config/welcome.py:558
 msgid "Card"
 msgstr ""
 
 #: cogs/config/welcome.py:444 cogs/config/welcome.py:471
+#: cogs/config/welcome.py:560
 msgid "Random GIF"
 msgstr ""
 
@@ -4383,24 +4409,33 @@ msgstr ""
 msgid "Edit the welcome embed..."
 msgstr ""
 
-#: cogs/config/welcome.py:596
+#: cogs/config/welcome.py:545
+#, python-brace-format
+msgid "Welcome | {guild}"
+msgstr ""
+
+#: cogs/config/welcome.py:583
+msgid "Use `/welcome` to open the full builder."
+msgstr ""
+
+#: cogs/config/welcome.py:671
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr ""
 
-#: cogs/config/welcome.py:681 cogs/config/welcome.py:701
+#: cogs/config/welcome.py:756 cogs/config/welcome.py:776
 msgid "Welcome message"
 msgstr ""
 
-#: cogs/config/welcome.py:688
+#: cogs/config/welcome.py:763
 msgid "Use /welcome to open the full builder."
 msgstr ""
 
-#: cogs/config/welcome.py:704
+#: cogs/config/welcome.py:779
 msgid "Welcome messages have been turned off."
 msgstr ""
 
-#: cogs/config/welcome.py:768
+#: cogs/config/welcome.py:855
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr ""
@@ -5255,8 +5290,8 @@ msgstr ""
 msgid "No cases on record."
 msgstr ""
 
-#: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:469
-#: cogs/moderation/modlog.py:510
+#: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:534
+#: cogs/moderation/modlog.py:575
 #, python-brace-format
 msgid "ID: {id}"
 msgstr ""
@@ -5287,62 +5322,78 @@ msgstr ""
 msgid "Log channel"
 msgstr ""
 
-#: cogs/moderation/modlog.py:211
+#: cogs/moderation/modlog.py:211 cogs/moderation/modlog.py:279
 msgid "Events"
 msgstr ""
 
-#: cogs/moderation/modlog.py:325 cogs/moderation/modlog.py:339
+#: cogs/moderation/modlog.py:265
+#, python-brace-format
+msgid "Mod-log | {guild}"
+msgstr ""
+
+#: cogs/moderation/modlog.py:271
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Log channel:** {channel}"
+msgstr ""
+
+#: cogs/moderation/modlog.py:286
+msgid "Use `/modlog set` to choose a log channel."
+msgstr ""
+
+#: cogs/moderation/modlog.py:378 cogs/moderation/modlog.py:392
 msgid "Mod log"
 msgstr ""
 
-#: cogs/moderation/modlog.py:326
+#: cogs/moderation/modlog.py:379
 #, python-brace-format
 msgid "Mod-log channel set to {channel}."
 msgstr ""
 
-#: cogs/moderation/modlog.py:340
+#: cogs/moderation/modlog.py:393
 msgid "Mod-log has been disabled for this guild."
 msgstr ""
 
-#: cogs/moderation/modlog.py:436
+#: cogs/moderation/modlog.py:501
 msgid "Account created"
 msgstr ""
 
-#: cogs/moderation/modlog.py:450
+#: cogs/moderation/modlog.py:515
 msgid "Message Deleted"
 msgstr ""
 
-#: cogs/moderation/modlog.py:456 cogs/moderation/modlog.py:494
+#: cogs/moderation/modlog.py:521 cogs/moderation/modlog.py:559
 msgid "Author"
 msgstr ""
 
-#: cogs/moderation/modlog.py:460
+#: cogs/moderation/modlog.py:525
 msgid "Content"
 msgstr ""
 
-#: cogs/moderation/modlog.py:465 cogs/moderation/modlog.py:506
+#: cogs/moderation/modlog.py:530 cogs/moderation/modlog.py:571
 #: cogs/utility/extras.py:46
 msgid "Jump"
 msgstr ""
 
-#: cogs/moderation/modlog.py:466
+#: cogs/moderation/modlog.py:531
 #, python-brace-format
 msgid "[Go to location]({url})"
 msgstr ""
 
-#: cogs/moderation/modlog.py:488
+#: cogs/moderation/modlog.py:553
 msgid "Message Edited"
 msgstr ""
 
-#: cogs/moderation/modlog.py:498
+#: cogs/moderation/modlog.py:563
 msgid "Before"
 msgstr ""
 
-#: cogs/moderation/modlog.py:501
+#: cogs/moderation/modlog.py:566
 msgid "After"
 msgstr ""
 
-#: cogs/moderation/modlog.py:507
+#: cogs/moderation/modlog.py:572
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr ""
