@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 12:43+0000\n"
+"POT-Creation-Date: 2026-07-14 12:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -1072,7 +1072,7 @@ msgid "Stop tracking a title..."
 msgstr "Arrêter de suivre un titre..."
 
 #: cogs/anilist/feed.py:1625 cogs/community/leveling.py:206
-#: cogs/music/views.py:1134
+#: cogs/community/reminders.py:304 cogs/music/views.py:1134
 msgid "Next"
 msgstr "Suiv."
 
@@ -2215,7 +2215,8 @@ msgstr[1] "{count} membres"
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Page {page}/{pages} - {members}"
 
-#: cogs/community/leveling.py:199 cogs/music/views.py:1127
+#: cogs/community/leveling.py:199 cogs/community/reminders.py:297
+#: cogs/music/views.py:1127
 msgid "Prev"
 msgstr "Préc."
 
@@ -2374,53 +2375,103 @@ msgstr "Profil réinitialisé"
 msgid "Your profile has been cleared."
 msgstr "Votre profil a été réinitialisé."
 
-#: cogs/community/reminders.py:40 cogs/community/reminders.py:140
+#: cogs/community/reminders.py:42 cogs/community/reminders.py:142
 msgid "Set a reminder"
 msgstr "Definir un rappel"
 
-#: cogs/community/reminders.py:46 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:48 cogs/config/announcements.py:154
 msgid "When"
 msgstr "Quand"
 
-#: cogs/community/reminders.py:47
+#: cogs/community/reminders.py:49
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "ex. 10m, demain à 18h, ou une balise <t:...>"
 
-#: cogs/community/reminders.py:55 cogs/config/reactionroles.py:182
+#: cogs/community/reminders.py:57 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:35
 #: cogs/config/twitch.py:439 cogs/config/welcome.py:684
 msgid "Message"
 msgstr "Message"
 
-#: cogs/community/reminders.py:56
+#: cogs/community/reminders.py:58
 msgid "What should I remind you about?"
 msgstr "De quoi veux-tu que je te rappelle ?"
 
-#: cogs/community/reminders.py:84
+#: cogs/community/reminders.py:86
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "Je n'ai pas compris cette heure. Essaie quelque chose comme `10m`, `demain a 18h` ou `dans 3 jours`."
 
-#: cogs/community/reminders.py:94 cogs/community/reminders.py:306
+#: cogs/community/reminders.py:96 cogs/community/reminders.py:565
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Ce moment est deja passe. Donne-moi un moment dans le futur."
 
-#: cogs/community/reminders.py:104 cogs/community/reminders.py:326
+#: cogs/community/reminders.py:106 cogs/community/reminders.py:585
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Tu as deja {count} rappels en attente - attends que certains se declenchent avant d'en ajouter d'autres."
 
-#: cogs/community/reminders.py:118 cogs/community/reminders.py:339
+#: cogs/community/reminders.py:120 cogs/community/reminders.py:598
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "D'accord, je vous le rappellerai {when} : {message}"
 
-#: cogs/community/reminders.py:242
+#: cogs/community/reminders.py:187 cogs/community/reminders.py:239
+#: cogs/utility/extras.py:37
+msgid "(no text)"
+msgstr "(aucun texte)"
+
+#: cogs/community/reminders.py:193
+#, python-brace-format
+msgid "in {when}"
+msgstr "dans {when}"
+
+#: cogs/community/reminders.py:199
+msgid "Cancel a reminder..."
+msgstr "Annuler un rappel..."
+
+#: cogs/community/reminders.py:201
+msgid "(nothing to cancel)"
+msgstr "(rien à annuler)"
+
+#: cogs/community/reminders.py:241
+#, python-brace-format
+msgid ""
+"{when} - {text}\n"
+"-# in <#{channel}>"
+msgstr ""
+"{when} - {text}\n"
+"-# dans <#{channel}>"
+
+#: cogs/community/reminders.py:246
+#, python-brace-format
+msgid "{when} - {text}"
+msgstr "{when} - {text}"
+
+#: cogs/community/reminders.py:259
+msgid "Your reminders"
+msgstr "Tes rappels"
+
+#: cogs/community/reminders.py:266
+msgid "You have no reminders set. Use `/remind` to add one."
+msgstr "Tu n'as aucun rappel. Utilise `/remind` pour en ajouter un."
+
+#: cogs/community/reminders.py:281
+#, python-brace-format
+msgid "-# {count} pending"
+msgstr "-# {count} en attente"
+
+#: cogs/community/reminders.py:285
+#, python-brace-format
+msgid "-# Page {page}/{pages} - {count} pending"
+msgstr "-# Page {page}/{pages} - {count} en attente"
+
+#: cogs/community/reminders.py:501
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>, {when} : {message}"
 
-#: cogs/community/reminders.py:292
+#: cogs/community/reminders.py:551
 msgid "Tap the button below to set a reminder."
 msgstr "Appuie sur le bouton ci-dessous pour definir un rappel."
 
@@ -6662,10 +6713,6 @@ msgstr "Je ne peux citer que des messages de ce serveur."
 #: cogs/utility/extras.py:33
 msgid "You can't quote a message from a channel you can't see."
 msgstr "Tu ne peux pas citer un message d'un salon que tu ne peux pas voir."
-
-#: cogs/utility/extras.py:37
-msgid "(no text)"
-msgstr "(aucun texte)"
 
 #: cogs/utility/extras.py:74
 #, python-brace-format

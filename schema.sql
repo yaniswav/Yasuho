@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS timers (
     extra   JSONB       NOT NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS timers_expires_idx ON timers (expires);
+-- Serves the per-user "my pending reminders" list and the pending-count guard:
+-- filter on (event, author) then read already-ordered by expires. Additive.
+CREATE INDEX IF NOT EXISTS timers_reminder_author_idx
+    ON timers (event, (extra->>'author_id'), expires);
 
 -- Per-(guild, user) XP for the leveling system.  leveling.py
 CREATE TABLE IF NOT EXISTS levels (

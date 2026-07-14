@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-14 12:43+0000\n"
+"POT-Creation-Date: 2026-07-14 12:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1072,7 +1072,7 @@ msgid "Stop tracking a title..."
 msgstr "追跡を解除するタイトルを選択..."
 
 #: cogs/anilist/feed.py:1625 cogs/community/leveling.py:206
-#: cogs/music/views.py:1134
+#: cogs/community/reminders.py:304 cogs/music/views.py:1134
 msgid "Next"
 msgstr "次へ"
 
@@ -2215,7 +2215,8 @@ msgstr[1] "{count}人"
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# ページ {page}/{pages} - {members}"
 
-#: cogs/community/leveling.py:199 cogs/music/views.py:1127
+#: cogs/community/leveling.py:199 cogs/community/reminders.py:297
+#: cogs/music/views.py:1127
 msgid "Prev"
 msgstr "前へ"
 
@@ -2374,53 +2375,103 @@ msgstr "プロフィールを消去しました"
 msgid "Your profile has been cleared."
 msgstr "あなたのプロフィールを消去しました。"
 
-#: cogs/community/reminders.py:40 cogs/community/reminders.py:140
+#: cogs/community/reminders.py:42 cogs/community/reminders.py:142
 msgid "Set a reminder"
 msgstr "リマインダーを設定"
 
-#: cogs/community/reminders.py:46 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:48 cogs/config/announcements.py:154
 msgid "When"
 msgstr "いつ"
 
-#: cogs/community/reminders.py:47
+#: cogs/community/reminders.py:49
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "例: 10m、明日18時、または <t:...> タグ"
 
-#: cogs/community/reminders.py:55 cogs/config/reactionroles.py:182
+#: cogs/community/reminders.py:57 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:35
 #: cogs/config/twitch.py:439 cogs/config/welcome.py:684
 msgid "Message"
 msgstr "メッセージ"
 
-#: cogs/community/reminders.py:56
+#: cogs/community/reminders.py:58
 msgid "What should I remind you about?"
 msgstr "何をリマインドしましょうか?"
 
-#: cogs/community/reminders.py:84
+#: cogs/community/reminders.py:86
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "その時間を理解できませんでした。`10m`、`tomorrow at 6pm`、`in 3 days` のように入力してみてください。"
 
-#: cogs/community/reminders.py:94 cogs/community/reminders.py:306
+#: cogs/community/reminders.py:96 cogs/community/reminders.py:565
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "その時間は過去です。未来の時刻を指定してください。"
 
-#: cogs/community/reminders.py:104 cogs/community/reminders.py:326
+#: cogs/community/reminders.py:106 cogs/community/reminders.py:585
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
-#: cogs/community/reminders.py:118 cogs/community/reminders.py:339
+#: cogs/community/reminders.py:120 cogs/community/reminders.py:598
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "了解しました。{when} にリマインドします: {message}"
 
-#: cogs/community/reminders.py:242
+#: cogs/community/reminders.py:187 cogs/community/reminders.py:239
+#: cogs/utility/extras.py:37
+msgid "(no text)"
+msgstr "(テキストなし)"
+
+#: cogs/community/reminders.py:193
+#, python-brace-format
+msgid "in {when}"
+msgstr "{when}後"
+
+#: cogs/community/reminders.py:199
+msgid "Cancel a reminder..."
+msgstr "リマインダーをキャンセル..."
+
+#: cogs/community/reminders.py:201
+msgid "(nothing to cancel)"
+msgstr "(キャンセルするものはありません)"
+
+#: cogs/community/reminders.py:241
+#, python-brace-format
+msgid ""
+"{when} - {text}\n"
+"-# in <#{channel}>"
+msgstr ""
+"{when} - {text}\n"
+"-# <#{channel}> にて"
+
+#: cogs/community/reminders.py:246
+#, python-brace-format
+msgid "{when} - {text}"
+msgstr "{when} - {text}"
+
+#: cogs/community/reminders.py:259
+msgid "Your reminders"
+msgstr "あなたのリマインダー"
+
+#: cogs/community/reminders.py:266
+msgid "You have no reminders set. Use `/remind` to add one."
+msgstr "リマインダーはありません。`/remind` で追加できます。"
+
+#: cogs/community/reminders.py:281
+#, python-brace-format
+msgid "-# {count} pending"
+msgstr "-# {count}件保留中"
+
+#: cogs/community/reminders.py:285
+#, python-brace-format
+msgid "-# Page {page}/{pages} - {count} pending"
+msgstr "-# ページ {page}/{pages} - {count}件保留中"
+
+#: cogs/community/reminders.py:501
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>、{when}: {message}"
 
-#: cogs/community/reminders.py:292
+#: cogs/community/reminders.py:551
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
@@ -6662,10 +6713,6 @@ msgstr "このサーバーのメッセージのみ引用できます。"
 #: cogs/utility/extras.py:33
 msgid "You can't quote a message from a channel you can't see."
 msgstr "見ることのできないチャンネルのメッセージは引用できません。"
-
-#: cogs/utility/extras.py:37
-msgid "(no text)"
-msgstr "(テキストなし)"
 
 #: cogs/utility/extras.py:74
 #, python-brace-format
