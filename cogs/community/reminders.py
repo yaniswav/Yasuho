@@ -28,6 +28,32 @@ DEFAULT_REMINDER_MESSAGE = "something"
 
 # Cap pending reminders per user so nobody can flood the timers table.
 MAX_PENDING_REMINDERS = 25
+TIMER_CLAIM_TIMEOUT_MINUTES = 5
+TIMER_RETRY_MAX_SECONDS = 3600
+
+# Delivery semantics split by event (see dispatch_timers):
+#
+# * DURABLE_TIMER_EVENTS use claim -> deliver -> delete with bounded retries.
+#   The action MUST be idempotent (a re-fire is harmless) and losing a firing
+#   is worse than doubling it. Only the tempban unban qualifies: a missed unban
+#   is a permanent ban, and the unban is idempotent through call_timer's
+#   NotFound guard, so at-least-once is safe and durability is valuable.
+# * Every other event (reminders, and the generic ``*_timer_complete`` dispatch
+#   used by announcements/temprole) uses DELETE-as-atomic-claim BEFORE delivery
+#   (at-most-once). Those side effects are NOT idempotent - a doubled
+#   announcement or temprole re-fire is user-visible - so a crash mid-delivery
+#   must lose at most one firing, never double it.
+DURABLE_TIMER_EVENTS = frozenset({"tempban"})
+
+# A durable timer that keeps failing is retried with exponential backoff up to
+# this many attempts; on exhaustion the row is dead-lettered (deleted + logged)
+# so a permanently Forbidden action cannot retry for eternity.
+MAX_TIMER_ATTEMPTS = 12
+
+
+def timer_retry_delay(attempts):
+    """Return the bounded exponential retry delay after a delivery failure."""
+    return min(60 * (2 ** max(0, attempts)), TIMER_RETRY_MAX_SECONDS)
 
 
 class RemindModal(LocaleModal):
@@ -38,11 +64,12 @@ class RemindModal(LocaleModal):
     then the same "reminder" timer row the text command creates is inserted.
     """
 
-    def __init__(self, cog, channel_id, author_id):
+    def __init__(self, cog, channel_id, author_id, guild_id=None):
         super().__init__(title=_("Set a reminder"))
         self.cog = cog
         self.channel_id = channel_id
         self.author_id = author_id
+        self.guild_id = guild_id
 
         self.when_input = discord.ui.TextInput(
             label=_("When"),
@@ -114,6 +141,7 @@ class RemindModal(LocaleModal):
             "reminder",
             author_id=self.author_id,
             channel_id=self.channel_id,
+            guild_id=self.guild_id,
             message=message,
         )
         await interaction.response.send_message(
@@ -131,12 +159,15 @@ class RemindLauncherView(AuthorView):
     posts this view and the author clicks the button to summon the modal.
     """
 
-    def __init__(self, cog, author_id, channel_id, timeout=180):
+    def __init__(
+        self, cog, author_id, channel_id, guild_id=None, timeout=180
+    ):
         super().__init__(
             author_id, timeout=timeout, deny_message="This prompt isn't for you."
         )
         self.cog = cog
         self.channel_id = channel_id
+        self.guild_id = guild_id
 
         button = discord.ui.Button(
             label=_("Set a reminder"),
@@ -148,7 +179,12 @@ class RemindLauncherView(AuthorView):
 
     async def _open(self, interaction):
         await interaction.response.send_modal(
-            RemindModal(self.cog, self.channel_id, self.author_id)
+            RemindModal(
+                self.cog,
+                self.channel_id,
+                self.author_id,
+                self.guild_id,
+            )
         )
 
 
@@ -408,15 +444,15 @@ class Reminder(commands.Cog):
 
         The DELETE is scoped to ``event = 'reminder'`` AND this author, so a user
         can only ever cancel their OWN reminders and never another timer type
-        (e.g. a moderation tempban). The DELETE is also the atomic claim the
-        dispatch loop competes on (see :meth:`dispatch_timers`): if this removes
-        the row the loop is currently sleeping on, we wake the loop so it
-        re-sleeps against the new earliest timer. Returns False when the row was
-        already gone (it fired, or a previous cancel removed it).
+        (e.g. a moderation tempban). A claimed reminder cannot be cancelled
+        because delivery has already started. If this removes the row the loop
+        is currently sleeping on, we wake the loop so it re-sleeps against the
+        new earliest timer. Returns False when the row was already gone, already
+        claimed, or a previous cancel removed it.
         """
         row = await self.bot.db_pool.fetchrow(
             "DELETE FROM timers WHERE id = $1 AND event = 'reminder' "
-            "AND extra->>'author_id' = $2 RETURNING id",
+            "AND extra->>'author_id' = $2 AND claimed_at IS NULL RETURNING id",
             reminder_id,
             str(user_id),
         )
@@ -442,7 +478,9 @@ class Reminder(commands.Cog):
 
     async def get_active_timer(self):
         return await self.bot.db_pool.fetchrow(
-            "SELECT * FROM timers ORDER BY expires LIMIT 1"
+            "SELECT * FROM timers WHERE claimed_at IS NULL "
+            "OR claimed_at < now() - interval '5 minutes' "
+            "ORDER BY expires LIMIT 1"
         )
 
     async def dispatch_timers(self):
@@ -466,57 +504,161 @@ class Reminder(commands.Cog):
                         pass
                     continue
 
-                # DELETE is the atomic claim on this timer: only the deleter
-                # fires it. A concurrent cancel_reminder races on the same row,
-                # so if our DELETE removed zero rows someone else (a cancel)
-                # already owns it - skip firing. This is what makes cancelling
-                # the exact timer the loop is sleeping on race-safe: the loop
-                # never delivers a reminder the user cancelled in the same tick.
-                status = await self.bot.db_pool.execute(
-                    "DELETE FROM timers WHERE id=$1", row["id"]
-                )
-                if status and status.rsplit(" ", 1)[-1] == "0":
-                    continue
-                await self.call_timer(row)
+                # Two delivery contracts, chosen by event (see
+                # DURABLE_TIMER_EVENTS). Tempbans take the durable claim ->
+                # deliver -> delete path with bounded retries; everything else
+                # takes the at-most-once DELETE-as-claim path.
+                if row["event"] in DURABLE_TIMER_EVENTS:
+                    await self._deliver_durable(row)
+                else:
+                    await self._deliver_at_most_once(row)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 log.exception("Error while dispatching timers")
                 await asyncio.sleep(5)
 
+    async def _deliver_at_most_once(self, row):
+        """Fire reminders / generic dispatched events with at-most-once safety.
+
+        The DELETE is the atomic claim (BL2 contract): the row is removed BEFORE
+        delivery, so exactly one worker can win it and a crash mid-delivery loses
+        at most one firing - it can never double-fire. ``cancel_reminder``
+        competes on the very same conditional DELETE, so a race there simply
+        means the loser sees no row and does nothing.
+        """
+        claimed = await self.bot.db_pool.fetchrow(
+            "DELETE FROM timers WHERE id = $1 AND claimed_at IS NULL RETURNING *",
+            row["id"],
+        )
+        if claimed is None:
+            # Someone else (another worker, or a cancel) already took it.
+            return
+        try:
+            await self.call_timer(claimed)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # The row is already gone, so there is nothing to retry: at-most-once
+            # deliberately drops this firing rather than risk a double-send.
+            log.exception(
+                "Timer %s (%s) delivery failed after atomic claim; dropping "
+                "(at-most-once)",
+                claimed["id"],
+                claimed["event"],
+            )
+
+    async def _deliver_durable(self, row):
+        """Fire a durable (idempotent) timer with claim -> deliver -> delete.
+
+        The claim leases the row (``claimed_at``); a crash after delivery but
+        before the delete lets the 5-minute stale-claim reclaim re-run it, which
+        is safe because the action is idempotent. Delivery failures release the
+        claim and reschedule with exponential backoff, incrementing ``attempts``;
+        once ``attempts`` would reach :data:`MAX_TIMER_ATTEMPTS` the row is
+        dead-lettered (deleted + logged) so it cannot retry forever.
+        """
+        claimed = await self.bot.db_pool.fetchrow(
+            "UPDATE timers SET claimed_at = now() WHERE id = $1 "
+            "AND (claimed_at IS NULL OR "
+            "claimed_at < now() - interval '5 minutes') RETURNING *",
+            row["id"],
+        )
+        if claimed is None:
+            return
+        try:
+            await self.call_timer(claimed)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            prior_attempts = int(claimed["attempts"] or 0)
+            attempts = prior_attempts + 1
+            if attempts >= MAX_TIMER_ATTEMPTS:
+                await self.bot.db_pool.execute(
+                    "DELETE FROM timers WHERE id = $1", claimed["id"]
+                )
+                log.error(
+                    "Timer dead-letter: dropping %s timer id=%s after %s "
+                    "attempts; extra=%s last_error=%s",
+                    claimed["event"],
+                    claimed["id"],
+                    attempts,
+                    claimed["extra"],
+                    str(exc)[:500],
+                )
+                return
+            delay = timer_retry_delay(prior_attempts)
+            await self.bot.db_pool.execute(
+                "UPDATE timers SET claimed_at = NULL, "
+                "attempts = attempts + 1, last_error = $2, "
+                "expires = now() + "
+                "($3::double precision * interval '1 second') "
+                "WHERE id = $1",
+                claimed["id"],
+                str(exc)[:500],
+                delay,
+            )
+            log.exception(
+                "Timer %s (%s) delivery failed; retry %s/%s in %ss",
+                claimed["id"],
+                claimed["event"],
+                attempts,
+                MAX_TIMER_ATTEMPTS,
+                delay,
+            )
+        else:
+            await self.bot.db_pool.execute(
+                "DELETE FROM timers WHERE id = $1", claimed["id"]
+            )
+
     async def call_timer(self, row):
         extra = row["extra"]
         extra = json.loads(extra) if isinstance(extra, str) else (extra or {})
         event = row["event"]
-        try:
-            if event == "reminder":
-                ch = self.bot.get_channel(extra["channel_id"])
-                if ch is None:
-                    try:
-                        ch = await self.bot.fetch_channel(extra["channel_id"])
-                    except discord.HTTPException:
-                        ch = None
-                if ch:
-                    await ch.send(
-                        _("<@{author_id}>, {when}: {message}").format(
-                            author_id=extra["author_id"],
-                            when=human_timedelta(row["created"]),
-                            message=extra["message"],
-                        )
+        if event == "reminder":
+            ch = self.bot.get_channel(extra["channel_id"])
+            if ch is None:
+                try:
+                    ch = await self.bot.fetch_channel(extra["channel_id"])
+                except discord.NotFound:
+                    log.warning(
+                        "Dropping timer %s because channel %s no longer exists",
+                        row["id"],
+                        extra["channel_id"],
                     )
-            elif event == "tempban":
-                g = self.bot.get_guild(extra["guild_id"])
-                if g:
-                    await g.unban(
-                        discord.Object(id=extra["user_id"]),
-                        reason="Temp-ban expired",
+                    return
+            await ch.send(
+                _("<@{author_id}>, {when}: {message}").format(
+                    author_id=extra["author_id"],
+                    when=human_timedelta(row["created"]),
+                    message=extra["message"],
+                )
+            )
+        elif event == "tempban":
+            g = self.bot.get_guild(extra["guild_id"])
+            if g is None:
+                try:
+                    g = await self.bot.fetch_guild(extra["guild_id"])
+                except (discord.NotFound, discord.Forbidden):
+                    log.warning(
+                        "Dropping temp-ban timer %s because guild %s is unavailable",
+                        row["id"],
+                        extra["guild_id"],
                     )
-            else:
-                # Let other cogs own their timer events (e.g. scheduled
-                # announcements) without coupling them into this cog.
-                self.bot.dispatch(f"{event}_timer_complete", extra)
-        except Exception:
-            log.exception("Error while calling timer")
+                    return
+            try:
+                await g.unban(
+                    discord.Object(id=extra["user_id"]),
+                    reason="Temp-ban expired",
+                )
+            except discord.NotFound:
+                # Already manually unbanned: the intended final state is
+                # satisfied, so acknowledge the timer.
+                return
+        else:
+            # Let other cogs own their timer events (e.g. scheduled
+            # announcements) without coupling them into this cog.
+            self.bot.dispatch(f"{event}_timer_complete", extra)
 
     @commands.hybrid_command(aliases=["remindme", "reminder"])
     @app_commands.describe(
@@ -544,9 +686,19 @@ class Reminder(commands.Cog):
         if at is None and when is None:
             if ctx.interaction is not None:
                 return await ctx.interaction.response.send_modal(
-                    RemindModal(self, ctx.channel.id, ctx.author.id)
+                    RemindModal(
+                        self,
+                        ctx.channel.id,
+                        ctx.author.id,
+                        ctx.guild.id if ctx.guild else None,
+                    )
                 )
-            view = RemindLauncherView(self, ctx.author.id, ctx.channel.id)
+            view = RemindLauncherView(
+                self,
+                ctx.author.id,
+                ctx.channel.id,
+                ctx.guild.id if ctx.guild else None,
+            )
             view.message = await ctx.send(
                 _("Tap the button below to set a reminder."), view=view
             )
@@ -592,6 +744,7 @@ class Reminder(commands.Cog):
             "reminder",
             author_id=ctx.author.id,
             channel_id=ctx.channel.id,
+            guild_id=ctx.guild.id if ctx.guild else None,
             message=message,
         )
         await ctx.send(

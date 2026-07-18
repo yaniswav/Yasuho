@@ -7,8 +7,8 @@ Covers three things the pure-logic suite (tests/tools/test_reminders.py) cannot:
 * The cog's DB seams: ``list_pending_reminders`` (author + type scoping,
   str/dict ``extra`` parsing, the +1 overflow -> ``capped``) and
   ``cancel_reminder`` (scoped DELETE, dispatch-loop wake, existed/not-existed).
-* The dispatch-loop race-safety guard: a timer whose DELETE removed zero rows
-  (a concurrent cancel already claimed it) is NOT fired.
+* The dispatch-loop race-safety guard: a timer whose conditional UPDATE returns
+  no row (another worker already claimed it) is NOT fired.
 """
 
 import asyncio
@@ -18,7 +18,7 @@ import types
 
 import discord
 
-from cogs.community.reminders import Reminder, RemindersCard
+from cogs.community.reminders import Reminder, RemindersCard, timer_retry_delay
 from tools import reminders as rem
 
 # ---------------------------------------------------------------------------
@@ -284,6 +284,7 @@ async def test_cancel_reminder_scopes_delete_and_wakes_loop(fake_pool):
     assert query.startswith("DELETE FROM timers")
     assert "event = 'reminder'" in query
     assert "extra->>'author_id' = $2" in query
+    assert "claimed_at IS NULL" in query
     assert args == (9, "777")
     assert cog._have_data.is_set()  # dispatch loop woken to re-sleep
 
@@ -300,7 +301,14 @@ async def test_cancel_reminder_missing_row_returns_false_and_no_wake(fake_pool):
 
 
 # ---------------------------------------------------------------------------
-# Dispatch-loop race safety: DELETE is the atomic claim
+# Dispatch-loop delivery semantics
+#
+# Two contracts, split by event (cogs/community/reminders.py):
+#   * reminders + generic ``*_timer_complete`` events -> DELETE-as-atomic-claim
+#     BEFORE delivery (at-most-once): a crash mid-delivery loses at most one
+#     firing and can NEVER double-fire.
+#   * tempban -> durable claim -> deliver -> delete with bounded retries and a
+#     dead-letter at MAX_TIMER_ATTEMPTS (at-least-once; the unban is idempotent).
 # ---------------------------------------------------------------------------
 
 
@@ -322,37 +330,62 @@ class _RaceBot:
 
 
 class _RacePool:
-    """Serves one due timer to the first get_active_timer, None afterwards, and
-    a configurable DELETE status."""
+    """Serves one due timer, then nothing; records claims and executes.
 
-    def __init__(self, delete_status):
+    A single ``get_active_timer`` SELECT returns the seeded row once (and None
+    forever after, modelling the row being gone once claimed/deleted). The claim
+    fetchrow - the at-most-once ``DELETE ... RETURNING`` or the durable
+    ``UPDATE ... claimed_at`` - returns the row when the claim is won, else None.
+    """
+
+    def __init__(self, row, *, claim_won=True):
         self._served = False
-        self._delete_status = delete_status
+        self._claim_won = claim_won
+        self.row = row
         self.executes = []
+        self.claims = []
 
     async def fetchrow(self, query, *args):
-        if self._served:
-            return None
-        self._served = True
-        return {
-            "id": 1,
-            "expires": datetime.datetime.now(datetime.timezone.utc)
-            - datetime.timedelta(seconds=1),
-        }
+        stripped = query.lstrip()
+        if stripped.startswith("SELECT"):
+            if self._served:
+                return None
+            self._served = True
+            return self.row
+        # Both claim shapes (DELETE-as-claim and UPDATE-claim) land here.
+        self.claims.append((query, args))
+        return self.row if self._claim_won else None
 
     async def execute(self, query, *args):
         self.executes.append((query, args))
-        return self._delete_status
+        return "DELETE 1"
 
 
-async def _run_one_dispatch(delete_status):
-    pool = _RacePool(delete_status)
+def _due_row(event, *, attempts=0, timer_id=1):
+    return {
+        "id": timer_id,
+        "event": event,
+        "expires": datetime.datetime.now(datetime.timezone.utc)
+        - datetime.timedelta(seconds=1),
+        "attempts": attempts,
+        "extra": {"guild_id": 10, "user_id": 20},
+    }
+
+
+async def _run_one_dispatch(row, *, claim_won=True, delivery_error=None):
+    pool = _RacePool(row, claim_won=claim_won)
     bot = _RaceBot(pool)
     cog = Reminder(bot)
     fired = []
+    claims_at_delivery = []
 
-    async def _spy_call_timer(row):
-        fired.append(row["id"])
+    async def _spy_call_timer(r):
+        # Record how many claims had already run when delivery started, so a
+        # test can prove the DELETE claim happens BEFORE delivery.
+        claims_at_delivery.append(len(pool.claims))
+        fired.append(r["id"])
+        if delivery_error is not None:
+            raise delivery_error
 
     cog.call_timer = _spy_call_timer
 
@@ -365,21 +398,154 @@ async def _run_one_dispatch(delete_status):
         await task
     except asyncio.CancelledError:
         pass
-    return fired
+    return types.SimpleNamespace(
+        fired=fired,
+        executes=pool.executes,
+        claims=pool.claims,
+        claims_at_delivery=claims_at_delivery,
+    )
 
 
-async def test_dispatch_fires_when_it_wins_the_delete():
-    """DELETE removed the row (status "DELETE 1") -> this loop owns it, fires."""
-    fired = await _run_one_dispatch("DELETE 1")
-    assert fired == [1]
+# --- at-most-once path (reminders + generic dispatched events) --------------
 
 
-async def test_dispatch_skips_firing_when_cancel_won_the_delete():
-    """A concurrent cancel already removed the row ("DELETE 0") -> do NOT fire.
+async def test_reminder_deletes_as_claim_before_delivering():
+    result = await _run_one_dispatch(_due_row("reminder"))
 
-    This is the race-safety guarantee: cancelling the exact timer the loop is
-    about to fire means the loop's DELETE affects zero rows and the reminder is
-    never delivered.
-    """
-    fired = await _run_one_dispatch("DELETE 0")
-    assert fired == []
+    assert result.fired == [1]
+    # The claim is a DELETE ... RETURNING, and it ran BEFORE delivery.
+    assert len(result.claims) == 1
+    claim_query, _args = result.claims[0]
+    assert claim_query.startswith("DELETE FROM timers")
+    assert "RETURNING" in claim_query
+    assert result.claims_at_delivery == [1]  # delete had already happened
+    # No post-delivery execute DELETE: the claim WAS the delete.
+    assert result.executes == []
+
+
+async def test_reminder_crash_after_delete_cannot_double_fire():
+    # Delivery raises AFTER the row was deleted-as-claim. The dispatch loop keeps
+    # running (get_active_timer now returns nothing), so the reminder is neither
+    # rescheduled nor re-delivered: at most one firing, never two.
+    result = await _run_one_dispatch(
+        _due_row("reminder"), delivery_error=RuntimeError("Discord down")
+    )
+
+    assert result.fired == [1]  # fired exactly once, never twice
+    # Nothing is rescheduled and nothing re-deleted - the firing is dropped.
+    assert result.executes == []
+    assert not any(
+        q.startswith("UPDATE timers SET claimed_at = NULL")
+        for q, _a in result.executes
+    )
+
+
+async def test_reminder_skips_when_another_worker_or_cancel_won_the_claim():
+    result = await _run_one_dispatch(_due_row("reminder"), claim_won=False)
+
+    assert result.fired == []
+    assert result.executes == []
+
+
+# --- durable path (tempban) -------------------------------------------------
+
+
+async def test_tempban_claims_delivers_then_deletes():
+    result = await _run_one_dispatch(_due_row("tempban"))
+
+    assert result.fired == [1]
+    # Durable claim is the conditional UPDATE (claim BEFORE delivery).
+    claim_query, _args = result.claims[0]
+    assert claim_query.startswith("UPDATE timers SET claimed_at = now()")
+    # The delete only happens AFTER a successful delivery.
+    assert result.claims_at_delivery == [1]
+    assert any(q.startswith("DELETE FROM timers") for q, _a in result.executes)
+
+
+async def test_tempban_skips_firing_when_another_worker_holds_the_claim():
+    result = await _run_one_dispatch(_due_row("tempban"), claim_won=False)
+
+    assert result.fired == []
+    assert result.executes == []
+
+
+async def test_tempban_releases_and_reschedules_failed_delivery():
+    result = await _run_one_dispatch(
+        _due_row("tempban", attempts=0),
+        delivery_error=RuntimeError("Discord unavailable"),
+    )
+
+    assert result.fired == [1]
+    retry_query, retry_args = next(
+        (query, args)
+        for query, args in result.executes
+        if query.startswith("UPDATE timers SET claimed_at = NULL")
+    )
+    assert "attempts = attempts + 1" in retry_query
+    assert retry_args == (1, "Discord unavailable", 60)
+    # Not deleted: durable delivery is retried, not dropped.
+    assert not any(
+        query.startswith("DELETE FROM timers") for query, _args in result.executes
+    )
+
+
+async def test_tempban_dead_letters_at_max_attempts(caplog):
+    # The 12th consecutive failure (prior attempts = MAX - 1) exhausts the retry
+    # budget: the row is deleted and a grep-able dead-letter line is logged.
+    from cogs.community.reminders import MAX_TIMER_ATTEMPTS
+
+    with caplog.at_level("ERROR", logger="cogs.community.reminders"):
+        result = await _run_one_dispatch(
+            _due_row("tempban", attempts=MAX_TIMER_ATTEMPTS - 1),
+            delivery_error=RuntimeError("Forbidden forever"),
+        )
+
+    assert result.fired == [1]
+    # Dead-lettered: deleted, and NOT rescheduled.
+    assert any(
+        query.startswith("DELETE FROM timers") for query, _args in result.executes
+    )
+    assert not any(
+        query.startswith("UPDATE timers SET claimed_at = NULL")
+        for query, _args in result.executes
+    )
+    dead_letter = " ".join(r.getMessage() for r in caplog.records)
+    assert "dead-letter" in dead_letter
+    assert "tempban" in dead_letter  # event is grep-able
+    assert "id=1" in dead_letter  # id is grep-able
+
+
+def test_timer_retry_delay_is_exponential_and_bounded():
+    assert timer_retry_delay(0) == 60
+    assert timer_retry_delay(1) == 120
+    assert timer_retry_delay(99) == 3600
+
+
+async def test_tempban_fetches_uncached_guild_before_unban(fake_pool):
+    class _Guild:
+        def __init__(self):
+            self.unbanned = []
+
+        async def unban(self, user, *, reason):
+            self.unbanned.append((user.id, reason))
+
+    guild = _Guild()
+    bot = _make_reminder_bot(fake_pool)
+    bot.get_guild = lambda _guild_id: None
+
+    async def fetch_guild(guild_id):
+        assert guild_id == 123
+        return guild
+
+    bot.fetch_guild = fetch_guild
+    cog = Reminder(bot)
+
+    await cog.call_timer(
+        {
+            "id": 9,
+            "event": "tempban",
+            "extra": {"guild_id": 123, "user_id": 456},
+        }
+    )
+
+    assert guild.unbanned == [(456, "Temp-ban expired")]
