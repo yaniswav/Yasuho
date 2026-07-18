@@ -81,13 +81,22 @@ CREATE TABLE IF NOT EXISTS modlog (
 
 -- Generic scheduled timers (reminders, tempban, ...).  reminders.py
 CREATE TABLE IF NOT EXISTS timers (
-    id      BIGSERIAL   PRIMARY KEY,
-    event   TEXT        NOT NULL,
-    expires TIMESTAMPTZ NOT NULL,
-    created TIMESTAMPTZ NOT NULL DEFAULT now(),
-    extra   JSONB       NOT NULL DEFAULT '{}'::jsonb
+    id         BIGSERIAL   PRIMARY KEY,
+    event      TEXT        NOT NULL,
+    expires    TIMESTAMPTZ NOT NULL,
+    created    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    extra      JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    attempts   INTEGER     NOT NULL DEFAULT 0,
+    last_error TEXT,
+    claimed_at TIMESTAMPTZ
 );
+-- Migrate pre-existing installs (no-ops on a fresh database):
+ALTER TABLE timers ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE timers ADD COLUMN IF NOT EXISTS last_error TEXT;
+ALTER TABLE timers ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS timers_expires_idx ON timers (expires);
+CREATE INDEX IF NOT EXISTS timers_pending_expires_idx
+    ON timers (expires) WHERE claimed_at IS NULL;
 -- Serves the per-user "my pending reminders" list and the pending-count guard:
 -- filter on (event, author) then read already-ordered by expires. Additive.
 CREATE INDEX IF NOT EXISTS timers_reminder_author_idx
@@ -288,8 +297,9 @@ CREATE TABLE IF NOT EXISTS profiles (
     steamid    TEXT
 );
 
--- Per-user image history: global avatars, per-guild avatars and banners
--- (raw PNG bytes, capped to ~50 per user/guild/kind in code).  avatarhistory.py
+-- Per-user image history: global avatars, per-guild avatars and banners.
+-- New rows are bounded WebP; retention keeps at most 30 per series and prunes
+-- rows older than 18 months while preserving the newest 5.  avatarhistory.py
 CREATE TABLE IF NOT EXISTS avatar_history (
     id         BIGSERIAL   PRIMARY KEY,
     user_id    BIGINT      NOT NULL,
@@ -297,13 +307,20 @@ CREATE TABLE IF NOT EXISTS avatar_history (
     kind       TEXT        NOT NULL DEFAULT 'global',   -- 'global' | 'guild' | 'banner'
     ref        TEXT,                                    -- asset key/hash, for de-duplication
     avatar     BYTEA       NOT NULL,
+    image_format TEXT      NOT NULL DEFAULT 'png',      -- png (legacy) | webp | original
     changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Migrate pre-existing installs (no-ops on a fresh database):
 ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS guild_id BIGINT;
 ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'global';
 ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS ref TEXT;
+ALTER TABLE avatar_history ADD COLUMN IF NOT EXISTS image_format TEXT NOT NULL DEFAULT 'png';
 CREATE INDEX IF NOT EXISTS avatar_history_user_idx ON avatar_history (user_id, kind, changed_at DESC);
+-- Retention/pagination path (avatarhistory.py): one image "series" is a
+-- (user_id, kind, guild_id) tuple read newest-first; this composite serves the
+-- keep-newest-N prune and the paged viewer without a sort.
+CREATE INDEX IF NOT EXISTS avatar_history_series_idx
+    ON avatar_history (user_id, kind, guild_id, changed_at DESC, id DESC);
 
 -- Per-user AniList OAuth access token, encrypted at rest (Fernet ciphertext;
 -- the key lives in config, never in the DB).  anilist.py
@@ -340,6 +357,9 @@ CREATE TABLE IF NOT EXISTS cases (
     UNIQUE (guild_id, case_number)
 );
 CREATE INDEX IF NOT EXISTS cases_guild_user_idx ON cases (guild_id, user_id);
+-- Cross-guild "this user's history" reads (retention export/purge) filter by
+-- user_id newest-first; this serves them without scanning the guild index.
+CREATE INDEX IF NOT EXISTS cases_user_created_idx ON cases (user_id, created_at DESC);
 
 -- Self-assignable button roles: one row per (message, role) button on a panel.
 -- buttonroles.py (admin builds a panel; persistent views toggle the roles).
@@ -438,6 +458,8 @@ CREATE INDEX IF NOT EXISTS levels_guild_xp_idx ON levels (guild_id, xp DESC);
 CREATE INDEX IF NOT EXISTS auto_room_guild_idx ON auto_room (guild_id);
 CREATE INDEX IF NOT EXISTS reaction_roles_guild_idx ON reaction_roles (guild_id);
 CREATE INDEX IF NOT EXISTS starboard_entries_guild_idx ON starboard_entries (guild_id);
+CREATE INDEX IF NOT EXISTS starboard_entries_guild_stars_idx
+    ON starboard_entries (guild_id, star_count DESC);
 
 -- Per-guild custom (canned) commands invoked by the guild prefix. The response
 -- is a JSONB blob: {"type":"text","content":"..."} or
@@ -650,3 +672,238 @@ CREATE TABLE IF NOT EXISTS anilist_channel_subs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (guild_id, channel_id, media_id)
 );
+
+-- ============================================================
+-- Data retention: delayed purge of departed guilds
+-- ============================================================
+-- When the bot leaves a guild, a job is scheduled here and its stored data is
+-- purged only after a cancellable grace period (the guild rejoining cancels it).
+-- ``claimed_at`` lets a worker lease a due job (cleared on failure so it retries;
+-- ``attempts``/``last_error`` record why). The inline CHECKs are safe: this is a
+-- fresh table, so there are no legacy rows to grandfather.  tools/retention.py
+CREATE TABLE IF NOT EXISTS guild_retention_jobs (
+    guild_id    BIGINT      PRIMARY KEY,
+    left_at     TIMESTAMPTZ NOT NULL,
+    purge_after TIMESTAMPTZ NOT NULL,
+    attempts    INTEGER     NOT NULL DEFAULT 0,
+    last_error  TEXT,
+    claimed_at  TIMESTAMPTZ,
+    CONSTRAINT guild_retention_attempts_nonnegative CHECK (attempts >= 0),
+    CONSTRAINT guild_retention_dates_ordered CHECK (purge_after >= left_at)
+);
+-- Due-job scan: WHERE purge_after <= now() AND claimed_at IS NULL ORDER BY
+-- purge_after, guild_id -> partial index range scan, no sort.
+CREATE INDEX IF NOT EXISTS guild_retention_jobs_due_idx
+    ON guild_retention_jobs (purge_after, guild_id)
+    WHERE claimed_at IS NULL;
+
+-- ============================================================
+-- One-shot data fixups bookkeeping (tools/fixups.py)
+-- ============================================================
+-- schema.sql (DDL) is applied every boot; a fixup is a one-shot DATA repair that
+-- DDL alone cannot express. Each fixup runs at most once (its name is recorded
+-- here on success) and MUST itself be idempotent. There are NO checksums and NO
+-- ordering pins: a name in this table that the running code no longer knows about
+-- is simply ignored, so rolling back to an older commit never fails to boot.
+CREATE TABLE IF NOT EXISTS applied_fixups (
+    name       TEXT        PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- Guarded integrity constraints (added NOT VALID)
+-- ============================================================
+-- Every constraint below is added NOT VALID and is NEVER validated here: new
+-- INSERT/UPDATE writes are enforced, but pre-existing ("legacy") rows are
+-- grandfathered and are NOT scanned when the constraint is added. This is the
+-- deliberate anti-brick posture - a single legacy row that predates a tightened
+-- rule can never turn a boot into a crash-loop (which a validating scan would).
+-- Each ADD is guarded by a pg_constraint lookup so re-applying schema.sql on
+-- every boot is a no-op. Two constraints are intentionally looser than the
+-- strictest possible rule to keep hot write paths brick-free (see inline notes).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'warns_count_nonnegative'
+    ) THEN
+        ALTER TABLE warns ADD CONSTRAINT warns_count_nonnegative
+            CHECK (warns_count >= 0) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'timers_event_nonempty'
+    ) THEN
+        ALTER TABLE timers ADD CONSTRAINT timers_event_nonempty
+            CHECK (btrim(event) <> '') NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'timers_attempts_nonnegative'
+    ) THEN
+        ALTER TABLE timers ADD CONSTRAINT timers_attempts_nonnegative
+            CHECK (attempts >= 0) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'level_config_values_valid'
+    ) THEN
+        ALTER TABLE level_config ADD CONSTRAINT level_config_values_valid CHECK (
+            cooldown_seconds >= 1
+            AND xp_min >= 0
+            AND xp_max >= xp_min
+            AND announce_mode IN ('off', 'channel', 'dm', 'fixed')
+            AND rewards_mode IN ('stack', 'replace')
+            AND voice_xp_per_minute BETWEEN 1 AND 60
+            AND (
+                event_factor IS NULL
+                OR event_factor BETWEEN 0 AND 5
+            )
+        ) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'xp_multipliers_values_valid'
+    ) THEN
+        ALTER TABLE xp_multipliers
+            ADD CONSTRAINT xp_multipliers_values_valid CHECK (
+                kind IN ('global', 'channel', 'role')
+                AND factor BETWEEN 0 AND 5
+                AND (
+                    (kind = 'global' AND target_id = 0)
+                    OR (kind <> 'global' AND target_id > 0)
+                )
+            ) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'level_rewards_level_positive'
+    ) THEN
+        ALTER TABLE level_rewards
+            ADD CONSTRAINT level_rewards_level_positive
+            CHECK (level >= 1) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'starboard_threshold_positive'
+    ) THEN
+        ALTER TABLE starboard
+            ADD CONSTRAINT starboard_threshold_positive
+            CHECK (threshold >= 1) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'starboard_count_nonnegative'
+    ) THEN
+        ALTER TABLE starboard_entries
+            ADD CONSTRAINT starboard_count_nonnegative
+            CHECK (star_count >= 0) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'avatar_history_kind_valid'
+    ) THEN
+        ALTER TABLE avatar_history
+            ADD CONSTRAINT avatar_history_kind_valid
+            CHECK (kind IN ('global', 'guild', 'banner')) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'avatar_history_format_valid'
+    ) THEN
+        ALTER TABLE avatar_history
+            ADD CONSTRAINT avatar_history_format_valid
+            CHECK (image_format IN ('png', 'webp', 'original')) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'cases_values_valid'
+    ) THEN
+        ALTER TABLE cases ADD CONSTRAINT cases_values_valid
+            CHECK (case_number >= 1 AND btrim(action) <> '') NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'button_roles_style_valid'
+    ) THEN
+        ALTER TABLE button_roles ADD CONSTRAINT button_roles_style_valid
+            CHECK (style BETWEEN 1 AND 4) NOT VALID;
+    END IF;
+    -- guild_playlists: the strict form also asserted
+    -- ``track_count = cardinality(tracks)``. That equality is DROPPED on purpose:
+    -- it is a pure denormalisation-consistency assertion (a wrong count only
+    -- misprints a list count) yet it would turn EVERY future partial write that
+    -- touches only one of the two columns into a hard failure - a brick risk the
+    -- review flagged as real (track_count drift). The cheap, safe range checks
+    -- are kept.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'guild_playlists_values_valid'
+    ) THEN
+        ALTER TABLE guild_playlists
+            ADD CONSTRAINT guild_playlists_values_valid CHECK (
+                track_count >= 0
+                AND total_ms >= 0
+            ) NOT VALID;
+    END IF;
+    -- music_state: volume is bounded 0..1000, NOT the app's current 0..200 UI cap.
+    -- The upper bound was historically 1000, so every legitimately-created legacy
+    -- row is in [0, 1000]; using that union grandfathers all of them AND keeps a
+    -- corruption backstop, while never bricking the very hot per-save UPDATE (which
+    -- re-checks the row's volume on every position write). The app enforces the
+    -- tighter 0..200 today; this constraint is only the DB-side floor/ceiling.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'music_state_values_valid'
+    ) THEN
+        ALTER TABLE music_state ADD CONSTRAINT music_state_values_valid CHECK (
+            volume BETWEEN 0 AND 1000
+            AND loop_mode BETWEEN 0 AND 2
+            AND position_ms >= 0
+        ) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_feed_fail_count_valid'
+    ) THEN
+        ALTER TABLE anilist_feeds
+            ADD CONSTRAINT anilist_feed_fail_count_valid
+            CHECK (fail_count >= 0) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'mangadex_mapping_status_valid'
+    ) THEN
+        ALTER TABLE mangadex_mapping
+            ADD CONSTRAINT mangadex_mapping_status_valid CHECK (
+                status IN ('found', 'missing')
+                AND ((status = 'found') = (mangadex_id IS NOT NULL))
+            ) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_channel_media_type_valid'
+    ) THEN
+        ALTER TABLE anilist_channel_subs
+            ADD CONSTRAINT anilist_channel_media_type_valid
+            CHECK (media_type IN ('ANIME', 'MANGA')) NOT VALID;
+    END IF;
+END
+$$;
+
+-- Foreign keys, likewise added NOT VALID (orphan legacy rows are grandfathered;
+-- the FK columns never change on the hot UPDATE paths, so grandfathered rows are
+-- never re-checked). ON DELETE CASCADE gives clean config teardown going forward.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'starboard_entries_config_fk'
+    ) THEN
+        ALTER TABLE starboard_entries
+            ADD CONSTRAINT starboard_entries_config_fk
+            FOREIGN KEY (guild_id) REFERENCES starboard(guild_id)
+            ON DELETE CASCADE NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_follows_feed_fk'
+    ) THEN
+        ALTER TABLE anilist_follows
+            ADD CONSTRAINT anilist_follows_feed_fk
+            FOREIGN KEY (guild_id, channel_id)
+            REFERENCES anilist_feeds(guild_id, channel_id)
+            ON DELETE CASCADE NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_subs_feed_fk'
+    ) THEN
+        ALTER TABLE anilist_channel_subs
+            ADD CONSTRAINT anilist_subs_feed_fk
+            FOREIGN KEY (guild_id, channel_id)
+            REFERENCES anilist_feeds(guild_id, channel_id)
+            ON DELETE CASCADE NOT VALID;
+    END IF;
+END
+$$;
