@@ -2,7 +2,6 @@ import datetime
 import logging
 import time
 
-import aiohttp
 import discord
 
 from .components import (
@@ -39,7 +38,7 @@ from .queries import (
 )
 from tools import crypto
 from tools.config_loader import config_loader
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -112,13 +111,13 @@ class AniListBase:
             headers["Authorization"] = "Bearer " + token
 
         try:
-            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-                async with session.post(
-                    API_URL,
-                    json={"query": query, "variables": variables},
-                    headers=headers,
-                ) as r:
-                    return await r.json()
+            async with get_session(self.bot).post(
+                API_URL,
+                json={"query": query, "variables": variables},
+                headers=headers,
+                timeout=TIMEOUT,
+            ) as r:
+                return await r.json()
         except Exception:
             log.exception("AniList GraphQL request failed")
             return None
@@ -250,9 +249,10 @@ class AniListBase:
         }
 
         try:
-            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-                async with session.post(TOKEN_URL, json=payload) as r:
-                    data = await r.json()
+            async with get_session(self.bot).post(
+                TOKEN_URL, json=payload, timeout=TIMEOUT
+            ) as r:
+                data = await r.json()
         except Exception:
             log.exception("AniList token exchange failed")
             return None

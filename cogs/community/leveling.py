@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from tools import leveling, leveling_gate, settings
+from tools import leveling, leveling_gate, rendering, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -343,6 +343,24 @@ class Leveling(commands.Cog):
             bool(enabled),
         )
         self._cache_config_row(guild_id, row)
+
+    async def refresh_guild_config(self, guild_id):
+        """Reload one guild after a retention-grace rejoin."""
+        row = await self.bot.db_pool.fetchrow(
+            f"SELECT {_CONFIG_COLUMNS} FROM level_config WHERE guild_id = $1;",
+            guild_id,
+        )
+        if row is not None:
+            self._cache_config_row(guild_id, row)
+            return
+        legacy_enabled = await settings.get_guild(
+            self.bot.db_pool, guild_id, "leveling_enabled", False
+        )
+        config = leveling.resolve_config(None, legacy_enabled)
+        if config is None:
+            self._configs.pop(guild_id, None)
+        else:
+            self._configs[guild_id] = config
 
     def _cache_config_row(self, guild_id, row):
         """Resolve a level_config RETURNING row into the hot-path config map.
@@ -1170,6 +1188,7 @@ class Leveling(commands.Cog):
         return buf
 
     @commands.hybrid_command(aliases=["level", "lvl"])
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.guild_only()
     @discord.app_commands.describe(member="Whose rank to show (defaults to you).")
     async def rank(self, ctx, member: discord.Member = None):
@@ -1219,7 +1238,7 @@ class Leveling(commands.Cog):
                         accent,
                     )
 
-                buf = await self.bot.loop.run_in_executor(None, _render)
+                buf = await rendering.run_image_job(self.bot, _render)
                 await ctx.send(file=discord.File(buf, filename="rank.png"))
             except Exception:
                 log.exception("Failed to render rank card")

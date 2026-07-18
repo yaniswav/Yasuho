@@ -41,7 +41,6 @@ import re
 import time
 from datetime import datetime, timezone
 
-import aiohttp
 import discord
 from discord.ext import commands, tasks
 
@@ -66,7 +65,7 @@ from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from tools import i18n, interactions
 from tools import mangadex as md
 from tools import round_robin as rr
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -364,7 +363,9 @@ async def _run_read(interaction, media_id, chapter):
 
     # 1) Look up the viewer's current progress + the title, as themselves.
     try:
-        data = await _authed_graphql(token, CHAPTER_LOOKUP_QUERY, {"id": media_id})
+        data = await _authed_graphql(
+            interaction.client, token, CHAPTER_LOOKUP_QUERY, {"id": media_id}
+        )
     except _RateLimited:
         return await _feed_ephemeral(
             interaction, _("AniList is rate limiting me right now - try again shortly.")
@@ -406,7 +407,10 @@ async def _run_read(interaction, media_id, chapter):
     #    only the progress leaves their status untouched (already Reading).
     try:
         saved = await _authed_graphql(
-            token, SAVE_ENTRY_QUERY, {"mediaId": media_id, "progress": target}
+            interaction.client,
+            token,
+            SAVE_ENTRY_QUERY,
+            {"mediaId": media_id, "progress": target},
         )
     except _RateLimited:
         return await _feed_ephemeral(
@@ -730,18 +734,19 @@ class AniListChapters(commands.Cog):
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
         try:
-            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-                async with session.post(API_URL, json=payload, headers=headers) as r:
-                    if r.status == 429:
-                        raise _RateLimited(
-                            _parse_retry_after(r.headers.get("Retry-After"))
-                        )
-                    try:
-                        data = await r.json()
-                    except Exception:
-                        data = None
-                    if data is None:
-                        raise _FetchError("AniList HTTP %s with no JSON body" % r.status)
+            async with get_session(self.bot).post(
+                API_URL, json=payload, headers=headers, timeout=TIMEOUT
+            ) as r:
+                if r.status == 429:
+                    raise _RateLimited(
+                        _parse_retry_after(r.headers.get("Retry-After"))
+                    )
+                try:
+                    data = await r.json()
+                except Exception:
+                    data = None
+                if data is None:
+                    raise _FetchError("AniList HTTP %s with no JSON body" % r.status)
         except _RateLimited:
             raise
         except _FetchError:
@@ -767,20 +772,21 @@ class AniListChapters(commands.Cog):
         """
 
         try:
-            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-                async with session.get(url, params=params, headers=headers) as r:
-                    if r.status == 429:
-                        raise _RateLimited(
-                            _parse_retry_after(r.headers.get("Retry-After"))
-                        )
-                    try:
-                        data = await r.json()
-                    except Exception:
-                        data = None
-                    if data is None:
-                        raise _FetchError(
-                            "MangaDex HTTP %s with no JSON body" % r.status
-                        )
+            async with get_session(self.bot).get(
+                url, params=params, headers=headers, timeout=TIMEOUT
+            ) as r:
+                if r.status == 429:
+                    raise _RateLimited(
+                        _parse_retry_after(r.headers.get("Retry-After"))
+                    )
+                try:
+                    data = await r.json()
+                except Exception:
+                    data = None
+                if data is None:
+                    raise _FetchError(
+                        "MangaDex HTTP %s with no JSON body" % r.status
+                    )
         except _RateLimited:
             raise
         except _FetchError:

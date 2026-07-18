@@ -118,3 +118,15 @@ def test_clear_empties_the_cache():
     cache.clear()
     assert len(cache) == 0
     assert "a" not in cache
+
+
+def test_discard_removes_only_requested_key_and_tolerates_missing():
+    cache = BoundedLRU(4)
+    cache["a"] = 1
+    cache["b"] = 2
+
+    cache.discard("a")
+    cache.discard("missing")
+
+    assert "a" not in cache
+    assert cache["b"] == 2

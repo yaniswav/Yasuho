@@ -1,13 +1,12 @@
 
 import logging
 
-import aiohttp
 import discord
 from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -70,18 +69,18 @@ class Meta(commands.Cog):
         """
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
-                    async with cs.get(
-                        f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}"
-                    ) as resp:
-                        if resp.status != 200:
-                            log.warning("APOD API returned HTTP %s", resp.status)
-                            return await ctx.send(
-                                _(
-                                    "Could not fetch the Astronomy Picture of the Day right now."
-                                )
+                async with get_session(self.bot).get(
+                    f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}",
+                    timeout=TIMEOUT,
+                ) as resp:
+                    if resp.status != 200:
+                        log.warning("APOD API returned HTTP %s", resp.status)
+                        return await ctx.send(
+                            _(
+                                "Could not fetch the Astronomy Picture of the Day right now."
                             )
-                        cont = await resp.json()
+                        )
+                    cont = await resp.json()
             except Exception:
                 log.exception("APOD fetch failed")
                 return await ctx.send(
@@ -125,12 +124,12 @@ class Meta(commands.Cog):
         """Show the current weather for a given city."""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
-                    async with cs.get(
-                        "https://api.openweathermap.org/data/2.5/weather",
-                        params={"q": city, "appid": WEATHER_KEY, "units": "metric"},
-                    ) as r:
-                        res = await r.json()
+                async with get_session(self.bot).get(
+                    "https://api.openweathermap.org/data/2.5/weather",
+                    params={"q": city, "appid": WEATHER_KEY, "units": "metric"},
+                    timeout=TIMEOUT,
+                ) as r:
+                    res = await r.json()
             except Exception:
                 log.exception("Weather fetch failed")
                 return await ctx.send(_("Could not fetch the weather right now."))

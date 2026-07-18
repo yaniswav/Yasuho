@@ -1,4 +1,5 @@
 import logging
+import secrets
 from datetime import timedelta
 
 import discord
@@ -195,14 +196,28 @@ class Errors(commands.Cog):
             return
 
         elif isinstance(error, commands.CommandInvokeError):
+            error_id = secrets.token_hex(4)
+            original = error.original
+            log.error(
+                "Command invocation failed [error_id=%s command=%s user=%s guild=%s]",
+                error_id,
+                getattr(ctx.command, "qualified_name", None),
+                ctx.author.id,
+                ctx.guild.id if ctx.guild else None,
+                exc_info=(
+                    type(original),
+                    original,
+                    original.__traceback__,
+                ),
+            )
             await ctx.send(
                 embed=_error_embed(
                     ctx,
                     _("**Seems like something went wrong while executing command:**"),
                     _(
-                        ":question: What to do: `Report the bug to bot owner` "
-                        "[<@!228895251576782858>]\n:warning: Error: `{error}`\n{usage}"
-                    ).format(error=error, usage=_usage(ctx)),
+                        ":question: What to do: `Report this error identifier to "
+                        "the bot owner`: `{error_id}`\n{usage}"
+                    ).format(error_id=error_id, usage=_usage(ctx)),
                 )
             )
 

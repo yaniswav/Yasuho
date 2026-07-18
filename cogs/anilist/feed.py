@@ -28,7 +28,6 @@ import logging
 import time
 import typing
 
-import aiohttp
 import discord
 from discord.ext import commands, tasks
 
@@ -38,7 +37,7 @@ from .queries import SAVE_ENTRY_QUERY, SEARCH_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
 from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import N_, _, ngettext
 from tools.views import _DISABLEABLE, AuthorLayoutView, AuthorView, LocaleModal
 
@@ -450,7 +449,7 @@ def _activity_url(activity_id):
     return "https://anilist.co/activity/{aid}".format(aid=activity_id)
 
 
-async def _authed_graphql(token, query, variables):
+async def _authed_graphql(bot, token, query, variables):
     """POST an authenticated GraphQL request to AniList as the linked user.
 
     The bearer token is placed ONLY in the Authorization header - never logged,
@@ -473,23 +472,24 @@ async def _authed_graphql(token, query, variables):
     payload = {"query": query, "variables": variables}
 
     try:
-        async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-            async with session.post(API_URL, json=payload, headers=headers) as r:
-                status = r.status
-                if status == 429:
-                    raise _RateLimited(
-                        _parse_retry_after(r.headers.get("Retry-After"))
-                    )
-                if status == 401:
-                    raise _AuthError()
-                try:
-                    data = await r.json()
-                except Exception:
-                    data = None
-                if status in (400, 404):
-                    raise _GoneError()
-                if data is None:
-                    raise _FetchError("AniList HTTP %s with no JSON body" % status)
+        async with get_session(bot).post(
+            API_URL, json=payload, headers=headers, timeout=TIMEOUT
+        ) as r:
+            status = r.status
+            if status == 429:
+                raise _RateLimited(
+                    _parse_retry_after(r.headers.get("Retry-After"))
+                )
+            if status == 401:
+                raise _AuthError()
+            try:
+                data = await r.json()
+            except Exception:
+                data = None
+            if status in (400, 404):
+                raise _GoneError()
+            if data is None:
+                raise _FetchError("AniList HTTP %s with no JSON body" % status)
     except (_RateLimited, _AuthError, _GoneError, _FetchError):
         raise
     except Exception as exc:
@@ -599,7 +599,10 @@ async def _run_like(interaction, activity_id):
 
     try:
         data = await _authed_graphql(
-            token, TOGGLE_LIKE_MUTATION, {"id": activity_id, "type": "ACTIVITY"}
+            interaction.client,
+            token,
+            TOGGLE_LIKE_MUTATION,
+            {"id": activity_id, "type": "ACTIVITY"},
         )
     except _RateLimited:
         return await _feed_ephemeral(
@@ -715,7 +718,9 @@ async def _run_add(interaction, media_id):
 
     # 1) Look up the viewer's existing entry (and the title) as themselves.
     try:
-        data = await _authed_graphql(token, ADD_LOOKUP_QUERY, {"id": media_id})
+        data = await _authed_graphql(
+            interaction.client, token, ADD_LOOKUP_QUERY, {"id": media_id}
+        )
     except _RateLimited:
         return await _feed_ephemeral(
             interaction, _("AniList is rate limiting me right now - try again shortly.")
@@ -755,7 +760,10 @@ async def _run_add(interaction, media_id):
     # 2) Not tracked yet: add it to PLANNING as the clicking user.
     try:
         saved = await _authed_graphql(
-            token, SAVE_ENTRY_QUERY, {"mediaId": media_id, "status": "PLANNING"}
+            interaction.client,
+            token,
+            SAVE_ENTRY_QUERY,
+            {"mediaId": media_id, "status": "PLANNING"},
         )
     except _RateLimited:
         return await _feed_ephemeral(
@@ -853,6 +861,7 @@ class _ReplyModal(LocaleModal):
 
         try:
             data = await _authed_graphql(
+                interaction.client,
                 token,
                 SAVE_REPLY_MUTATION,
                 {"activityId": self.activity_id, "text": text},
@@ -2343,18 +2352,19 @@ class AniListFeed(commands.Cog):
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
         try:
-            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
-                async with session.post(API_URL, json=payload, headers=headers) as r:
-                    if r.status == 429:
-                        raise _RateLimited(
-                            _parse_retry_after(r.headers.get("Retry-After"))
-                        )
-                    try:
-                        data = await r.json()
-                    except Exception:
-                        data = None
-                    if data is None:
-                        raise _FetchError("AniList HTTP %s with no JSON body" % r.status)
+            async with get_session(self.bot).post(
+                API_URL, json=payload, headers=headers, timeout=TIMEOUT
+            ) as r:
+                if r.status == 429:
+                    raise _RateLimited(
+                        _parse_retry_after(r.headers.get("Retry-After"))
+                    )
+                try:
+                    data = await r.json()
+                except Exception:
+                    data = None
+                if data is None:
+                    raise _FetchError("AniList HTTP %s with no JSON body" % r.status)
         except _RateLimited:
             raise
         except _FetchError:

@@ -78,6 +78,10 @@ class BoundedLRU:
     def clear(self) -> None:
         self._data.clear()
 
+    def discard(self, key) -> None:
+        """Remove ``key`` if present, without changing any other recency."""
+        self._data.pop(key, None)
+
     def _evict(self) -> None:
         # A single write adds at most one entry, so one pop restores the ceiling;
         # the while loop also copes if ``capacity`` were ever lowered at runtime.

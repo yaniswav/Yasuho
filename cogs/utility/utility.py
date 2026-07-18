@@ -3,12 +3,11 @@ import logging
 import time
 import urllib.parse
 
-import aiohttp
 import discord
 from discord.ext import commands
 
 from tools.formats import random_colour
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 from tools.interactions import notify_failure
 from tools.views import AuthorView, LocaleModal
@@ -220,9 +219,10 @@ class Utility(commands.Cog):
                     "?client=gtx&sl=auto&tl=en&dt=t&q="
                     + urllib.parse.quote(text)
                 )
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
-                    async with s.get(url) as r:
-                        data = await r.json()
+                async with get_session(self.bot).get(
+                    url, timeout=TIMEOUT
+                ) as r:
+                    data = await r.json()
 
                 translated = "".join(seg[0] for seg in data[0])
                 embed = discord.Embed(

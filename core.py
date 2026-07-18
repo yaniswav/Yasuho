@@ -4,13 +4,15 @@ import logging.handlers
 import os
 import sys
 
+import aiohttp
 import asyncpg
 import discord
 import sonolink
 from discord.ext import commands
 
-from tools import backup, i18n, music_state
+from tools import backup, fixups, i18n, music_state
 from tools.config_loader import config_loader
+from tools.http import TIMEOUT
 from tools.mobile_status import enable_mobile_status
 from tools.translator import YasuhoTranslator
 
@@ -20,6 +22,7 @@ DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 TOKEN = config_loader.get("Bot_Token", "Token")
 POSTGRESQL_URI = config_loader.get("Database", "PostgreSQL")
 BACKUPS_DIR = os.path.join(os.path.dirname(__file__), "backups")
+PROJECT_ROOT = os.path.dirname(__file__)
 
 # Strong references to fire-and-forget background tasks (the startup backup),
 # so the loop does not garbage-collect a task that is still running. Mirrors the
@@ -72,7 +75,16 @@ class Yasuho(commands.Bot):
         allowed_mentions = discord.AllowedMentions(
             roles=False, everyone=False, users=True
         )
-        intents = discord.Intents.all()
+        intents = discord.Intents.none()
+        intents.guilds = True
+        intents.members = True
+        intents.moderation = True
+        intents.emojis_and_stickers = True
+        intents.voice_states = True
+        intents.presences = True
+        intents.messages = True
+        intents.reactions = True
+        intents.message_content = True
 
         super().__init__(
             command_prefix=get_prefix,
@@ -85,6 +97,8 @@ class Yasuho(commands.Bot):
         )
 
         self.db_pool = db_pool
+        self.http_session = None
+        self.image_render_semaphore = asyncio.Semaphore(2)
         self.default_prefix = DEFAULT_PREFIX
         # sonolink client for music (Lavalink v4). Created here but only started
         # in setup_hook, and only when [Lavalink] is configured.
@@ -148,17 +162,33 @@ class Yasuho(commands.Bot):
         task.add_done_callback(_background_tasks.discard)
 
     async def setup_hook(self) -> None:
-        # Ensure the database schema exists (idempotent CREATE TABLE IF NOT EXISTS).
-        schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
+        # schema.sql is THE schema source of truth and is applied on every boot.
+        # It is idempotent (CREATE ... IF NOT EXISTS, additive ALTER ... IF NOT
+        # EXISTS, and guarded NOT VALID constraints) and carries no params, so
+        # asyncpg runs it via the simple query protocol where the multi-statement
+        # script executes as one implicit transaction.
+        schema_path = os.path.join(PROJECT_ROOT, "schema.sql")
         if os.path.exists(schema_path):
             with open(schema_path, "r", encoding="utf-8") as fp:
                 await self.db_pool.execute(fp.read())
+
+        # One-shot, idempotent DATA repairs that DDL cannot express. This NEVER
+        # blocks startup: run_fixups swallows per-fixup errors, and the outer
+        # guard covers an unexpected failure of the runner itself.
+        try:
+            applied_fixups = await fixups.run_fixups(self.db_pool)
+            if applied_fixups:
+                log.info("Applied data fixups: %s", ", ".join(applied_fixups))
+        except Exception:
+            log.exception("Data fixups runner failed; continuing startup")
 
         # The DB is confirmed up (schema applied). Take a backup in the
         # background: fire-and-forget so it never delays readiness, with a strong
         # ref + done-callback so the loop cannot drop the task mid-run and so a
         # failure is logged rather than swallowed silently.
         self._schedule_startup_backup()
+
+        self.http_session = aiohttp.ClientSession(timeout=TIMEOUT)
 
         self.prefixes = dict(
             await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
@@ -237,6 +267,15 @@ class Yasuho(commands.Bot):
                 log.warning("Lavalink unavailable, music disabled: %s", e)
         else:
             log.info("Lavalink not configured; music disabled.")
+
+    async def close(self) -> None:
+        try:
+            # Let cogs stop their background tasks before tearing down the
+            # connector those tasks share.
+            await super().close()
+        finally:
+            if self.http_session is not None and not self.http_session.closed:
+                await self.http_session.close()
 
 
 async def get_prefix(bot: Yasuho, message: discord.Message):

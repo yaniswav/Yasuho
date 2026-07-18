@@ -4,7 +4,6 @@ import logging
 import random
 import re
 
-import aiohttp
 import discord
 from discord.ext import commands
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageSequence
@@ -13,7 +12,7 @@ from pyfiglet import figlet_format
 from tools import interactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 from tools.views import AuthorView
 
@@ -185,10 +184,12 @@ class Fun(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
-                    async with cs.get('https://api.thecatapi.com/v1/images/search/') as r:
-                        res = await r.json()
-                        url=(res[0]['url'])
+                async with get_session(self.bot).get(
+                    "https://api.thecatapi.com/v1/images/search/",
+                    timeout=TIMEOUT,
+                ) as r:
+                    res = await r.json()
+                    url = res[0]["url"]
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch cat image")
@@ -201,10 +202,11 @@ class Fun(commands.Cog):
         """Send a random dog picture."""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
-                    async with cs.get('https://random.dog/woof.json') as r:
-                        res = await r.json()
-                        url=(res['url'])
+                async with get_session(self.bot).get(
+                    "https://random.dog/woof.json", timeout=TIMEOUT
+                ) as r:
+                    res = await r.json()
+                    url = res["url"]
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch dog image")
@@ -217,10 +219,12 @@ class Fun(commands.Cog):
         """Send a random fox picture."""
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as cs:
-                    async with cs.get('https://randomfox.ca/floof/?ref=apilist.fun') as r:
-                        res = await r.json()
-                        url=(res['image'])
+                async with get_session(self.bot).get(
+                    "https://randomfox.ca/floof/?ref=apilist.fun",
+                    timeout=TIMEOUT,
+                ) as r:
+                    res = await r.json()
+                    url = res["image"]
                 await ctx.send(url)
             except Exception:
                 log.exception("Failed to fetch fox image")

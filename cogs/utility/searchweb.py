@@ -1,7 +1,6 @@
 import logging
 import urllib.parse
 
-import aiohttp
 import discord
 import requests
 import wikipedia
@@ -9,7 +8,7 @@ from discord.ext import commands
 
 from tools.config_loader import config_loader
 from tools.formats import random_colour
-from tools.http import TIMEOUT
+from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -122,12 +121,12 @@ class SearchWeb(commands.Cog):
 
         async with ctx.typing():
             try:
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
-                    async with s.get(
-                        "https://osu.ppy.sh/api/get_user",
-                        params={"k": key, "u": username},
-                    ) as r:
-                        data = await r.json()
+                async with get_session(self.bot).get(
+                    "https://osu.ppy.sh/api/get_user",
+                    params={"k": key, "u": username},
+                    timeout=TIMEOUT,
+                ) as r:
+                    data = await r.json()
 
                 if not data:
                     return await ctx.send(_("No osu! user found."))
@@ -161,13 +160,13 @@ class SearchWeb(commands.Cog):
         async with ctx.typing():
             try:
                 safe_name = urllib.parse.quote(username, safe="")
-                async with aiohttp.ClientSession(timeout=TIMEOUT) as s:
-                    async with s.get(
-                        f"https://api.mojang.com/users/profiles/minecraft/{safe_name}"
-                    ) as r:
-                        if r.status != 200:
-                            return await ctx.send(_("No such Minecraft account."))
-                        data = await r.json()
+                async with get_session(self.bot).get(
+                    f"https://api.mojang.com/users/profiles/minecraft/{safe_name}",
+                    timeout=TIMEOUT,
+                ) as r:
+                    if r.status != 200:
+                        return await ctx.send(_("No such Minecraft account."))
+                    data = await r.json()
 
                 uuid = data["id"]
                 embed = discord.Embed(
