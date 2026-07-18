@@ -53,3 +53,29 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime + dev dependencies
+        # Audit the same resolved tree the bot and its tests actually install.
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies for known vulnerabilities
+        # Blocking: the dependency tree is clean today (Pillow >= 12.3.0,
+        # PyNaCl >= 1.6.2 close the last advisories). If a NEW advisory lands,
+        # this fails the build - bump the affected pin in requirements.txt to the
+        # fix version (requirements.lock shows the fully-resolved tree), or, only
+        # with a written justification, add `--ignore-vuln <ID>` to this step.
+        run: pip-audit --progress-spinner off
