@@ -66,7 +66,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import unquote, urlsplit
 
 log = logging.getLogger(__name__)
@@ -124,6 +124,21 @@ def rotation_victims(existing_names, keep: int = BACKUP_KEEP) -> list[str]:
     # Newest first; secondary sort on name keeps duplicate timestamps stable.
     dated.sort(key=lambda item: (item[0], item[1]), reverse=True)
     return [name for _, name in dated[keep:]]
+
+
+def newest_dump(existing_names) -> tuple[datetime, str] | None:
+    """Return ``(timestamp, name)`` of the newest recognised dump, or None.
+
+    Pure counterpart to ``rotation_victims``: it applies the same name parsing
+    and the same ordering (embedded timestamp, name as tie-break) but returns
+    only the single newest dump. Foreign files are ignored. Returns None when no
+    recognised dump is present, which is the caller's cue that no backup exists.
+    """
+    dated = [(ts, name) for name in existing_names if (ts := _parse_ts(name))]
+    if not dated:
+        return None
+    dated.sort(key=lambda item: (item[0], item[1]))
+    return dated[-1]
 
 
 @dataclass(frozen=True)
@@ -196,6 +211,95 @@ class BackupResult:
     size: int | None = None
     deleted: int = 0
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class BackupReport:
+    """Freshness snapshot of the newest dump on disk (no secrets, safe to log).
+
+    ``timestamp`` is the UTC time embedded in the filename, not filesystem mtime,
+    so it is deterministic and matches what rotation orders by. ``age`` derives
+    from it against a caller-supplied ``now`` (kept as an argument rather than
+    calling utcnow internally so the logic stays pure and unit-testable).
+    """
+
+    name: str
+    path: str
+    timestamp: datetime
+    size: int
+
+    def age(self, now: datetime) -> timedelta:
+        return now - self.timestamp
+
+
+def latest_backup_report(backups_dir: str) -> BackupReport | None:
+    """Return a BackupReport for the newest dump in ``backups_dir``, or None.
+
+    None means no recognised dump exists (empty/missing directory, or only
+    foreign files). The newest dump is selected by the timestamp embedded in the
+    filename via ``newest_dump``; size comes from a single stat. Never raises: a
+    missing directory or unreadable file degrades to None / size 0.
+    """
+    try:
+        names = os.listdir(backups_dir)
+    except OSError:
+        return None
+    newest = newest_dump(names)
+    if newest is None:
+        return None
+    ts, name = newest
+    path = os.path.join(backups_dir, name)
+    try:
+        size = os.path.getsize(path)
+    except OSError:
+        size = 0
+    return BackupReport(name=name, path=path, timestamp=ts, size=size)
+
+
+@dataclass(frozen=True)
+class VerifyResult:
+    """Outcome of a pg_restore --list integrity probe (safe to log, no secrets)."""
+
+    ok: bool
+    error: str | None = None
+
+
+def _map_verify_result(returncode: int, stderr: bytes | None) -> VerifyResult:
+    """Map a finished pg_restore --list process to a VerifyResult (pure).
+
+    A zero exit means the archive's table of contents parsed cleanly. Any other
+    exit is treated as a corrupt/unreadable dump; the stderr tail is attached
+    (trimmed and never carrying a secret - --list opens no database connection).
+    """
+    if returncode != 0:
+        detail = (stderr or b"").decode("utf-8", "replace").strip()
+        return VerifyResult(
+            ok=False, error=f"pg_restore --list exit {returncode}: {detail[:500]}"
+        )
+    return VerifyResult(ok=True)
+
+
+async def verify_backup(path: str) -> VerifyResult:
+    """Check a dump's integrity by listing its table of contents. No restore.
+
+    Runs ``pg_restore --list <path>``, which parses the custom-format archive
+    header and TOC without connecting to or writing any database - cheap (seconds)
+    and completely side-effect-free. stdout is discarded; stderr is captured and
+    bounded. Never raises: a spawn failure or non-zero exit comes back as
+    ``VerifyResult(ok=False, error=...)``. No password is needed or passed, so
+    argv and env are secret-free.
+    """
+    args = ["pg_restore", "--list", path]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await proc.communicate()
+    except Exception as exc:  # spawn failure (pg_restore missing, etc.)
+        return VerifyResult(ok=False, error=f"pg_restore did not start: {exc}")
+    return _map_verify_result(proc.returncode, stderr)
 
 
 def human_size(num: int) -> str:

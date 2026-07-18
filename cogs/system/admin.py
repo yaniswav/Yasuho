@@ -435,11 +435,21 @@ class Admin(commands.Cog):
         if not result.ok:
             log.warning("?backup failed: %s", result.error)
             return await ctx.send("Backup failed. Check the logs.")
+        # Verify the dump we just wrote is a readable archive (pg_restore --list
+        # reads its table of contents; it never restores into any database).
+        verify = await backup.verify_backup(result.path)
+        if verify.ok:
+            integrity = "integrity OK"
+        else:
+            log.error("BACKUP-CORRUPT: ?backup verify failed: %s", verify.error)
+            integrity = "integrity CHECK FAILED (see logs)"
         await ctx.send(
-            "Backup saved: `{name}` ({size}), {deleted} old dump(s) rotated.".format(
+            "Backup saved: `{name}` ({size}), {deleted} old dump(s) rotated, "
+            "{integrity}.".format(
                 name=os.path.basename(result.path),
                 size=backup.human_size(result.size or 0),
                 deleted=result.deleted,
+                integrity=integrity,
             )
         )
 

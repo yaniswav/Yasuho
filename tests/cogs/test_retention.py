@@ -19,6 +19,10 @@ def _gated_cog(*, ready, guilds, paused=False, last_healthy=None):
     cog = _cog(bot)
     cog._paused = paused
     cog._last_healthy_guild_count = last_healthy
+    # Point the backup guard at a directory with no dumps so the healthy-path
+    # tick takes the "no dump found" branch and never shells out to pg_restore.
+    cog._backups_dir = "/nonexistent-yasuho-backups-test-dir"
+    cog._backup_verified = False
     return cog
 
 
@@ -218,3 +222,88 @@ async def test_avatar_cleanup_stops_after_short_batch(monkeypatch):
         "avatar_rows": 253,
         "avatar_bytes": 1020,
     }
+
+
+# ---------------------------------------------------------------------------
+# _check_backups: freshness (warn only on total absence) + once-per-boot probe
+# ---------------------------------------------------------------------------
+
+
+def _backup_cog():
+    """A cog wired only for the backup guard (no __init__/loop)."""
+    cog = _cog(object())
+    cog._backups_dir = "/irrelevant"
+    cog._backup_verified = False
+    return cog
+
+
+class _Report:
+    def __init__(self, name="yasuho-20260705-120000.dump", size=123):
+        self.name = name
+        self.path = "/irrelevant/" + name
+        self.size = size
+
+
+async def test_check_backups_warns_when_no_dump_and_skips_verify(monkeypatch):
+    verified = []
+
+    monkeypatch.setattr(
+        retention_cog.backup, "latest_backup_report", lambda _d: None
+    )
+
+    async def verify(_path):
+        verified.append(_path)
+
+    monkeypatch.setattr(retention_cog.backup, "verify_backup", verify)
+
+    cog = _backup_cog()
+    await cog._check_backups()
+
+    # Absence never triggers the integrity probe, and the boot flag stays unset
+    # so a later tick (once a dump appears) still gets its one verification.
+    assert verified == []
+    assert cog._backup_verified is False
+
+
+async def test_check_backups_verifies_once_per_boot(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        retention_cog.backup,
+        "latest_backup_report",
+        lambda _d: _Report(),
+    )
+
+    async def verify(path):
+        calls.append(path)
+        return types.SimpleNamespace(ok=True, error=None)
+
+    monkeypatch.setattr(retention_cog.backup, "verify_backup", verify)
+
+    cog = _backup_cog()
+    await cog._check_backups()
+    await cog._check_backups()  # second tick, same unchanged dump
+    await cog._check_backups()
+
+    assert len(calls) == 1  # verified exactly once for the life of the process
+    assert cog._backup_verified is True
+
+
+async def test_check_backups_logs_error_on_corrupt_dump(monkeypatch, caplog):
+    monkeypatch.setattr(
+        retention_cog.backup,
+        "latest_backup_report",
+        lambda _d: _Report(),
+    )
+
+    async def verify(_path):
+        return types.SimpleNamespace(ok=False, error="bad magic")
+
+    monkeypatch.setattr(retention_cog.backup, "verify_backup", verify)
+
+    cog = _backup_cog()
+    with caplog.at_level("ERROR"):
+        await cog._check_backups()
+
+    assert any("BACKUP-CORRUPT" in r.message for r in caplog.records)
+    # Still consumes the one-shot: we do not re-probe a known-bad file each tick.
+    assert cog._backup_verified is True

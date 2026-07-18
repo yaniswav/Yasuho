@@ -2,10 +2,11 @@
 
 import asyncio
 import logging
+import os
 
 from discord.ext import commands, tasks
 
-from tools import retention
+from tools import backup, retention
 
 log = logging.getLogger(__name__)
 
@@ -13,6 +14,11 @@ log = logging.getLogger(__name__)
 # fraction of the last healthy count is treated as a partial gateway state and
 # skipped, so a reconnect can never enrol live guilds as orphans.
 GUILD_COUNT_HEALTH_RATIO = 0.5
+
+# backups/ lives at the repo root; this file is cogs/system/retention.py.
+_BACKUPS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "backups")
+)
 
 
 class DataRetention(commands.Cog):
@@ -25,6 +31,10 @@ class DataRetention(commands.Cog):
         # Guild count of the last successful pass; guards against acting on a
         # transiently partial gateway state (see _is_healthy).
         self._last_healthy_guild_count = None
+        # Backup guard state (see _check_backups): where dumps live, and whether
+        # the once-per-boot integrity probe has already run this process.
+        self._backups_dir = _BACKUPS_DIR
+        self._backup_verified = False
         self.maintenance.start()
 
     def cog_unload(self):
@@ -138,6 +148,54 @@ class DataRetention(commands.Cog):
             "avatar_bytes": avatar_bytes,
         }
 
+    async def _check_backups(self):
+        """Freshness + integrity guard for the pg_dump archives.
+
+        FRESHNESS SEMANTICS (the deliberate choice). Dumps are taken only at
+        startup and on demand via ?backup - never on a timer (house rule: no
+        cron/services). A dump's age therefore simply tracks the bot's uptime:
+        a process healthily up for three weeks legitimately has a three-week-old
+        newest dump. An age threshold (e.g. "warn if > 26h") would thus fire on
+        exactly the healthy long-uptime case it is meant to reassure us about -
+        a guaranteed false positive on any well-behaved deployment. The only
+        actionable freshness failure is the TOTAL ABSENCE of a dump: the startup
+        dump silently failed, or backups/ was wiped. So absence is the sole
+        freshness condition we warn on. It is a single listdir, so we do it on
+        every tick.
+
+        INTEGRITY. pg_restore --list reads the archive's table of contents
+        without touching any database - cheap, but not free. The newest dump
+        does not change unless a ?backup runs, so re-listing the same file every
+        24h is wasted work. We verify ONCE PER BOOT (the first tick that finds a
+        dump) instead; a corrupt newest dump surfaces as a grep-able error line.
+        """
+        report = backup.latest_backup_report(self._backups_dir)
+        if report is None:
+            log.warning(
+                "BACKUP-FRESHNESS: no Postgres dump found in %s - the startup "
+                "dump may have failed. Run ?backup to take one.",
+                self._backups_dir,
+            )
+            return
+        if self._backup_verified:
+            return
+        # First tick with a dump present: probe it once, then never again this
+        # boot (set the flag before awaiting so a slow probe cannot double-fire).
+        self._backup_verified = True
+        result = await backup.verify_backup(report.path)
+        if result.ok:
+            log.info(
+                "Backup integrity OK: %s (%s)",
+                report.name,
+                backup.human_size(report.size),
+            )
+        else:
+            log.error(
+                "BACKUP-CORRUPT: pg_restore --list failed for %s: %s",
+                report.name,
+                result.error,
+            )
+
     @tasks.loop(hours=24)
     async def maintenance(self):
         if self._paused:
@@ -147,6 +205,7 @@ class DataRetention(commands.Cog):
             return
         try:
             await self.run_once()
+            await self._check_backups()
         except asyncio.CancelledError:
             raise
         except Exception:

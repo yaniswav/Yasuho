@@ -6,7 +6,7 @@ the backend: the filename shape, rotation selection, and - critically - that the
 parsed DSN never reveals the password through str/repr.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from tools import backup
 
@@ -154,3 +154,99 @@ def test_dump_args_never_contain_the_password():
     assert "--port=5432" in args
     assert "--username=yasuho" in args
     assert "--dbname=yasuho_db" in args
+
+
+# ---------------------------------------------------------------------------
+# newest_dump
+# ---------------------------------------------------------------------------
+
+
+def test_newest_dump_picks_the_latest_timestamp():
+    names = _names(5)  # 2026-07-01 .. 2026-07-05
+    ts, name = backup.newest_dump(names)
+    assert name == _dump("20260705-120000")
+    assert ts == datetime(2026, 7, 5, 12, 0, 0)
+
+
+def test_newest_dump_ignores_foreign_files():
+    names = ["README.md", "notes.txt", _dump("20260701-120000")]
+    ts, name = backup.newest_dump(names)
+    assert name == _dump("20260701-120000")
+
+
+def test_newest_dump_none_when_no_dumps():
+    assert backup.newest_dump(["README.md", "x.log"]) is None
+    assert backup.newest_dump([]) is None
+
+
+def test_newest_dump_ordering_ignores_list_order():
+    # Insertion order must not matter; selection is by embedded timestamp.
+    names = [_dump("20260703-120000"), _dump("20260701-120000"),
+             _dump("20260705-120000"), _dump("20260702-120000")]
+    _, name = backup.newest_dump(names)
+    assert name == _dump("20260705-120000")
+
+
+# ---------------------------------------------------------------------------
+# latest_backup_report
+# ---------------------------------------------------------------------------
+
+
+def test_latest_backup_report_none_for_missing_dir(tmp_path):
+    missing = tmp_path / "does-not-exist"
+    assert backup.latest_backup_report(str(missing)) is None
+
+
+def test_latest_backup_report_none_when_no_dumps(tmp_path):
+    (tmp_path / "README.md").write_text("hi")
+    assert backup.latest_backup_report(str(tmp_path)) is None
+
+
+def test_latest_backup_report_reports_newest_with_size(tmp_path):
+    (tmp_path / _dump("20260701-120000")).write_bytes(b"old")
+    newest = tmp_path / _dump("20260705-120000")
+    newest.write_bytes(b"newer-content")
+    report = backup.latest_backup_report(str(tmp_path))
+    assert report.name == _dump("20260705-120000")
+    assert report.path == str(newest)
+    assert report.timestamp == datetime(2026, 7, 5, 12, 0, 0)
+    assert report.size == len(b"newer-content")
+
+
+def test_backup_report_age_is_now_minus_timestamp():
+    report = backup.BackupReport(
+        name="x", path="/x", timestamp=datetime(2026, 7, 5, 12, 0, 0), size=1
+    )
+    age = report.age(datetime(2026, 7, 6, 12, 0, 0))
+    assert age == timedelta(hours=24)
+
+
+# ---------------------------------------------------------------------------
+# _map_verify_result (pg_restore --list outcome mapping; no subprocess)
+# ---------------------------------------------------------------------------
+
+
+def test_map_verify_result_ok_on_zero_exit():
+    result = backup._map_verify_result(0, b"")
+    assert result.ok is True
+    assert result.error is None
+
+
+def test_map_verify_result_error_on_nonzero_exit():
+    result = backup._map_verify_result(1, b"pg_restore: error: did not find magic")
+    assert result.ok is False
+    assert "exit 1" in result.error
+    assert "magic" in result.error
+
+
+def test_map_verify_result_bounds_the_stderr_tail():
+    result = backup._map_verify_result(1, b"x" * 5000)
+    assert result.ok is False
+    # Error carries a prefix plus at most 500 chars of stderr detail.
+    assert len(result.error) < 600
+
+
+def test_map_verify_result_handles_none_stderr():
+    result = backup._map_verify_result(2, None)
+    assert result.ok is False
+    assert "exit 2" in result.error
