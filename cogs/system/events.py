@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands, tasks
 from discord.utils import find
 
+from tools import retention
 from tools.config_loader import config_loader
 from tools.i18n import _
 
@@ -60,9 +61,54 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        # No prefix row is stored for new guilds: the DB only holds *custom*
-        # prefixes; get_prefix resolves everyone else to DEFAULT_PREFIX in O(1)
-        # from memory, so there is nothing to insert or cache here.
+        # A rejoin inside the grace period restores the existing configuration.
+        # Cancel its scheduled purge and refill the startup caches evicted when
+        # the bot left.
+        try:
+            cancelled = await retention.cancel_guild_purge(
+                self.bot.db_pool, guild.id
+            )
+            row = await self.bot.db_pool.fetchrow(
+                "SELECT "
+                "(SELECT prefix FROM prefixes WHERE guild_id = $1) AS prefix, "
+                "(SELECT role_id FROM autorole WHERE guild_id = $1) AS autorole, "
+                "(SELECT role_id FROM muterole WHERE guild_id = $1) AS muterole",
+                guild.id,
+            )
+            for attr, column in (
+                ("prefixes", "prefix"),
+                ("autoroles", "autorole"),
+                ("muteroles", "muterole"),
+            ):
+                cache = getattr(self.bot, attr)
+                value = row[column]
+                if value is None:
+                    cache.pop(guild.id, None)
+                else:
+                    cache[guild.id] = value
+
+            leveling = self.bot.get_cog("Leveling")
+            if leveling is not None:
+                await leveling.refresh_guild_config(guild.id)
+
+            rooms = self.bot.get_cog("TemporaryRooms")
+            if rooms is not None:
+                rooms._index_guild(
+                    guild.id, await rooms._load_hubs(guild.id)
+                )
+            if cancelled:
+                log.info(
+                    "Cancelled scheduled data purge after guild %s rejoined",
+                    guild.id,
+                )
+        except Exception:
+            # Joining must remain usable during a retention DB outage; the
+            # maintenance worker also refuses to purge active cached guilds.
+            log.exception(
+                "Failed to cancel/restore retention state for guild %s",
+                guild.id,
+            )
+
         names = [
             "general",
             "général",
@@ -100,13 +146,22 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        query = """
-                DELETE FROM prefixes
-                WHERE guild_id = $1
-
-                """
-        await self.bot.db_pool.execute(query, guild.id)
-        self.bot.prefixes.pop(guild.id, None)
+        try:
+            purge_after = await retention.schedule_guild_purge(
+                self.bot.db_pool, guild.id
+            )
+            log.info(
+                "Guild %s data scheduled for purge at %s",
+                guild.id,
+                purge_after.isoformat(),
+            )
+        except Exception:
+            # Never turn a transient outage into immediate data loss.
+            log.exception(
+                "Failed to schedule data purge for departed guild %s", guild.id
+            )
+        finally:
+            retention.invalidate_guild_caches(self.bot, guild.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import math
@@ -6,11 +7,17 @@ import discord
 from discord.ext import commands
 from PIL import Image
 
+from tools import privacy, rendering, retention, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
+TRACKING_PREF_KEY = privacy.AVATAR_TRACKING_KEY
+HISTORY_LIMIT = retention.AVATAR_MAX_PER_SERIES
+STORAGE_MAX_SIZE = 192
+STORAGE_WEBP_QUALITY = 76
+COMPRESSION_BATCH_SIZE = 25
 
 # Human-readable titles and nouns per tracked image kind. Marked with N_ so
 # pybabel extracts them; each is translated at the use site via _(...).
@@ -99,12 +106,88 @@ class AvatarHistory(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self._compression_task = self.bot.loop.create_task(
+            self._compress_existing_history()
+        )
+
+    def cog_unload(self):
+        self._compression_task.cancel()
+
+    @staticmethod
+    def compress_for_storage(raw):
+        """Return a bounded WebP representation suitable for collage storage."""
+        with Image.open(io.BytesIO(raw)) as source:
+            source.load()
+            image = source.convert(
+                "RGBA" if source.mode in {"RGBA", "LA"} else "RGB"
+            )
+        image.thumbnail(
+            (STORAGE_MAX_SIZE, STORAGE_MAX_SIZE), Image.Resampling.LANCZOS
+        )
+        output = io.BytesIO()
+        image.save(
+            output,
+            "WEBP",
+            quality=STORAGE_WEBP_QUALITY,
+            method=6,
+        )
+        return output.getvalue()
+
+    async def _compress_existing_history(self):
+        """Gradually recompress legacy PNG rows without delaying bot startup."""
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            try:
+                rows = await self.bot.db_pool.fetch(
+                    "SELECT id, avatar FROM avatar_history "
+                    "WHERE image_format = 'png' ORDER BY id LIMIT $1",
+                    COMPRESSION_BATCH_SIZE,
+                )
+                if not rows:
+                    return
+                for row in rows:
+                    raw = bytes(row["avatar"])
+                    try:
+                        compressed = await rendering.run_image_job(
+                            self.bot, self.compress_for_storage, raw
+                        )
+                    except Exception:
+                        log.exception(
+                            "failed to recompress avatar history row %s",
+                            row["id"],
+                        )
+                        compressed = raw
+                    if len(compressed) < len(raw):
+                        await self.bot.db_pool.execute(
+                            "UPDATE avatar_history "
+                            "SET avatar = $2, image_format = 'webp' "
+                            "WHERE id = $1 AND image_format = 'png'",
+                            row["id"],
+                            compressed,
+                        )
+                    else:
+                        await self.bot.db_pool.execute(
+                            "UPDATE avatar_history SET image_format = 'original' "
+                            "WHERE id = $1 AND image_format = 'png'",
+                            row["id"],
+                        )
+                await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("avatar history compression worker failed")
+                await asyncio.sleep(60)
 
     async def _record(self, user_id, guild_id, kind, asset):
         """Single recording path for every tracked image kind."""
         if asset is None:
             return
         try:
+            tracking_enabled = await settings.get_user(
+                self.bot.db_pool, user_id, TRACKING_PREF_KEY, True
+            )
+            if not tracking_enabled:
+                return
             ref = asset.key
             last = await self.bot.db_pool.fetchval(
                 "SELECT ref FROM avatar_history "
@@ -136,25 +219,17 @@ class AvatarHistory(commands.Cog):
                     len(data),
                 )
                 return
-            await self.bot.db_pool.execute(
-                "INSERT INTO avatar_history(user_id, guild_id, kind, ref, avatar) "
-                "VALUES($1, $2, $3, $4, $5)",
-                user_id,
-                guild_id,
-                kind,
-                ref,
-                data,
+            data = await rendering.run_image_job(
+                self.bot, self.compress_for_storage, data
             )
-            await self.bot.db_pool.execute(
-                "DELETE FROM avatar_history "
-                "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
-                "AND id NOT IN ("
-                "SELECT id FROM avatar_history "
-                "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
-                "ORDER BY changed_at DESC LIMIT 50)",
-                user_id,
-                kind,
-                guild_id,
+            await privacy.store_avatar_if_tracking(
+                self.bot.db_pool,
+                user_id=user_id,
+                guild_id=guild_id,
+                kind=kind,
+                ref=ref,
+                avatar=data,
+                history_limit=HISTORY_LIMIT,
             )
         except Exception:
             log.exception("failed to record %s image for user %s", kind, user_id)
@@ -214,20 +289,21 @@ class AvatarHistory(commands.Cog):
         return buf
 
     async def _collage_for(self, member, kind, guild_id):
-        """Fetch up to 50 rows for a kind and render them into a collage."""
+        """Fetch the retained rows for a kind and render them into a collage."""
         rows = await self.bot.db_pool.fetch(
             "SELECT avatar FROM avatar_history "
             "WHERE user_id = $1 AND kind = $2 AND guild_id IS NOT DISTINCT FROM $3 "
-            "ORDER BY changed_at DESC LIMIT 50",
+            "ORDER BY changed_at DESC LIMIT $4",
             member.id,
             kind,
             guild_id,
+            HISTORY_LIMIT,
         )
         if not rows:
             return None
         images = [bytes(r["avatar"]) for r in rows]
-        buf = await self.bot.loop.run_in_executor(
-            None, self.build_collage, images
+        buf = await rendering.run_image_job(
+            self.bot, self.build_collage, images
         )
         return buf, len(images)
 
@@ -245,13 +321,14 @@ class AvatarHistory(commands.Cog):
             )
             return embed, None
         buf, count = result
-        embed.description = _("Showing `{count}` of up to `50` changes").format(
-            count=count
-        )
+        embed.description = _(
+            "Showing `{count}` of up to `{limit}` changes"
+        ).format(count=count, limit=HISTORY_LIMIT)
         embed.set_image(url="attachment://history.png")
         return embed, buf
 
     @commands.hybrid_command(aliases=["avh"])
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @discord.app_commands.describe(member="Whose history to show (defaults to you).")
     async def avatarhistory(self, ctx, member: discord.User = None):
         """Show a collage of a user's avatar / server avatar / banner history."""

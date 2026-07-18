@@ -70,6 +70,9 @@ class SettingsCache:
         self._user.clear()
         self._guild.clear()
 
+    def discard(self, key):
+        self._bucket(key).discard(key)
+
     def __len__(self):
         return len(self._user) + len(self._guild)
 
@@ -99,15 +102,33 @@ async def _load(pool, spec, id_val):
     return _cache[cache_key]
 
 
-async def _save(pool, spec, id_val, data):
+async def _save_key(pool, spec, id_val, key, value):
+    """Persist a SINGLE preference key, patching the row in place.
+
+    The write is a per-key ``jsonb_set`` (a single parameterized statement), not
+    a whole-blob overwrite. This is what closes the lost-update against
+    ``tools.privacy``: that module writes the avatar-tracking flag out-of-band
+    under an advisory lock, and a stale whole-blob write here would silently
+    revert it. A per-key patch only ever touches the one key we changed, so any
+    sibling key another writer set survives untouched.
+
+    The DB row is patched first; only then is the in-process cache reconciled.
+    ``_load`` re-reads the authoritative row on a cold or invalidated cache (so a
+    concurrent out-of-band write is picked up), and the final patch guarantees
+    our own key is present regardless of what the reload observed.
+    """
     table, id_col = spec
-    _cache[(table, id_val)] = data
     await pool.execute(
-        f"INSERT INTO {table} ({id_col}, settings) VALUES ($1, $2::jsonb) "
-        f"ON CONFLICT ({id_col}) DO UPDATE SET settings = $2::jsonb",
+        f"INSERT INTO {table} ({id_col}, settings) "
+        f"VALUES ($1, jsonb_build_object($2::text, $3::jsonb)) "
+        f"ON CONFLICT ({id_col}) DO UPDATE SET settings = "
+        f"jsonb_set({table}.settings, ARRAY[$2::text], $3::jsonb, true)",
         id_val,
-        json.dumps(data),
+        key,
+        json.dumps(value),
     )
+    data = await _load(pool, spec, id_val)
+    data[key] = value
 
 
 async def get_user(pool, user_id, key, default=None):
@@ -115,9 +136,7 @@ async def get_user(pool, user_id, key, default=None):
 
 
 async def set_user(pool, user_id, key, value):
-    data = dict(await _load(pool, _USER, user_id))
-    data[key] = value
-    await _save(pool, _USER, user_id, data)
+    await _save_key(pool, _USER, user_id, key, value)
 
 
 async def get_guild(pool, guild_id, key, default=None):
@@ -125,6 +144,14 @@ async def get_guild(pool, guild_id, key, default=None):
 
 
 async def set_guild(pool, guild_id, key, value):
-    data = dict(await _load(pool, _GUILD, guild_id))
-    data[key] = value
-    await _save(pool, _GUILD, guild_id, data)
+    await _save_key(pool, _GUILD, guild_id, key, value)
+
+
+def invalidate_user(user_id):
+    """Drop one user's cached blob after an out-of-band transactional write."""
+    _cache.discard((_USER[0], user_id))
+
+
+def invalidate_guild(guild_id):
+    """Drop one guild's cached blob after retention deletes its source row."""
+    _cache.discard((_GUILD[0], guild_id))

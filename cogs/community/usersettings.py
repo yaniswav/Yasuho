@@ -3,9 +3,10 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import i18n, settings
+from tools import i18n, privacy, rendering, settings
 from tools.i18n import N_, _
 from tools.interactions import notify_failure
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -91,12 +92,97 @@ PREFS = [
         ),
         default=False,
     ),
+    Preference(
+        key="avatar_history_tracking",
+        label=N_("Avatar history tracking"),
+        emoji="🖼️",
+        description=N_(
+            "Let Yasuho save future avatar and banner changes for public history."
+        ),
+        default=True,
+    ),
 ]
 
 
 def _style(value):
     """Green when a preference is on, grey when off."""
     return discord.ButtonStyle.success if value else discord.ButtonStyle.secondary
+
+
+def _human_bytes(value):
+    amount = float(value)
+    for unit in ("B", "KiB", "MiB", "GiB"):
+        if amount < 1024 or unit == "GiB":
+            return (
+                f"{int(amount)} {unit}"
+                if unit == "B"
+                else f"{amount:.1f} {unit}"
+            )
+        amount /= 1024
+    return f"{value} B"
+
+
+class AvatarDeletionView(AuthorView):
+    """One-shot destructive confirmation for personal avatar history."""
+
+    def __init__(self, cog, author_id):
+        super().__init__(
+            author_id,
+            timeout=60,
+            # A registered N_ literal (see tools.views._DENY_STRINGS); the base
+            # AuthorView.interaction_check translates it at click time.
+            deny_message="This prompt isn't for you.",
+        )
+        self.cog = cog
+        self._running = False
+        # Localize the labels at send time (the command context set the
+        # invoker's locale), the way RemindLauncherView builds its labels in
+        # __init__. The decorator labels below are construction-time
+        # placeholders discord.py requires; these overrides are what render.
+        self.confirm.label = _("Delete my avatar history")
+        self.cancel.label = _("Cancel")
+
+    @discord.ui.button(
+        label="Delete my avatar history",
+        style=discord.ButtonStyle.danger,
+    )
+    async def confirm(self, interaction, button):
+        if self._running:
+            return
+        self._running = True
+        await interaction.response.defer()
+        try:
+            count, size = await privacy.delete_user_avatar_history(
+                self.cog.bot.db_pool, self.author_id
+            )
+            self.stop()
+            for child in self.children:
+                child.disabled = True
+            await interaction.edit_original_response(
+                content=_(
+                    "Deleted {count} saved image(s) ({size}). Future avatar "
+                    "tracking is now turned off."
+                ).format(count=count, size=_human_bytes(size)),
+                view=self,
+            )
+        except Exception:
+            self._running = False
+            log.exception(
+                "Failed to delete avatar history for %s", self.author_id
+            )
+            await interaction.followup.send(
+                _("Something went wrong deleting your avatar history."),
+                ephemeral=True,
+            )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(
+            content=_("Avatar history deletion cancelled."), view=self
+        )
 
 
 class PrefButton(discord.ui.Button):
@@ -184,9 +270,14 @@ class SettingsView(discord.ui.LayoutView):
         """Flip a preference, persist it and re-render the panel in place."""
         try:
             new_value = not self.states.get(pref.key, pref.default)
-            await settings.set_user(
-                self.bot.db_pool, self.author_id, pref.key, new_value
-            )
+            if pref.key == privacy.AVATAR_TRACKING_KEY:
+                await privacy.set_avatar_tracking(
+                    self.bot.db_pool, self.author_id, new_value
+                )
+            else:
+                await settings.set_user(
+                    self.bot.db_pool, self.author_id, pref.key, new_value
+                )
             self.states[pref.key] = new_value
             self._rerender()
             await interaction.response.edit_message(view=self)
@@ -241,6 +332,81 @@ class UserSettings(commands.Cog):
         # (no embed, no content) and with mentions suppressed for safety.
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    @commands.hybrid_group(name="mydata", invoke_without_command=True)
+    async def mydata(self, ctx):
+        """Export your personal data or delete your avatar history."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(
+                _(
+                    "Use `{prefix}mydata export` to receive your data, or "
+                    "`{prefix}mydata deleteavatars` to erase saved avatars."
+                ).format(prefix=ctx.clean_prefix)
+            )
+
+    @mydata.command(name="export")
+    @commands.cooldown(1, 3600, commands.BucketType.user)
+    async def mydata_export(self, ctx):
+        """Export your Yasuho personal data without OAuth secrets."""
+        async def _build():
+            data, avatar_rows = await privacy.collect_user_export(
+                self.bot.db_pool, ctx.author.id
+            )
+            return await rendering.run_image_job(
+                self.bot,
+                privacy.build_export_archives,
+                data,
+                avatar_rows,
+            )
+
+        try:
+            if ctx.interaction is not None:
+                await ctx.defer(ephemeral=True)
+                archives = await _build()
+            else:
+                async with ctx.typing():
+                    archives = await _build()
+
+            if ctx.interaction is not None:
+                for filename, archive in archives:
+                    await ctx.send(
+                        file=discord.File(archive, filename=filename),
+                        ephemeral=True,
+                    )
+                return
+
+            for filename, archive in archives:
+                await ctx.author.send(
+                    file=discord.File(archive, filename=filename)
+                )
+            await ctx.send(
+                _("I sent your data export to you by direct message.")
+            )
+        except discord.Forbidden:
+            await ctx.send(
+                _("I couldn't send you a direct message. Please enable DMs.")
+            )
+        except Exception:
+            log.exception("Failed to export personal data for %s", ctx.author.id)
+            await ctx.send(
+                _("Something went wrong building your data export."),
+                ephemeral=ctx.interaction is not None,
+            )
+
+    @mydata.command(name="deleteavatars")
+    @commands.cooldown(1, 60, commands.BucketType.user)
+    async def mydata_deleteavatars(self, ctx):
+        """Permanently delete your saved avatars and disable future tracking."""
+        view = AvatarDeletionView(self, ctx.author.id)
+        view.message = await ctx.send(
+            _(
+                "This permanently deletes every saved global avatar, server "
+                "avatar and banner for your account. It also turns future "
+                "tracking off. This cannot be undone."
+            ),
+            view=view,
+            ephemeral=ctx.interaction is not None,
         )
 
 

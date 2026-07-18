@@ -7,6 +7,7 @@ fetch must not clobber a value a concurrent writer already cached).
 """
 
 import asyncio
+import json
 
 import pytest
 
@@ -118,3 +119,71 @@ async def test_user_flood_does_not_evict_guild_blob(fake_pool, monkeypatch):
     assert await settings.get_guild(fake_pool, 100, "leveling_enabled") is True
     reads_after = len([c for c in fake_pool.calls if c[0] == "fetchval"])
     assert reads_after == reads_before
+
+
+async def test_set_user_patches_single_key_via_jsonb_set(fake_pool):
+    """set_user must write ONE key with jsonb_set, never a whole-blob overwrite.
+
+    The whole-blob overwrite is the lost-update: tools/privacy.py writes the
+    avatar-tracking flag out-of-band under an advisory lock, and a stale full
+    blob written here would revert it. A per-key jsonb_set only touches the key
+    we changed.
+    """
+    settings._cache.clear()
+    await settings.set_user(fake_pool, 5, "help_expand", True)
+
+    writes = [call for call in fake_pool.calls if call[0] == "execute"]
+    assert writes, "set_user must issue a DB write"
+    _method, query, args = writes[-1]
+    assert "jsonb_set" in query
+    assert "jsonb_build_object" in query
+    # A whole-blob overwrite would set the entire column; that must be gone.
+    assert "settings = $2::jsonb" not in query
+    # Single parameterized statement keyed by (id, key, value).
+    assert args == (5, "help_expand", json.dumps(True))
+
+
+async def test_set_user_does_not_revert_out_of_band_sibling_key():
+    """Regression: a set_user write must not clobber a concurrently-set sibling.
+
+    Models the real row and jsonb_set semantics. A whole-blob write built from a
+    stale cache would drop ``avatar_history_tracking``; the per-key patch keeps
+    it.
+    """
+
+    class _JsonbPool:
+        def __init__(self, row):
+            self.row = row
+            self.calls = []
+
+        async def execute(self, query, *args):
+            self.calls.append(("execute", query, args))
+            _id, key, value = args
+            self.row[key] = json.loads(value)  # emulate the per-key patch
+            return "INSERT 0 1"
+
+        async def fetchval(self, query, *args):
+            self.calls.append(("fetchval", query, args))
+            return json.dumps(self.row)  # authoritative post-write row
+
+    settings._cache.clear()
+    pool = _JsonbPool({"avatar_history_tracking": True})
+
+    await settings.set_user(pool, 5, "help_expand", False)
+
+    assert pool.row["avatar_history_tracking"] is True  # untouched sibling
+    assert pool.row["help_expand"] is False
+
+
+async def test_targeted_invalidation_forces_only_that_scope_to_reread(fake_pool):
+    fake_pool.fetchval_return = None
+    await settings.get_user(fake_pool, 5, "x")
+    await settings.get_guild(fake_pool, 5, "x")
+
+    settings.invalidate_user(5)
+    settings.invalidate_guild(5)
+
+    await settings.get_user(fake_pool, 5, "x")
+    await settings.get_guild(fake_pool, 5, "x")
+    fetchvals = [call for call in fake_pool.calls if call[0] == "fetchval"]
+    assert len(fetchvals) == 4
