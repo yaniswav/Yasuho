@@ -226,7 +226,9 @@ async def run_backup(
     """
     conn = parse_dsn(dsn)
     try:
-        os.makedirs(backups_dir, exist_ok=True)
+        # Dumps hold the full database: keep the directory owner-only.
+        os.makedirs(backups_dir, mode=0o700, exist_ok=True)
+        os.chmod(backups_dir, 0o700)
     except OSError as exc:
         return BackupResult(ok=False, error=f"cannot create backups dir: {exc}")
 
@@ -270,6 +272,9 @@ async def run_backup(
     # Durability: fsync the finished .part, then atomically rename into place so
     # a crash between here and there can never expose a half-written .dump.
     try:
+        # pg_dump created the file under the process umask; a dump is the whole
+        # database, so clamp it owner-only before it becomes visible.
+        os.chmod(part_path, 0o600)
         _fsync_file(part_path)
         os.replace(part_path, final_path)
         _fsync_dir(backups_dir)

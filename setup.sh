@@ -13,6 +13,9 @@
 # Usage:  ./setup.sh
 # Override the interpreter:  PYTHON=python3.10 ./setup.sh
 #
+# Secrets live in files this script touches: keep everything owner-only.
+umask 077
+
 set -uo pipefail
 cd "$(dirname "$0")"
 

@@ -14,11 +14,17 @@
 # Override defaults via env, e.g.:
 #   LAVALINK_PASSWORD='strongpass' LAVALINK_PORT=2333 ./setup-lavalink.sh
 #
+# Secrets live in files this script touches: keep everything owner-only.
+umask 077
+
 cd "$(dirname "$0")"
 
 LAVALINK_DIR="${LAVALINK_DIR:-$(pwd)/lavalink}"
 LAVALINK_PORT="${LAVALINK_PORT:-2333}"
-LAVALINK_PASSWORD="${LAVALINK_PASSWORD:-youshallnotpass}"
+# No fixed default password: generate a random one unless the caller provides
+# LAVALINK_PASSWORD. The generated value ends up only in application.yml (0600);
+# copy it into config/bot.ini [Lavalink] password yourself.
+LAVALINK_PASSWORD="${LAVALINK_PASSWORD:-$(head -c 48 /dev/urandom | base64 | tr -d '/+=' | head -c 48)}"
 YOUTUBE_PLUGIN_VERSION="${YOUTUBE_PLUGIN_VERSION:-1.18.1}"
 HEAP="${HEAP:-512m}"
 JAR_URL="https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
@@ -88,7 +94,9 @@ if [ ! -f "$LAVALINK_DIR/application.yml" ]; then
     cat > "$LAVALINK_DIR/application.yml" <<EOF
 server:
   port: ${LAVALINK_PORT}
-  address: 0.0.0.0
+  # Local-only: the bot talks to Lavalink over loopback. Change deliberately
+  # if you ever split them across hosts (and firewall the port if you do).
+  address: 127.0.0.1
 lavalink:
   plugins:
     # Native YouTube was deprecated in Lavalink v4; this plugin restores it.

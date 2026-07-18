@@ -8,6 +8,9 @@
 # never clobber local changes or your gitignored config (bot.ini / tokens.ini).
 # Toggle it with the AUTO_UPDATE variable below, or per-run: AUTO_UPDATE=0 ./run.sh
 #
+# Secrets live in files this script touches: keep everything owner-only.
+umask 077
+
 cd "$(dirname "$0")"
 
 AUTO_UPDATE="${AUTO_UPDATE:-1}"
