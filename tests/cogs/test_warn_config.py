@@ -399,11 +399,11 @@ async def test_apply_action_failure_returns_false(fake_pool):
 # The Moderation.warn escalation hook, end to end against a routed fake pool.
 # ---------------------------------------------------------------------------
 class _WarnCmdPool:
-    """Routes the warn command's three DB touches by query.
+    """Routes the warn command's database touches by query.
 
-    create_case -> fetchrow (RETURNING case_number); bump_warn -> fetchval on
-    the warns upsert (returns the new running count); the settings read ->
-    fetchval on guild_settings (returns the stored blob or None).
+    record_warn -> fetchrow (returns the case number and running count); the
+    settings read -> fetchval on guild_settings (returns the stored blob or
+    None).
     """
 
     def __init__(self, new_count, settings_blob=None, case_number=1):
@@ -414,14 +414,15 @@ class _WarnCmdPool:
 
     async def fetchrow(self, query, *args):
         self.calls.append(("fetchrow", query, args))
-        if "INSERT INTO cases" in query:
-            return {"case_number": self.case_number}
+        if "inserted_case" in query and "warns_count" in query:
+            return {
+                "case_number": self.case_number,
+                "warns_count": self.new_count,
+            }
         return None
 
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
-        if "warns" in query and "RETURNING warns_count" in query:
-            return self.new_count
         if "SELECT settings FROM guild_settings" in query:
             return self.settings_blob
         return None

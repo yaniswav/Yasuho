@@ -22,6 +22,8 @@ from tools.views import AuthorView, LocaleModal
 log = logging.getLogger(__name__)
 
 E_VERIF = config_loader.getstr("Emojis", "verif")
+WARN_HISTORY_CAP = 100
+CASE_HISTORY_CAP = 250
 
 
 def trim_reason(reason):
@@ -425,19 +427,10 @@ class Moderation(commands.Cog):
         single ``warn`` case and decrements the running ``warns_count`` (floored
         at 0 via ``GREATEST(..., 0)``).
         """
-        await self.bot.db_pool.execute(
-            "DELETE FROM cases WHERE guild_id = $1 AND user_id = $2 "
-            "AND action = 'warn' AND case_number = $3;",
-            guild_id,
-            user_id,
-            case_number,
+        removed, _remaining = await modactions.remove_warn_case(
+            self.bot.db_pool, guild_id, user_id, case_number
         )
-        await self.bot.db_pool.execute(
-            "UPDATE warns SET warns_count = GREATEST(warns_count - 1, 0) "
-            "WHERE guild_id = $1 AND user_id = $2;",
-            guild_id,
-            user_id,
-        )
+        return bool(removed)
 
     def _case_record_embed(self, guild, row):
         """Render a stored case row (DB record) as a consistent case embed.
@@ -735,6 +728,13 @@ class Moderation(commands.Cog):
         if err:
             return await ctx.send(err)
 
+        # Preflight the scheduler before applying the external Discord action.
+        # A missing Reminder cog must never turn a requested temp-ban into a
+        # permanent ban.
+        reminder = self.bot.get_cog("Reminder")
+        if reminder is None:
+            return await ctx.send(_("Scheduling is unavailable right now."))
+
         try:
             await ctx.guild.ban(member, reason=reason)
         except discord.Forbidden:
@@ -744,18 +744,66 @@ class Moderation(commands.Cog):
         except discord.HTTPException:
             return await ctx.send(_("Sorry, I couldn't ban that member."))
 
-        # The delayed unban rides the Reminder cog's timer machinery (it schedules
-        # a "tempban" row and its dispatcher fires the unban when it expires); this
-        # cog only needs to enqueue it through the shared cross-cog seam.
-        reminder = self.bot.get_cog("Reminder")
-        if reminder is None:
-            return await ctx.send(_("Scheduling is unavailable right now."))
-        await reminder.create_timer(
-            duration.dt,
-            "tempban",
-            guild_id=ctx.guild.id,
-            user_id=member.id,
-        )
+        try:
+            await reminder.create_timer(
+                duration.dt,
+                "tempban",
+                guild_id=ctx.guild.id,
+                user_id=member.id,
+            )
+        except Exception:
+            log.exception(
+                "Failed to schedule temp-ban for user %s in guild %s",
+                member.id,
+                ctx.guild.id,
+            )
+            # Compensate immediately. The command must fail closed: if durable
+            # scheduling fails, restore the member's unbanned state.
+            try:
+                await ctx.guild.unban(
+                    discord.Object(id=member.id),
+                    reason="Temp-ban scheduling failed; rolling back",
+                )
+            except Exception:
+                log.critical(
+                    "TEMP-BAN ROLLBACK FAILED for user %s in guild %s",
+                    member.id,
+                    ctx.guild.id,
+                    exc_info=True,
+                )
+                return await ctx.send(
+                    _(
+                        "The temporary ban could not be scheduled and the rollback "
+                        "failed. Please unban that user manually."
+                    )
+                )
+            return await ctx.send(
+                _("The temporary ban could not be scheduled, so I rolled it back.")
+            )
+
+        try:
+            num = await modactions.create_case(
+                self.bot.db_pool,
+                ctx.guild.id,
+                member.id,
+                ctx.author.id,
+                "tempban",
+                reason,
+                duration.dt,
+            )
+        except Exception:
+            log.exception("Failed to record temp-ban moderation case")
+        else:
+            embed = modactions.case_embed(
+                num,
+                "tempban",
+                member,
+                ctx.author,
+                reason,
+                expires=duration.dt,
+            )
+            await self._post_modlog(ctx.guild, embed)
+
         await ctx.send(
             _("Banned {member} until {time}.").format(
                 member=member, time=discord.utils.format_dt(duration.dt, "F")
@@ -1260,20 +1308,16 @@ class Moderation(commands.Cog):
             return await ctx.send_help(ctx.command)
 
         # Every warn is recorded as its own case for history/auditing, while the
-        # warns_count row (bumped here, monotonic) is the running total the
-        # escalation policy keys on. bump_warn is shared with AutoMod so both
-        # count identically; the escalation policy is per-guild configurable
+        # warns_count row is the running total the escalation policy keys on.
+        # record_warn owns both writes atomically and is shared with AutoMod, so
+        # both surfaces count identically. The policy is per-guild configurable
         # (defaulting to kick at 3 for an unconfigured server).
-        num = await modactions.create_case(
+        num, new_count = await modactions.record_warn(
             self.bot.db_pool,
             ctx.guild.id,
             member.id,
             ctx.author.id,
-            "warn",
             reason,
-        )
-        new_count = await modactions.bump_warn(
-            self.bot.db_pool, ctx.guild.id, member.id
         )
 
         policy, _default = await modactions.load_escalation_policy(
@@ -1327,28 +1371,25 @@ class Moderation(commands.Cog):
         if member is None:
             return await ctx.send_help(ctx.command)
 
-        query = (
-            """SELECT warns_count FROM warns WHERE guild_id = $1 AND user_id = $2;"""
-        )
-        fetch = await self.bot.db_pool.fetchval(query, ctx.guild.id, member.id)
+        if num < 1:
+            return await ctx.send(_("The number of warns must be at least 1."))
 
-        if not fetch:
+        removed, remaining = await modactions.remove_latest_warns(
+            self.bot.db_pool, ctx.guild.id, member.id, num
+        )
+        if not removed:
             return await ctx.send(
                 _("{member} has no warns!").format(member=member.mention)
             )
 
-        if fetch - num < 0:
-            query = """ UPDATE warns SET warns_count = 0 WHERE guild_id = $1 AND user_id = $2;"""
-            await self.bot.db_pool.execute(query, ctx.guild.id, member.id)
+        if remaining == 0:
             return await ctx.send(
                 _("Removed all warns for {member}.").format(member=member.mention)
             )
 
-        query = """UPDATE warns SET warns_count = warns_count - $3 WHERE guild_id = $1 AND user_id = $2;"""
-        await self.bot.db_pool.execute(query, ctx.guild.id, member.id, num)
         await ctx.send(
             _("Removed {num} warn(s) for {member}. [{remaining} warns]").format(
-                num=num, member=member.mention, remaining=fetch - num
+                num=removed, member=member.mention, remaining=remaining
             )
         )
 
@@ -1369,9 +1410,10 @@ class Moderation(commands.Cog):
         rows = await self.bot.db_pool.fetch(
             "SELECT case_number, reason, moderator_id, created_at FROM cases "
             "WHERE guild_id = $1 AND user_id = $2 AND action = 'warn' "
-            "ORDER BY case_number DESC;",
+            "ORDER BY case_number DESC LIMIT $3;",
             ctx.guild.id,
             member.id,
+            WARN_HISTORY_CAP,
         )
 
         view = WarningsView(self, ctx.guild, member, rows, ctx.author.id)
@@ -1425,16 +1467,19 @@ class Moderation(commands.Cog):
         if member is None:
             rows = await self.bot.db_pool.fetch(
                 "SELECT case_number, user_id, action, reason, created_at FROM cases "
-                "WHERE guild_id = $1 ORDER BY case_number DESC;",
+                "WHERE guild_id = $1 ORDER BY case_number DESC LIMIT $2;",
                 ctx.guild.id,
+                CASE_HISTORY_CAP,
             )
             title = _("Case history - {guild}").format(guild=ctx.guild.name)
         else:
             rows = await self.bot.db_pool.fetch(
                 "SELECT case_number, user_id, action, reason, created_at FROM cases "
-                "WHERE guild_id = $1 AND user_id = $2 ORDER BY case_number DESC;",
+                "WHERE guild_id = $1 AND user_id = $2 "
+                "ORDER BY case_number DESC LIMIT $3;",
                 ctx.guild.id,
                 member.id,
+                CASE_HISTORY_CAP,
             )
             title = _("Case history - {member}").format(member=member)
 

@@ -88,29 +88,83 @@ async def create_case(
     raise last_exc
 
 
-async def bump_warn(pool, guild_id, user_id):
-    """Add one warn to a member and return the new running count.
+async def record_warn(pool, guild_id, user_id, moderator_id, reason=None):
+    """Atomically create a warn case and increment its running counter.
 
-    The running count is MONOTONIC - it is never auto-reset. It used to reset
-    at 3 (the old hardcoded auto-kick), but configurable escalation needs the
-    count to keep climbing so a higher threshold (e.g. ban at 7) can ever be
-    reached. WHICH action fires at a given count is now decided by the caller
-    against the guild's policy (tools.warn_escalation); this function is purely
-    "add one warn, return the new total". Shared by the warn command and
-    AutoMod so both count identically.
-
-    The increment is atomic (``warns_count + 1`` inside the UPDATE with a
-    ``RETURNING``), so two warns racing on the same member can never lose one -
-    a real improvement over the former read-then-write.
+    A warn is one logical persistence operation. Keeping both writes in a single
+    data-modifying CTE prevents a case without a counter increment (or the
+    reverse) when the database fails between statements.
     """
-    return await pool.fetchval(
+    query = (
+        "WITH inserted_case AS ("
+        "INSERT INTO cases "
+        "(guild_id, case_number, user_id, moderator_id, action, reason) "
+        "VALUES ($1, (SELECT COALESCE(MAX(case_number), 0) + 1 FROM cases "
+        "WHERE guild_id = $1), $2, $3, 'warn', $4) "
+        "RETURNING case_number"
+        "), bumped_warn AS ("
         "INSERT INTO warns (guild_id, user_id, warns_count) VALUES ($1, $2, 1) "
         "ON CONFLICT (guild_id, user_id) DO UPDATE "
         "SET warns_count = warns.warns_count + 1 "
-        "RETURNING warns_count",
+        "RETURNING warns_count"
+        ") "
+        "SELECT inserted_case.case_number, bumped_warn.warns_count "
+        "FROM inserted_case CROSS JOIN bumped_warn"
+    )
+    last_exc = None
+    for _attempt in range(_CASE_INSERT_RETRIES):
+        try:
+            row = await pool.fetchrow(
+                query, guild_id, user_id, moderator_id, reason
+            )
+            return row["case_number"], row["warns_count"]
+        except asyncpg.UniqueViolationError as exc:
+            last_exc = exc
+    raise last_exc
+
+
+async def remove_warn_case(pool, guild_id, user_id, case_number):
+    """Atomically remove one warn case and decrement the matching counter."""
+    row = await pool.fetchrow(
+        "WITH removed AS ("
+        "DELETE FROM cases WHERE guild_id = $1 AND user_id = $2 "
+        "AND action = 'warn' AND case_number = $3 RETURNING id"
+        "), updated AS ("
+        "UPDATE warns SET warns_count = GREATEST("
+        "warns_count - (SELECT COUNT(*) FROM removed), 0"
+        ") WHERE guild_id = $1 AND user_id = $2 RETURNING warns_count"
+        ") "
+        "SELECT (SELECT COUNT(*) FROM removed)::integer AS removed_count, "
+        "COALESCE((SELECT warns_count FROM updated), 0)::integer AS warns_count",
         guild_id,
         user_id,
+        case_number,
     )
+    return row["removed_count"], row["warns_count"]
+
+
+async def remove_latest_warns(pool, guild_id, user_id, amount):
+    """Atomically remove up to ``amount`` newest warn cases and their count."""
+    if amount < 1:
+        raise ValueError("amount must be at least 1")
+    row = await pool.fetchrow(
+        "WITH removed AS ("
+        "DELETE FROM cases WHERE id IN ("
+        "SELECT id FROM cases WHERE guild_id = $1 AND user_id = $2 "
+        "AND action = 'warn' ORDER BY case_number DESC LIMIT $3"
+        ") RETURNING id"
+        "), updated AS ("
+        "UPDATE warns SET warns_count = GREATEST("
+        "warns_count - (SELECT COUNT(*) FROM removed), 0"
+        ") WHERE guild_id = $1 AND user_id = $2 RETURNING warns_count"
+        ") "
+        "SELECT (SELECT COUNT(*) FROM removed)::integer AS removed_count, "
+        "COALESCE((SELECT warns_count FROM updated), 0)::integer AS warns_count",
+        guild_id,
+        user_id,
+        amount,
+    )
+    return row["removed_count"], row["warns_count"]
 
 
 async def load_escalation_policy(pool, guild_id):

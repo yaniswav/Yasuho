@@ -301,21 +301,24 @@ class AutoMod(commands.Cog):
                 return True
         return False
 
-    async def _log_case(self, guild, target, action, reason):
+    async def _log_case(
+        self, guild, target, action, reason, *, case_number=None
+    ):
         """Open a moderation case and funnel the embed to the mod-log."""
 
-        try:
-            case_number = await modactions.create_case(
-                self.bot.db_pool,
-                guild.id,
-                target.id,
-                self.bot.user.id,
-                action,
-                reason,
-            )
-        except Exception:
-            log.exception("AutoMod failed to create case")
-            return
+        if case_number is None:
+            try:
+                case_number = await modactions.create_case(
+                    self.bot.db_pool,
+                    guild.id,
+                    target.id,
+                    self.bot.user.id,
+                    action,
+                    reason,
+                )
+            except Exception:
+                log.exception("AutoMod failed to create case")
+                return
 
         embed = modactions.case_embed(
             case_number, action, target, guild.me, reason
@@ -332,6 +335,7 @@ class AutoMod(commands.Cog):
         )
         if action not in VALID_ACTIONS:
             action = DEFAULT_ACTION
+        warn_case_number = None
 
         # The offending message always goes, whatever the escalation level.
         try:
@@ -358,12 +362,14 @@ class AutoMod(commands.Cog):
             except discord.HTTPException:
                 log.exception("AutoMod failed to kick member")
         elif action == "warn":
-            # A real warn: bump the shared (monotonic) counter and escalate per
-            # the guild's configurable warn policy, exactly like the warn
-            # command (bump_warn + load_escalation_policy + the shared action
-            # applier). Both surfaces stay in lockstep this way.
-            new_count = await modactions.bump_warn(
-                self.bot.db_pool, guild.id, member.id
+            # Persist the case and counter as one atomic operation, then apply
+            # the same configurable escalation policy as the manual command.
+            warn_case_number, new_count = await modactions.record_warn(
+                self.bot.db_pool,
+                guild.id,
+                member.id,
+                self.bot.user.id,
+                reason,
             )
             policy, _default = await modactions.load_escalation_policy(
                 self.bot.db_pool, guild.id
@@ -379,7 +385,13 @@ class AutoMod(commands.Cog):
         except discord.HTTPException:
             pass
 
-        await self._log_case(guild, member, action, reason)
+        await self._log_case(
+            guild,
+            member,
+            action,
+            reason,
+            case_number=warn_case_number,
+        )
 
     def _prune_spam(self, now):
         """Drop spam-tracking entries whose newest timestamp is past the window."""
