@@ -17,7 +17,6 @@ Three surfaces, all against the conftest fakes (no network / DB / Discord):
 import datetime
 import types
 
-from cogs.moderation.moderation import Moderation
 from cogs.moderation.warn_config import (
     ACTION_CHOICES,
     WarnConfigPanel,
@@ -28,6 +27,7 @@ from cogs.moderation.warn_config import (
     escalation_summary,
     format_duration,
 )
+from cogs.moderation.warns import Warns
 from tools import modactions, settings
 from tools import warn_escalation as we
 
@@ -97,7 +97,7 @@ class _FakeCtx:
 
 
 def _make_cog(pool):
-    return Moderation(_FakeBot(pool))
+    return Warns(_FakeBot(pool))
 
 
 def _state(policy=None, pending="timeout"):
@@ -452,7 +452,7 @@ async def test_warn_below_threshold_records_only(fake_pool):
     member = _FakeMember(2)
     ctx = _FakeCtx(guild)
 
-    await Moderation.warn.callback(cog, ctx, member, reason="spam")
+    await Warns.warn.callback(cog, ctx, member, reason="spam")
 
     assert guild.kicked == []
     assert _warn_field(ctx, "Warns") == "2"
@@ -467,7 +467,7 @@ async def test_warn_default_kicks_at_three(fake_pool):
     member = _FakeMember(2)
     ctx = _FakeCtx(guild)
 
-    await Moderation.warn.callback(cog, ctx, member, reason="last straw")
+    await Warns.warn.callback(cog, ctx, member, reason="last straw")
 
     assert len(guild.kicked) == 1  # kicked at exactly 3
     assert "kicked" in _warn_field(ctx, "Auto-action")
@@ -482,7 +482,7 @@ async def test_warn_does_not_refire_past_threshold(fake_pool):
     member = _FakeMember(2)
     ctx = _FakeCtx(guild)
 
-    await Moderation.warn.callback(cog, ctx, member, reason="another")
+    await Warns.warn.callback(cog, ctx, member, reason="another")
 
     assert guild.kicked == []  # equals-only: 4 does not re-fire the rule at 3
     assert _warn_field(ctx, "Warns") == "4"
@@ -500,7 +500,7 @@ async def test_warn_configured_timeout_fires(fake_pool):
     member = _FakeMember(2)
     ctx = _FakeCtx(guild)
 
-    await Moderation.warn.callback(cog, ctx, member, reason="rowdy")
+    await Warns.warn.callback(cog, ctx, member, reason="rowdy")
 
     assert len(member.timeouts) == 1
     assert guild.kicked == []
@@ -515,7 +515,7 @@ async def test_warn_action_failure_degrades(fake_pool):
     member = _FakeMember(2)
     ctx = _FakeCtx(guild)
 
-    await Moderation.warn.callback(cog, ctx, member, reason="oops")
+    await Warns.warn.callback(cog, ctx, member, reason="oops")
 
     # The warn is still recorded (a case embed was sent) and the Auto-action
     # line still explains the intent, but a clear failure notice follows and no
