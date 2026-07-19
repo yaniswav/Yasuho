@@ -7,12 +7,13 @@ into the SAME Postgres database, then emits::
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
-leveling``. The bot mirrors those settings in memory (``bot.prefixes`` /
-``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
-``tools.settings`` LRU for the welcome + automod JSONB blobs, the Starboard cog's
-``_config`` cache, the AutoMod cog's ``_settings`` cache for its boolean toggle
-table, and the Leveling cog's three caches - ``_configs`` (level_config scalar
-knobs), ``_no_xp`` (level_no_xp snapshot) and ``_multipliers`` (xp_multipliers +
+leveling | warn_escalation``. The bot mirrors those settings in memory
+(``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's
+``_channels`` cache, the ``tools.settings`` LRU for the welcome + automod +
+modlog_events + warn_escalation JSONB blobs, the Starboard cog's ``_config``
+cache, the AutoMod cog's ``_settings`` cache for its boolean toggle table, and
+the Leveling cog's three caches - ``_configs`` (level_config scalar knobs),
+``_no_xp`` (level_no_xp snapshot) and ``_multipliers`` (xp_multipliers +
 level_config event columns)), so without this cog it would keep serving the stale
 in-memory value until the next restart.
 
@@ -26,9 +27,11 @@ Design mirrors the existing house patterns:
 * prefix/autorole/muterole updates mirror ``cogs/config/settings.py`` and
   ``cogs/moderation/moderation.py`` (``bot.prefixes[gid] = row`` / ``pop`` etc.);
 * the modlog invalidation drops the ModLog cog's negative-cached ``_channels``
-  entry, exactly as ``tools/retention.invalidate_guild_caches`` does;
-* the welcome invalidation evicts the guild's cached blob via
-  ``tools.settings.invalidate_guild`` (same helper retention uses);
+  entry, exactly as ``tools/retention.invalidate_guild_caches`` does, AND evicts
+  the ``tools.settings`` blob (the dashboard also writes ``modlog_events`` there);
+* the welcome and warn_escalation invalidations evict the guild's cached
+  ``tools.settings`` blob (same helper retention uses) - both settings live in
+  the same JSONB row, so evicting the blob is enough to pick up either key;
 * the starboard invalidation re-reads the guild's ``(channel_id, threshold)`` row
   and writes it into the Starboard cog's ``_config`` cache exactly as that cog's
   own ``_apply_set`` / ``starboard_disable`` do (set the tuple, or ``None`` when
@@ -70,6 +73,7 @@ VALID_KINDS = frozenset(
         "starboard",
         "automod",
         "leveling",
+        "warn_escalation",
     }
 )
 
@@ -157,13 +161,22 @@ async def _invalidate_muterole(bot, gid):
 
 
 async def _invalidate_modlog(bot, gid):
-    """Drop the ModLog cog's ``_channels`` entry so it re-reads on next use.
+    """Refresh BOTH stores a dashboard mod-log write can touch, for one guild.
 
-    ``_channels`` is negative-cached (``None`` means "looked up, not configured"),
-    so simply popping the guild's entry forces ``get_log_channel`` to re-query the
-    ``modlog`` table on the next event - the same eviction
-    ``tools/retention.invalidate_guild_caches`` performs. No cog loaded => no-op.
+    The mod-log CHANNEL lives in the ``modlog`` table and is cached in the
+    ModLog cog's negative-cached ``_channels`` dict (``None`` means "looked up,
+    not configured"); popping the guild's entry forces ``get_log_channel`` to
+    re-query on the next event - the same eviction
+    ``tools/retention.invalidate_guild_caches`` performs. The dashboard's
+    "Moderation" section ALSO writes the guild_settings JSONB key
+    ``modlog_events`` (which events get logged), served from the
+    ``tools.settings`` LRU via ``settings.get_guild``/``_get_events``
+    (``cogs/moderation/modlog.py``) - so this invalidator evicts that blob too,
+    unconditionally, so an events-only change takes effect immediately even
+    without touching the channel. No ModLog cog loaded => the ``_channels`` pop
+    is skipped, but the settings eviction still runs.
     """
+    settings.invalidate_guild(gid)
     cog = bot.get_cog("ModLog")
     if cog is None:
         return
@@ -179,6 +192,20 @@ async def _invalidate_welcome(bot, gid):
     served from the ``tools.settings`` LRU. ``invalidate_guild`` drops the guild's
     cached blob (the same helper retention uses), so the next
     ``settings.get_guild(..., 'welcome', ...)`` re-reads the authoritative row.
+    """
+    settings.invalidate_guild(gid)
+
+
+async def _invalidate_warn_escalation(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    Warn escalation policy lives under the ``guild_settings`` JSONB key
+    ``'warn_escalation'`` (``tools/warn_escalation.py`` ``SETTINGS_KEY``) and is
+    read via ``tools.modactions.load_escalation_policy`` -> ``settings.get_guild``,
+    served from the SAME ``tools.settings`` LRU as welcome/automod/modlog_events.
+    ``invalidate_guild`` drops the guild's cached blob (the same helper retention
+    uses), so the next read re-fetches the authoritative row instead of serving a
+    stale policy until the next restart.
     """
     settings.invalidate_guild(gid)
 
@@ -295,6 +322,7 @@ _INVALIDATORS = {
     "starboard": _invalidate_starboard,
     "automod": _invalidate_automod,
     "leveling": _invalidate_leveling,
+    "warn_escalation": _invalidate_warn_escalation,
 }
 
 

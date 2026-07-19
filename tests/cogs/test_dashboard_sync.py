@@ -277,7 +277,8 @@ async def test_dispatch_pops_cache_when_db_empty(kind, cache_attr):
 
 
 # ---------------------------------------------------------------------------
-# dispatch: modlog invalidation (pop the ModLog cog's _channels entry).
+# dispatch: modlog invalidation (pop the ModLog cog's _channels entry AND evict
+# the settings LRU blob, since the dashboard also writes modlog_events there).
 # ---------------------------------------------------------------------------
 
 
@@ -292,11 +293,32 @@ async def test_dispatch_modlog_pops_channels_entry():
     assert 100 not in modlog._channels
 
 
-async def test_dispatch_modlog_noop_without_cog():
-    # No ModLog cog loaded: safe no-op, still reports handled.
-    bot = FakeBot(SyncPool())
+async def test_dispatch_modlog_evicts_settings_blob():
+    # modlog_events lives in the guild_settings JSONB blob (served by the
+    # tools.settings LRU, not the ModLog cog's _channels dict), so a
+    # dashboard events-only change must evict it too or it never applies.
+    modlog = FakeModLog()
+    bot = FakeBot(SyncPool(), modlog=modlog)
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"modlog_events": ["join"]}
+
     handled = await dashboard_sync.dispatch(bot, _payload("modlog", 100))
+
     assert handled == "modlog"
+    assert key not in settings._cache
+
+
+async def test_dispatch_modlog_noop_without_cog():
+    # No ModLog cog loaded: the _channels pop is skipped, but the settings
+    # eviction is unconditional, and dispatch still reports handled.
+    bot = FakeBot(SyncPool())
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"modlog_events": ["join"]}
+
+    handled = await dashboard_sync.dispatch(bot, _payload("modlog", 100))
+
+    assert handled == "modlog"
+    assert key not in settings._cache
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +482,27 @@ async def test_dispatch_leveling_noop_without_cog():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: warn_escalation invalidation (evict the settings LRU blob).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_warn_escalation_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    # Seed the process-global settings cache with a stale policy for guild 100.
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {
+        "warn_escalation": [{"threshold": 3, "action": "kick", "duration": None}]
+    }
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("warn_escalation", 100))
+
+    assert handled == "warn_escalation"
+    # Evicted: the next settings.get_guild would re-read the authoritative row.
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -511,4 +554,5 @@ def test_valid_kinds_match_invalidators():
         "starboard",
         "automod",
         "leveling",
+        "warn_escalation",
     }
