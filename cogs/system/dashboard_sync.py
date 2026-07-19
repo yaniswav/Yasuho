@@ -6,11 +6,12 @@ into the SAME Postgres database, then emits::
     SELECT pg_notify('yasuho_dashboard', $1)
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
-``prefix | autorole | modlog | muterole | welcome | starboard``. The bot mirrors
-those settings in memory (``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``,
-the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU for the welcome
-JSONB blob, and the Starboard cog's ``_config`` cache), so without this cog it
-would keep serving the stale in-memory value until the next restart.
+``prefix | autorole | modlog | muterole | welcome | starboard | automod``. The bot
+mirrors those settings in memory (``bot.prefixes`` / ``bot.autoroles`` /
+``bot.muteroles``, the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU
+for the welcome + automod JSONB blobs, the Starboard cog's ``_config`` cache, and
+the AutoMod cog's ``_settings`` cache for its boolean toggle table), so without this
+cog it would keep serving the stale in-memory value until the next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -57,7 +58,7 @@ CHANNEL = "yasuho_dashboard"
 
 # The settings the dashboard can change; anything else is ignored.
 VALID_KINDS = frozenset(
-    {"prefix", "autorole", "modlog", "muterole", "welcome", "starboard"}
+    {"prefix", "autorole", "modlog", "muterole", "welcome", "starboard", "automod"}
 )
 
 # Reconnect backoff bounds for the listen connection supervisor.
@@ -194,6 +195,40 @@ async def _invalidate_starboard(bot, gid):
     cache[gid] = (row["channel_id"], row["threshold"]) if row else None
 
 
+async def _invalidate_automod(bot, gid):
+    """Refresh BOTH AutoMod stores for a guild after a dashboard write.
+
+    AutoMod config is split across two stores, so this invalidator touches both:
+
+    * The ``guild_settings`` JSONB keys ``antiinvite`` / ``automod_action`` /
+      ``automod_exempt_roles`` / ``automod_exempt_channels`` are served from the
+      ``tools.settings`` LRU (``cogs/moderation/automod.py`` reads them via
+      ``settings.get_guild`` - l.172-197 / l.285-297 / l.417). ``invalidate_guild``
+      evicts the guild's cached blob (the SAME helper the welcome path uses), so
+      the next ``settings.get_guild`` re-reads the authoritative row. This part is
+      unconditional - the blob is cached whether or not the AutoMod cog object is
+      currently loaded.
+    * The ``automod`` TABLE booleans (``antilink`` / ``antispam``) ARE cached, in
+      the AutoMod cog's ``_settings`` dict - a NEGATIVE cache holding the fetched
+      Record, or ``None`` when the guild has no row
+      (``cogs/moderation/automod.py`` ``get_settings``, l.136-143). Mirror that
+      exactly: re-read the row and store it under ``gid`` (Record, or ``None``), so
+      the next ``on_message`` sees the dashboard's new toggles. No cog loaded / no
+      cache dict => safe no-op (the settings eviction above still ran).
+    """
+    settings.invalidate_guild(gid)
+    cog = bot.get_cog("AutoMod")
+    if cog is None:
+        return
+    cache = getattr(cog, "_settings", None)
+    if not isinstance(cache, dict):
+        return
+    row = await bot.db_pool.fetchrow(
+        "SELECT antilink, antispam FROM automod WHERE guild_id = $1", gid
+    )
+    cache[gid] = row
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
@@ -201,6 +236,7 @@ _INVALIDATORS = {
     "modlog": _invalidate_modlog,
     "welcome": _invalidate_welcome,
     "starboard": _invalidate_starboard,
+    "automod": _invalidate_automod,
 }
 
 

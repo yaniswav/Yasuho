@@ -39,6 +39,8 @@ class SyncPool:
         self.muterole = {}
         # gid -> (channel_id, threshold); absent => no starboard row.
         self.starboard = {}
+        # gid -> {"antilink": bool, "antispam": bool}; absent => no automod row.
+        self.automod = {}
 
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
@@ -60,6 +62,9 @@ class SyncPool:
                 return None
             channel_id, threshold = cfg
             return {"channel_id": channel_id, "threshold": threshold}
+        if "FROM automod" in query:
+            # dict (Record-like) or None, exactly as get_settings caches it.
+            return self.automod.get(gid)
         raise AssertionError(f"unexpected fetchrow: {query!r}")  # pragma: no cover
 
 
@@ -81,8 +86,19 @@ class FakeStarboard:
         self._config = {}
 
 
+class FakeAutoMod:
+    """Stand-in for the AutoMod cog exposing only its ``_settings`` cache.
+
+    The real cog's ``_settings`` is a NEGATIVE cache: the fetched ``automod``-table
+    Record when configured, ``None`` when looked-up-and-empty (get_settings).
+    """
+
+    def __init__(self):
+        self._settings = {}
+
+
 class FakeBot:
-    def __init__(self, pool, modlog=None, starboard=None):
+    def __init__(self, pool, modlog=None, starboard=None, automod=None):
         self.db_pool = pool
         self.prefixes = {}
         self.autoroles = {}
@@ -92,6 +108,8 @@ class FakeBot:
             self._cogs["ModLog"] = modlog
         if starboard is not None:
             self._cogs["Starboard"] = starboard
+        if automod is not None:
+            self._cogs["AutoMod"] = automod
 
     def get_cog(self, name):
         return self._cogs.get(name)
@@ -276,6 +294,60 @@ async def test_dispatch_starboard_noop_without_cog():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: automod invalidation (BOTH stores - the cog's _settings table cache
+# AND the tools.settings LRU blob for the JSONB keys).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_automod_refreshes_both_stores():
+    # DB has authoritative automod-table booleans for guild 100...
+    pool = SyncPool()
+    pool.automod[100] = {"antilink": True, "antispam": False}
+    am = FakeAutoMod()
+    am._settings[100] = {"antilink": False, "antispam": False}  # stale
+    bot = FakeBot(pool, automod=am)
+    # ...and a stale JSONB blob sits in the settings LRU (antiinvite/action/etc).
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"antiinvite": True, "automod_action": "kick"}
+
+    handled = await dashboard_sync.dispatch(bot, _payload("automod", 100))
+
+    assert handled == "automod"
+    # Store 1: the cog's table cache is refreshed with the re-read row.
+    assert am._settings[100] == {"antilink": True, "antispam": False}
+    # Store 2: the JSONB blob is evicted so the next get_guild re-reads it.
+    assert key not in settings._cache
+
+
+async def test_dispatch_automod_sets_none_when_table_empty():
+    # No automod row (dashboard saved both toggles off, which upserts a row -
+    # but a guild that never had one reads None): the negative cache stores None,
+    # exactly as get_settings does on a cold miss.
+    pool = SyncPool()
+    am = FakeAutoMod()
+    am._settings[100] = {"antilink": True, "antispam": True}  # stale
+    bot = FakeBot(pool, automod=am)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("automod", 100))
+
+    assert handled == "automod"
+    assert am._settings[100] is None
+
+
+async def test_dispatch_automod_evicts_settings_blob_without_cog():
+    # No AutoMod cog loaded: the JSONB eviction is UNCONDITIONAL (the blob is
+    # cached independently of the cog object), and dispatch still reports handled.
+    bot = FakeBot(SyncPool())
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"automod_exempt_roles": [1, 2, 3]}
+
+    handled = await dashboard_sync.dispatch(bot, _payload("automod", 100))
+
+    assert handled == "automod"
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -325,4 +397,5 @@ def test_valid_kinds_match_invalidators():
         "muterole",
         "welcome",
         "starboard",
+        "automod",
     }
