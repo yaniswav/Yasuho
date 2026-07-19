@@ -133,7 +133,9 @@ fi
 if [ -f config/bot.ini ] && ! grep -q 'YOUR_BOT_TOKEN' config/bot.ini; then
     mkdir -p "$CONFIG_BACKUP" && chmod 700 "$CONFIG_BACKUP" 2>/dev/null
     cp -f config/bot.ini "$CONFIG_BACKUP/bot.ini"
+    chmod 600 "$CONFIG_BACKUP/bot.ini" 2>/dev/null
     [ -f config/tokens.ini ] && cp -f config/tokens.ini "$CONFIG_BACKUP/tokens.ini"
+    [ -f "$CONFIG_BACKUP/tokens.ini" ] && chmod 600 "$CONFIG_BACKUP/tokens.ini" 2>/dev/null
     info "Backed up config to $CONFIG_BACKUP - it survives 'git clean -fdx' and rm."
 fi
 

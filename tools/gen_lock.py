@@ -34,7 +34,6 @@ RUNTIME_ROOTS: dict[str, set[str]] = {
     "parsedatetime": set(),
     "python-dateutil": set(),
     "wikipedia": set(),
-    "lyricsgenius": set(),
     "cryptography": set(),
     "babel": set(),
 }

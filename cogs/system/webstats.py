@@ -1,3 +1,4 @@
+import hmac
 import logging
 
 import topgg
@@ -47,7 +48,10 @@ def build_webhook_app(password, dispatch, limiter):
     async def _vote_handler(request):
         # Byte-equivalent to topgg WebhookManager._bot_vote_handler.
         auth = request.headers.get("Authorization", "")
-        if auth != password:
+        # Constant-time compare so the response time can't leak how many leading
+        # bytes of the secret matched; reject outright when no password is set so
+        # an empty Authorization header can never authenticate.
+        if not password or not hmac.compare_digest(auth, password):
             return web.Response(status=401, text="Unauthorized")
         data = await request.json()
         dispatch("dbl_vote", BotVoteData(**data))

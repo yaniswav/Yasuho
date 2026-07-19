@@ -45,7 +45,9 @@ backup_config() {
     grep -q 'YOUR_BOT_TOKEN' config/bot.ini && return 0
     mkdir -p "$CONFIG_BACKUP" && chmod 700 "$CONFIG_BACKUP" 2>/dev/null
     cp -f config/bot.ini "$CONFIG_BACKUP/bot.ini" 2>/dev/null
+    chmod 600 "$CONFIG_BACKUP/bot.ini" 2>/dev/null
     [ -f config/tokens.ini ] && cp -f config/tokens.ini "$CONFIG_BACKUP/tokens.ini" 2>/dev/null
+    [ -f "$CONFIG_BACKUP/tokens.ini" ] && chmod 600 "$CONFIG_BACKUP/tokens.ini" 2>/dev/null
 }
 
 self_update() {

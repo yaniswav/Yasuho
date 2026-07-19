@@ -12,7 +12,6 @@ topggpy~=1.4.0
 parsedatetime~=2.6
 python-dateutil~=2.9.0
 wikipedia~=1.4.0
-lyricsgenius~=3.0.1
 cryptography~=49.0.0
 # Build-only: extracting/compiling i18n catalogs (pybabel). The runtime uses the
 # stdlib gettext to load the committed .mo files, so this is not needed to run.
