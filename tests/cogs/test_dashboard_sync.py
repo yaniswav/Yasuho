@@ -1,0 +1,260 @@
+"""Unit tests for the dashboard->bot cache-sync cog (``cogs.system.dashboard_sync``).
+
+These exercise the PURE invalidation dispatch - the part that turns a Postgres
+NOTIFY payload into an update of the SAME in-memory structure the bot's own
+commands mutate - with in-memory stand-ins for the only boundaries: a fake bot
+exposing the ``prefixes`` / ``autoroles`` / ``muteroles`` caches (as the real bot
+does), a fake asyncpg pool returning a row or ``None`` per table, and a fake
+ModLog cog. The network / LISTEN connection and the reconnect supervisor are NOT
+exercised here (they touch a real socket); only the dispatch is, which is where
+all the cache-coherence logic lives.
+
+Runs on the 3.7 box against discord.py 1.5.1: the cog module imports cleanly
+there (``from discord.ext import commands`` + a ``commands.Cog`` subclass), and
+the dispatch path never touches any 2.x-only Discord API, so it is fully
+runnable here as well as on the 3.12 target.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from cogs.system import dashboard_sync
+from tools import settings
+
+# ---------------------------------------------------------------------------
+# In-memory fakes (mirror the real bot's caches / pool shape).
+# ---------------------------------------------------------------------------
+
+
+class SyncPool:
+    """Fake pool: fetchval returns the seeded value for the queried table."""
+
+    def __init__(self):
+        self.calls = []
+        self.prefixes = {}
+        self.autorole = {}
+        self.muterole = {}
+
+    async def fetchval(self, query, *args):
+        self.calls.append(("fetchval", query, args))
+        gid = args[0]
+        if "FROM prefixes" in query:
+            return self.prefixes.get(gid)
+        if "FROM autorole" in query:
+            return self.autorole.get(gid)
+        if "FROM muterole" in query:
+            return self.muterole.get(gid)
+        raise AssertionError(f"unexpected fetchval: {query!r}")  # pragma: no cover
+
+
+class FakeModLog:
+    """Stand-in for the ModLog cog exposing only its ``_channels`` cache."""
+
+    def __init__(self):
+        self._channels = {}
+
+
+class FakeBot:
+    def __init__(self, pool, modlog=None):
+        self.db_pool = pool
+        self.prefixes = {}
+        self.autoroles = {}
+        self.muteroles = {}
+        self._cogs = {}
+        if modlog is not None:
+            self._cogs["ModLog"] = modlog
+
+    def get_cog(self, name):
+        return self._cogs.get(name)
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    """The tools.settings LRU is process-global; keep it from leaking across tests."""
+    settings._cache.clear()
+    yield
+    settings._cache.clear()
+
+
+def _payload(kind, guild_id):
+    import json
+
+    return json.dumps({"kind": kind, "guildId": str(guild_id)})
+
+
+# ---------------------------------------------------------------------------
+# _parse_payload: defensive parsing.
+# ---------------------------------------------------------------------------
+
+
+def test_parse_valid_numeric_string_guild_id():
+    assert dashboard_sync._parse_payload(_payload("prefix", 100)) == ("prefix", 100)
+
+
+def test_parse_valid_int_guild_id():
+    import json
+
+    assert dashboard_sync._parse_payload(
+        json.dumps({"kind": "modlog", "guildId": 42})
+    ) == ("modlog", 42)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "not json at all",
+        "",
+        "[1, 2, 3]",  # valid JSON but not an object
+        "42",  # valid JSON but not an object
+        '{"kind": "prefix"}',  # missing guildId
+        '{"guildId": "100"}',  # missing kind
+        '{"kind": "unknown", "guildId": "100"}',  # unknown kind
+        '{"kind": "prefix", "guildId": "abc"}',  # non-numeric guild id
+        '{"kind": "prefix", "guildId": null}',  # null guild id
+        None,  # not even a string
+        123,  # not a string
+    ],
+)
+def test_parse_rejects_bad_payloads(payload):
+    assert dashboard_sync._parse_payload(payload) is None
+
+
+# ---------------------------------------------------------------------------
+# dispatch: prefix / autorole / muterole re-read + set-or-pop.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "kind, cache_attr, pool_attr",
+    [
+        ("prefix", "prefixes", "prefixes"),
+        ("autorole", "autoroles", "autorole"),
+        ("muterole", "muteroles", "muterole"),
+    ],
+)
+async def test_dispatch_sets_cache_from_db_row(kind, cache_attr, pool_attr):
+    pool = SyncPool()
+    bot = FakeBot(pool)
+    # DB has an authoritative value for guild 100.
+    getattr(pool, pool_attr)[100] = "yo!" if kind == "prefix" else 555
+
+    handled = await dashboard_sync.dispatch(bot, _payload(kind, 100))
+
+    assert handled == kind
+    expected = "yo!" if kind == "prefix" else 555
+    assert getattr(bot, cache_attr)[100] == expected
+
+
+@pytest.mark.parametrize(
+    "kind, cache_attr",
+    [
+        ("prefix", "prefixes"),
+        ("autorole", "autoroles"),
+        ("muterole", "muteroles"),
+    ],
+)
+async def test_dispatch_pops_cache_when_db_empty(kind, cache_attr):
+    pool = SyncPool()  # DB has no row for guild 100
+    bot = FakeBot(pool)
+    # Seed a stale in-memory value the dashboard just deleted from the DB.
+    getattr(bot, cache_attr)[100] = "stale" if kind == "prefix" else 999
+
+    handled = await dashboard_sync.dispatch(bot, _payload(kind, 100))
+
+    assert handled == kind
+    assert 100 not in getattr(bot, cache_attr)
+
+
+# ---------------------------------------------------------------------------
+# dispatch: modlog invalidation (pop the ModLog cog's _channels entry).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_modlog_pops_channels_entry():
+    modlog = FakeModLog()
+    modlog._channels[100] = 202  # negative/positive cached entry to evict
+    bot = FakeBot(SyncPool(), modlog=modlog)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("modlog", 100))
+
+    assert handled == "modlog"
+    assert 100 not in modlog._channels
+
+
+async def test_dispatch_modlog_noop_without_cog():
+    # No ModLog cog loaded: safe no-op, still reports handled.
+    bot = FakeBot(SyncPool())
+    handled = await dashboard_sync.dispatch(bot, _payload("modlog", 100))
+    assert handled == "modlog"
+
+
+# ---------------------------------------------------------------------------
+# dispatch: welcome invalidation (evict the settings LRU blob for the guild).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_welcome_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    # Seed the process-global settings cache with a stale guild blob.
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"welcome": {"channel_id": 201, "enabled": True}}
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("welcome", 100))
+
+    assert handled == "welcome"
+    # Evicted: the next settings.get_guild would re-read the authoritative row.
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
+# dispatch: malformed / unknown payloads are ignored (no cache mutation).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_ignores_unknown_kind():
+    pool = SyncPool()
+    bot = FakeBot(pool)
+    handled = await dashboard_sync.dispatch(
+        bot, '{"kind": "banword", "guildId": "100"}'
+    )
+    assert handled is None
+    assert not pool.calls  # no DB read attempted
+
+
+async def test_dispatch_ignores_malformed_json():
+    pool = SyncPool()
+    bot = FakeBot(pool)
+    handled = await dashboard_sync.dispatch(bot, "definitely-not-json")
+    assert handled is None
+    assert not pool.calls
+
+
+async def test_dispatch_swallows_invalidator_error():
+    """A DB error inside an invalidator is logged and swallowed (returns None)."""
+
+    class BoomPool(SyncPool):
+        async def fetchval(self, query, *args):
+            raise RuntimeError("db down")
+
+    bot = FakeBot(BoomPool())
+    # Must not raise; a bad notification can never take down the listener.
+    handled = await dashboard_sync.dispatch(bot, _payload("prefix", 100))
+    assert handled is None
+
+
+# ---------------------------------------------------------------------------
+# Invalidator/kind registry stays in sync.
+# ---------------------------------------------------------------------------
+
+
+def test_valid_kinds_match_invalidators():
+    assert set(dashboard_sync._INVALIDATORS) == set(dashboard_sync.VALID_KINDS)
+    assert dashboard_sync.VALID_KINDS == {
+        "prefix",
+        "autorole",
+        "modlog",
+        "muterole",
+        "welcome",
+    }
