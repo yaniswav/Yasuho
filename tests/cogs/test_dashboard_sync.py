@@ -28,13 +28,17 @@ from tools import settings
 
 
 class SyncPool:
-    """Fake pool: fetchval returns the seeded value for the queried table."""
+    """Fake pool: fetchval returns the seeded value for the queried table;
+    fetchrow returns the seeded ``starboard`` row (as a dict, ``row["col"]``
+    style, like an asyncpg Record) or ``None``."""
 
     def __init__(self):
         self.calls = []
         self.prefixes = {}
         self.autorole = {}
         self.muterole = {}
+        # gid -> (channel_id, threshold); absent => no starboard row.
+        self.starboard = {}
 
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
@@ -47,6 +51,17 @@ class SyncPool:
             return self.muterole.get(gid)
         raise AssertionError(f"unexpected fetchval: {query!r}")  # pragma: no cover
 
+    async def fetchrow(self, query, *args):
+        self.calls.append(("fetchrow", query, args))
+        gid = args[0]
+        if "FROM starboard" in query:
+            cfg = self.starboard.get(gid)
+            if cfg is None:
+                return None
+            channel_id, threshold = cfg
+            return {"channel_id": channel_id, "threshold": threshold}
+        raise AssertionError(f"unexpected fetchrow: {query!r}")  # pragma: no cover
+
 
 class FakeModLog:
     """Stand-in for the ModLog cog exposing only its ``_channels`` cache."""
@@ -55,8 +70,19 @@ class FakeModLog:
         self._channels = {}
 
 
+class FakeStarboard:
+    """Stand-in for the Starboard cog exposing only its ``_config`` cache.
+
+    The real cog's ``_config`` is a NEGATIVE cache: ``(channel_id, threshold)``
+    when configured, ``None`` when looked-up-and-empty.
+    """
+
+    def __init__(self):
+        self._config = {}
+
+
 class FakeBot:
-    def __init__(self, pool, modlog=None):
+    def __init__(self, pool, modlog=None, starboard=None):
         self.db_pool = pool
         self.prefixes = {}
         self.autoroles = {}
@@ -64,6 +90,8 @@ class FakeBot:
         self._cogs = {}
         if modlog is not None:
             self._cogs["ModLog"] = modlog
+        if starboard is not None:
+            self._cogs["Starboard"] = starboard
 
     def get_cog(self, name):
         return self._cogs.get(name)
@@ -209,6 +237,45 @@ async def test_dispatch_welcome_evicts_settings_blob():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: starboard invalidation (refresh the Starboard cog's _config entry).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_starboard_sets_config_from_db_row():
+    pool = SyncPool()
+    pool.starboard[100] = (555, 7)  # authoritative (channel_id, threshold)
+    sb = FakeStarboard()
+    bot = FakeBot(pool, starboard=sb)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("starboard", 100))
+
+    assert handled == "starboard"
+    # Mirrors the cog's own _apply_set: the tuple lands in _config.
+    assert sb._config[100] == (555, 7)
+
+
+async def test_dispatch_starboard_sets_none_when_db_empty():
+    # DB has no starboard row (a dashboard "disable" deleted it): the negative
+    # cache must store None, exactly as the cog's starboard_disable does.
+    pool = SyncPool()
+    sb = FakeStarboard()
+    sb._config[100] = (999, 3)  # stale value the dashboard just deleted
+    bot = FakeBot(pool, starboard=sb)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("starboard", 100))
+
+    assert handled == "starboard"
+    assert sb._config[100] is None
+
+
+async def test_dispatch_starboard_noop_without_cog():
+    # No Starboard cog loaded: safe no-op, still reports handled.
+    bot = FakeBot(SyncPool())
+    handled = await dashboard_sync.dispatch(bot, _payload("starboard", 100))
+    assert handled == "starboard"
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -257,4 +324,5 @@ def test_valid_kinds_match_invalidators():
         "modlog",
         "muterole",
         "welcome",
+        "starboard",
     }

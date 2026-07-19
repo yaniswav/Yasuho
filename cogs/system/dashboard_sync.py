@@ -6,11 +6,11 @@ into the SAME Postgres database, then emits::
     SELECT pg_notify('yasuho_dashboard', $1)
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
-``prefix | autorole | modlog | muterole | welcome``. The bot mirrors those
-settings in memory (``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``, the
-ModLog cog's ``_channels`` cache, and the ``tools.settings`` LRU for the welcome
-JSONB blob), so without this cog it would keep serving the stale in-memory value
-until the next restart.
+``prefix | autorole | modlog | muterole | welcome | starboard``. The bot mirrors
+those settings in memory (``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``,
+the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU for the welcome
+JSONB blob, and the Starboard cog's ``_config`` cache), so without this cog it
+would keep serving the stale in-memory value until the next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -25,6 +25,10 @@ Design mirrors the existing house patterns:
   entry, exactly as ``tools/retention.invalidate_guild_caches`` does;
 * the welcome invalidation evicts the guild's cached blob via
   ``tools.settings.invalidate_guild`` (same helper retention uses);
+* the starboard invalidation re-reads the guild's ``(channel_id, threshold)`` row
+  and writes it into the Starboard cog's ``_config`` cache exactly as that cog's
+  own ``_apply_set`` / ``starboard_disable`` do (set the tuple, or ``None`` when
+  the row is gone);
 * the supervised background task started in ``__init__`` via
   ``bot.loop.create_task`` with a done-callback mirrors
   ``cogs/system/webstats.py``.
@@ -51,8 +55,10 @@ log = logging.getLogger(__name__)
 # The Postgres NOTIFY channel the dashboard publishes on (see module docstring).
 CHANNEL = "yasuho_dashboard"
 
-# The five settings the dashboard can change; anything else is ignored.
-VALID_KINDS = frozenset({"prefix", "autorole", "modlog", "muterole", "welcome"})
+# The settings the dashboard can change; anything else is ignored.
+VALID_KINDS = frozenset(
+    {"prefix", "autorole", "modlog", "muterole", "welcome", "starboard"}
+)
 
 # Reconnect backoff bounds for the listen connection supervisor.
 _BACKOFF_START = 1.0
@@ -164,12 +170,37 @@ async def _invalidate_welcome(bot, gid):
     settings.invalidate_guild(gid)
 
 
+async def _invalidate_starboard(bot, gid):
+    """Refresh the Starboard cog's ``_config`` entry from the authoritative row.
+
+    The Starboard cog caches per-guild ``(channel_id, threshold)`` in ``_config``
+    - a NEGATIVE cache where ``None`` means "looked up, not configured"
+    (``cogs/config/starboard.py`` ``get_config``, l.152-163). It keeps that cache
+    coherent on its own writes: ``_apply_set`` sets the tuple
+    (``cogs/config/starboard.py:176``) and ``starboard_disable`` sets ``None``
+    (``cogs/config/starboard.py:266``). Mirror that exactly here - re-read the row
+    and store the tuple when configured, else ``None`` (a dashboard "disable"
+    deletes the row). No cog loaded / no cache dict => safe no-op.
+    """
+    cog = bot.get_cog("Starboard")
+    if cog is None:
+        return
+    cache = getattr(cog, "_config", None)
+    if not isinstance(cache, dict):
+        return
+    row = await bot.db_pool.fetchrow(
+        "SELECT channel_id, threshold FROM starboard WHERE guild_id = $1", gid
+    )
+    cache[gid] = (row["channel_id"], row["threshold"]) if row else None
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
     "muterole": _invalidate_muterole,
     "modlog": _invalidate_modlog,
     "welcome": _invalidate_welcome,
+    "starboard": _invalidate_starboard,
 }
 
 
