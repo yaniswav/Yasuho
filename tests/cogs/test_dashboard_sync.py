@@ -41,6 +41,13 @@ class SyncPool:
         self.starboard = {}
         # gid -> {"antilink": bool, "antispam": bool}; absent => no automod row.
         self.automod = {}
+        # Leveling stores read by the Leveling cog's refresh hooks (below).
+        # gid -> dict row (Record-like) or absent => no level_config row.
+        self.level_config = {}
+        # gid -> list of {"kind", "target_id"} rows; absent => no rows.
+        self.level_no_xp = {}
+        # gid -> list of {"kind", "target_id", "factor"} rows; absent => no rows.
+        self.xp_multipliers = {}
 
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
@@ -65,7 +72,18 @@ class SyncPool:
         if "FROM automod" in query:
             # dict (Record-like) or None, exactly as get_settings caches it.
             return self.automod.get(gid)
+        if "FROM level_config" in query:
+            return self.level_config.get(gid)
         raise AssertionError(f"unexpected fetchrow: {query!r}")  # pragma: no cover
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        gid = args[0]
+        if "FROM level_no_xp" in query:
+            return self.level_no_xp.get(gid, [])
+        if "FROM xp_multipliers" in query:
+            return self.xp_multipliers.get(gid, [])
+        raise AssertionError(f"unexpected fetch: {query!r}")  # pragma: no cover
 
 
 class FakeModLog:
@@ -97,8 +115,52 @@ class FakeAutoMod:
         self._settings = {}
 
 
+class FakeLeveling:
+    """Stand-in for the Leveling cog exposing its three refresh hooks + caches.
+
+    The real cog keeps ``self._configs`` (a plain dict of LevelConfig), plus
+    ``self._no_xp`` and ``self._multipliers`` (BoundedLRUs of snapshots); each is
+    refreshed by the SAME public method ``level_config_ui.py`` calls after a
+    write. Here each hook RE-READS from the fake pool and updates its cache (or
+    pops it when the config row is gone), so the dispatch test proves the
+    invalidator refreshes all three from the DB.
+    """
+
+    def __init__(self, pool):
+        self._pool = pool
+        self._configs = {}
+        self._no_xp = {}
+        self._multipliers = {}
+
+    async def refresh_guild_config(self, gid):
+        row = await self._pool.fetchrow(
+            "SELECT enabled FROM level_config WHERE guild_id = $1", gid
+        )
+        if row is not None:
+            self._configs[gid] = row
+        else:
+            self._configs.pop(gid, None)
+
+    async def refresh_no_xp_snapshot(self, gid):
+        rows = await self._pool.fetch(
+            "SELECT kind, target_id FROM level_no_xp WHERE guild_id = $1", gid
+        )
+        snapshot = frozenset((r["kind"], r["target_id"]) for r in rows)
+        self._no_xp[gid] = snapshot
+        return snapshot
+
+    async def refresh_multiplier_snapshot(self, gid):
+        rows = await self._pool.fetch(
+            "SELECT kind, target_id, factor FROM xp_multipliers WHERE guild_id = $1",
+            gid,
+        )
+        snapshot = tuple((r["kind"], r["target_id"], r["factor"]) for r in rows)
+        self._multipliers[gid] = snapshot
+        return snapshot
+
+
 class FakeBot:
-    def __init__(self, pool, modlog=None, starboard=None, automod=None):
+    def __init__(self, pool, modlog=None, starboard=None, automod=None, leveling=None):
         self.db_pool = pool
         self.prefixes = {}
         self.autoroles = {}
@@ -110,6 +172,8 @@ class FakeBot:
             self._cogs["Starboard"] = starboard
         if automod is not None:
             self._cogs["AutoMod"] = automod
+        if leveling is not None:
+            self._cogs["Leveling"] = leveling
 
     def get_cog(self, name):
         return self._cogs.get(name)
@@ -348,6 +412,54 @@ async def test_dispatch_automod_evicts_settings_blob_without_cog():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: leveling invalidation (refresh ALL THREE Leveling cog caches via
+# the cog's own public refresh hooks).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_leveling_refreshes_all_three_caches():
+    pool = SyncPool()
+    pool.level_config[100] = {"enabled": True}
+    pool.level_no_xp[100] = [{"kind": "role", "target_id": 7}]
+    pool.xp_multipliers[100] = [{"kind": "global", "target_id": 0, "factor": 2.0}]
+    lv = FakeLeveling(pool)
+    # Seed stale caches the dashboard just changed, to prove they are overwritten.
+    lv._configs[100] = {"enabled": False}
+    lv._no_xp[100] = frozenset()
+    lv._multipliers[100] = ()
+    bot = FakeBot(pool, leveling=lv)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("leveling", 100))
+
+    assert handled == "leveling"
+    # Each of the three caches is refreshed from the authoritative DB rows.
+    assert lv._configs[100] == {"enabled": True}
+    assert lv._no_xp[100] == frozenset({("role", 7)})
+    assert lv._multipliers[100] == (("global", 0, 2.0),)
+
+
+async def test_dispatch_leveling_pops_config_when_disabled():
+    # No level_config row (dashboard turned leveling off / deleted the row): the
+    # config mirror drops the guild, exactly as refresh_guild_config does.
+    pool = SyncPool()
+    lv = FakeLeveling(pool)
+    lv._configs[100] = {"enabled": True}  # stale
+    bot = FakeBot(pool, leveling=lv)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("leveling", 100))
+
+    assert handled == "leveling"
+    assert 100 not in lv._configs
+
+
+async def test_dispatch_leveling_noop_without_cog():
+    # No Leveling cog loaded: safe no-op, still reports handled.
+    bot = FakeBot(SyncPool())
+    handled = await dashboard_sync.dispatch(bot, _payload("leveling", 100))
+    assert handled == "leveling"
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -398,4 +510,5 @@ def test_valid_kinds_match_invalidators():
         "welcome",
         "starboard",
         "automod",
+        "leveling",
     }

@@ -6,12 +6,15 @@ into the SAME Postgres database, then emits::
     SELECT pg_notify('yasuho_dashboard', $1)
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
-``prefix | autorole | modlog | muterole | welcome | starboard | automod``. The bot
-mirrors those settings in memory (``bot.prefixes`` / ``bot.autoroles`` /
-``bot.muteroles``, the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU
-for the welcome + automod JSONB blobs, the Starboard cog's ``_config`` cache, and
-the AutoMod cog's ``_settings`` cache for its boolean toggle table), so without this
-cog it would keep serving the stale in-memory value until the next restart.
+``prefix | autorole | modlog | muterole | welcome | starboard | automod |
+leveling``. The bot mirrors those settings in memory (``bot.prefixes`` /
+``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
+``tools.settings`` LRU for the welcome + automod JSONB blobs, the Starboard cog's
+``_config`` cache, the AutoMod cog's ``_settings`` cache for its boolean toggle
+table, and the Leveling cog's three caches - ``_configs`` (level_config scalar
+knobs), ``_no_xp`` (level_no_xp snapshot) and ``_multipliers`` (xp_multipliers +
+level_config event columns)), so without this cog it would keep serving the stale
+in-memory value until the next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -58,7 +61,16 @@ CHANNEL = "yasuho_dashboard"
 
 # The settings the dashboard can change; anything else is ignored.
 VALID_KINDS = frozenset(
-    {"prefix", "autorole", "modlog", "muterole", "welcome", "starboard", "automod"}
+    {
+        "prefix",
+        "autorole",
+        "modlog",
+        "muterole",
+        "welcome",
+        "starboard",
+        "automod",
+        "leveling",
+    }
 )
 
 # Reconnect backoff bounds for the listen connection supervisor.
@@ -229,6 +241,51 @@ async def _invalidate_automod(bot, gid):
     cache[gid] = row
 
 
+async def _invalidate_leveling(bot, gid):
+    """Refresh EVERY leveling cache the Leveling cog keeps, for one guild.
+
+    Leveling config is spread across THREE in-memory caches on the Leveling cog
+    (``cogs/community/leveling.py``), so this invalidator refreshes each by
+    calling the cog's OWN public refresh hook - the SAME method
+    ``cogs/community/level_config_ui.py`` invokes after every leveling write, so a
+    dashboard change takes effect on the very next message / voice sweep, no
+    restart:
+
+    * ``self._configs`` - a plain dict of ``tools.leveling.LevelConfig``, the
+      on_message hot-path mirror of the level_config scalar knobs (enabled,
+      cooldown, xp band, announce, voice_xp; leveling.py l.252) - is refreshed by
+      ``refresh_guild_config`` (leveling.py l.347), which re-reads level_config
+      and re-resolves the cached config (or drops the guild when disabled).
+    * ``self._no_xp`` - a ``BoundedLRU`` of ``tools.leveling.NoXpSnapshot``
+      (leveling.py l.268) - is refreshed by ``refresh_no_xp_snapshot``
+      (leveling.py l.526), which re-reads the guild's ``level_no_xp`` rows.
+    * ``self._multipliers`` - a ``BoundedLRU`` of
+      ``tools.leveling.MultiplierSnapshot`` (leveling.py l.276) - is refreshed by
+      ``refresh_multiplier_snapshot`` (leveling.py l.562), which re-reads the
+      guild's ``xp_multipliers`` rows AND the ``level_config`` event columns.
+
+    ``level_rewards`` rows and the ``level_config.rewards_mode`` column are NOT
+    cached (``cogs/community/level_rewards.py`` reads both fresh on each level-up -
+    l.19-22 / ``_fetch_mode``), so a dashboard rewards/mode change needs no
+    invalidation here. Leveling config is served from these dict / LRU caches, NOT
+    the ``tools.settings`` LRU (that LRU is only a legacy read-through fallback in
+    ``refresh_guild_config``, which a level_config row - always written by the
+    dashboard - makes moot), so no ``settings.invalidate_guild`` call is needed.
+    No Leveling cog loaded, or a missing refresh method, is a safe no-op.
+    """
+    cog = bot.get_cog("Leveling")
+    if cog is None:
+        return
+    for method_name in (
+        "refresh_guild_config",
+        "refresh_no_xp_snapshot",
+        "refresh_multiplier_snapshot",
+    ):
+        refresh = getattr(cog, method_name, None)
+        if callable(refresh):
+            await refresh(gid)
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
@@ -237,6 +294,7 @@ _INVALIDATORS = {
     "welcome": _invalidate_welcome,
     "starboard": _invalidate_starboard,
     "automod": _invalidate_automod,
+    "leveling": _invalidate_leveling,
 }
 
 
