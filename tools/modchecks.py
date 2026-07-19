@@ -46,3 +46,29 @@ def hierarchy_error(ctx, target):
         return _("My highest role isn't above that member, so I can't act on them.")
 
     return None
+
+
+def role_hierarchy_error(ctx, role):
+    """Return a reason string if ctx.author may not manage ``role``, else None.
+
+    The role-management commands (addrole/removerole) are gated only by
+    ``manage_roles``, which does not prove the invoker outranks the role they
+    are handing out. This mirrors :func:`hierarchy_error` for roles: the guild
+    owner or an Administrator may touch any role, but a plain moderator must sit
+    strictly above it, and the bot must outrank it too or the edit just fails
+    with a confusing silent Forbidden.
+    """
+    author = ctx.author
+    guild = ctx.guild
+
+    if (
+        author.id != guild.owner_id
+        and not author.guild_permissions.administrator
+        and role >= author.top_role
+    ):
+        return _("You can't manage a role that is equal to or above your highest role.")
+
+    if role >= guild.me.top_role:
+        return _("My highest role isn't above that role, so I can't manage it.")
+
+    return None

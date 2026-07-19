@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-18 08:46+0000\n"
+"POT-Creation-Date: 2026-07-19 15:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -85,7 +85,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου με `/anilist login`."
 
 #: cogs/anilist/account.py:267 cogs/anilist/account.py:553
-#: cogs/anilist/feed.py:3372
+#: cogs/anilist/feed.py:1345
 msgid "Could not resolve your AniList account."
 msgstr "Δεν ήταν δυνατός ο εντοπισμός του λογαριασμού σου AniList."
 
@@ -129,30 +129,32 @@ msgstr "Ο τύπος πρέπει να είναι `anime` ή `manga`."
 
 #: cogs/anilist/airing.py:301 cogs/anilist/airing.py:347
 #: cogs/anilist/chapters.py:371 cogs/anilist/chapters.py:417
-#: cogs/anilist/feed.py:609 cogs/anilist/feed.py:726 cogs/anilist/feed.py:770
-#: cogs/anilist/feed.py:872
+#: cogs/anilist/feed_delivery.py:323 cogs/anilist/feed_delivery.py:440
+#: cogs/anilist/feed_delivery.py:484 cogs/anilist/feed_delivery.py:586
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr "Το AniList με περιορίζει αυτή τη στιγμή - δοκίμασε ξανά σύντομα."
 
 #: cogs/anilist/airing.py:307 cogs/anilist/airing.py:353
 #: cogs/anilist/chapters.py:377 cogs/anilist/chapters.py:423
-#: cogs/anilist/feed.py:615 cogs/anilist/feed.py:732 cogs/anilist/feed.py:776
-#: cogs/anilist/feed.py:878
+#: cogs/anilist/feed_delivery.py:329 cogs/anilist/feed_delivery.py:446
+#: cogs/anilist/feed_delivery.py:490 cogs/anilist/feed_delivery.py:592
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr "Η σύνδεση του AniList σου φαίνεται άκυρη τώρα - επανασύνδεσέ τη με `/anilist login`."
 
 #: cogs/anilist/airing.py:313 cogs/anilist/airing.py:323
 #: cogs/anilist/airing.py:359 cogs/anilist/chapters.py:383
 #: cogs/anilist/chapters.py:393 cogs/anilist/chapters.py:429
-#: cogs/anilist/feed.py:738 cogs/anilist/feed.py:748 cogs/anilist/feed.py:782
+#: cogs/anilist/feed_delivery.py:452 cogs/anilist/feed_delivery.py:462
+#: cogs/anilist/feed_delivery.py:496
 msgid "I couldn't find that title on AniList anymore."
 msgstr "Δεν μπόρεσα να ξαναβρώ αυτόν τον τίτλο στο AniList."
 
 #: cogs/anilist/airing.py:317 cogs/anilist/airing.py:363
 #: cogs/anilist/airing.py:368 cogs/anilist/chapters.py:387
 #: cogs/anilist/chapters.py:433 cogs/anilist/chapters.py:438
-#: cogs/anilist/feed.py:625 cogs/anilist/feed.py:742 cogs/anilist/feed.py:786
-#: cogs/anilist/feed.py:791 cogs/anilist/feed.py:888 cogs/anilist/feed.py:3064
+#: cogs/anilist/feed.py:1037 cogs/anilist/feed_delivery.py:339
+#: cogs/anilist/feed_delivery.py:456 cogs/anilist/feed_delivery.py:500
+#: cogs/anilist/feed_delivery.py:505 cogs/anilist/feed_delivery.py:602
 msgid "I could not reach AniList - try again shortly."
 msgstr "Δεν μπόρεσα να συνδεθώ με το AniList - δοκίμασε ξανά σύντομα."
 
@@ -183,8 +185,8 @@ msgstr "Το επεισόδιο {episode} του **{title}** μόλις κυκλ
 msgid "New episode"
 msgstr "Νέο επεισόδιο"
 
-#: cogs/anilist/airing.py:476 cogs/anilist/feed.py:1105 cogs/anilist/hub.py:293
-#: cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
+#: cogs/anilist/airing.py:476 cogs/anilist/feed_render.py:274
+#: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
 msgid "AniList"
 msgstr "AniList"
 
@@ -197,7 +199,7 @@ msgid "Link your AniList account first with `/anilist login`, then run this agai
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά τρέξε ξανά αυτή την εντολή για να ενεργοποιήσεις τις ειδοποιήσεις προβολής."
 
 #: cogs/anilist/airing.py:539 cogs/anilist/chapters.py:627
-#: cogs/anilist/feed.py:574 cogs/anilist/feed.py:3363
+#: cogs/anilist/feed.py:1336 cogs/anilist/feed_delivery.py:288
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Η σύνδεση του AniList σου δεν ισχύει πια - επανασύνδεσέ τη με `/anilist login`."
 
@@ -379,42 +381,42 @@ msgstr "Ανάγνωση"
 #: cogs/anilist/collection.py:52 cogs/anilist/collection.py:336
 #: cogs/anilist/components.py:245 cogs/anilist/components.py:596
 #: cogs/anilist/components.py:860 cogs/anilist/components.py:988
-#: cogs/anilist/feed.py:417
+#: cogs/anilist/feed_delivery.py:131
 msgid "Watching"
 msgstr "Παρακολούθηση"
 
 #: cogs/anilist/collection.py:60 cogs/anilist/collection.py:338
 #: cogs/anilist/components.py:249 cogs/anilist/components.py:600
 #: cogs/anilist/components.py:864 cogs/anilist/components.py:989
-#: cogs/anilist/feed.py:418
+#: cogs/anilist/feed_delivery.py:132
 msgid "Planning"
 msgstr "Σε σχεδιασμό"
 
 #: cogs/anilist/collection.py:64 cogs/anilist/collection.py:339
 #: cogs/anilist/components.py:250 cogs/anilist/components.py:599
 #: cogs/anilist/components.py:865 cogs/anilist/components.py:990
-#: cogs/anilist/feed.py:419
+#: cogs/anilist/feed_delivery.py:133
 msgid "Completed"
 msgstr "Ολοκληρωμένα"
 
 #: cogs/anilist/collection.py:68 cogs/anilist/collection.py:340
 #: cogs/anilist/components.py:252 cogs/anilist/components.py:601
 #: cogs/anilist/components.py:867 cogs/anilist/components.py:992
-#: cogs/anilist/feed.py:421
+#: cogs/anilist/feed_delivery.py:135
 msgid "Paused"
 msgstr "Σε παύση"
 
 #: cogs/anilist/collection.py:72 cogs/anilist/collection.py:341
 #: cogs/anilist/components.py:253 cogs/anilist/components.py:602
 #: cogs/anilist/components.py:866 cogs/anilist/components.py:991
-#: cogs/anilist/feed.py:420
+#: cogs/anilist/feed_delivery.py:134
 msgid "Dropped"
 msgstr "Εγκαταλειμμένα"
 
 #: cogs/anilist/collection.py:76 cogs/anilist/collection.py:342
 #: cogs/anilist/components.py:251 cogs/anilist/components.py:603
 #: cogs/anilist/components.py:868 cogs/anilist/components.py:993
-#: cogs/anilist/feed.py:422
+#: cogs/anilist/feed_delivery.py:136
 msgid "Repeating"
 msgstr "Επανάληψη"
 
@@ -423,14 +425,16 @@ msgid "Filter by status..."
 msgstr "Φιλτράρισμα κατά κατάσταση..."
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1243 cogs/anilist/feed.py:1424
-#: cogs/anilist/feed.py:1590 cogs/anilist/feed.py:1711 cogs/anilist/hub.py:54
+#: cogs/anilist/feed_views.py:133 cogs/anilist/feed_views.py:314
+#: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
+#: cogs/anilist/hub.py:54
 msgid "Anime"
 msgstr "Anime"
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1244 cogs/anilist/feed.py:1424
-#: cogs/anilist/feed.py:1590 cogs/anilist/feed.py:1711 cogs/anilist/hub.py:55
+#: cogs/anilist/feed_views.py:134 cogs/anilist/feed_views.py:314
+#: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
+#: cogs/anilist/hub.py:55
 msgid "Manga"
 msgstr "Manga"
 
@@ -446,13 +450,13 @@ msgstr "Ολοκλήρωση"
 msgid "Drop"
 msgstr "Εγκατάλειψη"
 
-#: cogs/anilist/collection.py:247 cogs/config/rooms.py:1000
+#: cogs/anilist/collection.py:247 cogs/config/rooms_config.py:389
 msgid "Edit"
 msgstr "Επεξεργασία"
 
-#: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2061
+#: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
 #: cogs/anilist/hub.py:261 cogs/community/usersettings.py:226
-#: cogs/config/rooms.py:1062 tools/views.py:22
+#: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
 
@@ -543,7 +547,7 @@ msgid "Keep current status"
 msgstr "Διατήρηση τρέχουσας κατάστασης"
 
 #: cogs/anilist/components.py:270 cogs/anilist/components.py:762
-#: cogs/anilist/feed.py:2153 cogs/config/twitch.py:420
+#: cogs/anilist/feed_views.py:1043 cogs/config/twitch.py:420
 #: cogs/config/welcome.py:429 cogs/config/welcome.py:551
 msgid "Status"
 msgstr "Κατάσταση"
@@ -787,576 +791,144 @@ msgstr "Κάτι πήγε στραβά κατά τη σύνδεση του λο�
 msgid "Could not open the code form."
 msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κωδικού."
 
-#: cogs/anilist/feed.py:243 cogs/anilist/feed.py:1427 cogs/music/music.py:2455
-#: cogs/music/music.py:2623 cogs/music/search.py:342
-msgid "Unknown title"
-msgstr "Άγνωστος τίτλος"
-
-#: cogs/anilist/feed.py:256
-#, python-brace-format
-msgid "watched episode {progress} of"
-msgstr "είδε το επεισόδιο {progress} του"
-
-#: cogs/anilist/feed.py:257
-#, python-brace-format
-msgid "rewatched episode {progress} of"
-msgstr "ξαναείδε το επεισόδιο {progress} του"
-
-#: cogs/anilist/feed.py:258
-#, python-brace-format
-msgid "read chapter {progress} of"
-msgstr "διάβασε το κεφάλαιο {progress} του"
-
-#: cogs/anilist/feed.py:259
-#, python-brace-format
-msgid "reread chapter {progress} of"
-msgstr "ξαναδιάβασε το κεφάλαιο {progress} του"
-
-#: cogs/anilist/feed.py:260
-msgid "completed"
-msgstr "ολοκλήρωσε το"
-
-#: cogs/anilist/feed.py:261
-msgid "plans to watch"
-msgstr "σχεδιάζει να δει το"
-
-#: cogs/anilist/feed.py:262
-msgid "plans to read"
-msgstr "σχεδιάζει να διαβάσει το"
-
-#: cogs/anilist/feed.py:263
-msgid "paused watching"
-msgstr "σταμάτησε προσωρινά να παρακολουθεί το"
-
-#: cogs/anilist/feed.py:264
-msgid "paused reading"
-msgstr "σταμάτησε προσωρινά να διαβάζει το"
-
-#: cogs/anilist/feed.py:265
-msgid "dropped"
-msgstr "εγκατέλειψε το"
-
-#: cogs/anilist/feed.py:318
-#, python-brace-format
-msgid "{n} like"
-msgid_plural "{n} likes"
-msgstr[0] "{n} like"
-msgstr[1] "{n} like"
-
-#: cogs/anilist/feed.py:321
-#, python-brace-format
-msgid "{n} reply"
-msgid_plural "{n} replies"
-msgstr[0] "{n} απάντηση"
-msgstr[1] "{n} απαντήσεις"
-
-#: cogs/anilist/feed.py:338
-#, python-brace-format
-msgid "{n} anime update"
-msgid_plural "{n} anime updates"
-msgstr[0] "{n} ενημέρωση anime"
-msgstr[1] "{n} ενημερώσεις anime"
-
-#: cogs/anilist/feed.py:341
-#, python-brace-format
-msgid "{n} manga update"
-msgid_plural "{n} manga updates"
-msgstr[0] "{n} ενημέρωση manga"
-msgstr[1] "{n} ενημερώσεις manga"
-
-#: cogs/anilist/feed.py:344
-#, python-brace-format
-msgid "{n} post"
-msgid_plural "{n} posts"
-msgstr[0] "{n} δημοσίευση"
-msgstr[1] "{n} δημοσιεύσεις"
-
-#: cogs/anilist/feed.py:347
-#, python-brace-format
-msgid "{n} update"
-msgid_plural "{n} updates"
-msgstr[0] "{n} ενημέρωση"
-msgstr[1] "{n} ενημερώσεις"
-
-#: cogs/anilist/feed.py:537
-msgid "You are clicking too fast - give it a moment."
-msgstr "Κάνεις κλικ πολύ γρήγορα - περίμενε λίγο."
-
-#: cogs/anilist/feed.py:556 cogs/anilist/feed.py:3353
-msgid "AniList actions are unavailable right now."
-msgstr "Οι ενέργειες AniList δεν είναι διαθέσιμες αυτή τη στιγμή."
-
-#: cogs/anilist/feed.py:565
-msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
-msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά θα μπορείς να κάνεις like και να απαντάς απευθείας από τη ροή."
-
-#: cogs/anilist/feed.py:621 cogs/anilist/feed.py:884
-msgid "This activity no longer exists on AniList."
-msgstr "Αυτή η δραστηριότητα δεν υπάρχει πια στο AniList."
-
-#: cogs/anilist/feed.py:633
-#, python-brace-format
-msgid "Liked - this activity now has {n} like."
-msgid_plural "Liked - this activity now has {n} likes."
-msgstr[0] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
-msgstr[1] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
-
-#: cogs/anilist/feed.py:639
-#, python-brace-format
-msgid "Like removed - this activity now has {n} like."
-msgid_plural "Like removed - this activity now has {n} likes."
-msgstr[0] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
-msgstr[1] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
-
-#: cogs/anilist/feed.py:663
-msgid "Set progress / score"
-msgstr "Πρόοδος / βαθμολογία"
-
-#: cogs/anilist/feed.py:755
-#, python-brace-format
-msgid "**{title}** is already on your list ({status})."
-msgstr "Το **{title}** βρίσκεται ήδη στη λίστα σου ({status})."
-
-#: cogs/anilist/feed.py:803
-#, python-brace-format
-msgid "Added **{title}** to your planning."
-msgstr "Το **{title}** προστέθηκε στη λίστα «Σε σχεδιασμό» σου."
-
-#: cogs/anilist/feed.py:832
-msgid "Reply on AniList"
-msgstr "Απάντηση στο AniList"
-
-#: cogs/anilist/feed.py:838
-msgid "Write your reply..."
-msgstr "Γράψε την απάντησή σου..."
-
-#: cogs/anilist/feed.py:841
-msgid "Your reply"
-msgstr "Η απάντησή σου"
-
-#: cogs/anilist/feed.py:859
-msgid "Your reply was empty - nothing was posted."
-msgstr "Η απάντησή σου ήταν κενή - δεν δημοσιεύτηκε τίποτα."
-
-#: cogs/anilist/feed.py:894
-msgid "AniList did not accept that reply - try again shortly."
-msgstr "Το AniList δεν δέχτηκε αυτή την απάντηση - δοκίμασε ξανά σύντομα."
-
-#: cogs/anilist/feed.py:898
-#, python-brace-format
-msgid "Your reply was posted. [See it on AniList]({url})"
-msgstr "Η απάντησή σου δημοσιεύτηκε. [Δες τη στο AniList]({url})"
-
-#: cogs/anilist/feed.py:1007
-msgid "An AniList update could not be rendered."
-msgstr "Μια ενημέρωση AniList δεν μπόρεσε να εμφανιστεί."
-
-#: cogs/anilist/feed.py:1030 cogs/anilist/feed.py:1070
-#: cogs/anilist/feed.py:1169
-msgid "Someone"
-msgstr "Κάποιος"
-
-#: cogs/anilist/feed.py:1041
-#, python-brace-format
-msgid "{user} {action} {title}"
-msgstr "{user} {action} {title}"
-
-#: cogs/anilist/feed.py:1075
-#, python-brace-format
-msgid "{user} posted an update"
-msgstr "{user} δημοσίευσε μια ενημέρωση"
-
-#: cogs/anilist/feed.py:1144
-msgid "More AniList activity"
-msgstr "Περισσότερη δραστηριότητα AniList"
-
-#: cogs/anilist/feed.py:1157
-#, python-brace-format
-msgid "...and {count} more update"
-msgid_plural "...and {count} more updates"
-msgstr[0] "...και {count} ακόμα ενημέρωση"
-msgstr[1] "...και {count} ακόμα ενημερώσεις"
-
-#: cogs/anilist/feed.py:1173
-#, python-brace-format
-msgid "{user} - {summary}"
-msgstr "{user} - {summary}"
-
-#: cogs/anilist/feed.py:1181
-#, python-brace-format
-msgid "+{count} other"
-msgid_plural "+{count} others"
-msgstr[0] "+{count} ακόμα"
-msgstr[1] "+{count} ακόμα"
-
-#: cogs/anilist/feed.py:1245
-msgid "Posts"
-msgstr "Δημοσιεύσεις"
-
-#: cogs/anilist/feed.py:1265
-msgid "Switch feed..."
-msgstr "Αλλαγή ροής..."
-
-#: cogs/anilist/feed.py:1300
-msgid "Move this feed to..."
-msgstr "Μετακίνηση αυτής της ροής σε..."
-
-#: cogs/anilist/feed.py:1302
-msgid "Pick a channel to create a feed..."
-msgstr "Διάλεξε ένα κανάλι για να δημιουργήσεις μια ροή..."
-
-#: cogs/anilist/feed.py:1353
-msgid "At least one activity type must stay enabled."
-msgstr "Τουλάχιστον ένας τύπος δραστηριότητας πρέπει να παραμείνει ενεργός."
-
-#: cogs/anilist/feed.py:1375
-#, python-brace-format
-msgid "Members can join: {state}"
-msgstr "Τα μέλη μπορούν να μπουν: {state}"
-
-#: cogs/anilist/feed.py:1376 cogs/config/welcome.py:145
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
-#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
-msgid "On"
-msgstr "Ενεργό"
-
-#: cogs/anilist/feed.py:1376 cogs/config/welcome.py:145
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
-#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
-#: cogs/music/views.py:322
-msgid "Off"
-msgstr "Ανενεργό"
-
-#: cogs/anilist/feed.py:1438
-msgid "Pick the title to track..."
-msgstr "Διάλεξε τον τίτλο για παρακολούθηση..."
-
-#: cogs/anilist/feed.py:1458 cogs/music/views.py:472
-msgid "Back"
-msgstr "Πίσω"
-
-#: cogs/anilist/feed.py:1491 cogs/anilist/feed.py:1539
-#: cogs/anilist/feed.py:1564
-msgid "Track a title"
-msgstr "Παρακολούθηση τίτλου"
-
-#: cogs/anilist/feed.py:1493
-msgid "Pick the exact title to track:"
-msgstr "Διάλεξε τον ακριβή τίτλο για παρακολούθηση:"
-
-#: cogs/anilist/feed.py:1500 cogs/anilist/feed.py:1744
-#: cogs/anilist/feed.py:2128 cogs/anilist/feed.py:2215 cogs/anilist/hub.py:309
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:220
-msgid "Only you can use these controls."
-msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
-
-#: cogs/anilist/feed.py:1507
-msgid "I couldn't read that selection - try again."
-msgstr "Δεν μπόρεσα να διαβάσω αυτή την επιλογή - δοκίμασε ξανά."
-
-#: cogs/anilist/feed.py:1519
-#, python-brace-format
-msgid "Now tracking **{title}** in this feed."
-msgstr "Τώρα παρακολουθώ το **{title}** σε αυτή τη ροή."
-
-#: cogs/anilist/feed.py:1542
-msgid "Title to search"
-msgstr "Τίτλος για αναζήτηση"
-
-#: cogs/anilist/feed.py:1572 cogs/anilist/feed.py:2923
-#, python-brace-format
-msgid "This feed already tracks the maximum of {max} titles. Remove one first."
-msgstr "Αυτή η ροή παρακολουθεί ήδη το μέγιστο των {max} τίτλων. Αφαίρεσε έναν πρώτα."
-
-#: cogs/anilist/feed.py:1600
-msgid "Stop tracking a title..."
-msgstr "Διακοπή παρακολούθησης τίτλου..."
-
-#: cogs/anilist/feed.py:1634 cogs/community/leveling.py:206
-#: cogs/community/reminders.py:340 cogs/music/views.py:1134
-msgid "Next"
-msgstr "Επόμ."
-
-#: cogs/anilist/feed.py:1634
-msgid "Previous"
-msgstr "Προηγούμενο"
-
-#: cogs/anilist/feed.py:1695
-msgid "Tracked releases"
-msgstr "Κυκλοφορίες υπό παρακολούθηση"
-
-#: cogs/anilist/feed.py:1702
-#, python-brace-format
-msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
-msgstr "Τα νέα επεισόδια (anime) και κεφάλαια (manga) αυτών των τίτλων δημοσιεύονται στο {channel}, ανεξάρτητα από τυχόν ειδοποιήσεις σε προσωπικά μηνύματα. Έως {max} τίτλοι ανά ροή."
-
-#: cogs/anilist/feed.py:1714
-msgid "No titles tracked yet."
-msgstr "Δεν παρακολουθείται κανένας τίτλος ακόμα."
-
-#: cogs/anilist/feed.py:1717
-#, python-brace-format
-msgid "Tracking {count}/{max}"
-msgstr "Παρακολούθηση {count}/{max}"
-
-#: cogs/anilist/feed.py:1765
-#, python-brace-format
-msgid "No AniList match for **{query}**."
-msgstr "Καμία αντιστοιχία στο AniList για **{query}**."
-
-#: cogs/anilist/feed.py:1796
-#, python-brace-format
-msgid "Tracked releases ({count})"
-msgstr "Κυκλοφορίες υπό παρακολούθηση ({count})"
-
-#: cogs/anilist/feed.py:1822 cogs/config/twitch.py:302
-#: cogs/config/welcome.py:200
-msgid "Disable"
-msgstr "Απενεργοποίηση"
-
-#: cogs/anilist/feed.py:1822 cogs/config/twitch.py:302
-#: cogs/config/welcome.py:200
-msgid "Enable"
-msgstr "Ενεργοποίηση"
-
-#: cogs/anilist/feed.py:1848
-msgid "Delete"
-msgstr "Διαγραφή"
-
-#: cogs/anilist/feed.py:1849 cogs/community/level_admin.py:65
-#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:143
-#: tools/arg_completion.py:219
-msgid "Cancel"
-msgstr "Ακύρωση"
-
-#: cogs/anilist/feed.py:1853
-msgid "Delete this feed?"
-msgstr "Διαγραφή αυτής της ροής;"
-
-#: cogs/anilist/feed.py:1855
-#, python-brace-format
-msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
-msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο {channel} και όλους όσους ακολουθεί. Δεν μπορεί να αναιρεθεί."
-
-#: cogs/anilist/feed.py:1870
-msgid "Feed deleted."
-msgstr "Η ροή διαγράφηκε."
-
-#: cogs/anilist/feed.py:1883 cogs/moderation/moderation.py:1158
-#: cogs/moderation/moderation.py:1215 tools/arg_completion.py:411
-msgid "Cancelled."
-msgstr "Ακυρώθηκε."
-
-#: cogs/anilist/feed.py:1893
-msgid "Delete feed"
-msgstr "Διαγραφή ροής"
-
-#: cogs/anilist/feed.py:1911
-msgid "Add a follow"
-msgstr "Προσθήκη ακολούθησης"
-
-#: cogs/anilist/feed.py:1914
-msgid "AniList username"
-msgstr "Όνομα χρήστη AniList"
-
-#: cogs/anilist/feed.py:1942
-#, python-brace-format
-msgid "Now following **{name}**."
-msgstr "Ακολουθεί πλέον **{name}**."
-
-#: cogs/anilist/feed.py:1952
-msgid "Add follow"
-msgstr "Προσθήκη ακολούθησης"
-
-#: cogs/anilist/feed.py:1959 cogs/anilist/feed.py:3122
-#, python-brace-format
-msgid "This feed already follows the maximum of {max} users."
-msgstr "Αυτή η ροή ακολουθεί ήδη το μέγιστο των {max} χρηστών."
-
-#: cogs/anilist/feed.py:1982
-msgid "Remove a follow..."
-msgstr "Αφαίρεση ακολούθησης..."
-
-#: cogs/anilist/feed.py:2117 cogs/anilist/feed.py:2145
-msgid "AniList activity feed"
-msgstr "Ροή δραστηριότητας AniList"
-
-#: cogs/anilist/feed.py:2120
-#, python-brace-format
-msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
-msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
-
-#: cogs/anilist/feed.py:2139 cogs/config/settings.py:53
-#: cogs/config/twitch.py:405 cogs/config/verification.py:94
-#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
-#: cogs/moderation/modlog.py:253
-msgid "Enabled"
-msgstr "Ενεργοποιημένο"
-
-#: cogs/anilist/feed.py:2139 cogs/config/settings.py:53
-#: cogs/config/twitch.py:407 cogs/config/verification.py:96
-#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
-#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
-msgid "Disabled"
-msgstr "Απενεργοποιημένο"
-
-#: cogs/anilist/feed.py:2141
-#, python-brace-format
-msgid "{status} ({count} recent failures)"
-msgstr "{status} ({count} πρόσφατες αποτυχίες)"
-
-#: cogs/anilist/feed.py:2147
-msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
-msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικατοπτρίζεται σε αυτόν τον διακομιστή. Κάθε αλλαγή αποθηκεύεται αμέσως."
-
-#: cogs/anilist/feed.py:2151 cogs/config/announcements.py:268
-#: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
-#: cogs/config/twitch.py:422 cogs/config/welcome.py:431
-#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
-#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
-msgid "Channel"
-msgstr "Κανάλι"
-
-#: cogs/anilist/feed.py:2160
-msgid "Feeds"
-msgstr "Ροές"
-
-#: cogs/anilist/feed.py:2173
-msgid "Types"
-msgstr "Τύποι"
-
-#: cogs/anilist/feed.py:2197 cogs/anilist/feed.py:3440
-msgid "no one yet"
-msgstr "κανείς ακόμα"
-
-#: cogs/anilist/feed.py:2201
-#, python-brace-format
-msgid "Following ({count})"
-msgstr "Ακολουθεί ({count})"
-
-#: cogs/anilist/feed.py:2768 cogs/anilist/feed.py:2804
-#: cogs/anilist/feed.py:3260
+#: cogs/anilist/feed.py:741 cogs/anilist/feed.py:777 cogs/anilist/feed.py:1233
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "Το {channel} είναι ήδη ροή AniList."
 
-#: cogs/anilist/feed.py:2776
+#: cogs/anilist/feed.py:749
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Διάγραψε μία πρώτα."
 
-#: cogs/anilist/feed.py:2816
+#: cogs/anilist/feed.py:789
 msgid "That feed no longer exists."
 msgstr "Αυτή η ροή δεν υπάρχει πια."
 
-#: cogs/anilist/feed.py:2911 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:884 tests/cogs/test_anilist_feed_subs.py:14
 msgid "I couldn't read that title - try searching again."
 msgstr "Δεν μπόρεσα να διαβάσω αυτόν τον τίτλο - δοκίμασε να ψάξεις ξανά."
 
-#: cogs/anilist/feed.py:3045
+#: cogs/anilist/feed.py:896 cogs/anilist/feed_views.py:462
+#, python-brace-format
+msgid "This feed already tracks the maximum of {max} titles. Remove one first."
+msgstr "Αυτή η ροή παρακολουθεί ήδη το μέγιστο των {max} τίτλων. Αφαίρεσε έναν πρώτα."
+
+#: cogs/anilist/feed.py:1018
 msgid "Give me an AniList username to follow."
 msgstr "Δώσε μου ένα όνομα χρήστη AniList για να ακολουθήσω."
 
-#: cogs/anilist/feed.py:3055
+#: cogs/anilist/feed.py:1028
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "Το AniList με περιορίζει αυτή τη στιγμή - δοκίμασε ξανά σε ένα λεπτό."
 
-#: cogs/anilist/feed.py:3073
+#: cogs/anilist/feed.py:1046
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "Δεν βρήκα κανέναν χρήστη AniList με το όνομα **{name}**."
 
-#: cogs/anilist/feed.py:3178
+#: cogs/anilist/feed.py:1095 cogs/anilist/feed_views.py:849
+#, python-brace-format
+msgid "This feed already follows the maximum of {max} users."
+msgstr "Αυτή η ροή ακολουθεί ήδη το μέγιστο των {max} χρηστών."
+
+#: cogs/anilist/feed.py:1151
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "Αυτός ο διακομιστής δεν έχει ενεργή ροή AniList. Δημιούργησε ή ενεργοποίησε ξανά μία με `/anilistfeed set` πρώτα."
 
-#: cogs/anilist/feed.py:3189
+#: cogs/anilist/feed.py:1162
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "Αυτός ο διακομιστής έχει πολλές ροές. Εκτέλεσε αυτό σε ένα κανάλι ροής ({channels})."
 
-#: cogs/anilist/feed.py:3236
+#: cogs/anilist/feed.py:1209
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Αφαίρεσε μία με `/anilistfeed remove` πρώτα."
 
-#: cogs/anilist/feed.py:3246
+#: cogs/anilist/feed.py:1219
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "Η ροή AniList δημιουργήθηκε στο {channel}. Πρόσθεσε χρήστες με `/anilistfeed follow`."
 
-#: cogs/anilist/feed.py:3256
+#: cogs/anilist/feed.py:1229
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "Η ροή AniList ενεργοποιήθηκε ξανά στο {channel}."
 
-#: cogs/anilist/feed.py:3264
+#: cogs/anilist/feed.py:1237
 msgid "AniList feed"
 msgstr "Ροή AniList"
 
-#: cogs/anilist/feed.py:3290
+#: cogs/anilist/feed.py:1263
 msgid "User"
 msgstr "Χρήστης"
 
-#: cogs/anilist/feed.py:3290
+#: cogs/anilist/feed.py:1263
 msgid "Feed"
 msgstr "Ροή"
 
-#: cogs/anilist/feed.py:3292
+#: cogs/anilist/feed.py:1265
 msgid "Now following"
 msgstr "Ακολουθεί πλέον"
 
-#: cogs/anilist/feed.py:3317
+#: cogs/anilist/feed.py:1290
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "Αυτή η ροή δεν ακολουθεί **{name}**."
 
-#: cogs/anilist/feed.py:3320
+#: cogs/anilist/feed.py:1293
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "Δεν ακολουθεί πλέον **{name}**."
 
-#: cogs/anilist/feed.py:3345
+#: cogs/anilist/feed.py:1318
 msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
 msgstr "Αυτή η ροή δεν επιτρέπει στα μέλη να μπουν μόνα τους. Ζήτησε από έναν συντονιστή να ενεργοποιήσει το **Τα μέλη μπορούν να μπουν** στο `/anilistfeed`."
 
-#: cogs/anilist/feed.py:3358
+#: cogs/anilist/feed.py:1326 cogs/anilist/feed_delivery.py:270
+msgid "AniList actions are unavailable right now."
+msgstr "Οι ενέργειες AniList δεν είναι διαθέσιμες αυτή τη στιγμή."
+
+#: cogs/anilist/feed.py:1331
 msgid "Link your AniList account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`."
 
-#: cogs/anilist/feed.py:3380
+#: cogs/anilist/feed.py:1353
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "Έφυγες από τη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:3388
+#: cogs/anilist/feed.py:1361
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "Αυτή η ροή είναι γεμάτη αυτή τη στιγμή - ζήτησε από έναν συντονιστή να κάνει χώρο."
 
-#: cogs/anilist/feed.py:3392
+#: cogs/anilist/feed.py:1365
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "Μπήκες στη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:3410
+#: cogs/anilist/feed.py:1383
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Δημιούργησε μία με `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:3432
+#: cogs/anilist/feed.py:1405
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:3433 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:3433 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
-#: cogs/anilist/feed.py:3443
+#: cogs/anilist/feed.py:1413 cogs/anilist/feed_views.py:1087
+msgid "no one yet"
+msgstr "κανείς ακόμα"
+
+#: cogs/anilist/feed.py:1416
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -1367,19 +939,451 @@ msgstr ""
 "Τύποι: {types}\n"
 "Ακολουθεί: {names}"
 
-#: cogs/anilist/feed.py:3447
+#: cogs/anilist/feed.py:1420
 msgid "AniList feeds"
 msgstr "Ροές AniList"
 
-#: cogs/anilist/feed.py:3467
+#: cogs/anilist/feed.py:1440
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "Το {channel} δεν είναι ροή AniList."
 
-#: cogs/anilist/feed.py:3472
+#: cogs/anilist/feed.py:1445
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
+
+#: cogs/anilist/feed_delivery.py:69 cogs/anilist/feed_views.py:317
+#: cogs/music/music.py:2455 cogs/music/music.py:2623 cogs/music/search.py:342
+msgid "Unknown title"
+msgstr "Άγνωστος τίτλος"
+
+#: cogs/anilist/feed_delivery.py:251
+msgid "You are clicking too fast - give it a moment."
+msgstr "Κάνεις κλικ πολύ γρήγορα - περίμενε λίγο."
+
+#: cogs/anilist/feed_delivery.py:279
+msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
+msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά θα μπορείς να κάνεις like και να απαντάς απευθείας από τη ροή."
+
+#: cogs/anilist/feed_delivery.py:335 cogs/anilist/feed_delivery.py:598
+msgid "This activity no longer exists on AniList."
+msgstr "Αυτή η δραστηριότητα δεν υπάρχει πια στο AniList."
+
+#: cogs/anilist/feed_delivery.py:347
+#, python-brace-format
+msgid "Liked - this activity now has {n} like."
+msgid_plural "Liked - this activity now has {n} likes."
+msgstr[0] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
+msgstr[1] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
+
+#: cogs/anilist/feed_delivery.py:353
+#, python-brace-format
+msgid "Like removed - this activity now has {n} like."
+msgid_plural "Like removed - this activity now has {n} likes."
+msgstr[0] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
+msgstr[1] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
+
+#: cogs/anilist/feed_delivery.py:377
+msgid "Set progress / score"
+msgstr "Πρόοδος / βαθμολογία"
+
+#: cogs/anilist/feed_delivery.py:469
+#, python-brace-format
+msgid "**{title}** is already on your list ({status})."
+msgstr "Το **{title}** βρίσκεται ήδη στη λίστα σου ({status})."
+
+#: cogs/anilist/feed_delivery.py:517
+#, python-brace-format
+msgid "Added **{title}** to your planning."
+msgstr "Το **{title}** προστέθηκε στη λίστα «Σε σχεδιασμό» σου."
+
+#: cogs/anilist/feed_delivery.py:546
+msgid "Reply on AniList"
+msgstr "Απάντηση στο AniList"
+
+#: cogs/anilist/feed_delivery.py:552
+msgid "Write your reply..."
+msgstr "Γράψε την απάντησή σου..."
+
+#: cogs/anilist/feed_delivery.py:555
+msgid "Your reply"
+msgstr "Η απάντησή σου"
+
+#: cogs/anilist/feed_delivery.py:573
+msgid "Your reply was empty - nothing was posted."
+msgstr "Η απάντησή σου ήταν κενή - δεν δημοσιεύτηκε τίποτα."
+
+#: cogs/anilist/feed_delivery.py:608
+msgid "AniList did not accept that reply - try again shortly."
+msgstr "Το AniList δεν δέχτηκε αυτή την απάντηση - δοκίμασε ξανά σύντομα."
+
+#: cogs/anilist/feed_delivery.py:612
+#, python-brace-format
+msgid "Your reply was posted. [See it on AniList]({url})"
+msgstr "Η απάντησή σου δημοσιεύτηκε. [Δες τη στο AniList]({url})"
+
+#: cogs/anilist/feed_render.py:48
+#, python-brace-format
+msgid "watched episode {progress} of"
+msgstr "είδε το επεισόδιο {progress} του"
+
+#: cogs/anilist/feed_render.py:49
+#, python-brace-format
+msgid "rewatched episode {progress} of"
+msgstr "ξαναείδε το επεισόδιο {progress} του"
+
+#: cogs/anilist/feed_render.py:50
+#, python-brace-format
+msgid "read chapter {progress} of"
+msgstr "διάβασε το κεφάλαιο {progress} του"
+
+#: cogs/anilist/feed_render.py:51
+#, python-brace-format
+msgid "reread chapter {progress} of"
+msgstr "ξαναδιάβασε το κεφάλαιο {progress} του"
+
+#: cogs/anilist/feed_render.py:52
+msgid "completed"
+msgstr "ολοκλήρωσε το"
+
+#: cogs/anilist/feed_render.py:53
+msgid "plans to watch"
+msgstr "σχεδιάζει να δει το"
+
+#: cogs/anilist/feed_render.py:54
+msgid "plans to read"
+msgstr "σχεδιάζει να διαβάσει το"
+
+#: cogs/anilist/feed_render.py:55
+msgid "paused watching"
+msgstr "σταμάτησε προσωρινά να παρακολουθεί το"
+
+#: cogs/anilist/feed_render.py:56
+msgid "paused reading"
+msgstr "σταμάτησε προσωρινά να διαβάζει το"
+
+#: cogs/anilist/feed_render.py:57
+msgid "dropped"
+msgstr "εγκατέλειψε το"
+
+#: cogs/anilist/feed_render.py:110
+#, python-brace-format
+msgid "{n} like"
+msgid_plural "{n} likes"
+msgstr[0] "{n} like"
+msgstr[1] "{n} like"
+
+#: cogs/anilist/feed_render.py:113
+#, python-brace-format
+msgid "{n} reply"
+msgid_plural "{n} replies"
+msgstr[0] "{n} απάντηση"
+msgstr[1] "{n} απαντήσεις"
+
+#: cogs/anilist/feed_render.py:130
+#, python-brace-format
+msgid "{n} anime update"
+msgid_plural "{n} anime updates"
+msgstr[0] "{n} ενημέρωση anime"
+msgstr[1] "{n} ενημερώσεις anime"
+
+#: cogs/anilist/feed_render.py:133
+#, python-brace-format
+msgid "{n} manga update"
+msgid_plural "{n} manga updates"
+msgstr[0] "{n} ενημέρωση manga"
+msgstr[1] "{n} ενημερώσεις manga"
+
+#: cogs/anilist/feed_render.py:136
+#, python-brace-format
+msgid "{n} post"
+msgid_plural "{n} posts"
+msgstr[0] "{n} δημοσίευση"
+msgstr[1] "{n} δημοσιεύσεις"
+
+#: cogs/anilist/feed_render.py:139
+#, python-brace-format
+msgid "{n} update"
+msgid_plural "{n} updates"
+msgstr[0] "{n} ενημέρωση"
+msgstr[1] "{n} ενημερώσεις"
+
+#: cogs/anilist/feed_render.py:176
+msgid "An AniList update could not be rendered."
+msgstr "Μια ενημέρωση AniList δεν μπόρεσε να εμφανιστεί."
+
+#: cogs/anilist/feed_render.py:199 cogs/anilist/feed_render.py:239
+#: cogs/anilist/feed_render.py:338
+msgid "Someone"
+msgstr "Κάποιος"
+
+#: cogs/anilist/feed_render.py:210
+#, python-brace-format
+msgid "{user} {action} {title}"
+msgstr "{user} {action} {title}"
+
+#: cogs/anilist/feed_render.py:244
+#, python-brace-format
+msgid "{user} posted an update"
+msgstr "{user} δημοσίευσε μια ενημέρωση"
+
+#: cogs/anilist/feed_render.py:313
+msgid "More AniList activity"
+msgstr "Περισσότερη δραστηριότητα AniList"
+
+#: cogs/anilist/feed_render.py:326
+#, python-brace-format
+msgid "...and {count} more update"
+msgid_plural "...and {count} more updates"
+msgstr[0] "...και {count} ακόμα ενημέρωση"
+msgstr[1] "...και {count} ακόμα ενημερώσεις"
+
+#: cogs/anilist/feed_render.py:342
+#, python-brace-format
+msgid "{user} - {summary}"
+msgstr "{user} - {summary}"
+
+#: cogs/anilist/feed_render.py:350
+#, python-brace-format
+msgid "+{count} other"
+msgid_plural "+{count} others"
+msgstr[0] "+{count} ακόμα"
+msgstr[1] "+{count} ακόμα"
+
+#: cogs/anilist/feed_views.py:135
+msgid "Posts"
+msgstr "Δημοσιεύσεις"
+
+#: cogs/anilist/feed_views.py:155
+msgid "Switch feed..."
+msgstr "Αλλαγή ροής..."
+
+#: cogs/anilist/feed_views.py:190
+msgid "Move this feed to..."
+msgstr "Μετακίνηση αυτής της ροής σε..."
+
+#: cogs/anilist/feed_views.py:192
+msgid "Pick a channel to create a feed..."
+msgstr "Διάλεξε ένα κανάλι για να δημιουργήσεις μια ροή..."
+
+#: cogs/anilist/feed_views.py:243
+msgid "At least one activity type must stay enabled."
+msgstr "Τουλάχιστον ένας τύπος δραστηριότητας πρέπει να παραμείνει ενεργός."
+
+#: cogs/anilist/feed_views.py:265
+#, python-brace-format
+msgid "Members can join: {state}"
+msgstr "Τα μέλη μπορούν να μπουν: {state}"
+
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:145
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+msgid "On"
+msgstr "Ενεργό"
+
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:145
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+#: cogs/music/views.py:322
+msgid "Off"
+msgstr "Ανενεργό"
+
+#: cogs/anilist/feed_views.py:328
+msgid "Pick the title to track..."
+msgstr "Διάλεξε τον τίτλο για παρακολούθηση..."
+
+#: cogs/anilist/feed_views.py:348 cogs/music/views.py:472
+msgid "Back"
+msgstr "Πίσω"
+
+#: cogs/anilist/feed_views.py:381 cogs/anilist/feed_views.py:429
+#: cogs/anilist/feed_views.py:454
+msgid "Track a title"
+msgstr "Παρακολούθηση τίτλου"
+
+#: cogs/anilist/feed_views.py:383
+msgid "Pick the exact title to track:"
+msgstr "Διάλεξε τον ακριβή τίτλο για παρακολούθηση:"
+
+#: cogs/anilist/feed_views.py:390 cogs/anilist/feed_views.py:634
+#: cogs/anilist/feed_views.py:1018 cogs/anilist/feed_views.py:1105
+#: cogs/anilist/hub.py:309 cogs/config/buttonroles.py:572
+#: cogs/moderation/modlog.py:220
+msgid "Only you can use these controls."
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
+
+#: cogs/anilist/feed_views.py:397
+msgid "I couldn't read that selection - try again."
+msgstr "Δεν μπόρεσα να διαβάσω αυτή την επιλογή - δοκίμασε ξανά."
+
+#: cogs/anilist/feed_views.py:409
+#, python-brace-format
+msgid "Now tracking **{title}** in this feed."
+msgstr "Τώρα παρακολουθώ το **{title}** σε αυτή τη ροή."
+
+#: cogs/anilist/feed_views.py:432
+msgid "Title to search"
+msgstr "Τίτλος για αναζήτηση"
+
+#: cogs/anilist/feed_views.py:490
+msgid "Stop tracking a title..."
+msgstr "Διακοπή παρακολούθησης τίτλου..."
+
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:206
+#: cogs/community/reminders.py:340 cogs/music/views.py:1134
+msgid "Next"
+msgstr "Επόμ."
+
+#: cogs/anilist/feed_views.py:524
+msgid "Previous"
+msgstr "Προηγούμενο"
+
+#: cogs/anilist/feed_views.py:585
+msgid "Tracked releases"
+msgstr "Κυκλοφορίες υπό παρακολούθηση"
+
+#: cogs/anilist/feed_views.py:592
+#, python-brace-format
+msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
+msgstr "Τα νέα επεισόδια (anime) και κεφάλαια (manga) αυτών των τίτλων δημοσιεύονται στο {channel}, ανεξάρτητα από τυχόν ειδοποιήσεις σε προσωπικά μηνύματα. Έως {max} τίτλοι ανά ροή."
+
+#: cogs/anilist/feed_views.py:604
+msgid "No titles tracked yet."
+msgstr "Δεν παρακολουθείται κανένας τίτλος ακόμα."
+
+#: cogs/anilist/feed_views.py:607
+#, python-brace-format
+msgid "Tracking {count}/{max}"
+msgstr "Παρακολούθηση {count}/{max}"
+
+#: cogs/anilist/feed_views.py:655
+#, python-brace-format
+msgid "No AniList match for **{query}**."
+msgstr "Καμία αντιστοιχία στο AniList για **{query}**."
+
+#: cogs/anilist/feed_views.py:686
+#, python-brace-format
+msgid "Tracked releases ({count})"
+msgstr "Κυκλοφορίες υπό παρακολούθηση ({count})"
+
+#: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:302
+#: cogs/config/welcome.py:200
+msgid "Disable"
+msgstr "Απενεργοποίηση"
+
+#: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:302
+#: cogs/config/welcome.py:200
+msgid "Enable"
+msgstr "Ενεργοποίηση"
+
+#: cogs/anilist/feed_views.py:738
+msgid "Delete"
+msgstr "Διαγραφή"
+
+#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:65
+#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:143
+#: tools/arg_completion.py:219
+msgid "Cancel"
+msgstr "Ακύρωση"
+
+#: cogs/anilist/feed_views.py:743
+msgid "Delete this feed?"
+msgstr "Διαγραφή αυτής της ροής;"
+
+#: cogs/anilist/feed_views.py:745
+#, python-brace-format
+msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
+msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο {channel} και όλους όσους ακολουθεί. Δεν μπορεί να αναιρεθεί."
+
+#: cogs/anilist/feed_views.py:760
+msgid "Feed deleted."
+msgstr "Η ροή διαγράφηκε."
+
+#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:970
+#: cogs/moderation/moderation.py:1031 tools/arg_completion.py:411
+msgid "Cancelled."
+msgstr "Ακυρώθηκε."
+
+#: cogs/anilist/feed_views.py:783
+msgid "Delete feed"
+msgstr "Διαγραφή ροής"
+
+#: cogs/anilist/feed_views.py:801
+msgid "Add a follow"
+msgstr "Προσθήκη ακολούθησης"
+
+#: cogs/anilist/feed_views.py:804
+msgid "AniList username"
+msgstr "Όνομα χρήστη AniList"
+
+#: cogs/anilist/feed_views.py:832
+#, python-brace-format
+msgid "Now following **{name}**."
+msgstr "Ακολουθεί πλέον **{name}**."
+
+#: cogs/anilist/feed_views.py:842
+msgid "Add follow"
+msgstr "Προσθήκη ακολούθησης"
+
+#: cogs/anilist/feed_views.py:872
+msgid "Remove a follow..."
+msgstr "Αφαίρεση ακολούθησης..."
+
+#: cogs/anilist/feed_views.py:1007 cogs/anilist/feed_views.py:1035
+msgid "AniList activity feed"
+msgstr "Ροή δραστηριότητας AniList"
+
+#: cogs/anilist/feed_views.py:1010
+#, python-brace-format
+msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
+
+#: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
+#: cogs/config/twitch.py:405 cogs/config/verification.py:94
+#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
+#: cogs/moderation/modlog.py:253
+msgid "Enabled"
+msgstr "Ενεργοποιημένο"
+
+#: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
+#: cogs/config/twitch.py:407 cogs/config/verification.py:96
+#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
+#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
+msgid "Disabled"
+msgstr "Απενεργοποιημένο"
+
+#: cogs/anilist/feed_views.py:1031
+#, python-brace-format
+msgid "{status} ({count} recent failures)"
+msgstr "{status} ({count} πρόσφατες αποτυχίες)"
+
+#: cogs/anilist/feed_views.py:1037
+msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
+msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικατοπτρίζεται σε αυτόν τον διακομιστή. Κάθε αλλαγή αποθηκεύεται αμέσως."
+
+#: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
+#: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
+#: cogs/config/twitch.py:422 cogs/config/welcome.py:431
+#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
+#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
+msgid "Channel"
+msgstr "Κανάλι"
+
+#: cogs/anilist/feed_views.py:1050
+msgid "Feeds"
+msgstr "Ροές"
+
+#: cogs/anilist/feed_views.py:1063
+msgid "Types"
+msgstr "Τύποι"
+
+#: cogs/anilist/feed_views.py:1091
+#, python-brace-format
+msgid "Following ({count})"
+msgstr "Ακολουθεί ({count})"
 
 #: cogs/anilist/hub.py:39
 msgid "Search AniList"
@@ -2725,7 +2729,7 @@ msgstr "Η αποστολή απέτυχε, δοκίμασε ξανά."
 msgid "Announcement sent to {channel}."
 msgstr "Η ανακοίνωση στάλθηκε στο {channel}."
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:736
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:544
 msgid "Scheduling is unavailable right now."
 msgstr "Ο προγραμματισμός δεν είναι διαθέσιμος αυτή τη στιγμή."
 
@@ -3429,401 +3433,75 @@ msgstr "Το μενού ρόλων δημοσιεύτηκε στο {channel}."
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} μενού ρόλων."
 
-#: cogs/config/rooms.py:94 cogs/config/rooms.py:424
-msgid "User limit..."
-msgstr "Όριο χρηστών..."
-
-#: cogs/config/rooms.py:129
-msgid "Remove a hub..."
-msgstr "Αφαίρεση ενός hub..."
-
-#: cogs/config/rooms.py:149
-msgid "Add an autoroom hub"
-msgstr "Προσθήκη hub αυτόματων δωματίων"
-
-#: cogs/config/rooms.py:153 cogs/config/rooms.py:220
-msgid "Hub label"
-msgstr "Ετικέτα hub"
-
-#: cogs/config/rooms.py:159 cogs/config/rooms.py:288
-msgid "Category name"
-msgstr "Όνομα κατηγορίας"
-
-#: cogs/config/rooms.py:165 cogs/config/rooms.py:294
-msgid "Join-to-create channel name"
-msgstr "Όνομα καναλιού join-to-create"
-
-#: cogs/config/rooms.py:171 cogs/config/rooms.py:226
-#, python-brace-format
-msgid "Room name template ({user}, {count})"
-msgstr "Πρότυπο ονόματος δωματίου ({user}, {count})"
-
-#: cogs/config/rooms.py:186 cogs/config/rooms.py:250
-msgid "User limit (0 = unlimited)"
-msgstr "Όριο χρηστών (0 = απεριόριστο)"
-
-#: cogs/config/rooms.py:215
-msgid "Edit autoroom hub"
-msgstr "Επεξεργασία hub αυτόματων δωματίων"
-
-#: cogs/config/rooms.py:233
-msgid "Max rooms (1-50)"
-msgstr "Μέγιστα δωμάτια (1-50)"
-
-#: cogs/config/rooms.py:241
-msgid "Private"
-msgstr "Ιδιωτικό"
-
-#: cogs/config/rooms.py:244
-msgid "Public"
-msgstr "Δημόσιο"
-
-#: cogs/config/rooms.py:255
-msgid "Room privacy"
-msgstr "Ιδιωτικότητα δωματίου"
-
-#: cogs/config/rooms.py:283
-msgid "Rename hub channels"
-msgstr "Μετονομασία καναλιών hub"
-
-#: cogs/config/rooms.py:330
-msgid "Settings"
-msgstr "Ρυθμίσεις"
-
-#: cogs/config/rooms.py:338
-msgid "Rename channels"
-msgstr "Μετονομασία καναλιών"
-
-#: cogs/config/rooms.py:435 cogs/config/rooms.py:507 cogs/config/rooms.py:675
-#: cogs/config/rooms.py:909
-msgid "This room no longer exists."
-msgstr "Αυτό το δωμάτιο δεν υπάρχει πλέον."
-
-#: cogs/config/rooms.py:442
-msgid "Could not change the user limit."
-msgstr "Δεν ήταν δυνατή η αλλαγή του ορίου χρηστών."
-
-#: cogs/config/rooms.py:446
-msgid "Updated the user limit."
-msgstr "Το όριο χρηστών ενημερώθηκε."
-
-#: cogs/config/rooms.py:464
-msgid "Select a member to remove..."
-msgstr "Διάλεξε ένα μέλος προς αφαίρεση..."
-
-#: cogs/config/rooms.py:465
-msgid "Select a member to unblacklist..."
-msgstr "Διάλεξε ένα μέλος για αφαίρεση από τη μαύρη λίστα..."
-
-#: cogs/config/rooms.py:466
-msgid "Select the new owner..."
-msgstr "Διάλεξε τον νέο ιδιοκτήτη..."
-
-#: cogs/config/rooms.py:469
-msgid "Select a member..."
-msgstr "Διάλεξε ένα μέλος..."
-
-#: cogs/config/rooms.py:494
-msgid "Rename room"
-msgstr "Μετονομασία δωματίου"
-
-#: cogs/config/rooms.py:497
-msgid "New room name"
-msgstr "Νέο όνομα δωματίου"
-
-#: cogs/config/rooms.py:511
-msgid "Give the room a name."
-msgstr "Δώσε ένα όνομα στο δωμάτιο."
-
-#: cogs/config/rooms.py:517
-msgid "Could not rename the room."
-msgstr "Δεν ήταν δυνατή η μετονομασία του δωματίου."
-
-#: cogs/config/rooms.py:521
-#, python-brace-format
-msgid "Renamed the room to **{name}**."
-msgstr "Το δωμάτιο μετονομάστηκε σε **{name}**."
-
-#: cogs/config/rooms.py:578
-msgid "## Room controls"
-msgstr "## Στοιχεία ελέγχου δωματίου"
-
-#: cogs/config/rooms.py:582
-#, python-brace-format
-msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
-msgstr "Ιδιοκτήτης: <@{owner_id}> - χρησιμοποίησε τα κουμπιά παρακάτω για να διαχειριστείς το δωμάτιο."
-
-#: cogs/config/rooms.py:586
-msgid "No owner right now - anyone in the room can Claim it below."
-msgstr "Κανένας ιδιοκτήτης αυτή τη στιγμή - οποιοσδήποτε στο δωμάτιο μπορεί να το διεκδικήσει παρακάτω."
-
-#: cogs/config/rooms.py:596
-msgid "Slots"
-msgstr "Θέσεις"
-
-#: cogs/config/rooms.py:602
-msgid "Rename"
-msgstr "Μετονομασία"
-
-#: cogs/config/rooms.py:608
-msgid "Unlock"
-msgstr "Ξεκλείδωμα"
-
-#: cogs/config/rooms.py:608
-msgid "Lock"
-msgstr "Κλείδωμα"
-
-#: cogs/config/rooms.py:614
-msgid "Unhide"
-msgstr "Εμφάνιση"
-
-#: cogs/config/rooms.py:614
-msgid "Hide"
-msgstr "Απόκρυψη"
-
-#: cogs/config/rooms.py:620
-msgid "Kick + blacklist"
-msgstr "Αποβολή + μαύρη λίστα"
-
-#: cogs/config/rooms.py:628
-msgid "Remove from blacklist"
-msgstr "Αφαίρεση από μαύρη λίστα"
-
-#: cogs/config/rooms.py:634
-msgid "Transfer lead"
-msgstr "Μεταβίβαση ιδιοκτησίας"
-
-#: cogs/config/rooms.py:640
-msgid "Bump to top"
-msgstr "Ανέβασμα στην κορυφή"
-
-#: cogs/config/rooms.py:646
-msgid "Claim"
-msgstr "Διεκδίκηση"
-
-#: cogs/config/rooms.py:657
-msgid "-# Only the room owner can use these controls (except Claim)."
-msgstr "-# Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου (εκτός από τη Διεκδίκηση)."
-
-#: cogs/config/rooms.py:695
-msgid "Only the room owner can use these controls."
-msgstr "Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου."
-
-#: cogs/config/rooms.py:713 cogs/config/rooms.py:944
-msgid "Unknown action."
-msgstr "Άγνωστη ενέργεια."
-
-#: cogs/config/rooms.py:720
-msgid "Something went wrong with that action."
-msgstr "Κάτι πήγε στραβά με αυτή την ενέργεια."
-
-#: cogs/config/rooms.py:730
-msgid "Choose a user limit for the room:"
-msgstr "Διάλεξε ένα όριο χρηστών για το δωμάτιο:"
-
-#: cogs/config/rooms.py:755
-msgid "Could not change the lock."
-msgstr "Δεν ήταν δυνατή η αλλαγή του κλειδώματος."
-
-#: cogs/config/rooms.py:760
-msgid "Unlocked the room - anyone can join."
-msgstr "Το δωμάτιο ξεκλειδώθηκε - οποιοσδήποτε μπορεί να μπει."
-
-#: cogs/config/rooms.py:762
-msgid "Locked the room - no one new can join."
-msgstr "Το δωμάτιο κλειδώθηκε - κανένας νέος δεν μπορεί να μπει."
-
-#: cogs/config/rooms.py:779
-msgid "Could not change visibility."
-msgstr "Δεν ήταν δυνατή η αλλαγή της ορατότητας."
-
-#: cogs/config/rooms.py:784
-msgid "The room is visible again."
-msgstr "Το δωμάτιο είναι ξανά ορατό."
-
-#: cogs/config/rooms.py:786
-msgid "Hid the room from everyone else."
-msgstr "Το δωμάτιο κρύφτηκε από όλους τους άλλους."
-
-#: cogs/config/rooms.py:802
-msgid "There's no one else in the room to remove."
-msgstr "Δεν υπάρχει κανένας άλλος στο δωμάτιο για αφαίρεση."
-
-#: cogs/config/rooms.py:806
-msgid "Pick who to kick and blacklist:"
-msgstr "Διάλεξε ποιον να αποβάλεις και να βάλεις στη μαύρη λίστα:"
-
-#: cogs/config/rooms.py:823
-msgid "No one is blacklisted here."
-msgstr "Κανένας δεν είναι στη μαύρη λίστα εδώ."
-
-#: cogs/config/rooms.py:826
-msgid "Pick who to remove from the blacklist:"
-msgstr "Διάλεξε ποιον να αφαιρέσεις από τη μαύρη λίστα:"
-
-#: cogs/config/rooms.py:845
-msgid "There's no one else here to hand the room to."
-msgstr "Δεν υπάρχει κανένας άλλος εδώ για να παραδώσεις το δωμάτιο."
-
-#: cogs/config/rooms.py:849
-msgid "Pick the new room owner:"
-msgstr "Διάλεξε τον νέο ιδιοκτήτη του δωματίου:"
-
-#: cogs/config/rooms.py:876
-msgid "Could not bump the room."
-msgstr "Δεν ήταν δυνατό το ανέβασμα του δωματίου."
-
-#: cogs/config/rooms.py:879
-msgid "Bumped the room to the top."
-msgstr "Το δωμάτιο ανέβηκε στην κορυφή."
-
-#: cogs/config/rooms.py:890
-msgid "The room already has an owner who's still here."
-msgstr "Το δωμάτιο έχει ήδη ιδιοκτήτη που βρίσκεται ακόμη εδώ."
-
-#: cogs/config/rooms.py:895
-msgid "Join the room first to claim it."
-msgstr "Μπες πρώτα στο δωμάτιο για να το διεκδικήσεις."
-
-#: cogs/config/rooms.py:901
-msgid "You're now the owner of this room."
-msgstr "Είσαι πλέον ο/η ιδιοκτήτης αυτού του δωματίου."
-
-#: cogs/config/rooms.py:915
-msgid "That member is no longer here."
-msgstr "Αυτό το μέλος δεν είναι πλέον εδώ."
-
-#: cogs/config/rooms.py:927
-#, python-brace-format
-msgid "Removed and blacklisted {name}."
-msgstr "Ο/Η {name} αφαιρέθηκε και μπήκε στη μαύρη λίστα."
-
-#: cogs/config/rooms.py:934
-#, python-brace-format
-msgid "Removed {name} from the blacklist."
-msgstr "Ο/Η {name} αφαιρέθηκε από τη μαύρη λίστα."
-
-#: cogs/config/rooms.py:940
-#, python-brace-format
-msgid "Transferred room ownership to {name}."
-msgstr "Η ιδιοκτησία του δωματίου μεταβιβάστηκε στον/στην {name}."
-
-#: cogs/config/rooms.py:947
-msgid "Could not complete that action."
-msgstr "Δεν ήταν δυνατή η ολοκλήρωση αυτής της ενέργειας."
-
-#: cogs/config/rooms.py:979
-msgid "## Autoroom hubs"
-msgstr "## Hub αυτόματων δωματίων"
-
-#: cogs/config/rooms.py:983
-msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
-msgstr "Φωνητικά hub join-to-create. Τα μέλη που μπαίνουν σε ένα hub αποκτούν το δικό τους προσωρινό δωμάτιο, το οποίο καθαρίζεται όταν αδειάσει."
-
-#: cogs/config/rooms.py:993
-msgid "No hubs yet. Use **Add hub** to create your first one."
-msgstr "Κανένα hub ακόμη. Χρησιμοποίησε **Προσθήκη hub** για να δημιουργήσεις το πρώτο σου."
-
-#: cogs/config/rooms.py:1007
-#, python-brace-format
-msgid ""
-"**{label}**\n"
-"{summary}"
-msgstr ""
-"**{label}**\n"
-"{summary}"
-
-#: cogs/config/rooms.py:1020
-msgid "Add hub"
-msgstr "Προσθήκη hub"
-
-#: cogs/config/rooms.py:1036
-#, python-brace-format
-msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
-msgstr "-# {count}/{max_hubs} hub - ~{reserved} κανάλια δεσμευμένα - {used}/{budget} κανάλια σε χρήση"
-
-#: cogs/config/rooms.py:1096 cogs/config/rooms.py:1378
+#: cogs/config/rooms.py:321 cogs/config/rooms_config.py:485
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "Έχεις ήδη το μέγιστο των {max_hubs} hub."
 
-#: cogs/config/rooms.py:1106 cogs/config/rooms.py:1127
-msgid "Something went wrong opening that form."
-msgstr "Κάτι πήγε στραβά κατά το άνοιγμα αυτής της φόρμας."
-
-#: cogs/config/rooms.py:1114 cogs/config/rooms.py:1420
-#: cogs/config/rooms.py:1436 cogs/config/rooms.py:1478
-msgid "That hub no longer exists."
-msgstr "Αυτό το hub δεν υπάρχει πλέον."
-
-#: cogs/config/rooms.py:1118
-#, python-brace-format
-msgid "Manage the **{label}** hub:"
-msgstr "Διαχείριση του hub **{label}**:"
-
-#: cogs/config/rooms.py:1139
-msgid "Something went wrong removing that hub."
-msgstr "Κάτι πήγε στραβά κατά την αφαίρεση αυτού του hub."
-
-#: cogs/config/rooms.py:1383
+#: cogs/config/rooms.py:326
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "Αυτός ο διακομιστής βρίσκεται στο όριο του Discord των {max} κατηγοριών."
 
-#: cogs/config/rooms.py:1387
+#: cogs/config/rooms.py:330
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "Αυτός ο διακομιστής είναι πολύ κοντά στο όριο των {budget} καναλιών του Discord για να προστεθεί άλλο hub."
 
-#: cogs/config/rooms.py:1398
+#: cogs/config/rooms.py:341
 msgid "Something went wrong while creating the hub's channels."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία των καναλιών του hub."
 
-#: cogs/config/rooms.py:1409
+#: cogs/config/rooms.py:352
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "Δημιουργήθηκε το hub **{label}**. Τα μέλη μπορούν να μπουν στο {channel} τώρα."
 
-#: cogs/config/rooms.py:1429
+#: cogs/config/rooms.py:363 cogs/config/rooms.py:379 cogs/config/rooms.py:421
+#: cogs/config/rooms_config.py:503
+msgid "That hub no longer exists."
+msgstr "Αυτό το hub δεν υπάρχει πλέον."
+
+#: cogs/config/rooms.py:372
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "Το hub **{label}** ενημερώθηκε."
 
-#: cogs/config/rooms.py:1464
+#: cogs/config/rooms.py:407
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "Το hub **{label}** αφαιρέθηκε."
 
-#: cogs/config/rooms.py:1492
+#: cogs/config/rooms.py:435
 msgid "category"
 msgstr "κατηγορία"
 
-#: cogs/config/rooms.py:1498
+#: cogs/config/rooms.py:441
 msgid "join-to-create channel"
 msgstr "κανάλι join-to-create"
 
-#: cogs/config/rooms.py:1503
+#: cogs/config/rooms.py:446
 msgid "Nothing was renamed - those channels are missing."
 msgstr "Δεν μετονομάστηκε τίποτα - αυτά τα κανάλια λείπουν."
 
-#: cogs/config/rooms.py:1504
+#: cogs/config/rooms.py:447
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "Έγινε μετονομασία: {targets}."
 
-#: cogs/config/rooms.py:1758
+#: cogs/config/rooms.py:701
 msgid "There are no autoroom hubs set up in this server."
 msgstr "Δεν έχουν ρυθμιστεί hub αυτόματων δωματίων σε αυτόν τον διακομιστή."
 
-#: cogs/config/rooms.py:1762
+#: cogs/config/rooms.py:705
 msgid "Autoroom hubs"
 msgstr "Hub αυτόματων δωματίων"
 
-#: cogs/config/rooms.py:1766
+#: cogs/config/rooms.py:709
 msgid "channel missing"
 msgstr "λείπει κανάλι"
 
-#: cogs/config/rooms.py:1769
+#: cogs/config/rooms.py:712
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -3831,6 +3509,332 @@ msgid ""
 msgstr ""
 "{location}\n"
 "{summary}"
+
+#: cogs/config/rooms_config.py:72 cogs/config/rooms_panels.py:86
+msgid "User limit..."
+msgstr "Όριο χρηστών..."
+
+#: cogs/config/rooms_config.py:92
+msgid "Remove a hub..."
+msgstr "Αφαίρεση ενός hub..."
+
+#: cogs/config/rooms_config.py:112
+msgid "Add an autoroom hub"
+msgstr "Προσθήκη hub αυτόματων δωματίων"
+
+#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:183
+msgid "Hub label"
+msgstr "Ετικέτα hub"
+
+#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:251
+msgid "Category name"
+msgstr "Όνομα κατηγορίας"
+
+#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:257
+msgid "Join-to-create channel name"
+msgstr "Όνομα καναλιού join-to-create"
+
+#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:189
+#, python-brace-format
+msgid "Room name template ({user}, {count})"
+msgstr "Πρότυπο ονόματος δωματίου ({user}, {count})"
+
+#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:213
+msgid "User limit (0 = unlimited)"
+msgstr "Όριο χρηστών (0 = απεριόριστο)"
+
+#: cogs/config/rooms_config.py:178
+msgid "Edit autoroom hub"
+msgstr "Επεξεργασία hub αυτόματων δωματίων"
+
+#: cogs/config/rooms_config.py:196
+msgid "Max rooms (1-50)"
+msgstr "Μέγιστα δωμάτια (1-50)"
+
+#: cogs/config/rooms_config.py:204
+msgid "Private"
+msgstr "Ιδιωτικό"
+
+#: cogs/config/rooms_config.py:207
+msgid "Public"
+msgstr "Δημόσιο"
+
+#: cogs/config/rooms_config.py:218
+msgid "Room privacy"
+msgstr "Ιδιωτικότητα δωματίου"
+
+#: cogs/config/rooms_config.py:246
+msgid "Rename hub channels"
+msgstr "Μετονομασία καναλιών hub"
+
+#: cogs/config/rooms_config.py:293
+msgid "Settings"
+msgstr "Ρυθμίσεις"
+
+#: cogs/config/rooms_config.py:301
+msgid "Rename channels"
+msgstr "Μετονομασία καναλιών"
+
+#: cogs/config/rooms_config.py:368
+msgid "## Autoroom hubs"
+msgstr "## Hub αυτόματων δωματίων"
+
+#: cogs/config/rooms_config.py:372
+msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
+msgstr "Φωνητικά hub join-to-create. Τα μέλη που μπαίνουν σε ένα hub αποκτούν το δικό τους προσωρινό δωμάτιο, το οποίο καθαρίζεται όταν αδειάσει."
+
+#: cogs/config/rooms_config.py:382
+msgid "No hubs yet. Use **Add hub** to create your first one."
+msgstr "Κανένα hub ακόμη. Χρησιμοποίησε **Προσθήκη hub** για να δημιουργήσεις το πρώτο σου."
+
+#: cogs/config/rooms_config.py:396
+#, python-brace-format
+msgid ""
+"**{label}**\n"
+"{summary}"
+msgstr ""
+"**{label}**\n"
+"{summary}"
+
+#: cogs/config/rooms_config.py:409
+msgid "Add hub"
+msgstr "Προσθήκη hub"
+
+#: cogs/config/rooms_config.py:425
+#, python-brace-format
+msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
+msgstr "-# {count}/{max_hubs} hub - ~{reserved} κανάλια δεσμευμένα - {used}/{budget} κανάλια σε χρήση"
+
+#: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
+msgid "Something went wrong opening that form."
+msgstr "Κάτι πήγε στραβά κατά το άνοιγμα αυτής της φόρμας."
+
+#: cogs/config/rooms_config.py:507
+#, python-brace-format
+msgid "Manage the **{label}** hub:"
+msgstr "Διαχείριση του hub **{label}**:"
+
+#: cogs/config/rooms_config.py:528
+msgid "Something went wrong removing that hub."
+msgstr "Κάτι πήγε στραβά κατά την αφαίρεση αυτού του hub."
+
+#: cogs/config/rooms_panels.py:97 cogs/config/rooms_panels.py:169
+#: cogs/config/rooms_panels.py:337 cogs/config/rooms_panels.py:571
+msgid "This room no longer exists."
+msgstr "Αυτό το δωμάτιο δεν υπάρχει πλέον."
+
+#: cogs/config/rooms_panels.py:104
+msgid "Could not change the user limit."
+msgstr "Δεν ήταν δυνατή η αλλαγή του ορίου χρηστών."
+
+#: cogs/config/rooms_panels.py:108
+msgid "Updated the user limit."
+msgstr "Το όριο χρηστών ενημερώθηκε."
+
+#: cogs/config/rooms_panels.py:126
+msgid "Select a member to remove..."
+msgstr "Διάλεξε ένα μέλος προς αφαίρεση..."
+
+#: cogs/config/rooms_panels.py:127
+msgid "Select a member to unblacklist..."
+msgstr "Διάλεξε ένα μέλος για αφαίρεση από τη μαύρη λίστα..."
+
+#: cogs/config/rooms_panels.py:128
+msgid "Select the new owner..."
+msgstr "Διάλεξε τον νέο ιδιοκτήτη..."
+
+#: cogs/config/rooms_panels.py:131
+msgid "Select a member..."
+msgstr "Διάλεξε ένα μέλος..."
+
+#: cogs/config/rooms_panels.py:156
+msgid "Rename room"
+msgstr "Μετονομασία δωματίου"
+
+#: cogs/config/rooms_panels.py:159
+msgid "New room name"
+msgstr "Νέο όνομα δωματίου"
+
+#: cogs/config/rooms_panels.py:173
+msgid "Give the room a name."
+msgstr "Δώσε ένα όνομα στο δωμάτιο."
+
+#: cogs/config/rooms_panels.py:179
+msgid "Could not rename the room."
+msgstr "Δεν ήταν δυνατή η μετονομασία του δωματίου."
+
+#: cogs/config/rooms_panels.py:183
+#, python-brace-format
+msgid "Renamed the room to **{name}**."
+msgstr "Το δωμάτιο μετονομάστηκε σε **{name}**."
+
+#: cogs/config/rooms_panels.py:240
+msgid "## Room controls"
+msgstr "## Στοιχεία ελέγχου δωματίου"
+
+#: cogs/config/rooms_panels.py:244
+#, python-brace-format
+msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
+msgstr "Ιδιοκτήτης: <@{owner_id}> - χρησιμοποίησε τα κουμπιά παρακάτω για να διαχειριστείς το δωμάτιο."
+
+#: cogs/config/rooms_panels.py:248
+msgid "No owner right now - anyone in the room can Claim it below."
+msgstr "Κανένας ιδιοκτήτης αυτή τη στιγμή - οποιοσδήποτε στο δωμάτιο μπορεί να το διεκδικήσει παρακάτω."
+
+#: cogs/config/rooms_panels.py:258
+msgid "Slots"
+msgstr "Θέσεις"
+
+#: cogs/config/rooms_panels.py:264
+msgid "Rename"
+msgstr "Μετονομασία"
+
+#: cogs/config/rooms_panels.py:270
+msgid "Unlock"
+msgstr "Ξεκλείδωμα"
+
+#: cogs/config/rooms_panels.py:270
+msgid "Lock"
+msgstr "Κλείδωμα"
+
+#: cogs/config/rooms_panels.py:276
+msgid "Unhide"
+msgstr "Εμφάνιση"
+
+#: cogs/config/rooms_panels.py:276
+msgid "Hide"
+msgstr "Απόκρυψη"
+
+#: cogs/config/rooms_panels.py:282
+msgid "Kick + blacklist"
+msgstr "Αποβολή + μαύρη λίστα"
+
+#: cogs/config/rooms_panels.py:290
+msgid "Remove from blacklist"
+msgstr "Αφαίρεση από μαύρη λίστα"
+
+#: cogs/config/rooms_panels.py:296
+msgid "Transfer lead"
+msgstr "Μεταβίβαση ιδιοκτησίας"
+
+#: cogs/config/rooms_panels.py:302
+msgid "Bump to top"
+msgstr "Ανέβασμα στην κορυφή"
+
+#: cogs/config/rooms_panels.py:308
+msgid "Claim"
+msgstr "Διεκδίκηση"
+
+#: cogs/config/rooms_panels.py:319
+msgid "-# Only the room owner can use these controls (except Claim)."
+msgstr "-# Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου (εκτός από τη Διεκδίκηση)."
+
+#: cogs/config/rooms_panels.py:357
+msgid "Only the room owner can use these controls."
+msgstr "Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου."
+
+#: cogs/config/rooms_panels.py:375 cogs/config/rooms_panels.py:606
+msgid "Unknown action."
+msgstr "Άγνωστη ενέργεια."
+
+#: cogs/config/rooms_panels.py:382
+msgid "Something went wrong with that action."
+msgstr "Κάτι πήγε στραβά με αυτή την ενέργεια."
+
+#: cogs/config/rooms_panels.py:392
+msgid "Choose a user limit for the room:"
+msgstr "Διάλεξε ένα όριο χρηστών για το δωμάτιο:"
+
+#: cogs/config/rooms_panels.py:417
+msgid "Could not change the lock."
+msgstr "Δεν ήταν δυνατή η αλλαγή του κλειδώματος."
+
+#: cogs/config/rooms_panels.py:422
+msgid "Unlocked the room - anyone can join."
+msgstr "Το δωμάτιο ξεκλειδώθηκε - οποιοσδήποτε μπορεί να μπει."
+
+#: cogs/config/rooms_panels.py:424
+msgid "Locked the room - no one new can join."
+msgstr "Το δωμάτιο κλειδώθηκε - κανένας νέος δεν μπορεί να μπει."
+
+#: cogs/config/rooms_panels.py:441
+msgid "Could not change visibility."
+msgstr "Δεν ήταν δυνατή η αλλαγή της ορατότητας."
+
+#: cogs/config/rooms_panels.py:446
+msgid "The room is visible again."
+msgstr "Το δωμάτιο είναι ξανά ορατό."
+
+#: cogs/config/rooms_panels.py:448
+msgid "Hid the room from everyone else."
+msgstr "Το δωμάτιο κρύφτηκε από όλους τους άλλους."
+
+#: cogs/config/rooms_panels.py:464
+msgid "There's no one else in the room to remove."
+msgstr "Δεν υπάρχει κανένας άλλος στο δωμάτιο για αφαίρεση."
+
+#: cogs/config/rooms_panels.py:468
+msgid "Pick who to kick and blacklist:"
+msgstr "Διάλεξε ποιον να αποβάλεις και να βάλεις στη μαύρη λίστα:"
+
+#: cogs/config/rooms_panels.py:485
+msgid "No one is blacklisted here."
+msgstr "Κανένας δεν είναι στη μαύρη λίστα εδώ."
+
+#: cogs/config/rooms_panels.py:488
+msgid "Pick who to remove from the blacklist:"
+msgstr "Διάλεξε ποιον να αφαιρέσεις από τη μαύρη λίστα:"
+
+#: cogs/config/rooms_panels.py:507
+msgid "There's no one else here to hand the room to."
+msgstr "Δεν υπάρχει κανένας άλλος εδώ για να παραδώσεις το δωμάτιο."
+
+#: cogs/config/rooms_panels.py:511
+msgid "Pick the new room owner:"
+msgstr "Διάλεξε τον νέο ιδιοκτήτη του δωματίου:"
+
+#: cogs/config/rooms_panels.py:538
+msgid "Could not bump the room."
+msgstr "Δεν ήταν δυνατό το ανέβασμα του δωματίου."
+
+#: cogs/config/rooms_panels.py:541
+msgid "Bumped the room to the top."
+msgstr "Το δωμάτιο ανέβηκε στην κορυφή."
+
+#: cogs/config/rooms_panels.py:552
+msgid "The room already has an owner who's still here."
+msgstr "Το δωμάτιο έχει ήδη ιδιοκτήτη που βρίσκεται ακόμη εδώ."
+
+#: cogs/config/rooms_panels.py:557
+msgid "Join the room first to claim it."
+msgstr "Μπες πρώτα στο δωμάτιο για να το διεκδικήσεις."
+
+#: cogs/config/rooms_panels.py:563
+msgid "You're now the owner of this room."
+msgstr "Είσαι πλέον ο/η ιδιοκτήτης αυτού του δωματίου."
+
+#: cogs/config/rooms_panels.py:577
+msgid "That member is no longer here."
+msgstr "Αυτό το μέλος δεν είναι πλέον εδώ."
+
+#: cogs/config/rooms_panels.py:589
+#, python-brace-format
+msgid "Removed and blacklisted {name}."
+msgstr "Ο/Η {name} αφαιρέθηκε και μπήκε στη μαύρη λίστα."
+
+#: cogs/config/rooms_panels.py:596
+#, python-brace-format
+msgid "Removed {name} from the blacklist."
+msgstr "Ο/Η {name} αφαιρέθηκε από τη μαύρη λίστα."
+
+#: cogs/config/rooms_panels.py:602
+#, python-brace-format
+msgid "Transferred room ownership to {name}."
+msgstr "Η ιδιοκτησία του δωματίου μεταβιβάστηκε στον/στην {name}."
+
+#: cogs/config/rooms_panels.py:609
+msgid "Could not complete that action."
+msgstr "Δεν ήταν δυνατή η ολοκλήρωση αυτής της ενέργειας."
 
 #: cogs/config/settings.py:23
 msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
@@ -4903,98 +4907,38 @@ msgstr "Μαύρη λίστα"
 msgid "The blacklist is empty."
 msgstr "Η μαύρη λίστα είναι κενή."
 
-#: cogs/moderation/moderation.py:106
-msgid "Select a warn to remove..."
-msgstr "Επίλεξε μια προειδοποίηση για αφαίρεση..."
-
-#: cogs/moderation/moderation.py:128
-#, python-brace-format
-msgid "Warnings - {member}"
-msgstr "Προειδοποιήσεις - {member}"
-
-#: cogs/moderation/moderation.py:135
-msgid "No warnings on record."
-msgstr "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις."
-
-#: cogs/moderation/moderation.py:139
-msgid "*No reason provided*"
-msgstr "*Δεν δόθηκε λόγος*"
-
-#: cogs/moderation/moderation.py:142
-#, python-brace-format
-msgid ""
-"**Case #{case}** - {reason}\n"
-"by {mod} - {when}"
-msgstr ""
-"**Υπόθεση #{case}** - {reason}\n"
-"από {mod} - {when}"
-
-#: cogs/moderation/moderation.py:152
-#, python-brace-format
-msgid "Page {current}/{total} - {count} warn(s)"
-msgstr "Σελίδα {current}/{total} - {count} προειδοποίηση/εις"
-
-#: cogs/moderation/moderation.py:165 cogs/moderation/moderation.py:1494
-msgid "No reason"
-msgstr "Χωρίς λόγο"
-
-#: cogs/moderation/moderation.py:168
-#, python-brace-format
-msgid "Case #{case}"
-msgstr "Υπόθεση #{case}"
-
-#: cogs/moderation/moderation.py:179
-msgid "No warnings"
-msgstr "Καμία προειδοποίηση"
-
-#: cogs/moderation/moderation.py:200
-msgid "Couldn't select that warn, please try again."
-msgstr "Δεν ήταν δυνατή η επιλογή αυτής της προειδοποίησης, δοκίμασε ξανά."
-
-#: cogs/moderation/moderation.py:224 tools/paginator.py:94
-msgid "Couldn't turn the page, please try again."
-msgstr "Δεν ήταν δυνατή η αλλαγή σελίδας, δοκίμασε ξανά."
-
-#: cogs/moderation/moderation.py:233
-msgid "Pick a warn from the dropdown first."
-msgstr "Διάλεξε πρώτα μια προειδοποίηση από το αναπτυσσόμενο μενού."
-
-#: cogs/moderation/moderation.py:256
-msgid "Couldn't remove that warn, please try again."
-msgstr "Δεν ήταν δυνατή η αφαίρεση αυτής της προειδοποίησης, δοκίμασε ξανά."
-
-#: cogs/moderation/moderation.py:273
+#: cogs/moderation/moderation.py:93
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr "Επεξεργασία λόγου - υπόθεση #{number}"
 
-#: cogs/moderation/moderation.py:289
+#: cogs/moderation/moderation.py:109
 msgid "New reason"
 msgstr "Νέος λόγος"
 
-#: cogs/moderation/moderation.py:297
+#: cogs/moderation/moderation.py:117
 msgid "The reason can't be empty."
 msgstr "Ο λόγος δεν μπορεί να είναι κενός."
 
-#: cogs/moderation/moderation.py:311 cogs/moderation/moderation.py:1455
-#: cogs/moderation/moderation.py:1528 cogs/moderation/moderation.py:1550
+#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1119
+#: cogs/moderation/moderation.py:1192 cogs/moderation/moderation.py:1214
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "Δεν βρέθηκε υπόθεση #{number} σε αυτόν τον διακομιστή."
 
-#: cogs/moderation/moderation.py:318 cogs/moderation/moderation.py:1556
+#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1220
 msgid "Updated by"
 msgstr "Ενημερώθηκε από"
 
-#: cogs/moderation/moderation.py:327
+#: cogs/moderation/moderation.py:147
 msgid "Sorry, I couldn't update that reason."
 msgstr "Συγγνώμη, δεν μπόρεσα να ενημερώσω αυτόν τον λόγο."
 
-#: cogs/moderation/moderation.py:345
+#: cogs/moderation/moderation.py:165
 msgid "## New Members"
 msgstr "## Νέα μέλη"
 
-#: cogs/moderation/moderation.py:350
+#: cogs/moderation/moderation.py:170
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
@@ -5003,20 +4947,20 @@ msgstr ""
 "**{member}** (ID: {id})\n"
 "μπήκε {joined}, δημιουργήθηκε {created}"
 
-#: cogs/moderation/moderation.py:387
+#: cogs/moderation/moderation.py:207
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό!**"
 
-#: cogs/moderation/moderation.py:559
+#: cogs/moderation/moderation.py:367
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr "Kick | Ο/Η {mod} έδιωξε τον/την {target}"
 
-#: cogs/moderation/moderation.py:565
+#: cogs/moderation/moderation.py:373
 msgid "**🔴 Voice Kick Info**"
 msgstr "**🔴 Πληροφορίες Voice Kick**"
 
-#: cogs/moderation/moderation.py:567
+#: cogs/moderation/moderation.py:375
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -5027,56 +4971,56 @@ msgstr ""
 "Λόγος: **{reason}**\n"
 "Ώρα: **{time}**"
 
-#: cogs/moderation/moderation.py:600
+#: cogs/moderation/moderation.py:408
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr "Ο/Η {user} μετακινήθηκε στο {channel}"
 
-#: cogs/moderation/moderation.py:624
+#: cogs/moderation/moderation.py:432
 msgid "Confirm ban"
 msgstr "Επιβεβαίωση ban"
 
-#: cogs/moderation/moderation.py:625
+#: cogs/moderation/moderation.py:433
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban τον/την {target} (`{id}`);"
 
-#: cogs/moderation/moderation.py:630 cogs/moderation/moderation.py:845
-#: cogs/moderation/moderation.py:892
+#: cogs/moderation/moderation.py:438 cogs/moderation/moderation.py:653
+#: cogs/moderation/moderation.py:700
 msgid "Reason"
 msgstr "Λόγος"
 
-#: cogs/moderation/moderation.py:635
+#: cogs/moderation/moderation.py:443
 msgid "Ban cancelled"
 msgstr "Το ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:444
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr "Δεν έγινε καμία ενέργεια κατά του/της {target}."
 
-#: cogs/moderation/moderation.py:742
+#: cogs/moderation/moderation.py:550
 msgid "I don't have permission to ban that member."
 msgstr "Δεν έχω δικαίωμα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:745
+#: cogs/moderation/moderation.py:553
 msgid "Sorry, I couldn't ban that member."
 msgstr "Συγγνώμη, δεν μπόρεσα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:776
+#: cogs/moderation/moderation.py:584
 msgid "The temporary ban could not be scheduled and the rollback failed. Please unban that user manually."
 msgstr "Δεν ήταν δυνατός ο προγραμματισμός του προσωρινού ban και η επαναφορά απέτυχε. Κάνε unban αυτόν τον χρήστη χειροκίνητα, σε παρακαλώ."
 
-#: cogs/moderation/moderation.py:781
+#: cogs/moderation/moderation.py:589
 msgid "The temporary ban could not be scheduled, so I rolled it back."
 msgstr "Δεν ήταν δυνατός ο προγραμματισμός του προσωρινού ban, οπότε το ανέστρεψα."
 
-#: cogs/moderation/moderation.py:808
+#: cogs/moderation/moderation.py:616
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "Ο/Η {member} αποκλείστηκε μέχρι {time}."
 
-#: cogs/moderation/moderation.py:828
+#: cogs/moderation/moderation.py:636
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
@@ -5084,214 +5028,189 @@ msgstr ""
 "Δώσε μου τουλάχιστον ένα id χρήστη για ban.\n"
 "Χρήση: `massban <id1> <id2> ... [reason]`"
 
-#: cogs/moderation/moderation.py:833
+#: cogs/moderation/moderation.py:641
 msgid "I can ban at most 200 users in one go."
 msgstr "Μπορώ να κάνω ban το πολύ 200 χρήστες με τη μία."
 
-#: cogs/moderation/moderation.py:839
+#: cogs/moderation/moderation.py:647
 msgid "Confirm mass ban"
 msgstr "Επιβεβαίωση μαζικού ban"
 
-#: cogs/moderation/moderation.py:841
+#: cogs/moderation/moderation.py:649
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban **{count}** χρήστη/ες με id;"
 
-#: cogs/moderation/moderation.py:848
+#: cogs/moderation/moderation.py:656
 msgid "Mass ban cancelled"
 msgstr "Το μαζικό ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:849
+#: cogs/moderation/moderation.py:657
 msgid "No action taken."
 msgstr "Δεν έγινε καμία ενέργεια."
 
-#: cogs/moderation/moderation.py:868
+#: cogs/moderation/moderation.py:676
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr "**:x: Συγγνώμη, δεν μπόρεσα να κάνω ban αυτούς τους χρήστες (λείπουν δικαιώματα;).**"
 
-#: cogs/moderation/moderation.py:886
+#: cogs/moderation/moderation.py:694
 msgid "Mass ban complete"
 msgstr "Το μαζικό ban ολοκληρώθηκε"
 
-#: cogs/moderation/moderation.py:890
+#: cogs/moderation/moderation.py:698
 msgid "Banned"
 msgstr "Έγινε ban"
 
-#: cogs/moderation/moderation.py:891
+#: cogs/moderation/moderation.py:699
 msgid "Failed"
 msgstr "Απέτυχε"
 
-#: cogs/moderation/moderation.py:894
+#: cogs/moderation/moderation.py:702
 #, python-brace-format
 msgid "By {author}"
 msgstr "Από {author}"
 
-#: cogs/moderation/moderation.py:918
+#: cogs/moderation/moderation.py:726
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ":warning: | **Ο αριθμός δεν μπορεί να είναι μικρότερος από 0 και μεγαλύτερος από 999**"
 
-#: cogs/moderation/moderation.py:928
+#: cogs/moderation/moderation.py:736
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό**"
 
-#: cogs/moderation/moderation.py:933
+#: cogs/moderation/moderation.py:741
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr "{emoji} **Διαγράφηκε με επιτυχία!**"
 
-#: cogs/moderation/moderation.py:949
+#: cogs/moderation/moderation.py:757
 msgid "Invalid amount. Maximum is 500."
 msgstr "Μη έγκυρη ποσότητα. Το μέγιστο είναι 500."
 
-#: cogs/moderation/moderation.py:961
+#: cogs/moderation/moderation.py:769
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Διαγράφηκαν **{deleted}/{num}** πιθανά μηνύματα για εσένα."
 
-#: cogs/moderation/moderation.py:1031
+#: cogs/moderation/moderation.py:839
 msgid "Mute role is not defined"
 msgstr "Ο ρόλος mute δεν έχει οριστεί"
 
-#: cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:840
 msgid "Creating role..."
 msgstr "Δημιουργία ρόλου..."
 
-#: cogs/moderation/moderation.py:1034
+#: cogs/moderation/moderation.py:842
 msgid "Mute role created!"
 msgstr "Ο ρόλος mute δημιουργήθηκε!"
 
-#: cogs/moderation/moderation.py:1072
+#: cogs/moderation/moderation.py:880
 msgid "Already Muted"
 msgstr "Ήδη σε σίγαση"
 
-#: cogs/moderation/moderation.py:1074
+#: cogs/moderation/moderation.py:882
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: Ο/Η {user} είναι ήδη σε σίγαση!"
 
-#: cogs/moderation/moderation.py:1084
+#: cogs/moderation/moderation.py:892
 msgid "Mute failed"
 msgstr "Η σίγαση απέτυχε"
 
-#: cogs/moderation/moderation.py:1087
+#: cogs/moderation/moderation.py:895
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η σίγαση του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1128
+#: cogs/moderation/moderation.py:936
 msgid "Unmute failed"
 msgstr "Η κατάργηση σίγασης απέτυχε"
 
-#: cogs/moderation/moderation.py:1131
+#: cogs/moderation/moderation.py:939
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η κατάργηση σίγασης του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1149
+#: cogs/moderation/moderation.py:961
 msgid "Confirm mass role add"
 msgstr "Επιβεβαίωση μαζικής προσθήκης ρόλου"
 
-#: cogs/moderation/moderation.py:1151
+#: cogs/moderation/moderation.py:963
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "Προσθήκη του ρόλου **{role}** σε **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1180
+#: cogs/moderation/moderation.py:992
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "Προστέθηκε το **{role}** σε {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1189
+#: cogs/moderation/moderation.py:1001
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** προστέθηκε στον/στην **{member}**"
 
-#: cogs/moderation/moderation.py:1206
+#: cogs/moderation/moderation.py:1022
 msgid "Confirm mass role remove"
 msgstr "Επιβεβαίωση μαζικής αφαίρεσης ρόλου"
 
-#: cogs/moderation/moderation.py:1208
+#: cogs/moderation/moderation.py:1024
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "Αφαίρεση του ρόλου **{role}** από **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1237
+#: cogs/moderation/moderation.py:1053
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "Αφαιρέθηκε το **{role}** από {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1246
+#: cogs/moderation/moderation.py:1062
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** αφαιρέθηκε από τον/την **{member}**"
 
-#: cogs/moderation/moderation.py:1262
+#: cogs/moderation/moderation.py:1084 tools/modchecks.py:69
+msgid "You can't manage a role that is equal to or above your highest role."
+msgstr "Δεν μπορείς να διαχειριστείς έναν ρόλο ίσο ή ανώτερο από τον υψηλότερο ρόλο σου."
+
+#: cogs/moderation/moderation.py:1091
+msgid "You can't move a role to or above my highest role."
+msgstr "Δεν μπορείς να μετακινήσεις έναν ρόλο στο ίδιο ή πάνω από τον υψηλότερο ρόλο μου."
+
+#: cogs/moderation/moderation.py:1097
 #, python-brace-format
 msgid "{role} moved."
 msgstr "Ο ρόλος {role} μετακινήθηκε."
 
-#: cogs/moderation/moderation.py:1264
+#: cogs/moderation/moderation.py:1099
 msgid "You do not have permission to do that"
 msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
 
-#: cogs/moderation/moderation.py:1266
+#: cogs/moderation/moderation.py:1101
 msgid "Failed to move role"
 msgstr "Αποτυχία μετακίνησης ρόλου"
 
-#: cogs/moderation/moderation.py:1268
+#: cogs/moderation/moderation.py:1103
 msgid "Invalid argument"
 msgstr "Μη έγκυρο όρισμα"
 
-#: cogs/moderation/moderation.py:1291
-#, python-brace-format
-msgid "{member} has no warns."
-msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις."
-
-#: cogs/moderation/moderation.py:1295
-#, python-brace-format
-msgid "{member} has {count} warn(s)"
-msgstr "Ο/Η {member} έχει {count} προειδοποίηση/εις"
-
-#: cogs/moderation/moderation.py:1332
-msgid "Warns"
-msgstr "Προειδοποιήσεις"
-
-#: cogs/moderation/moderation.py:1344
-msgid "Auto-action"
-msgstr "Αυτόματη ενέργεια"
-
-#: cogs/moderation/moderation.py:1375
-msgid "The number of warns must be at least 1."
-msgstr "Ο αριθμός των warns πρέπει να είναι τουλάχιστον 1."
-
-#: cogs/moderation/moderation.py:1382
-#, python-brace-format
-msgid "{member} has no warns!"
-msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις!"
-
-#: cogs/moderation/moderation.py:1387
-#, python-brace-format
-msgid "Removed all warns for {member}."
-msgstr "Αφαιρέθηκαν όλες οι προειδοποιήσεις για τον/την {member}."
-
-#: cogs/moderation/moderation.py:1391
-#, python-brace-format
-msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
-msgstr "Αφαιρέθηκαν {num} προειδοποίηση/εις για τον/την {member}. [{remaining} προειδοποιήσεις]"
-
-#: cogs/moderation/moderation.py:1474
+#: cogs/moderation/moderation.py:1138
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Ιστορικό υποθέσεων - {guild}"
 
-#: cogs/moderation/moderation.py:1484
+#: cogs/moderation/moderation.py:1148
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Ιστορικό υποθέσεων - {member}"
 
-#: cogs/moderation/moderation.py:1487
+#: cogs/moderation/moderation.py:1151
 msgid "No cases on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες υποθέσεις."
+
+#: cogs/moderation/moderation.py:1158 cogs/moderation/warns.py:133
+msgid "No reason"
+msgstr "Χωρίς λόγο"
 
 #: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:534
 #: cogs/moderation/modlog.py:575
@@ -5572,6 +5491,99 @@ msgstr "Ένας κανόνας ενεργοποιείται τη στιγμή �
 #, python-brace-format
 msgid "This server already has the maximum of {max} escalation rules."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} κανόνων κλιμάκωσης."
+
+#: cogs/moderation/warns.py:74
+msgid "Select a warn to remove..."
+msgstr "Επίλεξε μια προειδοποίηση για αφαίρεση..."
+
+#: cogs/moderation/warns.py:96
+#, python-brace-format
+msgid "Warnings - {member}"
+msgstr "Προειδοποιήσεις - {member}"
+
+#: cogs/moderation/warns.py:103
+msgid "No warnings on record."
+msgstr "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις."
+
+#: cogs/moderation/warns.py:107
+msgid "*No reason provided*"
+msgstr "*Δεν δόθηκε λόγος*"
+
+#: cogs/moderation/warns.py:110
+#, python-brace-format
+msgid ""
+"**Case #{case}** - {reason}\n"
+"by {mod} - {when}"
+msgstr ""
+"**Υπόθεση #{case}** - {reason}\n"
+"από {mod} - {when}"
+
+#: cogs/moderation/warns.py:120
+#, python-brace-format
+msgid "Page {current}/{total} - {count} warn(s)"
+msgstr "Σελίδα {current}/{total} - {count} προειδοποίηση/εις"
+
+#: cogs/moderation/warns.py:136
+#, python-brace-format
+msgid "Case #{case}"
+msgstr "Υπόθεση #{case}"
+
+#: cogs/moderation/warns.py:147
+msgid "No warnings"
+msgstr "Καμία προειδοποίηση"
+
+#: cogs/moderation/warns.py:168
+msgid "Couldn't select that warn, please try again."
+msgstr "Δεν ήταν δυνατή η επιλογή αυτής της προειδοποίησης, δοκίμασε ξανά."
+
+#: cogs/moderation/warns.py:192 tools/paginator.py:94
+msgid "Couldn't turn the page, please try again."
+msgstr "Δεν ήταν δυνατή η αλλαγή σελίδας, δοκίμασε ξανά."
+
+#: cogs/moderation/warns.py:201
+msgid "Pick a warn from the dropdown first."
+msgstr "Διάλεξε πρώτα μια προειδοποίηση από το αναπτυσσόμενο μενού."
+
+#: cogs/moderation/warns.py:224
+msgid "Couldn't remove that warn, please try again."
+msgstr "Δεν ήταν δυνατή η αφαίρεση αυτής της προειδοποίησης, δοκίμασε ξανά."
+
+#: cogs/moderation/warns.py:274
+#, python-brace-format
+msgid "{member} has no warns."
+msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις."
+
+#: cogs/moderation/warns.py:278
+#, python-brace-format
+msgid "{member} has {count} warn(s)"
+msgstr "Ο/Η {member} έχει {count} προειδοποίηση/εις"
+
+#: cogs/moderation/warns.py:319
+msgid "Warns"
+msgstr "Προειδοποιήσεις"
+
+#: cogs/moderation/warns.py:331
+msgid "Auto-action"
+msgstr "Αυτόματη ενέργεια"
+
+#: cogs/moderation/warns.py:362
+msgid "The number of warns must be at least 1."
+msgstr "Ο αριθμός των warns πρέπει να είναι τουλάχιστον 1."
+
+#: cogs/moderation/warns.py:369
+#, python-brace-format
+msgid "{member} has no warns!"
+msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις!"
+
+#: cogs/moderation/warns.py:374
+#, python-brace-format
+msgid "Removed all warns for {member}."
+msgstr "Αφαιρέθηκαν όλες οι προειδοποιήσεις για τον/την {member}."
+
+#: cogs/moderation/warns.py:378
+#, python-brace-format
+msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
+msgstr "Αφαιρέθηκαν {num} προειδοποίηση/εις για τον/την {member}. [{remaining} προειδοποιήσεις]"
 
 #: cogs/music/effects.py:171
 msgid "Clear every effect and hear the track as it is."
@@ -6629,25 +6641,25 @@ msgstr ""
 "Το {ext} δεν μπορεί να αποφορτωθεί! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:481
+#: cogs/system/admin.py:491
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "Έγινε pull και επαναφόρτωση του `{ext}`."
 
-#: cogs/system/admin.py:485
+#: cogs/system/admin.py:495
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "Δεν ήταν δυνατή η επαναφόρτωση του `{ext}`: {error}"
 
-#: cogs/system/admin.py:520
+#: cogs/system/admin.py:530
 msgid "Update"
 msgstr "Ενημέρωση"
 
-#: cogs/system/admin.py:523
+#: cogs/system/admin.py:533
 msgid "Already up to date."
 msgstr "Ήδη ενημερωμένο."
 
-#: cogs/system/admin.py:525
+#: cogs/system/admin.py:535
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -6660,11 +6672,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:534
+#: cogs/system/admin.py:544
 msgid "Pulled"
 msgstr "Έγινε pull"
 
-#: cogs/system/admin.py:535
+#: cogs/system/admin.py:545
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -6677,19 +6689,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:538
+#: cogs/system/admin.py:548
 msgid "(no log)"
 msgstr "(χωρίς log)"
 
-#: cogs/system/admin.py:544
+#: cogs/system/admin.py:554
 msgid "Changed cogs"
 msgstr "Cogs που άλλαξαν"
 
-#: cogs/system/admin.py:550
+#: cogs/system/admin.py:560
 msgid "Restart needed (not hot-reloadable)"
 msgstr "Απαιτείται επανεκκίνηση (δεν γίνεται hot-reload)"
 
-#: cogs/system/admin.py:555
+#: cogs/system/admin.py:565
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Διάλεξε τα cogs για επαναφόρτωση παρακάτω ή επαναφόρτωσε τα πάντα."
 
@@ -8986,6 +8998,10 @@ msgstr "Δεν μπορείς να ενεργήσεις εναντίον κάπ�
 #: tools/modchecks.py:46
 msgid "My highest role isn't above that member, so I can't act on them."
 msgstr "Ο υψηλότερος ρόλος μου δεν είναι πάνω από αυτό το μέλος, οπότε δεν μπορώ να ενεργήσω εναντίον του."
+
+#: tools/modchecks.py:72
+msgid "My highest role isn't above that role, so I can't manage it."
+msgstr "Ο υψηλότερος ρόλος μου δεν είναι πάνω από αυτόν τον ρόλο, οπότε δεν μπορώ να τον διαχειριστώ."
 
 #: tools/paginator.py:23 tools/paginator.py:49
 msgid "Nothing to show."

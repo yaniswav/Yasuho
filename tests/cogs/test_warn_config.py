@@ -53,6 +53,12 @@ class _FakeGuild:
             raise RuntimeError("missing permissions")
         self.banned.append((member, reason))
 
+    def get_member(self, _uid):
+        # These escalation tests are not about role hierarchy: a target that is
+        # "not in the guild" makes modchecks.hierarchy_error apply only its
+        # self-check, so the warn command's new guard is a no-op here.
+        return None
+
 
 class _FakeMember:
     def __init__(self, member_id=2, fail=False):

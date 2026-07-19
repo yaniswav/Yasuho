@@ -42,7 +42,7 @@ from cogs.moderation.warn_config import (
     escalation_failure_notice,
     escalation_summary,
 )
-from tools import modactions, warn_escalation
+from tools import modactions, modchecks, warn_escalation
 from tools.i18n import _
 from tools.views import AuthorView
 
@@ -289,6 +289,10 @@ class Warns(commands.Cog):
 
         if member is None:
             return await ctx.send_help(ctx.command)
+
+        err = modchecks.hierarchy_error(ctx, member)
+        if err:
+            return await ctx.send(err, delete_after=10)
 
         # Every warn is recorded as its own case for history/auditing, while the
         # warns_count row is the running total the escalation policy keys on.

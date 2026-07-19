@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-18 08:46+0000\n"
+"POT-Creation-Date: 2026-07-19 15:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -85,7 +85,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr "まず `/anilist login` でアカウントを連携してください。"
 
 #: cogs/anilist/account.py:267 cogs/anilist/account.py:553
-#: cogs/anilist/feed.py:3372
+#: cogs/anilist/feed.py:1345
 msgid "Could not resolve your AniList account."
 msgstr "あなたのAniListアカウントを特定できませんでした。"
 
@@ -129,30 +129,32 @@ msgstr "メディアタイプは `anime` または `manga` にしてください
 
 #: cogs/anilist/airing.py:301 cogs/anilist/airing.py:347
 #: cogs/anilist/chapters.py:371 cogs/anilist/chapters.py:417
-#: cogs/anilist/feed.py:609 cogs/anilist/feed.py:726 cogs/anilist/feed.py:770
-#: cogs/anilist/feed.py:872
+#: cogs/anilist/feed_delivery.py:323 cogs/anilist/feed_delivery.py:440
+#: cogs/anilist/feed_delivery.py:484 cogs/anilist/feed_delivery.py:586
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr "現在AniListのレート制限が発生しています - しばらくしてからもう一度お試しください。"
 
 #: cogs/anilist/airing.py:307 cogs/anilist/airing.py:353
 #: cogs/anilist/chapters.py:377 cogs/anilist/chapters.py:423
-#: cogs/anilist/feed.py:615 cogs/anilist/feed.py:732 cogs/anilist/feed.py:776
-#: cogs/anilist/feed.py:878
+#: cogs/anilist/feed_delivery.py:329 cogs/anilist/feed_delivery.py:446
+#: cogs/anilist/feed_delivery.py:490 cogs/anilist/feed_delivery.py:592
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr "AniListとの連携が無効なようです - `/anilist login` で再連携してください。"
 
 #: cogs/anilist/airing.py:313 cogs/anilist/airing.py:323
 #: cogs/anilist/airing.py:359 cogs/anilist/chapters.py:383
 #: cogs/anilist/chapters.py:393 cogs/anilist/chapters.py:429
-#: cogs/anilist/feed.py:738 cogs/anilist/feed.py:748 cogs/anilist/feed.py:782
+#: cogs/anilist/feed_delivery.py:452 cogs/anilist/feed_delivery.py:462
+#: cogs/anilist/feed_delivery.py:496
 msgid "I couldn't find that title on AniList anymore."
 msgstr "その作品はもうAniListで見つかりませんでした。"
 
 #: cogs/anilist/airing.py:317 cogs/anilist/airing.py:363
 #: cogs/anilist/airing.py:368 cogs/anilist/chapters.py:387
 #: cogs/anilist/chapters.py:433 cogs/anilist/chapters.py:438
-#: cogs/anilist/feed.py:625 cogs/anilist/feed.py:742 cogs/anilist/feed.py:786
-#: cogs/anilist/feed.py:791 cogs/anilist/feed.py:888 cogs/anilist/feed.py:3064
+#: cogs/anilist/feed.py:1037 cogs/anilist/feed_delivery.py:339
+#: cogs/anilist/feed_delivery.py:456 cogs/anilist/feed_delivery.py:500
+#: cogs/anilist/feed_delivery.py:505 cogs/anilist/feed_delivery.py:602
 msgid "I could not reach AniList - try again shortly."
 msgstr "AniListに接続できませんでした - しばらくしてからもう一度お試しください。"
 
@@ -183,8 +185,8 @@ msgstr "**{title}** のエピソード{episode}が配信されました。"
 msgid "New episode"
 msgstr "新エピソード"
 
-#: cogs/anilist/airing.py:476 cogs/anilist/feed.py:1105 cogs/anilist/hub.py:293
-#: cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
+#: cogs/anilist/airing.py:476 cogs/anilist/feed_render.py:274
+#: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
 msgid "AniList"
 msgstr "AniList"
 
@@ -197,7 +199,7 @@ msgid "Link your AniList account first with `/anilist login`, then run this agai
 msgstr "まず `/anilist login` でAniListアカウントを連携してから、もう一度実行して放送アラートをオンにしてください。"
 
 #: cogs/anilist/airing.py:539 cogs/anilist/chapters.py:627
-#: cogs/anilist/feed.py:574 cogs/anilist/feed.py:3363
+#: cogs/anilist/feed.py:1336 cogs/anilist/feed_delivery.py:288
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "AniListとの連携が無効になっています - `/anilist login` で再連携してください。"
 
@@ -379,42 +381,42 @@ msgstr "読書中"
 #: cogs/anilist/collection.py:52 cogs/anilist/collection.py:336
 #: cogs/anilist/components.py:245 cogs/anilist/components.py:596
 #: cogs/anilist/components.py:860 cogs/anilist/components.py:988
-#: cogs/anilist/feed.py:417
+#: cogs/anilist/feed_delivery.py:131
 msgid "Watching"
 msgstr "視聴中"
 
 #: cogs/anilist/collection.py:60 cogs/anilist/collection.py:338
 #: cogs/anilist/components.py:249 cogs/anilist/components.py:600
 #: cogs/anilist/components.py:864 cogs/anilist/components.py:989
-#: cogs/anilist/feed.py:418
+#: cogs/anilist/feed_delivery.py:132
 msgid "Planning"
 msgstr "計画中"
 
 #: cogs/anilist/collection.py:64 cogs/anilist/collection.py:339
 #: cogs/anilist/components.py:250 cogs/anilist/components.py:599
 #: cogs/anilist/components.py:865 cogs/anilist/components.py:990
-#: cogs/anilist/feed.py:419
+#: cogs/anilist/feed_delivery.py:133
 msgid "Completed"
 msgstr "完了"
 
 #: cogs/anilist/collection.py:68 cogs/anilist/collection.py:340
 #: cogs/anilist/components.py:252 cogs/anilist/components.py:601
 #: cogs/anilist/components.py:867 cogs/anilist/components.py:992
-#: cogs/anilist/feed.py:421
+#: cogs/anilist/feed_delivery.py:135
 msgid "Paused"
 msgstr "中断"
 
 #: cogs/anilist/collection.py:72 cogs/anilist/collection.py:341
 #: cogs/anilist/components.py:253 cogs/anilist/components.py:602
 #: cogs/anilist/components.py:866 cogs/anilist/components.py:991
-#: cogs/anilist/feed.py:420
+#: cogs/anilist/feed_delivery.py:134
 msgid "Dropped"
 msgstr "中止"
 
 #: cogs/anilist/collection.py:76 cogs/anilist/collection.py:342
 #: cogs/anilist/components.py:251 cogs/anilist/components.py:603
 #: cogs/anilist/components.py:868 cogs/anilist/components.py:993
-#: cogs/anilist/feed.py:422
+#: cogs/anilist/feed_delivery.py:136
 msgid "Repeating"
 msgstr "リピート中"
 
@@ -423,14 +425,16 @@ msgid "Filter by status..."
 msgstr "ステータスで絞り込み..."
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1243 cogs/anilist/feed.py:1424
-#: cogs/anilist/feed.py:1590 cogs/anilist/feed.py:1711 cogs/anilist/hub.py:54
+#: cogs/anilist/feed_views.py:133 cogs/anilist/feed_views.py:314
+#: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
+#: cogs/anilist/hub.py:54
 msgid "Anime"
 msgstr "アニメ"
 
 #: cogs/anilist/collection.py:107 cogs/anilist/collection.py:330
-#: cogs/anilist/feed.py:1244 cogs/anilist/feed.py:1424
-#: cogs/anilist/feed.py:1590 cogs/anilist/feed.py:1711 cogs/anilist/hub.py:55
+#: cogs/anilist/feed_views.py:134 cogs/anilist/feed_views.py:314
+#: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
+#: cogs/anilist/hub.py:55
 msgid "Manga"
 msgstr "マンガ"
 
@@ -446,13 +450,13 @@ msgstr "完了"
 msgid "Drop"
 msgstr "中止"
 
-#: cogs/anilist/collection.py:247 cogs/config/rooms.py:1000
+#: cogs/anilist/collection.py:247 cogs/config/rooms_config.py:389
 msgid "Edit"
 msgstr "編集"
 
-#: cogs/anilist/collection.py:352 cogs/anilist/feed.py:2061
+#: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
 #: cogs/anilist/hub.py:261 cogs/community/usersettings.py:226
-#: cogs/config/rooms.py:1062 tools/views.py:22
+#: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
 
@@ -543,7 +547,7 @@ msgid "Keep current status"
 msgstr "現在のステータスを維持"
 
 #: cogs/anilist/components.py:270 cogs/anilist/components.py:762
-#: cogs/anilist/feed.py:2153 cogs/config/twitch.py:420
+#: cogs/anilist/feed_views.py:1043 cogs/config/twitch.py:420
 #: cogs/config/welcome.py:429 cogs/config/welcome.py:551
 msgid "Status"
 msgstr "ステータス"
@@ -787,576 +791,144 @@ msgstr "アカウントの連携中に問題が発生しました。"
 msgid "Could not open the code form."
 msgstr "コードフォームを開けませんでした。"
 
-#: cogs/anilist/feed.py:243 cogs/anilist/feed.py:1427 cogs/music/music.py:2455
-#: cogs/music/music.py:2623 cogs/music/search.py:342
-msgid "Unknown title"
-msgstr "不明なタイトル"
-
-#: cogs/anilist/feed.py:256
-#, python-brace-format
-msgid "watched episode {progress} of"
-msgstr "の第{progress}話を視聴しました"
-
-#: cogs/anilist/feed.py:257
-#, python-brace-format
-msgid "rewatched episode {progress} of"
-msgstr "の第{progress}話を再視聴しました"
-
-#: cogs/anilist/feed.py:258
-#, python-brace-format
-msgid "read chapter {progress} of"
-msgstr "の第{progress}話を読了しました"
-
-#: cogs/anilist/feed.py:259
-#, python-brace-format
-msgid "reread chapter {progress} of"
-msgstr "の第{progress}話を再読しました"
-
-#: cogs/anilist/feed.py:260
-msgid "completed"
-msgstr "を完了しました"
-
-#: cogs/anilist/feed.py:261
-msgid "plans to watch"
-msgstr "を視聴予定です"
-
-#: cogs/anilist/feed.py:262
-msgid "plans to read"
-msgstr "を読書予定です"
-
-#: cogs/anilist/feed.py:263
-msgid "paused watching"
-msgstr "の視聴を一時中断しました"
-
-#: cogs/anilist/feed.py:264
-msgid "paused reading"
-msgstr "の読書を一時中断しました"
-
-#: cogs/anilist/feed.py:265
-msgid "dropped"
-msgstr "を中止しました"
-
-#: cogs/anilist/feed.py:318
-#, python-brace-format
-msgid "{n} like"
-msgid_plural "{n} likes"
-msgstr[0] "{n}件のいいね"
-msgstr[1] "{n}件のいいね"
-
-#: cogs/anilist/feed.py:321
-#, python-brace-format
-msgid "{n} reply"
-msgid_plural "{n} replies"
-msgstr[0] "{n}件の返信"
-msgstr[1] "{n}件の返信"
-
-#: cogs/anilist/feed.py:338
-#, python-brace-format
-msgid "{n} anime update"
-msgid_plural "{n} anime updates"
-msgstr[0] "{n}件のアニメ更新"
-msgstr[1] "{n}件のアニメ更新"
-
-#: cogs/anilist/feed.py:341
-#, python-brace-format
-msgid "{n} manga update"
-msgid_plural "{n} manga updates"
-msgstr[0] "{n}件のマンガ更新"
-msgstr[1] "{n}件のマンガ更新"
-
-#: cogs/anilist/feed.py:344
-#, python-brace-format
-msgid "{n} post"
-msgid_plural "{n} posts"
-msgstr[0] "{n}件の投稿"
-msgstr[1] "{n}件の投稿"
-
-#: cogs/anilist/feed.py:347
-#, python-brace-format
-msgid "{n} update"
-msgid_plural "{n} updates"
-msgstr[0] "{n}件の更新"
-msgstr[1] "{n}件の更新"
-
-#: cogs/anilist/feed.py:537
-msgid "You are clicking too fast - give it a moment."
-msgstr "クリックが速すぎます - 少し待ってください。"
-
-#: cogs/anilist/feed.py:556 cogs/anilist/feed.py:3353
-msgid "AniList actions are unavailable right now."
-msgstr "現在、AniListの操作は利用できません。"
-
-#: cogs/anilist/feed.py:565
-msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
-msgstr "まず `/anilist login` でAniListアカウントを連携してください。連携後はフィードから直接いいねや返信ができるようになります。"
-
-#: cogs/anilist/feed.py:621 cogs/anilist/feed.py:884
-msgid "This activity no longer exists on AniList."
-msgstr "このアクティビティはAniList上に存在しません。"
-
-#: cogs/anilist/feed.py:633
-#, python-brace-format
-msgid "Liked - this activity now has {n} like."
-msgid_plural "Liked - this activity now has {n} likes."
-msgstr[0] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
-msgstr[1] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
-
-#: cogs/anilist/feed.py:639
-#, python-brace-format
-msgid "Like removed - this activity now has {n} like."
-msgid_plural "Like removed - this activity now has {n} likes."
-msgstr[0] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
-msgstr[1] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
-
-#: cogs/anilist/feed.py:663
-msgid "Set progress / score"
-msgstr "進捗 / スコア"
-
-#: cogs/anilist/feed.py:755
-#, python-brace-format
-msgid "**{title}** is already on your list ({status})."
-msgstr "**{title}** はすでにリストに登録されています({status})。"
-
-#: cogs/anilist/feed.py:803
-#, python-brace-format
-msgid "Added **{title}** to your planning."
-msgstr "**{title}** を「計画中」リストに追加しました。"
-
-#: cogs/anilist/feed.py:832
-msgid "Reply on AniList"
-msgstr "AniListで返信"
-
-#: cogs/anilist/feed.py:838
-msgid "Write your reply..."
-msgstr "返信を入力してください..."
-
-#: cogs/anilist/feed.py:841
-msgid "Your reply"
-msgstr "あなたの返信"
-
-#: cogs/anilist/feed.py:859
-msgid "Your reply was empty - nothing was posted."
-msgstr "返信が空のため、投稿されませんでした。"
-
-#: cogs/anilist/feed.py:894
-msgid "AniList did not accept that reply - try again shortly."
-msgstr "AniListがその返信を受け付けませんでした - しばらくしてからもう一度お試しください。"
-
-#: cogs/anilist/feed.py:898
-#, python-brace-format
-msgid "Your reply was posted. [See it on AniList]({url})"
-msgstr "返信を投稿しました。[AniListで見る]({url})"
-
-#: cogs/anilist/feed.py:1007
-msgid "An AniList update could not be rendered."
-msgstr "AniListの更新情報を表示できませんでした。"
-
-#: cogs/anilist/feed.py:1030 cogs/anilist/feed.py:1070
-#: cogs/anilist/feed.py:1169
-msgid "Someone"
-msgstr "誰か"
-
-#: cogs/anilist/feed.py:1041
-#, python-brace-format
-msgid "{user} {action} {title}"
-msgstr "{user}が{title}{action}"
-
-#: cogs/anilist/feed.py:1075
-#, python-brace-format
-msgid "{user} posted an update"
-msgstr "{user}が更新を投稿しました"
-
-#: cogs/anilist/feed.py:1144
-msgid "More AniList activity"
-msgstr "他のAniListアクティビティ"
-
-#: cogs/anilist/feed.py:1157
-#, python-brace-format
-msgid "...and {count} more update"
-msgid_plural "...and {count} more updates"
-msgstr[0] "...他に{count}件の更新"
-msgstr[1] "...他に{count}件の更新"
-
-#: cogs/anilist/feed.py:1173
-#, python-brace-format
-msgid "{user} - {summary}"
-msgstr "{user} - {summary}"
-
-#: cogs/anilist/feed.py:1181
-#, python-brace-format
-msgid "+{count} other"
-msgid_plural "+{count} others"
-msgstr[0] "+{count}件"
-msgstr[1] "+{count}件"
-
-#: cogs/anilist/feed.py:1245
-msgid "Posts"
-msgstr "投稿"
-
-#: cogs/anilist/feed.py:1265
-msgid "Switch feed..."
-msgstr "フィードを切り替え..."
-
-#: cogs/anilist/feed.py:1300
-msgid "Move this feed to..."
-msgstr "このフィードを移動..."
-
-#: cogs/anilist/feed.py:1302
-msgid "Pick a channel to create a feed..."
-msgstr "フィードを作成するチャンネルを選択..."
-
-#: cogs/anilist/feed.py:1353
-msgid "At least one activity type must stay enabled."
-msgstr "少なくとも1つのアクティビティタイプを有効にしておく必要があります。"
-
-#: cogs/anilist/feed.py:1375
-#, python-brace-format
-msgid "Members can join: {state}"
-msgstr "メンバーの参加: {state}"
-
-#: cogs/anilist/feed.py:1376 cogs/config/welcome.py:145
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
-#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
-msgid "On"
-msgstr "オン"
-
-#: cogs/anilist/feed.py:1376 cogs/config/welcome.py:145
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
-#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
-#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
-#: cogs/music/views.py:322
-msgid "Off"
-msgstr "オフ"
-
-#: cogs/anilist/feed.py:1438
-msgid "Pick the title to track..."
-msgstr "追跡するタイトルを選択..."
-
-#: cogs/anilist/feed.py:1458 cogs/music/views.py:472
-msgid "Back"
-msgstr "戻る"
-
-#: cogs/anilist/feed.py:1491 cogs/anilist/feed.py:1539
-#: cogs/anilist/feed.py:1564
-msgid "Track a title"
-msgstr "タイトルを追跡"
-
-#: cogs/anilist/feed.py:1493
-msgid "Pick the exact title to track:"
-msgstr "追跡する正確なタイトルを選んでください:"
-
-#: cogs/anilist/feed.py:1500 cogs/anilist/feed.py:1744
-#: cogs/anilist/feed.py:2128 cogs/anilist/feed.py:2215 cogs/anilist/hub.py:309
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:220
-msgid "Only you can use these controls."
-msgstr "これらの操作はあなただけが使用できます。"
-
-#: cogs/anilist/feed.py:1507
-msgid "I couldn't read that selection - try again."
-msgstr "その選択を読み取れませんでした。もう一度お試しください。"
-
-#: cogs/anilist/feed.py:1519
-#, python-brace-format
-msgid "Now tracking **{title}** in this feed."
-msgstr "このフィードで**{title}**の追跡を開始しました。"
-
-#: cogs/anilist/feed.py:1542
-msgid "Title to search"
-msgstr "検索するタイトル"
-
-#: cogs/anilist/feed.py:1572 cogs/anilist/feed.py:2923
-#, python-brace-format
-msgid "This feed already tracks the maximum of {max} titles. Remove one first."
-msgstr "このフィードはすでに上限の{max}件のタイトルを追跡しています。先に1件削除してください。"
-
-#: cogs/anilist/feed.py:1600
-msgid "Stop tracking a title..."
-msgstr "追跡を解除するタイトルを選択..."
-
-#: cogs/anilist/feed.py:1634 cogs/community/leveling.py:206
-#: cogs/community/reminders.py:340 cogs/music/views.py:1134
-msgid "Next"
-msgstr "次へ"
-
-#: cogs/anilist/feed.py:1634
-msgid "Previous"
-msgstr "前へ"
-
-#: cogs/anilist/feed.py:1695
-msgid "Tracked releases"
-msgstr "追跡中のリリース"
-
-#: cogs/anilist/feed.py:1702
-#, python-brace-format
-msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
-msgstr "これらのタイトルの新しいエピソード(アニメ)やチャプター(マンガ)は、DM通知とは別に{channel}に投稿されます。1つのフィードにつき最大{max}タイトルまでです。"
-
-#: cogs/anilist/feed.py:1714
-msgid "No titles tracked yet."
-msgstr "まだ追跡中のタイトルはありません。"
-
-#: cogs/anilist/feed.py:1717
-#, python-brace-format
-msgid "Tracking {count}/{max}"
-msgstr "追跡数 {count}/{max}"
-
-#: cogs/anilist/feed.py:1765
-#, python-brace-format
-msgid "No AniList match for **{query}**."
-msgstr "**{query}**に一致するAniListの結果がありませんでした。"
-
-#: cogs/anilist/feed.py:1796
-#, python-brace-format
-msgid "Tracked releases ({count})"
-msgstr "追跡中のリリース ({count})"
-
-#: cogs/anilist/feed.py:1822 cogs/config/twitch.py:302
-#: cogs/config/welcome.py:200
-msgid "Disable"
-msgstr "無効化"
-
-#: cogs/anilist/feed.py:1822 cogs/config/twitch.py:302
-#: cogs/config/welcome.py:200
-msgid "Enable"
-msgstr "有効化"
-
-#: cogs/anilist/feed.py:1848
-msgid "Delete"
-msgstr "削除"
-
-#: cogs/anilist/feed.py:1849 cogs/community/level_admin.py:65
-#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:143
-#: tools/arg_completion.py:219
-msgid "Cancel"
-msgstr "キャンセル"
-
-#: cogs/anilist/feed.py:1853
-msgid "Delete this feed?"
-msgstr "このフィードを削除しますか?"
-
-#: cogs/anilist/feed.py:1855
-#, python-brace-format
-msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
-msgstr "{channel} のAniListフィードとフォロー中のユーザーがすべて完全に削除されます。この操作は取り消せません。"
-
-#: cogs/anilist/feed.py:1870
-msgid "Feed deleted."
-msgstr "フィードを削除しました。"
-
-#: cogs/anilist/feed.py:1883 cogs/moderation/moderation.py:1158
-#: cogs/moderation/moderation.py:1215 tools/arg_completion.py:411
-msgid "Cancelled."
-msgstr "キャンセルしました。"
-
-#: cogs/anilist/feed.py:1893
-msgid "Delete feed"
-msgstr "フィードを削除"
-
-#: cogs/anilist/feed.py:1911
-msgid "Add a follow"
-msgstr "フォローを追加"
-
-#: cogs/anilist/feed.py:1914
-msgid "AniList username"
-msgstr "AniListユーザー名"
-
-#: cogs/anilist/feed.py:1942
-#, python-brace-format
-msgid "Now following **{name}**."
-msgstr "**{name}** をフォローしました。"
-
-#: cogs/anilist/feed.py:1952
-msgid "Add follow"
-msgstr "フォローを追加"
-
-#: cogs/anilist/feed.py:1959 cogs/anilist/feed.py:3122
-#, python-brace-format
-msgid "This feed already follows the maximum of {max} users."
-msgstr "このフィードはすでに最大数の{max}人をフォローしています。"
-
-#: cogs/anilist/feed.py:1982
-msgid "Remove a follow..."
-msgstr "フォローを解除..."
-
-#: cogs/anilist/feed.py:2117 cogs/anilist/feed.py:2145
-msgid "AniList activity feed"
-msgstr "AniListアクティビティフィード"
-
-#: cogs/anilist/feed.py:2120
-#, python-brace-format
-msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
-msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
-
-#: cogs/anilist/feed.py:2139 cogs/config/settings.py:53
-#: cogs/config/twitch.py:405 cogs/config/verification.py:94
-#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
-#: cogs/moderation/modlog.py:253
-msgid "Enabled"
-msgstr "有効"
-
-#: cogs/anilist/feed.py:2139 cogs/config/settings.py:53
-#: cogs/config/twitch.py:407 cogs/config/verification.py:96
-#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
-#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
-msgid "Disabled"
-msgstr "無効"
-
-#: cogs/anilist/feed.py:2141
-#, python-brace-format
-msgid "{status} ({count} recent failures)"
-msgstr "{status} (直近の失敗{count}件)"
-
-#: cogs/anilist/feed.py:2147
-msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
-msgstr "このサーバーへのAniListアクティビティの反映方法を設定します。変更内容はすべて即座に保存されます。"
-
-#: cogs/anilist/feed.py:2151 cogs/config/announcements.py:268
-#: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
-#: cogs/config/twitch.py:422 cogs/config/welcome.py:431
-#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
-#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
-msgid "Channel"
-msgstr "チャンネル"
-
-#: cogs/anilist/feed.py:2160
-msgid "Feeds"
-msgstr "フィード"
-
-#: cogs/anilist/feed.py:2173
-msgid "Types"
-msgstr "タイプ"
-
-#: cogs/anilist/feed.py:2197 cogs/anilist/feed.py:3440
-msgid "no one yet"
-msgstr "まだいません"
-
-#: cogs/anilist/feed.py:2201
-#, python-brace-format
-msgid "Following ({count})"
-msgstr "フォロー中 ({count})"
-
-#: cogs/anilist/feed.py:2768 cogs/anilist/feed.py:2804
-#: cogs/anilist/feed.py:3260
+#: cogs/anilist/feed.py:741 cogs/anilist/feed.py:777 cogs/anilist/feed.py:1233
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "{channel} はすでにAniListフィードです。"
 
-#: cogs/anilist/feed.py:2776
+#: cogs/anilist/feed.py:749
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "このサーバーはすでに最大数の{max}件のフィードがあります。先に1件削除してください。"
 
-#: cogs/anilist/feed.py:2816
+#: cogs/anilist/feed.py:789
 msgid "That feed no longer exists."
 msgstr "そのフィードはもう存在しません。"
 
-#: cogs/anilist/feed.py:2911 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:884 tests/cogs/test_anilist_feed_subs.py:14
 msgid "I couldn't read that title - try searching again."
 msgstr "そのタイトルを読み取れませんでした。もう一度検索してみてください。"
 
-#: cogs/anilist/feed.py:3045
+#: cogs/anilist/feed.py:896 cogs/anilist/feed_views.py:462
+#, python-brace-format
+msgid "This feed already tracks the maximum of {max} titles. Remove one first."
+msgstr "このフィードはすでに上限の{max}件のタイトルを追跡しています。先に1件削除してください。"
+
+#: cogs/anilist/feed.py:1018
 msgid "Give me an AniList username to follow."
 msgstr "フォローするAniListのユーザー名を指定してください。"
 
-#: cogs/anilist/feed.py:3055
+#: cogs/anilist/feed.py:1028
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "現在AniListのレート制限が発生しています - 1分ほどしてからもう一度お試しください。"
 
-#: cogs/anilist/feed.py:3073
+#: cogs/anilist/feed.py:1046
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "**{name}** という名前のAniListユーザーが見つかりませんでした。"
 
-#: cogs/anilist/feed.py:3178
+#: cogs/anilist/feed.py:1095 cogs/anilist/feed_views.py:849
+#, python-brace-format
+msgid "This feed already follows the maximum of {max} users."
+msgstr "このフィードはすでに最大数の{max}人をフォローしています。"
+
+#: cogs/anilist/feed.py:1151
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "このサーバーには有効なAniListフィードがありません。まず `/anilistfeed set` で作成するか再度有効にしてください。"
 
-#: cogs/anilist/feed.py:3189
+#: cogs/anilist/feed.py:1162
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "このサーバーには複数のフィードがあります。フィードチャンネル ({channels}) 内で実行してください。"
 
-#: cogs/anilist/feed.py:3236
+#: cogs/anilist/feed.py:1209
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "このサーバーはすでに最大数の{max}件のフィードがあります。先に `/anilistfeed remove` で1件削除してください。"
 
-#: cogs/anilist/feed.py:3246
+#: cogs/anilist/feed.py:1219
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "{channel} にAniListフィードを作成しました。`/anilistfeed follow` でユーザーを追加してください。"
 
-#: cogs/anilist/feed.py:3256
+#: cogs/anilist/feed.py:1229
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "{channel} のAniListフィードを再度有効にしました。"
 
-#: cogs/anilist/feed.py:3264
+#: cogs/anilist/feed.py:1237
 msgid "AniList feed"
 msgstr "AniListフィード"
 
-#: cogs/anilist/feed.py:3290
+#: cogs/anilist/feed.py:1263
 msgid "User"
 msgstr "ユーザー"
 
-#: cogs/anilist/feed.py:3290
+#: cogs/anilist/feed.py:1263
 msgid "Feed"
 msgstr "フィード"
 
-#: cogs/anilist/feed.py:3292
+#: cogs/anilist/feed.py:1265
 msgid "Now following"
 msgstr "フォロー中"
 
-#: cogs/anilist/feed.py:3317
+#: cogs/anilist/feed.py:1290
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "このフィードは **{name}** をフォローしていません。"
 
-#: cogs/anilist/feed.py:3320
+#: cogs/anilist/feed.py:1293
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "**{name}** のフォローを解除しました。"
 
-#: cogs/anilist/feed.py:3345
+#: cogs/anilist/feed.py:1318
 msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
 msgstr "このフィードはメンバーが自分で参加することを許可していません。モデレーターに `/anilistfeed` で **メンバーの参加** を有効にしてもらってください。"
 
-#: cogs/anilist/feed.py:3358
+#: cogs/anilist/feed.py:1326 cogs/anilist/feed_delivery.py:270
+msgid "AniList actions are unavailable right now."
+msgstr "現在、AniListの操作は利用できません。"
+
+#: cogs/anilist/feed.py:1331
 msgid "Link your AniList account first with `/anilist login`."
 msgstr "まず `/anilist login` でAniListアカウントを連携してください。"
 
-#: cogs/anilist/feed.py:3380
+#: cogs/anilist/feed.py:1353
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "<#{channel}> のAniListフィードから退出しました。"
 
-#: cogs/anilist/feed.py:3388
+#: cogs/anilist/feed.py:1361
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "このフィードは現在満員です - モデレーターに空きを作ってもらってください。"
 
-#: cogs/anilist/feed.py:3392
+#: cogs/anilist/feed.py:1365
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "<#{channel}> のAniListフィードに参加しました。"
 
-#: cogs/anilist/feed.py:3410
+#: cogs/anilist/feed.py:1383
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "このサーバーにはまだAniListフィードがありません。`/anilistfeed set` で作成してください。"
 
-#: cogs/anilist/feed.py:3432
+#: cogs/anilist/feed.py:1405
 msgid "none"
 msgstr "なし"
 
-#: cogs/anilist/feed.py:3433 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
 msgid "enabled"
 msgstr "有効"
 
-#: cogs/anilist/feed.py:3433 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
 msgid "disabled"
 msgstr "無効"
 
-#: cogs/anilist/feed.py:3443
+#: cogs/anilist/feed.py:1413 cogs/anilist/feed_views.py:1087
+msgid "no one yet"
+msgstr "まだいません"
+
+#: cogs/anilist/feed.py:1416
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -1367,19 +939,451 @@ msgstr ""
 "タイプ: {types}\n"
 "フォロー中: {names}"
 
-#: cogs/anilist/feed.py:3447
+#: cogs/anilist/feed.py:1420
 msgid "AniList feeds"
 msgstr "AniListフィード"
 
-#: cogs/anilist/feed.py:3467
+#: cogs/anilist/feed.py:1440
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "{channel} はAniListフィードではありません。"
 
-#: cogs/anilist/feed.py:3472
+#: cogs/anilist/feed.py:1445
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "{channel} のAniListフィードを削除しました。"
+
+#: cogs/anilist/feed_delivery.py:69 cogs/anilist/feed_views.py:317
+#: cogs/music/music.py:2455 cogs/music/music.py:2623 cogs/music/search.py:342
+msgid "Unknown title"
+msgstr "不明なタイトル"
+
+#: cogs/anilist/feed_delivery.py:251
+msgid "You are clicking too fast - give it a moment."
+msgstr "クリックが速すぎます - 少し待ってください。"
+
+#: cogs/anilist/feed_delivery.py:279
+msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
+msgstr "まず `/anilist login` でAniListアカウントを連携してください。連携後はフィードから直接いいねや返信ができるようになります。"
+
+#: cogs/anilist/feed_delivery.py:335 cogs/anilist/feed_delivery.py:598
+msgid "This activity no longer exists on AniList."
+msgstr "このアクティビティはAniList上に存在しません。"
+
+#: cogs/anilist/feed_delivery.py:347
+#, python-brace-format
+msgid "Liked - this activity now has {n} like."
+msgid_plural "Liked - this activity now has {n} likes."
+msgstr[0] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
+msgstr[1] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
+
+#: cogs/anilist/feed_delivery.py:353
+#, python-brace-format
+msgid "Like removed - this activity now has {n} like."
+msgid_plural "Like removed - this activity now has {n} likes."
+msgstr[0] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
+msgstr[1] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
+
+#: cogs/anilist/feed_delivery.py:377
+msgid "Set progress / score"
+msgstr "進捗 / スコア"
+
+#: cogs/anilist/feed_delivery.py:469
+#, python-brace-format
+msgid "**{title}** is already on your list ({status})."
+msgstr "**{title}** はすでにリストに登録されています({status})。"
+
+#: cogs/anilist/feed_delivery.py:517
+#, python-brace-format
+msgid "Added **{title}** to your planning."
+msgstr "**{title}** を「計画中」リストに追加しました。"
+
+#: cogs/anilist/feed_delivery.py:546
+msgid "Reply on AniList"
+msgstr "AniListで返信"
+
+#: cogs/anilist/feed_delivery.py:552
+msgid "Write your reply..."
+msgstr "返信を入力してください..."
+
+#: cogs/anilist/feed_delivery.py:555
+msgid "Your reply"
+msgstr "あなたの返信"
+
+#: cogs/anilist/feed_delivery.py:573
+msgid "Your reply was empty - nothing was posted."
+msgstr "返信が空のため、投稿されませんでした。"
+
+#: cogs/anilist/feed_delivery.py:608
+msgid "AniList did not accept that reply - try again shortly."
+msgstr "AniListがその返信を受け付けませんでした - しばらくしてからもう一度お試しください。"
+
+#: cogs/anilist/feed_delivery.py:612
+#, python-brace-format
+msgid "Your reply was posted. [See it on AniList]({url})"
+msgstr "返信を投稿しました。[AniListで見る]({url})"
+
+#: cogs/anilist/feed_render.py:48
+#, python-brace-format
+msgid "watched episode {progress} of"
+msgstr "の第{progress}話を視聴しました"
+
+#: cogs/anilist/feed_render.py:49
+#, python-brace-format
+msgid "rewatched episode {progress} of"
+msgstr "の第{progress}話を再視聴しました"
+
+#: cogs/anilist/feed_render.py:50
+#, python-brace-format
+msgid "read chapter {progress} of"
+msgstr "の第{progress}話を読了しました"
+
+#: cogs/anilist/feed_render.py:51
+#, python-brace-format
+msgid "reread chapter {progress} of"
+msgstr "の第{progress}話を再読しました"
+
+#: cogs/anilist/feed_render.py:52
+msgid "completed"
+msgstr "を完了しました"
+
+#: cogs/anilist/feed_render.py:53
+msgid "plans to watch"
+msgstr "を視聴予定です"
+
+#: cogs/anilist/feed_render.py:54
+msgid "plans to read"
+msgstr "を読書予定です"
+
+#: cogs/anilist/feed_render.py:55
+msgid "paused watching"
+msgstr "の視聴を一時中断しました"
+
+#: cogs/anilist/feed_render.py:56
+msgid "paused reading"
+msgstr "の読書を一時中断しました"
+
+#: cogs/anilist/feed_render.py:57
+msgid "dropped"
+msgstr "を中止しました"
+
+#: cogs/anilist/feed_render.py:110
+#, python-brace-format
+msgid "{n} like"
+msgid_plural "{n} likes"
+msgstr[0] "{n}件のいいね"
+msgstr[1] "{n}件のいいね"
+
+#: cogs/anilist/feed_render.py:113
+#, python-brace-format
+msgid "{n} reply"
+msgid_plural "{n} replies"
+msgstr[0] "{n}件の返信"
+msgstr[1] "{n}件の返信"
+
+#: cogs/anilist/feed_render.py:130
+#, python-brace-format
+msgid "{n} anime update"
+msgid_plural "{n} anime updates"
+msgstr[0] "{n}件のアニメ更新"
+msgstr[1] "{n}件のアニメ更新"
+
+#: cogs/anilist/feed_render.py:133
+#, python-brace-format
+msgid "{n} manga update"
+msgid_plural "{n} manga updates"
+msgstr[0] "{n}件のマンガ更新"
+msgstr[1] "{n}件のマンガ更新"
+
+#: cogs/anilist/feed_render.py:136
+#, python-brace-format
+msgid "{n} post"
+msgid_plural "{n} posts"
+msgstr[0] "{n}件の投稿"
+msgstr[1] "{n}件の投稿"
+
+#: cogs/anilist/feed_render.py:139
+#, python-brace-format
+msgid "{n} update"
+msgid_plural "{n} updates"
+msgstr[0] "{n}件の更新"
+msgstr[1] "{n}件の更新"
+
+#: cogs/anilist/feed_render.py:176
+msgid "An AniList update could not be rendered."
+msgstr "AniListの更新情報を表示できませんでした。"
+
+#: cogs/anilist/feed_render.py:199 cogs/anilist/feed_render.py:239
+#: cogs/anilist/feed_render.py:338
+msgid "Someone"
+msgstr "誰か"
+
+#: cogs/anilist/feed_render.py:210
+#, python-brace-format
+msgid "{user} {action} {title}"
+msgstr "{user}が{title}{action}"
+
+#: cogs/anilist/feed_render.py:244
+#, python-brace-format
+msgid "{user} posted an update"
+msgstr "{user}が更新を投稿しました"
+
+#: cogs/anilist/feed_render.py:313
+msgid "More AniList activity"
+msgstr "他のAniListアクティビティ"
+
+#: cogs/anilist/feed_render.py:326
+#, python-brace-format
+msgid "...and {count} more update"
+msgid_plural "...and {count} more updates"
+msgstr[0] "...他に{count}件の更新"
+msgstr[1] "...他に{count}件の更新"
+
+#: cogs/anilist/feed_render.py:342
+#, python-brace-format
+msgid "{user} - {summary}"
+msgstr "{user} - {summary}"
+
+#: cogs/anilist/feed_render.py:350
+#, python-brace-format
+msgid "+{count} other"
+msgid_plural "+{count} others"
+msgstr[0] "+{count}件"
+msgstr[1] "+{count}件"
+
+#: cogs/anilist/feed_views.py:135
+msgid "Posts"
+msgstr "投稿"
+
+#: cogs/anilist/feed_views.py:155
+msgid "Switch feed..."
+msgstr "フィードを切り替え..."
+
+#: cogs/anilist/feed_views.py:190
+msgid "Move this feed to..."
+msgstr "このフィードを移動..."
+
+#: cogs/anilist/feed_views.py:192
+msgid "Pick a channel to create a feed..."
+msgstr "フィードを作成するチャンネルを選択..."
+
+#: cogs/anilist/feed_views.py:243
+msgid "At least one activity type must stay enabled."
+msgstr "少なくとも1つのアクティビティタイプを有効にしておく必要があります。"
+
+#: cogs/anilist/feed_views.py:265
+#, python-brace-format
+msgid "Members can join: {state}"
+msgstr "メンバーの参加: {state}"
+
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:145
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+msgid "On"
+msgstr "オン"
+
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:145
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:445
+#: cogs/config/welcome.py:447 cogs/config/welcome.py:559
+#: cogs/config/welcome.py:561 cogs/config/welcome.py:563
+#: cogs/music/views.py:322
+msgid "Off"
+msgstr "オフ"
+
+#: cogs/anilist/feed_views.py:328
+msgid "Pick the title to track..."
+msgstr "追跡するタイトルを選択..."
+
+#: cogs/anilist/feed_views.py:348 cogs/music/views.py:472
+msgid "Back"
+msgstr "戻る"
+
+#: cogs/anilist/feed_views.py:381 cogs/anilist/feed_views.py:429
+#: cogs/anilist/feed_views.py:454
+msgid "Track a title"
+msgstr "タイトルを追跡"
+
+#: cogs/anilist/feed_views.py:383
+msgid "Pick the exact title to track:"
+msgstr "追跡する正確なタイトルを選んでください:"
+
+#: cogs/anilist/feed_views.py:390 cogs/anilist/feed_views.py:634
+#: cogs/anilist/feed_views.py:1018 cogs/anilist/feed_views.py:1105
+#: cogs/anilist/hub.py:309 cogs/config/buttonroles.py:572
+#: cogs/moderation/modlog.py:220
+msgid "Only you can use these controls."
+msgstr "これらの操作はあなただけが使用できます。"
+
+#: cogs/anilist/feed_views.py:397
+msgid "I couldn't read that selection - try again."
+msgstr "その選択を読み取れませんでした。もう一度お試しください。"
+
+#: cogs/anilist/feed_views.py:409
+#, python-brace-format
+msgid "Now tracking **{title}** in this feed."
+msgstr "このフィードで**{title}**の追跡を開始しました。"
+
+#: cogs/anilist/feed_views.py:432
+msgid "Title to search"
+msgstr "検索するタイトル"
+
+#: cogs/anilist/feed_views.py:490
+msgid "Stop tracking a title..."
+msgstr "追跡を解除するタイトルを選択..."
+
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:206
+#: cogs/community/reminders.py:340 cogs/music/views.py:1134
+msgid "Next"
+msgstr "次へ"
+
+#: cogs/anilist/feed_views.py:524
+msgid "Previous"
+msgstr "前へ"
+
+#: cogs/anilist/feed_views.py:585
+msgid "Tracked releases"
+msgstr "追跡中のリリース"
+
+#: cogs/anilist/feed_views.py:592
+#, python-brace-format
+msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
+msgstr "これらのタイトルの新しいエピソード(アニメ)やチャプター(マンガ)は、DM通知とは別に{channel}に投稿されます。1つのフィードにつき最大{max}タイトルまでです。"
+
+#: cogs/anilist/feed_views.py:604
+msgid "No titles tracked yet."
+msgstr "まだ追跡中のタイトルはありません。"
+
+#: cogs/anilist/feed_views.py:607
+#, python-brace-format
+msgid "Tracking {count}/{max}"
+msgstr "追跡数 {count}/{max}"
+
+#: cogs/anilist/feed_views.py:655
+#, python-brace-format
+msgid "No AniList match for **{query}**."
+msgstr "**{query}**に一致するAniListの結果がありませんでした。"
+
+#: cogs/anilist/feed_views.py:686
+#, python-brace-format
+msgid "Tracked releases ({count})"
+msgstr "追跡中のリリース ({count})"
+
+#: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:302
+#: cogs/config/welcome.py:200
+msgid "Disable"
+msgstr "無効化"
+
+#: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:302
+#: cogs/config/welcome.py:200
+msgid "Enable"
+msgstr "有効化"
+
+#: cogs/anilist/feed_views.py:738
+msgid "Delete"
+msgstr "削除"
+
+#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:65
+#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:143
+#: tools/arg_completion.py:219
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: cogs/anilist/feed_views.py:743
+msgid "Delete this feed?"
+msgstr "このフィードを削除しますか?"
+
+#: cogs/anilist/feed_views.py:745
+#, python-brace-format
+msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
+msgstr "{channel} のAniListフィードとフォロー中のユーザーがすべて完全に削除されます。この操作は取り消せません。"
+
+#: cogs/anilist/feed_views.py:760
+msgid "Feed deleted."
+msgstr "フィードを削除しました。"
+
+#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:970
+#: cogs/moderation/moderation.py:1031 tools/arg_completion.py:411
+msgid "Cancelled."
+msgstr "キャンセルしました。"
+
+#: cogs/anilist/feed_views.py:783
+msgid "Delete feed"
+msgstr "フィードを削除"
+
+#: cogs/anilist/feed_views.py:801
+msgid "Add a follow"
+msgstr "フォローを追加"
+
+#: cogs/anilist/feed_views.py:804
+msgid "AniList username"
+msgstr "AniListユーザー名"
+
+#: cogs/anilist/feed_views.py:832
+#, python-brace-format
+msgid "Now following **{name}**."
+msgstr "**{name}** をフォローしました。"
+
+#: cogs/anilist/feed_views.py:842
+msgid "Add follow"
+msgstr "フォローを追加"
+
+#: cogs/anilist/feed_views.py:872
+msgid "Remove a follow..."
+msgstr "フォローを解除..."
+
+#: cogs/anilist/feed_views.py:1007 cogs/anilist/feed_views.py:1035
+msgid "AniList activity feed"
+msgstr "AniListアクティビティフィード"
+
+#: cogs/anilist/feed_views.py:1010
+#, python-brace-format
+msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
+msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
+
+#: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
+#: cogs/config/twitch.py:405 cogs/config/verification.py:94
+#: cogs/config/welcome.py:417 cogs/config/welcome.py:538
+#: cogs/moderation/modlog.py:253
+msgid "Enabled"
+msgstr "有効"
+
+#: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
+#: cogs/config/twitch.py:407 cogs/config/verification.py:96
+#: cogs/config/welcome.py:419 cogs/config/welcome.py:540
+#: cogs/config/welcome.py:778 cogs/moderation/modlog.py:255
+msgid "Disabled"
+msgstr "無効"
+
+#: cogs/anilist/feed_views.py:1031
+#, python-brace-format
+msgid "{status} ({count} recent failures)"
+msgstr "{status} (直近の失敗{count}件)"
+
+#: cogs/anilist/feed_views.py:1037
+msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
+msgstr "このサーバーへのAniListアクティビティの反映方法を設定します。変更内容はすべて即座に保存されます。"
+
+#: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
+#: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
+#: cogs/config/twitch.py:422 cogs/config/welcome.py:431
+#: cogs/config/welcome.py:553 cogs/config/welcome.py:757
+#: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
+msgid "Channel"
+msgstr "チャンネル"
+
+#: cogs/anilist/feed_views.py:1050
+msgid "Feeds"
+msgstr "フィード"
+
+#: cogs/anilist/feed_views.py:1063
+msgid "Types"
+msgstr "タイプ"
+
+#: cogs/anilist/feed_views.py:1091
+#, python-brace-format
+msgid "Following ({count})"
+msgstr "フォロー中 ({count})"
 
 #: cogs/anilist/hub.py:39
 msgid "Search AniList"
@@ -2725,7 +2729,7 @@ msgstr "送信に失敗しました。もう一度お試しください。"
 msgid "Announcement sent to {channel}."
 msgstr "{channel} にアナウンスを送信しました。"
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:736
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:544
 msgid "Scheduling is unavailable right now."
 msgstr "予約機能は現在利用できません。"
 
@@ -3429,401 +3433,75 @@ msgstr "{channel} にロールメニューを投稿しました。"
 msgid "This server already has the maximum of {n} role menus."
 msgstr "このサーバーはすでに最大 {n} 個のロールメニューに達しています。"
 
-#: cogs/config/rooms.py:94 cogs/config/rooms.py:424
-msgid "User limit..."
-msgstr "ユーザー数制限..."
-
-#: cogs/config/rooms.py:129
-msgid "Remove a hub..."
-msgstr "ハブを削除..."
-
-#: cogs/config/rooms.py:149
-msgid "Add an autoroom hub"
-msgstr "自動ルームハブを追加"
-
-#: cogs/config/rooms.py:153 cogs/config/rooms.py:220
-msgid "Hub label"
-msgstr "ハブのラベル"
-
-#: cogs/config/rooms.py:159 cogs/config/rooms.py:288
-msgid "Category name"
-msgstr "カテゴリ名"
-
-#: cogs/config/rooms.py:165 cogs/config/rooms.py:294
-msgid "Join-to-create channel name"
-msgstr "作成用チャンネル名"
-
-#: cogs/config/rooms.py:171 cogs/config/rooms.py:226
-#, python-brace-format
-msgid "Room name template ({user}, {count})"
-msgstr "ルーム名テンプレート ({user}, {count})"
-
-#: cogs/config/rooms.py:186 cogs/config/rooms.py:250
-msgid "User limit (0 = unlimited)"
-msgstr "ユーザー数制限 (0 = 無制限)"
-
-#: cogs/config/rooms.py:215
-msgid "Edit autoroom hub"
-msgstr "自動ルームハブを編集"
-
-#: cogs/config/rooms.py:233
-msgid "Max rooms (1-50)"
-msgstr "最大ルーム数 (1-50)"
-
-#: cogs/config/rooms.py:241
-msgid "Private"
-msgstr "非公開"
-
-#: cogs/config/rooms.py:244
-msgid "Public"
-msgstr "公開"
-
-#: cogs/config/rooms.py:255
-msgid "Room privacy"
-msgstr "ルームのプライバシー"
-
-#: cogs/config/rooms.py:283
-msgid "Rename hub channels"
-msgstr "ハブのチャンネル名を変更"
-
-#: cogs/config/rooms.py:330
-msgid "Settings"
-msgstr "設定"
-
-#: cogs/config/rooms.py:338
-msgid "Rename channels"
-msgstr "チャンネル名を変更"
-
-#: cogs/config/rooms.py:435 cogs/config/rooms.py:507 cogs/config/rooms.py:675
-#: cogs/config/rooms.py:909
-msgid "This room no longer exists."
-msgstr "このルームはもう存在しません。"
-
-#: cogs/config/rooms.py:442
-msgid "Could not change the user limit."
-msgstr "ユーザー数制限を変更できませんでした。"
-
-#: cogs/config/rooms.py:446
-msgid "Updated the user limit."
-msgstr "ユーザー数制限を更新しました。"
-
-#: cogs/config/rooms.py:464
-msgid "Select a member to remove..."
-msgstr "削除するメンバーを選択..."
-
-#: cogs/config/rooms.py:465
-msgid "Select a member to unblacklist..."
-msgstr "ブラックリストから解除するメンバーを選択..."
-
-#: cogs/config/rooms.py:466
-msgid "Select the new owner..."
-msgstr "新しいオーナーを選択..."
-
-#: cogs/config/rooms.py:469
-msgid "Select a member..."
-msgstr "メンバーを選択..."
-
-#: cogs/config/rooms.py:494
-msgid "Rename room"
-msgstr "ルーム名を変更"
-
-#: cogs/config/rooms.py:497
-msgid "New room name"
-msgstr "新しいルーム名"
-
-#: cogs/config/rooms.py:511
-msgid "Give the room a name."
-msgstr "ルームに名前を付けてください。"
-
-#: cogs/config/rooms.py:517
-msgid "Could not rename the room."
-msgstr "ルーム名を変更できませんでした。"
-
-#: cogs/config/rooms.py:521
-#, python-brace-format
-msgid "Renamed the room to **{name}**."
-msgstr "ルーム名を **{name}** に変更しました。"
-
-#: cogs/config/rooms.py:578
-msgid "## Room controls"
-msgstr "## ルームの操作"
-
-#: cogs/config/rooms.py:582
-#, python-brace-format
-msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
-msgstr "オーナー: <@{owner_id}> - 下のボタンを使ってルームを管理してください。"
-
-#: cogs/config/rooms.py:586
-msgid "No owner right now - anyone in the room can Claim it below."
-msgstr "現在オーナーはいません - ルーム内の誰でも下のボタンで取得できます。"
-
-#: cogs/config/rooms.py:596
-msgid "Slots"
-msgstr "定員"
-
-#: cogs/config/rooms.py:602
-msgid "Rename"
-msgstr "名前変更"
-
-#: cogs/config/rooms.py:608
-msgid "Unlock"
-msgstr "ロック解除"
-
-#: cogs/config/rooms.py:608
-msgid "Lock"
-msgstr "ロック"
-
-#: cogs/config/rooms.py:614
-msgid "Unhide"
-msgstr "再表示"
-
-#: cogs/config/rooms.py:614
-msgid "Hide"
-msgstr "非表示"
-
-#: cogs/config/rooms.py:620
-msgid "Kick + blacklist"
-msgstr "キック + ブラックリスト"
-
-#: cogs/config/rooms.py:628
-msgid "Remove from blacklist"
-msgstr "ブラックリストから削除"
-
-#: cogs/config/rooms.py:634
-msgid "Transfer lead"
-msgstr "オーナーを譲渡"
-
-#: cogs/config/rooms.py:640
-msgid "Bump to top"
-msgstr "最上部に移動"
-
-#: cogs/config/rooms.py:646
-msgid "Claim"
-msgstr "取得"
-
-#: cogs/config/rooms.py:657
-msgid "-# Only the room owner can use these controls (except Claim)."
-msgstr "-# これらの操作はルームのオーナーだけが使用できます (取得を除く)。"
-
-#: cogs/config/rooms.py:695
-msgid "Only the room owner can use these controls."
-msgstr "これらの操作はルームのオーナーだけが使用できます。"
-
-#: cogs/config/rooms.py:713 cogs/config/rooms.py:944
-msgid "Unknown action."
-msgstr "不明なアクションです。"
-
-#: cogs/config/rooms.py:720
-msgid "Something went wrong with that action."
-msgstr "そのアクションで問題が発生しました。"
-
-#: cogs/config/rooms.py:730
-msgid "Choose a user limit for the room:"
-msgstr "ルームのユーザー数制限を選んでください:"
-
-#: cogs/config/rooms.py:755
-msgid "Could not change the lock."
-msgstr "ロックを変更できませんでした。"
-
-#: cogs/config/rooms.py:760
-msgid "Unlocked the room - anyone can join."
-msgstr "ルームのロックを解除しました - 誰でも参加できます。"
-
-#: cogs/config/rooms.py:762
-msgid "Locked the room - no one new can join."
-msgstr "ルームをロックしました - 新しく参加することはできません。"
-
-#: cogs/config/rooms.py:779
-msgid "Could not change visibility."
-msgstr "表示状態を変更できませんでした。"
-
-#: cogs/config/rooms.py:784
-msgid "The room is visible again."
-msgstr "ルームが再び表示されるようになりました。"
-
-#: cogs/config/rooms.py:786
-msgid "Hid the room from everyone else."
-msgstr "他の全員からルームを非表示にしました。"
-
-#: cogs/config/rooms.py:802
-msgid "There's no one else in the room to remove."
-msgstr "ルームに削除できる他のメンバーがいません。"
-
-#: cogs/config/rooms.py:806
-msgid "Pick who to kick and blacklist:"
-msgstr "キックしてブラックリストに追加する相手を選んでください:"
-
-#: cogs/config/rooms.py:823
-msgid "No one is blacklisted here."
-msgstr "ここでブラックリストに登録されている人はいません。"
-
-#: cogs/config/rooms.py:826
-msgid "Pick who to remove from the blacklist:"
-msgstr "ブラックリストから削除する相手を選んでください:"
-
-#: cogs/config/rooms.py:845
-msgid "There's no one else here to hand the room to."
-msgstr "ルームを譲れる他の人がいません。"
-
-#: cogs/config/rooms.py:849
-msgid "Pick the new room owner:"
-msgstr "新しいルームのオーナーを選んでください:"
-
-#: cogs/config/rooms.py:876
-msgid "Could not bump the room."
-msgstr "ルームを移動できませんでした。"
-
-#: cogs/config/rooms.py:879
-msgid "Bumped the room to the top."
-msgstr "ルームを最上部に移動しました。"
-
-#: cogs/config/rooms.py:890
-msgid "The room already has an owner who's still here."
-msgstr "ルームにはまだ在室しているオーナーがいます。"
-
-#: cogs/config/rooms.py:895
-msgid "Join the room first to claim it."
-msgstr "取得するには、まずルームに参加してください。"
-
-#: cogs/config/rooms.py:901
-msgid "You're now the owner of this room."
-msgstr "あなたがこのルームのオーナーになりました。"
-
-#: cogs/config/rooms.py:915
-msgid "That member is no longer here."
-msgstr "そのメンバーはもうここにいません。"
-
-#: cogs/config/rooms.py:927
-#, python-brace-format
-msgid "Removed and blacklisted {name}."
-msgstr "{name} を削除してブラックリストに追加しました。"
-
-#: cogs/config/rooms.py:934
-#, python-brace-format
-msgid "Removed {name} from the blacklist."
-msgstr "{name} をブラックリストから削除しました。"
-
-#: cogs/config/rooms.py:940
-#, python-brace-format
-msgid "Transferred room ownership to {name}."
-msgstr "ルームのオーナー権限を {name} に譲渡しました。"
-
-#: cogs/config/rooms.py:947
-msgid "Could not complete that action."
-msgstr "そのアクションを完了できませんでした。"
-
-#: cogs/config/rooms.py:979
-msgid "## Autoroom hubs"
-msgstr "## 自動ルームハブ"
-
-#: cogs/config/rooms.py:983
-msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
-msgstr "参加で作成するボイスハブです。ハブに参加したメンバーは自分専用の一時ルームを取得し、空になると自動的に削除されます。"
-
-#: cogs/config/rooms.py:993
-msgid "No hubs yet. Use **Add hub** to create your first one."
-msgstr "まだハブがありません。**Add hub** を使って最初のハブを作成してください。"
-
-#: cogs/config/rooms.py:1007
-#, python-brace-format
-msgid ""
-"**{label}**\n"
-"{summary}"
-msgstr ""
-"**{label}**\n"
-"{summary}"
-
-#: cogs/config/rooms.py:1020
-msgid "Add hub"
-msgstr "ハブを追加"
-
-#: cogs/config/rooms.py:1036
-#, python-brace-format
-msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
-msgstr "-# {count}/{max_hubs} ハブ - ~{reserved} チャンネル予約 - {used}/{budget} チャンネル使用"
-
-#: cogs/config/rooms.py:1096 cogs/config/rooms.py:1378
+#: cogs/config/rooms.py:321 cogs/config/rooms_config.py:485
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "すでに最大 {max_hubs} 個のハブに達しています。"
 
-#: cogs/config/rooms.py:1106 cogs/config/rooms.py:1127
-msgid "Something went wrong opening that form."
-msgstr "そのフォームを開く際に問題が発生しました。"
-
-#: cogs/config/rooms.py:1114 cogs/config/rooms.py:1420
-#: cogs/config/rooms.py:1436 cogs/config/rooms.py:1478
-msgid "That hub no longer exists."
-msgstr "そのハブはもう存在しません。"
-
-#: cogs/config/rooms.py:1118
-#, python-brace-format
-msgid "Manage the **{label}** hub:"
-msgstr "**{label}** ハブを管理:"
-
-#: cogs/config/rooms.py:1139
-msgid "Something went wrong removing that hub."
-msgstr "そのハブの削除中に問題が発生しました。"
-
-#: cogs/config/rooms.py:1383
+#: cogs/config/rooms.py:326
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "このサーバーはDiscordのカテゴリ上限 {max} 個に達しています。"
 
-#: cogs/config/rooms.py:1387
+#: cogs/config/rooms.py:330
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "このサーバーはDiscordの {budget} チャンネル上限に近すぎるため、これ以上ハブを追加できません。"
 
-#: cogs/config/rooms.py:1398
+#: cogs/config/rooms.py:341
 msgid "Something went wrong while creating the hub's channels."
 msgstr "ハブのチャンネルの作成中に問題が発生しました。"
 
-#: cogs/config/rooms.py:1409
+#: cogs/config/rooms.py:352
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "**{label}** ハブを作成しました。メンバーは今すぐ {channel} に参加できます。"
 
-#: cogs/config/rooms.py:1429
+#: cogs/config/rooms.py:363 cogs/config/rooms.py:379 cogs/config/rooms.py:421
+#: cogs/config/rooms_config.py:503
+msgid "That hub no longer exists."
+msgstr "そのハブはもう存在しません。"
+
+#: cogs/config/rooms.py:372
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "**{label}** ハブを更新しました。"
 
-#: cogs/config/rooms.py:1464
+#: cogs/config/rooms.py:407
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "**{label}** ハブを削除しました。"
 
-#: cogs/config/rooms.py:1492
+#: cogs/config/rooms.py:435
 msgid "category"
 msgstr "カテゴリ"
 
-#: cogs/config/rooms.py:1498
+#: cogs/config/rooms.py:441
 msgid "join-to-create channel"
 msgstr "作成用チャンネル"
 
-#: cogs/config/rooms.py:1503
+#: cogs/config/rooms.py:446
 msgid "Nothing was renamed - those channels are missing."
 msgstr "名前は変更されませんでした - それらのチャンネルが見つかりません。"
 
-#: cogs/config/rooms.py:1504
+#: cogs/config/rooms.py:447
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "{targets} の名前を変更しました。"
 
-#: cogs/config/rooms.py:1758
+#: cogs/config/rooms.py:701
 msgid "There are no autoroom hubs set up in this server."
 msgstr "このサーバーには自動ルームハブが設定されていません。"
 
-#: cogs/config/rooms.py:1762
+#: cogs/config/rooms.py:705
 msgid "Autoroom hubs"
 msgstr "自動ルームハブ"
 
-#: cogs/config/rooms.py:1766
+#: cogs/config/rooms.py:709
 msgid "channel missing"
 msgstr "チャンネルなし"
 
-#: cogs/config/rooms.py:1769
+#: cogs/config/rooms.py:712
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -3831,6 +3509,332 @@ msgid ""
 msgstr ""
 "{location}\n"
 "{summary}"
+
+#: cogs/config/rooms_config.py:72 cogs/config/rooms_panels.py:86
+msgid "User limit..."
+msgstr "ユーザー数制限..."
+
+#: cogs/config/rooms_config.py:92
+msgid "Remove a hub..."
+msgstr "ハブを削除..."
+
+#: cogs/config/rooms_config.py:112
+msgid "Add an autoroom hub"
+msgstr "自動ルームハブを追加"
+
+#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:183
+msgid "Hub label"
+msgstr "ハブのラベル"
+
+#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:251
+msgid "Category name"
+msgstr "カテゴリ名"
+
+#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:257
+msgid "Join-to-create channel name"
+msgstr "作成用チャンネル名"
+
+#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:189
+#, python-brace-format
+msgid "Room name template ({user}, {count})"
+msgstr "ルーム名テンプレート ({user}, {count})"
+
+#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:213
+msgid "User limit (0 = unlimited)"
+msgstr "ユーザー数制限 (0 = 無制限)"
+
+#: cogs/config/rooms_config.py:178
+msgid "Edit autoroom hub"
+msgstr "自動ルームハブを編集"
+
+#: cogs/config/rooms_config.py:196
+msgid "Max rooms (1-50)"
+msgstr "最大ルーム数 (1-50)"
+
+#: cogs/config/rooms_config.py:204
+msgid "Private"
+msgstr "非公開"
+
+#: cogs/config/rooms_config.py:207
+msgid "Public"
+msgstr "公開"
+
+#: cogs/config/rooms_config.py:218
+msgid "Room privacy"
+msgstr "ルームのプライバシー"
+
+#: cogs/config/rooms_config.py:246
+msgid "Rename hub channels"
+msgstr "ハブのチャンネル名を変更"
+
+#: cogs/config/rooms_config.py:293
+msgid "Settings"
+msgstr "設定"
+
+#: cogs/config/rooms_config.py:301
+msgid "Rename channels"
+msgstr "チャンネル名を変更"
+
+#: cogs/config/rooms_config.py:368
+msgid "## Autoroom hubs"
+msgstr "## 自動ルームハブ"
+
+#: cogs/config/rooms_config.py:372
+msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
+msgstr "参加で作成するボイスハブです。ハブに参加したメンバーは自分専用の一時ルームを取得し、空になると自動的に削除されます。"
+
+#: cogs/config/rooms_config.py:382
+msgid "No hubs yet. Use **Add hub** to create your first one."
+msgstr "まだハブがありません。**Add hub** を使って最初のハブを作成してください。"
+
+#: cogs/config/rooms_config.py:396
+#, python-brace-format
+msgid ""
+"**{label}**\n"
+"{summary}"
+msgstr ""
+"**{label}**\n"
+"{summary}"
+
+#: cogs/config/rooms_config.py:409
+msgid "Add hub"
+msgstr "ハブを追加"
+
+#: cogs/config/rooms_config.py:425
+#, python-brace-format
+msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
+msgstr "-# {count}/{max_hubs} ハブ - ~{reserved} チャンネル予約 - {used}/{budget} チャンネル使用"
+
+#: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
+msgid "Something went wrong opening that form."
+msgstr "そのフォームを開く際に問題が発生しました。"
+
+#: cogs/config/rooms_config.py:507
+#, python-brace-format
+msgid "Manage the **{label}** hub:"
+msgstr "**{label}** ハブを管理:"
+
+#: cogs/config/rooms_config.py:528
+msgid "Something went wrong removing that hub."
+msgstr "そのハブの削除中に問題が発生しました。"
+
+#: cogs/config/rooms_panels.py:97 cogs/config/rooms_panels.py:169
+#: cogs/config/rooms_panels.py:337 cogs/config/rooms_panels.py:571
+msgid "This room no longer exists."
+msgstr "このルームはもう存在しません。"
+
+#: cogs/config/rooms_panels.py:104
+msgid "Could not change the user limit."
+msgstr "ユーザー数制限を変更できませんでした。"
+
+#: cogs/config/rooms_panels.py:108
+msgid "Updated the user limit."
+msgstr "ユーザー数制限を更新しました。"
+
+#: cogs/config/rooms_panels.py:126
+msgid "Select a member to remove..."
+msgstr "削除するメンバーを選択..."
+
+#: cogs/config/rooms_panels.py:127
+msgid "Select a member to unblacklist..."
+msgstr "ブラックリストから解除するメンバーを選択..."
+
+#: cogs/config/rooms_panels.py:128
+msgid "Select the new owner..."
+msgstr "新しいオーナーを選択..."
+
+#: cogs/config/rooms_panels.py:131
+msgid "Select a member..."
+msgstr "メンバーを選択..."
+
+#: cogs/config/rooms_panels.py:156
+msgid "Rename room"
+msgstr "ルーム名を変更"
+
+#: cogs/config/rooms_panels.py:159
+msgid "New room name"
+msgstr "新しいルーム名"
+
+#: cogs/config/rooms_panels.py:173
+msgid "Give the room a name."
+msgstr "ルームに名前を付けてください。"
+
+#: cogs/config/rooms_panels.py:179
+msgid "Could not rename the room."
+msgstr "ルーム名を変更できませんでした。"
+
+#: cogs/config/rooms_panels.py:183
+#, python-brace-format
+msgid "Renamed the room to **{name}**."
+msgstr "ルーム名を **{name}** に変更しました。"
+
+#: cogs/config/rooms_panels.py:240
+msgid "## Room controls"
+msgstr "## ルームの操作"
+
+#: cogs/config/rooms_panels.py:244
+#, python-brace-format
+msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
+msgstr "オーナー: <@{owner_id}> - 下のボタンを使ってルームを管理してください。"
+
+#: cogs/config/rooms_panels.py:248
+msgid "No owner right now - anyone in the room can Claim it below."
+msgstr "現在オーナーはいません - ルーム内の誰でも下のボタンで取得できます。"
+
+#: cogs/config/rooms_panels.py:258
+msgid "Slots"
+msgstr "定員"
+
+#: cogs/config/rooms_panels.py:264
+msgid "Rename"
+msgstr "名前変更"
+
+#: cogs/config/rooms_panels.py:270
+msgid "Unlock"
+msgstr "ロック解除"
+
+#: cogs/config/rooms_panels.py:270
+msgid "Lock"
+msgstr "ロック"
+
+#: cogs/config/rooms_panels.py:276
+msgid "Unhide"
+msgstr "再表示"
+
+#: cogs/config/rooms_panels.py:276
+msgid "Hide"
+msgstr "非表示"
+
+#: cogs/config/rooms_panels.py:282
+msgid "Kick + blacklist"
+msgstr "キック + ブラックリスト"
+
+#: cogs/config/rooms_panels.py:290
+msgid "Remove from blacklist"
+msgstr "ブラックリストから削除"
+
+#: cogs/config/rooms_panels.py:296
+msgid "Transfer lead"
+msgstr "オーナーを譲渡"
+
+#: cogs/config/rooms_panels.py:302
+msgid "Bump to top"
+msgstr "最上部に移動"
+
+#: cogs/config/rooms_panels.py:308
+msgid "Claim"
+msgstr "取得"
+
+#: cogs/config/rooms_panels.py:319
+msgid "-# Only the room owner can use these controls (except Claim)."
+msgstr "-# これらの操作はルームのオーナーだけが使用できます (取得を除く)。"
+
+#: cogs/config/rooms_panels.py:357
+msgid "Only the room owner can use these controls."
+msgstr "これらの操作はルームのオーナーだけが使用できます。"
+
+#: cogs/config/rooms_panels.py:375 cogs/config/rooms_panels.py:606
+msgid "Unknown action."
+msgstr "不明なアクションです。"
+
+#: cogs/config/rooms_panels.py:382
+msgid "Something went wrong with that action."
+msgstr "そのアクションで問題が発生しました。"
+
+#: cogs/config/rooms_panels.py:392
+msgid "Choose a user limit for the room:"
+msgstr "ルームのユーザー数制限を選んでください:"
+
+#: cogs/config/rooms_panels.py:417
+msgid "Could not change the lock."
+msgstr "ロックを変更できませんでした。"
+
+#: cogs/config/rooms_panels.py:422
+msgid "Unlocked the room - anyone can join."
+msgstr "ルームのロックを解除しました - 誰でも参加できます。"
+
+#: cogs/config/rooms_panels.py:424
+msgid "Locked the room - no one new can join."
+msgstr "ルームをロックしました - 新しく参加することはできません。"
+
+#: cogs/config/rooms_panels.py:441
+msgid "Could not change visibility."
+msgstr "表示状態を変更できませんでした。"
+
+#: cogs/config/rooms_panels.py:446
+msgid "The room is visible again."
+msgstr "ルームが再び表示されるようになりました。"
+
+#: cogs/config/rooms_panels.py:448
+msgid "Hid the room from everyone else."
+msgstr "他の全員からルームを非表示にしました。"
+
+#: cogs/config/rooms_panels.py:464
+msgid "There's no one else in the room to remove."
+msgstr "ルームに削除できる他のメンバーがいません。"
+
+#: cogs/config/rooms_panels.py:468
+msgid "Pick who to kick and blacklist:"
+msgstr "キックしてブラックリストに追加する相手を選んでください:"
+
+#: cogs/config/rooms_panels.py:485
+msgid "No one is blacklisted here."
+msgstr "ここでブラックリストに登録されている人はいません。"
+
+#: cogs/config/rooms_panels.py:488
+msgid "Pick who to remove from the blacklist:"
+msgstr "ブラックリストから削除する相手を選んでください:"
+
+#: cogs/config/rooms_panels.py:507
+msgid "There's no one else here to hand the room to."
+msgstr "ルームを譲れる他の人がいません。"
+
+#: cogs/config/rooms_panels.py:511
+msgid "Pick the new room owner:"
+msgstr "新しいルームのオーナーを選んでください:"
+
+#: cogs/config/rooms_panels.py:538
+msgid "Could not bump the room."
+msgstr "ルームを移動できませんでした。"
+
+#: cogs/config/rooms_panels.py:541
+msgid "Bumped the room to the top."
+msgstr "ルームを最上部に移動しました。"
+
+#: cogs/config/rooms_panels.py:552
+msgid "The room already has an owner who's still here."
+msgstr "ルームにはまだ在室しているオーナーがいます。"
+
+#: cogs/config/rooms_panels.py:557
+msgid "Join the room first to claim it."
+msgstr "取得するには、まずルームに参加してください。"
+
+#: cogs/config/rooms_panels.py:563
+msgid "You're now the owner of this room."
+msgstr "あなたがこのルームのオーナーになりました。"
+
+#: cogs/config/rooms_panels.py:577
+msgid "That member is no longer here."
+msgstr "そのメンバーはもうここにいません。"
+
+#: cogs/config/rooms_panels.py:589
+#, python-brace-format
+msgid "Removed and blacklisted {name}."
+msgstr "{name} を削除してブラックリストに追加しました。"
+
+#: cogs/config/rooms_panels.py:596
+#, python-brace-format
+msgid "Removed {name} from the blacklist."
+msgstr "{name} をブラックリストから削除しました。"
+
+#: cogs/config/rooms_panels.py:602
+#, python-brace-format
+msgid "Transferred room ownership to {name}."
+msgstr "ルームのオーナー権限を {name} に譲渡しました。"
+
+#: cogs/config/rooms_panels.py:609
+msgid "Could not complete that action."
+msgstr "そのアクションを完了できませんでした。"
 
 #: cogs/config/settings.py:23
 msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
@@ -4903,98 +4907,38 @@ msgstr "ブラックリスト"
 msgid "The blacklist is empty."
 msgstr "ブラックリストは空です。"
 
-#: cogs/moderation/moderation.py:106
-msgid "Select a warn to remove..."
-msgstr "削除する警告を選択..."
-
-#: cogs/moderation/moderation.py:128
-#, python-brace-format
-msgid "Warnings - {member}"
-msgstr "警告 - {member}"
-
-#: cogs/moderation/moderation.py:135
-msgid "No warnings on record."
-msgstr "記録されている警告はありません。"
-
-#: cogs/moderation/moderation.py:139
-msgid "*No reason provided*"
-msgstr "*理由は記載されていません*"
-
-#: cogs/moderation/moderation.py:142
-#, python-brace-format
-msgid ""
-"**Case #{case}** - {reason}\n"
-"by {mod} - {when}"
-msgstr ""
-"**ケース #{case}** - {reason}\n"
-"実行者: {mod} - {when}"
-
-#: cogs/moderation/moderation.py:152
-#, python-brace-format
-msgid "Page {current}/{total} - {count} warn(s)"
-msgstr "ページ {current}/{total} - {count} 件の警告"
-
-#: cogs/moderation/moderation.py:165 cogs/moderation/moderation.py:1494
-msgid "No reason"
-msgstr "理由なし"
-
-#: cogs/moderation/moderation.py:168
-#, python-brace-format
-msgid "Case #{case}"
-msgstr "ケース #{case}"
-
-#: cogs/moderation/moderation.py:179
-msgid "No warnings"
-msgstr "警告なし"
-
-#: cogs/moderation/moderation.py:200
-msgid "Couldn't select that warn, please try again."
-msgstr "その警告を選択できませんでした。もう一度お試しください。"
-
-#: cogs/moderation/moderation.py:224 tools/paginator.py:94
-msgid "Couldn't turn the page, please try again."
-msgstr "ページを切り替えられませんでした。もう一度お試しください。"
-
-#: cogs/moderation/moderation.py:233
-msgid "Pick a warn from the dropdown first."
-msgstr "まずドロップダウンから警告を選んでください。"
-
-#: cogs/moderation/moderation.py:256
-msgid "Couldn't remove that warn, please try again."
-msgstr "その警告を削除できませんでした。もう一度お試しください。"
-
-#: cogs/moderation/moderation.py:273
+#: cogs/moderation/moderation.py:93
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr "理由を編集 - ケース #{number}"
 
-#: cogs/moderation/moderation.py:289
+#: cogs/moderation/moderation.py:109
 msgid "New reason"
 msgstr "新しい理由"
 
-#: cogs/moderation/moderation.py:297
+#: cogs/moderation/moderation.py:117
 msgid "The reason can't be empty."
 msgstr "理由を空にすることはできません。"
 
-#: cogs/moderation/moderation.py:311 cogs/moderation/moderation.py:1455
-#: cogs/moderation/moderation.py:1528 cogs/moderation/moderation.py:1550
+#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1119
+#: cogs/moderation/moderation.py:1192 cogs/moderation/moderation.py:1214
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "このサーバーでケース #{number} が見つかりませんでした。"
 
-#: cogs/moderation/moderation.py:318 cogs/moderation/moderation.py:1556
+#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1220
 msgid "Updated by"
 msgstr "更新者"
 
-#: cogs/moderation/moderation.py:327
+#: cogs/moderation/moderation.py:147
 msgid "Sorry, I couldn't update that reason."
 msgstr "申し訳ありませんが、その理由を更新できませんでした。"
 
-#: cogs/moderation/moderation.py:345
+#: cogs/moderation/moderation.py:165
 msgid "## New Members"
 msgstr "## 新規メンバー"
 
-#: cogs/moderation/moderation.py:350
+#: cogs/moderation/moderation.py:170
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
@@ -5003,20 +4947,20 @@ msgstr ""
 "**{member}** (ID: {id})\n"
 "参加: {joined}、作成: {created}"
 
-#: cogs/moderation/moderation.py:387
+#: cogs/moderation/moderation.py:207
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr "**:x: 申し訳ありませんが、これを行う権限がありません!**"
 
-#: cogs/moderation/moderation.py:559
+#: cogs/moderation/moderation.py:367
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr "キック | {mod} が {target} をキックしました"
 
-#: cogs/moderation/moderation.py:565
+#: cogs/moderation/moderation.py:373
 msgid "**🔴 Voice Kick Info**"
 msgstr "**🔴 ボイスキック情報**"
 
-#: cogs/moderation/moderation.py:567
+#: cogs/moderation/moderation.py:375
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -5027,56 +4971,56 @@ msgstr ""
 "理由: **{reason}**\n"
 "時刻: **{time}**"
 
-#: cogs/moderation/moderation.py:600
+#: cogs/moderation/moderation.py:408
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr "{user} を {channel} に移動しました"
 
-#: cogs/moderation/moderation.py:624
+#: cogs/moderation/moderation.py:432
 msgid "Confirm ban"
 msgstr "BANの確認"
 
-#: cogs/moderation/moderation.py:625
+#: cogs/moderation/moderation.py:433
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "{target} (`{id}`) をBANしてもよろしいですか?"
 
-#: cogs/moderation/moderation.py:630 cogs/moderation/moderation.py:845
-#: cogs/moderation/moderation.py:892
+#: cogs/moderation/moderation.py:438 cogs/moderation/moderation.py:653
+#: cogs/moderation/moderation.py:700
 msgid "Reason"
 msgstr "理由"
 
-#: cogs/moderation/moderation.py:635
+#: cogs/moderation/moderation.py:443
 msgid "Ban cancelled"
 msgstr "BANをキャンセルしました"
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:444
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr "{target} に対して何も実行しませんでした。"
 
-#: cogs/moderation/moderation.py:742
+#: cogs/moderation/moderation.py:550
 msgid "I don't have permission to ban that member."
 msgstr "そのメンバーをBANする権限がありません。"
 
-#: cogs/moderation/moderation.py:745
+#: cogs/moderation/moderation.py:553
 msgid "Sorry, I couldn't ban that member."
 msgstr "申し訳ありませんが、そのメンバーをBANできませんでした。"
 
-#: cogs/moderation/moderation.py:776
+#: cogs/moderation/moderation.py:584
 msgid "The temporary ban could not be scheduled and the rollback failed. Please unban that user manually."
 msgstr "一時BANのスケジュールに失敗し、ロールバックも失敗しました。そのユーザーを手動でBAN解除してください。"
 
-#: cogs/moderation/moderation.py:781
+#: cogs/moderation/moderation.py:589
 msgid "The temporary ban could not be scheduled, so I rolled it back."
 msgstr "一時BANのスケジュールに失敗したため、ロールバックしました。"
 
-#: cogs/moderation/moderation.py:808
+#: cogs/moderation/moderation.py:616
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "{member} を {time} まで禁止しました。"
 
-#: cogs/moderation/moderation.py:828
+#: cogs/moderation/moderation.py:636
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
@@ -5084,214 +5028,189 @@ msgstr ""
 "BANするユーザーIDを少なくとも1つ指定してください。\n"
 "使い方: `massban <id1> <id2> ... [reason]`"
 
-#: cogs/moderation/moderation.py:833
+#: cogs/moderation/moderation.py:641
 msgid "I can ban at most 200 users in one go."
 msgstr "一度にBANできるのは最大200人までです。"
 
-#: cogs/moderation/moderation.py:839
+#: cogs/moderation/moderation.py:647
 msgid "Confirm mass ban"
 msgstr "一括BANの確認"
 
-#: cogs/moderation/moderation.py:841
+#: cogs/moderation/moderation.py:649
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr "IDで **{count}** 人のユーザーをBANしてもよろしいですか?"
 
-#: cogs/moderation/moderation.py:848
+#: cogs/moderation/moderation.py:656
 msgid "Mass ban cancelled"
 msgstr "一括BANをキャンセルしました"
 
-#: cogs/moderation/moderation.py:849
+#: cogs/moderation/moderation.py:657
 msgid "No action taken."
 msgstr "何も実行しませんでした。"
 
-#: cogs/moderation/moderation.py:868
+#: cogs/moderation/moderation.py:676
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr "**:x: 申し訳ありませんが、それらのユーザーをBANできませんでした (権限不足?)。**"
 
-#: cogs/moderation/moderation.py:886
+#: cogs/moderation/moderation.py:694
 msgid "Mass ban complete"
 msgstr "一括BANが完了しました"
 
-#: cogs/moderation/moderation.py:890
+#: cogs/moderation/moderation.py:698
 msgid "Banned"
 msgstr "BAN済み"
 
-#: cogs/moderation/moderation.py:891
+#: cogs/moderation/moderation.py:699
 msgid "Failed"
 msgstr "失敗"
 
-#: cogs/moderation/moderation.py:894
+#: cogs/moderation/moderation.py:702
 #, python-brace-format
 msgid "By {author}"
 msgstr "実行者: {author}"
 
-#: cogs/moderation/moderation.py:918
+#: cogs/moderation/moderation.py:726
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ":warning: | **数は0未満や999より大きくはできません**"
 
-#: cogs/moderation/moderation.py:928
+#: cogs/moderation/moderation.py:736
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr "**:x: 申し訳ありませんが、これを行う権限がありません**"
 
-#: cogs/moderation/moderation.py:933
+#: cogs/moderation/moderation.py:741
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr "{emoji} **正常に削除しました!**"
 
-#: cogs/moderation/moderation.py:949
+#: cogs/moderation/moderation.py:757
 msgid "Invalid amount. Maximum is 500."
 msgstr "無効な数です。最大は500です。"
 
-#: cogs/moderation/moderation.py:961
+#: cogs/moderation/moderation.py:769
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} **{deleted}/{num}** 件のメッセージを削除しました。"
 
-#: cogs/moderation/moderation.py:1031
+#: cogs/moderation/moderation.py:839
 msgid "Mute role is not defined"
 msgstr "ミュートロールが定義されていません"
 
-#: cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:840
 msgid "Creating role..."
 msgstr "ロールを作成中..."
 
-#: cogs/moderation/moderation.py:1034
+#: cogs/moderation/moderation.py:842
 msgid "Mute role created!"
 msgstr "ミュートロールを作成しました!"
 
-#: cogs/moderation/moderation.py:1072
+#: cogs/moderation/moderation.py:880
 msgid "Already Muted"
 msgstr "すでにミュート済み"
 
-#: cogs/moderation/moderation.py:1074
+#: cogs/moderation/moderation.py:882
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: {user} はすでにミュートされています!"
 
-#: cogs/moderation/moderation.py:1084
+#: cogs/moderation/moderation.py:892
 msgid "Mute failed"
 msgstr "ミュートに失敗しました"
 
-#: cogs/moderation/moderation.py:1087
+#: cogs/moderation/moderation.py:895
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: {user} をミュートできませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1128
+#: cogs/moderation/moderation.py:936
 msgid "Unmute failed"
 msgstr "ミュート解除に失敗しました"
 
-#: cogs/moderation/moderation.py:1131
+#: cogs/moderation/moderation.py:939
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: {user} のミュートを解除できませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1149
+#: cogs/moderation/moderation.py:961
 msgid "Confirm mass role add"
 msgstr "一括ロール付与の確認"
 
-#: cogs/moderation/moderation.py:1151
+#: cogs/moderation/moderation.py:963
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーに **{role}** ロールを付与しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1180
+#: cogs/moderation/moderation.py:992
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーに付与しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1189
+#: cogs/moderation/moderation.py:1001
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** に付与しました"
 
-#: cogs/moderation/moderation.py:1206
+#: cogs/moderation/moderation.py:1022
 msgid "Confirm mass role remove"
 msgstr "一括ロール削除の確認"
 
-#: cogs/moderation/moderation.py:1208
+#: cogs/moderation/moderation.py:1024
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーから **{role}** ロールを削除しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1237
+#: cogs/moderation/moderation.py:1053
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーから削除しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1246
+#: cogs/moderation/moderation.py:1062
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** から削除しました"
 
-#: cogs/moderation/moderation.py:1262
+#: cogs/moderation/moderation.py:1084 tools/modchecks.py:69
+msgid "You can't manage a role that is equal to or above your highest role."
+msgstr "自分の最上位ロール以上のロールは管理できません。"
+
+#: cogs/moderation/moderation.py:1091
+msgid "You can't move a role to or above my highest role."
+msgstr "私の最上位ロール以上の位置にロールを移動することはできません。"
+
+#: cogs/moderation/moderation.py:1097
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1264
+#: cogs/moderation/moderation.py:1099
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
-#: cogs/moderation/moderation.py:1266
+#: cogs/moderation/moderation.py:1101
 msgid "Failed to move role"
 msgstr "ロールの移動に失敗しました"
 
-#: cogs/moderation/moderation.py:1268
+#: cogs/moderation/moderation.py:1103
 msgid "Invalid argument"
 msgstr "無効な引数"
 
-#: cogs/moderation/moderation.py:1291
-#, python-brace-format
-msgid "{member} has no warns."
-msgstr "{member} には警告がありません。"
-
-#: cogs/moderation/moderation.py:1295
-#, python-brace-format
-msgid "{member} has {count} warn(s)"
-msgstr "{member} には {count} 件の警告があります"
-
-#: cogs/moderation/moderation.py:1332
-msgid "Warns"
-msgstr "警告"
-
-#: cogs/moderation/moderation.py:1344
-msgid "Auto-action"
-msgstr "自動アクション"
-
-#: cogs/moderation/moderation.py:1375
-msgid "The number of warns must be at least 1."
-msgstr "警告の数は1以上である必要があります。"
-
-#: cogs/moderation/moderation.py:1382
-#, python-brace-format
-msgid "{member} has no warns!"
-msgstr "{member} には警告がありません!"
-
-#: cogs/moderation/moderation.py:1387
-#, python-brace-format
-msgid "Removed all warns for {member}."
-msgstr "{member} のすべての警告を削除しました。"
-
-#: cogs/moderation/moderation.py:1391
-#, python-brace-format
-msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
-msgstr "{member} の {num} 件の警告を削除しました。[残り {remaining} 件]"
-
-#: cogs/moderation/moderation.py:1474
+#: cogs/moderation/moderation.py:1138
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "ケース履歴 - {guild}"
 
-#: cogs/moderation/moderation.py:1484
+#: cogs/moderation/moderation.py:1148
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "ケース履歴 - {member}"
 
-#: cogs/moderation/moderation.py:1487
+#: cogs/moderation/moderation.py:1151
 msgid "No cases on record."
 msgstr "記録されているケースはありません。"
+
+#: cogs/moderation/moderation.py:1158 cogs/moderation/warns.py:133
+msgid "No reason"
+msgstr "理由なし"
 
 #: cogs/moderation/modlog.py:62 cogs/moderation/modlog.py:534
 #: cogs/moderation/modlog.py:575
@@ -5572,6 +5491,99 @@ msgstr "ルールはメンバーの警告数がちょうどしきい値に達し
 #, python-brace-format
 msgid "This server already has the maximum of {max} escalation rules."
 msgstr "このサーバーはすでに最大{max}件のエスカレーションルールがあります。"
+
+#: cogs/moderation/warns.py:74
+msgid "Select a warn to remove..."
+msgstr "削除する警告を選択..."
+
+#: cogs/moderation/warns.py:96
+#, python-brace-format
+msgid "Warnings - {member}"
+msgstr "警告 - {member}"
+
+#: cogs/moderation/warns.py:103
+msgid "No warnings on record."
+msgstr "記録されている警告はありません。"
+
+#: cogs/moderation/warns.py:107
+msgid "*No reason provided*"
+msgstr "*理由は記載されていません*"
+
+#: cogs/moderation/warns.py:110
+#, python-brace-format
+msgid ""
+"**Case #{case}** - {reason}\n"
+"by {mod} - {when}"
+msgstr ""
+"**ケース #{case}** - {reason}\n"
+"実行者: {mod} - {when}"
+
+#: cogs/moderation/warns.py:120
+#, python-brace-format
+msgid "Page {current}/{total} - {count} warn(s)"
+msgstr "ページ {current}/{total} - {count} 件の警告"
+
+#: cogs/moderation/warns.py:136
+#, python-brace-format
+msgid "Case #{case}"
+msgstr "ケース #{case}"
+
+#: cogs/moderation/warns.py:147
+msgid "No warnings"
+msgstr "警告なし"
+
+#: cogs/moderation/warns.py:168
+msgid "Couldn't select that warn, please try again."
+msgstr "その警告を選択できませんでした。もう一度お試しください。"
+
+#: cogs/moderation/warns.py:192 tools/paginator.py:94
+msgid "Couldn't turn the page, please try again."
+msgstr "ページを切り替えられませんでした。もう一度お試しください。"
+
+#: cogs/moderation/warns.py:201
+msgid "Pick a warn from the dropdown first."
+msgstr "まずドロップダウンから警告を選んでください。"
+
+#: cogs/moderation/warns.py:224
+msgid "Couldn't remove that warn, please try again."
+msgstr "その警告を削除できませんでした。もう一度お試しください。"
+
+#: cogs/moderation/warns.py:274
+#, python-brace-format
+msgid "{member} has no warns."
+msgstr "{member} には警告がありません。"
+
+#: cogs/moderation/warns.py:278
+#, python-brace-format
+msgid "{member} has {count} warn(s)"
+msgstr "{member} には {count} 件の警告があります"
+
+#: cogs/moderation/warns.py:319
+msgid "Warns"
+msgstr "警告"
+
+#: cogs/moderation/warns.py:331
+msgid "Auto-action"
+msgstr "自動アクション"
+
+#: cogs/moderation/warns.py:362
+msgid "The number of warns must be at least 1."
+msgstr "警告の数は1以上である必要があります。"
+
+#: cogs/moderation/warns.py:369
+#, python-brace-format
+msgid "{member} has no warns!"
+msgstr "{member} には警告がありません!"
+
+#: cogs/moderation/warns.py:374
+#, python-brace-format
+msgid "Removed all warns for {member}."
+msgstr "{member} のすべての警告を削除しました。"
+
+#: cogs/moderation/warns.py:378
+#, python-brace-format
+msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
+msgstr "{member} の {num} 件の警告を削除しました。[残り {remaining} 件]"
 
 #: cogs/music/effects.py:171
 msgid "Clear every effect and hear the track as it is."
@@ -6629,25 +6641,25 @@ msgstr ""
 "{ext} をアンロードできません! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:481
+#: cogs/system/admin.py:491
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "`{ext}` をプルしてリロードしました。"
 
-#: cogs/system/admin.py:485
+#: cogs/system/admin.py:495
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "`{ext}` をリロードできませんでした: {error}"
 
-#: cogs/system/admin.py:520
+#: cogs/system/admin.py:530
 msgid "Update"
 msgstr "アップデート"
 
-#: cogs/system/admin.py:523
+#: cogs/system/admin.py:533
 msgid "Already up to date."
 msgstr "すでに最新です。"
 
-#: cogs/system/admin.py:525
+#: cogs/system/admin.py:535
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -6660,11 +6672,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:534
+#: cogs/system/admin.py:544
 msgid "Pulled"
 msgstr "プルしました"
 
-#: cogs/system/admin.py:535
+#: cogs/system/admin.py:545
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -6677,19 +6689,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:538
+#: cogs/system/admin.py:548
 msgid "(no log)"
 msgstr "(ログなし)"
 
-#: cogs/system/admin.py:544
+#: cogs/system/admin.py:554
 msgid "Changed cogs"
 msgstr "変更されたコグ"
 
-#: cogs/system/admin.py:550
+#: cogs/system/admin.py:560
 msgid "Restart needed (not hot-reloadable)"
 msgstr "再起動が必要です (ホットリロード不可)"
 
-#: cogs/system/admin.py:555
+#: cogs/system/admin.py:565
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "下でリロードするコグを選ぶか、すべてをリロードしてください。"
 
@@ -8986,6 +8998,10 @@ msgstr "自分と同等以上のロールを持つ相手に対して操作を行
 #: tools/modchecks.py:46
 msgid "My highest role isn't above that member, so I can't act on them."
 msgstr "私の最上位ロールがそのメンバーより上ではないため、操作を実行できません。"
+
+#: tools/modchecks.py:72
+msgid "My highest role isn't above that role, so I can't manage it."
+msgstr "私の最上位ロールがそのロールより上にないため、管理できません。"
 
 #: tools/paginator.py:23 tools/paginator.py:49
 msgid "Nothing to show."

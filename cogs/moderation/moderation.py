@@ -952,6 +952,10 @@ class Moderation(commands.Cog):
     async def addrole(self, ctx, member, role: discord.Role):
         """Give a role to a member."""
 
+        err = modchecks.role_hierarchy_error(ctx, role)
+        if err:
+            return await ctx.send(err, delete_after=10)
+
         if member == "-all":
             confirm = discord.Embed(
                 title=_("Confirm mass role add"),
@@ -1009,6 +1013,10 @@ class Moderation(commands.Cog):
     async def removerole(self, ctx, member, role: discord.Role):
         """Remove a role from a member."""
 
+        err = modchecks.role_hierarchy_error(ctx, role)
+        if err:
+            return await ctx.send(err, delete_after=10)
+
         if member == "-all":
             confirm = discord.Embed(
                 title=_("Confirm mass role remove"),
@@ -1064,6 +1072,25 @@ class Moderation(commands.Cog):
     )
     async def moverole(self, ctx, role: discord.Role, pos: int):
         """Move a role to the given position in the hierarchy."""
+
+        author = ctx.author
+        if (
+            author.id != ctx.guild.owner_id
+            and not author.guild_permissions.administrator
+            and role >= author.top_role
+        ):
+            return await ctx.send(
+                _(
+                    "You can't manage a role that is equal to or above your "
+                    "highest role."
+                ),
+                delete_after=10,
+            )
+        if pos >= ctx.guild.me.top_role.position:
+            return await ctx.send(
+                _("You can't move a role to or above my highest role."),
+                delete_after=10,
+            )
 
         try:
             await role.edit(position=pos)
