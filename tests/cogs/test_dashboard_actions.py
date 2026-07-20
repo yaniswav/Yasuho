@@ -123,12 +123,18 @@ class FakeBot:
         # The reaction-role remove executor consults the gateway message cache
         # (best-effort unreact); empty by default so that path is a clean no-op.
         self.cached_messages = []
+        # The button-panel post executor re-registers the persistent view via
+        # bot.add_view; record each (view, message_id) so a test can assert it.
+        self.added_views = []
 
     def get_guild(self, gid):
         return self._guilds.get(gid)
 
     def get_cog(self, name):
         return self._cogs.get(name)
+
+    def add_view(self, view, message_id=None):
+        self.added_views.append((view, message_id))
 
 
 @pytest.fixture(autouse=True)
@@ -859,3 +865,452 @@ def test_verify_button_post_is_registered():
 def test_reaction_role_executors_are_registered():
     assert "reaction_role_add" in dashboard_actions._EXECUTORS
     assert "reaction_role_remove" in dashboard_actions._EXECUTORS
+
+
+def test_button_panel_executors_are_registered():
+    assert "button_panel_post" in dashboard_actions._EXECUTORS
+    assert "button_panel_delete" in dashboard_actions._EXECUTORS
+
+
+# ---------------------------------------------------------------------------
+# button_panel_post / button_panel_delete executors: re-validate against live
+# state, render the embed + post a ButtonRoleView REUSED from the cog, persist
+# one row per button (message-authoritative) and re-register the persistent view.
+# ---------------------------------------------------------------------------
+
+
+class FakeButtonRoleView:
+    """Stand-in for the cog's persistent ButtonRoleView (no discord.ui needed)."""
+
+    instances = 0
+
+    def __init__(self, rows):
+        FakeButtonRoleView.instances += 1
+        self.rows = list(rows)
+
+
+class _FakeButtonRolesModule:
+    """Stand-in for cogs.config.buttonroles: just what the executor reuses."""
+
+    MAX_BUTTONS = 25
+    ButtonRoleView = FakeButtonRoleView
+
+
+class FakeEmbed:
+    def __init__(self, blob):
+        self.blob = blob or {}
+
+
+class _FakeEmbedCreator:
+    """Stand-in for tools.embed_creator: render() + embed_has_content()."""
+
+    @staticmethod
+    def render(blob):
+        return FakeEmbed(blob)
+
+    @staticmethod
+    def embed_has_content(embed):
+        b = embed.blob
+        return bool(
+            b.get("title")
+            or b.get("description")
+            or b.get("fields")
+            or b.get("image")
+            or b.get("thumbnail")
+            or (b.get("author") or {}).get("name")
+            or (b.get("footer") or {}).get("text")
+        )
+
+
+class BRRole:
+    def __init__(self, role_id, name="Role"):
+        self.id = role_id
+        self.name = name
+
+
+class BRGuild:
+    def __init__(self, channels=None, roles=None, has_me=True):
+        self.id = 100
+        self._channels = channels or {}
+        self._roles = roles or {}
+        self.me = object() if has_me else None
+
+    def get_channel(self, channel_id):
+        return self._channels.get(channel_id)
+
+    def get_channel_or_thread(self, channel_id):
+        return self._channels.get(channel_id)
+
+    def get_role(self, role_id):
+        return self._roles.get(role_id)
+
+
+class _BRTxn:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _BRConn:
+    """Fake connection: models conn.transaction() + execute() + executemany()."""
+
+    def __init__(self, pool):
+        self.pool = pool
+
+    def transaction(self):
+        return _BRTxn()
+
+    async def execute(self, query, *args):
+        if "DELETE FROM button_roles" in query:
+            self.pool.deleted.append(args[0])
+        return "DELETE"
+
+    async def executemany(self, query, records):
+        assert "INSERT INTO button_roles" in query
+        self.pool.inserted.extend(records)
+        return None
+
+
+class _BRAcquire:
+    def __init__(self, pool):
+        self.pool = pool
+
+    async def __aenter__(self):
+        return _BRConn(self.pool)
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class BRPool:
+    """Pool modelling the acquire()/transaction() persist path + the scoped
+    DELETE ... RETURNING of the delete executor."""
+
+    def __init__(self, delete_return=None):
+        self.inserted = []
+        self.deleted = []
+        self.delete_calls = []
+        self._delete_return = delete_return or []
+
+    def acquire(self):
+        return _BRAcquire(self)
+
+    async def fetch(self, query, *args):
+        assert "DELETE FROM button_roles" in query  # the delete executor
+        self.delete_calls.append(args)
+        return self._delete_return
+
+
+class ButtonActionsPool(ActionsPool):
+    """ActionsPool (claim/finish/reconcile) PLUS the acquire() persist path, so a
+    button_panel_post can be driven end-to-end through handle_action."""
+
+    def __init__(self):
+        super().__init__()
+        self.inserted = []
+        self.deleted = []
+
+    def acquire(self):
+        return _BRAcquire(self)
+
+
+@pytest.fixture
+def button_env(monkeypatch):
+    """Patch the lazy buttonroles + embed_creator seams and discord.TextChannel so
+    the executor runs without the discord.py-2.x UI stack (absent on the 3.7 box)."""
+    FakeButtonRoleView.instances = 0
+    monkeypatch.setattr(
+        dashboard_actions, "_button_roles_module", lambda: _FakeButtonRolesModule
+    )
+    monkeypatch.setattr(dashboard_actions, "_embed_creator", lambda: _FakeEmbedCreator)
+    monkeypatch.setattr(discord, "TextChannel", FakeTextChannel)
+    yield
+
+
+def _panel_payload(buttons=None, embed=None, channel_id="555"):
+    return {
+        "channel_id": channel_id,
+        "embed": embed if embed is not None else {"description": "Pick a role."},
+        "buttons": buttons
+        if buttons is not None
+        else [{"role_id": "888", "label": "Gamer", "style": 1}],
+    }
+
+
+def _br_bot(pool, guild=None):
+    return FakeBot(pool, guilds={100: guild} if guild is not None else {})
+
+
+async def test_button_panel_post_success(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(
+        channels={555: channel},
+        roles={888: BRRole(888, "Gamer"), 999: BRRole(999, "Artist")},
+    )
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    result = await dashboard_actions._exec_button_panel_post(
+        bot,
+        100,
+        _panel_payload(
+            buttons=[
+                {"role_id": "888", "label": "Gamer", "emoji": "🎮", "style": 1},
+                {"role_id": "999", "label": "Artist", "style": 3},
+            ]
+        ),
+    )
+
+    assert result == {
+        "ok": True,
+        "message_id": "999888777666555444",
+        "channel_id": "555",
+    }
+    # Posted exactly one message carrying the embed + the reused ButtonRoleView.
+    assert len(channel.sent) == 1
+    _, kwargs = channel.sent[0]
+    assert isinstance(kwargs["embed"], FakeEmbed)
+    assert isinstance(kwargs["view"], FakeButtonRoleView)
+    # One row per button, message-authoritative (DELETE then INSERT).
+    assert pool.deleted == [999888777666555444]
+    assert pool.inserted == [
+        (999888777666555444, 100, 555, 888, "Gamer", "🎮", 1),
+        (999888777666555444, 100, 555, 999, "Artist", None, 3),
+    ]
+    # Persistent view re-registered for THIS message so it survives a restart.
+    assert len(bot.added_views) == 1
+    view, mid = bot.added_views[0]
+    assert mid == 999888777666555444
+    assert isinstance(view, FakeButtonRoleView)
+    assert view.rows == [(888, "Gamer", "🎮", 1), (999, "Artist", None, 3)]
+
+
+async def test_button_panel_post_dedupes_roles(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888, "Gamer")})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    result = await dashboard_actions._exec_button_panel_post(
+        bot,
+        100,
+        _panel_payload(
+            buttons=[
+                {"role_id": "888", "label": "First", "style": 1},
+                {"role_id": "888", "label": "Duplicate", "style": 4},
+            ]
+        ),
+    )
+
+    assert result["ok"] is True
+    # The duplicate role produced no second row (mirrors the (message, role) PK).
+    assert len(pool.inserted) == 1
+    assert pool.inserted[0][3] == 888
+    assert pool.inserted[0][4] == "First"
+
+
+async def test_button_panel_post_empty_label_falls_back_to_role_name(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888, "Gamer")})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    await dashboard_actions._exec_button_panel_post(
+        bot, 100, _panel_payload(buttons=[{"role_id": "888", "style": 2}])
+    )
+
+    assert pool.inserted[0][4] == "Gamer"  # label defaulted to the role name
+
+
+async def test_button_panel_post_coerces_bad_style_to_secondary(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    await dashboard_actions._exec_button_panel_post(
+        bot,
+        100,
+        _panel_payload(buttons=[{"role_id": "888", "label": "X", "style": 9}]),
+    )
+
+    assert pool.inserted[0][6] == 2  # style 9 (Link/premium/unknown) -> secondary
+
+
+@pytest.mark.parametrize("channel_id", [None, "abc", "", "not-a-number"])
+async def test_button_panel_post_bad_channel_id(button_env, channel_id):
+    guild = BRGuild(channels={}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    payload = _panel_payload()
+    if channel_id is None:
+        payload.pop("channel_id")
+    else:
+        payload["channel_id"] = channel_id
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    assert result == {"ok": False, "error": "bad_channel_id"}
+    assert pool.inserted == []
+
+
+async def test_button_panel_post_guild_unavailable(button_env):
+    pool = BRPool()
+    bot = _br_bot(pool, guild=None)  # bot not in guild 100
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert pool.inserted == []
+
+
+async def test_button_panel_post_channel_not_found(button_env):
+    guild = BRGuild(channels={}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "channel_not_found"}
+    assert pool.inserted == []
+
+
+async def test_button_panel_post_rejects_non_text_channel(button_env):
+    guild = BRGuild(channels={555: FakeVoiceChannel(555)}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "not_text_channel"}
+    assert pool.inserted == []
+
+
+async def test_button_panel_post_missing_send_permission(button_env):
+    channel = FakeTextChannel(channel_id=555, can_send=False)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "missing_send_permission"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+@pytest.mark.parametrize("buttons", [None, [], "notalist"])
+async def test_button_panel_post_no_buttons(button_env, buttons):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    payload = _panel_payload()
+    if buttons is None:
+        payload.pop("buttons")
+    else:
+        payload["buttons"] = buttons
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    assert result == {"ok": False, "error": "no_buttons"}
+    assert channel.sent == []
+
+
+async def test_button_panel_post_too_many_buttons(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    payload = _panel_payload(
+        buttons=[{"role_id": "888", "style": 2} for _ in range(26)]
+    )
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    assert result == {"ok": False, "error": "too_many_buttons"}
+    assert channel.sent == []
+
+
+async def test_button_panel_post_bad_role(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={})  # role 888 absent
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "bad_role"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+async def test_button_panel_post_empty_embed(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(
+        bot, 100, _panel_payload(embed={})  # no visible content
+    )
+    assert result == {"ok": False, "error": "empty_embed"}
+    # Nothing posted, persisted or registered for an empty embed.
+    assert channel.sent == []
+    assert pool.inserted == []
+    assert bot.added_views == []
+
+
+async def test_button_panel_post_full_flow_via_handle_action(button_env):
+    """End-to-end through the queue: claim -> post executor -> done + result."""
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888, "Gamer")})
+    pool = ButtonActionsPool()
+    pool.add(1, guild_id=100, kind="button_panel_post", payload=_panel_payload())
+    bot = FakeBot(pool, guilds={100: guild})
+
+    status = await dashboard_actions.handle_action(bot, 1)
+
+    assert status == "done"
+    assert pool.rows[1]["result"]["ok"] is True
+    assert pool.rows[1]["result"]["channel_id"] == "555"
+    assert len(channel.sent) == 1
+    assert len(pool.inserted) == 1
+    assert len(bot.added_views) == 1
+
+
+async def test_button_panel_delete_scoped(button_env):
+    channel = FakeTextChannel(channel_id=555)
+
+    class _StripMsg:
+        def __init__(self):
+            self.edited = None
+
+        async def edit(self, **kwargs):
+            self.edited = kwargs
+
+    strip = _StripMsg()
+
+    async def _fetch_message(mid):
+        return strip
+
+    channel.fetch_message = _fetch_message
+    guild = BRGuild(channels={555: channel})
+    pool = BRPool(delete_return=[{"channel_id": 555}])
+    bot = _br_bot(pool, guild)
+
+    result = await dashboard_actions._exec_button_panel_delete(
+        bot, 100, {"message_id": "777"}
+    )
+
+    assert result == {"ok": True}
+    # Guild-scoped delete with the AUTHORITATIVE guild_id (100).
+    assert pool.delete_calls == [(777, 100)]
+    # Best-effort strip of the live buttons.
+    assert strip.edited == {"view": None}
+
+
+async def test_button_panel_delete_no_rows_is_still_ok(button_env):
+    guild = BRGuild(channels={})
+    pool = BRPool(delete_return=[])  # nothing matched (e.g. wrong guild)
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_delete(
+        bot, 100, {"message_id": "777"}
+    )
+    assert result == {"ok": True}
+    assert pool.delete_calls == [(777, 100)]
+
+
+@pytest.mark.parametrize("message_id", [None, "abc", "", "not-a-number"])
+async def test_button_panel_delete_bad_message_id(button_env, message_id):
+    pool = BRPool()
+    bot = _br_bot(pool, BRGuild())
+    payload = {} if message_id is None else {"message_id": message_id}
+    result = await dashboard_actions._exec_button_panel_delete(bot, 100, payload)
+    assert result == {"ok": False, "error": "message_not_found"}
+    assert pool.delete_calls == []

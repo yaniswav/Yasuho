@@ -139,6 +139,36 @@ def _verify_view_cls():
     return VerifyView
 
 
+def _embed_creator():
+    """Return the ``tools.embed_creator`` module, imported lazily.
+
+    ``embed_creator`` builds ``discord.ui`` modal classes at import time
+    (discord.py 2.x only), so importing it at module load would break this cog's
+    import on the 3.7/discord.py-1.5 test box. Deferring keeps the module
+    importable everywhere; the seam is also the monkeypatch point the button-panel
+    executor tests use to avoid pulling in ``discord.ui`` at all.
+    """
+    from tools import embed_creator
+
+    return embed_creator
+
+
+def _button_roles_module():
+    """Return the ``cogs.config.buttonroles`` module, imported lazily.
+
+    Same rationale as ``_verify_view_cls`` / ``_embed_creator``: buttonroles
+    defines ``discord.ui.Button`` / ``discord.ui.View`` subclasses (``ButtonRoleButton``
+    / ``ButtonRoleView``) at import time, so importing it eagerly would break this
+    cog on the discord.py-1.5 box. The button-panel post executor REUSES
+    ``ButtonRoleView`` (and ``MAX_BUTTONS``) from here, exactly like the cog's own
+    ``_do_post`` builds it, so a dashboard-posted panel behaves identically to a
+    ``/buttonrole`` one. Tests monkeypatch this seam.
+    """
+    from cogs.config import buttonroles
+
+    return buttonroles
+
+
 async def _exec_verify_button_post(bot, guild_id, payload):
     """Post the persistent Verify button embed into a channel.
 
@@ -335,10 +365,212 @@ async def _exec_reaction_role_remove(bot, guild_id, payload):
     return {"ok": True}
 
 
+# Discord caps a role button's label at 80 chars; bound it exactly like the cog.
+_MAX_BUTTON_LABEL = 80
+
+
+async def _exec_button_panel_post(bot, guild_id, payload):
+    """Post an embed + self-assignable role buttons panel into a channel.
+
+    Payload: ``{"channel_id", "embed": {<embed_creator blob>},
+    "buttons": [{"role_id", "label"?, "emoji"?, "style"}]}``. ``guild_id`` is
+    authoritative (the claimed row, written under the dashboard's manage-guild
+    gate); EVERYTHING else is re-validated here against the live gateway and NEVER
+    trusted: the guild must be present, the channel must exist in THIS guild, be a
+    text channel and be sendable, there must be 1..MAX_BUTTONS buttons, and each
+    role must be a real role of the guild. Style is coerced to a callable
+    ButtonStyle (1/2/3/4, secondary fallback), the label is bounded to 80 (empty
+    -> the role name), the emoji is optional, and role ids are DE-DUPLICATED (one
+    button per role, mirroring the ``(message_id, role_id)`` primary key).
+
+    This REPLICATES the cog's ``ButtonRoles._do_post`` / ``_persist``: it renders
+    the embed via ``embed_creator.render`` (the same blob shape the dashboard's
+    Embed Builder produces), sends it with a ``ButtonRoleView`` REUSED from the
+    cog, persists one ``button_roles`` row per button (message-authoritative:
+    DELETE the message's rows then re-INSERT), and RE-REGISTERS the persistent
+    view via ``bot.add_view`` so the buttons keep working after a restart of THIS
+    process (a restart of the bot re-registers them from the table in
+    ``ButtonRoles.cog_load``). The rendered embed is NOT stored -- it lives in the
+    posted message, so a panel's embed cannot be edited from the dashboard.
+    """
+    try:
+        channel_id = int(payload.get("channel_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_channel_id"}
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
+    channel = guild.get_channel(channel_id)
+    if channel is None:
+        return {"ok": False, "error": "channel_not_found"}
+    if not isinstance(channel, discord.TextChannel):
+        return {"ok": False, "error": "not_text_channel"}
+
+    me = guild.me
+    if me is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    if not channel.permissions_for(me).send_messages:
+        return {"ok": False, "error": "missing_send_permission"}
+
+    br = _button_roles_module()
+    max_buttons = getattr(br, "MAX_BUTTONS", 25)
+
+    raw_buttons = payload.get("buttons")
+    if not isinstance(raw_buttons, list) or not raw_buttons:
+        return {"ok": False, "error": "no_buttons"}
+    if len(raw_buttons) > max_buttons:
+        return {"ok": False, "error": "too_many_buttons"}
+
+    # Validate + normalise each button; dedup by role (the PK is (message, role)).
+    seen_roles = set()
+    buttons = []
+    for entry in raw_buttons:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            role_id = int(entry.get("role_id"))
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "bad_role"}
+        role = guild.get_role(role_id)
+        if role is None:
+            return {"ok": False, "error": "bad_role"}
+        if role_id in seen_roles:
+            continue  # one button per role, mirroring the primary key
+        seen_roles.add(role_id)
+
+        try:
+            style = int(entry.get("style"))
+        except (TypeError, ValueError):
+            style = 2
+        if style not in (1, 2, 3, 4):
+            style = 2
+
+        label = entry.get("label")
+        if not isinstance(label, str) or not label.strip():
+            label = role.name
+        label = label[:_MAX_BUTTON_LABEL]
+
+        emoji = entry.get("emoji")
+        if not isinstance(emoji, str) or not emoji.strip():
+            emoji = None
+        else:
+            emoji = emoji.strip()
+
+        buttons.append(
+            {"role_id": role_id, "label": label, "emoji": emoji, "style": style}
+        )
+
+    if not buttons:
+        return {"ok": False, "error": "no_buttons"}
+
+    # Render the embed through the SAME path as the cog + the dashboard preview.
+    ec = _embed_creator()
+    embed_blob = payload.get("embed")
+    if not isinstance(embed_blob, dict):
+        embed_blob = {}
+    embed = ec.render(embed_blob)
+    if not ec.embed_has_content(embed):
+        return {"ok": False, "error": "empty_embed"}
+
+    # rows shape matches ButtonRoleView.__init__: (role_id, label, emoji, style).
+    rows = [(b["role_id"], b["label"], b["emoji"], b["style"]) for b in buttons]
+    msg = await channel.send(embed=embed, view=br.ButtonRoleView(rows))
+
+    # Persist message-authoritatively, exactly like BuilderView._persist: replace
+    # the message's whole stored set so nothing stale lingers.
+    records = [
+        (
+            msg.id,
+            guild_id,
+            channel.id,
+            b["role_id"],
+            b["label"][:_MAX_BUTTON_LABEL],
+            b["emoji"],
+            int(b["style"]),
+        )
+        for b in buttons
+    ]
+    async with bot.db_pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "DELETE FROM button_roles WHERE message_id = $1;", msg.id
+            )
+            await conn.executemany(
+                """
+                INSERT INTO button_roles
+                (message_id, guild_id, channel_id, role_id, label, emoji, style)
+                VALUES ($1, $2, $3, $4, $5, $6, $7);
+                """,
+                records,
+            )
+
+    # Re-register the persistent view so the buttons survive a restart of THIS
+    # process (the cog rebuilds it from the table on the bot's next boot).
+    try:
+        bot.add_view(br.ButtonRoleView(rows), message_id=msg.id)
+    except Exception:
+        log.exception(
+            "dashboard_actions: failed to register button-role view for message %s",
+            msg.id,
+        )
+
+    return {
+        "ok": True,
+        "message_id": str(msg.id),
+        "channel_id": str(channel.id),
+    }
+
+
+async def _exec_button_panel_delete(bot, guild_id, payload):
+    """Delete a button-role panel: drop its rows (guild-scoped) + strip the buttons.
+
+    Payload: ``{"message_id"}``. ``guild_id`` is authoritative (the claimed row):
+    the DELETE is scoped to it so a crafted request can never wipe another guild's
+    panel by guessing a message id. ``RETURNING channel_id`` lets us best-effort
+    fetch the message and ``msg.edit(view=None)`` to strip the live buttons (so an
+    attached announcement keeps its content); any failure there is cosmetic and
+    never affects the ``ok`` result. Mirrors the cog's ``buttonrole_remove``.
+    """
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "message_not_found"}
+
+    rows = await bot.db_pool.fetch(
+        "DELETE FROM button_roles "
+        "WHERE message_id = $1 AND guild_id = $2 "
+        "RETURNING channel_id;",
+        message_id,
+        guild_id,
+    )
+
+    # Best-effort: strip the buttons off the message. Never let a hiccup here fail
+    # the delete (the rows are already gone).
+    if rows:
+        try:
+            guild = bot.get_guild(guild_id)
+            channel = (
+                guild.get_channel_or_thread(rows[0]["channel_id"])
+                if guild is not None
+                else None
+            )
+            if channel is not None:
+                msg = await channel.fetch_message(message_id)
+                await msg.edit(view=None)
+        except Exception:
+            pass
+
+    return {"ok": True}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
     "reaction_role_add": _exec_reaction_role_add,
     "reaction_role_remove": _exec_reaction_role_remove,
+    "button_panel_post": _exec_button_panel_post,
+    "button_panel_delete": _exec_button_panel_delete,
 }
 
 
