@@ -27,7 +27,6 @@ import pytest
 from cogs.system import dashboard_actions
 from tools import settings
 
-
 # ---------------------------------------------------------------------------
 # Stateful fake pool: models the atomic claim + finish + reconcile UPDATEs.
 # ---------------------------------------------------------------------------
