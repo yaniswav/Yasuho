@@ -711,6 +711,37 @@ CREATE TABLE IF NOT EXISTS applied_fixups (
 );
 
 -- ============================================================
+-- Dashboard -> bot action queue (in-bot executor via pg_notify)
+-- ============================================================
+-- A durable work queue for actions the dashboard (a SEPARATE Node process)
+-- wants the LIVE bot to perform on Discord - things the dashboard itself cannot
+-- do because it has no gateway connection (e.g. posting the Verify button into a
+-- channel). The dashboard INSERTs a row here and fires
+-- ``SELECT pg_notify('yasuho_dashboard_action', <id>)`` on a channel DEDICATED
+-- to this queue (distinct from the 'yasuho_dashboard' cache-invalidation
+-- channel); the bot's cogs/system/dashboard_actions.py LISTENs on that channel
+-- and, per notification, atomically CLAIMs the row (UPDATE ... WHERE
+-- status='pending' RETURNING - single-flight, so a duplicate notify is a no-op),
+-- runs the matching executor and writes back status + result. The bot also
+-- reconciles at boot so an action enqueued while it was restarting is not lost.
+-- ``kind`` selects the executor; ``payload`` is the (bot-revalidated, never
+-- trusted) arguments; ``result`` is the JSON outcome the dashboard polls to show
+-- the user; ``requested_by`` is the Discord id of the user who asked (audit),
+-- written under the dashboard's requireManageGuild gate.  cogs/system/dashboard_actions.py
+CREATE TABLE IF NOT EXISTS dashboard_actions (
+    id           BIGSERIAL   PRIMARY KEY,
+    guild_id     BIGINT      NOT NULL,
+    kind         TEXT        NOT NULL,
+    payload      JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    status       TEXT        NOT NULL DEFAULT 'pending',   -- pending|running|done|failed
+    result       JSONB,
+    requested_by BIGINT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS dashboard_actions_guild_idx ON dashboard_actions (guild_id, status);
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new
@@ -870,6 +901,13 @@ BEGIN
         ALTER TABLE anilist_channel_subs
             ADD CONSTRAINT anilist_channel_media_type_valid
             CHECK (media_type IN ('ANIME', 'MANGA')) NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'dashboard_actions_status_valid'
+    ) THEN
+        ALTER TABLE dashboard_actions
+            ADD CONSTRAINT dashboard_actions_status_valid
+            CHECK (status IN ('pending', 'running', 'done', 'failed')) NOT VALID;
     END IF;
 END
 $$;
