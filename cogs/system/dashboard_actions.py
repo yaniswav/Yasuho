@@ -199,8 +199,146 @@ async def _exec_verify_button_post(bot, guild_id, payload):
     }
 
 
+async def _exec_reaction_role_add(bot, guild_id, payload):
+    """Add a reaction-role mapping: react on a live message and store the pair.
+
+    Payload: ``{"channel_id", "message_id", "role_id"}`` (snowflake strings) plus
+    ``"emoji"``. ``guild_id`` is authoritative (the claimed row, written under the
+    dashboard's manage-guild gate); EVERYTHING else is re-validated here against
+    the live gateway and NEVER trusted: the guild must be present, the channel
+    must exist in THIS guild, the role must be a real assignable role of it, and
+    the emoji must be non-empty. Only then do we fetch the message and add the
+    reaction (a failure there -- gone message, missing add-reactions permission,
+    a bad emoji -- yields a short code, never a stack).
+
+    On success it upserts ``reaction_roles`` (keyed on (message_id, emoji), so a
+    re-add just repoints the role) with the AUTHORITATIVE ``guild_id``, then live-
+    patches the ReactionRoles cog's in-memory ``cache`` -- CRUCIAL, because
+    ``on_raw_reaction_add`` reads that cache, not the table, on every reaction.
+    The emoji is stored WITHOUT U+FE0F to match an incoming reaction payload,
+    exactly like the cog's own ``_persist_reaction_role``.
+    """
+    try:
+        channel_id = int(payload.get("channel_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_channel_id"}
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "message_not_found"}
+    try:
+        role_id = int(payload.get("role_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_role"}
+
+    emoji = payload.get("emoji")
+    if not isinstance(emoji, str) or not emoji.strip():
+        return {"ok": False, "error": "bad_emoji"}
+    emoji = emoji.strip()
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
+    channel = guild.get_channel_or_thread(channel_id)
+    if channel is None:
+        return {"ok": False, "error": "channel_not_found"}
+
+    role = guild.get_role(role_id)
+    if role is None:
+        return {"ok": False, "error": "bad_role"}
+
+    # Fetch first (a missing / inaccessible message is distinct from a reaction
+    # that can't be added), then react. Both raise on failure and are mapped to a
+    # short code -- the message may be gone, or the bot may lack add-reactions /
+    # read-history in a channel that nonetheless "exists".
+    try:
+        msg = await channel.fetch_message(message_id)
+    except Exception:
+        return {"ok": False, "error": "message_not_found"}
+    try:
+        await msg.add_reaction(emoji)
+    except Exception:
+        return {"ok": False, "error": "cant_add_reaction"}
+
+    stored = emoji.replace("\uFE0F", "")
+
+    query = """
+        INSERT INTO reaction_roles
+        (message_id, emoji, role_id, guild_id)
+        VALUES
+        ($1, $2, $3, $4)
+        ON CONFLICT (message_id, emoji) DO UPDATE SET role_id = $3;
+        """
+    await bot.db_pool.execute(query, message_id, stored, role_id, guild_id)
+
+    # Live-patch the cog cache so the very next reaction is honoured without a
+    # restart (on_raw_reaction_add reads self.cache). No-op if the cog is absent.
+    cog = bot.get_cog("ReactionRoles")
+    if cog is not None:
+        cog.cache[(message_id, stored)] = role_id
+
+    return {
+        "ok": True,
+        "message_id": str(message_id),
+        "emoji": stored,
+        "role_id": str(role_id),
+    }
+
+
+async def _exec_reaction_role_remove(bot, guild_id, payload):
+    """Remove a reaction-role mapping: drop the row (guild-scoped) + cache entry.
+
+    Payload: ``{"message_id", "emoji"}``. ``guild_id`` is authoritative (the
+    claimed row): the DELETE is scoped to it so a crafted request can never wipe
+    another guild's mapping by guessing a message id. The cog cache entry is
+    popped so ``on_raw_reaction_add`` stops granting immediately. Best-effort, we
+    also try to strip the bot's own reaction from the message IF it is still in
+    the gateway message cache (the payload carries no channel id, so we cannot
+    fetch it by REST); any failure there is ignored -- a leftover reaction is
+    cosmetic, and never affects the ``ok`` result.
+    """
+    emoji = payload.get("emoji")
+    if not isinstance(emoji, str):
+        emoji = ""
+    stored = emoji.replace("\uFE0F", "")
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "message_not_found"}
+
+    query = """
+        DELETE FROM reaction_roles
+        WHERE message_id = $1 AND emoji = $2 AND guild_id = $3;
+        """
+    await bot.db_pool.execute(query, message_id, stored, guild_id)
+
+    cog = bot.get_cog("ReactionRoles")
+    if cog is not None:
+        cog.cache.pop((message_id, stored), None)
+
+    # Best-effort: unreact if the message is still cached (no channel id to fetch
+    # by). Never let a hiccup here fail the removal.
+    try:
+        guild = bot.get_guild(guild_id)
+        message = discord.utils.get(bot.cached_messages, id=message_id)
+        if (
+            guild is not None
+            and message is not None
+            and getattr(message.guild, "id", None) == guild_id
+            and guild.me is not None
+        ):
+            await message.remove_reaction(emoji or stored, guild.me)
+    except Exception:
+        pass
+
+    return {"ok": True}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
+    "reaction_role_add": _exec_reaction_role_add,
+    "reaction_role_remove": _exec_reaction_role_remove,
 }
 
 

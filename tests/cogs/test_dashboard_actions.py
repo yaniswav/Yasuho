@@ -92,6 +92,10 @@ class ActionsPool:
                 if row["status"] == "running":
                     row["status"] = "pending"
             return "UPDATE"
+        if "INSERT INTO reaction_roles" in query:  # reaction_role_add upsert
+            return "INSERT 0 1"
+        if "DELETE FROM reaction_roles" in query:  # reaction_role_remove
+            return "DELETE 1"
         raise AssertionError("unexpected execute: %r" % query)  # pragma: no cover
 
     async def fetch(self, query, *args):
@@ -112,12 +116,19 @@ class ActionsPool:
 
 
 class FakeBot:
-    def __init__(self, pool, guilds=None):
+    def __init__(self, pool, guilds=None, cogs=None):
         self.db_pool = pool
         self._guilds = guilds or {}
+        self._cogs = cogs or {}
+        # The reaction-role remove executor consults the gateway message cache
+        # (best-effort unreact); empty by default so that path is a clean no-op.
+        self.cached_messages = []
 
     def get_guild(self, gid):
         return self._guilds.get(gid)
+
+    def get_cog(self, name):
+        return self._cogs.get(name)
 
 
 @pytest.fixture(autouse=True)
@@ -462,6 +473,340 @@ async def test_verify_button_post_full_flow_via_handle_action(verify_env):
 
 
 # ---------------------------------------------------------------------------
+# reaction_role_add / reaction_role_remove executors: re-validate against live
+# state, drive the reaction on the real message, and keep the cog cache in sync.
+# ---------------------------------------------------------------------------
+
+
+class RRPool:
+    """Minimal pool that records reaction_roles writes for the executor tests."""
+
+    def __init__(self):
+        self.executed = []
+
+    async def execute(self, query, *args):
+        self.executed.append((query, args))
+        if "DELETE FROM reaction_roles" in query:
+            return "DELETE 1"
+        return "INSERT 0 1"
+
+
+class FakeMessage:
+    def __init__(self, message_id=777, fail_add=False):
+        self.id = message_id
+        self._fail_add = fail_add
+        self.reactions = []
+
+    async def add_reaction(self, emoji):
+        if self._fail_add:
+            # Mirrors a real Forbidden/HTTPException; the executor catches any
+            # Exception and maps it to a short code (never a stack).
+            raise RuntimeError("missing add-reactions permission")
+        self.reactions.append(emoji)
+
+
+class FakeReactionChannel:
+    def __init__(self, channel_id=555, message=None, fail_fetch=False):
+        self.id = channel_id
+        self.message = message
+        self._fail_fetch = fail_fetch
+
+    async def fetch_message(self, mid):
+        if self._fail_fetch or self.message is None:
+            raise RuntimeError("unknown message")
+        return self.message
+
+
+class FakeRole:
+    def __init__(self, role_id=888):
+        self.id = role_id
+
+
+class FakeReactionGuild:
+    def __init__(self, channels=None, roles=None, has_me=True):
+        self.id = 100
+        self._channels = channels or {}
+        self._roles = roles or {}
+        self.me = object() if has_me else None
+
+    def get_channel_or_thread(self, channel_id):
+        return self._channels.get(channel_id)
+
+    def get_role(self, role_id):
+        return self._roles.get(role_id)
+
+
+class FakeCog:
+    """Stand-in for the ReactionRoles cog: just the in-memory cache the executor
+    live-patches (and on_raw_reaction_add reads)."""
+
+    def __init__(self):
+        self.cache = {}
+
+
+def _rr_bot(pool, guild=None, cog=None):
+    guilds = {100: guild} if guild is not None else {}
+    cogs = {"ReactionRoles": cog} if cog is not None else {}
+    return FakeBot(pool, guilds=guilds, cogs=cogs)
+
+
+async def test_reaction_role_add_success():
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+
+    # snowflakes come back as STRINGS (never JS numbers on the far side).
+    assert result == {
+        "ok": True,
+        "message_id": "777",
+        "emoji": "🎮",
+        "role_id": "888",
+    }
+    # Reacted on the LIVE message with the emoji.
+    assert channel.message.reactions == ["🎮"]
+    # Upsert used the AUTHORITATIVE guild_id (100, from the claimed row) + role.
+    assert len(pool.executed) == 1
+    query, args = pool.executed[0]
+    assert "INSERT INTO reaction_roles" in query
+    assert "ON CONFLICT (message_id, emoji)" in query
+    assert args == (777, "🎮", 888, 100)
+    # Cog cache live-patched so on_raw_reaction_add honours it without a restart.
+    assert cog.cache[(777, "🎮")] == 888
+
+
+async def test_reaction_role_add_strips_variation_selector():
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+
+    heart = "❤️"  # red heart + U+FE0F variation selector
+    stored = "❤"  # what the table + cache must hold (FE0F stripped)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": heart, "role_id": "888"},
+    )
+
+    assert result["emoji"] == stored
+    # add_reaction gets the ORIGINAL emoji (with FE0F); the DB + cache use the
+    # STRIPPED form so an incoming reaction payload matches.
+    assert channel.message.reactions == [heart]
+    _, args = pool.executed[0]
+    assert args[1] == stored
+    assert cog.cache[(777, stored)] == 888
+    assert (777, heart) not in cog.cache
+
+
+async def test_reaction_role_add_works_without_cog_loaded():
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog=None)  # cog absent -> cache patch is a no-op
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+
+    assert result["ok"] is True
+    assert len(pool.executed) == 1  # still persisted
+
+
+async def test_reaction_role_add_guild_unavailable():
+    pool = RRPool()
+    bot = _rr_bot(pool, guild=None)  # bot not in guild 100
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert pool.executed == []
+
+
+async def test_reaction_role_add_channel_not_found():
+    guild = FakeReactionGuild(channels={}, roles={888: FakeRole(888)})
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, FakeCog())
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+    assert result == {"ok": False, "error": "channel_not_found"}
+    assert pool.executed == []
+
+
+async def test_reaction_role_add_message_not_found():
+    channel = FakeReactionChannel(555, message=None)  # fetch_message raises
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+    assert result == {"ok": False, "error": "message_not_found"}
+    assert pool.executed == []
+    assert cog.cache == {}
+
+
+async def test_reaction_role_add_bad_role():
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={})  # role 888 absent
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, FakeCog())
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+    assert result == {"ok": False, "error": "bad_role"}
+    assert pool.executed == []
+
+
+async def test_reaction_role_add_cant_add_reaction():
+    channel = FakeReactionChannel(555, message=FakeMessage(777, fail_add=True))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+    assert result == {"ok": False, "error": "cant_add_reaction"}
+    # The reaction failed, so NOTHING was persisted or cached.
+    assert pool.executed == []
+    assert cog.cache == {}
+
+
+@pytest.mark.parametrize("channel_id", [None, "abc", "", "not-a-number"])
+async def test_reaction_role_add_bad_channel_id(channel_id):
+    guild = FakeReactionGuild(channels={}, roles={888: FakeRole(888)})
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, FakeCog())
+    payload = {"message_id": "777", "emoji": "🎮", "role_id": "888"}
+    if channel_id is not None:
+        payload["channel_id"] = channel_id
+    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload)
+    assert result == {"ok": False, "error": "bad_channel_id"}
+    assert pool.executed == []
+
+
+@pytest.mark.parametrize("emoji", [None, "", "   "])
+async def test_reaction_role_add_rejects_empty_emoji(emoji):
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, FakeCog())
+    payload = {"channel_id": "555", "message_id": "777", "role_id": "888"}
+    if emoji is not None:
+        payload["emoji"] = emoji
+    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload)
+    assert result == {"ok": False, "error": "bad_emoji"}
+    assert pool.executed == []
+
+
+async def test_reaction_role_add_full_flow_via_handle_action():
+    """End-to-end through the queue: claim -> add executor -> done + result + cache."""
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    cog = FakeCog()
+    pool = ActionsPool()
+    pool.add(
+        1,
+        guild_id=100,
+        kind="reaction_role_add",
+        payload={
+            "channel_id": "555",
+            "message_id": "777",
+            "emoji": "🎮",
+            "role_id": "888",
+        },
+    )
+    bot = FakeBot(pool, guilds={100: guild}, cogs={"ReactionRoles": cog})
+
+    status = await dashboard_actions.handle_action(bot, 1)
+
+    assert status == "done"
+    assert pool.rows[1]["result"]["ok"] is True
+    assert cog.cache[(777, "🎮")] == 888
+
+
+async def test_reaction_role_remove_deletes_and_pops_cache():
+    cog = FakeCog()
+    cog.cache[(777, "🎮")] = 888
+    pool = RRPool()
+    bot = _rr_bot(pool, guild=None, cog=cog)  # no guild -> best-effort unreact skips
+
+    result = await dashboard_actions._exec_reaction_role_remove(
+        bot, 100, {"message_id": "777", "emoji": "🎮"}
+    )
+
+    assert result == {"ok": True}
+    assert len(pool.executed) == 1
+    query, args = pool.executed[0]
+    assert "DELETE FROM reaction_roles" in query
+    # Guild-scoped delete with the AUTHORITATIVE guild_id (100).
+    assert args == (777, "🎮", 100)
+    # Cache entry popped so on_raw_reaction_add stops granting immediately.
+    assert (777, "🎮") not in cog.cache
+
+
+async def test_reaction_role_remove_strips_variation_selector():
+    cog = FakeCog()
+    stored = "❤"
+    cog.cache[(777, stored)] = 888
+    pool = RRPool()
+    bot = _rr_bot(pool, guild=None, cog=cog)
+
+    await dashboard_actions._exec_reaction_role_remove(
+        bot, 100, {"message_id": "777", "emoji": "❤️"}
+    )
+
+    _, args = pool.executed[0]
+    assert args[1] == stored  # FE0F stripped before the delete
+    assert (777, stored) not in cog.cache
+
+
+async def test_reaction_role_remove_bad_message_id_does_not_delete():
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild=None, cog=cog)
+    result = await dashboard_actions._exec_reaction_role_remove(
+        bot, 100, {"message_id": "not-a-number", "emoji": "🎮"}
+    )
+    assert result == {"ok": False, "error": "message_not_found"}
+    assert pool.executed == []
+
+
+async def test_reaction_role_remove_works_without_cog_loaded():
+    pool = RRPool()
+    bot = _rr_bot(pool, guild=None, cog=None)
+    result = await dashboard_actions._exec_reaction_role_remove(
+        bot, 100, {"message_id": "777", "emoji": "🎮"}
+    )
+    assert result == {"ok": True}
+    assert len(pool.executed) == 1  # still deleted
+
+
+# ---------------------------------------------------------------------------
 # reconcile: boot backstop for notifies missed during a restart.
 # ---------------------------------------------------------------------------
 
@@ -509,3 +854,8 @@ async def test_reconcile_empty_table_is_noop():
 
 def test_verify_button_post_is_registered():
     assert "verify_button_post" in dashboard_actions._EXECUTORS
+
+
+def test_reaction_role_executors_are_registered():
+    assert "reaction_role_add" in dashboard_actions._EXECUTORS
+    assert "reaction_role_remove" in dashboard_actions._EXECUTORS
