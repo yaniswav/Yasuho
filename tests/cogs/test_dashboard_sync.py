@@ -159,8 +159,31 @@ class FakeLeveling:
         return snapshot
 
 
+class FakeCustomCommands:
+    """Stand-in for the CustomCommands cog exposing its three per-guild caches.
+
+    The real cog's ``save_command``/``delete_command`` pop the guild's entry
+    from ``_cache`` (``{name: response}``) and ``_uses`` (``{name: uses}``),
+    and drop every ``_cd`` (per-command cooldown clock) entry whose key's first
+    element is that guild - see ``cogs/config/customcommands.py``.
+    """
+
+    def __init__(self):
+        self._cache = {}
+        self._uses = {}
+        self._cd = {}
+
+
 class FakeBot:
-    def __init__(self, pool, modlog=None, starboard=None, automod=None, leveling=None):
+    def __init__(
+        self,
+        pool,
+        modlog=None,
+        starboard=None,
+        automod=None,
+        leveling=None,
+        custom_commands=None,
+    ):
         self.db_pool = pool
         self.prefixes = {}
         self.autoroles = {}
@@ -174,6 +197,8 @@ class FakeBot:
             self._cogs["AutoMod"] = automod
         if leveling is not None:
             self._cogs["Leveling"] = leveling
+        if custom_commands is not None:
+            self._cogs["CustomCommands"] = custom_commands
 
     def get_cog(self, name):
         return self._cogs.get(name)
@@ -543,6 +568,48 @@ async def test_dispatch_locale_evicts_settings_blob():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: custom_commands invalidation (drop _cache/_uses/_cd for the guild,
+# mirroring CustomCommands.save_command/delete_command's own writes).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_custom_commands_drops_cache_and_uses():
+    cc = FakeCustomCommands()
+    cc._cache[100] = {"rules": {"type": "text", "content": "old"}}  # stale
+    cc._uses[100] = {"rules": 3}  # stale
+    bot = FakeBot(SyncPool(), custom_commands=cc)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("custom_commands", 100))
+
+    assert handled == "custom_commands"
+    assert 100 not in cc._cache
+    assert 100 not in cc._uses
+
+
+async def test_dispatch_custom_commands_drops_only_this_guilds_cooldowns():
+    cc = FakeCustomCommands()
+    # (guild_id, name, user_id) -> expiry, mirroring the cog's _cd shape.
+    cc._cd[(100, "rules", 1)] = 999.0
+    cc._cd[(100, "welcome", 2)] = 999.0
+    cc._cd[(200, "other", 3)] = 999.0  # a DIFFERENT guild's cooldown: must survive
+    bot = FakeBot(SyncPool(), custom_commands=cc)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("custom_commands", 100))
+
+    assert handled == "custom_commands"
+    assert (100, "rules", 1) not in cc._cd
+    assert (100, "welcome", 2) not in cc._cd
+    assert (200, "other", 3) in cc._cd
+
+
+async def test_dispatch_custom_commands_noop_without_cog():
+    # No CustomCommands cog loaded: safe no-op, still reports handled.
+    bot = FakeBot(SyncPool())
+    handled = await dashboard_sync.dispatch(bot, _payload("custom_commands", 100))
+    assert handled == "custom_commands"
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -597,4 +664,5 @@ def test_valid_kinds_match_invalidators():
         "warn_escalation",
         "verify_role",
         "locale",
+        "custom_commands",
     }

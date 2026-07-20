@@ -7,16 +7,17 @@ into the SAME Postgres database, then emits::
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
-leveling | warn_escalation | verify_role | locale``. The bot mirrors those
-settings in memory (``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``,
-the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU for the
-welcome + automod + modlog_events + warn_escalation + verify_role + locale
-JSONB blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's
-``_settings`` cache for its boolean toggle table, and the Leveling cog's three
+leveling | warn_escalation | verify_role | locale | custom_commands``. The bot
+mirrors those settings in memory (``bot.prefixes`` / ``bot.autoroles`` /
+``bot.muteroles``, the ModLog cog's ``_channels`` cache, the ``tools.settings``
+LRU for the welcome + automod + modlog_events + warn_escalation + verify_role +
+locale JSONB blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's
+``_settings`` cache for its boolean toggle table, the Leveling cog's three
 caches - ``_configs`` (level_config scalar knobs), ``_no_xp`` (level_no_xp
-snapshot) and ``_multipliers`` (xp_multipliers + level_config event columns)),
-so without this cog it would keep serving the stale in-memory value until the
-next restart.
+snapshot) and ``_multipliers`` (xp_multipliers + level_config event columns) -
+and the CustomCommands cog's ``_cache``/``_uses``/``_cd`` (per-guild command
+map, usage counts and per-command cooldown clocks)), so without this cog it
+would keep serving the stale in-memory value until the next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -37,6 +38,12 @@ Design mirrors the existing house patterns:
   and writes it into the Starboard cog's ``_config`` cache exactly as that cog's
   own ``_apply_set`` / ``starboard_disable`` do (set the tuple, or ``None`` when
   the row is gone);
+* the custom_commands invalidation mirrors ``CustomCommands.save_command`` /
+  ``.delete_command`` (``cogs/config/customcommands.py``) exactly: pop the
+  guild's entry from ``_cache`` (the ``{name: response}`` map) and ``_uses``
+  (the usage-count map), and drop every per-command cooldown clock for that
+  guild from ``_cd`` - the SAME three lines those two methods run on their own
+  writes, so a dashboard change is indistinguishable from a bot-side one;
 * the supervised background task started in ``__init__`` via
   ``bot.loop.create_task`` with a done-callback mirrors
   ``cogs/system/webstats.py``.
@@ -77,6 +84,7 @@ VALID_KINDS = frozenset(
         "warn_escalation",
         "verify_role",
         "locale",
+        "custom_commands",
     }
 )
 
@@ -346,6 +354,40 @@ async def _invalidate_leveling(bot, gid):
             await refresh(gid)
 
 
+async def _invalidate_custom_commands(bot, gid):
+    """Drop the CustomCommands cog's per-guild caches, mirroring its own writes.
+
+    ``CustomCommands.save_command`` and ``.delete_command``
+    (``cogs/config/customcommands.py``) both run these exact three lines after
+    every write of their own:
+
+        self._cache.pop(guild_id, None)
+        self._uses.pop(guild_id, None)
+        self._cd = {k: v for k, v in self._cd.items() if k[0] != guild_id}
+
+    ``_cache`` is the lazily-loaded ``{name: response}`` map
+    (``get_custom_commands`` re-fetches on the next miss), ``_uses`` is the
+    parallel ``{name: uses}`` map for the panel's usage display, and ``_cd``
+    holds ``(guild_id, name, user_id) -> expiry`` per-command cooldown clocks -
+    stale entries there would otherwise let a member dodge (or get stuck on) a
+    cooldown the dashboard just changed. Mirrored verbatim here so a dashboard
+    add/edit/delete takes effect on the very next message, no restart. No
+    CustomCommands cog loaded is a safe no-op.
+    """
+    cog = bot.get_cog("CustomCommands")
+    if cog is None:
+        return
+    cache = getattr(cog, "_cache", None)
+    if isinstance(cache, dict):
+        cache.pop(gid, None)
+    uses = getattr(cog, "_uses", None)
+    if isinstance(uses, dict):
+        uses.pop(gid, None)
+    cd = getattr(cog, "_cd", None)
+    if isinstance(cd, dict):
+        cog._cd = {k: v for k, v in cd.items() if k[0] != gid}
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
@@ -358,6 +400,7 @@ _INVALIDATORS = {
     "warn_escalation": _invalidate_warn_escalation,
     "verify_role": _invalidate_verify_role,
     "locale": _invalidate_locale,
+    "custom_commands": _invalidate_custom_commands,
 }
 
 
