@@ -503,6 +503,46 @@ async def test_dispatch_warn_escalation_evicts_settings_blob():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: verify_role invalidation (evict the settings LRU blob).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_verify_role_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    # Seed the process-global settings cache with a stale verify_role for guild 100.
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"verify_role": 555}
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("verify_role", 100))
+
+    assert handled == "verify_role"
+    # Evicted: the next settings.get_guild would re-read the authoritative row,
+    # so the verify_button view grants the freshly-configured role on its very
+    # next click instead of a stale one.
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
+# dispatch: locale invalidation (evict the settings LRU blob).
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_locale_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    # Seed the process-global settings cache with a stale locale for guild 100.
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"locale": "fr"}
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("locale", 100))
+
+    assert handled == "locale"
+    # Evicted: the next settings.get_guild would re-read the authoritative row.
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -555,4 +595,6 @@ def test_valid_kinds_match_invalidators():
         "automod",
         "leveling",
         "warn_escalation",
+        "verify_role",
+        "locale",
     }

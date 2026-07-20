@@ -7,15 +7,16 @@ into the SAME Postgres database, then emits::
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
-leveling | warn_escalation``. The bot mirrors those settings in memory
-(``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's
-``_channels`` cache, the ``tools.settings`` LRU for the welcome + automod +
-modlog_events + warn_escalation JSONB blobs, the Starboard cog's ``_config``
-cache, the AutoMod cog's ``_settings`` cache for its boolean toggle table, and
-the Leveling cog's three caches - ``_configs`` (level_config scalar knobs),
-``_no_xp`` (level_no_xp snapshot) and ``_multipliers`` (xp_multipliers +
-level_config event columns)), so without this cog it would keep serving the stale
-in-memory value until the next restart.
+leveling | warn_escalation | verify_role | locale``. The bot mirrors those
+settings in memory (``bot.prefixes`` / ``bot.autoroles`` / ``bot.muteroles``,
+the ModLog cog's ``_channels`` cache, the ``tools.settings`` LRU for the
+welcome + automod + modlog_events + warn_escalation + verify_role + locale
+JSONB blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's
+``_settings`` cache for its boolean toggle table, and the Leveling cog's three
+caches - ``_configs`` (level_config scalar knobs), ``_no_xp`` (level_no_xp
+snapshot) and ``_multipliers`` (xp_multipliers + level_config event columns)),
+so without this cog it would keep serving the stale in-memory value until the
+next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -74,6 +75,8 @@ VALID_KINDS = frozenset(
         "automod",
         "leveling",
         "warn_escalation",
+        "verify_role",
+        "locale",
     }
 )
 
@@ -210,6 +213,36 @@ async def _invalidate_warn_escalation(bot, gid):
     settings.invalidate_guild(gid)
 
 
+async def _invalidate_verify_role(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    The verification role lives under the ``guild_settings`` JSONB key
+    ``'verify_role'`` and is read via ``settings.get_guild(..., 'verify_role',
+    None)`` in ``cogs/config/verification.py`` (both the ``/verify setup``
+    command and the persistent ``verify_button`` view re-read it on every
+    click), served from the SAME ``tools.settings`` LRU as
+    welcome/automod/modlog_events/warn_escalation. ``invalidate_guild`` drops
+    the guild's cached blob (the same helper retention uses), so the very next
+    click re-reads the authoritative row instead of granting a stale role
+    until the next restart.
+    """
+    settings.invalidate_guild(gid)
+
+
+async def _invalidate_locale(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    The server language lives under the ``guild_settings`` JSONB key
+    ``'locale'`` and is read via ``settings.get_guild(..., 'locale', ...)``,
+    served from the SAME ``tools.settings`` LRU as
+    welcome/automod/modlog_events/warn_escalation/verify_role.
+    ``invalidate_guild`` drops the guild's cached blob (the same helper
+    retention uses), so the next read re-fetches the authoritative row instead
+    of serving a stale language until the next restart.
+    """
+    settings.invalidate_guild(gid)
+
+
 async def _invalidate_starboard(bot, gid):
     """Refresh the Starboard cog's ``_config`` entry from the authoritative row.
 
@@ -323,6 +356,8 @@ _INVALIDATORS = {
     "automod": _invalidate_automod,
     "leveling": _invalidate_leveling,
     "warn_escalation": _invalidate_warn_escalation,
+    "verify_role": _invalidate_verify_role,
+    "locale": _invalidate_locale,
 }
 
 
