@@ -52,7 +52,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-from tools import i18n
+from tools import i18n, role_menus
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -167,6 +167,22 @@ def _button_roles_module():
     from cogs.config import buttonroles
 
     return buttonroles
+
+
+def _role_menus_module():
+    """Return the ``cogs.config.rolemenus`` module, imported lazily.
+
+    Same rationale as ``_button_roles_module``: rolemenus defines
+    ``discord.ui.Select`` / ``discord.ui.View`` subclasses (``RoleMenuSelect`` /
+    ``RoleMenuView``) at import time, so importing it eagerly would break this cog
+    on the discord.py-1.5 box. The role-menu post executor REUSES ``RoleMenuView``
+    (and ``MAX_MENUS_PER_GUILD``) from here, exactly like the cog's own
+    ``RoleMenuBuilder.post`` builds it, so a dashboard-posted menu behaves
+    identically to a ``/rolemenu`` one. Tests monkeypatch this seam.
+    """
+    from cogs.config import rolemenus
+
+    return rolemenus
 
 
 async def _exec_verify_button_post(bot, guild_id, payload):
@@ -565,12 +581,267 @@ async def _exec_button_panel_delete(bot, guild_id, payload):
     return {"ok": True}
 
 
+# Role-menu header bounds, mirrored from cogs/config/rolemenus.py's builder modals:
+# the embed title caps at 256 and the description at 2000 (Discord's own embed
+# limits are higher, but the builder bounds them there). The select placeholder
+# caps at 150 (Discord's placeholder limit). The colour is a 24-bit RGB int.
+_MAX_MENU_TITLE = 256
+_MAX_MENU_DESCRIPTION = 2000
+_MAX_MENU_PLACEHOLDER = 150
+_MAX_COLOUR = 0xFFFFFF
+
+
+def _coerce_menu_options(raw):
+    """Widen each option's STRING role_id to a Python int, then reuse the helper.
+
+    The dashboard serialises every snowflake as a STRING (never a JS number, to
+    dodge 2^53 precision loss), but ``role_menus.normalize_options`` requires an
+    ``int`` role_id and drops anything else. So we do the SAME boundary conversion
+    the reaction/button executors do (``int(...)`` in Python, which is arbitrary
+    precision) on each option's role_id, then hand the list to the shared helper
+    for all the real work (drop/dedup/cap-at-25, label/emoji/description/temp).
+    A non-string, non-int, or unparseable role_id is left as-is so the helper
+    drops it. Never raises.
+    """
+    if not isinstance(raw, list):
+        return role_menus.normalize_options(raw)
+    widened = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        rid = entry.get("role_id")
+        if isinstance(rid, str):
+            try:
+                rid = int(rid)
+            except ValueError:
+                continue  # not a decimal id: the helper would drop it anyway
+        entry = dict(entry)
+        entry["role_id"] = rid
+        widened.append(entry)
+    return role_menus.normalize_options(widened)
+
+
+async def _exec_role_menu_post(bot, guild_id, payload):
+    """Post a self-role select menu into a channel + persist + register its view.
+
+    Payload: ``{"channel_id": "<snowflake>", "config": {<menu config>}}``.
+    ``guild_id`` is authoritative (the claimed row, written under the dashboard's
+    manage-guild gate); EVERYTHING else is re-validated here against the live
+    gateway and NEVER trusted: the guild must be present, the channel must exist in
+    THIS guild, be a text channel and be sendable, the guild must be under
+    MAX_MENUS_PER_GUILD, the option list (normalised through the SAME
+    ``role_menus.normalize_options`` helper the cog uses) must be non-empty AND at
+    least one kept option's role must be a real role of this guild (foreign/gone
+    roles are filtered out; an all-foreign list is rejected). Title/description are
+    bounded, the colour is an optional valid 24-bit int and the placeholder is
+    bounded.
+
+    This REPLICATES the cog's ``RoleMenuBuilder.post``: it builds the header embed
+    from the (bounded) title/description/colour + a Roles field, POSTS it with NO
+    view FIRST to learn the message id, THEN edits the message to attach a
+    ``RoleMenuView`` REUSED from the cog whose select custom_id is
+    ``rolemenu:<message_id>`` -- message-unique and restart-stable, which is why the
+    post-then-edit sequence is needed (the view cannot be built before the id
+    exists). It then persists the ``role_menus`` row (config normalised) with the
+    AUTHORITATIVE guild_id via the SAME INSERT ... ON CONFLICT the cog's
+    ``store_menu`` uses, and RE-REGISTERS the persistent view via ``bot.add_view``
+    so the select survives a restart of THIS process (the cog rebuilds it from the
+    table on the bot's next boot). If the RoleMenus cog is loaded, the new message
+    id is added to its in-memory ``_menu_ids`` set so deleting the message still
+    prunes the row (parity with ``store_menu``).
+    """
+    try:
+        channel_id = int(payload.get("channel_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_channel_id"}
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
+    channel = guild.get_channel(channel_id)
+    if channel is None:
+        return {"ok": False, "error": "channel_not_found"}
+    if not isinstance(channel, discord.TextChannel):
+        return {"ok": False, "error": "not_text_channel"}
+
+    me = guild.me
+    if me is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    if not channel.permissions_for(me).send_messages:
+        return {"ok": False, "error": "missing_send_permission"}
+
+    rm = _role_menus_module()
+    max_menus = getattr(rm, "MAX_MENUS_PER_GUILD", 25)
+
+    # Enforce the per-guild cap BEFORE posting, counting this guild's live menus
+    # (mirrors the cog's _menu_count gate on the /rolemenu builder).
+    count = await bot.db_pool.fetchval(
+        "SELECT COUNT(*) FROM role_menus WHERE guild_id = $1", guild_id
+    )
+    if (count or 0) >= max_menus:
+        return {"ok": False, "error": "too_many_menus"}
+
+    raw_config = payload.get("config")
+    if not isinstance(raw_config, dict):
+        raw_config = {}
+
+    # Normalise through the SAME helper the cog uses (drops/dedups/caps at 25).
+    options = _coerce_menu_options(raw_config.get("options"))
+    if not options:
+        return {"ok": False, "error": "no_options"}
+
+    # belongs-to-guild defence: keep only options whose role is a real role of THIS
+    # guild. A crafted payload naming only foreign/gone roles is rejected wholesale
+    # rather than posting an empty menu.
+    options = [o for o in options if guild.get_role(o["role_id"]) is not None]
+    if not options:
+        return {"ok": False, "error": "bad_role_all"}
+
+    title = raw_config.get("title")
+    title = title[:_MAX_MENU_TITLE] if isinstance(title, str) else ""
+    description = raw_config.get("description")
+    description = (
+        description[:_MAX_MENU_DESCRIPTION] if isinstance(description, str) else ""
+    )
+    colour = raw_config.get("colour")
+    if not (
+        isinstance(colour, int)
+        and not isinstance(colour, bool)
+        and 0 <= colour <= _MAX_COLOUR
+    ):
+        colour = None
+    exclusive = bool(raw_config.get("exclusive"))
+    placeholder = raw_config.get("placeholder")
+    placeholder = (
+        placeholder[:_MAX_MENU_PLACEHOLDER]
+        if isinstance(placeholder, str) and placeholder.strip()
+        else None
+    )
+
+    # The persisted + view config, in the SAME shape the cog's post() stores.
+    config = {
+        "title": title,
+        "description": description,
+        "colour": colour,
+        "exclusive": exclusive,
+        "options": options,
+    }
+    if placeholder:
+        config["placeholder"] = placeholder
+
+    # Build the header embed exactly like the cog's header_embed (title/description/
+    # colour + a Roles field). Only the fallback copy is localised, to the guild's
+    # configured language (the user-supplied title/description are left verbatim).
+    loc = await i18n.resolve_guild_locale(bot, guild)
+    with i18n.locale(loc):
+        embed = discord.Embed(
+            title=title or _("Pick your roles"),
+            description=description or None,
+            colour=colour if isinstance(colour, int) else random_colour(),
+        )
+        embed.add_field(
+            name=_("Roles"),
+            value=" ".join(f"<@&{o['role_id']}>" for o in options)[:1024],
+            inline=False,
+        )
+
+    # Post first (no view) to learn the message id, then attach the view so its
+    # select carries a message-unique, restart-stable custom_id -- the cog's trick.
+    message = await channel.send(embed=embed)
+    view = rm.RoleMenuView(message.id, config)
+    try:
+        await message.edit(view=view)
+    except discord.HTTPException:
+        try:
+            await message.delete()
+        except discord.HTTPException:
+            pass
+        return {"ok": False, "error": "post_failed"}
+
+    # Persist the row with the AUTHORITATIVE guild_id, exactly like store_menu.
+    await bot.db_pool.execute(
+        "INSERT INTO role_menus (message_id, guild_id, channel_id, config) "
+        "VALUES ($1, $2, $3, $4::jsonb) "
+        "ON CONFLICT (message_id) DO UPDATE SET config = $4::jsonb",
+        message.id,
+        guild_id,
+        channel.id,
+        json.dumps(config),
+    )
+
+    # Re-register the persistent view so the select survives a restart of THIS
+    # process (the cog rebuilds it from the table on the bot's next boot).
+    try:
+        bot.add_view(view, message_id=message.id)
+    except Exception:
+        log.exception(
+            "dashboard_actions: failed to register role-menu view for message %s",
+            message.id,
+        )
+    # Keep the cog's live id set in sync so deleting the message prunes the row.
+    cog = bot.get_cog("RoleMenus")
+    if cog is not None and hasattr(cog, "_menu_ids"):
+        cog._menu_ids.add(message.id)
+
+    return {"ok": True, "message_id": str(message.id), "menu": True}
+
+
+async def _exec_role_menu_delete(bot, guild_id, payload):
+    """Delete a role menu: drop its row (guild-scoped) + strip the live select.
+
+    Payload: ``{"message_id"}``. ``guild_id`` is authoritative (the claimed row):
+    the DELETE is scoped to it so a crafted request can never wipe another guild's
+    menu by guessing a message id. ``RETURNING channel_id`` lets us best-effort
+    fetch the message and ``msg.edit(view=None)`` to strip the live select; any
+    failure there is cosmetic and never affects the ``ok`` result. The message id
+    is also dropped from the RoleMenus cog's in-memory ``_menu_ids`` set (parity
+    with the cog's own on_raw_message_delete pruning).
+    """
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "message_not_found"}
+
+    rows = await bot.db_pool.fetch(
+        "DELETE FROM role_menus "
+        "WHERE message_id = $1 AND guild_id = $2 "
+        "RETURNING channel_id;",
+        message_id,
+        guild_id,
+    )
+
+    cog = bot.get_cog("RoleMenus")
+    if cog is not None and hasattr(cog, "_menu_ids"):
+        cog._menu_ids.discard(message_id)
+
+    # Best-effort: strip the select off the message. Never let a hiccup here fail
+    # the delete (the row is already gone).
+    if rows:
+        try:
+            guild = bot.get_guild(guild_id)
+            channel = (
+                guild.get_channel_or_thread(rows[0]["channel_id"])
+                if guild is not None
+                else None
+            )
+            if channel is not None:
+                msg = await channel.fetch_message(message_id)
+                await msg.edit(view=None)
+        except Exception:
+            pass
+
+    return {"ok": True}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
     "reaction_role_add": _exec_reaction_role_add,
     "reaction_role_remove": _exec_reaction_role_remove,
     "button_panel_post": _exec_button_panel_post,
     "button_panel_delete": _exec_button_panel_delete,
+    "role_menu_post": _exec_role_menu_post,
+    "role_menu_delete": _exec_role_menu_delete,
 }
 
 

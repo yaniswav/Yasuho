@@ -1313,3 +1313,441 @@ async def test_button_panel_delete_bad_message_id(button_env, message_id):
     result = await dashboard_actions._exec_button_panel_delete(bot, 100, payload)
     assert result == {"ok": False, "error": "message_not_found"}
     assert pool.delete_calls == []
+
+
+# ---------------------------------------------------------------------------
+# role_menu_post / role_menu_delete executors: re-validate against live state,
+# reuse tools.role_menus.normalize_options + the cog's RoleMenuView (post-then-
+# edit so the select's custom_id carries the real message id), persist the
+# role_menus row (guild-authoritative) and re-register the persistent view.
+# ---------------------------------------------------------------------------
+
+
+class FakeRoleMenuView:
+    """Stand-in for the cog's persistent RoleMenuView (no discord.ui needed)."""
+
+    instances = 0
+
+    def __init__(self, message_id, config):
+        FakeRoleMenuView.instances += 1
+        self.message_id = message_id
+        self.config = config
+
+
+class _FakeRoleMenusModule:
+    """Stand-in for cogs.config.rolemenus: just what the executor reuses."""
+
+    MAX_MENUS_PER_GUILD = 25
+    RoleMenuView = FakeRoleMenuView
+
+
+class FakeRMMessage:
+    """The posted menu message: supports the edit(view=...) / delete() the
+    post-then-edit custom_id trick + the best-effort strip on delete use."""
+
+    def __init__(self, message_id=999888777666555444, fail_edit=False):
+        self.id = message_id
+        self._fail_edit = fail_edit
+        self.edited = None
+        self.deleted = False
+
+    async def edit(self, **kwargs):
+        if self._fail_edit:
+            resp = types.SimpleNamespace(status=400, reason="Bad Request")
+            raise discord.HTTPException(resp, "edit failed")
+        self.edited = kwargs
+
+    async def delete(self):
+        self.deleted = True
+
+
+class FakeRMChannel:
+    def __init__(self, channel_id=555, can_send=True, message=None, fail_edit=False):
+        self.id = channel_id
+        self._can_send = can_send
+        self._message = message or FakeRMMessage(fail_edit=fail_edit)
+        self.sent = []
+
+    def permissions_for(self, member):
+        return FakePermissions(self._can_send)
+
+    async def send(self, *args, **kwargs):
+        self.sent.append((args, kwargs))
+        return self._message
+
+
+class RMGuild:
+    def __init__(self, channels=None, roles=None, has_me=True, preferred_locale="en"):
+        self.id = 100
+        self._channels = channels or {}
+        self._roles = roles or {}
+        self.me = object() if has_me else None
+        self.preferred_locale = preferred_locale
+
+    def get_channel(self, channel_id):
+        return self._channels.get(channel_id)
+
+    def get_channel_or_thread(self, channel_id):
+        return self._channels.get(channel_id)
+
+    def get_role(self, role_id):
+        return self._roles.get(role_id)
+
+
+class FakeRMCog:
+    """Stand-in for the RoleMenus cog: just the in-memory id set the executor
+    keeps in sync (so deleting a message still prunes the row)."""
+
+    def __init__(self):
+        self._menu_ids = set()
+
+
+class RMPool:
+    """Pool modelling the role_menus COUNT + INSERT ... ON CONFLICT persist and the
+    scoped DELETE ... RETURNING of the delete executor. fetchval also answers the
+    settings locale lookup (unconfigured -> None) reached via resolve_guild_locale."""
+
+    def __init__(self, count=0, delete_return=None):
+        self.count = count
+        self.inserted = []
+        self.delete_calls = []
+        self._delete_return = delete_return or []
+
+    async def fetchval(self, query, *args):
+        if "SELECT COUNT(*) FROM role_menus" in query:
+            return self.count
+        return None  # settings.get_guild locale lookup: unconfigured guild
+
+    async def execute(self, query, *args):
+        assert "INSERT INTO role_menus" in query
+        self.inserted.append(args)
+        return "INSERT 0 1"
+
+    async def fetch(self, query, *args):
+        assert "DELETE FROM role_menus" in query
+        self.delete_calls.append(args)
+        return self._delete_return
+
+
+class RoleMenuActionsPool(ActionsPool):
+    """ActionsPool (claim/finish/reconcile) PLUS the role_menus INSERT persist path,
+    so a role_menu_post can be driven end-to-end through handle_action. The COUNT
+    fetchval falls through to ActionsPool.fetchval -> None (treated as 0 menus)."""
+
+    def __init__(self):
+        super().__init__()
+        self.inserted = []
+
+    async def execute(self, query, *args):
+        if "INSERT INTO role_menus" in query:
+            self.inserted.append(args)
+            return "INSERT 0 1"
+        return await super().execute(query, *args)
+
+
+@pytest.fixture
+def rolemenu_env(monkeypatch):
+    """Patch the lazy rolemenus seam + discord.TextChannel so the executor runs
+    without the discord.py-2.x UI stack (absent on the 3.7 box)."""
+    FakeRoleMenuView.instances = 0
+    monkeypatch.setattr(
+        dashboard_actions, "_role_menus_module", lambda: _FakeRoleMenusModule
+    )
+    monkeypatch.setattr(discord, "TextChannel", FakeRMChannel)
+    yield
+
+
+def _rm_bot(pool, guild=None, cog=None):
+    guilds = {100: guild} if guild is not None else {}
+    cogs = {"RoleMenus": cog} if cog is not None else {}
+    return FakeBot(pool, guilds=guilds, cogs=cogs)
+
+
+def _menu_payload(options=None, channel_id="555", **config):
+    cfg = {
+        "options": options
+        if options is not None
+        else [{"role_id": "888", "label": "Blue"}]
+    }
+    cfg.update(config)
+    return {"channel_id": channel_id, "config": cfg}
+
+
+async def test_role_menu_post_success(rolemenu_env):
+    channel = FakeRMChannel(555)
+    guild = RMGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888), 999: FakeRole(999)},
+    )
+    cog = FakeRMCog()
+    pool = RMPool(count=0)
+    bot = _rm_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot,
+        100,
+        _menu_payload(
+            title="Colours",
+            description="Pick",
+            colour=0x5865F2,
+            exclusive=True,
+            placeholder="Choose",
+            options=[
+                {"role_id": "888", "label": "Blue", "emoji": "🔵", "description": "cool"},
+                {"role_id": "999", "label": "Red", "temp_seconds": 3600},
+            ],
+        ),
+    )
+
+    assert result == {"ok": True, "message_id": "999888777666555444", "menu": True}
+    # Posted exactly one message carrying the embed; then edited to attach the view.
+    assert len(channel.sent) == 1
+    _, kwargs = channel.sent[0]
+    assert isinstance(kwargs["embed"], discord.Embed)
+    assert channel._message.edited is not None
+    view = channel._message.edited["view"]
+    assert isinstance(view, FakeRoleMenuView)
+    # The view was built with the REAL message id (the custom_id trick) + a config
+    # normalised through tools.role_menus.normalize_options (role_ids are ints).
+    assert view.message_id == 999888777666555444
+    assert view.config["exclusive"] is True
+    assert view.config["placeholder"] == "Choose"
+    assert [o["role_id"] for o in view.config["options"]] == [888, 999]
+    # Persisted with the AUTHORITATIVE guild_id + the normalised JSONB config.
+    assert len(pool.inserted) == 1
+    args = pool.inserted[0]
+    assert args[0] == 999888777666555444  # message id
+    assert args[1] == 100  # authoritative guild id (from the claimed row)
+    assert args[2] == 555  # channel id
+    stored = json.loads(args[3])
+    assert stored["exclusive"] is True
+    assert stored["colour"] == 0x5865F2
+    assert stored["options"][0]["role_id"] == 888
+    assert stored["options"][1]["temp_seconds"] == 3600
+    # Persistent view re-registered for THIS message; cog id set kept in sync.
+    assert len(bot.added_views) == 1
+    _, mid = bot.added_views[0]
+    assert mid == 999888777666555444
+    assert 999888777666555444 in cog._menu_ids
+
+
+async def test_role_menu_post_defaults_exclusive_false_and_temp_zero(rolemenu_env):
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    await dashboard_actions._exec_role_menu_post(
+        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}])
+    )
+
+    stored = json.loads(pool.inserted[0][3])
+    assert stored["exclusive"] is False
+    assert stored["options"][0]["temp_seconds"] == 0
+    assert stored["options"][0]["emoji"] is None
+    assert "placeholder" not in stored  # only set when provided
+
+
+async def test_role_menu_post_filters_foreign_roles(rolemenu_env):
+    """A foreign/gone role is dropped; a menu with a valid one still posts."""
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})  # 999 absent
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot,
+        100,
+        _menu_payload(
+            options=[
+                {"role_id": "888", "label": "Blue"},
+                {"role_id": "999", "label": "Ghost"},
+            ]
+        ),
+    )
+
+    assert result["ok"] is True
+    stored = json.loads(pool.inserted[0][3])
+    assert [o["role_id"] for o in stored["options"]] == [888]
+
+
+async def test_role_menu_post_bad_role_all(rolemenu_env):
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={})  # no roles at all
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}])
+    )
+
+    assert result == {"ok": False, "error": "bad_role_all"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+@pytest.mark.parametrize("options", [None, [], "notalist", [{"label": "no role id"}]])
+async def test_role_menu_post_no_options(rolemenu_env, options):
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+    payload = _menu_payload()
+    if options is None:
+        payload["config"].pop("options")
+    else:
+        payload["config"]["options"] = options
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload)
+    assert result == {"ok": False, "error": "no_options"}
+    assert channel.sent == []
+
+
+async def test_role_menu_post_too_many_menus(rolemenu_env):
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RMPool(count=25)  # already at MAX_MENUS_PER_GUILD
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+
+    assert result == {"ok": False, "error": "too_many_menus"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+@pytest.mark.parametrize("channel_id", [None, "abc", "", "not-a-number"])
+async def test_role_menu_post_bad_channel_id(rolemenu_env, channel_id):
+    guild = RMGuild(channels={}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+    payload = _menu_payload()
+    if channel_id is None:
+        payload.pop("channel_id")
+    else:
+        payload["channel_id"] = channel_id
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload)
+    assert result == {"ok": False, "error": "bad_channel_id"}
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_guild_unavailable(rolemenu_env):
+    pool = RMPool()
+    bot = _rm_bot(pool, guild=None)  # bot not in guild 100
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_channel_not_found(rolemenu_env):
+    guild = RMGuild(channels={}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    assert result == {"ok": False, "error": "channel_not_found"}
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_rejects_non_text_channel(rolemenu_env):
+    guild = RMGuild(channels={555: FakeVoiceChannel(555)}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    assert result == {"ok": False, "error": "not_text_channel"}
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_missing_send_permission(rolemenu_env):
+    channel = FakeRMChannel(555, can_send=False)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    assert result == {"ok": False, "error": "missing_send_permission"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_edit_failure_deletes_and_reports(rolemenu_env):
+    msg = FakeRMMessage(fail_edit=True)
+    channel = FakeRMChannel(555, message=msg)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+
+    assert result == {"ok": False, "error": "post_failed"}
+    # The orphan (view-less) message is cleaned up; nothing persisted or registered.
+    assert msg.deleted is True
+    assert pool.inserted == []
+    assert bot.added_views == []
+
+
+async def test_role_menu_post_full_flow_via_handle_action(rolemenu_env):
+    """End-to-end through the queue: claim -> post executor -> done + result."""
+    channel = FakeRMChannel(555)
+    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    pool = RoleMenuActionsPool()
+    pool.add(1, guild_id=100, kind="role_menu_post", payload=_menu_payload())
+    bot = FakeBot(pool, guilds={100: guild})
+
+    status = await dashboard_actions.handle_action(bot, 1)
+
+    assert status == "done"
+    assert pool.rows[1]["result"]["ok"] is True
+    assert pool.rows[1]["result"]["menu"] is True
+    assert len(channel.sent) == 1
+    assert len(pool.inserted) == 1
+    assert len(bot.added_views) == 1
+
+
+async def test_role_menu_delete_scoped(rolemenu_env):
+    strip = FakeRMMessage()
+    channel = FakeRMChannel(555)
+
+    async def _fetch_message(mid):
+        return strip
+
+    channel.fetch_message = _fetch_message
+    guild = RMGuild(channels={555: channel})
+    cog = FakeRMCog()
+    cog._menu_ids.add(777)
+    pool = RMPool(delete_return=[{"channel_id": 555}])
+    bot = _rm_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_role_menu_delete(
+        bot, 100, {"message_id": "777"}
+    )
+
+    assert result == {"ok": True}
+    # Guild-scoped delete with the AUTHORITATIVE guild_id (100).
+    assert pool.delete_calls == [(777, 100)]
+    # Best-effort strip of the live select + pruned from the cog's id set.
+    assert strip.edited == {"view": None}
+    assert 777 not in cog._menu_ids
+
+
+async def test_role_menu_delete_no_rows_is_still_ok(rolemenu_env):
+    guild = RMGuild(channels={})
+    pool = RMPool(delete_return=[])  # nothing matched (e.g. wrong guild)
+    bot = _rm_bot(pool, guild)
+    result = await dashboard_actions._exec_role_menu_delete(
+        bot, 100, {"message_id": "777"}
+    )
+    assert result == {"ok": True}
+    assert pool.delete_calls == [(777, 100)]
+
+
+@pytest.mark.parametrize("message_id", [None, "abc", "", "not-a-number"])
+async def test_role_menu_delete_bad_message_id(rolemenu_env, message_id):
+    pool = RMPool()
+    bot = _rm_bot(pool, RMGuild())
+    payload = {} if message_id is None else {"message_id": message_id}
+    result = await dashboard_actions._exec_role_menu_delete(bot, 100, payload)
+    assert result == {"ok": False, "error": "message_not_found"}
+    assert pool.delete_calls == []
+
+
+def test_role_menu_executors_are_registered():
+    assert "role_menu_post" in dashboard_actions._EXECUTORS
+    assert "role_menu_delete" in dashboard_actions._EXECUTORS
