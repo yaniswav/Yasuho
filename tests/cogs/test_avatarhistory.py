@@ -43,6 +43,48 @@ async def test_record_respects_tracking_opt_out(monkeypatch):
     assert calls == [(42, avatarhistory.TRACKING_PREF_KEY, True)]
 
 
+async def test_capture_banner_skips_fetch_user_when_opted_out(monkeypatch):
+    """The opt-out check is a warm cached read; it must run BEFORE the
+    uncached ``fetch_user`` REST call, so an opted-out user costs zero
+    network round-trips."""
+    calls = []
+
+    async def _get_user(pool, user_id, key, default):
+        calls.append((user_id, key, default))
+        return False
+
+    async def _fetch_user(user_id):
+        raise AssertionError("fetch_user must not be called when opted out")
+
+    monkeypatch.setattr(avatarhistory.settings, "get_user", _get_user)
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    cog.bot = types.SimpleNamespace(db_pool=object(), fetch_user=_fetch_user)
+
+    await cog.capture_banner(types.SimpleNamespace(id=99))
+
+    assert calls == [(99, avatarhistory.TRACKING_PREF_KEY, True)]
+
+
+async def test_capture_banner_fetches_user_when_opted_in(monkeypatch):
+    async def _get_user(pool, user_id, key, default):
+        return True
+
+    fetched_ids = []
+    fake_user = types.SimpleNamespace(banner=None)
+
+    async def _fetch_user(user_id):
+        fetched_ids.append(user_id)
+        return fake_user
+
+    monkeypatch.setattr(avatarhistory.settings, "get_user", _get_user)
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    cog.bot = types.SimpleNamespace(db_pool=object(), fetch_user=_fetch_user)
+
+    await cog.capture_banner(types.SimpleNamespace(id=99))
+
+    assert fetched_ids == [99]
+
+
 def test_avatar_tracking_is_available_in_user_preferences():
     pref = next(
         item for item in PREFS if item.key == avatarhistory.TRACKING_PREF_KEY

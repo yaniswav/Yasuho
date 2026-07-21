@@ -9,7 +9,7 @@ from discord.ext import commands
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageSequence
 from pyfiglet import figlet_format
 
-from tools import interactions
+from tools import interactions, rendering
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.http import TIMEOUT, get_session
@@ -170,7 +170,7 @@ class Fun(commands.Cog):
 
         async with ctx.typing():
             try:
-                final_gif = await self.bot.loop.run_in_executor(None, _render)
+                final_gif = await rendering.run_image_job(self.bot, _render)
             except Exception:
                 log.exception("Failed to render hug gif")
                 return await ctx.send(_("Sorry, I couldn't make the hug image."))
@@ -317,11 +317,16 @@ class Fun(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def ascii(self, ctx, *, msg: str):
         "Convert text to ASCII art."
         if not (ctx.invoked_subcommand):
             if msg:
-                msg = str(figlet_format(msg.strip(), font="big"))
+                msg = str(
+                    await rendering.run_image_job(
+                        self.bot, figlet_format, msg.strip(), font="big"
+                    )
+                )
                 if len(msg) > 2000:
                     await ctx.send(_("*Message too long.*"))
                 else:

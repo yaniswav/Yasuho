@@ -10,6 +10,7 @@ import types
 
 import discord
 
+import cogs.config.welcome as welcome_module
 from cogs.config.welcome import Welcome, WelcomeStatusView, _default_config
 
 
@@ -126,3 +127,46 @@ async def test_welcome_status_command_is_pure_read(fake_pool):
     await cog.welcome_status.callback(cog, ctx)
     execs = [c for c in fake_pool.calls if c[0] == "execute"]
     assert execs == []
+
+
+# ---------------------------------------------------------------------------
+# Welcome card rendering: must go through the shared image-render gate
+# (tools.rendering.run_image_job), not a raw run_in_executor, so a join burst
+# can't spawn unbounded concurrent Pillow renders.
+# ---------------------------------------------------------------------------
+class _FakeAvatar:
+    def replace(self, size):
+        return self
+
+    async def read(self):
+        return b"avatar-bytes"
+
+
+class _FakeJoiningMember:
+    def __init__(self):
+        self.display_avatar = _FakeAvatar()
+        self.display_name = "Newbie"
+        self.guild = types.SimpleNamespace(member_count=42)
+
+
+async def test_render_welcome_card_routes_through_run_image_job(monkeypatch):
+    calls = []
+
+    async def _fake_run_image_job(bot, function, *args, **kwargs):
+        calls.append((bot, function, args, kwargs))
+        return "rendered-buf"
+
+    monkeypatch.setattr(welcome_module.rendering, "run_image_job", _fake_run_image_job)
+
+    bot = types.SimpleNamespace()
+    cog = Welcome(bot)
+    result = await cog.render_welcome_card(_FakeJoiningMember())
+
+    assert result == "rendered-buf"
+    assert len(calls) == 1
+    bot_arg, function, args, kwargs = calls[0]
+    assert bot_arg is bot
+    assert function is welcome_module.welcome_card.render_card
+    assert args[0] == b"avatar-bytes"
+    assert args[1] == "Newbie"
+    assert args[2] == 42

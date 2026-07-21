@@ -256,8 +256,18 @@ class AvatarHistory(commands.Cog):
             )
 
     async def capture_banner(self, user):
-        """Best-effort banner capture (Discord never pushes banner changes)."""
+        """Best-effort banner capture (Discord never pushes banner changes).
+
+        The opt-out check is a warm cached read, so it runs before the
+        uncached `fetch_user` REST call - an opted-out user costs zero
+        network round-trips.
+        """
         try:
+            tracking_enabled = await settings.get_user(
+                self.bot.db_pool, user.id, TRACKING_PREF_KEY, True
+            )
+            if not tracking_enabled:
+                return
             fetched = await self.bot.fetch_user(user.id)
             if fetched.banner:
                 await self._record(user.id, None, "banner", fetched.banner)

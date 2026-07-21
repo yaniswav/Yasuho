@@ -452,6 +452,12 @@ async def _exec_button_panel_post(bot, guild_id, payload):
         role = guild.get_role(role_id)
         if role is None:
             return {"ok": False, "error": "bad_role"}
+        # Mirror the /buttonrole builder's assignability guard (BuilderView.
+        # _can_assign) so a dashboard write can't persist a button for a
+        # dead/dangerous role: @everyone, an integration-managed role, or one
+        # at/above our own top role.
+        if role.is_default() or role.managed or not (role < me.top_role):
+            return {"ok": False, "error": "role_not_assignable"}
         if role_id in seen_roles:
             continue  # one button per role, mirroring the primary key
         seen_roles.add(role_id)
@@ -951,12 +957,14 @@ async def reconcile(bot):
     """
     pool = bot.db_pool
 
-    # (1) Expire the too-old. Bound age is a fixed constant, not user input.
+    # (1) Expire the too-old. Bound age is a fixed constant, not user input,
+    # but it's still passed as a bound parameter rather than interpolated.
     await pool.execute(
         "UPDATE dashboard_actions "
-        "SET status = 'failed', result = $1::jsonb, updated_at = now() "
+        "SET status = 'failed', result = $2::jsonb, updated_at = now() "
         "WHERE status IN ('pending', 'running') "
-        "AND created_at < now() - INTERVAL '%d minutes'" % _STALE_ACTION_MINUTES,
+        "AND created_at < now() - $1 * INTERVAL '1 minute'",
+        _STALE_ACTION_MINUTES,
         json.dumps({"ok": False, "error": "expired"}),
     )
 

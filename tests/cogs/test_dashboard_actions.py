@@ -80,7 +80,7 @@ class ActionsPool:
                 row["result"] = json.loads(result_json)
             return "UPDATE 1"
         if "created_at < now()" in query:  # reconcile: expire the too-old
-            (result_json,) = args
+            _stale_minutes, result_json = args
             for row in self.rows.values():
                 if row["status"] in ("pending", "running") and row["stale"]:
                     row["status"] = "failed"
@@ -922,9 +922,32 @@ class _FakeEmbedCreator:
 
 
 class BRRole:
-    def __init__(self, role_id, name="Role"):
+    """Stand-in for discord.Role: id/name plus just enough of the
+    assignability surface (is_default/managed/position ordering) for the
+    dashboard button-panel executor's guard to exercise."""
+
+    def __init__(self, role_id, name="Role", *, default=False, managed=False, position=1):
         self.id = role_id
         self.name = name
+        self.managed = managed
+        self.position = position
+        self._default = default
+
+    def is_default(self):
+        return self._default
+
+    def __lt__(self, other):
+        return self.position < other.position
+
+    def __ge__(self, other):
+        return self.position >= other.position
+
+
+class BRMe:
+    """Stand-in for guild.me: only needs a top_role to compare against."""
+
+    def __init__(self, top_role_position=1000):
+        self.top_role = BRRole(0, "Bot", position=top_role_position)
 
 
 class BRGuild:
@@ -932,7 +955,7 @@ class BRGuild:
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
-        self.me = object() if has_me else None
+        self.me = BRMe() if has_me else None
 
     def get_channel(self, channel_id):
         return self._channels.get(channel_id)
@@ -1226,6 +1249,28 @@ async def test_button_panel_post_bad_role(button_env):
     bot = _br_bot(pool, guild)
     result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
     assert result == {"ok": False, "error": "bad_role"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        BRRole(888, "@everyone", default=True),
+        BRRole(888, "Integration", managed=True),
+        BRRole(888, "Too High", position=2000),  # >= bot's top_role (1000)
+    ],
+    ids=["everyone", "managed", "above_bot_top_role"],
+)
+async def test_button_panel_post_rejects_unassignable_role(button_env, role):
+    """Mirrors the /buttonrole builder's guard: a dashboard write can't persist
+    a dead/dangerous role button (@everyone, managed, or >= our top role)."""
+    channel = FakeTextChannel(channel_id=555)
+    guild = BRGuild(channels={555: channel}, roles={888: role})
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    assert result == {"ok": False, "error": "role_not_assignable"}
     assert channel.sent == []
     assert pool.inserted == []
 

@@ -4,7 +4,7 @@ import random
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, interactions, settings, welcome_card
+from tools import embed_creator, interactions, rendering, settings, welcome_card
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import AuthorLayoutView, LocaleModal
@@ -690,8 +690,8 @@ class Welcome(commands.Cog):
         colour = random_colour()
         bg_rgb = ((colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF)
 
-        return await self.bot.loop.run_in_executor(
-            None,
+        return await rendering.run_image_job(
+            self.bot,
             welcome_card.render_card,
             avatar_bytes,
             display_name,

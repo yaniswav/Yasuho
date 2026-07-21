@@ -21,6 +21,7 @@ from packaging.requirements import Requirement
 # Mirror requirements.txt; update here when a runtime top-level dep is added.
 RUNTIME_ROOTS: dict[str, set[str]] = {
     "aiohttp": set(),
+    "aiodns": set(),
     "async-timeout": set(),
     "asyncpg": set(),
     "discord.py": set(),
