@@ -36,6 +36,7 @@ from .queries import (
     SEARCH_QUERY,
     VIEWER_QUERY,
 )
+from .throttle import GLOBAL_LIMIT, GLOBAL_WINDOW, AniListThrottle
 from tools import crypto
 from tools.config_loader import config_loader
 from tools.http import TIMEOUT, get_session
@@ -87,6 +88,11 @@ class AniListBase:
     def __init__(self, bot):
         self.bot = bot
 
+        # Bounds ONLY the user-driven interactive surface (lookups + button
+        # clicks routed through _graphql). Separate from the pollers' own budget:
+        # they never call this _graphql, so a burst here cannot starve them.
+        self._throttle = AniListThrottle()
+
         try:
             self.client_id = config_loader.get("AniList", "clientId")
         except Exception:
@@ -101,7 +107,26 @@ class AniListBase:
     # Helpers
     # ------------------------------------------------------------------
     async def _graphql(self, query, variables, token=None):
-        """POST a GraphQL request to AniList. Returns the parsed JSON or None."""
+        """POST a GraphQL request to AniList. Returns the parsed JSON or None.
+
+        User-driven ONLY: the airing / feed / chapter pollers use their own
+        authenticated fetch, never this method. A process-wide interactive ceiling
+        (see :class:`~cogs.anilist.throttle.AniListThrottle`) is applied here so no
+        burst of lookups or button clicks can starve the pollers' share of the
+        shared per-IP 429 budget - a dropped call never reaches the wire. A 429
+        response is logged distinctly and counted so the operator can correlate
+        interactive throttling with poller embargoes; the pollers' own embargo
+        behaviour is untouched.
+        """
+
+        if not self._throttle.allow_global():
+            log.warning(
+                "AniList interactive ceiling reached (%d per %ds); dropping a "
+                "user-driven GraphQL call to protect the pollers",
+                GLOBAL_LIMIT,
+                int(GLOBAL_WINDOW),
+            )
+            return None
 
         headers = {
             "Content-Type": "application/json",
@@ -117,6 +142,13 @@ class AniListBase:
                 headers=headers,
                 timeout=TIMEOUT,
             ) as r:
+                if r.status == 429:
+                    self._throttle.note_throttled()
+                    log.warning(
+                        "AniList returned HTTP 429 on an interactive request; the "
+                        "shared per-IP budget is under pressure and the airing / "
+                        "feed / chapter pollers may be embargoed"
+                    )
                 return await r.json()
         except Exception:
             log.exception("AniList GraphQL request failed")

@@ -1501,6 +1501,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
     @commands.hybrid_command(name="search")
     @commands.guild_only()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     @app_commands.describe(
         query="What to search for - a song, album, artist or playlist."
     )

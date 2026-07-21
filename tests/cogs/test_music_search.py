@@ -573,3 +573,20 @@ async def test_maybe_play_picker_on_but_no_matches_reports(fake_pool):
     (content, kwargs) = ctx.sends[-1]
     assert "view" not in kwargs
     assert content is not None
+
+
+# ---------------------------------------------------------------------------
+# /search shares the shared Lavalink node, so it carries a per-user cooldown
+# matching the sibling music / AniList lookup convention (1 use / 5s / user).
+# ---------------------------------------------------------------------------
+def test_search_command_has_per_user_cooldown():
+    from discord.ext import commands
+
+    from cogs.music.music import Music
+
+    cmd = Music.search_cmd
+    cooldown = cmd._buckets._cooldown
+    assert cooldown is not None, "/search must carry a cooldown"
+    assert cooldown.rate == 1
+    assert cooldown.per == 5.0
+    assert cmd._buckets._type is commands.BucketType.user

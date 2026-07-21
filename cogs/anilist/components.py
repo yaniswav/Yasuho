@@ -26,6 +26,35 @@ from tools.views import AuthorView, LocaleModal
 log = logging.getLogger(__name__)
 
 
+async def _deny_if_throttled(cog, interaction):
+    """Refuse an interactive AniList action when the per-user/guild quota is spent.
+
+    Guards the button and select callbacks that issue an AniList GraphQL request,
+    so one member (or one hyped guild) is throttled BEFORE the expensive fetch and
+    the airing / feed / chapter pollers keep their share of the shared per-IP
+    budget. Sends a terse ephemeral 'slow down' and returns ``True`` when the
+    caller should stop; returns ``False`` (having consumed a slot) when it may
+    proceed. Best-effort: a missing throttle (older wiring) never blocks a click.
+    """
+
+    throttle = getattr(cog, "_throttle", None)
+    if throttle is None:
+        return False
+    if throttle.allow_interactive(interaction.user.id, interaction.guild_id):
+        return False
+    try:
+        await interaction.response.send_message(
+            _(
+                "Slow down a little - too many AniList requests right now. "
+                "Give it a few seconds and try again."
+            ),
+            ephemeral=True,
+        )
+    except Exception:
+        pass
+    return True
+
+
 # ----------------------------------------------------------------------
 # Interactive components (discord.ui)
 # ----------------------------------------------------------------------
@@ -54,6 +83,8 @@ class ResultSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             # Remember the menu we came from so the MediaView can offer "Back".
             parent_view = self.view
             parent_content = (
@@ -116,6 +147,8 @@ class SeasonView(AuthorView):
 
     async def _change_season(self, interaction, *, forward):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             await interaction.response.defer()
             season, year = _step_season(self.season, self.year, forward=forward)
             data = await self.cog._graphql(
@@ -191,6 +224,8 @@ class EditSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
@@ -458,6 +493,8 @@ class SeasonSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
@@ -544,6 +581,8 @@ class OnListSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             media = self.candidates.get(self.values[0])
             if not media:
                 return await interaction.response.send_message(
@@ -612,6 +651,8 @@ class StatusSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             await interaction.response.defer()
             await self.cog._apply_edit(
                 interaction, self.author_id, self.media, "status", self.values[0]
@@ -1081,6 +1122,8 @@ class MediaView(AuthorView):
     @discord.ui.button(label="📊 Stats", style=discord.ButtonStyle.secondary, row=0)
     async def stats_button(self, interaction, button):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             viewer_entry, logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
             )
@@ -1135,6 +1178,8 @@ class MediaView(AuthorView):
     @discord.ui.button(label="✅ Complete", style=discord.ButtonStyle.success, row=2)
     async def complete_button(self, interaction, button):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             await interaction.response.defer()
             await self.cog._apply_edit(
                 interaction, self.author_id, self.media, "complete", None
@@ -1151,6 +1196,8 @@ class MediaView(AuthorView):
     @discord.ui.button(label="✏️ Edit", style=discord.ButtonStyle.primary, row=2)
     async def edit_button(self, interaction, button):
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             # Pre-load the viewer's current entry so the modal opens pre-filled.
             viewer_entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
@@ -1178,6 +1225,8 @@ class MediaView(AuthorView):
         """Bump the viewer's progress by ``delta``, clamped to [0, max]."""
 
         try:
+            if await _deny_if_throttled(self.cog, interaction):
+                return
             await interaction.response.defer()
             entry, _logged_in = await self.cog._viewer_entry(
                 interaction.user.id, self.media.get("id")
