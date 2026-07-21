@@ -326,8 +326,11 @@ async def main():
     discord.utils.setup_logging(level=logging.INFO)
     _attach_file_logging()
     enable_mobile_status()
+    # max_size=30: local Postgres allows up to 100 connections, so this leaves
+    # ample headroom for psql/backup/other clients while giving the bot more
+    # room than the old ceiling of 20 before callers start queuing for a slot.
     async with asyncpg.create_pool(
-        POSTGRESQL_URI, min_size=5, max_size=20, command_timeout=60
+        POSTGRESQL_URI, min_size=5, max_size=30, command_timeout=60
     ) as pool:
         async with Yasuho(db_pool=pool) as bot:
             await bot.start(TOKEN)

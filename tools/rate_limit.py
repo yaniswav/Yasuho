@@ -51,6 +51,10 @@ class FixedWindowRateLimiter:
         self._clock = clock
         # value = [window_id, count, logged] - a small mutable list per key.
         self._buckets: BoundedLRU = BoundedLRU(capacity)
+        # Instrumentation counters (lifetime for the process), read by
+        # :meth:`stats` for the bot-wide periodic load line.
+        self._hit_count = 0
+        self._reject_count = 0
 
     def check(self, key) -> tuple[bool, bool]:
         """Record one request for ``key`` and decide whether to allow it.
@@ -69,7 +73,9 @@ class FixedWindowRateLimiter:
         self._buckets[key] = state  # (re)insert -> marks recent, evicts overflow
 
         if state[1] <= self._limit:
+            self._hit_count += 1
             return True, False
+        self._reject_count += 1
         should_log = not state[2]
         state[2] = True
         return False, should_log
@@ -77,3 +83,14 @@ class FixedWindowRateLimiter:
     def __len__(self) -> int:
         """Number of distinct keys currently tracked (for tests/introspection)."""
         return len(self._buckets)
+
+    def stats(self) -> dict[str, int]:
+        """Cheap snapshot for periodic logging: lifetime hits/rejections + the
+        number of distinct keys currently tracked. Mirrors
+        :meth:`tools.quotas.SlidingWindowQuota.stats`; all O(1).
+        """
+        return {
+            "hits": self._hit_count,
+            "rejections": self._reject_count,
+            "tracked": len(self._buckets),
+        }

@@ -105,3 +105,33 @@ def test_eviction_grants_a_fresh_window():
 def test_invalid_config_rejected(kwargs):
     with pytest.raises(ValueError):
         FixedWindowRateLimiter(**kwargs)
+
+
+# --- stats(): lifetime counters for the bot-wide periodic load line --------
+
+
+def test_stats_starts_at_zero():
+    rl = _limiter(_Clock(0.0))
+    assert rl.stats() == {"hits": 0, "rejections": 0, "tracked": 0}
+
+
+def test_stats_counts_hits_and_rejections_lifetime():
+    clock = _Clock(0.0)
+    rl = _limiter(clock, limit=1)
+    rl.check("a")  # hit
+    rl.check("a")  # rejection
+    rl.check("a")  # rejection (should_log fires once, but this still counts)
+    rl.check("b")  # hit (different key, own budget)
+    stats = rl.stats()
+    assert stats["hits"] == 2
+    assert stats["rejections"] == 2
+    assert stats["tracked"] == 2
+
+
+def test_stats_tracked_matches_len():
+    clock = _Clock(0.0)
+    rl = _limiter(clock, limit=5)
+    rl.check("a")
+    rl.check("b")
+    rl.check("c")
+    assert rl.stats()["tracked"] == len(rl) == 3
