@@ -27,6 +27,7 @@ import asyncio
 import logging
 import time
 import typing
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands, tasks
@@ -97,6 +98,7 @@ from .feed_views import (
 from .helpers import API_URL
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from tools import anilist_feed as af
+from tools import anilist_feed_coalesce as afc
 from tools import i18n
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
@@ -130,6 +132,11 @@ REQUEST_SPACING = 2.0
 
 # Auto-disable a feed after this many consecutive delivery failures.
 MAX_DELIVERY_FAILURES = 10
+
+# Upper bound on dead coalescing-card rows swept per poll tick. The sweep rides
+# the poll tick (no new timer) and this cap keeps it O(1)-ish: a huge backlog
+# drains over several ticks instead of one unbounded DELETE.
+COALESCE_PRUNE_BATCH = 500
 
 # AniList's ``userId_in`` array filter accepts up to ~10k ids. The poller already
 # chunks the followed-id union by ``PER_PAGE`` (50) per request, so no single
@@ -525,6 +532,13 @@ class AniListFeed(commands.Cog):
         if now < self._embargo_until:
             return  # still under a 429 backoff
 
+        # Coalescing-card maintenance. Drop rows whose live card is certainly
+        # dead (untouched past AGE_CAP + PRUNE_GRACE) so the table stays ~1 row
+        # per active reading session. Bounded, index-served, DB-only and best
+        # effort - it rides this tick (no new timer) and is NOT part of the
+        # cursor/dedup machinery below, which stays byte-identical.
+        await self._prune_coalesce_posts()
+
         feeds = await self._load_feeds()
         if not feeds:
             return
@@ -664,11 +678,10 @@ class AniListFeed(commands.Cog):
             with i18n.locale(loc):
                 full, digest = af.plan_posts(items)
                 for activity in full:
-                    await channel.send(
-                        allowed_mentions=discord.AllowedMentions.none(),
-                        **self._render_activity(activity),
-                    )
+                    await self._deliver_card(feed["guild_id"], channel, activity)
                 if digest:
+                    # The digest (the busy-tick remainder) is never coalesced: it
+                    # is a fresh, presentational summary and holds no record.
                     await channel.send(
                         allowed_mentions=discord.AllowedMentions.none(),
                         **self._render_digest(digest),
@@ -695,6 +708,179 @@ class AniListFeed(commands.Cog):
         else:
             if feed["fail_count"]:
                 await self._reset_failure(feed)
+
+    # ------------------------------------------------------------------
+    # Coalescing delivery. A reader who saves ch.50 then ch.54 on the same
+    # manga emits two AniList activities where the second supersedes the first;
+    # rather than post two cards we fold consecutive same-status progress
+    # increments into ONE card, EDITED in place (a Discord edit is silent = zero
+    # notification), within a session window. The pure decision lives in
+    # tools.anilist_feed_coalesce; here is the thin I/O shell around it. Each
+    # channel keeps its OWN record + message id, so fan-out edits independently.
+    # ------------------------------------------------------------------
+    async def _deliver_card(self, guild_id, channel, activity):
+        """Deliver one full activity, coalescing consecutive list-progress saves.
+
+        A coalescible list-progress activity folds into the live card for its
+        ``(channel, user, media)`` slot when
+        :func:`~tools.anilist_feed_coalesce.decide_delivery` says EDIT - a silent
+        in-place edit whose freshly rebuilt :class:`ActivityCard` carries the
+        LATEST activity id (so the Like/Reply/Add buttons act on it) - otherwise
+        a fresh card is posted and (re)recorded. Text posts, progress-less list
+        activities and any activity missing a user/media key never coalesce: they
+        post fresh and hold no record. A 404 on the edit (the card was deleted in
+        THIS channel) falls back to a fresh post here only, overwriting the stale
+        record; other channels' rows are untouched.
+        """
+
+        user_id = activity.get("user_id")
+        media_id = (activity.get("media") or {}).get("id")
+
+        # Only a list-progress activity with a full (user, media) key can key a
+        # record; everything else posts fresh and is never tracked.
+        if not afc.is_coalescible(activity) or user_id is None or media_id is None:
+            await channel.send(
+                allowed_mentions=discord.AllowedMentions.none(),
+                **self._render_activity(activity),
+            )
+            return
+
+        record = await self._load_coalesce_record(channel.id, user_id, media_id)
+        decision = afc.decide_delivery(
+            activity, record, datetime.now(timezone.utc)
+        )
+
+        if decision.action == afc.EDIT:
+            try:
+                await channel.get_partial_message(decision.message_id).edit(
+                    allowed_mentions=discord.AllowedMentions.none(),
+                    **self._render_activity(activity),
+                )
+            except discord.NotFound:
+                # The live card was deleted in THIS channel: fall through to a
+                # fresh post + record overwrite. Other channels stay untouched.
+                log.info(
+                    "AniList feed: coalescing card %s gone in channel %s; "
+                    "reposting",
+                    decision.message_id,
+                    channel.id,
+                )
+            else:
+                await self._touch_coalesce_record(
+                    channel.id, user_id, media_id, activity
+                )
+                return
+
+        message = await channel.send(
+            allowed_mentions=discord.AllowedMentions.none(),
+            **self._render_activity(activity),
+        )
+        await self._record_coalesce_post(
+            guild_id, channel.id, user_id, media_id, message.id, activity
+        )
+
+    async def _load_coalesce_record(self, channel_id, user_id, media_id):
+        """Load the live coalescing record for a slot, or ``None``.
+
+        Reads straight from ``anilist_feed_posts`` (never an in-memory cache), so
+        an edit resumes across a restart: the message id lives in the table.
+        """
+
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT message_id, status, last_progress, created_at, updated_at "
+            "FROM anilist_feed_posts "
+            "WHERE channel_id = $1 AND user_id = $2 AND media_id = $3;",
+            channel_id,
+            user_id,
+            media_id,
+        )
+        if row is None:
+            return None
+        return afc.CoalesceRecord(
+            message_id=row["message_id"],
+            status=row["status"],
+            last_progress=row["last_progress"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+    async def _record_coalesce_post(
+        self, guild_id, channel_id, user_id, media_id, message_id, activity
+    ):
+        """Upsert the coalescing row for a freshly posted card (both clocks reset).
+
+        A new card starts a new session, so BOTH ``created_at`` (the AGE_CAP
+        clock) and ``updated_at`` (the SESSION_GAP clock) are set to now, even
+        when this overwrites a stale row for the same slot.
+        """
+
+        await self.bot.db_pool.execute(
+            "INSERT INTO anilist_feed_posts "
+            "(guild_id, channel_id, user_id, media_id, message_id, activity_id, "
+            " last_progress, status, created_at, updated_at) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now()) "
+            "ON CONFLICT (channel_id, user_id, media_id) DO UPDATE SET "
+            "guild_id = EXCLUDED.guild_id, "
+            "message_id = EXCLUDED.message_id, "
+            "activity_id = EXCLUDED.activity_id, "
+            "last_progress = EXCLUDED.last_progress, "
+            "status = EXCLUDED.status, "
+            "created_at = now(), "
+            "updated_at = now();",
+            guild_id,
+            channel_id,
+            user_id,
+            media_id,
+            message_id,
+            activity.get("id"),
+            activity.get("progress"),
+            activity.get("status"),
+        )
+
+    async def _touch_coalesce_record(self, channel_id, user_id, media_id, activity):
+        """Advance the coalescing row after a silent in-place edit.
+
+        The card keeps its message and its first-post time (the AGE_CAP clock),
+        so only ``activity_id`` / ``last_progress`` / ``status`` and the
+        SESSION_GAP clock (``updated_at``) move forward.
+        """
+
+        await self.bot.db_pool.execute(
+            "UPDATE anilist_feed_posts SET "
+            "activity_id = $4, last_progress = $5, status = $6, updated_at = now() "
+            "WHERE channel_id = $1 AND user_id = $2 AND media_id = $3;",
+            channel_id,
+            user_id,
+            media_id,
+            activity.get("id"),
+            activity.get("progress"),
+            activity.get("status"),
+        )
+
+    async def _prune_coalesce_posts(self):
+        """Delete coalescing rows whose card is certainly dead (bounded sweep).
+
+        A row is dead once its last edit (``updated_at``) is older than
+        ``AGE_CAP + PRUNE_GRACE``: the session has lapsed (the card can no longer
+        be edited) and an active card is touched at least every ``SESSION_GAP``.
+        Rides the ``anilist_feed_posts_prune_idx`` and caps each sweep at
+        :data:`COALESCE_PRUNE_BATCH` rows. Best-effort: a failure here must never
+        disturb the poll.
+        """
+
+        dead_after = afc.AGE_CAP + afc.PRUNE_GRACE
+        try:
+            await self.bot.db_pool.execute(
+                "DELETE FROM anilist_feed_posts WHERE ctid IN ("
+                "  SELECT ctid FROM anilist_feed_posts "
+                "  WHERE updated_at < now() - ($1 * interval '1 second') "
+                "  ORDER BY updated_at LIMIT $2"
+                ");",
+                dead_after,
+                COALESCE_PRUNE_BATCH,
+            )
+        except Exception:
+            log.exception("AniList feed: coalescing-card prune failed")
 
     # ------------------------------------------------------------------
     # Rendering - the send-kwargs boundary. Both return a Components V2

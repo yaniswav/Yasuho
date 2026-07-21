@@ -673,6 +673,37 @@ CREATE TABLE IF NOT EXISTS anilist_channel_subs (
     PRIMARY KEY (guild_id, channel_id, media_id)
 );
 
+-- Coalescing state for the AniList activity feed: at most ONE live card per
+-- (feed channel, AniList user, media). AniList emits a separate activity every
+-- time a user saves progress, so a reader who saves ch.50 then ch.54 on the same
+-- manga produces two activities where the second supersedes the first. The
+-- delivery layer folds consecutive same-status progress increments into a SINGLE
+-- card that is EDITED in place (a Discord edit is silent = zero notification),
+-- keyed by this table. Two clocks bound the fold, both pure comparisons in
+-- tools.anilist_feed_coalesce: ``updated_at`` is the last-edit time (the
+-- SESSION_GAP = 30 min clock - a longer quiet gap opens a fresh card) and doubles
+-- as the sweep's prune key; ``created_at`` is the first-post time (the AGE_CAP =
+-- 6 h clock - an unbroken session still gets a fresh card once the current one is
+-- this old). ``last_progress`` caches the raw AniList progress of the newest fold
+-- and ``status`` the list status being coalesced, so a backwards jump or a status
+-- change also opens a fresh card. ``activity_id`` is the newest activity folded
+-- in (the card's interactive buttons carry it). One row per slot; lookups ride
+-- the PK, the sweep rides the updated_at index.  cogs/anilist/feed.py
+CREATE TABLE IF NOT EXISTS anilist_feed_posts (
+    guild_id      BIGINT      NOT NULL,
+    channel_id    BIGINT      NOT NULL,                       -- feed text channel OR thread id
+    user_id       BIGINT      NOT NULL,                       -- AniList numeric user id
+    media_id      INTEGER     NOT NULL,                       -- AniList numeric media id
+    message_id    BIGINT      NOT NULL,                       -- the live coalescing card's message
+    activity_id   BIGINT      NOT NULL,                       -- newest AniList activity folded in
+    last_progress TEXT,                                       -- raw AniList progress of the newest fold
+    status        TEXT,                                       -- AniList list status the card coalesces
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),         -- first-post time (AGE_CAP clock)
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),         -- last-edit time (SESSION_GAP clock + prune key)
+    PRIMARY KEY (channel_id, user_id, media_id)
+);
+CREATE INDEX IF NOT EXISTS anilist_feed_posts_prune_idx ON anilist_feed_posts (updated_at);
+
 -- ============================================================
 -- Data retention: delayed purge of departed guilds
 -- ============================================================
@@ -939,6 +970,15 @@ BEGIN
     ) THEN
         ALTER TABLE anilist_channel_subs
             ADD CONSTRAINT anilist_subs_feed_fk
+            FOREIGN KEY (guild_id, channel_id)
+            REFERENCES anilist_feeds(guild_id, channel_id)
+            ON DELETE CASCADE NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_feed_posts_feed_fk'
+    ) THEN
+        ALTER TABLE anilist_feed_posts
+            ADD CONSTRAINT anilist_feed_posts_feed_fk
             FOREIGN KEY (guild_id, channel_id)
             REFERENCES anilist_feeds(guild_id, channel_id)
             ON DELETE CASCADE NOT VALID;
