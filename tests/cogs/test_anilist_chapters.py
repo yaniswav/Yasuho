@@ -1180,18 +1180,27 @@ async def test_fan_out_points_each_recipient_at_their_own_language():
     assert posts == [(900, "fr-386"), (901, "en-386")]
 
 
-async def test_guild_language_maps_the_guild_locale_and_memoizes(monkeypatch):
-    # A channel post has no single reader, so it follows the guild locale - mapped
-    # to a MangaDex code, English whenever that locale is not one MangaDex serves.
+def _guild_locale_cog(monkeypatch, stored, reads=None):
+    """A bare cog whose guild ``locale`` setting reads come from ``stored``."""
+
     cog = _language_cog()
-    cog.bot = type("B", (), {"get_guild": staticmethod(lambda gid: gid)})()
-    resolved = []
+    cog.bot = type("B", (), {"db_pool": object()})()
 
-    async def _locale(_bot, guild):
-        resolved.append(guild)
-        return {1: "fr", 2: "el", 3: "eo"}[guild]
+    async def _get_guild(_pool, guild_id, key, default=None):
+        assert key == "locale"
+        if reads is not None:
+            reads.append(guild_id)
+        return stored.get(guild_id, default)
 
-    monkeypatch.setattr(ch.i18n, "resolve_guild_locale", _locale)
+    monkeypatch.setattr(ch.settings, "get_guild", _get_guild)
+    return cog
+
+
+async def test_guild_language_maps_the_explicit_guild_setting_and_memoizes(monkeypatch):
+    # A channel post has no single reader, so it follows the guild locale THE SERVER
+    # SET - mapped to a MangaDex code, English whenever MangaDex does not serve it.
+    reads = []
+    cog = _guild_locale_cog(monkeypatch, {1: "fr", 2: "el", 3: "eo"}, reads)
 
     memo = {}
     assert await cog._guild_language(1, memo) == "fr"
@@ -1199,7 +1208,52 @@ async def test_guild_language_maps_the_guild_locale_and_memoizes(monkeypatch):
     assert await cog._guild_language(3, memo) == "en"  # unserved locale -> fallback
     # A guild subscribed to several manga is resolved ONCE per tick, not per manga.
     assert await cog._guild_language(1, memo) == "fr"
-    assert resolved == [1, 2, 3]
+    assert reads == [1, 2, 3]
+
+
+async def test_guild_language_ignores_the_discord_preferred_locale(monkeypatch):
+    """An INFERRED locale must never widen the shared per-manga language union.
+
+    ``guild.preferred_locale`` is a Discord-side hint nobody on the server chose, and
+    the language returned here joins the union every reader of that manga shares - an
+    inferred 'es' would change WHEN they are alerted, bot-wide. So a guild with no
+    explicit setting contributes nothing but the English safety net.
+    """
+    cog = _guild_locale_cog(monkeypatch, {})
+    cog.bot = type(
+        "B",
+        (),
+        {
+            "db_pool": object(),
+            "get_guild": staticmethod(
+                lambda gid: (_ for _ in ()).throw(
+                    AssertionError("the guild object must not be consulted")
+                )
+            ),
+        },
+    )()
+
+    async def _never(*args, **kwargs):
+        raise AssertionError("resolve_guild_locale must not be used here")
+
+    monkeypatch.setattr(ch.i18n, "resolve_guild_locale", _never)
+
+    assert await cog._guild_language(7, {}) == md.DEFAULT_LANGUAGE
+    # ... and 'en' is already in every union, so nothing is widened by that guild.
+    assert md.feed_languages(["en"]) == md.feed_languages([])
+
+
+async def test_guild_language_survives_an_unreadable_setting(monkeypatch):
+    # A failing settings read must never raise into a poller tick.
+    cog = _language_cog()
+    cog.bot = type("B", (), {"db_pool": object()})()
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(ch.settings, "get_guild", _boom)
+
+    assert await cog._guild_language(9, {}) == md.DEFAULT_LANGUAGE
 
 
 def test_the_language_preference_key_matches_the_panel():

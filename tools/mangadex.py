@@ -35,9 +35,17 @@ MangaDex facts this module is built on (live-verified 2026-07-10):
   above deliberately ignores the language, so a chapter alerts ONCE, at its first
   appearance in any requested language, and its later translations are silently
   deduplicated. That is what keeps the at-most-once guarantee intact while readers
-  of different languages share one feed poll; the residual limitation is that a
-  French reader can be alerted by the English release when it lands first (the link
-  is then re-pointed per recipient, best-effort, by :func:`pick_variant`).
+  of different languages share one feed poll. The limitation is SYMMETRIC and
+  assumed: whoever the first release is in, everyone sharing that manga's union is
+  alerted then, with the link re-pointed per recipient best-effort by
+  :func:`pick_variant` (their own translation when it is already out, the alerting
+  row otherwise) - so an English reader can be alerted by a French release exactly
+  as a French reader can be alerted by the English one, and the translation that
+  lands later never re-alerts (same number, already delivered). Because the union
+  is shared, the cog only ever widens it with languages someone EXPLICITLY chose
+  (a reader's preference, a server's configured locale), never with an inferred
+  one; nobody can LOSE an alert to a language race, and that is what is being
+  bought.
 * ``attributes.externalUrl`` non-null means an official link-only stub (e.g.
   MangaPlus for One Piece): there is no MangaDex reader page, so the alert must
   link out to that url instead (see :func:`reader_url`).

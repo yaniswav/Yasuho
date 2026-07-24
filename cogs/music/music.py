@@ -438,6 +438,12 @@ async def refresh_progress_bars(
       can never sink the batch nor cost the other guilds their idle disconnect.
 
     Free when the batch is empty, so a bot with no playing player pays nothing.
+
+    Batch membership is the caller's call and is deliberately NOT locked: when a
+    voice reconnect rebinds a guild's controller between the moment the batch was
+    collected and the moment these edits go out, that panel can take one redundant
+    progress edit. Accepted rather than serialised - it is rare, it costs a single
+    HTTP call, and the bar drawn is correct either way.
     """
     if not controllers:
         return 0

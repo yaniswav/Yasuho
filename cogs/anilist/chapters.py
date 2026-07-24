@@ -22,14 +22,20 @@ Two moving parts live here, both wired from the package ``__init__``:
   persistent Read button.
 
 Languages. A DM follows its reader's own ``mangadex_language`` preference (set in
-``/preferences``, English by default); a channel post follows its guild's language.
+``/preferences``, English by default); a channel post follows its guild's language,
+and ONLY when the server explicitly set one (see :meth:`AniListChapters._guild_language`
+- an inferred ``preferred_locale`` is never enough, because this union is SHARED).
 Those are wishes about PRESENTATION, not about who is alerted: the poller fetches
-one feed per manga carrying the UNION of the languages its trackers want (English
-always included), and the alert fires on the first release in any of them, with the
-link re-pointed per recipient when their language is in the same window. Alert
-identity stays the chapter NUMBER, so the at-most-once guarantee is untouched - and
-the residual limitation is by design: a French reader may be told about a chapter by
-its English release, but can never LOSE an alert to a language race.
+one feed per manga carrying the UNION of the languages its trackers EXPLICITLY chose
+(English always included), and the alert fires on the FIRST release in ANY of them,
+with the link re-pointed per recipient when their language is in the same window.
+Alert identity stays the chapter NUMBER, so the at-most-once guarantee is untouched.
+The limitation is symmetric and assumed: an English reader can be alerted by a
+non-English release that landed first, with a best-effort link, and the English
+release that follows does NOT re-alert (same number, already delivered) - exactly as
+a French reader can be alerted by the English one. Only explicit choices widen the
+union, and nobody can ever LOSE an alert to a language race; being told early in the
+wrong language is the price paid for that.
 
 Token discipline. Poll-time reads are UNAUTHENTICATED: a public profile's
 ``MediaListCollection`` needs no token, and MangaDex is a public API. The only
@@ -73,7 +79,7 @@ from .feed import (
 )
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
-from tools import i18n, interactions
+from tools import i18n, interactions, settings
 from tools import mangadex as md
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
@@ -961,7 +967,7 @@ class AniListChapters(commands.Cog):
 
         MangaDex has no batch endpoint and no ``readableAt_greater`` filter, so the
         only source is the per-manga feed ordered ``readableAt`` DESC. One
-        ``md.FEED_LIMIT`` page suffices when a manga is polled every tick, but under
+        ``md.feed_page_limit`` page suffices when a manga is polled every tick, but under
         the round-robin feed wheel a manga's effective interval widens to
         ceil(mapped / FEED_BUDGET) ticks, so a fast updater (or a bulk import) can
         drop MORE than one page between polls. Fetching only the newest page there
@@ -1350,19 +1356,37 @@ class AniListChapters(commands.Cog):
     async def _guild_language(self, guild_id, resolved):
         """The MangaDex language a guild's channel posts target (memoized per tick).
 
-        A channel post has no single reader, so it follows the GUILD language - the
-        very locale :meth:`_deliver_channel` already renders its card in - mapped to
-        a MangaDex code, with English as the fallback for a locale MangaDex does not
-        serve. ``resolved`` is the caller's per-tick memo, so a guild subscribed to
-        several manga costs one resolution rather than one per manga.
+        A channel post has no single reader, so it follows the guild language - but
+        ONLY when the server EXPLICITLY set one. This deliberately reads just the
+        ``locale`` guild setting, i.e. the FIRST step of
+        :func:`tools.i18n.resolve_guild_locale`, and none of the rest of that chain:
+        ``guild.preferred_locale`` is a Discord-side hint nobody chose, and the
+        language returned here joins the SHARED per-manga feed union, so an INFERRED
+        'es' would widen that union for every reader of the title bot-wide and change
+        WHEN their alert fires. A guild with no explicit setting therefore contributes
+        NO language: its posts still link the English safety net
+        (:data:`tools.mangadex.DEFAULT_LANGUAGE`, always part of the union), they just
+        never widen it for anybody else. A locale MangaDex does not serve falls back
+        the same way. ``resolved`` is the caller's per-tick memo, so a guild
+        subscribed to several manga costs one resolution rather than one per manga.
         """
 
         if guild_id in resolved:
             return resolved[guild_id]
-        locale = await i18n.resolve_guild_locale(
-            self.bot, self.bot.get_guild(guild_id)
+        try:
+            configured = await settings.get_guild(
+                self.bot.db_pool, guild_id, "locale", None
+            )
+        except Exception:
+            # Never raise into a poller tick (resolve_guild_locale swallows the same
+            # way): an unreadable setting simply contributes no language.
+            log.exception(
+                "AniList chapters: could not read the locale of guild %s", guild_id
+            )
+            configured = None
+        language = (
+            md.normalize_language(i18n.normalize(configured)) or md.DEFAULT_LANGUAGE
         )
-        language = md.normalize_language(locale) or md.DEFAULT_LANGUAGE
         resolved[guild_id] = language
         return language
 
@@ -1460,7 +1484,7 @@ class AniListChapters(commands.Cog):
         # _process_manga / mangadex_chapter_state): a manga NOT polled this tick keeps
         # its DB cursor untouched and catches up when the wheel next reaches it; a
         # manga that IS polled pages BACKWARD to its own stored cursor (_fetch_feed),
-        # so even when the widened interval let more than one md.FEED_LIMIT page of
+        # so even when the widened interval let more than one md.feed_page_limit page of
         # chapters accumulate, its cursor never jumps past un-fetched overflow. The
         # cost is a per-manga poll interval of ceil(mapped / FEED_BUDGET) ticks.
         mapped = sorted(mdx_to_media)
@@ -1755,6 +1779,10 @@ class AniListChapters(commands.Cog):
             )
             return
 
+        # PRESENTATION only, so the full chain (inferred ``preferred_locale``
+        # included) is fine here: it changes the card's prose in THIS guild and
+        # nothing else. The chapter LANGUAGE deliberately does NOT follow it - see
+        # :meth:`_guild_language`, whose union is shared with every other tracker.
         loc = await i18n.resolve_guild_locale(
             self.bot, getattr(channel, "guild", None)
         )

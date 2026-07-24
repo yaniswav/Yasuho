@@ -15,11 +15,22 @@ PANEL_COLOUR = 0x5865F2
 ON_BADGE = "🟢"
 OFF_BADGE = "⚪"
 
-# Keep the layout within the component budget: one Section (plus a Separator)
-# per preference means the panel stays comfortably under the Container limit.
-# Each CHOICE_PREFS entry costs three more components (a TextDisplay, its
-# ActionRow and the select inside it), so count those in before raising this.
-MAX_PREFS = 10
+# Discord's Components V2 budget: 40 components per message, NESTED ones included
+# (a Container, every Section, every TextDisplay, every accessory...). Going over is
+# a 400 from Discord, i.e. no panel at all.
+COMPONENT_CAP = 40
+
+
+def _component_count(bool_prefs, choice_prefs):
+    """Components :meth:`SettingsView._rerender` emits for that many preferences.
+
+    Fixed cost 5: the Container itself, the header and intro TextDisplays, the
+    Separator under them and the footer TextDisplay. Then 4 per boolean preference
+    (its Section, the TextDisplay inside it, the toggle button accessory and the
+    trailing Separator) and 4 per choice preference (a TextDisplay, its ActionRow,
+    the select inside that row and the trailing Separator).
+    """
+    return 5 + 4 * bool_prefs + 4 * choice_prefs
 
 
 class Preference:
@@ -156,6 +167,14 @@ CHOICE_PREFS = [
     ),
 ]
 
+# Most boolean preferences the panel can render and still fit COMPONENT_CAP, given
+# the choice preferences above:
+#   5 + 4*MAX_PREFS + 4*len(CHOICE_PREFS) <= 40  ->  MAX_PREFS = 7 with one select.
+# The previous value (10) was a fiction: 10 toggles plus one select is 49 components,
+# so the panel would simply 400. An eighth toggle (or a second select) means
+# paginating this panel, NOT raising the cap.
+MAX_PREFS = (COMPONENT_CAP - _component_count(0, len(CHOICE_PREFS))) // 4
+
 
 def _style(value):
     """Green when a preference is on, grey when off."""
@@ -284,7 +303,10 @@ class ChoiceSelect(discord.ui.Select):
         self.pref = pref
 
     async def callback(self, interaction):
-        await self._panel.choose(interaction, self.pref, self.values[0])
+        # The RAW payload is handed over unread: the panel does the indexing inside
+        # its handled path, so a malformed (empty) payload cannot raise an
+        # IndexError here that would leave the interaction unanswered.
+        await self._panel.choose(interaction, self.pref, self.values)
 
 
 class SettingsView(discord.ui.LayoutView):
@@ -317,6 +339,18 @@ class SettingsView(discord.ui.LayoutView):
         """(Re)assemble the layout from the current ``{key: bool}`` state map."""
         self.clear_items()
 
+        # Fail fast and say why, rather than shipping a payload Discord answers with
+        # an opaque 400 (the panel is built from module-level lists, so this trips
+        # for whoever adds the preference, in tests, not for a member at runtime).
+        shown = PREFS[:MAX_PREFS]
+        total = _component_count(len(shown), len(CHOICE_PREFS))
+        if total > COMPONENT_CAP:
+            raise RuntimeError(
+                f"settings panel would emit {total} components, over Discord's "
+                f"cap of {COMPONENT_CAP}: paginate the panel instead of adding "
+                f"preferences to it"
+            )
+
         container = discord.ui.Container(accent_colour=PANEL_COLOUR)
         container.add_item(discord.ui.TextDisplay(_("## Your preferences")))
         container.add_item(
@@ -329,7 +363,7 @@ class SettingsView(discord.ui.LayoutView):
         )
         container.add_item(discord.ui.Separator())
 
-        for pref in PREFS[:MAX_PREFS]:
+        for pref in shown:
             on = bool(self.states.get(pref.key, pref.default))
             badge = ON_BADGE if on else OFF_BADGE
             state = _("ON") if on else _("OFF")
@@ -398,9 +432,27 @@ class SettingsView(discord.ui.LayoutView):
                 interaction, _("Something went wrong updating that setting.")
             )
 
-    async def choose(self, interaction, pref, value):
-        """Persist a picked value for a choice preference and re-render in place."""
+    async def choose(self, interaction, pref, values):
+        """Persist a picked value for a choice preference and re-render in place.
+
+        ``values`` is the select's RAW payload, read HERE rather than in the select
+        callback so that an empty one lands on the same handled path as any other
+        failure instead of raising an IndexError that answers nothing.
+        """
         try:
+            if not values:
+                # ``min_values=1`` means Discord always sends exactly one value; an
+                # empty payload is malformed, so nothing is written or re-rendered.
+                log.warning(
+                    "Empty select payload for user setting %s from %s",
+                    pref.key,
+                    self.author_id,
+                )
+                await notify_failure(
+                    interaction, _("Something went wrong updating that setting.")
+                )
+                return
+            value = values[0]
             # Discord only sends back values we offered, but the stored value ends
             # up in an API request downstream, so an unknown one falls back to the
             # default rather than being written through.
@@ -432,8 +484,10 @@ class SettingsView(discord.ui.LayoutView):
         return True
 
     async def on_timeout(self):
+        # Selects too, not just buttons: a still-clickable select outlives the view
+        # and fails silently (its callback has nowhere to go) once this fires.
         for child in self.walk_children():
-            if isinstance(child, discord.ui.Button):
+            if isinstance(child, (discord.ui.Button, discord.ui.Select)):
                 child.disabled = True
         if self.message is not None:
             try:
