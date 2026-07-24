@@ -174,6 +174,36 @@ class FakeCustomCommands:
         self._cd = {}
 
 
+class FakeTemporaryRooms:
+    """Stand-in for the TemporaryRooms cog: the two methods the invalidator drives.
+
+    The real cog re-reads its hub list from settings (``_load_hubs``) and points
+    the derived ``_hub_index`` at it (``_index_guild``) - the SAME pair
+    ``cogs/system/events.py`` runs on a guild rejoin and the cog's ``_save_hubs``
+    runs after a bot-side write. ``_index_guild`` here is a faithful copy of the
+    real one (map by ``hub_channel_id``, drop the guild when empty) so the
+    assertion is about real behaviour; ``_load_hubs`` also records whether the
+    settings blob was ALREADY evicted when it was called, which is what pins the
+    invalidator's ordering.
+    """
+
+    def __init__(self, hubs=None):
+        self.hubs = list(hubs or [])
+        self.loaded = []
+        self._hub_index = {}
+
+    async def _load_hubs(self, gid):
+        self.loaded.append((gid, (settings._GUILD[0], gid) in settings._cache))
+        return [dict(hub) for hub in self.hubs]
+
+    def _index_guild(self, gid, hubs):
+        mapping = {h["hub_channel_id"]: h for h in hubs if h.get("hub_channel_id")}
+        if mapping:
+            self._hub_index[gid] = mapping
+        else:
+            self._hub_index.pop(gid, None)
+
+
 class FakeBot:
     def __init__(
         self,
@@ -183,6 +213,7 @@ class FakeBot:
         automod=None,
         leveling=None,
         custom_commands=None,
+        rooms=None,
     ):
         self.db_pool = pool
         self.prefixes = {}
@@ -199,6 +230,8 @@ class FakeBot:
             self._cogs["Leveling"] = leveling
         if custom_commands is not None:
             self._cogs["CustomCommands"] = custom_commands
+        if rooms is not None:
+            self._cogs["TemporaryRooms"] = rooms
 
     def get_cog(self, name):
         return self._cogs.get(name)
@@ -624,6 +657,87 @@ async def test_dispatch_custom_commands_noop_without_cog():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: autorooms invalidation (evict the settings LRU blob AND rebuild the
+# TemporaryRooms cog's derived _hub_index, which the voice event consults).
+# ---------------------------------------------------------------------------
+
+
+def _hub(hub_id="abc12345", hub_channel_id=555, label="Ranked"):
+    """A normalised hub dict, in the shape tools/autoroom.default_hub produces."""
+    return {
+        "id": hub_id,
+        "label": label,
+        "category_id": 444,
+        "hub_channel_id": hub_channel_id,
+        "template": "{user}'s room",
+        "user_limit": 4,
+        "max_rooms": 20,
+        "private": False,
+    }
+
+
+async def test_dispatch_autorooms_evicts_settings_blob():
+    # The hub list lives in the guild_settings JSONB key 'autorooms', served by
+    # the tools.settings LRU, so a dashboard hub edit must evict it or the cog's
+    # next _load_hubs would re-serve the stale list.
+    rooms = FakeTemporaryRooms()
+    bot = FakeBot(SyncPool(), rooms=rooms)
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"autorooms": [_hub()]}
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("autorooms", 100))
+
+    assert handled == "autorooms"
+    assert key not in settings._cache
+
+
+async def test_dispatch_autorooms_rebuilds_hub_index():
+    # Evicting the blob is not enough: _hub_index is a DERIVED cache the voice
+    # event reads on every join and that is only ever rewritten by _index_guild.
+    hub = _hub(hub_channel_id=555)
+    rooms = FakeTemporaryRooms(hubs=[hub])
+    rooms._hub_index[100] = {999: _hub(hub_id="stale999", hub_channel_id=999)}
+    bot = FakeBot(SyncPool(), rooms=rooms)
+    settings._cache[(settings._GUILD[0], 100)] = {"autorooms": [_hub()]}
+
+    handled = await dashboard_sync.dispatch(bot, _payload("autorooms", 100))
+
+    assert handled == "autorooms"
+    # Re-read exactly once, and only AFTER the eviction - a rebuild before it
+    # would just re-index the stale blob.
+    assert rooms.loaded == [(100, False)]
+    # The stale trigger channel is gone; the index now points at the fresh hub.
+    assert rooms._hub_index[100] == {555: hub}
+
+
+async def test_dispatch_autorooms_drops_index_when_no_hubs_left():
+    # The dashboard removed the guild's last hub: _index_guild pops the guild so
+    # on_voice_state_update costs zero work again (the cog's own contract).
+    rooms = FakeTemporaryRooms(hubs=[])
+    rooms._hub_index[100] = {555: _hub()}
+    bot = FakeBot(SyncPool(), rooms=rooms)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("autorooms", 100))
+
+    assert handled == "autorooms"
+    assert 100 not in rooms._hub_index
+
+
+async def test_dispatch_autorooms_noop_without_cog():
+    # No TemporaryRooms cog loaded: the index rebuild is skipped, but the
+    # settings eviction is unconditional, and dispatch still reports handled.
+    bot = FakeBot(SyncPool())
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"autorooms": [_hub()]}
+
+    handled = await dashboard_sync.dispatch(bot, _payload("autorooms", 100))
+
+    assert handled == "autorooms"
+    assert key not in settings._cache
+
+
+# ---------------------------------------------------------------------------
 # dispatch: malformed / unknown payloads are ignored (no cache mutation).
 # ---------------------------------------------------------------------------
 
@@ -680,4 +794,5 @@ def test_valid_kinds_match_invalidators():
         "locale",
         "custom_commands",
         "twitch",
+        "autorooms",
     }

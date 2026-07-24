@@ -1888,3 +1888,341 @@ async def test_role_menu_delete_bad_message_id(rolemenu_env, message_id):
 def test_role_menu_executors_are_registered():
     assert "role_menu_post" in dashboard_actions._EXECUTORS
     assert "role_menu_delete" in dashboard_actions._EXECUTORS
+
+
+# ---------------------------------------------------------------------------
+# autoroom_hub_create / autoroom_hub_delete executors: validate the payload
+# server-side BEFORE touching the cog, then drive TemporaryRooms._add_hub /
+# ._remove_hub (which create/delete the REAL category + trigger channel and
+# re-index the cog). Success is detected STRUCTURALLY - both cog methods return
+# a translated human string on every path - by diffing the saved hub list.
+# ---------------------------------------------------------------------------
+
+
+class FakeRoomsCog:
+    """Stand-in for the TemporaryRooms cog: the three methods the executors use.
+
+    ``_load_hubs`` serves the guild's saved hubs (the before/after picture the
+    create executor diffs), ``_add_hub`` records its exact kwargs and - unless
+    seeded to refuse - appends a hub and returns the "Created ..." message, just
+    as the real one does only after actually saving. ``_remove_hub`` records the
+    id, drops the hub and returns its own message. No Discord objects needed: the
+    real channel work happens inside the cog, which is not under test here.
+    """
+
+    CREATED_HUB_ID = "newhub01"
+    CREATED_CHANNEL_ID = 4242
+
+    def __init__(self, hubs=None, refuse_add=False):
+        self.hubs = list(hubs or [])
+        self.loads = []
+        self.add_calls = []
+        self.remove_calls = []
+        self._refuse_add = refuse_add
+
+    async def _load_hubs(self, guild_id):
+        self.loads.append(guild_id)
+        return [dict(hub) for hub in self.hubs]
+
+    async def _add_hub(
+        self, guild, *, label, category_name, hub_name, template, user_limit
+    ):
+        self.add_calls.append(
+            {
+                "guild": guild,
+                "label": label,
+                "category_name": category_name,
+                "hub_name": hub_name,
+                "template": template,
+                "user_limit": user_limit,
+            }
+        )
+        if self._refuse_add:
+            # A budget refusal: the real cog returns its message WITHOUT saving.
+            return "This server is at Discord's limit of 50 categories."
+        self.hubs.append(
+            _ar_hub(
+                hub_id=self.CREATED_HUB_ID,
+                hub_channel_id=self.CREATED_CHANNEL_ID,
+                label=label,
+            )
+        )
+        return "Created the **%s** hub. Members can join <#%s> now." % (
+            label,
+            self.CREATED_CHANNEL_ID,
+        )
+
+    async def _remove_hub(self, guild, hub_id):
+        self.remove_calls.append((guild, hub_id))
+        self.hubs = [hub for hub in self.hubs if hub["id"] != hub_id]
+        return "Removed the **Ranked** hub."
+
+
+class FakeRoomsGuild:
+    """The live guild object the executor hands straight to the cog."""
+
+    def __init__(self, guild_id=100):
+        self.id = guild_id
+
+
+def _ar_hub(hub_id="abc12345", hub_channel_id=555, label="Ranked"):
+    """A normalised hub dict, in the shape tools/autoroom.default_hub produces."""
+    return {
+        "id": hub_id,
+        "label": label,
+        "category_id": 444,
+        "hub_channel_id": hub_channel_id,
+        "template": "{user}'s room",
+        "user_limit": 4,
+        "max_rooms": 20,
+        "private": False,
+    }
+
+
+def _ar_bot(pool=None, guild=None, cog=None):
+    """Bot with a live guild 100 + the TemporaryRooms cog, unless told otherwise."""
+    guilds = {} if guild is False else {100: guild if guild else FakeRoomsGuild()}
+    cogs = {} if cog is None else {"TemporaryRooms": cog}
+    return FakeBot(pool or ActionsPool(), guilds=guilds, cogs=cogs)
+
+
+def _hub_payload(**overrides):
+    payload = {
+        "label": "Ranked",
+        "category_name": "RANKED ROOMS",
+        "hub_name": "Join to create",
+        "template": "{user}'s room",
+        "user_limit": 4,
+    }
+    payload.update(overrides)
+    return payload
+
+
+async def test_autoroom_hub_create_calls_add_hub_with_exact_kwargs():
+    cog = FakeRoomsCog()
+    guild = FakeRoomsGuild()
+    bot = _ar_bot(guild=guild, cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload(label="  Ranked  ")  # stripped before the cog sees it
+    )
+
+    assert cog.add_calls == [
+        {
+            "guild": guild,  # the LIVE guild object, resolved from the claimed id
+            "label": "Ranked",
+            "category_name": "RANKED ROOMS",
+            "hub_name": "Join to create",
+            "template": "{user}'s room",
+            "user_limit": 4,
+        }
+    ]
+    # ok is derived from the hub actually appearing in the saved list, not from
+    # the cog's (translated) message - which is passed through for display.
+    assert result["ok"] is True
+    assert result["hub_id"] == FakeRoomsCog.CREATED_HUB_ID
+    assert result["hub_channel_id"] == "4242"  # snowflake as a STRING
+    assert "Created the **Ranked** hub" in result["message"]
+
+
+async def test_autoroom_hub_create_reports_refusal_as_create_failed():
+    # The cog refused (a budget check) and saved nothing: no new hub id appears,
+    # so the structural check reports failure and forwards the reason.
+    cog = FakeRoomsCog(refuse_add=True)
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result["ok"] is False
+    assert result["error"] == "create_failed"
+    assert result["message"] == "This server is at Discord's limit of 50 categories."
+    assert len(cog.add_calls) == 1  # it WAS attempted, just not saved
+
+
+async def test_autoroom_hub_create_enforces_max_hubs_before_creating():
+    # At MAX_HUBS the executor refuses BEFORE the cog can create any channel
+    # (mirrors the _exec_role_menu_post cap gate).
+    cog = FakeRoomsCog(
+        hubs=[_ar_hub(hub_id="hub%d" % i, hub_channel_id=500 + i) for i in range(5)]
+    )
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result == {"ok": False, "error": "too_many_hubs"}
+    assert cog.add_calls == []
+
+
+@pytest.mark.parametrize(
+    "field, error",
+    [
+        ("label", "bad_label"),
+        ("category_name", "bad_category_name"),
+        ("hub_name", "bad_hub_name"),
+        ("template", "bad_template"),
+    ],
+)
+@pytest.mark.parametrize("value", [None, "", "   ", 42, "x" * 101])
+async def test_autoroom_hub_create_rejects_bad_text(field, error, value):
+    """Missing / empty / blank / non-string / over-100-char fields are refused."""
+    cog = FakeRoomsCog()
+    bot = _ar_bot(cog=cog)
+    payload = _hub_payload()
+    if value is None:
+        payload.pop(field)
+    else:
+        payload[field] = value
+
+    result = await dashboard_actions._exec_autoroom_hub_create(bot, 100, payload)
+
+    assert result == {"ok": False, "error": error}
+    # Validated BEFORE the cog is touched: no channel is ever created.
+    assert cog.add_calls == []
+    assert cog.loads == []
+
+
+@pytest.mark.parametrize("value", [None, "abc", "", -1, 100, True, "4.5", {}, [4]])
+async def test_autoroom_hub_create_rejects_bad_user_limit(value):
+    cog = FakeRoomsCog()
+    bot = _ar_bot(cog=cog)
+    payload = _hub_payload()
+    if value is None:
+        payload.pop("user_limit")
+    else:
+        payload["user_limit"] = value
+
+    result = await dashboard_actions._exec_autoroom_hub_create(bot, 100, payload)
+
+    assert result == {"ok": False, "error": "bad_user_limit"}
+    assert cog.add_calls == []
+    assert cog.loads == []
+
+
+@pytest.mark.parametrize("user_limit", [0, 99, "12"])
+async def test_autoroom_hub_create_accepts_in_range_user_limit(user_limit):
+    cog = FakeRoomsCog()
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload(user_limit=user_limit)
+    )
+
+    assert result["ok"] is True
+    assert cog.add_calls[0]["user_limit"] == int(user_limit)
+
+
+async def test_autoroom_hub_create_guild_unavailable():
+    cog = FakeRoomsCog()
+    bot = _ar_bot(guild=False, cog=cog)  # bot is not in guild 100
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert cog.add_calls == []
+
+
+async def test_autoroom_hub_create_without_cog():
+    bot = _ar_bot(cog=None)  # TemporaryRooms not loaded: the bot cannot act
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+    assert result == {"ok": False, "error": "guild_unavailable"}
+
+
+async def test_autoroom_hub_create_full_flow_via_handle_action():
+    """End-to-end through the queue: claim -> create executor -> done + result."""
+    cog = FakeRoomsCog()
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="autoroom_hub_create", payload=_hub_payload())
+    bot = FakeBot(pool, guilds={100: FakeRoomsGuild()}, cogs={"TemporaryRooms": cog})
+
+    status = await dashboard_actions.handle_action(bot, 1)
+
+    assert status == "done"
+    assert pool.rows[1]["result"]["ok"] is True
+    assert pool.rows[1]["result"]["hub_id"] == FakeRoomsCog.CREATED_HUB_ID
+    assert len(cog.add_calls) == 1
+
+
+async def test_autoroom_hub_delete_calls_remove_hub():
+    guild = FakeRoomsGuild()
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    bot = _ar_bot(guild=guild, cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "  abc12345  "}  # stripped before the cog sees it
+    )
+
+    assert result["ok"] is True
+    assert result["hub_id"] == "abc12345"
+    assert result["message"] == "Removed the **Ranked** hub."
+    assert cog.remove_calls == [(guild, "abc12345")]
+
+
+async def test_autoroom_hub_delete_unknown_hub_is_not_found():
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "deadbeef"}  # not one of THIS guild's hubs
+    )
+
+    assert result == {"ok": False, "error": "hub_not_found"}
+    assert cog.remove_calls == []
+
+
+@pytest.mark.parametrize("hub_id", [None, "", "   ", 42, ["abc"], "x" * 65])
+async def test_autoroom_hub_delete_bad_hub_id(hub_id):
+    cog = FakeRoomsCog(hubs=[_ar_hub()])
+    bot = _ar_bot(cog=cog)
+    payload = {} if hub_id is None else {"hub_id": hub_id}
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(bot, 100, payload)
+
+    assert result == {"ok": False, "error": "bad_hub_id"}
+    assert cog.remove_calls == []
+    assert cog.loads == []  # rejected before the cog is touched
+
+
+async def test_autoroom_hub_delete_guild_unavailable():
+    cog = FakeRoomsCog(hubs=[_ar_hub()])
+    bot = _ar_bot(guild=False, cog=cog)
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert cog.remove_calls == []
+
+
+async def test_autoroom_hub_delete_without_cog():
+    bot = _ar_bot(cog=None)
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+    assert result == {"ok": False, "error": "guild_unavailable"}
+
+
+async def test_autoroom_hub_delete_full_flow_via_handle_action():
+    """End-to-end through the queue: claim -> delete executor -> done + result."""
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    pool = ActionsPool()
+    pool.add(
+        1, guild_id=100, kind="autoroom_hub_delete", payload={"hub_id": "abc12345"}
+    )
+    bot = FakeBot(pool, guilds={100: FakeRoomsGuild()}, cogs={"TemporaryRooms": cog})
+
+    status = await dashboard_actions.handle_action(bot, 1)
+
+    assert status == "done"
+    assert pool.rows[1]["result"]["ok"] is True
+    assert len(cog.remove_calls) == 1
+    assert cog.hubs == []
+
+
+def test_autoroom_hub_executors_are_registered():
+    assert "autoroom_hub_create" in dashboard_actions._EXECUTORS
+    assert "autoroom_hub_delete" in dashboard_actions._EXECUTORS

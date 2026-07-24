@@ -7,17 +7,19 @@ into the SAME Postgres database, then emits::
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
-leveling | warn_escalation | verify_role | locale | custom_commands``. The bot
-mirrors those settings in memory (``bot.prefixes`` / ``bot.autoroles`` /
-``bot.muteroles``, the ModLog cog's ``_channels`` cache, the ``tools.settings``
-LRU for the welcome + automod + modlog_events + warn_escalation + verify_role +
-locale JSONB blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's
-``_settings`` cache for its boolean toggle table, the Leveling cog's three
-caches - ``_configs`` (level_config scalar knobs), ``_no_xp`` (level_no_xp
-snapshot) and ``_multipliers`` (xp_multipliers + level_config event columns) -
-and the CustomCommands cog's ``_cache``/``_uses``/``_cd`` (per-guild command
-map, usage counts and per-command cooldown clocks)), so without this cog it
-would keep serving the stale in-memory value until the next restart.
+leveling | warn_escalation | verify_role | locale | custom_commands | twitch |
+autorooms``. The bot mirrors those settings in memory (``bot.prefixes`` /
+``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
+``tools.settings`` LRU for the welcome + automod + modlog_events +
+warn_escalation + verify_role + locale + twitch + autorooms JSONB blobs, the
+Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings`` cache for its
+boolean toggle table, the Leveling cog's three caches - ``_configs``
+(level_config scalar knobs), ``_no_xp`` (level_no_xp snapshot) and
+``_multipliers`` (xp_multipliers + level_config event columns) -, the
+CustomCommands cog's ``_cache``/``_uses``/``_cd`` (per-guild command map, usage
+counts and per-command cooldown clocks) and the TemporaryRooms cog's
+``_hub_index`` (the join-to-create lookup the voice event consults)), so without
+this cog it would keep serving the stale in-memory value until the next restart.
 
 This cog LISTENs on the ``yasuho_dashboard`` channel over a DEDICATED asyncpg
 connection (kept open for the cog's lifetime, separate from the shared pool) and,
@@ -44,6 +46,9 @@ Design mirrors the existing house patterns:
   (the usage-count map), and drop every per-command cooldown clock for that
   guild from ``_cd`` - the SAME three lines those two methods run on their own
   writes, so a dashboard change is indistinguishable from a bot-side one;
+* the autorooms invalidation evicts the settings blob (the hub list lives in the
+  same JSONB row) AND rebuilds the TemporaryRooms cog's derived ``_hub_index``,
+  the exact pair of lines ``cogs/system/events.py`` runs when a guild rejoins;
 * the supervised background task started in ``__init__`` via
   ``bot.loop.create_task`` with a done-callback mirrors
   ``cogs/system/webstats.py``.
@@ -86,6 +91,7 @@ VALID_KINDS = frozenset(
         "locale",
         "custom_commands",
         "twitch",
+        "autorooms",
     }
 )
 
@@ -403,6 +409,35 @@ async def _invalidate_custom_commands(bot, gid):
         cog._cd = {k: v for k, v in cd.items() if k[0] != gid}
 
 
+async def _invalidate_autorooms(bot, gid):
+    """Evict the settings blob AND rebuild the Rooms cog's derived hub index.
+
+    Autoroom hubs live under the ``guild_settings`` JSONB key ``'autorooms'`` (a
+    list of hub dicts) served by the ``tools.settings`` LRU, which
+    ``TemporaryRooms._load_hubs`` reads through ``settings.get_guild``
+    (``cogs/config/rooms.py``) - so the eviction is what makes the dashboard's
+    write visible at all. It is NOT sufficient on its own: the cog also keeps a
+    DERIVED in-memory ``_hub_index`` (``{guild_id: {hub_channel_id: hub}}``) that
+    ``on_voice_state_update`` consults on EVERY voice event and that is never
+    re-read from settings - it is only ever rewritten by ``_index_guild``. Left
+    stale, a hub the dashboard just retargeted (or a template/limit it changed)
+    would keep spinning up rooms from the OLD config until the next restart.
+
+    Hence both steps, in this order: evict first so the re-read returns the
+    authoritative row (rebuilding before the eviction would just re-index the
+    stale blob), then ``_load_hubs`` + ``_index_guild`` - the exact pair
+    ``cogs/system/events.py`` runs when a guild rejoins, and what the cog's own
+    ``_save_hubs`` does after every bot-side write. No TemporaryRooms cog loaded
+    is a safe no-op (the settings eviction above still ran).
+    """
+    settings.invalidate_guild(gid)
+    cog = bot.get_cog("TemporaryRooms")
+    if cog is None:
+        return
+    hubs = await cog._load_hubs(gid)
+    cog._index_guild(gid, hubs)
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
@@ -417,6 +452,7 @@ _INVALIDATORS = {
     "locale": _invalidate_locale,
     "custom_commands": _invalidate_custom_commands,
     "twitch": _invalidate_twitch,
+    "autorooms": _invalidate_autorooms,
 }
 
 

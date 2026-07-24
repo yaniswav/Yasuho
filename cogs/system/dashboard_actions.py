@@ -56,7 +56,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-from tools import i18n, role_menus
+from tools import autoroom, i18n, role_menus
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -854,6 +854,161 @@ async def _exec_role_menu_delete(bot, guild_id, payload):
     return {"ok": True}
 
 
+# Autoroom hub ids are 8-hex strings (``tools/autoroom.default_hub``); the cap is
+# a sanity bound so a crafted payload can never carry an unbounded string into the
+# cog's linear scan over the guild's hubs.
+_MAX_HUB_ID_LEN = 64
+
+
+def _hub_text(payload, key):
+    """Return ``payload[key]`` stripped, or ``None`` when it is not usable.
+
+    Server-side bound for the free-text fields of a hub (label, category name,
+    join-to-create channel name, room-name template): each must be a non-empty
+    string of at most ``CHANNEL_NAME_LIMIT`` (100) characters - Discord's
+    channel-name cap, which the cog would otherwise silently truncate. Rejecting
+    rather than truncating keeps what the dashboard displays and what Discord
+    actually gets identical. Never raises.
+    """
+    value = payload.get(key)
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value or len(value) > autoroom.CHANNEL_NAME_LIMIT:
+        return None
+    return value
+
+
+async def _exec_autoroom_hub_create(bot, guild_id, payload):
+    """Create a join-to-create voice hub: real Discord channels + saved config.
+
+    Payload: ``{"label", "category_name", "hub_name", "template", "user_limit"}``.
+    This runs through the QUEUE rather than as a plain dashboard settings write
+    because creating a hub creates actual Discord channels (a category + a voice
+    trigger) and updates the TemporaryRooms cog's in-memory ``_hub_index`` -
+    neither of which the Node process can do. (Editing an existing hub's fields
+    IS a direct settings write on the dashboard side; the ``autorooms``
+    cache-invalidation kind in ``cogs/system/dashboard_sync.py`` picks that up.)
+
+    ``guild_id`` is authoritative (the claimed row, written under the dashboard's
+    manage-guild gate); EVERYTHING else is re-validated here and NEVER trusted:
+    the four text fields must be non-empty and within Discord's 100-char channel
+    name limit, ``user_limit`` must be an int in 0..99 (0 = unlimited, Discord's
+    voice cap is 99) - all checked BEFORE the cog is touched, so a bad payload
+    never creates a channel - and the guild must be present with the cog loaded.
+    The per-guild ``MAX_HUBS`` cap is enforced before anything is created, exactly
+    as ``_exec_role_menu_post`` gates on ``MAX_MENUS_PER_GUILD``.
+
+    ``TemporaryRooms._add_hub`` returns a TRANSLATED human string on EVERY path
+    (created, refused by one of its budget checks, or "something went wrong while
+    creating the hub's channels"), so success is detected STRUCTURALLY rather than
+    by matching that text: only the created path appends the hub and saves, so
+    exactly one new hub id appears in the reloaded list. The cog's message is
+    passed back as ``message`` so the dashboard can show WHY a refusal happened
+    (which budget was hit) - it is bot-authored copy, never a stack or a secret.
+    """
+    label = _hub_text(payload, "label")
+    if label is None:
+        return {"ok": False, "error": "bad_label"}
+    category_name = _hub_text(payload, "category_name")
+    if category_name is None:
+        return {"ok": False, "error": "bad_category_name"}
+    hub_name = _hub_text(payload, "hub_name")
+    if hub_name is None:
+        return {"ok": False, "error": "bad_hub_name"}
+    template = _hub_text(payload, "template")
+    if template is None:
+        return {"ok": False, "error": "bad_template"}
+
+    user_limit = payload.get("user_limit")
+    if isinstance(user_limit, bool):  # a stray True must never read as 1
+        return {"ok": False, "error": "bad_user_limit"}
+    try:
+        user_limit = int(user_limit)
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_user_limit"}
+    if not 0 <= user_limit <= 99:
+        return {"ok": False, "error": "bad_user_limit"}
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    # The cog owns both the Discord side effects and the hub index, so without it
+    # loaded the bot simply cannot act on this guild - reported with the SAME code
+    # a missing guild uses rather than inventing a code the dashboard can't map.
+    cog = bot.get_cog("TemporaryRooms")
+    if cog is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
+    # The before-picture doubles as the cap gate and as the success diff below.
+    before = {hub["id"] for hub in await cog._load_hubs(guild_id)}
+    if len(before) >= autoroom.MAX_HUBS:
+        return {"ok": False, "error": "too_many_hubs"}
+
+    message = await cog._add_hub(
+        guild,
+        label=label,
+        category_name=category_name,
+        hub_name=hub_name,
+        template=template,
+        user_limit=user_limit,
+    )
+
+    created = [
+        hub for hub in await cog._load_hubs(guild_id) if hub["id"] not in before
+    ]
+    if not created:
+        # Refused by a budget check (categories / channel count) or the channel
+        # creation failed: nothing was saved, and the cog's message says which.
+        return {"ok": False, "error": "create_failed", "message": message}
+    hub = created[0]
+    return {
+        "ok": True,
+        "hub_id": hub["id"],
+        "hub_channel_id": str(hub["hub_channel_id"]),
+        "message": message,
+    }
+
+
+async def _exec_autoroom_hub_delete(bot, guild_id, payload):
+    """Delete a join-to-create hub: its Discord channels + its stored config.
+
+    Payload: ``{"hub_id"}`` (the 8-hex id from the hub dict). Like the create
+    path this must run through the queue: ``TemporaryRooms._remove_hub`` deletes
+    the hub's trigger channel AND its category with every live temp room inside,
+    drops the hub's ``_active`` room set and re-indexes the guild - all live-bot
+    work. ``guild_id`` is authoritative (the claimed row), and the hub id is
+    re-validated against THIS guild's saved hubs, so a crafted request can never
+    reach into another guild's config (the cog only ever looks at the hubs stored
+    under the guild it is handed).
+
+    The existence pre-check is what turns the cog's translated "That hub no
+    longer exists." into a short machine code, mirroring how the reaction/button
+    executors validate a role or channel before acting. The cog's message is
+    passed back for display, as in the create executor.
+    """
+    hub_id = payload.get("hub_id")
+    if not isinstance(hub_id, str):
+        return {"ok": False, "error": "bad_hub_id"}
+    hub_id = hub_id.strip()
+    if not hub_id or len(hub_id) > _MAX_HUB_ID_LEN:
+        return {"ok": False, "error": "bad_hub_id"}
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    cog = bot.get_cog("TemporaryRooms")
+    if cog is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
+    hubs = await cog._load_hubs(guild_id)
+    if not any(hub["id"] == hub_id for hub in hubs):
+        return {"ok": False, "error": "hub_not_found"}
+
+    message = await cog._remove_hub(guild, hub_id)
+    return {"ok": True, "hub_id": hub_id, "message": message}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
     "reaction_role_add": _exec_reaction_role_add,
@@ -862,6 +1017,8 @@ _EXECUTORS = {
     "button_panel_delete": _exec_button_panel_delete,
     "role_menu_post": _exec_role_menu_post,
     "role_menu_delete": _exec_role_menu_delete,
+    "autoroom_hub_create": _exec_autoroom_hub_create,
+    "autoroom_hub_delete": _exec_autoroom_hub_delete,
 }
 
 
