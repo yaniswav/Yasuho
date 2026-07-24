@@ -109,10 +109,11 @@ def level_down_between(old_xp, new_xp):
 class LevelConfig:
     """Immutable per-guild leveling settings (mirrors one level_config row).
 
-    Only ``enabled``, ``cooldown_seconds`` and the ``xp_min`` / ``xp_max`` band are
-    read by the grant path this lot; ``announce_mode`` / ``announce_channel_id`` /
-    ``announce_template`` are carried for later lots. Frozen so a cached config is a
-    value: a change replaces the map entry rather than mutating a shared object.
+    ``enabled``, ``cooldown_seconds`` and the ``xp_min`` / ``xp_max`` band are read
+    by the grant path; ``announce_mode`` / ``announce_channel_id`` /
+    ``announce_template`` are read when a level-up is announced (see
+    cogs/community/leveling.py). Frozen so a cached config is a value: a change
+    replaces the map entry rather than mutating a shared object.
     """
 
     enabled: bool = False

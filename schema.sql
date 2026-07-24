@@ -118,9 +118,12 @@ CREATE TABLE IF NOT EXISTS levels (
 -- guild that had leveling on keeps it on until its next toggle writes a row - and a
 -- row always wins, so switching leveling OFF via this table is never undone by a
 -- stale JSONB true. `enabled`, `cooldown_seconds` and the `xp_min`/`xp_max` band
--- are wired into the grant path now; `announce_mode` (off|channel|dm|fixed),
--- `announce_channel_id` and `announce_template` are reserved for later lots. One
--- row per guild; lookups ride the PK.  leveling.py, cogs/config/settings.py
+-- are wired into the grant path now; `announce_mode` (off|channel|dm|fixed)
+-- picks where a level-up is announced, `announce_channel_id` is the target
+-- channel for `announce_mode = 'fixed'`, and `announce_template` is an
+-- optional custom level-up message (both set via set_announce_mode /
+-- set_announce_template and read by the grant path). One row per guild;
+-- lookups ride the PK.  leveling.py, cogs/config/settings.py
 CREATE TABLE IF NOT EXISTS level_config (
     guild_id            BIGINT  PRIMARY KEY,
     enabled             BOOLEAN NOT NULL DEFAULT FALSE,
@@ -128,8 +131,8 @@ CREATE TABLE IF NOT EXISTS level_config (
     xp_min              INTEGER NOT NULL DEFAULT 15,
     xp_max              INTEGER NOT NULL DEFAULT 25,
     announce_mode       TEXT    NOT NULL DEFAULT 'channel',  -- off | channel | dm | fixed
-    announce_channel_id BIGINT,                              -- target channel for announce_mode = 'fixed' (later lot)
-    announce_template   TEXT,                                -- custom level-up message template (later lot)
+    announce_channel_id BIGINT,                              -- target channel for announce_mode = 'fixed'
+    announce_template   TEXT,                                -- custom level-up message template (NULL = default)
     rewards_mode        TEXT    NOT NULL DEFAULT 'stack',     -- stack | replace (level_rewards.py)
     voice_xp_enabled    BOOLEAN NOT NULL DEFAULT FALSE,       -- opt-in: earn XP for time in voice (voice_xp.py)
     voice_xp_per_minute INTEGER NOT NULL DEFAULT 5,           -- XP per eligible minute in voice (bounds 1..60)
@@ -494,7 +497,7 @@ CREATE INDEX IF NOT EXISTS role_menus_guild_idx ON role_menus (guild_id);
 -- ``self_add`` lets a member with a linked AniList account add themselves;
 -- ``enabled``/``fail_count`` back the auto-disable of a feed whose channel keeps
 -- erroring. Guild lookups ride the (guild_id, ...) PK prefix, so no extra index.
--- cogs/anilist/feed.py (owner cog, later lot)
+-- cogs/anilist/feed.py (owner cog)
 CREATE TABLE IF NOT EXISTS anilist_feeds (
     guild_id   BIGINT      NOT NULL,
     channel_id BIGINT      NOT NULL,                       -- a text channel OR thread id
@@ -510,7 +513,7 @@ CREATE TABLE IF NOT EXISTS anilist_feeds (
 -- enforced in code). One row per (feed, AniList user); ``anilist_user_id`` is
 -- AniList's numeric user id and ``anilist_username`` a cached display name for
 -- the setup panel. Lookups by feed ride the (guild_id, channel_id, ...) PK
--- prefix.  cogs/anilist/feed.py (later lot)
+-- prefix.  cogs/anilist/feed.py
 CREATE TABLE IF NOT EXISTS anilist_follows (
     guild_id         BIGINT      NOT NULL,
     channel_id       BIGINT      NOT NULL,
@@ -569,18 +572,18 @@ CREATE TABLE IF NOT EXISTS anilist_airing_state (
 );
 
 -- ============================================================
--- MangaDex chapter alerts (tools/mangadex.py + a later poller/cog lot)
+-- MangaDex chapter alerts (tools/mangadex.py + cogs/anilist/chapters.py)
 -- ============================================================
 
 -- MangaDex chapter-alert opt-ins: mirrors anilist_airing_optins exactly, chapter
 -- flavour. Users who chose to be DMed when a new chapter of a title on their
--- MangaDex-mapped manga list drops (with a one-click Read button, a later lot).
+-- MangaDex-mapped manga list drops (with a one-click Read button).
 -- One row per Discord user; ``anilist_user_id`` is their AniList numeric id,
 -- resolved once at opt-in so the poller can read their PUBLIC manga list
 -- unauthenticated (no token at poll time). ``enabled`` is flipped off
 -- automatically when their DMs are closed (a Forbidden on delivery) and they can
 -- re-run the toggle to turn it back on. Lookups ride the PK.
--- cogs/anilist (chapters, later lot)
+-- cogs/anilist/chapters.py
 CREATE TABLE IF NOT EXISTS anilist_chapter_optins (
     user_id         BIGINT      PRIMARY KEY,               -- Discord user id
     anilist_user_id INTEGER     NOT NULL,                  -- AniList numeric user id
@@ -596,7 +599,7 @@ CREATE TABLE IF NOT EXISTS anilist_chapter_optins (
 -- resolved ``mangadex_id`` (a UUID), ``status = 'missing'`` stores it NULL and
 -- exists solely to STOP the poller re-searching that media every tick. A later
 -- lot may retry stale 'missing' rows using ``checked_at`` as the staleness clock.
--- One row per AniList media; lookups ride the PK.  cogs/anilist (chapters lot)
+-- One row per AniList media; lookups ride the PK.  cogs/anilist/chapters.py
 CREATE TABLE IF NOT EXISTS mangadex_mapping (
     anilist_media_id INTEGER     PRIMARY KEY,               -- AniList numeric media id
     mangadex_id      TEXT,                                  -- MangaDex manga UUID; NULL when missing
@@ -612,7 +615,7 @@ CREATE TABLE IF NOT EXISTS mangadex_mapping (
 -- that raw value and accepts it straight back, so a verbatim round-trip avoids any
 -- lossy timestamp reparse at the seam. NULL means "never anchored" -> the next
 -- poll is the anti-backfill first run (anchor the cursor, alert nothing). One row
--- per manga; lookups ride the PK.  cogs/anilist (chapters lot)
+-- per manga; lookups ride the PK.  cogs/anilist/chapters.py
 CREATE TABLE IF NOT EXISTS mangadex_chapter_state (
     mangadex_id      TEXT        PRIMARY KEY,               -- MangaDex manga UUID
     last_readable_at TEXT,                                  -- cursor: raw readableAt of the newest processed chapter
@@ -631,7 +634,7 @@ CREATE TABLE IF NOT EXISTS mangadex_chapter_state (
 -- identity from tools.mangadex.chapter_key: the canonical chapter NUMBER (the
 -- volume is excluded - groups disagree on it), id-fallback for numberless rows.
 -- Stored as TEXT. Lookups/prunes ride the PK + index.
--- cogs/anilist (chapters lot)
+-- cogs/anilist/chapters.py
 CREATE TABLE IF NOT EXISTS mangadex_seen_chapters (
     mangadex_id   TEXT        NOT NULL,                     -- MangaDex manga UUID
     chapter_key   TEXT        NOT NULL,                     -- serialized chapter-number identity

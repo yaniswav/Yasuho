@@ -2,8 +2,8 @@
 
 A guild may configure up to two feed channels; each feed follows a set of
 AniList users and the bot posts their new activities (list progress and text
-posts) into the channel. A single global poller (a later lot) fetches the raw
-activities in batches and hands them to the helpers here.
+posts) into the channel. A single global poller (cogs/anilist/feed.py) fetches
+the raw activities in batches and hands them to the helpers here.
 
 This module is deliberately free of any discord.py, database or network use:
 it only shapes and filters data (AniList markdown -> Discord markdown, routing
@@ -13,7 +13,7 @@ tests can run without a bot. Every Discord/DB side effect lives in the cog.
 
 It is also translation-free on purpose (no ``_()`` imports): it returns raw
 data (statuses, numbers, cleaned text) and the cog does all user-facing wording
-and localisation in a later lot.
+and localisation.
 """
 
 from __future__ import annotations

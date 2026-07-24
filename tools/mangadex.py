@@ -1,10 +1,11 @@
 """Pure, testable core for MangaDex-based manga chapter alerts.
 
-A later cog polls MangaDex for new chapters of the manga a guild/user tracks and
-posts (or DMs) an alert with a one-click read link. This module owns the only
-non-trivial decisions that logic needs - AniList -> MangaDex mapping, feed
-normalisation, and the dedup + cursor core that decides what to alert - as pure
-functions so the cog stays a thin I/O shell and the tests need no network.
+cogs/anilist/chapters.py polls MangaDex for new chapters of the manga a
+guild/user tracks and posts (or DMs) an alert with a one-click read link.
+This module owns the only non-trivial decisions that logic needs - AniList ->
+MangaDex mapping, feed normalisation, and the dedup + cursor core that decides
+what to alert - as pure functions so the cog stays a thin I/O shell and the
+tests need no network.
 
 It is deliberately free of any aiohttp/discord.py/database use: it only shapes,
 matches and filters data. The only concession to I/O is a handful of pure

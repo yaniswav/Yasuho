@@ -2,7 +2,8 @@
 
 It imports the heaviest modules (which pull in the sonolink stub, config
 bootstrap, and the i18n catalogs), then exercises the two boundary fixtures.
-Kept intentionally small - real coverage lands in later phases.
+Kept intentionally small - the rest of the suite (2194+ tests) carries the
+real coverage.
 """
 
 import core  # noqa: F401  (import-time config reads + sonolink)
