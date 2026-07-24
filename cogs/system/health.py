@@ -18,10 +18,12 @@ Two blind spots this cog closes:
 The periodic load line folds the ALREADY-EXISTING per-subsystem
 instrumentation - :class:`tools.quotas.QuotaRegistry` (owned by the Music
 cog), the webhook :class:`tools.rate_limit.FixedWindowRateLimiter` (owned by
-Webstats), the DB pool, and the gateway counters above - into one compact,
-grep-able INFO line every 60s. Every read is O(1) (counters, dict sizes, or
-asyncpg's own get_size()/get_idle_size()/get_max_size() getters), so the loop
-can never itself become a load problem. Both other cogs are read defensively
+Webstats), the interactive :class:`cogs.anilist.throttle.AniListThrottle`
+(owned by the AniList cog), the DB pool, and the gateway counters above -
+into one compact, grep-able INFO line every 60s. Every read is O(1)
+(counters, dict sizes, or asyncpg's own
+get_size()/get_idle_size()/get_max_size() getters), so the loop can never
+itself become a load problem. Every other cog is read defensively
 (``get_cog`` + ``getattr``) so this cog degrades to "n/a" for a subsystem
 that failed to load, rather than crashing the loop.
 """
@@ -63,15 +65,16 @@ def format_load_line(
     pool_max: int,
     quota_stats: dict | None,
     webhook_stats: dict | None,
+    anilist_stats: dict | None,
     gw_resumes: int,
     gw_disconnects: int,
 ) -> str:
     """Fold every subsystem's counters into one compact, grep-able line.
 
     Pure and side-effect free so it is unit-testable without a bot, a pool,
-    or a running loop. ``quota_stats``/``webhook_stats`` are ``None`` when the
-    owning cog has not (yet) loaded; that subsystem then renders as ``n/a``
-    instead of failing the whole line.
+    or a running loop. ``quota_stats``/``webhook_stats``/``anilist_stats`` are
+    ``None`` when the owning cog has not (yet) loaded; that subsystem then
+    renders as ``n/a`` instead of failing the whole line.
     """
     parts = [f"pool={pool_size}/{pool_max}", f"idle={pool_idle}"]
     parts.append(
@@ -79,6 +82,9 @@ def format_load_line(
     )
     parts.append(
         "webhook=" + (_format_kv(webhook_stats) if webhook_stats else "n/a")
+    )
+    parts.append(
+        "anilist=" + (_format_kv(anilist_stats) if anilist_stats else "n/a")
     )
     parts.append(f"gw_resumes={gw_resumes}")
     parts.append(f"gw_disconnects={gw_disconnects}")
@@ -127,6 +133,26 @@ class Health(commands.Cog):
         limiter = getattr(webstats, "_limiter", None)
         return limiter.stats() if limiter is not None else None
 
+    def _anilist_stats(self):
+        """Interactive AniList throttle counters, or None if unavailable.
+
+        Folds :attr:`~cogs.anilist.throttle.AniListThrottle.throttled_count`
+        (lifetime interactive 429s) and the process-wide global window's
+        ``stats()['global']`` (hits/rejections against ``GLOBAL_LIMIT``) so an
+        operator watching the LOAD line can see "AniList is throttling us"
+        without grepping a separate log line.
+        """
+        anilist = self.bot.get_cog("AniList")
+        throttle = getattr(anilist, "_throttle", None)
+        if throttle is None:
+            return None
+        global_stats = throttle.stats()["global"]
+        return {
+            "throttled_429": throttle.throttled_count,
+            "global_hits": global_stats["hits"],
+            "global_rejections": global_stats["rejections"],
+        }
+
     @tasks.loop(seconds=LOAD_LOG_INTERVAL)
     async def load_line(self):
         try:
@@ -138,6 +164,7 @@ class Health(commands.Cog):
                 pool_max=pool.get_max_size(),
                 quota_stats=self._quota_stats(),
                 webhook_stats=self._webhook_stats(),
+                anilist_stats=self._anilist_stats(),
                 gw_resumes=self.gw_resumes,
                 gw_disconnects=self.gw_disconnects,
             )

@@ -27,7 +27,12 @@ Two layers, deliberately separate:
 A shared counter records how many interactive responses (lookups and feed card
 actions) came back as HTTP 429, so the operator can SEE "AniList is throttling
 us" and correlate it with poller embargoes - surfacing the signal without
-changing poller behaviour.
+changing poller behaviour. That counter (and the global window's hit/rejection
+counts from :meth:`AniListThrottle.stats`) is folded into the ``anilist=``
+segment of the bot-wide ``LOAD`` line that :mod:`cogs.system.health` logs every
+60s (:meth:`cogs.system.health.Health._anilist_stats`), the same place the
+Music and webhook subsystems already surface theirs - so the promise above is
+not just a docstring, it is a grep-able line in production.
 
 Pure and clock-injected (via :mod:`tools.quotas`): pass ``clock`` to drive time
 deterministically in tests.
