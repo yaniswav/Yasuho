@@ -3,15 +3,11 @@ from itertools import cycle
 
 import discord
 from discord.ext import commands, tasks
-from discord.utils import find
 
 from tools import retention
-from tools.config_loader import config_loader
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
-
-DEFAULT_PREFIX = config_loader.get("BotInfo", "DefaultPrefix")
 
 status = cycle(["@Yasuho help", "https://yasuho.xyz"])
 
@@ -108,41 +104,6 @@ class Events(commands.Cog):
                 "Failed to cancel/restore retention state for guild %s",
                 guild.id,
             )
-
-        names = [
-            "general",
-            "général",
-            "lobby",
-            "chat",
-            "welcome",
-            "bienvenue",
-            "commands",
-            "cmds",
-            "hub",
-            "arrival",
-            "command",
-            "bots-commands",
-            "bots",
-        ]
-
-        general = find(lambda x: x.name in names, guild.text_channels)
-
-        welcome = _(
-            "🌺 Beep boop **{guild}**! To get started type `{prefix}help`"
-        ).format(guild=guild.name, prefix=DEFAULT_PREFIX)
-
-        if general and general.permissions_for(guild.me).send_messages:
-            await general.send(welcome)
-
-        else:
-            msg = welcome
-            try:
-                if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
-                    await guild.system_channel.send(msg)
-                elif guild.owner:
-                    await guild.owner.send(msg)
-            except Exception:
-                log.exception("Failed to send welcome message")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
