@@ -44,6 +44,7 @@ from cogs.music.music import (
     can_go_previous,
     can_skip,
     effect_select_options,
+    format_clock,
     format_duration,
     is_autoplay_track,
     purge_queue_lanes,
@@ -71,6 +72,74 @@ E_VOICE = config_loader.getstr("Emojis", "voice")
 # replaces playback, so a double-click would fire two competing replace
 # sequences. Touched only on an allowed click, so a burst collapses to one.
 _STATION_DEBOUNCE = Cooldowns(2.0)
+
+
+# Now-playing progress bar. Twelve segments is the widest bar that still fits a
+# phone-width line beside both timestamps, and it keeps each step at an eighth
+# of a typical track (a visible jump, not a shimmer).
+PROGRESS_SEGMENTS = 12
+PROGRESS_FILLED = "▓"  # dark shade block
+PROGRESS_EMPTY = "░"  # light shade block
+
+
+def progress_state(
+    position_ms: typing.Optional[int], duration_ms: typing.Optional[int]
+) -> typing.Tuple[int, int]:
+    """The two numbers the rendered progress line can show, as a comparison key.
+
+    Returns ``(filled_segments, elapsed_minutes)``. A live stream (duration
+    ``None`` or non-positive) renders a static badge with nothing that can move,
+    so it collapses to the constant ``(-1, -1)``.
+
+    This is the anti-noop half of the feature: the 60s idle tick re-renders the
+    controller only when this key actually changes, so a player whose bar has not
+    moved a segment (and whose displayed minute is unchanged) posts NO edit. Pure
+    and total over None / negative / past-the-end input, so it is unit-tested
+    without a node.
+    """
+    if not duration_ms or duration_ms <= 0:
+        return (-1, -1)
+    position = min(max(position_ms or 0, 0), duration_ms)
+    filled = position * PROGRESS_SEGMENTS // duration_ms
+    return (filled, position // 60000)
+
+
+def render_progress_line(
+    position_ms: typing.Optional[int], duration_ms: typing.Optional[int]
+) -> str:
+    """Render ``elapsed [####--------] total`` for the now-playing panel.
+
+    A live stream (duration ``None`` or non-positive) has no end to fill towards,
+    so it gets the LIVE badge instead of a bar. Timestamps use :func:`format_clock`,
+    so ``mm:ss`` rolls into ``h:mm:ss`` past an hour; the total on the right of the
+    bar is the ONLY place the panel states the track's length. Positions past the
+    end (or below zero) are clamped rather than overflowing the bar. Pure: the
+    caller supplies the position, so the render never reaches into the player.
+
+    The badge keeps the emoji OUT of the msgid (the onboarding-card pattern), so
+    translators get a short, decoration-free string to work with.
+    """
+    if not duration_ms or duration_ms <= 0:
+        return "🔴 " + _("**LIVE**")
+    position = min(max(position_ms or 0, 0), duration_ms)
+    filled = progress_state(position, duration_ms)[0]
+    bar = PROGRESS_FILLED * filled + PROGRESS_EMPTY * (PROGRESS_SEGMENTS - filled)
+    return f"`{format_clock(position)} [{bar}] {format_clock(duration_ms)}`"
+
+
+def track_duration_ms(
+    track: typing.Optional[sonolink.models.Playable],
+) -> typing.Optional[int]:
+    """A track's playable length in ms, or ``None`` when it cannot be filled.
+
+    Streams and length-less tracks both return ``None`` - the two cases the
+    progress line renders as LIVE. Attribute-tolerant so a partially built track
+    (the cold-restore race) degrades to the badge instead of raising.
+    """
+    if track is None or getattr(track, "is_stream", False):
+        return None
+    length = getattr(track, "length", None)
+    return length if isinstance(length, int) and length > 0 else None
 
 
 async def _ensure_in_voice(
@@ -258,6 +327,16 @@ class MusicController(discord.ui.LayoutView):
         # (not player.current, which has already advanced to the new track by the
         # time its event lands) to tell a reconnect re-fire from a real change.
         self._rendered_id: typing.Optional[str] = None
+        # What the progress line last RENDERED, as a (segment, minute) key. The
+        # idle tick compares the live key against this one and stands down when
+        # nothing would visibly change, so an unmoved bar posts no edit. None
+        # until the first _build, and while nothing is playing.
+        self._progress_key: typing.Optional[typing.Tuple[int, int]] = None
+        # Accent colour of the container, drawn ONCE per track (see _accent_for).
+        # The progress bar makes this panel re-render on the idle tick, and a
+        # fresh random colour on every build would make the panel blink every 60s.
+        self._accent_id: typing.Optional[str] = None
+        self._accent_colour: typing.Optional[int] = None
         # When this view was created; _send_controller only keeps a very recent
         # controller on a same-track re-fire (a reconnect re-fire arrives within
         # seconds), so a later same-track start (loop mode) still re-posts.
@@ -273,8 +352,32 @@ class MusicController(discord.ui.LayoutView):
     ) -> _ControllerButton:
         return _ControllerButton(handler, **kwargs)
 
-    def _build(self) -> None:
-        """(Re)assemble the layout from the player's current state."""
+    def _accent_for(self, track_id: typing.Optional[str]) -> int:
+        """The container's accent colour, stable for as long as the track is.
+
+        A fresh :func:`random_colour` per build was fine when every build followed
+        a user action, but the progress bar re-renders this panel on the 60s idle
+        tick: re-drawing then would recolour the container roughly once a minute
+        under an unchanged song (a blinking panel). The colour is therefore drawn
+        once per rendered track and reused until the track identity changes.
+        """
+        if self._accent_colour is None or track_id != self._accent_id:
+            self._accent_id = track_id
+            self._accent_colour = random_colour()
+        return self._accent_colour
+
+    def _build(self, *, keep_rendered_id: bool = False) -> None:
+        """(Re)assemble the layout from the player's current state.
+
+        ``keep_rendered_id`` leaves :attr:`_rendered_id` untouched. The progress
+        tick passes it: ``_rendered_id`` is an INPUT of decide_controller_action
+        (the identity of the track on screen when a track_start arrives), and a
+        clock refresh must never move that dedup state - a tick landing in the
+        window where player.current has advanced but the new track's track_start
+        has not reached the cog would otherwise re-key the panel onto the incoming
+        track and turn the genuine change into a keep/repost. The bar has its own
+        change key (:attr:`_progress_key`), so it needs nothing from this one.
+        """
         self.clear_items()
 
         # player.current wins once sonolink has set it; self._track only covers
@@ -284,12 +387,16 @@ class MusicController(discord.ui.LayoutView):
         # Record what this render actually shows so _send_controller can tell a
         # same-track re-fire from a genuine change without consulting the live
         # player.current (which advances ahead of the track_start event).
-        self._rendered_id = getattr(track, "identifier", None)
+        if not keep_rendered_id:
+            self._rendered_id = getattr(track, "identifier", None)
         if track is None:
+            self._progress_key = None
             self.add_item(discord.ui.TextDisplay(_("Nothing is playing right now.")))
             return
 
-        container = discord.ui.Container(accent_colour=random_colour())
+        container = discord.ui.Container(
+            accent_colour=self._accent_for(getattr(track, "identifier", None))
+        )
 
         title = track.title[:256]
         header = f"## [{title}]({track.uri})" if track.uri else f"## {title}"
@@ -310,6 +417,16 @@ class MusicController(discord.ui.LayoutView):
                     )
                 )
             )
+
+        # Progress line, refreshed by the renders this panel already does plus
+        # the 60s idle tick (see refresh_progress) - never by a timer of its own.
+        duration_ms = track_duration_ms(track)
+        position_ms = self._position_ms()
+        self._progress_key = progress_state(position_ms, duration_ms)
+        container.add_item(
+            discord.ui.TextDisplay(render_progress_line(position_ms, duration_ms))
+        )
+
         container.add_item(discord.ui.Separator())
 
         status = _("⏸ Paused") if self.player.paused else _("▶ Playing")
@@ -320,16 +437,17 @@ class MusicController(discord.ui.LayoutView):
             loop_state = _("On (track)")
         else:
             loop_state = _("Off")
+        # No "Duration" row: the progress line above already states the total (and
+        # renders the LIVE badge for a stream), so repeating it here printed the
+        # same value twice on one panel.
         container.add_item(
             discord.ui.TextDisplay(
                 _(
                     "**Status:** {status}\n"
-                    "**Duration:** `{duration}`\n"
                     "**Volume:** `{volume}%`\n"
                     "**Loop:** {loop}"
                 ).format(
                     status=status,
-                    duration=format_duration(track),
                     volume=self.player.volume,
                     loop=loop_state,
                 )
@@ -527,6 +645,60 @@ class MusicController(discord.ui.LayoutView):
             return None
         return effects.PRESETS_BY_KEY.get(key)
 
+    def _position_ms(self) -> int:
+        """Playback position of the player's current track, straight from sonolink.
+
+        sonolink's ``Player.position`` already interpolates against its last node
+        state update (and freezes while paused), so this reads it as-is: adding
+        our own elapsed-time maths on top would double-extrapolate and race the
+        bar ahead of the audio.
+
+        Returns 0 while nothing is current - the panel is then rendering the
+        fallback ``self._track`` (the track_start event beats ``play()``'s REST
+        update), and ``player.position`` still belongs to the PREVIOUS track, so
+        reading it would draw a nearly-full bar under a song that just began.
+
+        This takes no track argument on purpose: both callers render
+        ``player.current`` itself whenever it exists (:meth:`_build` prefers it
+        over the fallback, :meth:`refresh_progress` reads it directly), so the
+        position always belongs to the track being drawn. A caller that ever
+        renders a track OTHER than ``player.current`` must not use this.
+        """
+        if self.player.current is None:
+            return 0
+        position = getattr(self.player, "position", 0)
+        return position if isinstance(position, int) else 0
+
+    async def refresh_progress(self) -> bool:
+        """Advance the progress bar in place, but only when it would change.
+
+        Called by the cog's existing 60s idle tick - the feature adds NO timer of
+        its own. The edit is skipped whenever the rendered key (segment index plus
+        displayed minute) is unchanged, so a paused player, a live stream, or a
+        long track sitting between segments costs nothing. Returns True when an
+        edit was actually issued, which is what the tests assert against.
+
+        Worst case is therefore one edit per playing player per minute: 200 active
+        players bot-wide is ~3.3 edits/s spread over 200 distinct channels, far
+        under the per-channel limits, and no new hot path is created.
+
+        The re-render is explicitly dedup-neutral (``keep_rendered_id=True``): a
+        clock refresh must leave decide_controller_action's inputs exactly as the
+        last track_start left them, so the panel's keep/rerender/repost classing
+        can never be decided by where a 60s tick happened to land.
+        """
+        if self.message is None:
+            return False
+        if self.player.current is None:
+            return False
+        key = progress_state(
+            self._position_ms(), track_duration_ms(self.player.current)
+        )
+        if key == self._progress_key:
+            return False
+        await self._rerender(keep_rendered_id=True)
+        return True
+
     def _disable_all(self) -> None:
         """Disable every button in the layout (walks nested ActionRows)."""
         for child in self.walk_children():
@@ -551,13 +723,17 @@ class MusicController(discord.ui.LayoutView):
             interaction, _("Something went wrong handling that action.")
         )
 
-    async def _rerender(self) -> None:
-        """Re-render the now-playing layout in place so it reflects new state."""
+    async def _rerender(self, *, keep_rendered_id: bool = False) -> None:
+        """Re-render the now-playing layout in place so it reflects new state.
+
+        ``keep_rendered_id`` is forwarded to :meth:`_build`; only the progress
+        tick sets it, so a button-driven refresh keeps recording what it drew.
+        """
         if self.message is None:
             return
         if self.player.current is None:
             return
-        self._build()
+        self._build(keep_rendered_id=keep_rendered_id)
         try:
             await self.message.edit(view=self)
         except discord.HTTPException:

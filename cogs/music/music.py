@@ -55,6 +55,13 @@ RESTORE_MAX_AGE = 600
 # thundering herd.
 RESTORE_CONCURRENCY = 5
 
+# How many now-playing panels the idle tick may refresh at once. The refreshes
+# are Discord edits, so awaiting them one after another made a tick as long as
+# the sum of its HTTP round-trips (a fleet with hundreds of players could push
+# the 60s loop past its own period); fanning them out bounded keeps the tick
+# roughly constant-time while never bursting a whole fleet at the rate limiter.
+PROGRESS_REFRESH_CONCURRENCY = 10
+
 # Cap a user's saved favourites so the table cannot grow without bound.
 MAX_FAVOURITES = 100
 
@@ -412,6 +419,41 @@ def decide_controller_action(
             return "keep"
         return "repost"
     return "rerender"
+
+
+async def refresh_progress_bars(
+    controllers: typing.Sequence[typing.Any],
+    *,
+    concurrency: int = PROGRESS_REFRESH_CONCURRENCY,
+) -> int:
+    """Advance a batch of now-playing progress bars; returns how many edits went out.
+
+    Each controller decides for itself whether anything moved (an unchanged bar
+    posts no edit at all), so this only owns the fan-out policy:
+
+    * bounded-concurrent, like the startup restore - the edits are HTTP calls, and
+      awaiting them in series made the 60s idle tick grow linearly with the number
+      of active players, so a large fleet could spend its whole period editing;
+    * isolated per controller - one guild's failed edit is logged and dropped, it
+      can never sink the batch nor cost the other guilds their idle disconnect.
+
+    Free when the batch is empty, so a bot with no playing player pays nothing.
+    """
+    if not controllers:
+        return 0
+
+    semaphore = asyncio.Semaphore(max(concurrency, 1))
+
+    async def _guarded(controller: typing.Any) -> bool:
+        async with semaphore:
+            try:
+                return bool(await controller.refresh_progress())
+            except Exception:
+                log.exception("Failed to refresh a controller progress bar")
+                return False
+
+    results = await asyncio.gather(*(_guarded(c) for c in controllers))
+    return sum(1 for edited in results if edited)
 
 
 def radio_seen_ids(
@@ -1244,6 +1286,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Disconnect players that have stayed idle longer than ``IDLE_TIMEOUT``."""
         try:
             now = time.monotonic()
+            # Panels to advance this tick, collected here and refreshed together
+            # once the (fast, local) idle bookkeeping is done - see
+            # refresh_progress_bars for why the edits must not be serialised.
+            pending: typing.List[typing.Tuple[Player, typing.Any]] = []
             for voice_client in list(self.bot.voice_clients):
                 if not isinstance(voice_client, Player):
                     continue
@@ -1251,6 +1297,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 # drift between the event-driven snapshots.
                 if voice_client.current is not None:
                     await self._snapshot(voice_client)
+                    # Same tick advances the now-playing progress bar. The view
+                    # itself decides whether anything moved, so an unchanged bar
+                    # (paused player, live stream, long track between segments)
+                    # posts no edit.
+                    controller = getattr(voice_client, "controller", None)
+                    if controller is not None:
+                        pending.append((voice_client, controller))
                 if self._is_idle(voice_client):
                     if voice_client.idle_since is None:
                         voice_client.idle_since = now
@@ -1262,6 +1315,16 @@ class Music(ServerPlaylistMixin, commands.Cog):
                         await self._teardown(voice_client)
                 else:
                     voice_client.idle_since = None
+            # Advance every surviving panel at once. A player torn down above has
+            # had its controller dropped (and its message deleted), so it is
+            # filtered out here rather than edited into a 404.
+            await refresh_progress_bars(
+                [
+                    controller
+                    for player, controller in pending
+                    if getattr(player, "controller", None) is controller
+                ]
+            )
             # Quota-stats heartbeat: fold the whole registry into one INFO line
             # about every QUOTA_LOG_INTERVAL, and only when something has actually
             # happened, so an idle process stays silent.
