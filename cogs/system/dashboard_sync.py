@@ -85,6 +85,7 @@ VALID_KINDS = frozenset(
         "verify_role",
         "locale",
         "custom_commands",
+        "twitch",
     }
 )
 
@@ -217,6 +218,20 @@ async def _invalidate_warn_escalation(bot, gid):
     ``invalidate_guild`` drops the guild's cached blob (the same helper retention
     uses), so the next read re-fetches the authoritative row instead of serving a
     stale policy until the next restart.
+    """
+    settings.invalidate_guild(gid)
+
+
+async def _invalidate_twitch(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    The Twitch go-live alert config lives under the ``guild_settings`` JSONB key
+    ``'twitch'`` (``cogs/config/twitch.py`` reads it via ``settings.get_guild(...,
+    'twitch', ...)``), served from the SAME ``tools.settings`` LRU as
+    welcome/automod/warn_escalation. ``invalidate_guild`` drops the guild's cached
+    blob so the next go-live re-reads the authoritative config. NB: the watchlist
+    (``twitch_alert`` table) is read straight from the DB on each go-live and is
+    not cached, so the dashboard's watchlist writes need no invalidation.
     """
     settings.invalidate_guild(gid)
 
@@ -401,6 +416,7 @@ _INVALIDATORS = {
     "verify_role": _invalidate_verify_role,
     "locale": _invalidate_locale,
     "custom_commands": _invalidate_custom_commands,
+    "twitch": _invalidate_twitch,
 }
 
 

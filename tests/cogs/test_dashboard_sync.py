@@ -365,6 +365,20 @@ async def test_dispatch_welcome_evicts_settings_blob():
     assert key not in settings._cache
 
 
+async def test_dispatch_twitch_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    # The Twitch go-live config lives in the SAME settings LRU blob (key
+    # 'twitch'); a dashboard write must evict it so the next go-live re-reads it.
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {"twitch": {"enabled": True, "channel_id": 201}}
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("twitch", 100))
+
+    assert handled == "twitch"
+    assert key not in settings._cache
+
+
 # ---------------------------------------------------------------------------
 # dispatch: starboard invalidation (refresh the Starboard cog's _config entry).
 # ---------------------------------------------------------------------------
@@ -665,4 +679,5 @@ def test_valid_kinds_match_invalidators():
         "verify_role",
         "locale",
         "custom_commands",
+        "twitch",
     }
