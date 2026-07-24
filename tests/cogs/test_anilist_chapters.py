@@ -11,7 +11,7 @@ click. Importing the cog module is enough; nothing in it runs at import time.
 """
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from cogs.anilist import chapters as ch
 from cogs.anilist.airing import SEEN_TEMPLATE
@@ -533,11 +533,12 @@ def _paged(rows, limit):
     return pages
 
 
-def _chapters_cog_with_pages(pages):
+def _chapters_cog_with_pages(pages, asked=None):
     """A bare AniListChapters whose _fetch_feed_page serves ``pages`` by offset.
 
-    Records the offsets requested so a test can assert where paging stopped. No task
-    loop, bot or DB is constructed; _fetch_feed only needs _space + _fetch_feed_page.
+    Records the offsets requested so a test can assert where paging stopped (and, in
+    ``asked``, the language union each page was asked for). No task loop, bot or DB
+    is constructed; _fetch_feed only needs _space + _fetch_feed_page.
     """
 
     cog = object.__new__(ch.AniListChapters)
@@ -549,8 +550,10 @@ def _chapters_cog_with_pages(pages):
 
     cog._space = _no_space
 
-    async def _page(_mangadex_id, offset):
+    async def _page(_mangadex_id, offset, languages):
         requested.append(offset)
+        if asked is not None:
+            asked.append(languages)
         return {"data": pages.get(offset, [])}
 
     cog._fetch_feed_page = _page
@@ -645,8 +648,22 @@ def _mapping_env(specs):
     return union, media_by_id, rows
 
 
-def _missing_row(retry_due):
-    return {"mangadex_id": None, "status": "missing", "retry_due": retry_due}
+_CHECK_BASE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+def _checked(offset):
+    """A ``checked_at`` stamp ``offset`` seconds after a fixed base (bigger = newer)."""
+
+    return _CHECK_BASE + timedelta(seconds=offset)
+
+
+def _missing_row(retry_due, checked_at=None):
+    return {
+        "mangadex_id": None,
+        "status": "missing",
+        "retry_due": retry_due,
+        "checked_at": checked_at,
+    }
 
 
 def test_fresh_missing_row_is_not_retried():
@@ -677,12 +694,13 @@ def test_never_searched_media_win_the_whole_budget_over_retries():
 
 
 def test_retries_only_take_the_budget_new_media_left():
-    # 1 never-searched media + 3 stale retries, budget 3 -> new first, then 2 retries.
+    # 1 never-searched media + 3 stale retries, budget 3 -> new first, then the 2
+    # least-recently-checked retries (50 was checked first, then 51, then 52).
     specs = {
         7: None,
-        50: _missing_row(True),
-        51: _missing_row(True),
-        52: _missing_row(True),
+        50: _missing_row(True, _checked(0)),
+        51: _missing_row(True, _checked(10)),
+        52: _missing_row(True, _checked(20)),
     }
     union, media, rows = _mapping_env(specs)
     picked = ch._mapping_search_candidates(union, media, rows)
@@ -704,6 +722,103 @@ def test_untitled_media_are_skipped_in_both_classes():
     media = {1: {"id": 1, "title": {}}, 2: {"id": 2, "title": {}}}
     rows = {2: _missing_row(True)}
     assert ch._mapping_search_candidates(union, media, rows) == []
+
+
+# --- retry fairness: the backlog drains FIFO, not by media id ----------------
+#
+# The retry budget is what MAX_MAPPING_SEARCHES_PER_TICK leaves over, i.e. only a
+# few per tick against a backlog that can be far larger than one MISSING_RETRY_DAYS
+# window can serve. Draining by media id would then permanently feed the low-id
+# cohort (which goes stale again and re-takes the head) and never reach the high
+# ids - exactly the NEWEST media, the ones most likely to have just landed on
+# MangaDex. So the order is the checked_at clock: least-recently-checked first.
+
+
+def test_retries_drain_least_recently_checked_first():
+    # Clocks run OPPOSITE to the ids: the oldest check is the highest id, which an
+    # id-ordered drain would serve last (and, at scale, never).
+    specs = {
+        50: _missing_row(True, _checked(300)),
+        51: _missing_row(True, _checked(200)),
+        52: _missing_row(True, _checked(100)),
+    }
+    union, media, rows = _mapping_env(specs)
+    assert ch._mapping_search_candidates(union, media, rows) == [52, 51, 50]
+
+
+def test_a_restamped_retry_falls_behind_the_older_backlog():
+    # The rotation invariant: a row that was just served (checked_at moved to now)
+    # goes to the BACK, so the next tick serves the row that has waited longest.
+    specs = {
+        50: _missing_row(True, _checked(100)),
+        51: _missing_row(True, _checked(200)),
+    }
+    union, media, rows = _mapping_env(specs)
+    assert ch._mapping_search_candidates(union, media, rows, budget=1) == [50]
+
+    rows[50]["checked_at"] = _checked(900)  # re-stamped by the completed search
+    assert ch._mapping_search_candidates(union, media, rows, budget=1) == [51]
+
+
+def test_retry_tiebreak_on_equal_clocks_is_the_media_id():
+    # Rows stamped in the same transaction share a clock; the id keeps the drain
+    # deterministic (and therefore testable) instead of hash-ordered.
+    same = _checked(500)
+    specs = {
+        52: _missing_row(True, same),
+        50: _missing_row(True, same),
+        51: _missing_row(True, same),
+    }
+    union, media, rows = _mapping_env(specs)
+    assert ch._mapping_search_candidates(union, media, rows) == [50, 51, 52]
+
+
+def test_a_row_with_no_readable_clock_is_treated_as_maximally_stale():
+    # A missing/unreadable checked_at must never raise (no datetime-vs-None compare)
+    # and must not starve either: it ranks ahead of every dated row.
+    specs = {
+        50: _missing_row(True, _checked(100)),
+        51: _missing_row(True, None),
+        52: _missing_row(True, "not-a-date"),
+    }
+    union, media, rows = _mapping_env(specs)
+    assert ch._mapping_search_candidates(union, media, rows) == [51, 52, 50]
+
+
+def test_the_whole_backlog_is_served_before_anything_repeats():
+    # End-to-end fairness over two ticks with the real cap: 6 stale rows, clocks
+    # inverted against the ids. Each served row is re-stamped (as the resolver's
+    # upsert does) and immediately eligible again, so an id-ordered drain would
+    # re-serve the low ids on tick 2 and never touch the high ones. FIFO instead
+    # serves all 6 exactly once.
+    ids = [100, 101, 102, 103, 104, 105]
+    specs = {
+        mid: _missing_row(True, _checked(1000 - 10 * i)) for i, mid in enumerate(ids)
+    }
+    union, media, rows = _mapping_env(specs)
+
+    served = []
+    stamp = 5000
+    for _tick in range(2):
+        picked = ch._mapping_search_candidates(union, media, rows)
+        assert len(picked) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+        for mid in picked:
+            served.append(mid)
+            stamp += 10
+            rows[mid]["checked_at"] = _checked(stamp)  # re-stamped, still stale
+
+    assert sorted(served) == ids  # every row served, none twice
+    assert served[:3] == [105, 104, 103]  # oldest checks first, ids notwithstanding
+
+
+def test_checked_epoch_normalises_what_the_driver_returns():
+    aware = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert ch._checked_epoch(aware) == aware.timestamp()
+    # A naive stamp is read as UTC (never as local time).
+    assert ch._checked_epoch(datetime(2026, 1, 1)) == aware.timestamp()
+    assert ch._checked_epoch(1735689600) == 1735689600.0
+    assert ch._checked_epoch(None) is None
+    assert ch._checked_epoch("nope") is None
 
 
 # --- the async resolver: what a retry actually writes ------------------------
@@ -756,7 +871,15 @@ async def test_retry_that_still_misses_restamps_checked_at():
     assert await cog._resolve_new_mappings(union, media, rows, 0) is True
     assert searched == [50]
     assert upserts == [(50, None, "missing")]
-    assert rows[50] == {"mangadex_id": None, "status": "missing", "retry_due": False}
+    # The mirrored clock is dropped to None on purpose: only Postgres' now() is
+    # authoritative for it, and retry_due=False already keeps the row out of the
+    # retry ordering until the real stamp is re-read next tick.
+    assert rows[50] == {
+        "mangadex_id": None,
+        "status": "missing",
+        "retry_due": False,
+        "checked_at": None,
+    }
 
 
 async def test_successful_retry_persists_the_mapping():
@@ -770,6 +893,7 @@ async def test_successful_retry_persists_the_mapping():
         "mangadex_id": "uuid-50",
         "status": "found",
         "retry_due": False,
+        "checked_at": None,
     }
 
 
@@ -836,6 +960,7 @@ class _RecordingPool:
 
 
 async def test_load_mappings_asks_postgres_for_the_staleness_verdict():
+    stamp = _checked(0)
     pool = _RecordingPool(
         [
             {
@@ -843,12 +968,14 @@ async def test_load_mappings_asks_postgres_for_the_staleness_verdict():
                 "mangadex_id": None,
                 "status": "missing",
                 "retry_due": True,
+                "checked_at": stamp,
             },
             {
                 "anilist_media_id": 11,
                 "mangadex_id": "uuid-11",
                 "status": "found",
                 "retry_due": False,
+                "checked_at": stamp,
             },
         ]
     )
@@ -863,3 +990,228 @@ async def test_load_mappings_asks_postgres_for_the_staleness_verdict():
     assert args[1] == str(ch.MISSING_RETRY_DAYS)
     assert got[10]["retry_due"] is True
     assert got[11]["retry_due"] is False
+    # The raw clock rides along too: the boolean verdict alone cannot order a
+    # backlog the per-tick cap can only partly serve (see the FIFO drain).
+    assert "checked_at," in query  # selected, not only compared
+    assert got[10]["checked_at"] == stamp
+
+
+# ---------------------------------------------------------------------------
+# Chapter-alert languages (C0d)
+#
+# The v1 semantics: language filters the per-manga feed REQUEST (the union of what
+# that manga's trackers read, English always in), never the alert identity. So the
+# poll count is unchanged, at-most-once is unchanged, nobody can lose an alert to a
+# language race - and only the LINK is picked per recipient.
+# ---------------------------------------------------------------------------
+
+
+def test_language_union_covers_dm_and_channel_trackers():
+    dm_targets = [(1, "fr"), (2, "fr"), (3, "en")]
+    channel_targets = [(100, "es")]
+    assert ch._feed_language_union(dm_targets, channel_targets) == ["en", "fr", "es"]
+
+
+def test_language_union_is_english_only_when_nobody_asked_otherwise():
+    # The overwhelmingly common case: identical to what the tracker requested before
+    # this lot, so an English-reading audience sees no behaviour change at all.
+    assert ch._feed_language_union([(1, "en"), (2, "en")], []) == ["en"]
+    assert ch._feed_language_union([], []) == ["en"]
+
+
+def test_language_union_drops_a_language_we_do_not_serve():
+    assert ch._feed_language_union([(1, "klingon")], []) == ["en"]
+
+
+def _language_cog():
+    """A bare AniListChapters, enough to exercise the language plumbing."""
+
+    return object.__new__(ch.AniListChapters)
+
+
+def test_feed_languages_clamps_and_logs_the_drop(caplog):
+    cog = _language_cog()
+    dm_targets = [
+        (1, "fr"),
+        (2, "fr"),
+        (3, "es"),
+        (4, "es"),
+        (5, "de"),
+        (6, "it"),
+        (7, "ru"),
+    ]
+    with caplog.at_level("INFO"):
+        got = cog._feed_languages("uuid", dm_targets, [])
+    # English plus the three most-requested; the singletons are what gets dropped,
+    # and the drop is logged (those readers fall back to another language's release).
+    assert got == ["en", "es", "fr", "de"]
+    assert len(got) == md.MAX_FEED_LANGUAGES
+    assert "languages" in caplog.text
+    assert "it" in caplog.text and "ru" in caplog.text
+
+
+def test_feed_languages_does_not_log_when_nothing_is_dropped(caplog):
+    cog = _language_cog()
+    with caplog.at_level("INFO"):
+        got = cog._feed_languages("uuid", [(1, "fr")], [])
+    assert got == ["en", "fr"]
+    assert caplog.text == ""
+
+
+async def test_fetch_feed_asks_every_page_for_the_same_union():
+    # ONE request per page, carrying the whole union: widening the union never adds
+    # a request, it only adds params and rows.
+    asked = []
+    limit = md.feed_page_limit(["en", "fr"])
+    cog, requested = _chapters_cog_with_pages(
+        _paged(_desc_rows(limit + 2), limit), asked
+    )
+
+    await cog._fetch_feed("uuid", _EPOCH_BASE, ["en", "fr"])
+    assert requested == [0, limit]  # stride follows the widened page, not FEED_LIMIT
+    assert asked == [["en", "fr"], ["en", "fr"]]
+
+
+async def test_fetch_feed_stride_widens_with_the_union():
+    # A two-language feed carries ~2 rows per chapter, so the page doubles and the
+    # backward pagination keeps covering the same number of distinct chapters.
+    limit = md.feed_page_limit(["en", "fr"])
+    assert limit == md.FEED_LIMIT * 2
+    rows = md.FEED_LIMIT * 2 - 1  # a short page for the widened stride, two for 5
+    asked = []
+    cog, requested = _chapters_cog_with_pages(_paged(_desc_rows(rows), limit), asked)
+
+    got = await cog._fetch_feed("uuid", _EPOCH_BASE, ["en", "fr"])
+    # One request held everything an English-only page would have needed two for.
+    assert requested == [0]
+    assert len(got) == rows
+
+
+async def test_fetch_feed_without_languages_is_unchanged():
+    # The default path (no tracker preference) is byte-for-byte today's behaviour:
+    # FEED_LIMIT-sized pages, English only.
+    asked = []
+    cog, requested = _chapters_cog_with_pages(
+        _paged(_desc_rows(12), md.FEED_LIMIT), asked
+    )
+
+    await cog._fetch_feed("uuid", _EPOCH_BASE)
+    assert requested == [0, 5, 10]
+    assert asked == [None, None, None]
+
+
+class _FakePool:
+    """Minimal asyncpg-pool stand-in: records the query and returns fixed rows."""
+
+    def __init__(self, rows):
+        self._rows = rows
+        self.calls = []
+
+    async def fetch(self, query, *args):
+        self.calls.append((query, args))
+        return self._rows
+
+
+async def test_load_dm_languages_normalizes_and_drops_junk():
+    cog = _language_cog()
+    cog.bot = type("B", (), {})()
+    cog.bot.db_pool = _FakePool(
+        [
+            {"user_id": 1, "language": "fr"},
+            {"user_id": 2, "language": "PT_BR"},
+            {"user_id": 3, "language": "klingon"},
+            {"user_id": 4, "language": None},
+        ]
+    )
+
+    got = await cog._load_dm_languages([1, 2, 3, 4])
+    # Only the usable picks are kept; everyone else is absent and reads as English.
+    assert got == {1: "fr", 2: "pt-br"}
+    # ONE query for the whole opt-in set, whatever its size (scale: no per-user read).
+    assert len(cog.bot.db_pool.calls) == 1
+    assert ch.MANGADEX_LANGUAGE_KEY in cog.bot.db_pool.calls[0][1]
+
+
+async def test_load_dm_languages_skips_the_query_when_nobody_is_tracked():
+    cog = _language_cog()
+    cog.bot = type("B", (), {})()
+    cog.bot.db_pool = _FakePool([])
+    assert await cog._load_dm_languages([]) == {}
+    assert cog.bot.db_pool.calls == []
+
+
+def _lang_chapter(cid, number, language):
+    return {
+        "id": cid,
+        "chapter": str(number),
+        "volume": None,
+        "readableAt": "2023-01-01T00:00:00Z",
+        "translatedLanguage": language,
+        "url": "https://mangadex.org/chapter/" + cid,
+    }
+
+
+async def test_fan_out_points_each_recipient_at_their_own_language():
+    cog = _language_cog()
+    dms = []
+    posts = []
+
+    async def _dm(user_id, _media, chapter):
+        dms.append((user_id, chapter["id"]))
+
+    async def _post(channel_id, _media, chapter):
+        posts.append((channel_id, chapter["id"]))
+
+    cog._deliver_dm = _dm
+    cog._deliver_channel = _post
+
+    en = _lang_chapter("en-386", 386, "en")
+    fr = _lang_chapter("fr-386", 386, "fr")
+    variants = md.index_variants([en, fr])
+
+    # The alert fired on the English row (it landed first); the French reader and a
+    # French-speaking server still get the French page, the German reader - whose
+    # translation is not out yet - gets the row the alert fired on rather than
+    # nothing. NOBODY is skipped: that is the invariant that keeps at-most-once safe.
+    await cog._deliver_alert(
+        {}, en, variants, [(1, "fr"), (2, "en"), (3, "de")], [(900, "fr"), (901, "en")]
+    )
+    assert dms == [(1, "fr-386"), (2, "en-386"), (3, "en-386")]
+    assert posts == [(900, "fr-386"), (901, "en-386")]
+
+
+async def test_guild_language_maps_the_guild_locale_and_memoizes(monkeypatch):
+    # A channel post has no single reader, so it follows the guild locale - mapped
+    # to a MangaDex code, English whenever that locale is not one MangaDex serves.
+    cog = _language_cog()
+    cog.bot = type("B", (), {"get_guild": staticmethod(lambda gid: gid)})()
+    resolved = []
+
+    async def _locale(_bot, guild):
+        resolved.append(guild)
+        return {1: "fr", 2: "el", 3: "eo"}[guild]
+
+    monkeypatch.setattr(ch.i18n, "resolve_guild_locale", _locale)
+
+    memo = {}
+    assert await cog._guild_language(1, memo) == "fr"
+    assert await cog._guild_language(2, memo) == "el"
+    assert await cog._guild_language(3, memo) == "en"  # unserved locale -> fallback
+    # A guild subscribed to several manga is resolved ONCE per tick, not per manga.
+    assert await cog._guild_language(1, memo) == "fr"
+    assert resolved == [1, 2, 3]
+
+
+def test_the_language_preference_key_matches_the_panel():
+    # The key is coupled by literal across modules (the house convention), so pin it
+    # here: a rename on either side must break this, not the feature.
+    from cogs.community import usersettings
+
+    match = [
+        pref
+        for pref in usersettings.CHOICE_PREFS
+        if pref.key == ch.MANGADEX_LANGUAGE_KEY
+    ]
+    assert len(match) == 1
+    assert match[0].default == md.DEFAULT_LANGUAGE
+    assert match[0].options == md.LANGUAGES

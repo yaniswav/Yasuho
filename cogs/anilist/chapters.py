@@ -21,6 +21,16 @@ Two moving parts live here, both wired from the package ``__init__``:
   mapping resolution, the per-manga feed poll, the DM / channel fan-out and the
   persistent Read button.
 
+Languages. A DM follows its reader's own ``mangadex_language`` preference (set in
+``/preferences``, English by default); a channel post follows its guild's language.
+Those are wishes about PRESENTATION, not about who is alerted: the poller fetches
+one feed per manga carrying the UNION of the languages its trackers want (English
+always included), and the alert fires on the first release in any of them, with the
+link re-pointed per recipient when their language is in the same window. Alert
+identity stays the chapter NUMBER, so the at-most-once guarantee is untouched - and
+the residual limitation is by design: a French reader may be told about a chapter by
+its English release, but can never LOSE an alert to a language race.
+
 Token discipline. Poll-time reads are UNAUTHENTICATED: a public profile's
 ``MediaListCollection`` needs no token, and MangaDex is a public API. The only
 token use is at opt-in (resolving the user's AniList id via ``VIEWER_QUERY``) and
@@ -105,12 +115,14 @@ FEED_BUDGET = 25
 
 # Safety cap on feed PAGES fetched per manga per tick. The MangaDex feed is
 # newest-first with no ``readableAt_greater`` filter, so :meth:`_fetch_feed` pages
-# BACKWARD (``md.FEED_LIMIT`` rows each) from the newest chapter down to the manga's
-# stored cursor. This matters because the round-robin wheel widens a manga's
+# BACKWARD (``md.feed_page_limit`` rows each: md.FEED_LIMIT for the English-only
+# common case, scaled up with the language union so a multi-language feed still
+# covers as many distinct chapters per page) from the newest chapter down to the
+# manga's stored cursor. This matters because the round-robin wheel widens a manga's
 # effective poll interval to ceil(mapped / FEED_BUDGET) ticks: a fast updater (or a
 # bulk import) can drop MORE than one page of chapters between two polls, and
 # fetching only the newest page would let the per-manga cursor jump to the newest
-# chapter and SILENTLY skip the older overflow. ``MAX_FEED_PAGES * md.FEED_LIMIT`` is
+# chapter and SILENTLY skip the older overflow. ``MAX_FEED_PAGES`` pages is
 # the largest single-tick catch-up handled with zero loss; a rarer one-time burst
 # beyond it (a licensor dump) hits the cap, which is LOGGED (never silent) and stays
 # delivery-capped by MAX_ALERTS_PER_MANGA. Paging is adaptive - a normally-quiet
@@ -141,7 +153,10 @@ MAX_MAPPING_SEARCHES_PER_TICK = 3
 # one search per media per week. 7 days trades a week of latency for a search rate
 # that stays negligible next to the fresh-media work - and retries NEVER widen the
 # per-tick budget: they only spend what MAX_MAPPING_SEARCHES_PER_TICK leaves after
-# the never-searched media took theirs.
+# the never-searched media took theirs. Because that leftover budget is far smaller
+# than a large backlog, the drain order matters as much as the TTL: retries are
+# served least-recently-checked first (see _mapping_search_candidates), so every
+# stale row eventually gets its turn instead of the same head cohort recycling.
 MISSING_RETRY_DAYS = 7
 
 # Cap on alerts posted per manga per tick, newest kept. A bulk licensor import can
@@ -155,6 +170,12 @@ MAX_ALERTS_PER_MANGA = 3
 # outside the newest this-many chapters for its manga, whichever comes first.
 SEEN_PRUNE_DAYS = 90
 SEEN_PRUNE_KEEP = 200
+
+# The user_settings key holding a reader's preferred MangaDex translation language.
+# The literal MUST match the ChoicePreference in cogs/community/usersettings.py -
+# read by literal here, exactly like leveling and music read their own preference
+# keys. An absent/unreadable value means md.DEFAULT_LANGUAGE.
+MANGADEX_LANGUAGE_KEY = "mangadex_language"
 
 
 # --- GraphQL ----------------------------------------------------------------
@@ -290,6 +311,46 @@ def _search_title(media):
     return title.get("romaji") or title.get("english")
 
 
+def _checked_epoch(value):
+    """Epoch seconds for a mapping row's ``checked_at``, or None when unknown.
+
+    ``_load_mappings`` surfaces the raw column, so this normalises whatever the
+    driver returns (a tz-aware ``datetime`` from asyncpg, a naive one read as UTC,
+    or an already-numeric stamp) into a single comparable float. Anything
+    unreadable - or a row whose clock was never surfaced - yields ``None``, which
+    :func:`_retry_sort_key` treats as maximally stale rather than raising. Pure
+    and total.
+    """
+
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.timestamp()
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _retry_sort_key(mid, row):
+    """FIFO ordering key for a stale ``missing`` row: oldest ``checked_at`` first.
+
+    Returns a uniformly-shaped 3-tuple so the sort never compares a datetime with
+    ``None``: rows whose clock could not be read rank FIRST (they are treated as
+    maximally stale - a row we cannot date must not be the one that starves), then
+    the rest by ascending ``checked_at``, with the media id as a stable tiebreak
+    so two rows stamped in the same transaction keep a deterministic order. Pure
+    and total.
+    """
+
+    stamp = _checked_epoch((row or {}).get("checked_at"))
+    if stamp is None:
+        return (0, 0.0, mid)
+    return (1, stamp, mid)
+
+
 def _mapping_search_candidates(
     union_media, media_by_id, mapping_rows, budget=MAX_MAPPING_SEARCHES_PER_TICK
 ):
@@ -298,16 +359,24 @@ def _mapping_search_candidates(
     Two classes compete for the SAME ``budget`` (never more - the retry must not
     widen :data:`MAX_MAPPING_SEARCHES_PER_TICK`):
 
-    1. media with NO mapping row at all (never searched) - they go first, because a
-       tracked manga nobody has ever resolved is invisible right now;
+    1. media with NO mapping row at all (never searched) - they go first, ordered
+       by media id, because a tracked manga nobody has ever resolved is invisible
+       right now;
     2. ``missing`` rows whose ``checked_at`` went stale (``retry_due``, see
        :data:`MISSING_RETRY_DAYS`) - they take only what class 1 left over, so a
        long retry backlog can never delay a freshly tracked manga.
 
-    Within a class the order is the media id, which makes the drain deterministic;
-    a retried row is re-stamped by the caller, so it leaves the retry set for
-    another :data:`MISSING_RETRY_DAYS` and the backlog drains instead of looping.
-    Media with no searchable title are skipped in both classes. Pure and total.
+    The retry class drains FIFO - least-recently-checked first
+    (:func:`_retry_sort_key`) - NOT by media id. That ordering is what makes the
+    retry fair at scale: the per-tick cap is only ~1000 retries per
+    :data:`MISSING_RETRY_DAYS` window, so an id-ordered drain permanently serves
+    the low-id cohort (which goes stale again and re-takes the head) and NEVER
+    reaches the high ids - precisely the newest media, the ones most likely to
+    have just landed on MangaDex. With the clock as the key every stale row moves
+    to the back the moment it is re-stamped by the caller, so the backlog rotates
+    instead of looping over its own head. The order stays fully deterministic
+    (media id breaks ties), and media with no searchable title are skipped in
+    both classes. Pure and total.
     """
 
     if budget <= 0:
@@ -325,7 +394,8 @@ def _mapping_search_candidates(
     picked = sorted(fresh)[:budget]
     left = budget - len(picked)
     if left > 0:
-        picked.extend(sorted(retries)[:left])
+        retries.sort(key=lambda mid: _retry_sort_key(mid, mapping_rows.get(mid)))
+        picked.extend(retries[:left])
     return picked
 
 
@@ -361,6 +431,24 @@ def plan_chapter_targets(media_id, dm_lists_by_user, channel_media):
         key for key, mids in channel_media.items() if media_id in mids
     )
     return dm_user_ids, channel_keys
+
+
+def _feed_language_union(dm_targets, channel_targets):
+    """The full ordered language union one manga's feed request must cover.
+
+    ``dm_targets`` / ``channel_targets`` are the ``(recipient, language)`` pairs
+    :meth:`AniListChapters._tick` resolved for this manga - each DM reader's own
+    preference, each subscribed channel's guild language. The ordering is delegated
+    to :func:`tools.mangadex.feed_languages`, which pins English first (the safety
+    net) and then orders by how many trackers asked, so the caller's
+    :data:`tools.mangadex.MAX_FEED_LANGUAGES` clamp always drops the least-requested
+    languages. Returns the UNCLAMPED list so the caller can log a truncation. Pure
+    and total.
+    """
+
+    codes = [language for _target, language in dm_targets]
+    codes.extend(language for _target, language in channel_targets)
+    return md.feed_languages(codes)
 
 
 def _sub_media(media_id, title):
@@ -855,13 +943,20 @@ class AniListChapters(commands.Cog):
         url, params, headers = md.search_manga_request(title)
         return await self._mangadex_get(url, params, headers)
 
-    async def _fetch_feed_page(self, mangadex_id, offset):
-        """GET one page of a manga's chapter feed at ``offset`` (newest-first)."""
+    async def _fetch_feed_page(self, mangadex_id, offset, languages):
+        """GET one page of a manga's chapter feed at ``offset`` (newest-first).
 
-        url, params, headers = md.manga_feed_request(mangadex_id, offset=offset)
+        ``languages`` is the already-clamped union this manga's trackers need; the
+        builder emits one ``translatedLanguage[]`` pair per language (an OR) and
+        sizes the page from the same union, so the whole union rides ONE request.
+        """
+
+        url, params, headers = md.manga_feed_request(
+            mangadex_id, languages=languages, offset=offset
+        )
         return await self._mangadex_get(url, params, headers)
 
-    async def _fetch_feed(self, mangadex_id, cursor):
+    async def _fetch_feed(self, mangadex_id, cursor, languages=None):
         """Fetch a manga's chapters back to ``cursor``, paging newest-first.
 
         MangaDex has no batch endpoint and no ``readableAt_greater`` filter, so the
@@ -876,23 +971,34 @@ class AniListChapters(commands.Cog):
         cursor) or the feed ends, bounded by :data:`MAX_FEED_PAGES`. On the first run
         (``cursor`` is None) a single page anchors the cursor with no backfill.
         Hitting the cap with a still-full page above the cursor is a pathological
-        one-time burst (beyond ``MAX_FEED_PAGES * md.FEED_LIMIT`` chapters between two
+        one-time burst (beyond ``MAX_FEED_PAGES`` pages of rows between two
         polls of the SAME manga); it is LOGGED rather than left silent, and delivery
         stays capped by MAX_ALERTS_PER_MANGA. Returns the accumulated normalised
         chapter dicts (the planner reorders internally). Requests are paced by
         :meth:`_space`; may raise :class:`_RateLimited` / :class:`_FetchError`.
+
+        ``languages`` is this manga's clamped tracker union (``None`` = English
+        only). The page STRIDE is derived from it by the same pure
+        :func:`tools.mangadex.feed_page_limit` the request builder uses, so a
+        multi-language feed - which carries one row per language per chapter - keeps
+        covering about the same number of distinct chapters per page as an
+        English-only one, and the offsets stay aligned with the pages actually
+        returned. Widening the union therefore never costs an extra request here.
         """
 
         cursor_ts = md._to_epoch(cursor)
+        page_limit = md.feed_page_limit(md.feed_languages(languages))
         chapters = []
         capped = False
         for page in range(MAX_FEED_PAGES):
             await self._space()
             page_chapters = md.parse_chapter_feed(
-                await self._fetch_feed_page(mangadex_id, page * md.FEED_LIMIT)
+                await self._fetch_feed_page(
+                    mangadex_id, page * page_limit, languages
+                )
             )
             chapters.extend(page_chapters)
-            if len(page_chapters) < md.FEED_LIMIT:
+            if len(page_chapters) < page_limit:
                 break  # short page -> reached the end of the feed
             if cursor_ts is None:
                 break  # first run: one page anchors the cursor (anti-backfill)
@@ -908,12 +1014,12 @@ class AniListChapters(commands.Cog):
         if capped:
             log.warning(
                 "AniList chapters: feed page cap (%s x %s) reached for manga %s; a "
-                "burst of more than %s chapters since the last poll may skip the "
+                "burst of more than %s rows since the last poll may skip the "
                 "oldest overflow (delivery stays capped at %s/tick)",
                 MAX_FEED_PAGES,
-                md.FEED_LIMIT,
+                page_limit,
                 mangadex_id,
-                MAX_FEED_PAGES * md.FEED_LIMIT,
+                MAX_FEED_PAGES * page_limit,
                 MAX_ALERTS_PER_MANGA,
             )
         return chapters
@@ -1045,6 +1151,39 @@ class AniListChapters(commands.Cog):
             "WHERE enabled = TRUE;"
         )
 
+    async def _load_dm_languages(self, user_ids):
+        """Every DM opt-in's preferred MangaDex language, in ONE query.
+
+        Returns ``{user_id: language}`` holding only the users who actually picked
+        one and whose pick is still a language we serve
+        (:func:`tools.mangadex.normalize_language`); everyone else is absent, and
+        the caller reads that as :data:`tools.mangadex.DEFAULT_LANGUAGE`.
+
+        This reads ``user_settings`` directly instead of looping over
+        ``tools.settings.get_user`` on purpose. The language is needed BEFORE any
+        request - it shapes the feed query itself, not just the delivery - so at
+        1000+ guilds a per-user accessor would mean one cold-cache round trip per
+        opt-in per tick, while this is a single indexed ``= ANY`` read whatever the
+        opt-in count. It is also strictly fresher than the settings cache (it hits
+        the row the panel wrote), and it never writes, so the two never disagree.
+        """
+
+        ids = list(user_ids)
+        if not ids:
+            return {}
+        rows = await self.bot.db_pool.fetch(
+            "SELECT user_id, settings ->> $2::text AS language "
+            "FROM user_settings WHERE user_id = ANY($1::bigint[]);",
+            ids,
+            MANGADEX_LANGUAGE_KEY,
+        )
+        out = {}
+        for row in rows:
+            language = md.normalize_language(row["language"])
+            if language:
+                out[row["user_id"]] = language
+        return out
+
     async def _load_channel_subs(self):
         """Explicit MANGA title subscriptions of every enabled feed (with cached title).
 
@@ -1065,7 +1204,7 @@ class AniListChapters(commands.Cog):
         )
 
     async def _load_mappings(self, media_ids):
-        """Return ``{anilist_media_id: {mangadex_id, status, retry_due}}``.
+        """Return ``{anilist_media_id: {mangadex_id, status, retry_due, checked_at}}``.
 
         ``retry_due`` is the staleness verdict for the ``checked_at`` clock,
         computed BY POSTGRES (``checked_at < now() - MISSING_RETRY_DAYS days``) so
@@ -1073,10 +1212,16 @@ class AniListChapters(commands.Cog):
         Python-side timezone or clock-skew reasoning at the seam. It is only
         meaningful for a ``missing`` row; ``_resolve_new_mappings`` is what decides
         to spend leftover budget on one.
+
+        ``checked_at`` itself rides along because the verdict alone is a boolean:
+        it cannot say WHICH stale row waited longest, and the per-tick retry cap is
+        far below a large backlog, so :func:`_mapping_search_candidates` needs the
+        raw clock to drain the retries FIFO instead of forever re-serving the same
+        low-id head.
         """
 
         rows = await self.bot.db_pool.fetch(
-            "SELECT anilist_media_id, mangadex_id, status, "
+            "SELECT anilist_media_id, mangadex_id, status, checked_at, "
             "       (checked_at < now() - ($2 || ' days')::interval) AS retry_due "
             "FROM mangadex_mapping "
             "WHERE anilist_media_id = ANY($1::int[]);",
@@ -1088,6 +1233,7 @@ class AniListChapters(commands.Cog):
                 "mangadex_id": row["mangadex_id"],
                 "status": row["status"],
                 "retry_due": bool(row["retry_due"]),
+                "checked_at": row["checked_at"],
             }
             for row in rows
         }
@@ -1201,6 +1347,25 @@ class AniListChapters(commands.Cog):
         log.exception("AniList chapters: poll loop crashed; restarting", exc_info=error)
         self._poll_chapters.restart()
 
+    async def _guild_language(self, guild_id, resolved):
+        """The MangaDex language a guild's channel posts target (memoized per tick).
+
+        A channel post has no single reader, so it follows the GUILD language - the
+        very locale :meth:`_deliver_channel` already renders its card in - mapped to
+        a MangaDex code, with English as the fallback for a locale MangaDex does not
+        serve. ``resolved`` is the caller's per-tick memo, so a guild subscribed to
+        several manga costs one resolution rather than one per manga.
+        """
+
+        if guild_id in resolved:
+            return resolved[guild_id]
+        locale = await i18n.resolve_guild_locale(
+            self.bot, self.bot.get_guild(guild_id)
+        )
+        language = md.normalize_language(locale) or md.DEFAULT_LANGUAGE
+        resolved[guild_id] = language
+        return language
+
     async def _tick(self):
         now = int(time.time())
         if now < self._embargo_until:
@@ -1312,13 +1477,34 @@ class AniListChapters(commands.Cog):
         batch, self._feed_wheel_after = rr.next_batch(
             mapped, self._feed_wheel_after, FEED_BUDGET
         )
+        # Each DM opt-in's language in ONE read, plus a per-tick memo for the guild
+        # languages resolved lazily below (only the guilds this batch touches).
+        dm_lang_by_user = await self._load_dm_languages(dm_lists_by_user.keys())
+        guild_langs = {}
         for mangadex_id in batch:
             media_id = mdx_to_media[mangadex_id]
+            # Resolve the audience BEFORE fetching: the languages its members read
+            # are what the feed request must cover, and the same targets are then
+            # handed to the fan-out (so the audience is computed once per manga).
+            dm_user_ids, channel_keys = plan_chapter_targets(
+                media_id, dm_lists_by_user, channel_media
+            )
+            dm_targets = [
+                (uid, dm_lang_by_user.get(uid, md.DEFAULT_LANGUAGE))
+                for uid in dm_user_ids
+            ]
+            channel_targets = [
+                (channel_id, await self._guild_language(guild_id, guild_langs))
+                for guild_id, channel_id in channel_keys
+            ]
+            languages = self._feed_languages(
+                mangadex_id, dm_targets, channel_targets
+            )
             # Read the cursor once and thread it through: _fetch_feed pages back to
             # it, then _process_manga plans against the SAME value (no double read).
             cursor = await self._load_chapter_cursor(mangadex_id)
             try:
-                chapters = await self._fetch_feed(mangadex_id, cursor)
+                chapters = await self._fetch_feed(mangadex_id, cursor, languages)
             except _RateLimited as exc:
                 self._embargo_until = now + exc.retry_after
                 log.warning(
@@ -1337,12 +1523,11 @@ class AniListChapters(commands.Cog):
 
             await self._process_manga(
                 mangadex_id,
-                media_id,
                 cursor,
                 chapters,
                 media_by_id.get(media_id) or {},
-                dm_lists_by_user,
-                channel_media,
+                dm_targets,
+                channel_targets,
             )
 
         # Per-tick instrumentation, logged only on a tick that actually spent
@@ -1360,6 +1545,29 @@ class AniListChapters(commands.Cog):
                     "wheel_after": self._feed_wheel_after,
                 },
             )
+
+    def _feed_languages(self, mangadex_id, dm_targets, channel_targets):
+        """The clamped language union to request for one manga, logging a truncation.
+
+        :func:`_feed_language_union` orders the demand (English first, then by how
+        many trackers asked); this keeps the head of that list, so an unusually
+        diverse audience loses only its least-requested languages - and never
+        silently: a truncation is logged with what was dropped, because those
+        readers fall back to being alerted by another language's release.
+        """
+
+        wanted = _feed_language_union(dm_targets, channel_targets)
+        if len(wanted) > md.MAX_FEED_LANGUAGES:
+            log.info(
+                "AniList chapters: manga %s has trackers in %s languages (%s); "
+                "requesting the %s most asked for and dropping %s",
+                mangadex_id,
+                len(wanted),
+                ", ".join(wanted),
+                md.MAX_FEED_LANGUAGES,
+                ", ".join(wanted[md.MAX_FEED_LANGUAGES:]),
+            )
+        return wanted[: md.MAX_FEED_LANGUAGES]
 
     async def _resolve_new_mappings(self, union_media, media_by_id, mapping_rows, now):
         """Search MangaDex for a few media, recording found AND missing.
@@ -1406,39 +1614,52 @@ class AniListChapters(commands.Cog):
                     "mangadex_id": uuid,
                     "status": "found",
                     "retry_due": False,
+                    "checked_at": None,
                 }
             else:
                 # Still missing: the upsert re-stamped checked_at, so this media is
                 # out of the retry set for another MISSING_RETRY_DAYS - mirror that
-                # here too, so nothing later in this same tick re-picks it.
+                # here too, so nothing later in this same tick re-picks it. The
+                # mirrored clock stays None on purpose: only Postgres' now() is
+                # authoritative for it, retry_due=False already keeps the row out
+                # of the retry ordering, and the real stamp is re-read next tick.
                 await self._upsert_mapping(mid, None, "missing")
                 mapping_rows[mid] = {
                     "mangadex_id": None,
                     "status": "missing",
                     "retry_due": False,
+                    "checked_at": None,
                 }
         return True
 
     async def _process_manga(
         self,
         mangadex_id,
-        media_id,
         cursor,
         chapters,
         media,
-        dm_lists_by_user,
-        channel_media,
+        dm_targets,
+        channel_targets,
     ):
         """Plan, persist and fan out one manga's feed for this tick.
 
         ``cursor`` is the manga's stored ``last_readable_at``, already read by
         :meth:`_tick` (which threaded it into :meth:`_fetch_feed` to page back to it),
-        so it is passed in rather than re-read here. Loads the seen memory, runs the
-        pure planner (which anchors silently on the first run), persists the advanced
-        cursor and the fresh seen rows, prunes the seen memory, caps the alerts
-        newest-first and fans each survivor out to the DM recipients and feed channels
-        that track it. Delivery is fully guarded, so a closed DM or a dead channel
-        never aborts the rest of the manga or the tick.
+        so it is passed in rather than re-read here. ``dm_targets`` /
+        ``channel_targets`` are the ``(recipient, language)`` pairs :meth:`_tick`
+        resolved for this manga - the same audience whose languages shaped the feed
+        request. Loads the seen memory, runs the pure planner (which anchors silently
+        on the first run), persists the advanced cursor and the fresh seen rows,
+        prunes the seen memory, caps the alerts newest-first and fans each survivor
+        out. Delivery is fully guarded, so a closed DM or a dead channel never aborts
+        the rest of the manga or the tick.
+
+        The planner sees the WHOLE fetched feed, language included, and its identity
+        is still the chapter number alone: a chapter alerts once, on its first
+        appearance in any requested language, and every later translation of it is
+        deduplicated exactly like a second scanlation group. Only the LINK is
+        language-aware, and only as a presentation detail - see
+        :func:`tools.mangadex.index_variants`.
         """
 
         seen = await self._load_seen(mangadex_id)
@@ -1467,22 +1688,34 @@ class AniListChapters(commands.Cog):
                 MAX_ALERTS_PER_MANGA,
             )
 
-        dm_user_ids, channel_keys = plan_chapter_targets(
-            media_id, dm_lists_by_user, channel_media
-        )
+        variants = md.index_variants(chapters)
         for chapter in kept:
-            await self._deliver_alert(media, chapter, dm_user_ids, channel_keys)
+            await self._deliver_alert(
+                media, chapter, variants, dm_targets, channel_targets
+            )
 
     # ------------------------------------------------------------------
     # Fan-out
     # ------------------------------------------------------------------
-    async def _deliver_alert(self, media, chapter, dm_user_ids, channel_keys):
-        """DM every opted-in reader, then post once per opted-in feed channel."""
+    async def _deliver_alert(self, media, chapter, variants, dm_targets, channel_targets):
+        """DM every opted-in reader, then post once per opted-in feed channel.
 
-        for user_id in dm_user_ids:
-            await self._deliver_dm(user_id, media, chapter)
-        for guild_id, channel_id in channel_keys:
-            await self._deliver_channel(channel_id, media, chapter)
+        Every recipient gets the alert - the decision was made once, for the whole
+        audience - but each gets it pointed at the release in THEIR language when
+        this same fetch carried one (:func:`tools.mangadex.pick_variant`), so a
+        French reader alerted by an English-first release still reads the French page
+        once it exists in the window. The fallback is always the row the alert fired
+        on, never a skipped delivery.
+        """
+
+        for user_id, language in dm_targets:
+            await self._deliver_dm(
+                user_id, media, md.pick_variant(variants, chapter, language)
+            )
+        for channel_id, language in channel_targets:
+            await self._deliver_channel(
+                channel_id, media, md.pick_variant(variants, chapter, language)
+            )
 
     async def _deliver_dm(self, user_id, media, chapter):
         """DM one reader one chapter card, disabling them on a closed-DM Forbidden."""

@@ -5,8 +5,9 @@ decisions the chapter tracker leans on - AniList -> MangaDex mapping (scan ALL
 candidates, never the first hit), feed normalisation (stub routing, malformed
 rows skipped), and the dedup + cursor planner (same-chapter multi-group dedup,
 the late re-upload trap, first-run anchoring, no backfill) - plus the request
-builders that pin the MangaDex contract. All payloads are fabricated; nothing
-touches the network.
+builders that pin the MangaDex contract and the translation-language filter, whose
+whole point is that it shapes the REQUEST only and never the alert identity. All
+payloads are fabricated; nothing touches the network.
 """
 
 from tools import mangadex as md
@@ -40,8 +41,8 @@ def test_search_manga_request_clamps_limit():
 def test_manga_feed_request_shape():
     url, params, headers = md.manga_feed_request("uuid-123")
     assert url == "https://api.mangadex.org/manga/uuid-123/feed"
-    # A per-manga feed, English only, newest-first by readableAt - never the
-    # global /chapter feed.
+    # A per-manga feed, English only by default, newest-first by readableAt - never
+    # the global /chapter feed.
     assert ("translatedLanguage[]", "en") in params
     assert ("order[readableAt]", "desc") in params
     assert ("limit", str(md.FEED_LIMIT)) in params
@@ -49,8 +50,110 @@ def test_manga_feed_request_shape():
 
 
 def test_manga_feed_request_language_override():
-    _, params, _ = md.manga_feed_request("uuid-123", language="fr")
+    _url, params, _headers = md.manga_feed_request("uuid-123", languages="fr")
     assert ("translatedLanguage[]", "fr") in params
+
+
+def test_manga_feed_request_emits_one_pair_per_language():
+    # Repeated translatedLanguage[] pairs are how MangaDex expresses OR, which is
+    # why params is a LIST: a dict could not carry the same key twice.
+    _url, params, _headers = md.manga_feed_request(
+        "uuid-123", languages=["fr", "es", "fr"]
+    )
+    langs = [value for key, value in params if key == "translatedLanguage[]"]
+    assert langs[0] == "en"  # the safety net is always requested, and always first
+    assert sorted(langs) == ["en", "es", "fr"]  # deduplicated
+
+
+def test_manga_feed_request_clamps_the_language_union():
+    _url, params, _headers = md.manga_feed_request(
+        "uuid-123", languages=["fr", "es", "de", "it", "ru", "pl"]
+    )
+    langs = [value for key, value in params if key == "translatedLanguage[]"]
+    assert len(langs) == md.MAX_FEED_LANGUAGES
+    assert langs[0] == "en"
+
+
+def test_manga_feed_request_page_scales_with_the_union():
+    # One request, more rows: a multi-language feed carries one row per language per
+    # chapter, so the page grows to keep covering ~FEED_LIMIT distinct chapters.
+    _url, params, _headers = md.manga_feed_request("uuid-123", languages=["fr", "es"])
+    assert ("limit", str(md.FEED_LIMIT * 3)) in params
+
+
+def test_manga_feed_request_clamps_an_explicit_limit():
+    _url, params, _headers = md.manga_feed_request("uuid-123", limit=9999)
+    assert ("limit", "100") in params
+    _url, params, _headers = md.manga_feed_request("uuid-123", limit=0)
+    assert ("limit", "1") in params
+
+
+# ---------------------------------------------------------------------------
+# translation languages (C0d) - the request-only filter
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_language_accepts_offered_codes_any_case_or_separator():
+    assert md.normalize_language("fr") == "fr"
+    assert md.normalize_language("PT_BR") == "pt-br"
+    assert md.normalize_language(" es-LA ") == "es-la"
+
+
+def test_normalize_language_falls_back_to_the_base_language():
+    # A regional code we do not offer still maps to something MangaDex serves.
+    assert md.normalize_language("es-mx") == "es"
+    assert md.normalize_language("fr-CA") == "fr"
+
+
+def test_normalize_language_refuses_anything_unoffered():
+    # MangaDex answers an unknown two-letter code with a silently EMPTY feed, so a
+    # pass-through would look exactly like "no new chapters" forever.
+    assert md.normalize_language("xx") is None
+    assert md.normalize_language("klingon") is None
+    assert md.normalize_language("") is None
+    assert md.normalize_language(None) is None
+
+
+def test_every_offered_language_normalizes_to_itself():
+    for code, name in md.LANGUAGES:
+        assert md.normalize_language(code) == code
+        assert md.language_name(code) == name
+    assert md.DEFAULT_LANGUAGE in dict(md.LANGUAGES)
+    assert len(md.LANGUAGES) <= 25  # Discord's select-option ceiling
+
+
+def test_language_name_falls_back_to_the_code():
+    assert md.language_name("xx") == "xx"
+
+
+def test_feed_languages_always_leads_with_the_safety_net():
+    assert md.feed_languages(None) == ["en"]
+    assert md.feed_languages([]) == ["en"]
+    assert md.feed_languages(["fr"])[0] == "en"
+
+
+def test_feed_languages_dedupes_and_drops_junk():
+    assert md.feed_languages(["fr", "fr", None, "xx", "en"]) == ["en", "fr"]
+
+
+def test_feed_languages_orders_by_demand_then_code():
+    # The caller keeps the head of this list, so the most-requested languages are
+    # the ones that survive the MAX_FEED_LANGUAGES clamp.
+    got = md.feed_languages(["de", "fr", "fr", "es", "es", "es"])
+    assert got == ["en", "es", "fr", "de"]
+
+
+def test_feed_languages_is_deterministic_on_ties():
+    assert md.feed_languages(["fr", "de"]) == md.feed_languages(["de", "fr"])
+
+
+def test_feed_page_limit_scales_and_clamps():
+    assert md.feed_page_limit(["en"]) == md.FEED_LIMIT
+    assert md.feed_page_limit(["en", "fr", "es"]) == md.FEED_LIMIT * 3
+    # Never past MangaDex's 100-row page, and never below one row.
+    assert md.feed_page_limit(["en"] * 50) == md.FEED_LIMIT * md.MAX_FEED_LANGUAGES
+    assert md.feed_page_limit([], base=1000) == 100
+    assert md.feed_page_limit(["en"], base=0) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -470,3 +573,95 @@ def test_plan_handles_z_and_offset_readable_at_equivalently():
     a1, _, _ = md.plan_chapter_alerts(feed_z, "2023-01-01T00:00:00Z", set())
     a2, _, _ = md.plan_chapter_alerts(feed_offset, "2023-01-01T00:00:00Z", set())
     assert [c["id"] for c in a1] == [c["id"] for c in a2] == ["a"]
+
+
+# ---------------------------------------------------------------------------
+# index_variants / pick_variant - the per-recipient link, and the invariant that
+# language is a PRESENTATION detail: it never enters the alert identity, so the
+# at-most-once guarantee survives a multi-language feed untouched.
+# ---------------------------------------------------------------------------
+
+
+def _lang_ch(cid, chapter, readable, language):
+    row = _ch(cid, chapter, readable)
+    row["translatedLanguage"] = language
+    return row
+
+
+def test_index_variants_groups_one_chapter_by_language():
+    feed = [
+        _lang_ch("en-386", "386", "2023-01-02T00:00:00Z", "en"),
+        _lang_ch("fr-386", "386", "2023-01-01T00:00:00Z", "fr"),
+        _lang_ch("en-385", "385", "2022-12-30T00:00:00Z", "en"),
+    ]
+    variants = md.index_variants(feed)
+    assert set(variants) == {("ch", "386"), ("ch", "385")}
+    assert variants[("ch", "386")]["fr"]["id"] == "fr-386"
+    assert variants[("ch", "385")].keys() == {"en"}
+
+
+def test_index_variants_keeps_the_newest_row_per_language():
+    # The feed is readableAt DESC, so the FIRST row of a language is its newest
+    # upload; a second scanlation group of the same language must not replace it.
+    feed = [
+        _lang_ch("new", "386", "2023-01-02T00:00:00Z", "en"),
+        _lang_ch("old", "386", "2023-01-01T00:00:00Z", "en"),
+    ]
+    assert md.index_variants(feed)[("ch", "386")]["en"]["id"] == "new"
+
+
+def test_index_variants_skips_rows_with_no_language_or_identity():
+    feed = [
+        _ch("no-lang", "386", "2023-01-02T00:00:00Z"),
+        {"translatedLanguage": "fr"},  # no id, no number -> no identity
+    ]
+    assert md.index_variants(feed) == {}
+
+
+def test_pick_variant_returns_the_recipients_language():
+    en = _lang_ch("en-386", "386", "2023-01-02T00:00:00Z", "en")
+    fr = _lang_ch("fr-386", "386", "2023-01-01T00:00:00Z", "fr")
+    variants = md.index_variants([en, fr])
+    assert md.pick_variant(variants, en, "fr") is fr
+    assert md.pick_variant(variants, fr, "en") is en
+
+
+def test_pick_variant_falls_back_to_the_alerted_row():
+    # Their language is not in this window (not released yet, or below the page):
+    # they still get the alert, pointed at the release it fired on - never nothing.
+    en = _lang_ch("en-386", "386", "2023-01-02T00:00:00Z", "en")
+    variants = md.index_variants([en])
+    assert md.pick_variant(variants, en, "fr") is en
+    assert md.pick_variant(variants, en, "xx") is en
+    assert md.pick_variant(variants, en, None) is en
+    assert md.pick_variant({}, en, "fr") is en
+
+
+def test_a_later_translation_never_re_alerts():
+    # THE invariant of C0d. Tick 1 alerts chapter 386 from its English release; tick
+    # 2's feed carries the French upload of the SAME chapter with a LATER readableAt
+    # (above the advanced cursor). The identity is the number alone, so it is
+    # deduplicated exactly like a second scanlation group: no second alert, ever.
+    tick1 = [_lang_ch("en-386", "386", "2023-01-01T00:00:00Z", "en")]
+    alerts, cursor, seen = md.plan_chapter_alerts(tick1, "2022-12-01T00:00:00Z", set())
+    assert [c["id"] for c in alerts] == ["en-386"]
+
+    tick2 = [_lang_ch("fr-386", "386", "2023-01-05T00:00:00Z", "fr")]
+    alerts, cursor2, seen2 = md.plan_chapter_alerts(tick2, cursor, seen)
+    assert alerts == []
+    assert seen2 == seen  # the identity was already recorded, nothing new to persist
+    assert cursor2 == "2023-01-05T00:00:00Z"  # the cursor still advances
+
+
+def test_same_tick_multi_language_rows_collapse_to_one_alert():
+    # Both translations land in the SAME window: one alert (oldest-first wins), and
+    # the other language stays available to pick_variant for the link.
+    feed = [
+        _lang_ch("fr-386", "386", "2023-01-02T00:00:00Z", "fr"),
+        _lang_ch("en-386", "386", "2023-01-01T00:00:00Z", "en"),
+    ]
+    alerts, _cursor, seen = md.plan_chapter_alerts(feed, "2022-12-01T00:00:00Z", set())
+    assert [c["id"] for c in alerts] == ["en-386"]
+    assert seen == {("ch", "386")}
+    variants = md.index_variants(feed)
+    assert md.pick_variant(variants, alerts[0], "fr")["id"] == "fr-386"

@@ -29,6 +29,15 @@ MangaDex facts this module is built on (live-verified 2026-07-10):
   group). Alert identity is therefore ``(volume, chapter)`` PER MANGA - not the
   per-row chapter UUID - so the groups collapse to one alert (see
   :func:`chapter_key`).
+* ``translatedLanguage[]`` REPEATS to mean OR (live-verified 2026-07-24), so one
+  request covers a whole union of languages - a wider union costs params and rows,
+  never an extra request. It is a filter on the REQUEST only: the alert identity
+  above deliberately ignores the language, so a chapter alerts ONCE, at its first
+  appearance in any requested language, and its later translations are silently
+  deduplicated. That is what keeps the at-most-once guarantee intact while readers
+  of different languages share one feed poll; the residual limitation is that a
+  French reader can be alerted by the English release when it lands first (the link
+  is then re-pointed per recipient, best-effort, by :func:`pick_variant`).
 * ``attributes.externalUrl`` non-null means an official link-only stub (e.g.
   MangaPlus for One Piece): there is no MangaDex reader page, so the alert must
   link out to that url instead (see :func:`reader_url`).
@@ -54,9 +63,59 @@ READER_BASE = "https://mangadex.org/chapter"
 # the client behaviour ever changes materially.
 USER_AGENT = "Yasuho-DiscordBot/1.0 (github.com/yaniswav/Yasuho)"
 
-# Default language for chapter alerts. English scanlations are what the tracker
-# targets; the request builder keeps it a parameter so a later lot can widen it.
+# Default translation language, and the SAFETY NET of every feed request: it is
+# always part of the requested union (see :func:`feed_languages`), so a manga whose
+# trackers all read some other language still surfaces its English releases and a
+# tracker with no (or an unreadable) preference is never left with an empty feed.
 DEFAULT_LANGUAGE = "en"
+
+# The translation languages Yasuho offers, in picker order, as ``(code, name)``.
+# The code is MangaDex's ``translatedLanguage`` value; the name is DATA, not prose
+# - a stable ASCII hint shown beside the code in the picker - so it carries no
+# ``_()`` and adds no msgid (this module is translation-free by design, see the
+# module docstring).
+#
+# Every code here was verified live (2026-07-24) against
+# ``GET /chapter?translatedLanguage[]=<code>``. That check also pinned WHY the list
+# is a closed set rather than free text: MangaDex rejects a three-letter code with
+# a 400 (``fil``), and silently accepts an unknown two-letter one (``xx``) while
+# returning nothing at all - so an unvalidated value would either break a poll or,
+# worse, turn it into a permanently empty feed. :func:`normalize_language` refuses
+# anything outside this tuple.
+LANGUAGES = (
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("es-la", "Spanish (Latin America)"),
+    ("pt-br", "Portuguese (Brazil)"),
+    ("pt", "Portuguese"),
+    ("fr", "French"),
+    ("de", "German"),
+    ("it", "Italian"),
+    ("ru", "Russian"),
+    ("uk", "Ukrainian"),
+    ("pl", "Polish"),
+    ("tr", "Turkish"),
+    ("ar", "Arabic"),
+    ("id", "Indonesian"),
+    ("vi", "Vietnamese"),
+    ("th", "Thai"),
+    ("zh", "Chinese (Simplified)"),
+    ("zh-hk", "Chinese (Traditional)"),
+    ("ja", "Japanese"),
+    ("ko", "Korean"),
+    ("el", "Greek"),
+)
+
+_LANGUAGE_NAMES = dict(LANGUAGES)
+
+# How many languages one feed request may ask for. The union of a manga's trackers
+# rides a SINGLE request (repeated ``translatedLanguage[]`` pairs are an OR), so a
+# wider union costs no extra request - but it does dilute the fixed page window with
+# more rows per logical chapter, so the union is bounded and the extra languages are
+# dropped least-requested-first (:func:`feed_languages` orders by demand). Four
+# covers every realistic mixed-language tracker set while keeping
+# :func:`feed_page_limit` well inside MangaDex's 100-row page cap.
+MAX_FEED_LANGUAGES = 4
 
 # How many search candidates to scan for the AniList-id match. MangaDex ranks by
 # relevance, but the wanted title is not always first (see the module docstring),
@@ -99,13 +158,26 @@ def search_manga_request(title, limit=SEARCH_LIMIT):
     return url, params, _headers()
 
 
-def manga_feed_request(mangadex_id, language=DEFAULT_LANGUAGE, limit=FEED_LIMIT, offset=0):
+def manga_feed_request(mangadex_id, languages=None, limit=None, offset=0):
     """Build the per-manga chapter-feed request for one manga UUID.
 
     Returns ``(url, params, headers)`` for
-    ``GET /manga/{uuid}/feed?translatedLanguage[]=<lang>&order[readableAt]=desc``.
+    ``GET /manga/{uuid}/feed?translatedLanguage[]=<lang>...&order[readableAt]=desc``.
     The response is normalised by :func:`parse_chapter_feed`. This is the ONLY
     supported chapter source (the global ``/chapter`` feed is gap-unsafe).
+
+    ``languages`` is the union of translation languages this manga's trackers need
+    (a single code or an iterable; ``None`` means English only). It is normalised,
+    deduplicated and bounded by :func:`feed_languages` /
+    :data:`MAX_FEED_LANGUAGES`, and emitted as one repeated
+    ``translatedLanguage[]`` pair per language - which MangaDex reads as an OR
+    (live-verified 2026-07-24: a two-language request returns both, interleaved by
+    ``readableAt``). Widening the union therefore costs ZERO extra requests; it only
+    adds params and rows.
+
+    ``limit`` defaults to :func:`feed_page_limit` for that union, so a
+    multi-language feed still covers about :data:`FEED_LIMIT` distinct chapters per
+    page instead of a fraction of it. Both are clamped to MangaDex's 1..100 window.
 
     ``offset`` (clamped to >= 0) lets the caller page BACKWARD through the
     newest-first feed: the cog walks pages of ``limit`` until it reaches a chapter
@@ -113,16 +185,105 @@ def manga_feed_request(mangadex_id, language=DEFAULT_LANGUAGE, limit=FEED_LIMIT,
     widened past a single page cannot silently skip the older overflow.
     """
 
+    langs = feed_languages(languages)[:MAX_FEED_LANGUAGES]
+    if limit is None:
+        limit = feed_page_limit(langs)
     limit = max(1, min(int(limit), 100))
     offset = max(0, int(offset))
     url = "{base}/manga/{uuid}/feed".format(base=BASE_URL, uuid=mangadex_id)
-    params = [
-        ("translatedLanguage[]", str(language)),
-        ("order[readableAt]", "desc"),
-        ("limit", str(limit)),
-        ("offset", str(offset)),
-    ]
+    params = [("translatedLanguage[]", lang) for lang in langs]
+    params.extend(
+        [
+            ("order[readableAt]", "desc"),
+            ("limit", str(limit)),
+            ("offset", str(offset)),
+        ]
+    )
     return url, params, _headers()
+
+
+# --- Translation languages ---------------------------------------------------
+
+
+def _as_codes(value):
+    """Coerce a language argument to a list: ``None`` -> ``[]``, a str -> one code."""
+
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return list(value)
+
+
+def language_name(code):
+    """The display name for a language code, falling back to the code itself."""
+
+    return _LANGUAGE_NAMES.get(str(code or "").strip().lower(), code)
+
+
+def normalize_language(code):
+    """Canonicalise a stored/preferred language code, or ``None`` when unusable.
+
+    Accepts what the settings blobs and the i18n locales actually hold: any case,
+    and either separator (``pt_BR``, ``pt-br``). A regional code we do not offer
+    falls back to its base language when that IS offered (``es-mx`` -> ``es``), so a
+    Discord-side locale maps to something MangaDex can serve. Anything outside
+    :data:`LANGUAGES` yields ``None`` - never a pass-through - because MangaDex
+    answers an unknown two-letter code with a silently EMPTY feed (verified live),
+    which would look exactly like "no new chapters" forever. Pure and total.
+    """
+
+    if not code:
+        return None
+    text = str(code).strip().lower().replace("_", "-")
+    if text in _LANGUAGE_NAMES:
+        return text
+    base = text.split("-", 1)[0]
+    if base in _LANGUAGE_NAMES:
+        return base
+    return None
+
+
+def feed_languages(codes):
+    """The ordered language union one manga's feed request should ask for.
+
+    ``codes`` is whatever its trackers want (DM readers' preferences and the guild
+    language of each subscribed channel), with duplicates, junk and ``None`` all
+    welcome. Returns :data:`DEFAULT_LANGUAGE` FIRST - it is the safety net and is
+    always requested - then the other valid languages ordered by how many trackers
+    asked for them (ties broken by code, so the result is fully deterministic).
+
+    That demand ordering is what makes the :data:`MAX_FEED_LANGUAGES` clamp fair:
+    the caller keeps the head of this list, so the languages dropped from an
+    unusually diverse tracker set are always the least-requested ones. The full
+    (unclamped) list is returned so the caller can SEE that it truncated and log it.
+    Pure and total.
+    """
+
+    counts = {}
+    for code in _as_codes(codes):
+        lang = normalize_language(code)
+        if lang is None or lang == DEFAULT_LANGUAGE:
+            continue
+        counts[lang] = counts.get(lang, 0) + 1
+    ordered = sorted(counts, key=lambda lang: (-counts[lang], lang))
+    return [DEFAULT_LANGUAGE] + ordered
+
+
+def feed_page_limit(languages, base=FEED_LIMIT):
+    """Rows to pull per feed page so a wider union still covers ~``base`` chapters.
+
+    One logical chapter already occupies one row PER scanlation group; asking for N
+    languages multiplies that again, so a fixed page would cover a fraction of the
+    chapters it covers today and push the backward pagination into its page cap
+    sooner. Scaling the page size with the union keeps the chapter coverage (and
+    therefore the catch-up window) roughly constant for the SAME single request -
+    more rows in one response, never more responses. Clamped to MangaDex's 100-row
+    maximum. Pure and total.
+    """
+
+    count = max(1, min(len(_as_codes(languages)) or 1, MAX_FEED_LANGUAGES))
+    return max(1, min(int(base) * count, 100))
 
 
 # --- AniList -> MangaDex mapping --------------------------------------------
@@ -286,6 +447,51 @@ def chapter_sort_key(chapter):
     vol = _to_number(chapter.get("volume"))
     num = _to_number(chapter.get("chapter"))
     return (vol is None, vol or 0.0, num is None, num or 0.0)
+
+
+def index_variants(chapters):
+    """Index one manga's fetched feed as ``{chapter_key: {language: chapter}}``.
+
+    A multi-language feed carries the SAME logical chapter once per language (and
+    once per scanlation group within a language). The alert identity stays the
+    chapter number alone - :func:`plan_chapter_alerts` is untouched and still fires
+    once, at the first appearance in ANY requested language - so this index exists
+    only for PRESENTATION: it lets the fan-out hand each recipient the row in their
+    own language when this same fetch happened to contain it (see
+    :func:`pick_variant`). The first row wins per language, i.e. the newest upload
+    (the feed is ``readableAt`` DESC). Rows with no identity or no language are
+    skipped. Pure and total.
+    """
+
+    out = {}
+    for chapter in chapters:
+        if not isinstance(chapter, dict):
+            continue
+        key = chapter_key(chapter)
+        language = chapter.get("translatedLanguage")
+        if key is None or not language:
+            continue
+        out.setdefault(key, {}).setdefault(str(language).strip().lower(), chapter)
+    return out
+
+
+def pick_variant(variants, chapter, language):
+    """The ``language`` row of ``chapter``'s identity, else ``chapter`` unchanged.
+
+    Best-effort by design: the alert has ALREADY been decided (and its identity
+    already persisted as seen) for the whole audience, so this only ever swaps the
+    link/metadata shown to one recipient. When their language is not in
+    ``variants`` - it was not in this fetch's window, or has not been released yet -
+    they simply get the row the alert fired on, never nothing. Pure and total.
+    """
+
+    lang = normalize_language(language)
+    if lang is None:
+        return chapter
+    key = chapter_key(chapter) if isinstance(chapter, dict) else None
+    if key is None:
+        return chapter
+    return (variants.get(key) or {}).get(lang) or chapter
 
 
 def _to_epoch(value):

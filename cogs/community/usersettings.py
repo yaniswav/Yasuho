@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from tools import i18n, privacy, rendering, settings
+from tools import mangadex as md
 from tools.i18n import N_, _
 from tools.interactions import notify_failure
 from tools.views import AuthorView
@@ -16,6 +17,8 @@ OFF_BADGE = "⚪"
 
 # Keep the layout within the component budget: one Section (plus a Separator)
 # per preference means the panel stays comfortably under the Container limit.
+# Each CHOICE_PREFS entry costs three more components (a TextDisplay, its
+# ActionRow and the select inside it), so count those in before raising this.
 MAX_PREFS = 10
 
 
@@ -30,6 +33,36 @@ class Preference:
         self.emoji = emoji
         self.description = description
         self.default = default
+
+
+class ChoicePreference:
+    """A per-user preference picked from a fixed list, rendered as a select.
+
+    The boolean :class:`Preference` above covers on/off settings; this covers the
+    ones with more than two values. ``options`` is an ordered ``(value, label)``
+    sequence - at most 25, Discord's select limit - whose labels are DATA supplied
+    by the owning module (language names, identical in every catalog), so they carry
+    no ``N_``; the preference's own label/description/placeholder are prose and do.
+    """
+
+    __slots__ = (
+        "key",
+        "label",
+        "emoji",
+        "description",
+        "default",
+        "options",
+        "placeholder",
+    )
+
+    def __init__(self, key, label, emoji, description, default, options, placeholder):
+        self.key = key
+        self.label = label
+        self.emoji = emoji
+        self.description = description
+        self.default = default
+        self.options = tuple(options)
+        self.placeholder = placeholder
 
 
 # Ordered list of preferences. Drop a new ``Preference`` in here and it gets its
@@ -100,6 +133,26 @@ PREFS = [
             "Let Yasuho save future avatar and banner changes for public history."
         ),
         default=True,
+    ),
+]
+
+# Non-boolean preferences, rendered under the toggles as one select each. The
+# language key MUST match cogs/anilist/chapters.py's MANGADEX_LANGUAGE_KEY (read by
+# literal there, like leveling and music read theirs). It steers the chapter alerts
+# YOU are DMed; a channel post follows its server's language instead, which is why
+# the description says so rather than promising it everywhere.
+CHOICE_PREFS = [
+    ChoicePreference(
+        key="mangadex_language",
+        label=N_("Chapter alert language"),
+        emoji="\N{BOOKS}",
+        description=N_(
+            "Which translation your new-chapter DMs link to, when it is out. "
+            "Server posts follow the server language."
+        ),
+        default=md.DEFAULT_LANGUAGE,
+        options=md.LANGUAGES,
+        placeholder=N_("Pick a chapter language..."),
     ),
 ]
 
@@ -205,22 +258,56 @@ class PrefButton(discord.ui.Button):
         await self._panel.toggle(interaction, self.pref)
 
 
+class ChoiceSelect(discord.ui.Select):
+    """Select bound to a single :class:`ChoicePreference`.
+
+    Lives in its own ActionRow inside the panel's Container (a Section accessory
+    only takes a button). Like :class:`PrefButton` it forwards the click to the
+    owning panel, which persists the value and re-renders in place - and it holds
+    that panel as ``_panel``, never ``parent``/``view``, which are discord.py's own
+    Item attributes.
+    """
+
+    def __init__(self, panel, pref, value):
+        super().__init__(
+            placeholder=_(pref.placeholder),
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(
+                    label=label, value=value_code, default=(value_code == value)
+                )
+                for value_code, label in pref.options
+            ],
+        )
+        self._panel = panel
+        self.pref = pref
+
+    async def callback(self, interaction):
+        await self._panel.choose(interaction, self.pref, self.values[0])
+
+
 class SettingsView(discord.ui.LayoutView):
     """Author-restricted Components V2 panel of per-user preference toggles.
 
-    Rendered as a Container holding one Section per preference: a TextDisplay
-    with the label, current ON/OFF state and description, plus the toggle button
-    as the Section accessory, with Separators between sections. A LayoutView is
-    not a plain ``discord.ui.View``, so it cannot subclass ``AuthorView``; the
-    author gating, locale resolution and timeout cleanup are mirrored here.
+    Rendered as a Container holding one Section per boolean preference: a
+    TextDisplay with the label, current ON/OFF state and description, plus the
+    toggle button as the Section accessory, with Separators between sections. Each
+    :data:`CHOICE_PREFS` entry follows as a TextDisplay plus its own ActionRow
+    select - a Section accessory can only hold a button, never a select.
+
+    A LayoutView is not a plain ``discord.ui.View``, so it cannot subclass
+    ``AuthorView``; the author gating, locale resolution and timeout cleanup are
+    mirrored here.
     """
 
-    def __init__(self, bot, author, states, *, timeout=180):
+    def __init__(self, bot, author, states, choices=None, *, timeout=180):
         super().__init__(timeout=timeout)
         self.bot = bot
         self.author = author
         self.author_id = author.id
         self.states = states
+        self.choices = choices if choices is not None else {}
         self.message = None
         # Registered in tools.views._DENY_STRINGS; translated at check time.
         self._deny_message = N_("This panel isn't for you.")
@@ -261,6 +348,26 @@ class SettingsView(discord.ui.LayoutView):
             )
             container.add_item(discord.ui.Separator())
 
+        for pref in CHOICE_PREFS:
+            value = self.choices.get(pref.key, pref.default)
+            # The current value is shown as its option label (the raw stored code is
+            # the fallback, so a value we no longer offer still reads as something).
+            current = dict(pref.options).get(value, value)
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("{emoji} **{label}** - {value}\n{description}").format(
+                        emoji=pref.emoji,
+                        label=_(pref.label),
+                        value=current,
+                        description=_(pref.description),
+                    )
+                )
+            )
+            container.add_item(
+                discord.ui.ActionRow(ChoiceSelect(self, pref, value))
+            )
+            container.add_item(discord.ui.Separator())
+
         container.add_item(
             discord.ui.TextDisplay(_("-# Only you can use these controls."))
         )
@@ -286,6 +393,28 @@ class SettingsView(discord.ui.LayoutView):
                 "Failed to toggle user setting %s for %s",
                 pref.key,
                 self.author_id,
+            )
+            await notify_failure(
+                interaction, _("Something went wrong updating that setting.")
+            )
+
+    async def choose(self, interaction, pref, value):
+        """Persist a picked value for a choice preference and re-render in place."""
+        try:
+            # Discord only sends back values we offered, but the stored value ends
+            # up in an API request downstream, so an unknown one falls back to the
+            # default rather than being written through.
+            if value not in {code for code, _label in pref.options}:
+                value = pref.default
+            await settings.set_user(
+                self.bot.db_pool, self.author_id, pref.key, value
+            )
+            self.choices[pref.key] = value
+            self._rerender()
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            log.exception(
+                "Failed to set user setting %s for %s", pref.key, self.author_id
             )
             await notify_failure(
                 interaction, _("Something went wrong updating that setting.")
@@ -327,7 +456,12 @@ class UserSettings(commands.Cog):
             states[pref.key] = await settings.get_user(
                 self.bot.db_pool, ctx.author.id, pref.key, pref.default
             )
-        view = SettingsView(self.bot, ctx.author, states)
+        choices = {}
+        for pref in CHOICE_PREFS:
+            choices[pref.key] = await settings.get_user(
+                self.bot.db_pool, ctx.author.id, pref.key, pref.default
+            )
+        view = SettingsView(self.bot, ctx.author, states, choices)
         # A LayoutView carries its own content, so it is sent with view= only
         # (no embed, no content) and with mentions suppressed for safety.
         view.message = await ctx.send(
