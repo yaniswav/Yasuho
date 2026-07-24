@@ -597,8 +597,14 @@ CREATE TABLE IF NOT EXISTS anilist_chapter_optins (
 -- tools.mangadex.pick_mapping). That search is expensive and often fruitless for
 -- niche titles, so BOTH outcomes are cached: ``status = 'found'`` carries the
 -- resolved ``mangadex_id`` (a UUID), ``status = 'missing'`` stores it NULL and
--- exists solely to STOP the poller re-searching that media every tick. A later
--- lot may retry stale 'missing' rows using ``checked_at`` as the staleness clock.
+-- exists solely to STOP the poller re-searching that media every tick. ``missing``
+-- is NOT permanent though: ``checked_at`` is the staleness clock, and a 'missing'
+-- row older than MISSING_RETRY_DAYS (7) becomes a search candidate again, so a
+-- niche title added to MangaDex after we first looked stops being invisible for
+-- good. Retries are strictly second-class - they only spend the per-tick search
+-- budget that never-searched media leave - and every completed retry re-stamps
+-- checked_at (found or still missing), so an absent title costs at most one
+-- search per week.
 -- One row per AniList media; lookups ride the PK.  cogs/anilist/chapters.py
 CREATE TABLE IF NOT EXISTS mangadex_mapping (
     anilist_media_id INTEGER     PRIMARY KEY,               -- AniList numeric media id

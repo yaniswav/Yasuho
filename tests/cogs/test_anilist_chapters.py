@@ -41,6 +41,7 @@ def test_documented_constants():
     assert POLL_SECONDS == 1800
     assert MAX_ALERTS_PER_MANGA == 3
     assert ch.MAX_MAPPING_SEARCHES_PER_TICK == 3
+    assert ch.MISSING_RETRY_DAYS == 7
     assert ch.LIST_FETCH_BUDGET == 10
     assert ch.FEED_BUDGET == 25
     assert ch.MAX_FEED_PAGES == 6
@@ -614,3 +615,251 @@ async def test_fetch_feed_page_cap_is_logged_not_silent(caplog):
     assert len(requested) == ch.MAX_FEED_PAGES  # stopped exactly at the cap
     assert len(got) == ch.MAX_FEED_PAGES * limit
     assert "feed page cap" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Stale-'missing' mapping retry (C0c)
+#
+# A 'missing' row is a cached negative, not a life sentence: once its checked_at
+# clock is older than MISSING_RETRY_DAYS the media is searched again, so a niche
+# title added to MangaDex later becomes visible. The invariant these tests pin is
+# the BUDGET one - retries are strictly second-class and can never push the tick
+# past MAX_MAPPING_SEARCHES_PER_TICK.
+# ---------------------------------------------------------------------------
+
+
+def _title_media(mid):
+    return {"id": mid, "title": {"romaji": "Title {}".format(mid)}}
+
+
+def _mapping_env(specs):
+    """Build ``(union_media, media_by_id, mapping_rows)`` from ``{mid: spec}``.
+
+    A spec of ``None`` means "no mapping row at all" (never searched); otherwise it
+    is the row dict as :meth:`_load_mappings` returns it.
+    """
+
+    union = set(specs)
+    media_by_id = {mid: _title_media(mid) for mid in specs}
+    rows = {mid: spec for mid, spec in specs.items() if spec is not None}
+    return union, media_by_id, rows
+
+
+def _missing_row(retry_due):
+    return {"mangadex_id": None, "status": "missing", "retry_due": retry_due}
+
+
+def test_fresh_missing_row_is_not_retried():
+    union, media, rows = _mapping_env({10: _missing_row(False)})
+    assert ch._mapping_search_candidates(union, media, rows) == []
+
+
+def test_stale_missing_row_is_retried_when_budget_is_free():
+    union, media, rows = _mapping_env({10: _missing_row(True)})
+    assert ch._mapping_search_candidates(union, media, rows) == [10]
+
+
+def test_found_row_is_never_re_searched_even_if_stale():
+    # 'found' rows are terminal here: only 'missing' carries a retry.
+    union, media, rows = _mapping_env(
+        {10: {"mangadex_id": "uuid-10", "status": "found", "retry_due": True}}
+    )
+    assert ch._mapping_search_candidates(union, media, rows) == []
+
+
+def test_never_searched_media_win_the_whole_budget_over_retries():
+    # 3 never-searched media + 2 stale retries, budget 3 -> only the new ones run.
+    specs = {1: None, 2: None, 3: None, 50: _missing_row(True), 51: _missing_row(True)}
+    union, media, rows = _mapping_env(specs)
+    picked = ch._mapping_search_candidates(union, media, rows)
+    assert picked == [1, 2, 3]
+    assert len(picked) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+
+
+def test_retries_only_take_the_budget_new_media_left():
+    # 1 never-searched media + 3 stale retries, budget 3 -> new first, then 2 retries.
+    specs = {
+        7: None,
+        50: _missing_row(True),
+        51: _missing_row(True),
+        52: _missing_row(True),
+    }
+    union, media, rows = _mapping_env(specs)
+    picked = ch._mapping_search_candidates(union, media, rows)
+    assert picked == [7, 50, 51]
+    assert len(picked) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+
+
+def test_candidates_never_exceed_the_cap_whatever_the_backlog():
+    specs = {mid: None for mid in range(1, 6)}
+    specs.update({mid: _missing_row(True) for mid in range(100, 140)})
+    union, media, rows = _mapping_env(specs)
+    picked = ch._mapping_search_candidates(union, media, rows)
+    assert len(picked) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+    assert all(mid < 100 for mid in picked)  # backlog waits behind the new media
+
+
+def test_untitled_media_are_skipped_in_both_classes():
+    union = {1, 2}
+    media = {1: {"id": 1, "title": {}}, 2: {"id": 2, "title": {}}}
+    rows = {2: _missing_row(True)}
+    assert ch._mapping_search_candidates(union, media, rows) == []
+
+
+# --- the async resolver: what a retry actually writes ------------------------
+
+
+def _resolver_cog(payloads):
+    """A bare AniListChapters whose _search_manga serves ``payloads`` by media id.
+
+    A payload may be an exception instance, which is raised instead. Records every
+    _upsert_mapping call so a test can assert what was persisted.
+    """
+
+    cog = object.__new__(ch.AniListChapters)
+    cog._embargo_until = 0
+    searched = []
+    upserts = []
+
+    async def _no_space():
+        return None
+
+    cog._space = _no_space
+
+    async def _search(title):
+        mid = int(title.split()[-1])
+        searched.append(mid)
+        payload = payloads[mid]
+        if isinstance(payload, Exception):
+            raise payload
+        return payload
+
+    cog._search_manga = _search
+
+    async def _upsert(mid, mangadex_id, status):
+        upserts.append((mid, mangadex_id, status))
+
+    cog._upsert_mapping = _upsert
+    return cog, searched, upserts
+
+
+def _found_payload(mid, uuid):
+    return {"data": [{"id": uuid, "attributes": {"links": {"al": str(mid)}}}]}
+
+
+async def test_retry_that_still_misses_restamps_checked_at():
+    # The upsert is the re-stamp (checked_at = now() in _upsert_mapping's SQL), so
+    # persisting 'missing' again is what buys another MISSING_RETRY_DAYS of quiet.
+    union, media, rows = _mapping_env({50: _missing_row(True)})
+    cog, searched, upserts = _resolver_cog({50: {"data": []}})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 0) is True
+    assert searched == [50]
+    assert upserts == [(50, None, "missing")]
+    assert rows[50] == {"mangadex_id": None, "status": "missing", "retry_due": False}
+
+
+async def test_successful_retry_persists_the_mapping():
+    union, media, rows = _mapping_env({50: _missing_row(True)})
+    cog, searched, upserts = _resolver_cog({50: _found_payload(50, "uuid-50")})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 0) is True
+    assert searched == [50]
+    assert upserts == [(50, "uuid-50", "found")]
+    assert rows[50] == {
+        "mangadex_id": "uuid-50",
+        "status": "found",
+        "retry_due": False,
+    }
+
+
+async def test_fresh_missing_row_costs_no_search_at_all():
+    union, media, rows = _mapping_env({50: _missing_row(False)})
+    cog, searched, upserts = _resolver_cog({})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 0) is True
+    assert searched == []
+    assert upserts == []
+
+
+async def test_transient_retry_failure_writes_nothing():
+    # A fetch error must NOT re-stamp: the row keeps its stale clock and is picked
+    # up again on a later tick (only a completed search buys the TTL).
+    union, media, rows = _mapping_env({50: _missing_row(True)})
+    cog, searched, upserts = _resolver_cog({50: ch._FetchError("boom")})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 0) is True
+    assert searched == [50]
+    assert upserts == []
+    assert rows[50]["retry_due"] is True
+
+
+async def test_retry_search_burst_stays_within_the_tick_cap():
+    # 2 new + 3 stale retries: exactly MAX_MAPPING_SEARCHES_PER_TICK searches run,
+    # new media first - the retry never widens the budget.
+    specs = {
+        1: None,
+        2: None,
+        50: _missing_row(True),
+        51: _missing_row(True),
+        52: _missing_row(True),
+    }
+    union, media, rows = _mapping_env(specs)
+    cog, searched, upserts = _resolver_cog({mid: {"data": []} for mid in specs})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 0) is True
+    assert searched == [1, 2, 50]
+    assert len(searched) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+    assert len(upserts) == ch.MAX_MAPPING_SEARCHES_PER_TICK
+
+
+async def test_rate_limited_retry_aborts_the_tick_and_sets_the_embargo():
+    union, media, rows = _mapping_env({50: _missing_row(True)})
+    cog, searched, _upserts = _resolver_cog({50: ch._RateLimited(90)})
+
+    assert await cog._resolve_new_mappings(union, media, rows, 1000) is False
+    assert searched == [50]
+    assert cog._embargo_until == 1090
+
+
+# --- _load_mappings: the staleness verdict is computed by Postgres -----------
+
+
+class _RecordingPool:
+    def __init__(self, rows):
+        self._rows = rows
+        self.calls = []
+
+    async def fetch(self, query, *args):
+        self.calls.append((query, args))
+        return self._rows
+
+
+async def test_load_mappings_asks_postgres_for_the_staleness_verdict():
+    pool = _RecordingPool(
+        [
+            {
+                "anilist_media_id": 10,
+                "mangadex_id": None,
+                "status": "missing",
+                "retry_due": True,
+            },
+            {
+                "anilist_media_id": 11,
+                "mangadex_id": "uuid-11",
+                "status": "found",
+                "retry_due": False,
+            },
+        ]
+    )
+    cog = object.__new__(ch.AniListChapters)
+    cog.bot = type("_Bot", (), {"db_pool": pool})()
+
+    got = await cog._load_mappings([10, 11])
+    query, args = pool.calls[0]
+    # The clock comparison rides Postgres' now() - the same clock _upsert_mapping
+    # stamps with - and the TTL is passed as the named constant, never inlined.
+    assert "checked_at < now() -" in query
+    assert args[1] == str(ch.MISSING_RETRY_DAYS)
+    assert got[10]["retry_due"] is True
+    assert got[11]["retry_due"] is False

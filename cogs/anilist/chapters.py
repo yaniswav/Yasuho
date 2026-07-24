@@ -132,6 +132,18 @@ POLL_PHASE_OFFSET = 60
 # scanned), so new mappings resolve a few per tick; the rest ride later ticks.
 MAX_MAPPING_SEARCHES_PER_TICK = 3
 
+# How long a recorded ``missing`` mapping is trusted before the search is retried.
+# A niche title absent from MangaDex on day 1 is often added later (a scanlation
+# group picks it up), and without a retry that manga would stay invisible forever.
+# ``mangadex_mapping.checked_at`` is the staleness clock: a 'missing' row older
+# than this many days becomes a search candidate again, and every retry re-stamps
+# checked_at (found or still missing), so a permanently absent title costs at most
+# one search per media per week. 7 days trades a week of latency for a search rate
+# that stays negligible next to the fresh-media work - and retries NEVER widen the
+# per-tick budget: they only spend what MAX_MAPPING_SEARCHES_PER_TICK leaves after
+# the never-searched media took theirs.
+MISSING_RETRY_DAYS = 7
+
 # Cap on alerts posted per manga per tick, newest kept. A bulk licensor import can
 # dump 100+ chapters of a series onto MangaDex at once; without this cap that
 # would spam 100 DMs. The seen memory still records every dropped chapter, so a
@@ -276,6 +288,45 @@ def _search_title(media):
 
     title = (media or {}).get("title") or {}
     return title.get("romaji") or title.get("english")
+
+
+def _mapping_search_candidates(
+    union_media, media_by_id, mapping_rows, budget=MAX_MAPPING_SEARCHES_PER_TICK
+):
+    """The media to spend this tick's mapping searches on, in priority order.
+
+    Two classes compete for the SAME ``budget`` (never more - the retry must not
+    widen :data:`MAX_MAPPING_SEARCHES_PER_TICK`):
+
+    1. media with NO mapping row at all (never searched) - they go first, because a
+       tracked manga nobody has ever resolved is invisible right now;
+    2. ``missing`` rows whose ``checked_at`` went stale (``retry_due``, see
+       :data:`MISSING_RETRY_DAYS`) - they take only what class 1 left over, so a
+       long retry backlog can never delay a freshly tracked manga.
+
+    Within a class the order is the media id, which makes the drain deterministic;
+    a retried row is re-stamped by the caller, so it leaves the retry set for
+    another :data:`MISSING_RETRY_DAYS` and the backlog drains instead of looping.
+    Media with no searchable title are skipped in both classes. Pure and total.
+    """
+
+    if budget <= 0:
+        return []
+    fresh = []
+    retries = []
+    for mid in union_media:
+        if not _search_title(media_by_id.get(mid)):
+            continue
+        row = mapping_rows.get(mid)
+        if row is None:
+            fresh.append(mid)
+        elif row.get("status") == "missing" and row.get("retry_due"):
+            retries.append(mid)
+    picked = sorted(fresh)[:budget]
+    left = budget - len(picked)
+    if left > 0:
+        picked.extend(sorted(retries)[:left])
+    return picked
 
 
 def _cap_alerts(alerts, cap=MAX_ALERTS_PER_MANGA):
@@ -1014,17 +1065,29 @@ class AniListChapters(commands.Cog):
         )
 
     async def _load_mappings(self, media_ids):
-        """Return ``{anilist_media_id: {mangadex_id, status}}`` for known media."""
+        """Return ``{anilist_media_id: {mangadex_id, status, retry_due}}``.
+
+        ``retry_due`` is the staleness verdict for the ``checked_at`` clock,
+        computed BY POSTGRES (``checked_at < now() - MISSING_RETRY_DAYS days``) so
+        it is read against the very clock ``_upsert_mapping`` stamps with - no
+        Python-side timezone or clock-skew reasoning at the seam. It is only
+        meaningful for a ``missing`` row; ``_resolve_new_mappings`` is what decides
+        to spend leftover budget on one.
+        """
 
         rows = await self.bot.db_pool.fetch(
-            "SELECT anilist_media_id, mangadex_id, status FROM mangadex_mapping "
+            "SELECT anilist_media_id, mangadex_id, status, "
+            "       (checked_at < now() - ($2 || ' days')::interval) AS retry_due "
+            "FROM mangadex_mapping "
             "WHERE anilist_media_id = ANY($1::int[]);",
             list(media_ids),
+            str(MISSING_RETRY_DAYS),
         )
         return {
             row["anilist_media_id"]: {
                 "mangadex_id": row["mangadex_id"],
                 "status": row["status"],
+                "retry_due": bool(row["retry_due"]),
             }
             for row in rows
         }
@@ -1299,22 +1362,23 @@ class AniListChapters(commands.Cog):
             )
 
     async def _resolve_new_mappings(self, union_media, media_by_id, mapping_rows, now):
-        """Search MangaDex for a few unmapped media, recording found AND missing.
+        """Search MangaDex for a few media, recording found AND missing.
 
-        Only media with NO mapping row at all are searched (a recorded ``missing``
-        is not retried in this lot - ``checked_at`` is the future staleness clock);
-        at most :data:`MAX_MAPPING_SEARCHES_PER_TICK` per tick. Every outcome is
-        upserted and mirrored into ``mapping_rows`` so the caller sees it this tick.
+        Candidates come from :func:`_mapping_search_candidates`: never-searched
+        media first, then - only on the budget they leave - ``missing`` rows whose
+        ``checked_at`` went stale (:data:`MISSING_RETRY_DAYS`), so a title added to
+        MangaDex after we first looked stops being invisible forever. The total
+        stays at most :data:`MAX_MAPPING_SEARCHES_PER_TICK` searches per tick,
+        retries included. Every completed search is upserted (which re-stamps
+        ``checked_at``, so a still-missing retry waits another full TTL) and
+        mirrored into ``mapping_rows`` so the caller sees it this tick. A transient
+        fetch error is the one outcome that writes nothing: the row keeps its old
+        clock and the media is simply picked up again on a later tick.
         Returns ``False`` (and sets an embargo) when a search 429s, so the caller
         can abort the tick; ``True`` otherwise.
         """
 
-        unmapped = [
-            mid
-            for mid in union_media
-            if mid not in mapping_rows and _search_title(media_by_id.get(mid))
-        ]
-        for mid in sorted(unmapped)[:MAX_MAPPING_SEARCHES_PER_TICK]:
+        for mid in _mapping_search_candidates(union_media, media_by_id, mapping_rows):
             title = _search_title(media_by_id.get(mid))
             await self._space()
             try:
@@ -1338,10 +1402,21 @@ class AniListChapters(commands.Cog):
             uuid = md.pick_mapping(payload, mid)
             if uuid:
                 await self._upsert_mapping(mid, uuid, "found")
-                mapping_rows[mid] = {"mangadex_id": uuid, "status": "found"}
+                mapping_rows[mid] = {
+                    "mangadex_id": uuid,
+                    "status": "found",
+                    "retry_due": False,
+                }
             else:
+                # Still missing: the upsert re-stamped checked_at, so this media is
+                # out of the retry set for another MISSING_RETRY_DAYS - mirror that
+                # here too, so nothing later in this same tick re-picks it.
                 await self._upsert_mapping(mid, None, "missing")
-                mapping_rows[mid] = {"mangadex_id": None, "status": "missing"}
+                mapping_rows[mid] = {
+                    "mangadex_id": None,
+                    "status": "missing",
+                    "retry_due": False,
+                }
         return True
 
     async def _process_manga(
