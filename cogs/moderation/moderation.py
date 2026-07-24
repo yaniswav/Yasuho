@@ -660,43 +660,62 @@ class Moderation(commands.Cog):
             await self._edit_confirm(ctx, embed=aborted, view=None)
             return
 
-        # Log each ban once (the summary below), not twice via the ModLog listener.
+        # Discord evaluates a bulk_ban's hierarchy against the BOT's top role, not
+        # the invoker's, so a Ban-Members moderator could otherwise wipe staff
+        # ranked above them. Gate each target the same way the single-target
+        # commands do. Non-members (hackbans by id) have no role to compare and
+        # stay eligible - hierarchy_error degrades to None for them.
+        eligible = []
+        skipped = 0
         for obj in users:
-            modactions.funnel_suppress(self.bot, ctx.guild.id, obj.id, "ban")
+            if modchecks.hierarchy_error(ctx, obj) is not None:
+                skipped += 1
+                continue
+            eligible.append(obj)
 
-        try:
-            result = await ctx.guild.bulk_ban(
-                users,
-                reason=f"{ctx.author}: {trim_reason(reason)}",
-                delete_message_seconds=0,
-            )
-        except Exception:
-            log.exception("Failed to bulk ban")
-            return await ctx.send(
-                _("**:x: Sorry, I could not ban those users (missing permissions?).**"),
-                delete_after=10,
-            )
+        banned = []
+        failed = []
+        if eligible:
+            # Log each ban once (the summary below), not twice via the ModLog listener.
+            for obj in eligible:
+                modactions.funnel_suppress(self.bot, ctx.guild.id, obj.id, "ban")
 
-        for obj in result.banned:
             try:
-                await modactions.create_case(
-                    self.bot.db_pool,
-                    ctx.guild.id,
-                    obj.id,
-                    ctx.author.id,
-                    "ban",
-                    reason,
+                result = await ctx.guild.bulk_ban(
+                    eligible,
+                    reason=f"{ctx.author}: {trim_reason(reason)}",
+                    delete_message_seconds=0,
                 )
             except Exception:
-                log.exception("Failed to record mass-ban case for %s", obj.id)
+                log.exception("Failed to bulk ban")
+                return await ctx.send(
+                    _("**:x: Sorry, I could not ban those users (missing permissions?).**"),
+                    delete_after=10,
+                )
+
+            banned = result.banned
+            failed = result.failed
+            for obj in banned:
+                try:
+                    await modactions.create_case(
+                        self.bot.db_pool,
+                        ctx.guild.id,
+                        obj.id,
+                        ctx.author.id,
+                        "ban",
+                        reason,
+                    )
+                except Exception:
+                    log.exception("Failed to record mass-ban case for %s", obj.id)
 
         embed = discord.Embed(
             title=_("Mass ban complete"),
             colour=modactions.action_colour("ban"),
             timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(name=_("Banned"), value=str(len(result.banned)))
-        embed.add_field(name=_("Failed"), value=str(len(result.failed)))
+        embed.add_field(name=_("Banned"), value=str(len(banned)))
+        embed.add_field(name=_("Failed"), value=str(len(failed)))
+        embed.add_field(name=_("Skipped"), value=str(skipped))
         embed.add_field(name=_("Reason"), value=trim_reason(reason), inline=False)
         embed.set_footer(
             text=_("By {author}").format(author=ctx.author),
