@@ -45,7 +45,20 @@ class ActionsPool:
         self.calls = []
         self.rows = {}  # id -> dict(guild_id, kind, payload, status, result, stale)
 
-    def add(self, action_id, guild_id, kind, payload, status="pending", stale=False):
+    def add(
+        self,
+        action_id,
+        guild_id,
+        kind,
+        payload,
+        status="pending",
+        stale=False,
+        fresh_claim=False,
+    ):
+        # ``fresh_claim`` models a 'running' row whose updated_at is recent (just
+        # claimed by a live handler of this process); reconcile's age-guarded
+        # step-2 must NOT reset such a row. Default False = an orphan of a dead
+        # previous process (stale updated_at), which step-2 DOES reset.
         self.rows[action_id] = {
             "guild_id": guild_id,
             "kind": kind,
@@ -53,6 +66,7 @@ class ActionsPool:
             "status": status,
             "result": None,
             "stale": stale,
+            "fresh_claim": fresh_claim,
         }
 
     async def fetchrow(self, query, *args):
@@ -63,6 +77,8 @@ class ActionsPool:
             if row is None or row["status"] != "pending":
                 return None
             row["status"] = "running"
+            # The claim SETs updated_at = now(), so a just-claimed row is fresh.
+            row["fresh_claim"] = True
             return {
                 "guild_id": row["guild_id"],
                 "kind": row["kind"],
@@ -87,9 +103,18 @@ class ActionsPool:
                     row["result"] = json.loads(result_json)
             return "UPDATE"
         if "SET status = 'pending'" in query and "WHERE status = 'running'" in query:
-            for row in self.rows.values():  # reconcile: reset orphaned running
-                if row["status"] == "running":
-                    row["status"] = "pending"
+            # reconcile step-2: reset orphaned running rows. Model the age-guard
+            # faithfully: only when the query carries the `updated_at < now() -
+            # ... second` clause is a freshly claimed row (recent updated_at)
+            # spared. Without that clause (the pre-fix SQL) EVERY running row is
+            # reset - so a test of the live-claim race stays red before the fix.
+            age_guarded = "updated_at <" in query and "second" in query
+            for row in self.rows.values():
+                if row["status"] != "running":
+                    continue
+                if age_guarded and row["fresh_claim"]:
+                    continue
+                row["status"] = "pending"
             return "UPDATE"
         if "INSERT INTO reaction_roles" in query:  # reaction_role_add upsert
             return "INSERT 0 1"
@@ -314,6 +339,24 @@ async def test_handle_action_survives_claim_error():
     bot = FakeBot(BoomPool())
     # Must not raise: a DB blip can never take down the listener.
     assert await dashboard_actions.handle_action(bot, 1) is None
+
+
+async def test_claim_stamps_updated_at():
+    """The reconcile step-2 age-guard only protects a live claim if the claim
+    itself refreshes updated_at. Assert the claim SQL sets it to now() as it
+    flips the row to 'running'; without that the guard would protect nothing."""
+    captured = []
+
+    class _CapturePool:
+        async def fetchrow(self, query, *args):
+            captured.append(query)
+            return None
+
+    await dashboard_actions._claim(_CapturePool(), 1)
+
+    assert len(captured) == 1
+    assert "status = 'running'" in captured[0]
+    assert "updated_at = now()" in captured[0]
 
 
 # ---------------------------------------------------------------------------
@@ -850,6 +893,55 @@ async def test_reconcile_empty_table_is_noop():
     await dashboard_actions.reconcile(bot)  # must not raise
     # Only the two sweep UPDATEs + the pending SELECT ran; no claim/finish.
     assert not any(c[0] == "fetchrow" for c in pool.calls)
+
+
+async def test_reconcile_does_not_reset_freshly_claimed_running_row(monkeypatch):
+    """The finding: the listener is attached BEFORE reconcile runs, so a live
+    handler of this process can already hold a just-claimed 'running' row (recent
+    updated_at). The age-guarded step-2 must NOT reset it - otherwise step-3
+    re-claims and re-runs the executor, doubling the side effect (double panel /
+    menu, cap exceeded by one)."""
+    ran = []
+
+    async def _exec(bot, guild_id, payload):
+        ran.append(payload.get("tag"))
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    # A row a live handler claimed moments ago: running + recent updated_at. It is
+    # mid-flight (side effect maybe done, terminal status not yet written).
+    pool.add(1, 100, "test_kind", {"tag": "live"}, status="running", fresh_claim=True)
+    bot = FakeBot(pool)
+
+    await dashboard_actions.reconcile(bot)
+
+    # Left running (not reset), never re-claimed, executor never re-ran for it.
+    assert pool.rows[1]["status"] == "running"
+    assert ran == []
+    assert not any(c[0] == "fetchrow" for c in pool.calls)
+
+
+async def test_reconcile_resets_and_redrives_stale_orphan_running_row(monkeypatch):
+    """Non-regression of the orphan path: a 'running' row left by a DEAD previous
+    process (stale updated_at) IS reset to pending and re-driven through the claim
+    so a notify lost during the restart is not stranded."""
+    ran = []
+
+    async def _exec(bot, guild_id, payload):
+        ran.append(payload.get("tag"))
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    # fresh_claim defaults to False -> models a stale (older-than-grace) claim.
+    pool.add(1, 100, "test_kind", {"tag": "orphan"}, status="running")
+    bot = FakeBot(pool)
+
+    await dashboard_actions.reconcile(bot)
+
+    assert pool.rows[1]["status"] == "done"
+    assert ran == ["orphan"]
 
 
 # ---------------------------------------------------------------------------

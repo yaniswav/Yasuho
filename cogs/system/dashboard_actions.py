@@ -29,12 +29,16 @@ Design (mirrors the house patterns and the security brief):
   a secret or a stack trace - only short machine-readable error codes.
 * Boot reconciliation (``reconcile``): a notify emitted while the bot was
   restarting is lost (LISTEN/NOTIFY does not buffer), so once at startup we
-  expire actions too old to still be wanted, reset any ``running`` row orphaned
-  by a previous process back to ``pending``, and re-drive every remaining
-  ``pending`` row through the SAME claim path. Delivery is therefore
-  at-least-once: an action interrupted after its side effect but before its
-  status write can run twice (a duplicate Verify button, low harm) - the price
-  of never silently dropping one.
+  expire actions too old to still be wanted, reset every ``running`` row whose
+  claim is older than a short grace window (``_ORPHAN_RESET_SECONDS``) back to
+  ``pending``, and re-drive every remaining ``pending`` row through the SAME
+  claim path. The age guard matters because the listener is attached BEFORE
+  reconcile runs, so a live handler of THIS process may already hold a freshly
+  claimed ``running`` row; its ``updated_at`` (stamped by the claim) is inside
+  the window, so it is NOT mistaken for an orphan and re-driven. Delivery is
+  still at-least-once, but a duplicate is now possible only on a crash AFTER an
+  action's side effect but BEFORE its status write (a duplicate Verify button,
+  low harm) - the price of never silently dropping one.
 
 Everything is defensive: a malformed payload, a missing guild/channel, a DB
 blip or an executor exception is caught, logged without secrets, and recorded as
@@ -74,6 +78,16 @@ _KEEPALIVE_INTERVAL = 30.0
 # marked failed rather than replayed - a request enqueued long before a restart
 # is very likely no longer wanted. Generous enough to survive a slow restart.
 _STALE_ACTION_MINUTES = 60
+
+# Grace window before boot reconciliation resets a 'running' row back to
+# 'pending'. The listener is attached BEFORE reconcile runs (see _supervise), so
+# a live handler of THIS process may already hold a freshly claimed 'running'
+# row; _claim stamps updated_at = now() on claim, so that row's updated_at is
+# inside this window and the age-guarded reset skips it - only rows orphaned by a
+# dead previous process (stale updated_at) are reset and re-driven. Comfortably
+# exceeds any executor's runtime, so a genuinely in-flight claim is never mistaken
+# for an orphan (which would re-run its side effect and double the panel/menu).
+_ORPHAN_RESET_SECONDS = 30
 
 # Defensive cap on a custom embed message copied from the payload (Discord's
 # embed description limit is 4096; the /verify setup path is bounded like this).
@@ -949,11 +963,15 @@ async def reconcile(bot):
 
     LISTEN/NOTIFY does not buffer, so a notify fired while the bot was down is
     gone. Once at startup we (1) fail actions too old to still be wanted, (2)
-    reset any ``running`` row orphaned by a dead previous process back to
-    ``pending`` (this fresh process holds no in-flight handler yet, so every
-    ``running`` row is orphaned), and (3) re-drive every remaining ``pending``
-    row through the normal atomic claim - so a concurrent live notify for the
-    same row still can't double-run it. Never raises out of a per-row failure.
+    reset a ``running`` row back to ``pending`` ONLY once its claim is older than
+    ``_ORPHAN_RESET_SECONDS`` - the listener is attached before this runs, so a
+    live handler of THIS process may already hold a ``running`` row whose
+    ``updated_at`` (stamped by ``_claim``) is recent; the age guard leaves that
+    one alone and resets only rows orphaned by a dead previous process - and (3)
+    re-drive every remaining ``pending`` row through the normal atomic claim - so
+    a concurrent live notify for the same row still can't double-run it. A
+    duplicate is therefore possible only when a crash lands AFTER an executor's
+    side effect but BEFORE its status write. Never raises out of a per-row failure.
     """
     pool = bot.db_pool
 
@@ -968,11 +986,18 @@ async def reconcile(bot):
         json.dumps({"ok": False, "error": "expired"}),
     )
 
-    # (2) Reset orphaned 'running' rows (only recent ones remain after step 1).
+    # (2) Reset orphaned 'running' rows. Age-guarded: only rows whose claim is
+    # older than the grace window are reset. The listener is already attached, so
+    # a live handler of THIS process may hold a freshly claimed 'running' row
+    # (recent updated_at, stamped by _claim); resetting it here would let step 3
+    # re-claim and re-run its executor, doubling the side effect. Bound age is a
+    # fixed constant but is still passed as a parameter rather than interpolated.
     await pool.execute(
         "UPDATE dashboard_actions "
         "SET status = 'pending', updated_at = now() "
-        "WHERE status = 'running'"
+        "WHERE status = 'running' "
+        "AND updated_at < now() - $1 * INTERVAL '1 second'",
+        _ORPHAN_RESET_SECONDS,
     )
 
     # (3) Re-drive everything still pending, oldest first, one at a time.
