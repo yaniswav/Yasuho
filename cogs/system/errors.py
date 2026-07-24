@@ -46,6 +46,23 @@ def _usage(ctx):
     )
 
 
+def _generic_report(ctx, error_id):
+    """The generic "something broke, report this id" embed.
+
+    Shared by the CommandInvokeError branch and the catch-all else so a crash
+    reports identically whether it surfaced from a prefix or a slash (hybrid)
+    invocation, and the traceable identifier wording lives in one place.
+    """
+    return _error_embed(
+        ctx,
+        _("**Seems like something went wrong while executing command:**"),
+        _(
+            ":question: What to do: `Report this error identifier to "
+            "the bot owner`: `{error_id}`\n{usage}"
+        ).format(error_id=error_id, usage=_usage(ctx)),
+    )
+
+
 class Errors(commands.Cog):
     """Global command error handler that reports failures as embeds."""
 
@@ -54,12 +71,31 @@ class Errors(commands.Cog):
         bot.on_command_error = self._on_command_error
 
     async def _on_command_error(self, ctx, error, bypass=False):
+        # Parenthesise the whole "command handles its own error" test so that
+        # bypass=True always forces the global handler to run; without the
+        # parens `and not bypass` bound only to the second operand and a command
+        # with its own on_error could never be bypassed.
         if (
             hasattr(ctx.command, "on_error")
             or (ctx.command and hasattr(ctx.cog, f"_{ctx.command.cog_name}__error"))
-            and not bypass
-        ):
+        ) and not bypass:
             return
+
+        # A hybrid command invoked as a slash re-wraps a runtime crash as
+        # HybridCommandError -> app_commands.CommandInvokeError -> the real
+        # error. Peel to the real exception so slash crashes take the exact same
+        # CommandInvokeError branch as prefix ones (error_id + generic reply +
+        # logged traceback). Any other HybridCommandError shape is left intact
+        # and drops to the final else, which logs it before replying.
+        if isinstance(error, commands.HybridCommandError) and isinstance(
+            error.original, discord.app_commands.CommandInvokeError
+        ):
+            inner = error.original.original
+            error = (
+                inner
+                if isinstance(inner, commands.CommandError)
+                else commands.CommandInvokeError(inner)
+            )
 
         if isinstance(error, commands.CommandNotFound):
             # A per-guild custom command may claim this name; if it does, it
@@ -210,16 +246,7 @@ class Errors(commands.Cog):
                     original.__traceback__,
                 ),
             )
-            await ctx.send(
-                embed=_error_embed(
-                    ctx,
-                    _("**Seems like something went wrong while executing command:**"),
-                    _(
-                        ":question: What to do: `Report this error identifier to "
-                        "the bot owner`: `{error_id}`\n{usage}"
-                    ).format(error_id=error_id, usage=_usage(ctx)),
-                )
-            )
+            await ctx.send(embed=_generic_report(ctx, error_id))
 
         elif isinstance(error, commands.BotMissingPermissions):
             await ctx.send(
@@ -231,6 +258,37 @@ class Errors(commands.Cog):
                     ),
                 )
             )
+
+        elif isinstance(error, commands.CheckFailure):
+            # NotOwner / MissingRole / NSFWChannelRequired / CheckAnyFailure and
+            # the like are deliberate refusals, not crashes. The specific check
+            # failures above keep their own wording; the rest get one short,
+            # discreet reply. Never the alarming "report this to the bot owner"
+            # text, which would ask users to file a bug for a permission denial.
+            await ctx.send(
+                _("You do not have permission to do that"), delete_after=10
+            )
+
+        else:
+            # Any command error that matched no branch above (including a
+            # HybridCommandError shape we could not unwrap). Log the full
+            # traceback BEFORE attempting a reply: ctx.send can itself fail (an
+            # expired slash interaction, missing permissions) and the traceback
+            # of an otherwise-unhandled error must never be lost. Pass exc_info
+            # explicitly because on_command_error runs outside the except block,
+            # so there is no active exception for log.exception to capture.
+            error_id = secrets.token_hex(4)
+            log.error(
+                "Unhandled command error "
+                "[error_id=%s type=%s command=%s user=%s guild=%s]",
+                error_id,
+                type(error).__name__,
+                getattr(ctx.command, "qualified_name", None),
+                ctx.author.id,
+                ctx.guild.id if ctx.guild else None,
+                exc_info=(type(error), error, error.__traceback__),
+            )
+            await ctx.send(embed=_generic_report(ctx, error_id))
 
 
 async def setup(bot):
