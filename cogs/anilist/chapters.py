@@ -52,6 +52,7 @@ from .feed import (
     _AuthError,
     _check_debounce,
     _colour_from_media,
+    _deny_feed_action,
     _feed_ephemeral,
     _FetchError,
     _GoneError,
@@ -332,8 +333,8 @@ async def _run_read(interaction, media_id, chapter):
     """Advance the clicker's AniList progress to ``chapter`` for ``media_id``.
 
     Mirrors the airing Seen button: apply the invocation locale, gate on the
-    shared per-user debounce, then resolve the clicker's token (this action
-    WRITES, so a token is required). The chapter string is floored to an integer
+    shared per-user debounce and the shared interactive throttle, then resolve
+    the clicker's token (this action WRITES, so a token is required). The chapter string is floored to an integer
     (a decimal ``110.5`` becomes progress ``110``); it looks up the viewer's
     current entry first and only advances when their progress is strictly below
     that number - progress is never regressed. The decrypted token stays a local;
@@ -344,6 +345,8 @@ async def _run_read(interaction, media_id, chapter):
     # never set: resolve it first so every _() below renders in the user's tongue.
     await i18n.apply_interaction_locale(interaction)
     if not await _check_debounce(interaction):
+        return
+    if await _deny_feed_action(interaction):
         return
     token = await _resolve_token(interaction)
     if token is None:

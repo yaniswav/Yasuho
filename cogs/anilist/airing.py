@@ -46,6 +46,7 @@ from .feed import (
     _AuthError,
     _check_debounce,
     _colour_from_media,
+    _deny_feed_action,
     _feed_ephemeral,
     _FetchError,
     _GoneError,
@@ -270,8 +271,8 @@ async def _run_seen(interaction, media_id, episode):
     """Advance the clicker's AniList progress to ``episode`` for ``media_id``.
 
     Mirrors the feed action buttons: apply the invocation locale, gate on the
-    shared per-user debounce, then resolve the clicker's token (this action
-    WRITES, so a token is required). It looks up their current entry first and
+    shared per-user debounce and the shared interactive throttle, then resolve
+    the clicker's token (this action WRITES, so a token is required). It looks up their current entry first and
     only advances when their progress is strictly below ``episode`` - progress is
     never regressed. The decrypted token stays a local; it is never logged or
     stored.
@@ -281,6 +282,8 @@ async def _run_seen(interaction, media_id, episode):
     # never set: resolve it first so every _() below renders in the user's tongue.
     await i18n.apply_interaction_locale(interaction)
     if not await _check_debounce(interaction):
+        return
+    if await _deny_feed_action(interaction):
         return
     token = await _resolve_token(interaction)
     if token is None:

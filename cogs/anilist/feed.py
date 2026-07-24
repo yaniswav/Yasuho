@@ -53,6 +53,7 @@ from .feed_delivery import (
     _AuthError,  # noqa: F401
     _check_debounce,  # noqa: F401
     _ConfigureEntryView,  # noqa: F401
+    _deny_feed_action,  # noqa: F401
     _feed_ephemeral,  # noqa: F401
     _FetchError,
     _GoneError,  # noqa: F401
@@ -65,6 +66,7 @@ from .feed_delivery import (
     _run_like,  # noqa: F401
     _run_reply,  # noqa: F401
     _status_word,  # noqa: F401
+    _throttle_for,
 )
 from .feed_render import (
     _LIST_ACTION_TEMPLATES,  # noqa: F401
@@ -1118,6 +1120,18 @@ class AniListFeed(commands.Cog):
         query = (query or "").strip()
         if not query:
             return []
+        # This is an admin-triggered INTERACTIVE search, not a poller call, so it
+        # shares the interactive ceiling with the buttons/lookups (allow_global
+        # backstop only - the caller carries no per-user identity here). A dropped
+        # search degrades to the method's normal "no match" shape; the poller's own
+        # _graphql path in _fetch_activities stays untouched.
+        throttle = _throttle_for(self.bot)
+        if throttle is not None and not throttle.allow_global():
+            log.warning(
+                "AniList interactive ceiling reached; dropping an admin title "
+                "search to protect the pollers"
+            )
+            return []
         try:
             data = await self._graphql(SEARCH_QUERY, {"search": query})
         except (_RateLimited, _FetchError):
@@ -1202,6 +1216,26 @@ class AniListFeed(commands.Cog):
         username = (username or "").strip()
         if not username:
             return None, None, None, _("Give me an AniList username to follow.")
+
+        # Admin-triggered INTERACTIVE lookup: share the interactive ceiling with
+        # the buttons/lookups (allow_global backstop only). A drop reuses the same
+        # rate-limit message the AniList-429 branch already returns; the poller's
+        # own _graphql path in _fetch_activities is never gated here.
+        throttle = _throttle_for(self.bot)
+        if throttle is not None and not throttle.allow_global():
+            log.warning(
+                "AniList interactive ceiling reached; dropping an admin follow "
+                "lookup to protect the pollers"
+            )
+            return (
+                None,
+                None,
+                None,
+                _(
+                    "AniList is rate limiting me right now - try again in a "
+                    "minute."
+                ),
+            )
 
         try:
             data = await self._graphql(USER_SEARCH_QUERY, {"name": username})

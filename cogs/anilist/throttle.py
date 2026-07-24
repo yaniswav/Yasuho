@@ -9,19 +9,25 @@ entirely from the pure primitives in :mod:`tools.quotas`.
 
 Two layers, deliberately separate:
 
-* A process-wide aggregate ceiling on user-driven ``_graphql`` calls (a single-
+* A process-wide aggregate ceiling on user-driven interactive calls (a single-
   key :class:`~tools.quotas.SlidingWindowQuota`). This is the hard backstop: no
   burst of interactive calls can sustain more than ``GLOBAL_LIMIT`` requests per
   window across the WHOLE process, so the pollers always keep their share of the
-  per-IP budget. Because the pollers use their own authenticated fetch (never
-  this ``_graphql``), the ceiling is naturally isolated from their traffic.
+  per-IP budget. It spans the ENTIRE interactive surface - the lookup commands
+  (``AniListBase._graphql``), the feed card actions (like / reply / add, which
+  act as the clicking user through ``feed_delivery._authed_graphql``) and the
+  admin feed searches (follow-lookup and title-search). The airing / feed /
+  chapter pollers use their own authenticated fetch, are excluded by design and
+  never touch this ceiling.
 * Per-user and per-guild sliding windows checked at the top of the expensive
-  interactive button callbacks, so one member (or one hyped guild) is told to
-  slow down BEFORE the expensive fetch, with a friendly ephemeral.
+  interactive callbacks (lookup components and feed card buttons), so one member
+  (or one hyped guild) is told to slow down BEFORE the expensive fetch, with a
+  friendly ephemeral.
 
-A shared counter records how many interactive ``_graphql`` responses came back as
-HTTP 429, so the operator can SEE "AniList is throttling us" and correlate it
-with poller embargoes - surfacing the signal without changing poller behaviour.
+A shared counter records how many interactive responses (lookups and feed card
+actions) came back as HTTP 429, so the operator can SEE "AniList is throttling
+us" and correlate it with poller embargoes - surfacing the signal without
+changing poller behaviour.
 
 Pure and clock-injected (via :mod:`tools.quotas`): pass ``clock`` to drive time
 deterministically in tests.
@@ -70,9 +76,11 @@ class AniListThrottle:
     def allow_global(self, now: float | None = None) -> bool:
         """Consume one process-wide interactive slot; False when the ceiling is hit.
 
-        This is the backstop wired into ``_graphql``: a False here means the whole
-        interactive surface is already at capacity for this window, so the call is
-        dropped rather than added to the shared per-IP budget the pollers depend on.
+        This is the backstop wired into every interactive path (the lookup
+        ``_graphql``, the feed card actions and the admin feed searches): a False
+        here means the whole interactive surface is already at capacity for this
+        window, so the call is dropped rather than added to the shared per-IP
+        budget the pollers depend on.
         """
         return self._global.hit(_GLOBAL_KEY, now)
 
@@ -98,7 +106,7 @@ class AniListThrottle:
         return True
 
     def note_throttled(self) -> None:
-        """Record one interactive AniList response that came back HTTP 429."""
+        """Record one interactive AniList response (lookup or feed action) as 429."""
         self._throttled_429 += 1
 
     @property

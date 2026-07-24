@@ -163,6 +163,23 @@ def _activity_url(activity_id):
     return "https://anilist.co/activity/{aid}".format(aid=activity_id)
 
 
+def _throttle_for(client):
+    """Return the ONE shared interactive throttle, or None when unavailable.
+
+    The single :class:`~cogs.anilist.throttle.AniListThrottle` instance lives on
+    the AniList cog (``AniListBase.__init__``). The feed surface reads it through
+    that same cog so the buttons, the lookup commands and the admin searches all
+    consume ONE process-wide window - two instances would mean two ceilings, which
+    would defeat the point. Degrades to None (never blocks) if the cog is somehow
+    unavailable, mirroring ``components._deny_if_throttled``.
+    """
+
+    get_cog = getattr(client, "get_cog", None)
+    if get_cog is None:
+        return None
+    return getattr(get_cog("AniList"), "_throttle", None)
+
+
 async def _authed_graphql(bot, token, query, variables):
     """POST an authenticated GraphQL request to AniList as the linked user.
 
@@ -191,6 +208,17 @@ async def _authed_graphql(bot, token, query, variables):
         ) as r:
             status = r.status
             if status == 429:
+                # Record and log on the SAME shared counter / WARNING level the
+                # lookup path (AniListBase._graphql) uses, so the operator can
+                # correlate interactive throttling with poller embargoes.
+                throttle = _throttle_for(bot)
+                if throttle is not None:
+                    throttle.note_throttled()
+                log.warning(
+                    "AniList returned HTTP 429 on an interactive feed action; the "
+                    "shared per-IP budget is under pressure and the airing / feed "
+                    "/ chapter pollers may be embargoed"
+                )
                 raise _RateLimited(
                     _parse_retry_after(r.headers.get("Retry-After"))
                 )
@@ -255,6 +283,38 @@ async def _check_debounce(interaction):
     return True
 
 
+async def _deny_feed_action(interaction):
+    """Gate a feed-card action behind the shared interactive throttle.
+
+    The feed buttons act AS the clicking user through a per-user OAuth token, so
+    they never route through ``AniListBase._graphql`` (which carries the ceiling
+    for the lookup commands). This applies the SAME shared throttle here: the
+    per-user/guild window first, then the process-wide backstop - the exact
+    check-then-hit order of ``AniListBase._graphql`` - so a click storm cannot
+    burn the shared per-IP budget the airing / feed / chapter pollers depend on.
+    Returns ``True`` (having already replied with a terse ephemeral 'slow down')
+    when the click must stop, else ``False`` after consuming one interactive AND
+    one global slot. Best-effort: a missing throttle never blocks a click.
+    """
+
+    throttle = _throttle_for(interaction.client)
+    if throttle is None:
+        return False
+    allowed = throttle.allow_interactive(interaction.user.id, interaction.guild_id)
+    if allowed:
+        allowed = throttle.allow_global()
+    if allowed:
+        return False
+    await _feed_ephemeral(
+        interaction,
+        _(
+            "Slow down a little - too many AniList requests right now. "
+            "Give it a few seconds and try again."
+        ),
+    )
+    return True
+
+
 async def _resolve_token(interaction):
     """Resolve the clicker's AniList token, or reply with the right hint.
 
@@ -300,6 +360,10 @@ async def _run_like(interaction, activity_id):
     # never set: resolve it first so every _() below renders in the user's tongue.
     await i18n.apply_interaction_locale(interaction)
     if not await _check_debounce(interaction):
+        return
+    # Shared interactive throttle before any AniList round-trip (protects the
+    # pollers' per-IP share); the cheaper debounce above is the first line.
+    if await _deny_feed_action(interaction):
         return
     token = await _resolve_token(interaction)
     if token is None:
@@ -411,15 +475,20 @@ async def _run_add(interaction, media_id):
     """Add the media to the clicking user's planning list, or say it is already there.
 
     Mirrors :func:`_run_like` exactly: apply the invocation locale, gate on the
-    shared per-user debounce, then resolve the clicker's token (same not-linked /
-    re-link hints). It then acts AS the clicking user (Bearer): first an authed
-    lookup of their existing entry (``mediaListEntry`` resolves per-viewer), and
-    only when the media is not already on their list a ``SaveMediaListEntry`` to
-    PLANNING. The token stays a local; it is never logged or stored.
+    shared per-user debounce and the interactive throttle, then resolve the
+    clicker's token (same not-linked / re-link hints). It then acts AS the
+    clicking user (Bearer): first an authed lookup of their existing entry
+    (``mediaListEntry`` resolves per-viewer), and only when the media is not
+    already on their list a ``SaveMediaListEntry`` to PLANNING. The token stays a
+    local; it is never logged or stored.
     """
 
     await i18n.apply_interaction_locale(interaction)
     if not await _check_debounce(interaction):
+        return
+    # Shared interactive throttle before any AniList round-trip (protects the
+    # pollers' per-IP share); the cheaper debounce above is the first line.
+    if await _deny_feed_action(interaction):
         return
     token = await _resolve_token(interaction)
     if token is None:
@@ -526,6 +595,10 @@ async def _run_reply(interaction, activity_id):
 
     await i18n.apply_interaction_locale(interaction)
     if not await _check_debounce(interaction):
+        return
+    # Shared interactive throttle before opening the modal (its submit is the
+    # AniList round-trip); the cheaper debounce above is the first line.
+    if await _deny_feed_action(interaction):
         return
     # Fail fast with a clear hint before the user types a whole reply; the modal
     # re-fetches the token at submit time, so we deliberately drop this one and
