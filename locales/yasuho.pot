@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-21 20:13+0000\n"
+"POT-Creation-Date: 2026-07-24 21:37+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -72,7 +72,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr ""
 
 #: cogs/anilist/account.py:267 cogs/anilist/account.py:553
-#: cogs/anilist/feed.py:1345
+#: cogs/anilist/feed.py:1565
 msgid "Could not resolve your AniList account."
 msgstr ""
 
@@ -116,97 +116,97 @@ msgstr ""
 msgid "Media type must be `anime` or `manga`."
 msgstr ""
 
-#: cogs/anilist/airing.py:301 cogs/anilist/airing.py:347
-#: cogs/anilist/chapters.py:371 cogs/anilist/chapters.py:417
-#: cogs/anilist/feed_delivery.py:323 cogs/anilist/feed_delivery.py:440
-#: cogs/anilist/feed_delivery.py:484 cogs/anilist/feed_delivery.py:586
+#: cogs/anilist/airing.py:304 cogs/anilist/airing.py:350
+#: cogs/anilist/chapters.py:425 cogs/anilist/chapters.py:471
+#: cogs/anilist/feed_delivery.py:387 cogs/anilist/feed_delivery.py:509
+#: cogs/anilist/feed_delivery.py:553 cogs/anilist/feed_delivery.py:659
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr ""
 
-#: cogs/anilist/airing.py:307 cogs/anilist/airing.py:353
-#: cogs/anilist/chapters.py:377 cogs/anilist/chapters.py:423
-#: cogs/anilist/feed_delivery.py:329 cogs/anilist/feed_delivery.py:446
-#: cogs/anilist/feed_delivery.py:490 cogs/anilist/feed_delivery.py:592
+#: cogs/anilist/airing.py:310 cogs/anilist/airing.py:356
+#: cogs/anilist/chapters.py:431 cogs/anilist/chapters.py:477
+#: cogs/anilist/feed_delivery.py:393 cogs/anilist/feed_delivery.py:515
+#: cogs/anilist/feed_delivery.py:559 cogs/anilist/feed_delivery.py:665
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/airing.py:313 cogs/anilist/airing.py:323
-#: cogs/anilist/airing.py:359 cogs/anilist/chapters.py:383
-#: cogs/anilist/chapters.py:393 cogs/anilist/chapters.py:429
-#: cogs/anilist/feed_delivery.py:452 cogs/anilist/feed_delivery.py:462
-#: cogs/anilist/feed_delivery.py:496
+#: cogs/anilist/airing.py:316 cogs/anilist/airing.py:326
+#: cogs/anilist/airing.py:362 cogs/anilist/chapters.py:437
+#: cogs/anilist/chapters.py:447 cogs/anilist/chapters.py:483
+#: cogs/anilist/feed_delivery.py:521 cogs/anilist/feed_delivery.py:531
+#: cogs/anilist/feed_delivery.py:565
 msgid "I couldn't find that title on AniList anymore."
 msgstr ""
 
-#: cogs/anilist/airing.py:317 cogs/anilist/airing.py:363
-#: cogs/anilist/airing.py:368 cogs/anilist/chapters.py:387
-#: cogs/anilist/chapters.py:433 cogs/anilist/chapters.py:438
-#: cogs/anilist/feed.py:1037 cogs/anilist/feed_delivery.py:339
-#: cogs/anilist/feed_delivery.py:456 cogs/anilist/feed_delivery.py:500
-#: cogs/anilist/feed_delivery.py:505 cogs/anilist/feed_delivery.py:602
+#: cogs/anilist/airing.py:320 cogs/anilist/airing.py:366
+#: cogs/anilist/airing.py:371 cogs/anilist/chapters.py:441
+#: cogs/anilist/chapters.py:487 cogs/anilist/chapters.py:492
+#: cogs/anilist/feed.py:1257 cogs/anilist/feed_delivery.py:403
+#: cogs/anilist/feed_delivery.py:525 cogs/anilist/feed_delivery.py:569
+#: cogs/anilist/feed_delivery.py:574 cogs/anilist/feed_delivery.py:675
 msgid "I could not reach AniList - try again shortly."
 msgstr ""
 
-#: cogs/anilist/airing.py:331
+#: cogs/anilist/airing.py:334
 #, python-brace-format
 msgid "You are already at episode {progress} of **{title}**."
 msgstr ""
 
-#: cogs/anilist/airing.py:372
+#: cogs/anilist/airing.py:375
 #, python-brace-format
 msgid "Marked **{title}** as watched up to episode {episode}."
 msgstr ""
 
-#: cogs/anilist/airing.py:396
+#: cogs/anilist/airing.py:399
 msgid "Seen"
 msgstr ""
 
-#: cogs/anilist/airing.py:434
+#: cogs/anilist/airing.py:437
 msgid "A new episode just aired."
 msgstr ""
 
-#: cogs/anilist/airing.py:445
+#: cogs/anilist/airing.py:448
 #, python-brace-format
 msgid "Episode {episode} of **{title}** just aired."
 msgstr ""
 
-#: cogs/anilist/airing.py:449
+#: cogs/anilist/airing.py:452
 msgid "New episode"
 msgstr ""
 
-#: cogs/anilist/airing.py:476 cogs/anilist/feed_render.py:274
+#: cogs/anilist/airing.py:479 cogs/anilist/feed_render.py:274
 #: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
 msgid "AniList"
 msgstr ""
 
-#: cogs/anilist/airing.py:520
+#: cogs/anilist/airing.py:523
 msgid ""
 "Airing alerts are now **off**. I will not DM you about new episodes "
 "anymore - run this again to turn them back on."
 msgstr ""
 
-#: cogs/anilist/airing.py:531
+#: cogs/anilist/airing.py:534
 msgid ""
 "Link your AniList account first with `/anilist login`, then run this "
 "again to turn on airing alerts."
 msgstr ""
 
-#: cogs/anilist/airing.py:539 cogs/anilist/chapters.py:627
-#: cogs/anilist/feed.py:1336 cogs/anilist/feed_delivery.py:288
+#: cogs/anilist/airing.py:542 cogs/anilist/chapters.py:681
+#: cogs/anilist/feed.py:1556 cogs/anilist/feed_delivery.py:348
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/airing.py:550 cogs/anilist/chapters.py:638
+#: cogs/anilist/airing.py:553 cogs/anilist/chapters.py:692
 msgid "Could not resolve your AniList account - try again shortly."
 msgstr ""
 
-#: cogs/anilist/airing.py:577
+#: cogs/anilist/airing.py:580
 msgid ""
 "-# Heads up: I could not see any titles on your Watching list. Make sure "
 "your AniList anime list is set to public."
 msgstr ""
 
-#: cogs/anilist/airing.py:583
+#: cogs/anilist/airing.py:586
 msgid ""
 "Airing alerts are now **on**. I will DM you when a new episode of a title"
 " on your **Watching** anime list airs, with a one-click Seen button.\n"
@@ -302,69 +302,69 @@ msgstr ""
 msgid "**{season} {year} anime** - pick one for details:"
 msgstr ""
 
-#: cogs/anilist/chapters.py:356
+#: cogs/anilist/chapters.py:410
 msgid "I couldn't read that chapter number."
 msgstr ""
 
-#: cogs/anilist/chapters.py:401
+#: cogs/anilist/chapters.py:455
 #, python-brace-format
 msgid "You are already at chapter {progress} of **{title}**."
 msgstr ""
 
-#: cogs/anilist/chapters.py:442
+#: cogs/anilist/chapters.py:496
 #, python-brace-format
 msgid "Marked **{title}** as read up to chapter {chapter}."
 msgstr ""
 
-#: cogs/anilist/chapters.py:468
+#: cogs/anilist/chapters.py:522
 msgid "Read"
 msgstr ""
 
-#: cogs/anilist/chapters.py:514
+#: cogs/anilist/chapters.py:568
 msgid "A new chapter is out."
 msgstr ""
 
-#: cogs/anilist/chapters.py:525
+#: cogs/anilist/chapters.py:579
 #, python-brace-format
 msgid "Chapter {chapter} of **{title}** is out."
 msgstr ""
 
-#: cogs/anilist/chapters.py:529
+#: cogs/anilist/chapters.py:583
 msgid "New chapter"
 msgstr ""
 
-#: cogs/anilist/chapters.py:534
+#: cogs/anilist/chapters.py:588
 #, python-brace-format
 msgid "Vol. {volume}"
 msgstr ""
 
-#: cogs/anilist/chapters.py:560
+#: cogs/anilist/chapters.py:614
 msgid "Official site"
 msgstr ""
 
-#: cogs/anilist/chapters.py:560
+#: cogs/anilist/chapters.py:614
 msgid "MangaDex"
 msgstr ""
 
-#: cogs/anilist/chapters.py:608
+#: cogs/anilist/chapters.py:662
 msgid ""
 "Chapter alerts are now **off**. I will not DM you about new chapters "
 "anymore - run this again to turn them back on."
 msgstr ""
 
-#: cogs/anilist/chapters.py:619
+#: cogs/anilist/chapters.py:673
 msgid ""
 "Link your AniList account first with `/anilist login`, then run this "
 "again to turn on chapter alerts."
 msgstr ""
 
-#: cogs/anilist/chapters.py:665
+#: cogs/anilist/chapters.py:719
 msgid ""
 "-# Heads up: I could not see any titles on your Reading list. Make sure "
 "your AniList manga list is set to public."
 msgstr ""
 
-#: cogs/anilist/chapters.py:671
+#: cogs/anilist/chapters.py:725
 msgid ""
 "Chapter alerts are now **on**. I will DM you when a new chapter of a "
 "title on your **Reading** manga list drops, with a one-click Read button."
@@ -510,7 +510,7 @@ msgstr ""
 msgid "Could not reach your AniList account."
 msgstr ""
 
-#: cogs/anilist/components.py:48
+#: cogs/anilist/components.py:48 cogs/anilist/feed_delivery.py:311
 msgid ""
 "Slow down a little - too many AniList requests right now. Give it a few "
 "seconds and try again."
@@ -797,150 +797,150 @@ msgstr ""
 msgid "Could not open the code form."
 msgstr ""
 
-#: cogs/anilist/feed.py:741 cogs/anilist/feed.py:777 cogs/anilist/feed.py:1233
+#: cogs/anilist/feed.py:929 cogs/anilist/feed.py:965 cogs/anilist/feed.py:1453
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:749
+#: cogs/anilist/feed.py:937
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:789
+#: cogs/anilist/feed.py:977
 msgid "That feed no longer exists."
 msgstr ""
 
-#: cogs/anilist/feed.py:884 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:1072 tests/cogs/test_anilist_feed_subs.py:14
 msgid "I couldn't read that title - try searching again."
 msgstr ""
 
-#: cogs/anilist/feed.py:896 cogs/anilist/feed_views.py:462
+#: cogs/anilist/feed.py:1084 cogs/anilist/feed_views.py:462
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1018
+#: cogs/anilist/feed.py:1218
 msgid "Give me an AniList username to follow."
 msgstr ""
 
-#: cogs/anilist/feed.py:1028
+#: cogs/anilist/feed.py:1235 cogs/anilist/feed.py:1248
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr ""
 
-#: cogs/anilist/feed.py:1046
+#: cogs/anilist/feed.py:1266
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1095 cogs/anilist/feed_views.py:849
+#: cogs/anilist/feed.py:1315 cogs/anilist/feed_views.py:849
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr ""
 
-#: cogs/anilist/feed.py:1151
+#: cogs/anilist/feed.py:1371
 msgid ""
 "This server has no active AniList feed. Create or re-enable one with "
 "`/anilistfeed set` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1162
+#: cogs/anilist/feed.py:1382
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr ""
 
-#: cogs/anilist/feed.py:1209
+#: cogs/anilist/feed.py:1429
 #, python-brace-format
 msgid ""
 "This server already has the maximum of {max} feeds. Remove one with "
 "`/anilistfeed remove` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1219
+#: cogs/anilist/feed.py:1439
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr ""
 
-#: cogs/anilist/feed.py:1229
+#: cogs/anilist/feed.py:1449
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr ""
 
-#: cogs/anilist/feed.py:1237
+#: cogs/anilist/feed.py:1457
 msgid "AniList feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:1263
+#: cogs/anilist/feed.py:1483
 msgid "User"
 msgstr ""
 
-#: cogs/anilist/feed.py:1263
+#: cogs/anilist/feed.py:1483
 msgid "Feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:1265
+#: cogs/anilist/feed.py:1485
 msgid "Now following"
 msgstr ""
 
-#: cogs/anilist/feed.py:1290
+#: cogs/anilist/feed.py:1510
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1293
+#: cogs/anilist/feed.py:1513
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1318
+#: cogs/anilist/feed.py:1538
 msgid ""
 "This feed does not let members join themselves. Ask a moderator to turn "
 "on **Members can join** in `/anilistfeed`."
 msgstr ""
 
-#: cogs/anilist/feed.py:1326 cogs/anilist/feed_delivery.py:270
+#: cogs/anilist/feed.py:1546 cogs/anilist/feed_delivery.py:330
 msgid "AniList actions are unavailable right now."
 msgstr ""
 
-#: cogs/anilist/feed.py:1331
+#: cogs/anilist/feed.py:1551
 msgid "Link your AniList account first with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/feed.py:1353
+#: cogs/anilist/feed.py:1573
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:1361
+#: cogs/anilist/feed.py:1581
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr ""
 
-#: cogs/anilist/feed.py:1365
+#: cogs/anilist/feed.py:1585
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:1383
+#: cogs/anilist/feed.py:1603
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr ""
 
-#: cogs/anilist/feed.py:1405
+#: cogs/anilist/feed.py:1625
 msgid "none"
 msgstr ""
 
-#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1626 cogs/moderation/automod.py:95
 msgid "enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:1406 cogs/moderation/automod.py:95
+#: cogs/anilist/feed.py:1626 cogs/moderation/automod.py:95
 msgid "disabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:1413 cogs/anilist/feed_views.py:1087
+#: cogs/anilist/feed.py:1633 cogs/anilist/feed_views.py:1087
 msgid "no one yet"
 msgstr ""
 
-#: cogs/anilist/feed.py:1416
+#: cogs/anilist/feed.py:1636
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -948,16 +948,16 @@ msgid ""
 "Following: {names}"
 msgstr ""
 
-#: cogs/anilist/feed.py:1420
+#: cogs/anilist/feed.py:1640
 msgid "AniList feeds"
 msgstr ""
 
-#: cogs/anilist/feed.py:1440
+#: cogs/anilist/feed.py:1660
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:1445
+#: cogs/anilist/feed.py:1665
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr ""
@@ -967,69 +967,69 @@ msgstr ""
 msgid "Unknown title"
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:251
+#: cogs/anilist/feed_delivery.py:279
 msgid "You are clicking too fast - give it a moment."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:279
+#: cogs/anilist/feed_delivery.py:339
 msgid ""
 "Link your AniList account first with `/anilist login`, then you can like "
 "and reply straight from the feed."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:335 cogs/anilist/feed_delivery.py:598
+#: cogs/anilist/feed_delivery.py:399 cogs/anilist/feed_delivery.py:671
 msgid "This activity no longer exists on AniList."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:347
+#: cogs/anilist/feed_delivery.py:411
 #, python-brace-format
 msgid "Liked - this activity now has {n} like."
 msgid_plural "Liked - this activity now has {n} likes."
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed_delivery.py:353
+#: cogs/anilist/feed_delivery.py:417
 #, python-brace-format
 msgid "Like removed - this activity now has {n} like."
 msgid_plural "Like removed - this activity now has {n} likes."
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed_delivery.py:377
+#: cogs/anilist/feed_delivery.py:441
 msgid "Set progress / score"
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:469
+#: cogs/anilist/feed_delivery.py:538
 #, python-brace-format
 msgid "**{title}** is already on your list ({status})."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:517
+#: cogs/anilist/feed_delivery.py:586
 #, python-brace-format
 msgid "Added **{title}** to your planning."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:546
+#: cogs/anilist/feed_delivery.py:619
 msgid "Reply on AniList"
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:552
+#: cogs/anilist/feed_delivery.py:625
 msgid "Write your reply..."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:555
+#: cogs/anilist/feed_delivery.py:628
 msgid "Your reply"
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:573
+#: cogs/anilist/feed_delivery.py:646
 msgid "Your reply was empty - nothing was posted."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:608
+#: cogs/anilist/feed_delivery.py:681
 msgid "AniList did not accept that reply - try again shortly."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:612
+#: cogs/anilist/feed_delivery.py:685
 #, python-brace-format
 msgid "Your reply was posted. [See it on AniList]({url})"
 msgstr ""
@@ -1317,8 +1317,8 @@ msgstr ""
 msgid "Feed deleted."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:970
-#: cogs/moderation/moderation.py:1031 tools/arg_completion.py:411
+#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:989
+#: cogs/moderation/moderation.py:1050 tools/arg_completion.py:411
 msgid "Cancelled."
 msgstr ""
 
@@ -2916,7 +2916,7 @@ msgstr ""
 msgid "Your button-role panel is live in {channel}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:693
+#: cogs/config/buttonroles.py:693 cogs/moderation/moderation.py:718
 msgid "Skipped"
 msgstr ""
 
@@ -3450,10 +3450,12 @@ msgid "Header"
 msgstr ""
 
 #: cogs/config/rolemenus.py:562 cogs/config/rolemenus.py:752
+#: cogs/system/dashboard_actions.py:759
 msgid "Pick your roles"
 msgstr ""
 
-#: cogs/config/rolemenus.py:569 cogs/utility/info.py:127
+#: cogs/config/rolemenus.py:569 cogs/system/dashboard_actions.py:764
+#: cogs/utility/info.py:127
 msgid "Roles"
 msgstr ""
 
@@ -4361,11 +4363,11 @@ msgstr ""
 msgid "I can't assign {role} - it must be below my highest role and not managed."
 msgstr ""
 
-#: cogs/config/verification.py:181 cogs/system/dashboard_actions.py:216
+#: cogs/config/verification.py:181 cogs/system/dashboard_actions.py:246
 msgid "Verification"
 msgstr ""
 
-#: cogs/config/verification.py:184 cogs/system/dashboard_actions.py:219
+#: cogs/config/verification.py:184 cogs/system/dashboard_actions.py:249
 msgid "Click the button below to verify and unlock the server."
 msgstr ""
 
@@ -4981,13 +4983,13 @@ msgstr ""
 msgid "The reason can't be empty."
 msgstr ""
 
-#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1119
-#: cogs/moderation/moderation.py:1192 cogs/moderation/moderation.py:1214
+#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1138
+#: cogs/moderation/moderation.py:1211 cogs/moderation/moderation.py:1233
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr ""
 
-#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1220
+#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1239
 msgid "Updated by"
 msgstr ""
 
@@ -5042,7 +5044,7 @@ msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr ""
 
 #: cogs/moderation/moderation.py:438 cogs/moderation/moderation.py:653
-#: cogs/moderation/moderation.py:700
+#: cogs/moderation/moderation.py:719
 msgid "Reason"
 msgstr ""
 
@@ -5105,170 +5107,170 @@ msgstr ""
 msgid "No action taken."
 msgstr ""
 
-#: cogs/moderation/moderation.py:676
+#: cogs/moderation/moderation.py:692
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:694
+#: cogs/moderation/moderation.py:712
 msgid "Mass ban complete"
 msgstr ""
 
-#: cogs/moderation/moderation.py:698
+#: cogs/moderation/moderation.py:716
 msgid "Banned"
 msgstr ""
 
-#: cogs/moderation/moderation.py:699
+#: cogs/moderation/moderation.py:717
 msgid "Failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:702
+#: cogs/moderation/moderation.py:721
 #, python-brace-format
 msgid "By {author}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:726
+#: cogs/moderation/moderation.py:745
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:736
+#: cogs/moderation/moderation.py:755
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:741
+#: cogs/moderation/moderation.py:760
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:757
+#: cogs/moderation/moderation.py:776
 msgid "Invalid amount. Maximum is 500."
 msgstr ""
 
-#: cogs/moderation/moderation.py:769
+#: cogs/moderation/moderation.py:788
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr ""
 
-#: cogs/moderation/moderation.py:839
+#: cogs/moderation/moderation.py:858
 msgid "Mute role is not defined"
 msgstr ""
 
-#: cogs/moderation/moderation.py:840
+#: cogs/moderation/moderation.py:859
 msgid "Creating role..."
 msgstr ""
 
-#: cogs/moderation/moderation.py:842
+#: cogs/moderation/moderation.py:861
 msgid "Mute role created!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:880
+#: cogs/moderation/moderation.py:899
 msgid "Already Muted"
 msgstr ""
 
-#: cogs/moderation/moderation.py:882
+#: cogs/moderation/moderation.py:901
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:892
+#: cogs/moderation/moderation.py:911
 msgid "Mute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:895
+#: cogs/moderation/moderation.py:914
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:936
+#: cogs/moderation/moderation.py:955
 msgid "Unmute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:939
+#: cogs/moderation/moderation.py:958
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:961
+#: cogs/moderation/moderation.py:980
 msgid "Confirm mass role add"
 msgstr ""
 
-#: cogs/moderation/moderation.py:963
+#: cogs/moderation/moderation.py:982
 #, python-brace-format
 msgid ""
 "Add the **{role}** role to **all** members of this server? This can take "
 "a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:992
+#: cogs/moderation/moderation.py:1011
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1001
+#: cogs/moderation/moderation.py:1020
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1022
+#: cogs/moderation/moderation.py:1041
 msgid "Confirm mass role remove"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1024
+#: cogs/moderation/moderation.py:1043
 #, python-brace-format
 msgid ""
 "Remove the **{role}** role from **all** members of this server? This can "
 "take a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1053
+#: cogs/moderation/moderation.py:1072
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1062
+#: cogs/moderation/moderation.py:1081
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1084 tools/modchecks.py:69
+#: cogs/moderation/moderation.py:1103 tools/modchecks.py:69
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1091
+#: cogs/moderation/moderation.py:1110
 msgid "You can't move a role to or above my highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1097
+#: cogs/moderation/moderation.py:1116
 #, python-brace-format
 msgid "{role} moved."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1099
+#: cogs/moderation/moderation.py:1118 cogs/system/errors.py:269
 msgid "You do not have permission to do that"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1101
+#: cogs/moderation/moderation.py:1120
 msgid "Failed to move role"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1103
+#: cogs/moderation/moderation.py:1122
 msgid "Invalid argument"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1138
+#: cogs/moderation/moderation.py:1157
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1148
+#: cogs/moderation/moderation.py:1167
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1151
+#: cogs/moderation/moderation.py:1170
 msgid "No cases on record."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1158 cogs/moderation/warns.py:133
+#: cogs/moderation/moderation.py:1177 cogs/moderation/warns.py:133
 msgid "No reason"
 msgstr ""
 
@@ -6773,80 +6775,11 @@ msgstr ""
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ""
 
-#: cogs/system/errors.py:83
-msgid "Sorry, no similar commands found"
-msgstr ""
-
-#: cogs/system/errors.py:88
-msgid "**Invalid command entered. Did you mean:**"
-msgstr ""
-
-#: cogs/system/errors.py:110
-msgid "**Seems like you're missing a required argument:**"
-msgstr ""
-
-#: cogs/system/errors.py:111 cogs/system/errors.py:122
-#: cogs/system/errors.py:189 cogs/system/errors.py:229
-#, python-brace-format
-msgid ""
-":warning: Error: `{error}`\n"
-"{usage}"
-msgstr ""
-
-#: cogs/system/errors.py:121
-msgid "**Seems like you gave me a bad argument:**"
-msgstr ""
-
-#: cogs/system/errors.py:133
-msgid "**Seems like you are on cooldown:**"
-msgstr ""
-
-#: cogs/system/errors.py:134
-#, python-brace-format
-msgid ""
-":hourglass: Remaining time: `{time}`\n"
-"{usage}"
-msgstr ""
-
-#: cogs/system/errors.py:143
-msgid "I need more permissions!"
-msgstr ""
-
-#: cogs/system/errors.py:149
-msgid "**Seems like you can't use this command in private messages:**"
-msgstr ""
-
-#: cogs/system/errors.py:151
-msgid ""
-"Go in a guild where I am or invite me in your server\n"
-"invite.yasuho.xyz"
-msgstr ""
-
-#: cogs/system/errors.py:164
-msgid "**Seems like you gave me too many arguments:**"
-msgstr ""
-
-#: cogs/system/errors.py:166 cogs/system/errors.py:178
-#, python-brace-format
-msgid ""
-":question: What to do: `look at {prefix}help and try being more specific`"
-"\n"
-"{usage}"
-msgstr ""
-
-#: cogs/system/errors.py:176
-msgid "**Seems like you did something wrong:**"
-msgstr ""
-
-#: cogs/system/errors.py:188
-msgid "**Seems like you are missing permissions:**"
-msgstr ""
-
-#: cogs/system/errors.py:216
+#: cogs/system/errors.py:58
 msgid "**Seems like something went wrong while executing command:**"
 msgstr ""
 
-#: cogs/system/errors.py:218
+#: cogs/system/errors.py:60
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: "
@@ -6854,16 +6787,80 @@ msgid ""
 "{usage}"
 msgstr ""
 
-#: cogs/system/errors.py:228
+#: cogs/system/errors.py:119
+msgid "Sorry, no similar commands found"
+msgstr ""
+
+#: cogs/system/errors.py:124
+msgid "**Invalid command entered. Did you mean:**"
+msgstr ""
+
+#: cogs/system/errors.py:146
+msgid "**Seems like you're missing a required argument:**"
+msgstr ""
+
+#: cogs/system/errors.py:147 cogs/system/errors.py:158
+#: cogs/system/errors.py:225 cogs/system/errors.py:256
+#, python-brace-format
+msgid ""
+":warning: Error: `{error}`\n"
+"{usage}"
+msgstr ""
+
+#: cogs/system/errors.py:157
+msgid "**Seems like you gave me a bad argument:**"
+msgstr ""
+
+#: cogs/system/errors.py:169
+msgid "**Seems like you are on cooldown:**"
+msgstr ""
+
+#: cogs/system/errors.py:170
+#, python-brace-format
+msgid ""
+":hourglass: Remaining time: `{time}`\n"
+"{usage}"
+msgstr ""
+
+#: cogs/system/errors.py:179
+msgid "I need more permissions!"
+msgstr ""
+
+#: cogs/system/errors.py:185
+msgid "**Seems like you can't use this command in private messages:**"
+msgstr ""
+
+#: cogs/system/errors.py:187
+msgid ""
+"Go in a guild where I am or invite me in your server\n"
+"invite.yasuho.xyz"
+msgstr ""
+
+#: cogs/system/errors.py:200
+msgid "**Seems like you gave me too many arguments:**"
+msgstr ""
+
+#: cogs/system/errors.py:202 cogs/system/errors.py:214
+#, python-brace-format
+msgid ""
+":question: What to do: `look at {prefix}help and try being more specific`"
+"\n"
+"{usage}"
+msgstr ""
+
+#: cogs/system/errors.py:212
+msgid "**Seems like you did something wrong:**"
+msgstr ""
+
+#: cogs/system/errors.py:224
+msgid "**Seems like you are missing permissions:**"
+msgstr ""
+
+#: cogs/system/errors.py:255
 msgid "**Seems like I am missing permissions:**"
 msgstr ""
 
-#: cogs/system/events.py:131
-#, python-brace-format
-msgid "🌺 Beep boop **{guild}**! To get started type `{prefix}help`"
-msgstr ""
-
-#: cogs/system/events.py:178
+#: cogs/system/events.py:139
 msgid ""
 "You are blacklisted from bot. You can ask to be unblacklisted by send a "
 "message to <@228895251576782858>"
@@ -7043,6 +7040,55 @@ msgstr ""
 #: cogs/system/help.py:760
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
+msgstr ""
+
+#: cogs/system/onboarding.py:154
+#, python-brace-format
+msgid "Hello, {guild}! I'm Yasuho."
+msgstr ""
+
+#: cogs/system/onboarding.py:160
+msgid "I'm ready and delighted to help out here. Here's what I can do:"
+msgstr ""
+
+#: cogs/system/onboarding.py:163
+msgid "- **Music**: full-featured player with queues, effects, and synced lyrics."
+msgstr ""
+
+#: cogs/system/onboarding.py:167
+msgid "- **Moderation**: automod, warnings, mutes, and a searchable case history."
+msgstr ""
+
+#: cogs/system/onboarding.py:170
+msgid "- **Leveling**: XP, levels, and role rewards for your members."
+msgstr ""
+
+#: cogs/system/onboarding.py:172
+msgid ""
+"- **AniList & manga**: watch/reading lists, airing alerts, and new-"
+"chapter alerts."
+msgstr ""
+
+#: cogs/system/onboarding.py:175
+msgid "- **Fun**: games and more to keep the server lively."
+msgstr ""
+
+#: cogs/system/onboarding.py:181
+msgid "Getting started"
+msgstr ""
+
+#: cogs/system/onboarding.py:183
+msgid ""
+"Use `/config` to set up prefixes, autorole, leveling, starboard, automod,"
+" mod-log, and welcome messages in one place."
+msgstr ""
+
+#: cogs/system/onboarding.py:186
+msgid "Use `/help` to browse every command."
+msgstr ""
+
+#: cogs/system/onboarding.py:187
+msgid "Use `/language` to pick the language I speak in this server."
 msgstr ""
 
 #: cogs/utility/extras.py:30
