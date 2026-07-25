@@ -7,6 +7,7 @@ from discord.ext import commands
 from tools import embed_creator, interactions, rendering, settings, welcome_card
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.snowflake import coerce_id
 from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -62,6 +63,11 @@ def _merge_defaults(blob):
     for key in ("channel_id", "enabled", "ping", "card", "random_gif"):
         if key in blob:
             config[key] = blob[key]
+    # The dashboard (Node) serialises snowflakes as STRINGS, and
+    # ``guild.get_channel("123")`` silently returns None - so the greeting would
+    # just never send. Coerce at this single read seam (every reader goes
+    # through get_config -> _merge_defaults).
+    config["channel_id"] = coerce_id(config.get("channel_id"))
     config["gifs"] = list(blob.get("gifs") or [])
     config["embed"] = embed_creator.merge_embed(blob.get("embed"))
     return config

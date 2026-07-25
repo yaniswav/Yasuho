@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 
+from tools.snowflake import coerce_id
+
 MAX_OPTIONS = 25  # Discord caps a select at 25 options
 MAX_LABEL = 80
 MAX_DESCRIPTION = 100
@@ -48,9 +50,14 @@ def normalize_options(blob):
     """Return a clean option list from stored/raw config.
 
     Each option is ``{"role_id": int, "label": str, "emoji": str|None,
-    "description": str|None}``. Entries without a valid int role_id are dropped,
+    "description": str|None}``. Entries without a valid role_id are dropped,
     duplicates by role_id collapse (first wins), and the list is capped at
     MAX_OPTIONS.
+
+    role_id goes through :func:`tools.snowflake.coerce_id`, so a numeric STRING
+    (how the Node dashboard serialises snowflakes) is accepted and normalised to
+    an int rather than dropping the option - while bools, junk and non-positive
+    values are still refused.
     """
     if not isinstance(blob, list):
         return []
@@ -59,8 +66,8 @@ def normalize_options(blob):
     for entry in blob:
         if not isinstance(entry, dict):
             continue
-        rid = entry.get("role_id")
-        if not isinstance(rid, int) or isinstance(rid, bool) or rid in seen:
+        rid = coerce_id(entry.get("role_id"))
+        if rid is None or rid in seen:
             continue
         seen.add(rid)
         label = str(entry.get("label") or rid)[:MAX_LABEL]

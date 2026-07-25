@@ -9,6 +9,7 @@ from tools import embed_creator, interactions, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
+from tools.snowflake import coerce_id
 from tools.views import AuthorLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -106,6 +107,12 @@ def _merge_defaults(blob):
             config[key] = blob[key]
     if config["style"] not in ("embed", "text"):
         config["style"] = "embed"
+    # The dashboard (Node) serialises snowflakes as STRINGS, and
+    # ``guild.get_channel("123")`` / ``guild.get_role("123")`` silently return
+    # None - the alert would never post and the Live role never land. Coerce at
+    # this single read seam (every reader goes through get_config).
+    config["channel_id"] = coerce_id(config.get("channel_id"))
+    config["role_id"] = coerce_id(config.get("role_id"))
 
     config["embed"] = embed_creator.merge_embed(blob.get("embed"))
     return config

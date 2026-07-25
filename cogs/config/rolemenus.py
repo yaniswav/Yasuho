@@ -663,6 +663,16 @@ class RoleMenus(commands.Cog):
             config = row["config"]
             if isinstance(config, str):
                 config = json.loads(config)
+            # Re-normalise the stored JSONB options at this read seam: it is
+            # idempotent for a menu the builder wrote (it normalises before
+            # storing), and it repairs a row whose role_ids came back as STRINGS
+            # (how a Node writer serialises snowflakes) - left as strings they
+            # would never match the int role ids the callback compares against,
+            # so every pick would silently do nothing.
+            if isinstance(config, dict):
+                config["options"] = role_menus.normalize_options(
+                    config.get("options")
+                )
             try:
                 self.bot.add_view(
                     RoleMenuView(row["message_id"], config),

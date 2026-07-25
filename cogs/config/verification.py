@@ -18,6 +18,7 @@ from discord.ext import commands
 from tools import i18n, settings
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.snowflake import coerce_id
 
 log = logging.getLogger(__name__)
 
@@ -41,8 +42,13 @@ class VerifyButton(discord.ui.Button):
             return await interaction.response.send_message(
                 _("Verification only works inside a server."), ephemeral=True
             )
-        role_id = await settings.get_guild(
-            interaction.client.db_pool, guild.id, "verify_role", None
+        # coerce_id: the dashboard writes snowflakes as STRINGS, and
+        # ``guild.get_role("123")`` returns None - the button would answer "not
+        # set up" for a guild that is perfectly configured.
+        role_id = coerce_id(
+            await settings.get_guild(
+                interaction.client.db_pool, guild.id, "verify_role", None
+            )
         )
         role = guild.get_role(role_id) if role_id else None
         if role is None:
@@ -205,8 +211,10 @@ class Verification(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def verify_status(self, ctx):
         """Show the current verification configuration."""
-        role_id = await settings.get_guild(
-            self.bot.db_pool, ctx.guild.id, "verify_role", None
+        role_id = coerce_id(
+            await settings.get_guild(
+                self.bot.db_pool, ctx.guild.id, "verify_role", None
+            )
         )
         view = VerifyStatusView(ctx.guild, role_id)
         view.message = await ctx.send(

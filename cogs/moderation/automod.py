@@ -29,6 +29,7 @@ from cogs.moderation.automod_panel import (
 from tools import db, modactions, settings, warn_escalation
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.snowflake import coerce_ids
 
 log = logging.getLogger(__name__)
 
@@ -172,15 +173,16 @@ class AutoMod(commands.Cog):
         action = await settings.get_guild(
             pool, guild.id, "automod_action", DEFAULT_ACTION
         )
-        exempt_roles = (
+        # coerce_ids: the dashboard writes snowflakes as STRINGS, so an exempt
+        # list can come back as ["123"] - which would render as a dead entry in
+        # the panel (``guild.get_role("123")`` is None) and never match a live id.
+        exempt_roles = coerce_ids(
             await settings.get_guild(pool, guild.id, "automod_exempt_roles", [])
-            or []
         )
-        exempt_channels = (
+        exempt_channels = coerce_ids(
             await settings.get_guild(
                 pool, guild.id, "automod_exempt_channels", []
             )
-            or []
         )
         native = await self.native_state(guild)
         return {
@@ -193,8 +195,8 @@ class AutoMod(commands.Cog):
             "nspam": native["nspam"],
             "nmention": native["nmention"],
             "action": action if action in VALID_ACTIONS else DEFAULT_ACTION,
-            "exempt_roles": list(exempt_roles),
-            "exempt_channels": list(exempt_channels),
+            "exempt_roles": exempt_roles,
+            "exempt_channels": exempt_channels,
         }
 
     # ------------------------------------------------------------------
@@ -282,8 +284,13 @@ class AutoMod(commands.Cog):
         pool = self.bot.db_pool
         guild_id = message.guild.id
 
-        exempt_channels = await settings.get_guild(
-            pool, guild_id, "automod_exempt_channels", []
+        # coerce_ids on both lists: a dashboard-written ["123"] would never match
+        # ``message.channel.id`` / a member's role ids, so the exemption would
+        # silently stop protecting the people it names.
+        exempt_channels = coerce_ids(
+            await settings.get_guild(
+                pool, guild_id, "automod_exempt_channels", []
+            )
         )
         if exempt_channels:
             if message.channel.id in exempt_channels:
@@ -292,8 +299,8 @@ class AutoMod(commands.Cog):
             if parent_id is not None and parent_id in exempt_channels:
                 return True
 
-        exempt_roles = await settings.get_guild(
-            pool, guild_id, "automod_exempt_roles", []
+        exempt_roles = coerce_ids(
+            await settings.get_guild(pool, guild_id, "automod_exempt_roles", [])
         )
         if exempt_roles:
             role_ids = {role.id for role in message.author.roles}

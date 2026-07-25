@@ -617,33 +617,17 @@ _MAX_COLOUR = 0xFFFFFF
 
 
 def _coerce_menu_options(raw):
-    """Widen each option's STRING role_id to a Python int, then reuse the helper.
+    """Normalise a payload's option list through the cog's own shared helper.
 
     The dashboard serialises every snowflake as a STRING (never a JS number, to
-    dodge 2^53 precision loss), but ``role_menus.normalize_options`` requires an
-    ``int`` role_id and drops anything else. So we do the SAME boundary conversion
-    the reaction/button executors do (``int(...)`` in Python, which is arbitrary
-    precision) on each option's role_id, then hand the list to the shared helper
-    for all the real work (drop/dedup/cap-at-25, label/emoji/description/temp).
-    A non-string, non-int, or unparseable role_id is left as-is so the helper
-    drops it. Never raises.
+    dodge 2^53 precision loss). ``role_menus.normalize_options`` runs each
+    role_id through ``tools.snowflake.coerce_id``, so it already accepts that
+    STRING spelling and normalises it to an int - on top of all the real work
+    (drop/dedup/cap-at-25, label/emoji/description/temp). Kept as a named seam
+    (this is where a payload becomes trusted option data) but with no widening
+    of its own to duplicate. Never raises.
     """
-    if not isinstance(raw, list):
-        return role_menus.normalize_options(raw)
-    widened = []
-    for entry in raw:
-        if not isinstance(entry, dict):
-            continue
-        rid = entry.get("role_id")
-        if isinstance(rid, str):
-            try:
-                rid = int(rid)
-            except ValueError:
-                continue  # not a decimal id: the helper would drop it anyway
-        entry = dict(entry)
-        entry["role_id"] = rid
-        widened.append(entry)
-    return role_menus.normalize_options(widened)
+    return role_menus.normalize_options(raw)
 
 
 async def _exec_role_menu_post(bot, guild_id, payload):
