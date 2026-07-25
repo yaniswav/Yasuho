@@ -38,7 +38,11 @@ Design (mirrors the house patterns and the security brief):
   the window, so it is NOT mistaken for an orphan and re-driven. Delivery is
   still at-least-once, but a duplicate is now possible only on a crash AFTER an
   action's side effect but BEFORE its status write (a duplicate Verify button,
-  low harm) - the price of never silently dropping one.
+  low harm) - the price of never silently dropping one. The harm is NOT always
+  cosmetic though: replaying ``autoroom_hub_create`` creates a SECOND real
+  category + voice trigger pair on Discord, so the duplicate is bounded only by
+  the ``MAX_HUBS`` gate the executor re-reads on every run (a replay that would
+  push the guild over the cap is refused before anything is created).
 
 Everything is defensive: a malformed payload, a missing guild/channel, a DB
 blip or an executor exception is caught, logged without secrets, and recorded as
@@ -51,12 +55,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections import defaultdict
 
 import asyncpg
 import discord
 from discord.ext import commands
 
-from tools import autoroom, i18n, role_menus
+from tools import autoroom, i18n, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -859,6 +864,28 @@ async def _exec_role_menu_delete(bot, guild_id, payload):
 # cog's linear scan over the guild's hubs.
 _MAX_HUB_ID_LEN = 64
 
+# Per-guild serialisation of the autoroom read-modify-write.
+#
+# Both autoroom executors LOAD the guild's hub list, mutate it and SAVE it back
+# into the single ``autorooms`` JSONB blob. Every notification is handled in its
+# own task (``_on_notify`` creates one per notify), so two autoroom actions for
+# the SAME guild can interleave: the second one's save is computed from a list
+# read before the first one's save and silently drops the first hub - while its
+# category and voice trigger stay alive on Discord, orphaned. This lock makes
+# each guild's load -> act -> re-read sequence atomic within this process.
+#
+# Deliberately NOT ``TemporaryRooms._locks``: that one gates the voice-join hot
+# path, and holding it across the seconds a channel-creation round trip takes
+# would stall every join-to-create in the guild.
+#
+# The mapping is unbounded on purpose. It grows one ``asyncio.Lock`` (a few
+# hundred bytes, and no event-loop binding at all while uncontended) per guild
+# that has ever run a dashboard autoroom action - an operator-driven set far
+# smaller than the guild count. A BoundedLRU would be worse than useless here:
+# evicting an entry while its lock is HELD hands the next caller a brand-new
+# lock and silently destroys the mutual exclusion this exists to provide.
+_AUTOROOM_LOCKS = defaultdict(asyncio.Lock)
+
 
 def _hub_text(payload, key):
     """Return ``payload[key]`` stripped, or ``None`` when it is not usable.
@@ -905,7 +932,21 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
     by matching that text: only the created path appends the hub and saves, so
     exactly one new hub id appears in the reloaded list. The cog's message is
     passed back as ``message`` so the dashboard can show WHY a refusal happened
-    (which budget was hit) - it is bot-authored copy, never a stack or a secret.
+    (which budget was hit) - it is bot-authored copy, never a stack or a secret,
+    and it is rendered under the guild's configured language (the cog translates
+    against the ambient locale, which a background task would otherwise leave at
+    the default).
+
+    Because the whole thing is a read-modify-write of one JSONB blob it runs
+    under the guild's ``_AUTOROOM_LOCKS`` entry, after dropping the settings LRU
+    entry for the guild (the dashboard's Node process writes the same key, and a
+    NOTIFY missed during a listener reconnect would leave the cache stale).
+
+    NOTE on the at-least-once delivery of the queue: a crash landing AFTER
+    ``_add_hub`` but BEFORE the status write makes the boot reconciliation replay
+    this action, and the replay creates a SECOND real category + voice trigger
+    pair - not a cosmetic duplicate. It is bounded by the ``MAX_HUBS`` gate
+    below, which is re-read from the (freshly invalidated) settings on every run.
     """
     label = _hub_text(payload, "label")
     if label is None:
@@ -933,6 +974,12 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
     guild = bot.get_guild(guild_id)
     if guild is None:
         return {"ok": False, "error": "guild_unavailable"}
+    # Same gate the /autoroom group carries (bot_has_permissions(manage_channels)):
+    # without it the category/voice creation raises Forbidden inside the cog,
+    # which swallows it and returns a failure message - reported here as a code.
+    me = guild.me
+    if me is None or not me.guild_permissions.manage_channels:
+        return {"ok": False, "error": "missing_manage_channels"}
     # The cog owns both the Discord side effects and the hub index, so without it
     # loaded the bot simply cannot act on this guild - reported with the SAME code
     # a missing guild uses rather than inventing a code the dashboard can't map.
@@ -940,28 +987,44 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
     if cog is None:
         return {"ok": False, "error": "guild_unavailable"}
 
-    # The before-picture doubles as the cap gate and as the success diff below.
-    before = {hub["id"] for hub in await cog._load_hubs(guild_id)}
-    if len(before) >= autoroom.MAX_HUBS:
-        return {"ok": False, "error": "too_many_hubs"}
+    # The cog's messages are translated against the AMBIENT locale, and this runs
+    # on a background queue task with no interaction context, so resolve the
+    # guild's language explicitly (the _exec_verify_button_post pattern).
+    loc = await i18n.resolve_guild_locale(bot, guild)
 
-    message = await cog._add_hub(
-        guild,
-        label=label,
-        category_name=category_name,
-        hub_name=hub_name,
-        template=template,
-        user_limit=user_limit,
-    )
+    async with _AUTOROOM_LOCKS[guild_id]:
+        # Read from Postgres, not from a possibly stale LRU entry: the dashboard
+        # writes this same blob, and a NOTIFY emitted while the sync listener was
+        # reconnecting is lost. Inside the lock, so a concurrent action of this
+        # process cannot re-populate the cache between the drop and the read.
+        settings.invalidate_guild(guild_id)
 
-    created = [
-        hub for hub in await cog._load_hubs(guild_id) if hub["id"] not in before
-    ]
+        # The before-picture doubles as the cap gate and as the success diff below.
+        before = {hub["id"] for hub in await cog._load_hubs(guild_id)}
+        if len(before) >= autoroom.MAX_HUBS:
+            return {"ok": False, "error": "too_many_hubs"}
+
+        with i18n.locale(loc):
+            message = await cog._add_hub(
+                guild,
+                label=label,
+                category_name=category_name,
+                hub_name=hub_name,
+                template=template,
+                user_limit=user_limit,
+            )
+
+        created = [
+            hub for hub in await cog._load_hubs(guild_id) if hub["id"] not in before
+        ]
+
     if not created:
         # Refused by a budget check (categories / channel count) or the channel
         # creation failed: nothing was saved, and the cog's message says which.
         return {"ok": False, "error": "create_failed", "message": message}
-    hub = created[0]
+    # _add_hub APPENDS the new hub before saving, so the last previously-unseen
+    # entry is the one THIS call created even if another writer slipped one in.
+    hub = created[-1]
     return {
         "ok": True,
         "hub_id": hub["id"],
@@ -985,7 +1048,11 @@ async def _exec_autoroom_hub_delete(bot, guild_id, payload):
     The existence pre-check is what turns the cog's translated "That hub no
     longer exists." into a short machine code, mirroring how the reaction/button
     executors validate a role or channel before acting. The cog's message is
-    passed back for display, as in the create executor.
+    passed back for display (rendered under the guild's language), as in the
+    create executor - and, exactly as there, the whole load -> remove -> save
+    sequence runs under the guild's ``_AUTOROOM_LOCKS`` entry with the settings
+    LRU dropped first, so it can neither read a stale hub list nor lose a
+    concurrent action's write.
     """
     hub_id = payload.get("hub_id")
     if not isinstance(hub_id, str):
@@ -997,15 +1064,29 @@ async def _exec_autoroom_hub_delete(bot, guild_id, payload):
     guild = bot.get_guild(guild_id)
     if guild is None:
         return {"ok": False, "error": "guild_unavailable"}
+    # Without manage_channels the cog's channel deletions all raise Forbidden and
+    # are swallowed: the config row would be dropped while the category and its
+    # live rooms stayed on Discord, and the dashboard would be told ok. Refuse
+    # up front instead (parity with the /autoroom group's bot_has_permissions).
+    me = guild.me
+    if me is None or not me.guild_permissions.manage_channels:
+        return {"ok": False, "error": "missing_manage_channels"}
     cog = bot.get_cog("TemporaryRooms")
     if cog is None:
         return {"ok": False, "error": "guild_unavailable"}
 
-    hubs = await cog._load_hubs(guild_id)
-    if not any(hub["id"] == hub_id for hub in hubs):
-        return {"ok": False, "error": "hub_not_found"}
+    loc = await i18n.resolve_guild_locale(bot, guild)
 
-    message = await cog._remove_hub(guild, hub_id)
+    async with _AUTOROOM_LOCKS[guild_id]:
+        settings.invalidate_guild(guild_id)
+
+        hubs = await cog._load_hubs(guild_id)
+        if not any(hub["id"] == hub_id for hub in hubs):
+            return {"ok": False, "error": "hub_not_found"}
+
+        with i18n.locale(loc):
+            message = await cog._remove_hub(guild, hub_id)
+
     return {"ok": True, "hub_id": hub_id, "message": message}
 
 

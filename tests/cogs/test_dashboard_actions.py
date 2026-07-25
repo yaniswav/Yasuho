@@ -18,6 +18,7 @@ there (it imports ``VerifyView`` LAZILY, so it never pulls in the 2.x-only
 
 from __future__ import annotations
 
+import asyncio
 import json
 import types
 
@@ -25,7 +26,7 @@ import discord
 import pytest
 
 from cogs.system import dashboard_actions
-from tools import settings
+from tools import i18n, settings
 
 # ---------------------------------------------------------------------------
 # Stateful fake pool: models the atomic claim + finish + reconcile UPDATEs.
@@ -167,6 +168,16 @@ def _clear_settings_cache():
     settings._cache.clear()
     yield
     settings._cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _clear_autoroom_locks():
+    """The per-guild autoroom lock map is module-global (one lock per guild that
+    has ever run a dashboard autoroom action); each test gets its own event loop,
+    so start from an empty map rather than reusing a lock across loops."""
+    dashboard_actions._AUTOROOM_LOCKS.clear()
+    yield
+    dashboard_actions._AUTOROOM_LOCKS.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -1918,6 +1929,10 @@ class FakeRoomsCog:
         self.loads = []
         self.add_calls = []
         self.remove_calls = []
+        # The gettext locale that was ACTIVE on each call: the real cog builds
+        # its messages with _(), so the executor must set the guild's language
+        # around the call or every dashboard message comes back in English.
+        self.locales = []
         self._refuse_add = refuse_add
 
     async def _load_hubs(self, guild_id):
@@ -1927,6 +1942,7 @@ class FakeRoomsCog:
     async def _add_hub(
         self, guild, *, label, category_name, hub_name, template, user_limit
     ):
+        self.locales.append(i18n.current_locale.get())
         self.add_calls.append(
             {
                 "guild": guild,
@@ -1953,16 +1969,68 @@ class FakeRoomsCog:
         )
 
     async def _remove_hub(self, guild, hub_id):
+        self.locales.append(i18n.current_locale.get())
         self.remove_calls.append((guild, hub_id))
         self.hubs = [hub for hub in self.hubs if hub["id"] != hub_id]
         return "Removed the **Ranked** hub."
 
 
+class SlowRoomsCog(FakeRoomsCog):
+    """A cog whose ``_add_hub`` models the REAL read-modify-write of the blob.
+
+    The real one loads the hub list, awaits a Discord round trip (creating the
+    category + trigger channel), then appends and saves. Two concurrent creates
+    for one guild therefore both save from a list read before either finished:
+    without the executor's per-guild lock the second save silently drops the
+    first hub. The ``sleep(0)`` is that round trip's suspension point.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._created = 0
+
+    async def _add_hub(
+        self, guild, *, label, category_name, hub_name, template, user_limit
+    ):
+        self.locales.append(i18n.current_locale.get())
+        self.add_calls.append({"label": label})
+        snapshot = list(self.hubs)  # read
+        await asyncio.sleep(0)  # the channel-creation round trip
+        self._created += 1
+        snapshot.append(
+            _ar_hub(
+                hub_id="new%d" % self._created,
+                hub_channel_id=4240 + self._created,
+                label=label,
+            )
+        )
+        self.hubs = snapshot  # write-back from a possibly stale snapshot
+        return "Created the **%s** hub." % label
+
+
+class FakeRoomsPermissions:
+    def __init__(self, manage_channels=True):
+        self.manage_channels = manage_channels
+
+
+class FakeRoomsMe:
+    def __init__(self, manage_channels=True):
+        self.guild_permissions = FakeRoomsPermissions(manage_channels)
+
+
 class FakeRoomsGuild:
     """The live guild object the executor hands straight to the cog."""
 
-    def __init__(self, guild_id=100):
+    def __init__(
+        self,
+        guild_id=100,
+        has_me=True,
+        manage_channels=True,
+        preferred_locale="en",
+    ):
         self.id = guild_id
+        self.me = FakeRoomsMe(manage_channels) if has_me else None
+        self.preferred_locale = preferred_locale
 
 
 def _ar_hub(hub_id="abc12345", hub_channel_id=555, label="Ranked"):
@@ -2221,6 +2289,171 @@ async def test_autoroom_hub_delete_full_flow_via_handle_action():
     assert pool.rows[1]["result"]["ok"] is True
     assert len(cog.remove_calls) == 1
     assert cog.hubs == []
+
+
+# ---------------------------------------------------------------------------
+# Autoroom concurrency / freshness / permissions: both executors do a
+# read-modify-write of the single 'autorooms' JSONB blob, on a background task,
+# against a cache the dashboard's Node process also writes.
+# ---------------------------------------------------------------------------
+
+
+async def test_autoroom_hub_create_invalidates_cache_before_reading(monkeypatch):
+    """The settings LRU may hold a blob the dashboard has since overwritten, so
+    the guild's entry is dropped BEFORE the first _load_hubs, not after."""
+    cog = FakeRoomsCog()
+    bot = _ar_bot(cog=cog)
+    seen = []
+    monkeypatch.setattr(
+        settings,
+        "invalidate_guild",
+        lambda gid: seen.append((gid, list(cog.loads))),
+    )
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result["ok"] is True
+    # Exactly one invalidation, for THIS guild, with no hub read done yet.
+    assert seen == [(100, [])]
+
+
+async def test_autoroom_hub_delete_invalidates_cache_before_reading(monkeypatch):
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    bot = _ar_bot(cog=cog)
+    seen = []
+    monkeypatch.setattr(
+        settings,
+        "invalidate_guild",
+        lambda gid: seen.append((gid, list(cog.loads))),
+    )
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+
+    assert result["ok"] is True
+    assert seen == [(100, [])]
+
+
+async def test_autoroom_hub_create_serialises_concurrent_actions_for_one_guild():
+    """Two creates for the same guild must not lose a hub.
+
+    Each notification is handled in its own task, so without the per-guild lock
+    the second create saves a hub list snapshotted before the first one's save:
+    the first hub vanishes from the config while its category and voice trigger
+    stay alive on Discord.
+    """
+    cog = SlowRoomsCog()
+    bot = _ar_bot(cog=cog)
+
+    results = await asyncio.gather(
+        dashboard_actions._exec_autoroom_hub_create(
+            bot, 100, _hub_payload(label="One")
+        ),
+        dashboard_actions._exec_autoroom_hub_create(
+            bot, 100, _hub_payload(label="Two")
+        ),
+    )
+
+    assert [r["ok"] for r in results] == [True, True]
+    # Both hubs survived, and each executor reported the hub IT created.
+    assert len(cog.hubs) == 2
+    assert {h["label"] for h in cog.hubs} == {"One", "Two"}
+    assert [r["hub_id"] for r in results] == ["new1", "new2"]
+    assert {r["hub_id"] for r in results} == {h["id"] for h in cog.hubs}
+
+
+class InterleavedRoomsCog(FakeRoomsCog):
+    """A cog whose save lands after ANOTHER writer added a hub of its own.
+
+    The dashboard's Node process writes the same 'autorooms' blob, so the
+    reloaded list can hold more than one previously-unseen id. ``_add_hub``
+    APPENDS the hub it just created, so the LAST unseen entry is ours.
+    """
+
+    async def _add_hub(self, guild, **kwargs):
+        self.hubs.append(
+            _ar_hub(hub_id="foreign1", hub_channel_id=7777, label="Elsewhere")
+        )
+        return await super()._add_hub(guild, **kwargs)
+
+
+async def test_autoroom_hub_create_reports_the_hub_it_created():
+    """With another writer's hub also unseen, the result must name OURS - the
+    dashboard uses hub_id/hub_channel_id to link straight to the new hub."""
+    cog = InterleavedRoomsCog()
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result["ok"] is True
+    assert result["hub_id"] == FakeRoomsCog.CREATED_HUB_ID
+    assert result["hub_channel_id"] == "4242"
+    assert {h["id"] for h in cog.hubs} == {"foreign1", FakeRoomsCog.CREATED_HUB_ID}
+
+
+@pytest.mark.parametrize("has_me, manage_channels", [(False, True), (True, False)])
+async def test_autoroom_hub_create_requires_manage_channels(has_me, manage_channels):
+    """Parity with the /autoroom group's bot_has_permissions gate: without
+    manage_channels the cog's channel creation would only raise Forbidden."""
+    cog = FakeRoomsCog()
+    guild = FakeRoomsGuild(has_me=has_me, manage_channels=manage_channels)
+    bot = _ar_bot(guild=guild, cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result == {"ok": False, "error": "missing_manage_channels"}
+    assert cog.add_calls == []
+    assert cog.loads == []  # refused before the cog is touched at all
+
+
+@pytest.mark.parametrize("has_me, manage_channels", [(False, True), (True, False)])
+async def test_autoroom_hub_delete_requires_manage_channels(has_me, manage_channels):
+    """A delete on a LIVE hub must NOT report ok when the bot cannot delete the
+    channels: the cog swallows every Forbidden, so the config row would be
+    dropped while the category and its rooms stayed alive on Discord."""
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    guild = FakeRoomsGuild(has_me=has_me, manage_channels=manage_channels)
+    bot = _ar_bot(guild=guild, cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+
+    assert result == {"ok": False, "error": "missing_manage_channels"}
+    assert result.get("ok") is not True
+    assert cog.remove_calls == []
+    assert cog.hubs  # the hub is still configured, matching Discord
+
+
+async def test_autoroom_hub_messages_render_in_the_guild_locale(monkeypatch):
+    """The cog translates with _() against the ambient locale; a queue task has
+    none, so both executors must resolve and apply the guild's language."""
+    calls = []
+
+    async def _spy(bot, guild):
+        calls.append(guild)
+        return "fr"
+
+    monkeypatch.setattr(i18n, "resolve_guild_locale", _spy)
+
+    guild = FakeRoomsGuild()
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
+    bot = _ar_bot(guild=guild, cog=cog)
+
+    await dashboard_actions._exec_autoroom_hub_delete(bot, 100, {"hub_id": "abc12345"})
+    await dashboard_actions._exec_autoroom_hub_create(bot, 100, _hub_payload())
+
+    assert calls == [guild, guild]  # resolved from the LIVE guild both times
+    assert cog.locales == ["fr", "fr"]
+    # ... and the locale is scoped to the call, never leaked into the task.
+    assert i18n.current_locale.get() == i18n.DEFAULT_LOCALE
 
 
 def test_autoroom_hub_executors_are_registered():
