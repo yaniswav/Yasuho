@@ -81,21 +81,57 @@ class Errors(commands.Cog):
         ) and not bypass:
             return
 
-        # A hybrid command invoked as a slash re-wraps a runtime crash as
-        # HybridCommandError -> app_commands.CommandInvokeError -> the real
-        # error. Peel to the real exception so slash crashes take the exact same
-        # CommandInvokeError branch as prefix ones (error_id + generic reply +
-        # logged traceback). Any other HybridCommandError shape is left intact
-        # and drops to the final else, which logs it before replying.
-        if isinstance(error, commands.HybridCommandError) and isinstance(
-            error.original, discord.app_commands.CommandInvokeError
-        ):
-            inner = error.original.original
-            error = (
-                inner
-                if isinstance(inner, commands.CommandError)
-                else commands.CommandInvokeError(inner)
-            )
+        # A hybrid command invoked as a slash re-wraps every app_commands
+        # failure as HybridCommandError -> the app error (discord.py
+        # ext/commands/hybrid.py). app_commands errors do not derive from
+        # commands.CommandError, so an unpeeled one matches no branch below and
+        # lands in the final else: logged ERROR "Unhandled" and told to report a
+        # bug. Translate each shape to its ext equivalent so a slash invocation
+        # takes the exact same branch as the prefix one. Shapes with no ext
+        # counterpart (CommandSignatureMismatch, TranslationError...) are left
+        # intact on purpose: those really are bugs and belong in the else.
+        if isinstance(error, commands.HybridCommandError):
+            app_error = error.original
+
+            if isinstance(app_error, discord.app_commands.CommandInvokeError):
+                # A runtime crash: same error_id + logged traceback as a prefix
+                # invocation.
+                inner = app_error.original
+                error = (
+                    inner
+                    if isinstance(inner, commands.CommandError)
+                    else commands.CommandInvokeError(inner)
+                )
+
+            elif isinstance(app_error, discord.app_commands.CommandOnCooldown):
+                # Tested before CheckFailure, which it subclasses: only the
+                # cooldown branch states the remaining time, where the generic
+                # refusal wording would be plainly wrong.
+                error = commands.CommandOnCooldown(
+                    commands.Cooldown(
+                        app_error.cooldown.rate, app_error.cooldown.per
+                    ),
+                    app_error.retry_after,
+                    commands.BucketType.default,
+                )
+                error.__cause__ = app_error
+
+            elif isinstance(app_error, discord.app_commands.CheckFailure):
+                # A deliberate refusal from an @app_commands.check (and the
+                # MissingPermissions / MissingRole / NoPrivateMessage shapes
+                # that subclass it): the short discreet reply, never a crash
+                # report asking the user to file a bug.
+                error = commands.CheckFailure(str(app_error))
+                error.__cause__ = app_error
+
+            elif isinstance(app_error, discord.app_commands.TransformerError):
+                # The user typed a value a Transformer could not convert. Its
+                # message ("Failed to convert X to Y") is user-facing, so reuse
+                # the BadArgument branch. discord.py already unwraps the case
+                # where the cause is a CommandError, so this is a genuine input
+                # error, not a crash.
+                error = commands.BadArgument(str(app_error))
+                error.__cause__ = app_error
 
         if isinstance(error, commands.CommandNotFound):
             # A per-guild custom command may claim this name; if it does, it

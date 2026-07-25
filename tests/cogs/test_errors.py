@@ -149,6 +149,69 @@ async def test_hybrid_slash_crash_takes_the_invoke_branch(monkeypatch, caplog):
     assert "database-password-leak" in caplog.text
 
 
+async def test_hybrid_app_check_failure_stays_discreet(caplog):
+    """An @app_commands.check refusal reaches this handler as
+    HybridCommandError -> app CheckFailure. It is a deliberate refusal, so it
+    must take the discreet CheckFailure branch: no ERROR log, and never the
+    alarming "report this to the bot owner" text.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(
+            ctx,
+            commands.HybridCommandError(
+                discord.app_commands.CheckFailure("nope")
+            ),
+        )
+
+    assert caplog.text == ""
+    assert len(sent) == 1
+    assert "do not have permission" in sent[0][0][0]
+    assert "embed" not in sent[0][1]
+
+
+async def test_hybrid_app_transformer_error_takes_the_input_branch(caplog):
+    """A value a Transformer could not convert is a user input error, not a
+    crash: the bad-argument branch, no ERROR log, no error_id.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    app_error = discord.app_commands.TransformerError(
+        "abc",
+        discord.AppCommandOptionType.string,
+        discord.app_commands.Transformer(),
+    )
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+    assert caplog.text == ""
+    field = sent[0][1]["embed"].fields[0]
+    assert "bad argument" in field.name
+    assert "Failed to convert abc" in field.value
+
+
+async def test_hybrid_app_cooldown_takes_the_cooldown_branch(caplog):
+    """app CommandOnCooldown subclasses app CheckFailure, so it must be peeled
+    before it: the user needs the remaining time, not a permission refusal.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    app_error = discord.app_commands.CommandOnCooldown(
+        discord.app_commands.Cooldown(1, 120.0), 65.0
+    )
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+    assert caplog.text == ""
+    field = sent[0][1]["embed"].fields[0]
+    assert "cooldown" in field.name
+    assert "0:01:05" in field.value
+
+
 async def test_unknown_error_type_is_logged_and_reported(monkeypatch, caplog):
     """A command error matching no branch must not vanish: the else logs the
     full traceback and still replies with a traceable error_id.
