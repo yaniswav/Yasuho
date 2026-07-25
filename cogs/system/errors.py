@@ -116,11 +116,30 @@ class Errors(commands.Cog):
                 )
                 error.__cause__ = app_error
 
+            elif isinstance(app_error, discord.app_commands.NoPrivateMessage):
+                # Mapped before the generic CheckFailure it subclasses: the
+                # handler has a dedicated DM branch below ("use this in a
+                # server, here is the invite"), and flattening would replace
+                # that helpful wording with a bare permission refusal.
+                error = commands.NoPrivateMessage(str(app_error))
+                error.__cause__ = app_error
+
+            elif isinstance(app_error, discord.app_commands.BotMissingPermissions):
+                # Same reason: the ext branch names the permissions I lack,
+                # which reads as "I am missing X" instead of telling the user
+                # THEY have no permission. missing_permissions is a list[str]
+                # on both the app and the ext exception, so it carries over
+                # verbatim into the ext constructor.
+                error = commands.BotMissingPermissions(
+                    app_error.missing_permissions
+                )
+                error.__cause__ = app_error
+
             elif isinstance(app_error, discord.app_commands.CheckFailure):
                 # A deliberate refusal from an @app_commands.check (and the
-                # MissingPermissions / MissingRole / NoPrivateMessage shapes
-                # that subclass it): the short discreet reply, never a crash
-                # report asking the user to file a bug.
+                # MissingPermissions / MissingRole shapes that subclass it and
+                # have no dedicated branch): the short discreet reply, never a
+                # crash report asking the user to file a bug.
                 error = commands.CheckFailure(str(app_error))
                 error.__cause__ = app_error
 

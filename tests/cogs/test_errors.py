@@ -172,6 +172,94 @@ async def test_hybrid_app_check_failure_stays_discreet(caplog):
     assert "embed" not in sent[0][1]
 
 
+async def test_hybrid_app_no_private_message_keeps_the_dm_branch(caplog):
+    """app NoPrivateMessage subclasses app CheckFailure, but the handler has a
+    dedicated DM branch. Flattening it to a generic CheckFailure would swap
+    "use this in a server" for a bare permission refusal, which is wrong: the
+    user has every permission, they are just in a DM.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    app_error = discord.app_commands.NoPrivateMessage()
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+    assert caplog.text == ""
+    field = sent[0][1]["embed"].fields[0]
+    assert "private messages" in field.name
+    assert "invite.yasuho.xyz" in field.value
+
+
+async def test_hybrid_app_bot_missing_permissions_names_the_permissions(caplog):
+    """app BotMissingPermissions must reach the ext branch that says "I am
+    missing permissions" and names them, not the generic refusal that blames
+    the user. The missing_permissions list carries over verbatim.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    app_error = discord.app_commands.BotMissingPermissions(["manage_roles"])
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+    assert caplog.text == ""
+    field = sent[0][1]["embed"].fields[0]
+    assert "I am missing permissions" in field.name
+    assert "Manage Roles" in field.value
+
+
+async def test_hybrid_app_mapped_shapes_preserve_the_cause(monkeypatch):
+    """Both mappings must keep the original app error as __cause__ so a later
+    reader (or a traceback) can still see what actually refused.
+
+    Observed by swapping the ext exception class the handler instantiates for a
+    recording subclass: isinstance still matches, so the branch is unchanged.
+    """
+    for attr, app_error in (
+        ("NoPrivateMessage", discord.app_commands.NoPrivateMessage()),
+        (
+            "BotMissingPermissions",
+            discord.app_commands.BotMissingPermissions(["ban_members"]),
+        ),
+    ):
+        built = []
+        base = getattr(commands, attr)
+
+        class _Recording(base):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                built.append(self)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(commands, attr, _Recording)
+            sent = []
+            cog, ctx = _handler_ctx(sent)
+            await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+        assert len(built) == 1, f"{attr} was not mapped"
+        assert built[0].__cause__ is app_error
+        assert len(sent) == 1
+
+
+async def test_hybrid_app_check_subclass_without_branch_stays_generic(caplog):
+    """Ordering guard: only the two shapes WITH a dedicated branch are mapped.
+    Any other app CheckFailure subclass (here MissingPermissions) still
+    flattens to the generic discreet refusal.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent)
+
+    app_error = discord.app_commands.MissingPermissions(["manage_guild"])
+    with caplog.at_level("ERROR"):
+        await cog._on_command_error(ctx, commands.HybridCommandError(app_error))
+
+    assert caplog.text == ""
+    assert len(sent) == 1
+    assert "do not have permission" in sent[0][0][0]
+    assert "embed" not in sent[0][1]
+
+
 async def test_hybrid_app_transformer_error_takes_the_input_branch(caplog):
     """A value a Transformer could not convert is a user input error, not a
     crash: the bad-argument branch, no ERROR log, no error_id.

@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import uuid
 
+from tools.snowflake import coerce_id
+
 # --- Discord platform limits (fixed, documented for the reader) -------------
 CHANNEL_NAME_LIMIT = 100  # a channel name may be at most 100 characters
 GUILD_CHANNEL_BUDGET = 500  # a guild may hold at most 500 channels total
@@ -53,8 +55,12 @@ HUB_OVERHEAD_CHANNELS = 2
 def _coerce_int(value):
     """Return ``value`` as an int, or ``None`` if it cannot be one.
 
-    Accepts ints and clean numeric strings; rejects bools (a stray ``True``
-    should never masquerade as a channel id), floats-as-strings and junk.
+    Accepts ints and clean numeric strings (including ``0`` and negatives);
+    rejects bools, floats-as-strings and junk. This is the COUNT coercion, used
+    for ``user_limit`` (0 means unlimited) and ``max_rooms``, which are then
+    clamped. Discord ids never come through here: they go through
+    :func:`tools.snowflake.coerce_id`, which is strictly stricter (no id can be
+    zero or negative).
     """
     if isinstance(value, bool):
         return None
@@ -139,7 +145,10 @@ def _normalize_one(entry):
     if not isinstance(entry, dict):
         return None
 
-    hub_channel_id = _coerce_int(entry.get("hub_channel_id"))
+    # Ids go through the shared snowflake coercion, not the count coercion: a
+    # Discord channel id is always a positive snowflake, so 0 and negatives are
+    # junk that must drop the hub rather than be stored as a channel id.
+    hub_channel_id = coerce_id(entry.get("hub_channel_id"))
     if hub_channel_id is None:
         return None
 
@@ -162,7 +171,7 @@ def _normalize_one(entry):
     return {
         "id": hub_id,
         "label": label,
-        "category_id": _coerce_int(entry.get("category_id")),
+        "category_id": coerce_id(entry.get("category_id")),
         "hub_channel_id": hub_channel_id,
         "template": template,
         "user_limit": user_limit,

@@ -10,6 +10,7 @@ import types
 import discord
 
 from cogs.config.verification import Verification, VerifyStatusView
+from tools import settings
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +116,31 @@ async def test_verify_status_command_sends_the_card(fake_pool):
     args, kwargs = ctx.sends[0]
     assert isinstance(kwargs["view"], VerifyStatusView)
     assert isinstance(kwargs["allowed_mentions"], discord.AllowedMentions)
+
+
+async def test_verify_status_coerces_a_string_role_id(fake_pool):
+    """The dashboard writes snowflakes as STRINGS. ``guild.get_role("42")``
+    returns None, so without the coercion the card would report a perfectly
+    configured guild as unconfigured.
+    """
+    guild_id = 990909
+    settings.invalidate_guild(guild_id)  # force a cold read through fake_pool
+    fake_pool.fetchval_return = {"verify_role": "42"}
+    role = _FakeRole(42)
+    cog = _make_cog(fake_pool)
+    ctx = _Ctx(_FakeGuild(guild_id=guild_id, roles=[role]))
+
+    try:
+        await cog.verify_status.callback(cog, ctx)
+    finally:
+        settings.invalidate_guild(guild_id)
+
+    view = ctx.sends[0][1]["view"]
+    text = "\n".join(
+        c.content for c in view.children[0].children if hasattr(c, "content")
+    )
+    assert "Enabled" in text
+    assert role.mention in text
 
 
 async def test_verify_status_command_is_pure_read(fake_pool):

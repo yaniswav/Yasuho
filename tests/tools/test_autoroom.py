@@ -150,6 +150,44 @@ def test_normalize_bool_hub_channel_rejected():
     assert hubs == []
 
 
+def test_normalize_rejects_non_positive_hub_channel():
+    """Ids go through the shared snowflake coercion, which is stricter than the
+    count coercion: no Discord channel id is 0 or negative, so such an entry is
+    junk and must drop the whole hub rather than be stored as a channel id.
+    """
+    assert autoroom.normalize_hubs([{"hub_channel_id": 0}]) == []
+    assert autoroom.normalize_hubs([{"hub_channel_id": -5}]) == []
+    assert autoroom.normalize_hubs([{"hub_channel_id": "0"}]) == []
+    assert autoroom.normalize_hubs([{"hub_channel_id": "-5"}]) == []
+
+
+def test_normalize_drops_non_positive_category_id():
+    """Same contract for the category: a bad value becomes None (no category)
+    instead of an impossible id the cog would try to fetch.
+    """
+    hubs = autoroom.normalize_hubs(
+        [
+            {"hub_channel_id": 1, "category_id": 0},
+            {"hub_channel_id": 2, "category_id": -3},
+            {"hub_channel_id": 3, "category_id": "-3"},
+            {"hub_channel_id": 4, "category_id": True},
+            {"hub_channel_id": 5, "category_id": "77"},
+        ]
+    )
+    assert [h["category_id"] for h in hubs] == [None, None, None, None, 77]
+
+
+def test_normalize_keeps_zero_and_negative_counts():
+    """Counter-test to the id tightening: user_limit/max_rooms keep the tolerant
+    count coercion (0 means unlimited), they are NOT snowflakes.
+    """
+    hubs = autoroom.normalize_hubs(
+        [{"hub_channel_id": 1, "user_limit": 0, "max_rooms": 0}]
+    )
+    assert hubs[0]["user_limit"] == 0
+    assert hubs[0]["max_rooms"] == 1  # clamped into range, not dropped
+
+
 def test_normalize_clamps_user_limit():
     hubs = autoroom.normalize_hubs(
         [
