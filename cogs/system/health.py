@@ -168,10 +168,14 @@ class Health(commands.Cog):
                 gw_resumes=self.gw_resumes,
                 gw_disconnects=self.gw_disconnects,
             )
-            if pool_idle == 0:
-                # Zero idle connections: the next acquire has to wait for one
-                # to free. Once per tick (never per-acquire) is the cheap,
-                # non-spammy cadence asked for - see the module docstring.
+            if pool_idle == 0 and pool.get_size() >= pool.get_max_size():
+                # True saturation only: zero idle AND the pool is already at
+                # its max size, so there is no margin left to grow into. With
+                # asyncpg's lazy pool, idle==0 alone is a false positive most
+                # of the time (e.g. pool=1/30 idle=0 is one connection in use
+                # with 29 of headroom) - it would otherwise warn every tick.
+                # Once per tick (never per-acquire) is the cheap, non-spammy
+                # cadence asked for - see the module docstring.
                 log.warning("DB pool has zero idle connections: %s", line)
             else:
                 log.info(line)

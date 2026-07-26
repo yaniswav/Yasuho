@@ -196,7 +196,8 @@ async def test_load_line_logs_info_when_idle_present(caplog):
     assert not any(r.levelno == logging.WARNING for r in caplog.records)
 
 
-async def test_load_line_warns_when_zero_idle(caplog):
+async def test_load_line_warns_when_zero_idle_and_at_max_size(caplog):
+    # True saturation: zero idle AND no room left to grow (size == max).
     cog = _cog(bot=types.SimpleNamespace(
         db_pool=_Pool(size=30, idle=0, max_size=30),
         get_cog=lambda name: None,
@@ -206,6 +207,20 @@ async def test_load_line_warns_when_zero_idle(caplog):
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(warnings) == 1
     assert "zero idle" in warnings[0].message
+
+
+async def test_load_line_logs_info_when_zero_idle_but_below_max_size(caplog):
+    # Lazy asyncpg pool: idle=0 with size < max is normal headroom, not
+    # saturation (e.g. pool=1/30 idle=0) - must not false-positive WARNING.
+    cog = _cog(bot=types.SimpleNamespace(
+        db_pool=_Pool(size=1, idle=0, max_size=30),
+        get_cog=lambda name: None,
+    ))
+    with caplog.at_level(logging.INFO, logger=health.log.name):
+        await _run_tick(cog)
+    assert not any(r.levelno == logging.WARNING for r in caplog.records)
+    infos = [r for r in caplog.records if r.levelno == logging.INFO]
+    assert any(r.message.startswith("LOAD ") for r in infos)
 
 
 async def test_load_line_folds_in_anilist_throttle_segment(caplog):

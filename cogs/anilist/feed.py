@@ -587,7 +587,18 @@ class AniListFeed(commands.Cog):
             return
         except _FetchError as exc:
             # Abort cleanly; cursors are NOT advanced past unprocessed work.
-            log.warning("AniList feed: fetch failed (%s); cursors held", exc)
+            # _FetchError's own message is often empty (it wraps a bare
+            # str(exc) - e.g. a timeout whose str() is "") which used to
+            # render as an uninformative "fetch failed (); cursors held".
+            # Fall back to the wrapped cause (network/timeout errors set one
+            # via ``from exc``) so the exception's type name is always
+            # visible even when both messages are empty.
+            detail = exc.__cause__ or exc
+            log.warning(
+                "AniList feed: fetch failed (%s: %r); cursors held",
+                type(detail).__name__,
+                detail,
+            )
             return
 
         normalized = [n for n in (_normalize(a) for a in raw) if n is not None]
