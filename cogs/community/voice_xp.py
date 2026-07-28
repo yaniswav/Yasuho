@@ -366,6 +366,13 @@ class VoiceXP(commands.Cog):
         # common case is a cache hit (a tuple compare, zero DB) on every one
         # of them, so this never adds a real round trip except on the rare
         # tick where a guild's week or month just rolled over.
+        # Bounded even on the WORST tick (the first one after midnight UTC on
+        # the 1st, where every credited guild rolls its month at once): a
+        # rolled-over guild costs the DELETE plus, only while its period marker
+        # is still cold - the first such tick after a restart - one indexed
+        # single-row lookup, and the season rollover itself is SCHEDULED as a
+        # task by the leveling cog, never awaited here. So the sweep cannot be
+        # dragged out by anyone's rate-limited role moves or announce.
         for credited_guild_id in {c[0] for c in credits}:
             await leveling_cog.maybe_prune_expired_periods(
                 credited_guild_id, wall_now

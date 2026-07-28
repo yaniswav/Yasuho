@@ -286,9 +286,13 @@ async def test_reset_confirm_without_leveling_cog_still_deletes(
 # ---------------------------------------------------------------------------
 
 
-async def test_resetall_modal_matching_name_wipes_levels_and_periods(
+async def test_resetall_modal_matching_name_wipes_every_leveling_table(
     fake_pool, make_interaction
 ):
+    """"Every" has to mean every: the lifetime totals, both period rollups AND
+    the frozen season podiums - the one leveling artefact that deliberately
+    outlives the xp_period prune, so leaving it would resurrect exactly the
+    history this command exists to destroy."""
     fake_pool.fetchval_return = 7  # 7 member records
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     guild = _FakeGuild(1, name="My Server")
@@ -304,6 +308,7 @@ async def test_resetall_modal_matching_name_wipes_levels_and_periods(
     tables = " ".join(c[1] for c in deletes)
     assert "DELETE FROM levels" in tables
     assert "DELETE FROM xp_period" in tables
+    assert "DELETE FROM season_podiums" in tables
     assert interaction.sent  # a confirmation was sent
     assert "7" in interaction.sent[0][0][0]  # wiped-count reported
 
@@ -341,3 +346,32 @@ async def test_perform_reset_all_returns_the_wiped_count(fake_pool):
     count = await cog._perform_reset_all(1)
 
     assert count == 12
+
+
+async def test_perform_reset_all_is_one_transaction_over_all_three_tables(
+    fake_pool,
+):
+    """A crash between statements must not leave a guild with an empty
+    leaderboard and a hall of fame still naming last month's champions, so the
+    count and the three DELETEs share one transaction."""
+    opened = []
+    real_transaction = fake_pool.transaction
+
+    def _transaction():
+        opened.append(True)
+        return real_transaction()
+
+    fake_pool.transaction = _transaction
+    fake_pool.fetchval_return = 3
+    cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
+
+    await cog._perform_reset_all(1)
+
+    assert opened == [True]  # exactly one transaction, not three autocommits
+    deleted = [
+        c[1] for c in fake_pool.calls if c[0] == "execute" and "DELETE" in c[1]
+    ]
+    assert len(deleted) == 3
+    for table in ("levels", "xp_period", "season_podiums"):
+        assert any(f"DELETE FROM {table} " in query for query in deleted)
+        assert all("WHERE guild_id = $1" in query for query in deleted)

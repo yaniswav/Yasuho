@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import os
@@ -46,8 +47,11 @@ _MULTIPLIER_CACHE_CAP = 2048
 # Per-guild "last seen period" marker cache ceiling (L6). Same sizing
 # rationale as _NO_XP_CACHE_CAP/_MULTIPLIER_CACHE_CAP: comfortably above any
 # plausible number of guilds with leveling enabled - see self._period_markers
-# and maybe_prune_expired_periods. An evicted guild simply re-prunes on its
-# next grant (a rare, harmless extra DELETE), never a correctness issue.
+# and maybe_prune_expired_periods. An evicted guild looks cold on its next
+# grant and pays that method's cold branch once: the extra DELETE, the
+# closed-month lookup that clamps it, and an idempotent season snapshot that
+# almost always stops on its exists probe. Rare and bounded, never a
+# correctness issue - the same branch every guild takes once after a restart.
 _PERIOD_MARKER_CACHE_CAP = 2048
 
 # The full set of level_config columns the hot-path LevelConfig mirror is built
@@ -281,6 +285,25 @@ class Leveling(commands.Cog):
         # and its xp_period rows are due for a lazy prune. Bounded like
         # self._no_xp / self._multipliers above (same rationale).
         self._period_markers: BoundedLRU = BoundedLRU(_PERIOD_MARKER_CACHE_CAP)
+        # Strong refs to the in-flight season-rollover tasks (S1), so the event
+        # loop cannot garbage-collect one mid-flight (core.py's
+        # _schedule_startup_backup pattern). Self-bounding: a guild schedules at
+        # most ONE per month and each entry is discarded by its own done
+        # callback, so this holds only the handful of guilds whose month is
+        # rolling over right now.
+        self._season_tasks: set[asyncio.Task] = set()
+
+    def cog_unload(self):
+        """Cancel any in-flight season rollover on reload.
+
+        A snapshot task outliving its cog would keep a stale bot/cog reference
+        alive and could post an announce after a reload replaced the cog. The
+        podium row is committed inside a single statement, so a cancellation
+        either lands the snapshot or leaves the season untouched for the next
+        trigger - never a half-frozen podium.
+        """
+        for task in list(self._season_tasks):
+            task.cancel()
 
     async def cog_load(self):
         """Load every enabled guild's leveling config once, at startup.
@@ -620,19 +643,50 @@ class Leveling(commands.Cog):
             )
 
     async def maybe_prune_expired_periods(self, guild_id, now=None):
-        """Lazily drop a guild's stale xp_period rows (L6 retention).
+        """Lazily drop a guild's stale xp_period rows (L6 retention) AND close
+        its leveling season when a month rolled over (S1).
 
-        Fires a DELETE ONLY on the first grant/credit of a NEW period for
-        this guild (week or month rolled over since the marker was last set)
-        - never a background timer, never on every grant. The common case
-        (nothing rolled over since the last check) is a single BoundedLRU
-        read plus a tuple compare via tools.leveling.period_marker_changed:
-        zero DB, so this is safe to await from both hot paths (on_message
-        and the voice sweep, once per credited guild - see their call
-        sites). Never raises: a failed prune only leaves a few extra
-        periods' worth of rows until the NEXT rollover retries it, and the
-        marker is updated regardless so a persistently-failing guild does
-        not retry the DELETE on every single message.
+        Fires ONLY on the first grant/credit of a NEW period for this guild
+        (week or month rolled over since the marker was last set) - never a
+        background timer, never on every grant. The common case (nothing
+        rolled over since the last check) is a single BoundedLRU read plus a
+        tuple compare via tools.leveling.period_marker_changed: zero DB and
+        zero awaits, so this is safe to await from both hot paths (on_message
+        and the voice sweep, once per credited guild - see their call sites).
+
+        Two effects ride that one marker test, in this order:
+
+        1. the xp_period retention DELETE (cheap, deterministic, always first
+           so a slow season rollover can never delay it) - with its monthly
+           cutoff CLAMPED to the month awaiting a season snapshot, so it can
+           never delete the very rows that snapshot is about to read;
+        2. when the MONTH component changed (tools.leveling.month_rolled_over -
+           a cold marker counts as changed), that same month is handed to the
+           Seasons cog for its exactly-once podium snapshot.
+
+        Which month that is comes from one of two places, and NEVER from the
+        wall clock ("the month before now" is empty for a guild silent through
+        a whole month, whose real podium sits in an OLDER one):
+
+        * marker WARM - the month it names
+          (tools.leveling.season_rollover_period_key), free, no DB;
+        * marker COLD (``None``: every restart, since the BoundedLRU starts
+          empty and the deploy is continuous, plus the rare eviction) - ONE
+          lookup in the data, :meth:`_resolve_cold_closed_month`, run BEFORE
+          the DELETE. It has to be before: the cold branch is exactly where the
+          clamp would otherwise be ``None``, and an unclamped cutoff can delete
+          the last active month of a guild dormant for PRUNE_PERIODS_BACK
+          months or more - the rows the snapshot needs - a beat before the
+          background task gets to read them. Once per guild per PROCESS (the
+          marker is warm from here on), and only on a month rollover.
+
+        Never raises AND never awaits the season work: the snapshot runs as a
+        tracked background task (see :meth:`_dispatch_season_rollover`), so
+        neither the level-up announce right after a grant nor the voice sweep's
+        per-guild loop ever waits on its role/HTTP calls. A failed prune only
+        leaves a few extra periods' worth of rows until the NEXT rollover
+        retries it, and the marker is updated regardless so a persistently
+        failing guild does not retry either on every single message.
         """
         now = now or discord.utils.utcnow()
         current = leveling.current_period_keys(now)
@@ -640,6 +694,15 @@ class Leveling(commands.Cog):
         if not leveling.period_marker_changed(previous, current):
             return
         self._period_markers[guild_id] = current
+        month_rolled = leveling.month_rolled_over(previous, current)
+        # The month to protect from the prune below AND to hand to the season
+        # snapshot - the same one, which is the whole point of resolving it
+        # here rather than letting the DELETE and the snapshot disagree.
+        rolled_season = (
+            leveling.season_rollover_period_key(previous) if month_rolled else None
+        )
+        if month_rolled and rolled_season is None:
+            rolled_season = await self._resolve_cold_closed_month(guild_id, now)
         try:
             await self.bot.db_pool.execute(
                 """
@@ -652,12 +715,97 @@ class Leveling(commands.Cog):
                 """,
                 guild_id,
                 leveling.weekly_prune_cutoff_key(now),
-                leveling.monthly_prune_cutoff_key(now),
+                leveling.monthly_prune_cutoff_key(now, keep_month=rolled_season),
             )
         except Exception:
             log.exception(
                 "Failed to prune expired xp_period rows for guild %s", guild_id
             )
+        if month_rolled:
+            self._dispatch_season_rollover(guild_id, rolled_season, now)
+
+    async def _resolve_cold_closed_month(self, guild_id, now):
+        """The month a COLD-marker rollover closes, read from the data.
+
+        The cold branch of :meth:`maybe_prune_expired_periods`: with no marker
+        there is nothing in memory to name the month, so we ask xp_period for
+        the guild's latest monthly period strictly before the current one -
+        tools.leveling.LATEST_CLOSED_MONTH_SQL, the very query the Seasons cog
+        uses for the same question, shared verbatim so the month this clamps
+        the prune to and the month the snapshot freezes are always the same one.
+
+        Returns ``None`` when the guild has no closed month at all (a brand new
+        guild) or when the lookup fails - both mean "nothing to protect", and
+        the failure case is additionally covered by handing that ``None`` to
+        the dispatch, which makes the engine resolve it again for itself.
+
+        Scale: ONE extra index lookup per guild per PROCESS, on the first month
+        rollover it sees after a restart - not per rollover, not per message.
+        At 1000+ guilds that is at most 1000 single-row lookups spread over
+        whenever each guild first speaks in a new month.
+        """
+        try:
+            return await self.bot.db_pool.fetchval(
+                leveling.LATEST_CLOSED_MONTH_SQL,
+                guild_id,
+                leveling.month_period_key(now),
+            )
+        except Exception:
+            log.exception(
+                "Failed to resolve the closed season month for guild %s", guild_id
+            )
+            return None
+
+    def _dispatch_season_rollover(self, guild_id, period_key, now):
+        """Hand a just-closed month to the Seasons cog (S1), best effort.
+
+        Cross-cog seam in the house shape (mirrors :meth:`_apply_level_rewards`'s
+        ``bot.get_cog("LevelRewards")``): the Seasons cog owns the podium
+        snapshot, the champion role and the announce; the leveling cog only
+        knows WHICH month rolled over for a guild, from its period marker or
+        (cold) from the same lookup the engine itself would run. The cog lookup
+        comes FIRST so a bot without the Seasons extension loaded pays nothing
+        beyond one dict read, and a guild that is no longer cached (left,
+        outage) is simply skipped - the snapshot is idempotent and the next
+        rollover, or an on-demand ``ensure_season_snapshot`` from a read
+        surface, picks it up.
+
+        ``period_key`` may still be ``None`` - a guild with no closed month at
+        all, or a resolution that failed - and that is deliberate: the engine
+        then resolves it itself (and short-circuits on a guild that has none),
+        so a transient DB error on the cold path still closes the season.
+
+        SYNCHRONOUS on purpose: it only SCHEDULES the snapshot as a tracked
+        task (the house strong-ref pattern, core.py's _schedule_startup_backup)
+        instead of awaiting it. The snapshot can fire several rate-limited role
+        moves and a channel.send, and both callers are latency-sensitive in a
+        way that would be visible at scale: the message path would delay the
+        level-up announce of the first message of the month, and the voice
+        sweep - which loops over EVERY credited guild in one tick - would
+        serialize every guild's rollover into the same tick right after
+        midnight UTC on the 1st. One task per guild per month, so the strong-ref
+        set holds at most as many entries as guilds rolling over at once.
+        """
+        seasons_cog = self.bot.get_cog("Seasons")
+        if seasons_cog is None:
+            return
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            return
+
+        async def _close():
+            try:
+                await seasons_cog.ensure_season_snapshot(
+                    guild, period_key, now=now
+                )
+            except Exception:
+                log.exception(
+                    "Failed to close the leveling season for guild %s", guild_id
+                )
+
+        task = asyncio.ensure_future(_close())
+        self._season_tasks.add(task)
+        task.add_done_callback(self._season_tasks.discard)
 
     def is_enabled(self, guild_id):
         """Whether leveling is currently ON for a guild (in-memory, no DB).

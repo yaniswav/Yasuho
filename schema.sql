@@ -137,7 +137,9 @@ CREATE TABLE IF NOT EXISTS level_config (
     voice_xp_enabled    BOOLEAN NOT NULL DEFAULT FALSE,       -- opt-in: earn XP for time in voice (voice_xp.py)
     voice_xp_per_minute INTEGER NOT NULL DEFAULT 5,           -- XP per eligible minute in voice (bounds 1..60)
     event_factor        REAL,                                 -- active timed double-XP event's multiplier, NULL = no event (L4)
-    event_ends_at       TIMESTAMPTZ                            -- when the event above expires; an expired row is ignored at read time and lazily nulled (no timer) (L4)
+    event_ends_at       TIMESTAMPTZ,                           -- when the event above expires; an expired row is ignored at read time and lazily nulled (no timer) (L4)
+    season_champion_role_id BIGINT,                            -- optional "Season champion" role, REPLACE-moved to the closed month's #1; NULL = off (S1)
+    season_announce     BOOLEAN NOT NULL DEFAULT FALSE         -- opt in to the season rollover announce; announce_mode still decides WHERE (S1)
 );
 -- Migrate pre-existing installs (no-op on a fresh database): level_config already
 -- exists on any deploy that shipped the L0/L1 leveling lot, so CREATE TABLE IF NOT
@@ -148,6 +150,14 @@ ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_enabled BOOLEAN NOT N
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_per_minute INTEGER NOT NULL DEFAULT 5;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_factor REAL;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_ends_at TIMESTAMPTZ;
+-- Seasons (S1), read by cogs/community/seasons.py once per guild per month:
+-- season_champion_role_id is the optional "Season champion" role handed to the
+-- closed month's #1 in REPLACE mode (NULL = feature off, the default), and
+-- season_announce opts the guild in to the rollover announce (default off, and
+-- the guild's existing announce_mode still decides WHERE - see
+-- tools.leveling.resolve_season_announce_channel).
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS season_champion_role_id BIGINT;
+ALTER TABLE level_config ADD COLUMN IF NOT EXISTS season_announce BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Per-guild XP multipliers (L4, the Lurkr rule): boost or reduce XP globally,
 -- per channel/category, or per role. ``kind = 'global'`` always uses
@@ -242,6 +252,43 @@ CREATE TABLE IF NOT EXISTS xp_period (
 -- -> index range scan, no sort (mirrors levels_guild_xp_idx below).
 CREATE INDEX IF NOT EXISTS xp_period_guild_period_xp_idx
     ON xp_period (guild_id, period_key, xp DESC);
+
+-- Leveling seasons (S1): one row per podium PLACE of a CLOSED month. A season
+-- is simply a calendar month of the xp_period rollup above - nothing is reset
+-- or destroyed when one ends (lifetime `levels` totals and member levels are
+-- untouched); the month's top 3 are merely FROZEN here so they survive the
+-- lazy xp_period prune. `period_key` is the monthly key of the CLOSED month
+-- ('M<year>-<month>') - the month the guild's period marker says it last
+-- earned XP in (tools.leveling.season_rollover_period_key), or, when that
+-- marker is cold (every restart), the latest monthly key this guild has an
+-- xp_period row for before the current month (the shared
+-- tools.leveling.LATEST_CLOSED_MONTH_SQL). NEVER simply the month before now,
+-- which would skip a guild that stayed silent a whole month. `rank` is 1..3 (tools.leveling.SEASON_PODIUM_SIZE), ties broken by
+-- user_id so a re-run can never reshuffle a stored podium, and `xp` is that
+-- member's XP for that month alone. Written EXACTLY ONCE per (guild, month) by
+-- an INSERT ... ON CONFLICT DO NOTHING whose RETURNING is also what elects the
+-- single caller allowed to run the one-shot side effects (champion role +
+-- announce), so two concurrent triggers can never double-post. Trigger paths,
+-- both converging on that same INSERT: the first XP grant of a new month for a
+-- guild (detected by the leveling cog's existing in-memory period marker - no
+-- timer, no sweep) and an on-demand ensure_season_snapshot() call from a read
+-- surface. No extra index: the PK serves the exactly-once probe
+-- (guild_id, period_key), a guild's season history (guild_id prefix) AND the
+-- "who was the outgoing champion?" lookup the REPLACE role move needs
+-- (guild_id, period_key < closed, rank = 1 -> backward index scan, verified on
+-- the real Postgres) - which is read from HERE rather than from Role.members
+-- precisely because the member cache is not populated (chunk_guilds_at_startup
+-- is False).
+-- cogs/community/seasons.py, cogs/community/leveling.py
+CREATE TABLE IF NOT EXISTS season_podiums (
+    guild_id    BIGINT      NOT NULL,
+    period_key  TEXT        NOT NULL,   -- closed month, 'M<year>-<month>'
+    rank        SMALLINT    NOT NULL,   -- 1..3
+    user_id     BIGINT      NOT NULL,
+    xp          BIGINT      NOT NULL,   -- that member's XP for that month only
+    snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, period_key, rank)
+);
 
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (

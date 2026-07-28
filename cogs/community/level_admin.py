@@ -12,10 +12,11 @@ recomputes the tier; stack mode keeps earned roles - the documented convention).
 Scale: these are RARE, explicit human actions (an admin typing a command), never
 a hot path, so each does a plain read-then-write with no caching - the SCALE
 STORY is simply "there is nothing to scale here". The one guild-wide operation
-(``resetall``) is a pair of indexed DELETEs behind a two-step confirmation, so it
-cannot fire by accident. Admin edits deliberately do NOT touch xp_period (periods
-track ORGANIC activity only - see schema.sql); only ``resetall`` wipes xp_period,
-and only because it is nuking the whole guild's history on purpose.
+(``resetall``) is three indexed DELETEs in ONE transaction behind a two-step
+confirmation, so it cannot fire by accident and cannot half-happen. Admin edits
+deliberately do NOT touch xp_period or season_podiums (periods track ORGANIC
+activity only - see schema.sql); only ``resetall`` wipes those, and only because
+it is nuking the whole guild's leveling history on purpose.
 
 Period rollups: an XP grant on the hot path writes both the lifetime `levels`
 row AND the weekly/monthly xp_period rows; an admin adjustment writes ONLY
@@ -328,23 +329,41 @@ class LevelAdmin(commands.Cog):
         return old_xp
 
     async def _perform_reset_all(self, guild_id):
-        """Wipe EVERY member's lifetime XP AND every period rollup for a guild.
+        """Wipe a guild's ENTIRE leveling history: lifetime XP, every period
+        rollup, and every frozen season podium.
 
-        The nuclear ``/levelconfig xp resetall`` action (behind the two-step confirm). Two
-        indexed DELETEs; roles are deliberately NOT reconciled here - a mass
-        role sweep across the whole guild is a different, much heavier operation
-        and out of scope for a reset (see the cog docstring / residual risks).
-        Returns the number of member records wiped, for the confirmation.
+        The nuclear ``/levelconfig xp resetall`` action (behind the two-step
+        confirm). Three indexed DELETEs in ONE transaction, with the count read
+        inside it: "every" has to mean every, so a crash between statements must
+        not leave a guild with an empty leaderboard and a hall of fame still
+        naming last month's champions. season_podiums is part of the wipe for
+        exactly that reason - it is the ONE leveling artefact that deliberately
+        outlives the xp_period prune, so leaving it behind would resurrect the
+        history this command exists to destroy.
+
+        The confirmation prose is unchanged and stays accurate: a season podium
+        IS a frozen monthly leaderboard (see cogs/community/seasons.py), so
+        "every weekly/monthly leaderboard" already names it.
+
+        Roles are deliberately NOT reconciled here - a mass role sweep across
+        the whole guild is a different, much heavier operation and out of scope
+        for a reset (see the cog docstring / residual risks). Returns the number
+        of member records wiped, for the confirmation.
         """
-        count = await self.bot.db_pool.fetchval(
-            "SELECT COUNT(*) FROM levels WHERE guild_id = $1;", guild_id
-        )
-        await self.bot.db_pool.execute(
-            "DELETE FROM levels WHERE guild_id = $1;", guild_id
-        )
-        await self.bot.db_pool.execute(
-            "DELETE FROM xp_period WHERE guild_id = $1;", guild_id
-        )
+        async with self.bot.db_pool.acquire() as connection:
+            async with connection.transaction():
+                count = await connection.fetchval(
+                    "SELECT COUNT(*) FROM levels WHERE guild_id = $1;", guild_id
+                )
+                await connection.execute(
+                    "DELETE FROM levels WHERE guild_id = $1;", guild_id
+                )
+                await connection.execute(
+                    "DELETE FROM xp_period WHERE guild_id = $1;", guild_id
+                )
+                await connection.execute(
+                    "DELETE FROM season_podiums WHERE guild_id = $1;", guild_id
+                )
         return count or 0
 
     # -- admin command bodies (registered as /levelconfig xp *) --------------

@@ -10,6 +10,12 @@ The curve is deliberately UNCHANGED from the original inline formula (the user
 decreed no curve change): :func:`level_for_xp` and :func:`xp_for_level` reproduce
 ``int((xp / 100) ** 0.5)`` and ``level ** 2 * 100`` exactly, and a property test
 pins zero drift against those literals.
+
+One exception to "no database", and only one: :data:`LATEST_CLOSED_MONTH_SQL` is
+a SQL *literal* - inert text, executed by its two callers (the leveling cog's
+lazy prune and the Seasons cog), never by this module. It lives here because
+both of them must ask the SAME question to stay consistent, and this is the only
+module they already share (see the S1 section below).
 """
 
 from __future__ import annotations
@@ -761,15 +767,39 @@ def weekly_prune_cutoff_key(now, periods_back=PRUNE_PERIODS_BACK):
     return iso_week_period_key(now - timedelta(weeks=periods_back))
 
 
-def monthly_prune_cutoff_key(now, periods_back=PRUNE_PERIODS_BACK):
-    """The oldest MONTHLY period key a prune must still KEEP. Calendar months
-    are not a fixed number of days, so this walks back whole months by
-    integer arithmetic (a zero-based month-of-all-time index, rolling the
-    year over every 12) rather than subtracting a timedelta.
+def _month_key_back(now, months_back):
+    """The monthly period key ``months_back`` whole calendar months before ``now``.
+
+    Calendar months are not a fixed number of days, so this walks back by
+    integer arithmetic (a zero-based month-of-all-time index, rolling the year
+    over every 12) rather than subtracting a timedelta. THE one place that
+    knows how to cross a year boundary (December 2025 is the month before
+    January 2026, not month 0), so no caller can disagree about which month a
+    boundary belongs to.
     """
-    month_index = (now.year * 12 + (now.month - 1)) - periods_back
+    month_index = (now.year * 12 + (now.month - 1)) - months_back
     year, month0 = divmod(month_index, 12)
     return f"M{year:04d}-{month0 + 1:02d}"
+
+
+def monthly_prune_cutoff_key(now, periods_back=PRUNE_PERIODS_BACK, keep_month=None):
+    """The oldest MONTHLY period key a prune must still KEEP (see
+    :func:`_month_key_back` for the calendar-month arithmetic).
+
+    ``keep_month`` CLAMPS that cutoff down: a guild whose season rollover is
+    about to snapshot ``keep_month`` (the month its period marker still names,
+    see :func:`season_rollover_period_key`) must keep that month's xp_period
+    rows, even when plain retention would already have dropped them. Without
+    the clamp a guild dormant for ``periods_back`` months or more would have
+    the very rows the snapshot reads DELETED by the same call that is about to
+    freeze them - the prune runs first - and its last podium would be lost for
+    good. Months older than the clamp are still dropped; the clamp only ever
+    lowers the cutoff, never raises it.
+    """
+    cutoff = _month_key_back(now, periods_back)
+    if keep_month and keep_month < cutoff:
+        return keep_month
+    return cutoff
 
 
 def period_marker_changed(previous, current):
@@ -785,6 +815,117 @@ def period_marker_changed(previous, current):
     tick that credited a guild, so it must stay allocation-free, and does.
     """
     return previous is None or previous != current
+
+
+# ============================================================
+# Leveling seasons (S1): a SEASON is one calendar MONTH, riding the monthly
+# xp_period rollup above - nothing is ever reset or destroyed, lifetime totals
+# and levels are untouched. When a month closes, the top 3 of that CLOSED month
+# are snapshotted once into season_podiums (see schema.sql). The pure decisions
+# live here; the snapshot itself, the champion role and the announce live in
+# cogs/community/seasons.py, and the lazy per-guild rollover DETECTION rides the
+# leveling cog's existing "last seen period" marker (period_marker_changed just
+# above) - no new timer, no new hot-path marker.
+# ============================================================
+
+# How many ranks a season podium keeps. Three is the podium, full stop: the
+# snapshot query's LIMIT, the announce's line count and season_podiums' rank
+# range all read this one constant.
+SEASON_PODIUM_SIZE = 3
+
+# The on-demand answer to "which month actually closed?", asked with
+# ($1 = guild_id, $2 = the CURRENT month's period key). Used by every caller
+# that cannot name the closed month from memory - a read surface opening the
+# hall of fame, and the leveling cog's lazy prune when its in-memory period
+# marker was COLD (every restart, and the deploy is continuous). Both must ask
+# the SAME question or they would disagree about which month to protect and
+# which to freeze, hence the single literal here.
+#
+# "The month before now" is wrong for a guild that went a whole month without a
+# single grant: that month is empty while the podium sits in an older one. So we
+# ask the data instead - the LATEST monthly period this guild has any xp_period
+# row for, strictly before the current month. Served by
+# xp_period_guild_period_xp_idx as a (guild_id, period_key < current) range -
+# verified on the real Postgres - so it only ever touches THIS guild's own
+# retained rows, at most PRUNE_PERIODS_BACK periods' worth, once per rollover.
+# The 'M%' filter is intent only: weekly 'W' keys already sort ABOVE every 'M'
+# key, so the range excludes them anyway. No row means this guild has no closed
+# month left to freeze, and the caller stays silent.
+LATEST_CLOSED_MONTH_SQL = """
+    SELECT period_key
+    FROM xp_period
+    WHERE guild_id = $1 AND period_key LIKE 'M%' AND period_key < $2
+    ORDER BY period_key DESC
+    LIMIT 1;
+    """
+
+
+def season_rollover_period_key(previous):
+    """The month a marker rollover actually CLOSES, or ``None`` if unknown.
+
+    ``previous`` is the guild's period marker BEFORE it was refreshed (the
+    ``(week_key, month_key)`` pair, or ``None`` when the guild was never
+    marked - cold since restart, or LRU-evicted). When it is known, its MONTH
+    component is the answer, and it is the only correct one: it names the last
+    month this guild actually earned XP in, which for a guild that stayed
+    silent through one or more whole months is NOT simply the month before now.
+
+    DELIBERATELY no wall-clock fallback: "the month before now" is exactly the
+    wrong answer for that dormant guild (it names an EMPTY month and the real
+    podium is never frozen), so a cold marker returns ``None`` and the cog
+    resolves the closed month from the DATA instead - the guild's latest
+    xp_period month before the current one. Pure, allocation-free, called at
+    most once per guild per rollover.
+    """
+    if previous is not None and previous[1]:
+        return previous[1]
+    return None
+
+
+def month_rolled_over(previous, current):
+    """Whether the MONTH component of a guild's period marker just changed.
+
+    ``previous``/``current`` are the ``(week_key, month_key)`` pairs the
+    leveling cog's marker cache stores (see :func:`period_marker_changed`,
+    the coarser "either period rolled" test that gates the lazy prune). A cold
+    marker (``None``) counts as rolled: we cannot prove the month did NOT
+    change while this guild was unmarked, and the season snapshot is idempotent
+    and cheap to re-verify, so the safe answer is to look. Pure, allocation-free
+    - it only ever runs on the (rare) branch where SOME period already rolled.
+    """
+    return previous is None or previous[1] != current[1]
+
+
+def format_month_period_label(period_key):
+    """A month period key rendered for humans: ``"M2026-07"`` -> ``"2026-07"``.
+
+    Deliberately numeric rather than a localized month name: the label is
+    interpolated into a translated sentence, and a numeric year-month reads the
+    same in every locale the bot ships. Any unexpected value is returned
+    unchanged (never raises - this only ever feeds a message).
+    """
+    if isinstance(period_key, str) and period_key.startswith("M"):
+        return period_key[1:]
+    return period_key
+
+
+def resolve_season_announce_channel(announce_mode, announce_channel_id):
+    """The channel id a season-rollover announce should go to, or ``None``.
+
+    A season announce is guild-wide: there is no origin channel (no message
+    triggered it) and no single member to DM, so it can only ever land in a
+    CONFIGURED channel. This reuses :func:`resolve_announce_target` with no
+    source channel so the guild's existing ``announce_mode`` keeps its exact
+    meaning - ``"off"`` silences seasons too, and only a ``"fixed"`` mode with
+    a real ``announce_channel_id`` yields a destination. Every other mode
+    (``"channel"`` with no origin, ``"dm"`` with no member) resolves to
+    ``None``, i.e. "this guild has not told us where to post it" - the cog then
+    skips the announce quietly rather than inventing a channel.
+    """
+    route, channel_id = resolve_announce_target(
+        announce_mode, None, announce_channel_id
+    )
+    return channel_id if route == "fixed" else None
 
 
 # ============================================================

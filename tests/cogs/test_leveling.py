@@ -14,6 +14,7 @@ The method is a ``@staticmethod`` with no dependencies, so it is called directly
 on the class - no cog instance, bot, pool, or event loop required.
 """
 
+import asyncio
 import datetime
 import json
 import types
@@ -158,6 +159,7 @@ class _FakeMessage:
 def _make_bot(
     fake_pool, prefixes=None, default_prefix="?", bot_user_id=999, get_cog=None
 ):
+    _route_closed_month_fetchval(fake_pool)
     return types.SimpleNamespace(
         db_pool=fake_pool,
         prefixes=prefixes if prefixes is not None else {},
@@ -179,8 +181,56 @@ def _enable(cog, guild_id=1, **overrides):
     cog._configs[guild_id] = leveling.LevelConfig(enabled=True, **overrides)
 
 
+# The lazy prune's "which month closed?" lookup
+# (tools.leveling.LATEST_CLOSED_MONTH_SQL) is recognised by this fragment - it
+# is the only fetchval in this cog besides the grant statement.
+_CLOSED_MONTH_NEEDLE = "LIKE 'M%'"
+
+
 def _fetchval_calls(fake_pool):
-    return [c for c in fake_pool.calls if c[0] == "fetchval"]
+    """Every fetchval EXCEPT the season closed-month lookup.
+
+    That lookup shares the fetchval method with the grant statement and fires
+    on every COLD period marker - i.e. the first grant of any guild after a
+    restart - so counting it here would quietly turn "the grant is ONE round
+    trip" into an assertion about something else. See _closed_month_lookups for
+    the tests that are about the lookup itself.
+    """
+    return [
+        c
+        for c in fake_pool.calls
+        if c[0] == "fetchval" and _CLOSED_MONTH_NEEDLE not in c[1]
+    ]
+
+
+def _closed_month_lookups(fake_pool):
+    """The cold-marker "which month closed?" lookups, in call order."""
+    return [
+        c
+        for c in fake_pool.calls
+        if c[0] == "fetchval" and _CLOSED_MONTH_NEEDLE in c[1]
+    ]
+
+
+def _route_closed_month_fetchval(fake_pool, closed_month=None):
+    """A query-aware `fetchval` stub, installed for every test by _make_bot.
+
+    Same need as _route_fetch: one method now serves two different queries (the
+    grant write and the closed-month lookup), so a single `fetchval_return` -
+    an XP total in most tests - would otherwise come back as a period key and
+    be compared against one. ``fake_pool.closed_month_return`` is the knob for
+    the lookup; the grant keeps reading ``fetchval_return``, so no existing
+    test has to know this exists.
+    """
+    fake_pool.closed_month_return = closed_month
+
+    async def fetchval(query, *args):
+        fake_pool.calls.append(("fetchval", query, args))
+        if _CLOSED_MONTH_NEEDLE in query:
+            return fake_pool.closed_month_return
+        return fake_pool.fetchval_return
+
+    fake_pool.fetchval = fetchval
 
 
 def _route_fetch(fake_pool, no_xp_rows=None, multiplier_rows=None):
@@ -1429,6 +1479,316 @@ async def test_on_message_second_grant_same_period_skips_the_prune(fake_pool):
     await cog.on_message(_FakeMessage(content="two", guild_id=1, author_id=3))
 
     assert len(_xp_period_deletes(fake_pool)) == 1  # only the first grant fired it
+
+
+# ---------------------------------------------------------------------------
+# Season rollover dispatch (S1): the SAME in-memory period marker that gates
+# the lazy prune also decides when a guild's MONTH closed, and hands that
+# closed season to the Seasons cog. The engine itself (podium snapshot,
+# champion role, announce) lives in tests/cogs/test_seasons.py; these pin the
+# leveling side only - it must cost nothing when nothing rolled over, fire
+# exactly once per month per guild, and never break a grant.
+# ---------------------------------------------------------------------------
+
+
+class _FakeSeasonsCog:
+    def __init__(self, raises=None):
+        self.calls = []
+        self.raises = raises
+
+    async def ensure_season_snapshot(self, guild, period_key=None, *, now=None):
+        self.calls.append((getattr(guild, "id", None), period_key, now))
+        if self.raises is not None:
+            raise self.raises
+        return []
+
+
+def _make_season_bot(fake_pool, seasons_cog, guild_id=1, guild=None):
+    """A bot exposing both cross-cog seams the dispatch uses."""
+    bot = _make_bot(
+        fake_pool,
+        get_cog=lambda name: seasons_cog if name == "Seasons" else None,
+    )
+    resolved = guild if guild is not None else types.SimpleNamespace(id=guild_id)
+    bot.get_guild = lambda gid: resolved if gid == guild_id else None
+    return bot
+
+
+async def _drain(cog):
+    """Let the scheduled season tasks run to completion.
+
+    The dispatch is deliberately NOT awaited by maybe_prune_expired_periods
+    (it schedules a tracked task instead, so neither the level-up announce nor
+    the voice sweep ever waits on rate-limited role moves), so every assertion
+    about the engine has to yield to the loop first.
+    """
+    while cog._season_tasks:
+        await asyncio.gather(*list(cog._season_tasks), return_exceptions=True)
+
+
+async def test_month_rollover_dispatches_the_closed_season(fake_pool):
+    """A cold marker with NO closed month in the data (a brand new guild):
+    nothing to name, nothing to protect, and the engine short-circuits."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    now = discord.utils.utcnow()
+
+    await cog.maybe_prune_expired_periods(1, now)
+    await _drain(cog)
+
+    assert len(seasons.calls) == 1
+    guild_id, period_key, passed_now = seasons.calls[0]
+    assert guild_id == 1
+    assert period_key is None
+    assert passed_now == now
+
+
+# --- the COLD marker path (every restart, since the LRU starts empty) -------
+#
+# The marker is in memory only and the deploy is continuous, so "cold" is not
+# an edge case: it is what EVERY guild looks like on its first grant of a new
+# month after a restart. That branch has to resolve the closed month from the
+# DATA, and it has to do it BEFORE the retention DELETE - the whole point of
+# the clamp is to protect rows the DELETE would otherwise take with it.
+
+
+async def test_cold_marker_resolves_the_closed_month_before_pruning(fake_pool):
+    """A guild last active in JANUARY, first message in MAY, after a restart.
+
+    Plain retention would cut at M2026-02 and delete January's rows - the very
+    rows the season snapshot is about to read - and the marker cannot say
+    otherwise because it is empty. So the month is read from xp_period first,
+    then used BOTH as the prune's clamp and as the season handed over.
+    """
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    _route_closed_month_fetchval(fake_pool, closed_month="M2026-01")
+    may = datetime.datetime(2026, 5, 2, tzinfo=datetime.timezone.utc)
+
+    await cog.maybe_prune_expired_periods(1, may)
+    await _drain(cog)
+
+    lookups = _closed_month_lookups(fake_pool)
+    assert len(lookups) == 1
+    assert lookups[0][2] == (1, "M2026-05")  # everything strictly before NOW
+    deletes = _xp_period_deletes(fake_pool)
+    assert deletes[0][2][2] == "M2026-01"  # clamped, not the M2026-02 cutoff
+    # Order is the whole fix: resolve, THEN delete.
+    assert fake_pool.calls.index(lookups[0]) < fake_pool.calls.index(deletes[0])
+    assert [c[1] for c in seasons.calls] == ["M2026-01"]
+
+
+async def test_cold_marker_lookup_failure_still_dispatches_the_rollover(fake_pool):
+    """A DB hiccup on the resolution must not swallow the season: the dispatch
+    still fires with None, which makes the engine resolve it for itself."""
+
+    async def boom(*args, **kwargs):
+        raise RuntimeError("db down")
+
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    fake_pool.fetchval = boom
+    now = datetime.datetime(2026, 5, 2, tzinfo=datetime.timezone.utc)
+
+    await cog.maybe_prune_expired_periods(1, now)  # must not raise
+    await _drain(cog)
+
+    deletes = _xp_period_deletes(fake_pool)
+    # Nothing could be named, so nothing is clamped - the plain cutoff stands.
+    assert deletes[0][2][2] == leveling.monthly_prune_cutoff_key(now)
+    assert [c[1] for c in seasons.calls] == [None]
+
+
+async def test_a_warm_marker_never_pays_the_closed_month_lookup(fake_pool):
+    """The lookup is the COLD branch's price, once per guild per process. A
+    guild whose marker is warm already knows the month for free."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    cog._period_markers[1] = ("W2026-26", "M2026-06")
+    august = datetime.datetime(2026, 8, 3, tzinfo=datetime.timezone.utc)
+
+    await cog.maybe_prune_expired_periods(1, august)
+    await _drain(cog)
+
+    assert _closed_month_lookups(fake_pool) == []
+    assert [c[1] for c in seasons.calls] == ["M2026-06"]
+
+
+async def test_a_week_only_rollover_never_pays_the_closed_month_lookup(fake_pool):
+    """No month closed, so there is no season to protect or freeze - and the
+    prune must not start paying a lookup several times a month."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    now = datetime.datetime(2026, 7, 20, tzinfo=datetime.timezone.utc)
+    _week_key, month_key = leveling.current_period_keys(now)
+    cog._period_markers[1] = ("W2026-29", month_key)
+
+    await cog.maybe_prune_expired_periods(1, now)
+
+    assert _closed_month_lookups(fake_pool) == []
+    assert seasons.calls == []
+
+
+async def test_dispatch_is_scheduled_not_awaited(fake_pool):
+    """The season rollover must never be on the caller's await path: the
+    message path would delay the first level-up announce of the month, and the
+    voice sweep would serialize EVERY credited guild's rollover into the same
+    tick right after midnight UTC on the 1st."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+
+    await cog.maybe_prune_expired_periods(1, discord.utils.utcnow())
+
+    assert seasons.calls == []  # scheduled, not run yet
+    assert len(cog._season_tasks) == 1
+    await _drain(cog)
+    assert len(seasons.calls) == 1
+    assert cog._season_tasks == set()  # the done callback discards it
+
+
+async def test_dormant_guild_closes_the_month_its_marker_knows(fake_pool):
+    """A guild active in June and TOTALLY silent in July: its first message in
+    August must close JUNE, not the empty July that 'the month before now'
+    would name. The marker is the only witness of what actually closed."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    cog._period_markers[1] = ("W2026-26", "M2026-06")
+    august = datetime.datetime(2026, 8, 3, tzinfo=datetime.timezone.utc)
+
+    await cog.maybe_prune_expired_periods(1, august)
+    await _drain(cog)
+
+    assert [c[1] for c in seasons.calls] == ["M2026-06"]
+
+
+async def test_prune_never_eats_the_month_it_is_about_to_snapshot(fake_pool):
+    """The retention DELETE runs FIRST, so its monthly cutoff is clamped to the
+    marker's month: a guild dormant for more than PRUNE_PERIODS_BACK months
+    must not have its podium rows deleted by the very call that closes it."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    cog._period_markers[1] = ("W2026-05", "M2026-01")
+    may = datetime.datetime(2026, 5, 2, tzinfo=datetime.timezone.utc)
+
+    await cog.maybe_prune_expired_periods(1, may)
+    await _drain(cog)
+
+    deletes = _xp_period_deletes(fake_pool)
+    assert len(deletes) == 1
+    # Unclamped this would be M2026-02 and January's rows would be gone.
+    assert deletes[0][2][2] == "M2026-01"
+    assert [c[1] for c in seasons.calls] == ["M2026-01"]
+
+
+async def test_prune_cutoff_is_unclamped_when_no_season_rolled(fake_pool):
+    """The clamp is only ever for a month awaiting its snapshot: a week-only
+    rollover must keep the full retention cutoff."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    now = datetime.datetime(2026, 7, 20, tzinfo=datetime.timezone.utc)
+    _week_key, month_key = leveling.current_period_keys(now)
+    cog._period_markers[1] = ("W2026-29", month_key)
+
+    await cog.maybe_prune_expired_periods(1, now)
+
+    deletes = _xp_period_deletes(fake_pool)
+    assert deletes[0][2][2] == leveling.monthly_prune_cutoff_key(now)
+
+
+async def test_week_only_rollover_does_not_close_a_season(fake_pool):
+    """A week rolls several times a month; only the MONTH component closing
+    may dispatch a season."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    # Seed the marker by hand with the same month but the previous ISO week,
+    # so exactly one component moves.
+    now = datetime.datetime(2026, 7, 20, tzinfo=datetime.timezone.utc)
+    week_key, month_key = leveling.current_period_keys(now)
+    cog._period_markers[1] = ("W2026-29", month_key)
+
+    await cog.maybe_prune_expired_periods(1, now)
+
+    assert len(_xp_period_deletes(fake_pool)) == 1  # the prune still fired
+    assert seasons.calls == []  # ...but no season closed
+
+
+async def test_second_grant_in_the_same_month_never_re_dispatches(fake_pool):
+    fake_pool.fetchval_return = 11000
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    _enable(cog, 1, cooldown_seconds=0)
+
+    await cog.on_message(_FakeMessage(content="one", guild_id=1, author_id=2))
+    await cog.on_message(_FakeMessage(content="two", guild_id=1, author_id=3))
+    await _drain(cog)
+
+    assert len(seasons.calls) == 1  # only the first grant of the month
+
+
+async def test_unchanged_marker_never_reaches_the_seasons_cog(fake_pool):
+    """The hot path's guarantee: with nothing rolled over, the marker test
+    short-circuits BEFORE any await - no cog lookup, no DB, no dispatch."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    now = discord.utils.utcnow()
+    await cog.maybe_prune_expired_periods(1, now)
+    await _drain(cog)
+    fake_pool.calls.clear()
+    seasons.calls.clear()
+
+    await cog.maybe_prune_expired_periods(1, now)
+
+    assert fake_pool.calls == []
+    assert seasons.calls == []
+    assert cog._season_tasks == set()  # nothing was even scheduled
+
+
+async def test_season_dispatch_failure_never_breaks_the_grant(fake_pool):
+    fake_pool.fetchval_return = 11000
+    seasons = _FakeSeasonsCog(raises=RuntimeError("seasons down"))
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+    _enable(cog, 1)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))  # must not raise
+    await _drain(cog)  # the task swallows it too, into the log
+
+    assert len(_fetchval_calls(fake_pool)) == 1  # the XP write still landed
+    assert len(seasons.calls) == 1
+
+
+async def test_cog_unload_cancels_an_in_flight_rollover(fake_pool):
+    """A snapshot task outliving its cog would keep a stale cog alive and could
+    announce after a reload replaced it."""
+    seasons = _FakeSeasonsCog()
+    cog = Leveling(_make_season_bot(fake_pool, seasons))
+
+    await cog.maybe_prune_expired_periods(1, discord.utils.utcnow())
+    tasks = list(cog._season_tasks)
+    cog.cog_unload()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    assert all(t.cancelled() for t in tasks)
+    assert seasons.calls == []
+
+
+async def test_missing_seasons_cog_is_a_noop(fake_pool):
+    """A bot without the Seasons extension loaded pays one dict read: the cog
+    lookup comes FIRST, so this bot's missing get_guild is never touched."""
+    cog = Leveling(_make_bot(fake_pool))  # get_cog returns None, no get_guild
+
+    await cog.maybe_prune_expired_periods(1, discord.utils.utcnow())
+
+    assert len(_xp_period_deletes(fake_pool)) == 1
+
+
+async def test_uncached_guild_is_skipped_without_calling_the_engine(fake_pool):
+    seasons = _FakeSeasonsCog()
+    bot = _make_season_bot(fake_pool, seasons, guild_id=1)
+    cog = Leveling(bot)
+
+    await cog.maybe_prune_expired_periods(999, discord.utils.utcnow())  # not cached
+
+    assert seasons.calls == []
 
 
 # ---------------------------------------------------------------------------

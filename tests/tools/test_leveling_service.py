@@ -966,6 +966,125 @@ def test_period_marker_changed_month_rollover_is_stale():
 
 
 # ---------------------------------------------------------------------------
+# Leveling seasons (S1): a season IS a calendar month of the monthly rollup.
+# These pin the pure decisions the engine (cogs/community/seasons.py) leans on:
+# which month just closed, whether a marker's MONTH component moved, how a
+# period key reads to a human, and where a guild-wide announce may land.
+# ---------------------------------------------------------------------------
+
+
+def test_season_podium_size_is_three():
+    assert leveling.SEASON_PODIUM_SIZE == 3
+
+
+def test_the_month_before_now_crosses_the_year_boundary():
+    """The calendar-month walk-back every season/prune cutoff shares: January
+    2026 follows DECEMBER 2025, never month 0."""
+    assert leveling.monthly_prune_cutoff_key(_dt(2026, 1, 9), periods_back=1) == (
+        "M2025-12"
+    )
+    assert leveling.monthly_prune_cutoff_key(_dt(2026, 7, 4), periods_back=1) == (
+        "M2026-06"
+    )
+
+
+def test_month_rolled_over_cold_marker_counts_as_rolled():
+    assert leveling.month_rolled_over(None, ("W2026-28", "M2026-07")) is True
+
+
+def test_month_rolled_over_is_false_when_only_the_week_moved():
+    """A week rollover fires the marker path several times a month; it must
+    NOT close a season."""
+    assert (
+        leveling.month_rolled_over(
+            ("W2026-28", "M2026-07"), ("W2026-29", "M2026-07")
+        )
+        is False
+    )
+
+
+def test_month_rolled_over_is_true_when_the_month_moved():
+    assert (
+        leveling.month_rolled_over(
+            ("W2026-31", "M2026-07"), ("W2026-31", "M2026-08")
+        )
+        is True
+    )
+
+
+def test_month_rolled_over_is_false_for_an_identical_marker():
+    current = ("W2026-28", "M2026-07")
+    assert leveling.month_rolled_over(current, current) is False
+
+
+def test_season_rollover_period_key_uses_the_marker_month():
+    """The month the marker names is the one that actually closed - even when
+    it is NOT the month before now. A guild active in June and totally silent
+    in July closes JUNE on its first August message, not the empty July."""
+    assert (
+        leveling.season_rollover_period_key(("W2026-26", "M2026-06")) == "M2026-06"
+    )
+
+
+def test_season_rollover_period_key_is_none_on_a_cold_marker():
+    """A marker that was never set (restart, LRU eviction) knows nothing, and
+    must NOT guess "the month before now" - that is the very answer that skips
+    a dormant guild's podium. None means "ask the data"."""
+    assert leveling.season_rollover_period_key(None) is None
+
+
+def test_season_rollover_period_key_is_the_previous_month_in_the_normal_case():
+    """The overwhelmingly common shape: the marker holds LAST month."""
+    assert (
+        leveling.season_rollover_period_key(("W2026-31", "M2026-07")) == "M2026-07"
+    )
+
+
+def test_monthly_prune_cutoff_key_is_clamped_to_a_month_awaiting_its_snapshot():
+    """The retention DELETE runs BEFORE the season snapshot, so it must never
+    drop the very rows that snapshot is about to read."""
+    now = _dt(2026, 5, 2)
+    assert leveling.monthly_prune_cutoff_key(now) == "M2026-02"
+    assert (
+        leveling.monthly_prune_cutoff_key(now, keep_month="M2026-01") == "M2026-01"
+    )
+
+
+def test_monthly_prune_cutoff_key_clamp_never_raises_the_cutoff():
+    """A recent keep_month is already inside retention: the clamp only ever
+    lowers the cutoff, so it can never make the prune keep LESS."""
+    now = _dt(2026, 5, 2)
+    assert leveling.monthly_prune_cutoff_key(now, keep_month="M2026-04") == "M2026-02"
+    assert leveling.monthly_prune_cutoff_key(now, keep_month=None) == "M2026-02"
+
+
+def test_format_month_period_label_strips_the_kind_prefix():
+    assert leveling.format_month_period_label("M2026-07") == "2026-07"
+
+
+def test_format_month_period_label_passes_anything_else_through():
+    assert leveling.format_month_period_label("W2026-28") == "W2026-28"
+    assert leveling.format_month_period_label(None) is None
+
+
+def test_resolve_season_announce_channel_uses_a_fixed_channel():
+    assert leveling.resolve_season_announce_channel("fixed", 500) == 500
+
+
+def test_resolve_season_announce_channel_off_mode_silences_seasons():
+    assert leveling.resolve_season_announce_channel("off", 500) is None
+
+
+def test_resolve_season_announce_channel_needs_a_configured_channel():
+    """A season announce is guild-wide: there is no origin channel and no
+    single member to DM, so every mode but a fixed channel yields nothing."""
+    for mode in ("channel", "dm", "fixed", "bogus"):
+        assert leveling.resolve_season_announce_channel(mode, None) is None
+    assert leveling.resolve_season_announce_channel("dm", 500) is None
+    assert leveling.resolve_season_announce_channel("channel", 500) is None
+
+
+# ---------------------------------------------------------------------------
 # level_down_between truth table (leveling L5 - the admin XP tools' mirror of
 # level_up_between; only an explicit admin action ever removes XP).
 # ---------------------------------------------------------------------------

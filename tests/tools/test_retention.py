@@ -1,7 +1,95 @@
 import datetime
+import os
+import re
 import types
 
 from tools import retention
+
+# ---------------------------------------------------------------------------
+# Structural guard: schema.sql is the source of truth for "what is guild data"
+# ---------------------------------------------------------------------------
+#
+# The house lesson, encoded: a new guild-scoped table is added to schema.sql by
+# one lot and forgotten by the purge list in ANOTHER file (season_podiums did
+# exactly that). Reviewing every future table by hand is not a control, so the
+# test below derives the expectation from the schema itself - every table with
+# a guild_id column must be purged, or be on the short exemption list here with
+# a justification that was verified in the code.
+
+_SCHEMA_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "schema.sql"
+)
+
+# Tables that carry a guild_id and are DELIBERATELY not in GUILD_DELETE_QUERIES.
+# Adding an entry here is a claim about the code, so each one names where it was
+# checked. Keep this list tiny: "it is not really guild data" is almost never
+# true of a column literally named guild_id.
+_PURGE_EXEMPT_TABLES = {
+    # The purge JOB row itself, not guild content. purge_claimed_guild locks it
+    # FOR UPDATE and deletes it explicitly at the END of the same transaction
+    # (tools/retention.py), after the loop that deletes what it authorises;
+    # inside the loop it would delete the very row being held.
+    "guild_retention_jobs",
+    # Ephemeral cache of LIVE AniList coalescing cards (message ids of a card
+    # still being edited in place), not stored guild data - and self-expiring:
+    # cogs/anilist/feed.py's _prune_coalesce_posts deletes every row whose last
+    # edit is older than AGE_CAP + PRUNE_GRACE, i.e. hours, far inside the
+    # 30-day purge grace. A departed guild's rows are long gone before the
+    # purge job even becomes due.
+    "anilist_feed_posts",
+}
+
+
+def _guild_scoped_tables():
+    """Every table in schema.sql that has a ``guild_id`` column.
+
+    Deliberately a small, dumb parser over the DDL rather than a live DB
+    introspection: this must run in the offline suite, and schema.sql IS the
+    source of truth (it is applied verbatim at startup). Comments are stripped
+    first, then both ways a column can appear are collected - inside a CREATE
+    TABLE body and via a later ADD COLUMN migration.
+    """
+    with open(_SCHEMA_PATH, encoding="utf-8") as handle:
+        ddl = re.sub(r"--[^\n]*", "", handle.read())
+
+    tables = set()
+    for match in re.finditer(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\n\s*\)\s*;",
+        ddl,
+        re.S | re.I,
+    ):
+        if re.search(r"^\s*guild_id\b", match.group(2), re.M | re.I):
+            tables.add(match.group(1))
+    for match in re.finditer(
+        r"ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?guild_id\b",
+        ddl,
+        re.I,
+    ):
+        tables.add(match.group(1))
+    return tables
+
+
+def test_every_guild_scoped_table_is_purged_or_explicitly_exempt():
+    tables = _guild_scoped_tables()
+    # Sanity-check the parser itself before trusting its verdict: if it stopped
+    # seeing tables, "nothing is missing" would be a false pass.
+    assert {"levels", "xp_period", "season_podiums", "cases"} <= tables
+    assert len(tables) > 25
+
+    purged = {table for table, _query in retention.GUILD_DELETE_QUERIES}
+    assert sorted(tables - purged - _PURGE_EXEMPT_TABLES) == []
+
+
+def test_purge_exemptions_still_name_real_guild_scoped_tables():
+    """A dropped or renamed table must not leave a silent exemption behind."""
+    assert _PURGE_EXEMPT_TABLES <= _guild_scoped_tables()
+
+
+def test_guild_purge_covers_the_season_podiums():
+    """Season podiums are the one leveling artefact that outlives the xp_period
+    prune, so a departed guild's are the one thing retention could forget."""
+    assert "season_podiums" in dict(retention.GUILD_DELETE_QUERIES)
+    assert "FROM season_podiums" in retention.STORED_GUILD_IDS_QUERY
 
 
 class _Context:

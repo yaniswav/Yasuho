@@ -59,6 +59,7 @@ GUILD_DELETE_QUERIES = (
     ("level_rewards", "DELETE FROM level_rewards WHERE guild_id = $1"),
     ("level_no_xp", "DELETE FROM level_no_xp WHERE guild_id = $1"),
     ("xp_period", "DELETE FROM xp_period WHERE guild_id = $1"),
+    ("season_podiums", "DELETE FROM season_podiums WHERE guild_id = $1"),
     ("welcome", "DELETE FROM welcome WHERE guild_id = $1"),
     (
         "reaction_roles",
@@ -86,6 +87,13 @@ GUILD_DELETE_QUERIES = (
     ),
     ("role_menus", "DELETE FROM role_menus WHERE guild_id = $1"),
     (
+        # The dashboard -> bot action queue. Rows are terminal audit records
+        # (kind, payload, the requesting user's id) that nothing else ever
+        # deletes, so without this they would outlive the guild for good.
+        "dashboard_actions",
+        "DELETE FROM dashboard_actions WHERE guild_id = $1",
+    ),
+    (
         # Reminders are user-owned even when created in a guild. A departed
         # guild must not collaterally delete a member's pending reminders; any
         # that are genuinely undeliverable die naturally at fire time via the
@@ -112,6 +120,7 @@ UNION SELECT guild_id FROM xp_multipliers
 UNION SELECT guild_id FROM level_rewards
 UNION SELECT guild_id FROM level_no_xp
 UNION SELECT guild_id FROM xp_period
+UNION SELECT guild_id FROM season_podiums
 UNION SELECT guild_id FROM starboard
 UNION SELECT guild_id FROM starboard_entries
 UNION SELECT guild_id FROM welcome
@@ -128,6 +137,7 @@ UNION SELECT guild_id FROM role_menus
 UNION SELECT guild_id FROM anilist_feeds
 UNION SELECT guild_id FROM anilist_follows
 UNION SELECT guild_id FROM anilist_channel_subs
+UNION SELECT guild_id FROM dashboard_actions
 UNION
 SELECT (extra->>'guild_id')::bigint FROM timers
 WHERE extra->>'guild_id' ~ '^[0-9]+$'

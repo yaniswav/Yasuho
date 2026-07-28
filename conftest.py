@@ -156,12 +156,31 @@ class Record(dict):
     """
 
 
+class _FakeAsyncContext:
+    """``async with`` wrapper yielding a fixed value (pool / connection)."""
+
+    def __init__(self, value):
+        self._value = value
+
+    async def __aenter__(self):
+        return self._value
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        return False
+
+
 class FakePool:
     """In-memory asyncpg pool stand-in.
 
     Every ``execute``/``fetch``/``fetchrow``/``fetchval`` call is appended to
     ``.calls`` as ``(method, query, args)`` for assertions. Return values are
     configurable per instance via the ``*_return`` attributes.
+
+    The pool is ALSO its own connection: ``acquire()`` and ``transaction()``
+    are async context managers yielding this same object, so code that wraps a
+    multi-statement write in ``async with pool.acquire() as conn: async with
+    conn.transaction():`` records into the very same ``.calls`` list as a plain
+    pool call. Assertions therefore do not care which shape the caller used.
     """
 
     def __init__(self):
@@ -186,6 +205,12 @@ class FakePool:
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
         return self.fetchval_return
+
+    def acquire(self):
+        return _FakeAsyncContext(self)
+
+    def transaction(self):
+        return _FakeAsyncContext(self)
 
 
 @pytest.fixture
