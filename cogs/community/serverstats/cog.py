@@ -25,9 +25,10 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import discord
 from discord.ext import commands, tasks
 
-from . import buffer, queries
+from . import buffer, queries, rollups, views
 
 log = logging.getLogger(__name__)
 
@@ -285,3 +286,78 @@ class ServerStats(commands.Cog):
                 deleted_days,
                 cutoff,
             )
+
+    # ------------------------------------------------------------------
+    # ST3: /serverstats - a PUBLIC read of the aggregates above (no
+    # manage_guild gate: this is a guild-wide statistic, not a moderation
+    # tool, and nothing it shows is per-member). The card (views.py) owns
+    # every rendering decision; this command only gathers the reads.
+    # ------------------------------------------------------------------
+    @commands.hybrid_command(name="serverstats")
+    @commands.guild_only()
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def serverstats(self, ctx):
+        """Show this server's activity and growth statistics."""
+        await self.cmd_serverstats(ctx)
+
+    async def cmd_serverstats(self, ctx):
+        """The ``/serverstats`` body - gathers every read the card needs, then
+        hands them to :class:`~.views.ServerStatsCard`. A read-only aggregate
+        query can run comfortably under the 3s slash budget, but the command
+        still defers first (house discipline, and cheap insurance against a
+        slow connection pool)."""
+        await ctx.defer()
+        pool = self.bot.db_pool
+        guild = ctx.guild
+
+        since = await rollups.data_since(pool, guild.id)
+        overview = await rollups.overview(
+            pool, guild.id, days=rollups.DEFAULT_OVERVIEW_DAYS, since=since
+        )
+        top_channels = await rollups.top_channels(
+            pool,
+            guild.id,
+            days=rollups.DEFAULT_OVERVIEW_DAYS,
+            limit=views.TOP_CHANNELS_LIMIT,
+        )
+        growth = await rollups.growth(
+            pool, guild.id, days=rollups.DEFAULT_SERIES_DAYS
+        )
+        # watched_days is threaded straight from growth: same window, so this
+        # is the free reuse rollups.activity_series documents - zero extra
+        # query for the honesty check that tells a silent day from a blind one.
+        activity = await rollups.activity_series(
+            pool,
+            guild.id,
+            days=rollups.DEFAULT_SERIES_DAYS,
+            since=since,
+            watched_days=growth.watched_days,
+        )
+        leveling_cog = self.bot.get_cog("Leveling")
+        leveling_enabled = bool(leveling_cog and leveling_cog.is_enabled(guild.id))
+        retention_report = await rollups.retention(
+            pool,
+            guild.id,
+            weeks=rollups.DEFAULT_RETENTION_WEEKS,
+            leveling=leveling_enabled,
+            since=since,
+        )
+
+        view = views.ServerStatsCard(
+            pool,
+            guild,
+            # The invoking MEMBER (guild_only, so ctx.author always is one):
+            # the card cuts the top-channels ranking to this member's own
+            # channel visibility, and a Member re-resolved from the partial
+            # member cache would be None. Never guild.get_member here.
+            ctx.author,
+            since,
+            overview,
+            top_channels,
+            growth,
+            activity,
+            retention_report,
+        )
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )

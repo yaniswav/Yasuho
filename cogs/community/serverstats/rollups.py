@@ -16,8 +16,11 @@ Two rules shape every function below.
    yesterday, because a window holding three hours of today against a full
    previous window swings the headline delta from deeply negative at 00:00 to
    zero at 23:59 without a single message changing. The SERIES reads (growth,
-   activity) do keep today - a curve is read as a curve, its last point is
-   visibly the day in progress, and nothing is divided by it.
+   activity) do keep today - a curve is read as a curve and nothing is divided
+   by it. Its last point IS the day in progress, and nothing about the point
+   itself says so (a partial day is just a smaller number), so the card is
+   required to label that last bar in words - see views.py's
+   ``_last_bar_note``.
 2. NO MEMBER CACHE, EVER. The bot runs with ``chunk_guilds_at_startup=False``,
    so ``guild.members`` is a partial, arbitrary subset. No statistic here may be
    derived from it. Member counts come from the daily ``member_count`` snapshot,
