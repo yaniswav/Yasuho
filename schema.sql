@@ -290,6 +290,41 @@ CREATE TABLE IF NOT EXISTS season_podiums (
     PRIMARY KEY (guild_id, period_key, rank)
 );
 
+-- Per-guild look of the /rank card: an optional background image and an optional
+-- accent colour. One row per guild, created only when a guild customises the
+-- card - no row means the stock card, which renders byte-for-byte as it did
+-- before this table existed.
+-- ``background`` is ALWAYS a bot-normalised WebP: tools/rank_card.py decodes the
+-- uploaded PNG/JPEG/WebP, cover-crops it to the card's EXACT pixel size and
+-- re-encodes it under a hard size cap, so the stored blob is bounded (512 KiB
+-- worst case) and the render never resizes a hostile image. That bound is
+-- ENFORCED here, not merely documented: the CHECK below refuses anything larger,
+-- because the dashboard is an INDEPENDENT writer (a separate Node process with
+-- its own copy of the caps) and a blob that slipped past it would be re-read on
+-- every /rank of that guild. It matches tools/rank_card.MAX_STORED_BYTES.
+-- ``background_format``
+-- records that encoding ('webp') for future-proofing, exactly as avatar_history
+-- does. ``accent`` is a packed 0xRRGGBB int (the same shape discord.Colour.value
+-- uses), NULL to keep the member-colour default.
+-- Owner: cogs/community/leveling (render seam) + tools/rank_card.py (validation
+-- and the write API). ALSO WRITTEN BY THE DASHBOARD (the separate Node process),
+-- which fires pg_notify('yasuho_dashboard', {"kind": "rank_card", ...}) after its
+-- write so cogs/system/dashboard_sync.py drops the bot's cached config.
+CREATE TABLE IF NOT EXISTS rank_cards (
+    guild_id          BIGINT      PRIMARY KEY,
+    background        BYTEA,                 -- normalised WebP, NULL = no background
+    background_format TEXT,                  -- 'webp' (NULL when no background)
+    accent            INTEGER,               -- packed 0xRRGGBB, NULL = default
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT rank_cards_accent_range CHECK (accent IS NULL OR (accent >= 0 AND accent <= 16777215)),
+    CONSTRAINT rank_cards_background_size CHECK (background IS NULL OR octet_length(background) <= 524288)
+);
+-- Migrate pre-existing installs (no-op on a fresh database):
+ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS background BYTEA;
+ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS background_format TEXT;
+ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS accent INTEGER;
+ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
     guild_id   BIGINT  PRIMARY KEY,

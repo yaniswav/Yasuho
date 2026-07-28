@@ -615,6 +615,47 @@ async def test_dispatch_locale_evicts_settings_blob():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: rank_card invalidation (drop the Leveling cog's cached card style so
+# the next /rank re-reads the row the dashboard just wrote - RC1).
+# ---------------------------------------------------------------------------
+
+
+class FakeRankCardLeveling:
+    """Stand-in exposing only the hook the invalidator uses."""
+
+    def __init__(self):
+        self.invalidated = []
+
+    def invalidate_rank_card(self, guild_id):
+        self.invalidated.append(guild_id)
+
+
+async def test_dispatch_rank_card_evicts_the_cached_style():
+    cog = FakeRankCardLeveling()
+    bot = FakeBot(SyncPool(), leveling=cog)
+
+    handled = await dashboard_sync.dispatch(bot, _payload("rank_card", 100))
+
+    assert handled == "rank_card"
+    assert cog.invalidated == [100]
+    # A style eviction is pure in-memory work: no DB round trip per notification.
+    assert not bot.db_pool.calls
+
+
+async def test_dispatch_rank_card_noop_without_cog():
+    bot = FakeBot(SyncPool())
+    handled = await dashboard_sync.dispatch(bot, _payload("rank_card", 100))
+    assert handled == "rank_card"
+
+
+async def test_dispatch_rank_card_noop_without_the_hook():
+    """An older/partial Leveling cog must not take the listener down."""
+    bot = FakeBot(SyncPool(), leveling=object())
+    handled = await dashboard_sync.dispatch(bot, _payload("rank_card", 100))
+    assert handled == "rank_card"
+
+
+# ---------------------------------------------------------------------------
 # dispatch: custom_commands invalidation (drop _cache/_uses/_cd for the guild,
 # mirroring CustomCommands.save_command/delete_command's own writes).
 # ---------------------------------------------------------------------------
@@ -789,6 +830,7 @@ def test_valid_kinds_match_invalidators():
         "starboard",
         "automod",
         "leveling",
+        "rank_card",
         "warn_escalation",
         "verify_role",
         "locale",

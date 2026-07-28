@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from tools import leveling, leveling_gate, rendering, settings
+from tools import leveling, leveling_gate, rank_card, rendering, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -56,6 +56,26 @@ _MULTIPLIER_CACHE_CAP = 2048
 # almost always stops on its exists probe. Rare and bounded, never a
 # correctness issue - the same branch every guild takes once after a restart.
 _PERIOD_MARKER_CACHE_CAP = 2048
+
+# Per-guild rank-card STYLE cache ceiling (RC1). Much smaller than its siblings
+# above on purpose: this one is not on any hot path - it is read once per /rank
+# invocation, a rare, human-paced, already-rate-limited command - so its job is
+# only to spare the DB a repeated lookup during a burst of /rank in the same
+# guild. 512 entries of (accent tuple | None, bool) is a few tens of KiB; the
+# background BYTES are deliberately NOT cached (see _rank_cards below).
+_RANK_CARD_CACHE_CAP = 512
+
+# What a guild with no rank_cards row looks like, cached verbatim so a stock
+# guild's repeat /rank calls do not re-query. Distinct from a cache MISS (which
+# BoundedLRU reports as None), hence a real tuple rather than None.
+_STOCK_RANK_CARD = (None, False)
+
+# Scrim painted over a custom background before any text is drawn. The stock
+# card's text colours were picked against the near-black panel below, so a
+# bright photo would make them unreadable; this keeps the contrast budget the
+# layout was designed for while leaving the image clearly visible.
+_BACKGROUND_SCRIM = (18, 19, 26)
+_BACKGROUND_SCRIM_ALPHA = 150
 
 # The full set of level_config columns the hot-path LevelConfig mirror is built
 # from. EVERY read that refreshes a cached config - cog_load's bulk SELECT and
@@ -288,6 +308,17 @@ class Leveling(commands.Cog):
         # and its xp_period rows are due for a lazy prune. Bounded like
         # self._no_xp / self._multipliers above (same rationale).
         self._period_markers: BoundedLRU = BoundedLRU(_PERIOD_MARKER_CACHE_CAP)
+        # Per-guild rank-card STYLE (RC1): ``(accent_rgb | None, has_background)``
+        # mirrored from the rank_cards table, or _STOCK_RANK_CARD for a guild
+        # that never customised its card. Kept live by invalidate_rank_card,
+        # which RC2's panel and cogs/system/dashboard_sync.py (kind
+        # 'rank_card') both call after a write. SCALE STORY: this caches
+        # METADATA ONLY - the background image bytes (up to ~512 KiB each) are
+        # re-read from Postgres by the render itself, so 512 cached guilds cost
+        # tens of KiB rather than a quarter of a gigabyte, and the extra
+        # primary-key lookup rides inside a render already gated by the shared
+        # 2-slot image semaphore.
+        self._rank_cards: BoundedLRU = BoundedLRU(_RANK_CARD_CACHE_CAP)
         # Strong refs to the in-flight season-rollover tasks (S1), so the event
         # loop cannot garbage-collect one mid-flight (core.py's
         # _schedule_startup_backup pattern). Self-bounding: a guild schedules at
@@ -1233,6 +1264,87 @@ class Leveling(commands.Cog):
         except Exception:
             return ImageFont.load_default()
 
+    # -- rank-card customisation (RC1) ----------------------------------
+    async def ensure_rank_card_style(self, guild_id):
+        """Return ``(accent_rgb | None, has_background)`` for a guild's card.
+
+        The cached-or-load accessor the /rank path uses, mirroring
+        ensure_no_xp_snapshot's contract: a hit is a plain BoundedLRU read (no
+        DB), a miss pays ONE primary-key lookup on rank_cards that deliberately
+        does not select the image blob (tools/rank_card.CONFIG_QUERY).
+
+        Never raises and never degrades /rank: a DB failure here logs and
+        returns the stock style WITHOUT caching it, so the card still renders
+        (in its default look) and the next call retries. That is why this is not
+        simply inlined in the command's try block - a hiccup reading an optional
+        cosmetic must not push the whole command onto its plain-embed fallback.
+        """
+        cached = self._rank_cards.get(guild_id)
+        if cached is not None:
+            return cached
+        try:
+            row = await rank_card.fetch_config(self.bot.db_pool, guild_id)
+        except Exception:
+            log.exception("Failed to read rank card config for guild %s", guild_id)
+            return _STOCK_RANK_CARD
+        style = (
+            _STOCK_RANK_CARD
+            if row is None
+            else (
+                rank_card.accent_to_rgb(row["accent"]),
+                bool(row["has_background"]),
+            )
+        )
+        self._rank_cards[guild_id] = style
+        return style
+
+    def invalidate_rank_card(self, guild_id):
+        """Drop a guild's cached card style so the next /rank re-reads it.
+
+        A plain eviction rather than the eager re-read the other dashboard
+        invalidators do: /rank is rare and human-paced, so paying the lookup on
+        the next actual render is strictly cheaper than paying it on every
+        notification - and it also covers a background-bytes-only change, which
+        no cached metadata would reflect anyway. Called by RC2's panel after a
+        bot-side write and by cogs/system/dashboard_sync.py (kind 'rank_card')
+        after a dashboard one.
+        """
+        self._rank_cards.discard(guild_id)
+
+    @staticmethod
+    def _paint_background(card, data):
+        """Paint a stored background under the card, returning success.
+
+        The blob is written by tools/rank_card.validate_and_downscale, so it is
+        already a card-sized WebP; the defensive resize only covers a blob
+        stored before a future card resize. A corrupt or undecodable row is
+        logged and reported as a failure so the caller falls back to the stock
+        panel - a broken background must never cost a member their /rank.
+        """
+        width, height = rank_card.CARD_SIZE
+        try:
+            with Image.open(io.BytesIO(data)) as source:
+                source.load()
+                image = source.convert("RGB")
+            if image.size != rank_card.CARD_SIZE:
+                image = image.resize(rank_card.CARD_SIZE, Image.Resampling.LANCZOS)
+        except Exception:
+            log.warning("Unusable stored rank card background", exc_info=True)
+            return False
+        # Rounded mask so the background respects the card's corners exactly as
+        # the stock panel does.
+        mask = Image.new("L", (width, height), 0)
+        ImageDraw.Draw(mask).rounded_rectangle(
+            (0, 0, width - 1, height - 1), radius=rank_card.CARD_RADIUS, fill=255
+        )
+        card.paste(image, (0, 0), mask)
+        card.paste(
+            Image.new("RGB", (width, height), _BACKGROUND_SCRIM),
+            (0, 0),
+            mask.point(lambda value: value * _BACKGROUND_SCRIM_ALPHA // 255),
+        )
+        return True
+
     @classmethod
     def _render_rank_card(
         cls,
@@ -1244,16 +1356,36 @@ class Leveling(commands.Cog):
         cur_threshold,
         next_threshold,
         accent,
+        background=None,
     ):
-        """Blocking Pillow render of a member's rank card. Returns a BytesIO PNG."""
-        width, height = 880, 240
+        """Blocking Pillow render of a member's rank card. Returns a BytesIO PNG.
+
+        ``accent`` is the (r, g, b) the ring, the LEVEL label and the progress
+        bar are drawn in - the member's colour by default, the guild's
+        configured accent when it set one (RC1). ``background`` is the guild's
+        stored background WebP, or None for the stock card. When it is None NOT
+        A SINGLE drawing call below changes, so the default card stays
+        byte-for-byte what it was before RC1 (guarded by a hash test).
+
+        DECIDED: the accent does NOT recolour the display name. It is drawn on
+        the dark panel at a fixed high-contrast light tone, and a guild is free
+        to pick a near-black accent; tying the name to it would let one setting
+        make the card's most important text unreadable. Accent-coloured surfaces
+        are the ones that stay legible at any hue: the avatar ring, the LEVEL
+        label and the bar fill.
+        """
+        width, height = rank_card.CARD_SIZE
         card = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(card)
 
-        # Rounded dark panel.
-        draw.rounded_rectangle(
-            (0, 0, width - 1, height - 1), radius=30, fill=(28, 30, 38, 255)
-        )
+        # Rounded dark panel (or the guild's background under a contrast scrim,
+        # falling back to the panel if the stored blob cannot be decoded).
+        if background is None or not cls._paint_background(card, background):
+            draw.rounded_rectangle(
+                (0, 0, width - 1, height - 1),
+                radius=rank_card.CARD_RADIUS,
+                fill=(28, 30, 38, 255),
+            )
 
         # Circular avatar with an accent ring on the left.
         av_size = 150
@@ -1376,6 +1508,27 @@ class Leveling(commands.Cog):
                     if member.colour.value
                     else (88, 101, 242)
                 )
+                # Per-guild look (RC1). A configured accent is the guild's card
+                # branding and therefore outranks the member's role colour; the
+                # background bytes are fetched only when the cached style says
+                # there is one, and a row that vanished meanwhile just renders
+                # the stock panel.
+                guild_accent, has_background = await self.ensure_rank_card_style(
+                    ctx.guild.id
+                )
+                if guild_accent is not None:
+                    accent = guild_accent
+                background = None
+                if has_background:
+                    try:
+                        background = await rank_card.fetch_background(
+                            self.bot.db_pool, ctx.guild.id
+                        )
+                    except Exception:
+                        log.exception(
+                            "Failed to read rank card background for guild %s",
+                            ctx.guild.id,
+                        )
 
                 def _render():
                     return self._render_rank_card(
@@ -1387,6 +1540,7 @@ class Leveling(commands.Cog):
                         cur_threshold,
                         next_threshold,
                         accent,
+                        background,
                     )
 
                 buf = await rendering.run_image_job(self.bot, _render)

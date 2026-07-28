@@ -60,6 +60,7 @@ GUILD_DELETE_QUERIES = (
     ("level_no_xp", "DELETE FROM level_no_xp WHERE guild_id = $1"),
     ("xp_period", "DELETE FROM xp_period WHERE guild_id = $1"),
     ("season_podiums", "DELETE FROM season_podiums WHERE guild_id = $1"),
+    ("rank_cards", "DELETE FROM rank_cards WHERE guild_id = $1"),
     ("welcome", "DELETE FROM welcome WHERE guild_id = $1"),
     (
         "reaction_roles",
@@ -132,6 +133,7 @@ UNION SELECT guild_id FROM level_rewards
 UNION SELECT guild_id FROM level_no_xp
 UNION SELECT guild_id FROM xp_period
 UNION SELECT guild_id FROM season_podiums
+UNION SELECT guild_id FROM rank_cards
 UNION SELECT guild_id FROM starboard
 UNION SELECT guild_id FROM starboard_entries
 UNION SELECT guild_id FROM welcome

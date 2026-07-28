@@ -7,15 +7,16 @@ into the SAME Postgres database, then emits::
 
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
-leveling | warn_escalation | verify_role | locale | custom_commands | twitch |
-autorooms``. The bot mirrors those settings in memory (``bot.prefixes`` /
+leveling | rank_card | warn_escalation | verify_role | locale | custom_commands |
+twitch | autorooms``. The bot mirrors those settings in memory (``bot.prefixes`` /
 ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
 ``tools.settings`` LRU for the welcome + automod + modlog_events +
 warn_escalation + verify_role + locale + twitch + autorooms JSONB blobs, the
 Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings`` cache for its
 boolean toggle table, the Leveling cog's three caches - ``_configs``
 (level_config scalar knobs), ``_no_xp`` (level_no_xp snapshot) and
-``_multipliers`` (xp_multipliers + level_config event columns) -, the
+``_multipliers`` (xp_multipliers + level_config event columns) - plus its
+``_rank_cards`` rank-card style cache, the
 CustomCommands cog's ``_cache``/``_uses``/``_cd`` (per-guild command map, usage
 counts and per-command cooldown clocks) and the TemporaryRooms cog's
 ``_hub_index`` (the join-to-create lookup the voice event consults)), so without
@@ -86,6 +87,7 @@ VALID_KINDS = frozenset(
         "starboard",
         "automod",
         "leveling",
+        "rank_card",
         "warn_escalation",
         "verify_role",
         "locale",
@@ -375,6 +377,31 @@ async def _invalidate_leveling(bot, gid):
             await refresh(gid)
 
 
+async def _invalidate_rank_card(bot, gid):
+    """Drop the Leveling cog's cached rank-card style for one guild.
+
+    The dashboard writes the ``rank_cards`` row directly (background blob and/or
+    accent) using the SAME statements ``tools/rank_card.py`` exposes, then
+    notifies with this kind. The Leveling cog serves that row from its
+    ``_rank_cards`` BoundedLRU (``cogs/community/leveling.py``), so without this
+    a guild that just uploaded a background would keep getting the stock card
+    until the entry aged out under cache pressure - possibly never.
+
+    A plain eviction through the cog's own ``invalidate_rank_card`` hook, NOT
+    the eager re-read the leveling/starboard invalidators do: /rank is a rare,
+    human-paced command, so the lookup is cheaper paid on the next actual render
+    than on every notification - and a background-BYTES-only change does not
+    move any cached metadata anyway, which only a re-read on render can see. No
+    Leveling cog loaded, or a missing hook, is a safe no-op.
+    """
+    cog = bot.get_cog("Leveling")
+    if cog is None:
+        return
+    invalidate = getattr(cog, "invalidate_rank_card", None)
+    if callable(invalidate):
+        invalidate(gid)
+
+
 async def _invalidate_custom_commands(bot, gid):
     """Drop the CustomCommands cog's per-guild caches, mirroring its own writes.
 
@@ -447,6 +474,7 @@ _INVALIDATORS = {
     "starboard": _invalidate_starboard,
     "automod": _invalidate_automod,
     "leveling": _invalidate_leveling,
+    "rank_card": _invalidate_rank_card,
     "warn_escalation": _invalidate_warn_escalation,
     "verify_role": _invalidate_verify_role,
     "locale": _invalidate_locale,
