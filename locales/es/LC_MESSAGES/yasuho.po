@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 21:36+0000\n"
+"POT-Creation-Date: 2026-07-28 23:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -588,11 +588,12 @@ msgid "No matching titles of that type."
 msgstr "No hay títulos coincidentes de ese tipo."
 
 #: cogs/anilist/components.py:457 cogs/anilist/components.py:461
-#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:275
-#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:105
-#: cogs/config/announcements.py:298 cogs/config/rolemenus.py:583
-#: cogs/config/welcome.py:108 cogs/config/welcome.py:263
-#: cogs/config/welcome.py:517
+#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:722
+#: cogs/community/level_config_ui.py:801 cogs/community/level_rewards.py:105
+#: cogs/community/seasons_views.py:214 cogs/community/seasons_views.py:236
+#: cogs/community/serverstats/views.py:476 cogs/config/announcements.py:298
+#: cogs/config/rolemenus.py:583 cogs/config/welcome.py:108
+#: cogs/config/welcome.py:263 cogs/config/welcome.py:517
 msgid "Something went wrong."
 msgstr "Algo salió mal."
 
@@ -962,7 +963,7 @@ msgstr "Se quitó el feed de AniList en {channel}."
 msgid "Unknown title"
 msgstr "Título desconocido"
 
-#: cogs/anilist/feed_delivery.py:279
+#: cogs/anilist/feed_delivery.py:279 cogs/community/level_config_ui.py:631
 msgid "You are clicking too fast - give it a moment."
 msgstr "Estás haciendo clic demasiado rápido - espera un momento."
 
@@ -1236,7 +1237,7 @@ msgstr "Título a buscar"
 msgid "Stop tracking a title..."
 msgstr "Dejar de seguir un título..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:213
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:233
 #: cogs/community/reminders.py:340 cogs/community/seasons_views.py:170
 #: cogs/music/views.py:1310
 msgid "Next"
@@ -1633,7 +1634,7 @@ msgstr "Nivel {old} -> **{new}**"
 msgid "Level down"
 msgstr "Bajada de nivel"
 
-#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1402
+#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1621
 #: cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "Nivel"
@@ -1695,159 +1696,270 @@ msgstr ""
 "\n"
 "Pulsa el botón de abajo y escribe el nombre del servidor para confirmar."
 
-#: cogs/community/level_config_ui.py:63
+#: cogs/community/level_config_ui.py:64
 msgid "The message can't be empty."
 msgstr "El mensaje no puede estar vacío."
 
-#: cogs/community/level_config_ui.py:65
+#: cogs/community/level_config_ui.py:66
 #, python-brace-format
 msgid "That message has a stray '{' or '}' - check the placeholders."
 msgstr "Ese mensaje tiene un '{' o '}' suelto - revisa los marcadores."
 
-#: cogs/community/level_config_ui.py:68
+#: cogs/community/level_config_ui.py:69
 #, python-brace-format
 msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
 msgstr "Solo se permiten estos marcadores: {user}, {level}, {guild}."
 
-#: cogs/community/level_config_ui.py:75
+#: cogs/community/level_config_ui.py:76
 #, python-brace-format
 msgid "The message is too long (max {max} characters)."
 msgstr "El mensaje es demasiado largo (máx. {max} caracteres)."
 
-#: cogs/community/level_config_ui.py:84
+#: cogs/community/level_config_ui.py:85
 msgid "Off - level-ups are never announced."
 msgstr "Off - las subidas de nivel nunca se anuncian."
 
-#: cogs/community/level_config_ui.py:86
+#: cogs/community/level_config_ui.py:87
 msgid "DM - the member is messaged directly."
 msgstr "MD - el miembro recibe un mensaje directo."
 
-#: cogs/community/level_config_ui.py:89
+#: cogs/community/level_config_ui.py:90
 #, python-brace-format
 msgid "Fixed channel: <#{channel_id}>"
 msgstr "Canal fijo: <#{channel_id}>"
 
-#: cogs/community/level_config_ui.py:93
+#: cogs/community/level_config_ui.py:94
 msgid "Fixed channel (none set yet - falls back to the message's own channel)."
 msgstr "Canal fijo (ninguno definido - se usa el canal del mensaje)."
 
-#: cogs/community/level_config_ui.py:96
+#: cogs/community/level_config_ui.py:97
 msgid "Channel - announced where the message was sent."
 msgstr "Canal - se anuncia donde se envió el mensaje."
 
-#: cogs/community/level_config_ui.py:101
+#: cogs/community/level_config_ui.py:102
 #, python-brace-format
 msgid "Custom: \"{template}\""
 msgstr "Personalizado: \"{template}\""
 
-#: cogs/community/level_config_ui.py:102
+#: cogs/community/level_config_ui.py:103
 #, python-brace-format
 msgid "Default: \"{template}\""
 msgstr "Predeterminado: \"{template}\""
 
-#: cogs/community/level_config_ui.py:110
+#: cogs/community/level_config_ui.py:111
 #, python-brace-format
 msgid "On - {rate} XP per eligible minute in voice."
 msgstr "On - {rate} XP por minuto elegible en voz."
 
-#: cogs/community/level_config_ui.py:113
+#: cogs/community/level_config_ui.py:114
 msgid "Off - no XP for time spent in voice."
 msgstr "Off - sin XP por el tiempo en voz."
 
-#: cogs/community/level_config_ui.py:122
+#: cogs/community/level_config_ui.py:123
 msgid "The multiplier must be a plain number."
 msgstr "El multiplicador debe ser un número simple."
 
-#: cogs/community/level_config_ui.py:129
+#: cogs/community/level_config_ui.py:130
 #, python-brace-format
 msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
 msgstr "El multiplicador debe estar entre {min} y {max} (0 silencia el XP por completo)."
 
-#: cogs/community/level_config_ui.py:144
+#: cogs/community/level_config_ui.py:145
 #, python-brace-format
 msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
 msgstr "El evento debe durar entre 1 minuto y {max_days} días (p. ej. \"2h\" o \"3d\")."
 
-#: cogs/community/level_config_ui.py:148
+#: cogs/community/level_config_ui.py:149
 msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
 msgstr "No entendí esa duración - prueba con \"2h\" o \"3d\"."
 
-#: cogs/community/level_config_ui.py:162
+#: cogs/community/level_config_ui.py:163
 #, python-brace-format
 msgid "Server-wide: **{factor}x**"
 msgstr "Todo el servidor: **x{factor}**"
 
-#: cogs/community/level_config_ui.py:168 cogs/community/level_config_ui.py:174
-#: cogs/community/level_config_ui.py:384 cogs/community/level_config_ui.py:390
+#: cogs/community/level_config_ui.py:169 cogs/community/level_config_ui.py:175
+#: cogs/community/level_config_ui.py:831 cogs/community/level_config_ui.py:837
 #: cogs/config/verification.py:105
 msgid "(deleted)"
 msgstr "(eliminado)"
 
-#: cogs/community/level_config_ui.py:195
+#: cogs/community/level_config_ui.py:196
 msgid "No XP event running. Use `/levelconfig event set` to start one."
 msgstr "No hay ningún evento de XP en curso. Usa `/levelconfig event set` para iniciar uno."
 
-#: cogs/community/level_config_ui.py:196
+#: cogs/community/level_config_ui.py:197
 #, python-brace-format
 msgid "**{factor}x** XP until {when}."
 msgstr "XP **x{factor}** hasta {when}."
 
-#: cogs/community/level_config_ui.py:234
+#: cogs/community/level_config_ui.py:248
+#, python-brace-format
+msgid "That image is too large - the limit is {mb} MB."
+msgstr "Esa imagen es demasiado grande - el límite es de {mb} MB."
+
+#: cogs/community/level_config_ui.py:253
+msgid "That image has too many pixels to process safely - try a smaller picture."
+msgstr "Esa imagen tiene demasiados píxeles para procesarla de forma segura - prueba con una imagen más pequeña."
+
+#: cogs/community/level_config_ui.py:257
+msgid "Only PNG, JPEG, and WebP images are supported."
+msgstr "Solo se admiten imágenes PNG, JPEG y WebP."
+
+#: cogs/community/level_config_ui.py:260
+msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
+msgstr "Esa imagen es demasiado compleja para ajustarse al límite de almacenamiento - prueba con una imagen más simple o más pequeña."
+
+#: cogs/community/level_config_ui.py:265
+msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
+msgstr "No pude leer eso como una imagen - asegúrate de que sea un archivo PNG, JPEG o WebP válido."
+
+#: cogs/community/level_config_ui.py:270
+msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
+msgstr "Eso no es un color hexadecimal válido - prueba algo como #5865F2 o #58F."
+
+#: cogs/community/level_config_ui.py:274
+msgid "That image couldn't be used for the rank card."
+msgstr "Esa imagen no se pudo usar para la tarjeta de rango."
+
+#: cogs/community/level_config_ui.py:355
+msgid "Set rank card accent"
+msgstr "Establecer el acento de la tarjeta de rango"
+
+#: cogs/community/level_config_ui.py:359
+msgid "Hex colour"
+msgstr "Color hexadecimal"
+
+#: cogs/community/level_config_ui.py:384
+msgid "Set background..."
+msgstr "Establecer fondo..."
+
+#: cogs/community/level_config_ui.py:395
+msgid "Reset background"
+msgstr "Restablecer fondo"
+
+#: cogs/community/level_config_ui.py:407
+msgid "Set accent..."
+msgstr "Establecer acento..."
+
+#: cogs/community/level_config_ui.py:417
+msgid "Reset accent"
+msgstr "Restablecer acento"
+
+#: cogs/community/level_config_ui.py:430
+msgid "Preview my card"
+msgstr "Vista previa de mi tarjeta"
+
+#: cogs/community/level_config_ui.py:476
+#, python-brace-format
+msgid "Rank card - {guild}"
+msgstr "Tarjeta de rango - {guild}"
+
+#: cogs/community/level_config_ui.py:479
+msgid "Customise the background and accent colour used on this server's /rank cards."
+msgstr "Personaliza el fondo y el color de acento que usan las tarjetas /rank de este servidor."
+
+#: cogs/community/level_config_ui.py:488
+#, python-brace-format
+msgid "Set - a custom {width}x{height} background image is used."
+msgstr "Establecido - se usa una imagen de fondo personalizada de {width}x{height}."
+
+#: cogs/community/level_config_ui.py:492
+msgid "Not set - the stock panel background is used."
+msgstr "No establecido - se usa el fondo predeterminado del panel."
+
+#: cogs/community/level_config_ui.py:496
+msgid "Background"
+msgstr "Fondo"
+
+#: cogs/community/level_config_ui.py:510
+#, python-brace-format
+msgid "Set - {hex}"
+msgstr "Establecido - {hex}"
+
+#: cogs/community/level_config_ui.py:513
+msgid "Default - each member's own role colour is used."
+msgstr "Predeterminado - se usa el color de rol propio de cada miembro."
+
+#: cogs/community/level_config_ui.py:517
+msgid "Accent colour"
+msgstr "Color de acento"
+
+#: cogs/community/level_config_ui.py:535 cogs/community/seasons_views.py:185
+#: cogs/community/seasons_views.py:426 cogs/community/serverstats/views.py:550
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
+msgid "Only you can use these controls"
+msgstr "Solo tú puedes usar estos controles"
+
+#: cogs/community/level_config_ui.py:537 cogs/community/seasons_views.py:187
+#: cogs/community/seasons_views.py:428 cogs/community/serverstats/views.py:552
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
+msgid "times out after 3 min"
+msgstr "expira después de 3 min"
+
+#: cogs/community/level_config_ui.py:564
+#, python-brace-format
+msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
+msgstr "Para establecer un fondo, ejecuta `/levelconfig card background` y adjunta una imagen (PNG, JPEG o WebP; máximo {mb} MB)."
+
+#: cogs/community/level_config_ui.py:681
 msgid "Channel/category"
 msgstr "Canal/categoría"
 
-#: cogs/community/level_config_ui.py:235 cogs/community/level_config_ui.py:239
-#: cogs/community/level_config_ui.py:314 cogs/community/level_config_ui.py:318
+#: cogs/community/level_config_ui.py:682 cogs/community/level_config_ui.py:686
+#: cogs/community/level_config_ui.py:761 cogs/community/level_config_ui.py:765
 msgid "Unknown (deleted)"
 msgstr "Desconocido (eliminado)"
 
-#: cogs/community/level_config_ui.py:238 cogs/config/buttonroles.py:220
+#: cogs/community/level_config_ui.py:685 cogs/config/buttonroles.py:220
 #: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
 msgid "Role"
 msgstr "Rol"
 
-#: cogs/community/level_config_ui.py:248
+#: cogs/community/level_config_ui.py:695
 msgid "Pick a no-XP zone to remove..."
 msgstr "Elige una zona sin XP a eliminar..."
 
-#: cogs/community/level_config_ui.py:268
+#: cogs/community/level_config_ui.py:715
 msgid "Removed that no-XP zone."
 msgstr "Zona sin XP eliminada."
 
-#: cogs/community/level_config_ui.py:309
+#: cogs/community/level_config_ui.py:756
 msgid "Global boost"
 msgstr "Impulso global"
 
-#: cogs/community/level_config_ui.py:310
+#: cogs/community/level_config_ui.py:757
 msgid "Server-wide"
 msgstr "Todo el servidor"
 
-#: cogs/community/level_config_ui.py:313
+#: cogs/community/level_config_ui.py:760
 msgid "Channel/category boost"
 msgstr "Impulso de canal/categoría"
 
-#: cogs/community/level_config_ui.py:317
+#: cogs/community/level_config_ui.py:764
 msgid "Role boost"
 msgstr "Impulso de rol"
 
-#: cogs/community/level_config_ui.py:327
+#: cogs/community/level_config_ui.py:774
 msgid "Pick an XP boost to remove..."
 msgstr "Elige un impulso de XP a eliminar..."
 
-#: cogs/community/level_config_ui.py:347
+#: cogs/community/level_config_ui.py:794
 msgid "Removed that XP boost."
 msgstr "Impulso de XP eliminado."
 
-#: cogs/community/level_config_ui.py:409
+#: cogs/community/level_config_ui.py:856
 #, python-brace-format
 msgid "No-XP zones | {guild}"
 msgstr "Zonas sin XP | {guild}"
 
-#: cogs/community/level_config_ui.py:418
+#: cogs/community/level_config_ui.py:865
 msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
 msgstr "Aún no hay zonas sin XP. Usa `/levelconfig noxp add` para silenciar un canal, una categoría o un rol."
 
-#: cogs/community/level_config_ui.py:428 cogs/community/level_config_ui.py:483
+#: cogs/community/level_config_ui.py:875 cogs/community/level_config_ui.py:930
 #, python-brace-format
 msgid ""
 "**Channels & categories**\n"
@@ -1856,7 +1968,7 @@ msgstr ""
 "**Canales y categorías**\n"
 "{lines}"
 
-#: cogs/community/level_config_ui.py:438 cogs/community/level_config_ui.py:493
+#: cogs/community/level_config_ui.py:885 cogs/community/level_config_ui.py:940
 #, python-brace-format
 msgid ""
 "**Roles**\n"
@@ -1865,16 +1977,16 @@ msgstr ""
 "**Roles**\n"
 "{lines}"
 
-#: cogs/community/level_config_ui.py:459
+#: cogs/community/level_config_ui.py:906
 #, python-brace-format
 msgid "XP boosts | {guild}"
 msgstr "Impulsos de XP | {guild}"
 
-#: cogs/community/level_config_ui.py:468
+#: cogs/community/level_config_ui.py:915
 msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
 msgstr "Aún no hay impulsos de XP. Usa `/levelconfig boost add` para aumentar o reducir el XP globalmente, por canal o por rol."
 
-#: cogs/community/level_config_ui.py:499 cogs/community/level_config_ui.py:596
+#: cogs/community/level_config_ui.py:946 cogs/community/level_config_ui.py:1043
 #, python-brace-format
 msgid ""
 "**XP event**\n"
@@ -1883,16 +1995,16 @@ msgstr ""
 "**Evento de XP**\n"
 "{event}"
 
-#: cogs/community/level_config_ui.py:534
+#: cogs/community/level_config_ui.py:981
 #, python-brace-format
 msgid "Level config | {guild}"
 msgstr "Config de niveles | {guild}"
 
-#: cogs/community/level_config_ui.py:541
+#: cogs/community/level_config_ui.py:988
 msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
 msgstr "Sin zonas sin XP configuradas. Usa `/levelconfig noxp add`."
 
-#: cogs/community/level_config_ui.py:547
+#: cogs/community/level_config_ui.py:994
 #, python-brace-format
 msgid ""
 "**No-XP zones ({count}/{max})**\n"
@@ -1901,7 +2013,7 @@ msgstr ""
 "**Zonas sin XP ({count}/{max})**\n"
 "{summary}"
 
-#: cogs/community/level_config_ui.py:557
+#: cogs/community/level_config_ui.py:1004
 #, python-brace-format
 msgid ""
 "**Announce mode**\n"
@@ -1914,7 +2026,7 @@ msgstr ""
 "**Mensaje de anuncio**\n"
 "{template}"
 
-#: cogs/community/level_config_ui.py:566
+#: cogs/community/level_config_ui.py:1013
 #, python-brace-format
 msgid ""
 "**Voice XP**\n"
@@ -1923,11 +2035,11 @@ msgstr ""
 "**XP de voz**\n"
 "{voice}"
 
-#: cogs/community/level_config_ui.py:576
+#: cogs/community/level_config_ui.py:1023
 msgid "No XP boosts configured. Use `/levelconfig boost add`."
 msgstr "Sin impulsos de XP configurados. Usa `/levelconfig boost add`."
 
-#: cogs/community/level_config_ui.py:586
+#: cogs/community/level_config_ui.py:1033
 #, python-brace-format
 msgid ""
 "**XP boosts ({count}/{max})**\n"
@@ -1936,161 +2048,176 @@ msgstr ""
 "**Impulsos de XP ({count}/{max})**\n"
 "{summary}"
 
-#: cogs/community/level_config_ui.py:648 cogs/community/level_config_ui.py:898
-#: cogs/community/level_config_ui.py:924 cogs/community/level_config_ui.py:972
-#: cogs/community/level_config_ui.py:1021
+#: cogs/community/level_config_ui.py:1095
+#: cogs/community/level_config_ui.py:1358
+#: cogs/community/level_config_ui.py:1384
+#: cogs/community/level_config_ui.py:1432
+#: cogs/community/level_config_ui.py:1481
 msgid "The leveling system isn't loaded right now."
 msgstr "El sistema de niveles no está cargado ahora mismo."
 
-#: cogs/community/level_config_ui.py:736 cogs/config/settings.py:89
+#: cogs/community/level_config_ui.py:1196 cogs/config/settings.py:89
 #: cogs/config/settings.py:215
 msgid "Leveling"
 msgstr "Niveles"
 
-#: cogs/community/level_config_ui.py:738
+#: cogs/community/level_config_ui.py:1198
 msgid "Leveling enabled for this server."
 msgstr "Sistema de niveles activado para este servidor."
 
-#: cogs/community/level_config_ui.py:740
+#: cogs/community/level_config_ui.py:1200
 msgid "Leveling disabled for this server."
 msgstr "El sistema de niveles está desactivado para este servidor."
 
-#: cogs/community/level_config_ui.py:773
+#: cogs/community/level_config_ui.py:1233
 msgid "Give exactly one of a channel/category or a role."
 msgstr "Indica exactamente un canal/categoría O un rol."
 
-#: cogs/community/level_config_ui.py:778
+#: cogs/community/level_config_ui.py:1238
 msgid "You can't use @everyone as a no-XP zone."
 msgstr "No puedes usar @everyone como zona sin XP."
 
-#: cogs/community/level_config_ui.py:794 cogs/community/level_config_ui.py:831
+#: cogs/community/level_config_ui.py:1254
+#: cogs/community/level_config_ui.py:1291
 #, python-brace-format
 msgid "This server already has the maximum of {max} no-XP zones."
 msgstr "Este servidor ya tiene el máximo de {max} zonas sin XP."
 
-#: cogs/community/level_config_ui.py:823
+#: cogs/community/level_config_ui.py:1283
 #, python-brace-format
 msgid "{target} is already a no-XP zone."
 msgstr "{target} ya es una zona sin XP."
 
-#: cogs/community/level_config_ui.py:840
+#: cogs/community/level_config_ui.py:1300
 msgid "No-XP zone added"
 msgstr "Zona sin XP añadida"
 
-#: cogs/community/level_config_ui.py:841
+#: cogs/community/level_config_ui.py:1301
 #, python-brace-format
 msgid "{target} will no longer earn XP."
 msgstr "{target} ya no dará XP."
 
-#: cogs/community/level_config_ui.py:855
+#: cogs/community/level_config_ui.py:1315
 msgid "This server has no no-XP zones configured yet."
 msgstr "Este servidor aún no tiene zonas sin XP."
 
-#: cogs/community/level_config_ui.py:859
+#: cogs/community/level_config_ui.py:1319
 msgid "Pick a no-XP zone to remove:"
 msgstr "Elige una zona sin XP a eliminar:"
 
-#: cogs/community/level_config_ui.py:893
+#: cogs/community/level_config_ui.py:1353
 msgid "Give a channel when setting the fixed mode."
 msgstr "Indica un canal al elegir el modo fijo."
 
-#: cogs/community/level_config_ui.py:906
+#: cogs/community/level_config_ui.py:1366
 msgid "Announce mode updated"
 msgstr "Modo de anuncio actualizado"
 
-#: cogs/community/level_config_ui.py:930
+#: cogs/community/level_config_ui.py:1390
 #, python-brace-format
 msgid "The level-up message was reset to the default: \"{template}\""
 msgstr "El mensaje de subida de nivel se restableció al predeterminado: \"{template}\""
 
-#: cogs/community/level_config_ui.py:950
+#: cogs/community/level_config_ui.py:1410
 msgid "Level-up message updated"
 msgstr "Mensaje de subida de nivel actualizado"
 
-#: cogs/community/level_config_ui.py:951
+#: cogs/community/level_config_ui.py:1411
 #, python-brace-format
 msgid "Preview: {preview}"
 msgstr "Vista previa: {preview}"
 
-#: cogs/community/level_config_ui.py:976
+#: cogs/community/level_config_ui.py:1436
 msgid "Voice XP enabled"
 msgstr "XP de voz activado"
 
-#: cogs/community/level_config_ui.py:977
+#: cogs/community/level_config_ui.py:1437
 msgid "Members now earn XP for time spent together in voice."
 msgstr "Los miembros ahora ganan XP por el tiempo juntos en voz."
 
-#: cogs/community/level_config_ui.py:980
+#: cogs/community/level_config_ui.py:1440
 msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
 msgstr "Aviso: el sistema de niveles del servidor está desactivado, no se dará XP de voz hasta que lo actives."
 
-#: cogs/community/level_config_ui.py:984
+#: cogs/community/level_config_ui.py:1444
 msgid "Voice XP disabled"
 msgstr "XP de voz desactivado"
 
-#: cogs/community/level_config_ui.py:985
+#: cogs/community/level_config_ui.py:1445
 msgid "Members no longer earn XP for time in voice."
 msgstr "Los miembros ya no ganan XP por el tiempo en voz."
 
-#: cogs/community/level_config_ui.py:1012
+#: cogs/community/level_config_ui.py:1472
 #, python-brace-format
 msgid "The rate must be between {min} and {max} XP per minute."
 msgstr "La tasa debe estar entre {min} y {max} XP por minuto."
 
-#: cogs/community/level_config_ui.py:1025
+#: cogs/community/level_config_ui.py:1485
 msgid "Voice XP rate updated"
 msgstr "Tasa de XP de voz actualizada"
 
-#: cogs/community/level_config_ui.py:1027
+#: cogs/community/level_config_ui.py:1487
 #, python-brace-format
 msgid "Members now earn **{rate}** XP per eligible minute in voice."
 msgstr "Los miembros ahora ganan **{rate}** XP por minuto elegible en voz."
 
-#: cogs/community/level_config_ui.py:1065
+#: cogs/community/level_config_ui.py:1525
 msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
 msgstr "Indica como máximo un canal/categoría O un rol - ninguno para un impulso global."
 
-#: cogs/community/level_config_ui.py:1073
+#: cogs/community/level_config_ui.py:1533
 msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
 msgstr "No puedes apuntar a @everyone directamente - deja canal y rol vacíos para un impulso global."
 
-#: cogs/community/level_config_ui.py:1099
+#: cogs/community/level_config_ui.py:1559
 msgid "the whole server"
 msgstr "todo el servidor"
 
-#: cogs/community/level_config_ui.py:1130
+#: cogs/community/level_config_ui.py:1590
 #, python-brace-format
 msgid "This server already has the maximum of {max} XP boosts."
 msgstr "Este servidor ya tiene el máximo de {max} impulsos de XP."
 
-#: cogs/community/level_config_ui.py:1138
+#: cogs/community/level_config_ui.py:1598
 msgid "XP boost set"
 msgstr "Impulso de XP establecido"
 
-#: cogs/community/level_config_ui.py:1140
+#: cogs/community/level_config_ui.py:1600
 #, python-brace-format
 msgid "{target} now has a **{factor}x** XP multiplier."
 msgstr "{target} ahora tiene un multiplicador de XP de **x{factor}**."
 
-#: cogs/community/level_config_ui.py:1153
+#: cogs/community/level_config_ui.py:1613
 msgid "This server has no XP boosts configured yet."
 msgstr "Este servidor aún no tiene impulsos de XP."
 
-#: cogs/community/level_config_ui.py:1156
+#: cogs/community/level_config_ui.py:1616
 msgid "Pick an XP boost to remove:"
 msgstr "Elige un impulso de XP a eliminar:"
 
-#: cogs/community/level_config_ui.py:1174
+#: cogs/community/level_config_ui.py:1634
 msgid "XP event"
 msgstr "Evento de XP"
 
-#: cogs/community/level_config_ui.py:1249
+#: cogs/community/level_config_ui.py:1709
 msgid "XP event started"
 msgstr "Evento de XP iniciado"
 
-#: cogs/community/level_config_ui.py:1261
+#: cogs/community/level_config_ui.py:1721
 msgid "The XP event was stopped."
 msgstr "El evento de XP se detuvo."
+
+#: cogs/community/level_config_ui.py:1808
+msgid "I couldn't download that attachment - try again."
+msgstr "No pude descargar ese archivo adjunto - inténtalo de nuevo."
+
+#: cogs/community/level_config_ui.py:1821
+msgid "Rank card background updated"
+msgstr "Fondo de la tarjeta de rango actualizado"
+
+#: cogs/community/level_config_ui.py:1823
+msgid "This server's /rank cards now use the uploaded image as their background."
+msgstr "Las tarjetas /rank de este servidor ahora usan la imagen subida como fondo."
 
 #: cogs/community/level_rewards.py:66
 msgid "Unknown role (deleted)"
@@ -2192,17 +2319,17 @@ msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan gan
 msgid "Reward mode updated"
 msgstr "Modo de recompensa actualizado"
 
-#: cogs/community/leveling.py:122
+#: cogs/community/leveling.py:142
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - nivel **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:128
+#: cogs/community/leveling.py:148
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling.py:138
+#: cogs/community/leveling.py:158
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2211,7 +2338,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "Nivel **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:145
+#: cogs/community/leveling.py:165
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2220,84 +2347,84 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling.py:193
+#: cogs/community/leveling.py:213
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count} miembro"
 msgstr[1] "{count} miembros"
 
-#: cogs/community/leveling.py:197
+#: cogs/community/leveling.py:217
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Página {page}/{pages} - {members}"
 
-#: cogs/community/leveling.py:206 cogs/community/reminders.py:333
+#: cogs/community/leveling.py:226 cogs/community/reminders.py:333
 #: cogs/community/seasons_views.py:163 cogs/music/views.py:1303
 msgid "Prev"
 msgstr "Ant."
 
-#: cogs/community/leveling.py:1169
+#: cogs/community/leveling.py:1200
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... y ganó {roles}"
 
-#: cogs/community/leveling.py:1177
+#: cogs/community/leveling.py:1208
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "¡{user} alcanzó el nivel **{level}**! ... y ganó {roles}"
 
-#: cogs/community/leveling.py:1184
+#: cogs/community/leveling.py:1215
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "¡{user} alcanzó el nivel **{level}**!"
 
-#: cogs/community/leveling.py:1397
+#: cogs/community/leveling.py:1616
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling.py:1401 cogs/utility/searchweb.py:141
+#: cogs/community/leveling.py:1620 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "Rango"
 
-#: cogs/community/leveling.py:1403
+#: cogs/community/leveling.py:1622
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:1405
+#: cogs/community/leveling.py:1624
 msgid "XP for next level"
 msgstr "XP para el siguiente nivel"
 
-#: cogs/community/leveling.py:1433
+#: cogs/community/leveling.py:1652
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Clasificación | {guild}"
 
-#: cogs/community/leveling.py:1438
+#: cogs/community/leveling.py:1657
 msgid "No one has earned any XP yet!"
 msgstr "¡Nadie ha ganado XP todavía!"
 
-#: cogs/community/leveling.py:1452 cogs/community/leveling.py:1507
+#: cogs/community/leveling.py:1671 cogs/community/leveling.py:1726
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Usuario {uid}"
 
-#: cogs/community/leveling.py:1486
+#: cogs/community/leveling.py:1705
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Clasificación semanal | {guild}"
 
-#: cogs/community/leveling.py:1487
+#: cogs/community/leveling.py:1706
 msgid "No one has earned any XP this week yet!"
 msgstr "¡Nadie ha ganado XP esta semana todavía!"
 
-#: cogs/community/leveling.py:1489
+#: cogs/community/leveling.py:1708
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Clasificación mensual | {guild}"
 
-#: cogs/community/leveling.py:1492
+#: cogs/community/leveling.py:1711
 msgid "No one has earned any XP this month yet!"
 msgstr "¡Nadie ha ganado XP este mes todavía!"
 
@@ -2492,22 +2619,22 @@ msgstr "&lt;@{author_id}&gt;, {when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Toca el botón de abajo para crear un recordatorio."
 
-#: cogs/community/seasons.py:657
+#: cogs/community/seasons.py:684
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr "**¡La temporada {month} ha terminado!** Este es el podio final:"
 
-#: cogs/community/seasons.py:663
+#: cogs/community/seasons.py:690
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr "{medal} {user} - {xp} XP"
 
-#: cogs/community/seasons.py:671
+#: cogs/community/seasons.py:698
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr "{user} es el nuevo campeón de la temporada y recibe {role}."
 
-#: cogs/community/seasons.py:746
+#: cogs/community/seasons.py:773
 msgid "No leveling season has closed here yet - check back next month."
 msgstr "Aún no se ha cerrado ninguna temporada de niveles aquí - vuelve el mes que viene."
 
@@ -2530,80 +2657,68 @@ msgstr "Temporada {month}"
 msgid "No podium recorded for this season."
 msgstr "No hay podio registrado para esta temporada."
 
-#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:415
-#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
-#: cogs/moderation/warn_config.py:437
-msgid "Only you can use these controls"
-msgstr "Solo tú puedes usar estos controles"
-
-#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:417
-#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
-#: cogs/moderation/warn_config.py:439
-msgid "times out after 3 min"
-msgstr "expira después de 3 min"
-
-#: cogs/community/seasons_views.py:257
+#: cogs/community/seasons_views.py:268
 msgid "None set - no role is granted for winning a season."
 msgstr "Ninguno configurado - no se otorga ningún rol por ganar una temporada."
 
-#: cogs/community/seasons_views.py:265
+#: cogs/community/seasons_views.py:276
 msgid "Off - the season podium is never announced."
 msgstr "Desactivado - el podio de la temporada nunca se anuncia."
 
-#: cogs/community/seasons_views.py:267
+#: cogs/community/seasons_views.py:278
 #, python-brace-format
 msgid "On - posted in <#{channel_id}> when a season closes."
 msgstr "Activado - publicado en <#{channel_id}> al cerrar una temporada."
 
-#: cogs/community/seasons_views.py:274
+#: cogs/community/seasons_views.py:285
 msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
 msgstr "Activado, pero no hay un canal de anuncio fijo configurado, así que no se publicará nada. Configura uno con `/levelconfig announce mode`."
 
-#: cogs/community/seasons_views.py:286
+#: cogs/community/seasons_views.py:297
 msgid "Pick the season champion role..."
 msgstr "Elige el rol del campeón de temporada..."
 
-#: cogs/community/seasons_views.py:299
+#: cogs/community/seasons_views.py:310
 msgid "Clear role"
 msgstr "Borrar rol"
 
-#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
 msgid "Turn off"
 msgstr "Desactivar"
 
-#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
 msgid "Turn on"
 msgstr "Activar"
 
-#: cogs/community/seasons_views.py:362
+#: cogs/community/seasons_views.py:373
 #, python-brace-format
 msgid "Seasons - {guild}"
 msgstr "Temporadas - {guild}"
 
-#: cogs/community/seasons_views.py:365
+#: cogs/community/seasons_views.py:376
 msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
 msgstr "Configura el rol otorgado al campeón de cada temporada y si el podio se anuncia al cerrar una temporada."
 
-#: cogs/community/seasons_views.py:375
+#: cogs/community/seasons_views.py:386
 msgid "Season champion role"
 msgstr "Rol del campeón de temporada"
 
-#: cogs/community/seasons_views.py:400
+#: cogs/community/seasons_views.py:411
 msgid "Season announce"
 msgstr "Anuncio de temporada"
 
-#: cogs/community/seasons_views.py:431
+#: cogs/community/seasons_views.py:442
 #, python-brace-format
 msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
 msgstr "No puedo gestionar {role} (está por encima de mi rol más alto, lo gestiona una integración, o es @everyone). Elige otro rol."
 
-#: cogs/community/seasons_views.py:443 cogs/community/seasons_views.py:455
-#: cogs/community/seasons_views.py:480 cogs/moderation/automod_panel.py:415
+#: cogs/community/seasons_views.py:454 cogs/community/seasons_views.py:466
+#: cogs/community/seasons_views.py:491 cogs/moderation/automod_panel.py:415
 #: cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Algo salió mal al actualizar el panel."
 
-#: cogs/community/seasons_views.py:468
+#: cogs/community/seasons_views.py:479
 msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
 msgstr "Configura primero un canal de anuncio fijo con `/levelconfig announce mode` antes de activar el anuncio de temporada."
 
@@ -2751,6 +2866,135 @@ msgstr "Algo salió mal al preparar tu exportación de datos."
 #: cogs/community/usersettings.py:592
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
+
+#: cogs/community/serverstats/views.py:172
+msgid "Last bar: today, still in progress."
+msgstr "Última barra: hoy, día en curso."
+
+#: cogs/community/serverstats/views.py:196
+#, python-brace-format
+msgid "Complete days only, through {end_day}."
+msgstr "Solo días completos, hasta {end_day}."
+
+#: cogs/community/serverstats/views.py:205
+#: cogs/community/serverstats/views.py:294
+#: cogs/community/serverstats/views.py:331
+msgid "No day of this window was observed yet."
+msgstr "Aún no se ha observado ningún día de esta ventana."
+
+#: cogs/community/serverstats/views.py:208
+#, python-brace-format
+msgid "{total} messages - {average:.1f}/day average"
+msgstr "{total} mensajes - {average:.1f}/día de promedio"
+
+#: cogs/community/serverstats/views.py:214
+#, python-brace-format
+msgid "Partial window: only {available} of {days} days have data."
+msgstr "Ventana parcial: solo {available} de {days} días tienen datos."
+
+#: cogs/community/serverstats/views.py:219
+msgid "Not enough history yet to compare against a previous window."
+msgstr "Aún no hay suficiente historial para comparar con una ventana anterior."
+
+#: cogs/community/serverstats/views.py:223
+#, python-brace-format
+msgid "{sign}{pct:.1f}% vs the {days} days before"
+msgstr "{sign}{pct:.1f}% frente a los {days} días anteriores"
+
+#: cogs/community/serverstats/views.py:255
+msgid "No channel activity in this window."
+msgstr "Sin actividad de canales en esta ventana."
+
+#: cogs/community/serverstats/views.py:274
+msgid "No member count recorded yet."
+msgstr "Aún no se ha registrado el número de miembros."
+
+#: cogs/community/serverstats/views.py:277
+#, python-brace-format
+msgid "{count} members now"
+msgstr "{count} miembros ahora"
+
+#: cogs/community/serverstats/views.py:282
+#, python-brace-format
+msgid "{count} members now (net {delta} over the window, bots included)"
+msgstr "{count} miembros ahora (neto {delta} en la ventana, bots incluidos)"
+
+#: cogs/community/serverstats/views.py:297
+#, python-brace-format
+msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
+msgstr "{joins} entradas / {leaves} salidas (neto {net}, solo humanos)"
+
+#: cogs/community/serverstats/views.py:305
+#, python-brace-format
+msgid "Only {watched} of {days} days were observed."
+msgstr "Solo se observaron {watched} de {days} días."
+
+#: cogs/community/serverstats/views.py:316
+msgid "Member count, relative to this window's low point."
+msgstr "Número de miembros, en relación con el punto más bajo de esta ventana."
+
+#: cogs/community/serverstats/views.py:334
+#, python-brace-format
+msgid "{total} messages over {watched} observed day(s)"
+msgstr "{total} mensajes en {watched} día(s) observado(s)"
+
+#: cogs/community/serverstats/views.py:340
+#, python-brace-format
+msgid "Peak: {peak} messages on {day}"
+msgstr "Pico: {peak} mensajes el {day}"
+
+#: cogs/community/serverstats/views.py:358
+#, python-brace-format
+msgid "{week}: net {net} ({joins} joins / {leaves} leaves)"
+msgstr "{week}: neto {net} ({joins} entradas / {leaves} salidas)"
+
+#: cogs/community/serverstats/views.py:367
+msgid "Active members (via leveling)"
+msgstr "Miembros activos (mediante niveles)"
+
+#: cogs/community/serverstats/views.py:401
+#, python-brace-format
+msgid "Show {days} days"
+msgstr "Mostrar {days} días"
+
+#: cogs/community/serverstats/views.py:485
+#, python-brace-format
+msgid "{guild} - Server statistics"
+msgstr "{guild} - Estadísticas del servidor"
+
+#: cogs/community/serverstats/views.py:491
+#, python-brace-format
+msgid "Data collected since {date}"
+msgstr "Datos recopilados desde {date}"
+
+#: cogs/community/serverstats/views.py:496
+msgid "No statistics collected yet."
+msgstr "Aún no se han recopilado estadísticas."
+
+#: cogs/community/serverstats/views.py:502
+#, python-brace-format
+msgid "Overview ({days} days)"
+msgstr "Resumen ({days} días)"
+
+#: cogs/community/serverstats/views.py:510
+#, python-brace-format
+msgid "Top channels ({days} days)"
+msgstr "Canales principales ({days} días)"
+
+#: cogs/community/serverstats/views.py:523
+#, python-brace-format
+msgid "Growth ({days} days)"
+msgstr "Crecimiento ({days} días)"
+
+#: cogs/community/serverstats/views.py:531
+#, python-brace-format
+msgid "Activity ({days} days)"
+msgstr "Actividad ({days} días)"
+
+#: cogs/community/serverstats/views.py:540
+#, python-brace-format
+msgid "Retention ({weeks} weeks)"
+msgstr "Retención ({weeks} semanas)"
 
 #: cogs/config/announcements.py:68
 msgid "Target channel..."
