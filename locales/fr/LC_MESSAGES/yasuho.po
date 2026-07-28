@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 20:38+0000\n"
+"POT-Creation-Date: 2026-07-28 21:36+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -588,8 +588,8 @@ msgid "No matching titles of that type."
 msgstr "Aucun titre correspondant de ce type."
 
 #: cogs/anilist/components.py:457 cogs/anilist/components.py:461
-#: cogs/community/level_admin.py:88 cogs/community/level_config_ui.py:275
-#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:117
+#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:275
+#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:105
 #: cogs/config/announcements.py:298 cogs/config/rolemenus.py:583
 #: cogs/config/welcome.py:108 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:517
@@ -1236,8 +1236,9 @@ msgstr "Titre à rechercher"
 msgid "Stop tracking a title..."
 msgstr "Arrêter de suivre un titre..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:207
-#: cogs/community/reminders.py:340 cogs/music/views.py:1310
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:213
+#: cogs/community/reminders.py:340 cogs/community/seasons_views.py:170
+#: cogs/music/views.py:1310
 msgid "Next"
 msgstr "Suiv."
 
@@ -1287,8 +1288,8 @@ msgstr "Activer"
 msgid "Delete"
 msgstr "Supprimer"
 
-#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:65
-#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:215
+#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
+#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
 #: tools/arg_completion.py:219
 msgid "Cancel"
 msgstr "Annuler"
@@ -1565,88 +1566,88 @@ msgstr "Langue inconnue. Disponibles : {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Langue par défaut du serveur définie sur **{lang}**."
 
-#: cogs/community/level_admin.py:61
+#: cogs/community/level_admin.py:62
 msgid "Reset XP"
 msgstr "Réinitialiser l'XP"
 
-#: cogs/community/level_admin.py:77
+#: cogs/community/level_admin.py:78
 #, python-brace-format
 msgid "Reset {member}'s XP - they had **{xp} XP**."
 msgstr "XP de {member} réinitialisé - il avait **{xp} XP**."
 
-#: cogs/community/level_admin.py:97 cogs/community/level_admin.py:186
+#: cogs/community/level_admin.py:98 cogs/community/level_admin.py:187
 msgid "Cancelled - no XP was changed."
 msgstr "Annulé - aucun XP modifié."
 
-#: cogs/community/level_admin.py:112
+#: cogs/community/level_admin.py:113
 msgid "Confirm full XP reset"
 msgstr "Confirmer la réinitialisation totale"
 
-#: cogs/community/level_admin.py:117
+#: cogs/community/level_admin.py:118
 msgid "Type the server name to confirm"
 msgstr "Tape le nom du serveur pour confirmer"
 
-#: cogs/community/level_admin.py:130
+#: cogs/community/level_admin.py:131
 msgid "That doesn't match the server name - nothing was reset."
 msgstr "Ça ne correspond pas au nom du serveur - rien n'a été réinitialisé."
 
-#: cogs/community/level_admin.py:144
+#: cogs/community/level_admin.py:145
 #, python-brace-format
 msgid "{count} member's XP"
 msgid_plural "{count} members' XP"
 msgstr[0] "l'XP de {count} membre"
 msgstr[1] "l'XP de {count} membres"
 
-#: cogs/community/level_admin.py:148
+#: cogs/community/level_admin.py:149
 #, python-brace-format
 msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
 msgstr "XP de **{guild}** réinitialisé : {members} effacés ainsi que tous les classements de période."
 
-#: cogs/community/level_admin.py:155
+#: cogs/community/level_admin.py:156
 msgid "Something went wrong resetting XP."
 msgstr "Un problème est survenu pendant la réinitialisation."
 
-#: cogs/community/level_admin.py:169
+#: cogs/community/level_admin.py:170
 msgid "Reset ALL XP"
 msgstr "TOUT réinitialiser"
 
-#: cogs/community/level_admin.py:263
+#: cogs/community/level_admin.py:264
 msgid "XP updated"
 msgstr "XP mis à jour"
 
-#: cogs/community/level_admin.py:265
+#: cogs/community/level_admin.py:266
 #, python-brace-format
 msgid "{member} now has **{xp} XP** (was {old_xp})."
 msgstr "{member} a maintenant **{xp} XP** (avant : {old_xp})."
 
-#: cogs/community/level_admin.py:269
+#: cogs/community/level_admin.py:270
 msgid "Level up"
 msgstr "Niveau gagné"
 
-#: cogs/community/level_admin.py:270 cogs/community/level_admin.py:277
+#: cogs/community/level_admin.py:271 cogs/community/level_admin.py:278
 #, python-brace-format
 msgid "Level {old} -> **{new}**"
 msgstr "Niveau {old} -> **{new}**"
 
-#: cogs/community/level_admin.py:276
+#: cogs/community/level_admin.py:277
 msgid "Level down"
 msgstr "Niveau perdu"
 
-#: cogs/community/level_admin.py:283 cogs/community/leveling.py:1346
+#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1402
 #: cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "Niveau"
 
-#: cogs/community/level_admin.py:284
+#: cogs/community/level_admin.py:285
 #, python-brace-format
 msgid "**{level}** (unchanged)"
 msgstr "**{level}** (inchangé)"
 
-#: cogs/community/level_admin.py:356
+#: cogs/community/level_admin.py:375
 msgid "Admin XP tools"
 msgstr "Outils XP admin"
 
-#: cogs/community/level_admin.py:358
+#: cogs/community/level_admin.py:377
 msgid ""
 "- `/levelconfig xp give <member> <amount>` - add XP\n"
 "- `/levelconfig xp take <member> <amount>` - remove XP\n"
@@ -1660,30 +1661,30 @@ msgstr ""
 "- `/levelconfig xp reset <membre>` - réinitialiser un membre (confirmation)\n"
 "- `/levelconfig xp resetall` - réinitialiser tout le serveur (double confirmation)"
 
-#: cogs/community/level_admin.py:373 cogs/community/level_admin.py:386
+#: cogs/community/level_admin.py:392 cogs/community/level_admin.py:405
 #, python-brace-format
 msgid "The amount must be between {min} and {max}."
 msgstr "Le montant doit être entre {min} et {max}."
 
-#: cogs/community/level_admin.py:399
+#: cogs/community/level_admin.py:418
 #, python-brace-format
 msgid "The XP total must be between {min} and {max}."
 msgstr "Le total d'XP doit être entre {min} et {max}."
 
-#: cogs/community/level_admin.py:409
+#: cogs/community/level_admin.py:428
 msgid "Reset this member's XP?"
 msgstr "Réinitialiser l'XP de ce membre ?"
 
-#: cogs/community/level_admin.py:411
+#: cogs/community/level_admin.py:430
 #, python-brace-format
 msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
 msgstr "L'XP de {member} repasse à **0** et il disparaît du classement. C'est irréversible."
 
-#: cogs/community/level_admin.py:426
+#: cogs/community/level_admin.py:445
 msgid "Reset ALL XP in this server?"
 msgstr "Réinitialiser TOUT l'XP de ce serveur ?"
 
-#: cogs/community/level_admin.py:428
+#: cogs/community/level_admin.py:447
 #, python-brace-format
 msgid ""
 "This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
@@ -2091,117 +2092,117 @@ msgstr "Événement XP lancé"
 msgid "The XP event was stopped."
 msgstr "L'événement XP a été arrêté."
 
-#: cogs/community/level_rewards.py:78
+#: cogs/community/level_rewards.py:66
 msgid "Unknown role (deleted)"
 msgstr "Rôle inconnu (supprimé)"
 
-#: cogs/community/level_rewards.py:81
+#: cogs/community/level_rewards.py:69
 #, python-brace-format
 msgid "Level {level}"
 msgstr "Niveau {level}"
 
-#: cogs/community/level_rewards.py:87
+#: cogs/community/level_rewards.py:75
 msgid "Pick a reward rule to remove..."
 msgstr "Choisis une règle à retirer..."
 
-#: cogs/community/level_rewards.py:108
+#: cogs/community/level_rewards.py:96
 #, python-brace-format
 msgid "Removed the level {level} reward ({role})."
 msgstr "Récompense du niveau {level} retirée ({role})."
 
-#: cogs/community/level_rewards.py:154
+#: cogs/community/level_rewards.py:142
 #, python-brace-format
 msgid "Level rewards | {guild}"
 msgstr "Récompenses de niveau | {guild}"
 
-#: cogs/community/level_rewards.py:158
+#: cogs/community/level_rewards.py:146
 msgid "Stack - members keep every role they've earned"
 msgstr "Cumuler - les membres gardent tous les rôles gagnés"
 
-#: cogs/community/level_rewards.py:160
+#: cogs/community/level_rewards.py:148
 msgid "Replace - members only keep the highest tier they've earned"
 msgstr "Remplacer - les membres ne gardent que le plus haut palier atteint"
 
-#: cogs/community/level_rewards.py:163
+#: cogs/community/level_rewards.py:151
 #, python-brace-format
 msgid "Mode: **{mode}**"
 msgstr "Mode : **{mode}**"
 
-#: cogs/community/level_rewards.py:171
+#: cogs/community/level_rewards.py:159
 msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
 msgstr "Aucune récompense de niveau configurée. Utilise `/levelconfig rewards add` pour en créer une."
 
-#: cogs/community/level_rewards.py:179
+#: cogs/community/level_rewards.py:167
 #, python-brace-format
 msgid "**Level {level}** -> {roles}"
 msgstr "**Niveau {level}** -> {roles}"
 
-#: cogs/community/level_rewards.py:401
+#: cogs/community/level_rewards.py:389
 msgid "That role isn't from this server."
 msgstr "Ce rôle ne vient pas de ce serveur."
 
-#: cogs/community/level_rewards.py:404
+#: cogs/community/level_rewards.py:392
 msgid "You can't use @everyone as a level reward."
 msgstr "Tu ne peux pas utiliser @everyone comme récompense de niveau."
 
-#: cogs/community/level_rewards.py:407
+#: cogs/community/level_rewards.py:395
 msgid "The level must be 1 or higher."
 msgstr "Le niveau doit être de 1 ou plus."
 
-#: cogs/community/level_rewards.py:420 cogs/community/level_rewards.py:461
+#: cogs/community/level_rewards.py:408 cogs/community/level_rewards.py:449
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr "Ce serveur a déjà le maximum de {max} récompenses de niveau."
 
-#: cogs/community/level_rewards.py:453
+#: cogs/community/level_rewards.py:441
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr "{role} est déjà une récompense du niveau {level}."
 
-#: cogs/community/level_rewards.py:468
+#: cogs/community/level_rewards.py:456
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "Récompense ajoutée : atteins le niveau **{level}** pour recevoir {role}."
 
-#: cogs/community/level_rewards.py:474
+#: cogs/community/level_rewards.py:462
 msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
 msgstr "Je peux l'ajouter, mais ce rôle est au-dessus du mien - remonte mon rôle pour que je puisse vraiment l'attribuer."
 
-#: cogs/community/level_rewards.py:479
+#: cogs/community/level_rewards.py:467
 msgid "Level reward added"
 msgstr "Récompense de niveau ajoutée"
 
-#: cogs/community/level_rewards.py:490
+#: cogs/community/level_rewards.py:478
 msgid "This server has no level rewards configured yet."
 msgstr "Ce serveur n'a pas encore de récompense de niveau."
 
-#: cogs/community/level_rewards.py:495
+#: cogs/community/level_rewards.py:483
 msgid "Pick a reward rule to remove:"
 msgstr "Choisis une règle à retirer :"
 
-#: cogs/community/level_rewards.py:531
+#: cogs/community/level_rewards.py:519
 msgid "Members now keep only the roles from the highest level reward they've reached."
 msgstr "Les membres ne gardent désormais que les rôles du plus haut palier atteint."
 
-#: cogs/community/level_rewards.py:536
+#: cogs/community/level_rewards.py:524
 msgid "Members now keep every level reward role they've ever earned."
 msgstr "Les membres gardent désormais tous les rôles de récompense gagnés."
 
-#: cogs/community/level_rewards.py:540
+#: cogs/community/level_rewards.py:528
 msgid "Reward mode updated"
 msgstr "Mode de récompense mis à jour"
 
-#: cogs/community/leveling.py:116
+#: cogs/community/leveling.py:122
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - niveau **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:122
+#: cogs/community/leveling.py:128
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling.py:132
+#: cogs/community/leveling.py:138
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2210,7 +2211,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "Niveau **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:139
+#: cogs/community/leveling.py:145
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2219,84 +2220,84 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling.py:187
+#: cogs/community/leveling.py:193
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count} membre"
 msgstr[1] "{count} membres"
 
-#: cogs/community/leveling.py:191
+#: cogs/community/leveling.py:197
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Page {page}/{pages} - {members}"
 
-#: cogs/community/leveling.py:200 cogs/community/reminders.py:333
-#: cogs/music/views.py:1303
+#: cogs/community/leveling.py:206 cogs/community/reminders.py:333
+#: cogs/community/seasons_views.py:163 cogs/music/views.py:1303
 msgid "Prev"
 msgstr "Préc."
 
-#: cogs/community/leveling.py:1113
+#: cogs/community/leveling.py:1169
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... et a gagné {roles}"
 
-#: cogs/community/leveling.py:1121
+#: cogs/community/leveling.py:1177
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} a atteint le niveau **{level}** ! ... et a gagné {roles}"
 
-#: cogs/community/leveling.py:1128
+#: cogs/community/leveling.py:1184
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} a atteint le niveau **{level}** !"
 
-#: cogs/community/leveling.py:1341
+#: cogs/community/leveling.py:1397
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rang | {name}"
 
-#: cogs/community/leveling.py:1345 cogs/utility/searchweb.py:141
+#: cogs/community/leveling.py:1401 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "Rang"
 
-#: cogs/community/leveling.py:1347
+#: cogs/community/leveling.py:1403
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:1349
+#: cogs/community/leveling.py:1405
 msgid "XP for next level"
 msgstr "XP pour le prochain niveau"
 
-#: cogs/community/leveling.py:1377
+#: cogs/community/leveling.py:1433
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Classement | {guild}"
 
-#: cogs/community/leveling.py:1382
+#: cogs/community/leveling.py:1438
 msgid "No one has earned any XP yet!"
 msgstr "Personne n'a encore gagné d'XP !"
 
-#: cogs/community/leveling.py:1396 cogs/community/leveling.py:1451
+#: cogs/community/leveling.py:1452 cogs/community/leveling.py:1507
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Utilisateur {uid}"
 
-#: cogs/community/leveling.py:1430
+#: cogs/community/leveling.py:1486
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Classement de la semaine | {guild}"
 
-#: cogs/community/leveling.py:1431
+#: cogs/community/leveling.py:1487
 msgid "No one has earned any XP this week yet!"
 msgstr "Personne n'a encore gagné d'XP cette semaine !"
 
-#: cogs/community/leveling.py:1433
+#: cogs/community/leveling.py:1489
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Classement du mois | {guild}"
 
-#: cogs/community/leveling.py:1436
+#: cogs/community/leveling.py:1492
 msgid "No one has earned any XP this month yet!"
 msgstr "Personne n'a encore gagné d'XP ce mois-ci !"
 
@@ -2491,20 +2492,120 @@ msgstr "<@{author_id}>, {when} : {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Appuie sur le bouton ci-dessous pour definir un rappel."
 
-#: cogs/community/seasons.py:501
+#: cogs/community/seasons.py:657
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr "**La saison {month} est terminée !** Voici le podium final :"
 
-#: cogs/community/seasons.py:507
+#: cogs/community/seasons.py:663
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr "{medal} {user} - {xp} XP"
 
-#: cogs/community/seasons.py:515
+#: cogs/community/seasons.py:671
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr "{user} est le nouveau champion de la saison et reçoit {role}."
+
+#: cogs/community/seasons.py:746
+msgid "No leveling season has closed here yet - check back next month."
+msgstr "Aucune saison de niveaux ne s'est encore terminée ici - revenez le mois prochain."
+
+#: cogs/community/seasons_views.py:117
+#, python-brace-format
+msgid "{marker} <@{user_id}> - {xp} XP"
+msgstr "{marker} <@{user_id}> - {xp} XP"
+
+#: cogs/community/seasons_views.py:127
+#, python-brace-format
+msgid "Hall of fame - {guild}"
+msgstr "Panthéon - {guild}"
+
+#: cogs/community/seasons_views.py:134
+#, python-brace-format
+msgid "Season {month}"
+msgstr "Saison {month}"
+
+#: cogs/community/seasons_views.py:145
+msgid "No podium recorded for this season."
+msgstr "Aucun podium enregistré pour cette saison."
+
+#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:415
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
+msgid "Only you can use these controls"
+msgstr "Vous seul pouvez utiliser ces commandes"
+
+#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:417
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
+msgid "times out after 3 min"
+msgstr "expire après 3 min"
+
+#: cogs/community/seasons_views.py:257
+msgid "None set - no role is granted for winning a season."
+msgstr "Aucun défini - aucun rôle n'est attribué pour avoir gagné une saison."
+
+#: cogs/community/seasons_views.py:265
+msgid "Off - the season podium is never announced."
+msgstr "Désactivé - le podium de la saison n'est jamais annoncé."
+
+#: cogs/community/seasons_views.py:267
+#, python-brace-format
+msgid "On - posted in <#{channel_id}> when a season closes."
+msgstr "Activé - publié dans <#{channel_id}> à la clôture d'une saison."
+
+#: cogs/community/seasons_views.py:274
+msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
+msgstr "Activé, mais aucun salon d'annonce fixe n'est configuré, donc rien ne sera publié. Configurez-en un avec `/levelconfig announce mode`."
+
+#: cogs/community/seasons_views.py:286
+msgid "Pick the season champion role..."
+msgstr "Choisissez le rôle du champion de saison..."
+
+#: cogs/community/seasons_views.py:299
+msgid "Clear role"
+msgstr "Effacer le rôle"
+
+#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+msgid "Turn off"
+msgstr "Desactiver"
+
+#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+msgid "Turn on"
+msgstr "Activer"
+
+#: cogs/community/seasons_views.py:362
+#, python-brace-format
+msgid "Seasons - {guild}"
+msgstr "Saisons - {guild}"
+
+#: cogs/community/seasons_views.py:365
+msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
+msgstr "Configurez le rôle attribué au champion de chaque saison et si le podium est annoncé à la clôture d'une saison."
+
+#: cogs/community/seasons_views.py:375
+msgid "Season champion role"
+msgstr "Rôle du champion de saison"
+
+#: cogs/community/seasons_views.py:400
+msgid "Season announce"
+msgstr "Annonce de saison"
+
+#: cogs/community/seasons_views.py:431
+#, python-brace-format
+msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
+msgstr "Je ne peux pas gérer {role} (il est au-dessus de mon rôle le plus élevé, géré par une intégration, ou il s'agit de @everyone). Choisissez un autre rôle."
+
+#: cogs/community/seasons_views.py:443 cogs/community/seasons_views.py:455
+#: cogs/community/seasons_views.py:480 cogs/moderation/automod_panel.py:415
+#: cogs/moderation/warn_config.py:456
+msgid "Something went wrong updating the panel."
+msgstr "Une erreur est survenue lors de la mise à jour du panneau."
+
+#: cogs/community/seasons_views.py:468
+msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
+msgstr "Configurez d'abord un salon d'annonce fixe avec `/levelconfig announce mode` avant d'activer l'annonce de saison."
 
 #: cogs/community/usersettings.py:86
 msgid "Level-up announcements"
@@ -2582,14 +2683,6 @@ msgstr "Un problème est survenu pendant la suppression de ton historique d'avat
 #: cogs/community/usersettings.py:256
 msgid "Avatar history deletion cancelled."
 msgstr "Suppression de l'historique des avatars annulée."
-
-#: cogs/community/usersettings.py:271
-msgid "Turn off"
-msgstr "Desactiver"
-
-#: cogs/community/usersettings.py:271
-msgid "Turn on"
-msgstr "Activer"
 
 #: cogs/community/usersettings.py:355
 msgid "## Your preferences"
@@ -4000,16 +4093,6 @@ msgstr "Un aperçu de chaque fonctionnalité de ce serveur. Utilisez le menu ci-
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "La configuration complète du leveling vit dans `/levelconfig`."
 
-#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
-#: cogs/moderation/warn_config.py:437
-msgid "Only you can use these controls"
-msgstr "Vous seul pouvez utiliser ces commandes"
-
-#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
-#: cogs/moderation/warn_config.py:439
-msgid "times out after 3 min"
-msgstr "expire après 3 min"
-
 #: cogs/config/settings.py:352
 msgid "The prefix can't be blank."
 msgstr "Le prefixe ne peut pas etre vide."
@@ -4924,10 +5007,6 @@ msgstr "Les membres ayant un rôle exempté, et les messages dans un salon exemp
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Les filtres natifs exigent que Yasuho ait la permission Gérer le serveur."
 
-#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
-msgid "Something went wrong updating the panel."
-msgstr "Une erreur est survenue lors de la mise à jour du panneau."
-
 #: cogs/moderation/automod_panel.py:429
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Yasuho a besoin de la permission **Gérer le serveur** pour modifier les filtres natifs de Discord."
@@ -5212,7 +5291,7 @@ msgstr "**{role}** retire de {done} membre(s) ({failed} echec(s))."
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} le rôle **`{role}`** a été retiré à **{member}**"
 
-#: cogs/moderation/moderation.py:1103 tools/modchecks.py:69
+#: cogs/moderation/moderation.py:1103 tools/modchecks.py:90
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "Tu ne peux pas gérer un rôle égal ou supérieur à ton rôle le plus haut."
 
@@ -9084,7 +9163,7 @@ msgstr "Tu ne peux pas sanctionner quelqu'un dont le role est egal ou superieur 
 msgid "My highest role isn't above that member, so I can't act on them."
 msgstr "Mon role le plus eleve n'est pas au-dessus de ce membre, je ne peux donc pas agir sur lui."
 
-#: tools/modchecks.py:72
+#: tools/modchecks.py:93
 msgid "My highest role isn't above that role, so I can't manage it."
 msgstr "Mon rôle le plus haut n'est pas au-dessus de ce rôle, donc je ne peux pas le gérer."
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 20:38+0000\n"
+"POT-Creation-Date: 2026-07-28 21:36+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -588,8 +588,8 @@ msgid "No matching titles of that type."
 msgstr "そのタイプに一致するタイトルがありません。"
 
 #: cogs/anilist/components.py:457 cogs/anilist/components.py:461
-#: cogs/community/level_admin.py:88 cogs/community/level_config_ui.py:275
-#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:117
+#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:275
+#: cogs/community/level_config_ui.py:354 cogs/community/level_rewards.py:105
 #: cogs/config/announcements.py:298 cogs/config/rolemenus.py:583
 #: cogs/config/welcome.py:108 cogs/config/welcome.py:263
 #: cogs/config/welcome.py:517
@@ -1236,8 +1236,9 @@ msgstr "検索するタイトル"
 msgid "Stop tracking a title..."
 msgstr "追跡を解除するタイトルを選択..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:207
-#: cogs/community/reminders.py:340 cogs/music/views.py:1310
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:213
+#: cogs/community/reminders.py:340 cogs/community/seasons_views.py:170
+#: cogs/music/views.py:1310
 msgid "Next"
 msgstr "次へ"
 
@@ -1287,8 +1288,8 @@ msgstr "有効化"
 msgid "Delete"
 msgstr "削除"
 
-#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:65
-#: cogs/community/level_admin.py:173 cogs/community/usersettings.py:215
+#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
+#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
 #: tools/arg_completion.py:219
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1565,88 +1566,88 @@ msgstr "不明な言語です。利用可能: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "サーバーのデフォルト言語を **{lang}** に設定しました。"
 
-#: cogs/community/level_admin.py:61
+#: cogs/community/level_admin.py:62
 msgid "Reset XP"
 msgstr "XPをリセット"
 
-#: cogs/community/level_admin.py:77
+#: cogs/community/level_admin.py:78
 #, python-brace-format
 msgid "Reset {member}'s XP - they had **{xp} XP**."
 msgstr "{member} のXPをリセットしました (以前は **{xp} XP**)。"
 
-#: cogs/community/level_admin.py:97 cogs/community/level_admin.py:186
+#: cogs/community/level_admin.py:98 cogs/community/level_admin.py:187
 msgid "Cancelled - no XP was changed."
 msgstr "キャンセルしました。XPは変更されていません。"
 
-#: cogs/community/level_admin.py:112
+#: cogs/community/level_admin.py:113
 msgid "Confirm full XP reset"
 msgstr "全XPリセットの確認"
 
-#: cogs/community/level_admin.py:117
+#: cogs/community/level_admin.py:118
 msgid "Type the server name to confirm"
 msgstr "確認のためサーバー名を入力してください"
 
-#: cogs/community/level_admin.py:130
+#: cogs/community/level_admin.py:131
 msgid "That doesn't match the server name - nothing was reset."
 msgstr "サーバー名と一致しません。何もリセットされませんでした。"
 
-#: cogs/community/level_admin.py:144
+#: cogs/community/level_admin.py:145
 #, python-brace-format
 msgid "{count} member's XP"
 msgid_plural "{count} members' XP"
 msgstr[0] "{count}人のXP"
 msgstr[1] "{count}人のXP"
 
-#: cogs/community/level_admin.py:148
+#: cogs/community/level_admin.py:149
 #, python-brace-format
 msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
 msgstr "**{guild}** の全XPをリセットしました: {members} と全ての期間ランキングを消去しました。"
 
-#: cogs/community/level_admin.py:155
+#: cogs/community/level_admin.py:156
 msgid "Something went wrong resetting XP."
 msgstr "XPのリセット中に問題が発生しました。"
 
-#: cogs/community/level_admin.py:169
+#: cogs/community/level_admin.py:170
 msgid "Reset ALL XP"
 msgstr "全てリセット"
 
-#: cogs/community/level_admin.py:263
+#: cogs/community/level_admin.py:264
 msgid "XP updated"
 msgstr "XPを更新しました"
 
-#: cogs/community/level_admin.py:265
+#: cogs/community/level_admin.py:266
 #, python-brace-format
 msgid "{member} now has **{xp} XP** (was {old_xp})."
 msgstr "{member} のXPは **{xp} XP** になりました (以前: {old_xp})。"
 
-#: cogs/community/level_admin.py:269
+#: cogs/community/level_admin.py:270
 msgid "Level up"
 msgstr "レベルアップ"
 
-#: cogs/community/level_admin.py:270 cogs/community/level_admin.py:277
+#: cogs/community/level_admin.py:271 cogs/community/level_admin.py:278
 #, python-brace-format
 msgid "Level {old} -> **{new}**"
 msgstr "レベル {old} -> **{new}**"
 
-#: cogs/community/level_admin.py:276
+#: cogs/community/level_admin.py:277
 msgid "Level down"
 msgstr "レベルダウン"
 
-#: cogs/community/level_admin.py:283 cogs/community/leveling.py:1346
+#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1402
 #: cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "レベル"
 
-#: cogs/community/level_admin.py:284
+#: cogs/community/level_admin.py:285
 #, python-brace-format
 msgid "**{level}** (unchanged)"
 msgstr "**{level}** (変更なし)"
 
-#: cogs/community/level_admin.py:356
+#: cogs/community/level_admin.py:375
 msgid "Admin XP tools"
 msgstr "XP管理ツール"
 
-#: cogs/community/level_admin.py:358
+#: cogs/community/level_admin.py:377
 msgid ""
 "- `/levelconfig xp give <member> <amount>` - add XP\n"
 "- `/levelconfig xp take <member> <amount>` - remove XP\n"
@@ -1660,30 +1661,30 @@ msgstr ""
 "- `/levelconfig xp reset <メンバー>` - 1人をリセット (確認あり)\n"
 "- `/levelconfig xp resetall` - サーバー全体をリセット (二重確認)"
 
-#: cogs/community/level_admin.py:373 cogs/community/level_admin.py:386
+#: cogs/community/level_admin.py:392 cogs/community/level_admin.py:405
 #, python-brace-format
 msgid "The amount must be between {min} and {max}."
 msgstr "量は {min} から {max} の間にしてください。"
 
-#: cogs/community/level_admin.py:399
+#: cogs/community/level_admin.py:418
 #, python-brace-format
 msgid "The XP total must be between {min} and {max}."
 msgstr "XPの合計は {min} から {max} の間にしてください。"
 
-#: cogs/community/level_admin.py:409
+#: cogs/community/level_admin.py:428
 msgid "Reset this member's XP?"
 msgstr "このメンバーのXPをリセットしますか？"
 
-#: cogs/community/level_admin.py:411
+#: cogs/community/level_admin.py:430
 #, python-brace-format
 msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
 msgstr "{member} のXPを **0** に戻し、ランキングから外します。元に戻せません。"
 
-#: cogs/community/level_admin.py:426
+#: cogs/community/level_admin.py:445
 msgid "Reset ALL XP in this server?"
 msgstr "このサーバーの全XPをリセットしますか？"
 
-#: cogs/community/level_admin.py:428
+#: cogs/community/level_admin.py:447
 #, python-brace-format
 msgid ""
 "This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
@@ -2091,117 +2092,117 @@ msgstr "XPイベントを開始しました"
 msgid "The XP event was stopped."
 msgstr "XPイベントを停止しました。"
 
-#: cogs/community/level_rewards.py:78
+#: cogs/community/level_rewards.py:66
 msgid "Unknown role (deleted)"
 msgstr "不明なロール (削除済み)"
 
-#: cogs/community/level_rewards.py:81
+#: cogs/community/level_rewards.py:69
 #, python-brace-format
 msgid "Level {level}"
 msgstr "レベル {level}"
 
-#: cogs/community/level_rewards.py:87
+#: cogs/community/level_rewards.py:75
 msgid "Pick a reward rule to remove..."
 msgstr "削除する報酬ルールを選択..."
 
-#: cogs/community/level_rewards.py:108
+#: cogs/community/level_rewards.py:96
 #, python-brace-format
 msgid "Removed the level {level} reward ({role})."
 msgstr "レベル {level} の報酬 ({role}) を削除しました。"
 
-#: cogs/community/level_rewards.py:154
+#: cogs/community/level_rewards.py:142
 #, python-brace-format
 msgid "Level rewards | {guild}"
 msgstr "レベル報酬 | {guild}"
 
-#: cogs/community/level_rewards.py:158
+#: cogs/community/level_rewards.py:146
 msgid "Stack - members keep every role they've earned"
 msgstr "累積 - 獲得したすべてのロールを保持"
 
-#: cogs/community/level_rewards.py:160
+#: cogs/community/level_rewards.py:148
 msgid "Replace - members only keep the highest tier they've earned"
 msgstr "置き換え - 到達した最高段階のロールのみ保持"
 
-#: cogs/community/level_rewards.py:163
+#: cogs/community/level_rewards.py:151
 #, python-brace-format
 msgid "Mode: **{mode}**"
 msgstr "モード: **{mode}**"
 
-#: cogs/community/level_rewards.py:171
+#: cogs/community/level_rewards.py:159
 msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
 msgstr "レベル報酬はまだ設定されていません。`/levelconfig rewards add` で作成できます。"
 
-#: cogs/community/level_rewards.py:179
+#: cogs/community/level_rewards.py:167
 #, python-brace-format
 msgid "**Level {level}** -> {roles}"
 msgstr "**レベル {level}** -> {roles}"
 
-#: cogs/community/level_rewards.py:401
+#: cogs/community/level_rewards.py:389
 msgid "That role isn't from this server."
 msgstr "そのロールはこのサーバーのものではありません。"
 
-#: cogs/community/level_rewards.py:404
+#: cogs/community/level_rewards.py:392
 msgid "You can't use @everyone as a level reward."
 msgstr "@everyone はレベル報酬に使用できません。"
 
-#: cogs/community/level_rewards.py:407
+#: cogs/community/level_rewards.py:395
 msgid "The level must be 1 or higher."
 msgstr "レベルは 1 以上にしてください。"
 
-#: cogs/community/level_rewards.py:420 cogs/community/level_rewards.py:461
+#: cogs/community/level_rewards.py:408 cogs/community/level_rewards.py:449
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr "このサーバーはすでに上限の {max} 件のレベル報酬があります。"
 
-#: cogs/community/level_rewards.py:453
+#: cogs/community/level_rewards.py:441
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr "{role} はすでにレベル {level} の報酬です。"
 
-#: cogs/community/level_rewards.py:468
+#: cogs/community/level_rewards.py:456
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "レベル報酬を追加しました。レベル **{level}** に到達すると {role} を獲得できます。"
 
-#: cogs/community/level_rewards.py:474
+#: cogs/community/level_rewards.py:462
 msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
 msgstr "追加はできますが、そのロールは私より上位です。実際に付与できるように私のロールを上げてください。"
 
-#: cogs/community/level_rewards.py:479
+#: cogs/community/level_rewards.py:467
 msgid "Level reward added"
 msgstr "レベル報酬を追加しました"
 
-#: cogs/community/level_rewards.py:490
+#: cogs/community/level_rewards.py:478
 msgid "This server has no level rewards configured yet."
 msgstr "このサーバーにはまだレベル報酬がありません。"
 
-#: cogs/community/level_rewards.py:495
+#: cogs/community/level_rewards.py:483
 msgid "Pick a reward rule to remove:"
 msgstr "削除する報酬ルールを選択:"
 
-#: cogs/community/level_rewards.py:531
+#: cogs/community/level_rewards.py:519
 msgid "Members now keep only the roles from the highest level reward they've reached."
 msgstr "メンバーは到達した最高レベルの報酬ロールのみ保持するようになりました。"
 
-#: cogs/community/level_rewards.py:536
+#: cogs/community/level_rewards.py:524
 msgid "Members now keep every level reward role they've ever earned."
 msgstr "メンバーは獲得したすべての報酬ロールを保持するようになりました。"
 
-#: cogs/community/level_rewards.py:540
+#: cogs/community/level_rewards.py:528
 msgid "Reward mode updated"
 msgstr "報酬モードを更新しました"
 
-#: cogs/community/leveling.py:116
+#: cogs/community/leveling.py:122
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - レベル **{level}** ({xp} XP)"
 
-#: cogs/community/leveling.py:122
+#: cogs/community/leveling.py:128
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling.py:132
+#: cogs/community/leveling.py:138
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2210,7 +2211,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "レベル **{level}** - {xp} XP"
 
-#: cogs/community/leveling.py:139
+#: cogs/community/leveling.py:145
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2219,84 +2220,84 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling.py:187
+#: cogs/community/leveling.py:193
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count}人"
 msgstr[1] "{count}人"
 
-#: cogs/community/leveling.py:191
+#: cogs/community/leveling.py:197
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# ページ {page}/{pages} - {members}"
 
-#: cogs/community/leveling.py:200 cogs/community/reminders.py:333
-#: cogs/music/views.py:1303
+#: cogs/community/leveling.py:206 cogs/community/reminders.py:333
+#: cogs/community/seasons_views.py:163 cogs/music/views.py:1303
 msgid "Prev"
 msgstr "前へ"
 
-#: cogs/community/leveling.py:1113
+#: cogs/community/leveling.py:1169
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling.py:1121
+#: cogs/community/leveling.py:1177
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} がレベル **{level}** に到達しました！ ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling.py:1128
+#: cogs/community/leveling.py:1184
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} がレベル **{level}** に到達しました!"
 
-#: cogs/community/leveling.py:1341
+#: cogs/community/leveling.py:1397
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "ランク | {name}"
 
-#: cogs/community/leveling.py:1345 cogs/utility/searchweb.py:141
+#: cogs/community/leveling.py:1401 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "ランク"
 
-#: cogs/community/leveling.py:1347
+#: cogs/community/leveling.py:1403
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling.py:1349
+#: cogs/community/leveling.py:1405
 msgid "XP for next level"
 msgstr "次のレベルまでのXP"
 
-#: cogs/community/leveling.py:1377
+#: cogs/community/leveling.py:1433
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "リーダーボード | {guild}"
 
-#: cogs/community/leveling.py:1382
+#: cogs/community/leveling.py:1438
 msgid "No one has earned any XP yet!"
 msgstr "まだ誰もXPを獲得していません!"
 
-#: cogs/community/leveling.py:1396 cogs/community/leveling.py:1451
+#: cogs/community/leveling.py:1452 cogs/community/leveling.py:1507
 #, python-brace-format
 msgid "User {uid}"
 msgstr "ユーザー {uid}"
 
-#: cogs/community/leveling.py:1430
+#: cogs/community/leveling.py:1486
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "週間ランキング | {guild}"
 
-#: cogs/community/leveling.py:1431
+#: cogs/community/leveling.py:1487
 msgid "No one has earned any XP this week yet!"
 msgstr "今週はまだ誰もXPを獲得していません！"
 
-#: cogs/community/leveling.py:1433
+#: cogs/community/leveling.py:1489
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "月間ランキング | {guild}"
 
-#: cogs/community/leveling.py:1436
+#: cogs/community/leveling.py:1492
 msgid "No one has earned any XP this month yet!"
 msgstr "今月はまだ誰もXPを獲得していません！"
 
@@ -2491,20 +2492,120 @@ msgstr "<@{author_id}>、{when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
-#: cogs/community/seasons.py:501
+#: cogs/community/seasons.py:657
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr "**シーズン{month}が終了しました！**最終順位はこちらです:"
 
-#: cogs/community/seasons.py:507
+#: cogs/community/seasons.py:663
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr "{medal} {user} - {xp} XP"
 
-#: cogs/community/seasons.py:515
+#: cogs/community/seasons.py:671
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr "{user}さんが新しいシーズンチャンピオンとなり、{role}を獲得しました。"
+
+#: cogs/community/seasons.py:746
+msgid "No leveling season has closed here yet - check back next month."
+msgstr "ここでは、まだレベリングシーズンが終了していません - 来月また確認してください。"
+
+#: cogs/community/seasons_views.py:117
+#, python-brace-format
+msgid "{marker} <@{user_id}> - {xp} XP"
+msgstr "{marker} <@{user_id}> - {xp} XP"
+
+#: cogs/community/seasons_views.py:127
+#, python-brace-format
+msgid "Hall of fame - {guild}"
+msgstr "殿堂 - {guild}"
+
+#: cogs/community/seasons_views.py:134
+#, python-brace-format
+msgid "Season {month}"
+msgstr "シーズン {month}"
+
+#: cogs/community/seasons_views.py:145
+msgid "No podium recorded for this season."
+msgstr "このシーズンの表彰台は記録されていません。"
+
+#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:415
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
+msgid "Only you can use these controls"
+msgstr "これらの操作はあなただけが使用できます"
+
+#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:417
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
+msgid "times out after 3 min"
+msgstr "3分後にタイムアウトします"
+
+#: cogs/community/seasons_views.py:257
+msgid "None set - no role is granted for winning a season."
+msgstr "未設定 - シーズン優勝によって付与されるロールはありません。"
+
+#: cogs/community/seasons_views.py:265
+msgid "Off - the season podium is never announced."
+msgstr "オフ - シーズンの表彰台は告知されません。"
+
+#: cogs/community/seasons_views.py:267
+#, python-brace-format
+msgid "On - posted in <#{channel_id}> when a season closes."
+msgstr "オン - シーズン終了時に <#{channel_id}> に投稿されます。"
+
+#: cogs/community/seasons_views.py:274
+msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
+msgstr "オンですが、固定の告知チャンネルが設定されていないため、実際には何も投稿されません。`/levelconfig announce mode` で設定してください。"
+
+#: cogs/community/seasons_views.py:286
+msgid "Pick the season champion role..."
+msgstr "シーズンチャンピオンのロールを選んでください..."
+
+#: cogs/community/seasons_views.py:299
+msgid "Clear role"
+msgstr "ロールをクリア"
+
+#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+msgid "Turn off"
+msgstr "オフにする"
+
+#: cogs/community/seasons_views.py:312 cogs/community/usersettings.py:271
+msgid "Turn on"
+msgstr "オンにする"
+
+#: cogs/community/seasons_views.py:362
+#, python-brace-format
+msgid "Seasons - {guild}"
+msgstr "シーズン - {guild}"
+
+#: cogs/community/seasons_views.py:365
+msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
+msgstr "各シーズンのチャンピオンに付与するロールと、シーズン終了時に表彰台を告知するかどうかを設定します。"
+
+#: cogs/community/seasons_views.py:375
+msgid "Season champion role"
+msgstr "シーズンチャンピオンロール"
+
+#: cogs/community/seasons_views.py:400
+msgid "Season announce"
+msgstr "シーズン告知"
+
+#: cogs/community/seasons_views.py:431
+#, python-brace-format
+msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
+msgstr "{role} を管理できません（私の最上位ロールより上にあるか、連携機能によって管理されているか、@everyone です）。別のロールを選んでください。"
+
+#: cogs/community/seasons_views.py:443 cogs/community/seasons_views.py:455
+#: cogs/community/seasons_views.py:480 cogs/moderation/automod_panel.py:415
+#: cogs/moderation/warn_config.py:456
+msgid "Something went wrong updating the panel."
+msgstr "パネルの更新中に問題が発生しました。"
+
+#: cogs/community/seasons_views.py:468
+msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
+msgstr "シーズン告知をオンにする前に、まず `/levelconfig announce mode` で固定の告知チャンネルを設定してください。"
 
 #: cogs/community/usersettings.py:86
 msgid "Level-up announcements"
@@ -2582,14 +2683,6 @@ msgstr "アバター履歴の削除中に問題が発生しました。"
 #: cogs/community/usersettings.py:256
 msgid "Avatar history deletion cancelled."
 msgstr "アバター履歴の削除をキャンセルしました。"
-
-#: cogs/community/usersettings.py:271
-msgid "Turn off"
-msgstr "オフにする"
-
-#: cogs/community/usersettings.py:271
-msgid "Turn on"
-msgstr "オンにする"
 
 #: cogs/community/usersettings.py:355
 msgid "## Your preferences"
@@ -4000,16 +4093,6 @@ msgstr "このサーバーのすべての機能の概要です。下のメニュ
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "レベリングの詳細設定は `/levelconfig` にあります。"
 
-#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
-#: cogs/moderation/warn_config.py:437
-msgid "Only you can use these controls"
-msgstr "これらの操作はあなただけが使用できます"
-
-#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
-#: cogs/moderation/warn_config.py:439
-msgid "times out after 3 min"
-msgstr "3分後にタイムアウトします"
-
 #: cogs/config/settings.py:352
 msgid "The prefix can't be blank."
 msgstr "プレフィックスを空にすることはできません。"
@@ -4924,10 +5007,6 @@ msgstr "除外ロールを持つメンバーと除外チャンネルのメッセ
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "ネイティブフィルターにはYasuhoにサーバー管理権限が必要です。"
 
-#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
-msgid "Something went wrong updating the panel."
-msgstr "パネルの更新中に問題が発生しました。"
-
 #: cogs/moderation/automod_panel.py:429
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Discordのネイティブフィルターを変更するには、Yasuhoに**サーバー管理**権限が必要です。"
@@ -5212,7 +5291,7 @@ msgstr "**{role}** を {done} 人のメンバーから削除しました ({faile
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** から削除しました"
 
-#: cogs/moderation/moderation.py:1103 tools/modchecks.py:69
+#: cogs/moderation/moderation.py:1103 tools/modchecks.py:90
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "自分の最上位ロール以上のロールは管理できません。"
 
@@ -9084,7 +9163,7 @@ msgstr "自分と同等以上のロールを持つ相手に対して操作を行
 msgid "My highest role isn't above that member, so I can't act on them."
 msgstr "私の最上位ロールがそのメンバーより上ではないため、操作を実行できません。"
 
-#: tools/modchecks.py:72
+#: tools/modchecks.py:93
 msgid "My highest role isn't above that role, so I can't manage it."
 msgstr "私の最上位ロールがそのロールより上にないため、管理できません。"
 
