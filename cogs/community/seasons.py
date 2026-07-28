@@ -1,4 +1,5 @@
-"""Leveling seasons (S1) - the engine that closes a month and freezes its podium.
+"""Leveling seasons (S1 engine + S2 surfaces) - closes a month, freezes its
+podium, and lets the guild browse and configure it.
 
 A SEASON is one calendar month, and it rides the monthly ``xp_period`` rollup
 the leveling cog already writes on every grant (tools.leveling.month_period_key).
@@ -39,6 +40,19 @@ separate ``announced_at`` claim on the rank-1 row (an UPDATE ... WHERE
 announced_at IS NULL RETURNING) so a replay can re-elect an announcer WITHOUT
 re-freezing the podium; deliberately not built until a guild asks for it.
 
+S2 adds two read/admin surfaces, both thin: ``/halloffame`` (a browsable
+Components V2 card over ``season_podiums``, opening on the most recent season
+and walking older/newer ones one indexed hop at a time - see the "hall of fame
+browsing queries" below) and ``/levelconfig seasons`` (a panel for the two
+level_config knobs the S1 engine already reads: the champion role and the
+announce toggle, delegated from LevelConfigUI the same way ``rewards``/``xp``
+already are). Neither surface touches the engine's exactly-once contract
+above; ``/halloffame`` only ever calls :meth:`ensure_season_snapshot` the way
+any other on-demand caller would. The Views themselves live in the sibling
+``seasons_views.py`` (the presentation concern, mirroring the automod.py /
+automod_panel.py split) - this module owns the queries and the command bodies,
+that one owns the Components V2 layout and its interactive callbacks.
+
 Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the
 fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
@@ -50,17 +64,18 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs.community.level_rewards import _assignable
+from cogs.community import seasons_views
 from tools import i18n, leveling
 from tools.i18n import _
+from tools.modchecks import bot_can_assign_role as _assignable
 
 log = logging.getLogger(__name__)
 
-# Medal glyphs for the three podium places, mirroring the leaderboard card's own
-# top-three markers (cogs/community/leveling.py's _MEDALS). A rank with no glyph
-# (impossible while SEASON_PODIUM_SIZE is 3, but cheap to survive) falls back to
-# a plain number.
-_MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD PLACE MEDAL}"}
+# Medal glyphs for the three podium places, shared with the leaderboard card and
+# the hall of fame (tools.leveling.PODIUM_MEDALS - one home, so the three podium
+# surfaces can never drift apart). A rank with no glyph (impossible while
+# SEASON_PODIUM_SIZE is 3, but cheap to survive) falls back to a plain number.
+_MEDALS = leveling.PODIUM_MEDALS
 
 # Audit-log reasons for the champion role moves. Plain English literals, never
 # _(): a reason is written to the guild's audit log at call time, outside any
@@ -121,6 +136,97 @@ _SEASON_CONFIG_SQL = """
     WHERE guild_id = $1;
     """
 
+# ---------------------------------------------------------------------------
+# S2 read surface: the hall of fame's browsing queries. Every one of them is
+# served by the season_podiums PK (guild_id, period_key, rank) as an index
+# range scan - there is deliberately no "list every season this guild has"
+# query anywhere: the card walks one hop at a time (see seasons_views.py's
+# HallOfFameCard), so a guild with 2 closed seasons or 200 costs the same per
+# page flip.
+# ---------------------------------------------------------------------------
+
+# The most recent season this guild ever froze, or NULL for a guild with none
+# at all - the hall of fame's landing page.
+_LATEST_SEASON_KEY_SQL = """
+    SELECT period_key FROM season_podiums
+    WHERE guild_id = $1
+    ORDER BY period_key DESC
+    LIMIT 1;
+    """
+
+# The closest season STRICTLY OLDER than ``period_key`` ("Prev" on the card),
+# or NULL when ``period_key`` is already the guild's oldest frozen season.
+_OLDER_SEASON_KEY_SQL = """
+    SELECT period_key FROM season_podiums
+    WHERE guild_id = $1 AND period_key < $2
+    ORDER BY period_key DESC
+    LIMIT 1;
+    """
+
+# The closest season STRICTLY NEWER than ``period_key`` ("Next" on the card),
+# or NULL when ``period_key`` is already the guild's latest frozen season.
+_NEWER_SEASON_KEY_SQL = """
+    SELECT period_key FROM season_podiums
+    WHERE guild_id = $1 AND period_key > $2
+    ORDER BY period_key ASC
+    LIMIT 1;
+    """
+
+# One season's frozen podium, rank-ordered. Bounded at SEASON_PODIUM_SIZE rows
+# by construction (the snapshot never inserts more), so this is always a tiny,
+# PK-served read - never a sort over the guild's whole season history.
+_SEASON_POD_ROWS_SQL = """
+    SELECT rank, user_id, xp FROM season_podiums
+    WHERE guild_id = $1 AND period_key = $2
+    ORDER BY rank ASC;
+    """
+
+# S2 admin writes: the seasons panel's two level_config knobs, each a
+# targeted UPDATE of exactly one column via the house upsert shape (mirrors
+# cogs/community/leveling.py's set_announce_mode/set_voice_xp_enabled) so a
+# guild that has never written a level_config row yet still gets its very first
+# season setting persisted, instead of a plain UPDATE silently touching zero
+# rows. Neither knob is part of the Leveling cog's hot-path config mirror (see
+# the class docstring), so neither write refreshes it.
+#
+# The INSERT branch seeds ``enabled`` from the legacy
+# guild_settings.leveling_enabled JSONB bool, EXACTLY like every other
+# level_config writer in the house. That is not cosmetic: a legacy guild whose
+# leveling is ON only through that JSONB flag has no level_config row at all,
+# so a bare INSERT here would create one with enabled defaulting to FALSE - and
+# tools.leveling.resolve_config, which prefers the row over the legacy bool,
+# would then answer "leveling off" on the next restart and that guild would
+# silently stop earning XP just because an admin picked a champion role. The
+# ON CONFLICT branch keeps touching ONLY its own column, so neither statement
+# can ever turn leveling on or off by itself.
+_SET_CHAMPION_ROLE_SQL = """
+    INSERT INTO level_config (guild_id, enabled, season_champion_role_id)
+    VALUES (
+        $1,
+        COALESCE(
+            (SELECT (settings->>'leveling_enabled')::boolean
+             FROM guild_settings WHERE guild_id = $1),
+            FALSE
+        ),
+        $2
+    )
+    ON CONFLICT (guild_id) DO UPDATE SET season_champion_role_id = $2;
+    """
+
+_SET_SEASON_ANNOUNCE_SQL = """
+    INSERT INTO level_config (guild_id, enabled, season_announce)
+    VALUES (
+        $1,
+        COALESCE(
+            (SELECT (settings->>'leveling_enabled')::boolean
+             FROM guild_settings WHERE guild_id = $1),
+            FALSE
+        ),
+        $2
+    )
+    ON CONFLICT (guild_id) DO UPDATE SET season_announce = $2;
+    """
+
 
 class Seasons(commands.Cog):
     """Closes leveling seasons: podium snapshot, champion role, announce.
@@ -130,6 +236,10 @@ class Seasons(commands.Cog):
     on a month rollover (``bot.get_cog("Seasons")``, the house cross-cog seam),
     and any read surface can call :meth:`ensure_season_snapshot` directly to
     materialize a month that closed while the guild was quiet.
+
+    Two visible commands (S2): ``/halloffame`` (browse past podiums) and, via
+    LevelConfigUI's ``/levelconfig seasons`` delegation, :meth:`cmd_seasons_panel`
+    (configure the champion role and the announce toggle).
 
     Scale: the work is bounded at ONE snapshot per ACTIVE guild per MONTH. The
     detection that gates it is a single in-memory marker test on the leveling
@@ -591,6 +701,99 @@ class Seasons(commands.Cog):
                 )
             )
         return "\n".join(lines)
+
+    # -- S2 read surface: hall-of-fame browsing queries -------------------
+    async def latest_season_key(self, guild_id):
+        """The most recent season this guild ever froze, or ``None``."""
+        return await self.bot.db_pool.fetchval(_LATEST_SEASON_KEY_SQL, guild_id)
+
+    async def older_season_key(self, guild_id, period_key):
+        """The closest frozen season strictly OLDER than ``period_key``, or
+        ``None`` when ``period_key`` is already the oldest one on record."""
+        return await self.bot.db_pool.fetchval(
+            _OLDER_SEASON_KEY_SQL, guild_id, period_key
+        )
+
+    async def newer_season_key(self, guild_id, period_key):
+        """The closest frozen season strictly NEWER than ``period_key``, or
+        ``None`` when ``period_key`` is already the latest one on record."""
+        return await self.bot.db_pool.fetchval(
+            _NEWER_SEASON_KEY_SQL, guild_id, period_key
+        )
+
+    async def season_podium_rows(self, guild_id, period_key):
+        """``(rank, user_id, xp)`` tuples for one frozen season, rank-ordered."""
+        rows = await self.bot.db_pool.fetch(
+            _SEASON_POD_ROWS_SQL, guild_id, period_key
+        )
+        return [(row["rank"], row["user_id"], row["xp"]) for row in rows]
+
+    # -- S2 admin writes: the seasons panel --------------------------------
+    async def set_champion_role(self, guild_id, role_id):
+        """Persist (or clear, with ``role_id=None``) the season champion role."""
+        await self.bot.db_pool.execute(_SET_CHAMPION_ROLE_SQL, guild_id, role_id)
+
+    async def set_season_announce(self, guild_id, enabled):
+        """Persist the season-rollover announce toggle."""
+        await self.bot.db_pool.execute(
+            _SET_SEASON_ANNOUNCE_SQL, guild_id, bool(enabled)
+        )
+
+    # -- S2 commands --------------------------------------------------------
+    @commands.hybrid_command(name="halloffame")
+    @commands.guild_only()
+    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
+    async def halloffame(self, ctx):
+        """Browse this server's leveling season podiums, most recent first."""
+        await self.cmd_halloffame(ctx)
+
+    async def cmd_halloffame(self, ctx):
+        """The ``/halloffame`` body, also the ``get_cog`` seam for a future
+        caller (matches the house delegation shape, see LevelConfigUI's
+        ``cmd_*`` wrappers around LevelRewards/LevelAdmin)."""
+        guild = ctx.guild
+        # ACKNOWLEDGE FIRST. Opening the hall of fame is also the on-demand
+        # entry point that can CLOSE a season, and that path is not a read: on
+        # the one invocation per guild per month that actually wins the
+        # snapshot it fetches members over HTTP, moves the champion role and
+        # posts the announce - comfortably past the 3s an un-deferred slash
+        # interaction gets, which would show "the application did not respond"
+        # and then lose the card to an expired token. Deferring costs nothing on
+        # every other invocation, and is a no-op for a prefix call (verified in
+        # discord.py: Context.defer only acts when self.interaction is set).
+        await ctx.defer()
+        # Materialize a closed month the guild's own activity never triggered
+        # (see the module docstring's contract): a read surface is exactly the
+        # on-demand entry point ensure_season_snapshot documents for this.
+        await self.ensure_season_snapshot(guild)
+
+        period_key = await self.latest_season_key(guild.id)
+        if period_key is None:
+            await ctx.send(
+                _("No leveling season has closed here yet - check back next month.")
+            )
+            return
+
+        podium = await self.season_podium_rows(guild.id, period_key)
+        # We just asked for the LATEST season, so by definition nothing is
+        # newer - no query needed to know that "Next" starts disabled.
+        has_older = await self.older_season_key(guild.id, period_key) is not None
+        view = seasons_views.HallOfFameCard(
+            self, guild, ctx.author.id, period_key, podium, has_older, False
+        )
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def cmd_seasons_panel(self, ctx):
+        """Open the ``/levelconfig seasons`` admin panel (delegated from
+        LevelConfigUI, the house cross-cog shape)."""
+        row = await self.bot.db_pool.fetchrow(_SEASON_CONFIG_SQL, ctx.guild.id)
+        state = seasons_views.season_panel_state(row)
+        view = seasons_views.SeasonsPanel(self, ctx.guild, ctx.author.id, state)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
 
 
 async def setup(bot):

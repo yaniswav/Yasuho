@@ -48,6 +48,27 @@ def hierarchy_error(ctx, target):
     return None
 
 
+def bot_can_assign_role(role, guild):
+    """Whether Yasuho could actually add/remove ``role`` in ``guild`` right now.
+
+    Not @everyone, not managed by an integration, and strictly below the bot's
+    top role - the same hierarchy shape :func:`role_hierarchy_error` checks for
+    a human invoker, but asked purely about the BOT with no invoker involved:
+    used to gate role grants that Yasuho hands out on its own (a level-up
+    reward, a season champion role), never in response to a moderator's
+    command. Shared home for a check that started life duplicated in
+    cogs/community/level_rewards.py (level rewards) and cogs/community/seasons.py
+    (the season champion role) - both import it from here now.
+    """
+    me = guild.me
+    return (
+        me is not None
+        and not role.is_default()
+        and not role.managed
+        and role < me.top_role
+    )
+
+
 def role_hierarchy_error(ctx, role):
     """Return a reason string if ctx.author may not manage ``role``, else None.
 

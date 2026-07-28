@@ -1319,6 +1319,18 @@ class LevelConfigUI(commands.Cog):
         if cog is not None:
             await cog.cmd_mode(ctx, mode)
 
+    # -- seasons (S2) --------------------------------------------------------
+    # Thin wrapper over the Seasons cog's cmd_seasons_panel body (see
+    # cogs/community/seasons.py), same delegation shape as rewards/xp above.
+    @levelconfig.command(name="seasons")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_seasons(self, ctx):
+        """Configure the season champion role and the season-rollover announce."""
+        cog = await self._require(ctx, "Seasons")
+        if cog is not None:
+            await cog.cmd_seasons_panel(ctx)
+
     # -- xp subgroup (L5) --------------------------------------------------
     # Thin wrappers over the LevelAdmin cog's cmd_* bodies (see
     # cogs/community/level_admin.py), including the reset/resetall confirm flows.

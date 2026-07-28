@@ -36,27 +36,15 @@ from discord.ext import commands
 from tools import level_rewards
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.modchecks import bot_can_assign_role as _assignable
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
-
-def _assignable(role, guild):
-    """Whether Yasuho could actually add/remove this role right now.
-
-    Mirrors the hierarchy check every other role-granting cog repeats
-    (buttonroles.BuilderView._can_assign, rolemenus's inline ``role >= bot_top``):
-    not @everyone, not managed by an integration, and strictly below the bot's
-    top role. Used both as a non-blocking ADD-time warning and to skip a role
-    at grant time (see :meth:`LevelRewards.grant_for_levelup`).
-    """
-    me = guild.me
-    return (
-        me is not None
-        and not role.is_default()
-        and not role.managed
-        and role < me.top_role
-    )
+# _assignable now lives in tools.modchecks (bot_can_assign_role) - shared with
+# cogs/community/seasons.py's season champion role, which needs the exact same
+# hierarchy check. Imported under its old name so every call site below reads
+# unchanged.
 
 
 # ----------------------------------------------------------------------

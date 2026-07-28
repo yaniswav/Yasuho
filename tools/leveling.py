@@ -896,6 +896,19 @@ def month_rolled_over(previous, current):
     return previous is None or previous[1] != current[1]
 
 
+# The podium markers every leveling surface reuses: the /leaderboard card, the
+# season rollover announce and the hall-of-fame card all mark their top three
+# with the SAME glyphs. Kept here (the neutral leveling module every one of them
+# already imports) rather than copied per cog, so the podium never renders with
+# three different medal sets. A rank with no glyph falls back to a plain number
+# at each call site (they format that fallback differently: "#4" vs "**#4**").
+PODIUM_MEDALS = {
+    1: "\N{FIRST PLACE MEDAL}",
+    2: "\N{SECOND PLACE MEDAL}",
+    3: "\N{THIRD PLACE MEDAL}",
+}
+
+
 def format_month_period_label(period_key):
     """A month period key rendered for humans: ``"M2026-07"`` -> ``"2026-07"``.
 

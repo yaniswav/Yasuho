@@ -1088,3 +1088,71 @@ async def test_announce_send_failure_never_undoes_the_snapshot(fake_pool):
     cog = Seasons(_make_bot(fake_pool))
 
     assert await cog.ensure_season_snapshot(guild, now=_JULY) == [(1, 11, 900)]
+
+
+# ---------------------------------------------------------------------------
+# S2 admin writes: the two level_config upserts must never mask a LEGACY guild.
+#
+# A guild whose leveling is ON only through the legacy
+# guild_settings.leveling_enabled JSONB bool has NO level_config row at all.
+# tools.leveling.resolve_config prefers a row over that legacy bool, so an
+# INSERT that seeds no ``enabled`` would hand such a guild a brand new row with
+# enabled = FALSE and silently kill its XP on the next restart. Both writers
+# therefore carry the house COALESCE seed (mirrors set_announce_mode /
+# set_voice_xp_enabled / level_rewards' cmd_mode) while their ON CONFLICT
+# branch still touches ONLY its own column.
+# ---------------------------------------------------------------------------
+
+
+def _update_branch(query):
+    """The ON CONFLICT DO UPDATE tail of an upsert (what a conflict writes)."""
+    return query.split("DO UPDATE")[1]
+
+
+async def test_set_champion_role_seeds_enabled_from_the_legacy_jsonb(fake_pool):
+    cog = Seasons(_make_bot(fake_pool))
+
+    await cog.set_champion_role(7, 99)
+
+    writes = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(writes) == 1
+    _method, query, args = writes[0]
+    assert "INSERT INTO level_config" in query
+    # The INSERT branch carries the legacy seed...
+    assert "guild_settings" in query
+    assert "leveling_enabled" in query
+    assert "COALESCE" in query
+    # ...and the UPDATE branch still writes nothing but the champion role.
+    assert "season_champion_role_id = $2" in _update_branch(query)
+    assert "enabled" not in _update_branch(query)
+    assert args == (7, 99)
+
+
+async def test_clearing_the_champion_role_keeps_the_legacy_seed(fake_pool):
+    """Clearing is the same upsert: a legacy guild that sets then clears a
+    champion role must still never end up with an enabled = FALSE row."""
+    cog = Seasons(_make_bot(fake_pool))
+
+    await cog.set_champion_role(7, None)
+
+    _method, query, args = [c for c in fake_pool.calls if c[0] == "execute"][0]
+    assert "leveling_enabled" in query
+    assert "COALESCE" in query
+    assert args == (7, None)
+
+
+async def test_set_season_announce_seeds_enabled_from_the_legacy_jsonb(fake_pool):
+    cog = Seasons(_make_bot(fake_pool))
+
+    await cog.set_season_announce(7, True)
+
+    writes = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(writes) == 1
+    _method, query, args = writes[0]
+    assert "INSERT INTO level_config" in query
+    assert "guild_settings" in query
+    assert "leveling_enabled" in query
+    assert "COALESCE" in query
+    assert "season_announce = $2" in _update_branch(query)
+    assert "enabled" not in _update_branch(query)
+    assert args == (7, True)

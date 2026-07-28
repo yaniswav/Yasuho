@@ -140,10 +140,29 @@ class AuthorLayoutView(discord.ui.LayoutView):
                 child.disabled = True
 
     async def on_timeout(self):
+        """Grey out the controls in place, WITHOUT ever notifying anyone.
+
+        A Components V2 message carries its text inside the view, so this edit
+        resends every TextDisplay - and several layouts legitimately hold raw
+        ``<@id>`` / ``<@&id>`` tokens (the hall-of-fame podium, the seasons
+        panel's champion role, the reminders card...). discord.py folds the
+        CLIENT default (core.Yasuho: users=True) into any edit that does not
+        say otherwise (verified: Message.edit passes
+        previous_allowed_mentions=state.allowed_mentions), so an unsuppressed
+        timeout edit would re-parse those tokens and ping their targets three
+        minutes after the fact, for a message nobody touched.
+        Suppressing every mention here is safe for ALL consumers: a timeout
+        edit only DISABLES controls, it never adds content, so no surface has a
+        legitimate reason to (re)notify at that moment - the ones that do mean
+        to ping say so on their own send/edit (see cogs/community/seasons.py's
+        announce, which passes its own AllowedMentions).
+        """
         self._disable_all()
         if self.message is not None:
             try:
-                await self.message.edit(view=self)
+                await self.message.edit(
+                    view=self, allowed_mentions=discord.AllowedMentions.none()
+                )
             except discord.HTTPException:
                 pass
 

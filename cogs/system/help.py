@@ -78,7 +78,7 @@ CATEGORIES = [
         "✨",
         "Levels & XP",
         N_("Earn XP, climb the leaderboard and set up rewards."),
-        ["Leveling", "LevelRewards", "LevelConfigUI", "LevelAdmin"],
+        ["Leveling", "LevelRewards", "LevelConfigUI", "LevelAdmin", "Seasons"],
     ),
     (
         "👤",

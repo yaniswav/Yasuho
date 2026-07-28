@@ -31,7 +31,10 @@ _DEFAULT_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png"
 _PODIUM_SLOTS = 5
 
 # Medal glyphs for the top three; lower ranks fall back to a plain number.
-_MEDALS = {1: "\N{FIRST PLACE MEDAL}", 2: "\N{SECOND PLACE MEDAL}", 3: "\N{THIRD PLACE MEDAL}"}
+# Shared with the season announce and the hall-of-fame card through
+# tools.leveling.PODIUM_MEDALS so all three podium surfaces mark the same ranks
+# with the same glyphs; aliased locally so every call site below reads unchanged.
+_MEDALS = leveling.PODIUM_MEDALS
 
 # No-xp snapshot cache ceiling (tools.lru_cache.BoundedLRU): comfortably above
 # any plausible number of guilds with leveling enabled AND no-xp zones
