@@ -40,10 +40,11 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import leveling
+from tools import interactions, leveling, rank_card, rendering
+from tools.cooldowns import Cooldowns
 from tools.formats import format_dt, random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorView
+from tools.views import AuthorLayoutView, AuthorView, LocaleModal
 
 try:
     # The house duration converter (tools/time.py), reused elsewhere (reminders,
@@ -209,6 +210,452 @@ async def _fetch_config(pool, guild_id):
         guild_id,
     )
     return leveling.LevelConfig.from_row(row) if row is not None else leveling.LevelConfig()
+
+
+# ----------------------------------------------------------------------
+# Rank card customisation (RC2): /levelconfig card
+# ----------------------------------------------------------------------
+# Every write below goes through the Leveling cog's RC2 seam
+# (set_rank_background / set_rank_accent / clear_rank_card, see
+# cogs/community/leveling.py) - this module never touches tools.rank_card's
+# storage functions directly, so the cache-invalidation contract that seam
+# exists to enforce can never be bypassed from here.
+
+# The upload cap as it is SPOKEN to admins, derived from the single authority
+# (tools.rank_card.MAX_SOURCE_BYTES) so the number in a message or in a slash
+# command's help can never drift from the number the validator enforces. Binary
+# megabytes floor-divided (8 * 1024 * 1024 -> 8), labelled "MB" the way every
+# other user-facing string in this codebase does.
+MAX_SOURCE_MB = rank_card.MAX_SOURCE_BYTES // (1024 * 1024)
+
+# SCALE STORY: "Preview my card" runs the FULL render pipeline - a CDN avatar
+# read plus a Pillow compose - inside tools.rendering's BOT-WIDE 2-slot image
+# semaphore. A button has no commands.cooldown of its own, so without this a
+# single admin holding the click could keep both slots busy and add latency to
+# every other guild's /rank, welcome card and stats render. One preview per 5s
+# per user is far above any real configuration session (the same shape as the
+# music vibe card's _STATION_DEBOUNCE, and as levelconfig_card_background's own
+# command cooldown). Keyed on user id only: the panel is already author-gated,
+# so a per-guild key would just be the same person twice.
+_PREVIEW_DEBOUNCE = Cooldowns(5.0)
+
+
+def _rank_card_error_message(exc):
+    """Map a typed :class:`tools.rank_card.RankCardError` to a short,
+    translated message - one clause per failure so a rejected upload always
+    tells the admin WHY, never a bare "something went wrong"."""
+    if isinstance(exc, rank_card.SourceTooLarge):
+        return _("That image is too large - the limit is {mb} MB.").format(
+            mb=MAX_SOURCE_MB
+        )
+    if isinstance(exc, rank_card.ImageTooLarge):
+        return _(
+            "That image has too many pixels to process safely - try a "
+            "smaller picture."
+        )
+    if isinstance(exc, rank_card.UnsupportedFormat):
+        return _("Only PNG, JPEG, and WebP images are supported.")
+    if isinstance(exc, rank_card.EncodedTooLarge):
+        return _(
+            "That image is too complex to fit under the storage limit - "
+            "try a simpler or smaller picture."
+        )
+    if isinstance(exc, rank_card.DecodeFailed):
+        return _(
+            "I couldn't read that as an image - make sure it's a valid "
+            "PNG, JPEG, or WebP file."
+        )
+    if isinstance(exc, rank_card.InvalidAccent):
+        return _(
+            "That's not a valid hex colour - try something like #5865F2 "
+            "or #58F."
+        )
+    # Defensive only: every RankCardError subclass is handled above.
+    return _("That image couldn't be used for the rank card.")
+
+
+def card_panel_state(row):
+    """The panel's state dict from a :func:`tools.rank_card.fetch_config` row.
+
+    ``row`` is ``None`` for a guild that never customised its card (no
+    ``rank_cards`` row at all) - both knobs then read as their stock default.
+    Kept as ONE function (the house shape, cf. ``seasons_views``'
+    ``season_panel_state``) so the command that opens the panel and the panel's
+    own re-read cannot describe the same row differently.
+    """
+    if row is None:
+        return {"accent": None, "has_background": False}
+    return {
+        "accent": row["accent"],
+        "has_background": bool(row["has_background"]),
+    }
+
+
+async def _render_card_preview(bot, leveling_cog, guild, member):
+    """Render ``member``'s rank card exactly as ``/rank`` would, using the
+    guild's CURRENT customisation (not the panel's possibly-stale in-memory
+    state) - the preview button's whole point is to show the real pipeline's
+    output. Lives here rather than on the Leveling cog because this lot's
+    leveling.py changes are scoped to the write seam alone; every piece this
+    calls (ensure_rank_card_style, the render, tools.rank_card.fetch_background)
+    already existed for /rank, so nothing new is added there.
+    """
+    pool = bot.db_pool
+    xp = (
+        await pool.fetchval(
+            "SELECT xp FROM levels WHERE guild_id = $1 AND user_id = $2;",
+            guild.id,
+            member.id,
+        )
+        or 0
+    )
+    level = leveling.level_for_xp(xp)
+    cur_threshold = leveling.xp_for_level(level)
+    next_threshold = leveling.xp_for_level(level + 1)
+    rank_pos = await pool.fetchval(
+        "SELECT COUNT(*) + 1 FROM levels WHERE guild_id = $1 AND xp > $2;",
+        guild.id,
+        xp,
+    )
+
+    avatar_bytes = await member.display_avatar.replace(size=128).read()
+    accent = member.colour.to_rgb() if member.colour.value else (88, 101, 242)
+    guild_accent, has_background = await leveling_cog.ensure_rank_card_style(guild.id)
+    if guild_accent is not None:
+        accent = guild_accent
+    background = None
+    if has_background:
+        background = await rank_card.fetch_background(pool, guild.id)
+
+    def _render():
+        return leveling_cog._render_rank_card(
+            avatar_bytes,
+            member.display_name,
+            level,
+            rank_pos,
+            xp,
+            cur_threshold,
+            next_threshold,
+            accent,
+            background,
+        )
+
+    return await rendering.run_image_job(bot, _render)
+
+
+class _RankAccentModal(LocaleModal):
+    """Set the guild's rank-card accent from a typed hex colour.
+
+    Accepts any shape :func:`tools.rank_card.validate_accent` does (``#RGB``,
+    ``#RRGGBB``, ``0xRRGGBB``); defaults to the guild's current accent so
+    submitting unchanged is a no-op write.
+    """
+
+    def __init__(self, panel):
+        super().__init__(title=_("Set rank card accent"))
+        self.panel = panel
+        current = panel.state.get("accent")
+        self.field = discord.ui.TextInput(
+            label=_("Hex colour"),
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=9,
+            default=("#%06X" % current) if current is not None else None,
+            placeholder="#RRGGBB",
+        )
+        self.add_item(self.field)
+
+    async def on_submit(self, interaction):
+        try:
+            await self.panel.set_accent(interaction, self.field.value)
+        except Exception:
+            log.exception("Rank card accent modal failed")
+            await interactions.notify_failure(interaction)
+
+
+class _RankCardSetBackgroundButton(discord.ui.Button):
+    """Points the admin at the companion attachment command - a button click
+    cannot open Discord's own file picker, so this only ever shows
+    instructions (the DECIDED KISS+security shape: the panel never fetches an
+    arbitrary URL, only a native command Attachment parameter does)."""
+
+    def __init__(self, panel):
+        super().__init__(
+            label=_("Set background..."), style=discord.ButtonStyle.primary
+        )
+        self.panel = panel
+
+    async def callback(self, interaction):
+        await self.panel.show_background_instructions(interaction)
+
+
+class _RankCardResetBackgroundButton(discord.ui.Button):
+    def __init__(self, panel, *, disabled):
+        super().__init__(
+            label=_("Reset background"),
+            style=discord.ButtonStyle.secondary,
+            disabled=disabled,
+        )
+        self.panel = panel
+
+    async def callback(self, interaction):
+        await self.panel.reset_background(interaction)
+
+
+class _RankCardSetAccentButton(discord.ui.Button):
+    def __init__(self, panel):
+        super().__init__(label=_("Set accent..."), style=discord.ButtonStyle.primary)
+        self.panel = panel
+
+    async def callback(self, interaction):
+        await interaction.response.send_modal(_RankAccentModal(self.panel))
+
+
+class _RankCardResetAccentButton(discord.ui.Button):
+    def __init__(self, panel, *, disabled):
+        super().__init__(
+            label=_("Reset accent"),
+            style=discord.ButtonStyle.secondary,
+            disabled=disabled,
+        )
+        self.panel = panel
+
+    async def callback(self, interaction):
+        await self.panel.reset_accent(interaction)
+
+
+class _RankCardPreviewButton(discord.ui.Button):
+    def __init__(self, panel):
+        super().__init__(
+            label=_("Preview my card"), style=discord.ButtonStyle.secondary
+        )
+        self.panel = panel
+
+    async def callback(self, interaction):
+        await self.panel.preview(interaction)
+
+
+class RankCardPanel(AuthorLayoutView):
+    """Author-restricted admin panel for the ``rank_cards`` row (RC2).
+
+    Single Components V2 :class:`~discord.ui.Container`, same house shape as
+    :class:`~cogs.community.seasons_views.SeasonsPanel`: a header, a
+    background section (state + set-instructions/reset buttons) and an accent
+    section (state + set-modal/reset buttons), plus a preview button that
+    renders the CLICKING admin's own card through the real pipeline and sends
+    it back ephemerally. The container's own ``accent_colour`` mirrors the
+    guild's configured accent when one is set - a live swatch, not just text.
+
+    Every write calls back into the Leveling cog's RC2 seam
+    (``leveling_cog.set_rank_background`` / ``set_rank_accent`` /
+    ``clear_rank_card``), never ``tools.rank_card`` directly, so the cache
+    invalidation contract holds from this surface too.
+    """
+
+    def __init__(self, bot, leveling_cog, guild, author_id, state, *, timeout=180):
+        super().__init__(author_id, timeout=timeout)
+        self.bot = bot
+        self.leveling_cog = leveling_cog
+        self.guild = guild
+        self.state = state
+        self._build()
+
+    def _build(self):
+        self.clear_items()
+        state = self.state
+        accent_colour = (
+            discord.Colour(state["accent"])
+            if state["accent"] is not None
+            else random_colour()
+        )
+        container = discord.ui.Container(accent_colour=accent_colour)
+
+        container.add_item(
+            discord.ui.TextDisplay(
+                "### \N{FRAME WITH PICTURE} "
+                + _("Rank card - {guild}").format(guild=self.guild.name)
+                + "\n-# "
+                + _(
+                    "Customise the background and accent colour used on "
+                    "this server's /rank cards."
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+
+        if state["has_background"]:
+            background_desc = _(
+                "Set - a custom {width}x{height} background image is used."
+            ).format(width=rank_card.CARD_WIDTH, height=rank_card.CARD_HEIGHT)
+        else:
+            background_desc = _(
+                "Not set - the stock panel background is used."
+            )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Background") + "**\n" + background_desc
+            )
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                _RankCardSetBackgroundButton(self),
+                _RankCardResetBackgroundButton(
+                    self, disabled=not state["has_background"]
+                ),
+            )
+        )
+        container.add_item(discord.ui.Separator())
+
+        if state["accent"] is not None:
+            accent_desc = _("Set - {hex}").format(hex="#%06X" % state["accent"])
+        else:
+            accent_desc = _(
+                "Default - each member's own role colour is used."
+            )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Accent colour") + "**\n" + accent_desc
+            )
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                _RankCardSetAccentButton(self),
+                _RankCardResetAccentButton(
+                    self, disabled=state["accent"] is None
+                ),
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.ActionRow(_RankCardPreviewButton(self)))
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# "
+                + _("Only you can use these controls")
+                + " - "
+                + _("times out after 3 min")
+            )
+        )
+        self.add_item(container)
+
+    async def _rerender(self, interaction):
+        await interactions.refresh_layout(
+            interaction, self.message, self, surface="rank card panel"
+        )
+
+    async def _reload_state(self):
+        """Re-read the guild's row so the panel shows reality, not its memory.
+
+        A READ, so it deliberately does NOT go through the Leveling seam (that
+        exists to pair a WRITE with its cache invalidation); it hits the same
+        metadata-only query :meth:`LevelConfigUI._send_card_panel` opened the
+        panel with, never the blob.
+        """
+        row = await rank_card.fetch_config(self.bot.db_pool, self.guild.id)
+        self.state = card_panel_state(row)
+
+    async def show_background_instructions(self, interaction):
+        # interactions.reply never raises (it logs an HTTP failure at debug), so
+        # a click can never surface Discord's bare "This interaction failed".
+        await interactions.reply(
+            interaction,
+            _(
+                "To set a background, run `/levelconfig card background` "
+                "and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
+            ).format(mb=MAX_SOURCE_MB),
+            ephemeral=True,
+        )
+        # The upload lands through a SEPARATE command, so by the time the admin
+        # comes back this panel's state can be stale - and a stale
+        # has_background leaves "Reset background" disabled over a background
+        # that really is set, a dead end. Re-read and rebuild here (the button
+        # an admin naturally clicks again in that flow). Best effort: the
+        # instructions are already delivered, so a failed refresh only logs.
+        try:
+            await self._reload_state()
+            self._build()
+            await self._rerender(interaction)
+        except Exception:
+            log.exception("Rank card panel refresh after background hint failed")
+
+    async def reset_background(self, interaction):
+        try:
+            await self.leveling_cog.clear_rank_card(
+                self.guild.id, target="background"
+            )
+            self.state["has_background"] = False
+            self._build()
+            await self._rerender(interaction)
+        except Exception:
+            log.exception("Rank card panel background reset failed")
+            await interactions.notify_failure(interaction)
+
+    async def reset_accent(self, interaction):
+        try:
+            await self.leveling_cog.clear_rank_card(self.guild.id, target="accent")
+            self.state["accent"] = None
+            self._build()
+            await self._rerender(interaction)
+        except Exception:
+            log.exception("Rank card panel accent reset failed")
+            await interactions.notify_failure(interaction)
+
+    async def set_accent(self, interaction, raw_value):
+        try:
+            accent = await self.leveling_cog.set_rank_accent(
+                self.guild.id, raw_value
+            )
+        except rank_card.InvalidAccent as exc:
+            await interactions.notify_failure(
+                interaction, _rank_card_error_message(exc)
+            )
+            return
+        except Exception:
+            log.exception("Rank card panel accent update failed")
+            await interactions.notify_failure(interaction)
+            return
+        self.state["accent"] = accent
+        self._build()
+        await self._rerender(interaction)
+
+    async def preview(self, interaction):
+        # Throttle BEFORE the defer, so a refused click costs nothing but one
+        # ephemeral reply - no semaphore slot, no CDN read, no Pillow work (see
+        # _PREVIEW_DEBOUNCE). The window is touched only on an ALLOWED click, so
+        # a burst of refused clicks can never extend it (same discipline as
+        # cogs/music/views.py's _check_station_debounce).
+        if _PREVIEW_DEBOUNCE.is_active(interaction.user.id):
+            await interactions.reply(
+                interaction,
+                _("You are clicking too fast - give it a moment."),
+                ephemeral=True,
+            )
+            return
+        _PREVIEW_DEBOUNCE.touch(interaction.user.id)
+        try:
+            # thinking=True is load-bearing on a COMPONENT interaction: without
+            # it discord.py sends deferred_message_update, which DROPS the
+            # ephemeral flag and shows the clicker no loading state at all while
+            # the card renders behind the image semaphore. The house pattern for
+            # "a click that answers with a new ephemeral message" is
+            # ephemeral+thinking (cogs/config/{rooms_config,welcome,twitch}.py).
+            await interactions.defer(
+                interaction,
+                ephemeral=True,
+                thinking=True,
+                surface="rank card preview",
+            )
+            buf = await _render_card_preview(
+                self.bot, self.leveling_cog, self.guild, interaction.user
+            )
+            await interaction.followup.send(
+                file=discord.File(buf, filename="rank_preview.png"),
+                ephemeral=True,
+            )
+        except Exception:
+            log.exception("Rank card panel preview failed")
+            await interactions.notify_failure(interaction)
 
 
 # ----------------------------------------------------------------------
@@ -704,6 +1151,19 @@ class LevelConfigUI(commands.Cog):
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
 
+    async def _send_card_panel(self, ctx):
+        leveling_cog = await self._require(ctx, "Leveling")
+        if leveling_cog is None:
+            return
+        row = await rank_card.fetch_config(self.bot.db_pool, ctx.guild.id)
+        state = card_panel_state(row)
+        view = RankCardPanel(
+            self.bot, leveling_cog, ctx.guild, ctx.author.id, state
+        )
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
     # -- command group -----------------------------------------------------
     @commands.hybrid_group(name="levelconfig", aliases=["lvlconfig"])
     @commands.guild_only()
@@ -718,7 +1178,7 @@ class LevelConfigUI(commands.Cog):
     @levelconfig.command(name="enable")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     @discord.app_commands.describe(mode="True to enable, False to disable.")
     async def levelconfig_enable(self, ctx, mode: bool):
         """Enable or disable the leveling system for this server."""
@@ -1259,6 +1719,113 @@ class LevelConfigUI(commands.Cog):
         """Stop the active XP event (if any)."""
         await self._write_event(ctx.guild.id, None, None)
         await ctx.send(_("The XP event was stopped."))
+
+    # -- card subgroup (RC2) -------------------------------------------------
+    # The panel (RankCardPanel, above) and this command both write through the
+    # Leveling cog's RC2 seam (set_rank_background / set_rank_accent /
+    # clear_rank_card) - never through tools.rank_card directly - so the panel
+    # and the attachment command can never drift on the invalidation contract.
+    @levelconfig.group(name="card")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_card(self, ctx):
+        """Customise this server's rank-card background and accent colour."""
+        if ctx.invoked_subcommand is None:
+            await self._send_card_panel(ctx)
+
+    # Discord forbids invoking a subcommand GROUP directly, so the group body
+    # above is reachable by prefix only ("?levelconfig card") - without this,
+    # the panel, the centrepiece of this surface, would have no slash form at
+    # all. Same fix as /automod panel, and the same reason /levelconfig noxp
+    # (etc.) carry an explicit read subcommand next to their write ones.
+    @levelconfig_card.command(name="panel")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def levelconfig_card_panel(self, ctx):
+        """Open the interactive rank-card panel for this server."""
+        await self._send_card_panel(ctx)
+
+    @levelconfig_card.command(name="background")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    # SCALE STORY: this is the only admin command that can queue an arbitrary
+    # decode (up to MAX_SOURCE_PIXELS) into tools.rendering's BOT-WIDE 2-slot
+    # image semaphore, so a single admin hammering it would add latency to every
+    # other guild's /rank, welcome card and stats render. One upload per 10s per
+    # user is far above any real configuration session and bounds that blast
+    # radius (same shape as levelconfig_enable's own per-user cooldown).
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    # A describe() string is an English literal read at DEFINITION time (it is
+    # not user-locale text and never goes through _()), so interpolating the
+    # module-level MAX_SOURCE_MB here still yields a plain constant str - and
+    # one that cannot drift from the cap the validator enforces.
+    @discord.app_commands.describe(
+        background=(
+            f"An image (PNG, JPEG, or WebP; max {MAX_SOURCE_MB} MB) "
+            "for the rank-card background."
+        )
+    )
+    async def levelconfig_card_background(
+        self, ctx: commands.Context, background: discord.Attachment
+    ):
+        """Set this server's rank-card background from an attached image."""
+        leveling_cog = await self._require(ctx, "Leveling")
+        if leveling_cog is None:
+            return
+
+        # Cheap pre-check on the attachment's OWN declared size - refuses an
+        # oversized upload before spending a round-trip downloading it (the
+        # authoritative check is still validate_and_downscale's byte cap,
+        # this only spares the network call on the common case).
+        if background.size > rank_card.MAX_SOURCE_BYTES:
+            await ctx.send(_rank_card_error_message(rank_card.SourceTooLarge()))
+            return
+
+        # SLOW WORK past this point (a network fetch, then a Pillow decode +
+        # encode inside the shared image semaphore): defer first.
+        await ctx.defer()
+
+        # ...and, on the PREFIX path, ctx.defer() is a documented no-op (there
+        # is no interaction to acknowledge), so a ?levelconfig card background
+        # would sit silent for the whole download + decode with nothing on
+        # screen. ctx.typing() covers both: a real typing indicator on the
+        # prefix side, and a defer already answered (DeferTyping guards on
+        # response.is_done) on the slash side. Same shape as /rank's own render.
+        async with ctx.typing():
+            try:
+                data = await background.read()
+            except Exception:
+                # Deliberately broader than discord.HTTPException:
+                # Attachment.read goes out over the CDN through aiohttp, whose
+                # transport failures (ClientError, timeouts) are NOT discord
+                # exceptions and would otherwise reach the global handler as an
+                # unknown crash. Logged with the traceback, so this reports
+                # rather than swallows.
+                log.exception(
+                    "Failed to download a rank card background attachment"
+                )
+                await ctx.send(
+                    _("I couldn't download that attachment - try again.")
+                )
+                return
+
+            try:
+                await leveling_cog.set_rank_background(
+                    ctx.guild.id, data, background.content_type
+                )
+            except rank_card.RankCardError as exc:
+                await ctx.send(_rank_card_error_message(exc))
+                return
+
+        embed = discord.Embed(
+            title=_("Rank card background updated"),
+            description=_(
+                "This server's /rank cards now use the uploaded image as "
+                "their background."
+            ),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
 
     # -- rewards subgroup (L2) ---------------------------------------------
     # Thin wrappers over the LevelRewards cog's cmd_* bodies (see

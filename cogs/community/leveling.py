@@ -1311,6 +1311,71 @@ class Leveling(commands.Cog):
         """
         self._rank_cards.discard(guild_id)
 
+    # -- rank-card customisation writes (RC2 contract) -------------------
+    # TODO-CONTRACT fulfilled: every bot-side write below validates, persists
+    # THROUGH tools.rank_card, then invalidates this cog's own cache in the
+    # SAME call - so from the caller's point of view (RC2's panel and its
+    # /levelconfig card background command) a write is atomic: there is no
+    # window where the DB has the new value but the next /rank still renders
+    # the stale cached style. The dashboard path is exempt from this seam by
+    # construction (it writes the row directly, over a different process) and
+    # is instead covered by cogs/system/dashboard_sync.py's own invalidation
+    # (kind 'rank_card' -> invalidate_rank_card), see that module's docstring.
+    async def set_rank_background(self, guild_id, data, content_type=None):
+        """Validate, store and invalidate one guild's rank-card background.
+
+        ``data`` is the raw uploaded bytes; ``content_type`` is the OPTIONAL
+        client-declared type (an Attachment's own, when the caller has one).
+        Raises whichever :class:`tools.rank_card.RankCardError` subclass the
+        upload failed on (SourceTooLarge, ImageTooLarge, UnsupportedFormat,
+        DecodeFailed, EncodedTooLarge) - the caller maps each to its own short
+        user-facing message; nothing is written and the cache is left untouched
+        on a rejection. Validation is Pillow work (decode, cover-crop, WebP
+        encode), so it runs through tools.rendering.run_image_job like every
+        other image job - never blocking the event loop directly.
+        """
+        encoded, background_format = await rendering.run_image_job(
+            self.bot, rank_card.validate_and_downscale, data, content_type
+        )
+        await rank_card.set_background(
+            self.bot.db_pool, guild_id, encoded, background_format
+        )
+        self.invalidate_rank_card(guild_id)
+        return background_format
+
+    async def set_rank_accent(self, guild_id, value):
+        """Validate, store and invalidate one guild's rank-card accent colour.
+
+        ``value`` is whatever the caller collected (an int or a hex string in
+        any shape :func:`tools.rank_card.validate_accent` accepts). Raises
+        :class:`tools.rank_card.InvalidAccent` on bad input; nothing is written
+        and the cache is left untouched on a rejection. Returns the packed
+        0xRRGGBB int that was stored, for the caller's confirmation message.
+        """
+        accent = rank_card.validate_accent(value)
+        await rank_card.set_accent(self.bot.db_pool, guild_id, accent)
+        self.invalidate_rank_card(guild_id)
+        return accent
+
+    async def clear_rank_card(self, guild_id, *, target=None):
+        """Reset one guild's rank-card customisation and invalidate the cache.
+
+        ``target`` picks what to drop: ``'background'`` clears only the
+        background (keeping any accent), ``'accent'`` clears only the accent
+        (keeping any background), and ``None`` (the default) resets the whole
+        row - a guild back to the stock card. Always invalidates, even when
+        there was nothing to clear (idempotent, matching the storage layer's
+        own no-op-without-a-row contract).
+        """
+        pool = self.bot.db_pool
+        if target == "background":
+            await rank_card.clear_background(pool, guild_id)
+        elif target == "accent":
+            await rank_card.clear_accent(pool, guild_id)
+        else:
+            await rank_card.clear(pool, guild_id)
+        self.invalidate_rank_card(guild_id)
+
     @staticmethod
     def _paint_background(card, data):
         """Paint a stored background under the card, returning success.

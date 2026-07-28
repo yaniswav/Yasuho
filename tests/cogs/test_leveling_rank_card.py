@@ -27,6 +27,7 @@ import types
 import pytest
 from PIL import Image
 
+import cogs.community.leveling as leveling_module
 from cogs.community.leveling import Leveling
 from tools import rank_card
 
@@ -102,6 +103,8 @@ class RankCardPool:
         self.background_reads = 0
         self.fail_config = False
         self.fail_background = False
+        # Recorded (query, args) for every write - the RC2 seam tests below.
+        self.executes = []
 
     async def fetchrow(self, query, *args):
         assert "FROM rank_cards" in query
@@ -116,6 +119,11 @@ class RankCardPool:
         if self.fail_background:
             raise RuntimeError("db down")
         return self.backgrounds.get(args[0])
+
+    async def execute(self, query, *args):
+        assert "rank_cards" in query
+        self.executes.append((query, args))
+        return "INSERT 0 1"
 
 
 def _cog(pool):
@@ -305,3 +313,114 @@ def test_stored_background_of_any_source_shape_renders(size):
         _png(Image.new("RGB", size, (10, 80, 200)))
     )
     assert _open(_render(background=encoded)).size == rank_card.CARD_SIZE
+
+
+# ---------------------------------------------------------------------------
+# RC2 write seam: set_rank_background / set_rank_accent / clear_rank_card.
+#
+# The contract this lot exists to prove (see tools/rank_card.py's
+# TODO-CONTRACT): every bot-side write goes through one of these three cog
+# methods, and each one invalidates the style cache in the SAME call - so
+# there is never a window where the DB has the new value but a cached
+# /rank style is still stale. Every writer is tested for both the happy path
+# (write lands, cache evicted) and the rejection path (typed error raised,
+# NOTHING written, cache left untouched).
+# ---------------------------------------------------------------------------
+
+
+async def _fake_run_image_job(bot, function, *args, **kwargs):
+    """Deterministic stand-in for tools.rendering.run_image_job: no executor,
+    no semaphore, just calls the function inline - proves the seam ROUTES
+    through run_image_job without needing a real event loop/thread pool."""
+    return function(*args, **kwargs)
+
+
+async def test_set_rank_background_writes_through_run_image_job_and_invalidates(
+    monkeypatch,
+):
+    pool = RankCardPool()
+    cog = _cog(pool)
+    await cog.ensure_rank_card_style(7)
+    assert 7 in cog._rank_cards
+
+    calls = []
+
+    async def _recording_run_image_job(bot, function, *args, **kwargs):
+        calls.append(function)
+        return await _fake_run_image_job(bot, function, *args, **kwargs)
+
+    monkeypatch.setattr(
+        leveling_module.rendering, "run_image_job", _recording_run_image_job
+    )
+
+    raw = _png(Image.new("RGB", (400, 400), (10, 200, 90)))
+    background_format = await cog.set_rank_background(7, raw, "image/png")
+
+    assert background_format == rank_card.STORED_FORMAT == "webp"
+    assert calls == [rank_card.validate_and_downscale]
+    inserts = [c for c in pool.executes if "INSERT INTO rank_cards" in c[0]]
+    assert len(inserts) == 1
+    assert inserts[0][1][0] == 7  # guild_id
+    # The seam invalidates in the SAME call - the contract this lot exists for.
+    assert 7 not in cog._rank_cards
+
+
+async def test_set_rank_background_rejection_writes_nothing_and_keeps_the_cache(
+    monkeypatch,
+):
+    pool = RankCardPool()
+    cog = _cog(pool)
+    await cog.ensure_rank_card_style(7)
+
+    monkeypatch.setattr(leveling_module.rendering, "run_image_job", _fake_run_image_job)
+
+    with pytest.raises(rank_card.UnsupportedFormat):
+        await cog.set_rank_background(7, b"not an image", "application/zip")
+
+    assert pool.executes == []
+    assert 7 in cog._rank_cards
+
+
+async def test_set_rank_accent_writes_and_invalidates():
+    pool = RankCardPool()
+    cog = _cog(pool)
+    await cog.ensure_rank_card_style(7)
+
+    accent = await cog.set_rank_accent(7, "#5865F2")
+
+    assert accent == 0x5865F2
+    inserts = [c for c in pool.executes if "INSERT INTO rank_cards" in c[0]]
+    assert len(inserts) == 1
+    assert inserts[0][1] == (7, 0x5865F2)
+    assert 7 not in cog._rank_cards
+
+
+async def test_set_rank_accent_rejection_writes_nothing_and_keeps_the_cache():
+    pool = RankCardPool()
+    cog = _cog(pool)
+    await cog.ensure_rank_card_style(7)
+
+    with pytest.raises(rank_card.InvalidAccent):
+        await cog.set_rank_accent(7, "not-a-colour")
+
+    assert pool.executes == []
+    assert 7 in cog._rank_cards
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected_fragment",
+    [
+        ({}, "DELETE FROM rank_cards"),
+        ({"target": "background"}, "SET background = NULL"),
+        ({"target": "accent"}, "SET accent = NULL"),
+    ],
+)
+async def test_clear_rank_card_writes_and_invalidates(kwargs, expected_fragment):
+    pool = RankCardPool()
+    cog = _cog(pool)
+    await cog.ensure_rank_card_style(7)
+
+    await cog.clear_rank_card(7, **kwargs)
+
+    assert any(expected_fragment in query for query, _args in pool.executes)
+    assert 7 not in cog._rank_cards
