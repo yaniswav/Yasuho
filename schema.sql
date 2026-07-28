@@ -829,6 +829,40 @@ CREATE TABLE IF NOT EXISTS dashboard_actions (
 CREATE INDEX IF NOT EXISTS dashboard_actions_guild_idx ON dashboard_actions (guild_id, status);
 
 -- ============================================================
+-- Server statistics (aggregates only)
+-- ============================================================
+-- Owner: cogs/community/serverstats. Collected for every guild, with NO message
+-- content and NO user id of any kind: only counts per channel-day and per
+-- guild-day. Both tables are pruned to the last 90 days by the collector's own
+-- lazy prune, so they have a fixed steady-state size.
+CREATE TABLE IF NOT EXISTS server_stats_messages (
+    guild_id   BIGINT  NOT NULL,
+    channel_id BIGINT  NOT NULL,   -- thread messages roll up to the parent
+    day        DATE    NOT NULL,   -- UTC day the messages were sent
+    messages   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, channel_id, day)
+);
+-- Reads are "this guild, this window", and the PK already leads with guild_id:
+-- a guild holds at most (its channels x 90) rows, so the PK range scan plus a
+-- day filter is enough and a (guild_id, day) index would only be dead weight.
+-- The 90-day prune, on the other hand, scans by day across every guild.
+CREATE INDEX IF NOT EXISTS server_stats_messages_day_idx
+    ON server_stats_messages (day);
+
+-- One row per guild-day: the day's join/leave counters (humans only, since bots
+-- are infrastructure rather than growth) plus a snapshot of Discord's member_count
+-- taken on the first flush of that UTC day (NULL until that first flush).
+CREATE TABLE IF NOT EXISTS server_stats_days (
+    guild_id     BIGINT  NOT NULL,
+    day          DATE    NOT NULL,   -- UTC day
+    member_count INTEGER,            -- daily snapshot, NULL if not taken yet
+    joins        INTEGER NOT NULL DEFAULT 0,
+    leaves       INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, day)
+);
+CREATE INDEX IF NOT EXISTS server_stats_days_day_idx ON server_stats_days (day);
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new

@@ -87,6 +87,17 @@ GUILD_DELETE_QUERIES = (
     ),
     ("role_menus", "DELETE FROM role_menus WHERE guild_id = $1"),
     (
+        # Server statistics are aggregates (no content, no user id), but they
+        # are still this guild's activity history and die with it. The 90-day
+        # collector prune only ages rows out; it never covers a departure.
+        "server_stats_messages",
+        "DELETE FROM server_stats_messages WHERE guild_id = $1",
+    ),
+    (
+        "server_stats_days",
+        "DELETE FROM server_stats_days WHERE guild_id = $1",
+    ),
+    (
         # The dashboard -> bot action queue. Rows are terminal audit records
         # (kind, payload, the requesting user's id) that nothing else ever
         # deletes, so without this they would outlive the guild for good.
@@ -138,6 +149,8 @@ UNION SELECT guild_id FROM anilist_feeds
 UNION SELECT guild_id FROM anilist_follows
 UNION SELECT guild_id FROM anilist_channel_subs
 UNION SELECT guild_id FROM dashboard_actions
+UNION SELECT guild_id FROM server_stats_messages
+UNION SELECT guild_id FROM server_stats_days
 UNION
 SELECT (extra->>'guild_id')::bigint FROM timers
 WHERE extra->>'guild_id' ~ '^[0-9]+$'
