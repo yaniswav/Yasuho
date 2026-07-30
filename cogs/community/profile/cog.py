@@ -35,7 +35,7 @@ from typing import Literal
 import discord
 from discord.ext import commands
 
-from . import registry, storage, views, visibility
+from . import presence, registry, storage, views, visibility
 from .connectors import base as connectors_base
 from .connectors import sessions as connectors_sessions
 from .connectors import storage as connectors_storage
@@ -487,6 +487,15 @@ class Profiles(commands.Cog):
             # what they may see: see _schedule_stale_refreshes. Never awaited
             # - it must not add a third-party round trip to this response.
             self._schedule_stale_refreshes(member.id, connections)
+            # The LIVE half of the two presence sections, attached to the rows
+            # that were just read: what the member is playing right now, and
+            # what they are listening to on Spotify. Pure memory - it reads
+            # ``member.activities`` out of the gateway cache, which this
+            # command already holds - so it costs no await, no query and no
+            # network, and nothing about Spotify is ever persisted (see
+            # presence.py). Only sections with a marker row are touched, and
+            # the card's own visibility check still decides what is drawn.
+            presence.enrich_live(member, connections)
             # guild_only + a Member converter: both parties are in THIS guild, so
             # they share one. No global mutual-guild scan (that is O(guilds)).
             viewer = ViewerContext(
@@ -628,6 +637,44 @@ class Profiles(commands.Cog):
                     _("{field} is now visible to you only.").format(field=label)
                 )
 
+    # Declared HERE and implemented in presence.py. A hybrid subcommand must
+    # live in the same cog as the group that owns it (the house lesson from the
+    # /levelconfig fold), and `profile` belongs to this cog - but the presence
+    # collector owns a hot gateway listener and a flush loop that have no
+    # business in the command surface, so it is a cog of its own and this body
+    # delegates to it through get_cog, exactly like that fold does.
+    #
+    # Both parameters are optional: `?profile presence` with neither reports
+    # what is on and what is off, which is the answer to "wait, is the bot
+    # recording my games" - a question an opt-in feature has to be able to
+    # answer without changing anything.
+    @profile.command(name="presence")
+    @commands.guild_only()
+    @discord.app_commands.describe(
+        gaming="on to let your profile show the games you play, off to stop and forget them.",
+        spotify="on to let your profile show what you are listening to, off to stop.",
+    )
+    async def profile_presence(
+        self,
+        ctx,
+        gaming: Literal["on", "off"] | None = None,
+        spotify: Literal["on", "off"] | None = None,
+    ):
+        """Choose whether your profile shares your Discord presence."""
+
+        cog = self.bot.get_cog("ProfilePresence")
+        if cog is None:
+            # The extension adds all three cogs together, so this only happens
+            # if presence.py failed to load - which is a log line for an
+            # operator, not a traceback for the member who asked.
+            log.error("The ProfilePresence cog is not loaded")
+            await ctx.send(
+                _("Failed to update your profile, please try again later."),
+                ephemeral=True,
+            )
+            return
+        await cog.cmd_presence(ctx, gaming=gaming, spotify=spotify)
+
     @profile.command(name="edit")
     @commands.guild_only()
     async def profile_edit(self, ctx):
@@ -670,6 +717,12 @@ class Profiles(commands.Cog):
                     _("Failed to clear your profile, please try again later.")
                 )
                 return
+            # The rows are gone; the presence collector still holds this user in
+            # memory (it is armed by an in-process set, not by a query). Told
+            # here rather than left to the next flush so the very next event of
+            # theirs is already rejected - see presence.forget_collected_presence
+            # for why this is best-effort and what backs it up.
+            presence.forget_collected_presence(self.bot, ctx.author.id)
 
             embed = discord.Embed(title=_("Profile cleared"), colour=random_colour())
             embed.add_field(name=_("Your profile has been cleared."), value="​")

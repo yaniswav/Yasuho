@@ -258,7 +258,13 @@ FIELDS = (
     Field("lastfm", N_("Last.fm"), "connector", _not_stored),
     Field("osu", N_("osu!"), "connector", _not_stored),
     Field("backloggd", N_("Backloggd"), "connector", _not_stored),
-    Field("presence_gaming", N_("Now playing"), "connector", _not_stored),
+    # "Recently played", NOT "Now playing": the section is a CUMULATIVE history
+    # (a top-N of minutes per game, collected over weeks), and the live game is
+    # only its optional first line when there happens to be one. The label is
+    # shared - it names the section on the card, in the visibility panel and in
+    # every "X is now visible to ..." answer - so it has to be true in the case
+    # where nothing is playing, which is most of the time.
+    Field("presence_gaming", N_("Recently played"), "connector", _not_stored),
     Field("spotify_presence", N_("Spotify"), "connector", _not_stored),
 )
 

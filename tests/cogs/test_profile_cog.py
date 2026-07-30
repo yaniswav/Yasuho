@@ -646,7 +646,9 @@ def test_the_slash_command_names_are_unchanged():
     """Renaming any of these would force a command re-sync in production.
 
     `visibility` and `panel` are the additions this lot and its predecessor
-    make (each IS a re-sync); every pre-existing name must still be here.
+    make (each IS a re-sync); `presence` is P5's, and it lives on THIS group
+    rather than on `connections` because the two presence sections are not
+    handle-linkable. Every pre-existing name must still be here.
     """
     assert Profiles.profile.name == "profile"
     assert {command.name for command in Profiles.profile.commands} == {
@@ -656,6 +658,7 @@ def test_the_slash_command_names_are_unchanged():
         "panel",
         "clear",
         "visibility",
+        "presence",
     }
 
 

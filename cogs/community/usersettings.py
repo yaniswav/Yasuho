@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from cogs.community.profile import presence
 from tools import i18n, privacy, rendering, settings
 from tools import mangadex as md
 from tools.i18n import N_, _
@@ -223,6 +224,12 @@ class ProfileDeletionView(AuthorView):
             await privacy.delete_user_profile(
                 self.cog.bot.db_pool, self.author_id
             )
+            # The marker row that armed presence collection died with the rest
+            # of the profile, but the collector keeps its opt-in set IN MEMORY:
+            # without this it would go on recording someone who just erased
+            # themselves. Best effort, and the presence flush re-checks the row
+            # anyway - see presence.forget_collected_presence.
+            presence.forget_collected_presence(self.cog.bot, self.author_id)
             self.stop()
             for child in self.children:
                 child.disabled = True

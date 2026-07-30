@@ -221,7 +221,7 @@ def _one_line(text):
     label or a gaming ID may still carry interior newlines - and a newline
     inside a ``**label:** value`` line lets its author forge a convincing fake
     section header ("## Gaming IDs") inside somebody else's card. The bio keeps
-    its newlines (see :func:`_defuse_lines`): it is a block of its own, exactly
+    its newlines (see :func:`defuse_lines`): it is a block of its own, exactly
     like the embed description it replaces, so its SHAPE is free - only its
     line-leading markdown is not.
     """
@@ -240,7 +240,7 @@ _ZERO_WIDTH = "\N{ZERO WIDTH SPACE}"
 _STRUCTURAL_PREFIXES = ("#", "-#", ">")
 
 
-def _defuse_lines(text):
+def defuse_lines(text):
     """Keep a multi-line block's newlines, neutralise its line-leading markdown.
 
     The bio is the one owner-typed value rendered as a block of its own, so
@@ -250,6 +250,13 @@ def _defuse_lines(text):
     "## Gaming IDs" would sit above real sections and pass for one of them.
     Every offending line keeps its exact characters and simply stops being at
     the start of its line.
+
+    PUBLIC on purpose (like :func:`register_section_renderer`): a section
+    renderer written in another lot faces the identical hazard the moment it
+    draws third-party text at the START of a line - a game name, a persona
+    name, a title - and flattening (:func:`_one_line`) is not enough, because
+    it removes the newline and leaves the "## " exactly where markdown wants
+    it. One implementation, used by every writer of a card block.
     """
     lines = []
     for line in str(text).split("\n"):
@@ -591,8 +598,8 @@ class ProfileCard(discord.ui.LayoutView):
         bio = visible.get("bio")
         if bio:
             # Keeps its newlines - it is the one block value - but not the
-            # power to open a section of its own (see _defuse_lines).
-            budget.add_block(_defuse_lines(bio))
+            # power to open a section of its own (see defuse_lines).
+            budget.add_block(defuse_lines(bio))
 
         custom_lines = _custom_field_lines(visible.get("custom_fields") or [])
         if custom_lines:

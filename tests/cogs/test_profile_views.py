@@ -242,8 +242,11 @@ async def test_a_presence_section_is_never_badged_before_p5(monkeypatch):
         [],
     )
     text = "\n".join(_texts(card))
-    assert "Now playing" not in text
-    assert "Spotify" not in text
+    # Taken from the registry, never restated: the P5 rename of this label
+    # ("Now playing" -> "Recently played") must not be able to make this
+    # assertion pass by looking for a string nothing draws any more.
+    assert registry.get("presence_gaming").label not in text
+    assert registry.get("spotify_presence").label not in text
 
 
 async def test_a_user_with_no_profile_and_no_connection_gets_no_card(monkeypatch):
