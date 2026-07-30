@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 10:17+0000\n"
+"POT-Creation-Date: 2026-07-30 13:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -187,7 +187,7 @@ msgstr "Nouvel épisode"
 
 #: cogs/anilist/airing.py:479 cogs/anilist/feed_render.py:274
 #: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
-#: cogs/community/profile/registry.py:244
+#: cogs/community/profile/registry.py:256
 msgid "AniList"
 msgstr "AniList"
 
@@ -1468,7 +1468,7 @@ msgstr "Toi"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:501 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:502 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -1882,21 +1882,21 @@ msgstr "Défini - {hex}"
 msgid "Default - each member's own role colour is used."
 msgstr "Par défaut - la couleur du rôle de chaque membre est utilisée."
 
-#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:226
+#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:238
 msgid "Accent colour"
 msgstr "Couleur d'accent"
 
-#: cogs/community/level_config_ui.py:535 cogs/community/seasons_views.py:185
-#: cogs/community/seasons_views.py:426 cogs/community/serverstats/views.py:550
-#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
-#: cogs/moderation/warn_config.py:437
+#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:684
+#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
+#: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
+#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Vous seul pouvez utiliser ces commandes"
 
-#: cogs/community/level_config_ui.py:537 cogs/community/seasons_views.py:187
-#: cogs/community/seasons_views.py:428 cogs/community/serverstats/views.py:552
-#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
-#: cogs/moderation/warn_config.py:439
+#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:686
+#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
+#: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
+#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expire après 3 min"
 
@@ -2781,6 +2781,7 @@ msgstr "Utilise `{prefix}mydata export` pour recevoir tes données, `{prefix}myd
 msgid "I sent your data export to you by direct message."
 msgstr "Je t'ai envoyé ton export de données par message privé."
 
+#: cogs/community/profile/connectors/cog.py:236
 #: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Je n'ai pas pu t'envoyer de message privé. Active tes messages privés."
@@ -2797,177 +2798,295 @@ msgstr "Cette action supprime définitivement ta bio, tes pronoms, ta couleur d'
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Ceci supprime définitivement chaque avatar global, avatar de serveur et bannière sauvegardés pour ton compte. Ça désactive aussi le suivi futur. C'est irréversible."
 
-#: cogs/community/profile/cog.py:62
-#, python-brace-format
-msgid "That value is too long (max {limit} characters)."
-msgstr "Cette valeur est trop longue (max {limit} caractères)."
-
-#: cogs/community/profile/cog.py:66
-msgid "That is not a valid colour. Use a hex colour like #5865F2."
-msgstr "Ce n'est pas une couleur valide. Utilise une couleur hexadécimale comme #5865F2."
-
-#: cogs/community/profile/cog.py:67
-msgid "That value is not valid for this field."
-msgstr "Cette valeur n'est pas valide pour ce champ."
-
-#: cogs/community/profile/cog.py:117
-msgid "Edit your profile"
-msgstr "Modifier votre profil"
-
-#: cogs/community/profile/cog.py:122
-msgid "Field"
-msgstr "Champ"
-
-#: cogs/community/profile/cog.py:128
-msgid "Value"
-msgstr "Valeur"
-
-#: cogs/community/profile/cog.py:136
-msgid "Pick a field and enter a value."
-msgstr "Choisissez un champ et saisissez une valeur."
-
-#: cogs/community/profile/cog.py:146
-msgid "Unknown field."
-msgstr "Champ inconnu."
-
-#: cogs/community/profile/cog.py:149 cogs/community/profile/cog.py:345
-msgid "Profile updated"
-msgstr "Profil mis à jour"
-
-#: cogs/community/profile/cog.py:162 cogs/community/profile/cog.py:326
-#: cogs/community/profile/cog.py:388
-msgid "Failed to update your profile, please try again later."
-msgstr "Échec de la mise à jour de votre profil, veuillez réessayer plus tard."
-
-#: cogs/community/profile/cog.py:215
-#, python-brace-format
-msgid "{name}'s profile"
-msgstr "Profil de {name}"
-
-#: cogs/community/profile/cog.py:242
-msgid "This profile is too long to show in full."
-msgstr "Ce profil est trop long pour être affiché en entier."
-
-#: cogs/community/profile/cog.py:264
+#: cogs/community/profile/cog.py:107
 #, python-brace-format
 msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
 msgstr "Pour l'instant, seul toi peux voir ceci. Utilise `{prefix}profile visibility {section} server` pour l'afficher aux serveurs que tu partages."
 
-#: cogs/community/profile/cog.py:302
+#: cogs/community/profile/cog.py:148
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "{name} n'a pas de profil configuré."
 
-#: cogs/community/profile/cog.py:332
+#: cogs/community/profile/cog.py:177 cogs/community/profile/cog.py:253
+#: cogs/community/profile/connectors/cog.py:104
+#: cogs/community/profile/views.py:147
+msgid "Failed to update your profile, please try again later."
+msgstr "Échec de la mise à jour de votre profil, veuillez réessayer plus tard."
+
+#: cogs/community/profile/cog.py:183
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "Champ inconnu. Choisissez : {options}"
 
-#: cogs/community/profile/cog.py:342
+#: cogs/community/profile/cog.py:193
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "{field} a été effacé."
 
-#: cogs/community/profile/cog.py:367
+#: cogs/community/profile/cog.py:196 cogs/community/profile/views.py:134
+msgid "Profile updated"
+msgstr "Profil mis à jour"
+
+#: cogs/community/profile/cog.py:232
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "Section inconnue. Choisis parmi : {options}"
 
-#: cogs/community/profile/cog.py:376
+#: cogs/community/profile/cog.py:241
+#: cogs/community/profile/connectors/cog.py:398
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "Visibilité inconnue. Choisis parmi : {options}"
 
-#: cogs/community/profile/cog.py:395
+#: cogs/community/profile/cog.py:260
+#: cogs/community/profile/connectors/cog.py:416
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "{field} est maintenant visible par tout le monde."
 
-#: cogs/community/profile/cog.py:399
+#: cogs/community/profile/cog.py:264
+#: cogs/community/profile/connectors/cog.py:421
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "{field} est maintenant visible sur les serveurs que tu partages."
 
-#: cogs/community/profile/cog.py:405
+#: cogs/community/profile/cog.py:270
+#: cogs/community/profile/connectors/cog.py:428
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "{field} est maintenant visible par toi seul."
 
-#: cogs/community/profile/cog.py:418
+#: cogs/community/profile/cog.py:283
 msgid "Click below to edit a profile field:"
 msgstr "Cliquez ci-dessous pour modifier un champ du profil :"
 
-#: cogs/community/profile/cog.py:432
+#: cogs/community/profile/cog.py:312
 msgid "Failed to clear your profile, please try again later."
 msgstr "Échec de la réinitialisation de votre profil, veuillez réessayer plus tard."
 
-#: cogs/community/profile/cog.py:436
+#: cogs/community/profile/cog.py:316
 msgid "Profile cleared"
 msgstr "Profil réinitialisé"
 
-#: cogs/community/profile/cog.py:437
+#: cogs/community/profile/cog.py:317
 msgid "Your profile has been cleared."
 msgstr "Votre profil a été réinitialisé."
 
-#: cogs/community/profile/registry.py:57
+#: cogs/community/profile/registry.py:69
 msgid "Switch Friend Code"
 msgstr "Code ami Switch"
 
-#: cogs/community/profile/registry.py:58
+#: cogs/community/profile/registry.py:70
 msgid "3DS Friend Code"
 msgstr "Code ami 3DS"
 
-#: cogs/community/profile/registry.py:59
+#: cogs/community/profile/registry.py:71
 msgid "BattleTag"
 msgstr "BattleTag"
 
-#: cogs/community/profile/registry.py:60
+#: cogs/community/profile/registry.py:72
 msgid "Riot ID"
 msgstr "Riot ID"
 
-#: cogs/community/profile/registry.py:61
+#: cogs/community/profile/registry.py:73
 msgid "Steam ID"
 msgstr "Steam ID"
 
-#: cogs/community/profile/registry.py:217
+#: cogs/community/profile/registry.py:229
 msgid "Bio"
 msgstr "Bio"
 
-#: cogs/community/profile/registry.py:220
+#: cogs/community/profile/registry.py:232
 msgid "Pronouns"
 msgstr "Pronoms"
 
-#: cogs/community/profile/registry.py:229
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:454
 msgid "Custom fields"
 msgstr "Champs personnalisés"
 
-#: cogs/community/profile/registry.py:237
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:460
 msgid "Gaming IDs"
 msgstr "Identifiants de jeu"
 
-#: cogs/community/profile/registry.py:245
+#: cogs/community/profile/registry.py:257
 msgid "Steam"
 msgstr "Steam"
 
-#: cogs/community/profile/registry.py:246
+#: cogs/community/profile/registry.py:258
 msgid "Last.fm"
 msgstr "Last.fm"
 
-#: cogs/community/profile/registry.py:247
+#: cogs/community/profile/registry.py:259
 msgid "osu!"
 msgstr "osu!"
 
-#: cogs/community/profile/registry.py:248
+#: cogs/community/profile/registry.py:260
 msgid "Backloggd"
 msgstr "Backloggd"
 
-#: cogs/community/profile/registry.py:249
+#: cogs/community/profile/registry.py:261
 msgid "Now playing"
 msgstr "En cours de lecture"
 
-#: cogs/community/profile/registry.py:250
+#: cogs/community/profile/registry.py:262
 msgid "Spotify"
 msgstr "Spotify"
+
+#: cogs/community/profile/connectors/cog.py:152
+#: cogs/community/profile/views.py:60
+#, python-brace-format
+msgid "That value is too long (max {limit} characters)."
+msgstr "Cette valeur est trop longue (max {limit} caractères)."
+
+#: cogs/community/profile/views.py:64
+msgid "That is not a valid colour. Use a hex colour like #5865F2."
+msgstr "Ce n'est pas une couleur valide. Utilise une couleur hexadécimale comme #5865F2."
+
+#: cogs/community/profile/connectors/cog.py:162
+#: cogs/community/profile/views.py:65
+msgid "That value is not valid for this field."
+msgstr "Cette valeur n'est pas valide pour ce champ."
+
+#: cogs/community/profile/views.py:102
+msgid "Edit your profile"
+msgstr "Modifier votre profil"
+
+#: cogs/community/profile/views.py:107
+msgid "Field"
+msgstr "Champ"
+
+#: cogs/community/profile/views.py:113
+msgid "Value"
+msgstr "Valeur"
+
+#: cogs/community/profile/views.py:121
+msgid "Pick a field and enter a value."
+msgstr "Choisissez un champ et saisissez une valeur."
+
+#: cogs/community/profile/views.py:131
+msgid "Unknown field."
+msgstr "Champ inconnu."
+
+#: cogs/community/profile/views.py:384
+msgid "Linked"
+msgstr "Liée"
+
+#: cogs/community/profile/views.py:470
+msgid "This profile is too long to show in full."
+msgstr "Ce profil est trop long pour être affiché en entier."
+
+#: cogs/community/profile/views.py:521 cogs/config/rooms_config.py:207
+msgid "Public"
+msgstr "Public"
+
+#: cogs/community/profile/views.py:522
+msgid "Server"
+msgstr "Serveur"
+
+#: cogs/community/profile/views.py:523 cogs/config/rooms_config.py:204
+msgid "Private"
+msgstr "Prive"
+
+#: cogs/community/profile/views.py:591
+msgid "Edit a gaming ID..."
+msgstr "Modifier un identifiant de jeu..."
+
+#: cogs/community/profile/views.py:653
+msgid "Profile visibility"
+msgstr "Visibilité du profil"
+
+#: cogs/community/profile/views.py:656
+msgid "Choose who can see each part of your profile: public (anyone), server (members of servers you share), or private (only you)."
+msgstr "Choisis qui peut voir chaque partie de ton profil : public (tout le monde), serveur (les membres des serveurs que tu partages), ou privé (toi seulement)."
+
+#: cogs/community/profile/views.py:665
+msgid "Current visibility"
+msgstr "Visibilité actuelle"
+
+#: cogs/community/profile/views.py:732
+msgid "Something went wrong updating your profile visibility."
+msgstr "Une erreur s'est produite lors de la mise à jour de la visibilité de ton profil."
+
+#: cogs/community/profile/connectors/cog.py:69
+#, python-brace-format
+msgid "Linked as {name} - visible to anyone"
+msgstr "Liée en tant que {name} - visible par tout le monde"
+
+#: cogs/community/profile/connectors/cog.py:71
+#, python-brace-format
+msgid "Linked as {name} - visible to the servers you share"
+msgstr "Liée en tant que {name} - visible sur les serveurs partagés"
+
+#: cogs/community/profile/connectors/cog.py:74
+#, python-brace-format
+msgid "Linked as {name} - visible to you only"
+msgstr "Liée en tant que {name} - visible par toi seul"
+
+#: cogs/community/profile/connectors/cog.py:111
+#, python-brace-format
+msgid "Unknown connection. Choose: {options}"
+msgstr "Connexion inconnue. Choisis : {options}"
+
+#: cogs/community/profile/connectors/cog.py:131
+#, python-brace-format
+msgid "Only you can see this for now. Use `{command}` to show it to the servers you share."
+msgstr "Toi seul peux voir ceci pour l'instant. Utilise `{command}` pour l'afficher aux serveurs que tu partages."
+
+#: cogs/community/profile/connectors/cog.py:139
+msgid "That connection is not available yet - it is coming soon."
+msgstr "Cette connexion n'est pas encore disponible - elle arrivera bientôt."
+
+#: cogs/community/profile/connectors/cog.py:143
+msgid "That connection is not set up on this bot yet. Ask an admin."
+msgstr "Cette connexion n'est pas encore configurée sur ce bot. Demande à un administrateur."
+
+#: cogs/community/profile/connectors/cog.py:146
+msgid "That service is not answering right now, please try again later."
+msgstr "Ce service ne répond pas pour le moment, réessaie plus tard."
+
+#: cogs/community/profile/connectors/cog.py:156
+msgid "No account was found with that name."
+msgstr "Aucun compte n'a été trouvé avec ce nom."
+
+#: cogs/community/profile/connectors/cog.py:159
+#, python-brace-format
+msgid "That does not look right. Enter {hint}."
+msgstr "Ça ne semble pas correct. Entre {hint}."
+
+#: cogs/community/profile/connectors/cog.py:175
+msgid "Your connections"
+msgstr "Tes connexions"
+
+#: cogs/community/profile/connectors/cog.py:183
+msgid "Coming soon"
+msgstr "Bientôt disponible"
+
+#: cogs/community/profile/connectors/cog.py:185
+msgid "Not linked"
+msgstr "Non liée"
+
+#: cogs/community/profile/connectors/cog.py:246
+msgid "I sent your connections to you by direct message."
+msgstr "Je t'ai envoyé tes connexions par message privé."
+
+#: cogs/community/profile/connectors/cog.py:311
+msgid "Connection linked"
+msgstr "Connexion liée"
+
+#: cogs/community/profile/connectors/cog.py:313
+msgid "Connection updated"
+msgstr "Connexion mise à jour"
+
+#: cogs/community/profile/connectors/cog.py:369
+#, python-brace-format
+msgid "{field} was not linked."
+msgstr "{field} n'a pas été lié."
+
+#: cogs/community/profile/connectors/cog.py:374
+#, python-brace-format
+msgid "{field} is unlinked and hidden again."
+msgstr "{field} est délié et de nouveau masqué."
 
 #: cogs/community/serverstats/views.py:172
 msgid "Last bar: today, still in progress."
@@ -4032,14 +4151,6 @@ msgstr "Modifier le hub de salons automatiques"
 #: cogs/config/rooms_config.py:196
 msgid "Max rooms (1-50)"
 msgstr "Salons max (1-50)"
-
-#: cogs/config/rooms_config.py:204
-msgid "Private"
-msgstr "Prive"
-
-#: cogs/config/rooms_config.py:207
-msgid "Public"
-msgstr "Public"
 
 #: cogs/config/rooms_config.py:218
 msgid "Room privacy"
@@ -7297,68 +7408,68 @@ msgstr "Gagne de l'XP, grimpe au classement et configure les récompenses."
 msgid "Your profile, reminders, AFK and personal preferences."
 msgstr "Ton profil, tes rappels, ton AFK et tes préférences personnelles."
 
-#: cogs/system/help.py:99
+#: cogs/system/help.py:100
 msgid "Server info, polls, translations and handy utilities."
 msgstr "Infos serveur, sondages, traductions et utilitaires pratiques."
 
-#: cogs/system/help.py:105
+#: cogs/system/help.py:106
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "Expulsions, bannissements, avertissements, automod et logs de modération."
 
-#: cogs/system/help.py:111
+#: cogs/system/help.py:112
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Messages de bienvenue, starboard, commandes personnalisées et plus."
 
-#: cogs/system/help.py:125
+#: cogs/system/help.py:126
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Rôles par réaction, menus de rôles, rôles par bouton et vérification."
 
-#: cogs/system/help.py:133
+#: cogs/system/help.py:134
 msgid "Anything not yet sorted into a category."
 msgstr "Tout ce qui n'est pas encore classé dans une catégorie."
 
-#: cogs/system/help.py:234 cogs/system/help.py:281 cogs/system/help.py:294
-#: cogs/system/help.py:774
+#: cogs/system/help.py:235 cogs/system/help.py:282 cogs/system/help.py:295
+#: cogs/system/help.py:775
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:286 cogs/system/help.py:778
+#: cogs/system/help.py:287 cogs/system/help.py:779
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:299
+#: cogs/system/help.py:300
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /preferences, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:304
+#: cogs/system/help.py:305
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} sous-commande"
 msgstr[1] "{n} sous-commandes"
 
-#: cogs/system/help.py:309
+#: cogs/system/help.py:310
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:338
+#: cogs/system/help.py:339
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:407 cogs/system/help.py:536 cogs/system/help.py:555
+#: cogs/system/help.py:408 cogs/system/help.py:537 cogs/system/help.py:556
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:468
+#: cogs/system/help.py:469
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:470
+#: cogs/system/help.py:471
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -7369,19 +7480,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:496
+#: cogs/system/help.py:497
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:496
+#: cogs/system/help.py:497
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:504
+#: cogs/system/help.py:505
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:507
+#: cogs/system/help.py:508
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -7392,66 +7503,66 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:519
+#: cogs/system/help.py:520
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:522
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:547
+#: cogs/system/help.py:548
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:553
+#: cogs/system/help.py:554
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:559
+#: cogs/system/help.py:560
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:568
+#: cogs/system/help.py:569
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:574
+#: cogs/system/help.py:575
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:591
+#: cogs/system/help.py:592
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:656
+#: cogs/system/help.py:657
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:725
+#: cogs/system/help.py:726
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:725
+#: cogs/system/help.py:726
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:742
+#: cogs/system/help.py:743
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:758 cogs/system/help.py:798
+#: cogs/system/help.py:759 cogs/system/help.py:799
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:760
+#: cogs/system/help.py:761
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."
