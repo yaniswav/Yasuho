@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 23:43+0000\n"
+"POT-Creation-Date: 2026-07-30 10:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -187,6 +187,7 @@ msgstr "新エピソード"
 
 #: cogs/anilist/airing.py:479 cogs/anilist/feed_render.py:274
 #: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
+#: cogs/community/profile/registry.py:244
 msgid "AniList"
 msgstr "AniList"
 
@@ -455,7 +456,7 @@ msgid "Edit"
 msgstr "編集"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:335
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:392
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
@@ -1290,8 +1291,8 @@ msgid "Delete"
 msgstr "削除"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
-#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
-#: tools/arg_completion.py:219
+#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:214
+#: cogs/community/usersettings.py:272 tools/arg_completion.py:219
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -1881,7 +1882,7 @@ msgstr "設定済み - {hex}"
 msgid "Default - each member's own role colour is used."
 msgstr "デフォルト - 各メンバー自身のロールカラーが使用されます。"
 
-#: cogs/community/level_config_ui.py:517
+#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:226
 msgid "Accent colour"
 msgstr "アクセントカラー"
 
@@ -2428,97 +2429,6 @@ msgstr "月間ランキング | {guild}"
 msgid "No one has earned any XP this month yet!"
 msgstr "今月はまだ誰もXPを獲得していません！"
 
-#: cogs/community/profiles.py:15
-msgid "Switch friend code"
-msgstr "Switch フレンドコード"
-
-#: cogs/community/profiles.py:16
-msgid "3DS friend code"
-msgstr "3DS フレンドコード"
-
-#: cogs/community/profiles.py:17 cogs/community/profiles.py:99
-msgid "BattleTag"
-msgstr "BattleTag"
-
-#: cogs/community/profiles.py:18 cogs/community/profiles.py:100
-msgid "Riot ID"
-msgstr "Riot ID"
-
-#: cogs/community/profiles.py:19 cogs/community/profiles.py:101
-msgid "Steam ID"
-msgstr "Steam ID"
-
-#: cogs/community/profiles.py:27
-msgid "Edit your profile"
-msgstr "プロフィールを編集"
-
-#: cogs/community/profiles.py:32
-msgid "Field"
-msgstr "項目"
-
-#: cogs/community/profiles.py:36
-msgid "Value"
-msgstr "値"
-
-#: cogs/community/profiles.py:44
-msgid "Pick a field and enter a value."
-msgstr "項目を選んで値を入力してください。"
-
-#: cogs/community/profiles.py:49
-msgid "Unknown field."
-msgstr "不明な項目です。"
-
-#: cogs/community/profiles.py:51 cogs/community/profiles.py:200
-msgid "Profile updated"
-msgstr "プロフィールを更新しました"
-
-#: cogs/community/profiles.py:57 cogs/community/profiles.py:188
-msgid "Failed to update your profile, please try again later."
-msgstr "プロフィールの更新に失敗しました。後でもう一度お試しください。"
-
-#: cogs/community/profiles.py:97
-msgid "Switch Friend Code"
-msgstr "Switch フレンドコード"
-
-#: cogs/community/profiles.py:98
-msgid "3DS Friend Code"
-msgstr "3DS フレンドコード"
-
-#: cogs/community/profiles.py:134
-#, python-brace-format
-msgid "{name} has no profile set."
-msgstr "{name} はプロフィールを設定していません。"
-
-#: cogs/community/profiles.py:139
-#, python-brace-format
-msgid "{name}'s profile"
-msgstr "{name} のプロフィール"
-
-#: cogs/community/profiles.py:179
-msgid "That value is too long (max 1000 characters)."
-msgstr "その値は長すぎます (最大1000文字)。"
-
-#: cogs/community/profiles.py:194
-#, python-brace-format
-msgid "Unknown field. Choose: {options}"
-msgstr "不明な項目です。選択してください: {options}"
-
-#: cogs/community/profiles.py:214
-msgid "Click below to edit a profile field:"
-msgstr "下をクリックしてプロフィール項目を編集してください:"
-
-#: cogs/community/profiles.py:230
-msgid "Failed to clear your profile, please try again later."
-msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
-
-#: cogs/community/profiles.py:235
-msgid "Profile cleared"
-msgstr "プロフィールを消去しました"
-
-#: cogs/community/profiles.py:237
-msgid "Your profile has been cleared."
-msgstr "あなたのプロフィールを消去しました。"
-
 #: cogs/community/reminders.py:68 cogs/community/reminders.py:173
 msgid "Set a reminder"
 msgstr "リマインダーを設定"
@@ -2682,11 +2592,11 @@ msgstr "シーズンチャンピオンのロールを選んでください..."
 msgid "Clear role"
 msgstr "ロールをクリア"
 
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:328
 msgid "Turn off"
 msgstr "オフにする"
 
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:328
 msgid "Turn on"
 msgstr "オンにする"
 
@@ -2782,28 +2692,44 @@ msgstr "新しいチャプターのDMが公開時にリンクする翻訳版で�
 msgid "Pick a chapter language..."
 msgstr "チャプターの言語を選択..."
 
-#: cogs/community/usersettings.py:214
+#: cogs/community/usersettings.py:213
+msgid "Delete my profile"
+msgstr "プロフィールを削除"
+
+#: cogs/community/usersettings.py:231
+msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
+msgstr "プロフィールが消去されました。フィールド、ゲームID、公開範囲の選択がすべて削除されました。"
+
+#: cogs/community/usersettings.py:240
+msgid "Something went wrong deleting your profile."
+msgstr "プロフィールの削除中に問題が発生しました。"
+
+#: cogs/community/usersettings.py:250
+msgid "Profile deletion cancelled."
+msgstr "プロフィールの削除をキャンセルしました。"
+
+#: cogs/community/usersettings.py:271
 msgid "Delete my avatar history"
 msgstr "アバター履歴を削除する"
 
-#: cogs/community/usersettings.py:235
+#: cogs/community/usersettings.py:292
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "保存された画像 {count} 件 ({size}) を削除しました。今後のアバター記録はオフになりました。"
 
-#: cogs/community/usersettings.py:246
+#: cogs/community/usersettings.py:303
 msgid "Something went wrong deleting your avatar history."
 msgstr "アバター履歴の削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:256
+#: cogs/community/usersettings.py:313
 msgid "Avatar history deletion cancelled."
 msgstr "アバター履歴の削除をキャンセルしました。"
 
-#: cogs/community/usersettings.py:355
+#: cogs/community/usersettings.py:412
 msgid "## Your preferences"
 msgstr "## あなたの設定"
 
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:416
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2811,15 +2737,15 @@ msgstr ""
 "これらの設定は、私が使われるすべての場所で **あなた** にのみ影響します。\n"
 "設定の横のボタンを使ってオン/オフを切り替えてください。"
 
-#: cogs/community/usersettings.py:369
+#: cogs/community/usersettings.py:426
 msgid "ON"
 msgstr "オン"
 
-#: cogs/community/usersettings.py:369
+#: cogs/community/usersettings.py:426
 msgid "OFF"
 msgstr "オフ"
 
-#: cogs/community/usersettings.py:370
+#: cogs/community/usersettings.py:427
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2828,7 +2754,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:449
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2837,35 +2763,211 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:406
+#: cogs/community/usersettings.py:463
 msgid "-# Only you can use these controls."
 msgstr "-# これらの操作はあなただけが使用できます。"
 
-#: cogs/community/usersettings.py:432 cogs/community/usersettings.py:452
-#: cogs/community/usersettings.py:472
+#: cogs/community/usersettings.py:489 cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:529
 msgid "Something went wrong updating that setting."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:531
+#: cogs/community/usersettings.py:588
 #, python-brace-format
-msgid "Use `{prefix}mydata export` to receive your data, or `{prefix}mydata deleteavatars` to erase saved avatars."
-msgstr "データを受け取るには `{prefix}mydata export`、保存されたアバターを消去するには `{prefix}mydata deleteavatars` を使ってください。"
+msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
+msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:572
+#: cogs/community/usersettings.py:630
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
-#: cogs/community/usersettings.py:576
+#: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:581
+#: cogs/community/usersettings.py:639
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:592
+#: cogs/community/usersettings.py:650
+msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
+msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
+
+#: cogs/community/usersettings.py:665
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
+
+#: cogs/community/profile/cog.py:62
+#, python-brace-format
+msgid "That value is too long (max {limit} characters)."
+msgstr "この値は長すぎます(最大{limit}文字)。"
+
+#: cogs/community/profile/cog.py:66
+msgid "That is not a valid colour. Use a hex colour like #5865F2."
+msgstr "それは有効な色ではありません。#5865F2 のような16進数カラーを使用してください。"
+
+#: cogs/community/profile/cog.py:67
+msgid "That value is not valid for this field."
+msgstr "この値はこのフィールドに対して無効です。"
+
+#: cogs/community/profile/cog.py:117
+msgid "Edit your profile"
+msgstr "プロフィールを編集"
+
+#: cogs/community/profile/cog.py:122
+msgid "Field"
+msgstr "項目"
+
+#: cogs/community/profile/cog.py:128
+msgid "Value"
+msgstr "値"
+
+#: cogs/community/profile/cog.py:136
+msgid "Pick a field and enter a value."
+msgstr "項目を選んで値を入力してください。"
+
+#: cogs/community/profile/cog.py:146
+msgid "Unknown field."
+msgstr "不明な項目です。"
+
+#: cogs/community/profile/cog.py:149 cogs/community/profile/cog.py:345
+msgid "Profile updated"
+msgstr "プロフィールを更新しました"
+
+#: cogs/community/profile/cog.py:162 cogs/community/profile/cog.py:326
+#: cogs/community/profile/cog.py:388
+msgid "Failed to update your profile, please try again later."
+msgstr "プロフィールの更新に失敗しました。後でもう一度お試しください。"
+
+#: cogs/community/profile/cog.py:215
+#, python-brace-format
+msgid "{name}'s profile"
+msgstr "{name} のプロフィール"
+
+#: cogs/community/profile/cog.py:242
+msgid "This profile is too long to show in full."
+msgstr "このプロフィールは長すぎて全文を表示できません。"
+
+#: cogs/community/profile/cog.py:264
+#, python-brace-format
+msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
+msgstr "現在はあなただけがこれを見ることができます。共有しているサーバーに表示するには `{prefix}profile visibility {section} server` を使用してください。"
+
+#: cogs/community/profile/cog.py:302
+#, python-brace-format
+msgid "{name} has no profile set."
+msgstr "{name} はプロフィールを設定していません。"
+
+#: cogs/community/profile/cog.py:332
+#, python-brace-format
+msgid "Unknown field. Choose: {options}"
+msgstr "不明な項目です。選択してください: {options}"
+
+#: cogs/community/profile/cog.py:342
+#, python-brace-format
+msgid "Cleared {field}."
+msgstr "{field}を削除しました。"
+
+#: cogs/community/profile/cog.py:367
+#, python-brace-format
+msgid "Unknown section. Choose: {options}"
+msgstr "不明なセクションです。選択してください: {options}"
+
+#: cogs/community/profile/cog.py:376
+#, python-brace-format
+msgid "Unknown visibility. Choose: {options}"
+msgstr "不明な公開範囲です。選択してください: {options}"
+
+#: cogs/community/profile/cog.py:395
+#, python-brace-format
+msgid "{field} is now visible to anyone."
+msgstr "{field}は今、誰でも見られるようになりました。"
+
+#: cogs/community/profile/cog.py:399
+#, python-brace-format
+msgid "{field} is now visible to the servers you share."
+msgstr "{field}は今、共有しているサーバーで見られるようになりました。"
+
+#: cogs/community/profile/cog.py:405
+#, python-brace-format
+msgid "{field} is now visible to you only."
+msgstr "{field}は今、あなただけが見られるようになりました。"
+
+#: cogs/community/profile/cog.py:418
+msgid "Click below to edit a profile field:"
+msgstr "下をクリックしてプロフィール項目を編集してください:"
+
+#: cogs/community/profile/cog.py:432
+msgid "Failed to clear your profile, please try again later."
+msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
+
+#: cogs/community/profile/cog.py:436
+msgid "Profile cleared"
+msgstr "プロフィールを消去しました"
+
+#: cogs/community/profile/cog.py:437
+msgid "Your profile has been cleared."
+msgstr "あなたのプロフィールを消去しました。"
+
+#: cogs/community/profile/registry.py:57
+msgid "Switch Friend Code"
+msgstr "Switch フレンドコード"
+
+#: cogs/community/profile/registry.py:58
+msgid "3DS Friend Code"
+msgstr "3DS フレンドコード"
+
+#: cogs/community/profile/registry.py:59
+msgid "BattleTag"
+msgstr "BattleTag"
+
+#: cogs/community/profile/registry.py:60
+msgid "Riot ID"
+msgstr "Riot ID"
+
+#: cogs/community/profile/registry.py:61
+msgid "Steam ID"
+msgstr "Steam ID"
+
+#: cogs/community/profile/registry.py:217
+msgid "Bio"
+msgstr "自己紹介"
+
+#: cogs/community/profile/registry.py:220
+msgid "Pronouns"
+msgstr "代名詞"
+
+#: cogs/community/profile/registry.py:229
+msgid "Custom fields"
+msgstr "カスタムフィールド"
+
+#: cogs/community/profile/registry.py:237
+msgid "Gaming IDs"
+msgstr "ゲームID"
+
+#: cogs/community/profile/registry.py:245
+msgid "Steam"
+msgstr "Steam"
+
+#: cogs/community/profile/registry.py:246
+msgid "Last.fm"
+msgstr "Last.fm"
+
+#: cogs/community/profile/registry.py:247
+msgid "osu!"
+msgstr "osu!"
+
+#: cogs/community/profile/registry.py:248
+msgid "Backloggd"
+msgstr "Backloggd"
+
+#: cogs/community/profile/registry.py:249
+msgid "Now playing"
+msgstr "再生中"
+
+#: cogs/community/profile/registry.py:250
+msgid "Spotify"
+msgstr "Spotify"
 
 #: cogs/community/serverstats/views.py:172
 msgid "Last bar: today, still in progress."

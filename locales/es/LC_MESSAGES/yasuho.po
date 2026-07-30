@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 23:43+0000\n"
+"POT-Creation-Date: 2026-07-30 10:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -187,6 +187,7 @@ msgstr "Nuevo episodio"
 
 #: cogs/anilist/airing.py:479 cogs/anilist/feed_render.py:274
 #: cogs/anilist/hub.py:293 cogs/anilist/lookup.py:61 cogs/anilist/lookup.py:113
+#: cogs/community/profile/registry.py:244
 msgid "AniList"
 msgstr "AniList"
 
@@ -455,7 +456,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:335
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:392
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -1290,8 +1291,8 @@ msgid "Delete"
 msgstr "Eliminar"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
-#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
-#: tools/arg_completion.py:219
+#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:214
+#: cogs/community/usersettings.py:272 tools/arg_completion.py:219
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1881,7 +1882,7 @@ msgstr "Establecido - {hex}"
 msgid "Default - each member's own role colour is used."
 msgstr "Predeterminado - se usa el color de rol propio de cada miembro."
 
-#: cogs/community/level_config_ui.py:517
+#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:226
 msgid "Accent colour"
 msgstr "Color de acento"
 
@@ -2428,97 +2429,6 @@ msgstr "Clasificación mensual | {guild}"
 msgid "No one has earned any XP this month yet!"
 msgstr "¡Nadie ha ganado XP este mes todavía!"
 
-#: cogs/community/profiles.py:15
-msgid "Switch friend code"
-msgstr "Cambiar código de amigo"
-
-#: cogs/community/profiles.py:16
-msgid "3DS friend code"
-msgstr "Código de amigo de 3DS"
-
-#: cogs/community/profiles.py:17 cogs/community/profiles.py:99
-msgid "BattleTag"
-msgstr "BattleTag"
-
-#: cogs/community/profiles.py:18 cogs/community/profiles.py:100
-msgid "Riot ID"
-msgstr "Riot ID"
-
-#: cogs/community/profiles.py:19 cogs/community/profiles.py:101
-msgid "Steam ID"
-msgstr "ID de Steam"
-
-#: cogs/community/profiles.py:27
-msgid "Edit your profile"
-msgstr "Edita tu perfil"
-
-#: cogs/community/profiles.py:32
-msgid "Field"
-msgstr "Campo"
-
-#: cogs/community/profiles.py:36
-msgid "Value"
-msgstr "Valor"
-
-#: cogs/community/profiles.py:44
-msgid "Pick a field and enter a value."
-msgstr "Elige un campo e introduce un valor."
-
-#: cogs/community/profiles.py:49
-msgid "Unknown field."
-msgstr "Campo desconocido."
-
-#: cogs/community/profiles.py:51 cogs/community/profiles.py:200
-msgid "Profile updated"
-msgstr "Perfil actualizado"
-
-#: cogs/community/profiles.py:57 cogs/community/profiles.py:188
-msgid "Failed to update your profile, please try again later."
-msgstr "No se pudo actualizar tu perfil, inténtalo de nuevo más tarde."
-
-#: cogs/community/profiles.py:97
-msgid "Switch Friend Code"
-msgstr "Código de amigo de Switch"
-
-#: cogs/community/profiles.py:98
-msgid "3DS Friend Code"
-msgstr "Código de amigo de 3DS"
-
-#: cogs/community/profiles.py:134
-#, python-brace-format
-msgid "{name} has no profile set."
-msgstr "{name} no tiene un perfil configurado."
-
-#: cogs/community/profiles.py:139
-#, python-brace-format
-msgid "{name}'s profile"
-msgstr "Perfil de {name}"
-
-#: cogs/community/profiles.py:179
-msgid "That value is too long (max 1000 characters)."
-msgstr "Ese valor es demasiado largo (máximo 1000 caracteres)."
-
-#: cogs/community/profiles.py:194
-#, python-brace-format
-msgid "Unknown field. Choose: {options}"
-msgstr "Campo desconocido. Elige: {options}"
-
-#: cogs/community/profiles.py:214
-msgid "Click below to edit a profile field:"
-msgstr "Haz clic abajo para editar un campo del perfil:"
-
-#: cogs/community/profiles.py:230
-msgid "Failed to clear your profile, please try again later."
-msgstr "No se pudo borrar tu perfil, inténtalo de nuevo más tarde."
-
-#: cogs/community/profiles.py:235
-msgid "Profile cleared"
-msgstr "Perfil borrado"
-
-#: cogs/community/profiles.py:237
-msgid "Your profile has been cleared."
-msgstr "Tu perfil ha sido borrado."
-
 #: cogs/community/reminders.py:68 cogs/community/reminders.py:173
 msgid "Set a reminder"
 msgstr "Crear un recordatorio"
@@ -2682,11 +2592,11 @@ msgstr "Elige el rol del campeón de temporada..."
 msgid "Clear role"
 msgstr "Borrar rol"
 
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:328
 msgid "Turn off"
 msgstr "Desactivar"
 
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:271
+#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:328
 msgid "Turn on"
 msgstr "Activar"
 
@@ -2782,28 +2692,44 @@ msgstr "La traducción a la que enlazan tus MD de nuevos capítulos, una vez pub
 msgid "Pick a chapter language..."
 msgstr "Elige un idioma de capítulo..."
 
-#: cogs/community/usersettings.py:214
+#: cogs/community/usersettings.py:213
+msgid "Delete my profile"
+msgstr "Eliminar mi perfil"
+
+#: cogs/community/usersettings.py:231
+msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
+msgstr "Tu perfil ha desaparecido: campos, IDs de juego y todas las opciones de visibilidad."
+
+#: cogs/community/usersettings.py:240
+msgid "Something went wrong deleting your profile."
+msgstr "Algo salió mal al eliminar tu perfil."
+
+#: cogs/community/usersettings.py:250
+msgid "Profile deletion cancelled."
+msgstr "Eliminación del perfil cancelada."
+
+#: cogs/community/usersettings.py:271
 msgid "Delete my avatar history"
 msgstr "Eliminar mi historial de avatares"
 
-#: cogs/community/usersettings.py:235
+#: cogs/community/usersettings.py:292
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de avatares se ha desactivado a partir de ahora."
 
-#: cogs/community/usersettings.py:246
+#: cogs/community/usersettings.py:303
 msgid "Something went wrong deleting your avatar history."
 msgstr "Algo salió mal al eliminar tu historial de avatares."
 
-#: cogs/community/usersettings.py:256
+#: cogs/community/usersettings.py:313
 msgid "Avatar history deletion cancelled."
 msgstr "Eliminación del historial de avatares cancelada."
 
-#: cogs/community/usersettings.py:355
+#: cogs/community/usersettings.py:412
 msgid "## Your preferences"
 msgstr "## Tus preferencias"
 
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:416
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2811,15 +2737,15 @@ msgstr ""
 "Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
-#: cogs/community/usersettings.py:369
+#: cogs/community/usersettings.py:426
 msgid "ON"
 msgstr "ACTIVADO"
 
-#: cogs/community/usersettings.py:369
+#: cogs/community/usersettings.py:426
 msgid "OFF"
 msgstr "DESACTIVADO"
 
-#: cogs/community/usersettings.py:370
+#: cogs/community/usersettings.py:427
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2828,7 +2754,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:449
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2837,35 +2763,211 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:406
+#: cogs/community/usersettings.py:463
 msgid "-# Only you can use these controls."
 msgstr "-# Solo tú puedes usar estos controles."
 
-#: cogs/community/usersettings.py:432 cogs/community/usersettings.py:452
-#: cogs/community/usersettings.py:472
+#: cogs/community/usersettings.py:489 cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:529
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
-#: cogs/community/usersettings.py:531
+#: cogs/community/usersettings.py:588
 #, python-brace-format
-msgid "Use `{prefix}mydata export` to receive your data, or `{prefix}mydata deleteavatars` to erase saved avatars."
-msgstr "Usa `{prefix}mydata export` para recibir tus datos, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
+msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
+msgstr "Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
 
-#: cogs/community/usersettings.py:572
+#: cogs/community/usersettings.py:630
 msgid "I sent your data export to you by direct message."
 msgstr "Te envié tu exportación de datos por mensaje directo."
 
-#: cogs/community/usersettings.py:576
+#: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "No pude enviarte un mensaje directo. Por favor, activa los MD."
 
-#: cogs/community/usersettings.py:581
+#: cogs/community/usersettings.py:639
 msgid "Something went wrong building your data export."
 msgstr "Algo salió mal al preparar tu exportación de datos."
 
-#: cogs/community/usersettings.py:592
+#: cogs/community/usersettings.py:650
+msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
+msgstr "Esto elimina permanentemente tu biografía, tus pronombres, tu color de acento, tus campos personalizados, tus IDs de juego y todas las decisiones que tomaste sobre quién podía verlos. Esto no se puede deshacer."
+
+#: cogs/community/usersettings.py:665
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
+
+#: cogs/community/profile/cog.py:62
+#, python-brace-format
+msgid "That value is too long (max {limit} characters)."
+msgstr "Ese valor es demasiado largo (máximo {limit} caracteres)."
+
+#: cogs/community/profile/cog.py:66
+msgid "That is not a valid colour. Use a hex colour like #5865F2."
+msgstr "Ese no es un color válido. Usa un color hexadecimal como #5865F2."
+
+#: cogs/community/profile/cog.py:67
+msgid "That value is not valid for this field."
+msgstr "Ese valor no es válido para este campo."
+
+#: cogs/community/profile/cog.py:117
+msgid "Edit your profile"
+msgstr "Edita tu perfil"
+
+#: cogs/community/profile/cog.py:122
+msgid "Field"
+msgstr "Campo"
+
+#: cogs/community/profile/cog.py:128
+msgid "Value"
+msgstr "Valor"
+
+#: cogs/community/profile/cog.py:136
+msgid "Pick a field and enter a value."
+msgstr "Elige un campo e introduce un valor."
+
+#: cogs/community/profile/cog.py:146
+msgid "Unknown field."
+msgstr "Campo desconocido."
+
+#: cogs/community/profile/cog.py:149 cogs/community/profile/cog.py:345
+msgid "Profile updated"
+msgstr "Perfil actualizado"
+
+#: cogs/community/profile/cog.py:162 cogs/community/profile/cog.py:326
+#: cogs/community/profile/cog.py:388
+msgid "Failed to update your profile, please try again later."
+msgstr "No se pudo actualizar tu perfil, inténtalo de nuevo más tarde."
+
+#: cogs/community/profile/cog.py:215
+#, python-brace-format
+msgid "{name}'s profile"
+msgstr "Perfil de {name}"
+
+#: cogs/community/profile/cog.py:242
+msgid "This profile is too long to show in full."
+msgstr "Este perfil es demasiado largo para mostrarse completo."
+
+#: cogs/community/profile/cog.py:264
+#, python-brace-format
+msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
+msgstr "Por ahora, solo tú puedes ver esto. Usa `{prefix}profile visibility {section} server` para mostrarlo en los servidores que compartes."
+
+#: cogs/community/profile/cog.py:302
+#, python-brace-format
+msgid "{name} has no profile set."
+msgstr "{name} no tiene un perfil configurado."
+
+#: cogs/community/profile/cog.py:332
+#, python-brace-format
+msgid "Unknown field. Choose: {options}"
+msgstr "Campo desconocido. Elige: {options}"
+
+#: cogs/community/profile/cog.py:342
+#, python-brace-format
+msgid "Cleared {field}."
+msgstr "Se borró {field}."
+
+#: cogs/community/profile/cog.py:367
+#, python-brace-format
+msgid "Unknown section. Choose: {options}"
+msgstr "Sección desconocida. Elige: {options}"
+
+#: cogs/community/profile/cog.py:376
+#, python-brace-format
+msgid "Unknown visibility. Choose: {options}"
+msgstr "Visibilidad desconocida. Elige: {options}"
+
+#: cogs/community/profile/cog.py:395
+#, python-brace-format
+msgid "{field} is now visible to anyone."
+msgstr "{field} ahora es visible para cualquiera."
+
+#: cogs/community/profile/cog.py:399
+#, python-brace-format
+msgid "{field} is now visible to the servers you share."
+msgstr "{field} ahora es visible en los servidores que compartes."
+
+#: cogs/community/profile/cog.py:405
+#, python-brace-format
+msgid "{field} is now visible to you only."
+msgstr "{field} ahora solo es visible para ti."
+
+#: cogs/community/profile/cog.py:418
+msgid "Click below to edit a profile field:"
+msgstr "Haz clic abajo para editar un campo del perfil:"
+
+#: cogs/community/profile/cog.py:432
+msgid "Failed to clear your profile, please try again later."
+msgstr "No se pudo borrar tu perfil, inténtalo de nuevo más tarde."
+
+#: cogs/community/profile/cog.py:436
+msgid "Profile cleared"
+msgstr "Perfil borrado"
+
+#: cogs/community/profile/cog.py:437
+msgid "Your profile has been cleared."
+msgstr "Tu perfil ha sido borrado."
+
+#: cogs/community/profile/registry.py:57
+msgid "Switch Friend Code"
+msgstr "Código de amigo de Switch"
+
+#: cogs/community/profile/registry.py:58
+msgid "3DS Friend Code"
+msgstr "Código de amigo de 3DS"
+
+#: cogs/community/profile/registry.py:59
+msgid "BattleTag"
+msgstr "BattleTag"
+
+#: cogs/community/profile/registry.py:60
+msgid "Riot ID"
+msgstr "Riot ID"
+
+#: cogs/community/profile/registry.py:61
+msgid "Steam ID"
+msgstr "ID de Steam"
+
+#: cogs/community/profile/registry.py:217
+msgid "Bio"
+msgstr "Biografía"
+
+#: cogs/community/profile/registry.py:220
+msgid "Pronouns"
+msgstr "Pronombres"
+
+#: cogs/community/profile/registry.py:229
+msgid "Custom fields"
+msgstr "Campos personalizados"
+
+#: cogs/community/profile/registry.py:237
+msgid "Gaming IDs"
+msgstr "IDs de juego"
+
+#: cogs/community/profile/registry.py:245
+msgid "Steam"
+msgstr "Steam"
+
+#: cogs/community/profile/registry.py:246
+msgid "Last.fm"
+msgstr "Last.fm"
+
+#: cogs/community/profile/registry.py:247
+msgid "osu!"
+msgstr "osu!"
+
+#: cogs/community/profile/registry.py:248
+msgid "Backloggd"
+msgstr "Backloggd"
+
+#: cogs/community/profile/registry.py:249
+msgid "Now playing"
+msgstr "Reproduciendo ahora"
+
+#: cogs/community/profile/registry.py:250
+msgid "Spotify"
+msgstr "Spotify"
 
 #: cogs/community/serverstats/views.py:172
 msgid "Last bar: today, still in progress."
