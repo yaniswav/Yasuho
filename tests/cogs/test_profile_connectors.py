@@ -80,12 +80,22 @@ def example():
     Registering it (rather than special-casing fakes in the registry) is the
     point: the cog, the storage seam and the error mapping are exercised through
     the SAME routing a P4 connector will take.
+
+    P4 has now landed a real connector under every LINKABLE name (this lot's
+    AniList/Steam/osu!, P4B's Last.fm/Backloggd), so "steam" is no longer a
+    free slot the way it was when this fixture was written - the real
+    ``SteamConnector`` is saved and restored around the swap so this fixture's
+    borrowed name does not leave production without its Steam connector for
+    the rest of the test session.
     """
+    previous = base.CONNECTORS.pop("steam", None)
     connector = base.register(ExampleConnector("steam"))
     try:
         yield connector
     finally:
         base.unregister("steam")
+        if previous is not None:
+            base.CONNECTORS["steam"] = previous
 
 
 # ---------------------------------------------------------------------------
@@ -156,12 +166,35 @@ def test_the_visibility_literal_matches_the_level_tuple():
 # ---------------------------------------------------------------------------
 
 
-def test_production_registers_no_connector_at_all():
-    """THE guard against a fake shipping: importing the package must leave the
-    registry empty, so every name answers 'coming soon' until P4 lands."""
-    assert base.CONNECTORS == {}
-    assert base.available() == ()
-    assert base.coming_soon() == base.LINKABLE
+def test_production_only_ever_registers_reserved_linkable_names():
+    """THE guard against a fake shipping, updated for a post-P4 world: every
+    name in the registry is a real reserved LINKABLE section (never a rogue
+    name), and the ones this lot ships (AniList, Steam, osu!) really are
+    registered - P3's original "the registry starts empty" version of this
+    guard held only until P4 landed its first real connector, which is
+    exactly what this lot does."""
+    assert set(base.CONNECTORS) <= set(base.LINKABLE)
+    assert {"anilist", "steam", "osu"} <= set(base.CONNECTORS)
+    assert set(base.available()) <= set(base.LINKABLE)
+
+
+@pytest.fixture
+def coming_soon_connector():
+    """One LINKABLE name with NO implementation, for the duration of the test.
+
+    Once every P4 module has landed, all five LINKABLE names are always
+    registered in production - so a test that wants to exercise the "coming
+    soon" refusal path has to manufacture that state itself. Borrows "osu"
+    (this lot's own connector, so nothing else needs updating to know the
+    slot might disappear) and restores it afterward.
+    """
+    name = "osu"
+    previous = base.CONNECTORS.pop(name, None)
+    try:
+        yield name
+    finally:
+        if previous is not None:
+            base.CONNECTORS[name] = previous
 
 
 def test_the_registry_only_accepts_reserved_linkable_names(example):
@@ -187,12 +220,14 @@ def test_registering_twice_is_refused_rather_than_silently_overwriting(example):
     assert base.CONNECTORS["steam"] is example
 
 
-def test_get_separates_a_typo_from_a_connector_that_has_not_landed(example):
+def test_get_separates_a_typo_from_a_connector_that_has_not_landed(
+    example, coming_soon_connector
+):
     assert base.get("steam") is example
     with pytest.raises(base.UnknownConnector):
         base.get("crunchyroll")
     with pytest.raises(base.ConnectorUnavailable) as caught:
-        base.get("osu")
+        base.get(coming_soon_connector)
     assert caught.value.reason == "coming_soon"
 
 
@@ -553,11 +588,13 @@ def seam(monkeypatch):
     return state
 
 
-async def test_a_connector_without_an_implementation_is_refused_not_stored(seam):
+async def test_a_connector_without_an_implementation_is_refused_not_stored(
+    seam, coming_soon_connector
+):
     """'Coming soon' must not mean 'stored and silently broken'."""
     cog = _cog()
     ctx = _Ctx()
-    await cog.connections_link.callback(cog, ctx, "osu", handle="peppy")
+    await cog.connections_link.callback(cog, ctx, coming_soon_connector, handle="peppy")
     assert "coming soon" in _last_text(ctx).lower()
     assert seam["linked"] == []
 
@@ -710,7 +747,9 @@ def _label(name):
     return base.label_for(name)
 
 
-async def test_the_list_shows_every_section_with_its_audience(seam, example):
+async def test_the_list_shows_every_section_with_its_audience(
+    seam, example, coming_soon_connector
+):
     seam["connections"] = [
         {"connector": "steam", "external_id": "yanis", "display_name": "Yanis"}
     ]
@@ -726,7 +765,7 @@ async def test_the_list_shows_every_section_with_its_audience(seam, example):
     assert "Yanis" in values[_label("steam")]
     assert "anyone" in values[_label("steam")]
     # Everything P4 has not landed says so, instead of pretending to be unlinked.
-    assert values[_label("osu")] == "Coming soon"
+    assert values[_label(coming_soon_connector)] == "Coming soon"
 
 
 async def test_the_group_falls_back_to_the_list_for_prefix_users(seam):
@@ -789,7 +828,9 @@ async def test_another_user_is_not_caught_by_someone_elses_list_cooldown(seam):
     assert other.dms
 
 
-async def test_a_coming_soon_refusal_gives_the_rate_limit_token_back(seam):
+async def test_a_coming_soon_refusal_gives_the_rate_limit_token_back(
+    seam, coming_soon_connector
+):
     """The link bucket protects a third party. A name refused before any remote
     call spent none of it, so waiting a minute to try the right one would be a
     penalty for being told "not yet"."""
@@ -800,7 +841,7 @@ async def test_a_coming_soon_refusal_gives_the_rate_limit_token_back(seam):
     bucket.update_rate_limit()  # what Command.invoke charges before the body
     assert bucket.get_tokens() == LINK_RATE - 1
 
-    await command.callback(cog, ctx, "osu", handle="peppy")
+    await command.callback(cog, ctx, coming_soon_connector, handle="peppy")
 
     assert "coming soon" in _last_text(ctx).lower()
     assert bucket.get_tokens() == LINK_RATE
@@ -1135,3 +1176,128 @@ def test_the_new_group_collides_with_nothing_in_the_tree():
         if d["receiver"] == "connections"
     }
     assert {"list", "link", "unlink", "visibility"} <= group
+
+
+# ---------------------------------------------------------------------------
+# The rate-limit refund covers every PRE-FLIGHT refusal, not just two of them
+# ---------------------------------------------------------------------------
+
+
+async def test_a_not_configured_refusal_gives_the_rate_limit_token_back(
+    seam, monkeypatch
+):
+    """'not_configured' is decided before a single byte leaves this process:
+    every connector reads its API key as the first statement of its call path.
+    A member who typed a perfectly good handle at a bot whose admin never
+    provisioned the key spent nothing, so making them wait a minute would be a
+    penalty for someone else's missing config."""
+    previous = base.CONNECTORS.pop("steam", None)
+
+    class _Unconfigured(base.Connector):
+        name = "steam"
+
+        async def link(self, user_id, raw_input):
+            raise base.ConnectorUnavailable(self.name, "not_configured")
+
+    base.register(_Unconfigured())
+    try:
+        cog = _cog()
+        command = cog.connections_link
+        ctx = _Ctx(command=command)
+        bucket = command._buckets.get_bucket(ctx)
+        bucket.update_rate_limit()
+
+        await command.callback(cog, ctx, "steam", handle="Yanis")
+
+        assert "admin" in _last_text(ctx).lower()
+        assert bucket.get_tokens() == LINK_RATE
+    finally:
+        base.unregister("steam")
+        if previous is not None:
+            base.CONNECTORS["steam"] = previous
+
+
+async def test_a_remote_failure_still_keeps_its_token(seam, monkeypatch):
+    """The counter-test: a third party that WAS called and had a bad day cost
+    the round trip this bucket exists to limit."""
+    previous = base.CONNECTORS.pop("steam", None)
+
+    class _Down(base.Connector):
+        name = "steam"
+
+        async def link(self, user_id, raw_input):
+            raise base.ConnectorUnavailable(self.name, "remote")
+
+    base.register(_Down())
+    try:
+        cog = _cog()
+        command = cog.connections_link
+        ctx = _Ctx(command=command)
+        bucket = command._buckets.get_bucket(ctx)
+        bucket.update_rate_limit()
+
+        await command.callback(cog, ctx, "steam", handle="Yanis")
+
+        assert bucket.get_tokens() == LINK_RATE - 1
+    finally:
+        base.unregister("steam")
+        if previous is not None:
+            base.CONNECTORS["steam"] = previous
+
+
+# ---------------------------------------------------------------------------
+# The framework's shared third-party value hygiene (base.safe_url /
+# base.safe_number), consumed by all five connectors on BOTH sides of the
+# payload rather than restated five times.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value",
+    (
+        None,
+        "",
+        "   ",
+        "/relative/avatar.png",
+        "javascript:alert(1)",
+        "data:image/png;base64,AAAA",
+        "//protocol-relative.example/x.png",
+        "ftp://example.test/x.png",
+        "https://example.test/" + "a" * 500,
+    ),
+)
+def test_safe_url_refuses_anything_a_thumbnail_could_choke_on(value):
+    assert base.safe_url(value) is None
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    (
+        ("https://example.test/a.png", "https://example.test/a.png"),
+        ("  https://example.test/a.png  ", "https://example.test/a.png"),
+        ("HTTP://EXAMPLE.TEST/A.PNG", "HTTP://EXAMPLE.TEST/A.PNG"),
+    ),
+)
+def test_safe_url_keeps_an_absolute_http_url_verbatim(value, expected):
+    assert base.safe_url(value) == expected
+
+
+def test_safe_url_drops_an_over_long_url_rather_than_truncating_it():
+    """Half a url is not a url - it is exactly the Thumbnail Discord refuses
+    the whole message over, which is the failure this filter exists for."""
+    url = "https://example.test/" + "a" * base.URL_MAX
+    assert base.safe_url(url) is None
+    assert base.safe_url(url, limit=len(url)) == url
+
+
+@pytest.mark.parametrize(
+    "value",
+    (None, "12", True, False, [], {}, float("inf"), float("-inf"), float("nan"), 10**40),
+)
+def test_safe_number_refuses_what_is_not_a_plausible_number(value):
+    assert base.safe_number(value) is None
+
+
+@pytest.mark.parametrize("value", (0, 3, -3, 78.5, 10**12 - 1))
+def test_safe_number_keeps_a_plausible_number(value):
+    assert base.safe_number(value) == value
