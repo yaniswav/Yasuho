@@ -9,11 +9,19 @@ Layout:
 * registry.py   - which fields exist, their caps and their validators (pure);
 * visibility.py - who may see which field, absent row = private (pure);
 * storage.py    - the single-statement reads and writes;
-* cog.py        - the Discord commands, re-homed from cogs/community/profiles.py.
+* cog.py        - the Discord commands, re-homed from cogs/community/profiles.py;
+* connectors/   - the external-account framework (its own cog, see below).
 
 This lot is the socle. The rendered card and the visibility panel are P2; the
 AniList / Steam / Last.fm / osu! / Backloggd / presence connectors are P3-P4 and
 already have their names reserved in the registry, so they need no schema change.
+
+Two cogs, one extension: core's discovery stops at the first ``__init__`` that
+defines ``setup`` and does not descend further, so ``connectors/`` is a
+sub-package rather than an extension of its own and is added here. They stay
+separate cogs because a hybrid subcommand must live in the same cog as its
+group, and ``connections`` is a root group of its own (``profile`` cannot adopt
+it across cogs).
 
 Data lifecycle: user-scoped, so the guild purge (tools/retention.py) does not and
 must not touch it. Export and deletion live on the USER path in tools/privacy.py
@@ -23,9 +31,11 @@ Typography rule: ASCII '-' and '...' only.
 """
 
 from .cog import Profiles
+from .connectors import ProfileConnectors
 
-__all__ = ("Profiles", "setup")
+__all__ = ("Profiles", "ProfileConnectors", "setup")
 
 
 async def setup(bot):
     await bot.add_cog(Profiles(bot))
+    await bot.add_cog(ProfileConnectors(bot))

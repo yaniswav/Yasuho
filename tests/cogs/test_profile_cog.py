@@ -6,6 +6,13 @@ behavioural: does `set` route each field to the right single-column write, does
 fields, another member does not), and does a rejected value produce a message
 that names the cap instead of a traceback.
 
+`view` (and the bare group) now sends the Components V2 card from
+cogs/community/profile/views.py instead of an embed (this lot's P2
+conversion); the tests below check that the right VIEW is sent with the right
+content, while the deep per-visibility-level rendering matrix and the
+worst-case Components V2 budget are covered directly against the card in
+tests/cogs/test_profile_views.py, not duplicated here.
+
 Offline: the storage seam is monkeypatched, so no database is involved.
 """
 
@@ -17,7 +24,8 @@ import pytest
 from discord.ext.commands.view import StringView
 
 from cogs.community.profile import registry, storage, visibility
-from cogs.community.profile.cog import EMBED_TOTAL_BUDGET, Profiles
+from cogs.community.profile.cog import Profiles
+from cogs.community.profile.connectors import storage as connectors_storage
 
 OWNER = 111
 FRIEND = 222
@@ -70,9 +78,40 @@ def _last_embed(ctx):
     return ctx.sends[-1][1]["embed"]
 
 
+def _last_view(ctx):
+    return ctx.sends[-1][1]["view"]
+
+
 def _last_text(ctx):
     args, kwargs = ctx.sends[-1]
     return args[0] if args else kwargs.get("content")
+
+
+def _walk(node):
+    """Every nested Components V2 payload dict inside a to_components() tree."""
+    if isinstance(node, list):
+        for item in node:
+            yield from _walk(item)
+    elif isinstance(node, dict):
+        yield node
+        for value in node.values():
+            if isinstance(value, (list, dict)):
+                yield from _walk(value)
+
+
+def _card_text(view):
+    """Every TextDisplay's content in a rendered card, joined by newlines."""
+    return "\n".join(
+        node["content"] for node in _walk(view.to_components()) if node.get("type") == 10
+    )
+
+
+def _card_accent(view):
+    """The card Container's accent_color, or None."""
+    for node in _walk(view.to_components()):
+        if node.get("type") == 17:
+            return node.get("accent_color")
+    return None
 
 
 @pytest.fixture
@@ -140,8 +179,13 @@ def writes(monkeypatch):
 
 @pytest.fixture
 def reads(monkeypatch):
-    """Serve one profile + visibility map to `profile view`."""
-    state = {"profile": None, "visibility": {}}
+    """Serve one profile + visibility map + connection list to `profile view`.
+
+    The third read is what makes a "Linked" badge true (see views.py): the card
+    draws a connector section only for a row that really exists, so the fixture
+    serves the same three reads the command performs.
+    """
+    state = {"profile": None, "visibility": {}, "connections": []}
 
     async def get_profile(pool, user_id):
         return state["profile"]
@@ -149,8 +193,12 @@ def reads(monkeypatch):
     async def get_visibility(pool, user_id):
         return state["visibility"]
 
+    async def get_connections(pool, user_id):
+        return state["connections"]
+
     monkeypatch.setattr(storage, "get_profile", get_profile)
     monkeypatch.setattr(storage, "get_visibility", get_visibility)
+    monkeypatch.setattr(connectors_storage, "get_connections", get_connections)
     return state
 
 
@@ -314,7 +362,8 @@ async def test_the_owner_sees_their_own_unpublished_fields(reads, owner):
     reads["visibility"] = {}
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    assert _last_embed(ctx).description == "my secret bio"
+    assert "my secret bio" in _card_text(_last_view(ctx))
+    assert "embed" not in ctx.sends[-1][1]
 
 
 async def test_another_member_does_not_see_an_unpublished_field(reads, friend, owner):
@@ -324,6 +373,7 @@ async def test_another_member_does_not_see_an_unpublished_field(reads, friend, o
     await Profiles.profile_view.callback(_cog(), ctx, owner)
     assert "no profile" in _last_text(ctx)
     assert not any("embed" in kwargs for _args, kwargs in ctx.sends)
+    assert not any("view" in kwargs for _args, kwargs in ctx.sends)
 
 
 async def test_another_member_sees_a_server_published_field(reads, friend, owner):
@@ -331,16 +381,16 @@ async def test_another_member_sees_a_server_published_field(reads, friend, owner
     reads["visibility"] = {"bio": "server"}
     ctx = _Ctx(friend)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    embed = _last_embed(ctx)
-    assert embed.description == "hello"
-    assert [field.name for field in embed.fields] == []
+    text = _card_text(_last_view(ctx))
+    assert "hello" in text
+    assert "she/her" not in text  # pronouns was never published
 
 
-async def test_the_accent_becomes_the_embed_colour_when_visible(reads, owner):
+async def test_the_accent_becomes_the_card_colour_when_visible(reads, owner):
     reads["profile"] = _profile(accent=0x5865F2, bio="hi")
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    assert _last_embed(ctx).colour == discord.Colour(0x5865F2)
+    assert _card_accent(_last_view(ctx)) == 0x5865F2
 
 
 async def test_a_hidden_accent_does_not_colour_someone_elses_view(reads, friend, owner):
@@ -348,7 +398,7 @@ async def test_a_hidden_accent_does_not_colour_someone_elses_view(reads, friend,
     reads["visibility"] = {"bio": "public"}
     ctx = _Ctx(friend)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    assert _last_embed(ctx).colour != discord.Colour(0x5865F2)
+    assert _card_accent(_last_view(ctx)) != 0x5865F2
 
 
 async def test_gaming_ids_and_custom_fields_render_in_registry_order(reads, owner):
@@ -359,58 +409,108 @@ async def test_gaming_ids_and_custom_fields_render_in_registry_order(reads, owne
     )
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    names = [field.name for field in _last_embed(ctx).fields]
-    assert names == [
-        "Pronouns",
-        "Switch Friend Code",
-        "Steam ID",
-        "Fav game",
-    ]
+    text = _card_text(_last_view(ctx))
+    # Registry order: pronouns (header), then custom fields, then gaming IDs
+    # (Switch before Steam, GAMING_ID_KEYS order).
+    assert (
+        text.index("she/her")
+        < text.index("Fav game")
+        < text.index("Switch Friend Code")
+        < text.index("Steam ID")
+    )
 
 
 async def test_view_defaults_to_the_caller(reads, owner):
     reads["profile"] = _profile(bio="hi")
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, None)
-    assert _last_embed(ctx).title.startswith("Owner")
+    assert "Owner" in _card_text(_last_view(ctx))
 
 
 async def test_the_bare_group_shows_the_callers_profile(reads, owner):
     reads["profile"] = _profile(bio="hi")
     ctx = _Ctx(owner)
     await Profiles.profile.callback(_cog(), ctx)
-    assert _last_embed(ctx).description == "hi"
+    assert "hi" in _card_text(_last_view(ctx))
 
 
-async def test_a_maxed_out_profile_stays_within_discords_embed_budget(reads, owner):
-    """Every field legal on its own can still add up to a 6000-char refusal.
-
-    Discord answers 50035 for the whole embed, so an owner could end up unable
-    to see their OWN profile. Fields that do not fit are dropped and announced.
-    """
-    reads["profile"] = _profile(
-        bio="b" * registry.BIO_MAX,
-        pronouns="p" * registry.PRONOUNS_MAX,
-        gaming_ids={key: key[0] * registry.GAMING_ID_MAX for key in registry.GAMING_ID_KEYS},
-        custom_fields=[
-            {"label": "l" * registry.CUSTOM_LABEL_MAX, "value": "v" * registry.CUSTOM_VALUE_MAX}
-            for _index in range(registry.CUSTOM_FIELDS_MAX)
-        ],
-    )
+async def test_view_sends_with_mentions_suppressed(reads, owner):
+    """Bio/custom-field/gaming-ID text is owner-typed and, unlike an embed, a
+    Components V2 TextDisplay DOES get parsed for mentions - so the card must
+    never be sent without AllowedMentions.none()."""
+    reads["profile"] = _profile(bio="hi")
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    embed = _last_embed(ctx)
-    assert len(embed) <= EMBED_TOTAL_BUDGET
-    assert embed.footer.text
-    # What DID fit is still the real content, in registry order.
-    assert embed.fields[0].name == "Pronouns"
+    sent = ctx.sends[-1][1]["allowed_mentions"]
+    assert sent.to_dict() == discord.AllowedMentions.none().to_dict()
+
+
+async def test_the_no_profile_answer_also_suppresses_mentions(reads, owner):
+    """That branch is plain message CONTENT and interpolates a NICKNAME, which
+    its owner controls: "@everyone" as a nickname would really ping."""
+    ctx = _Ctx(_Member(OWNER, "@everyone"))
+    await Profiles.profile_view.callback(_cog(), ctx, ctx.author)
+    assert "no profile" in _last_text(ctx)
+    sent = ctx.sends[-1][1]["allowed_mentions"]
+    assert sent.to_dict() == discord.AllowedMentions.none().to_dict()
+
+
+async def test_the_panel_defers_before_reading_and_binds_its_message(reads, owner):
+    """`ctx.typing()` is what defers the slash interaction here; without it the
+    database round-trip can eat the 3-second window and lose the panel."""
+    typings = []
+    ctx = _Ctx(owner)
+    real_typing = ctx.typing
+
+    def _record():
+        typings.append(True)
+        return real_typing()
+
+    ctx.typing = _record
+
+    await Profiles.profile_panel.callback(_cog(), ctx)
+
+    assert typings  # the read happened inside the typing/defer window
+    view = _last_view(ctx)
+    assert view.author_id == OWNER
+    assert view.message is not None  # bound, so on_timeout can disable it
+
+
+async def test_publishing_a_section_you_never_linked_shows_no_card(reads, owner):
+    """Turning every section on in the panel is a choice about an audience, not
+    an account: with nothing linked and nothing stored, `view` must fall back to
+    "no profile" rather than send seven "Linked" badges over nothing."""
+    reads["visibility"] = {name: "public" for name in registry.FIELD_NAMES}
+    ctx = _Ctx(owner)
+    await Profiles.profile_view.callback(_cog(), ctx, owner)
+    assert "no profile" in _last_text(ctx)
+
+
+async def test_a_section_is_badged_only_once_it_is_really_linked(reads, owner):
+    reads["profile"] = _profile(bio="hi")
+    reads["visibility"] = {"steam": "public", "anilist": "public"}
+    reads["connections"] = [
+        {
+            "connector": "steam",
+            "external_id": "76561198000000000",
+            "display_name": "Yanis",
+            "linked_at": None,
+            "last_refresh": None,
+            "payload": {},
+        }
+    ]
+    ctx = _Ctx(owner)
+    await Profiles.profile_view.callback(_cog(), ctx, owner)
+    text = _card_text(_last_view(ctx))
+    assert "Steam" in text
+    assert "AniList" not in text
 
 
 async def test_a_normal_profile_carries_no_truncation_footer(reads, owner):
     reads["profile"] = _profile(bio="hi", gaming_ids={"switch": "SW-1"})
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, owner)
-    assert _last_embed(ctx).footer.text is None
+    assert "too long to show in full" not in _card_text(_last_view(ctx))
 
 
 # ---------------------------------------------------------------------------
@@ -545,14 +645,15 @@ async def test_clear_degrades_politely_when_the_database_fails(monkeypatch, owne
 def test_the_slash_command_names_are_unchanged():
     """Renaming any of these would force a command re-sync in production.
 
-    `visibility` is the one addition this lot makes (it IS a re-sync); every
-    pre-existing name must still be here.
+    `visibility` and `panel` are the additions this lot and its predecessor
+    make (each IS a re-sync); every pre-existing name must still be here.
     """
     assert Profiles.profile.name == "profile"
     assert {command.name for command in Profiles.profile.commands} == {
         "view",
         "set",
         "edit",
+        "panel",
         "clear",
         "visibility",
     }

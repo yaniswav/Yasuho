@@ -86,6 +86,7 @@ CATEGORIES = [
         N_("Your profile, reminders, AFK and personal preferences."),
         [
             "Profiles",
+            "ProfileConnectors",
             "AFK",
             "Reminder",
             "AvatarHistory",

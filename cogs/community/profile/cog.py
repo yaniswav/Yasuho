@@ -1,17 +1,21 @@
 """Purpose: the Discord surface of the profile - the commands the old profiles
-cog already had, re-homed onto the new socle.
+cog already had, re-homed onto the new socle, plus the two Components V2
+surfaces this lot adds (the ``/profile view`` card and the ``/profile panel``
+visibility panel), whose actual layout lives in the sibling ``views.py``
+(mirrors the music.py -> views.py / seasons.py -> seasons_views.py split; see
+that module's docstring for the one-way import direction).
 
-Deliberately thin. The card and the visibility PANEL are the next lot's job; this
-one keeps every existing command NAME and behaviour (``profile`` / ``view`` /
-``set`` / ``edit`` / ``clear``) while routing them through
-registry -> storage -> visibility, and extends ``set`` to the socle fields the
-registry now knows (bio, pronouns, accent) because it is the same command, not a
-new surface.
+Deliberately thin otherwise. It keeps every existing command NAME and
+behaviour (``profile`` / ``view`` / ``set`` / ``edit`` / ``clear``) while
+routing them through registry -> storage -> visibility, and extends ``set`` to
+the socle fields the registry now knows (bio, pronouns, accent) because it is
+the same command, not a new surface.
 
-One command IS new and does need a re-sync: ``profile visibility``, the text
-twin of the future panel. Without it a field written today could never be
-published (every field is born private), so ``set`` would be a write into a
-void; ``set`` also says so in a footer when the section is still private.
+Two commands are new and do need a re-sync: ``profile visibility`` (the text
+twin of the panel - without it a field written today could never be published,
+every field is born private, so ``set`` would be a write into a void; ``set``
+also says so in a footer when the section is still private) and ``profile
+panel`` (its graphical twin, added by this lot).
 
 Reads apply the visibility rules for real: a field the owner has not published is
 not rendered for anyone else. Gamer IDs migrated from the legacy table are seeded
@@ -27,11 +31,20 @@ from typing import Literal
 import discord
 from discord.ext import commands
 
-from . import registry, storage, visibility
-from .visibility import ViewerContext, resolve_visible_fields
+from . import registry, storage, views, visibility
+from .connectors import storage as connectors_storage
+from .views import (
+    ProfileEditModal,
+    ProfileEditView,
+    ProfileVisibilityPanel,
+    build_profile_card,
+    format_value,
+    invalid_value_message,
+    section_for,
+)
+from .visibility import ViewerContext
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -42,146 +55,11 @@ TEXT_SETTABLE = ("bio", "pronouns", "accent")
 # Everything `profile set` accepts, in the order the help string lists them.
 SET_CHOICES = registry.GAMING_ID_KEYS + TEXT_SETTABLE
 
-# What `profile visibility` can publish: the sections this version actually
-# stores. The connector sections (anilist, lastfm, ...) are addressable in
-# storage already, but offering them before P3/P4 fill them would be a toggle
-# with nothing behind it.
+# What `profile visibility` (the text command) can publish: the sections this
+# version actually stores. The graphical panel offers the connector sections
+# too (see views.ProfileVisibilityPanel); offering them here, before P3/P4
+# fill them, would be a toggle with nothing behind it in a plain-text answer.
 VISIBILITY_CHOICES = registry.STORED_NAMES
-
-# Discord rejects an embed whose total length exceeds 6000 characters (50035),
-# and a single field value over 1024. Both are TOTALS across the card, so a
-# profile made only of legal fields can still be illegal as a whole; we stop
-# adding fields a little early and say so rather than raise on `profile view`.
-EMBED_TOTAL_BUDGET = 5800
-EMBED_FIELD_VALUE_MAX = 1024
-EMBED_FIELD_LIMIT = 25
-
-
-def _invalid_value_message(error):
-    """Map a typed registry rejection to the message the user should read."""
-    if error.reason == "too_long":
-        return _("That value is too long (max {limit} characters).").format(
-            limit=error.limit
-        )
-    if error.reason == "colour":
-        return _("That is not a valid colour. Use a hex colour like #5865F2.")
-    return _("That value is not valid for this field.")
-
-
-def section_for(field):
-    """The visibility SECTION a settable field belongs to.
-
-    The five gamer IDs are keys inside one ``gaming_ids`` section, so publishing
-    a Switch code publishes them all: the visibility choice is made once, for
-    the section, not per key.
-    """
-    key = (field or "").strip().lower()
-    return "gaming_ids" if key in registry.GAMING_ID_KEYS else key
-
-
-def add_field_within_budget(embed, name, value, inline=False):
-    """Add one field unless it would push the embed past Discord's limits.
-
-    Returns False when the field was dropped. Five 1000-char gamer IDs plus a
-    full bio and five custom pairs are each individually legal but total more
-    than 6000 characters, and Discord refuses the whole embed at that point -
-    which would make a profile unviewable even by its own owner.
-    """
-    text = str(value)
-    if len(text) > EMBED_FIELD_VALUE_MAX:
-        text = text[: EMBED_FIELD_VALUE_MAX - 3] + "..."
-    if len(embed.fields) >= EMBED_FIELD_LIMIT:
-        return False
-    if len(embed) + len(str(name)) + len(text) > EMBED_TOTAL_BUDGET:
-        return False
-    embed.add_field(name=name, value=text, inline=inline)
-    return True
-
-
-def format_value(name, stored):
-    """Render what was actually STORED, not what was typed.
-
-    The registry trims text and packs a colour into an int, so echoing the raw
-    input back would confirm something the profile does not contain.
-    """
-    if stored is None:
-        return None
-    if name == "accent":
-        return "#%06X" % stored
-    return str(stored)
-
-
-class ProfileEditModal(LocaleModal):
-    """Pick a gamer ID from a radio and type its value (Components V2 modal)."""
-
-    def __init__(self, cog):
-        super().__init__(title=_("Edit your profile"))
-        self.cog = cog
-        self.field = discord.ui.RadioGroup(required=True)
-        for key in registry.GAMING_ID_KEYS:
-            self.field.add_option(label=_(registry.GAMING_ID_LABELS[key]), value=key)
-        self.add_item(discord.ui.Label(text=_("Field"), component=self.field))
-        self.value_input = discord.ui.TextInput(
-            style=discord.TextStyle.short,
-            required=True,
-            max_length=registry.GAMING_ID_MAX,
-        )
-        self.add_item(discord.ui.Label(text=_("Value"), component=self.value_input))
-
-    async def on_submit(self, interaction):
-        try:
-            field = self.field.value
-            value = (self.value_input.value or "").strip()
-            if not field or not value:
-                return await interaction.response.send_message(
-                    _("Pick a field and enter a value."), ephemeral=True
-                )
-            try:
-                applied = await self.cog.apply_field(interaction.user.id, field, value)
-            except registry.InvalidValue as error:
-                return await interaction.response.send_message(
-                    _invalid_value_message(error), ephemeral=True
-                )
-            if applied is None:
-                return await interaction.response.send_message(
-                    _("Unknown field."), ephemeral=True
-                )
-            label, shown = applied
-            embed = discord.Embed(title=_("Profile updated"), colour=random_colour())
-            embed.add_field(name=label, value=shown or value)
-            # The modal is interaction-only, so the prefix that publishes the
-            # section is always the slash one.
-            note = await self.cog.visibility_note(
-                interaction.user.id, section_for(field), "/"
-            )
-            if note:
-                embed.set_footer(text=note)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        except Exception:
-            log.exception("Profile edit modal failed")
-            await interaction.response.send_message(
-                _("Failed to update your profile, please try again later."),
-                ephemeral=True,
-            )
-
-
-class ProfileEditView(AuthorView):
-    """One-button launcher for the profile edit modal (the prefix entry point)."""
-
-    def __init__(self, cog, author_id):
-        super().__init__(
-            author_id, timeout=120, deny_message="This profile editor isn't for you."
-        )
-        self.cog = cog
-
-    @discord.ui.button(
-        label="Edit a field", emoji="\U0000270F", style=discord.ButtonStyle.primary
-    )
-    async def edit(self, interaction, button):
-        try:
-            await interaction.response.send_modal(ProfileEditModal(self.cog))
-        except Exception:
-            log.exception("Profile edit button failed")
 
 
 class Profiles(commands.Cog):
@@ -208,41 +86,6 @@ class Profiles(commands.Cog):
             stored = await storage.set_field(self.bot.db_pool, user_id, key, value)
             return _(registry.get(key).label), format_value(key, stored)
         return None
-
-    def _build_embed(self, member, visible):
-        """Render the fields the viewer is allowed to see, in registry order."""
-        accent = visible.get("accent")
-        embed = discord.Embed(
-            title=_("{name}'s profile").format(name=member.display_name),
-            description=visible.get("bio"),
-            colour=discord.Colour(accent) if accent is not None else random_colour(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-
-        dropped = False
-        pronouns = visible.get("pronouns")
-        if pronouns:
-            dropped |= not add_field_within_budget(
-                embed, _(registry.get("pronouns").label), pronouns, inline=True
-            )
-        gaming_ids = visible.get("gaming_ids") or {}
-        for key in registry.GAMING_ID_KEYS:
-            value = gaming_ids.get(key)
-            if value:
-                dropped |= not add_field_within_budget(
-                    embed, _(registry.GAMING_ID_LABELS[key]), value
-                )
-        for pair in visible.get("custom_fields", []):
-            label = pair.get("label") if isinstance(pair, dict) else None
-            value = pair.get("value") if isinstance(pair, dict) else None
-            if not label or not value:
-                continue
-            dropped |= not add_field_within_budget(embed, label, value)
-        if dropped:
-            embed.set_footer(
-                text=_("This profile is too long to show in full.")
-            )
-        return embed
 
     async def visibility_note(self, user_id, section, prefix):
         """Warn the owner when what they just wrote is visible to nobody.
@@ -289,6 +132,12 @@ class Profiles(commands.Cog):
             pool = self.bot.db_pool
             profile = await storage.get_profile(pool, member.id)
             visibility_map = await storage.get_visibility(pool, member.id)
+            # The third read of the card, and the one that makes a "Linked"
+            # badge true: a section is drawn only if the owner really has a row
+            # here, never because a visibility line exists. One indexed read
+            # bounded to seven rows by the table's own primary key (user_id,
+            # connector), so it costs the same as the two above.
+            connections = await connectors_storage.get_connections(pool, member.id)
             # guild_only + a Member converter: both parties are in THIS guild, so
             # they share one. No global mutual-guild scan (that is O(guilds)).
             viewer = ViewerContext(
@@ -296,15 +145,25 @@ class Profiles(commands.Cog):
                 viewer_id=ctx.author.id,
                 shares_guild=True,
             )
-            visible = resolve_visible_fields(profile, visibility_map, viewer)
+            card = await build_profile_card(
+                member, profile, visibility_map, viewer, connections
+            )
 
-            if not visible:
+            if card is None:
+                # A nickname is user-controlled too, and this branch is plain
+                # message CONTENT (where "@everyone" from a nickname would
+                # really ping), so it carries the same suppression as the card.
                 await ctx.send(
-                    _("{name} has no profile set.").format(name=member.display_name)
+                    _("{name} has no profile set.").format(name=member.display_name),
+                    allowed_mentions=views.NO_PINGS,
                 )
                 return
 
-            await ctx.send(embed=self._build_embed(member, visible))
+            # The card's free-form fields (bio, custom values, gaming IDs) can
+            # contain mention syntax the owner typed - unlike an embed, a
+            # Components V2 card's TextDisplay text DOES get parsed for
+            # mentions (see views.NO_PINGS).
+            await ctx.send(view=card, allowed_mentions=views.NO_PINGS)
 
     @profile.command(name="set")
     @commands.guild_only()
@@ -319,7 +178,7 @@ class Profiles(commands.Cog):
             try:
                 applied = await self.apply_field(ctx.author.id, field, value)
             except registry.InvalidValue as error:
-                await ctx.send(_invalid_value_message(error))
+                await ctx.send(invalid_value_message(error))
                 return
             except Exception:
                 log.exception("Failed to set profile field %s", field)
@@ -432,6 +291,21 @@ class Profiles(commands.Cog):
             view.message = await ctx.send(
                 _("Click below to edit a profile field:"), view=view
             )
+
+    @profile.command(name="panel")
+    @commands.guild_only()
+    async def profile_panel(self, ctx):
+        """Open a graphical panel to manage your profile's visibility."""
+
+        # Same discipline as every sibling here: `ctx.typing()` defers the slash
+        # interaction, so the database round-trip cannot eat the 3-second
+        # response window and lose the panel entirely.
+        async with ctx.typing():
+            visibility_map = await storage.get_visibility(
+                self.bot.db_pool, ctx.author.id
+            )
+            view = ProfileVisibilityPanel(self, ctx.author.id, visibility_map)
+            view.message = await ctx.send(view=view, allowed_mentions=views.NO_PINGS)
 
     @profile.command(name="clear")
     @commands.guild_only()

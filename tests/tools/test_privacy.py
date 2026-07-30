@@ -354,7 +354,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 2
+    assert data["export_version"] == privacy.EXPORT_VERSION == 3
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -392,19 +392,25 @@ async def test_forget_deletes_every_profile_table_in_one_transaction():
     assert [table for table, _query in privacy.PROFILE_DELETE_QUERIES] == [
         "user_profiles",
         "profile_visibility",
+        "profile_connections",
         "profiles",
     ]
-    assert len(executed) == 3
+    assert len(executed) == 4
     assert all(query.startswith("DELETE FROM ") for query in executed)
     assert all(args == (42,) for _kind, _query, args in connection.calls)
     # _DeleteConnection reports "INSERT 0 1" for every statement.
-    assert counts == {"user_profiles": 1, "profile_visibility": 1, "profiles": 1}
+    assert counts == {
+        "user_profiles": 1,
+        "profile_visibility": 1,
+        "profile_connections": 1,
+        "profiles": 1,
+    }
 
 
 def test_the_forget_list_covers_exactly_the_profile_tables():
     """A new profile table must join the forget path, not just the export."""
     listed = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
-    assert {"user_profiles", "profile_visibility"} <= listed
+    assert {"user_profiles", "profile_visibility", "profile_connections"} <= listed
     assert listed <= _user_scoped_tables()
 
 

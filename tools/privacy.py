@@ -16,7 +16,10 @@ AVATAR_TRACKING_KEY = "avatar_history_tracking"
 
 # Export schema version. v2 added the social profile: `profile` (user_profiles)
 # and `profile_visibility`, and moved the old gamer-ID row to `legacy_profile`.
-EXPORT_VERSION = 2
+# v3 added `profile_connections`: the external accounts linked to a profile,
+# with the display cache each one keeps. Additive, but a consumer that keys on
+# the version must be able to tell the two apart.
+EXPORT_VERSION = 3
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -27,6 +30,13 @@ EXPORT_VERSION = 2
 PROFILE_DELETE_QUERIES = (
     ("user_profiles", "DELETE FROM user_profiles WHERE user_id = $1"),
     ("profile_visibility", "DELETE FROM profile_visibility WHERE user_id = $1"),
+    # The external accounts linked to the profile, and the display cache each
+    # one holds. Forgetting a profile that leaves a Steam handle (and the games
+    # fetched with it) behind is not forgetting it.
+    (
+        "profile_connections",
+        "DELETE FROM profile_connections WHERE user_id = $1",
+    ),
     # The pre-migration table. Still holds the same gamer IDs until it is
     # dropped, so forgetting a profile must clear it too.
     ("profiles", "DELETE FROM profiles WHERE user_id = $1"),
@@ -96,6 +106,17 @@ async def collect_user_export(pool, user_id):
     profile_visibility = await pool.fetch(
         "SELECT field, level FROM profile_visibility "
         "WHERE user_id = $1 ORDER BY field",
+        user_id,
+    )
+    # Handles are public by nature (a username, a SteamID64) and the payload is
+    # the display cache the profile card draws, so both belong in the archive.
+    # No credential can appear here: none is stored in this table by design
+    # (see schema.sql), which is why - unlike anilist_tokens above - the whole
+    # row is selected rather than a redacted projection.
+    profile_connections = await pool.fetch(
+        "SELECT connector, external_id, display_name, linked_at, "
+        "last_refresh, payload FROM profile_connections "
+        "WHERE user_id = $1 ORDER BY connector",
         user_id,
     )
     token = await pool.fetchrow(
@@ -178,6 +199,14 @@ async def collect_user_export(pool, user_id):
             social_profile.get("gaming_ids"), {}
         )
 
+    connections = []
+    for row in profile_connections:
+        connection = dict(row)
+        # asyncpg hands JSONB back as text, so decode it: the archive must hold
+        # the cache as an object, not a quoted blob nobody can read.
+        connection["payload"] = _json_value(connection.get("payload"), {})
+        connections.append(connection)
+
     data = {
         "export_version": EXPORT_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc),
@@ -187,6 +216,7 @@ async def collect_user_export(pool, user_id):
         # Absent row = private, so a field missing here is one the user never
         # published. The export states the rows, not the defaults.
         "profile_visibility": _records(profile_visibility),
+        "profile_connections": connections,
         "legacy_profile": dict(legacy_profile) if legacy_profile else None,
         "anilist": {
             # Deliberately report linkage/expiry without selecting the encrypted
@@ -315,9 +345,10 @@ def build_export_archives(
 async def delete_user_profile(pool, user_id):
     """Erase a user's whole profile in one transaction; return per-table counts.
 
-    All three tables die together or none does, so a half-forgotten profile (say
-    the fields gone but the visibility rows left) cannot exist. Nothing is cached
-    in memory, so there is no invalidation to do afterwards.
+    Every table in :data:`PROFILE_DELETE_QUERIES` dies together or none does, so
+    a half-forgotten profile (say the fields gone but the visibility rows, or a
+    linked Steam handle, left behind) cannot exist. Nothing is cached in memory,
+    so there is no invalidation to do afterwards.
     """
     counts = {}
     async with pool.acquire() as connection:

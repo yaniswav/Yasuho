@@ -435,6 +435,76 @@ CREATE TABLE IF NOT EXISTS profile_visibility (
     PRIMARY KEY (user_id, field)
 );
 
+-- One row per (user, external account) linked to a profile. Owner:
+-- cogs/community/profile/connectors/ (base.py is the source of truth for the
+-- caps and for which sections are linkable; the CHECKs below are the belt to
+-- that module's suspenders, for the second writer - the dashboard - that lands
+-- later).
+--
+-- NO CREDENTIAL LIVES HERE. AniList keeps its own encrypted `anilist_tokens`
+-- row (Fernet); every other v1 connector is keyed by a PUBLIC handle - a
+-- username, a SteamID64 - so there is nothing secret to store. A generic
+-- connector-token table is deliberately NOT created in advance: the day a
+-- second OAuth connector exists it will need its own scopes, refresh cadence
+-- and revocation path, and guessing that shape now would be inventing a
+-- security-sensitive schema for nobody (YAGNI). What is not negotiable is that
+-- such a secret goes in its own encrypted table and never in `payload`, which
+-- /mydata exports verbatim.
+--
+-- `payload` is a bounded CACHE of displayable data (counts, a few titles, an
+-- avatar URL) refreshed by the P4 connectors, never the source of truth; it is
+-- capped at 8 KiB in Python. `connector` is a fixed seven-value CHECK rather
+-- than a free TEXT because, unlike profile_visibility.field, a row here costs
+-- storage and a refresh budget: an unknown name must fail loudly. The two
+-- presence sections are allowed by the CHECK so P5 can keep a marker row, but
+-- they are NOT linkable by a typed handle (see base.LINKABLE).
+--
+-- User-scoped: no guild purge applies (see tools/retention.py); it joins the
+-- USER paths instead - export and forget in tools/privacy.py.
+CREATE TABLE IF NOT EXISTS profile_connections (
+    user_id      BIGINT      NOT NULL,
+    connector    TEXT        NOT NULL,
+    external_id  TEXT        NOT NULL,
+    display_name TEXT,
+    linked_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_refresh TIMESTAMPTZ,
+    payload      JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    PRIMARY KEY (user_id, connector),
+    CONSTRAINT profile_connections_connector_known
+        CHECK (connector IN ('anilist', 'steam', 'lastfm', 'osu', 'backloggd',
+                             'presence_gaming', 'spotify_presence')),
+    CONSTRAINT profile_connections_external_id_length
+        CHECK (char_length(external_id) BETWEEN 1 AND 190),
+    CONSTRAINT profile_connections_display_name_length
+        CHECK (display_name IS NULL OR char_length(display_name) <= 190),
+    CONSTRAINT profile_connections_payload_shape
+        CHECK (jsonb_typeof(payload) = 'object'),
+    -- The 8 KiB cap that the storage estimate leans on, in the one place a
+    -- second writer (the dashboard) cannot route around. octet_length on the
+    -- text form, NOT pg_column_size: the latter measures the COMPRESSED datum,
+    -- so a blob would pass here and blow the estimate anyway. Probed against
+    -- the local instance: a payload whose JSON text is exactly 8192 bytes is
+    -- accepted, 8193 raises CheckViolationError.
+    -- This measures the CANONICAL text jsonb re-serialises, not the bytes
+    -- Python sent, so it is not always the number base.encode_payload checked
+    -- (base.PAYLOAD_MAX_BYTES). Same probe: for strings, integers, booleans,
+    -- nulls and nesting the two are byte-for-byte equal (json.dumps' default
+    -- ', ' / ': ' separators are exactly what jsonb emits), and reordered keys
+    -- keep the same length - but NUMBERS are canonicalised, so a float written
+    -- in exponent form expands, e.g. 1e+50 becomes its 51 digits and a payload
+    -- Python measured at 8163 bytes is rejected here. A P4 connector that
+    -- caches raw numeric API data must therefore keep margin under 8 KiB (or
+    -- store such values as strings), not aim at it.
+    CONSTRAINT profile_connections_payload_size
+        CHECK (octet_length(payload::text) <= 8192)
+);
+-- The P4 refresh loop asks "which accounts of THIS connector are the stalest?"
+-- (one third-party API at a time, each with its own rate budget), so the index
+-- leads on connector and orders by staleness with never-refreshed rows first.
+-- Without it that scan is a seq scan over every user's every connection.
+CREATE INDEX IF NOT EXISTS profile_connections_refresh_idx
+    ON profile_connections (connector, last_refresh NULLS FIRST);
+
 -- Per-user image history: global avatars, per-guild avatars and banners.
 -- New rows are bounded WebP; retention keeps at most 30 per series and prunes
 -- rows older than 18 months while preserving the newest 5.  avatarhistory.py
