@@ -330,6 +330,16 @@ class ProfileConnectors(commands.Cog):
                 )
                 return
             except base.ConnectorUnavailable as error:
+                # 'not_configured' joins the two refusals above: every
+                # connector reads its API key as the FIRST statement of the
+                # call path (steam.py and osu.py in `link` itself, lastfm.py
+                # at the top of its first request), so a bot whose admin never
+                # provisioned that key refuses before a single byte leaves
+                # this process - the token bought nothing and goes back. A
+                # 'remote' failure DID cost a round trip at the third party
+                # this bucket exists to protect, and keeps it.
+                if error.reason == "not_configured":
+                    self._refund(ctx)
                 await ctx.send(
                     self._unavailable_message(error), ephemeral=True
                 )

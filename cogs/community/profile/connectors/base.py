@@ -88,6 +88,70 @@ DISPLAY_NAME_MAX = 190
 # comment for the probe.
 PAYLOAD_MAX_BYTES = 8192
 
+# The bound on any URL a connector may put in its payload. A url is
+# third-party text that ends up in a Components V2 ``Thumbnail``, and it
+# shares the 8 KiB above with everything else the card draws: generous next to
+# any real CDN avatar, small enough that one pathological string cannot be the
+# reason a whole refresh is refused.
+URL_MAX = 400
+
+# Above this, a third-party number is not a count, a playtime, a rank or a
+# score - it is garbage, or an attack on the payload SIZE: a float big enough
+# to need exponent form is written by json.dumps as ``1e+50`` where Postgres
+# re-serialises its 51 digits, which is the one way :func:`encode_payload`'s
+# count can under-measure what the schema CHECK then refuses (see that
+# constraint's own comment).
+MAX_SANE_NUMBER = 10**12
+
+
+# ---------------------------------------------------------------------------
+# Third-party value hygiene, shared by every connector.
+#
+# These live HERE and not five times over because all five modules face the
+# same two hazards with the same answer, on BOTH sides of the payload: at the
+# parse (what may be stored) and at the render (what a row written by a PAST
+# version of the module may contain).
+# ---------------------------------------------------------------------------
+
+
+def safe_url(value, limit=URL_MAX):
+    """An absolute http(s) URL, or ``None`` - never a truncated one.
+
+    Discord rejects the WHOLE message over a ``Thumbnail`` url it cannot
+    fetch, at SEND time - which takes the entire ``/profile view`` card down,
+    past the point where ``views.render_sections`` can still fall back to the
+    "Linked" badge (it has already returned by then). So a url that is
+    relative, protocol-relative or carries an exotic scheme is DROPPED here
+    rather than trusted.
+
+    Over-long is dropped too, not clipped: half a url is not a url, and a
+    truncated one is exactly the unfetchable Thumbnail this exists to avoid.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or len(text) > limit:
+        return None
+    if not text.lower().startswith(("https://", "http://")):
+        return None
+    return text
+
+
+def safe_number(value, limit=MAX_SANE_NUMBER):
+    """A third-party number, or ``None`` when it is missing, not a number or
+    absurd (see :data:`MAX_SANE_NUMBER`).
+
+    Booleans are refused on purpose: ``isinstance(True, int)`` is True in
+    Python, and a JSON ``true`` where a count was promised is not a count.
+    NaN and the infinities fall out for free - every comparison against them
+    is False, so they fail the range test.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not -limit < value < limit:
+        return None
+    return value
+
 
 # ---------------------------------------------------------------------------
 # Typed errors, so a caller maps a failure to a message without string matching

@@ -561,7 +561,14 @@ def _maxed_profile():
     )
 
 
-async def test_a_maxed_out_profile_with_every_connector_stays_within_the_cv2_budget():
+async def test_a_maxed_out_profile_with_every_connector_stays_within_the_cv2_budget(
+    monkeypatch,
+):
+    """Framework-only budget/truncation mechanics - the generic fallback badge,
+    not whatever real content a P4 connector's own renderer happens to draw
+    (every sibling test in this section isolates the same way, see
+    _clear_renderers)."""
+    _clear_renderers(monkeypatch)
     profile = _maxed_profile()
     visibility_map = {name: "public" for name in registry.FIELD_NAMES}
     viewer = visibility.ViewerContext(owner_id=OWNER, viewer_id=OWNER, shares_guild=False)
@@ -581,6 +588,78 @@ async def test_a_maxed_out_profile_with_every_connector_stays_within_the_cv2_bud
     # Every connector section is present (nothing silently dropped).
     linked_lines = [node["content"] for node in components if node["type"] == 10]
     assert sum(1 for text in linked_lines if "Linked" in text) == 7
+
+
+def _rich_payloads():
+    """A realistic, near-worst-case payload for every connector that ships a
+    real renderer, shaped exactly like what its own ``_build_payload`` writes
+    (clipped titles, three entries, an avatar)."""
+    return {
+        "anilist": {
+            "avatar": "https://example.test/a.png",
+            "anime_count": 1234,
+            "anime_mean_score": 78.4,
+            "anime_minutes_watched": 987654,
+            "manga_count": 321,
+            "manga_mean_score": 82.1,
+            "manga_chapters_read": 54321,
+            "favourite_anime": ["t" * 80, "t" * 80],
+            "favourite_manga": ["t" * 80],
+        },
+        "steam": {
+            "persona_name": "p" * 80,
+            "avatar": "https://example.test/s.png",
+            "private": False,
+            "recent_games": [
+                {"name": "g" * 80, "hours_2weeks": 12.5} for _index in range(3)
+            ],
+            "owned_games_count": 4321,
+        },
+        "osu": {
+            "username": "u" * 15,
+            "rank": 1234,
+            "pp": 12345.6,
+            "accuracy": 99.12,
+            "level": 101.5,
+            "country": "FR",
+            "avatar": "https://a.ppy.sh/2",
+        },
+    }
+
+
+async def test_the_real_connector_renderers_stay_within_the_cv2_budget():
+    """The sibling of the framework-only budget test above, with the REAL P4
+    renderers left registered and fed near-worst-case payloads: what a maxed
+    profile costs is decided by those renderers together, and the 4000
+    character / 40 component ceiling is per MESSAGE."""
+    payloads = _rich_payloads()
+    profile = _maxed_profile()
+    visibility_map = {name: "public" for name in registry.FIELD_NAMES}
+    viewer = visibility.ViewerContext(owner_id=OWNER, viewer_id=OWNER, shares_guild=False)
+    connections = _connections(
+        *[name for name in registry.FIELD_NAMES if not registry.get(name).stored]
+    )
+    for connection in connections:
+        connection["payload"] = payloads.get(connection["connector"], {})
+
+    card = await views.build_profile_card(
+        _Member(OWNER, "A Rather Long Display Name Indeed"),
+        profile,
+        visibility_map,
+        viewer,
+        connections,
+    )
+
+    components = _real_components(card)
+    text_total = sum(len(node["content"]) for node in components if node["type"] == 10)
+    assert len(components) <= 40
+    assert text_total <= views.CARD_TEXT_BUDGET
+    # ... and not vacuously: all three really drew, nothing was dropped.
+    text = "\n".join(_texts(card))
+    assert "mean score" in text  # AniList
+    assert "Owns 4321" in text  # Steam
+    assert "Rank #1234" in text  # osu!
+    assert "too long to show in full" not in text
 
 
 async def test_truncation_drops_content_cleanly_and_says_so(monkeypatch):

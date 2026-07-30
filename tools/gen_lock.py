@@ -37,6 +37,10 @@ RUNTIME_ROOTS: dict[str, set[str]] = {
     "wikipedia": set(),
     "cryptography": set(),
     "babel": set(),
+    # The Backloggd profile connector's HTML parser - a RUNTIME import (see
+    # cogs/community/profile/connectors/backloggd.py), so the comment above
+    # ("update here when a runtime top-level dep is added") applies.
+    "beautifulsoup4": set(),
 }
 
 HEADER = """\

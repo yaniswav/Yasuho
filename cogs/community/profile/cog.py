@@ -25,13 +25,19 @@ today.
 Typography rule: ASCII '-' and '...' only.
 """
 
+import asyncio
+import datetime
 import logging
+import sys
+import time
 from typing import Literal
 
 import discord
 from discord.ext import commands
 
 from . import registry, storage, views, visibility
+from .connectors import base as connectors_base
+from .connectors import sessions as connectors_sessions
 from .connectors import storage as connectors_storage
 from .views import (
     ProfileEditModal,
@@ -43,6 +49,7 @@ from .views import (
     section_for,
 )
 from .visibility import ViewerContext
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -61,12 +68,245 @@ SET_CHOICES = registry.GAMING_ID_KEYS + TEXT_SETTABLE
 # fill them, would be a toggle with nothing behind it in a plain-text answer.
 VISIBILITY_CHOICES = registry.STORED_NAMES
 
+# How stale a connector's cached payload may get before a `/profile view`
+# quietly kicks off a background refresh, when the connector itself declares
+# no preference. Most P4 modules DO declare their own ``REFRESH_TTL_SECONDS``
+# module constant (lastfm.py's 15 minutes for a "now scrobbling" signal,
+# backloggd.py's 12-hour scraping courtesy, ...) - see _connector_ttl, which
+# reads that constant off whichever module actually defines the connector
+# class. This is only the fallback for one that does not.
+DEFAULT_CONNECTOR_REFRESH_TTL = 3600.0
+
+# The floor between two refresh ATTEMPTS of the same (owner, connector),
+# whatever the outcome. The TTL above is computed from ``last_refresh``, which
+# only a SUCCESSFUL refresh stamps - so without this floor a connector whose
+# remote is down (or whose account was renamed) would be re-attempted on EVERY
+# `/profile view` of that member, forever: a popular profile would turn a dead
+# third party into a request storm. Kept well under the shortest TTL any
+# connector declares (Last.fm's 15 minutes) so it never delays a healthy
+# refresh, and held in a self-pruning tools.cooldowns map rather than a plain
+# dict so the memory cannot grow with the number of members ever viewed.
+CONNECTOR_REFRESH_MIN_INTERVAL = 300.0
+
+# ... and that floor DOUBLES per consecutive failure, up to the connector's own
+# TTL (see _retry_interval). A flat 300s floor is the right answer for a remote
+# having a bad minute and the wrong one for an account that is simply gone: a
+# permanently-404 Backloggd handle on a viewed profile is 288 scrapes a day
+# against a site whose declared courtesy window is 2 a day. Doubling turns a
+# dead handle into a handful of attempts before it settles at that window, and
+# costs a healthy connector nothing at all - one success resets the count.
+CONNECTOR_FAILURE_BACKOFF_BASE = CONNECTOR_REFRESH_MIN_INTERVAL
+
+# The exponent is capped before it is used: 2 ** 4000 is a number Python will
+# happily build (and multiply by a float, and raise OverflowError on). The cap
+# is far past the point where min() with the TTL has taken over anyway.
+CONNECTOR_FAILURE_BACKOFF_MAX_SHIFT = 32
+
+# Ceiling on lazy refreshes in flight at once, process-wide. The per-pair
+# guard already stops one popular member from being refreshed N times over,
+# but nothing stops a busy minute across MANY members (or the first views
+# after a restart, when every cached payload is cold) from queueing one task
+# per linked account. Past this many, the rest simply wait for a later view -
+# a warm cache is best-effort by construction, and dropping the work is always
+# better than holding hundreds of sockets open for a card nobody is waiting on.
+MAX_CONNECTOR_REFRESHES_IN_FLIGHT = 8
+
+# How long cog_unload waits for the refreshes it just cancelled to actually
+# unwind before it closes the sessions under them. Short on purpose: an unload
+# must never hang on a third party, and a request cancelled mid-flight costs
+# nothing but a log line either way.
+CONNECTOR_UNLOAD_TIMEOUT = 2.0
+
+
+class _ConnectorFailures:
+    """Consecutive-failure counts per (owner, connector), bounded in memory.
+
+    What this is for is the account that will NEVER answer again - renamed,
+    deleted, or a handle that was a typo the remote 404s forever. The flat
+    CONNECTOR_REFRESH_MIN_INTERVAL floor treats that exactly like a remote
+    having a bad minute, which on a profile people actually look at means
+    hundreds of requests a day at a third party for data that is not coming.
+
+    IN MEMORY on purpose, and not a column: a restart resets every counter,
+    which costs at most one extra attempt per dead account and buys neither a
+    schema change nor a write on every failure. The information is a hint
+    about the near future, not a fact about the user, so losing it is free.
+
+    Self-pruning past ``sweep_at`` keys, the same posture as tools.cooldowns:
+    an entry older than ``horizon`` can no longer lengthen anybody's window
+    (the interval is capped at the connector's TTL, and the longest TTL any
+    connector declares is Backloggd's 12 hours), so it is already forgotten -
+    dropping it just makes that official. Viewing a million profiles therefore
+    cannot turn this into a leak.
+    """
+
+    def __init__(self, horizon, *, sweep_at=2000):
+        self.horizon = horizon
+        self._sweep_at = sweep_at
+        self._counts = {}
+
+    def count(self, key):
+        entry = self._counts.get(key)
+        return entry[0] if entry is not None else 0
+
+    def record(self, key, *, now=None):
+        """One more consecutive failure for ``key``; returns the new count."""
+        now = time.monotonic() if now is None else now
+        count = self.count(key) + 1
+        self._counts[key] = (count, now)
+        if len(self._counts) > self._sweep_at:
+            cutoff = now - self.horizon
+            self._counts = {
+                k: v for k, v in self._counts.items() if v[1] >= cutoff
+            }
+        return count
+
+    def clear(self, key):
+        """A success: forget the whole history for ``key``."""
+        self._counts.pop(key, None)
+
+    def __len__(self):
+        return len(self._counts)
+
+
+def _connector_ttl(implementation):
+    """The refresh TTL a connector module declares for itself, or the default.
+
+    Read generically off ``sys.modules[type(implementation).__module__]``
+    rather than requiring every P4 module to also expose it as a class
+    attribute: lastfm.py and backloggd.py already ship a bare module-level
+    ``REFRESH_TTL_SECONDS`` (this lot cannot edit either file), and this is
+    the one place that turns "whichever lot adds the scheduling hook" - their
+    own words for what P4A is - into an actual read of that constant.
+    """
+    module = sys.modules.get(type(implementation).__module__)
+    return getattr(module, "REFRESH_TTL_SECONDS", DEFAULT_CONNECTOR_REFRESH_TTL)
+
+
+def _payload_age(now, connection):
+    """Seconds since this connection's cached payload was last filled, or None
+    when there is no usable stamp (which reads as "stale").
+
+    ``last_refresh`` is NULL until the first background refresh lands, but a
+    row is not cold then: ``link`` fetched and stored a payload the moment the
+    user linked, and stamped ``linked_at``. Falling back to it is what stops
+    every fresh link from paying for a second, pointless round trip on the
+    very next `/profile view`.
+
+    A naive datetime cannot come out of asyncpg for a TIMESTAMPTZ column, but
+    subtracting one from an aware ``now`` raises TypeError, and this runs
+    inside `/profile view` - so a hand-written or hand-edited row is read as
+    UTC rather than allowed to take the card down.
+    """
+    stamp = connection.get("last_refresh") or connection.get("linked_at")
+    if not isinstance(stamp, datetime.datetime):
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=datetime.timezone.utc)
+    return (now - stamp).total_seconds()
+
 
 class Profiles(commands.Cog):
     """Your global profile: bio, pronouns, accent colour and gaming IDs."""
 
     def __init__(self, bot):
         self.bot = bot
+        # Every real connector owns its OWN lazily-created aiohttp session
+        # (see connectors/__init__.py's module docstring) rather than reaching
+        # for the bot - the Connector interface carries no bot reference, by
+        # construction. A connector that additionally wants opportunistic
+        # access to the running bot (the AniList one, to share that cog's
+        # interactive throttle) exposes its own optional ``bind_bot(bot)``
+        # method; every other connector simply does not define one, and
+        # `getattr(..., None)` skips it without ceremony. Done here,
+        # synchronously, before `setup()` can finish adding either profile
+        # cog - which is always before any command or view can reach one.
+        for implementation in connectors_base.CONNECTORS.values():
+            bind = getattr(implementation, "bind_bot", None)
+            if bind is not None:
+                try:
+                    bind(bot)
+                except Exception:
+                    log.exception(
+                        "Connector %s failed to bind the bot",
+                        getattr(implementation, "name", "?"),
+                    )
+        # Fire-and-forget lazy refreshes kicked off by `profile view` (see
+        # _schedule_stale_refreshes). Held so the loop cannot garbage-collect
+        # a running task, and discarded on completion - the same pattern as
+        # cogs/community/leveling.py's `_season_tasks`.
+        self._connector_tasks: set[asyncio.Task] = set()
+        # (owner_id, connector) pairs currently being refreshed, so a burst of
+        # `/profile view` calls for the same popular member cannot spawn a
+        # second in-flight fetch of the same account.
+        self._connector_inflight: set[tuple[int, str]] = set()
+        # When each (owner, connector) pair was last ATTEMPTED, successfully or
+        # not - see CONNECTOR_REFRESH_MIN_INTERVAL. Self-pruning, so viewing a
+        # million profiles cannot turn this into a leak.
+        self._connector_attempts = Cooldowns(CONNECTOR_REFRESH_MIN_INTERVAL)
+        # How many times in a row each pair has FAILED, which is what turns
+        # that flat floor into an exponential backoff (see _retry_interval).
+        # The horizon is the longest window the backoff can ever produce - the
+        # largest TTL any connector declares, Backloggd's 12h scraping
+        # courtesy - past which a failure record can no longer lengthen
+        # anything.
+        self._connector_failures = _ConnectorFailures(12 * 60 * 60)
+
+    async def cog_unload(self):
+        """Cancel every in-flight lazy refresh, then close what they used.
+
+        Both halves matter on a reload. A fire-and-forget refresh that outlives
+        its cog keeps a stale bot and a stale connector reference alive and can
+        still write a payload after a reload replaced this cog; and the
+        connectors' aiohttp sessions (connectors/sessions.py) belong to no bot,
+        so if nothing closes them here they leak a connector pool and its open
+        sockets for the life of the process - which is what aiohttp's "Unclosed
+        client session" on shutdown was saying.
+
+        Order: cancel, WAIT briefly for the cancellations to land, then close.
+        Closing a session under a request that is still unwinding is how a
+        clean teardown turns into a noisy one. The wait is bounded because an
+        unload must never hang on a third party (same posture as the serverstats
+        flush), and nothing here may raise - a failed teardown must not leave
+        the extension half-unloaded.
+        """
+        tasks = [task for task in self._connector_tasks if not task.done()]
+        for task in tasks:
+            task.cancel()
+        self._connector_tasks.clear()
+        try:
+            if tasks:
+                await asyncio.wait(tasks, timeout=CONNECTOR_UNLOAD_TIMEOUT)
+        except Exception:
+            log.exception("Failed to await the cancelled connector refreshes")
+        try:
+            await connectors_sessions.close_all()
+        except Exception:
+            log.exception("Failed to close the connector HTTP sessions")
+
+    def _retry_interval(self, implementation, key):
+        """How long this (owner, connector) pair must wait before the next
+        ATTEMPT - the flat floor, doubled per consecutive failure.
+
+        Zero failures is the healthy case and reads exactly as it did before:
+        CONNECTOR_REFRESH_MIN_INTERVAL, well under the shortest TTL any
+        connector declares, so a working connector is never delayed by this.
+        Past that the window doubles until it reaches the connector's OWN TTL,
+        which is the rate that connector already declared is polite for it (12
+        hours of scraping courtesy for Backloggd, an hour for the JSON APIs) -
+        a dead handle therefore settles at the same rate a live one is
+        refreshed at, instead of at 288 attempts a day.
+
+        The cap is never allowed BELOW the flat floor: a hypothetical connector
+        declaring a two-minute TTL must not be able to shorten the guard that
+        protects it.
+        """
+        failures = self._connector_failures.count(key)
+        if failures <= 0:
+            return CONNECTOR_REFRESH_MIN_INTERVAL
+        ceiling = max(_connector_ttl(implementation), CONNECTOR_REFRESH_MIN_INTERVAL)
+        shift = min(failures, CONNECTOR_FAILURE_BACKOFF_MAX_SHIFT)
+        return min(CONNECTOR_FAILURE_BACKOFF_BASE * (2**shift), ceiling)
 
     # -- helpers ------------------------------------------------------------
 
@@ -110,6 +350,111 @@ class Profiles(commands.Cog):
             "servers you share."
         ).format(prefix=prefix, section=section)
 
+    def _schedule_stale_refreshes(self, owner_id, connections):
+        """Kick off a bounded, fire-and-forget refresh for every connection
+        whose cached payload is older than its connector's own TTL (or has
+        never been filled at all) - see :func:`_connector_ttl`.
+
+        Four bounds, each closing a different way this could turn one card
+        into third-party load:
+
+        * the TTL, measured from ``last_refresh`` and falling back to
+          ``linked_at`` (see :func:`_payload_age`), so a fresh link is not
+          re-fetched moments later;
+        * ``_connector_inflight``, so a burst of views of the same popular
+          member spawns ONE fetch of their account, not one per viewer;
+        * ``_connector_attempts``, so a connector that keeps FAILING (which
+          never stamps ``last_refresh``) is not re-attempted on every single
+          view - see CONNECTOR_REFRESH_MIN_INTERVAL, and _retry_interval for
+          the doubling that takes a permanently-dead account from that floor
+          up to the connector's own declared rate;
+        * MAX_CONNECTOR_REFRESHES_IN_FLIGHT, the process-wide ceiling that
+          covers the one case the per-pair guards cannot: many DIFFERENT
+          members being viewed at once, the first minutes after a restart
+          above all, when every cached payload is cold.
+
+        Best-effort in every direction, and deliberately unable to fail the
+        command: nothing here can affect the card that was just built (it
+        rendered from what was on file before this runs), so a surprise in
+        this bookkeeping must cost a log line, never a `/profile view`.
+        """
+        try:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for connection in connections:
+                if len(self._connector_tasks) >= MAX_CONNECTOR_REFRESHES_IN_FLIGHT:
+                    return
+                if not isinstance(connection, dict):
+                    continue
+                name = connection.get("connector")
+                implementation = connectors_base.CONNECTORS.get(name)
+                if implementation is None:
+                    continue
+                age = _payload_age(now, connection)
+                if age is not None and age < _connector_ttl(implementation):
+                    continue
+                key = (owner_id, name)
+                if key in self._connector_inflight:
+                    continue
+                if self._connector_attempts.is_active(
+                    key, seconds=self._retry_interval(implementation, key)
+                ):
+                    continue
+                self._connector_attempts.touch(key)
+                self._connector_inflight.add(key)
+                task = asyncio.ensure_future(
+                    self._refresh_connection(owner_id, name, implementation, connection)
+                )
+                self._connector_tasks.add(task)
+                task.add_done_callback(self._connector_tasks.discard)
+                task.add_done_callback(
+                    lambda _task, key=key: self._connector_inflight.discard(key)
+                )
+        except Exception:
+            log.exception(
+                "Failed to schedule the lazy connector refreshes for %s", owner_id
+            )
+
+    async def _refresh_connection(self, owner_id, name, implementation, connection):
+        """One connector's lazy refresh: fetch, then store. Never raises.
+
+        Every exit through a FAILURE lengthens this pair's next wait
+        (_retry_interval); the one exit through a successful fetch forgets the
+        history. The count is bumped on the fetch, not on the store: a
+        database that is unhappy says nothing about the third party this
+        backoff exists to be polite to.
+        """
+        key = (owner_id, name)
+        try:
+            payload = await implementation.refresh(owner_id, connection)
+        except connectors_base.ConnectorError as error:
+            # An EXPECTED outcome, not a bug: the remote is down, the key was
+            # never provisioned, the account was renamed. One warning line, no
+            # traceback - a third party having a bad hour must not bury the
+            # log under one stack trace per viewer.
+            self._connector_failures.record(key)
+            log.warning(
+                "Connector %s could not refresh %s: %s", name, owner_id, error
+            )
+            return
+        except Exception:
+            self._connector_failures.record(key)
+            log.exception(
+                "Connector %s failed its lazy refresh for %s", name, owner_id
+            )
+            return
+        self._connector_failures.clear(key)
+        try:
+            await connectors_storage.set_payload(self.bot.db_pool, owner_id, name, payload)
+        except connectors_base.NotLinked:
+            # The user unlinked while the fetch was in flight - nothing left
+            # to write, and resurrecting the row would be the exact hazard
+            # connectors.storage.set_payload's UPDATE-not-upsert avoids.
+            pass
+        except Exception:
+            log.exception(
+                "Failed to store the refreshed %s payload for %s", name, owner_id
+            )
+
     # -- commands -----------------------------------------------------------
 
     @commands.hybrid_group(name="profile")
@@ -138,6 +483,10 @@ class Profiles(commands.Cog):
             # bounded to seven rows by the table's own primary key (user_id,
             # connector), so it costs the same as the two above.
             connections = await connectors_storage.get_connections(pool, member.id)
+            # Best-effort cache warming, independent of who is looking or
+            # what they may see: see _schedule_stale_refreshes. Never awaited
+            # - it must not add a third-party round trip to this response.
+            self._schedule_stale_refreshes(member.id, connections)
             # guild_only + a Member converter: both parties are in THIS guild, so
             # they share one. No global mutual-guild scan (that is O(guilds)).
             viewer = ViewerContext(

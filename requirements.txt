@@ -14,6 +14,10 @@ parsedatetime~=2.6
 python-dateutil~=2.9.0
 wikipedia~=1.4.0
 cryptography~=49.0.0
+# HTML parsing for the Backloggd profile connector (cogs/community/profile/
+# connectors/backloggd.py) - Backloggd has no public API. Imported nowhere
+# else in the codebase.
+beautifulsoup4~=4.15.0
 # Build-only: extracting/compiling i18n catalogs (pybabel). The runtime uses the
 # stdlib gettext to load the committed .mo files, so this is not needed to run.
 Babel~=2.18.0
