@@ -194,6 +194,63 @@ def _human_bytes(value):
     return f"{value} B"
 
 
+class ProfileDeletionView(AuthorView):
+    """One-shot destructive confirmation for the social profile.
+
+    The same erase `profile clear` performs, offered from the privacy surface
+    that exports it: /mydata must not disclose a profile it cannot delete.
+    """
+
+    def __init__(self, cog, author_id):
+        super().__init__(
+            author_id,
+            timeout=60,
+            # A registered N_ literal (see tools.views._DENY_STRINGS).
+            deny_message="This prompt isn't for you.",
+        )
+        self.cog = cog
+        self._running = False
+        self.confirm.label = _("Delete my profile")
+        self.cancel.label = _("Cancel")
+
+    @discord.ui.button(label="Delete my profile", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction, button):
+        if self._running:
+            return
+        self._running = True
+        await interaction.response.defer()
+        try:
+            await privacy.delete_user_profile(
+                self.cog.bot.db_pool, self.author_id
+            )
+            self.stop()
+            for child in self.children:
+                child.disabled = True
+            await interaction.edit_original_response(
+                content=_(
+                    "Your profile is gone: fields, gaming IDs and every "
+                    "visibility choice."
+                ),
+                view=self,
+            )
+        except Exception:
+            self._running = False
+            log.exception("Failed to delete profile for %s", self.author_id)
+            await interaction.followup.send(
+                _("Something went wrong deleting your profile."),
+                ephemeral=True,
+            )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(
+            content=_("Profile deletion cancelled."), view=self
+        )
+
+
 class AvatarDeletionView(AuthorView):
     """One-shot destructive confirmation for personal avatar history."""
 
@@ -524,11 +581,12 @@ class UserSettings(commands.Cog):
 
     @commands.hybrid_group(name="mydata", invoke_without_command=True)
     async def mydata(self, ctx):
-        """Export your personal data or delete your avatar history."""
+        """Export your personal data, or delete your profile or avatar history."""
         if ctx.invoked_subcommand is None:
             await ctx.send(
                 _(
-                    "Use `{prefix}mydata export` to receive your data, or "
+                    "Use `{prefix}mydata export` to receive your data, "
+                    "`{prefix}mydata deleteprofile` to erase your profile, or "
                     "`{prefix}mydata deleteavatars` to erase saved avatars."
                 ).format(prefix=ctx.clean_prefix)
             )
@@ -581,6 +639,21 @@ class UserSettings(commands.Cog):
                 _("Something went wrong building your data export."),
                 ephemeral=ctx.interaction is not None,
             )
+
+    @mydata.command(name="deleteprofile")
+    @commands.cooldown(1, 60, commands.BucketType.user)
+    async def mydata_deleteprofile(self, ctx):
+        """Permanently delete your profile, gaming IDs and visibility choices."""
+        view = ProfileDeletionView(self, ctx.author.id)
+        view.message = await ctx.send(
+            _(
+                "This permanently deletes your bio, pronouns, accent colour, "
+                "custom fields, gaming IDs and every choice you made about who "
+                "could see them. This cannot be undone."
+            ),
+            view=view,
+            ephemeral=ctx.interaction is not None,
+        )
 
     @mydata.command(name="deleteavatars")
     @commands.cooldown(1, 60, commands.BucketType.user)

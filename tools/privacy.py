@@ -9,13 +9,44 @@ import json
 import zipfile
 
 from tools import settings
+from tools.db import affected_rows
 
 EXPORT_ARCHIVE_TARGET_BYTES = 6 * 1024 * 1024
 AVATAR_TRACKING_KEY = "avatar_history_tracking"
 
+# Export schema version. v2 added the social profile: `profile` (user_profiles)
+# and `profile_visibility`, and moved the old gamer-ID row to `legacy_profile`.
+EXPORT_VERSION = 2
+
+# THE list of tables a profile lives in, deleted together. This mirrors
+# retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
+# user_id and carries no guild_id, so the guild purge never sees it - it is
+# erased here, on the user's own request, or not at all.
+# cogs/community/profile/storage.delete_profile delegates to this so the cog and
+# the privacy path cannot drift.
+PROFILE_DELETE_QUERIES = (
+    ("user_profiles", "DELETE FROM user_profiles WHERE user_id = $1"),
+    ("profile_visibility", "DELETE FROM profile_visibility WHERE user_id = $1"),
+    # The pre-migration table. Still holds the same gamer IDs until it is
+    # dropped, so forgetting a profile must clear it too.
+    ("profiles", "DELETE FROM profiles WHERE user_id = $1"),
+)
+
 
 def _records(rows):
     return [dict(row) for row in rows]
+
+
+def _json_value(value, default):
+    """asyncpg returns JSONB as text (no codec is registered on the pool)."""
+    if value is None:
+        return default
+    if isinstance(value, (str, bytes, bytearray)):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return default
+    return value
 
 
 async def _write_avatar_tracking(connection, user_id, enabled):
@@ -52,9 +83,19 @@ async def collect_user_export(pool, user_id):
     elif preferences is not None:
         preferences = dict(preferences)
 
-    profile = await pool.fetchrow(
+    legacy_profile = await pool.fetchrow(
         "SELECT switch_fc, threeds_fc, battletag, riotid, steamid "
         "FROM profiles WHERE user_id = $1",
+        user_id,
+    )
+    social_profile = await pool.fetchrow(
+        "SELECT bio, pronouns, accent, custom_fields, gaming_ids, "
+        "created_at, updated_at FROM user_profiles WHERE user_id = $1",
+        user_id,
+    )
+    profile_visibility = await pool.fetch(
+        "SELECT field, level FROM profile_visibility "
+        "WHERE user_id = $1 ORDER BY field",
         user_id,
     )
     token = await pool.fetchrow(
@@ -128,12 +169,25 @@ async def collect_user_export(pool, user_id):
         user_id,
     )
 
+    if social_profile is not None:
+        social_profile = dict(social_profile)
+        social_profile["custom_fields"] = _json_value(
+            social_profile.get("custom_fields"), []
+        )
+        social_profile["gaming_ids"] = _json_value(
+            social_profile.get("gaming_ids"), {}
+        )
+
     data = {
-        "export_version": 1,
+        "export_version": EXPORT_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc),
         "user_id": user_id,
         "preferences": preferences or {},
-        "profile": dict(profile) if profile else None,
+        "profile": social_profile,
+        # Absent row = private, so a field missing here is one the user never
+        # published. The export states the rows, not the defaults.
+        "profile_visibility": _records(profile_visibility),
+        "legacy_profile": dict(legacy_profile) if legacy_profile else None,
         "anilist": {
             # Deliberately report linkage/expiry without selecting the encrypted
             # token. Neither ciphertext nor plaintext can enter the archive.
@@ -256,6 +310,22 @@ def build_export_archives(
         output.seek(0)
         archives.append((f"yasuho-data-{index}-of-{total_parts}.zip", output))
     return archives
+
+
+async def delete_user_profile(pool, user_id):
+    """Erase a user's whole profile in one transaction; return per-table counts.
+
+    All three tables die together or none does, so a half-forgotten profile (say
+    the fields gone but the visibility rows left) cannot exist. Nothing is cached
+    in memory, so there is no invalidation to do afterwards.
+    """
+    counts = {}
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            for table, query in PROFILE_DELETE_QUERIES:
+                status = await connection.execute(query, user_id)
+                counts[table] = affected_rows(status)
+    return counts
 
 
 async def delete_user_avatar_history(pool, user_id):

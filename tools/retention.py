@@ -11,6 +11,7 @@ import datetime
 import logging
 
 from tools import settings
+from tools.db import affected_rows
 
 log = logging.getLogger(__name__)
 
@@ -159,14 +160,6 @@ WHERE extra->>'guild_id' ~ '^[0-9]+$'
 """
 
 
-def _affected_rows(status):
-    """Extract asyncpg's affected-row count from ``DELETE n``."""
-    try:
-        return int((status or "").rsplit(" ", 1)[-1])
-    except (TypeError, ValueError):
-        return 0
-
-
 async def schedule_guild_purge(pool, guild_id, *, left_at=None):
     """Create or reset a guild's 30-day grace-period purge job."""
     left_at = left_at or datetime.datetime.now(datetime.timezone.utc)
@@ -201,7 +194,7 @@ async def cancel_guild_purge(pool, guild_id):
         "DELETE FROM guild_retention_jobs WHERE guild_id = $1",
         guild_id,
     )
-    return _affected_rows(status) > 0
+    return affected_rows(status) > 0
 
 
 async def reconcile_guild_jobs(pool, active_guild_ids):
@@ -233,7 +226,7 @@ async def reconcile_guild_jobs(pool, active_guild_ids):
         orphaned,
         GUILD_GRACE_DAYS,
     )
-    return _affected_rows(status)
+    return affected_rows(status)
 
 
 async def claim_due_guild(pool):
@@ -285,7 +278,7 @@ async def purge_claimed_guild(pool, guild_id):
 
             for table, query in GUILD_DELETE_QUERIES:
                 status = await connection.execute(query, guild_id)
-                counts[table] = _affected_rows(status)
+                counts[table] = affected_rows(status)
 
             await connection.execute(
                 "DELETE FROM guild_retention_jobs WHERE guild_id = $1",

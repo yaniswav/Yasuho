@@ -372,7 +372,11 @@ CREATE TABLE IF NOT EXISTS automod (
     antispam BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- Per-user gamer IDs / friend codes.  profiles.py
+-- LEGACY per-user gamer IDs / friend codes. Superseded by user_profiles.gaming_ids
+-- (see below): the boot fixup `user_profiles_import_legacy_gaming_ids` copies
+-- every row across once, after which nothing writes here. Kept - not dropped -
+-- as the migration's safety net; it is still exported by /mydata and still
+-- deleted by the profile-forget path while it holds anyone's data.
 CREATE TABLE IF NOT EXISTS profiles (
     user_id    BIGINT PRIMARY KEY,
     switch_fc  TEXT,
@@ -380,6 +384,55 @@ CREATE TABLE IF NOT EXISTS profiles (
     battletag  TEXT,
     riotid     TEXT,
     steamid    TEXT
+);
+
+-- The social profile, one row per USER and no guild_id: a profile follows the
+-- person, not the server. Owner: cogs/community/profile/ (registry.py is the
+-- source of truth for field names and caps; the CHECKs below guard the OUTER
+-- shape only - type, and how many custom pairs - for the second writer, the
+-- dashboard, which lands later. The nested caps (label/value lengths, the
+-- gamer-ID key whitelist) live in Python, so storage.py re-validates both JSONB
+-- columns on READ and drops what fails instead of trusting the row).
+-- custom_fields is a JSONB array of {"label": ..., "value": ...} objects because
+-- it is deliberately heterogeneous user text; gaming_ids is a JSONB object keyed
+-- by the registry's whitelist (switch / 3ds / battletag / riot / steam_id), so a new
+-- gamer ID is a line of Python, not a migration.
+-- User-scoped: no guild purge applies (see tools/retention.py); it joins the
+-- USER paths instead - export and forget in tools/privacy.py.
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id       BIGINT      PRIMARY KEY,
+    bio           TEXT,
+    pronouns      TEXT,
+    accent        INTEGER,
+    custom_fields JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    gaming_ids    JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT user_profiles_accent_range
+        CHECK (accent IS NULL OR (accent >= 0 AND accent <= 16777215)),
+    CONSTRAINT user_profiles_bio_length
+        CHECK (bio IS NULL OR char_length(bio) <= 300),
+    CONSTRAINT user_profiles_pronouns_length
+        CHECK (pronouns IS NULL OR char_length(pronouns) <= 40),
+    CONSTRAINT user_profiles_custom_fields_shape
+        CHECK (jsonb_typeof(custom_fields) = 'array'
+               AND jsonb_array_length(custom_fields) <= 5),
+    CONSTRAINT user_profiles_gaming_ids_shape
+        CHECK (jsonb_typeof(gaming_ids) = 'object')
+);
+
+-- Per-FIELD visibility for a profile. An ABSENT ROW MEANS PRIVATE: the default is
+-- never materialised, so "never decided" and "chose private" are one state and
+-- both fail closed. 'field' is a free TEXT validated against the Python registry
+-- (cogs/community/profile/registry.py) rather than a column or an enum, so P3/P4
+-- connectors become addressable without a schema change; a name the running code
+-- does not know is ignored on read.
+-- User-scoped, like user_profiles: exported and forgotten via tools/privacy.py.
+CREATE TABLE IF NOT EXISTS profile_visibility (
+    user_id BIGINT NOT NULL,
+    field   TEXT   NOT NULL,
+    level   TEXT   NOT NULL CHECK (level IN ('public', 'server', 'private')),
+    PRIMARY KEY (user_id, field)
 );
 
 -- Per-user image history: global avatars, per-guild avatars and banners.

@@ -24,6 +24,20 @@ def _validate_identifier(kind, value):
     return value
 
 
+def affected_rows(status):
+    """Extract asyncpg's affected-row count from a command tag like ``DELETE 3``.
+
+    Every purge path (guild retention, the user-profile forget) reports what it
+    actually removed, and asyncpg only hands back the tag string. Anything
+    unparseable counts as zero rather than raising: a bad count must never fail
+    a deletion that already committed.
+    """
+    try:
+        return int((status or "").rsplit(" ", 1)[-1])
+    except (AttributeError, TypeError, ValueError):
+        return 0
+
+
 async def upsert_guild_value(pool, table, column, guild_id, value):
     """Insert or update a single per-guild column keyed on guild_id.
 

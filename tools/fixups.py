@@ -11,9 +11,11 @@ Design invariants (the anti-brick posture):
   succeeds, so it runs at most once.
 - Each fixup's SQL MUST itself be idempotent, so a repeated or partial run can
   never corrupt data.
-- There are NO checksums and NO ordering pins. A ``name`` recorded in
+- There are NO checksums and NO version pins. A ``name`` recorded in
   ``applied_fixups`` that the running code no longer knows about is simply
-  IGNORED - rolling back to an older commit never refuses to boot.
+  IGNORED - rolling back to an older commit never refuses to boot. (The order of
+  ``FIXUPS`` is still the order they run in within one boot, and one pair below
+  depends on it; nothing is enforced across boots.)
 - A failing fixup is logged and skipped; it NEVER blocks startup.
 """
 
@@ -52,9 +54,79 @@ _WARNS_RECOMPUTE = Fixup(
     """,
 )
 
+# Copy the legacy `profiles` gamer IDs into user_profiles.gaming_ids, the JSONB
+# section the new profile package reads. A one-shot copy rather than a permanent
+# read-through: the P2 card and the dashboard then need ONE row per profile, and
+# adding a sixth gamer ID becomes a line in the Python registry instead of an
+# ALTER TABLE. The old table is deliberately NOT dropped (it stays the safety net
+# and is still exported/forgotten by tools/privacy.py).
+# Idempotent twice over: only users who actually have a legacy value are touched,
+# and on conflict the EXISTING keys win (`EXCLUDED || user_profiles` puts the
+# stored object on the right), so a repeat can never overwrite an edit made
+# through the new package.
+_PROFILE_GAMING_IDS_IMPORT = Fixup(
+    "user_profiles_import_legacy_gaming_ids",
+    """
+    INSERT INTO user_profiles (user_id, gaming_ids)
+    SELECT p.user_id, jsonb_strip_nulls(jsonb_build_object(
+        'switch',    p.switch_fc,
+        '3ds',       p.threeds_fc,
+        'battletag', p.battletag,
+        'riot',      p.riotid,
+        'steam_id',  p.steamid
+    ))
+    FROM profiles AS p
+    WHERE COALESCE(p.switch_fc, p.threeds_fc, p.battletag, p.riotid, p.steamid)
+          IS NOT NULL
+    ON CONFLICT (user_id) DO UPDATE
+    SET gaming_ids = EXCLUDED.gaming_ids || user_profiles.gaming_ids,
+        updated_at = now()
+    """,
+)
+
+# Keep migrated gamer IDs as visible as they already were. Everything NEW in the
+# profile is born private, but these IDs were readable by anyone who could run
+# `?profile view @them` before this lot shipped; silently blanking every existing
+# profile would be a surprise, and 'server' is the honest equivalent of the old
+# guild-only command. Nothing is made MORE visible than it was.
+#
+# Self-idempotence needs more than `ON CONFLICT DO NOTHING`, because 'private' is
+# stored as the ABSENCE of a row: a user who migrates, then deliberately sets
+# gaming_ids to private (deleting the row), would be silently re-published by a
+# replay - DO NOTHING has no row to conflict with. The `NOT EXISTS` guard closes
+# that hole structurally, which is why this fixup is ordered BEFORE the import:
+#   * first run  - user_profiles is still empty for these users, so every
+#                  migrated user is seeded, then the import creates their row;
+#   * any replay - the import has since created the row, so the guard matches
+#                  nothing and the seed is a true no-op, private stays private.
+# The guard is "has this user a new-package profile at all", not "has this user a
+# visibility row": that is precisely the signal that distinguishes "never
+# migrated" from "migrated, and has since had a say".
+_PROFILE_VISIBILITY_SEED = Fixup(
+    "profile_visibility_seed_legacy_gaming_ids",
+    """
+    INSERT INTO profile_visibility (user_id, field, level)
+    SELECT p.user_id, 'gaming_ids', 'server'
+    FROM profiles AS p
+    WHERE COALESCE(p.switch_fc, p.threeds_fc, p.battletag, p.riotid, p.steamid)
+          IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM user_profiles AS up WHERE up.user_id = p.user_id
+      )
+    ON CONFLICT (user_id, field) DO NOTHING
+    """,
+)
+
 # The ordered set of fixups the running code knows about. Append new fixups here;
 # never renumber or remove-and-reuse a name.
-FIXUPS = (_WARNS_RECOMPUTE,)
+# ORDER IS LOAD-BEARING for the two profile ones: the visibility seed reads
+# "this user has no user_profiles row yet" as "not migrated yet", so it MUST run
+# before the import that creates those rows. See the seed's comment above.
+FIXUPS = (
+    _WARNS_RECOMPUTE,
+    _PROFILE_VISIBILITY_SEED,
+    _PROFILE_GAMING_IDS_IMPORT,
+)
 
 _APPLIED_FIXUPS_DDL = (
     "CREATE TABLE IF NOT EXISTS applied_fixups ("
