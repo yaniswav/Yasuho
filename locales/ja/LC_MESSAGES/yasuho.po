@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 13:16+0000\n"
+"POT-Creation-Date: 2026-07-30 14:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -65,12 +65,14 @@ msgid ""
 "Authorize the bot here:\n"
 "{authorize_url}\n"
 "\n"
-"Authorize, copy the code AniList shows you, then press **Enter code** below (or run `/anilist code <code>`)."
+"Authorize, copy the code AniList shows you, then press **Enter code** "
+"below (or run `/anilist code <code>`)."
 msgstr ""
 "こちらでボットを認可してください:\n"
 "{authorize_url}\n"
 "\n"
-"認可したら、AniListに表示されるコードをコピーして、下の **Enter code** を押してください (または `/anilist code <code>` を実行してください)。"
+"認可したら、AniListに表示されるコードをコピーして、下の **Enter code** を押してください (または `/anilist "
+"code <code>` を実行してください)。"
 
 #: cogs/anilist/account.py:246
 msgid "No AniList user found."
@@ -112,8 +114,12 @@ msgid "Your AniList account has been unlinked."
 msgstr "AniListアカウントの連携を解除しました。"
 
 #: cogs/anilist/account.py:361 cogs/anilist/account.py:583
-msgid "Status must be one of: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
-msgstr "ステータスは次のいずれかにしてください: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating。"
+msgid ""
+"Status must be one of: Watching/Reading, Completed, Planning, Paused, "
+"Dropped, Repeating."
+msgstr ""
+"ステータスは次のいずれかにしてください: Watching/Reading, Completed, Planning, Paused, "
+"Dropped, Repeating。"
 
 #: cogs/anilist/account.py:377
 msgid "Score must be zero or a positive number."
@@ -192,11 +198,15 @@ msgid "AniList"
 msgstr "AniList"
 
 #: cogs/anilist/airing.py:523
-msgid "Airing alerts are now **off**. I will not DM you about new episodes anymore - run this again to turn them back on."
+msgid ""
+"Airing alerts are now **off**. I will not DM you about new episodes "
+"anymore - run this again to turn them back on."
 msgstr "放送アラートを**オフ**にしました。新しいエピソードのDMは送信されなくなります - もう一度実行するとオンに戻せます。"
 
 #: cogs/anilist/airing.py:534
-msgid "Link your AniList account first with `/anilist login`, then run this again to turn on airing alerts."
+msgid ""
+"Link your AniList account first with `/anilist login`, then run this "
+"again to turn on airing alerts."
 msgstr "まず `/anilist login` でAniListアカウントを連携してから、もう一度実行して放送アラートをオンにしてください。"
 
 #: cogs/anilist/airing.py:542 cogs/anilist/chapters.py:775
@@ -209,15 +219,19 @@ msgid "Could not resolve your AniList account - try again shortly."
 msgstr "あなたのAniListアカウントを特定できませんでした - しばらくしてからもう一度お試しください。"
 
 #: cogs/anilist/airing.py:580
-msgid "-# Heads up: I could not see any titles on your Watching list. Make sure your AniList anime list is set to public."
+msgid ""
+"-# Heads up: I could not see any titles on your Watching list. Make sure "
+"your AniList anime list is set to public."
 msgstr "-# ご注意: 視聴中リストにタイトルが見つかりませんでした。AniListのアニメリストが公開設定になっているか確認してください。"
 
 #: cogs/anilist/airing.py:586
 msgid ""
-"Airing alerts are now **on**. I will DM you when a new episode of a title on your **Watching** anime list airs, with a one-click Seen button.\n"
+"Airing alerts are now **on**. I will DM you when a new episode of a title"
+" on your **Watching** anime list airs, with a one-click Seen button.\n"
 "-# Your AniList anime list must be public for this to work."
 msgstr ""
-"放送アラートを**オン**にしました。あなたの**視聴中**アニメリストのタイトルの新しいエピソードが配信されると、ワンクリックの視聴済みボタン付きでDMをお送りします。\n"
+"放送アラートを**オン**にしました。あなたの**視聴中**アニメリストのタイトルの新しいエピソードが配信されると、ワンクリックの視聴済みボタン付きでDMをお送りします。"
+"\n"
 "-# この機能を使うには、AniListのアニメリストを公開設定にする必要があります。"
 
 #: cogs/anilist/base.py:307
@@ -354,23 +368,34 @@ msgid "MangaDex"
 msgstr "MangaDex"
 
 #: cogs/anilist/chapters.py:756
-msgid "Chapter alerts are now **off**. I will not DM you about new chapters anymore - run this again to turn them back on."
+msgid ""
+"Chapter alerts are now **off**. I will not DM you about new chapters "
+"anymore - run this again to turn them back on."
 msgstr "チャプター通知は今**オフ**です。新しいチャプターについてDMは送らなくなります。もう一度実行すると、再びオンに戻せます。"
 
 #: cogs/anilist/chapters.py:767
-msgid "Link your AniList account first with `/anilist login`, then run this again to turn on chapter alerts."
+msgid ""
+"Link your AniList account first with `/anilist login`, then run this "
+"again to turn on chapter alerts."
 msgstr "まず `/anilist login` で AniList アカウントを連携してから、もう一度実行してチャプター通知をオンにしてくださいね。"
 
 #: cogs/anilist/chapters.py:813
-msgid "-# Heads up: I could not see any titles on your Reading list. Make sure your AniList manga list is set to public."
-msgstr "-# ご注意：あなたの Reading リストにタイトルが見つかりませんでした。AniList のマンガリストが公開設定になっているか確認してくださいね。"
+msgid ""
+"-# Heads up: I could not see any titles on your Reading list. Make sure "
+"your AniList manga list is set to public."
+msgstr ""
+"-# ご注意：あなたの Reading リストにタイトルが見つかりませんでした。AniList "
+"のマンガリストが公開設定になっているか確認してくださいね。"
 
 #: cogs/anilist/chapters.py:819
 msgid ""
-"Chapter alerts are now **on**. I will DM you when a new chapter of a title on your **Reading** manga list drops, with a one-click Read button.\n"
+"Chapter alerts are now **on**. I will DM you when a new chapter of a "
+"title on your **Reading** manga list drops, with a one-click Read button."
+"\n"
 "-# Your AniList manga list must be public for this to work."
 msgstr ""
-"チャプター通知は今**オン**です。あなたの **Reading** マンガリストにあるタイトルの新しいチャプターが出たら、ワンクリックの「読む」ボタン付きでDMしますね。\n"
+"チャプター通知は今**オン**です。あなたの **Reading** "
+"マンガリストにあるタイトルの新しいチャプターが出たら、ワンクリックの「読む」ボタン付きでDMしますね。\n"
 "-# これを機能させるには、AniList のマンガリストを公開設定にしておいてください。"
 
 #: cogs/anilist/collection.py:52 cogs/anilist/collection.py:336
@@ -512,7 +537,9 @@ msgid "Could not reach your AniList account."
 msgstr "あなたのAniListアカウントにアクセスできませんでした。"
 
 #: cogs/anilist/components.py:48 cogs/anilist/feed_delivery.py:311
-msgid "Slow down a little - too many AniList requests right now. Give it a few seconds and try again."
+msgid ""
+"Slow down a little - too many AniList requests right now. Give it a few "
+"seconds and try again."
 msgstr "落ち着いて - 現在AniListへのリクエストが多すぎます。数秒待ってからもう一度お試しください。"
 
 #: cogs/anilist/components.py:82
@@ -839,7 +866,9 @@ msgid "This feed already follows the maximum of {max} users."
 msgstr "このフィードはすでに最大数の{max}人をフォローしています。"
 
 #: cogs/anilist/feed.py:1382
-msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
+msgid ""
+"This server has no active AniList feed. Create or re-enable one with "
+"`/anilistfeed set` first."
 msgstr "このサーバーには有効なAniListフィードがありません。まず `/anilistfeed set` で作成するか再度有効にしてください。"
 
 #: cogs/anilist/feed.py:1393
@@ -849,7 +878,9 @@ msgstr "このサーバーには複数のフィードがあります。フィー
 
 #: cogs/anilist/feed.py:1440
 #, python-brace-format
-msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
+msgid ""
+"This server already has the maximum of {max} feeds. Remove one with "
+"`/anilistfeed remove` first."
 msgstr "このサーバーはすでに最大数の{max}件のフィードがあります。先に `/anilistfeed remove` で1件削除してください。"
 
 #: cogs/anilist/feed.py:1450
@@ -889,8 +920,12 @@ msgid "Unfollowed **{name}**."
 msgstr "**{name}** のフォローを解除しました。"
 
 #: cogs/anilist/feed.py:1549
-msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
-msgstr "このフィードはメンバーが自分で参加することを許可していません。モデレーターに `/anilistfeed` で **メンバーの参加** を有効にしてもらってください。"
+msgid ""
+"This feed does not let members join themselves. Ask a moderator to turn "
+"on **Members can join** in `/anilistfeed`."
+msgstr ""
+"このフィードはメンバーが自分で参加することを許可していません。モデレーターに `/anilistfeed` で **メンバーの参加** "
+"を有効にしてもらってください。"
 
 #: cogs/anilist/feed.py:1557 cogs/anilist/feed_delivery.py:330
 msgid "AniList actions are unavailable right now."
@@ -969,7 +1004,9 @@ msgid "You are clicking too fast - give it a moment."
 msgstr "クリックが速すぎます - 少し待ってください。"
 
 #: cogs/anilist/feed_delivery.py:339
-msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
+msgid ""
+"Link your AniList account first with `/anilist login`, then you can like "
+"and reply straight from the feed."
 msgstr "まず `/anilist login` でAniListアカウントを連携してください。連携後はフィードから直接いいねや返信ができるようになります。"
 
 #: cogs/anilist/feed_delivery.py:399 cogs/anilist/feed_delivery.py:671
@@ -1254,7 +1291,9 @@ msgstr "追跡中のリリース"
 
 #: cogs/anilist/feed_views.py:592
 #, python-brace-format
-msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
+msgid ""
+"New episodes (anime) and chapters (manga) of these titles are posted in "
+"{channel}, independently of any DM alerts. Up to {max} titles per feed."
 msgstr "これらのタイトルの新しいエピソード(アニメ)やチャプター(マンガ)は、DM通知とは別に{channel}に投稿されます。1つのフィードにつき最大{max}タイトルまでです。"
 
 #: cogs/anilist/feed_views.py:604
@@ -1302,7 +1341,9 @@ msgstr "このフィードを削除しますか?"
 
 #: cogs/anilist/feed_views.py:745
 #, python-brace-format
-msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
+msgid ""
+"This permanently deletes the AniList feed in {channel} and everyone it "
+"follows. This cannot be undone."
 msgstr "{channel} のAniListフィードとフォロー中のユーザーがすべて完全に削除されます。この操作は取り消せません。"
 
 #: cogs/anilist/feed_views.py:760
@@ -1345,7 +1386,9 @@ msgstr "AniListアクティビティフィード"
 
 #: cogs/anilist/feed_views.py:1010
 #, python-brace-format
-msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
+msgid ""
+"This server has no AniList feed yet. Pick a channel below to create one "
+"(up to {max} per server)."
 msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
@@ -1368,7 +1411,9 @@ msgid "{status} ({count} recent failures)"
 msgstr "{status} (直近の失敗{count}件)"
 
 #: cogs/anilist/feed_views.py:1037
-msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
+msgid ""
+"Configure how AniList activity is mirrored into this server. Every change"
+" saves instantly."
 msgstr "このサーバーへのAniListアクティビティの反映方法を設定します。変更内容はすべて即座に保存されます。"
 
 #: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
@@ -1679,7 +1724,9 @@ msgstr "このメンバーのXPをリセットしますか？"
 
 #: cogs/community/level_admin.py:430
 #, python-brace-format
-msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
+msgid ""
+"This resets {member}'s XP to **0** and removes them from the leaderboard."
+" This can't be undone."
 msgstr "{member} のXPを **0** に戻し、ランキングから外します。元に戻せません。"
 
 #: cogs/community/level_admin.py:445
@@ -1689,7 +1736,8 @@ msgstr "このサーバーの全XPをリセットしますか？"
 #: cogs/community/level_admin.py:447
 #, python-brace-format
 msgid ""
-"This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
+"This wipes **every** member's XP and every weekly/monthly leaderboard for"
+" **{guild}**. This can't be undone.\n"
 "\n"
 "Press the button below, then type the server name to confirm."
 msgstr ""
@@ -1767,7 +1815,9 @@ msgstr "倍率は {min} から {max} の間にしてください (0 でXPを完�
 
 #: cogs/community/level_config_ui.py:145
 #, python-brace-format
-msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
+msgid ""
+"The event must last between 1 minute and {max_days} days (e.g. \"2h\" or "
+"\"3d\")."
 msgstr "イベントの期間は1分から {max_days} 日までです (例: \"2h\"、\"3d\")。"
 
 #: cogs/community/level_config_ui.py:149
@@ -1808,11 +1858,15 @@ msgid "Only PNG, JPEG, and WebP images are supported."
 msgstr "PNG、JPEG、WebP画像のみサポートされています。"
 
 #: cogs/community/level_config_ui.py:260
-msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
+msgid ""
+"That image is too complex to fit under the storage limit - try a simpler "
+"or smaller picture."
 msgstr "その画像は複雑すぎて保存容量の上限に収まりません - もっとシンプルか小さい画像をお試しください。"
 
 #: cogs/community/level_config_ui.py:265
-msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
+msgid ""
+"I couldn't read that as an image - make sure it's a valid PNG, JPEG, or "
+"WebP file."
 msgstr "それを画像として読み込めませんでした - 有効なPNG、JPEG、またはWebPファイルか確認してください。"
 
 #: cogs/community/level_config_ui.py:270
@@ -1857,7 +1911,9 @@ msgid "Rank card - {guild}"
 msgstr "ランクカード - {guild}"
 
 #: cogs/community/level_config_ui.py:479
-msgid "Customise the background and accent colour used on this server's /rank cards."
+msgid ""
+"Customise the background and accent colour used on this server's /rank "
+"cards."
 msgstr "このサーバーの/rankカードで使用される背景とアクセントカラーをカスタマイズします。"
 
 #: cogs/community/level_config_ui.py:488
@@ -1886,14 +1942,14 @@ msgstr "デフォルト - 各メンバー自身のロールカラーが使用さ
 msgid "Accent colour"
 msgstr "アクセントカラー"
 
-#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:684
+#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:866
 #: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
 #: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
 
-#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:686
+#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:868
 #: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
 #: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
@@ -1902,8 +1958,12 @@ msgstr "3分後にタイムアウトします"
 
 #: cogs/community/level_config_ui.py:564
 #, python-brace-format
-msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
-msgstr "背景を設定するには、`/levelconfig card background`を実行し、画像（PNG、JPEG、またはWebP、最大{mb}MB）を添付してください。"
+msgid ""
+"To set a background, run `/levelconfig card background` and attach an "
+"image (PNG, JPEG, or WebP; max {mb} MB)."
+msgstr ""
+"背景を設定するには、`/levelconfig card "
+"background`を実行し、画像（PNG、JPEG、またはWebP、最大{mb}MB）を添付してください。"
 
 #: cogs/community/level_config_ui.py:681
 msgid "Channel/category"
@@ -1957,7 +2017,9 @@ msgid "No-XP zones | {guild}"
 msgstr "XP対象外ゾーン | {guild}"
 
 #: cogs/community/level_config_ui.py:865
-msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
+msgid ""
+"No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a "
+"channel, category, or role."
 msgstr "XP対象外ゾーンはまだ設定されていません。`/levelconfig noxp add` でチャンネル・カテゴリー・ロールを除外できます。"
 
 #: cogs/community/level_config_ui.py:875 cogs/community/level_config_ui.py:930
@@ -1984,7 +2046,9 @@ msgid "XP boosts | {guild}"
 msgstr "XPブースト | {guild}"
 
 #: cogs/community/level_config_ui.py:915
-msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
+msgid ""
+"No XP boosts configured yet. Use `/levelconfig boost add` to boost or "
+"reduce XP globally, per channel, or per role."
 msgstr "XPブーストはまだ設定されていません。`/levelconfig boost add` で全体・チャンネル別・ロール別にXPを増減できます。"
 
 #: cogs/community/level_config_ui.py:946 cogs/community/level_config_ui.py:1043
@@ -2137,7 +2201,9 @@ msgid "Members now earn XP for time spent together in voice."
 msgstr "メンバーはボイスで一緒に過ごした時間でXPを獲得するようになりました。"
 
 #: cogs/community/level_config_ui.py:1440
-msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
+msgid ""
+"Heads up: server leveling is off, so no voice XP is granted until you "
+"turn leveling on."
 msgstr "ご注意：サーバーのレベルシステムがオフのため、オンにするまでボイスXPは付与されません。"
 
 #: cogs/community/level_config_ui.py:1444
@@ -2163,11 +2229,15 @@ msgid "Members now earn **{rate}** XP per eligible minute in voice."
 msgstr "メンバーはボイスの対象1分ごとに **{rate}** XPを獲得するようになりました。"
 
 #: cogs/community/level_config_ui.py:1525
-msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
+msgid ""
+"Give at most one of a channel/category or a role - give neither for a "
+"server-wide boost."
 msgstr "チャンネル/カテゴリーかロールはどちらか一方まで。両方空欄でサーバー全体のブーストになります。"
 
 #: cogs/community/level_config_ui.py:1533
-msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
+msgid ""
+"You can't target @everyone directly - leave both the channel and role "
+"empty for a server-wide boost instead."
 msgstr "@everyone を直接指定できません。チャンネルとロールを空欄にするとサーバー全体のブーストになります。"
 
 #: cogs/community/level_config_ui.py:1559
@@ -2257,7 +2327,9 @@ msgid "Mode: **{mode}**"
 msgstr "モード: **{mode}**"
 
 #: cogs/community/level_rewards.py:159
-msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
+msgid ""
+"No level rewards configured yet. Use `/levelconfig rewards add` to create"
+" one."
 msgstr "レベル報酬はまだ設定されていません。`/levelconfig rewards add` で作成できます。"
 
 #: cogs/community/level_rewards.py:167
@@ -2293,7 +2365,9 @@ msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "レベル報酬を追加しました。レベル **{level}** に到達すると {role} を獲得できます。"
 
 #: cogs/community/level_rewards.py:462
-msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
+msgid ""
+"I can add it, but that role is above me - move my role up so I can "
+"actually assign it."
 msgstr "追加はできますが、そのロールは私より上位です。実際に付与できるように私のロールを上げてください。"
 
 #: cogs/community/level_rewards.py:467
@@ -2309,7 +2383,9 @@ msgid "Pick a reward rule to remove:"
 msgstr "削除する報酬ルールを選択:"
 
 #: cogs/community/level_rewards.py:519
-msgid "Members now keep only the roles from the highest level reward they've reached."
+msgid ""
+"Members now keep only the roles from the highest level reward they've "
+"reached."
 msgstr "メンバーは到達した最高レベルの報酬ロールのみ保持するようになりました。"
 
 #: cogs/community/level_rewards.py:524
@@ -2452,7 +2528,9 @@ msgid "What should I remind you about?"
 msgstr "何をリマインドしましょうか?"
 
 #: cogs/community/reminders.py:113
-msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
+msgid ""
+"I couldn't understand that time. Try something like `10m`, `tomorrow at "
+"6pm`, or `in 3 days`."
 msgstr "その時間を理解できませんでした。`10m`、`tomorrow at 6pm`、`in 3 days` のように入力してみてください。"
 
 #: cogs/community/reminders.py:123 cogs/community/reminders.py:717
@@ -2462,7 +2540,9 @@ msgstr "その時間は過去です。未来の時刻を指定してください
 
 #: cogs/community/reminders.py:133 cogs/community/reminders.py:737
 #, python-brace-format
-msgid "You already have {count} reminders pending - wait for some to fire before adding more."
+msgid ""
+"You already have {count} reminders pending - wait for some to fire before"
+" adding more."
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
 #: cogs/community/reminders.py:148 cogs/community/reminders.py:751
@@ -2581,8 +2661,12 @@ msgid "On - posted in <#{channel_id}> when a season closes."
 msgstr "オン - シーズン終了時に <#{channel_id}> に投稿されます。"
 
 #: cogs/community/seasons_views.py:285
-msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
-msgstr "オンですが、固定の告知チャンネルが設定されていないため、実際には何も投稿されません。`/levelconfig announce mode` で設定してください。"
+msgid ""
+"On, but no fixed announce channel is configured, so nothing will actually"
+" be posted. Set one with `/levelconfig announce mode`."
+msgstr ""
+"オンですが、固定の告知チャンネルが設定されていないため、実際には何も投稿されません。`/levelconfig announce mode` "
+"で設定してください。"
 
 #: cogs/community/seasons_views.py:297
 msgid "Pick the season champion role..."
@@ -2606,7 +2690,9 @@ msgid "Seasons - {guild}"
 msgstr "シーズン - {guild}"
 
 #: cogs/community/seasons_views.py:376
-msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
+msgid ""
+"Configure the role handed to each season's champion and whether the "
+"podium is announced when a season closes."
 msgstr "各シーズンのチャンピオンに付与するロールと、シーズン終了時に表彰台を告知するかどうかを設定します。"
 
 #: cogs/community/seasons_views.py:386
@@ -2619,8 +2705,12 @@ msgstr "シーズン告知"
 
 #: cogs/community/seasons_views.py:442
 #, python-brace-format
-msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
-msgstr "{role} を管理できません（私の最上位ロールより上にあるか、連携機能によって管理されているか、@everyone です）。別のロールを選んでください。"
+msgid ""
+"I can't manage {role} (it's above my top role, managed by an integration,"
+" or @everyone). Pick another role."
+msgstr ""
+"{role} を管理できません（私の最上位ロールより上にあるか、連携機能によって管理されているか、@everyone "
+"です）。別のロールを選んでください。"
 
 #: cogs/community/seasons_views.py:454 cogs/community/seasons_views.py:466
 #: cogs/community/seasons_views.py:491 cogs/moderation/automod_panel.py:415
@@ -2629,7 +2719,9 @@ msgid "Something went wrong updating the panel."
 msgstr "パネルの更新中に問題が発生しました。"
 
 #: cogs/community/seasons_views.py:479
-msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
+msgid ""
+"Set a fixed announce channel first with `/levelconfig announce mode` "
+"before turning the season announce on."
 msgstr "シーズン告知をオンにする前に、まず `/levelconfig announce mode` で固定の告知チャンネルを設定してください。"
 
 #: cogs/community/usersettings.py:86
@@ -2645,7 +2737,9 @@ msgid "Level-up ping"
 msgstr "レベルアップ時のメンション"
 
 #: cogs/community/usersettings.py:100
-msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
+msgid ""
+"Ping you by mention in level-up announcements. Turn off to be named "
+"without a ping."
 msgstr "レベルアップ通知でメンションします。オフにするとメンションなしで名前が表示されます。"
 
 #: cogs/community/usersettings.py:107
@@ -2669,7 +2763,9 @@ msgid "Play search picker"
 msgstr "play の検索ピッカー"
 
 #: cogs/community/usersettings.py:134
-msgid "On /play, choose from the top matches instead of instantly queuing the first."
+msgid ""
+"On /play, choose from the top matches instead of instantly queuing the "
+"first."
 msgstr "/play で最初の曲を即再生する代わりに、上位の候補から選べます。"
 
 #: cogs/community/usersettings.py:141
@@ -2685,7 +2781,9 @@ msgid "Chapter alert language"
 msgstr "チャプター通知の言語"
 
 #: cogs/community/usersettings.py:161
-msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
+msgid ""
+"Which translation your new-chapter DMs link to, when it is out. Server "
+"posts follow the server language."
 msgstr "新しいチャプターのDMが公開時にリンクする翻訳版です。サーバーの投稿はサーバーの言語に従います。"
 
 #: cogs/community/usersettings.py:166
@@ -2714,7 +2812,9 @@ msgstr "アバター履歴を削除する"
 
 #: cogs/community/usersettings.py:292
 #, python-brace-format
-msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
+msgid ""
+"Deleted {count} saved image(s) ({size}). Future avatar tracking is now "
+"turned off."
 msgstr "保存された画像 {count} 件 ({size}) を削除しました。今後のアバター記録はオフになりました。"
 
 #: cogs/community/usersettings.py:303
@@ -2774,14 +2874,19 @@ msgstr "その設定の更新中に問題が発生しました。"
 
 #: cogs/community/usersettings.py:588
 #, python-brace-format
-msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
-msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
+msgid ""
+"Use `{prefix}mydata export` to receive your data, `{prefix}mydata "
+"deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` "
+"to erase saved avatars."
+msgstr ""
+"データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata "
+"deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
 #: cogs/community/usersettings.py:630
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
-#: cogs/community/profile/connectors/cog.py:236
+#: cogs/community/profile/connectors/cog.py:280
 #: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
@@ -2791,85 +2896,95 @@ msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
 #: cogs/community/usersettings.py:650
-msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
+msgid ""
+"This permanently deletes your bio, pronouns, accent colour, custom "
+"fields, gaming IDs and every choice you made about who could see them. "
+"This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
 #: cogs/community/usersettings.py:665
-msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
+msgid ""
+"This permanently deletes every saved global avatar, server avatar and "
+"banner for your account. It also turns future tracking off. This cannot "
+"be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
 
-#: cogs/community/profile/cog.py:107
+#: cogs/community/profile/cog.py:212
 #, python-brace-format
-msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
-msgstr "現在はあなただけがこれを見ることができます。共有しているサーバーに表示するには `{prefix}profile visibility {section} server` を使用してください。"
+msgid ""
+"Only you can see this for now. Use `{prefix}profile visibility {section} "
+"server` to show it to the servers you share."
+msgstr ""
+"現在はあなただけがこれを見ることができます。共有しているサーバーに表示するには `{prefix}profile visibility "
+"{section} server` を使用してください。"
 
-#: cogs/community/profile/cog.py:148
+#: cogs/community/profile/cog.py:355
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "{name} はプロフィールを設定していません。"
 
-#: cogs/community/profile/cog.py:177 cogs/community/profile/cog.py:253
-#: cogs/community/profile/connectors/cog.py:104
-#: cogs/community/profile/views.py:147
+#: cogs/community/profile/cog.py:384 cogs/community/profile/cog.py:460
+#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr "プロフィールの更新に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:183
+#: cogs/community/profile/cog.py:390
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "不明な項目です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:193
+#: cogs/community/profile/cog.py:400
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "{field}を削除しました。"
 
-#: cogs/community/profile/cog.py:196 cogs/community/profile/views.py:134
+#: cogs/community/profile/cog.py:403 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr "プロフィールを更新しました"
 
-#: cogs/community/profile/cog.py:232
+#: cogs/community/profile/cog.py:439
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "不明なセクションです。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:241
-#: cogs/community/profile/connectors/cog.py:398
+#: cogs/community/profile/cog.py:448
+#: cogs/community/profile/connectors/cog.py:447
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "不明な公開範囲です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:260
-#: cogs/community/profile/connectors/cog.py:416
+#: cogs/community/profile/cog.py:467
+#: cogs/community/profile/connectors/cog.py:465
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "{field}は今、誰でも見られるようになりました。"
 
-#: cogs/community/profile/cog.py:264
-#: cogs/community/profile/connectors/cog.py:421
+#: cogs/community/profile/cog.py:471
+#: cogs/community/profile/connectors/cog.py:470
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "{field}は今、共有しているサーバーで見られるようになりました。"
 
-#: cogs/community/profile/cog.py:270
-#: cogs/community/profile/connectors/cog.py:428
+#: cogs/community/profile/cog.py:477
+#: cogs/community/profile/connectors/cog.py:477
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "{field}は今、あなただけが見られるようになりました。"
 
-#: cogs/community/profile/cog.py:283
+#: cogs/community/profile/cog.py:490
 msgid "Click below to edit a profile field:"
 msgstr "下をクリックしてプロフィール項目を編集してください:"
 
-#: cogs/community/profile/cog.py:312
+#: cogs/community/profile/cog.py:519
 msgid "Failed to clear your profile, please try again later."
 msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:316
+#: cogs/community/profile/cog.py:523
 msgid "Profile cleared"
 msgstr "プロフィールを消去しました"
 
-#: cogs/community/profile/cog.py:317
+#: cogs/community/profile/cog.py:524
 msgid "Your profile has been cleared."
 msgstr "あなたのプロフィールを消去しました。"
 
@@ -2901,11 +3016,11 @@ msgstr "自己紹介"
 msgid "Pronouns"
 msgstr "代名詞"
 
-#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:454
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:600
 msgid "Custom fields"
 msgstr "カスタムフィールド"
 
-#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:460
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:606
 msgid "Gaming IDs"
 msgstr "ゲームID"
 
@@ -2933,160 +3048,262 @@ msgstr "再生中"
 msgid "Spotify"
 msgstr "Spotify"
 
-#: cogs/community/profile/connectors/cog.py:152
-#: cogs/community/profile/views.py:60
+#: cogs/community/profile/connectors/cog.py:194
+#: cogs/community/profile/views.py:67
 #, python-brace-format
 msgid "That value is too long (max {limit} characters)."
 msgstr "この値は長すぎます(最大{limit}文字)。"
 
-#: cogs/community/profile/views.py:64
+#: cogs/community/profile/views.py:71
 msgid "That is not a valid colour. Use a hex colour like #5865F2."
 msgstr "それは有効な色ではありません。#5865F2 のような16進数カラーを使用してください。"
 
-#: cogs/community/profile/connectors/cog.py:162
-#: cogs/community/profile/views.py:65
+#: cogs/community/profile/connectors/cog.py:204
+#: cogs/community/profile/views.py:72
 msgid "That value is not valid for this field."
 msgstr "この値はこのフィールドに対して無効です。"
 
-#: cogs/community/profile/views.py:102
+#: cogs/community/profile/views.py:109
 msgid "Edit your profile"
 msgstr "プロフィールを編集"
 
-#: cogs/community/profile/views.py:107
+#: cogs/community/profile/views.py:114
 msgid "Field"
 msgstr "項目"
 
-#: cogs/community/profile/views.py:113
+#: cogs/community/profile/views.py:120
 msgid "Value"
 msgstr "値"
 
-#: cogs/community/profile/views.py:121
+#: cogs/community/profile/views.py:128
 msgid "Pick a field and enter a value."
 msgstr "項目を選んで値を入力してください。"
 
-#: cogs/community/profile/views.py:131
+#: cogs/community/profile/views.py:138
 msgid "Unknown field."
 msgstr "不明な項目です。"
 
-#: cogs/community/profile/views.py:384
+#: cogs/community/profile/views.py:503
 msgid "Linked"
 msgstr "連携済み"
 
-#: cogs/community/profile/views.py:470
+#: cogs/community/profile/views.py:618
 msgid "This profile is too long to show in full."
 msgstr "このプロフィールは長すぎて全文を表示できません。"
 
-#: cogs/community/profile/views.py:521 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:699 cogs/config/rooms_config.py:207
 msgid "Public"
 msgstr "公開"
 
-#: cogs/community/profile/views.py:522
+#: cogs/community/profile/views.py:700
 msgid "Server"
 msgstr "サーバー"
 
-#: cogs/community/profile/views.py:523 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:701 cogs/config/rooms_config.py:204
 msgid "Private"
 msgstr "非公開"
 
-#: cogs/community/profile/views.py:591
+#: cogs/community/profile/views.py:769
 msgid "Edit a gaming ID..."
 msgstr "ゲームIDを編集する..."
 
-#: cogs/community/profile/views.py:653
+#: cogs/community/profile/views.py:835
 msgid "Profile visibility"
 msgstr "プロフィールの公開範囲"
 
-#: cogs/community/profile/views.py:656
-msgid "Choose who can see each part of your profile: public (anyone), server (members of servers you share), or private (only you)."
+#: cogs/community/profile/views.py:838
+msgid ""
+"Choose who can see each part of your profile: public (anyone), server "
+"(members of servers you share), or private (only you)."
 msgstr "プロフィールの各項目を誰が見られるか選択してください: 公開（全員）、サーバー（共有サーバーのメンバー）、非公開（自分のみ）。"
 
-#: cogs/community/profile/views.py:665
+#: cogs/community/profile/views.py:847
 msgid "Current visibility"
 msgstr "現在の公開範囲"
 
-#: cogs/community/profile/views.py:732
+#: cogs/community/profile/views.py:914
 msgid "Something went wrong updating your profile visibility."
 msgstr "プロフィールの公開範囲の更新中に問題が発生しました。"
 
-#: cogs/community/profile/connectors/cog.py:69
+#: cogs/community/profile/connectors/anilist.py:205
+msgid "your AniList username"
+msgstr "AniListのユーザー名"
+
+#: cogs/community/profile/connectors/anilist.py:269
+#, python-brace-format
+msgid "Anime: {count} - {hours}h watched, mean score {score}"
+msgstr "アニメ: {count}件 - {hours}時間視聴、平均スコア{score}"
+
+#: cogs/community/profile/connectors/anilist.py:279
+#, python-brace-format
+msgid "Manga: {count} - {chapters} chapters read, mean score {score}"
+msgstr "マンガ: {count}件 - {chapters}話読了、平均スコア{score}"
+
+#: cogs/community/profile/connectors/anilist.py:290
+#: cogs/community/profile/connectors/backloggd.py:532
+#, python-brace-format
+msgid "Favourites: {titles}"
+msgstr "お気に入り: {titles}"
+
+#: cogs/community/profile/connectors/backloggd.py:443
+msgid "your Backloggd username"
+msgstr "Backloggdのユーザー名"
+
+#: cogs/community/profile/connectors/backloggd.py:494
+#, python-brace-format
+msgid "{count} played"
+msgstr "{count}件プレイ済み"
+
+#: cogs/community/profile/connectors/backloggd.py:496
+#, python-brace-format
+msgid "{count} backlogged"
+msgstr "{count}件がバックログ登録済み"
+
+#: cogs/community/profile/connectors/backloggd.py:536
+#: cogs/community/profile/connectors/steam.py:332
+#, python-brace-format
+msgid "Recently played: {names}"
+msgstr "最近プレイ: {names}"
+
+#: cogs/community/profile/connectors/cog.py:77
 #, python-brace-format
 msgid "Linked as {name} - visible to anyone"
 msgstr "{name} として連携済み - 全員に公開"
 
-#: cogs/community/profile/connectors/cog.py:71
+#: cogs/community/profile/connectors/cog.py:79
 #, python-brace-format
 msgid "Linked as {name} - visible to the servers you share"
 msgstr "{name} として連携済み - 共有サーバーのメンバーに公開"
 
-#: cogs/community/profile/connectors/cog.py:74
+#: cogs/community/profile/connectors/cog.py:82
 #, python-brace-format
 msgid "Linked as {name} - visible to you only"
 msgstr "{name} として連携済み - 自分のみに公開"
 
-#: cogs/community/profile/connectors/cog.py:111
+#: cogs/community/profile/connectors/cog.py:153
 #, python-brace-format
 msgid "Unknown connection. Choose: {options}"
 msgstr "不明な連携です。選択してください: {options}"
 
-#: cogs/community/profile/connectors/cog.py:131
+#: cogs/community/profile/connectors/cog.py:173
 #, python-brace-format
-msgid "Only you can see this for now. Use `{command}` to show it to the servers you share."
+msgid ""
+"Only you can see this for now. Use `{command}` to show it to the servers "
+"you share."
 msgstr "現在はあなたにのみ表示されています。共有サーバーに表示するには `{command}` を使用してください。"
 
-#: cogs/community/profile/connectors/cog.py:139
+#: cogs/community/profile/connectors/cog.py:181
 msgid "That connection is not available yet - it is coming soon."
 msgstr "この連携はまだご利用いただけません - 近日公開予定です。"
 
-#: cogs/community/profile/connectors/cog.py:143
+#: cogs/community/profile/connectors/cog.py:185
 msgid "That connection is not set up on this bot yet. Ask an admin."
 msgstr "この連携はこのボットでまだ設定されていません。管理者にお尋ねください。"
 
-#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/connectors/cog.py:188
 msgid "That service is not answering right now, please try again later."
 msgstr "このサービスは現在応答していません。しばらくしてからもう一度お試しください。"
 
-#: cogs/community/profile/connectors/cog.py:156
+#: cogs/community/profile/connectors/cog.py:198
 msgid "No account was found with that name."
 msgstr "その名前のアカウントは見つかりませんでした。"
 
-#: cogs/community/profile/connectors/cog.py:159
+#: cogs/community/profile/connectors/cog.py:201
 #, python-brace-format
 msgid "That does not look right. Enter {hint}."
 msgstr "入力内容が正しくないようです。{hint} を入力してください。"
 
-#: cogs/community/profile/connectors/cog.py:175
+#: cogs/community/profile/connectors/cog.py:217
 msgid "Your connections"
 msgstr "あなたの連携情報"
 
-#: cogs/community/profile/connectors/cog.py:183
+#: cogs/community/profile/connectors/cog.py:225
 msgid "Coming soon"
 msgstr "近日公開"
 
-#: cogs/community/profile/connectors/cog.py:185
+#: cogs/community/profile/connectors/cog.py:227
 msgid "Not linked"
 msgstr "未連携"
 
-#: cogs/community/profile/connectors/cog.py:246
+#: cogs/community/profile/connectors/cog.py:290
 msgid "I sent your connections to you by direct message."
 msgstr "あなたの連携情報をダイレクトメッセージで送信しました。"
 
-#: cogs/community/profile/connectors/cog.py:311
+#: cogs/community/profile/connectors/cog.py:360
 msgid "Connection linked"
 msgstr "連携が完了しました"
 
-#: cogs/community/profile/connectors/cog.py:313
+#: cogs/community/profile/connectors/cog.py:362
 msgid "Connection updated"
 msgstr "連携情報を更新しました"
 
-#: cogs/community/profile/connectors/cog.py:369
+#: cogs/community/profile/connectors/cog.py:418
 #, python-brace-format
 msgid "{field} was not linked."
 msgstr "{field} は連携されませんでした。"
 
-#: cogs/community/profile/connectors/cog.py:374
+#: cogs/community/profile/connectors/cog.py:423
 #, python-brace-format
 msgid "{field} is unlinked and hidden again."
 msgstr "{field} の連携を解除し、再び非表示にしました。"
+
+#: cogs/community/profile/connectors/lastfm.py:313
+msgid "your Last.fm username"
+msgstr "Last.fmのユーザー名"
+
+#: cogs/community/profile/connectors/lastfm.py:371
+#, python-brace-format
+msgid "{count} scrobble"
+msgid_plural "{count} scrobbles"
+msgstr[0] "{count}件のスクロブル"
+msgstr[1] "{count}件のスクロブル"
+
+#: cogs/community/profile/connectors/lastfm.py:383
+#, python-brace-format
+msgid "Top artists (past month): {names}"
+msgstr "トップアーティスト (過去1か月): {names}"
+
+#: cogs/community/profile/connectors/lastfm.py:393
+#, python-brace-format
+msgid "Now scrobbling: {track}"
+msgstr "現在スクロブル中: {track}"
+
+#: cogs/community/profile/connectors/lastfm.py:395
+#, python-brace-format
+msgid "Last scrobble: {track}"
+msgstr "最新のスクロブル: {track}"
+
+#: cogs/community/profile/connectors/osu.py:159
+msgid "your osu! username"
+msgstr "osu!のユーザー名"
+
+#: cogs/community/profile/connectors/osu.py:220
+#, python-brace-format
+msgid "Rank #{rank} - {pp} pp"
+msgstr "Rank #{rank} - {pp} pp"
+
+#: cogs/community/profile/connectors/osu.py:227
+#, python-brace-format
+msgid "Accuracy {accuracy}% - level {level}"
+msgstr "精度{accuracy}% - level {level}"
+
+#: cogs/community/profile/connectors/osu.py:234
+#, python-brace-format
+msgid "Country: {country}"
+msgstr "国: {country}"
+
+#: cogs/community/profile/connectors/steam.py:247
+msgid "your SteamID64 or your steamcommunity.com/id/ name"
+msgstr "SteamID64、またはsteamcommunity.com/id/の名前"
+
+#: cogs/community/profile/connectors/steam.py:325
+msgid "This Steam profile is private."
+msgstr "このSteamプロフィールは非公開です。"
+
+#: cogs/community/profile/connectors/steam.py:344
+#, python-brace-format
+msgid "Owns {count} games"
+msgstr "{count}本のゲームを所有"
 
 #: cogs/community/serverstats/views.py:172
 msgid "Last bar: today, still in progress."
@@ -3257,7 +3474,9 @@ msgid "e.g. 2h, tomorrow at 9am, or a <t:...> tag"
 msgstr "例: 2h、明日9時、または <t:...> タグ"
 
 #: cogs/config/announcements.py:182
-msgid "I couldn't understand that time. Try something like `2h`, `tomorrow at 9am`, or `in 3 days`."
+msgid ""
+"I couldn't understand that time. Try something like `2h`, `tomorrow at "
+"9am`, or `in 3 days`."
 msgstr "その時刻をうまく理解できませんでした。`2h`、`tomorrow at 9am`、`in 3 days` のような形式で入力してみてください。"
 
 #: cogs/config/announcements.py:200
@@ -3278,8 +3497,12 @@ msgid "Announcement builder"
 msgstr "アナウンスビルダー"
 
 #: cogs/config/announcements.py:260
-msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
-msgstr "メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** を押してください。プレビューはあなたにのみ表示されます。"
+msgid ""
+"Compose the embed with the menu, pick a channel (and optionally a role to"
+" ping), then **Send**. Preview shows it only to you."
+msgstr ""
+"メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** "
+"を押してください。プレビューはあなたにのみ表示されます。"
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
@@ -3356,7 +3579,9 @@ msgid "Gave you {role}."
 msgstr "{role} を付与しました。"
 
 #: cogs/config/buttonroles.py:139
-msgid "I don't have permission to manage that role. It may be above my highest role."
+msgid ""
+"I don't have permission to manage that role. It may be above my highest "
+"role."
 msgstr "そのロールを管理する権限がありません。私の最上位ロールより上にある可能性があります。"
 
 #: cogs/config/buttonroles.py:147
@@ -3422,8 +3647,14 @@ msgid "Button role builder"
 msgstr "ボタンロールビルダー"
 
 #: cogs/config/buttonroles.py:511
-msgid "Design the panel below. Edit the embed, add role buttons, then **Post panel** to a channel or **Attach to message** to drop the buttons onto a message I already sent. Every change is kept until you post."
-msgstr "下のパネルをデザインしてください。埋め込みを編集し、ロールボタンを追加してから、**Post panel** でチャンネルに投稿するか、**Attach to message** で私がすでに送信したメッセージにボタンを追加してください。すべての変更は投稿するまで保持されます。"
+msgid ""
+"Design the panel below. Edit the embed, add role buttons, then **Post "
+"panel** to a channel or **Attach to message** to drop the buttons onto a "
+"message I already sent. Every change is kept until you post."
+msgstr ""
+"下のパネルをデザインしてください。埋め込みを編集し、ロールボタンを追加してから、**Post panel** "
+"でチャンネルに投稿するか、**Attach to message** "
+"で私がすでに送信したメッセージにボタンを追加してください。すべての変更は投稿するまで保持されます。"
 
 #: cogs/config/buttonroles.py:531
 msgid "*No buttons yet. Pick a role below to add one.*"
@@ -3443,11 +3674,15 @@ msgid "Self-assignable roles"
 msgstr "自分で付与できるロール"
 
 #: cogs/config/buttonroles.py:584
-msgid "Click a button below to give yourself a role, or click it again to remove it:"
+msgid ""
+"Click a button below to give yourself a role, or click it again to remove"
+" it:"
 msgstr "下のボタンをクリックすると自分にロールを付与でき、もう一度クリックすると外せます:"
 
 #: cogs/config/buttonroles.py:600
-msgid "I can't assign that role - it's either managed by an integration or above my highest role."
+msgid ""
+"I can't assign that role - it's either managed by an integration or above"
+" my highest role."
 msgstr "そのロールを付与できません - 連携によって管理されているか、私の最上位ロールより上にあります。"
 
 #: cogs/config/buttonroles.py:633
@@ -3463,7 +3698,9 @@ msgid "Add at least one role button before posting."
 msgstr "投稿する前に、ロールボタンを少なくとも1つ追加してください。"
 
 #: cogs/config/buttonroles.py:649
-msgid "None of those roles can be assigned by me - they're either managed by an integration or above my highest role."
+msgid ""
+"None of those roles can be assigned by me - they're either managed by an "
+"integration or above my highest role."
 msgstr "それらのロールはどれも私が付与できません - 連携によって管理されているか、私の最上位ロールより上にあります。"
 
 #: cogs/config/buttonroles.py:660
@@ -3518,8 +3755,15 @@ msgid "Something went wrong fetching that message."
 msgstr "そのメッセージの取得中に問題が発生しました。"
 
 #: cogs/config/buttonroles.py:759
-msgid "I can only add role buttons to a message I posted myself - Discord won't let a bot edit buttons onto someone else's message. Use **Post panel** to publish a fresh panel instead (I'll happily recreate the same embed and buttons there)."
-msgstr "私はロールボタンを自分が投稿したメッセージにのみ追加できます - Discordはボットが他人のメッセージにボタンを追加することを許可していません。代わりに **Post panel** で新しいパネルを公開してください (同じ埋め込みとボタンを喜んで再作成します)。"
+msgid ""
+"I can only add role buttons to a message I posted myself - Discord won't "
+"let a bot edit buttons onto someone else's message. Use **Post panel** to"
+" publish a fresh panel instead (I'll happily recreate the same embed and "
+"buttons there)."
+msgstr ""
+"私はロールボタンを自分が投稿したメッセージにのみ追加できます - "
+"Discordはボットが他人のメッセージにボタンを追加することを許可していません。代わりに **Post panel** "
+"で新しいパネルを公開してください (同じ埋め込みとボタンを喜んで再作成します)。"
 
 #: cogs/config/buttonroles.py:779
 msgid "I'm not allowed to edit that message."
@@ -3667,7 +3911,9 @@ msgstr "埋め込みコマンド: {name}"
 
 #: cogs/config/customcommands.py:348
 #, python-brace-format
-msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
+msgid ""
+"Design the embed this command will reply with, then **Save**. "
+"Placeholders: {placeholders}"
 msgstr "このコマンドが返信する埋め込みをデザインしてから、**Save** を押してください。プレースホルダー: {placeholders}"
 
 #: cogs/config/customcommands.py:354
@@ -3725,7 +3971,9 @@ msgid "Custom commands"
 msgstr "カスタムコマンド"
 
 #: cogs/config/customcommands.py:538
-msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
+msgid ""
+"Commands members run with the server prefix. Add a text or embed reply, "
+"or pick one to inspect and delete."
 msgstr "メンバーがサーバープレフィックスで実行するコマンドです。テキストまたは埋め込みの返信を追加するか、1つ選んで確認・削除してください。"
 
 #: cogs/config/customcommands.py:545
@@ -3970,8 +4218,12 @@ msgid "Role menu builder"
 msgstr "ロールメニュービルダー"
 
 #: cogs/config/rolemenus.py:507
-msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
-msgstr "提供するロールを選び、ルールを選択し、チャンネルを設定してから、**Post menu** を押してください。メンバーは1つのドロップダウンからロールを設定します。"
+msgid ""
+"Pick the roles to offer, choose the rule, set a channel, then **Post "
+"menu**. Members set their roles from a single dropdown."
+msgstr ""
+"提供するロールを選び、ルールを選択し、チャンネルを設定してから、**Post menu** "
+"を押してください。メンバーは1つのドロップダウンからロールを設定します。"
 
 #: cogs/config/rolemenus.py:515
 msgid "*None yet.*"
@@ -4046,7 +4298,9 @@ msgstr "このサーバーはDiscordのカテゴリ上限 {max} 個に達して�
 
 #: cogs/config/rooms.py:330
 #, python-brace-format
-msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
+msgid ""
+"This server is too close to Discord's {budget}-channel limit to add "
+"another hub."
 msgstr "このサーバーはDiscordの {budget} チャンネル上限に近すぎるため、これ以上ハブを追加できません。"
 
 #: cogs/config/rooms.py:341
@@ -4173,7 +4427,9 @@ msgid "## Autoroom hubs"
 msgstr "## 自動ルームハブ"
 
 #: cogs/config/rooms_config.py:372
-msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
+msgid ""
+"Join-to-create voice hubs. Members who join a hub get their own temp "
+"room, cleaned up when it empties."
 msgstr "参加で作成するボイスハブです。ハブに参加したメンバーは自分専用の一時ルームを取得し、空になると自動的に削除されます。"
 
 #: cogs/config/rooms_config.py:382
@@ -4195,7 +4451,9 @@ msgstr "ハブを追加"
 
 #: cogs/config/rooms_config.py:425
 #, python-brace-format
-msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
+msgid ""
+"-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - "
+"{used}/{budget} channels used"
 msgstr "-# {count}/{max_hubs} ハブ - ~{reserved} チャンネル予約 - {used}/{budget} チャンネル使用"
 
 #: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
@@ -4438,11 +4696,15 @@ msgid "Use `/autorole set <role>` to choose the role new members receive on join
 msgstr "`/autorole set <role>` を使って、新しいメンバーが参加時に受け取るロールを選びます。"
 
 #: cogs/config/settings.py:31
-msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
+msgid ""
+"Use `/automod` to open the interactive AutoMod control panel (custom + "
+"native filters)."
 msgstr "`/automod` を使って、インタラクティブなAutoMod管理パネル (カスタム + ネイティブフィルター) を開きます。"
 
 #: cogs/config/settings.py:35
-msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
+msgid ""
+"Use `/modlog` to open the interactive mod-log control panel (channel + "
+"event toggles)."
 msgstr "`/modlog` を使って、インタラクティブなモッドログ管理パネル (チャンネル + イベントの切り替え) を開きます。"
 
 #: cogs/config/settings.py:39
@@ -4451,8 +4713,12 @@ msgstr "`/starboard set <channel> [threshold]` を使ってスターボードを
 
 #: cogs/config/settings.py:42
 #, python-brace-format
-msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
-msgstr "`/welcome set <channel> <message>` を使ってウェルカムメッセージを設定します。プレースホルダー: {user}、{server}、{count}。"
+msgid ""
+"Use `/welcome set <channel> <message>` to configure welcome messages. "
+"Placeholders: {user}, {server}, {count}."
+msgstr ""
+"`/welcome set <channel> <message>` を使ってウェルカムメッセージを設定します。プレースホルダー: "
+"{user}、{server}、{count}。"
 
 #: cogs/config/settings.py:81
 msgid "Current state unknown"
@@ -4543,7 +4809,9 @@ msgid "Configuration"
 msgstr "設定"
 
 #: cogs/config/settings.py:240
-msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
+msgid ""
+"An overview of every feature for this server. Use the menu below to "
+"toggle **Leveling** or jump to a feature's setup command."
 msgstr "このサーバーのすべての機能の概要です。下のメニューを使って **レベリング** を切り替えるか、機能の設定コマンドに移動してください。"
 
 #: cogs/config/settings.py:245
@@ -4619,7 +4887,9 @@ msgid "Threshold"
 msgstr "しきい値"
 
 #: cogs/config/starboard.py:218
-msgid "Use the button below to pick the channel where starred messages should be posted and set the star threshold."
+msgid ""
+"Use the button below to pick the channel where starred messages should be"
+" posted and set the star threshold."
 msgstr "下のボタンを使って、スターが付いたメッセージを投稿するチャンネルを選び、スターのしきい値を設定してください。"
 
 #: cogs/config/starboard.py:223
@@ -4684,12 +4954,15 @@ msgstr "配信者のアバターURL。サムネイルや画像フィールドに
 #: cogs/config/twitch.py:57
 #, python-brace-format
 msgid ""
-"Drop any of these into your message, or into the embed's title, description, fields, author, or footer. They are filled in automatically the moment a watched member goes live.\n"
+"Drop any of these into your message, or into the embed's title, "
+"description, fields, author, or footer. They are filled in automatically "
+"the moment a watched member goes live.\n"
 "\n"
 "Example: `{mention} is now live playing {game}! Watch: {url}`\n"
 "Tip: pop {avatar} into Thumbnail for a clean look."
 msgstr ""
-"これらのいずれかをメッセージ、または埋め込みのタイトル、説明、フィールド、作成者、フッターに入れてください。監視中のメンバーが配信を開始した瞬間に自動的に埋め込まれます。\n"
+"これらのいずれかをメッセージ、または埋め込みのタイトル、説明、フィールド、作成者、フッターに入れてください。監視中のメンバーが配信を開始した瞬間に自動的に埋め込まれます。"
+"\n"
 "\n"
 "例: `{mention} is now live playing {game}! Watch: {url}`\n"
 "ヒント: {avatar} をサムネイルに入れるとすっきりした見た目になります。"
@@ -4739,8 +5012,13 @@ msgid "Twitch live alerts"
 msgstr "Twitchライブアラート"
 
 #: cogs/config/twitch.py:421
-msgid "Design the alert that fires when a watched member goes live on Twitch. Every change saves instantly - hit **Preview** to see it, and add streamers with `/twitch watch`."
-msgstr "監視中のメンバーがTwitchで配信を開始したときに発動するアラートをデザインしてください。すべての変更は即座に保存されます - **Preview** を押して確認し、`/twitch watch` で配信者を追加してください。"
+msgid ""
+"Design the alert that fires when a watched member goes live on Twitch. "
+"Every change saves instantly - hit **Preview** to see it, and add "
+"streamers with `/twitch watch`."
+msgstr ""
+"監視中のメンバーがTwitchで配信を開始したときに発動するアラートをデザインしてください。すべての変更は即座に保存されます - "
+"**Preview** を押して確認し、`/twitch watch` で配信者を追加してください。"
 
 #: cogs/config/twitch.py:435
 msgid "Live role"
@@ -4823,7 +5101,9 @@ msgid "Could not create the Live streamer role."
 msgstr "Live配信者ロールを作成できませんでした。"
 
 #: cogs/config/twitch.py:822
-msgid "Live streamer role created and linked. Move it to your preferred position in the role list."
+msgid ""
+"Live streamer role created and linked. Move it to your preferred position"
+" in the role list."
 msgstr "Live配信者ロールを作成して連携しました。ロールリストでお好みの位置に移動してください。"
 
 #: cogs/config/twitch.py:837
@@ -4943,8 +5223,12 @@ msgid "Manage welcome GIFs"
 msgstr "ウェルカムGIFを管理"
 
 #: cogs/config/welcome.py:301
-msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
-msgstr "ランダムプールに画像/GIFのURLを追加するか、下で削除してください。プールを使用するには、メインパネルで **Random GIF** をオンにしてください。"
+msgid ""
+"Add image/GIF URLs to the random pool, or remove one below. Turn on "
+"**Random GIF** on the main panel to use the pool."
+msgstr ""
+"ランダムプールに画像/GIFのURLを追加するか、下で削除してください。プールを使用するには、メインパネルで **Random GIF** "
+"をオンにしてください。"
 
 #: cogs/config/welcome.py:310
 #, python-brace-format
@@ -4969,8 +5253,12 @@ msgid "Welcome system"
 msgstr "ウェルカムシステム"
 
 #: cogs/config/welcome.py:431
-msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
-msgstr "新しいメンバーが受け取る挨拶をデザインしてください。下のメニューを使ってください。すべての変更は即座に保存されます。**Preview** を押してライブで確認してください。"
+msgid ""
+"Design the greeting new members receive. Use the menus below; every "
+"change saves instantly. Hit **Preview** to see it live."
+msgstr ""
+"新しいメンバーが受け取る挨拶をデザインしてください。下のメニューを使ってください。すべての変更は即座に保存されます。**Preview** "
+"を押してライブで確認してください。"
 
 #: cogs/config/welcome.py:441 cogs/config/welcome.py:572
 msgid "GIF pool"
@@ -5140,7 +5428,9 @@ msgid "*Message too long.*"
 msgstr "*メッセージが長すぎます。*"
 
 #: cogs/fun/fun.py:340
-msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
+msgid ""
+"**Please input text to convert to ascii art. Ex: ``<prefix> ascii "
+"stuff``**"
 msgstr "**アスキーアートに変換するテキストを入力してください。例: ``<prefix> ascii stuff``**"
 
 #: cogs/fun/fun.py:351
@@ -5421,7 +5711,10 @@ msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
 #: cogs/moderation/automod_panel.py:288
-msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
+msgid ""
+"Keeping the server tidy: Yasuho scans each message for the content "
+"filters, while Discord's native filters block matches before they are "
+"ever posted."
 msgstr "サーバーを綺麗に保つために、Yasuhoがコンテンツフィルターで各メッセージをスキャンし、Discordのネイティブフィルターは投稿前にブロックします。"
 
 #: cogs/moderation/automod_panel.py:299
@@ -5457,7 +5750,9 @@ msgid "Exempt channels"
 msgstr "除外チャンネル"
 
 #: cogs/moderation/automod_panel.py:339
-msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
+msgid ""
+"Members with an exempt role, and messages in an exempt channel, skip the "
+"content filters entirely."
 msgstr "除外ロールを持つメンバーと除外チャンネルのメッセージは、コンテンツフィルターの対象外です。"
 
 #: cogs/moderation/automod_panel.py:389
@@ -5465,7 +5760,9 @@ msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "ネイティブフィルターにはYasuhoにサーバー管理権限が必要です。"
 
 #: cogs/moderation/automod_panel.py:429
-msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
+msgid ""
+"Yasuho needs the **Manage Server** permission to change Discord's native "
+"filters."
 msgstr "Discordのネイティブフィルターを変更するには、Yasuhoに**サーバー管理**権限が必要です。"
 
 #: cogs/moderation/blacklist.py:42
@@ -5587,7 +5884,9 @@ msgid "Sorry, I couldn't ban that member."
 msgstr "申し訳ありませんが、そのメンバーをBANできませんでした。"
 
 #: cogs/moderation/moderation.py:584
-msgid "The temporary ban could not be scheduled and the rollback failed. Please unban that user manually."
+msgid ""
+"The temporary ban could not be scheduled and the rollback failed. Please "
+"unban that user manually."
 msgstr "一時BANのスケジュールに失敗し、ロールバックも失敗しました。そのユーザーを手動でBAN解除してください。"
 
 #: cogs/moderation/moderation.py:589
@@ -5716,7 +6015,9 @@ msgstr "一括ロール付与の確認"
 
 #: cogs/moderation/moderation.py:982
 #, python-brace-format
-msgid "Add the **{role}** role to **all** members of this server? This can take a while."
+msgid ""
+"Add the **{role}** role to **all** members of this server? This can take "
+"a while."
 msgstr "このサーバーの **すべて** のメンバーに **{role}** ロールを付与しますか? 時間がかかる場合があります。"
 
 #: cogs/moderation/moderation.py:1011
@@ -5735,7 +6036,9 @@ msgstr "一括ロール削除の確認"
 
 #: cogs/moderation/moderation.py:1043
 #, python-brace-format
-msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
+msgid ""
+"Remove the **{role}** role from **all** members of this server? This can "
+"take a while."
 msgstr "このサーバーの **すべて** のメンバーから **{role}** ロールを削除しますか? 時間がかかる場合があります。"
 
 #: cogs/moderation/moderation.py:1072
@@ -5814,7 +6117,9 @@ msgid "Mod-log settings"
 msgstr "モッドログ設定"
 
 #: cogs/moderation/modlog.py:198
-msgid "Choose where server events are logged and which events to record. Changes apply instantly."
+msgid ""
+"Choose where server events are logged and which events to record. Changes"
+" apply instantly."
 msgstr "サーバーイベントをどこに記録するか、どのイベントを記録するかを選んでください。変更は即座に適用されます。"
 
 #: cogs/moderation/modlog.py:206
@@ -5947,22 +6252,30 @@ msgstr "警告{count}回に到達 - キックしました"
 
 #: cogs/moderation/warn_config.py:115
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't time them out (check my permissions and role position)."
+msgid ""
+"{member} reached {count} warns, but I couldn't time them out (check my "
+"permissions and role position)."
 msgstr "{member}が警告{count}回に達しましたが、タイムアウトできませんでした (権限とロールの位置を確認してください)。"
 
 #: cogs/moderation/warn_config.py:120
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't ban them (check my permissions and role position)."
+msgid ""
+"{member} reached {count} warns, but I couldn't ban them (check my "
+"permissions and role position)."
 msgstr "{member}が警告{count}回に達しましたが、BANできませんでした (権限とロールの位置を確認してください)。"
 
 #: cogs/moderation/warn_config.py:124
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't kick them (check my permissions and role position)."
+msgid ""
+"{member} reached {count} warns, but I couldn't kick them (check my "
+"permissions and role position)."
 msgstr "{member}が警告{count}回に達しましたが、キックできませんでした (権限とロールの位置を確認してください)。"
 
 #: cogs/moderation/warn_config.py:134
 #, python-brace-format
-msgid "You reached {count} warns in {guild} and have been timed out for {duration}."
+msgid ""
+"You reached {count} warns in {guild} and have been timed out for "
+"{duration}."
 msgstr "{guild}で警告{count}回に達したため、{duration}のタイムアウトになりました。"
 
 #: cogs/moderation/warn_config.py:138
@@ -6032,11 +6345,15 @@ msgid "The number of warns must be between {min} and {max}."
 msgstr "警告数は{min}から{max}の間で入力してください。"
 
 #: cogs/moderation/warn_config.py:330
-msgid "I couldn't read that timeout duration - try something like \"10m\", \"1h\", or \"1d\"."
+msgid ""
+"I couldn't read that timeout duration - try something like \"10m\", "
+"\"1h\", or \"1d\"."
 msgstr "タイムアウト期間を読み取れませんでした。「10m」「1h」「1d」のような形式で入力してください。"
 
 #: cogs/moderation/warn_config.py:375
-msgid "**No escalation rules.** Warns are recorded, but no automatic action is taken. Add a rule below, or reset to the default."
+msgid ""
+"**No escalation rules.** Warns are recorded, but no automatic action is "
+"taken. Add a rule below, or reset to the default."
 msgstr "**エスカレーションルールなし。** 警告は記録されますが、自動アクションは行われません。下でルールを追加するか、デフォルトにリセットしてください。"
 
 #: cogs/moderation/warn_config.py:381
@@ -6054,7 +6371,9 @@ msgid "Warn escalation - {guild}"
 msgstr "警告エスカレーション - {guild}"
 
 #: cogs/moderation/warn_config.py:400
-msgid "Decide what happens as a member piles up warns: at each threshold Yasuho can time them out, kick, or ban them."
+msgid ""
+"Decide what happens as a member piles up warns: at each threshold Yasuho "
+"can time them out, kick, or ban them."
 msgstr "メンバーが警告を重ねたときの動作を設定します。各しきい値でYasuhoがタイムアウト、キック、またはBANできます。"
 
 #: cogs/moderation/warn_config.py:409
@@ -6063,7 +6382,10 @@ msgstr "現在のルール"
 
 #: cogs/moderation/warn_config.py:418
 #, python-brace-format
-msgid "A rule fires the moment a member's warn count lands exactly on its threshold, so editing rules never re-punishes past warns. Thresholds are unique; up to {max} rules."
+msgid ""
+"A rule fires the moment a member's warn count lands exactly on its "
+"threshold, so editing rules never re-punishes past warns. Thresholds are "
+"unique; up to {max} rules."
 msgstr "ルールはメンバーの警告数がちょうどしきい値に達した瞬間に発動するため、ルールを編集しても過去の警告が再処罰されることはありません。しきい値は一意で、最大{max}ルールです。"
 
 #: cogs/moderation/warn_config.py:493
@@ -6617,7 +6939,9 @@ msgstr "何も再生されていません。プレイリストを保存する前
 
 #: cogs/music/playlists_shared.py:427
 #, python-brace-format
-msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
+msgid ""
+"The queue is too long to save - a server playlist holds up to {max} "
+"tracks. Trim it and try again."
 msgstr "キューが長すぎて保存できません。サーバープレイリストは最大 {max} 曲までです。減らしてからお試しください。"
 
 #: cogs/music/playlists_shared.py:436 cogs/music/playlists_shared.py:461
@@ -6627,7 +6951,9 @@ msgstr "このサーバーはすでに上限の {max} 件のプレイリスト�
 
 #: cogs/music/playlists_shared.py:453 cogs/music/playlists_shared.py:678
 #, python-brace-format
-msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
+msgid ""
+"A playlist called **{name}** already exists here. Pick another name or "
+"delete it first."
 msgstr "**{name}** という名前のプレイリストはすでに存在します。別の名前にするか、先に削除してください。"
 
 #: cogs/music/playlists_shared.py:472
@@ -6663,7 +6989,9 @@ msgstr[0] " {skipped}曲は読み込めなかったためスキップされま�
 msgstr[1] " {skipped}曲は読み込めなかったためスキップされました。"
 
 #: cogs/music/playlists_shared.py:576
-msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
+msgid ""
+"This server has no saved playlists yet. Use `/serverplaylist save` to "
+"create one."
 msgstr "このサーバーにはまだプレイリストがありません。`/serverplaylist save` で作成できます。"
 
 #: cogs/music/playlists_shared.py:616 cogs/music/playlists_shared.py:652
@@ -6801,7 +7129,9 @@ msgid "### 🎵 Now Playing"
 msgstr "### 🎵 再生中"
 
 #: cogs/music/views.py:415
-msgid "✨ I'm keeping the music going with recommendations based on this session's listening. Tap Autoplay below to turn it off."
+msgid ""
+"✨ I'm keeping the music going with recommendations based on this "
+"session's listening. Tap Autoplay below to turn it off."
 msgstr "✨ このセッションの再生履歴をもとに、おすすめの曲で音楽を続けています。下のオートプレイをタップするとオフにできます。"
 
 #: cogs/music/views.py:432
@@ -6973,7 +7303,9 @@ msgid "Queue loop turned {state}."
 msgstr "キューのループを {state} にしました。"
 
 #: cogs/music/views.py:916
-msgid "Autoplay is on. I'll keep the music going with recommendations when the queue runs out."
+msgid ""
+"Autoplay is on. I'll keep the music going with recommendations when the "
+"queue runs out."
 msgstr "オートプレイがオンになりました。キューが空になったらおすすめの曲で音楽を続けます。"
 
 #: cogs/music/views.py:921
@@ -7298,7 +7630,8 @@ msgstr "**コマンドの実行中に問題が発生したようです:**"
 #: cogs/system/errors.py:60
 #, python-brace-format
 msgid ""
-":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
+":question: What to do: `Report this error identifier to the bot owner`: "
+"`{error_id}`\n"
 "{usage}"
 msgstr ""
 ":question: 対処法: `このエラーIDをボットの所有者に報告してください`: `{error_id}`\n"
@@ -7366,7 +7699,8 @@ msgstr "**引数が多すぎるようです:**"
 #: cogs/system/errors.py:257 cogs/system/errors.py:269
 #, python-brace-format
 msgid ""
-":question: What to do: `look at {prefix}help and try being more specific`\n"
+":question: What to do: `look at {prefix}help and try being more specific`"
+"\n"
 "{usage}"
 msgstr ""
 ":question: 対処法: `{prefix}help を見て、もっと具体的に指定してみてください`\n"
@@ -7385,7 +7719,9 @@ msgid "**Seems like I am missing permissions:**"
 msgstr "**私の権限が不足しているようです:**"
 
 #: cogs/system/events.py:139
-msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
+msgid ""
+"You are blacklisted from bot. You can ask to be unblacklisted by send a "
+"message to <@228895251576782858>"
 msgstr "あなたはボットのブラックリストに登録されています。<@228895251576782858> にメッセージを送って解除を依頼できます"
 
 #: cogs/system/help.py:62
@@ -7439,8 +7775,12 @@ msgstr "エイリアス"
 
 #: cogs/system/help.py:300
 #, python-brace-format
-msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
-msgstr "このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} <subcommand>` を使ってください。"
+msgid ""
+"This command has {count}. Toggle expansion in /preferences, or use "
+"`{prefix}help {group} <subcommand>`."
+msgstr ""
+"このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} "
+"<subcommand>` を使ってください。"
 
 #: cogs/system/help.py:305
 #, python-brace-format
@@ -7474,7 +7814,8 @@ msgstr "{bot} • ヘルプ"
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
 "\n"
-"Use the menu to jump to a category, the arrows to browse, or `{prefix}help <command>` for a specific command."
+"Use the menu to jump to a category, the arrows to browse, or "
+"`{prefix}help <command>` for a specific command."
 msgstr ""
 "こんにちは! 私は **{bot}** です、お手伝いします。💫\n"
 "\n"
@@ -7589,7 +7930,9 @@ msgid "- **Leveling**: XP, levels, and role rewards for your members."
 msgstr "- **レベル**: メンバーのためのXP、レベル、ロール報酬。"
 
 #: cogs/system/onboarding.py:172
-msgid "- **AniList & manga**: watch/reading lists, airing alerts, and new-chapter alerts."
+msgid ""
+"- **AniList & manga**: watch/reading lists, airing alerts, and new-"
+"chapter alerts."
 msgstr "- **AniList・マンガ**: 視聴リスト/読書リスト、放送アラート、新チャプター通知。"
 
 #: cogs/system/onboarding.py:175
@@ -7601,8 +7944,12 @@ msgid "Getting started"
 msgstr "はじめに"
 
 #: cogs/system/onboarding.py:183
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "`/config` を使うと、プレフィックス、オートロール、レベル、starboard、自動モデレーション、mod-log、ウェルカムメッセージを一か所で設定できます。"
+msgid ""
+"Use `/config` to set up prefixes, autorole, leveling, starboard, automod,"
+" mod-log, and welcome messages in one place."
+msgstr ""
+"`/config` を使うと、プレフィックス、オートロール、レベル、starboard、自動モデレーション、mod-"
+"log、ウェルカムメッセージを一か所で設定できます。"
 
 #: cogs/system/onboarding.py:186
 msgid "Use `/help` to browse every command."
@@ -8019,7 +8366,9 @@ msgid "Translation failed."
 msgstr "翻訳に失敗しました。"
 
 #: locales/command_strings.py:10
-msgid "A Discord timestamp to fire at, e.g. a <t:...> tag. Overrides the time in 'when'."
+msgid ""
+"A Discord timestamp to fire at, e.g. a <t:...> tag. Overrides the time in"
+" 'when'."
 msgstr "発動させたいDiscordタイムスタンプ、例えば <t:...> タグ。'when' の時刻より優先されます。"
 
 #: locales/command_strings.py:11
@@ -8055,11 +8404,15 @@ msgid "A song to search for and save (defaults to the current track)."
 msgstr "検索して保存する曲(未指定の場合は現在再生中の曲)。"
 
 #: locales/command_strings.py:19
-msgid "A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / -15."
+msgid ""
+"A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / "
+"-15."
 msgstr "タイムスタンプ (1:23 や 1:02:03)、秒数 (90)、または相対値 +30 / -15。"
 
 #: locales/command_strings.py:20
-msgid "Add a member to the live-alert watchlist (channel is an optional override)."
+msgid ""
+"Add a member to the live-alert watchlist (channel is an optional "
+"override)."
 msgstr "ライブ配信通知のウォッチリストにメンバーを追加します(チャンネルは任意で上書き可能)。"
 
 #: locales/command_strings.py:21
@@ -8391,7 +8744,9 @@ msgid "Move a role to the given position in the hierarchy."
 msgstr "ロールを指定した階層位置に移動します。"
 
 #: locales/command_strings.py:103
-msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
+msgid ""
+"Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no "
+"args opens a form)."
 msgstr "複数選択投票: quickpoll 質問 | 選択肢1 | 選択肢2 ...(引数なしの場合はフォームが開きます)。"
 
 #: locales/command_strings.py:104
@@ -9006,7 +9361,9 @@ msgstr "メッセージテンプレート、{user} {level} {guild} が使用可�
 
 #: locales/command_strings.py:256
 #, python-brace-format
-msgid "The message text (supports {mention} {user} {server} {count} {membercount})."
+msgid ""
+"The message text (supports {mention} {user} {server} {count} "
+"{membercount})."
 msgstr "メッセージ本文 ({mention} {user} {server} {count} {membercount} が使用可能)。"
 
 #: locales/command_strings.py:257
@@ -9202,7 +9559,9 @@ msgid "Watching/Reading, Completed, Planning, Paused, Dropped, or Repeating."
 msgstr "視聴中/読書中、完了、計画中、一時停止、中止、または再視聴中。"
 
 #: locales/command_strings.py:305
-msgid "What to remind you about (and when, e.g. '10m buy milk'). Blank opens a form."
+msgid ""
+"What to remind you about (and when, e.g. '10m buy milk'). Blank opens a "
+"form."
 msgstr "リマインドする内容と時間 (例: '10m buy milk')。空欄でフォームを開きます。"
 
 #: locales/command_strings.py:306
@@ -9398,7 +9757,9 @@ msgid "Run"
 msgstr "実行"
 
 #: tools/arg_completion.py:262
-msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
+msgid ""
+"Pick from the menus, use **Enter details** for the rest, then press "
+"**Run**."
 msgstr "メニューから選び、残りは **Enter details** で入力してから、**Run** を押してください。"
 
 #: tools/arg_completion.py:264

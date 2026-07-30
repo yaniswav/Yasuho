@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 13:16+0000\n"
+"POT-Creation-Date: 2026-07-30 14:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1904,14 +1904,14 @@ msgstr ""
 msgid "Accent colour"
 msgstr ""
 
-#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:684
+#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:866
 #: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
 #: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr ""
 
-#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:686
+#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:868
 #: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
 #: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
@@ -2812,7 +2812,7 @@ msgstr ""
 msgid "I sent your data export to you by direct message."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:236
+#: cogs/community/profile/connectors/cog.py:280
 #: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr ""
@@ -2835,80 +2835,80 @@ msgid ""
 "be undone."
 msgstr ""
 
-#: cogs/community/profile/cog.py:107
+#: cogs/community/profile/cog.py:212
 #, python-brace-format
 msgid ""
 "Only you can see this for now. Use `{prefix}profile visibility {section} "
 "server` to show it to the servers you share."
 msgstr ""
 
-#: cogs/community/profile/cog.py:148
+#: cogs/community/profile/cog.py:355
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr ""
 
-#: cogs/community/profile/cog.py:177 cogs/community/profile/cog.py:253
-#: cogs/community/profile/connectors/cog.py:104
-#: cogs/community/profile/views.py:147
+#: cogs/community/profile/cog.py:384 cogs/community/profile/cog.py:460
+#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr ""
 
-#: cogs/community/profile/cog.py:183
+#: cogs/community/profile/cog.py:390
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr ""
 
-#: cogs/community/profile/cog.py:193
+#: cogs/community/profile/cog.py:400
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr ""
 
-#: cogs/community/profile/cog.py:196 cogs/community/profile/views.py:134
+#: cogs/community/profile/cog.py:403 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr ""
 
-#: cogs/community/profile/cog.py:232
+#: cogs/community/profile/cog.py:439
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr ""
 
-#: cogs/community/profile/cog.py:241
-#: cogs/community/profile/connectors/cog.py:398
+#: cogs/community/profile/cog.py:448
+#: cogs/community/profile/connectors/cog.py:447
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr ""
 
-#: cogs/community/profile/cog.py:260
-#: cogs/community/profile/connectors/cog.py:416
+#: cogs/community/profile/cog.py:467
+#: cogs/community/profile/connectors/cog.py:465
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr ""
 
-#: cogs/community/profile/cog.py:264
-#: cogs/community/profile/connectors/cog.py:421
+#: cogs/community/profile/cog.py:471
+#: cogs/community/profile/connectors/cog.py:470
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr ""
 
-#: cogs/community/profile/cog.py:270
-#: cogs/community/profile/connectors/cog.py:428
+#: cogs/community/profile/cog.py:477
+#: cogs/community/profile/connectors/cog.py:477
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr ""
 
-#: cogs/community/profile/cog.py:283
+#: cogs/community/profile/cog.py:490
 msgid "Click below to edit a profile field:"
 msgstr ""
 
-#: cogs/community/profile/cog.py:312
+#: cogs/community/profile/cog.py:519
 msgid "Failed to clear your profile, please try again later."
 msgstr ""
 
-#: cogs/community/profile/cog.py:316
+#: cogs/community/profile/cog.py:523
 msgid "Profile cleared"
 msgstr ""
 
-#: cogs/community/profile/cog.py:317
+#: cogs/community/profile/cog.py:524
 msgid "Your profile has been cleared."
 msgstr ""
 
@@ -2940,11 +2940,11 @@ msgstr ""
 msgid "Pronouns"
 msgstr ""
 
-#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:454
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:600
 msgid "Custom fields"
 msgstr ""
 
-#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:460
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:606
 msgid "Gaming IDs"
 msgstr ""
 
@@ -2972,163 +2972,261 @@ msgstr ""
 msgid "Spotify"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:152
-#: cogs/community/profile/views.py:60
+#: cogs/community/profile/connectors/cog.py:194
+#: cogs/community/profile/views.py:67
 #, python-brace-format
 msgid "That value is too long (max {limit} characters)."
 msgstr ""
 
-#: cogs/community/profile/views.py:64
+#: cogs/community/profile/views.py:71
 msgid "That is not a valid colour. Use a hex colour like #5865F2."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:162
-#: cogs/community/profile/views.py:65
+#: cogs/community/profile/connectors/cog.py:204
+#: cogs/community/profile/views.py:72
 msgid "That value is not valid for this field."
 msgstr ""
 
-#: cogs/community/profile/views.py:102
+#: cogs/community/profile/views.py:109
 msgid "Edit your profile"
 msgstr ""
 
-#: cogs/community/profile/views.py:107
+#: cogs/community/profile/views.py:114
 msgid "Field"
 msgstr ""
 
-#: cogs/community/profile/views.py:113
+#: cogs/community/profile/views.py:120
 msgid "Value"
 msgstr ""
 
-#: cogs/community/profile/views.py:121
+#: cogs/community/profile/views.py:128
 msgid "Pick a field and enter a value."
 msgstr ""
 
-#: cogs/community/profile/views.py:131
+#: cogs/community/profile/views.py:138
 msgid "Unknown field."
 msgstr ""
 
-#: cogs/community/profile/views.py:384
+#: cogs/community/profile/views.py:503
 msgid "Linked"
 msgstr ""
 
-#: cogs/community/profile/views.py:470
+#: cogs/community/profile/views.py:618
 msgid "This profile is too long to show in full."
 msgstr ""
 
-#: cogs/community/profile/views.py:521 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:699 cogs/config/rooms_config.py:207
 msgid "Public"
 msgstr ""
 
-#: cogs/community/profile/views.py:522
+#: cogs/community/profile/views.py:700
 msgid "Server"
 msgstr ""
 
-#: cogs/community/profile/views.py:523 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:701 cogs/config/rooms_config.py:204
 msgid "Private"
 msgstr ""
 
-#: cogs/community/profile/views.py:591
+#: cogs/community/profile/views.py:769
 msgid "Edit a gaming ID..."
 msgstr ""
 
-#: cogs/community/profile/views.py:653
+#: cogs/community/profile/views.py:835
 msgid "Profile visibility"
 msgstr ""
 
-#: cogs/community/profile/views.py:656
+#: cogs/community/profile/views.py:838
 msgid ""
 "Choose who can see each part of your profile: public (anyone), server "
 "(members of servers you share), or private (only you)."
 msgstr ""
 
-#: cogs/community/profile/views.py:665
+#: cogs/community/profile/views.py:847
 msgid "Current visibility"
 msgstr ""
 
-#: cogs/community/profile/views.py:732
+#: cogs/community/profile/views.py:914
 msgid "Something went wrong updating your profile visibility."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:69
+#: cogs/community/profile/connectors/anilist.py:205
+msgid "your AniList username"
+msgstr ""
+
+#: cogs/community/profile/connectors/anilist.py:269
+#, python-brace-format
+msgid "Anime: {count} - {hours}h watched, mean score {score}"
+msgstr ""
+
+#: cogs/community/profile/connectors/anilist.py:279
+#, python-brace-format
+msgid "Manga: {count} - {chapters} chapters read, mean score {score}"
+msgstr ""
+
+#: cogs/community/profile/connectors/anilist.py:290
+#: cogs/community/profile/connectors/backloggd.py:532
+#, python-brace-format
+msgid "Favourites: {titles}"
+msgstr ""
+
+#: cogs/community/profile/connectors/backloggd.py:443
+msgid "your Backloggd username"
+msgstr ""
+
+#: cogs/community/profile/connectors/backloggd.py:494
+#, python-brace-format
+msgid "{count} played"
+msgstr ""
+
+#: cogs/community/profile/connectors/backloggd.py:496
+#, python-brace-format
+msgid "{count} backlogged"
+msgstr ""
+
+#: cogs/community/profile/connectors/backloggd.py:536
+#: cogs/community/profile/connectors/steam.py:332
+#, python-brace-format
+msgid "Recently played: {names}"
+msgstr ""
+
+#: cogs/community/profile/connectors/cog.py:77
 #, python-brace-format
 msgid "Linked as {name} - visible to anyone"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:71
+#: cogs/community/profile/connectors/cog.py:79
 #, python-brace-format
 msgid "Linked as {name} - visible to the servers you share"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:74
+#: cogs/community/profile/connectors/cog.py:82
 #, python-brace-format
 msgid "Linked as {name} - visible to you only"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:111
+#: cogs/community/profile/connectors/cog.py:153
 #, python-brace-format
 msgid "Unknown connection. Choose: {options}"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:131
+#: cogs/community/profile/connectors/cog.py:173
 #, python-brace-format
 msgid ""
 "Only you can see this for now. Use `{command}` to show it to the servers "
 "you share."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:139
+#: cogs/community/profile/connectors/cog.py:181
 msgid "That connection is not available yet - it is coming soon."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:143
+#: cogs/community/profile/connectors/cog.py:185
 msgid "That connection is not set up on this bot yet. Ask an admin."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/connectors/cog.py:188
 msgid "That service is not answering right now, please try again later."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:156
+#: cogs/community/profile/connectors/cog.py:198
 msgid "No account was found with that name."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:159
+#: cogs/community/profile/connectors/cog.py:201
 #, python-brace-format
 msgid "That does not look right. Enter {hint}."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:175
+#: cogs/community/profile/connectors/cog.py:217
 msgid "Your connections"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:183
+#: cogs/community/profile/connectors/cog.py:225
 msgid "Coming soon"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:185
+#: cogs/community/profile/connectors/cog.py:227
 msgid "Not linked"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:246
+#: cogs/community/profile/connectors/cog.py:290
 msgid "I sent your connections to you by direct message."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:311
+#: cogs/community/profile/connectors/cog.py:360
 msgid "Connection linked"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:313
+#: cogs/community/profile/connectors/cog.py:362
 msgid "Connection updated"
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:369
+#: cogs/community/profile/connectors/cog.py:418
 #, python-brace-format
 msgid "{field} was not linked."
 msgstr ""
 
-#: cogs/community/profile/connectors/cog.py:374
+#: cogs/community/profile/connectors/cog.py:423
 #, python-brace-format
 msgid "{field} is unlinked and hidden again."
+msgstr ""
+
+#: cogs/community/profile/connectors/lastfm.py:313
+msgid "your Last.fm username"
+msgstr ""
+
+#: cogs/community/profile/connectors/lastfm.py:371
+#, python-brace-format
+msgid "{count} scrobble"
+msgid_plural "{count} scrobbles"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/profile/connectors/lastfm.py:383
+#, python-brace-format
+msgid "Top artists (past month): {names}"
+msgstr ""
+
+#: cogs/community/profile/connectors/lastfm.py:393
+#, python-brace-format
+msgid "Now scrobbling: {track}"
+msgstr ""
+
+#: cogs/community/profile/connectors/lastfm.py:395
+#, python-brace-format
+msgid "Last scrobble: {track}"
+msgstr ""
+
+#: cogs/community/profile/connectors/osu.py:159
+msgid "your osu! username"
+msgstr ""
+
+#: cogs/community/profile/connectors/osu.py:220
+#, python-brace-format
+msgid "Rank #{rank} - {pp} pp"
+msgstr ""
+
+#: cogs/community/profile/connectors/osu.py:227
+#, python-brace-format
+msgid "Accuracy {accuracy}% - level {level}"
+msgstr ""
+
+#: cogs/community/profile/connectors/osu.py:234
+#, python-brace-format
+msgid "Country: {country}"
+msgstr ""
+
+#: cogs/community/profile/connectors/steam.py:247
+msgid "your SteamID64 or your steamcommunity.com/id/ name"
+msgstr ""
+
+#: cogs/community/profile/connectors/steam.py:325
+msgid "This Steam profile is private."
+msgstr ""
+
+#: cogs/community/profile/connectors/steam.py:344
+#, python-brace-format
+msgid "Owns {count} games"
 msgstr ""
 
 #: cogs/community/serverstats/views.py:172

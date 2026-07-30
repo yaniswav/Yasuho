@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 13:16+0000\n"
+"POT-Creation-Date: 2026-07-30 14:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -65,12 +65,14 @@ msgid ""
 "Authorize the bot here:\n"
 "{authorize_url}\n"
 "\n"
-"Authorize, copy the code AniList shows you, then press **Enter code** below (or run `/anilist code <code>`)."
+"Authorize, copy the code AniList shows you, then press **Enter code** "
+"below (or run `/anilist code <code>`)."
 msgstr ""
 "Autoriza al bot aquí:\n"
 "{authorize_url}\n"
 "\n"
-"Autoriza el acceso, copia el código que te muestra AniList y luego pulsa **Enter code** abajo (o ejecuta `/anilist code <code>`)."
+"Autoriza el acceso, copia el código que te muestra AniList y luego pulsa "
+"**Enter code** abajo (o ejecuta `/anilist code <code>`)."
 
 #: cogs/anilist/account.py:246
 msgid "No AniList user found."
@@ -112,8 +114,12 @@ msgid "Your AniList account has been unlinked."
 msgstr "Tu cuenta de AniList ha sido desvinculada."
 
 #: cogs/anilist/account.py:361 cogs/anilist/account.py:583
-msgid "Status must be one of: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
-msgstr "El estado debe ser uno de los siguientes: Viendo/Leyendo, Completado, Planeado, Pausado, Abandonado, Repitiendo."
+msgid ""
+"Status must be one of: Watching/Reading, Completed, Planning, Paused, "
+"Dropped, Repeating."
+msgstr ""
+"El estado debe ser uno de los siguientes: Viendo/Leyendo, Completado, "
+"Planeado, Pausado, Abandonado, Repitiendo."
 
 #: cogs/anilist/account.py:377
 msgid "Score must be zero or a positive number."
@@ -132,14 +138,18 @@ msgstr "El tipo de medio debe ser `anime` o `manga`."
 #: cogs/anilist/feed_delivery.py:387 cogs/anilist/feed_delivery.py:509
 #: cogs/anilist/feed_delivery.py:553 cogs/anilist/feed_delivery.py:659
 msgid "AniList is rate limiting me right now - try again shortly."
-msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un momento."
+msgstr ""
+"AniList me está limitando la frecuencia de peticiones ahora mismo - "
+"inténtalo de nuevo en un momento."
 
 #: cogs/anilist/airing.py:310 cogs/anilist/airing.py:356
 #: cogs/anilist/chapters.py:525 cogs/anilist/chapters.py:571
 #: cogs/anilist/feed_delivery.py:393 cogs/anilist/feed_delivery.py:515
 #: cogs/anilist/feed_delivery.py:559 cogs/anilist/feed_delivery.py:665
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
-msgstr "Tu vinculación de AniList parece inválida ahora - vuelve a vincularla con `/anilist login`."
+msgstr ""
+"Tu vinculación de AniList parece inválida ahora - vuelve a vincularla con"
+" `/anilist login`."
 
 #: cogs/anilist/airing.py:316 cogs/anilist/airing.py:326
 #: cogs/anilist/airing.py:362 cogs/anilist/chapters.py:531
@@ -192,32 +202,52 @@ msgid "AniList"
 msgstr "AniList"
 
 #: cogs/anilist/airing.py:523
-msgid "Airing alerts are now **off**. I will not DM you about new episodes anymore - run this again to turn them back on."
-msgstr "Las alertas de emisión ahora están **desactivadas**. Ya no te enviaré mensajes privados sobre nuevos episodios - ejecuta esto de nuevo para volver a activarlas."
+msgid ""
+"Airing alerts are now **off**. I will not DM you about new episodes "
+"anymore - run this again to turn them back on."
+msgstr ""
+"Las alertas de emisión ahora están **desactivadas**. Ya no te enviaré "
+"mensajes privados sobre nuevos episodios - ejecuta esto de nuevo para "
+"volver a activarlas."
 
 #: cogs/anilist/airing.py:534
-msgid "Link your AniList account first with `/anilist login`, then run this again to turn on airing alerts."
-msgstr "Vincula tu cuenta de AniList primero con `/anilist login`, luego ejecuta esto de nuevo para activar las alertas de emisión."
+msgid ""
+"Link your AniList account first with `/anilist login`, then run this "
+"again to turn on airing alerts."
+msgstr ""
+"Vincula tu cuenta de AniList primero con `/anilist login`, luego ejecuta "
+"esto de nuevo para activar las alertas de emisión."
 
 #: cogs/anilist/airing.py:542 cogs/anilist/chapters.py:775
 #: cogs/anilist/feed.py:1567 cogs/anilist/feed_delivery.py:348
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
-msgstr "Tu vinculación de AniList ya no es válida - vuelve a vincularla con `/anilist login`."
+msgstr ""
+"Tu vinculación de AniList ya no es válida - vuelve a vincularla con "
+"`/anilist login`."
 
 #: cogs/anilist/airing.py:553 cogs/anilist/chapters.py:786
 msgid "Could not resolve your AniList account - try again shortly."
-msgstr "No se pudo encontrar tu cuenta de AniList - inténtalo de nuevo en un momento."
+msgstr ""
+"No se pudo encontrar tu cuenta de AniList - inténtalo de nuevo en un "
+"momento."
 
 #: cogs/anilist/airing.py:580
-msgid "-# Heads up: I could not see any titles on your Watching list. Make sure your AniList anime list is set to public."
-msgstr "-# Aviso: no pude ver ningún título en tu lista Viendo. Asegúrate de que tu lista de anime de AniList esté configurada como pública."
+msgid ""
+"-# Heads up: I could not see any titles on your Watching list. Make sure "
+"your AniList anime list is set to public."
+msgstr ""
+"-# Aviso: no pude ver ningún título en tu lista Viendo. Asegúrate de que "
+"tu lista de anime de AniList esté configurada como pública."
 
 #: cogs/anilist/airing.py:586
 msgid ""
-"Airing alerts are now **on**. I will DM you when a new episode of a title on your **Watching** anime list airs, with a one-click Seen button.\n"
+"Airing alerts are now **on**. I will DM you when a new episode of a title"
+" on your **Watching** anime list airs, with a one-click Seen button.\n"
 "-# Your AniList anime list must be public for this to work."
 msgstr ""
-"Las alertas de emisión ahora están **activadas**. Te enviaré un mensaje privado cuando se estrene un nuevo episodio de un título en tu lista de anime **Viendo**, con un botón Visto de un solo clic.\n"
+"Las alertas de emisión ahora están **activadas**. Te enviaré un mensaje "
+"privado cuando se estrene un nuevo episodio de un título en tu lista de "
+"anime **Viendo**, con un botón Visto de un solo clic.\n"
 "-# Tu lista de anime de AniList debe ser pública para que esto funcione."
 
 #: cogs/anilist/base.py:307
@@ -354,23 +384,39 @@ msgid "MangaDex"
 msgstr "MangaDex"
 
 #: cogs/anilist/chapters.py:756
-msgid "Chapter alerts are now **off**. I will not DM you about new chapters anymore - run this again to turn them back on."
-msgstr "Las alertas de capítulos ahora están **desactivadas**. Ya no te enviaré MD sobre nuevos capítulos - vuelve a ejecutar esto para reactivarlas."
+msgid ""
+"Chapter alerts are now **off**. I will not DM you about new chapters "
+"anymore - run this again to turn them back on."
+msgstr ""
+"Las alertas de capítulos ahora están **desactivadas**. Ya no te enviaré "
+"MD sobre nuevos capítulos - vuelve a ejecutar esto para reactivarlas."
 
 #: cogs/anilist/chapters.py:767
-msgid "Link your AniList account first with `/anilist login`, then run this again to turn on chapter alerts."
-msgstr "Vincula primero tu cuenta de AniList con `/anilist login`, y luego vuelve a ejecutar esto para activar las alertas de capítulos."
+msgid ""
+"Link your AniList account first with `/anilist login`, then run this "
+"again to turn on chapter alerts."
+msgstr ""
+"Vincula primero tu cuenta de AniList con `/anilist login`, y luego vuelve"
+" a ejecutar esto para activar las alertas de capítulos."
 
 #: cogs/anilist/chapters.py:813
-msgid "-# Heads up: I could not see any titles on your Reading list. Make sure your AniList manga list is set to public."
-msgstr "-# Aviso: no he podido ver ningún título en tu lista Reading. Asegúrate de que tu lista de manga en AniList sea pública."
+msgid ""
+"-# Heads up: I could not see any titles on your Reading list. Make sure "
+"your AniList manga list is set to public."
+msgstr ""
+"-# Aviso: no he podido ver ningún título en tu lista Reading. Asegúrate "
+"de que tu lista de manga en AniList sea pública."
 
 #: cogs/anilist/chapters.py:819
 msgid ""
-"Chapter alerts are now **on**. I will DM you when a new chapter of a title on your **Reading** manga list drops, with a one-click Read button.\n"
+"Chapter alerts are now **on**. I will DM you when a new chapter of a "
+"title on your **Reading** manga list drops, with a one-click Read button."
+"\n"
 "-# Your AniList manga list must be public for this to work."
 msgstr ""
-"Las alertas de capítulos ahora están **activadas**. Te enviaré un MD cuando salga un nuevo capítulo de un título de tu lista de manga **Reading**, con un botón Leer de un solo clic.\n"
+"Las alertas de capítulos ahora están **activadas**. Te enviaré un MD "
+"cuando salga un nuevo capítulo de un título de tu lista de manga "
+"**Reading**, con un botón Leer de un solo clic.\n"
 "-# Tu lista de manga en AniList debe ser pública para que esto funcione."
 
 #: cogs/anilist/collection.py:52 cogs/anilist/collection.py:336
@@ -512,8 +558,12 @@ msgid "Could not reach your AniList account."
 msgstr "No pude conectar con tu cuenta de AniList."
 
 #: cogs/anilist/components.py:48 cogs/anilist/feed_delivery.py:311
-msgid "Slow down a little - too many AniList requests right now. Give it a few seconds and try again."
-msgstr "Más despacio - demasiadas peticiones a AniList ahora mismo. Espera unos segundos y vuelve a intentarlo."
+msgid ""
+"Slow down a little - too many AniList requests right now. Give it a few "
+"seconds and try again."
+msgstr ""
+"Más despacio - demasiadas peticiones a AniList ahora mismo. Espera unos "
+"segundos y vuelve a intentarlo."
 
 #: cogs/anilist/components.py:82
 msgid "Pick a title..."
@@ -577,7 +627,9 @@ msgstr "La puntuación debe ser un número dentro del rango {hint}."
 
 #: cogs/anilist/components.py:366
 msgid "Nothing to update - pick a status or fill in progress/score."
-msgstr "No hay nada que actualizar - elige un estado o rellena el progreso/puntuación."
+msgstr ""
+"No hay nada que actualizar - elige un estado o rellena el "
+"progreso/puntuación."
 
 #: cogs/anilist/components.py:399
 #, python-brace-format
@@ -677,7 +729,9 @@ msgstr "No hay recomendaciones."
 
 #: cogs/anilist/components.py:894
 msgid "🔗 Link your AniList with `/anilist login` to see your personal stats."
-msgstr "🔗 Vincula tu AniList con `/anilist login` para ver tus estadísticas personales."
+msgstr ""
+"🔗 Vincula tu AniList con `/anilist login` para ver tus estadísticas "
+"personales."
 
 #: cogs/anilist/components.py:898
 msgid "Not on your list yet."
@@ -826,7 +880,9 @@ msgstr "Dame un nombre de usuario de AniList para seguir."
 
 #: cogs/anilist/feed.py:1246 cogs/anilist/feed.py:1259
 msgid "AniList is rate limiting me right now - try again in a minute."
-msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un minuto."
+msgstr ""
+"AniList me está limitando la frecuencia de peticiones ahora mismo - "
+"inténtalo de nuevo en un minuto."
 
 #: cogs/anilist/feed.py:1277
 #, python-brace-format
@@ -839,23 +895,35 @@ msgid "This feed already follows the maximum of {max} users."
 msgstr "Este feed ya sigue al máximo de {max} usuarios."
 
 #: cogs/anilist/feed.py:1382
-msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
-msgstr "Este servidor no tiene ningún feed de AniList activo. Crea uno o vuelve a activarlo primero con `/anilistfeed set`."
+msgid ""
+"This server has no active AniList feed. Create or re-enable one with "
+"`/anilistfeed set` first."
+msgstr ""
+"Este servidor no tiene ningún feed de AniList activo. Crea uno o vuelve a"
+" activarlo primero con `/anilistfeed set`."
 
 #: cogs/anilist/feed.py:1393
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
-msgstr "Este servidor tiene varios feeds. Ejecuta esto en un canal de feed ({channels})."
+msgstr ""
+"Este servidor tiene varios feeds. Ejecuta esto en un canal de feed "
+"({channels})."
 
 #: cogs/anilist/feed.py:1440
 #, python-brace-format
-msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
-msgstr "Este servidor ya tiene el máximo de {max} feeds. Quita uno primero con `/anilistfeed remove`."
+msgid ""
+"This server already has the maximum of {max} feeds. Remove one with "
+"`/anilistfeed remove` first."
+msgstr ""
+"Este servidor ya tiene el máximo de {max} feeds. Quita uno primero con "
+"`/anilistfeed remove`."
 
 #: cogs/anilist/feed.py:1450
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
-msgstr "Feed de AniList creado en {channel}. Añade usuarios con `/anilistfeed follow`."
+msgstr ""
+"Feed de AniList creado en {channel}. Añade usuarios con `/anilistfeed "
+"follow`."
 
 #: cogs/anilist/feed.py:1460
 #, python-brace-format
@@ -889,8 +957,12 @@ msgid "Unfollowed **{name}**."
 msgstr "Dejaste de seguir a **{name}**."
 
 #: cogs/anilist/feed.py:1549
-msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
-msgstr "Este feed no permite que los miembros se unan por su cuenta. Pide a un moderador que active **Los miembros pueden unirse** en `/anilistfeed`."
+msgid ""
+"This feed does not let members join themselves. Ask a moderator to turn "
+"on **Members can join** in `/anilistfeed`."
+msgstr ""
+"Este feed no permite que los miembros se unan por su cuenta. Pide a un "
+"moderador que active **Los miembros pueden unirse** en `/anilistfeed`."
 
 #: cogs/anilist/feed.py:1557 cogs/anilist/feed_delivery.py:330
 msgid "AniList actions are unavailable right now."
@@ -916,7 +988,9 @@ msgstr "Te has unido al feed de AniList en <#{channel}>."
 
 #: cogs/anilist/feed.py:1614
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
-msgstr "Este servidor todavía no tiene un feed de AniList. Crea uno con `/anilistfeed set`."
+msgstr ""
+"Este servidor todavía no tiene un feed de AniList. Crea uno con "
+"`/anilistfeed set`."
 
 #: cogs/anilist/feed.py:1636
 msgid "none"
@@ -969,8 +1043,12 @@ msgid "You are clicking too fast - give it a moment."
 msgstr "Estás haciendo clic demasiado rápido - espera un momento."
 
 #: cogs/anilist/feed_delivery.py:339
-msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
-msgstr "Vincula tu cuenta de AniList primero con `/anilist login`, luego podrás dar me gusta y responder directamente desde el feed."
+msgid ""
+"Link your AniList account first with `/anilist login`, then you can like "
+"and reply straight from the feed."
+msgstr ""
+"Vincula tu cuenta de AniList primero con `/anilist login`, luego podrás "
+"dar me gusta y responder directamente desde el feed."
 
 #: cogs/anilist/feed_delivery.py:399 cogs/anilist/feed_delivery.py:671
 msgid "This activity no longer exists on AniList."
@@ -1254,8 +1332,13 @@ msgstr "Lanzamientos seguidos"
 
 #: cogs/anilist/feed_views.py:592
 #, python-brace-format
-msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
-msgstr "Los nuevos episodios (anime) y capítulos (manga) de estos títulos se publican en {channel}, independientemente de las alertas por mensajes directos. Hasta {max} títulos por feed."
+msgid ""
+"New episodes (anime) and chapters (manga) of these titles are posted in "
+"{channel}, independently of any DM alerts. Up to {max} titles per feed."
+msgstr ""
+"Los nuevos episodios (anime) y capítulos (manga) de estos títulos se "
+"publican en {channel}, independientemente de las alertas por mensajes "
+"directos. Hasta {max} títulos por feed."
 
 #: cogs/anilist/feed_views.py:604
 msgid "No titles tracked yet."
@@ -1302,8 +1385,12 @@ msgstr "¿Eliminar este feed?"
 
 #: cogs/anilist/feed_views.py:745
 #, python-brace-format
-msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
-msgstr "Esto elimina permanentemente el feed de AniList en {channel} y a todos a quienes sigue. Esto no se puede deshacer."
+msgid ""
+"This permanently deletes the AniList feed in {channel} and everyone it "
+"follows. This cannot be undone."
+msgstr ""
+"Esto elimina permanentemente el feed de AniList en {channel} y a todos a "
+"quienes sigue. Esto no se puede deshacer."
 
 #: cogs/anilist/feed_views.py:760
 msgid "Feed deleted."
@@ -1345,8 +1432,12 @@ msgstr "Feed de actividad de AniList"
 
 #: cogs/anilist/feed_views.py:1010
 #, python-brace-format
-msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
-msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo para crear uno (hasta {max} por servidor)."
+msgid ""
+"This server has no AniList feed yet. Pick a channel below to create one "
+"(up to {max} per server)."
+msgstr ""
+"Este servidor todavía no tiene un feed de AniList. Elige un canal abajo "
+"para crear uno (hasta {max} por servidor)."
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
 #: cogs/config/twitch.py:412 cogs/config/verification.py:100
@@ -1368,8 +1459,12 @@ msgid "{status} ({count} recent failures)"
 msgstr "{status} ({count} fallos recientes)"
 
 #: cogs/anilist/feed_views.py:1037
-msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
-msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
+msgid ""
+"Configure how AniList activity is mirrored into this server. Every change"
+" saves instantly."
+msgstr ""
+"Configura cómo se refleja la actividad de AniList en este servidor. Cada "
+"cambio se guarda al instante."
 
 #: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
@@ -1603,7 +1698,9 @@ msgstr[1] "el XP de {count} miembros"
 #: cogs/community/level_admin.py:149
 #, python-brace-format
 msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
-msgstr "XP de **{guild}** restablecido: se borraron {members} y todas las clasificaciones por período."
+msgstr ""
+"XP de **{guild}** restablecido: se borraron {members} y todas las "
+"clasificaciones por período."
 
 #: cogs/community/level_admin.py:156
 msgid "Something went wrong resetting XP."
@@ -1660,8 +1757,10 @@ msgstr ""
 "- `/levelconfig xp give <miembro> <cantidad>` - añadir XP\n"
 "- `/levelconfig xp take <miembro> <cantidad>` - quitar XP\n"
 "- `/levelconfig xp set <miembro> <cantidad>` - fijar un total exacto\n"
-"- `/levelconfig xp reset <miembro>` - restablecer a un miembro (confirmación)\n"
-"- `/levelconfig xp resetall` - restablecer todo el servidor (doble confirmación)"
+"- `/levelconfig xp reset <miembro>` - restablecer a un miembro "
+"(confirmación)\n"
+"- `/levelconfig xp resetall` - restablecer todo el servidor (doble "
+"confirmación)"
 
 #: cogs/community/level_admin.py:392 cogs/community/level_admin.py:405
 #, python-brace-format
@@ -1679,8 +1778,12 @@ msgstr "¿Restablecer el XP de este miembro?"
 
 #: cogs/community/level_admin.py:430
 #, python-brace-format
-msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
-msgstr "El XP de {member} vuelve a **0** y desaparece de la clasificación. No se puede deshacer."
+msgid ""
+"This resets {member}'s XP to **0** and removes them from the leaderboard."
+" This can't be undone."
+msgstr ""
+"El XP de {member} vuelve a **0** y desaparece de la clasificación. No se "
+"puede deshacer."
 
 #: cogs/community/level_admin.py:445
 msgid "Reset ALL XP in this server?"
@@ -1689,11 +1792,13 @@ msgstr "¿Restablecer TODO el XP de este servidor?"
 #: cogs/community/level_admin.py:447
 #, python-brace-format
 msgid ""
-"This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
+"This wipes **every** member's XP and every weekly/monthly leaderboard for"
+" **{guild}**. This can't be undone.\n"
 "\n"
 "Press the button below, then type the server name to confirm."
 msgstr ""
-"Borra el XP de **todos** los miembros y todas las clasificaciones semanales/mensuales de **{guild}**. No se puede deshacer.\n"
+"Borra el XP de **todos** los miembros y todas las clasificaciones "
+"semanales/mensuales de **{guild}**. No se puede deshacer.\n"
 "\n"
 "Pulsa el botón de abajo y escribe el nombre del servidor para confirmar."
 
@@ -1763,12 +1868,18 @@ msgstr "El multiplicador debe ser un número simple."
 #: cogs/community/level_config_ui.py:130
 #, python-brace-format
 msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
-msgstr "El multiplicador debe estar entre {min} y {max} (0 silencia el XP por completo)."
+msgstr ""
+"El multiplicador debe estar entre {min} y {max} (0 silencia el XP por "
+"completo)."
 
 #: cogs/community/level_config_ui.py:145
 #, python-brace-format
-msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
-msgstr "El evento debe durar entre 1 minuto y {max_days} días (p. ej. \"2h\" o \"3d\")."
+msgid ""
+"The event must last between 1 minute and {max_days} days (e.g. \"2h\" or "
+"\"3d\")."
+msgstr ""
+"El evento debe durar entre 1 minuto y {max_days} días (p. ej. \"2h\" o "
+"\"3d\")."
 
 #: cogs/community/level_config_ui.py:149
 msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
@@ -1787,7 +1898,9 @@ msgstr "(eliminado)"
 
 #: cogs/community/level_config_ui.py:196
 msgid "No XP event running. Use `/levelconfig event set` to start one."
-msgstr "No hay ningún evento de XP en curso. Usa `/levelconfig event set` para iniciar uno."
+msgstr ""
+"No hay ningún evento de XP en curso. Usa `/levelconfig event set` para "
+"iniciar uno."
 
 #: cogs/community/level_config_ui.py:197
 #, python-brace-format
@@ -1801,19 +1914,29 @@ msgstr "Esa imagen es demasiado grande - el límite es de {mb} MB."
 
 #: cogs/community/level_config_ui.py:253
 msgid "That image has too many pixels to process safely - try a smaller picture."
-msgstr "Esa imagen tiene demasiados píxeles para procesarla de forma segura - prueba con una imagen más pequeña."
+msgstr ""
+"Esa imagen tiene demasiados píxeles para procesarla de forma segura - "
+"prueba con una imagen más pequeña."
 
 #: cogs/community/level_config_ui.py:257
 msgid "Only PNG, JPEG, and WebP images are supported."
 msgstr "Solo se admiten imágenes PNG, JPEG y WebP."
 
 #: cogs/community/level_config_ui.py:260
-msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
-msgstr "Esa imagen es demasiado compleja para ajustarse al límite de almacenamiento - prueba con una imagen más simple o más pequeña."
+msgid ""
+"That image is too complex to fit under the storage limit - try a simpler "
+"or smaller picture."
+msgstr ""
+"Esa imagen es demasiado compleja para ajustarse al límite de "
+"almacenamiento - prueba con una imagen más simple o más pequeña."
 
 #: cogs/community/level_config_ui.py:265
-msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
-msgstr "No pude leer eso como una imagen - asegúrate de que sea un archivo PNG, JPEG o WebP válido."
+msgid ""
+"I couldn't read that as an image - make sure it's a valid PNG, JPEG, or "
+"WebP file."
+msgstr ""
+"No pude leer eso como una imagen - asegúrate de que sea un archivo PNG, "
+"JPEG o WebP válido."
 
 #: cogs/community/level_config_ui.py:270
 msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
@@ -1857,13 +1980,19 @@ msgid "Rank card - {guild}"
 msgstr "Tarjeta de rango - {guild}"
 
 #: cogs/community/level_config_ui.py:479
-msgid "Customise the background and accent colour used on this server's /rank cards."
-msgstr "Personaliza el fondo y el color de acento que usan las tarjetas /rank de este servidor."
+msgid ""
+"Customise the background and accent colour used on this server's /rank "
+"cards."
+msgstr ""
+"Personaliza el fondo y el color de acento que usan las tarjetas /rank de "
+"este servidor."
 
 #: cogs/community/level_config_ui.py:488
 #, python-brace-format
 msgid "Set - a custom {width}x{height} background image is used."
-msgstr "Establecido - se usa una imagen de fondo personalizada de {width}x{height}."
+msgstr ""
+"Establecido - se usa una imagen de fondo personalizada de "
+"{width}x{height}."
 
 #: cogs/community/level_config_ui.py:492
 msgid "Not set - the stock panel background is used."
@@ -1886,14 +2015,14 @@ msgstr "Predeterminado - se usa el color de rol propio de cada miembro."
 msgid "Accent colour"
 msgstr "Color de acento"
 
-#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:684
+#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:866
 #: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
 #: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Solo tú puedes usar estos controles"
 
-#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:686
+#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:868
 #: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
 #: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
@@ -1902,8 +2031,12 @@ msgstr "expira después de 3 min"
 
 #: cogs/community/level_config_ui.py:564
 #, python-brace-format
-msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
-msgstr "Para establecer un fondo, ejecuta `/levelconfig card background` y adjunta una imagen (PNG, JPEG o WebP; máximo {mb} MB)."
+msgid ""
+"To set a background, run `/levelconfig card background` and attach an "
+"image (PNG, JPEG, or WebP; max {mb} MB)."
+msgstr ""
+"Para establecer un fondo, ejecuta `/levelconfig card background` y "
+"adjunta una imagen (PNG, JPEG o WebP; máximo {mb} MB)."
 
 #: cogs/community/level_config_ui.py:681
 msgid "Channel/category"
@@ -1957,8 +2090,12 @@ msgid "No-XP zones | {guild}"
 msgstr "Zonas sin XP | {guild}"
 
 #: cogs/community/level_config_ui.py:865
-msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
-msgstr "Aún no hay zonas sin XP. Usa `/levelconfig noxp add` para silenciar un canal, una categoría o un rol."
+msgid ""
+"No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a "
+"channel, category, or role."
+msgstr ""
+"Aún no hay zonas sin XP. Usa `/levelconfig noxp add` para silenciar un "
+"canal, una categoría o un rol."
 
 #: cogs/community/level_config_ui.py:875 cogs/community/level_config_ui.py:930
 #, python-brace-format
@@ -1984,8 +2121,12 @@ msgid "XP boosts | {guild}"
 msgstr "Impulsos de XP | {guild}"
 
 #: cogs/community/level_config_ui.py:915
-msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
-msgstr "Aún no hay impulsos de XP. Usa `/levelconfig boost add` para aumentar o reducir el XP globalmente, por canal o por rol."
+msgid ""
+"No XP boosts configured yet. Use `/levelconfig boost add` to boost or "
+"reduce XP globally, per channel, or per role."
+msgstr ""
+"Aún no hay impulsos de XP. Usa `/levelconfig boost add` para aumentar o "
+"reducir el XP globalmente, por canal o por rol."
 
 #: cogs/community/level_config_ui.py:946 cogs/community/level_config_ui.py:1043
 #, python-brace-format
@@ -2117,7 +2258,9 @@ msgstr "Modo de anuncio actualizado"
 #: cogs/community/level_config_ui.py:1390
 #, python-brace-format
 msgid "The level-up message was reset to the default: \"{template}\""
-msgstr "El mensaje de subida de nivel se restableció al predeterminado: \"{template}\""
+msgstr ""
+"El mensaje de subida de nivel se restableció al predeterminado: "
+"\"{template}\""
 
 #: cogs/community/level_config_ui.py:1410
 msgid "Level-up message updated"
@@ -2137,8 +2280,12 @@ msgid "Members now earn XP for time spent together in voice."
 msgstr "Los miembros ahora ganan XP por el tiempo juntos en voz."
 
 #: cogs/community/level_config_ui.py:1440
-msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
-msgstr "Aviso: el sistema de niveles del servidor está desactivado, no se dará XP de voz hasta que lo actives."
+msgid ""
+"Heads up: server leveling is off, so no voice XP is granted until you "
+"turn leveling on."
+msgstr ""
+"Aviso: el sistema de niveles del servidor está desactivado, no se dará XP"
+" de voz hasta que lo actives."
 
 #: cogs/community/level_config_ui.py:1444
 msgid "Voice XP disabled"
@@ -2163,12 +2310,20 @@ msgid "Members now earn **{rate}** XP per eligible minute in voice."
 msgstr "Los miembros ahora ganan **{rate}** XP por minuto elegible en voz."
 
 #: cogs/community/level_config_ui.py:1525
-msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
-msgstr "Indica como máximo un canal/categoría O un rol - ninguno para un impulso global."
+msgid ""
+"Give at most one of a channel/category or a role - give neither for a "
+"server-wide boost."
+msgstr ""
+"Indica como máximo un canal/categoría O un rol - ninguno para un impulso "
+"global."
 
 #: cogs/community/level_config_ui.py:1533
-msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
-msgstr "No puedes apuntar a @everyone directamente - deja canal y rol vacíos para un impulso global."
+msgid ""
+"You can't target @everyone directly - leave both the channel and role "
+"empty for a server-wide boost instead."
+msgstr ""
+"No puedes apuntar a @everyone directamente - deja canal y rol vacíos para"
+" un impulso global."
 
 #: cogs/community/level_config_ui.py:1559
 msgid "the whole server"
@@ -2218,7 +2373,9 @@ msgstr "Fondo de la tarjeta de rango actualizado"
 
 #: cogs/community/level_config_ui.py:1823
 msgid "This server's /rank cards now use the uploaded image as their background."
-msgstr "Las tarjetas /rank de este servidor ahora usan la imagen subida como fondo."
+msgstr ""
+"Las tarjetas /rank de este servidor ahora usan la imagen subida como "
+"fondo."
 
 #: cogs/community/level_rewards.py:66
 msgid "Unknown role (deleted)"
@@ -2257,8 +2414,12 @@ msgid "Mode: **{mode}**"
 msgstr "Modo: **{mode}**"
 
 #: cogs/community/level_rewards.py:159
-msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
-msgstr "Aún no hay recompensas de nivel. Usa `/levelconfig rewards add` para crear una."
+msgid ""
+"No level rewards configured yet. Use `/levelconfig rewards add` to create"
+" one."
+msgstr ""
+"Aún no hay recompensas de nivel. Usa `/levelconfig rewards add` para "
+"crear una."
 
 #: cogs/community/level_rewards.py:167
 #, python-brace-format
@@ -2293,8 +2454,12 @@ msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "Recompensa añadida: alcanza el nivel **{level}** para recibir {role}."
 
 #: cogs/community/level_rewards.py:462
-msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
-msgstr "Puedo añadirlo, pero ese rol está por encima del mío - sube mi rol para que pueda asignarlo de verdad."
+msgid ""
+"I can add it, but that role is above me - move my role up so I can "
+"actually assign it."
+msgstr ""
+"Puedo añadirlo, pero ese rol está por encima del mío - sube mi rol para "
+"que pueda asignarlo de verdad."
 
 #: cogs/community/level_rewards.py:467
 msgid "Level reward added"
@@ -2309,12 +2474,16 @@ msgid "Pick a reward rule to remove:"
 msgstr "Elige una regla a eliminar:"
 
 #: cogs/community/level_rewards.py:519
-msgid "Members now keep only the roles from the highest level reward they've reached."
+msgid ""
+"Members now keep only the roles from the highest level reward they've "
+"reached."
 msgstr "Los miembros ahora solo conservan los roles del nivel más alto alcanzado."
 
 #: cogs/community/level_rewards.py:524
 msgid "Members now keep every level reward role they've ever earned."
-msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan ganado."
+msgstr ""
+"Los miembros ahora conservan todos los roles de recompensa que hayan "
+"ganado."
 
 #: cogs/community/level_rewards.py:528
 msgid "Reward mode updated"
@@ -2452,8 +2621,12 @@ msgid "What should I remind you about?"
 msgstr "¿Qué quieres que te recuerde?"
 
 #: cogs/community/reminders.py:113
-msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
-msgstr "No entendí esa hora. Prueba algo como `10m`, `tomorrow at 6pm` o `in 3 days`."
+msgid ""
+"I couldn't understand that time. Try something like `10m`, `tomorrow at "
+"6pm`, or `in 3 days`."
+msgstr ""
+"No entendí esa hora. Prueba algo como `10m`, `tomorrow at 6pm` o `in 3 "
+"days`."
 
 #: cogs/community/reminders.py:123 cogs/community/reminders.py:717
 #: cogs/config/announcements.py:191
@@ -2462,8 +2635,12 @@ msgstr "Esa hora ya pasó. Dame un momento en el futuro."
 
 #: cogs/community/reminders.py:133 cogs/community/reminders.py:737
 #, python-brace-format
-msgid "You already have {count} reminders pending - wait for some to fire before adding more."
-msgstr "Ya tienes {count} recordatorios pendientes - espera a que salte alguno antes de añadir más."
+msgid ""
+"You already have {count} reminders pending - wait for some to fire before"
+" adding more."
+msgstr ""
+"Ya tienes {count} recordatorios pendientes - espera a que salte alguno "
+"antes de añadir más."
 
 #: cogs/community/reminders.py:148 cogs/community/reminders.py:751
 #, python-brace-format
@@ -2546,7 +2723,9 @@ msgstr "{user} es el nuevo campeón de la temporada y recibe {role}."
 
 #: cogs/community/seasons.py:773
 msgid "No leveling season has closed here yet - check back next month."
-msgstr "Aún no se ha cerrado ninguna temporada de niveles aquí - vuelve el mes que viene."
+msgstr ""
+"Aún no se ha cerrado ninguna temporada de niveles aquí - vuelve el mes "
+"que viene."
 
 #: cogs/community/seasons_views.py:117
 #, python-brace-format
@@ -2581,8 +2760,12 @@ msgid "On - posted in <#{channel_id}> when a season closes."
 msgstr "Activado - publicado en <#{channel_id}> al cerrar una temporada."
 
 #: cogs/community/seasons_views.py:285
-msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
-msgstr "Activado, pero no hay un canal de anuncio fijo configurado, así que no se publicará nada. Configura uno con `/levelconfig announce mode`."
+msgid ""
+"On, but no fixed announce channel is configured, so nothing will actually"
+" be posted. Set one with `/levelconfig announce mode`."
+msgstr ""
+"Activado, pero no hay un canal de anuncio fijo configurado, así que no se"
+" publicará nada. Configura uno con `/levelconfig announce mode`."
 
 #: cogs/community/seasons_views.py:297
 msgid "Pick the season champion role..."
@@ -2606,8 +2789,12 @@ msgid "Seasons - {guild}"
 msgstr "Temporadas - {guild}"
 
 #: cogs/community/seasons_views.py:376
-msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
-msgstr "Configura el rol otorgado al campeón de cada temporada y si el podio se anuncia al cerrar una temporada."
+msgid ""
+"Configure the role handed to each season's champion and whether the "
+"podium is announced when a season closes."
+msgstr ""
+"Configura el rol otorgado al campeón de cada temporada y si el podio se "
+"anuncia al cerrar una temporada."
 
 #: cogs/community/seasons_views.py:386
 msgid "Season champion role"
@@ -2619,8 +2806,12 @@ msgstr "Anuncio de temporada"
 
 #: cogs/community/seasons_views.py:442
 #, python-brace-format
-msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
-msgstr "No puedo gestionar {role} (está por encima de mi rol más alto, lo gestiona una integración, o es @everyone). Elige otro rol."
+msgid ""
+"I can't manage {role} (it's above my top role, managed by an integration,"
+" or @everyone). Pick another role."
+msgstr ""
+"No puedo gestionar {role} (está por encima de mi rol más alto, lo "
+"gestiona una integración, o es @everyone). Elige otro rol."
 
 #: cogs/community/seasons_views.py:454 cogs/community/seasons_views.py:466
 #: cogs/community/seasons_views.py:491 cogs/moderation/automod_panel.py:415
@@ -2629,8 +2820,12 @@ msgid "Something went wrong updating the panel."
 msgstr "Algo salió mal al actualizar el panel."
 
 #: cogs/community/seasons_views.py:479
-msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
-msgstr "Configura primero un canal de anuncio fijo con `/levelconfig announce mode` antes de activar el anuncio de temporada."
+msgid ""
+"Set a fixed announce channel first with `/levelconfig announce mode` "
+"before turning the season announce on."
+msgstr ""
+"Configura primero un canal de anuncio fijo con `/levelconfig announce "
+"mode` antes de activar el anuncio de temporada."
 
 #: cogs/community/usersettings.py:86
 msgid "Level-up announcements"
@@ -2645,8 +2840,12 @@ msgid "Level-up ping"
 msgstr "Ping de subida de nivel"
 
 #: cogs/community/usersettings.py:100
-msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
-msgstr "Te menciona en los anuncios de subida de nivel. Desactívalo para aparecer sin ping."
+msgid ""
+"Ping you by mention in level-up announcements. Turn off to be named "
+"without a ping."
+msgstr ""
+"Te menciona en los anuncios de subida de nivel. Desactívalo para aparecer"
+" sin ping."
 
 #: cogs/community/usersettings.py:107
 msgid "Expanded help"
@@ -2662,15 +2861,21 @@ msgstr "Reproducción automática de música"
 
 #: cogs/community/usersettings.py:121
 msgid "Keep playing recommended tracks when your music queue runs out."
-msgstr "Sigue reproduciendo canciones recomendadas cuando se acabe tu cola de música."
+msgstr ""
+"Sigue reproduciendo canciones recomendadas cuando se acabe tu cola de "
+"música."
 
 #: cogs/community/usersettings.py:131
 msgid "Play search picker"
 msgstr "Selector de búsqueda en play"
 
 #: cogs/community/usersettings.py:134
-msgid "On /play, choose from the top matches instead of instantly queuing the first."
-msgstr "En /play, elige entre los mejores resultados en lugar de poner el primero al instante."
+msgid ""
+"On /play, choose from the top matches instead of instantly queuing the "
+"first."
+msgstr ""
+"En /play, elige entre los mejores resultados en lugar de poner el primero"
+" al instante."
 
 #: cogs/community/usersettings.py:141
 msgid "Avatar history tracking"
@@ -2678,15 +2883,21 @@ msgstr "Seguimiento del historial de avatares"
 
 #: cogs/community/usersettings.py:144
 msgid "Let Yasuho save future avatar and banner changes for public history."
-msgstr "Deja que Yasuho guarde los futuros cambios de avatar y banner para el historial público."
+msgstr ""
+"Deja que Yasuho guarde los futuros cambios de avatar y banner para el "
+"historial público."
 
 #: cogs/community/usersettings.py:158
 msgid "Chapter alert language"
 msgstr "Idioma de las alertas de capítulos"
 
 #: cogs/community/usersettings.py:161
-msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
-msgstr "La traducción a la que enlazan tus MD de nuevos capítulos, una vez publicado. Las publicaciones del servidor siguen el idioma del servidor."
+msgid ""
+"Which translation your new-chapter DMs link to, when it is out. Server "
+"posts follow the server language."
+msgstr ""
+"La traducción a la que enlazan tus MD de nuevos capítulos, una vez "
+"publicado. Las publicaciones del servidor siguen el idioma del servidor."
 
 #: cogs/community/usersettings.py:166
 msgid "Pick a chapter language..."
@@ -2698,7 +2909,9 @@ msgstr "Eliminar mi perfil"
 
 #: cogs/community/usersettings.py:231
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
-msgstr "Tu perfil ha desaparecido: campos, IDs de juego y todas las opciones de visibilidad."
+msgstr ""
+"Tu perfil ha desaparecido: campos, IDs de juego y todas las opciones de "
+"visibilidad."
 
 #: cogs/community/usersettings.py:240
 msgid "Something went wrong deleting your profile."
@@ -2714,8 +2927,12 @@ msgstr "Eliminar mi historial de avatares"
 
 #: cogs/community/usersettings.py:292
 #, python-brace-format
-msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
-msgstr "Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de avatares se ha desactivado a partir de ahora."
+msgid ""
+"Deleted {count} saved image(s) ({size}). Future avatar tracking is now "
+"turned off."
+msgstr ""
+"Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de "
+"avatares se ha desactivado a partir de ahora."
 
 #: cogs/community/usersettings.py:303
 msgid "Something went wrong deleting your avatar history."
@@ -2734,7 +2951,8 @@ msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
 msgstr ""
-"Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
+"Estos ajustes solo te afectan a **ti**, en todos los lugares donde me "
+"usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
 #: cogs/community/usersettings.py:426
@@ -2774,14 +2992,20 @@ msgstr "Algo salió mal al actualizar ese ajuste."
 
 #: cogs/community/usersettings.py:588
 #, python-brace-format
-msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
-msgstr "Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
+msgid ""
+"Use `{prefix}mydata export` to receive your data, `{prefix}mydata "
+"deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` "
+"to erase saved avatars."
+msgstr ""
+"Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata "
+"deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` "
+"para borrar los avatares guardados."
 
 #: cogs/community/usersettings.py:630
 msgid "I sent your data export to you by direct message."
 msgstr "Te envié tu exportación de datos por mensaje directo."
 
-#: cogs/community/profile/connectors/cog.py:236
+#: cogs/community/profile/connectors/cog.py:280
 #: cogs/community/usersettings.py:634
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "No pude enviarte un mensaje directo. Por favor, activa los MD."
@@ -2791,85 +3015,102 @@ msgid "Something went wrong building your data export."
 msgstr "Algo salió mal al preparar tu exportación de datos."
 
 #: cogs/community/usersettings.py:650
-msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
-msgstr "Esto elimina permanentemente tu biografía, tus pronombres, tu color de acento, tus campos personalizados, tus IDs de juego y todas las decisiones que tomaste sobre quién podía verlos. Esto no se puede deshacer."
+msgid ""
+"This permanently deletes your bio, pronouns, accent colour, custom "
+"fields, gaming IDs and every choice you made about who could see them. "
+"This cannot be undone."
+msgstr ""
+"Esto elimina permanentemente tu biografía, tus pronombres, tu color de "
+"acento, tus campos personalizados, tus IDs de juego y todas las "
+"decisiones que tomaste sobre quién podía verlos. Esto no se puede "
+"deshacer."
 
 #: cogs/community/usersettings.py:665
-msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
-msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
+msgid ""
+"This permanently deletes every saved global avatar, server avatar and "
+"banner for your account. It also turns future tracking off. This cannot "
+"be undone."
+msgstr ""
+"Esto elimina permanentemente todos los avatares globales, avatares de "
+"servidor y banners guardados de tu cuenta. También desactiva el "
+"seguimiento futuro. Esto no se puede deshacer."
 
-#: cogs/community/profile/cog.py:107
+#: cogs/community/profile/cog.py:212
 #, python-brace-format
-msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
-msgstr "Por ahora, solo tú puedes ver esto. Usa `{prefix}profile visibility {section} server` para mostrarlo en los servidores que compartes."
+msgid ""
+"Only you can see this for now. Use `{prefix}profile visibility {section} "
+"server` to show it to the servers you share."
+msgstr ""
+"Por ahora, solo tú puedes ver esto. Usa `{prefix}profile visibility "
+"{section} server` para mostrarlo en los servidores que compartes."
 
-#: cogs/community/profile/cog.py:148
+#: cogs/community/profile/cog.py:355
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "{name} no tiene un perfil configurado."
 
-#: cogs/community/profile/cog.py:177 cogs/community/profile/cog.py:253
-#: cogs/community/profile/connectors/cog.py:104
-#: cogs/community/profile/views.py:147
+#: cogs/community/profile/cog.py:384 cogs/community/profile/cog.py:460
+#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr "No se pudo actualizar tu perfil, inténtalo de nuevo más tarde."
 
-#: cogs/community/profile/cog.py:183
+#: cogs/community/profile/cog.py:390
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "Campo desconocido. Elige: {options}"
 
-#: cogs/community/profile/cog.py:193
+#: cogs/community/profile/cog.py:400
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "Se borró {field}."
 
-#: cogs/community/profile/cog.py:196 cogs/community/profile/views.py:134
+#: cogs/community/profile/cog.py:403 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr "Perfil actualizado"
 
-#: cogs/community/profile/cog.py:232
+#: cogs/community/profile/cog.py:439
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "Sección desconocida. Elige: {options}"
 
-#: cogs/community/profile/cog.py:241
-#: cogs/community/profile/connectors/cog.py:398
+#: cogs/community/profile/cog.py:448
+#: cogs/community/profile/connectors/cog.py:447
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "Visibilidad desconocida. Elige: {options}"
 
-#: cogs/community/profile/cog.py:260
-#: cogs/community/profile/connectors/cog.py:416
+#: cogs/community/profile/cog.py:467
+#: cogs/community/profile/connectors/cog.py:465
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "{field} ahora es visible para cualquiera."
 
-#: cogs/community/profile/cog.py:264
-#: cogs/community/profile/connectors/cog.py:421
+#: cogs/community/profile/cog.py:471
+#: cogs/community/profile/connectors/cog.py:470
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "{field} ahora es visible en los servidores que compartes."
 
-#: cogs/community/profile/cog.py:270
-#: cogs/community/profile/connectors/cog.py:428
+#: cogs/community/profile/cog.py:477
+#: cogs/community/profile/connectors/cog.py:477
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "{field} ahora solo es visible para ti."
 
-#: cogs/community/profile/cog.py:283
+#: cogs/community/profile/cog.py:490
 msgid "Click below to edit a profile field:"
 msgstr "Haz clic abajo para editar un campo del perfil:"
 
-#: cogs/community/profile/cog.py:312
+#: cogs/community/profile/cog.py:519
 msgid "Failed to clear your profile, please try again later."
 msgstr "No se pudo borrar tu perfil, inténtalo de nuevo más tarde."
 
-#: cogs/community/profile/cog.py:316
+#: cogs/community/profile/cog.py:523
 msgid "Profile cleared"
 msgstr "Perfil borrado"
 
-#: cogs/community/profile/cog.py:317
+#: cogs/community/profile/cog.py:524
 msgid "Your profile has been cleared."
 msgstr "Tu perfil ha sido borrado."
 
@@ -2901,11 +3142,11 @@ msgstr "Biografía"
 msgid "Pronouns"
 msgstr "Pronombres"
 
-#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:454
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:600
 msgid "Custom fields"
 msgstr "Campos personalizados"
 
-#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:460
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:606
 msgid "Gaming IDs"
 msgstr "IDs de juego"
 
@@ -2933,160 +3174,268 @@ msgstr "Reproduciendo ahora"
 msgid "Spotify"
 msgstr "Spotify"
 
-#: cogs/community/profile/connectors/cog.py:152
-#: cogs/community/profile/views.py:60
+#: cogs/community/profile/connectors/cog.py:194
+#: cogs/community/profile/views.py:67
 #, python-brace-format
 msgid "That value is too long (max {limit} characters)."
 msgstr "Ese valor es demasiado largo (máximo {limit} caracteres)."
 
-#: cogs/community/profile/views.py:64
+#: cogs/community/profile/views.py:71
 msgid "That is not a valid colour. Use a hex colour like #5865F2."
 msgstr "Ese no es un color válido. Usa un color hexadecimal como #5865F2."
 
-#: cogs/community/profile/connectors/cog.py:162
-#: cogs/community/profile/views.py:65
+#: cogs/community/profile/connectors/cog.py:204
+#: cogs/community/profile/views.py:72
 msgid "That value is not valid for this field."
 msgstr "Ese valor no es válido para este campo."
 
-#: cogs/community/profile/views.py:102
+#: cogs/community/profile/views.py:109
 msgid "Edit your profile"
 msgstr "Edita tu perfil"
 
-#: cogs/community/profile/views.py:107
+#: cogs/community/profile/views.py:114
 msgid "Field"
 msgstr "Campo"
 
-#: cogs/community/profile/views.py:113
+#: cogs/community/profile/views.py:120
 msgid "Value"
 msgstr "Valor"
 
-#: cogs/community/profile/views.py:121
+#: cogs/community/profile/views.py:128
 msgid "Pick a field and enter a value."
 msgstr "Elige un campo e introduce un valor."
 
-#: cogs/community/profile/views.py:131
+#: cogs/community/profile/views.py:138
 msgid "Unknown field."
 msgstr "Campo desconocido."
 
-#: cogs/community/profile/views.py:384
+#: cogs/community/profile/views.py:503
 msgid "Linked"
 msgstr "Vinculada"
 
-#: cogs/community/profile/views.py:470
+#: cogs/community/profile/views.py:618
 msgid "This profile is too long to show in full."
 msgstr "Este perfil es demasiado largo para mostrarse completo."
 
-#: cogs/community/profile/views.py:521 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:699 cogs/config/rooms_config.py:207
 msgid "Public"
 msgstr "Pública"
 
-#: cogs/community/profile/views.py:522
+#: cogs/community/profile/views.py:700
 msgid "Server"
 msgstr "Servidor"
 
-#: cogs/community/profile/views.py:523 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:701 cogs/config/rooms_config.py:204
 msgid "Private"
 msgstr "Privada"
 
-#: cogs/community/profile/views.py:591
+#: cogs/community/profile/views.py:769
 msgid "Edit a gaming ID..."
 msgstr "Editar un ID de juego..."
 
-#: cogs/community/profile/views.py:653
+#: cogs/community/profile/views.py:835
 msgid "Profile visibility"
 msgstr "Visibilidad del perfil"
 
-#: cogs/community/profile/views.py:656
-msgid "Choose who can see each part of your profile: public (anyone), server (members of servers you share), or private (only you)."
-msgstr "Elige quién puede ver cada parte de tu perfil: público (cualquiera), servidor (miembros de los servidores que compartes), o privado (solo tú)."
+#: cogs/community/profile/views.py:838
+msgid ""
+"Choose who can see each part of your profile: public (anyone), server "
+"(members of servers you share), or private (only you)."
+msgstr ""
+"Elige quién puede ver cada parte de tu perfil: público (cualquiera), "
+"servidor (miembros de los servidores que compartes), o privado (solo tú)."
 
-#: cogs/community/profile/views.py:665
+#: cogs/community/profile/views.py:847
 msgid "Current visibility"
 msgstr "Visibilidad actual"
 
-#: cogs/community/profile/views.py:732
+#: cogs/community/profile/views.py:914
 msgid "Something went wrong updating your profile visibility."
 msgstr "Algo salió mal al actualizar la visibilidad de tu perfil."
 
-#: cogs/community/profile/connectors/cog.py:69
+#: cogs/community/profile/connectors/anilist.py:205
+msgid "your AniList username"
+msgstr "tu nombre de usuario de AniList"
+
+#: cogs/community/profile/connectors/anilist.py:269
+#, python-brace-format
+msgid "Anime: {count} - {hours}h watched, mean score {score}"
+msgstr "Anime: {count} - {hours}h vistas, puntuación media {score}"
+
+#: cogs/community/profile/connectors/anilist.py:279
+#, python-brace-format
+msgid "Manga: {count} - {chapters} chapters read, mean score {score}"
+msgstr "Manga: {count} - {chapters} capítulos leídos, puntuación media {score}"
+
+#: cogs/community/profile/connectors/anilist.py:290
+#: cogs/community/profile/connectors/backloggd.py:532
+#, python-brace-format
+msgid "Favourites: {titles}"
+msgstr "Favoritos: {titles}"
+
+#: cogs/community/profile/connectors/backloggd.py:443
+msgid "your Backloggd username"
+msgstr "tu nombre de usuario de Backloggd"
+
+#: cogs/community/profile/connectors/backloggd.py:494
+#, python-brace-format
+msgid "{count} played"
+msgstr "{count} jugados"
+
+#: cogs/community/profile/connectors/backloggd.py:496
+#, python-brace-format
+msgid "{count} backlogged"
+msgstr "{count} en backlog"
+
+#: cogs/community/profile/connectors/backloggd.py:536
+#: cogs/community/profile/connectors/steam.py:332
+#, python-brace-format
+msgid "Recently played: {names}"
+msgstr "Jugados recientemente: {names}"
+
+#: cogs/community/profile/connectors/cog.py:77
 #, python-brace-format
 msgid "Linked as {name} - visible to anyone"
 msgstr "Vinculada como {name} - visible para cualquiera"
 
-#: cogs/community/profile/connectors/cog.py:71
+#: cogs/community/profile/connectors/cog.py:79
 #, python-brace-format
 msgid "Linked as {name} - visible to the servers you share"
 msgstr "Vinculada como {name} - visible para los servidores que compartes"
 
-#: cogs/community/profile/connectors/cog.py:74
+#: cogs/community/profile/connectors/cog.py:82
 #, python-brace-format
 msgid "Linked as {name} - visible to you only"
 msgstr "Vinculada como {name} - visible solo para ti"
 
-#: cogs/community/profile/connectors/cog.py:111
+#: cogs/community/profile/connectors/cog.py:153
 #, python-brace-format
 msgid "Unknown connection. Choose: {options}"
 msgstr "Conexión desconocida. Elige: {options}"
 
-#: cogs/community/profile/connectors/cog.py:131
+#: cogs/community/profile/connectors/cog.py:173
 #, python-brace-format
-msgid "Only you can see this for now. Use `{command}` to show it to the servers you share."
-msgstr "Solo tú puedes ver esto por ahora. Usa `{command}` para mostrarlo a los servidores que compartes."
+msgid ""
+"Only you can see this for now. Use `{command}` to show it to the servers "
+"you share."
+msgstr ""
+"Solo tú puedes ver esto por ahora. Usa `{command}` para mostrarlo a los "
+"servidores que compartes."
 
-#: cogs/community/profile/connectors/cog.py:139
+#: cogs/community/profile/connectors/cog.py:181
 msgid "That connection is not available yet - it is coming soon."
 msgstr "Esa conexión aún no está disponible - llegará pronto."
 
-#: cogs/community/profile/connectors/cog.py:143
+#: cogs/community/profile/connectors/cog.py:185
 msgid "That connection is not set up on this bot yet. Ask an admin."
-msgstr "Esa conexión aún no está configurada en este bot. Pregúntale a un administrador."
+msgstr ""
+"Esa conexión aún no está configurada en este bot. Pregúntale a un "
+"administrador."
 
-#: cogs/community/profile/connectors/cog.py:146
+#: cogs/community/profile/connectors/cog.py:188
 msgid "That service is not answering right now, please try again later."
 msgstr "Ese servicio no responde en este momento, inténtalo de nuevo más tarde."
 
-#: cogs/community/profile/connectors/cog.py:156
+#: cogs/community/profile/connectors/cog.py:198
 msgid "No account was found with that name."
 msgstr "No se encontró ninguna cuenta con ese nombre."
 
-#: cogs/community/profile/connectors/cog.py:159
+#: cogs/community/profile/connectors/cog.py:201
 #, python-brace-format
 msgid "That does not look right. Enter {hint}."
 msgstr "Eso no parece correcto. Ingresa {hint}."
 
-#: cogs/community/profile/connectors/cog.py:175
+#: cogs/community/profile/connectors/cog.py:217
 msgid "Your connections"
 msgstr "Tus conexiones"
 
-#: cogs/community/profile/connectors/cog.py:183
+#: cogs/community/profile/connectors/cog.py:225
 msgid "Coming soon"
 msgstr "Próximamente"
 
-#: cogs/community/profile/connectors/cog.py:185
+#: cogs/community/profile/connectors/cog.py:227
 msgid "Not linked"
 msgstr "No vinculada"
 
-#: cogs/community/profile/connectors/cog.py:246
+#: cogs/community/profile/connectors/cog.py:290
 msgid "I sent your connections to you by direct message."
 msgstr "Te envié tus conexiones por mensaje directo."
 
-#: cogs/community/profile/connectors/cog.py:311
+#: cogs/community/profile/connectors/cog.py:360
 msgid "Connection linked"
 msgstr "Conexión vinculada"
 
-#: cogs/community/profile/connectors/cog.py:313
+#: cogs/community/profile/connectors/cog.py:362
 msgid "Connection updated"
 msgstr "Conexión actualizada"
 
-#: cogs/community/profile/connectors/cog.py:369
+#: cogs/community/profile/connectors/cog.py:418
 #, python-brace-format
 msgid "{field} was not linked."
 msgstr "{field} no fue vinculado."
 
-#: cogs/community/profile/connectors/cog.py:374
+#: cogs/community/profile/connectors/cog.py:423
 #, python-brace-format
 msgid "{field} is unlinked and hidden again."
 msgstr "{field} está desvinculado y oculto de nuevo."
+
+#: cogs/community/profile/connectors/lastfm.py:313
+msgid "your Last.fm username"
+msgstr "tu nombre de usuario de Last.fm"
+
+#: cogs/community/profile/connectors/lastfm.py:371
+#, python-brace-format
+msgid "{count} scrobble"
+msgid_plural "{count} scrobbles"
+msgstr[0] "{count} scrobble"
+msgstr[1] "{count} scrobbles"
+
+#: cogs/community/profile/connectors/lastfm.py:383
+#, python-brace-format
+msgid "Top artists (past month): {names}"
+msgstr "Mejores artistas (último mes): {names}"
+
+#: cogs/community/profile/connectors/lastfm.py:393
+#, python-brace-format
+msgid "Now scrobbling: {track}"
+msgstr "Scrobbleando ahora: {track}"
+
+#: cogs/community/profile/connectors/lastfm.py:395
+#, python-brace-format
+msgid "Last scrobble: {track}"
+msgstr "Último scrobble: {track}"
+
+#: cogs/community/profile/connectors/osu.py:159
+msgid "your osu! username"
+msgstr "tu nombre de usuario de osu!"
+
+#: cogs/community/profile/connectors/osu.py:220
+#, python-brace-format
+msgid "Rank #{rank} - {pp} pp"
+msgstr "Rank #{rank} - {pp} pp"
+
+#: cogs/community/profile/connectors/osu.py:227
+#, python-brace-format
+msgid "Accuracy {accuracy}% - level {level}"
+msgstr "Precisión {accuracy}% - level {level}"
+
+#: cogs/community/profile/connectors/osu.py:234
+#, python-brace-format
+msgid "Country: {country}"
+msgstr "País: {country}"
+
+#: cogs/community/profile/connectors/steam.py:247
+msgid "your SteamID64 or your steamcommunity.com/id/ name"
+msgstr "tu SteamID64 o tu nombre de steamcommunity.com/id/"
+
+#: cogs/community/profile/connectors/steam.py:325
+msgid "This Steam profile is private."
+msgstr "Este perfil de Steam es privado."
+
+#: cogs/community/profile/connectors/steam.py:344
+#, python-brace-format
+msgid "Owns {count} games"
+msgstr "Posee {count} juegos"
 
 #: cogs/community/serverstats/views.py:172
 msgid "Last bar: today, still in progress."
@@ -3257,8 +3606,12 @@ msgid "e.g. 2h, tomorrow at 9am, or a <t:...> tag"
 msgstr "p. ej. 2h, mañana a las 9:00, o una etiqueta <t:...>"
 
 #: cogs/config/announcements.py:182
-msgid "I couldn't understand that time. Try something like `2h`, `tomorrow at 9am`, or `in 3 days`."
-msgstr "No entendí esa hora. Prueba algo como `2h`, `tomorrow at 9am` o `in 3 days`."
+msgid ""
+"I couldn't understand that time. Try something like `2h`, `tomorrow at "
+"9am`, or `in 3 days`."
+msgstr ""
+"No entendí esa hora. Prueba algo como `2h`, `tomorrow at 9am` o `in 3 "
+"days`."
 
 #: cogs/config/announcements.py:200
 msgid "Schedule"
@@ -3278,8 +3631,12 @@ msgid "Announcement builder"
 msgstr "Creador de anuncios"
 
 #: cogs/config/announcements.py:260
-msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
-msgstr "Compón el embed con el menú, elige un canal (y opcionalmente un rol a mencionar) y luego pulsa **Enviar**. La vista previa solo la ves tú."
+msgid ""
+"Compose the embed with the menu, pick a channel (and optionally a role to"
+" ping), then **Send**. Preview shows it only to you."
+msgstr ""
+"Compón el embed con el menú, elige un canal (y opcionalmente un rol a "
+"mencionar) y luego pulsa **Enviar**. La vista previa solo la ves tú."
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
@@ -3356,8 +3713,12 @@ msgid "Gave you {role}."
 msgstr "Te di el rol {role}."
 
 #: cogs/config/buttonroles.py:139
-msgid "I don't have permission to manage that role. It may be above my highest role."
-msgstr "No tengo permiso para gestionar ese rol. Puede que esté por encima de mi rol más alto."
+msgid ""
+"I don't have permission to manage that role. It may be above my highest "
+"role."
+msgstr ""
+"No tengo permiso para gestionar ese rol. Puede que esté por encima de mi "
+"rol más alto."
 
 #: cogs/config/buttonroles.py:147
 msgid "Something went wrong toggling that role."
@@ -3422,8 +3783,15 @@ msgid "Button role builder"
 msgstr "Creador de botones de rol"
 
 #: cogs/config/buttonroles.py:511
-msgid "Design the panel below. Edit the embed, add role buttons, then **Post panel** to a channel or **Attach to message** to drop the buttons onto a message I already sent. Every change is kept until you post."
-msgstr "Diseña el panel de abajo. Edita el embed, añade botones de rol y luego pulsa **Post panel** para publicarlo en un canal, o **Attach to message** para colocar los botones en un mensaje que ya envié. Cada cambio se guarda hasta que lo publiques."
+msgid ""
+"Design the panel below. Edit the embed, add role buttons, then **Post "
+"panel** to a channel or **Attach to message** to drop the buttons onto a "
+"message I already sent. Every change is kept until you post."
+msgstr ""
+"Diseña el panel de abajo. Edita el embed, añade botones de rol y luego "
+"pulsa **Post panel** para publicarlo en un canal, o **Attach to message**"
+" para colocar los botones en un mensaje que ya envié. Cada cambio se "
+"guarda hasta que lo publiques."
 
 #: cogs/config/buttonroles.py:531
 msgid "*No buttons yet. Pick a role below to add one.*"
@@ -3443,12 +3811,20 @@ msgid "Self-assignable roles"
 msgstr "Roles autoasignables"
 
 #: cogs/config/buttonroles.py:584
-msgid "Click a button below to give yourself a role, or click it again to remove it:"
-msgstr "Haz clic en un botón de abajo para darte un rol, o vuelve a hacer clic para quitártelo:"
+msgid ""
+"Click a button below to give yourself a role, or click it again to remove"
+" it:"
+msgstr ""
+"Haz clic en un botón de abajo para darte un rol, o vuelve a hacer clic "
+"para quitártelo:"
 
 #: cogs/config/buttonroles.py:600
-msgid "I can't assign that role - it's either managed by an integration or above my highest role."
-msgstr "No puedo asignar ese rol - o está gestionado por una integración, o está por encima de mi rol más alto."
+msgid ""
+"I can't assign that role - it's either managed by an integration or above"
+" my highest role."
+msgstr ""
+"No puedo asignar ese rol - o está gestionado por una integración, o está "
+"por encima de mi rol más alto."
 
 #: cogs/config/buttonroles.py:633
 msgid "Cancelled"
@@ -3463,8 +3839,12 @@ msgid "Add at least one role button before posting."
 msgstr "Añade al menos un botón de rol antes de publicar."
 
 #: cogs/config/buttonroles.py:649
-msgid "None of those roles can be assigned by me - they're either managed by an integration or above my highest role."
-msgstr "Ninguno de esos roles puede ser asignado por mí - o están gestionados por una integración, o están por encima de mi rol más alto."
+msgid ""
+"None of those roles can be assigned by me - they're either managed by an "
+"integration or above my highest role."
+msgstr ""
+"Ninguno de esos roles puede ser asignado por mí - o están gestionados por"
+" una integración, o están por encima de mi rol más alto."
 
 #: cogs/config/buttonroles.py:660
 msgid "Pick a valid text channel to post the panel in."
@@ -3518,8 +3898,16 @@ msgid "Something went wrong fetching that message."
 msgstr "Algo salió mal al obtener ese mensaje."
 
 #: cogs/config/buttonroles.py:759
-msgid "I can only add role buttons to a message I posted myself - Discord won't let a bot edit buttons onto someone else's message. Use **Post panel** to publish a fresh panel instead (I'll happily recreate the same embed and buttons there)."
-msgstr "Solo puedo añadir botones de rol a un mensaje que yo misma haya publicado - Discord no permite que un bot edite botones en el mensaje de otra persona. Usa **Publicar panel** para publicar un panel nuevo (encantada de recrear el mismo embed y los mismos botones ahí)."
+msgid ""
+"I can only add role buttons to a message I posted myself - Discord won't "
+"let a bot edit buttons onto someone else's message. Use **Post panel** to"
+" publish a fresh panel instead (I'll happily recreate the same embed and "
+"buttons there)."
+msgstr ""
+"Solo puedo añadir botones de rol a un mensaje que yo misma haya publicado"
+" - Discord no permite que un bot edite botones en el mensaje de otra "
+"persona. Usa **Publicar panel** para publicar un panel nuevo (encantada "
+"de recrear el mismo embed y los mismos botones ahí)."
 
 #: cogs/config/buttonroles.py:779
 msgid "I'm not allowed to edit that message."
@@ -3667,8 +4055,12 @@ msgstr "Comando de embed: {name}"
 
 #: cogs/config/customcommands.py:348
 #, python-brace-format
-msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
-msgstr "Diseña el embed con el que responderá este comando y luego pulsa **Guardar**. Marcadores: {placeholders}"
+msgid ""
+"Design the embed this command will reply with, then **Save**. "
+"Placeholders: {placeholders}"
+msgstr ""
+"Diseña el embed con el que responderá este comando y luego pulsa "
+"**Guardar**. Marcadores: {placeholders}"
 
 #: cogs/config/customcommands.py:354
 msgid "Preview summary"
@@ -3725,8 +4117,13 @@ msgid "Custom commands"
 msgstr "Comandos personalizados"
 
 #: cogs/config/customcommands.py:538
-msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
-msgstr "Comandos que los miembros ejecutan con el prefijo del servidor. Añade una respuesta de texto o embed, o elige uno para inspeccionarlo y eliminarlo."
+msgid ""
+"Commands members run with the server prefix. Add a text or embed reply, "
+"or pick one to inspect and delete."
+msgstr ""
+"Comandos que los miembros ejecutan con el prefijo del servidor. Añade una"
+" respuesta de texto o embed, o elige uno para inspeccionarlo y "
+"eliminarlo."
 
 #: cogs/config/customcommands.py:545
 #, python-brace-format
@@ -3874,7 +4271,9 @@ msgstr "Eliminados: {roles}"
 
 #: cogs/config/rolemenus.py:178
 msgid "I couldn't manage those roles - they may be above my highest role."
-msgstr "No pude gestionar esos roles - puede que estén por encima de mi rol más alto."
+msgstr ""
+"No pude gestionar esos roles - puede que estén por encima de mi rol más "
+"alto."
 
 #: cogs/config/rolemenus.py:181
 msgid "No changes."
@@ -3970,8 +4369,13 @@ msgid "Role menu builder"
 msgstr "Creador de menú de roles"
 
 #: cogs/config/rolemenus.py:507
-msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
-msgstr "Elige los roles a ofrecer, selecciona la regla, define un canal y luego pulsa **Publicar menú**. Los miembros ajustan sus roles desde un único desplegable."
+msgid ""
+"Pick the roles to offer, choose the rule, set a channel, then **Post "
+"menu**. Members set their roles from a single dropdown."
+msgstr ""
+"Elige los roles a ofrecer, selecciona la regla, define un canal y luego "
+"pulsa **Publicar menú**. Los miembros ajustan sus roles desde un único "
+"desplegable."
 
 #: cogs/config/rolemenus.py:515
 msgid "*None yet.*"
@@ -4046,8 +4450,12 @@ msgstr "Este servidor ha alcanzado el límite de Discord de {max} categorías."
 
 #: cogs/config/rooms.py:330
 #, python-brace-format
-msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
-msgstr "Este servidor está demasiado cerca del límite de {budget} canales de Discord para añadir otro hub."
+msgid ""
+"This server is too close to Discord's {budget}-channel limit to add "
+"another hub."
+msgstr ""
+"Este servidor está demasiado cerca del límite de {budget} canales de "
+"Discord para añadir otro hub."
 
 #: cogs/config/rooms.py:341
 msgid "Something went wrong while creating the hub's channels."
@@ -4173,8 +4581,12 @@ msgid "## Autoroom hubs"
 msgstr "## Hubs de autosalas"
 
 #: cogs/config/rooms_config.py:372
-msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
-msgstr "Hubs de voz de unirse para crear. Los miembros que se unen a un hub obtienen su propia sala temporal, que se elimina cuando queda vacía."
+msgid ""
+"Join-to-create voice hubs. Members who join a hub get their own temp "
+"room, cleaned up when it empties."
+msgstr ""
+"Hubs de voz de unirse para crear. Los miembros que se unen a un hub "
+"obtienen su propia sala temporal, que se elimina cuando queda vacía."
 
 #: cogs/config/rooms_config.py:382
 msgid "No hubs yet. Use **Add hub** to create your first one."
@@ -4195,8 +4607,12 @@ msgstr "Añadir hub"
 
 #: cogs/config/rooms_config.py:425
 #, python-brace-format
-msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
-msgstr "-# {count}/{max_hubs} hubs - ~{reserved} canales reservados - {used}/{budget} canales usados"
+msgid ""
+"-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - "
+"{used}/{budget} channels used"
+msgstr ""
+"-# {count}/{max_hubs} hubs - ~{reserved} canales reservados - "
+"{used}/{budget} canales usados"
 
 #: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
 msgid "Something went wrong opening that form."
@@ -4268,11 +4684,15 @@ msgstr "## Controles de la sala"
 #: cogs/config/rooms_panels.py:244
 #, python-brace-format
 msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
-msgstr "Propietario: <@{owner_id}> - usa los botones de abajo para gestionar la sala."
+msgstr ""
+"Propietario: <@{owner_id}> - usa los botones de abajo para gestionar la "
+"sala."
 
 #: cogs/config/rooms_panels.py:248
 msgid "No owner right now - anyone in the room can Claim it below."
-msgstr "Sin propietario ahora mismo - cualquiera en la sala puede reclamarla abajo."
+msgstr ""
+"Sin propietario ahora mismo - cualquiera en la sala puede reclamarla "
+"abajo."
 
 #: cogs/config/rooms_panels.py:258
 msgid "Slots"
@@ -4320,7 +4740,9 @@ msgstr "Reclamar"
 
 #: cogs/config/rooms_panels.py:319
 msgid "-# Only the room owner can use these controls (except Claim)."
-msgstr "-# Solo el propietario de la sala puede usar estos controles (excepto Reclamar)."
+msgstr ""
+"-# Solo el propietario de la sala puede usar estos controles (excepto "
+"Reclamar)."
 
 #: cogs/config/rooms_panels.py:357
 msgid "Only the room owner can use these controls."
@@ -4431,19 +4853,31 @@ msgstr "No se pudo completar esa acción."
 
 #: cogs/config/settings.py:23
 msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
-msgstr "Usa `/prefix set <prefix>` para cambiar el prefijo de comandos de este servidor."
+msgstr ""
+"Usa `/prefix set <prefix>` para cambiar el prefijo de comandos de este "
+"servidor."
 
 #: cogs/config/settings.py:27
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
-msgstr "Usa `/autorole set <role>` para elegir el rol que reciben los nuevos miembros al unirse."
+msgstr ""
+"Usa `/autorole set <role>` para elegir el rol que reciben los nuevos "
+"miembros al unirse."
 
 #: cogs/config/settings.py:31
-msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
-msgstr "Usa `/automod` para abrir el panel de control interactivo de AutoMod (filtros personalizados + nativos)."
+msgid ""
+"Use `/automod` to open the interactive AutoMod control panel (custom + "
+"native filters)."
+msgstr ""
+"Usa `/automod` para abrir el panel de control interactivo de AutoMod "
+"(filtros personalizados + nativos)."
 
 #: cogs/config/settings.py:35
-msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
-msgstr "Usa `/modlog` para abrir el panel de control interactivo del registro de moderación (canal + activación de eventos)."
+msgid ""
+"Use `/modlog` to open the interactive mod-log control panel (channel + "
+"event toggles)."
+msgstr ""
+"Usa `/modlog` para abrir el panel de control interactivo del registro de "
+"moderación (canal + activación de eventos)."
 
 #: cogs/config/settings.py:39
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
@@ -4451,8 +4885,12 @@ msgstr "Usa `/starboard set <channel> [threshold]` para configurar el starboard.
 
 #: cogs/config/settings.py:42
 #, python-brace-format
-msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
-msgstr "Usa `/welcome set <channel> <message>` para configurar los mensajes de bienvenida. Marcadores: {user}, {server}, {count}."
+msgid ""
+"Use `/welcome set <channel> <message>` to configure welcome messages. "
+"Placeholders: {user}, {server}, {count}."
+msgstr ""
+"Usa `/welcome set <channel> <message>` para configurar los mensajes de "
+"bienvenida. Marcadores: {user}, {server}, {count}."
 
 #: cogs/config/settings.py:81
 msgid "Current state unknown"
@@ -4543,8 +4981,13 @@ msgid "Configuration"
 msgstr "Configuración"
 
 #: cogs/config/settings.py:240
-msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
-msgstr "Un resumen de todas las funciones de este servidor. Usa el menú de abajo para activar o desactivar los **Niveles** o ir directamente al comando de configuración de una función."
+msgid ""
+"An overview of every feature for this server. Use the menu below to "
+"toggle **Leveling** or jump to a feature's setup command."
+msgstr ""
+"Un resumen de todas las funciones de este servidor. Usa el menú de abajo "
+"para activar o desactivar los **Niveles** o ir directamente al comando de"
+" configuración de una función."
 
 #: cogs/config/settings.py:245
 msgid "Full leveling setup lives in `/levelconfig`."
@@ -4619,8 +5062,12 @@ msgid "Threshold"
 msgstr "Umbral"
 
 #: cogs/config/starboard.py:218
-msgid "Use the button below to pick the channel where starred messages should be posted and set the star threshold."
-msgstr "Usa el botón de abajo para elegir el canal donde se publicarán los mensajes destacados y define el umbral de estrellas."
+msgid ""
+"Use the button below to pick the channel where starred messages should be"
+" posted and set the star threshold."
+msgstr ""
+"Usa el botón de abajo para elegir el canal donde se publicarán los "
+"mensajes destacados y define el umbral de estrellas."
 
 #: cogs/config/starboard.py:223
 msgid "Only you can use this menu."
@@ -4679,19 +5126,26 @@ msgstr "El nombre de tu servidor."
 
 #: cogs/config/twitch.py:50
 msgid "The streamer's avatar URL. Perfect for the Thumbnail or Image field."
-msgstr "La URL del avatar del streamer. Perfecta para el campo de Miniatura o Imagen."
+msgstr ""
+"La URL del avatar del streamer. Perfecta para el campo de Miniatura o "
+"Imagen."
 
 #: cogs/config/twitch.py:57
 #, python-brace-format
 msgid ""
-"Drop any of these into your message, or into the embed's title, description, fields, author, or footer. They are filled in automatically the moment a watched member goes live.\n"
+"Drop any of these into your message, or into the embed's title, "
+"description, fields, author, or footer. They are filled in automatically "
+"the moment a watched member goes live.\n"
 "\n"
 "Example: `{mention} is now live playing {game}! Watch: {url}`\n"
 "Tip: pop {avatar} into Thumbnail for a clean look."
 msgstr ""
-"Coloca cualquiera de estos en tu mensaje, o en el título, descripción, campos, autor o pie del embed. Se rellenan automáticamente en el momento en que un miembro vigilado empieza a transmitir en directo.\n"
+"Coloca cualquiera de estos en tu mensaje, o en el título, descripción, "
+"campos, autor o pie del embed. Se rellenan automáticamente en el momento "
+"en que un miembro vigilado empieza a transmitir en directo.\n"
 "\n"
-"Ejemplo: `{mention} ¡ahora está en directo jugando a {game}! Míralo: {url}`\n"
+"Ejemplo: `{mention} ¡ahora está en directo jugando a {game}! Míralo: "
+"{url}`\n"
 "Consejo: pon {avatar} en la miniatura para un aspecto más limpio."
 
 #: cogs/config/twitch.py:128
@@ -4739,8 +5193,14 @@ msgid "Twitch live alerts"
 msgstr "Alertas de directos de Twitch"
 
 #: cogs/config/twitch.py:421
-msgid "Design the alert that fires when a watched member goes live on Twitch. Every change saves instantly - hit **Preview** to see it, and add streamers with `/twitch watch`."
-msgstr "Diseña la alerta que se activa cuando un miembro vigilado empieza a transmitir en Twitch. Cada cambio se guarda al instante - pulsa **Vista previa** para verlo, y añade streamers con `/twitch watch`."
+msgid ""
+"Design the alert that fires when a watched member goes live on Twitch. "
+"Every change saves instantly - hit **Preview** to see it, and add "
+"streamers with `/twitch watch`."
+msgstr ""
+"Diseña la alerta que se activa cuando un miembro vigilado empieza a "
+"transmitir en Twitch. Cada cambio se guarda al instante - pulsa **Vista "
+"previa** para verlo, y añade streamers con `/twitch watch`."
 
 #: cogs/config/twitch.py:435
 msgid "Live role"
@@ -4771,7 +5231,9 @@ msgstr "¡{mention} está ahora en directo! {url}"
 
 #: cogs/config/twitch.py:577
 msgid "Nothing to preview yet - add a message or some embed content."
-msgstr "Todavía no hay nada que previsualizar - añade un mensaje o contenido para el embed."
+msgstr ""
+"Todavía no hay nada que previsualizar - añade un mensaje o contenido para"
+" el embed."
 
 #: cogs/config/twitch.py:726
 msgid "Could not add that member to the watchlist."
@@ -4823,8 +5285,12 @@ msgid "Could not create the Live streamer role."
 msgstr "No pude crear el rol de streamer en directo."
 
 #: cogs/config/twitch.py:822
-msgid "Live streamer role created and linked. Move it to your preferred position in the role list."
-msgstr "Rol de streamer en directo creado y vinculado. Muévelo a la posición que prefieras en la lista de roles."
+msgid ""
+"Live streamer role created and linked. Move it to your preferred position"
+" in the role list."
+msgstr ""
+"Rol de streamer en directo creado y vinculado. Muévelo a la posición que "
+"prefieras en la lista de roles."
 
 #: cogs/config/twitch.py:837
 msgid "No Live streamer role is set up."
@@ -4883,7 +5349,9 @@ msgstr "Usa `/verify setup` para activar la verificación."
 #: cogs/config/verification.py:174
 #, python-brace-format
 msgid "I can't assign {role} - it must be below my highest role and not managed."
-msgstr "No puedo asignar {role} - debe estar por debajo de mi rol más alto y no debe estar gestionado."
+msgstr ""
+"No puedo asignar {role} - debe estar por debajo de mi rol más alto y no "
+"debe estar gestionado."
 
 #: cogs/config/verification.py:187 cogs/system/dashboard_actions.py:251
 msgid "Verification"
@@ -4896,7 +5364,9 @@ msgstr "Haz clic en el botón de abajo para verificarte y desbloquear el servido
 #: cogs/config/verification.py:196
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
-msgstr "La verificación está configurada - al hacer clic se concede el rol {role} en {channel}."
+msgstr ""
+"La verificación está configurada - al hacer clic se concede el rol {role}"
+" en {channel}."
 
 #: cogs/config/verification.py:207
 msgid "Verification disabled."
@@ -4943,8 +5413,12 @@ msgid "Manage welcome GIFs"
 msgstr "Gestionar GIFs de bienvenida"
 
 #: cogs/config/welcome.py:301
-msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
-msgstr "Añade URLs de imágenes/GIF al grupo aleatorio, o elimina una abajo. Activa **GIF aleatorio** en el panel principal para usar el grupo."
+msgid ""
+"Add image/GIF URLs to the random pool, or remove one below. Turn on "
+"**Random GIF** on the main panel to use the pool."
+msgstr ""
+"Añade URLs de imágenes/GIF al grupo aleatorio, o elimina una abajo. "
+"Activa **GIF aleatorio** en el panel principal para usar el grupo."
 
 #: cogs/config/welcome.py:310
 #, python-brace-format
@@ -4969,8 +5443,13 @@ msgid "Welcome system"
 msgstr "Sistema de bienvenida"
 
 #: cogs/config/welcome.py:431
-msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
-msgstr "Diseña el mensaje de bienvenida que reciben los nuevos miembros. Usa los menús de abajo; cada cambio se guarda al instante. Pulsa **Vista previa** para verlo en directo."
+msgid ""
+"Design the greeting new members receive. Use the menus below; every "
+"change saves instantly. Hit **Preview** to see it live."
+msgstr ""
+"Diseña el mensaje de bienvenida que reciben los nuevos miembros. Usa los "
+"menús de abajo; cada cambio se guarda al instante. Pulsa **Vista previa**"
+" para verlo en directo."
 
 #: cogs/config/welcome.py:441 cogs/config/welcome.py:572
 msgid "GIF pool"
@@ -5140,8 +5619,12 @@ msgid "*Message too long.*"
 msgstr "*Mensaje demasiado largo.*"
 
 #: cogs/fun/fun.py:340
-msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
-msgstr "**Por favor, introduce el texto para convertir en arte ascii. Ej: ``<prefix> ascii stuff``**"
+msgid ""
+"**Please input text to convert to ascii art. Ex: ``<prefix> ascii "
+"stuff``**"
+msgstr ""
+"**Por favor, introduce el texto para convertir en arte ascii. Ej: "
+"``<prefix> ascii stuff``**"
 
 #: cogs/fun/fun.py:351
 msgid "Ask me a question..."
@@ -5421,8 +5904,14 @@ msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
 #: cogs/moderation/automod_panel.py:288
-msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
-msgstr "Para mantener el servidor limpio: Yasuho analiza cada mensaje con los filtros de contenido, mientras que los filtros nativos de Discord bloquean las coincidencias antes de publicarse."
+msgid ""
+"Keeping the server tidy: Yasuho scans each message for the content "
+"filters, while Discord's native filters block matches before they are "
+"ever posted."
+msgstr ""
+"Para mantener el servidor limpio: Yasuho analiza cada mensaje con los "
+"filtros de contenido, mientras que los filtros nativos de Discord "
+"bloquean las coincidencias antes de publicarse."
 
 #: cogs/moderation/automod_panel.py:299
 msgid "Content filters"
@@ -5457,16 +5946,26 @@ msgid "Exempt channels"
 msgstr "Canales exentos"
 
 #: cogs/moderation/automod_panel.py:339
-msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
-msgstr "Los miembros con un rol exento, y los mensajes en un canal exento, se saltan por completo los filtros de contenido."
+msgid ""
+"Members with an exempt role, and messages in an exempt channel, skip the "
+"content filters entirely."
+msgstr ""
+"Los miembros con un rol exento, y los mensajes en un canal exento, se "
+"saltan por completo los filtros de contenido."
 
 #: cogs/moderation/automod_panel.py:389
 msgid "Native filters need Yasuho to have the Manage Server permission."
-msgstr "Los filtros nativos requieren que Yasuho tenga el permiso Gestionar servidor."
+msgstr ""
+"Los filtros nativos requieren que Yasuho tenga el permiso Gestionar "
+"servidor."
 
 #: cogs/moderation/automod_panel.py:429
-msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
-msgstr "Yasuho necesita el permiso **Gestionar servidor** para cambiar los filtros nativos de Discord."
+msgid ""
+"Yasuho needs the **Manage Server** permission to change Discord's native "
+"filters."
+msgstr ""
+"Yasuho necesita el permiso **Gestionar servidor** para cambiar los "
+"filtros nativos de Discord."
 
 #: cogs/moderation/blacklist.py:42
 #, python-brace-format
@@ -5587,8 +6086,12 @@ msgid "Sorry, I couldn't ban that member."
 msgstr "Lo siento, no pude banear a ese miembro."
 
 #: cogs/moderation/moderation.py:584
-msgid "The temporary ban could not be scheduled and the rollback failed. Please unban that user manually."
-msgstr "No se pudo programar el baneo temporal y la reversión falló. Por favor, desbanea a ese usuario manualmente."
+msgid ""
+"The temporary ban could not be scheduled and the rollback failed. Please "
+"unban that user manually."
+msgstr ""
+"No se pudo programar el baneo temporal y la reversión falló. Por favor, "
+"desbanea a ese usuario manualmente."
 
 #: cogs/moderation/moderation.py:589
 msgid "The temporary ban could not be scheduled, so I rolled it back."
@@ -5716,8 +6219,12 @@ msgstr "Confirmar adición masiva de rol"
 
 #: cogs/moderation/moderation.py:982
 #, python-brace-format
-msgid "Add the **{role}** role to **all** members of this server? This can take a while."
-msgstr "¿Añadir el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
+msgid ""
+"Add the **{role}** role to **all** members of this server? This can take "
+"a while."
+msgstr ""
+"¿Añadir el rol **{role}** a **todos** los miembros de este servidor? Esto"
+" puede tardar un rato."
 
 #: cogs/moderation/moderation.py:1011
 #, python-brace-format
@@ -5735,8 +6242,12 @@ msgstr "Confirmar eliminación masiva de roles"
 
 #: cogs/moderation/moderation.py:1043
 #, python-brace-format
-msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
-msgstr "¿Quitar el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
+msgid ""
+"Remove the **{role}** role from **all** members of this server? This can "
+"take a while."
+msgstr ""
+"¿Quitar el rol **{role}** a **todos** los miembros de este servidor? Esto"
+" puede tardar un rato."
 
 #: cogs/moderation/moderation.py:1072
 #, python-brace-format
@@ -5814,8 +6325,12 @@ msgid "Mod-log settings"
 msgstr "Configuración del registro de moderación"
 
 #: cogs/moderation/modlog.py:198
-msgid "Choose where server events are logged and which events to record. Changes apply instantly."
-msgstr "Elige dónde se registran los eventos del servidor y cuáles se registran. Los cambios se aplican al instante."
+msgid ""
+"Choose where server events are logged and which events to record. Changes"
+" apply instantly."
+msgstr ""
+"Elige dónde se registran los eventos del servidor y cuáles se registran. "
+"Los cambios se aplican al instante."
 
 #: cogs/moderation/modlog.py:206
 msgid "Log channel"
@@ -5947,23 +6462,39 @@ msgstr "Alcanzó {count} advertencias - expulsado"
 
 #: cogs/moderation/warn_config.py:115
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't time them out (check my permissions and role position)."
-msgstr "{member} alcanzó {count} advertencias, pero no pude aislarlo (revisa mis permisos y la posición de mi rol)."
+msgid ""
+"{member} reached {count} warns, but I couldn't time them out (check my "
+"permissions and role position)."
+msgstr ""
+"{member} alcanzó {count} advertencias, pero no pude aislarlo (revisa mis "
+"permisos y la posición de mi rol)."
 
 #: cogs/moderation/warn_config.py:120
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't ban them (check my permissions and role position)."
-msgstr "{member} alcanzó {count} advertencias, pero no pude banearlo (revisa mis permisos y la posición de mi rol)."
+msgid ""
+"{member} reached {count} warns, but I couldn't ban them (check my "
+"permissions and role position)."
+msgstr ""
+"{member} alcanzó {count} advertencias, pero no pude banearlo (revisa mis "
+"permisos y la posición de mi rol)."
 
 #: cogs/moderation/warn_config.py:124
 #, python-brace-format
-msgid "{member} reached {count} warns, but I couldn't kick them (check my permissions and role position)."
-msgstr "{member} alcanzó {count} advertencias, pero no pude expulsarlo (revisa mis permisos y la posición de mi rol)."
+msgid ""
+"{member} reached {count} warns, but I couldn't kick them (check my "
+"permissions and role position)."
+msgstr ""
+"{member} alcanzó {count} advertencias, pero no pude expulsarlo (revisa "
+"mis permisos y la posición de mi rol)."
 
 #: cogs/moderation/warn_config.py:134
 #, python-brace-format
-msgid "You reached {count} warns in {guild} and have been timed out for {duration}."
-msgstr "Alcanzaste {count} advertencias en {guild} y has sido aislado durante {duration}."
+msgid ""
+"You reached {count} warns in {guild} and have been timed out for "
+"{duration}."
+msgstr ""
+"Alcanzaste {count} advertencias en {guild} y has sido aislado durante "
+"{duration}."
 
 #: cogs/moderation/warn_config.py:138
 #, python-brace-format
@@ -6032,12 +6563,21 @@ msgid "The number of warns must be between {min} and {max}."
 msgstr "El número de advertencias debe estar entre {min} y {max}."
 
 #: cogs/moderation/warn_config.py:330
-msgid "I couldn't read that timeout duration - try something like \"10m\", \"1h\", or \"1d\"."
-msgstr "No pude entender esa duración de aislamiento - prueba algo como \"10m\", \"1h\" o \"1d\"."
+msgid ""
+"I couldn't read that timeout duration - try something like \"10m\", "
+"\"1h\", or \"1d\"."
+msgstr ""
+"No pude entender esa duración de aislamiento - prueba algo como \"10m\", "
+"\"1h\" o \"1d\"."
 
 #: cogs/moderation/warn_config.py:375
-msgid "**No escalation rules.** Warns are recorded, but no automatic action is taken. Add a rule below, or reset to the default."
-msgstr "**Sin reglas de escalada.** Las advertencias se registran, pero no se toma ninguna acción automática. Añade una regla abajo, o restablece el valor por defecto."
+msgid ""
+"**No escalation rules.** Warns are recorded, but no automatic action is "
+"taken. Add a rule below, or reset to the default."
+msgstr ""
+"**Sin reglas de escalada.** Las advertencias se registran, pero no se "
+"toma ninguna acción automática. Añade una regla abajo, o restablece el "
+"valor por defecto."
 
 #: cogs/moderation/warn_config.py:381
 #, python-brace-format
@@ -6054,8 +6594,12 @@ msgid "Warn escalation - {guild}"
 msgstr "Escalada de advertencias - {guild}"
 
 #: cogs/moderation/warn_config.py:400
-msgid "Decide what happens as a member piles up warns: at each threshold Yasuho can time them out, kick, or ban them."
-msgstr "Decide qué pasa cuando un miembro acumula advertencias: en cada umbral, Yasuho puede aislarlo, expulsarlo o banearlo."
+msgid ""
+"Decide what happens as a member piles up warns: at each threshold Yasuho "
+"can time them out, kick, or ban them."
+msgstr ""
+"Decide qué pasa cuando un miembro acumula advertencias: en cada umbral, "
+"Yasuho puede aislarlo, expulsarlo o banearlo."
 
 #: cogs/moderation/warn_config.py:409
 msgid "Current rules"
@@ -6063,8 +6607,15 @@ msgstr "Reglas actuales"
 
 #: cogs/moderation/warn_config.py:418
 #, python-brace-format
-msgid "A rule fires the moment a member's warn count lands exactly on its threshold, so editing rules never re-punishes past warns. Thresholds are unique; up to {max} rules."
-msgstr "Una regla se activa cuando el contador de advertencias de un miembro alcanza exactamente su umbral, así que editar reglas nunca vuelve a castigar advertencias pasadas. Los umbrales son únicos; hasta {max} reglas."
+msgid ""
+"A rule fires the moment a member's warn count lands exactly on its "
+"threshold, so editing rules never re-punishes past warns. Thresholds are "
+"unique; up to {max} rules."
+msgstr ""
+"Una regla se activa cuando el contador de advertencias de un miembro "
+"alcanza exactamente su umbral, así que editar reglas nunca vuelve a "
+"castigar advertencias pasadas. Los umbrales son únicos; hasta {max} "
+"reglas."
 
 #: cogs/moderation/warn_config.py:493
 #, python-brace-format
@@ -6243,7 +6794,9 @@ msgstr "Ahora sigo la letra en {channel}."
 
 #: cogs/music/lyrics.py:783
 msgid "A lot of servers are following lyrics right now - try again in a moment."
-msgstr "Muchos servidores están siguiendo letras ahora mismo - inténtalo de nuevo en un momento."
+msgstr ""
+"Muchos servidores están siguiendo letras ahora mismo - inténtalo de nuevo"
+" en un momento."
 
 #: cogs/music/lyrics.py:786
 msgid "I can't follow the lyrics here right now."
@@ -6313,7 +6866,9 @@ msgstr "Aquí tienes el reproductor."
 #: cogs/music/playlists_shared.py:489 cogs/music/playlists_shared.py:508
 #: cogs/music/search.py:516
 msgid "Music is currently unavailable - no Lavalink node is connected."
-msgstr "La música no está disponible actualmente - no hay ningún nodo de Lavalink conectado."
+msgstr ""
+"La música no está disponible actualmente - no hay ningún nodo de Lavalink"
+" conectado."
 
 #: cogs/music/music.py:1646 cogs/music/music.py:1882 cogs/music/music.py:2575
 #: cogs/music/playlists_shared.py:355
@@ -6487,7 +7042,9 @@ msgstr "Estás cambiando de efecto demasiado rápido. Inténtalo de nuevo en {de
 
 #: cogs/music/music.py:2388
 msgid "A lot of servers are using effects right now - try again in a moment."
-msgstr "Muchos servidores están usando efectos ahora mismo - inténtalo de nuevo en un momento."
+msgstr ""
+"Muchos servidores están usando efectos ahora mismo - inténtalo de nuevo "
+"en un momento."
 
 #: cogs/music/music.py:2391
 msgid "Something went wrong applying that effect."
@@ -6510,7 +7067,9 @@ msgstr "Has consultado demasiadas letras. Inténtalo de nuevo en {delay}."
 #: cogs/music/music.py:2482
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
-msgstr "Este servidor ha consultado demasiadas letras. Inténtalo de nuevo en {delay}."
+msgstr ""
+"Este servidor ha consultado demasiadas letras. Inténtalo de nuevo en "
+"{delay}."
 
 #: cogs/music/music.py:2496
 msgid "I couldn't find any lyrics for this track."
@@ -6554,7 +7113,9 @@ msgstr "He añadido {count} pista(s) de tus favoritos a la cola."
 
 #: cogs/music/music.py:2634
 msgid "Nothing is playing - give me a song name or URL to save."
-msgstr "No hay nada reproduciéndose - dame el nombre o el enlace de una canción para guardarla."
+msgstr ""
+"No hay nada reproduciéndose - dame el nombre o el enlace de una canción "
+"para guardarla."
 
 #: cogs/music/music.py:2653
 #, python-brace-format
@@ -6617,8 +7178,12 @@ msgstr "No hay nada reproduciéndose - pon música antes de guardar una playlist
 
 #: cogs/music/playlists_shared.py:427
 #, python-brace-format
-msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
-msgstr "La cola es demasiado larga - una playlist de servidor admite hasta {max} pistas. Recórtala e inténtalo de nuevo."
+msgid ""
+"The queue is too long to save - a server playlist holds up to {max} "
+"tracks. Trim it and try again."
+msgstr ""
+"La cola es demasiado larga - una playlist de servidor admite hasta {max} "
+"pistas. Recórtala e inténtalo de nuevo."
 
 #: cogs/music/playlists_shared.py:436 cogs/music/playlists_shared.py:461
 #, python-brace-format
@@ -6627,8 +7192,12 @@ msgstr "Este servidor ya tiene el máximo de {max} playlists. Elimina una primer
 
 #: cogs/music/playlists_shared.py:453 cogs/music/playlists_shared.py:678
 #, python-brace-format
-msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
-msgstr "Ya existe una playlist llamada **{name}** aquí. Elige otro nombre o elimínala primero."
+msgid ""
+"A playlist called **{name}** already exists here. Pick another name or "
+"delete it first."
+msgstr ""
+"Ya existe una playlist llamada **{name}** aquí. Elige otro nombre o "
+"elimínala primero."
 
 #: cogs/music/playlists_shared.py:472
 #, python-brace-format
@@ -6663,8 +7232,12 @@ msgstr[0] " {skipped} pista fue omitida - no se pudo cargar."
 msgstr[1] " {skipped} pistas fueron omitidas - no se pudieron cargar."
 
 #: cogs/music/playlists_shared.py:576
-msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
-msgstr "Este servidor aún no tiene playlists guardadas. Usa `/serverplaylist save` para crear una."
+msgid ""
+"This server has no saved playlists yet. Use `/serverplaylist save` to "
+"create one."
+msgstr ""
+"Este servidor aún no tiene playlists guardadas. Usa `/serverplaylist "
+"save` para crear una."
 
 #: cogs/music/playlists_shared.py:616 cogs/music/playlists_shared.py:652
 msgid "Only the playlist's creator or a moderator can do that."
@@ -6801,8 +7374,12 @@ msgid "### 🎵 Now Playing"
 msgstr "### 🎵 Reproduciendo ahora"
 
 #: cogs/music/views.py:415
-msgid "✨ I'm keeping the music going with recommendations based on this session's listening. Tap Autoplay below to turn it off."
-msgstr "✨ Sigo con la música gracias a recomendaciones basadas en lo que escuchaste en esta sesión. Toca Autoplay abajo para desactivarlo."
+msgid ""
+"✨ I'm keeping the music going with recommendations based on this "
+"session's listening. Tap Autoplay below to turn it off."
+msgstr ""
+"✨ Sigo con la música gracias a recomendaciones basadas en lo que "
+"escuchaste en esta sesión. Toca Autoplay abajo para desactivarlo."
 
 #: cogs/music/views.py:432
 msgid "⏸ Paused"
@@ -6973,12 +7550,18 @@ msgid "Queue loop turned {state}."
 msgstr "El bucle de la cola se puso en {state}."
 
 #: cogs/music/views.py:916
-msgid "Autoplay is on. I'll keep the music going with recommendations when the queue runs out."
-msgstr "El autoplay está activado. Seguiré con la música gracias a recomendaciones cuando la cola se vacíe."
+msgid ""
+"Autoplay is on. I'll keep the music going with recommendations when the "
+"queue runs out."
+msgstr ""
+"El autoplay está activado. Seguiré con la música gracias a "
+"recomendaciones cuando la cola se vacíe."
 
 #: cogs/music/views.py:921
 msgid "Autoplay is off. Playback will stop once the queue is empty."
-msgstr "El autoplay está desactivado. La reproducción se detendrá cuando la cola esté vacía."
+msgstr ""
+"El autoplay está desactivado. La reproducción se detendrá cuando la cola "
+"esté vacía."
 
 #: cogs/music/views.py:934
 msgid "Add a few more tracks before shuffling."
@@ -7086,7 +7669,9 @@ msgstr "## 👋 Bienvenida"
 
 #: cogs/music/views.py:1570
 msgid "I'm all set to bring the music - let's get you into a room first."
-msgstr "Estoy lista para poner la música - pero primero necesito que entres a una sala."
+msgstr ""
+"Estoy lista para poner la música - pero primero necesito que entres a una"
+" sala."
 
 #: cogs/music/views.py:1575
 msgid "To get started, join a voice channel:"
@@ -7298,10 +7883,12 @@ msgstr "**Parece que algo salió mal al ejecutar el comando:**"
 #: cogs/system/errors.py:60
 #, python-brace-format
 msgid ""
-":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
+":question: What to do: `Report this error identifier to the bot owner`: "
+"`{error_id}`\n"
 "{usage}"
 msgstr ""
-":question: Que hacer: `Reporta este identificador de error al dueno del bot`: `{error_id}`\n"
+":question: Que hacer: `Reporta este identificador de error al dueno del "
+"bot`: `{error_id}`\n"
 "{usage}"
 
 #: cogs/system/errors.py:174
@@ -7366,10 +7953,12 @@ msgstr "**Parece que me diste demasiados argumentos:**"
 #: cogs/system/errors.py:257 cogs/system/errors.py:269
 #, python-brace-format
 msgid ""
-":question: What to do: `look at {prefix}help and try being more specific`\n"
+":question: What to do: `look at {prefix}help and try being more specific`"
+"\n"
 "{usage}"
 msgstr ""
-":question: Qué hacer: `consulta {prefix}help e intenta ser más específico`\n"
+":question: Qué hacer: `consulta {prefix}help e intenta ser más "
+"específico`\n"
 "{usage}"
 
 #: cogs/system/errors.py:267
@@ -7385,8 +7974,12 @@ msgid "**Seems like I am missing permissions:**"
 msgstr "**Parece que me faltan permisos:**"
 
 #: cogs/system/events.py:139
-msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
-msgstr "Estás en la lista negra del bot. Puedes pedir que te quiten de la lista negra enviando un mensaje a <@228895251576782858>"
+msgid ""
+"You are blacklisted from bot. You can ask to be unblacklisted by send a "
+"message to <@228895251576782858>"
+msgstr ""
+"Estás en la lista negra del bot. Puedes pedir que te quiten de la lista "
+"negra enviando un mensaje a <@228895251576782858>"
 
 #: cogs/system/help.py:62
 msgid "Play music, queue tracks, tune filters and see lyrics."
@@ -7439,8 +8032,12 @@ msgstr "Alias"
 
 #: cogs/system/help.py:300
 #, python-brace-format
-msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
-msgstr "Este comando tiene {count}. Activa o desactiva la expansión en /preferences, o usa `{prefix}help {group} <subcommand>`."
+msgid ""
+"This command has {count}. Toggle expansion in /preferences, or use "
+"`{prefix}help {group} <subcommand>`."
+msgstr ""
+"Este comando tiene {count}. Activa o desactiva la expansión en "
+"/preferences, o usa `{prefix}help {group} <subcommand>`."
 
 #: cogs/system/help.py:305
 #, python-brace-format
@@ -7474,11 +8071,13 @@ msgstr "{bot} • Ayuda"
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
 "\n"
-"Use the menu to jump to a category, the arrows to browse, or `{prefix}help <command>` for a specific command."
+"Use the menu to jump to a category, the arrows to browse, or "
+"`{prefix}help <command>` for a specific command."
 msgstr ""
 "¡Hola! Soy **{bot}**, encantada de ayudar. 💫\n"
 "\n"
-"Usa el menú para ir a una categoría, las flechas para navegar, o `{prefix}help <command>` para un comando específico."
+"Usa el menú para ir a una categoría, las flechas para navegar, o "
+"`{prefix}help <command>` para un comando específico."
 
 #: cogs/system/help.py:497
 msgid "Enabled ✅"
@@ -7519,7 +8118,9 @@ msgstr "📚 Categorías"
 #: cogs/system/help.py:554
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
-msgstr "{commands} en {categories} categorías • Usa el menú o las flechas para explorar"
+msgstr ""
+"{commands} en {categories} categorías • Usa el menú o las flechas para "
+"explorar"
 
 #: cogs/system/help.py:560
 #, python-brace-format
@@ -7578,19 +8179,27 @@ msgstr "Estoy lista y encantada de ayudar aquí. Esto es lo que puedo hacer:"
 
 #: cogs/system/onboarding.py:163
 msgid "- **Music**: full-featured player with queues, effects, and synced lyrics."
-msgstr "- **Música**: reproductor completo con colas, efectos y letras sincronizadas."
+msgstr ""
+"- **Música**: reproductor completo con colas, efectos y letras "
+"sincronizadas."
 
 #: cogs/system/onboarding.py:167
 msgid "- **Moderation**: automod, warnings, mutes, and a searchable case history."
-msgstr "- **Moderación**: automod, avisos, silencios y un historial de casos consultable."
+msgstr ""
+"- **Moderación**: automod, avisos, silencios y un historial de casos "
+"consultable."
 
 #: cogs/system/onboarding.py:170
 msgid "- **Leveling**: XP, levels, and role rewards for your members."
 msgstr "- **Niveles**: XP, niveles y recompensas de rol para tus miembros."
 
 #: cogs/system/onboarding.py:172
-msgid "- **AniList & manga**: watch/reading lists, airing alerts, and new-chapter alerts."
-msgstr "- **AniList y manga**: listas de seguimiento/lectura, alertas de emisión y alertas de nuevos capítulos."
+msgid ""
+"- **AniList & manga**: watch/reading lists, airing alerts, and new-"
+"chapter alerts."
+msgstr ""
+"- **AniList y manga**: listas de seguimiento/lectura, alertas de emisión "
+"y alertas de nuevos capítulos."
 
 #: cogs/system/onboarding.py:175
 msgid "- **Fun**: games and more to keep the server lively."
@@ -7601,8 +8210,12 @@ msgid "Getting started"
 msgstr "Primeros pasos"
 
 #: cogs/system/onboarding.py:183
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Usa `/config` para configurar prefijos, autorol, niveles, starboard, automod, mod-log y mensajes de bienvenida en un solo lugar."
+msgid ""
+"Use `/config` to set up prefixes, autorole, leveling, starboard, automod,"
+" mod-log, and welcome messages in one place."
+msgstr ""
+"Usa `/config` para configurar prefijos, autorol, niveles, starboard, "
+"automod, mod-log y mensajes de bienvenida en un solo lugar."
 
 #: cogs/system/onboarding.py:186
 msgid "Use `/help` to browse every command."
@@ -7640,7 +8253,9 @@ msgstr ""
 
 #: cogs/utility/extras.py:85
 msgid "I could not DM you - please enable direct messages and try again."
-msgstr "No pude enviarte un mensaje directo - por favor, activa los mensajes directos e inténtalo de nuevo."
+msgstr ""
+"No pude enviarte un mensaje directo - por favor, activa los mensajes "
+"directos e inténtalo de nuevo."
 
 #: cogs/utility/extras.py:90
 msgid "Something went wrong while generating your password."
@@ -7955,7 +8570,9 @@ msgstr "Algo salió mal al obtener los datos de Minecraft."
 
 #: cogs/utility/utility.py:37
 msgid "Give a question and options: `quickpoll question | option 1 | option 2`"
-msgstr "Proporciona una pregunta y opciones: `quickpoll pregunta | opción 1 | opción 2`"
+msgstr ""
+"Proporciona una pregunta y opciones: `quickpoll pregunta | opción 1 | "
+"opción 2`"
 
 #: cogs/utility/utility.py:40
 msgid "A poll needs at least two options."
@@ -8019,8 +8636,12 @@ msgid "Translation failed."
 msgstr "La traducción falló."
 
 #: locales/command_strings.py:10
-msgid "A Discord timestamp to fire at, e.g. a <t:...> tag. Overrides the time in 'when'."
-msgstr "Una marca de tiempo de Discord para dispararse, p. ej. una etiqueta <t:...>. Anula la hora indicada en 'when'."
+msgid ""
+"A Discord timestamp to fire at, e.g. a <t:...> tag. Overrides the time in"
+" 'when'."
+msgstr ""
+"Una marca de tiempo de Discord para dispararse, p. ej. una etiqueta "
+"<t:...>. Anula la hora indicada en 'when'."
 
 #: locales/command_strings.py:11
 msgid "A channel/category that should earn no XP."
@@ -8055,12 +8676,20 @@ msgid "A song to search for and save (defaults to the current track)."
 msgstr "Una canción para buscar y guardar (por defecto, la pista actual)."
 
 #: locales/command_strings.py:19
-msgid "A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / -15."
-msgstr "Una marca de tiempo (1:23 o 1:02:03), segundos enteros (90), o un valor relativo +30 / -15."
+msgid ""
+"A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / "
+"-15."
+msgstr ""
+"Una marca de tiempo (1:23 o 1:02:03), segundos enteros (90), o un valor "
+"relativo +30 / -15."
 
 #: locales/command_strings.py:20
-msgid "Add a member to the live-alert watchlist (channel is an optional override)."
-msgstr "Añade un miembro a la lista de alertas en directo (el canal es una anulación opcional)."
+msgid ""
+"Add a member to the live-alert watchlist (channel is an optional "
+"override)."
+msgstr ""
+"Añade un miembro a la lista de alertas en directo (el canal es una "
+"anulación opcional)."
 
 #: locales/command_strings.py:21
 msgid "Add a user to the bot-wide blacklist."
@@ -8068,11 +8697,15 @@ msgstr "Añade un usuario a la lista negra global del bot."
 
 #: locales/command_strings.py:22
 msgid "Admin XP tools: give, take, set, or reset a member's XP."
-msgstr "Herramientas de XP admin: da, quita, fija o restablece el XP de un miembro."
+msgstr ""
+"Herramientas de XP admin: da, quita, fija o restablece el XP de un "
+"miembro."
 
 #: locales/command_strings.py:23
 msgid "Apply an audio effect preset to the current playback (Off to clear)."
-msgstr "Aplica un preajuste de efecto de audio a la reproducción actual (Off para quitarlo)."
+msgstr ""
+"Aplica un preajuste de efecto de audio a la reproducción actual (Off para"
+" quitarlo)."
 
 #: locales/command_strings.py:24
 msgid "Assign an auto-role to your guild."
@@ -8104,15 +8737,21 @@ msgstr "Explora el anime mas popular en AniList."
 
 #: locales/command_strings.py:31
 msgid "Browse tracks, albums, artists and playlists, and queue any of them."
-msgstr "Explora canciones, álbumes, artistas y playlists, y añade cualquiera a la cola."
+msgstr ""
+"Explora canciones, álbumes, artistas y playlists, y añade cualquiera a la"
+" cola."
 
 #: locales/command_strings.py:32
 msgid "Build a Google reverse image search link for an image URL or attachment."
-msgstr "Crea un enlace de búsqueda inversa de imágenes de Google para una URL o un adjunto."
+msgstr ""
+"Crea un enlace de búsqueda inversa de imágenes de Google para una URL o "
+"un adjunto."
 
 #: locales/command_strings.py:33
 msgid "Clear the upcoming queue while the current track keeps playing."
-msgstr "Vacía la cola de próximas canciones mientras la pista actual sigue sonando."
+msgstr ""
+"Vacía la cola de próximas canciones mientras la pista actual sigue "
+"sonando."
 
 #: locales/command_strings.py:34
 msgid "Clear your entire gaming profile."
@@ -8120,11 +8759,15 @@ msgstr "Borra todo tu perfil de gaming."
 
 #: locales/command_strings.py:35
 msgid "Configure this server's warn escalation rules (threshold -> action)."
-msgstr "Configura las reglas de escalada de advertencias de este servidor (umbral -> acción)."
+msgstr ""
+"Configura las reglas de escalada de advertencias de este servidor (umbral"
+" -> acción)."
 
 #: locales/command_strings.py:36
 msgid "Create a Live streamer role and link it to the alert config."
-msgstr "Crea un rol de streamer en directo y vincúlalo a la configuración de alertas."
+msgstr ""
+"Crea un rol de streamer en directo y vincúlalo a la configuración de "
+"alertas."
 
 #: locales/command_strings.py:37
 msgid "Create a native yes/no poll (runs for 24 hours)."
@@ -8136,7 +8779,9 @@ msgstr "Crea o reactiva un feed de AniList en un canal (por defecto, aquí)."
 
 #: locales/command_strings.py:39
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
-msgstr "Elimina un panel de roles con botones por el ID de su mensaje (quita los botones)."
+msgstr ""
+"Elimina un panel de roles con botones por el ID de su mensaje (quita los "
+"botones)."
 
 #: locales/command_strings.py:40
 msgid "Delete a feed and its follows (default: this channel)."
@@ -8152,7 +8797,9 @@ msgstr "Elimina una cantidad de mensajes recientes en este canal."
 
 #: locales/command_strings.py:43
 msgid "Delete a shared server playlist (its creator or a moderator only)."
-msgstr "Elimina una playlist compartida del servidor (solo su creador o un moderador)."
+msgstr ""
+"Elimina una playlist compartida del servidor (solo su creador o un "
+"moderador)."
 
 #: locales/command_strings.py:44
 msgid "Delete the Live streamer role and unlink it from the config."
@@ -8180,7 +8827,9 @@ msgstr "Desconecta el reproductor del canal de voz."
 
 #: locales/command_strings.py:50
 msgid "Edit a profile field through a guided form (radio picker + value)."
-msgstr "Edita un campo del perfil mediante un formulario guiado (selector + valor)."
+msgstr ""
+"Edita un campo del perfil mediante un formulario guiado (selector + "
+"valor)."
 
 #: locales/command_strings.py:51
 msgid "Enable or disable the leveling system for this server."
@@ -8208,7 +8857,9 @@ msgstr "Otorga un rol automáticamente cuando un miembro alcanza un nivel."
 
 #: locales/command_strings.py:57
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
-msgstr "Actualizacion guiada: elige el titulo haciendo clic y luego edita un formulario prerellenado."
+msgstr ""
+"Actualizacion guiada: elige el titulo haciendo clic y luego edita un "
+"formulario prerellenado."
 
 #: locales/command_strings.py:58
 msgid "How long the ban lasts, e.g. 1d or 2h30m."
@@ -8288,7 +8939,9 @@ msgstr "Lista todos los usuarios en la lista negra."
 
 #: locales/command_strings.py:77
 msgid "List every button-role panel set up in this guild."
-msgstr "Lista todos los paneles de roles con botones configurados en este servidor."
+msgstr ""
+"Lista todos los paneles de roles con botones configurados en este "
+"servidor."
 
 #: locales/command_strings.py:78
 msgid "List the available prefixes for your guild."
@@ -8364,7 +9017,9 @@ msgstr "Gestiona el prefijo de comandos: definirlo o verlo."
 
 #: locales/command_strings.py:96
 msgid "Manage the starboard: set up, adjust, disable, or view the top messages."
-msgstr "Gestiona el starboard: configurarlo, ajustarlo, desactivarlo o ver los mejores mensajes."
+msgstr ""
+"Gestiona el starboard: configurarlo, ajustarlo, desactivarlo o ver los "
+"mejores mensajes."
 
 #: locales/command_strings.py:97
 msgid "Manage the timed double-XP (or reduced-XP) event."
@@ -8391,12 +9046,18 @@ msgid "Move a role to the given position in the hierarchy."
 msgstr "Mueve un rol a la posición indicada en la jerarquía."
 
 #: locales/command_strings.py:103
-msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
-msgstr "Encuesta de opción múltiple: quickpoll pregunta | opción 1 | opción 2 ... (sin argumentos abre un formulario)."
+msgid ""
+"Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no "
+"args opens a form)."
+msgstr ""
+"Encuesta de opción múltiple: quickpoll pregunta | opción 1 | opción 2 ..."
+" (sin argumentos abre un formulario)."
 
 #: locales/command_strings.py:104
 msgid "Mute a channel/category OR a role from earning XP (give exactly one)."
-msgstr "Silencia un canal/categoría O un rol para que no gane XP (indica exactamente uno)."
+msgstr ""
+"Silencia un canal/categoría O un rol para que no gane XP (indica "
+"exactamente uno)."
 
 #: locales/command_strings.py:105
 msgid "Mute a member."
@@ -8460,7 +9121,9 @@ msgstr "Abre el panel de control del feed de AniList de este servidor."
 
 #: locales/command_strings.py:120
 msgid "Open your interactive list dashboard, filtered by status (CURRENT)."
-msgstr "Abre tu panel interactivo de listas, filtrado por estado (por defecto ACTUAL)."
+msgstr ""
+"Abre tu panel interactivo de listas, filtrado por estado (por defecto "
+"ACTUAL)."
 
 #: locales/command_strings.py:121
 msgid "Open your personal preferences panel."
@@ -8468,7 +9131,9 @@ msgstr "Abre tu panel de preferencias personales."
 
 #: locales/command_strings.py:122
 msgid "Paginated moderation case history (optionally filtered to a member)."
-msgstr "Historial paginado de casos de moderación (opcionalmente filtrado por miembro)."
+msgstr ""
+"Historial paginado de casos de moderación (opcionalmente filtrado por "
+"miembro)."
 
 #: locales/command_strings.py:123
 msgid "Pause the current track."
@@ -8476,15 +9141,21 @@ msgstr "Pausa la pista actual."
 
 #: locales/command_strings.py:124
 msgid "Pick a level reward to remove from a list of every rule set up."
-msgstr "Elige una recompensa de nivel para eliminar de una lista con todas las reglas configuradas."
+msgstr ""
+"Elige una recompensa de nivel para eliminar de una lista con todas las "
+"reglas configuradas."
 
 #: locales/command_strings.py:125
 msgid "Pick a no-XP zone to remove from a list of every one configured."
-msgstr "Elige una zona sin XP para eliminar de una lista con todas las configuradas."
+msgstr ""
+"Elige una zona sin XP para eliminar de una lista con todas las "
+"configuradas."
 
 #: locales/command_strings.py:126
 msgid "Pick an XP boost to remove from a list of every one configured."
-msgstr "Elige un impulso de XP para eliminar de una lista con todos los configurados."
+msgstr ""
+"Elige un impulso de XP para eliminar de una lista con todos los "
+"configurados."
 
 #: locales/command_strings.py:127
 msgid "Pick the language for the bot's replies to you."
@@ -8504,7 +9175,9 @@ msgstr "Publica un botón Verify que concede un rol (un clic, sin vuelta atrás)
 
 #: locales/command_strings.py:131
 msgid "Queue every track in a shared server playlist and start playing."
-msgstr "Añade a la cola todas las canciones de una playlist compartida del servidor y empieza a reproducir."
+msgstr ""
+"Añade a la cola todas las canciones de una playlist compartida del "
+"servidor y empieza a reproducir."
 
 #: locales/command_strings.py:132
 msgid "Queue every track in your favourites and start playing."
@@ -8548,7 +9221,9 @@ msgstr "Elimina el favorito en la posición indicada de tu lista."
 
 #: locales/command_strings.py:142
 msgid "Rename a shared server playlist (its creator or a moderator only)."
-msgstr "Renombra una playlist compartida del servidor (solo su creador o un moderador)."
+msgstr ""
+"Renombra una playlist compartida del servidor (solo su creador o un "
+"moderador)."
 
 #: locales/command_strings.py:143
 msgid "Replay the previous track and requeue the current one."
@@ -8556,7 +9231,9 @@ msgstr "Repite la pista anterior y vuelve a poner la actual en la cola."
 
 #: locales/command_strings.py:144
 msgid "Reset EVERY member's XP for this server (double confirmation)."
-msgstr "Restablece el XP de TODOS los miembros de este servidor (doble confirmación)."
+msgstr ""
+"Restablece el XP de TODOS los miembros de este servidor (doble "
+"confirmación)."
 
 #: locales/command_strings.py:145
 msgid "Reset one member's XP to 0 (asks for confirmation first)."
@@ -8568,7 +9245,9 @@ msgstr "Reanuda el reproductor si está pausado."
 
 #: locales/command_strings.py:147
 msgid "Save the current track and queue as a shared server playlist."
-msgstr "Guarda la pista actual y la cola como una playlist compartida del servidor."
+msgstr ""
+"Guarda la pista actual y la cola como una playlist compartida del "
+"servidor."
 
 #: locales/command_strings.py:148
 msgid "Save the current track, or a searched track, to your favourites."
@@ -8585,7 +9264,9 @@ msgstr "Busca en Wikipedia un breve resumen de un tema."
 #: locales/command_strings.py:151
 #, python-brace-format
 msgid "Set a custom level-up message ({user} {level} {guild}), or reset it."
-msgstr "Define un mensaje personalizado de subida de nivel ({user} {level} {guild}), o restablécelo."
+msgstr ""
+"Define un mensaje personalizado de subida de nivel ({user} {level} "
+"{guild}), o restablécelo."
 
 #: locales/command_strings.py:152
 msgid "Set a member's XP to an exact total."
@@ -8601,7 +9282,9 @@ msgstr "Define cuánto XP gana un miembro por minuto elegible en voz (1-60)."
 
 #: locales/command_strings.py:155
 msgid "Set one of your profile fields (switch, 3ds, battletag, riot, steam)."
-msgstr "Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, steam)."
+msgstr ""
+"Configura uno de los campos de tu perfil (switch, 3ds, battletag, riot, "
+"steam)."
 
 #: locales/command_strings.py:156
 msgid "Set the channel where moderation logs are sent."
@@ -8621,7 +9304,9 @@ msgstr "Ajusta el volumen del reproductor (0-200)."
 
 #: locales/command_strings.py:160
 msgid "Set the server's default language (used when a member has not picked one)."
-msgstr "Establece el idioma predeterminado del servidor (se usa cuando un miembro no ha elegido uno)."
+msgstr ""
+"Establece el idioma predeterminado del servidor (se usa cuando un miembro"
+" no ha elegido uno)."
 
 #: locales/command_strings.py:161
 msgid "Set the starboard channel and the star threshold."
@@ -8637,7 +9322,9 @@ msgstr "Establece el canal y el mensaje de bienvenida (una alternativa sencilla)
 
 #: locales/command_strings.py:164
 msgid "Set whether members keep every earned reward, or only the latest."
-msgstr "Define si los miembros conservan todas las recompensas ganadas, o solo la más reciente."
+msgstr ""
+"Define si los miembros conservan todas las recompensas ganadas, o solo la"
+" más reciente."
 
 #: locales/command_strings.py:165
 msgid "Set your AFK status, with an optional message."
@@ -8645,7 +9332,9 @@ msgstr "Configura tu estado AFK, con un mensaje opcional."
 
 #: locales/command_strings.py:166
 msgid "Show AniList stats for a user (defaults to your linked account)."
-msgstr "Muestra las estadisticas de AniList de un usuario (por defecto, tu cuenta vinculada)."
+msgstr ""
+"Muestra las estadisticas de AniList de un usuario (por defecto, tu cuenta"
+" vinculada)."
 
 #: locales/command_strings.py:167
 msgid "Show NASA's Astronomy Picture of the Day."
@@ -8653,7 +9342,9 @@ msgstr "Muestra la Imagen Astronómica del Día de la NASA."
 
 #: locales/command_strings.py:168
 msgid "Show a collage of a user's avatar / server avatar / banner history."
-msgstr "Muestra un collage del historial de avatar / avatar de servidor / banner de un usuario."
+msgstr ""
+"Muestra un collage del historial de avatar / avatar de servidor / banner "
+"de un usuario."
 
 #: locales/command_strings.py:169
 msgid "Show a single moderation case by its number."
@@ -8669,7 +9360,9 @@ msgstr "Muestra todas las recompensas de nivel configuradas para este servidor."
 
 #: locales/command_strings.py:172
 msgid "Show every member on the live-alert watchlist."
-msgstr "Muestra todos los miembros en la lista de seguimiento de alertas en directo."
+msgstr ""
+"Muestra todos los miembros en la lista de seguimiento de alertas en "
+"directo."
 
 #: locales/command_strings.py:173
 msgid "Show every no-XP channel/category and role configured."
@@ -8745,11 +9438,15 @@ msgstr "Muestra los miembros más recientes del servidor."
 
 #: locales/command_strings.py:191
 msgid "Show the ranked members of the guild (add weekly/monthly for a"
-msgstr "Muestra la clasificación de miembros del servidor (añade semanal/mensual para una"
+msgstr ""
+"Muestra la clasificación de miembros del servidor (añade semanal/mensual "
+"para una"
 
 #: locales/command_strings.py:192
 msgid "Show this server's shared playlists (the bare-group fallback)."
-msgstr "Muestra las playlists compartidas de este servidor (respaldo del grupo sin subcomando)."
+msgstr ""
+"Muestra las playlists compartidas de este servidor (respaldo del grupo "
+"sin subcomando)."
 
 #: locales/command_strings.py:193
 msgid "Show your level and XP rank card, or another member's."
@@ -8785,7 +9482,9 @@ msgstr "Comienza a vincular tu cuenta de AniList."
 
 #: locales/command_strings.py:201
 msgid "Stop following an AniList user (by stored name, case-insensitive)."
-msgstr "Deja de seguir a un usuario de AniList (por nombre guardado, sin distinguir mayúsculas)."
+msgstr ""
+"Deja de seguir a un usuario de AniList (por nombre guardado, sin "
+"distinguir mayúsculas)."
 
 #: locales/command_strings.py:202
 msgid "Stop playback and clear the queue (stays connected)."
@@ -9002,12 +9701,18 @@ msgstr "El miembro cuyos mensajes eliminar."
 #: locales/command_strings.py:255
 #, python-brace-format
 msgid "The message template, using {user} {level} {guild} (blank resets it)."
-msgstr "La plantilla del mensaje, usando {user} {level} {guild} (vacío la restablece)."
+msgstr ""
+"La plantilla del mensaje, usando {user} {level} {guild} (vacío la "
+"restablece)."
 
 #: locales/command_strings.py:256
 #, python-brace-format
-msgid "The message text (supports {mention} {user} {server} {count} {membercount})."
-msgstr "El texto del mensaje (admite {mention} {user} {server} {count} {membercount})."
+msgid ""
+"The message text (supports {mention} {user} {server} {count} "
+"{membercount})."
+msgstr ""
+"El texto del mensaje (admite {mention} {user} {server} {count} "
+"{membercount})."
 
 #: locales/command_strings.py:257
 msgid "The message the mapping is on."
@@ -9031,7 +9736,9 @@ msgstr "El nuevo motivo a registrar."
 
 #: locales/command_strings.py:262
 msgid "The one leveling admin group: enable, rewards, XP, no-XP zones,"
-msgstr "El único grupo de administración de niveles: activar, recompensas, XP, zonas sin XP,"
+msgstr ""
+"El único grupo de administración de niveles: activar, recompensas, XP, "
+"zonas sin XP,"
 
 #: locales/command_strings.py:263
 msgid "The osu! username to look up."
@@ -9111,11 +9818,15 @@ msgstr "La pregunta de sí/no a hacer."
 
 #: locales/command_strings.py:282
 msgid "Toggle new-chapter DMs for titles on your Reading manga list."
-msgstr "Activa o desactiva los MD de nuevos capítulos para los títulos de tu lista de manga Reading."
+msgstr ""
+"Activa o desactiva los MD de nuevos capítulos para los títulos de tu "
+"lista de manga Reading."
 
 #: locales/command_strings.py:283
 msgid "Toggle new-episode DMs for titles on your Watching anime list."
-msgstr "Activa o desactiva los MD de nuevos episodios para los títulos de tu lista de anime Watching."
+msgstr ""
+"Activa o desactiva los MD de nuevos episodios para los títulos de tu "
+"lista de anime Watching."
 
 #: locales/command_strings.py:284
 msgid "Translate text to English (auto-detect source language)."
@@ -9127,7 +9838,9 @@ msgstr "True para activar, False para desactivar."
 
 #: locales/command_strings.py:286
 msgid "Turn Discord-invite filtering on or off for this server."
-msgstr "Activa o desactiva el filtrado de invitaciones de Discord para este servidor."
+msgstr ""
+"Activa o desactiva el filtrado de invitaciones de Discord para este "
+"servidor."
 
 #: locales/command_strings.py:287
 msgid "Turn invite filtering on or off."
@@ -9143,7 +9856,9 @@ msgstr "Activa o desactiva el filtrado de enlaces."
 
 #: locales/command_strings.py:290
 msgid "Turn off verification (existing buttons will report it is off)."
-msgstr "Desactiva la verificación (los botones existentes indicarán que está desactivada)."
+msgstr ""
+"Desactiva la verificación (los botones existentes indicarán que está "
+"desactivada)."
 
 #: locales/command_strings.py:291
 msgid "Turn spam filtering on or off for this server."
@@ -9195,15 +9910,21 @@ msgstr "WINTER, SPRING, SUMMER, o FALL (por defecto, la temporada actual)."
 
 #: locales/command_strings.py:303
 msgid "Warn a member (escalates per this server's warn rules)."
-msgstr "Advierte a un miembro (escala según las reglas de advertencias de este servidor)."
+msgstr ""
+"Advierte a un miembro (escala según las reglas de advertencias de este "
+"servidor)."
 
 #: locales/command_strings.py:304
 msgid "Watching/Reading, Completed, Planning, Paused, Dropped, or Repeating."
 msgstr "Watching/Reading, Completed, Planning, Paused, Dropped, o Repeating."
 
 #: locales/command_strings.py:305
-msgid "What to remind you about (and when, e.g. '10m buy milk'). Blank opens a form."
-msgstr "Sobre qué recordarte (y cuándo, p. ej. '10m comprar leche'). Vacío abre un formulario."
+msgid ""
+"What to remind you about (and when, e.g. '10m buy milk'). Blank opens a "
+"form."
+msgstr ""
+"Sobre qué recordarte (y cuándo, p. ej. '10m comprar leche'). Vacío abre "
+"un formulario."
 
 #: locales/command_strings.py:306
 msgid "What to search for - a song, album, artist or playlist."
@@ -9398,8 +10119,12 @@ msgid "Run"
 msgstr "Ejecutar"
 
 #: tools/arg_completion.py:262
-msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
-msgstr "Elige en los menús, usa **Introducir detalles** para el resto y luego pulsa **Ejecutar**."
+msgid ""
+"Pick from the menus, use **Enter details** for the rest, then press "
+"**Run**."
+msgstr ""
+"Elige en los menús, usa **Introducir detalles** para el resto y luego "
+"pulsa **Ejecutar**."
 
 #: tools/arg_completion.py:264
 msgid "Pick from the menus, then press **Run**."
@@ -9614,15 +10339,21 @@ msgstr "No puedes aplicar esa acción al propietario del servidor."
 
 #: tools/modchecks.py:42
 msgid "You can't action someone whose role is equal to or above yours."
-msgstr "No puedes aplicar esa acción a alguien cuyo rol sea igual o superior al tuyo."
+msgstr ""
+"No puedes aplicar esa acción a alguien cuyo rol sea igual o superior al "
+"tuyo."
 
 #: tools/modchecks.py:46
 msgid "My highest role isn't above that member, so I can't act on them."
-msgstr "Mi rol más alto no está por encima de ese miembro, así que no puedo actuar sobre él."
+msgstr ""
+"Mi rol más alto no está por encima de ese miembro, así que no puedo "
+"actuar sobre él."
 
 #: tools/modchecks.py:93
 msgid "My highest role isn't above that role, so I can't manage it."
-msgstr "Mi rol más alto no está por encima de ese rol, así que no puedo gestionarlo."
+msgstr ""
+"Mi rol más alto no está por encima de ese rol, así que no puedo "
+"gestionarlo."
 
 #: tools/paginator.py:23 tools/paginator.py:49
 msgid "Nothing to show."
