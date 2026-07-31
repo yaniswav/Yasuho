@@ -8,7 +8,12 @@ into the SAME Postgres database, then emits::
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
 leveling | rank_card | warn_escalation | verify_role | locale | custom_commands |
-twitch | autorooms``. The bot mirrors those settings in memory (``bot.prefixes`` /
+twitch | autorooms``.
+
+ONE kind is USER-scoped rather than guild-scoped and carries ``userId`` in place
+of ``guildId``: ``user_settings``, emitted when the dashboard writes somebody's
+personal preferences (the ``?settings`` panel's toggles + MangaDex language).
+See :data:`USER_KINDS`. The bot mirrors those settings in memory (``bot.prefixes`` /
 ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
 ``tools.settings`` LRU for the welcome + automod + modlog_events +
 warn_escalation + verify_role + locale + twitch + autorooms JSONB blobs, the
@@ -94,8 +99,18 @@ VALID_KINDS = frozenset(
         "custom_commands",
         "twitch",
         "autorooms",
+        "user_settings",
     }
 )
+
+# The kinds whose payload names a USER, not a guild -- they carry ``userId``.
+#
+# ``user_settings`` exists because ``tools.settings`` treats its LRU as
+# AUTHORITATIVE for this single-process bot: a dashboard write straight to
+# ``user_settings`` is invisible here until that user's blob happens to be
+# evicted (cap 8192). The user would flip a preference on the web, see it saved,
+# and watch the bot keep the old behaviour. This kind is what closes that.
+USER_KINDS = frozenset({"user_settings"})
 
 # Reconnect backoff bounds for the listen connection supervisor.
 _BACKOFF_START = 1.0
@@ -107,11 +122,16 @@ _KEEPALIVE_INTERVAL = 30.0
 
 
 def _parse_payload(payload):
-    """Parse a NOTIFY payload defensively into ``(kind, guild_id)`` or ``None``.
+    """Parse a NOTIFY payload defensively into ``(kind, scope_id)`` or ``None``.
 
-    Rejects anything that is not a JSON object carrying a known ``kind`` and a
-    numeric ``guildId`` (accepted as int or numeric string, since JS serialises
-    large ids as strings). Never raises.
+    Rejects anything that is not a JSON object carrying a known ``kind`` and the
+    numeric id that kind's SCOPE requires -- ``userId`` for a kind in
+    :data:`USER_KINDS`, ``guildId`` for every other. Both are accepted as int or
+    numeric string, since JS serialises large ids as strings. Never raises.
+
+    The id field is chosen by the kind and NOT by which key happens to be
+    present, so a guild kind carrying only ``userId`` (or the reverse) is
+    rejected rather than silently invalidating the wrong scope.
     """
     if not isinstance(payload, (str, bytes, bytearray)):
         return None
@@ -124,11 +144,12 @@ def _parse_payload(payload):
     kind = data.get("kind")
     if kind not in VALID_KINDS:
         return None
+    id_field = "userId" if kind in USER_KINDS else "guildId"
     try:
-        guild_id = int(data.get("guildId"))
+        scope_id = int(data.get(id_field))
     except (TypeError, ValueError):
         return None
-    return kind, guild_id
+    return kind, scope_id
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +486,22 @@ async def _invalidate_autorooms(bot, gid):
     cog._index_guild(gid, hubs)
 
 
+async def _invalidate_user_settings(bot, uid):
+    """Drop ONE user's ``tools.settings`` blob after a dashboard write.
+
+    Unlike every other invalidator here there is nothing to re-read: the LRU is
+    read-through, so discarding the entry is enough and the next ``get_user``
+    reloads the authoritative row. ``invalidate_user`` exists for exactly this
+    -- its own docstring calls it "after an out-of-band transactional write".
+
+    Deliberately does NOT re-read and re-seed: ``tools.privacy`` also writes one
+    of these keys (``avatar_history_tracking``) under an advisory lock, so
+    re-seeding from a read taken outside that lock could resurrect a value it
+    had just changed. Dropping the entry cannot.
+    """
+    settings.invalidate_user(uid)
+
+
 _INVALIDATORS = {
     "prefix": _invalidate_prefix,
     "autorole": _invalidate_autorole,
@@ -481,6 +518,7 @@ _INVALIDATORS = {
     "custom_commands": _invalidate_custom_commands,
     "twitch": _invalidate_twitch,
     "autorooms": _invalidate_autorooms,
+    "user_settings": _invalidate_user_settings,
 }
 
 
@@ -495,16 +533,17 @@ async def dispatch(bot, payload):
     parsed = _parse_payload(payload)
     if parsed is None:
         return None
-    kind, gid = parsed
+    kind, scope_id = parsed
     invalidator = _INVALIDATORS.get(kind)
     if invalidator is None:  # defensive: VALID_KINDS and _INVALIDATORS agree
         return None
     try:
-        await invalidator(bot, gid)
+        await invalidator(bot, scope_id)
     except Exception:
         log.exception("dashboard_sync: invalidation failed for kind=%s", kind)
         return None
-    log.debug("dashboard_sync: invalidated kind=%s guild=%s", kind, gid)
+    scope = "user" if kind in USER_KINDS else "guild"
+    log.debug("dashboard_sync: invalidated kind=%s %s=%s", kind, scope, scope_id)
     return kind
 
 

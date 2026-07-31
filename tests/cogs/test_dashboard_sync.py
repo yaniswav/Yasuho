@@ -837,4 +837,62 @@ def test_valid_kinds_match_invalidators():
         "custom_commands",
         "twitch",
         "autorooms",
+        "user_settings",
     }
+
+
+# ---------------------------------------------------------------------------
+# user_settings: the ONE user-scoped kind.
+#
+# tools.settings treats its LRU as AUTHORITATIVE for this single-process bot, so
+# a dashboard write straight into user_settings is invisible here until that
+# user's blob is evicted (cap 8192) -- the user flips a preference on the web,
+# sees it saved, and the bot keeps the old behaviour. These pin the bridge that
+# closes it, and pin that the scope cannot be confused with a guild's.
+# ---------------------------------------------------------------------------
+
+
+def test_parse_user_kind_reads_user_id_not_guild_id():
+    import json
+
+    assert dashboard_sync._parse_payload(
+        json.dumps({"kind": "user_settings", "userId": "77"})
+    ) == ("user_settings", 77)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        # A user kind carrying only guildId must NOT fall back to it: that would
+        # invalidate a user blob keyed by somebody's GUILD id.
+        '{"kind": "user_settings", "guildId": "100"}',
+        '{"kind": "user_settings", "userId": "abc"}',
+        '{"kind": "user_settings", "userId": null}',
+        '{"kind": "user_settings"}',
+        # ...and the reverse: a guild kind must not accept a userId.
+        '{"kind": "prefix", "userId": "100"}',
+    ],
+)
+def test_parse_rejects_cross_scope_payloads(payload):
+    assert dashboard_sync._parse_payload(payload) is None
+
+
+@pytest.mark.asyncio
+async def test_dispatch_user_settings_evicts_only_that_user():
+    pool = SyncPool()
+    bot = FakeBot(pool)
+    # Two users cached, plus a guild blob that must be left alone.
+    settings._cache[("user_settings", 77)] = {"levelup_ping": False}
+    settings._cache[("user_settings", 88)] = {"levelup_ping": True}
+    settings._cache[("guild_settings", 77)] = {"locale": "fr"}
+
+    import json
+
+    handled = await dashboard_sync.dispatch(
+        bot, json.dumps({"kind": "user_settings", "userId": "77"})
+    )
+
+    assert handled == "user_settings"
+    assert ("user_settings", 77) not in settings._cache  # dropped
+    assert ("user_settings", 88) in settings._cache  # other user untouched
+    assert ("guild_settings", 77) in settings._cache  # same id, other scope
