@@ -12,7 +12,7 @@ twitch | autorooms``.
 
 ONE kind is USER-scoped rather than guild-scoped and carries ``userId`` in place
 of ``guildId``: ``user_settings``, emitted when the dashboard writes somebody's
-personal preferences (the ``?settings`` panel's toggles + MangaDex language).
+personal preferences (the ``/preferences`` panel's keys).
 See :data:`USER_KINDS`. The bot mirrors those settings in memory (``bot.prefixes`` /
 ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
 ``tools.settings`` LRU for the welcome + automod + modlog_events +
