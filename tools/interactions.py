@@ -59,7 +59,9 @@ async def defer(
         return False
 
 
-async def refresh_layout(interaction, message, view, *, surface: str = "panel") -> None:
+async def refresh_layout(
+    interaction, message, view, *, surface: str = "panel", allowed_mentions=None
+) -> None:
     """View-only in-place refresh of a Components V2 (LayoutView) panel.
 
     A Components V2 message carries its content inside the view, so Discord rejects
@@ -69,11 +71,19 @@ async def refresh_layout(interaction, message, view, *, surface: str = "panel") 
     editing the stored message. A first-attempt failure is an expected fallthrough
     to that fallback and stays at DEBUG; a failure of the FINAL fallback means the
     refresh never landed, so it is logged at warning with ``surface``.
+
+    ``allowed_mentions`` is OMITTED from the edit unless a caller passes one, so the
+    default behaviour is unchanged: discord.py folds the client default into an edit
+    that says nothing (core.Yasuho: users=True). A panel whose text holds tokens it
+    must not (re)notify - attacker-chosen guild names, raw ``<@id>`` - passes
+    ``discord.AllowedMentions.none()`` here, the same reasoning as
+    ``AuthorLayoutView.on_timeout``.
     """
 
+    extra = {} if allowed_mentions is None else {"allowed_mentions": allowed_mentions}
     try:
         if not interaction.response.is_done():
-            await interaction.response.edit_message(view=view)
+            await interaction.response.edit_message(view=view, **extra)
             return
     except discord.HTTPException:
         log.debug(
@@ -83,7 +93,7 @@ async def refresh_layout(interaction, message, view, *, surface: str = "panel") 
         )
     if message is not None:
         try:
-            await message.edit(view=view)
+            await message.edit(view=view, **extra)
         except discord.HTTPException:
             log.warning(
                 "interactions.refresh_layout: could not refresh %s", surface, exc_info=True

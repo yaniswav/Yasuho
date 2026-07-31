@@ -134,9 +134,10 @@ OTHER_NAME = "Other"
 OTHER_DESCRIPTION = N_("Anything not yet sorted into a category.")
 
 # Cogs never surfaced as a category: the help cog wires itself in separately, and
-# Admin is owner-only (all its commands are hidden, so it never surfaces anyway -
-# listing it here states the intent and lets the guard test treat it as claimed).
-EXCLUDED_COGS = {"Help", "Admin"}
+# Admin / BotStats are owner-only (all their commands are hidden, so they never
+# surface anyway - listing them here states the intent and lets the guard test
+# treat them as claimed).
+EXCLUDED_COGS = {"Help", "Admin", "BotStats"}
 
 
 def _visible_commands(cmds):
