@@ -3,10 +3,10 @@ import logging
 import discord
 from discord.ext import commands
 
+from .message_ref import parse_message_ref
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.interactions import notify_failure
-from tools.message_ref import parse_message_ref
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView, LocaleModal
 

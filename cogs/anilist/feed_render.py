@@ -3,7 +3,7 @@
 The spoiler-safe, security-grade post/embed construction. :class:`ActivityCard`
 turns one normalised activity into a Components V2 card and :class:`ActivityDigest`
 coalesces a busy tick's remainder into one compact card; both lean on the pure
-helpers in ``tools.anilist_feed`` (``af``) for the spoiler-safe text conversion,
+helpers in ``cogs.anilist.feed_policy`` (``af``) for the spoiler-safe text conversion,
 colour parsing and grouping. The card's action row embeds the persistent
 DynamicItem buttons from ``feed_views``; the media-title helper is shared with the
 add action and lives in ``feed_delivery``. Import direction is one-way (this
@@ -16,9 +16,9 @@ import logging
 
 import discord
 
+from . import feed_policy as af
 from .feed_delivery import _media_title
 from .feed_views import CARD_ACCENT, FeedAddButton, FeedLikeButton, FeedReplyButton
-from tools import anilist_feed as af
 from tools.i18n import N_, _, ngettext
 
 log = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def _colour_from_media(media):
     """Cover accent colour ("#aabbcc") as an int, else the card blue.
 
     Parses the media's ``coverImage.color`` with the pure, defensive
-    :func:`tools.anilist_feed.parse_hex_colour`; a missing media, missing colour
+    :func:`cogs.anilist.feed_policy.parse_hex_colour`; a missing media, missing colour
     or malformed value all fall back to :data:`CARD_ACCENT`.
     """
 

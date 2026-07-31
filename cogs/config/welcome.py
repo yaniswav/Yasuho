@@ -4,7 +4,8 @@ import random
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, interactions, rendering, settings, welcome_card
+from . import welcome_card
+from tools import embed_creator, interactions, rendering, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -689,7 +690,7 @@ class Welcome(commands.Cog):
         """
 
         # Pull the avatar bytes off the loop before handing PIL the raw data,
-        # then delegate the pure Pillow rendering to tools.welcome_card.
+        # then delegate the pure Pillow rendering to cogs.config.welcome_card.
         avatar_bytes = await member.display_avatar.replace(size=128).read()
         display_name = member.display_name
         member_count = member.guild.member_count or 0

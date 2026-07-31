@@ -25,7 +25,7 @@ poller scans a SHORT trailing window ``(last_airing_at, now]`` sorted by TIME
 ascending and never pre-announces. The cursor advances to the max ``airingAt``
 processed; under page truncation it stops at the last fetched row so the
 higher-``airingAt`` tail rides the next tick (see
-:func:`tools.anilist_feed.advance_airing_cursor`). The very first run anchors the
+:func:`cogs.anilist.feed_policy.advance_airing_cursor`). The very first run anchors the
 cursor to ``now`` and posts nothing.
 """
 
@@ -38,6 +38,7 @@ import time
 import discord
 from discord.ext import commands, tasks
 
+from . import feed_policy as af
 from .account import AccountMixin
 from .feed import (
     CARD_ACCENT,
@@ -57,7 +58,6 @@ from .feed import (
 )
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
-from tools import anilist_feed as af
 from tools import i18n, interactions
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
@@ -215,7 +215,7 @@ def plan_airing_channel_posts(aired, channel_media):
     explicitly SUBSCRIBES to (``anilist_channel_subs``, media_type ANIME).
 
     A feed channel gets ONE post per aired row whose media it subscribes to. Unlike
-    the DM path (:func:`tools.anilist_feed.plan_airing_notifications`), this is NOT
+    the DM path (:func:`cogs.anilist.feed_policy.plan_airing_notifications`), this is NOT
     progress-gated: a guild post is for everyone in the channel, not tied to any one
     member's progress, so an airing of a subscribed title is posted regardless of
     who has watched what.

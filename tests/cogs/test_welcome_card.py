@@ -1,4 +1,4 @@
-"""Tests for tools.welcome_card.render_card.
+"""Tests for cogs.config.welcome_card.render_card.
 
 render_card is pure Pillow: given avatar bytes, a display name, a member count
 and a background colour, it must return a PNG BytesIO that opens as a 640x200
@@ -10,7 +10,7 @@ import io
 
 from PIL import Image
 
-from tools.welcome_card import render_card
+from cogs.config.welcome_card import render_card
 
 
 def _tiny_png_bytes(color=(10, 120, 200, 255), size=(8, 8)):

@@ -1,6 +1,6 @@
 """Tests for the reminders listing/cancel surface (cogs/community/reminders.py).
 
-Covers three things the pure-logic suite (tests/tools/test_reminders.py) cannot:
+Covers three things the pure-logic suite (tests/cogs/test_reminders_store.py) cannot:
 
 * :class:`RemindersCard` rendering + navigation + confirm-less cancel (the
   Components V2 card), driven against the FakeInteraction/fake-cog stand-ins.
@@ -18,8 +18,8 @@ import types
 
 import discord
 
+from cogs.community import reminders_store as rem
 from cogs.community.reminders import Reminder, RemindersCard, timer_retry_delay
-from tools import reminders as rem
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

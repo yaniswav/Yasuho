@@ -21,12 +21,13 @@ from typing import Literal
 import discord
 from discord.ext import commands
 
+from . import modactions
 from cogs.moderation.automod_panel import (
     DEFAULT_ACTION,
     VALID_ACTIONS,
     AutoModPanel,
 )
-from tools import db, modactions, settings, warn_escalation
+from tools import db, settings, warn_escalation
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_ids

@@ -1,4 +1,4 @@
-"""Unit tests for the pure reminder-card helpers (tools/reminders.py).
+"""Unit tests for the pure reminder-card helpers (cogs/community/reminders_store.py).
 
 These lock down the four side-effect-free pieces the "see and cancel my
 reminders" card relies on: the paging math, the label truncation, the
@@ -6,7 +6,7 @@ defensive type filter, and the capped-count label. No Discord object, DB, or
 event loop is required - the functions are pure.
 """
 
-from tools import reminders as rem
+from cogs.community import reminders_store as rem
 
 # ---------------------------------------------------------------------------
 # paginate

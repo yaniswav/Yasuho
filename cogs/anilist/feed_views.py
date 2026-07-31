@@ -15,8 +15,8 @@ import logging
 
 import discord
 
+from . import feed_policy as af
 from .feed_delivery import _run_add, _run_like, _run_reply
-from tools import anilist_feed as af
 from tools import i18n, interactions
 from tools.i18n import N_, _
 from tools.views import _DISABLEABLE, AuthorLayoutView, AuthorView, LocaleModal

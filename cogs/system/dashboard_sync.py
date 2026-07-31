@@ -242,7 +242,7 @@ async def _invalidate_warn_escalation(bot, gid):
 
     Warn escalation policy lives under the ``guild_settings`` JSONB key
     ``'warn_escalation'`` (``tools/warn_escalation.py`` ``SETTINGS_KEY``) and is
-    read via ``tools.modactions.load_escalation_policy`` -> ``settings.get_guild``,
+    read via ``cogs.moderation.modactions.load_escalation_policy`` -> ``settings.get_guild``,
     served from the SAME ``tools.settings`` LRU as welcome/automod/modlog_events.
     ``invalidate_guild`` drops the guild's cached blob (the same helper retention
     uses), so the next read re-fetches the authoritative row instead of serving a

@@ -1,6 +1,6 @@
-"""Unit tests for tools.message_ref.parse_message_ref (pure function)."""
+"""Unit tests for cogs.config.message_ref.parse_message_ref (pure function)."""
 
-from tools.message_ref import parse_message_ref
+from cogs.config.message_ref import parse_message_ref
 
 
 def test_jump_link_yields_all_three_ids():

@@ -4,11 +4,12 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
+from . import modactions
 from cogs.moderation.warns import (  # noqa: F401  (WarningsView re-exported for back-compat)
     WarningsView,
     Warns,
 )
-from tools import db, modactions, modchecks
+from tools import db, modchecks
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _

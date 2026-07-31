@@ -1,6 +1,6 @@
 """Delivery-layer integration tests for AniList feed card coalescing (LOT AF2).
 
-The pure fold decision is covered by tests/tools/test_anilist_feed_coalesce.py;
+The pure fold decision is covered by tests/cogs/test_anilist_feed_coalesce.py;
 here we pin how :class:`AniListFeed` wires it into real delivery:
 
 * an EDIT silently edits the STORED message and rebuilds the card with the
@@ -19,9 +19,9 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 
+from cogs.anilist import feed_coalesce as afc
 from cogs.anilist.feed import AniListFeed
 from cogs.anilist.feed_render import ActivityDigest
-from tools import anilist_feed_coalesce as afc
 
 
 def _now():

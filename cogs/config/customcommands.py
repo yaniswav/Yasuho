@@ -19,7 +19,7 @@ import time
 import discord
 from discord.ext import commands
 
-from tools import custom_commands as cc
+from . import command_naming as cc
 from tools import embed_creator
 from tools.formats import random_colour
 from tools.i18n import N_, _
@@ -45,7 +45,7 @@ PLACEHOLDERS = [
 ]
 PLACEHOLDER_HINT = "{user} {server} {members}"
 
-# error key -> user-facing message (keys come from tools.custom_commands).
+# error key -> user-facing message (keys come from cogs.config.command_naming).
 _NAME_ERRORS = {
     "empty": lambda: _("The command name can't be empty."),
     "too_long": lambda: _("The name is too long (max {n} characters).").format(

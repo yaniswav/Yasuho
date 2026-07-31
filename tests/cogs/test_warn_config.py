@@ -6,9 +6,9 @@ Three surfaces, all against the conftest fakes (no network / DB / Discord):
   ``cogs/moderation/warn_config.py`` (duration formatting, the case-embed
   "Auto-action" line, the panel building across states inside the CV2 budget,
   and each interactive component persisting through ``settings``).
-* The shared ``tools.modactions`` seams both the warn command and AutoMod use:
-  ``load_escalation_policy`` (default / configured / malformed) and
-  ``apply_escalation_action`` (timeout/kick/ban, suppression, failure).
+* The shared ``cogs.moderation.modactions`` seams both the warn command and
+  AutoMod use: ``load_escalation_policy`` (default / configured / malformed)
+  and ``apply_escalation_action`` (timeout/kick/ban, suppression, failure).
 * The ``Moderation.warn`` command's escalation hook end to end against a routed
   fake pool: fires AT a threshold, not past it, kick-at-3 for an unconfigured
   guild, and a clear degrade when the action fails.
@@ -17,6 +17,7 @@ Three surfaces, all against the conftest fakes (no network / DB / Discord):
 import datetime
 import types
 
+from cogs.moderation import modactions
 from cogs.moderation.warn_config import (
     ACTION_CHOICES,
     WarnConfigPanel,
@@ -28,7 +29,7 @@ from cogs.moderation.warn_config import (
     format_duration,
 )
 from cogs.moderation.warns import Warns
-from tools import modactions, settings
+from tools import settings
 from tools import warn_escalation as we
 
 
@@ -316,7 +317,7 @@ async def test_reset_default_writes_kick_at_three(fake_pool, make_interaction):
 
 
 # ---------------------------------------------------------------------------
-# tools.modactions.load_escalation_policy
+# cogs.moderation.modactions.load_escalation_policy
 # ---------------------------------------------------------------------------
 async def test_load_policy_unconfigured_is_default(fake_pool):
     settings._cache.clear()
@@ -349,7 +350,7 @@ async def test_load_policy_malformed_falls_back_and_logs(fake_pool, caplog):
 
 
 # ---------------------------------------------------------------------------
-# tools.modactions.apply_escalation_action
+# cogs.moderation.modactions.apply_escalation_action
 # ---------------------------------------------------------------------------
 async def test_apply_timeout_calls_member_timeout(fake_pool):
     bot = _FakeBot(fake_pool)

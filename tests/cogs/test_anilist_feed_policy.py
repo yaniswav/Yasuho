@@ -1,4 +1,4 @@
-"""Unit tests for tools/anilist_feed.py (pure feed helpers).
+"""Unit tests for cogs/anilist/feed_policy.py (pure feed helpers).
 
 The feed core is pure: no Discord, database or network. These tests pin the
 markdown conversion (spoilers above all - leaking one is the worst failure),
@@ -6,7 +6,7 @@ routing/filtering, burst coalescing and progress normalisation, focusing on the
 edges that bite in production.
 """
 
-from tools import anilist_feed as af
+from cogs.anilist import feed_policy as af
 
 # ---------------------------------------------------------------------------
 # constants

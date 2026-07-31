@@ -1,10 +1,10 @@
-"""Unit tests for tools/db.py and tools/modactions.py.
+"""Unit tests for tools/db.py and cogs/moderation/modactions.py.
 
 These exercise the two small, pure-ish helpers that several cogs lean on: the
 identifier validator + guild upsert in ``tools.db`` and the case numbering,
-action colours, and case embed builder in ``tools.modactions``. Every database
-call goes through the ``fake_pool`` fixture (see conftest at the repo root), so
-nothing here touches a real database, Discord, or the network.
+action colours, and case embed builder in ``cogs.moderation.modactions``. Every
+database call goes through the ``fake_pool`` fixture (see conftest at the repo
+root), so nothing here touches a real database, Discord, or the network.
 """
 
 import datetime
@@ -13,7 +13,8 @@ import asyncpg
 import discord
 import pytest
 
-from tools import db, modactions
+from cogs.moderation import modactions
+from tools import db
 
 # ---------------------------------------------------------------------------
 # small local fakes for the discord side of case_embed

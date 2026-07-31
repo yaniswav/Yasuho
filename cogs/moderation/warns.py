@@ -36,13 +36,14 @@ import logging
 import discord
 from discord.ext import commands
 
+from . import modactions
 from cogs.moderation.warn_config import (
     WarnConfigPanel,
     escalation_dm,
     escalation_failure_notice,
     escalation_summary,
 )
-from tools import modactions, modchecks, warn_escalation
+from tools import modchecks, warn_escalation
 from tools.i18n import _
 from tools.views import AuthorView
 

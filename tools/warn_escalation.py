@@ -21,7 +21,7 @@ Escalation semantics (documented + tested):
   existing servers.
 * An explicit empty list is a valid, DISTINCT state: escalation is OFF.
 * A malformed stored payload falls back to the default policy (fail safe); the
-  loader (tools.modactions.load_escalation_policy) logs a warning in that case.
+  loader (cogs.moderation.modactions.load_escalation_policy) logs a warning in that case.
 * Changing or removing rules never retro-applies: a rule fires only at the
   moment a warn lands on its threshold, so editing the policy never sweeps the
   existing member counts.

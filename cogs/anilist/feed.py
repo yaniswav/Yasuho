@@ -4,7 +4,7 @@ A guild may configure up to two feed channels; each feed follows a set of
 AniList users and this cog mirrors their new activities (list progress + text
 posts) into the channel. A single ``tasks.loop`` poller fetches new activities
 in batches from AniList's public GraphQL API and fans them out to the channels
-that want them, leaning on the pure helpers in ``tools.anilist_feed`` for all
+that want them, leaning on the pure helpers in ``cogs.anilist.feed_policy`` for all
 filtering/routing/coalescing/markdown work.
 
 Cursor + dedup. ``Page.activities`` has no ``id_greater`` argument, so the
@@ -41,6 +41,8 @@ from discord.ext import commands, tasks
 # path (airing.py, chapters.py and the test suite) keeps resolving to the exact
 # same object (``feed.Name is feed_x.Name``). Names the cog itself uses at
 # runtime carry no marker; the rest are pure re-exports flagged for the linter.
+from . import feed_coalesce as afc
+from . import feed_policy as af
 from .feed_delivery import (
     _ACTION_DEBOUNCE,  # noqa: F401
     _ADD_STATUS_WORDS,  # noqa: F401
@@ -99,8 +101,6 @@ from .feed_views import (
 )
 from .helpers import API_URL
 from .queries import SEARCH_QUERY, VIEWER_QUERY
-from tools import anilist_feed as af
-from tools import anilist_feed_coalesce as afc
 from tools import i18n
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
@@ -728,7 +728,7 @@ class AniListFeed(commands.Cog):
     # rather than post two cards we fold consecutive same-status progress
     # increments into ONE card, EDITED in place (a Discord edit is silent = zero
     # notification), within a session window. The pure decision lives in
-    # tools.anilist_feed_coalesce; here is the thin I/O shell around it. Each
+    # cogs.anilist.feed_coalesce; here is the thin I/O shell around it. Each
     # channel keeps its OWN record + message id, so fan-out edits independently.
     # ------------------------------------------------------------------
     async def _deliver_card(self, guild_id, channel, activity):
@@ -736,7 +736,7 @@ class AniListFeed(commands.Cog):
 
         A coalescible list-progress activity folds into the live card for its
         ``(channel, user, media)`` slot when
-        :func:`~tools.anilist_feed_coalesce.decide_delivery` says EDIT - a silent
+        :func:`~cogs.anilist.feed_coalesce.decide_delivery` says EDIT - a silent
         in-place edit whose freshly rebuilt :class:`ActivityCard` carries the
         LATEST activity id (so the Like/Reply/Add buttons act on it) - otherwise
         a fresh card is posted and (re)recorded. Text posts, progress-less list

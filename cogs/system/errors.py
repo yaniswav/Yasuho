@@ -6,7 +6,7 @@ import discord
 import Levenshtein as lv
 from discord.ext import commands
 
-from tools import arg_completion
+from . import arg_completion
 from tools.formats import random_colour
 from tools.i18n import _
 

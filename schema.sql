@@ -894,7 +894,7 @@ CREATE TABLE IF NOT EXISTS anilist_channel_subs (
 -- delivery layer folds consecutive same-status progress increments into a SINGLE
 -- card that is EDITED in place (a Discord edit is silent = zero notification),
 -- keyed by this table. Two clocks bound the fold, both pure comparisons in
--- tools.anilist_feed_coalesce: ``updated_at`` is the last-edit time (the
+-- cogs.anilist.feed_coalesce: ``updated_at`` is the last-edit time (the
 -- SESSION_GAP = 30 min clock - a longer quiet gap opens a fresh card) and doubles
 -- as the sweep's prune key; ``created_at`` is the first-post time (the AGE_CAP =
 -- 6 h clock - an unbroken session still gets a fresh card once the current one is

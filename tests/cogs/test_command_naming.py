@@ -1,6 +1,6 @@
-"""Unit tests for tools.custom_commands.validate_name (pure)."""
+"""Unit tests for cogs.config.command_naming.validate_name (pure)."""
 
-from tools import custom_commands as cc
+from cogs.config import command_naming as cc
 
 
 def _err(name, reserved=(), existing=()):

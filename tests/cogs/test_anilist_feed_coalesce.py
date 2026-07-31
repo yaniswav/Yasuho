@@ -1,4 +1,4 @@
-"""Unit tests for tools.anilist_feed_coalesce (pure coalescing engine).
+"""Unit tests for cogs.anilist.feed_coalesce (pure coalescing engine).
 
 decide_delivery is the whole contract: given an incoming normalised activity, the
 live coalescing record for its (channel, user, media) slot (or None), and "now",
@@ -10,7 +10,7 @@ non-list activity), the record flag, and the prune predicate.
 
 from datetime import datetime, timedelta, timezone
 
-from tools import anilist_feed_coalesce as afc
+from cogs.anilist import feed_coalesce as afc
 
 NOW = datetime(2026, 7, 21, 12, 0, 0, tzinfo=timezone.utc)
 

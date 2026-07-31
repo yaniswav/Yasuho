@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from tools import reminders as reminders_tool
+from . import reminders_store as reminders_tool
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.time import (
@@ -252,7 +252,7 @@ class RemindersCard(AuthorLayoutView):
     """Paginated Components V2 card of a member's pending reminders.
 
     One line per reminder (relative fire time, truncated text, the channel it
-    fires in), :data:`~tools.reminders.REMINDER_PAGE_SIZE` per page, with an
+    fires in), :data:`~cogs.community.reminders_store.REMINDER_PAGE_SIZE` per page, with an
     in-card :class:`_CancelSelect` so cancellation lives right where the list
     is - no separate command. Author-gated through
     :class:`~tools.views.AuthorLayoutView` so only the member who opened it can
