@@ -1,7 +1,7 @@
 """Warn-escalation control panel: the Components V2 surface for `/warnings config`.
 
 House concern-split, mirroring ``cogs/moderation/automod_panel.py`` (the AutoMod
-panel) and ``cogs/community/level_config_ui.py``: this module owns the panel
+panel) and ``cogs/community/leveling/level_config_ui.py``: this module owns the panel
 View, its interactive components, the action CATALOG the panel renders, and the
 presentation helpers (localized action labels, duration formatting, the case-embed
 "Auto-action" line, the failure notice, the DM). The Moderation cog

@@ -1,4 +1,4 @@
-"""The rank-card customisation seam in ``cogs.community.leveling`` (RC1).
+"""The rank-card customisation seam in ``cogs.community.leveling.leveling`` (RC1).
 
 Three things are pinned here, in ascending order of how expensive a regression
 would be:
@@ -27,9 +27,9 @@ import types
 import pytest
 from PIL import Image
 
-import cogs.community.leveling as leveling_module
-from cogs.community.leveling import Leveling
-from tools import rank_card
+import cogs.community.leveling.leveling as leveling_module
+from cogs.community.leveling import rank_card
+from cogs.community.leveling.leveling import Leveling
 
 # ---------------------------------------------------------------------------
 # Fixtures: the card's inputs, held constant so the golden hash is meaningful.
@@ -318,7 +318,7 @@ def test_stored_background_of_any_source_shape_renders(size):
 # ---------------------------------------------------------------------------
 # RC2 write seam: set_rank_background / set_rank_accent / clear_rank_card.
 #
-# The contract this lot exists to prove (see tools/rank_card.py's
+# The contract this lot exists to prove (see cogs/community/leveling/rank_card.py's
 # TODO-CONTRACT): every bot-side write goes through one of these three cog
 # methods, and each one invalidates the style cache in the SAME call - so
 # there is never a window where the DB has the new value but a cached

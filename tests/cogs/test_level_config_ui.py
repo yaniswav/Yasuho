@@ -1,8 +1,8 @@
-"""Unit tests for cogs.community.level_config_ui.LevelConfigUI (leveling L3).
+"""Unit tests for cogs.community.leveling.level_config_ui.LevelConfigUI (leveling L3).
 
 The pure decisions (is_no_xp_message, validate_announce_template,
 render_announce_template, resolve_announce_target) are covered in
-tests/tools/test_leveling_service.py; these tests drive the COG-level
+tests/cogs/test_leveling_engine.py; these tests drive the COG-level
 application against fakes: the race-safe cap-guarded INSERT (mirrors
 level_rewards_add's own precedent), the duplicate-vs-maximum disambiguation on
 a null insert, the cross-cog refresh_no_xp_snapshot push after every write, the
@@ -17,9 +17,11 @@ import types
 import discord
 import pytest
 
-import cogs.community.level_config_ui as level_config_ui_module
-from cogs.community.level_config_ui import LevelConfigUI, RankCardPanel
-from tools import i18n, leveling, rank_card
+import cogs.community.leveling.level_config_ui as level_config_ui_module
+from cogs.community.leveling import engine as leveling
+from cogs.community.leveling import rank_card
+from cogs.community.leveling.level_config_ui import LevelConfigUI, RankCardPanel
+from tools import i18n
 
 
 @pytest.fixture(autouse=True)
@@ -103,7 +105,7 @@ class _Ctx:
 
 
 class _FakeLevelingCog:
-    """Stand-in for cogs.community.leveling.Leveling's cross-cog surface."""
+    """Stand-in for cogs.community.leveling.leveling.Leveling's cross-cog surface."""
 
     def __init__(self):
         self.refresh_calls = []
@@ -331,7 +333,7 @@ async def test_noxp_remove_opens_a_picker_when_entries_exist(fake_pool):
 
 
 async def test_noxp_remove_select_deletes_and_refreshes_cache(fake_pool, make_interaction):
-    from cogs.community.level_config_ui import _RemoveNoXpSelect
+    from cogs.community.leveling.level_config_ui import _RemoveNoXpSelect
 
     channel = _FakeChannel(10)
     guild = _FakeGuild(guild_id=1, channels=[channel])
@@ -782,7 +784,7 @@ async def test_boost_remove_opens_a_picker_when_boosts_exist(fake_pool):
 
 
 async def test_boost_remove_select_deletes_and_refreshes_cache(fake_pool, make_interaction):
-    from cogs.community.level_config_ui import _RemoveMultiplierSelect
+    from cogs.community.leveling.level_config_ui import _RemoveMultiplierSelect
 
     guild = _FakeGuild(guild_id=1)
     leveling_cog = _FakeLevelingCog()

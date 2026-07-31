@@ -3,7 +3,7 @@
 This module is the PRESENTATION half of the seasons feature (mirrors the
 music.py -> views.py and automod.py -> automod_panel.py splits): it owns the
 two interactive Components V2 surfaces and nothing else. The engine and the
-command bodies live in the sibling ``cogs/community/seasons.py``; import
+command bodies live in the sibling ``cogs/community/leveling/seasons.py``; import
 direction is one-way (this module imports NOTHING from there) - a view is
 handed the ``Seasons`` cog instance at construction time and calls back into
 its query/write methods (``cog.season_podium_rows``, ``cog.set_champion_role``,
@@ -11,7 +11,7 @@ its query/write methods (``cog.season_podium_rows``, ``cog.set_champion_role``,
 
 * :class:`HallOfFameCard` - the ``/halloffame`` browsable podium, one season
   per page, walked via indexed PK hops (never a full season list loaded into
-  memory - see cogs/community/seasons.py's "hall of fame browsing queries").
+  memory - see cogs/community/leveling/seasons.py's "hall of fame browsing queries").
 * :class:`SeasonsPanel` - the ``/levelconfig seasons`` admin panel: the season
   champion RoleSelect (+ a clear button) and the season-announce toggle,
   refusing an inert toggle rather than silently accepting one (see
@@ -27,7 +27,8 @@ import logging
 
 import discord
 
-from tools import interactions, leveling
+from . import engine as leveling
+from tools import interactions
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role
@@ -45,10 +46,10 @@ log = logging.getLogger(__name__)
 # this; every edit has to say it too.
 _NO_PINGS = discord.AllowedMentions.none()
 
-# Medal glyphs, taken from the ONE shared home (tools.leveling.PODIUM_MEDALS)
-# rather than copied: importing them from cogs/community/seasons.py would break
+# Medal glyphs, taken from the ONE shared home (cogs.community.leveling.engine.PODIUM_MEDALS)
+# rather than copied: importing them from cogs/community/leveling/seasons.py would break
 # this module's strictly one-way import direction (see the module docstring),
-# but tools.leveling is neutral ground both sides already import.
+# but cogs.community.leveling.engine is neutral ground both sides already import.
 _MEDALS = leveling.PODIUM_MEDALS
 
 
@@ -76,7 +77,7 @@ class HallOfFameCard(AuthorLayoutView):
     Opens on the MOST RECENT season (the guild's default "what happened
     lately" view) and lets the author walk older/newer ones with Prev/Next,
     bounded to seasons that actually exist. Each hop is one or two indexed
-    ``season_podiums`` lookups (see cogs/community/seasons.py's
+    ``season_podiums`` lookups (see cogs/community/leveling/seasons.py's
     ``older_season_key`` / ``newer_season_key`` / ``season_podium_rows``, all
     served by the ``(guild_id, period_key, rank)`` PK) - never a query that
     loads every season a guild ever had, so a guild with 2 closed seasons or
@@ -245,7 +246,7 @@ def season_panel_state(row):
 
     ``row`` is ``None`` for a guild with no level_config row at all (never
     configured anything leveling-related yet) - every knob then falls back to
-    its inert default, same shape as :meth:`tools.leveling.LevelConfig.from_row`
+    its inert default, same shape as :meth:`cogs.community.leveling.engine.LevelConfig.from_row`
     handling an absent column.
     """
     if row is None:
@@ -267,7 +268,7 @@ def _describe_champion_role(state):
     if state["champion_role_id"] is None:
         return _("None set - no role is granted for winning a season.")
     # A bare mention token, no natural language in it: never wrapped in _()
-    # (mirrors cogs/community/seasons.py's own "<@{user_id}>".format(...)).
+    # (mirrors cogs/community/leveling/seasons.py's own "<@{user_id}>".format(...)).
     return "<@&{role_id}>".format(role_id=state["champion_role_id"])
 
 
@@ -336,7 +337,7 @@ class SeasonsPanel(AuthorLayoutView):
     (settings / level-config / automod panels): a header, a section for the
     champion role (a :class:`_ChampionRoleSelect` plus a clear button) and one
     for the announce toggle. Both writes go through the owning
-    :class:`~cogs.community.seasons.Seasons` cog (``self.cog``), never the DB
+    :class:`~cogs.community.leveling.seasons.Seasons` cog (``self.cog``), never the DB
     directly - this module owns no query, only the layout and the callbacks.
 
     The champion-role write is guarded by :func:`tools.modchecks.

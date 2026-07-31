@@ -1,6 +1,6 @@
-"""Unit tests for cogs.community.level_admin.LevelAdmin (the /levelconfig xp group, L5).
+"""Unit tests for cogs.community.leveling.level_admin.LevelAdmin (the /levelconfig xp group, L5).
 
-The pure value maths live in tests/tools/test_level_admin.py; these drive the
+The pure value maths live in tests/cogs/test_leveling_admin_rules.py; these drive the
 COG side against fakes: give/take/set write ONLY the lifetime levels row (never
 xp_period) and route through the Leveling reward/announce seam with the right
 old/new XP, out-of-range amounts are refused before any DB call, the reset
@@ -10,7 +10,7 @@ xp_period only when the typed server name matches.
 
 import types
 
-from cogs.community.level_admin import (
+from cogs.community.leveling.level_admin import (
     LevelAdmin,
     _ResetAllModal,
     _ResetAllView,

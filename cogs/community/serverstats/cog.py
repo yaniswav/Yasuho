@@ -1,7 +1,7 @@
 """Purpose: the Discord side of the collectors - three zero-await listeners and
 the ONE batched flush loop that turns their counters into rows.
 
-The shape is the voice-XP pattern (cogs/community/voice_xp.py): listeners do
+The shape is the voice-XP pattern (cogs/community/leveling/voice_xp.py): listeners do
 pure in-memory dict work and never await, and a single bot-wide
 :class:`~discord.ext.tasks.Loop` does all the I/O, so the DB write rate is a
 function of TIME, not of traffic - one round trip every

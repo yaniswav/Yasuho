@@ -1,4 +1,4 @@
-"""Unit tests for tools.leveling (the pure leveling service - no bot/DB needed).
+"""Unit tests for cogs.community.leveling.engine (the pure leveling service - no bot/DB needed).
 
 These pin the four contracts the cog leans on:
 
@@ -13,7 +13,7 @@ These pin the four contracts the cog leans on:
 
 import datetime
 
-from tools import leveling
+from cogs.community.leveling import engine as leveling
 
 # ---------------------------------------------------------------------------
 # Curve identity: zero drift from the original inline formula.
@@ -967,7 +967,7 @@ def test_period_marker_changed_month_rollover_is_stale():
 
 # ---------------------------------------------------------------------------
 # Leveling seasons (S1): a season IS a calendar month of the monthly rollup.
-# These pin the pure decisions the engine (cogs/community/seasons.py) leans on:
+# These pin the pure decisions the engine (cogs/community/leveling/seasons.py) leans on:
 # which month just closed, whether a marker's MONTH component moved, how a
 # period key reads to a human, and where a guild-wide announce may land.
 # ---------------------------------------------------------------------------

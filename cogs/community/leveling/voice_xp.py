@@ -14,11 +14,11 @@ anti-idle rules. This cog owns three things and nothing else:
   batched DB write and routes any level-ups through the Leveling cog's existing
   announce + role-reward seams;
 * nothing user-facing: the ``/levelconfig voicexp`` admin commands live in
-  cogs/community/level_config_ui.py, and every level-up message/role is emitted
+  cogs/community/leveling/level_config_ui.py, and every level-up message/role is emitted
   by the Leveling cog (credit_voice_levelup), so this module carries no prose.
 
 The pure decisions (eligibility predicate, credit arithmetic, batch-payload
-building) live in tools/leveling.py; this cog is only the I/O and the clock.
+building) live in cogs/community/leveling/engine.py; this cog is only the I/O and the clock.
 
 Restart drops every live session (in-memory only) - accepted and documented.
 To soften it, on_ready seeds sessions from the CURRENT voice states once (see
@@ -42,7 +42,7 @@ from dataclasses import dataclass
 import discord
 from discord.ext import commands, tasks
 
-from tools import leveling
+from . import engine as leveling
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ VOICE_SWEEP_INTERVAL = 300
 SESSION_CAP = 8192
 
 # One batched upsert credits every member who earned XP this sweep: unnest turns
-# the three parallel arrays (tools.leveling.build_voice_grant_payload) into rows,
+# the three parallel arrays (cogs.community.leveling.engine.build_voice_grant_payload) into rows,
 # and RETURNING hands back each member's NEW total so the caller can detect
 # level-ups (old = new - the gain it recorded). EXCLUDED.xp is the per-row
 # proposed gain, added onto the stored total on conflict.
@@ -114,7 +114,7 @@ class _VoiceSession:
     ``channel_id`` tracks the channel the listener last saw them in (updated on a
     move). ``last_credit`` is a ``time.monotonic()`` timestamp of the last sweep
     that consumed this session's minutes; the sweep advances it by the whole
-    minutes it consumes (credited or not - see tools.leveling.voice_credit), so
+    minutes it consumes (credited or not - see cogs.community.leveling.engine.voice_credit), so
     ineligible or capped time is never banked.
     """
 
@@ -300,7 +300,7 @@ class VoiceXP(commands.Cog):
                 )
                 # XP multipliers (L4): applied to the per-minute RATE, once,
                 # before voice_credit multiplies it by the whole-minute count
-                # (see tools.leveling.apply_multiplier's docstring for why
+                # (see cogs.community.leveling.engine.apply_multiplier's docstring for why
                 # rounding happens here and not on the aggregated total). The
                 # common case (no boosts/event configured) is a single
                 # ``is_trivial`` check - zero extra allocation, zero rate

@@ -4,7 +4,7 @@ Both ``give_hug`` (Pillow GIF render) and ``ascii`` (pyfiglet) must offload
 their blocking work through ``tools.rendering.run_image_job`` (the shared
 ``bot.image_render_semaphore``-gated executor) rather than a raw, uncapped
 ``run_in_executor`` - see the welcome-card / rank-card precedent in
-``cogs/config/welcome.py`` and ``cogs/community/leveling.py``. ``ascii`` must
+``cogs/config/welcome.py`` and ``cogs/community/leveling/leveling.py``. ``ascii`` must
 also carry a cooldown, since it previously ran pyfiglet synchronously on the
 event loop with none at all.
 """

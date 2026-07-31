@@ -1,12 +1,12 @@
-"""Unit tests for tools.level_admin (pure /xp value maths, leveling L5).
+"""Unit tests for cogs.community.leveling.admin_rules (pure /xp value maths, leveling L5).
 
 Bounds validation (give/take amount, set absolute total), the floored
 resolve_new_xp, and the resetall name-match gate - all pure, no discord, no DB.
-Level-crossing detection and the pager live in tools.leveling (tested in
-test_leveling_service.py); the role reconcile lives in tools.level_rewards.
+Level-crossing detection and the pager live in cogs.community.leveling.engine (tested in
+test_leveling_engine.py); the role reconcile lives in cogs.community.leveling.reward_rules.
 """
 
-from tools import level_admin as la
+from cogs.community.leveling import admin_rules as la
 
 # ---------------------------------------------------------------------------
 # validate_adjust_amount (give / take: 1 .. 1_000_000)

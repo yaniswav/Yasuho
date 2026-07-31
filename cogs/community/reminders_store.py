@@ -2,7 +2,7 @@
 
 The Reminder cog's "see and cancel my reminders" card leans on a handful of
 tiny, side-effect-free functions: the paging math (mirrors
-``tools.leveling.leaderboard_page`` so the card's Prev/Next is unit-tested
+``cogs.community.leveling.engine.leaderboard_page`` so the card's Prev/Next is unit-tested
 without any Discord object), the Select/line label truncation, the defensive
 type filter (only ``reminder`` timers ever reach a user's card - never a
 tempban or any other timer event), and the capped-count label. Keeping them
@@ -40,7 +40,7 @@ def paginate(total, page, per_page=REMINDER_PAGE_SIZE):
     clamped into ``[0, total_pages - 1]`` so a list that shrank under the viewer
     (a reminder fired, or the viewer cancelled the last one on a page) never
     lands on a blank page; ``total_pages`` is at least 1 even for an empty list.
-    Pure - mirrors ``tools.leveling.leaderboard_page`` so the card's paging math
+    Pure - mirrors ``cogs.community.leveling.engine.leaderboard_page`` so the card's paging math
     is unit-tested without any Discord objects.
     """
     safe_total = max(total, 0)

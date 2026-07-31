@@ -118,7 +118,7 @@ class LevelConfig:
     ``enabled``, ``cooldown_seconds`` and the ``xp_min`` / ``xp_max`` band are read
     by the grant path; ``announce_mode`` / ``announce_channel_id`` /
     ``announce_template`` are read when a level-up is announced (see
-    cogs/community/leveling.py). Frozen so a cached config is a value: a change
+    cogs/community/leveling/leveling.py). Frozen so a cached config is a value: a change
     replaces the map entry rather than mutating a shared object.
     """
 
@@ -194,7 +194,7 @@ def resolve_config(row, legacy_enabled):
 # Leveling cog; this module only holds the value object and the pure check.
 
 # Discord caps a single select at 25 options; the admin "remove an entry"
-# picker (cogs/community/level_config_ui.py) lists every configured entry in
+# picker (cogs/community/leveling/level_config_ui.py) lists every configured entry in
 # one select, mirroring level_rewards.MAX_REWARDS_PER_GUILD. A generous cap
 # above that Discord limit still keeps a guild's snapshot tiny.
 MAX_NO_XP_PER_GUILD = 50
@@ -359,7 +359,7 @@ def resolve_announce_target(mode, source_channel_id, fixed_channel_id):
     the DM target is the leveled-up member, not a channel). An unrecognised
     mode, and a ``"fixed"`` mode with no configured channel, both fall back to
     ``"channel"`` (the original, always-safe behaviour) - mirroring
-    ``tools.level_rewards``'s "unknown mode behaves like the safer default".
+    ``cogs.community.leveling.reward_rules``'s "unknown mode behaves like the safer default".
     This is the ONLY decision made here: whether the member opted out of
     announces entirely is a separate, outer gate the cog checks first (the
     existing ``levelup_announce`` per-user preference), so this function is
@@ -380,7 +380,7 @@ def resolve_announce_target(mode, source_channel_id, fixed_channel_id):
 # Voice XP (L7): rate validation, eligibility predicate, credit maths.
 # ============================================================
 #
-# The cog (cogs/community/voice_xp.py) owns the in-memory sessions, the periodic
+# The cog (cogs/community/leveling/voice_xp.py) owns the in-memory sessions, the periodic
 # sweep, and the batched DB write; this module holds only the pure decisions the
 # sweep leans on - none touch discord, the DB, or the clock, so the eligibility
 # truth table and the credit arithmetic are trivially unit-tested.
@@ -458,8 +458,8 @@ def voice_credit(elapsed_seconds, rate, interval_seconds, *, eligible):
 
 def apply_multiplier(value, multiplier):
     """Multiply an XP amount by an effective multiplier - one rounding rule
-    shared by BOTH hot paths (see cogs/community/leveling.py's on_message and
-    cogs/community/voice_xp.py's sweep). Rounds to the nearest whole XP and
+    shared by BOTH hot paths (see cogs/community/leveling/leveling.py's on_message and
+    cogs/community/leveling/voice_xp.py's sweep). Rounds to the nearest whole XP and
     floors at 0: a multiplier of 0.0 (or any factor small enough that
     ``value * multiplier`` rounds down to zero) means the message/window earns
     literally 0 XP, never an artificial floor of 1 - "mute XP via multiplier" is
@@ -468,7 +468,7 @@ def apply_multiplier(value, multiplier):
     (``config.voice_xp_per_minute * multiplier``), not to the aggregated
     per-tick total - so a session credited for several minutes in one sweep
     tick never compounds rounding drift across those minutes; the effective,
-    already-rounded rate is what tools.leveling.voice_credit then multiplies by
+    already-rounded rate is what cogs.community.leveling.engine.voice_credit then multiplies by
     the whole-minute count.
     """
     return max(0, round(value * multiplier))
@@ -543,7 +543,7 @@ def can_add_multiplier(existing_count, cap=MAX_MULTIPLIERS_PER_GUILD):
 
 # A tiny fallback duration parser (Nd/Nh/Nm/Ns, any subset, concatenated - e.g.
 # "2h", "3d", "1d12h"), used ONLY if tools.time.ShortTime cannot be imported
-# (see cogs/community/level_config_ui.py's event command - the house
+# (see cogs/community/leveling/level_config_ui.py's event command - the house
 # ShortTime converter is preferred whenever it is importable). Deliberately
 # tiny: no relativedelta, no "weeks"/"months"/"years" units, just the four a
 # double-XP event realistically needs.
@@ -710,7 +710,7 @@ def compute_multiplier(snapshot, channel_id, category_id, role_ids, now):
 # schema.sql) - NO destructive resets, a period simply rolls to a new key.
 # Pure period-key maths and the lazy-prune decision live here; the writes
 # (both hot paths), the reads (/top weekly|monthly) and the per-guild "last
-# seen period" marker all live in the cog (cogs/community/leveling.py).
+# seen period" marker all live in the cog (cogs/community/leveling/leveling.py).
 # ============================================================
 
 PERIOD_WEEKLY = "weekly"
@@ -823,7 +823,7 @@ def period_marker_changed(previous, current):
 # and levels are untouched. When a month closes, the top 3 of that CLOSED month
 # are snapshotted once into season_podiums (see schema.sql). The pure decisions
 # live here; the snapshot itself, the champion role and the announce live in
-# cogs/community/seasons.py, and the lazy per-guild rollover DETECTION rides the
+# cogs/community/leveling/seasons.py, and the lazy per-guild rollover DETECTION rides the
 # leveling cog's existing "last seen period" marker (period_marker_changed just
 # above) - no new timer, no new hot-path marker.
 # ============================================================

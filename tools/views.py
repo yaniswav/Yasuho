@@ -154,7 +154,7 @@ class AuthorLayoutView(discord.ui.LayoutView):
         Suppressing every mention here is safe for ALL consumers: a timeout
         edit only DISABLES controls, it never adds content, so no surface has a
         legitimate reason to (re)notify at that moment - the ones that do mean
-        to ping say so on their own send/edit (see cogs/community/seasons.py's
+        to ping say so on their own send/edit (see cogs/community/leveling/seasons.py's
         announce, which passes its own AllowedMentions).
         """
         self._disable_all()

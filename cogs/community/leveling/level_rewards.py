@@ -2,7 +2,7 @@
 
 An admin sets up rules via the ``/levelconfig rewards`` group: "reach level N,
 get role R". A member who levels up (dispatched from the Leveling cog's on_message
-grant path, tools/leveling.level_up_between) is reconciled against those rules
+grant path, cogs/community/leveling/engine.level_up_between) is reconciled against those rules
 here: :meth:`LevelRewards.grant_for_levelup` computes which roles to add and
 (in 'replace' mode) remove, applies what it actually can, and hands the
 Leveling cog back the list of roles it granted for the announce suffix.
@@ -16,7 +16,7 @@ owns exactly one table and reacts only when called.
 
 Scale: role grants happen on level-up only, never per message (leveling.py's
 on_message hot path never imports or touches this module). A guild's rule set
-is capped at 25 rows (tools.level_rewards.MAX_REWARDS_PER_GUILD) and read
+is capped at 25 rows (cogs.community.leveling.reward_rules.MAX_REWARDS_PER_GUILD) and read
 fresh from the DB on each level-up rather than cached - level-ups are already
 the rare branch of an already-gated hot path, so a bounded, tiny read there
 costs less than the cache invalidation it would take to avoid it (YAGNI).
@@ -33,7 +33,7 @@ from typing import Literal
 import discord
 from discord.ext import commands
 
-from tools import level_rewards
+from . import reward_rules as level_rewards
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
@@ -42,7 +42,7 @@ from tools.views import AuthorView
 log = logging.getLogger(__name__)
 
 # _assignable now lives in tools.modchecks (bot_can_assign_role) - shared with
-# cogs/community/seasons.py's season champion role, which needs the exact same
+# cogs/community/leveling/seasons.py's season champion role, which needs the exact same
 # hierarchy check. Imported under its old name so every call site below reads
 # unchanged.
 
@@ -242,7 +242,7 @@ class LevelRewards(commands.Cog):
 
         In stack mode this is a no-op in BOTH lists: earned roles are KEPT even
         when an admin removes XP (the documented convention - see
-        tools.level_rewards.reconcile_to_level). In replace mode the tier is
+        cogs.community.leveling.reward_rules.reconcile_to_level). In replace mode the tier is
         recomputed: reward roles above the new level are removed and the new
         tier's role(s) (re)added. Never raises - a missing/failing lookup is
         logged and swallowed so an admin XP edit is never broken by a reward

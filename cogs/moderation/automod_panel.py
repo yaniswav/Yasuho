@@ -1,7 +1,7 @@
 """AutoMod control panel: the Components V2 surface for the AutoMod cog.
 
 House concern-split (mirrors ``cogs/music/views.py`` and the presentation half of
-``cogs/community/level_config_ui.py``): this module owns the panel View, its
+``cogs/community/leveling/level_config_ui.py``): this module owns the panel View, its
 interactive components, and the display CATALOG the panel renders - the custom +
 native filters and the action taken when a custom filter trips.
 

@@ -34,8 +34,8 @@ import datetime
 
 import pytest
 
+from cogs.community.leveling.engine import iso_week_period_key
 from cogs.community.serverstats import rollups
-from tools.leveling import iso_week_period_key
 
 TODAY = datetime.date(2026, 7, 28)  # Tuesday, ISO week W2026-31
 GUILD = 111222333444555666
@@ -683,7 +683,7 @@ def test_retention_with_leveling_but_no_xp_rows_still_hides_the_half():
 
 
 def test_retention_activity_covers_only_the_unpruned_weeks():
-    # xp_period keeps a few periods back (tools.leveling.PRUNE_PERIODS_BACK), so
+    # xp_period keeps a few periods back (cogs.community.leveling.engine.PRUNE_PERIODS_BACK), so
     # the older half of an 8-week window is legitimately empty: those weeks must
     # read None (unknown), never 0 (nobody was active).
     rows = [active_row(KEYS[-1], 30), active_row(KEYS[-2], 25)]

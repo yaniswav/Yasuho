@@ -1,20 +1,20 @@
-"""Unit tests for cogs.community.level_rewards.LevelRewards.grant_for_levelup.
+"""Unit tests for cogs.community.leveling.level_rewards.LevelRewards.grant_for_levelup.
 
-The pure add/remove decision math is covered in tests/tools/test_level_rewards.py;
+The pure add/remove decision math is covered in tests/cogs/test_leveling_reward_rules.py;
 these tests drive the cog-level APPLICATION of that decision against fakes:
 role hierarchy skips (debug, never breaks the grant), HTTPException on a single
 role (swallowed, the rest still apply), and lazy pruning of a rule whose role
 was deleted (row removed, INFO logged). All of this is live-Discord-shaped
 behaviour that cannot be pure, so it is exercised here against fakes rather
-than in tools/test_level_rewards.py.
+than in tests/cogs/test_leveling_reward_rules.py.
 """
 
 import types
 
 import discord
 
-from cogs.community.level_rewards import LevelRewards
-from tools import level_rewards as lr
+from cogs.community.leveling import reward_rules as lr
+from cogs.community.leveling.level_rewards import LevelRewards
 
 # ---------------------------------------------------------------------------
 # Fakes: guild / role / member shaped just enough for the hierarchy checks
@@ -140,7 +140,7 @@ async def test_stack_mode_grants_the_new_role(fake_pool):
 
 async def test_stack_mode_catch_up_grants_a_stale_lower_rule(fake_pool):
     """A rule added for a level the member already passed is granted on their
-    next level-up (no retro sweep needed - see tools/level_rewards.py)."""
+    next level-up (no retro sweep needed - see cogs/community/leveling/reward_rules.py)."""
     role10 = _FakeRole(10, position=5)
     guild = _FakeGuild(1, roles=[role10])
     member = _FakeMember(2)  # never held role10

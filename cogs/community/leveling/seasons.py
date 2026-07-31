@@ -2,7 +2,7 @@
 podium, and lets the guild browse and configure it.
 
 A SEASON is one calendar month, and it rides the monthly ``xp_period`` rollup
-the leveling cog already writes on every grant (tools.leveling.month_period_key).
+the leveling cog already writes on every grant (cogs.community.leveling.engine.month_period_key).
 Nothing is ever reset or destroyed when a season ends: lifetime ``levels``
 totals and member levels are untouched, the month simply stops accumulating and
 its top 3 are FROZEN into ``season_podiums`` so they survive the lazy xp_period
@@ -14,7 +14,7 @@ await): the first XP grant of a new month for a guild dispatches here through
 ``bot.get_cog("Seasons")``. That marker is in MEMORY only, so it is cold for
 every guild after a restart - the leveling cog's cold branch resolves the
 closed month from xp_period before its own retention DELETE can touch it (see
-tools.leveling.LATEST_CLOSED_MONTH_SQL, shared with this cog) and hands it over
+cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL, shared with this cog) and hands it over
 like a warm one. A guild with no activity at all in the new month is never
 detected that way, so :meth:`Seasons.ensure_season_snapshot` is also the public
 on-demand entry point a read surface calls when it opens (S2's hall of fame) -
@@ -64,15 +64,16 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs.community import seasons_views
-from tools import i18n, leveling
+from . import engine as leveling
+from . import seasons_views
+from tools import i18n
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
 
 log = logging.getLogger(__name__)
 
 # Medal glyphs for the three podium places, shared with the leaderboard card and
-# the hall of fame (tools.leveling.PODIUM_MEDALS - one home, so the three podium
+# the hall of fame (cogs.community.leveling.engine.PODIUM_MEDALS - one home, so the three podium
 # surfaces can never drift apart). A rank with no glyph (impossible while
 # SEASON_PODIUM_SIZE is 3, but cheap to survive) falls back to a plain number.
 _MEDALS = leveling.PODIUM_MEDALS
@@ -183,7 +184,7 @@ _SEASON_POD_ROWS_SQL = """
 
 # S2 admin writes: the seasons panel's two level_config knobs, each a
 # targeted UPDATE of exactly one column via the house upsert shape (mirrors
-# cogs/community/leveling.py's set_announce_mode/set_voice_xp_enabled) so a
+# cogs/community/leveling/leveling.py's set_announce_mode/set_voice_xp_enabled) so a
 # guild that has never written a level_config row yet still gets its very first
 # season setting persisted, instead of a plain UPDATE silently touching zero
 # rows. Neither knob is part of the Leveling cog's hot-path config mirror (see
@@ -194,7 +195,7 @@ _SEASON_POD_ROWS_SQL = """
 # level_config writer in the house. That is not cosmetic: a legacy guild whose
 # leveling is ON only through that JSONB flag has no level_config row at all,
 # so a bare INSERT here would create one with enabled defaulting to FALSE - and
-# tools.leveling.resolve_config, which prefers the row over the legacy bool,
+# cogs.community.leveling.engine.resolve_config, which prefers the row over the legacy bool,
 # would then answer "leveling off" on the next restart and that guild would
 # silently stop earning XP just because an admin picked a champion role. The
 # ON CONFLICT branch keeps touching ONLY its own column, so neither statement
@@ -259,12 +260,12 @@ class Seasons(commands.Cog):
         announce both need it; a ``None`` guild is a quiet no-op).
         ``period_key`` names the CLOSED month to freeze. The activity hook
         always passes one: the month its period marker knows this guild last
-        earned XP in (tools.leveling.season_rollover_period_key) or, when that
+        earned XP in (cogs.community.leveling.engine.season_rollover_period_key) or, when that
         marker was cold, the month it resolved from the data before pruning.
         A caller that genuinely cannot say - a read surface opening the hall of
         fame - omits it and gets it RESOLVED here instead
         (:meth:`_resolve_closed_month`, over the shared
-        tools.leveling.LATEST_CLOSED_MONTH_SQL). "The month before now" is NOT
+        cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL). "The month before now" is NOT
         the default, because a guild that stayed silent for a whole month
         closed an OLDER month and would otherwise have its only podium skipped
         forever.
@@ -368,14 +369,14 @@ class Seasons(commands.Cog):
         whose old rows the retention prune already dropped.
 
         Bounded by design: it can only ever reach back as far as xp_period
-        retention keeps rows (tools.leveling.PRUNE_PERIODS_BACK months), which
+        retention keeps rows (cogs.community.leveling.engine.PRUNE_PERIODS_BACK months), which
         is the standing contract of the whole period rollup - a season that
         went unfrozen for longer than that is genuinely gone. The prune is what
         keeps that from happening on the LAST active month: it clamps its
         monthly cutoff to the month awaiting a snapshot, on BOTH of its
         branches - the one whose in-memory marker names that month, and the
         cold-marker one, which resolves it with THIS very query (the shared
-        tools.leveling.LATEST_CLOSED_MONTH_SQL) before deleting anything.
+        cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL) before deleting anything.
         """
         return await self.bot.db_pool.fetchval(
             leveling.LATEST_CLOSED_MONTH_SQL,
@@ -543,7 +544,7 @@ class Seasons(commands.Cog):
         role always names exactly one champion, the current one. This does NOT
         go through the LevelRewards cog: that machinery is rules-driven (a
         ``level_rewards`` row per "reach level N, get role R", reconciled by
-        tools.level_rewards.decide_role_changes), and a champion role is not a
+        cogs.community.leveling.reward_rules.decide_role_changes), and a champion role is not a
         level tier - it has no level, no stack/replace mode of its own and only
         ever one holder. What IS reused is that cog's hierarchy guard
         (``_assignable``: not @everyone, not integration-managed, strictly below

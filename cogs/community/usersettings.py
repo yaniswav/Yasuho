@@ -91,7 +91,7 @@ PREFS = [
     ),
     # Only affects HOW you're referenced in a level-up announce (a mention vs
     # your plain name) - it never silences the announce itself, that's the
-    # preference above. The key MUST match cogs/community/leveling.py's
+    # preference above. The key MUST match cogs/community/leveling/leveling.py's
     # _announce_levelup read (by literal, like every other preference here).
     Preference(
         key="levelup_ping",

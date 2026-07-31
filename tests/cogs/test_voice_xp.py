@@ -1,7 +1,7 @@
-"""Unit tests for cogs.community.voice_xp.VoiceXP (leveling L7).
+"""Unit tests for cogs.community.leveling.voice_xp.VoiceXP (leveling L7).
 
 The pure decisions (is_voice_xp_eligible, voice_credit, build_voice_grant_payload)
-are covered in tests/tools/test_leveling_service.py; these drive the COG against
+are covered in tests/cogs/test_leveling_engine.py; these drive the COG against
 fakes for the four things it owns:
 
 * the listener's session bookkeeping (join creates, move repoints the channel
@@ -17,9 +17,9 @@ fakes for the four things it owns:
 
 import types
 
-from cogs.community import voice_xp
-from cogs.community.voice_xp import VoiceXP, _VoiceSession
-from tools import leveling
+from cogs.community.leveling import engine as leveling
+from cogs.community.leveling import voice_xp
+from cogs.community.leveling.voice_xp import VoiceXP, _VoiceSession
 
 
 # ---------------------------------------------------------------------------

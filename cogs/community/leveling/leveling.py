@@ -8,7 +8,10 @@ import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 
-from tools import leveling, leveling_gate, rank_card, rendering, settings
+from . import engine as leveling
+from . import gate as leveling_gate
+from . import rank_card
+from tools import rendering, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -27,12 +30,12 @@ _DEFAULT_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png"
 # Components V2 budget: how many ranks get their own avatar Section (podium) on
 # page 0. The remaining ranks on the page (and every rank on later pages) render
 # as a plain text list. The per-page rank count itself lives in
-# tools.leveling.LEADERBOARD_PAGE_SIZE (the pager's home).
+# cogs.community.leveling.engine.LEADERBOARD_PAGE_SIZE (the pager's home).
 _PODIUM_SLOTS = 5
 
 # Medal glyphs for the top three; lower ranks fall back to a plain number.
 # Shared with the season announce and the hall-of-fame card through
-# tools.leveling.PODIUM_MEDALS so all three podium surfaces mark the same ranks
+# cogs.community.leveling.engine.PODIUM_MEDALS so all three podium surfaces mark the same ranks
 # with the same glyphs; aliased locally so every call site below reads unchanged.
 _MEDALS = leveling.PODIUM_MEDALS
 
@@ -116,7 +119,7 @@ class LeaderboardView(AuthorLayoutView):
     into one :class:`discord.ui.TextDisplay` ranked list (the V2 component
     budget). Page 1+ drops the avatars entirely for a single plain ranked list -
     a member scrolling past the top 15 wants the numbers, not fifteen more
-    thumbnails. Prev/Next walk pages of :data:`~tools.leveling.LEADERBOARD_PAGE_SIZE`
+    thumbnails. Prev/Next walk pages of :data:`~cogs.community.leveling.engine.LEADERBOARD_PAGE_SIZE`
     and are author-gated through :class:`~tools.views.AuthorLayoutView` (only the
     member who ran /leaderboard drives them), so a busy channel never has strangers
     flipping each other's boards. The pager row only appears when there is more
@@ -281,11 +284,11 @@ class Leveling(commands.Cog):
         # known after login, so this is filled lazily on first use (on_message
         # never fires before the bot is ready).
         self._mention_prefixes: tuple[str, ...] | None = None
-        # Per-guild no-xp-zone snapshot (tools.leveling.NoXpSnapshot: two
+        # Per-guild no-xp-zone snapshot (cogs.community.leveling.engine.NoXpSnapshot: two
         # frozensets of channel/category ids and role ids), loaded from
         # level_no_xp on a guild's first grant-eligible message and kept live by
         # refresh_no_xp_snapshot (called on every level_no_xp write, from
-        # cogs/community/level_config_ui.py). Bounded, unlike self._configs:
+        # cogs/community/leveling/level_config_ui.py). Bounded, unlike self._configs:
         # every ENABLED guild eventually gets an entry here (even an empty one,
         # once it earns its first XP), so this is genuinely unbounded by guild
         # count and needs the same size-cap tools.settings uses for user blobs.
@@ -293,12 +296,12 @@ class Leveling(commands.Cog):
         # next grant-eligible message - a rare, harmless extra query, never a
         # per-message cost (SCALE STORY).
         self._no_xp: BoundedLRU = BoundedLRU(_NO_XP_CACHE_CAP)
-        # Per-guild XP-multiplier snapshot (tools.leveling.MultiplierSnapshot:
+        # Per-guild XP-multiplier snapshot (cogs.community.leveling.engine.MultiplierSnapshot:
         # global/channel/role factors plus the active timed event, see that
         # class's docstring), the L4 sibling of self._no_xp above - same
         # cached-or-load contract (ensure_multiplier_snapshot), same
         # write-path refresh hook (refresh_multiplier_snapshot, called by
-        # cogs/community/level_config_ui.py after every boost/event write),
+        # cogs/community/leveling/level_config_ui.py after every boost/event write),
         # same BoundedLRU sizing rationale.
         self._multipliers: BoundedLRU = BoundedLRU(_MULTIPLIER_CACHE_CAP)
         # Per-guild "last seen period" marker (L6): the (week_key, month_key)
@@ -424,7 +427,7 @@ class Leveling(commands.Cog):
 
         Shared by every writer of level_config (set_enabled, set_announce_mode,
         set_announce_template): a row that leaves the guild enabled refreshes
-        its cached :class:`~tools.leveling.LevelConfig`, a disabled one (or a
+        its cached :class:`~cogs.community.leveling.engine.LevelConfig`, a disabled one (or a
         somehow-missing row) drops the guild from the map entirely - mirroring
         cog_load's own read-through resolution so the cache never disagrees
         with what resolve_config would compute from the same row.
@@ -504,7 +507,7 @@ class Leveling(commands.Cog):
         set_announce_mode (so toggling voice XP for a guild that turned leveling
         on only through the legacy bool never masks that flag with a fresh
         FALSE row); the UPDATE branch touches ONLY voice_xp_enabled, never the
-        leveling ``enabled`` flag. Called by cogs/community/level_config_ui.py
+        leveling ``enabled`` flag. Called by cogs/community/leveling/level_config_ui.py
         through bot.get_cog("Leveling"), the house cross-cog seam, so the
         VoiceXP cog reads the change through this same cached config on its very
         next sweep - no restart.
@@ -556,7 +559,7 @@ class Leveling(commands.Cog):
         self._cache_config_row(guild_id, row)
 
     def get_config(self, guild_id):
-        """The cached :class:`~tools.leveling.LevelConfig` for a guild, or None.
+        """The cached :class:`~cogs.community.leveling.engine.LevelConfig` for a guild, or None.
 
         The public O(1) read-through the VoiceXP cog leans on: it hands back the
         SAME frozen config the on_message hot path uses (leveling on/off folded
@@ -583,7 +586,7 @@ class Leveling(commands.Cog):
     async def refresh_no_xp_snapshot(self, guild_id):
         """Reload a guild's no-xp rows from the DB and refresh the hot-path cache.
 
-        Two callers: cogs/community/level_config_ui.py invokes this after EVERY
+        Two callers: cogs/community/leveling/level_config_ui.py invokes this after EVERY
         level_no_xp write (add/remove), so the very next message in that guild
         sees the change immediately - no restart, no reliance on cache
         eviction or a TTL. The on_message hot path below also calls this
@@ -619,7 +622,7 @@ class Leveling(commands.Cog):
     async def refresh_multiplier_snapshot(self, guild_id):
         """Reload a guild's xp_multipliers rows AND its level_config event
         columns from the DB, and refresh the hot-path cache. Two callers:
-        cogs/community/level_config_ui.py invokes this after EVERY
+        cogs/community/leveling/level_config_ui.py invokes this after EVERY
         xp_multipliers write (boost add/remove) and every event write
         (set/off), so the very next message/sweep tick sees the change
         immediately - no restart. The on_message hot path and the VoiceXP
@@ -684,7 +687,7 @@ class Leveling(commands.Cog):
         (week or month rolled over since the marker was last set) - never a
         background timer, never on every grant. The common case (nothing
         rolled over since the last check) is a single BoundedLRU read plus a
-        tuple compare via tools.leveling.period_marker_changed: zero DB and
+        tuple compare via cogs.community.leveling.engine.period_marker_changed: zero DB and
         zero awaits, so this is safe to await from both hot paths (on_message
         and the voice sweep, once per credited guild - see their call sites).
 
@@ -694,7 +697,7 @@ class Leveling(commands.Cog):
            so a slow season rollover can never delay it) - with its monthly
            cutoff CLAMPED to the month awaiting a season snapshot, so it can
            never delete the very rows that snapshot is about to read;
-        2. when the MONTH component changed (tools.leveling.month_rolled_over -
+        2. when the MONTH component changed (cogs.community.leveling.engine.month_rolled_over -
            a cold marker counts as changed), that same month is handed to the
            Seasons cog for its exactly-once podium snapshot.
 
@@ -703,7 +706,7 @@ class Leveling(commands.Cog):
         a whole month, whose real podium sits in an OLDER one):
 
         * marker WARM - the month it names
-          (tools.leveling.season_rollover_period_key), free, no DB;
+          (cogs.community.leveling.engine.season_rollover_period_key), free, no DB;
         * marker COLD (``None``: every restart, since the BoundedLRU starts
           empty and the deploy is continuous, plus the rare eviction) - ONE
           lookup in the data, :meth:`_resolve_cold_closed_month`, run BEFORE
@@ -764,7 +767,7 @@ class Leveling(commands.Cog):
         The cold branch of :meth:`maybe_prune_expired_periods`: with no marker
         there is nothing in memory to name the month, so we ask xp_period for
         the guild's latest monthly period strictly before the current one -
-        tools.leveling.LATEST_CLOSED_MONTH_SQL, the very query the Seasons cog
+        cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL, the very query the Seasons cog
         uses for the same question, shared verbatim so the month this clamps
         the prune to and the month the snapshot freezes are always the same one.
 
@@ -867,7 +870,7 @@ class Leveling(commands.Cog):
     @staticmethod
     def level_for_xp(xp):
         # Thin delegate to the pure service so the XP curve lives in exactly one
-        # place (tools/leveling.py); rank / leaderboard and the tests call this off the
+        # place (cogs/community/leveling/engine.py); rank / leaderboard and the tests call this off the
         # class, so the staticmethod contract is kept.
         return leveling.level_for_xp(xp)
 
@@ -896,7 +899,7 @@ class Leveling(commands.Cog):
         # then lives in self._no_xp for every later message, so this is a plain
         # cache read except on a guild's very first grant-eligible message (or
         # right after a cold eviction). The check itself is pure set
-        # membership (tools.leveling.is_no_xp_message) - zero DB, zero
+        # membership (cogs.community.leveling.engine.is_no_xp_message) - zero DB, zero
         # allocation beyond the tiny role-id generator below.
         no_xp = self._no_xp.get(message.guild.id)
         if no_xp is None:
@@ -907,7 +910,7 @@ class Leveling(commands.Cog):
         # called, so a no-zone guild pays ZERO allocations here (and never
         # touches the fresh-list-building Member.roles property). Only a guild
         # that actually muted a channel/category/role pays for the membership
-        # test - the pure set lookups in tools.leveling.is_no_xp_message.
+        # test - the pure set lookups in cogs.community.leveling.engine.is_no_xp_message.
         if (no_xp.channels or no_xp.roles) and leveling.is_no_xp_message(
             no_xp,
             message.channel.id,
@@ -1057,7 +1060,7 @@ class Leveling(commands.Cog):
     ):
         """Route a voice-earned level-up through the SAME reward + announce seams.
 
-        Called by cogs/community/voice_xp.py once per credited member who crossed
+        Called by cogs/community/leveling/voice_xp.py once per credited member who crossed
         a level in a sweep, so a voice level-up behaves exactly like a message
         one: reward roles are granted regardless of the announce opt-out, and the
         announce follows the guild's announce_mode - with "channel" mode targeting
@@ -1271,7 +1274,7 @@ class Leveling(commands.Cog):
         The cached-or-load accessor the /rank path uses, mirroring
         ensure_no_xp_snapshot's contract: a hit is a plain BoundedLRU read (no
         DB), a miss pays ONE primary-key lookup on rank_cards that deliberately
-        does not select the image blob (tools/rank_card.CONFIG_QUERY).
+        does not select the image blob (cogs/community/leveling/rank_card.CONFIG_QUERY).
 
         Never raises and never degrades /rank: a DB failure here logs and
         returns the stock style WITHOUT caching it, so the card still renders
@@ -1313,7 +1316,7 @@ class Leveling(commands.Cog):
 
     # -- rank-card customisation writes (RC2 contract) -------------------
     # TODO-CONTRACT fulfilled: every bot-side write below validates, persists
-    # THROUGH tools.rank_card, then invalidates this cog's own cache in the
+    # THROUGH cogs.community.leveling.rank_card, then invalidates this cog's own cache in the
     # SAME call - so from the caller's point of view (RC2's panel and its
     # /levelconfig card background command) a write is atomic: there is no
     # window where the DB has the new value but the next /rank still renders
@@ -1326,7 +1329,7 @@ class Leveling(commands.Cog):
 
         ``data`` is the raw uploaded bytes; ``content_type`` is the OPTIONAL
         client-declared type (an Attachment's own, when the caller has one).
-        Raises whichever :class:`tools.rank_card.RankCardError` subclass the
+        Raises whichever :class:`cogs.community.leveling.rank_card.RankCardError` subclass the
         upload failed on (SourceTooLarge, ImageTooLarge, UnsupportedFormat,
         DecodeFailed, EncodedTooLarge) - the caller maps each to its own short
         user-facing message; nothing is written and the cache is left untouched
@@ -1347,8 +1350,8 @@ class Leveling(commands.Cog):
         """Validate, store and invalidate one guild's rank-card accent colour.
 
         ``value`` is whatever the caller collected (an int or a hex string in
-        any shape :func:`tools.rank_card.validate_accent` accepts). Raises
-        :class:`tools.rank_card.InvalidAccent` on bad input; nothing is written
+        any shape :func:`cogs.community.leveling.rank_card.validate_accent` accepts). Raises
+        :class:`cogs.community.leveling.rank_card.InvalidAccent` on bad input; nothing is written
         and the cache is left untouched on a rejection. Returns the packed
         0xRRGGBB int that was stored, for the caller's confirmation message.
         """
@@ -1380,7 +1383,7 @@ class Leveling(commands.Cog):
     def _paint_background(card, data):
         """Paint a stored background under the card, returning success.
 
-        The blob is written by tools/rank_card.validate_and_downscale, so it is
+        The blob is written by cogs/community/leveling/rank_card.validate_and_downscale, so it is
         already a card-sized WebP; the defensive resize only covers a blob
         stored before a future card resize. A corrupt or undecodable row is
         logged and reported as a failure so the caller falls back to the stock

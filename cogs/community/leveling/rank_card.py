@@ -12,7 +12,7 @@ SAME contract from both ends:
   / the ``clear_*`` trio), taking an asyncpg pool explicitly so nothing here
   needs a bot object.
 
-Everything the render seam (``cogs/community/leveling.py``) and the future
+Everything the render seam (``cogs/community/leveling/leveling.py``) and the future
 Discord panel (RC2) and the Node dashboard need lives here, so the three
 writers cannot drift: the dashboard mirrors these exact statements and the same
 caps, then fires ``pg_notify('yasuho_dashboard', {"kind": "rank_card", ...})``
@@ -47,7 +47,7 @@ from PIL import Image, UnidentifiedImageError
 # ---------------------------------------------------------------------------
 # Card geometry - the single source of truth, shared with the renderer.
 # ---------------------------------------------------------------------------
-# These MUST stay equal to the dimensions cogs/community/leveling.py draws at;
+# These MUST stay equal to the dimensions cogs/community/leveling/leveling.py draws at;
 # that module imports them from here rather than redeclaring the literals, so a
 # future card resize cannot leave stored backgrounds silently mis-cropped.
 CARD_WIDTH = 880

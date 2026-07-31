@@ -26,7 +26,7 @@ visibility (:func:`_render_top_channels`), never the bot's. The read layer keeps
 returning complete rows; the filtering is a rendering decision, so it re-applies
 on every rebuild (the 7/30-day toggle included).
 
-Precedents followed: :class:`~cogs.community.seasons_views.HallOfFameCard`
+Precedents followed: :class:`~cogs.community.leveling.seasons_views.HallOfFameCard`
 (``AuthorLayoutView``, the ``_handler``-bound button shape, the house footer)
 and the now-playing progress bar (``cogs/music/views.py``'s
 ``PROGRESS_FILLED``/``PROGRESS_EMPTY`` two-tone bar with no partial-block

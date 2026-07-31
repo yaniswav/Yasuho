@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS levels (
 -- of the guild_settings.leveling_enabled JSONB bool so leveling gains real
 -- per-guild settings without bloating that shared blob. READ-THROUGH migration:
 -- the Leveling cog prefers a row here when one exists and otherwise falls back to
--- the legacy leveling_enabled JSONB value (tools/leveling.py resolve_config), so a
+-- the legacy leveling_enabled JSONB value (cogs/community/leveling/engine.py resolve_config), so a
 -- guild that had leveling on keeps it on until its next toggle writes a row - and a
 -- row always wins, so switching leveling OFF via this table is never undone by a
 -- stale JSONB true. `enabled`, `cooldown_seconds` and the `xp_min`/`xp_max` band
@@ -150,33 +150,33 @@ ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_enabled BOOLEAN NOT N
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS voice_xp_per_minute INTEGER NOT NULL DEFAULT 5;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_factor REAL;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS event_ends_at TIMESTAMPTZ;
--- Seasons (S1), read by cogs/community/seasons.py once per guild per month:
+-- Seasons (S1), read by cogs/community/leveling/seasons.py once per guild per month:
 -- season_champion_role_id is the optional "Season champion" role handed to the
 -- closed month's #1 in REPLACE mode (NULL = feature off, the default), and
 -- season_announce opts the guild in to the rollover announce (default off, and
 -- the guild's existing announce_mode still decides WHERE - see
--- tools.leveling.resolve_season_announce_channel).
+-- cogs.community.leveling.engine.resolve_season_announce_channel).
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS season_champion_role_id BIGINT;
 ALTER TABLE level_config ADD COLUMN IF NOT EXISTS season_announce BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Per-guild XP multipliers (L4, the Lurkr rule): boost or reduce XP globally,
 -- per channel/category, or per role. ``kind = 'global'`` always uses
--- ``target_id = 0`` (tools.leveling.GLOBAL_MULTIPLIER_TARGET_ID), so the PK
+-- ``target_id = 0`` (cogs.community.leveling.engine.GLOBAL_MULTIPLIER_TARGET_ID), so the PK
 -- caps a guild at exactly one global row; ``kind = 'channel'`` rows match
 -- EITHER a text channel id OR a category id (same one-row-per-category design
 -- as level_no_xp - see that table's comment); ``kind = 'role'`` rows match a
 -- member's held roles. ``factor`` is bounded 0.0..5.0 in code
--- (tools.leveling.validate_multiplier_factor) - 0.0 is a valid, explicitly
+-- (cogs.community.leveling.engine.validate_multiplier_factor) - 0.0 is a valid, explicitly
 -- supported "mute XP via multiplier" outcome. Capped at 25 rows/guild across
--- every kind (tools.leveling.MAX_MULTIPLIERS_PER_GUILD), enforced RACE-SAFELY
+-- every kind (cogs.community.leveling.engine.MAX_MULTIPLIERS_PER_GUILD), enforced RACE-SAFELY
 -- by the same WHERE-COUNT INSERT guard as level_rewards/level_no_xp. Stacking
 -- (effective = global * channel * role * event, channel-beats-category,
--- highest-role-wins) is computed by tools.leveling.compute_multiplier against
+-- highest-role-wins) is computed by cogs.community.leveling.engine.compute_multiplier against
 -- a per-guild MultiplierSnapshot cached in-memory
--- (cogs/community/leveling.py's ``self._multipliers``, a BoundedLRU beside the
+-- (cogs/community/leveling/leveling.py's ``self._multipliers``, a BoundedLRU beside the
 -- no-xp snapshot cache) - the hot paths (on_message, the voice sweep) never
--- query this table directly.  cogs/community/leveling.py,
--- cogs/community/voice_xp.py, cogs/community/level_config_ui.py
+-- query this table directly.  cogs/community/leveling/leveling.py,
+-- cogs/community/leveling/voice_xp.py, cogs/community/leveling/level_config_ui.py
 CREATE TABLE IF NOT EXISTS xp_multipliers (
     guild_id  BIGINT NOT NULL,
     kind      TEXT   NOT NULL,   -- 'global' | 'channel' | 'role'
@@ -190,11 +190,11 @@ CREATE INDEX IF NOT EXISTS xp_multipliers_guild_idx ON xp_multipliers (guild_id)
 -- reaches `level` is owed `role_id`. `rewards_mode` on level_config (above)
 -- decides whether a member keeps every earned reward role ('stack', the default)
 -- or only the roles tied to the single highest level they have reached
--- ('replace'). Capped at 25 rules per guild in code (tools/level_rewards.py).
+-- ('replace'). Capped at 25 rules per guild in code (cogs/community/leveling/reward_rules.py).
 -- Reconciliation is on-demand only: a rule added for a level a member already
 -- passed is granted the next time THEY level up, never by a retroactive sweep.
 -- A grant that hits a since-deleted role prunes that role's row(s) lazily and
--- logs INFO (cogs/community/level_rewards.py).
+-- logs INFO (cogs/community/leveling/level_rewards.py).
 CREATE TABLE IF NOT EXISTS level_rewards (
     guild_id BIGINT  NOT NULL,
     level    INTEGER NOT NULL,
@@ -207,15 +207,15 @@ CREATE INDEX IF NOT EXISTS level_rewards_guild_idx ON level_rewards (guild_id);
 -- XP. ``kind = 'channel'`` rows match EITHER a text channel id OR a category
 -- id (a category is itself a channel on Discord's side, so muting a whole
 -- category is one row, not one per channel inside it - see
--- tools/leveling.py NoXpSnapshot); ``kind = 'role'`` rows match any role the
+-- cogs/community/leveling/engine.py NoXpSnapshot); ``kind = 'role'`` rows match any role the
 -- message author holds. Capped at 50 entries/guild
--- (tools.leveling.MAX_NO_XP_PER_GUILD), enforced RACE-SAFELY by the same
+-- (cogs.community.leveling.engine.MAX_NO_XP_PER_GUILD), enforced RACE-SAFELY by the same
 -- WHERE-COUNT INSERT guard as level_rewards. HOT PATH: on_message never
 -- queries this table directly - the Leveling cog loads a guild's rows once
 -- (on its first grant-eligible message, or immediately after any write here)
 -- into an in-memory NoXpSnapshot (two frozensets) capped to ~2048 guilds via
 -- tools.lru_cache.BoundedLRU, so the steady-state per-message cost is pure set
--- membership, zero DB.  cogs/community/leveling.py, cogs/community/level_config_ui.py
+-- membership, zero DB.  cogs/community/leveling/leveling.py, cogs/community/leveling/level_config_ui.py
 CREATE TABLE IF NOT EXISTS level_no_xp (
     guild_id  BIGINT NOT NULL,
     kind      TEXT   NOT NULL,   -- 'channel' | 'role'
@@ -229,18 +229,18 @@ CREATE INDEX IF NOT EXISTS level_no_xp_guild_idx ON level_no_xp (guild_id);
 -- resets - a period simply rolls to a new key once it ends; old rows are
 -- pruned LAZILY (see below), never wiped by a reset job. Written by the SAME
 -- statements as every `levels` grant, IN THE SAME round trip (a single
--- multi-CTE SQL command - see cogs/community/leveling.py's on_message and
--- cogs/community/voice_xp.py's batched sweep upsert), never a separate query.
--- ``period_key`` is pure date maths from UTC "now" (tools.leveling.
+-- multi-CTE SQL command - see cogs/community/leveling/leveling.py's on_message and
+-- cogs/community/leveling/voice_xp.py's batched sweep upsert), never a separate query.
+-- ``period_key`` is pure date maths from UTC "now" (cogs.community.leveling.engine.
 -- current_period_keys): ``W<iso_year>-<iso_week>`` (ISO year-week, e.g.
 -- 'W2026-28') for the weekly view, ``M<year>-<month>`` (e.g. 'M2026-07') for
 -- the monthly view, both zero-padded so period keys of the same kind sort
 -- lexically in chronological order - a grant writes BOTH keys every time.
--- Retention: rows older than ~3 periods (tools.leveling.PRUNE_PERIODS_BACK)
+-- Retention: rows older than ~3 periods (cogs.community.leveling.engine.PRUNE_PERIODS_BACK)
 -- are dropped by a cheap DELETE piggybacked on the first grant/credit of a
 -- NEW period per guild - decided by an in-memory "last seen period" marker
--- on the Leveling cog (tools.leveling.period_marker_changed), never a
--- background timer.  cogs/community/leveling.py, cogs/community/voice_xp.py
+-- on the Leveling cog (cogs.community.leveling.engine.period_marker_changed), never a
+-- background timer.  cogs/community/leveling/leveling.py, cogs/community/leveling/voice_xp.py
 CREATE TABLE IF NOT EXISTS xp_period (
     guild_id   BIGINT  NOT NULL,
     user_id    BIGINT  NOT NULL,
@@ -259,11 +259,11 @@ CREATE INDEX IF NOT EXISTS xp_period_guild_period_xp_idx
 -- untouched); the month's top 3 are merely FROZEN here so they survive the
 -- lazy xp_period prune. `period_key` is the monthly key of the CLOSED month
 -- ('M<year>-<month>') - the month the guild's period marker says it last
--- earned XP in (tools.leveling.season_rollover_period_key), or, when that
+-- earned XP in (cogs.community.leveling.engine.season_rollover_period_key), or, when that
 -- marker is cold (every restart), the latest monthly key this guild has an
 -- xp_period row for before the current month (the shared
--- tools.leveling.LATEST_CLOSED_MONTH_SQL). NEVER simply the month before now,
--- which would skip a guild that stayed silent a whole month. `rank` is 1..3 (tools.leveling.SEASON_PODIUM_SIZE), ties broken by
+-- cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL). NEVER simply the month before now,
+-- which would skip a guild that stayed silent a whole month. `rank` is 1..3 (cogs.community.leveling.engine.SEASON_PODIUM_SIZE), ties broken by
 -- user_id so a re-run can never reshuffle a stored podium, and `xp` is that
 -- member's XP for that month alone. Written EXACTLY ONCE per (guild, month) by
 -- an INSERT ... ON CONFLICT DO NOTHING whose RETURNING is also what elects the
@@ -279,7 +279,7 @@ CREATE INDEX IF NOT EXISTS xp_period_guild_period_xp_idx
 -- the real Postgres) - which is read from HERE rather than from Role.members
 -- precisely because the member cache is not populated (chunk_guilds_at_startup
 -- is False).
--- cogs/community/seasons.py, cogs/community/leveling.py
+-- cogs/community/leveling/seasons.py, cogs/community/leveling/leveling.py
 CREATE TABLE IF NOT EXISTS season_podiums (
     guild_id    BIGINT      NOT NULL,
     period_key  TEXT        NOT NULL,   -- closed month, 'M<year>-<month>'
@@ -294,19 +294,19 @@ CREATE TABLE IF NOT EXISTS season_podiums (
 -- accent colour. One row per guild, created only when a guild customises the
 -- card - no row means the stock card, which renders byte-for-byte as it did
 -- before this table existed.
--- ``background`` is ALWAYS a bot-normalised WebP: tools/rank_card.py decodes the
+-- ``background`` is ALWAYS a bot-normalised WebP: cogs/community/leveling/rank_card.py decodes the
 -- uploaded PNG/JPEG/WebP, cover-crops it to the card's EXACT pixel size and
 -- re-encodes it under a hard size cap, so the stored blob is bounded (512 KiB
 -- worst case) and the render never resizes a hostile image. That bound is
 -- ENFORCED here, not merely documented: the CHECK below refuses anything larger,
 -- because the dashboard is an INDEPENDENT writer (a separate Node process with
 -- its own copy of the caps) and a blob that slipped past it would be re-read on
--- every /rank of that guild. It matches tools/rank_card.MAX_STORED_BYTES.
+-- every /rank of that guild. It matches cogs/community/leveling/rank_card.MAX_STORED_BYTES.
 -- ``background_format``
 -- records that encoding ('webp') for future-proofing, exactly as avatar_history
 -- does. ``accent`` is a packed 0xRRGGBB int (the same shape discord.Colour.value
 -- uses), NULL to keep the member-colour default.
--- Owner: cogs/community/leveling (render seam) + tools/rank_card.py (validation
+-- Owner: cogs/community/leveling/leveling.py (render seam) + cogs/community/leveling/rank_card.py (validation
 -- and the write API). ALSO WRITTEN BY THE DASHBOARD (the separate Node process),
 -- which fires pg_notify('yasuho_dashboard', {"kind": "rank_card", ...}) after its
 -- write so cogs/system/dashboard_sync.py drops the bot's cached config.

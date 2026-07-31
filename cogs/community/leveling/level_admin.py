@@ -32,7 +32,9 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import interactions, level_admin, leveling
+from . import admin_rules as level_admin
+from . import engine as leveling
+from tools import interactions
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.views import AuthorView, LocaleModal
@@ -342,7 +344,7 @@ class LevelAdmin(commands.Cog):
         history this command exists to destroy.
 
         The confirmation prose is unchanged and stays accurate: a season podium
-        IS a frozen monthly leaderboard (see cogs/community/seasons.py), so
+        IS a frozen monthly leaderboard (see cogs/community/leveling/seasons.py), so
         "every weekly/monthly leaderboard" already names it.
 
         Roles are deliberately NOT reconciled here - a mass role sweep across

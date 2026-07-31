@@ -1,4 +1,4 @@
-"""Unit tests for cogs.community.seasons.Seasons (leveling seasons, S1).
+"""Unit tests for cogs.community.leveling.seasons.Seasons (leveling seasons, S1).
 
 The engine that closes a calendar month: it freezes the month's top 3 into
 season_podiums EXACTLY ONCE, then - only for the caller that actually won that
@@ -22,7 +22,7 @@ What is pinned here (the cog side, against fakes):
   resolves a channel, renders in the GUILD's locale, and pings users only.
 
 The period-key maths and the announce-channel resolution are pure and live in
-tests/tools/test_leveling_service.py; the rollover DETECTION (the leveling
+tests/cogs/test_leveling_engine.py; the rollover DETECTION (the leveling
 cog's in-memory marker) lives in tests/cogs/test_leveling.py.
 """
 
@@ -33,8 +33,9 @@ import types
 import discord
 import pytest
 
-from cogs.community.seasons import Seasons
-from tools import i18n, leveling
+from cogs.community.leveling import engine as leveling
+from cogs.community.leveling.seasons import Seasons
+from tools import i18n
 
 # ---------------------------------------------------------------------------
 # Fakes: role / member / guild / channel, shaped just enough for the hierarchy
@@ -410,7 +411,7 @@ async def test_a_podium_without_rank_1_crowns_nobody(fake_pool, caplog):
     )
     cog = Seasons(_make_bot(fake_pool))
 
-    with caplog.at_level(logging.WARNING, logger="cogs.community.seasons"):
+    with caplog.at_level(logging.WARNING, logger="cogs.community.leveling.seasons"):
         podium = await cog.ensure_season_snapshot(guild, _CLOSED, now=_JULY)
 
     assert podium == [(2, 22, 700), (3, 33, 10)]  # what we wrote is what we report
@@ -1053,7 +1054,7 @@ async def test_an_announce_that_can_never_land_is_logged_as_a_WARNING(
     )
     cog = Seasons(_make_bot(fake_pool))
 
-    with caplog.at_level(logging.WARNING, logger="cogs.community.seasons"):
+    with caplog.at_level(logging.WARNING, logger="cogs.community.leveling.seasons"):
         await cog.ensure_season_snapshot(guild, now=_JULY)
 
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
@@ -1095,7 +1096,7 @@ async def test_announce_send_failure_never_undoes_the_snapshot(fake_pool):
 #
 # A guild whose leveling is ON only through the legacy
 # guild_settings.leveling_enabled JSONB bool has NO level_config row at all.
-# tools.leveling.resolve_config prefers a row over that legacy bool, so an
+# cogs.community.leveling.engine.resolve_config prefers a row over that legacy bool, so an
 # INSERT that seeds no ``enabled`` would hand such a guild a brand new row with
 # enabled = FALSE and silently kill its XP on the next restart. Both writers
 # therefore carry the house COALESCE seed (mirrors set_announce_mode /

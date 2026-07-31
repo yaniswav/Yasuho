@@ -4,7 +4,7 @@ A guild's admin configures "reach level N, get role R" rules (the level_rewards
 table). This module answers exactly one question with no discord, no database,
 no awaits: given the guild's rules, its rewards_mode, and a member who just
 leveled up, which reward roles should be ADDED and (in 'replace' mode) REMOVED?
-The cog (cogs/community/level_rewards.py) owns the DB reads, the role
+The cog (cogs/community/leveling/level_rewards.py) owns the DB reads, the role
 add/remove calls, the hierarchy check and the lazy pruning of stale rules; this
 module only computes the two role-id sets.
 
@@ -20,7 +20,7 @@ receives all three, and in replace mode ends up holding only the top tier.
 from __future__ import annotations
 
 # Discord caps a single select at 25 options, and the admin-facing "remove a
-# rule" picker (cogs/community/level_rewards.py) lists every rule in one select
+# rule" picker (cogs/community/leveling/level_rewards.py) lists every rule in one select
 # - so this cap is also what keeps that picker within Discord's own limit.
 MAX_REWARDS_PER_GUILD = 25
 

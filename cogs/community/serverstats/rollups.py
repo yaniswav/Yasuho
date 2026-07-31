@@ -40,7 +40,7 @@ import datetime
 from dataclasses import dataclass
 
 from . import buffer
-from tools.leveling import iso_week_period_key
+from cogs.community.leveling.engine import iso_week_period_key
 
 # Nothing older than the collector's own retention can be asked for (see
 # cog.RETENTION_DAYS - duplicated as a literal rather than imported so this pure
@@ -147,7 +147,7 @@ WATCHED_DAYS = """
     """
 
 # Weekly net movement. to_char(day, '"W"IYYY-IW') produces EXACTLY the key
-# tools.leveling.iso_week_period_key builds in Python ('W2026-31'), verified
+# cogs.community.leveling.engine.iso_week_period_key builds in Python ('W2026-31'), verified
 # against a real PostgreSQL including the Dec/Jan ISO boundary, so the two
 # halves of the retention block line up week for week.
 RETENTION_NET = """
@@ -344,7 +344,7 @@ class RetentionWeek:
 
     ``active_members`` is None when the guild has no leveling, or when xp_period
     no longer holds that week (its rows are pruned a few periods back - see
-    tools.leveling.PRUNE_PERIODS_BACK)."""
+    cogs.community.leveling.engine.PRUNE_PERIODS_BACK)."""
 
     week: str
     joins: int | None
@@ -448,7 +448,7 @@ def day_span(start, end):
 def week_keys(today, weeks):
     """The ``weeks`` most recent ISO week keys, oldest first ('W2026-31' shape).
 
-    Built with tools.leveling.iso_week_period_key so the keys are byte-identical
+    Built with cogs.community.leveling.engine.iso_week_period_key so the keys are byte-identical
     to the ones xp_period stores AND to what the SQL to_char produces.
     """
     return [
@@ -466,7 +466,7 @@ def week_window_start(today, weeks):
 def week_end(key):
     """The Sunday closing the ISO week named by ``key`` ('W2026-31' shape).
 
-    The exact inverse of tools.leveling.iso_week_period_key, via
+    The exact inverse of cogs.community.leveling.engine.iso_week_period_key, via
     ``date.fromisocalendar``, so a week key can be compared against a collection
     start date without re-deriving ISO arithmetic by hand.
     """

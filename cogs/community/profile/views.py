@@ -56,7 +56,7 @@ log = logging.getLogger(__name__)
 # A profile's free-form fields (bio, custom values, gaming IDs) can contain
 # anything the owner typed, including "@everyone" or a raw <@id> - and unlike
 # an embed, Components V2 TextDisplay text DOES get parsed for mentions (see
-# cogs/community/seasons_views.py's HallOfFameCard for the verified precedent).
+# cogs/community/leveling/seasons_views.py's HallOfFameCard for the verified precedent).
 # Every send/edit of a card or panel built here passes this.
 NO_PINGS = discord.AllowedMentions.none()
 
@@ -804,7 +804,7 @@ class ProfileVisibilityPanel(AuthorLayoutView):
     :func:`_connector_sections`. Every write goes through
     ``storage.set_visibility`` via ``self.cog.bot.db_pool`` - this module owns
     no query of its own, only the layout and the callbacks (same posture as
-    :class:`~cogs.community.seasons_views.SeasonsPanel`).
+    :class:`~cogs.community.leveling.seasons_views.SeasonsPanel`).
     """
 
     def __init__(self, cog, author_id, visibility_map, *, timeout=180):

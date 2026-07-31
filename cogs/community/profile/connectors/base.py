@@ -155,7 +155,7 @@ def safe_number(value, limit=MAX_SANE_NUMBER):
 
 # ---------------------------------------------------------------------------
 # Typed errors, so a caller maps a failure to a message without string matching
-# (the same posture as registry.py and tools/rank_card.py).
+# (the same posture as registry.py and cogs/community/leveling/rank_card.py).
 # ---------------------------------------------------------------------------
 
 

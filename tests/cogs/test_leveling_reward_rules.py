@@ -1,4 +1,4 @@
-"""Unit tests for tools.level_rewards (pure grant-decision engine).
+"""Unit tests for cogs.community.leveling.reward_rules (pure grant-decision engine).
 
 decide_role_changes is the whole contract: given a guild's reward rules, its
 mode, a level-up span, and the roles a member currently holds, which role ids
@@ -7,7 +7,7 @@ multi-level jumps (including catch-up for a rule added below the member's
 already-passed level), idempotency, and the "no rules" / no-level-up no-ops.
 """
 
-from tools import level_rewards as lr
+from cogs.community.leveling import reward_rules as lr
 
 # ---------------------------------------------------------------------------
 # owed_role_ids

@@ -34,8 +34,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from cogs.community.leveling.rank_card import InvalidAccent, validate_accent
 from tools.i18n import N_
-from tools.rank_card import InvalidAccent, validate_accent
 
 # ---------------------------------------------------------------------------
 # Caps. Changing one is a product decision, so it is made in exactly one place.
@@ -76,7 +76,7 @@ GAMING_ID_LABELS = {
 
 # ---------------------------------------------------------------------------
 # Typed errors, so callers map a failure to their own message without string
-# matching (the same posture as tools/rank_card.py).
+# matching (the same posture as cogs/community/leveling/rank_card.py).
 # ---------------------------------------------------------------------------
 
 

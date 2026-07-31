@@ -234,7 +234,7 @@ class Profiles(commands.Cog):
         # Fire-and-forget lazy refreshes kicked off by `profile view` (see
         # _schedule_stale_refreshes). Held so the loop cannot garbage-collect
         # a running task, and discarded on completion - the same pattern as
-        # cogs/community/leveling.py's `_season_tasks`.
+        # cogs/community/leveling/leveling.py's `_season_tasks`.
         self._connector_tasks: set[asyncio.Task] = set()
         # (owner_id, connector) pairs currently being refreshed, so a burst of
         # `/profile view` calls for the same popular member cannot spawn a

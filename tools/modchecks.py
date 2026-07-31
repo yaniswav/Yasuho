@@ -57,7 +57,7 @@ def bot_can_assign_role(role, guild):
     used to gate role grants that Yasuho hands out on its own (a level-up
     reward, a season champion role), never in response to a moderator's
     command. Shared home for a check that started life duplicated in
-    cogs/community/level_rewards.py (level rewards) and cogs/community/seasons.py
+    cogs/community/leveling/level_rewards.py (level rewards) and cogs/community/leveling/seasons.py
     (the season champion role) - both import it from here now.
     """
     me = guild.me

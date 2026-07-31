@@ -5,13 +5,13 @@ reset / resetall). This module answers the small, testable questions those
 commands lean on with no discord, no database, no awaits: are the amounts in
 range, what is the resulting (floored) XP total, and does the typed guild name
 match the one required to confirm the destructive ``resetall``. The cog
-(cogs/community/level_admin.py) owns the DB reads/writes, the confirmation
+(cogs/community/leveling/level_admin.py) owns the DB reads/writes, the confirmation
 views/modals, and the reward/announce routing; this module only computes values.
 
 Level-crossing detection (both directions) and the leaderboard pager live in
-tools/leveling.py (the leveling curve's home): ``level_up_between`` /
+cogs/community/leveling/engine.py (the leveling curve's home): ``level_up_between`` /
 ``level_down_between`` and ``leaderboard_page``. Role reconciliation on a level
-change lives in tools/level_rewards.py (``reconcile_to_level``). This file is
+change lives in cogs/community/leveling/reward_rules.py (``reconcile_to_level``). This file is
 deliberately just the ``/xp`` value maths.
 
 Typography rule: ASCII '-' and '...' only. No em/en dashes or fancy ellipsis.

@@ -1,4 +1,4 @@
-"""Unit tests for tools.leveling_gate (pure command-prefix filter).
+"""Unit tests for cogs.community.leveling.gate (pure command-prefix filter).
 
 is_command_invocation is the cheap, synchronous check that keeps prefix-command
 messages (and their near-misses) from earning XP on the leveling hot path. These
@@ -7,7 +7,7 @@ organic chat is not, bot mentions count as command prefixes, and empty prefixes
 can never swallow every message.
 """
 
-from tools.leveling_gate import is_command_invocation
+from cogs.community.leveling.gate import is_command_invocation
 
 
 def test_plain_prefix_command_is_an_invocation():

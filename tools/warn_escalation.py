@@ -8,7 +8,7 @@ the stored (possibly absent or malformed) payload into a usable policy, and the
 one runtime question - given a member's new warn count, which rule (if any)
 fires. It has no discord, no database, and no awaits; the moderation/automod
 cogs own the settings read/write, the Discord action calls, and the panel
-(house pattern, mirroring tools/level_rewards.py).
+(house pattern, mirroring cogs/community/leveling/reward_rules.py).
 
 Escalation semantics (documented + tested):
 

@@ -1,4 +1,4 @@
-"""Unit tests for ``Leveling.level_for_xp`` (cogs/community/leveling.py).
+"""Unit tests for ``Leveling.level_for_xp`` (cogs/community/leveling/leveling.py).
 
 ``level_for_xp`` is the single source of truth for turning an XP total into a
 level, and the ``rank`` command derives its progress bar from the inverse
@@ -22,8 +22,9 @@ import types
 import discord
 import pytest
 
-from cogs.community.leveling import LeaderboardView, Leveling
-from tools import leveling, settings
+from cogs.community.leveling import engine as leveling
+from cogs.community.leveling.leveling import LeaderboardView, Leveling
+from tools import settings
 
 
 @pytest.fixture(autouse=True)
@@ -182,7 +183,7 @@ def _enable(cog, guild_id=1, **overrides):
 
 
 # The lazy prune's "which month closed?" lookup
-# (tools.leveling.LATEST_CLOSED_MONTH_SQL) is recognised by this fragment - it
+# (cogs.community.leveling.engine.LATEST_CLOSED_MONTH_SQL) is recognised by this fragment - it
 # is the only fetchval in this cog besides the grant statement.
 _CLOSED_MONTH_NEEDLE = "LIKE 'M%'"
 
@@ -439,7 +440,7 @@ def test_is_enabled_reflects_the_config_map(fake_pool):
 # Level-reward announce integration (cross-cog seam: bot.get_cog("LevelRewards"))
 # ---------------------------------------------------------------------------
 #
-# The pure add/remove decision math lives in tools/level_rewards.py and the
+# The pure add/remove decision math lives in cogs/community/leveling/reward_rules.py and the
 # cog-level role application in tests/cogs/test_level_rewards.py; these tests
 # only pin the Leveling side of the seam: the reward cog is called on every
 # level-up (never per message), roles are granted regardless of the announce
@@ -454,7 +455,7 @@ class _FakeGrantedRole:
 
 
 class _FakeRewardsCog:
-    """Stand-in for cogs.community.level_rewards.LevelRewards."""
+    """Stand-in for cogs.community.leveling.level_rewards.LevelRewards."""
 
     def __init__(self, granted=None, raises=None):
         self.granted = list(granted or [])
@@ -596,11 +597,11 @@ async def test_no_levelup_never_calls_the_rewards_cog(fake_pool):
 # ---------------------------------------------------------------------------
 #
 # The pure decision (is_no_xp_message) is covered in
-# tests/tools/test_leveling_service.py; these tests pin the COG side of the
+# tests/cogs/test_leveling_engine.py; these tests pin the COG side of the
 # seam: the snapshot is loaded from the DB at most ONCE per guild (a genuine
 # cache, not a per-message query), a muted channel/category/role blocks the
 # grant AND never even starts the cooldown, and refresh_no_xp_snapshot (the
-# cross-cog hook cogs/community/level_config_ui.py calls after every write)
+# cross-cog hook cogs/community/leveling/level_config_ui.py calls after every write)
 # makes a change visible on the very next message.
 
 
@@ -752,7 +753,7 @@ async def test_no_xp_nonempty_snapshot_does_run_the_membership_test(
 # ---------------------------------------------------------------------------
 #
 # resolve_announce_target/render_announce_template's pure decisions are
-# covered in tests/tools/test_leveling_service.py; these drive
+# covered in tests/cogs/test_leveling_engine.py; these drive
 # _announce_levelup end to end through on_message against fakes for each
 # route, proving the opt-out gate applies in every mode and levelup_ping
 # swaps a mention for plain text without changing anything else.
@@ -964,7 +965,7 @@ async def test_custom_announce_template_is_rendered_with_the_roles_suffix(fake_p
 
 # ---------------------------------------------------------------------------
 # set_announce_mode / set_announce_template: the level_config writers used by
-# cogs/community/level_config_ui.py. Mirrors set_enabled's own tests plus the
+# cogs/community/leveling/level_config_ui.py. Mirrors set_enabled's own tests plus the
 # `enabled`-seeded-from-legacy-JSONB upsert shape level_rewards_mode pins.
 # ---------------------------------------------------------------------------
 
@@ -1133,12 +1134,12 @@ async def test_credit_voice_levelup_respects_announce_off(fake_pool):
 # ---------------------------------------------------------------------------
 #
 # The pure stacking rule (compute_multiplier) is covered in
-# tests/tools/test_leveling_service.py; these tests pin the COG side of the
+# tests/cogs/test_leveling_engine.py; these tests pin the COG side of the
 # seam: the snapshot (xp_multipliers rows + the level_config event columns) is
 # loaded at most ONCE per guild (a genuine cache), a boost scales the grant, a
 # 0x boost skips the write entirely (but still starts the cooldown), and
 # refresh_multiplier_snapshot (the cross-cog hook
-# cogs/community/level_config_ui.py calls after every boost/event write) makes
+# cogs/community/leveling/level_config_ui.py calls after every boost/event write) makes
 # a change visible on the very next message.
 
 
@@ -1371,7 +1372,7 @@ async def test_active_event_boosts_the_grant(fake_pool):
 # ---------------------------------------------------------------------------
 #
 # Period-key maths itself (ISO week edges, month rollover) is covered in
-# tests/tools/test_leveling_service.py; these pin the COG side: a message
+# tests/cogs/test_leveling_engine.py; these pin the COG side: a message
 # grant carries BOTH period keys in the SAME round trip as the lifetime
 # levels write (one fetchval call, never two), the lazy prune fires only
 # once per rolled-over period (a cache hit is zero DB), and the `levels`

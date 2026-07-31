@@ -357,27 +357,27 @@ async def _invalidate_leveling(bot, gid):
     """Refresh EVERY leveling cache the Leveling cog keeps, for one guild.
 
     Leveling config is spread across THREE in-memory caches on the Leveling cog
-    (``cogs/community/leveling.py``), so this invalidator refreshes each by
+    (``cogs/community/leveling/leveling.py``), so this invalidator refreshes each by
     calling the cog's OWN public refresh hook - the SAME method
-    ``cogs/community/level_config_ui.py`` invokes after every leveling write, so a
+    ``cogs/community/leveling/level_config_ui.py`` invokes after every leveling write, so a
     dashboard change takes effect on the very next message / voice sweep, no
     restart:
 
-    * ``self._configs`` - a plain dict of ``tools.leveling.LevelConfig``, the
+    * ``self._configs`` - a plain dict of ``cogs.community.leveling.engine.LevelConfig``, the
       on_message hot-path mirror of the level_config scalar knobs (enabled,
       cooldown, xp band, announce, voice_xp; leveling.py l.252) - is refreshed by
       ``refresh_guild_config`` (leveling.py l.347), which re-reads level_config
       and re-resolves the cached config (or drops the guild when disabled).
-    * ``self._no_xp`` - a ``BoundedLRU`` of ``tools.leveling.NoXpSnapshot``
+    * ``self._no_xp`` - a ``BoundedLRU`` of ``cogs.community.leveling.engine.NoXpSnapshot``
       (leveling.py l.268) - is refreshed by ``refresh_no_xp_snapshot``
       (leveling.py l.526), which re-reads the guild's ``level_no_xp`` rows.
     * ``self._multipliers`` - a ``BoundedLRU`` of
-      ``tools.leveling.MultiplierSnapshot`` (leveling.py l.276) - is refreshed by
+      ``cogs.community.leveling.engine.MultiplierSnapshot`` (leveling.py l.276) - is refreshed by
       ``refresh_multiplier_snapshot`` (leveling.py l.562), which re-reads the
       guild's ``xp_multipliers`` rows AND the ``level_config`` event columns.
 
     ``level_rewards`` rows and the ``level_config.rewards_mode`` column are NOT
-    cached (``cogs/community/level_rewards.py`` reads both fresh on each level-up -
+    cached (``cogs/community/leveling/level_rewards.py`` reads both fresh on each level-up -
     l.19-22 / ``_fetch_mode``), so a dashboard rewards/mode change needs no
     invalidation here. Leveling config is served from these dict / LRU caches, NOT
     the ``tools.settings`` LRU (that LRU is only a legacy read-through fallback in
@@ -402,9 +402,9 @@ async def _invalidate_rank_card(bot, gid):
     """Drop the Leveling cog's cached rank-card style for one guild.
 
     The dashboard writes the ``rank_cards`` row directly (background blob and/or
-    accent) using the SAME statements ``tools/rank_card.py`` exposes, then
+    accent) using the SAME statements ``cogs/community/leveling/rank_card.py`` exposes, then
     notifies with this kind. The Leveling cog serves that row from its
-    ``_rank_cards`` BoundedLRU (``cogs/community/leveling.py``), so without this
+    ``_rank_cards`` BoundedLRU (``cogs/community/leveling/leveling.py``), so without this
     a guild that just uploaded a background would keep getting the stock card
     until the entry aged out under cache pressure - possibly never.
 

@@ -1,4 +1,4 @@
-"""Unit tests for ``tools.rank_card`` - rank-card background/accent storage (RC1).
+"""Unit tests for ``cogs.community.leveling.rank_card`` - rank-card background/accent storage (RC1).
 
 Two halves, tested the way they are written:
 
@@ -23,7 +23,7 @@ import io
 import pytest
 from PIL import Image
 
-from tools import rank_card
+from cogs.community.leveling import rank_card
 
 # ---------------------------------------------------------------------------
 # Helpers: real, tiny images.

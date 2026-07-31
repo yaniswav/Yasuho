@@ -1,9 +1,9 @@
 """Unit tests for the S2 seasons surfaces: ``/halloffame`` and the
 ``/levelconfig seasons`` admin panel.
 
-Covers cogs/community/seasons.py's S2 additions (the hall-of-fame browsing
+Covers cogs/community/leveling/seasons.py's S2 additions (the hall-of-fame browsing
 queries, the two admin writes, and the two command bodies) together with
-cogs/community/seasons_views.py's two Components V2 views, driven against the
+cogs/community/leveling/seasons_views.py's two Components V2 views, driven against the
 REAL :class:`Seasons` cog and ``fake_pool`` (the same style as
 tests/cogs/test_automod_panel.py) so the SQL these surfaces actually run is
 exercised, not just mocked away.
@@ -29,8 +29,8 @@ import types
 
 import discord
 
-from cogs.community.seasons import Seasons
-from cogs.community.seasons_views import HallOfFameCard, SeasonsPanel
+from cogs.community.leveling.seasons import Seasons
+from cogs.community.leveling.seasons_views import HallOfFameCard, SeasonsPanel
 from tools import i18n
 
 
@@ -98,7 +98,7 @@ def _wire_hof(fake_pool, seasons):
 
     ``seasons``: ``{period_key: [(rank, user_id, xp), ...]}``. Every query the
     S2 read surfaces issue is routed off this single dict, PK-scan style (see
-    cogs/community/seasons.py's "hall of fame browsing queries").
+    cogs/community/leveling/seasons.py's "hall of fame browsing queries").
     """
     keys = sorted(seasons)  # lexical == chronological (zero-padded 'M%Y-%m')
 
@@ -504,10 +504,10 @@ def test_the_pager_failure_reuses_an_existing_msgid():
     translation round trip."""
     import pathlib
 
-    import cogs.community.seasons_views as views_module
+    import cogs.community.leveling.seasons_views as views_module
 
     source_path = pathlib.Path(views_module.__file__)
-    repo_root = source_path.parents[2]  # cogs/community/x.py -> repo root
+    repo_root = source_path.parents[3]  # cogs/community/leveling/x.py -> repo root
     assert source_path.read_text(encoding="utf-8").count(
         '_("Something went wrong.")'
     ) == 2

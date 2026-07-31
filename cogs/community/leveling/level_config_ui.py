@@ -1,12 +1,12 @@
 """Level-up no-XP zones, announce control, and XP multipliers (leveling L3+L4):
 the ``/levelconfig`` admin group.
 
-Independent knobs, all consumed by cogs/community/leveling.py's on_message hot
-path (and, for voice XP and boosts/events, cogs/community/voice_xp.py's sweep):
+Independent knobs, all consumed by cogs/community/leveling/leveling.py's on_message hot
+path (and, for voice XP and boosts/events, cogs/community/leveling/voice_xp.py's sweep):
 
 * NO-XP ZONES (``level_no_xp``): channels/categories and roles where messages
   never earn XP. This cog owns the table (add/remove/list, capped at
-  ``tools.leveling.MAX_NO_XP_PER_GUILD``) and, after every write, calls
+  ``cogs.community.leveling.engine.MAX_NO_XP_PER_GUILD``) and, after every write, calls
   ``Leveling.refresh_no_xp_snapshot`` so the change is live on the very next
   message - no restart, no reliance on cache eviction.
 * ANNOUNCE CONTROL (``level_config.announce_mode`` / ``announce_channel_id`` /
@@ -22,7 +22,7 @@ path (and, for voice XP and boosts/events, cogs/community/voice_xp.py's sweep):
   ``Leveling.refresh_multiplier_snapshot`` so the change is live on the very
   next message/sweep tick - no restart.
 
-Cross-cog seam, matching the house pattern (cogs/community/level_rewards.py,
+Cross-cog seam, matching the house pattern (cogs/community/leveling/level_rewards.py,
 cogs/config/settings.py): looked up by name via ``bot.get_cog("Leveling")``,
 guarded so a missing/failing Leveling cog degrades to a friendly refusal rather
 than a crash - this cog owns no hot path itself.
@@ -40,7 +40,9 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import interactions, leveling, rank_card, rendering
+from . import engine as leveling
+from . import rank_card
+from tools import interactions, rendering
 from tools.cooldowns import Cooldowns
 from tools.formats import format_dt, random_colour
 from tools.i18n import N_, _
@@ -49,7 +51,7 @@ from tools.views import AuthorLayoutView, AuthorView, LocaleModal
 try:
     # The house duration converter (tools/time.py), reused elsewhere (reminders,
     # rolemenus, announcements). Preferred whenever importable; a tiny pure
-    # fallback parser (tools.leveling.parse_short_duration) covers the
+    # fallback parser (cogs.community.leveling.engine.parse_short_duration) covers the
     # (never-expected-in-production) case it is not - see the event command.
     from tools.time import ShortTime
 except ImportError:  # pragma: no cover - defensive only
@@ -138,7 +140,7 @@ def _multiplier_error_message(reason):
 def _duration_error_message(reason):
     if reason == "out_of_range":
         # MIN_EVENT_DURATION_SECONDS is a fixed 60s (1 minute) design constant
-        # - see tools/leveling.py - so this is spelled out directly rather
+        # - see cogs/community/leveling/engine.py - so this is spelled out directly rather
         # than pluralized dynamically, matching the other bound messages in
         # this file (e.g. the voice-XP rate refusal).
         return _(
@@ -183,9 +185,9 @@ def _describe_event(event_factor, event_ends_at):
 
     An already-expired stored row (``event_ends_at`` in the past) is
     described as "no event running" - the SAME "ignored at read time" rule
-    tools.leveling.compute_multiplier applies, so the admin panel never
+    cogs.community.leveling.engine.compute_multiplier applies, so the admin panel never
     shows a stale event as still active even in the short window before the
-    next lazy-null refresh (cogs/community/leveling.py's
+    next lazy-null refresh (cogs/community/leveling/leveling.py's
     refresh_multiplier_snapshot).
     """
     if (
@@ -217,12 +219,12 @@ async def _fetch_config(pool, guild_id):
 # ----------------------------------------------------------------------
 # Every write below goes through the Leveling cog's RC2 seam
 # (set_rank_background / set_rank_accent / clear_rank_card, see
-# cogs/community/leveling.py) - this module never touches tools.rank_card's
+# cogs/community/leveling/leveling.py) - this module never touches cogs.community.leveling.rank_card's
 # storage functions directly, so the cache-invalidation contract that seam
 # exists to enforce can never be bypassed from here.
 
 # The upload cap as it is SPOKEN to admins, derived from the single authority
-# (tools.rank_card.MAX_SOURCE_BYTES) so the number in a message or in a slash
+# (cogs.community.leveling.rank_card.MAX_SOURCE_BYTES) so the number in a message or in a slash
 # command's help can never drift from the number the validator enforces. Binary
 # megabytes floor-divided (8 * 1024 * 1024 -> 8), labelled "MB" the way every
 # other user-facing string in this codebase does.
@@ -241,7 +243,7 @@ _PREVIEW_DEBOUNCE = Cooldowns(5.0)
 
 
 def _rank_card_error_message(exc):
-    """Map a typed :class:`tools.rank_card.RankCardError` to a short,
+    """Map a typed :class:`cogs.community.leveling.rank_card.RankCardError` to a short,
     translated message - one clause per failure so a rejected upload always
     tells the admin WHY, never a bare "something went wrong"."""
     if isinstance(exc, rank_card.SourceTooLarge):
@@ -275,7 +277,7 @@ def _rank_card_error_message(exc):
 
 
 def card_panel_state(row):
-    """The panel's state dict from a :func:`tools.rank_card.fetch_config` row.
+    """The panel's state dict from a :func:`cogs.community.leveling.rank_card.fetch_config` row.
 
     ``row`` is ``None`` for a guild that never customised its card (no
     ``rank_cards`` row at all) - both knobs then read as their stock default.
@@ -297,7 +299,7 @@ async def _render_card_preview(bot, leveling_cog, guild, member):
     state) - the preview button's whole point is to show the real pipeline's
     output. Lives here rather than on the Leveling cog because this lot's
     leveling.py changes are scoped to the write seam alone; every piece this
-    calls (ensure_rank_card_style, the render, tools.rank_card.fetch_background)
+    calls (ensure_rank_card_style, the render, cogs.community.leveling.rank_card.fetch_background)
     already existed for /rank, so nothing new is added there.
     """
     pool = bot.db_pool
@@ -346,7 +348,7 @@ async def _render_card_preview(bot, leveling_cog, guild, member):
 class _RankAccentModal(LocaleModal):
     """Set the guild's rank-card accent from a typed hex colour.
 
-    Accepts any shape :func:`tools.rank_card.validate_accent` does (``#RGB``,
+    Accepts any shape :func:`cogs.community.leveling.rank_card.validate_accent` does (``#RGB``,
     ``#RRGGBB``, ``0xRRGGBB``); defaults to the guild's current accent so
     submitting unchanged is a no-op write.
     """
@@ -439,7 +441,7 @@ class RankCardPanel(AuthorLayoutView):
     """Author-restricted admin panel for the ``rank_cards`` row (RC2).
 
     Single Components V2 :class:`~discord.ui.Container`, same house shape as
-    :class:`~cogs.community.seasons_views.SeasonsPanel`: a header, a
+    :class:`~cogs.community.leveling.seasons_views.SeasonsPanel`: a header, a
     background section (state + set-instructions/reset buttons) and an accent
     section (state + set-modal/reset buttons), plus a preview button that
     renders the CLICKING admin's own card through the real pipeline and sends
@@ -448,7 +450,7 @@ class RankCardPanel(AuthorLayoutView):
 
     Every write calls back into the Leveling cog's RC2 seam
     (``leveling_cog.set_rank_background`` / ``set_rank_accent`` /
-    ``clear_rank_card``), never ``tools.rank_card`` directly, so the cache
+    ``clear_rank_card``), never ``cogs.community.leveling.rank_card`` directly, so the cache
     invalidation contract holds from this surface too.
     """
 
@@ -1723,7 +1725,7 @@ class LevelConfigUI(commands.Cog):
     # -- card subgroup (RC2) -------------------------------------------------
     # The panel (RankCardPanel, above) and this command both write through the
     # Leveling cog's RC2 seam (set_rank_background / set_rank_accent /
-    # clear_rank_card) - never through tools.rank_card directly - so the panel
+    # clear_rank_card) - never through cogs.community.leveling.rank_card directly - so the panel
     # and the attachment command can never drift on the invalidation contract.
     @levelconfig.group(name="card")
     @commands.guild_only()
@@ -1829,7 +1831,7 @@ class LevelConfigUI(commands.Cog):
 
     # -- rewards subgroup (L2) ---------------------------------------------
     # Thin wrappers over the LevelRewards cog's cmd_* bodies (see
-    # cogs/community/level_rewards.py). The checks and describe live here (this
+    # cogs/community/leveling/level_rewards.py). The checks and describe live here (this
     # is where the command is registered); the logic lives there.
     @levelconfig.group(name="rewards")
     @commands.guild_only()
@@ -1888,7 +1890,7 @@ class LevelConfigUI(commands.Cog):
 
     # -- seasons (S2) --------------------------------------------------------
     # Thin wrapper over the Seasons cog's cmd_seasons_panel body (see
-    # cogs/community/seasons.py), same delegation shape as rewards/xp above.
+    # cogs/community/leveling/seasons.py), same delegation shape as rewards/xp above.
     @levelconfig.command(name="seasons")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -1900,7 +1902,7 @@ class LevelConfigUI(commands.Cog):
 
     # -- xp subgroup (L5) --------------------------------------------------
     # Thin wrappers over the LevelAdmin cog's cmd_* bodies (see
-    # cogs/community/level_admin.py), including the reset/resetall confirm flows.
+    # cogs/community/leveling/level_admin.py), including the reset/resetall confirm flows.
     @levelconfig.group(name="xp")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
