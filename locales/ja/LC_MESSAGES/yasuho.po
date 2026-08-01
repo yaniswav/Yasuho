@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-01 09:28+0000\n"
+"POT-Creation-Date: 2026-08-01 16:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1835,24 +1835,24 @@ msgstr "その設定の更新中に問題が発生しました。"
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:637
+#: cogs/community/usersettings.py:658
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:641
+#: cogs/community/usersettings.py:662
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:646
+#: cogs/community/usersettings.py:667
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:657
+#: cogs/community/usersettings.py:678
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
-#: cogs/community/usersettings.py:672
+#: cogs/community/usersettings.py:693
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
 
@@ -4168,11 +4168,11 @@ msgid "Header"
 msgstr "ヘッダー"
 
 #: cogs/config/rolemenus.py:562 cogs/config/rolemenus.py:762
-#: cogs/system/dashboard_actions.py:748
+#: cogs/system/dashboard_actions.py:789
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:569 cogs/system/dashboard_actions.py:753
+#: cogs/config/rolemenus.py:569 cogs/system/dashboard_actions.py:794
 #: cogs/utility/info.py:127
 msgid "Roles"
 msgstr "ロール"
@@ -5050,11 +5050,11 @@ msgstr "`/verify setup` で認証を有効にできます。"
 msgid "I can't assign {role} - it must be below my highest role and not managed."
 msgstr "{role} を付与できません - 私の最上位ロールより下にあり、かつ連携管理されていないロールである必要があります。"
 
-#: cogs/config/verification.py:187 cogs/system/dashboard_actions.py:251
+#: cogs/config/verification.py:187 cogs/system/dashboard_actions.py:292
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:190 cogs/system/dashboard_actions.py:254
+#: cogs/config/verification.py:190 cogs/system/dashboard_actions.py:295
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
@@ -7814,6 +7814,10 @@ msgstr "{when} に取得したスナップショット"
 #: cogs/system/botstats.py:1207
 msgid "times out after 5 min"
 msgstr "5分後にタイムアウトします"
+
+#: cogs/system/dashboard_user_actions.py:92
+msgid "Here is the personal-data export you requested from the dashboard."
+msgstr "ダッシュボードからリクエストされた個人データのエクスポートです。"
 
 #: cogs/system/errors.py:39
 #, python-brace-format

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-01 09:28+0000\n"
+"POT-Creation-Date: 2026-08-01 16:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -1835,24 +1835,24 @@ msgstr "Une erreur est survenue lors de la mise à jour de ce paramètre."
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Utilise `{prefix}mydata export` pour recevoir tes données, `{prefix}mydata deleteprofile` pour effacer ton profil, ou `{prefix}mydata deleteavatars` pour effacer les avatars enregistrés."
 
-#: cogs/community/usersettings.py:637
+#: cogs/community/usersettings.py:658
 msgid "I sent your data export to you by direct message."
 msgstr "Je t'ai envoyé ton export de données par message privé."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:641
+#: cogs/community/usersettings.py:662
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Je n'ai pas pu t'envoyer de message privé. Active tes messages privés."
 
-#: cogs/community/usersettings.py:646
+#: cogs/community/usersettings.py:667
 msgid "Something went wrong building your data export."
 msgstr "Un problème est survenu pendant la création de ton export de données."
 
-#: cogs/community/usersettings.py:657
+#: cogs/community/usersettings.py:678
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Cette action supprime définitivement ta bio, tes pronoms, ta couleur d'accent, tes champs personnalisés, tes identifiants de jeu et tous les choix que tu as faits sur qui pouvait les voir. Cette action est irréversible."
 
-#: cogs/community/usersettings.py:672
+#: cogs/community/usersettings.py:693
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Ceci supprime définitivement chaque avatar global, avatar de serveur et bannière sauvegardés pour ton compte. Ça désactive aussi le suivi futur. C'est irréversible."
 
@@ -4168,11 +4168,11 @@ msgid "Header"
 msgstr "En-tete"
 
 #: cogs/config/rolemenus.py:562 cogs/config/rolemenus.py:762
-#: cogs/system/dashboard_actions.py:748
+#: cogs/system/dashboard_actions.py:789
 msgid "Pick your roles"
 msgstr "Choisis tes roles"
 
-#: cogs/config/rolemenus.py:569 cogs/system/dashboard_actions.py:753
+#: cogs/config/rolemenus.py:569 cogs/system/dashboard_actions.py:794
 #: cogs/utility/info.py:127
 msgid "Roles"
 msgstr "Rôles"
@@ -5050,11 +5050,11 @@ msgstr "Utilise `/verify setup` pour activer la vérification."
 msgid "I can't assign {role} - it must be below my highest role and not managed."
 msgstr "Je ne peux pas attribuer {role} - il doit être en dessous de mon rôle le plus élevé et ne pas être géré par une intégration."
 
-#: cogs/config/verification.py:187 cogs/system/dashboard_actions.py:251
+#: cogs/config/verification.py:187 cogs/system/dashboard_actions.py:292
 msgid "Verification"
 msgstr "Vérification"
 
-#: cogs/config/verification.py:190 cogs/system/dashboard_actions.py:254
+#: cogs/config/verification.py:190 cogs/system/dashboard_actions.py:295
 msgid "Click the button below to verify and unlock the server."
 msgstr "Cliquez sur le bouton ci-dessous pour vérifier et déverrouiller le serveur."
 
@@ -7814,6 +7814,10 @@ msgstr "Instantané pris {when}"
 #: cogs/system/botstats.py:1207
 msgid "times out after 5 min"
 msgstr "expire après 5 min"
+
+#: cogs/system/dashboard_user_actions.py:92
+msgid "Here is the personal-data export you requested from the dashboard."
+msgstr "Voici l'export de tes données personnelles demandé depuis le dashboard."
 
 #: cogs/system/errors.py:39
 #, python-brace-format
