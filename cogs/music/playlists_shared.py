@@ -7,10 +7,11 @@ group and its ``save``/``play``/``list``/``delete``/``rename`` subcommands, plus
 the small pure helpers behind them (name normalisation, cap decisions, the save
 snapshot shape, decode-failure accounting, the creator-or-moderator permission
 decision). The commands lean on seams already provided by the Music cog -
-``_require_player``, ``_snapshot``, ``_has_manage_guild``, ``_nodes_available``
-and ``bot.sl_client.decode_tracks`` (the exact no-re-search decode seam the cold
-restore uses in ``_restore_one``) - so this module adds a feature, not a second
-copy of the engine.
+``_require_player``, ``_snapshot``, ``_has_manage_guild``, ``_nodes_available``,
+``_init_session`` (the shared player-birth configuration seam: autoplay seed,
+this guild's default volume, SponsorBlock) and ``bot.sl_client.decode_tracks``
+(the exact no-re-search decode seam the cold restore uses in ``_restore_one``) -
+so this module adds a feature, not a second copy of the engine.
 
 Scale: the ``guild_playlists`` table is hard-bounded per guild -
 :data:`MAX_GUILD_PLAYLISTS` playlists, each at most :data:`MAX_PLAYLIST_TRACKS`
@@ -338,7 +339,8 @@ class ServerPlaylistMixin:
 
         Mirrors the connect seam in ``playlist_play`` / ``_play_query``: an already
         active player is reused; otherwise the caller must be in a voice channel,
-        which the bot joins as a fresh session. Sends the reason and returns
+        which the bot joins as a fresh session configured by the shared
+        ``Music._init_session`` player-birth seam. Sends the reason and returns
         ``None`` on failure.
         """
         # Player and Music seams live in music.py; import lazily to avoid the
@@ -364,10 +366,11 @@ class ServerPlaylistMixin:
             return None
         player.dj = ctx.author
         player.home = ctx.channel
-        await self._init_autoplay(player, ctx.author.id)
-        from cogs.music import sponsorblock
-
-        sponsorblock.schedule_apply(player)
+        # Player birth: autoplay seed, this guild's default volume, and the
+        # SponsorBlock categories - the same ``Music._init_session`` seam every
+        # other fresh-connect entry point uses, so a per-guild music setting can
+        # never reach three connect sites and be forgotten in this one.
+        await self._init_session(player, ctx.author)
         return player
 
     # -- The /serverplaylist group ----------------------------------------

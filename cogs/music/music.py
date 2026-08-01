@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import effects, lyrics, sponsorblock, vibes, voteskip
+from cogs.music import effects, guild_config, lyrics, sponsorblock, vibes, voteskip
 
 # The playback engine core (Player, its YouTube-seed autoplay handler, the
 # search-result normalisers and the voice-channel resolver) lives in player.py,
@@ -252,17 +252,32 @@ def _int_to_loop(value):
     return sonolink.QueueMode.NORMAL
 
 
-def resolve_session_autoplay(user_pref):
-    """Initial autoplay for a NEW session: the starter's saved preference, ON if unset.
+def resolve_session_autoplay(user_pref, guild_default=None):
+    """Initial autoplay for a NEW session, most specific signal first.
 
-    Deliverable-4's personal preference seeds a new session only (it never flips a
-    live one); a missing preference (``None``) falls back to ON so autoplaying
-    recommendations is the default experience. Pure so the precedence is unit-tested
-    without a database or a live player.
+    Precedence, from most to least specific:
+
+    1. ``user_pref`` - the starter's OWN saved preference (deliverable 4). An
+       explicit personal choice always wins: it is the most specific signal there
+       is, and the member set it deliberately.
+    2. ``guild_default`` - this server's dashboard-configured default
+       (``guild_config.KEY_AUTOPLAY``). A DEFAULT by definition applies only where
+       nothing more specific was chosen, so it fills in for members who never
+       touched their preference. ``None`` means the server never configured one.
+    3. ON - the bot's own default, so autoplaying recommendations stays the
+       out-of-the-box experience.
+
+    Seeds a session's INITIAL state only; the controller toggle flips it live
+    afterwards and neither signal is re-read. With both arguments absent this
+    returns True, exactly as the one-argument version always did - which is what
+    keeps an unconfigured guild's behaviour identical. Pure, so the whole
+    precedence is unit-tested without a database or a live player.
     """
-    if user_pref is None:
-        return True
-    return bool(user_pref)
+    if user_pref is not None:
+        return bool(user_pref)
+    if guild_default is not None:
+        return bool(guild_default)
+    return True
 
 
 def is_autoplay_track(track):
@@ -714,7 +729,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             ):
                 await ctx.send(_("You must be in my voice channel to do that."))
                 return None
-        if control and not self._can_control(player, ctx.author):
+        if control and not await self._can_control(player, ctx.author):
             dj = getattr(player, "dj", None)
             # A None DJ opens the gate in _can_control, so dj is a real member on
             # this deny path; guard anyway so a racing clear never crashes .mention.
@@ -924,23 +939,89 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 self.bot.db_pool, guild_id, message.id
             )
 
-    async def _init_autoplay(self, player: Player, member_id: int) -> None:
-        """Seed a NEW session's autoplay from the member who started it.
+    def _settings_pool(self) -> typing.Any:
+        """The pool the per-guild music configuration reads through, or ``None``.
 
-        The default is that member's saved personal preference (deliverable 4),
-        falling back to ON when it is unset. This seeds a session's INITIAL state
-        only; the controller toggle flips it live afterwards and never re-reads the
-        preference. Best-effort: a settings read hiccup must not break playback, so
-        it degrades to ON.
+        Resolved defensively (``getattr`` down the chain) so every configuration
+        read degrades to "unconfigured" - i.e. to the bot's historical behaviour -
+        rather than raising, on a cog stand-in that has no bot or a bot whose pool
+        is not up yet.
+        """
+        return getattr(getattr(self, "bot", None), "db_pool", None)
+
+    async def _init_autoplay(self, player: Player, member_id: int) -> None:
+        """Seed a NEW session's autoplay: personal preference, guild default, ON.
+
+        Reads the starter's saved preference (deliverable 4) and this guild's
+        dashboard-configured default (``guild_config.KEY_AUTOPLAY``) and hands both
+        to :func:`resolve_session_autoplay`, which owns the precedence. This seeds a
+        session's INITIAL state only; the controller toggle flips it live afterwards
+        and never re-reads either signal. Best-effort: a settings read hiccup must
+        not break playback, so a failed personal read degrades to "unset" and the
+        guild read degrades to "unconfigured" (both leaving the ON default).
+
+        With no personal preference and no guild default this arms autoplay ON,
+        byte-identically to before the guild default existed.
         """
         try:
             pref = await settings.get_user(
-                self.bot.db_pool, member_id, AUTOPLAY_PREF_KEY, True
+                self.bot.db_pool, member_id, AUTOPLAY_PREF_KEY, None
             )
         except Exception:
             log.exception("Failed to read autoplay preference for %s", member_id)
-            pref = True
-        _set_autoplay(player, resolve_session_autoplay(pref))
+            pref = None
+        guild_id = getattr(getattr(player, "guild", None), "id", None)
+        guild_default = await guild_config.autoplay_default(
+            self._settings_pool(), guild_id
+        )
+        _set_autoplay(player, resolve_session_autoplay(pref, guild_default))
+
+    async def _apply_default_volume(self, player: Player) -> None:
+        """Apply this guild's configured starting volume to a BRAND-NEW player.
+
+        Runs at player birth, before the first track is played, so the very first
+        second of audio is already at the configured level. An UNCONFIGURED guild
+        makes NO call at all - sonolink's own default (100) stands and the node
+        sees exactly the traffic it saw before this setting existed.
+
+        Best-effort by design: the player was connected microseconds ago and its
+        node-side registration is asynchronous, so a volume PATCH can lose that
+        race. Losing it costs the room a default volume, never the session, so the
+        failure is logged at debug and swallowed.
+        """
+        volume = await guild_config.default_volume(
+            self._settings_pool(), getattr(getattr(player, "guild", None), "id", None)
+        )
+        if volume is None:
+            return
+        try:
+            await player.set_volume(volume)
+        except Exception:
+            log.debug(
+                "Could not apply the configured default volume for guild %s",
+                getattr(getattr(player, "guild", None), "id", None),
+                exc_info=True,
+            )
+
+    async def _init_session(self, player: Player, member: typing.Any) -> None:
+        """Configure a BRAND-NEW player: autoplay seed, default volume, SponsorBlock.
+
+        THE single player-birth seam, shared by every fresh-connect entry point
+        (``/play``, the vibe card's genre start, ``/playlist play`` and the shared
+        server-playlist connect) so a new setting can never reach three of the four
+        and be forgotten in the fourth. The caller has already assigned
+        ``player.dj`` and ``player.home``; this handles only what is configurable.
+
+        Order matters: autoplay is armed before anything can start playing, the
+        volume lands before the first track, and SponsorBlock's categories PUT is
+        backgrounded last so its 404-retry never delays the caller.
+        """
+        await self._init_autoplay(player, member.id)
+        await self._apply_default_volume(player)
+        if await guild_config.sponsorblock_enabled(
+            self._settings_pool(), getattr(getattr(player, "guild", None), "id", None)
+        ):
+            sponsorblock.schedule_apply(player)
 
     # ------------------------------------------------------------------
     # Restart persistence (snapshot live players, restore them on startup)
@@ -1461,6 +1542,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         current, queue_tracks = decoded[0], decoded[1:]
 
+        # Read the guild's SponsorBlock choice BEFORE connecting: the categories
+        # PUT below is the only birth configuration a restore applies, and doing
+        # the settings read here keeps the connect -> wire-up sequence free of any
+        # new await, so the window in which a player exists without its .home /
+        # .dj is exactly the one that already existed.
+        sponsorblock_on = await guild_config.sponsorblock_enabled(
+            self._settings_pool(), guild_id
+        )
+
         # Rejoin and replay at the extrapolated position. The track_start event
         # posts a fresh controller, but a track restored in a paused state (or a
         # missed/late event) emits no track_start, so we also post one
@@ -1468,11 +1558,19 @@ class Music(ServerPlaylistMixin, commands.Cog):
         player = guild.voice_client
         if not isinstance(player, Player):
             player = await channel.connect(cls=Player)
-        # Player birth: hand the node its SponsorBlock skip categories (best-effort,
-        # backgrounded so the 404 retry never stalls the restore).
-        sponsorblock.schedule_apply(player)
         player.home = home
         player.dj = dj
+        # Player birth: hand the node its SponsorBlock skip categories (best-effort,
+        # backgrounded so the 404 retry never stalls the restore) - unless this
+        # guild turned SponsorBlock off, in which case the restored session comes
+        # back with segment skipping disarmed, like a fresh one would.
+        #
+        # The rest of a restore is deliberately NOT re-configured from the guild
+        # settings: the persisted volume and autoplay mode below are THIS session's
+        # own live state, and a cold restart must resume the session it saved, not
+        # reset it to the server defaults.
+        if sponsorblock_on:
+            sponsorblock.schedule_apply(player)
         player.queue.mode = loop_mode
         for track in queue_tracks or []:
             player.queue.put(track)
@@ -1655,10 +1753,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 return
             player.dj = ctx.author
             player.home = ctx.channel
-            # Fresh session: seed autoplay from the starter's saved preference.
-            await self._init_autoplay(player, ctx.author.id)
-            # Player birth: configure SponsorBlock skip categories on the node.
-            sponsorblock.schedule_apply(player)
+            # Player birth: autoplay seed, this guild's default volume, and the
+            # SponsorBlock categories - the one shared configuration seam.
+            await self._init_session(player, ctx.author)
 
         if player.home is None:
             player.home = ctx.channel
@@ -1904,10 +2001,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 return
             player.dj = author
             player.home = interaction.channel
-            # Fresh session: seed autoplay from the starter's saved preference.
-            await self._init_autoplay(player, author.id)
-            # Player birth: configure SponsorBlock skip categories on the node.
-            sponsorblock.schedule_apply(player)
+            # Player birth: autoplay seed, this guild's default volume, and the
+            # SponsorBlock categories - the one shared configuration seam.
+            await self._init_session(player, author)
         if player.home is None:
             player.home = interaction.channel
 
@@ -1918,7 +2014,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Starting from silence stays open - the vibe card is the /play entry for
         # everyone. Reuses the station wording (no new msgid), the whole-room seam
         # via _can_control, so this can never drift from _change_station.
-        if replace and not self._can_control(player, author):
+        if replace and not await self._can_control(player, author):
             dj = getattr(player, "dj", None)
             # replace implies a live session and _can_control opens on a None DJ,
             # so dj is a real member here; guard anyway against a racing clear.
@@ -2000,36 +2096,97 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await self._snapshot(player)
         await ctx.send(_("Resumed the player."))
 
-    def _skip_exempt(self, player: Player, actor: typing.Any) -> bool:
-        """Whether ``actor`` skips instantly, bypassing a vote (DJ or Manage Server).
+    async def _is_music_manager(
+        self, player: Player, actor: typing.Any
+    ) -> bool:
+        """Whether ``actor`` holds this guild's MUSIC-manager privilege.
 
-        Reuses the P4 effects exemption predicate (:func:`effects.is_effect_exempt`)
-        and the shared :meth:`_has_manage_guild` helper rather than re-deriving the
-        DJ / manager gate, so "who is trusted to drive the room" stays one rule.
+        THE one place the "Manage Server" half of every music gate is decided, so
+        the per-guild DJ role (``guild_config.KEY_DJ_ROLE``) reaches the skip
+        exemption, the playback-control lock and the effects quota exemption
+        together instead of being wired into one of the three.
+
+        A guild with no DJ role configured gets exactly ``_has_manage_guild``
+        back - the same boolean, from the same check - so an untouched guild's
+        privilege rule is unchanged. When a role IS configured, holding it is
+        equivalent to Manage Server for music and NOTHING else; this never grants
+        a moderation permission, it only opens the music gates.
+
+        The read rides the ``tools.settings`` LRU (one shared guild blob, evicted
+        by the dashboard's ``music_config`` notification), so a warm guild costs a
+        dict lookup, not a query. Manage Server is checked FIRST and short-circuits,
+        so the common privileged path does not read settings at all.
+        """
+        if self._has_manage_guild(actor):
+            return True
+        # Identity, not truthiness: a duck-typed stand-in could be falsy without
+        # being absent, and falling through to the actor's guild would then read
+        # the wrong (or no) configuration.
+        guild = getattr(player, "guild", None)
+        if guild is None:
+            guild = getattr(actor, "guild", None)
+        role_id = await guild_config.dj_role_id(
+            self._settings_pool(), getattr(guild, "id", None)
+        )
+        return guild_config.member_has_role(actor, role_id)
+
+    async def _privileged(
+        self, predicate: typing.Any, player: Player, actor: typing.Any
+    ) -> bool:
+        """Run a pure privilege predicate, resolving the manager bit only if it matters.
+
+        ``predicate`` is one of the pure ``effects`` decisions
+        (:func:`effects.can_control_playback` or :func:`effects.is_effect_exempt`),
+        both of which take ``(dj_id, actor_id, has_manage_guild)`` and are MONOTONE
+        in that last argument: a manager is never refused something a plain listener
+        is allowed. So asking the predicate with ``False`` first and only consulting
+        :meth:`_is_music_manager` when that says no is EXACTLY equivalent - the pure
+        predicate still owns the rule on both branches, and neither branch can
+        answer something the one-call version would not have.
+
+        Why bother: the two commonest gated paths are already decided without the
+        manager bit - a session with no DJ (every restored session, and any session
+        whose DJ left) opens the control gate outright, and the DJ acting on their
+        own session is exempt everywhere. Both would otherwise pay a settings read
+        whose result is discarded, which on a cold guild blob is a real database
+        round trip inside a button callback. Warm reads were already free; this
+        makes the hot paths free even on an LRU miss.
         """
         dj = getattr(player, "dj", None)
-        return effects.is_effect_exempt(
-            dj.id if dj is not None else None,
-            getattr(actor, "id", 0),
-            self._has_manage_guild(actor),
+        dj_id = dj.id if dj is not None else None
+        actor_id = getattr(actor, "id", 0)
+        if predicate(dj_id, actor_id, False):
+            return True
+        return predicate(
+            dj_id, actor_id, await self._is_music_manager(player, actor)
         )
 
-    def _can_control(self, player: Player, actor: typing.Any) -> bool:
+    async def _skip_exempt(self, player: Player, actor: typing.Any) -> bool:
+        """Whether ``actor`` skips instantly, bypassing a vote (privileged actor).
+
+        Reuses the P4 effects exemption predicate (:func:`effects.is_effect_exempt`)
+        and the shared :meth:`_is_music_manager` helper rather than re-deriving the
+        DJ / manager gate, so "who is trusted to drive the room" stays one rule.
+        Runs it through :meth:`_privileged`, which spares the settings read on the
+        paths the predicate already decides (here: the session DJ).
+        """
+        return await self._privileged(effects.is_effect_exempt, player, actor)
+
+    async def _can_control(self, player: Player, actor: typing.Any) -> bool:
         """Whether ``actor`` may drive the DJ-locked playback controls for ``player``.
 
         THE single gate behind every DJ-locked command and controller button:
         reuses the effects "trusted to drive the room" predicate plus the
         no-DJ-opens fallback (:func:`effects.can_control_playback`), threading the
-        shared :meth:`_has_manage_guild` check so the rule lives in exactly one
+        shared :meth:`_is_music_manager` check so the rule lives in exactly one
         place and a button gate can never drift from its mirror command. Same-voice
         is enforced separately (``_require_player``/``_ensure_in_voice``).
+
+        Goes through :meth:`_privileged`, so the paths the predicate already
+        decides - a session with no DJ, or the DJ driving their own session - cost
+        no settings read at all.
         """
-        dj = getattr(player, "dj", None)
-        return effects.can_control_playback(
-            dj.id if dj is not None else None,
-            getattr(actor, "id", 0),
-            self._has_manage_guild(actor),
-        )
+        return await self._privileged(effects.can_control_playback, player, actor)
 
     async def _request_skip(
         self, player: Player, actor: typing.Any, fallback_channel: typing.Any
@@ -2038,15 +2195,35 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         Returns :data:`voteskip.SKIP_INSTANT` when the caller should perform its
         own (unchanged) skip - a privileged actor, a room of two or fewer humans,
-        or a player with nothing playing - or a vote-record outcome (which the
-        caller acks ephemerally) when a public vote was opened or joined instead.
-        The exempt / threshold decision is the pure :func:`voteskip.skip_mode`.
+        a player with nothing playing, or a guild that turned vote-skip off - or a
+        vote-record outcome (which the caller acks ephemerally) when a public vote
+        was opened or joined instead. The exempt / threshold decision is the pure
+        :func:`voteskip.skip_mode`.
+
+        The per-guild vote-skip toggle (``guild_config.KEY_VOTESKIP``, default ON)
+        is read HERE, the one routing point every VOTING skip surface passes
+        through: ``/skip`` and the controller's Skip button both end up in this
+        method, so turning votes off cannot leave one of them still voting. Off
+        means everyone who is allowed to ask for a skip at all - the same-voice
+        gate upstream still applies - skips directly, with no vote message posted.
+
+        The dashboard's skip executor deliberately does NOT come through here: it
+        calls ``_execute_skip`` directly because the dashboard's own Manage-Guild
+        gate already authorised it (see
+        ``cogs/system/dashboard_music_actions._exec_music_skip``), and a
+        Manage-Server actor is vote-exempt on this path anyway. A NEW skip surface
+        open to ordinary listeners must route through this method, not around it.
         """
         if getattr(player, "current", None) is None:
             return voteskip.SKIP_INSTANT
+        guild_id = getattr(getattr(player, "guild", None), "id", None)
+        if not await guild_config.voteskip_enabled(self._settings_pool(), guild_id):
+            return voteskip.SKIP_INSTANT
         channel = getattr(player, "channel", None)
         humans = voteskip.count_humans(getattr(channel, "members", ()))
-        mode = voteskip.skip_mode(humans, exempt=self._skip_exempt(player, actor))
+        mode = voteskip.skip_mode(
+            humans, exempt=await self._skip_exempt(player, actor)
+        )
         if mode == voteskip.SKIP_INSTANT:
             return voteskip.SKIP_INSTANT
         return await self.skip_votes.open(self, player, actor, fallback_channel)
@@ -2359,21 +2536,22 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         The single seam behind both /filter and the controller's ephemeral
         picker. Same-voice is enforced by the callers. Here: resolve the preset,
-        spend the guild effects quota (unless the actor is the DJ or has Manage
-        Server, or the change is Off), apply through the effects seam (which owns
+        spend the guild effects quota (unless the actor is the DJ or a music
+        manager, or the change is Off), apply through the effects seam (which owns
         the filtered-players ceiling), then refresh the controller and snapshot.
         Never raises - the effects seam swallows node errors and returns a code.
+
+        The exemption goes through :meth:`_privileged` (hence
+        :meth:`_is_music_manager`), not the raw Manage-Server check, so a guild's
+        configured DJ role is exempt from the effects quota exactly as it is exempt
+        from the vote and the control lock - one privilege rule, three gates, and
+        the same "read the setting only when it can change the answer" ordering.
         """
         preset = effects.resolve_preset(key)
         if preset is None:
             return _("That effect isn't available.")
         is_off = preset.key == effects.OFF_KEY
-        dj = getattr(player, "dj", None)
-        exempt = effects.is_effect_exempt(
-            dj.id if dj is not None else None,
-            actor.id,
-            self._has_manage_guild(actor),
-        )
+        exempt = await self._privileged(effects.is_effect_exempt, player, actor)
         # Quota gate: only an ordinary listener switching to a real effect pays.
         if not is_off and not exempt and not self.quotas.effects_guild.check(guild_id):
             delay = self._format_retry_delay(
@@ -2584,10 +2762,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 return
             player.dj = ctx.author
             player.home = ctx.channel
-            # Fresh session: seed autoplay from the starter's saved preference.
-            await self._init_autoplay(player, ctx.author.id)
-            # Player birth: configure SponsorBlock skip categories on the node.
-            sponsorblock.schedule_apply(player)
+            # Player birth: autoplay seed, this guild's default volume, and the
+            # SponsorBlock categories - the one shared configuration seam.
+            await self._init_session(player, ctx.author)
 
         if player.home is None:
             player.home = ctx.channel

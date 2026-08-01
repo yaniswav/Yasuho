@@ -114,12 +114,25 @@ PREFS = [
     # cogs/music/music.py's AUTOPLAY_PREF_KEY; the music cog reads it (by literal,
     # like leveling/help read their keys) when a session starts, and only then -
     # changing it here never flips a session that is already playing.
+    #
+    # This is the ONE preference whose stored value is a TRI-STATE downstream:
+    # music.resolve_session_autoplay reads absent / on / off and lets a server's
+    # own guild-level default (guild_settings' music_autoplay, see
+    # cogs/music/guild_config.py) fill in for members who never chose. This panel
+    # is deliberately global ("everywhere I'm used") and cannot show one server's
+    # default, so an unset key renders as the bot default (ON) and the
+    # description says out loud that a server default may be what actually
+    # applies until the member picks - rather than the badge quietly claiming a
+    # choice nobody made. Pressing the toggle always writes an explicit value,
+    # which by that precedence wins over the server default from then on.
     Preference(
         key="music_autoplay",
         label=N_("Music autoplay"),
         emoji="✨",
         description=N_(
-            "Keep playing recommended tracks when your music queue runs out."
+            "Keep playing recommended tracks when your music queue runs out. "
+            "Servers can set their own default, which applies until you pick "
+            "here."
         ),
         default=True,
     ),

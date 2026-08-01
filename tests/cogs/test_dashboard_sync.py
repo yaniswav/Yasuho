@@ -837,6 +837,7 @@ def test_valid_kinds_match_invalidators():
         "custom_commands",
         "twitch",
         "autorooms",
+        "music_config",
         "user_settings",
     }
 

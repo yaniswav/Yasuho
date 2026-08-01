@@ -82,14 +82,33 @@ def test_control_matches_effects_exemption_whenever_a_dj_exists():
 # ---------------------------------------------------------------------------
 
 
-def _cog(*, manager: bool):
+class _Cog:
     """A minimal cog stand-in exposing just the gate's collaborators.
 
-    ``_can_control`` calls ``self._has_manage_guild(actor)``; stubbing it lets the
-    manager path be exercised without a real ``discord.Member`` (the real static
-    check is ``isinstance(actor, discord.Member) and ...``).
+    ``_can_control`` goes through the REAL ``Music._is_music_manager``, which
+    checks ``self._has_manage_guild(actor)`` first and only then reads the guild's
+    configured DJ role through ``self._settings_pool()``. Stubbing the static
+    check lets the manager path be exercised without a real ``discord.Member``
+    (the real check is ``isinstance(actor, discord.Member) and ...``), and a
+    ``None`` pool means "no DJ role configured" - i.e. an untouched guild, whose
+    decision table must be exactly what it was before the role existed.
     """
-    return types.SimpleNamespace(_has_manage_guild=lambda actor: manager)
+
+    def __init__(self, manager):
+        self._has_manage_guild = lambda actor: manager
+
+    def _settings_pool(self):
+        return None
+
+    async def _is_music_manager(self, player, actor):
+        return await music.Music._is_music_manager(self, player, actor)
+
+    async def _privileged(self, predicate, player, actor):
+        return await music.Music._privileged(self, predicate, player, actor)
+
+
+def _cog(*, manager: bool):
+    return _Cog(manager)
 
 
 def _player(dj_id):
@@ -105,25 +124,27 @@ def _actor(actor_id):
     return types.SimpleNamespace(id=actor_id)
 
 
-def test_can_control_allows_the_dj():
-    assert music.Music._can_control(_cog(manager=False), _player(5), _actor(5))
+async def test_can_control_allows_the_dj():
+    assert await music.Music._can_control(_cog(manager=False), _player(5), _actor(5))
 
 
-def test_can_control_allows_a_manager_over_a_different_dj():
-    assert music.Music._can_control(_cog(manager=True), _player(5), _actor(9))
+async def test_can_control_allows_a_manager_over_a_different_dj():
+    assert await music.Music._can_control(_cog(manager=True), _player(5), _actor(9))
 
 
-def test_can_control_refuses_a_plain_listener():
-    assert not music.Music._can_control(_cog(manager=False), _player(5), _actor(9))
+async def test_can_control_refuses_a_plain_listener():
+    assert not await music.Music._can_control(
+        _cog(manager=False), _player(5), _actor(9)
+    )
 
 
-def test_can_control_opens_when_no_dj_is_set():
-    assert music.Music._can_control(_cog(manager=False), _player(None), _actor(9))
+async def test_can_control_opens_when_no_dj_is_set():
+    assert await music.Music._can_control(_cog(manager=False), _player(None), _actor(9))
 
 
-def test_can_control_handles_a_missing_actor_id():
+async def test_can_control_handles_a_missing_actor_id():
     # A None-DJ session opens regardless of the actor's id shape.
-    assert music.Music._can_control(_cog(manager=False), _player(None), object())
+    assert await music.Music._can_control(_cog(manager=False), _player(None), object())
 
 
 # ---------------------------------------------------------------------------
@@ -132,13 +153,26 @@ def test_can_control_handles_a_missing_actor_id():
 
 
 class _GateCog:
-    """Wraps the real ``Music._can_control`` with a stubbed manage-guild check."""
+    """Wraps the real ``Music._can_control`` with a stubbed manage-guild check.
+
+    ``_settings_pool`` returns None (no configured DJ role), so this drives the
+    unconfigured-guild decision table - the one that must not have moved.
+    """
 
     def __init__(self, manager):
         self._has_manage_guild = lambda actor: manager
 
-    def _can_control(self, player, actor):
-        return music.Music._can_control(self, player, actor)
+    def _settings_pool(self):
+        return None
+
+    async def _is_music_manager(self, player, actor):
+        return await music.Music._is_music_manager(self, player, actor)
+
+    async def _privileged(self, predicate, player, actor):
+        return await music.Music._privileged(self, predicate, player, actor)
+
+    async def _can_control(self, player, actor):
+        return await music.Music._can_control(self, player, actor)
 
 
 async def test_ensure_can_control_permits_the_dj(make_interaction):
@@ -211,8 +245,17 @@ class _GenreCog:
     def _nodes_available(self):
         return True
 
-    def _can_control(self, player, actor):
-        return music.Music._can_control(self, player, actor)
+    def _settings_pool(self):
+        return None
+
+    async def _is_music_manager(self, player, actor):
+        return await music.Music._is_music_manager(self, player, actor)
+
+    async def _privileged(self, predicate, player, actor):
+        return await music.Music._privileged(self, predicate, player, actor)
+
+    async def _can_control(self, player, actor):
+        return await music.Music._can_control(self, player, actor)
 
     async def _apply_genre(self, player, genre, requester_id, *, replace):
         self.apply_calls.append((genre, requester_id, replace))

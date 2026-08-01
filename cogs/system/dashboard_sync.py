@@ -8,7 +8,7 @@ into the SAME Postgres database, then emits::
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
 leveling | rank_card | warn_escalation | verify_role | locale | custom_commands |
-twitch | autorooms``.
+twitch | autorooms | music_config``.
 
 ONE kind is USER-scoped rather than guild-scoped and carries ``userId`` in place
 of ``guildId``: ``user_settings``, emitted when the dashboard writes somebody's
@@ -16,9 +16,9 @@ personal preferences (the ``/preferences`` panel's keys).
 See :data:`USER_KINDS`. The bot mirrors those settings in memory (``bot.prefixes`` /
 ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
 ``tools.settings`` LRU for the welcome + automod + modlog_events +
-warn_escalation + verify_role + locale + twitch + autorooms JSONB blobs, the
-Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings`` cache for its
-boolean toggle table, the Leveling cog's three caches - ``_configs``
+warn_escalation + verify_role + locale + twitch + autorooms + music_* JSONB
+blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings``
+cache for its boolean toggle table, the Leveling cog's three caches - ``_configs``
 (level_config scalar knobs), ``_no_xp`` (level_no_xp snapshot) and
 ``_multipliers`` (xp_multipliers + level_config event columns) - plus its
 ``_rank_cards`` rank-card style cache, the
@@ -99,6 +99,7 @@ VALID_KINDS = frozenset(
         "custom_commands",
         "twitch",
         "autorooms",
+        "music_config",
         "user_settings",
     }
 )
@@ -486,6 +487,24 @@ async def _invalidate_autorooms(bot, gid):
     cog._index_guild(gid, hubs)
 
 
+async def _invalidate_music_config(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    The per-guild music configuration (``music_default_volume``,
+    ``music_autoplay``, ``music_voteskip``, ``music_dj_role``,
+    ``music_sponsorblock`` - see ``cogs/music/guild_config.py``) lives under those
+    keys in the SAME ``guild_settings`` JSONB row as welcome / automod /
+    modlog_events / warn_escalation, served from the SAME ``tools.settings`` LRU.
+    Evicting the blob is therefore enough for all five keys at once.
+
+    There is deliberately NO derived music cache to refresh alongside it: the cog
+    reads through ``tools.settings`` at decision points that run at command /
+    player-birth frequency (never per message), so the LRU is the only cache in
+    the path and a second one could only ever drift from it.
+    """
+    settings.invalidate_guild(gid)
+
+
 async def _invalidate_user_settings(bot, uid):
     """Drop ONE user's ``tools.settings`` blob after a dashboard write.
 
@@ -518,6 +537,7 @@ _INVALIDATORS = {
     "custom_commands": _invalidate_custom_commands,
     "twitch": _invalidate_twitch,
     "autorooms": _invalidate_autorooms,
+    "music_config": _invalidate_music_config,
     "user_settings": _invalidate_user_settings,
 }
 

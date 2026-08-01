@@ -186,7 +186,7 @@ async def _ensure_can_control(
     a button gate can never drift from its mirror command, and the message matches
     the ``control=True`` command refusal verbatim.
     """
-    if cog._can_control(player, interaction.user):
+    if await cog._can_control(player, interaction.user):
         return True
     dj = getattr(player, "dj", None)
     # _can_control returns True when the session has no DJ, so dj is a real member
@@ -1043,7 +1043,7 @@ class MusicController(discord.ui.LayoutView):
             # Same single DJ/mod decision as every other control (no-DJ opens the
             # gate); the station keeps its own specific refusal wording.
             user = interaction.user
-            if not self.cog._can_control(self.player, user):
+            if not await self.cog._can_control(self.player, user):
                 dj = self.player.dj
                 if dj is not None:
                     await interaction.response.send_message(
