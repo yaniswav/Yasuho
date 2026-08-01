@@ -61,6 +61,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 
+from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
 from tools import autoroom, i18n, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
@@ -141,6 +142,11 @@ def _coerce_payload(raw):
 # Executors: kind -> async handler(bot, guild_id, payload) -> result dict.
 # Each RE-VALIDATES the payload against live state and returns a JSON-safe dict
 # ``{"ok": bool, ...}``. A short ``error`` code on failure - never a secret.
+#
+# The five live-player kinds follow the same contract but live in the sibling
+# module ``dashboard_music_actions`` (they drive the music package's seams); they
+# are merged into the ONE registry below. They report a failure under ``reason``
+# rather than ``error`` - the shape the dashboard contracted for those kinds.
 # ---------------------------------------------------------------------------
 
 
@@ -1084,6 +1090,13 @@ _EXECUTORS = {
     "role_menu_delete": _exec_role_menu_delete,
     "autoroom_hub_create": _exec_autoroom_hub_create,
     "autoroom_hub_delete": _exec_autoroom_hub_delete,
+    # The five live-player kinds (music_pause / resume / skip / volume / stop)
+    # live in cogs/system/dashboard_music_actions.py - they drive the music
+    # package's own seams and would double this module's length - but they are
+    # MERGED here so the queue keeps exactly ONE kind table to dispatch through:
+    # handle_action, the claim, the result write-back and the boot reconciliation
+    # are shared verbatim, and a test can register a fake kind the same way.
+    **_MUSIC_EXECUTORS,
 }
 
 
