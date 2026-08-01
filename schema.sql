@@ -1021,6 +1021,43 @@ CREATE TABLE IF NOT EXISTS server_stats_days (
 CREATE INDEX IF NOT EXISTS server_stats_days_day_idx ON server_stats_days (day);
 
 -- ============================================================
+-- Command usage (GLOBAL aggregates only)
+-- ============================================================
+-- Owner: cogs/system/botstats.py + cogs/system/usage_stats.py. One row per
+-- (UTC day, command name) for the WHOLE bot: how many times a command completed,
+-- split by the surface it was invoked from. This is what lets ?botstats answer
+-- "what was used today / this week / this month" across restarts, since the
+-- in-memory counters reset with the process.
+--
+-- There is deliberately NO user_id and NO guild_id here - not "not yet", never:
+-- the table answers a fleet-wide operational question, so nothing in it is
+-- personal data and nothing in it belongs to a guild. That is also why it needs
+-- no entry in the /mydata export nor in the departed-guild purge (both of those
+-- are driven structurally, off the columns above).
+--
+-- ``command`` is a qualified_name defined in this repository's own source, never
+-- user text: custom commands are dispatched by cogs/config/customcommands.py
+-- without ever becoming discord.py commands, so they cannot reach this table.
+-- Cardinality is therefore the number of distinct commands used in a day (a few
+-- hundred at most), and the collector prunes past 400 days, so the table has a
+-- fixed steady-state size of a few tens of thousands of rows at worst.
+--
+-- Counts are BIGINT because they are cumulative per day for the whole fleet, and
+-- the flush ADDS onto them (ON CONFLICT DO UPDATE ... + EXCLUDED) every 5
+-- minutes: an INTEGER would be a ceiling nobody would notice until it wrapped.
+CREATE TABLE IF NOT EXISTS command_usage (
+    day          DATE   NOT NULL,          -- UTC day the command completed on
+    command      TEXT   NOT NULL,          -- qualified_name, e.g. 'level rank'
+    prefix_count BIGINT NOT NULL DEFAULT 0,
+    slash_count  BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, command)
+);
+-- No extra index on purpose: every read here is "the last N days" and the PK
+-- already LEADS with day, so the window scan and the daily prune both ride the
+-- primary key. (server_stats_messages needs its own day index only because its
+-- PK leads with guild_id.)
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new

@@ -37,10 +37,21 @@ Three rules the pages below obey:
    recomputed every time (it is free), and the footer dates the page against
    the oldest memoised read it still shows.
 
-The usage counters are IN MEMORY and reset on restart, like health.py's gateway
-counters: they exist to show what a live process is being asked to do, not to be
-a durable audit log. Both listeners are O(1), await nothing and touch no DB, and
-the Counter's cardinality is bounded by the number of distinct command names.
+The usage counters come in two halves, and the Usage page shows both because
+they answer different questions:
+
+* SINCE BOOT - the in-memory :class:`UsageCounters`, like health.py's gateway
+  counters. They show what a LIVE process is being asked to do and reset on
+  every restart (which, on this deployment, means every deploy).
+* PERSISTED - the same completions are also counted per (UTC day, command) into
+  a bounded buffer and flushed to ``command_usage`` every few minutes, so the
+  day / week / month windows survive restarts (cogs/system/usage_stats.py owns
+  that half: the buffer, the additive upsert, the bounded reads and the prune).
+
+Both listeners stay O(1), await nothing and touch no DB - the ONLY writer is the
+flush loop below, so the write rate is a function of TIME (one statement per 5
+minutes, bot-wide), never of traffic. Both counters' cardinality is bounded by
+the number of distinct command names.
 
 Typography rule: ASCII '-' and '...' only.
 """
@@ -57,8 +68,9 @@ from collections import Counter
 from dataclasses import dataclass
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
+from cogs.system import usage_stats
 from tools import interactions
 from tools.backup import human_size
 from tools.formats import format_dt, random_colour
@@ -84,6 +96,24 @@ TOP_TABLES_LIMIT = 10
 
 # Window of the observed-activity block on the Usage page.
 ACTIVITY_WINDOW_DAYS = 7
+
+# One batched write every 5 minutes, bot-wide - the same clock as the serverstats
+# collector and the voice-XP sweep. It bounds the DB write rate independently of
+# how many commands are run, and losing at most one interval of counters to a
+# hard crash (a kill -9, never a clean shutdown: see cog_unload) is acceptable
+# for aggregates.
+FLUSH_INTERVAL = 300
+
+# How long cog_unload waits for a cancelled in-flight flush to unwind before it
+# runs the final one. Generous next to a single upsert, tiny next to a shutdown:
+# the point is that teardown is bounded even if the pool is wedged.
+UNLOAD_CANCEL_TIMEOUT = 5
+
+# ... and how long the final flush itself gets. Without it the last write is
+# bounded only by the pool's command_timeout (core.main: 60s), so a wedged DB
+# would hold a clean shutdown open for a minute over statistics. Losing the last
+# interval to a wedged pool is the same loss a kill -9 already causes.
+UNLOAD_FLUSH_TIMEOUT = 5
 
 # Per-statement ceiling for every read below. The row-count query seq-scans the
 # featured tables, which grows with the install, so the wait has to be bounded
@@ -127,16 +157,22 @@ DB_SIZE = "SELECT pg_database_size(current_database())::bigint AS bytes"
 # are what make the SUM honest: they say how much of the fleet the sum actually
 # covers, so an absent guild reads as unobserved rather than silent (rule 1).
 #
-# The window is INCLUSIVE of today and spans exactly $1 calendar days, i.e.
-# CURRENT_DATE - ($1 - 1) .. CURRENT_DATE. Plain `CURRENT_DATE - $1` would sum
-# $1 + 1 days under a heading that says $1; the house convention is
+# The window is INCLUSIVE of today and spans exactly $2 calendar days, i.e.
+# $1 - ($2 - 1) .. $1. Plain `$1 - $2` would sum $2 + 1 days under a heading
+# that says $2; the house convention is
 # cogs/community/serverstats/rollups.window_bounds, which this matches.
+#
+# The day the window ends on is a PARAMETER rather than CURRENT_DATE, for the
+# same reason as cogs/system/usage_stats.py's queries: CURRENT_DATE is the
+# DATABASE SESSION's calendar day, which equals the UTC day only while the
+# server's TimeZone is UTC. Both blocks on this page must key off ONE "today",
+# and the rows themselves are written per UTC day.
 OBSERVED_MESSAGES = """
     SELECT COALESCE(SUM(messages), 0)::bigint AS messages,
            COUNT(DISTINCT guild_id)::bigint   AS guilds,
            COUNT(DISTINCT day)::bigint        AS days
     FROM server_stats_messages
-    WHERE day >= CURRENT_DATE - ($1::int - 1)
+    WHERE day >= $1::date - ($2::int - 1)
     """
 
 # Same shape for the guild-day rollup. COUNT(*) is the number of guild-days that
@@ -148,7 +184,7 @@ OBSERVED_DAYS = """
            COUNT(DISTINCT guild_id)::bigint AS guilds,
            COUNT(*)::bigint                 AS guild_days
     FROM server_stats_days
-    WHERE day >= CURRENT_DATE - ($1::int - 1)
+    WHERE day >= $1::date - ($2::int - 1)
     """
 
 # Biggest tables on disk plus the fleet total, in ONE statement: the window
@@ -499,10 +535,21 @@ async def fetch_database_size(pool):
     return await pool.fetchval(DB_SIZE, timeout=QUERY_TIMEOUT)
 
 
-async def fetch_observed_activity(pool, days=ACTIVITY_WINDOW_DAYS):
-    """Two bounded aggregates over the last ``days`` UTC days."""
-    messages = await pool.fetchrow(OBSERVED_MESSAGES, days, timeout=QUERY_TIMEOUT)
-    member_days = await pool.fetchrow(OBSERVED_DAYS, days, timeout=QUERY_TIMEOUT)
+async def fetch_observed_activity(pool, days=ACTIVITY_WINDOW_DAYS, today=None):
+    """Two bounded aggregates over the last ``days`` UTC days.
+
+    ``today`` is the UTC day the window ends on, computed in Python so that this
+    block and the recorded-usage block above it cannot end up on two different
+    "today"s on a database whose session TimeZone is not UTC.
+    """
+    if today is None:
+        today = usage_stats.utc_today()
+    messages = await pool.fetchrow(
+        OBSERVED_MESSAGES, today, days, timeout=QUERY_TIMEOUT
+    )
+    member_days = await pool.fetchrow(
+        OBSERVED_DAYS, today, days, timeout=QUERY_TIMEOUT
+    )
     return ObservedActivity(
         days=days,
         messages=messages["messages"],
@@ -665,8 +712,15 @@ def render_top_guilds(rows, *, guilds, members, guilds_without_count):
     ]
 
 
-def render_usage(counters, activity, *, now=None):
-    """The Usage page: since-boot command counters plus observed DB activity."""
+def render_usage(counters, activity, persisted=None, *, now=None):
+    """The Usage page: since-boot counters, persisted windows, observed activity.
+
+    ``persisted`` is the ``command_usage`` half (``None`` when the read failed or
+    was not attempted). The since-boot block is kept as-is next to it on purpose:
+    it is the only thing on this dashboard that describes the LIVE process, and
+    the persisted windows cannot replace it - a bot restarted two minutes ago has
+    a full 30-day history and an empty since-boot count, and both facts matter.
+    """
     now = now or datetime.datetime.now(datetime.timezone.utc)
     elapsed = (now - counters.started_at).total_seconds()
 
@@ -692,15 +746,104 @@ def render_usage(counters, activity, *, now=None):
             for position, (name, count) in enumerate(top, start=1)
         ]
 
+    window_days = (
+        persisted.week_days if persisted is not None else usage_stats.WEEK_DAYS
+    )
     return [
         (_("Commands since boot"), headline),
         (_("Most used commands"), ranking),
+        (_("Recorded usage (UTC days)"), render_persisted_usage(persisted)),
+        (
+            _("Most used commands ({days} days)").format(days=window_days),
+            render_persisted_ranking(persisted),
+        ),
         (
             _("Observed activity ({days} days)").format(
                 days=activity.days if activity is not None else ACTIVITY_WINDOW_DAYS
             ),
             render_observed_activity(activity),
         ),
+    ]
+
+
+def render_persisted_usage(persisted):
+    """The day / week / month totals, with the coverage they really have.
+
+    Same honesty rule as the observed-activity block below: a failed read says
+    "unavailable" and an empty table says "nothing recorded yet". Neither is
+    rendered as a zero - a zero would claim that nobody ran a command, which is
+    not what either of those states means.
+
+    The same rule applies INSIDE the numbers: a day with no row is a day nobody
+    was counting on, so every multi-day total names how many of its days are
+    actually recorded. "1,200" over a month the bot was up for ten days of is a
+    true sum and a false impression; "1,200 (10 of 30 day(s) recorded)" is both
+    true. The ``since`` note below only catches a short history at the START of
+    collection, which is why it is not enough on its own.
+
+    The windows are CALENDAR UTC days ending TODAY, today included. That is
+    deliberately NOT the serverstats convention (which ends yesterday, because a
+    partial day would corrupt a comparison between periods): this block is lived
+    usage, not a comparison, and an operator asking "what happened today" must be
+    shown today. The footnote says so, so the partial day is never a surprise.
+    """
+    if persisted is None:
+        return [_("Recorded usage is unavailable right now.")]
+    if persisted.since is None:
+        return [
+            _(
+                "Nothing has been recorded yet - collection starts with the "
+                "first flush after this bot came up."
+            )
+        ]
+
+    lines = [
+        # No noun on this line on purpose: "1 commands" is what a count plus a
+        # hardcoded plural produces, and the heading above already says what is
+        # being counted.
+        _("Today: {count}").format(count=format_count(persisted.today)),
+        _("{days} days: {count} ({recorded} of {days} day(s) recorded)").format(
+            days=persisted.week_days,
+            count=format_count(persisted.week),
+            recorded=format_count(persisted.week_recorded),
+        ),
+        _("{days} days: {count} ({recorded} of {days} day(s) recorded)").format(
+            days=persisted.month_days,
+            count=format_count(persisted.month),
+            recorded=format_count(persisted.month_recorded),
+        ),
+        "-# "
+        + _(
+            "Calendar UTC days ending today, today included - so today is a "
+            "partial day."
+        ),
+    ]
+    if not persisted.window_is_full(persisted.month_days):
+        # The heading says 30 days; the table may hold six. Say which.
+        lines.append(
+            "-# "
+            + _(
+                "Recorded since {date} ({days} day(s)): the longer window is "
+                "not full yet."
+            ).format(
+                date=persisted.since.isoformat(),
+                days=format_count(persisted.covered_days),
+            )
+        )
+    return lines
+
+
+def render_persisted_ranking(persisted):
+    """The persisted top-N over the middle window."""
+    if persisted is None:
+        return [_("Recorded usage is unavailable right now.")]
+    if not persisted.top:
+        return [_("No command has been recorded in this window.")]
+    return [
+        _("`{rank:>2}.` `{name}` - {count}").format(
+            rank=position, name=name, count=format_count(count)
+        )
+        for position, (name, count) in enumerate(persisted.top, start=1)
     ]
 
 
@@ -853,12 +996,13 @@ class BotStatsDashboard(AuthorLayoutView):
     # date itself against.
     READ_DB_SIZE = "db_size"
     READ_ACTIVITY = "activity"
+    READ_USAGE = "usage"
     READ_ROW_COUNTS = "row_counts"
     READ_TABLE_SIZES = "table_sizes"
     PAGE_READS = {
         PAGE_OVERVIEW: (READ_DB_SIZE,),
         PAGE_GUILDS: (),
-        PAGE_USAGE: (READ_ACTIVITY,),
+        PAGE_USAGE: (READ_ACTIVITY, READ_USAGE),
         PAGE_DATA: (READ_ROW_COUNTS, READ_TABLE_SIZES),
     }
 
@@ -978,15 +1122,27 @@ class BotStatsDashboard(AuthorLayoutView):
         )
 
     async def _usage_sections(self):
-        # Only the DB half is memoised. The counters are in memory and cost
-        # nothing to re-read, so re-opening Usage always shows what the process
-        # has been asked to do since the last look.
+        # Only the DB halves are memoised. The since-boot counters are in memory
+        # and cost nothing to re-read, so re-opening Usage always shows what the
+        # process has been asked to do since the last look.
+        #
+        # ONE "today" for both blocks: they are windows on the same card, so
+        # they must not be able to end on different days (a click at the UTC
+        # midnight boundary would otherwise split them).
+        today = usage_stats.utc_today()
         activity = await self._read(
             self.READ_ACTIVITY,
-            lambda: fetch_observed_activity(self.bot.db_pool),
+            lambda: fetch_observed_activity(self.bot.db_pool, today=today),
             "observed activity",
         )
-        return render_usage(self.cog.usage, activity)
+        persisted = await self._read(
+            self.READ_USAGE,
+            lambda: usage_stats.fetch_persisted_usage(
+                self.bot.db_pool, timeout=QUERY_TIMEOUT, today=today
+            ),
+            "recorded usage",
+        )
+        return render_usage(self.cog.usage, activity, persisted)
 
     async def _data_sections(self):
         row_counts = await self._read(
@@ -1105,15 +1261,76 @@ class BotStats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.usage = UsageCounters()
+        # The persisted half: a bounded buffer the listeners feed and the flush
+        # loop drains (cogs/system/usage_stats.py).
+        self.buffer = usage_stats.UsageBuffer()
+        # UTC day (a date) whose retention prune has already run. In-memory
+        # marker: a restart re-runs it once, which is a bounded delete of
+        # already-expired rows, i.e. harmless.
+        self._prune_day = None
+        # Cumulative instrumentation (scale story).
+        self._flush_stats = {"flushes": 0, "rows": 0, "dropped": 0, "pruned": 0}
         # Fallback uptime source for a host without /proc (see the Overview
         # page). It is the COG's load time, so it is always <= the process
         # uptime, and it is rendered with that caveat spelled out.
         self.loaded_at = datetime.datetime.now(datetime.timezone.utc)
 
+    async def cog_load(self):
+        self._flush_loop.start()
+
+    async def cog_unload(self):
+        """Stop the loop, THEN write whatever the buffer still holds.
+
+        The order is the whole point. Cancelling first means the in-flight
+        iteration (if any) unwinds through _write_usage's ``except
+        BaseException`` and hands its drained generation BACK to the buffer -
+        but that unwind runs in the LOOP's task, not in this one, so we WAIT for
+        it before draining here. Flushing without waiting would read an
+        already-drained buffer, and the counters restored a moment later would
+        then sit in a buffer nobody writes again.
+
+        asyncio.wait never raises (a timeout or a cancelled child is just a
+        result). BOTH awaits below are bounded, which is what makes "shutdown
+        can never hang on statistics" true rather than aspirational: the wait on
+        the cancelled loop AND the final write, which is otherwise bounded only
+        by the pool's own command_timeout (core.main: 60s). A timed-out final
+        write cancels the coroutine, whose ``except BaseException`` hands the
+        counters back to a buffer nobody will write again - i.e. the timeout
+        costs at most the last interval, exactly like a hard crash does.
+
+        The final flush is best effort only: on a clean shutdown the pool
+        outlives cog teardown (core.main nests the bot inside the pool's
+        context), so the last partial interval is saved instead of dropped, and
+        any failure here - timeout included - is logged and swallowed.
+        """
+        task = self._flush_loop.get_task()
+        self._flush_loop.cancel()
+        if task is not None and not task.done():
+            await asyncio.wait({task}, timeout=UNLOAD_CANCEL_TIMEOUT)
+        if self.buffer.is_empty:
+            return
+        try:
+            await asyncio.wait_for(self._write_usage(), UNLOAD_FLUSH_TIMEOUT)
+        except Exception:
+            log.exception("botstats: final usage flush on unload failed")
+
     async def cog_check(self, ctx):
         return await self.bot.is_owner(ctx.author)
 
     # -- usage listeners: O(1), no await, no DB ------------------------------
+
+    def _record(self, name, *, slash):
+        """Count one completed command in BOTH halves of the usage stats.
+
+        ONE place, so the exactly-once dedup above it cannot ever apply to one
+        counter and not the other. The UTC day is captured HERE, at increment
+        time: a flush at 00:02 must write the 23:59 completions onto the day
+        they happened on, never migrate them into the new day.
+        """
+        if not name:
+            return
+        self.usage.record(name, slash=slash)
+        self.buffer.record(usage_stats.utc_today(), name, slash=slash)
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -1124,17 +1341,112 @@ class BotStats(commands.Cog):
         # tree's invoke path), so the surface is read off the context rather
         # than assumed - and on_app_command_completion skips hybrids so this
         # invocation is counted exactly once.
-        self.usage.record(
-            command.qualified_name, slash=ctx.interaction is not None
-        )
+        self._record(command.qualified_name, slash=ctx.interaction is not None)
 
     @commands.Cog.listener()
     async def on_app_command_completion(self, interaction, command):
         if is_hybrid_app_command(command):
             return  # already counted by on_command_completion
-        name = getattr(command, "qualified_name", None)
-        if name:
-            self.usage.record(name, slash=True)
+        self._record(getattr(command, "qualified_name", None), slash=True)
+
+    # -- the flush loop: the ONLY writer ------------------------------------
+
+    @tasks.loop(seconds=FLUSH_INTERVAL)
+    async def _flush_loop(self):
+        try:
+            await self.flush_usage()
+        except Exception:
+            log.exception("botstats usage flush iteration failed")
+
+    @_flush_loop.before_loop
+    async def _before_flush_loop(self):
+        await self.bot.wait_until_ready()
+
+    @_flush_loop.error
+    async def _flush_loop_error(self, error):
+        log.exception("botstats usage flush crashed; restarting", exc_info=error)
+        self._flush_loop.restart()
+
+    async def flush_usage(self, today=None):
+        """Write the buffered counters, then run the once-a-day prune.
+
+        ``today`` is injectable for tests; it defaults to the current UTC day.
+        The buffered rows carry their OWN day, so a tick that straddles midnight
+        writes each counter onto the day it was collected on - only the prune
+        below cares about which day it is NOW.
+        """
+        if today is None:
+            today = usage_stats.utc_today()
+        await self._write_usage()
+        await self._maybe_prune(today)
+
+    async def _write_usage(self):
+        """One additive upsert for everything counted since the last tick.
+
+        AT-LEAST-ONCE, stated honestly (same contract as the serverstats
+        collector): a cancellation landing after the upsert committed but before
+        this returns hands the same generation back to the buffer, so the next
+        flush can recount a batch. Counters, not money - a duplicated interval
+        nudges a daily total, and the alternative (dropping the batch on every DB
+        blip) loses real data far more often.
+        """
+        drained = self.buffer.drain()
+        if drained.dropped:
+            # Logged ONCE per flush, never per command: the cap exists to keep
+            # memory bounded, and a per-event log would be its own flood.
+            self._flush_stats["dropped"] += drained.dropped
+            log.warning(
+                "botstats: usage buffer cap reached, dropped %d command-day "
+                "key(s) this interval",
+                drained.dropped,
+            )
+        if drained.is_empty:
+            return
+        payload = usage_stats.build_flush_payload(drained)
+        try:
+            await self.bot.db_pool.execute(usage_stats.FLUSH, *payload)
+        except BaseException:
+            # Hand the counters back so a DB blip costs nothing; restore goes
+            # through the same cap, so the buffer stays bounded either way.
+            #
+            # BaseException, not Exception, ON PURPOSE: cog_unload cancels this
+            # loop and THEN runs a final flush, so the very window that matters
+            # is a CancelledError thrown into this await. CancelledError is a
+            # BaseException, so an `except Exception` would skip the restore and
+            # the drained generation would be gone before the final flush could
+            # write it. Nothing is swallowed - the exception is re-raised.
+            self.buffer.restore(drained)
+            raise
+        self._flush_stats["flushes"] += 1
+        self._flush_stats["rows"] += len(drained.rows)
+        log.debug("botstats usage flush: %d command-day row(s)", len(drained.rows))
+
+    async def _maybe_prune(self, today):
+        """Drop usage older than the retention window, once a day, in batches."""
+        if self._prune_day == today:
+            return
+        cutoff = today - datetime.timedelta(days=usage_stats.RETENTION_DAYS)
+        deleted = 0
+        # Never name a throwaway loop variable ``_`` in this codebase: ``_`` is
+        # the gettext translation callable by house convention (tools.i18n).
+        for _batch in range(usage_stats.PRUNE_MAX_BATCHES):
+            row = await self.bot.db_pool.fetchrow(
+                usage_stats.PRUNE, cutoff, usage_stats.PRUNE_BATCH_SIZE
+            )
+            batch = int(row["rows"]) if row else 0
+            deleted += batch
+            if batch < usage_stats.PRUNE_BATCH_SIZE:
+                break
+        # Marked only after the batches ran, so a failed prune is retried on the
+        # next tick instead of being lost for the whole day.
+        self._prune_day = today
+        self._flush_stats["pruned"] += deleted
+        if deleted:
+            log.info(
+                "botstats usage prune: removed %d row(s) older than %s",
+                deleted,
+                cutoff,
+            )
 
     # -- the command ---------------------------------------------------------
 

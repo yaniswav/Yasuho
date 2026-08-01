@@ -27,7 +27,7 @@ import types
 
 import pytest
 
-from cogs.system import botstats
+from cogs.system import botstats, usage_stats
 
 UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 7, 31, 12, 0, tzinfo=UTC)
@@ -453,11 +453,21 @@ def test_featured_tables_are_unique():
     "query", [botstats.OBSERVED_MESSAGES, botstats.OBSERVED_DAYS]
 )
 def test_observed_window_spans_exactly_the_days_it_advertises(query):
-    """`day >= CURRENT_DATE - $1` selects $1 + 1 calendar days (today included),
-    which would publish an 8-day sum under a heading that says 7. Same
-    convention as serverstats' rollups.window_bounds: today - (days - 1)."""
-    assert "CURRENT_DATE - ($1::int - 1)" in query
-    assert "CURRENT_DATE - $1" not in query
+    """`day >= $1 - $2` selects $2 + 1 calendar days (today included), which
+    would publish an 8-day sum under a heading that says 7. Same convention as
+    serverstats' rollups.window_bounds: today - (days - 1)."""
+    assert "$1::date - ($2::int - 1)" in query
+    assert "$1::date - $2" not in query
+
+
+@pytest.mark.parametrize(
+    "query", [botstats.OBSERVED_MESSAGES, botstats.OBSERVED_DAYS]
+)
+def test_the_observed_window_ends_on_the_day_it_is_given(query):
+    """CURRENT_DATE is the DATABASE SESSION's calendar day, so on a server whose
+    TimeZone is not UTC it would put this block and the recorded-usage block on
+    the SAME card on two different "today"s."""
+    assert "CURRENT_DATE" not in query
 
 
 def test_table_sizes_covers_every_relation_kind_that_holds_storage():
@@ -478,7 +488,8 @@ async def test_fetch_observed_activity_shapes_both_aggregates():
         return {"joins": 30, "leaves": 12, "guilds": 181, "guild_days": 362}
 
     pool = _Pool(fetchrow_return=_row)
-    activity = await botstats.fetch_observed_activity(pool, days=7)
+    day = datetime.date(2026, 7, 31)
+    activity = await botstats.fetch_observed_activity(pool, days=7, today=day)
     assert activity == botstats.ObservedActivity(
         days=7,
         messages=1500,
@@ -489,7 +500,8 @@ async def test_fetch_observed_activity_shapes_both_aggregates():
         day_guilds=181,
         guild_days=362,
     )
-    assert [call[2] for call in pool.calls] == [(7,), (7,)]
+    # Both aggregates end on the SAME day, and it is the caller's day.
+    assert [call[2] for call in pool.calls] == [(day, 7), (day, 7)]
 
 
 async def test_fetch_table_sizes_reads_the_total_off_the_window_sum():
@@ -787,17 +799,55 @@ async def test_top_guilds_page_issues_no_query_at_all():
     assert "Beta" in _flat(sections)
 
 
-async def test_usage_page_issues_exactly_the_two_activity_reads():
-    pool = _Pool(
-        fetchrow_return=lambda query: (
-            {"messages": 5, "guilds": 1, "days": 1}
-            if "server_stats_messages" in query
-            else {"joins": 1, "leaves": 0, "guilds": 1, "guild_days": 1}
-        )
+def _usage_row(query):
+    """fetchrow double for the Usage page's three reads (BS1 + BS2)."""
+    if "server_stats_messages" in query:
+        return {"messages": 5, "guilds": 1, "days": 1}
+    if "command_usage" in query:
+        return {
+            "today": 3,
+            "week": 9,
+            "month": 20,
+            "week_recorded": 7,
+            "month_recorded": 30,
+            "since": datetime.date(2026, 1, 1),
+        }
+    return {"joins": 1, "leaves": 0, "guilds": 1, "guild_days": 1}
+
+
+def _usage_pool():
+    return _Pool(
+        fetchrow_return=_usage_row,
+        fetch_return=lambda query: [{"command": "play", "total": 9}],
     )
+
+
+async def test_usage_page_issues_the_activity_and_recorded_usage_reads():
+    """Two aggregates for the observed-activity block, then the two persisted
+    usage reads (windows + ranking) behind a single memo key."""
+    pool = _usage_pool()
     card = _card(pool)
     await card._load(botstats.PAGE_USAGE)
-    assert [call[0] for call in pool.calls] == ["fetchrow", "fetchrow"]
+    assert [call[0] for call in pool.calls] == ["fetchrow", "fetchrow", "fetchrow", "fetch"]
+
+
+async def test_every_window_on_the_usage_page_ends_on_the_same_utc_day(monkeypatch):
+    """Observed activity and recorded usage are windows on ONE card, so they
+    must not be able to end on different days - which is what a click at the UTC
+    midnight boundary, or a DB session whose TimeZone is not UTC, would do if
+    either side computed its own "today".
+
+    The clock below advances on every call, so the page passes only if it reads
+    "today" ONCE and hands the same day to both reads."""
+    clock = iter(
+        [datetime.date(2026, 7, 31) + datetime.timedelta(days=n) for n in range(9)]
+    )
+    monkeypatch.setattr(usage_stats, "utc_today", lambda: next(clock))
+    pool = _usage_pool()
+    card = _card(pool)
+    await card._load(botstats.PAGE_USAGE)
+    days = {call[2][0] for call in pool.calls}
+    assert days == {datetime.date(2026, 7, 31)}
 
 
 async def test_data_page_issues_exactly_the_two_data_reads():
@@ -857,13 +907,7 @@ async def test_a_failed_read_is_never_memoised_so_the_next_open_retries():
 async def test_usage_counters_are_live_on_every_open_but_the_db_is_read_once():
     """The counters cost nothing to re-read; freezing them would make the page
     lie about a live process."""
-    pool = _Pool(
-        fetchrow_return=lambda query: (
-            {"messages": 5, "guilds": 1, "days": 1}
-            if "server_stats_messages" in query
-            else {"joins": 1, "leaves": 0, "guilds": 1, "guild_days": 1}
-        )
-    )
+    pool = _usage_pool()
     card = _card(pool)
     card.cog.usage.record("play")
     sections, _taken = await card._load(botstats.PAGE_USAGE)
@@ -873,8 +917,13 @@ async def test_usage_counters_are_live_on_every_open_but_the_db_is_read_once():
         card.cog.usage.record("play")
     sections, _taken = await card._load(botstats.PAGE_USAGE)
     assert "5 commands run since boot" in _flat(sections)
-    # ... while the DB half stayed at its one memoised pair of reads.
-    assert [call[0] for call in pool.calls] == ["fetchrow", "fetchrow"]
+    # ... while the DB half stayed at its one memoised set of reads.
+    assert [call[0] for call in pool.calls] == [
+        "fetchrow",
+        "fetchrow",
+        "fetchrow",
+        "fetch",
+    ]
 
 
 async def test_the_footer_dates_the_page_against_the_memoised_read():
