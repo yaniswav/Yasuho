@@ -1,6 +1,27 @@
 import types
 
+import pytest
+
 from cogs.system import retention as retention_cog
+
+
+@pytest.fixture(autouse=True)
+def _stub_user_prunes(monkeypatch):
+    """Neutralise the two user-side prunes for the tick tests.
+
+    They are single statements against a real pool, while every test here drives
+    a fake one; the test that actually pins them re-patches with recorders.
+    """
+
+    async def _none(_pool):
+        return 0
+
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_user_scoped_actions", _none
+    )
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_expired_export_slots", _none
+    )
 
 
 def _cog(bot):
@@ -221,7 +242,57 @@ async def test_avatar_cleanup_stops_after_short_batch(monkeypatch):
         "guilds": 0,
         "avatar_rows": 253,
         "avatar_bytes": 1020,
+        "user_actions": 0,
+        "export_slots": 0,
     }
+
+
+async def test_the_pass_prunes_the_rows_no_guild_purge_can_reach(monkeypatch):
+    """Terminal user-scoped queue rows and elapsed export slots are keyed by
+    user alone, so the guild purge above is blind to them by construction. This
+    daily pass is the only thing that bounds them - it must actually run them."""
+    pruned = []
+
+    async def claim(_pool):
+        return None
+
+    async def prune(_pool):
+        return 0, 0
+
+    async def reconcile(_pool, _active):
+        return 0
+
+    async def prune_actions(_pool):
+        pruned.append("actions")
+        return 4
+
+    async def prune_slots(_pool):
+        pruned.append("slots")
+        return 9
+
+    monkeypatch.setattr(
+        retention_cog.retention, "reconcile_guild_jobs", reconcile
+    )
+    monkeypatch.setattr(retention_cog.retention, "claim_due_guild", claim)
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_avatar_history_batch", prune
+    )
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_user_scoped_actions", prune_actions
+    )
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_expired_export_slots", prune_slots
+    )
+    bot = types.SimpleNamespace(
+        db_pool=object(),
+        get_guild=lambda _guild_id: None,
+    )
+
+    result = await _cog(bot).run_once()
+
+    assert pruned == ["actions", "slots"]
+    assert result["user_actions"] == 4
+    assert result["export_slots"] == 9
 
 
 # ---------------------------------------------------------------------------

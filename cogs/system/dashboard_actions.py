@@ -18,24 +18,37 @@ Design (mirrors the house patterns and the security brief):
 
 * CLAIM-then-run, single-flight: ``_claim`` runs
   ``UPDATE dashboard_actions SET status='running' ... WHERE id=$1 AND
-  status='pending' RETURNING guild_id, kind, payload``. Because the guard is
-  ``status='pending'`` and the UPDATE is atomic, exactly ONE caller can claim a
-  row; a duplicate notify (or a notify racing the boot reconciliation) finds no
-  ``pending`` row and is a silent no-op. This is the idempotence backstop.
-* The claimed ``guild_id`` is AUTHORITATIVE (the dashboard wrote it under its
-  manage-guild check); the executor re-validates EVERYTHING else in the payload
-  against the live gateway state (guild present, channel present + a text
-  channel, bot may send) and NEVER trusts the payload. ``result`` never carries
-  a secret or a stack trace - only short machine-readable error codes.
+  status='pending' RETURNING guild_id, user_id, kind, payload``. Because the
+  guard is ``status='pending'`` and the UPDATE is atomic, exactly ONE caller can
+  claim a row; a duplicate notify (or a notify racing the boot reconciliation)
+  finds no ``pending`` row and is a silent no-op. This is the idempotence
+  backstop.
+* The claimed SCOPE id is AUTHORITATIVE (the dashboard wrote it under its
+  manage-guild check, or under "this is your own session" for a user row); the
+  executor re-validates EVERYTHING else in the payload against the live gateway
+  state (guild present, channel present + a text channel, bot may send) and
+  NEVER trusts the payload. ``result`` never carries a secret or a stack trace -
+  only short machine-readable error codes.
+* TWO SCOPES, chosen by the KIND. A row names either a guild or a user (the DB
+  CHECK ``dashboard_actions_scope_valid`` makes "exactly one" a schema fact), and
+  :data:`_USER_KINDS` - the mirror of ``dashboard_sync.USER_KINDS`` - says which
+  column a kind reads. Deriving the scope from the KIND rather than from
+  whichever column happens to be populated is what stops a user-scoped kind
+  written onto a guild row (or the reverse) from acting on the wrong thing: the
+  mismatch yields a NULL id and the action is refused as ``bad_scope``. Every
+  executor still receives that id as its second argument, so a guild executor is
+  untouched by any of this.
 * Boot reconciliation (``reconcile``): a notify emitted while the bot was
   restarting is lost (LISTEN/NOTIFY does not buffer), so once at startup we
   expire actions too old to still be wanted, reset every ``running`` row whose
-  claim is older than a short grace window (``_ORPHAN_RESET_SECONDS``) back to
+  claim is older than a short grace window (``_ORPHAN_RESET_SECONDS``) and is not
+  one this process is currently handling (``_INFLIGHT_ACTIONS``) back to
   ``pending``, and re-drive every remaining ``pending`` row through the SAME
-  claim path. The age guard matters because the listener is attached BEFORE
-  reconcile runs, so a live handler of THIS process may already hold a freshly
-  claimed ``running`` row; its ``updated_at`` (stamped by the claim) is inside
-  the window, so it is NOT mistaken for an orphan and re-driven. Delivery is
+  claim path. Both guards matter because the listener is attached BEFORE
+  reconcile runs, so a live handler of THIS process may already hold a
+  ``running`` row: freshly claimed (recent ``updated_at``, caught by the age
+  guard) or long-running - an executor may outlast the window, which is what the
+  in-flight mark covers. Delivery is
   still at-least-once, but a duplicate is now possible only on a crash AFTER an
   action's side effect but BEFORE its status write (a duplicate Verify button,
   low harm) - the price of never silently dropping one. The harm is NOT always
@@ -53,6 +66,7 @@ dropped listen connection is re-established with backoff.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections import defaultdict
@@ -62,6 +76,7 @@ import discord
 from discord.ext import commands
 
 from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
+from cogs.system.dashboard_user_actions import EXECUTORS as _USER_EXECUTORS
 from tools import autoroom, i18n, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
@@ -90,10 +105,27 @@ _STALE_ACTION_MINUTES = 60
 # a live handler of THIS process may already hold a freshly claimed 'running'
 # row; _claim stamps updated_at = now() on claim, so that row's updated_at is
 # inside this window and the age-guarded reset skips it - only rows orphaned by a
-# dead previous process (stale updated_at) are reset and re-driven. Comfortably
-# exceeds any executor's runtime, so a genuinely in-flight claim is never mistaken
-# for an orphan (which would re-run its side effect and double the panel/menu).
+# dead previous process (stale updated_at) are reset and re-driven.
+#
+# The window is NOT a bound on how long an executor may run: mydata_export packs
+# an archive and uploads several megabytes to Discord, which can take longer than
+# this. What makes a live claim safe is _INFLIGHT_ACTIONS below - reconcile knows
+# exactly which ids THIS process is handling and never resets one, whatever its
+# age. The window is only what tells a claim left by a DEAD process from one made
+# moments ago by a process that has since died too; keeping it short is what
+# stops such an orphan from waiting for the NEXT restart to be re-driven.
 _ORPHAN_RESET_SECONDS = 30
+
+# The action ids this process is handling right now, as a refcount (a notify and
+# the boot sweep can enter for the same id; only one wins the claim, but both
+# must be accounted for so the loser's exit does not clear the winner's mark).
+# Read by reconcile: an id in here is being worked on by a coroutine of THIS
+# process, so resetting its row to 'pending' would let the sweep re-claim and
+# re-run it - the exact double side effect the age guard exists to prevent, which
+# the age guard alone cannot prevent for an executor that runs longer than the
+# window. Process-local by design: it describes THIS process's coroutines and
+# nothing else, which is precisely the set the age guard cannot identify.
+_INFLIGHT_ACTIONS = {}
 
 # Defensive cap on a custom embed message copied from the payload (Discord's
 # embed description limit is 4096; the /verify setup path is bounded like this).
@@ -139,14 +171,17 @@ def _coerce_payload(raw):
 
 
 # ---------------------------------------------------------------------------
-# Executors: kind -> async handler(bot, guild_id, payload) -> result dict.
-# Each RE-VALIDATES the payload against live state and returns a JSON-safe dict
-# ``{"ok": bool, ...}``. A short ``error`` code on failure - never a secret.
+# Executors: kind -> async handler(bot, scope_id, payload) -> result dict.
+# ``scope_id`` is the guild id for every kind except those in _USER_KINDS below,
+# which get the user id instead. Each RE-VALIDATES the payload against live state
+# and returns a JSON-safe dict ``{"ok": bool, ...}``. A short ``error`` code on
+# failure - never a secret.
 #
 # The five live-player kinds follow the same contract but live in the sibling
-# module ``dashboard_music_actions`` (they drive the music package's seams); they
-# are merged into the ONE registry below. They report a failure under ``reason``
-# rather than ``error`` - the shape the dashboard contracted for those kinds.
+# module ``dashboard_music_actions`` (they drive the music package's seams), and
+# the user-scoped ones in ``dashboard_user_actions``; both are merged into the
+# ONE registry below. They report a failure under ``reason`` rather than
+# ``error`` - the shape the dashboard contracted for those kinds.
 # ---------------------------------------------------------------------------
 
 
@@ -1097,7 +1132,26 @@ _EXECUTORS = {
     # handle_action, the claim, the result write-back and the boot reconciliation
     # are shared verbatim, and a test can register a fake kind the same way.
     **_MUSIC_EXECUTORS,
+    # Same deal for the USER-scoped kinds (cogs/system/dashboard_user_actions.py):
+    # one registry, one dispatch path. What differs is only which id they are
+    # handed - see _USER_KINDS right below.
+    **_USER_EXECUTORS,
 }
+
+# The kinds whose scope is a USER rather than a guild: they are dispatched with
+# ``dashboard_actions.user_id`` (the column the DB CHECK guarantees is the only
+# one set on such a row) instead of ``guild_id``.
+#
+# The house precedent is ``dashboard_sync.USER_KINDS``, and so is the rule it
+# encodes: the scope is chosen by the KIND, never by whichever column happens to
+# be populated. A ``mydata_export`` row that somehow carries a guild_id would
+# otherwise export the data of whoever's snowflake sat in that column; here it
+# simply reads a NULL user_id and is refused with ``bad_scope``.
+#
+# Spelled out as a literal rather than derived from _USER_EXECUTORS so that
+# "this kind is user-scoped" is a decision recorded in ONE reviewable place; the
+# test suite asserts the two agree, so they cannot drift apart in practice.
+_USER_KINDS = frozenset({"mydata_export"})
 
 
 # ---------------------------------------------------------------------------
@@ -1113,14 +1167,40 @@ async def _claim(pool, action_id):
     The ``status='pending'`` guard makes this single-flight: a duplicate notify
     (or a notify racing the boot reconciliation) finds no pending row and gets
     ``None`` back - the idempotence backstop.
+
+    BOTH scope columns are returned; :func:`_scope_id` picks the one this row's
+    kind is entitled to read. Exactly one of them is non-NULL (the DB CHECK), so
+    the other is only ever the answer to "was this row written for the scope its
+    kind expects?".
     """
     return await pool.fetchrow(
         "UPDATE dashboard_actions "
         "SET status = 'running', updated_at = now() "
         "WHERE id = $1 AND status = 'pending' "
-        "RETURNING guild_id, kind, payload",
+        "RETURNING guild_id, user_id, kind, payload",
         action_id,
     )
+
+
+def _scope_id(kind, claimed):
+    """Return the id ``kind`` acts on, or ``None`` when the row's scope is wrong.
+
+    The KIND decides which column is read - ``user_id`` for a kind in
+    :data:`_USER_KINDS`, ``guild_id`` for every other - so a kind can never be
+    made to act on the scope it was not written for (the ``dashboard_sync``
+    rule). Combined with the DB CHECK "exactly one column is set", a mismatch
+    always surfaces as ``None`` here rather than as an action on the wrong thing.
+
+    The lookup is guarded rather than bare: a row that does not carry the column
+    at all (an older query shape mid-deploy, a hand-rolled double) must be
+    refused like any other bad scope, not raise inside the dispatcher.
+    """
+    column = "user_id" if kind in _USER_KINDS else "guild_id"
+    try:
+        value = claimed[column]
+    except (KeyError, IndexError, TypeError):
+        return None
+    return value
 
 
 async def _finish(pool, action_id, status, result):
@@ -1135,13 +1215,50 @@ async def _finish(pool, action_id, status, result):
     )
 
 
+@contextlib.contextmanager
+def _inflight(action_id):
+    """Mark ``action_id`` as being handled by this process for the block.
+
+    A refcount rather than a set: a live notify and the boot sweep can both
+    enter for the same id (only one wins the claim), and the loser leaving must
+    not clear the mark the winner still needs. Always paired in ``finally``, so
+    a crashing executor cannot leave a permanent mark that would make the row
+    unrecoverable at the next boot.
+    """
+    _INFLIGHT_ACTIONS[action_id] = _INFLIGHT_ACTIONS.get(action_id, 0) + 1
+    try:
+        yield
+    finally:
+        remaining = _INFLIGHT_ACTIONS.get(action_id, 1) - 1
+        if remaining > 0:
+            _INFLIGHT_ACTIONS[action_id] = remaining
+        else:
+            _INFLIGHT_ACTIONS.pop(action_id, None)
+
+
 async def handle_action(bot, action_id):
     """Claim, dispatch and finalise one action. Never raises.
 
     Returns the terminal status (``'done'`` / ``'failed'``) it wrote, or
     ``None`` when there was nothing to do (already claimed/processed, or the
     claim itself errored). Shared by both the notify path and reconciliation.
+
+    The executor is handed the id of the scope ITS KIND declares (:func:`_scope_id`),
+    so a guild kind is dispatched exactly as it always was and a user kind gets
+    the row's ``user_id``; a row whose scope does not match its kind is refused
+    as ``bad_scope`` without the executor ever running.
+
+    The whole call is marked in :data:`_INFLIGHT_ACTIONS` - from BEFORE the claim
+    (the mark must already be up when a concurrent reconcile looks) until after
+    the terminal write - so the boot sweep can tell a claim this process is
+    working on from one a dead process abandoned.
     """
+    with _inflight(action_id):
+        return await _handle_action(bot, action_id)
+
+
+async def _handle_action(bot, action_id):
+    """The body of :func:`handle_action`, run under its in-flight mark."""
     pool = bot.db_pool
     try:
         claimed = await _claim(pool, action_id)
@@ -1153,7 +1270,6 @@ async def handle_action(bot, action_id):
     if claimed is None:
         return None  # already claimed elsewhere / not pending: silent no-op
 
-    guild_id = claimed["guild_id"]
     kind = claimed["kind"]
     payload = _coerce_payload(claimed["payload"])
 
@@ -1162,8 +1278,17 @@ async def handle_action(bot, action_id):
         await _finalise(pool, action_id, {"ok": False, "error": "unknown_kind"})
         return "failed"
 
+    # The scope the KIND is entitled to, never the one the row happens to carry.
+    scope_id = _scope_id(kind, claimed)
+    if scope_id is None:
+        # A guild kind on a user row, a user kind on a guild row, or a row the
+        # CHECK would have rejected. Refused BEFORE the executor is entered, so
+        # no executor ever has to defend itself against a None scope.
+        await _finalise(pool, action_id, {"ok": False, "error": "bad_scope"})
+        return "failed"
+
     try:
-        result = await executor(bot, guild_id, payload)
+        result = await executor(bot, scope_id, payload)
     except Exception:
         # Never surface the exception text/stack to the dashboard - only a fixed
         # code. The full traceback is logged server-side.
@@ -1199,10 +1324,12 @@ async def reconcile(bot):
     LISTEN/NOTIFY does not buffer, so a notify fired while the bot was down is
     gone. Once at startup we (1) fail actions too old to still be wanted, (2)
     reset a ``running`` row back to ``pending`` ONLY once its claim is older than
-    ``_ORPHAN_RESET_SECONDS`` - the listener is attached before this runs, so a
-    live handler of THIS process may already hold a ``running`` row whose
-    ``updated_at`` (stamped by ``_claim``) is recent; the age guard leaves that
-    one alone and resets only rows orphaned by a dead previous process - and (3)
+    ``_ORPHAN_RESET_SECONDS`` and the id is not one this process is handling -
+    the listener is attached before this runs, so a live handler of THIS process
+    may already hold a ``running`` row, either freshly claimed (recent
+    ``updated_at``, stamped by ``_claim``) or still working after the window has
+    passed (``mydata_export`` can); both are left alone and only rows orphaned by
+    a dead previous process are reset - and (3)
     re-drive every remaining ``pending`` row through the normal atomic claim - so
     a concurrent live notify for the same row still can't double-run it. A
     duplicate is therefore possible only when a crash lands AFTER an executor's
@@ -1221,25 +1348,36 @@ async def reconcile(bot):
         json.dumps({"ok": False, "error": "expired"}),
     )
 
-    # (2) Reset orphaned 'running' rows. Age-guarded: only rows whose claim is
-    # older than the grace window are reset. The listener is already attached, so
-    # a live handler of THIS process may hold a freshly claimed 'running' row
-    # (recent updated_at, stamped by _claim); resetting it here would let step 3
-    # re-claim and re-run its executor, doubling the side effect. Bound age is a
-    # fixed constant but is still passed as a parameter rather than interpolated.
+    # (2) Reset orphaned 'running' rows. Two guards, because neither alone is
+    # enough. AGE: the listener is already attached, so a live handler of THIS
+    # process may hold a freshly claimed 'running' row (recent updated_at,
+    # stamped by _claim); resetting it would let step 3 re-claim and re-run its
+    # executor, doubling the side effect. IN-FLIGHT: an executor that runs longer
+    # than the grace window (mydata_export packs and uploads an archive) has a
+    # claim that is BOTH live and old, which the age guard alone would read as an
+    # orphan - so ids this process is actually handling are excluded outright,
+    # whatever their age. Both bounds are code constants/process state, never
+    # user input, and are still passed as parameters rather than interpolated.
     await pool.execute(
         "UPDATE dashboard_actions "
         "SET status = 'pending', updated_at = now() "
         "WHERE status = 'running' "
-        "AND updated_at < now() - $1 * INTERVAL '1 second'",
+        "AND updated_at < now() - $1 * INTERVAL '1 second' "
+        "AND NOT (id = ANY($2::bigint[]))",
         _ORPHAN_RESET_SECONDS,
+        sorted(_INFLIGHT_ACTIONS),
     )
 
-    # (3) Re-drive everything still pending, oldest first, one at a time.
+    # (3) Re-drive everything still pending, oldest first, one at a time. An id
+    # this process is already handling is skipped rather than re-entered: the
+    # atomic claim would refuse it anyway, this just saves the round trip and
+    # keeps the sweep's intent legible.
     rows = await pool.fetch(
         "SELECT id FROM dashboard_actions WHERE status = 'pending' ORDER BY id"
     )
     for row in rows:
+        if row["id"] in _INFLIGHT_ACTIONS:
+            continue
         try:
             await handle_action(bot, row["id"])
         except Exception:

@@ -6,7 +6,22 @@ import os
 import re
 import zipfile
 
-from tools import privacy
+from tools import privacy, retention
+
+_REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+
+
+def _repo_python_files():
+    """Every shipped .py file (the bot's own code, not the test suite)."""
+    for root, dirs, files in os.walk(_REPO_ROOT):
+        dirs[:] = [
+            name
+            for name in dirs
+            if name not in {".git", ".venv", "tests", "__pycache__", "locales"}
+        ]
+        for name in files:
+            if name.endswith(".py"):
+                yield os.path.join(root, name)
 
 
 class _Context:
@@ -241,14 +256,27 @@ _SCHEMA_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "schema.sql"
 )
 
-# User-scoped tables (a user_id, no guild_id) deliberately absent from the
+# User-scoped tables (see _user_scoped_tables) deliberately absent from the
 # export. Each entry is a claim about the code, so keep this list empty unless a
 # table genuinely holds no personal data.
 _EXPORT_EXEMPT_TABLES = set()
 
 
 def _user_scoped_tables():
-    """Tables in schema.sql that have a user_id and NO guild_id."""
+    """Tables in schema.sql holding rows NO guild purge can ever reach.
+
+    That is: a ``user_id`` column, and either no ``guild_id`` at all or a
+    NULLABLE one. The nullable case is not a technicality - it is how
+    ``dashboard_actions`` gained a user scope: rows of the very same table are
+    guild-scoped (purged with the guild) or user-scoped (``guild_id NULL``, which
+    ``WHERE guild_id = $1`` can never match). A guard keyed on "has no guild_id
+    column" stopped applying to that table the moment it grew a second scope,
+    which is exactly when its user rows appeared.
+
+    A NOT NULL ``guild_id`` is the other side of the tiling: those rows die with
+    their guild, and ``tests/tools/test_retention.py`` is the structural guard
+    that makes sure they do.
+    """
     with open(_SCHEMA_PATH, encoding="utf-8") as handle:
         ddl = re.sub(r"--[^\n]*", "", handle.read())
     tables = set()
@@ -259,8 +287,10 @@ def _user_scoped_tables():
     ):
         body = match.group(2)
         has_user = re.search(r"^\s*user_id\b", body, re.M | re.I)
-        has_guild = re.search(r"^\s*guild_id\b", body, re.M | re.I)
-        if has_user and not has_guild:
+        guild = re.search(r"^\s*guild_id\b([^\n,]*)", body, re.M | re.I)
+        if not has_user:
+            continue
+        if guild is None or "NOT NULL" not in guild.group(1).upper():
             tables.add(match.group(1))
     return tables
 
@@ -268,14 +298,18 @@ def _user_scoped_tables():
 def test_every_user_scoped_table_is_covered_by_the_export():
     """The user-side twin of the guild-purge structural guard.
 
-    A new table keyed by user_id alone is invisible to the guild purge by
+    A row no guild purge can reach is invisible to the guild-side guard by
     construction, so the only thing that can surface it to its owner is
     ``collect_user_export``. Deriving the expectation from schema.sql means a
     future lot cannot add one and quietly forget /mydata.
     """
     tables = _user_scoped_tables()
-    # Sanity-check the parser before trusting its verdict.
+    # Sanity-check the parser before trusting its verdict: three tables keyed by
+    # user alone, the two-scope one whose user rows have guild_id NULL, and a
+    # guild-keyed table that must NOT be dragged in by the nullable rule.
     assert {"user_profiles", "profile_visibility", "afk", "profiles"} <= tables
+    assert "dashboard_actions" in tables
+    assert "season_podiums" not in tables
 
     source = inspect.getsource(privacy.collect_user_export)
     missing = sorted(
@@ -354,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 3
+    assert data["export_version"] == privacy.EXPORT_VERSION == 4
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -418,3 +452,225 @@ def test_forget_never_widens_beyond_the_owner():
     for _table, query in privacy.PROFILE_DELETE_QUERIES:
         assert query.count("$1") == 1
         assert query.endswith("WHERE user_id = $1")
+
+
+# ---------------------------------------------------------------------------
+# The shared export limiter (claim_export_slot)
+# ---------------------------------------------------------------------------
+#
+# One export per user per hour, enforced by a DB clock instead of a per-process
+# bucket, because two callers now ask for the same archive: `?mydata export` in
+# Discord and the dashboard's `mydata_export` queue action. These guard the
+# claim's semantics AND the properties that make it tamper-proof.
+
+
+class _SlotPool:
+    """Records the claim and replays a canned row."""
+
+    def __init__(self, row):
+        self.row = row
+        self.calls = []
+
+    async def fetchrow(self, query, *args):
+        self.calls.append((query, args))
+        return self.row
+
+
+async def test_claim_export_slot_grants_when_the_window_has_elapsed():
+    pool = _SlotPool({"granted": True, "retry_after": 0})
+
+    granted, retry_after = await privacy.claim_export_slot(pool, 42)
+
+    assert (granted, retry_after) == (True, 0)
+    _query, args = pool.calls[0]
+    assert args == (42, privacy.EXPORT_COOLDOWN_SECONDS)
+
+
+async def test_claim_export_slot_refuses_with_the_exact_remaining_seconds():
+    pool = _SlotPool({"granted": False, "retry_after": 2599})
+
+    granted, retry_after = await privacy.claim_export_slot(pool, 42)
+
+    assert granted is False
+    assert retry_after == 2599
+
+
+async def test_a_refusal_never_tells_the_caller_to_retry_immediately():
+    """The sub-select reads the row from the statement's own snapshot, so the
+    loser of a race on the last tick of the window can compute 0 from a row the
+    winner has already moved. "Retry in 0s" would walk straight back into a
+    refusal, so a refusal always reports at least one second."""
+    pool = _SlotPool({"granted": False, "retry_after": 0})
+
+    granted, retry_after = await privacy.claim_export_slot(pool, 42)
+
+    assert (granted, retry_after) == (False, 1)
+
+
+def test_the_claim_clamps_the_wait_to_the_window_itself():
+    """A row stamped in the FUTURE (backwards clock adjustment on the DB host, a
+    restored dump) must not produce "come back in a day" for an hourly limit.
+    The clamp lives in SQL because that is where the arithmetic is."""
+    sql = privacy._CLAIM_EXPORT_SLOT
+    assert "LEAST(GREATEST(0, CEIL(" in sql
+    # ... clamped against the window PARAMETER, not a literal copy of it.
+    assert "))), $2)" in sql
+
+
+async def test_claim_export_slot_takes_the_window_from_the_caller():
+    pool = _SlotPool({"granted": True, "retry_after": 0})
+
+    await privacy.claim_export_slot(pool, 42, cooldown=60)
+
+    assert pool.calls[0][1] == (42, 60)
+
+
+async def test_claim_export_slot_fails_closed_when_the_row_is_missing():
+    """A claim that somehow returns nothing must refuse, not hand out a free
+    export: the limiter guards the most expensive job the bot has."""
+    granted, retry_after = await privacy.claim_export_slot(_SlotPool(None), 42)
+
+    assert granted is False
+    assert retry_after == privacy.EXPORT_COOLDOWN_SECONDS
+
+
+def test_the_claim_is_one_atomic_statement_on_its_own_table():
+    """The properties the limiter's integrity rests on, pinned:
+
+    * ONE statement - asyncpg refuses multiple, and a read-then-write pair would
+      let two concurrent claims both pass;
+    * a test-and-set (INSERT ... ON CONFLICT DO UPDATE ... WHERE), so the loser
+      of a race updates nothing;
+    * the DEDICATED table, never the user_settings blob the /preferences panel
+      and the dashboard both write - anything stored there is rewritable by the
+      very party being rate-limited;
+    * the user id is a bound parameter, never interpolated.
+    """
+    sql = privacy._CLAIM_EXPORT_SLOT
+    assert sql.strip().count(";") == 0
+    assert "INSERT INTO mydata_export_cooldown" in sql
+    assert "ON CONFLICT (user_id) DO UPDATE" in sql
+    assert "user_settings" not in sql
+    assert "$1" in sql and "$2" in sql
+    assert "%" not in sql and ".format(" not in sql
+
+
+def test_the_limiter_row_is_out_of_reach_of_every_user_write_path():
+    """The clock must not be resettable by its own subject.
+
+    ``?mydata deleteprofile`` erases every table in PROFILE_DELETE_QUERIES, so
+    listing the limiter there would turn "delete my profile" into "give me
+    another export now" - a one-click bypass. It is deliberately absent, and the
+    export below is what keeps the user's right to SEE it intact.
+    """
+    listed = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    assert "mydata_export_cooldown" not in listed
+
+    # REPO-WIDE, not just this module: a writer added anywhere else would defeat
+    # the property just as thoroughly, and grepping only privacy.py would call
+    # that safe. Exactly two files may touch the table, and only in these ways.
+    writers = {}
+    for path in _repo_python_files():
+        source = open(path, encoding="utf-8").read()
+        verbs = re.findall(
+            r"(INSERT INTO|UPDATE|DELETE FROM)\s+mydata_export_cooldown", source
+        )
+        if verbs:
+            writers[os.path.relpath(path, _REPO_ROOT).replace(os.sep, "/")] = verbs
+
+    assert writers == {
+        # The claim: the ONLY thing that ever stamps the clock.
+        "tools/privacy.py": ["INSERT INTO"],
+        # Retention: deletes rows whose window has already elapsed. Those grant
+        # on sight, so this cannot hand anybody an export they were owed a wait
+        # for - and the age predicate is what makes that true.
+        "tools/retention.py": ["DELETE FROM"],
+    }
+    prune = inspect.getsource(retention.prune_expired_export_slots)
+    assert "last_export_at < now() - $1 * INTERVAL '1 second'" in prune
+
+
+async def test_the_export_carries_the_limiter_row():
+    """It is one timestamp, but it is stored under the user's id, so it ships -
+    and the user-scoped structural guard above holds every such table to it."""
+
+    class _SlotExportPool(_ExportPool):
+        async def fetchrow(self, query, *args):
+            self.queries.append(query)
+            if "mydata_export_cooldown" in query:
+                return {
+                    "last_export_at": datetime.datetime(
+                        2030, 5, 4, tzinfo=datetime.timezone.utc
+                    )
+                }
+            return None
+
+    pool = _SlotExportPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["data_export_requests"] == {
+        "last_export_at": datetime.datetime(
+            2030, 5, 4, tzinfo=datetime.timezone.utc
+        )
+    }
+    query = next(q for q in pool.queries if "mydata_export_cooldown" in q)
+    assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_states_a_never_exported_user_as_null():
+    data, _avatars = await privacy.collect_user_export(_ExportPool(), 42)
+
+    assert data["data_export_requests"] is None
+    assert data["dashboard_requests"] == []
+
+
+async def test_the_export_carries_the_users_own_queue_rows():
+    """A ``dashboard_actions`` user row says "you asked for an export at T, and
+    it ended like this". That is this user's data, it is unreachable by the guild
+    purge (guild_id NULL), so the export is what makes it visible to them."""
+
+    class _QueuePool(_ExportPool):
+        def __init__(self):
+            super().__init__()
+            self.args = []
+
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            self.args.append(args)
+            if "FROM dashboard_actions" in query:
+                return [
+                    {
+                        "id": 7,
+                        "kind": "mydata_export",
+                        "status": "done",
+                        # asyncpg hands JSONB back as TEXT: a quoted blob in the
+                        # archive would be unreadable to the person opening it.
+                        "result": json.dumps({"ok": True, "delivered": "dm"}),
+                        "requested_by": 42,
+                        "created_at": datetime.datetime(
+                            2030, 5, 4, tzinfo=datetime.timezone.utc
+                        ),
+                        "updated_at": datetime.datetime(
+                            2030, 5, 4, tzinfo=datetime.timezone.utc
+                        ),
+                    }
+                ]
+            return []
+
+    pool = _QueuePool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["dashboard_requests"][0]["kind"] == "mydata_export"
+    assert data["dashboard_requests"][0]["result"] == {
+        "ok": True,
+        "delivered": "dm",
+    }
+
+    query = next(q for q in pool.queries if "FROM dashboard_actions" in q)
+    # Scoped by USER: never by id (that would be somebody else's row), and never
+    # the guild rows of the same table (they belong to the guild, are gated by
+    # manage-guild, and die with it).
+    assert "WHERE user_id = $1" in query
+    assert "guild_id" not in query
+    # The dashboard-written payload is deliberately not exported.
+    assert "payload" not in query

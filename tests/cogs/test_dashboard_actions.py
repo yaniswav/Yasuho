@@ -44,7 +44,7 @@ class ActionsPool:
 
     def __init__(self):
         self.calls = []
-        self.rows = {}  # id -> dict(guild_id, kind, payload, status, result, stale)
+        self.rows = {}  # id -> dict(guild_id, user_id, kind, payload, status, ...)
 
     def add(
         self,
@@ -55,13 +55,21 @@ class ActionsPool:
         status="pending",
         stale=False,
         fresh_claim=False,
+        user_id=None,
     ):
         # ``fresh_claim`` models a 'running' row whose updated_at is recent (just
         # claimed by a live handler of this process); reconcile's age-guarded
         # step-2 must NOT reset such a row. Default False = an orphan of a dead
         # previous process (stale updated_at), which step-2 DOES reset.
+        #
+        # ``guild_id`` / ``user_id`` are the two SCOPE columns; the real table's
+        # dashboard_actions_scope_valid CHECK allows exactly one of them to be
+        # set, and the tests that exercise a rejected scope pass that pair
+        # explicitly (a doubly/never scoped row is what the CHECK refuses, and is
+        # asserted probe-side against a real Postgres).
         self.rows[action_id] = {
             "guild_id": guild_id,
+            "user_id": user_id,
             "kind": kind,
             "payload": payload,
             "status": status,
@@ -80,11 +88,16 @@ class ActionsPool:
             row["status"] = "running"
             # The claim SETs updated_at = now(), so a just-claimed row is fresh.
             row["fresh_claim"] = True
-            return {
+            # Only the columns the real RETURNING lists, so a dispatcher reading
+            # anything else would fail here rather than silently pass.
+            claimed = {
                 "guild_id": row["guild_id"],
                 "kind": row["kind"],
                 "payload": row["payload"],
             }
+            if "user_id" in query:
+                claimed["user_id"] = row["user_id"]
+            return claimed
         raise AssertionError("unexpected fetchrow: %r" % query)  # pragma: no cover
 
     async def execute(self, query, *args):
@@ -109,11 +122,20 @@ class ActionsPool:
             # ... second` clause is a freshly claimed row (recent updated_at)
             # spared. Without that clause (the pre-fix SQL) EVERY running row is
             # reset - so a test of the live-claim race stays red before the fix.
+            #
+            # The second guard is the in-flight mark: reconcile excludes the ids
+            # THIS process is handling, whatever their age. Modelled from the
+            # `id = ANY($2)` clause and its parameter, so a test of a
+            # longer-than-the-window executor stays red without it.
             age_guarded = "updated_at <" in query and "second" in query
-            for row in self.rows.values():
+            mark_guarded = "id = ANY(" in query
+            inflight = set(args[1]) if mark_guarded and len(args) > 1 else set()
+            for action_id, row in self.rows.items():
                 if row["status"] != "running":
                     continue
                 if age_guarded and row["fresh_claim"]:
+                    continue
+                if action_id in inflight:
                     continue
                 row["status"] = "pending"
             return "UPDATE"
@@ -368,6 +390,168 @@ async def test_claim_stamps_updated_at():
     assert len(captured) == 1
     assert "status = 'running'" in captured[0]
     assert "updated_at = now()" in captured[0]
+
+
+# ---------------------------------------------------------------------------
+# Scope threading: a row names EITHER a guild OR a user, and the KIND - never
+# the populated column - decides which one its executor is handed.
+# ---------------------------------------------------------------------------
+
+
+async def test_claim_returns_both_scope_columns():
+    """The dispatcher can only choose a scope if the claim brings both back."""
+    captured = []
+
+    class _CapturePool:
+        async def fetchrow(self, query, *args):
+            captured.append(query)
+            return None
+
+    await dashboard_actions._claim(_CapturePool(), 1)
+
+    assert "RETURNING guild_id, user_id, kind, payload" in captured[0]
+
+
+async def test_guild_kind_is_dispatched_with_the_guild_id(monkeypatch):
+    """Non-regression: a guild row behaves EXACTLY as before this lot."""
+    seen = []
+
+    async def _exec(bot, scope_id, payload):
+        seen.append(scope_id)
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    pool.add(1, 100, "test_kind", {})
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert seen == [100]
+    assert pool.rows[1]["status"] == "done"
+
+
+async def test_guild_kind_ignores_a_user_id_that_should_not_be_there(monkeypatch):
+    """The scope comes from the KIND. Even if a user_id somehow sat on a guild
+    row, a guild kind still acts on the guild - it can never be redirected at a
+    user by a column it does not read."""
+    seen = []
+
+    async def _exec(bot, scope_id, payload):
+        seen.append(scope_id)
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    pool.add(1, 100, "test_kind", {}, user_id=999)
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert seen == [100]
+
+
+async def test_user_kind_is_dispatched_with_the_user_id(monkeypatch):
+    """A kind in _USER_KINDS gets the row's user_id as its scope argument."""
+    seen = []
+
+    async def _exec(bot, scope_id, payload):
+        seen.append(scope_id)
+        return {"ok": True, "delivered": "dm"}
+
+    _register(monkeypatch, "user_kind", _exec)
+    monkeypatch.setattr(
+        dashboard_actions, "_USER_KINDS", frozenset({"user_kind"})
+    )
+    pool = ActionsPool()
+    pool.add(1, None, "user_kind", {}, user_id=4242)
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert seen == [4242]
+    assert pool.rows[1]["result"] == {"ok": True, "delivered": "dm"}
+
+
+async def test_user_kind_on_a_guild_row_is_refused_as_bad_scope(monkeypatch):
+    """A user kind written onto a guild-scoped row must NOT run with the guild
+    id standing in for a user id - that would export the wrong person's data."""
+    ran = []
+
+    async def _exec(bot, scope_id, payload):
+        ran.append(scope_id)
+        return {"ok": True}
+
+    _register(monkeypatch, "user_kind", _exec)
+    monkeypatch.setattr(
+        dashboard_actions, "_USER_KINDS", frozenset({"user_kind"})
+    )
+    pool = ActionsPool()
+    pool.add(1, 100, "user_kind", {})  # guild-scoped row, user_id NULL
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert ran == []  # the executor never even started
+    assert pool.rows[1]["result"] == {"ok": False, "error": "bad_scope"}
+
+
+async def test_guild_kind_on_a_user_row_is_refused_as_bad_scope(monkeypatch):
+    """The mirror case: a guild kind on a user row has no guild to act on."""
+    ran = []
+
+    async def _exec(bot, scope_id, payload):
+        ran.append(scope_id)
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    pool.add(1, None, "test_kind", {}, user_id=4242)
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert ran == []
+    assert pool.rows[1]["result"] == {"ok": False, "error": "bad_scope"}
+
+
+def test_scope_id_picks_the_column_the_kind_declares():
+    row = {"guild_id": 100, "user_id": 4242}
+    assert dashboard_actions._scope_id("verify_button_post", row) == 100
+    assert dashboard_actions._scope_id("mydata_export", row) == 4242
+
+
+def test_scope_id_refuses_a_row_missing_the_column():
+    """A row shape that predates (or postdates) this claim must be refused
+    rather than raise inside the dispatcher."""
+    assert dashboard_actions._scope_id("mydata_export", {"guild_id": 100}) is None
+    assert dashboard_actions._scope_id("verify_button_post", {}) is None
+    assert dashboard_actions._scope_id("mydata_export", None) is None
+
+
+def test_user_kinds_matches_the_user_executor_registry():
+    """_USER_KINDS is a literal, so a kind added to dashboard_user_actions and
+    forgotten here would be dispatched with a NULL guild id and refused. This is
+    the guard that makes the duplication safe."""
+    from cogs.system import dashboard_user_actions
+
+    assert dashboard_actions._USER_KINDS == frozenset(
+        dashboard_user_actions.EXECUTORS
+    )
+    # ...and every one of them really is in the single dispatch table.
+    assert dashboard_actions._USER_KINDS <= set(dashboard_actions._EXECUTORS)
+
+
+def test_no_guild_kind_is_listed_as_user_scoped():
+    """The other direction of the same drift: a guild kind accidentally added to
+    _USER_KINDS would silently stop receiving its guild id.
+
+    Expressed as "every registered kind that is not a user executor", so this
+    covers the WHOLE registry rather than a hand-picked sample that would quietly
+    stop being representative.
+    """
+    from cogs.system import dashboard_user_actions
+
+    guild_kinds = set(dashboard_actions._EXECUTORS) - set(
+        dashboard_user_actions.EXECUTORS
+    )
+    assert guild_kinds  # the sample is not empty by accident
+    assert not (guild_kinds & dashboard_actions._USER_KINDS)
 
 
 # ---------------------------------------------------------------------------
@@ -933,6 +1117,64 @@ async def test_reconcile_does_not_reset_freshly_claimed_running_row(monkeypatch)
     assert not any(c[0] == "fetchrow" for c in pool.calls)
 
 
+async def test_reconcile_never_resets_a_claim_this_process_is_still_working_on(
+    monkeypatch,
+):
+    """The age guard alone is only a heuristic about time.
+
+    An executor may legitimately run LONGER than the grace window -
+    ``mydata_export`` packs an archive and uploads several megabytes to Discord -
+    which makes its claim both live and old, i.e. indistinguishable from an
+    orphan by age. The in-flight mark is what tells them apart: reconcile must
+    leave the row alone and must not re-drive it, or the two runs race to write
+    the terminal status and the row can end as ``failed`` for work that really
+    was delivered.
+    """
+    runs = []
+
+    async def _exec(bot, guild_id, payload):
+        runs.append(payload.get("tag"))
+        if len(runs) == 1:
+            # This executor is slow: by the time the boot sweep lands, its claim
+            # is older than the grace window (what fresh_claim=False models).
+            pool.rows[1]["fresh_claim"] = False
+            await dashboard_actions.reconcile(bot)
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    pool = ActionsPool()
+    pool.add(1, 100, "test_kind", {"tag": "slow"}, status="pending")
+    bot = FakeBot(pool)
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+
+    # Ran exactly once, and the terminal status is the real run's.
+    assert runs == ["slow"]
+    assert pool.rows[1]["status"] == "done"
+    assert pool.rows[1]["result"] == {"ok": True}
+
+
+async def test_the_inflight_mark_is_a_refcount_and_is_always_released():
+    """A notify and the boot sweep can enter for the SAME id (only one wins the
+    claim); the loser leaving must not clear the winner's mark. And a crash must
+    not leave a permanent mark - that row could never be recovered again."""
+    assert dashboard_actions._INFLIGHT_ACTIONS == {}
+
+    with dashboard_actions._inflight(7):
+        with dashboard_actions._inflight(7):
+            assert dashboard_actions._INFLIGHT_ACTIONS == {7: 2}
+        # The inner exit does NOT clear the outer's mark.
+        assert dashboard_actions._INFLIGHT_ACTIONS == {7: 1}
+    assert dashboard_actions._INFLIGHT_ACTIONS == {}
+
+    try:
+        with dashboard_actions._inflight(7):
+            raise RuntimeError("executor exploded")
+    except RuntimeError:
+        pass
+    assert dashboard_actions._INFLIGHT_ACTIONS == {}
+
+
 async def test_reconcile_resets_and_redrives_stale_orphan_running_row(monkeypatch):
     """Non-regression of the orphan path: a 'running' row left by a DEAD previous
     process (stale updated_at) IS reset to pending and re-driven through the claim
@@ -972,6 +1214,11 @@ def test_reaction_role_executors_are_registered():
 def test_button_panel_executors_are_registered():
     assert "button_panel_post" in dashboard_actions._EXECUTORS
     assert "button_panel_delete" in dashboard_actions._EXECUTORS
+
+
+def test_mydata_export_is_registered_and_user_scoped():
+    assert "mydata_export" in dashboard_actions._EXECUTORS
+    assert "mydata_export" in dashboard_actions._USER_KINDS
 
 
 # ---------------------------------------------------------------------------

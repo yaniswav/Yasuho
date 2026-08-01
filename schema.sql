@@ -544,6 +544,35 @@ CREATE TABLE IF NOT EXISTS user_settings (
     settings JSONB  NOT NULL DEFAULT '{}'::jsonb
 );
 
+-- The rate limit on "give me all my data", as ONE authoritative clock rather
+-- than a per-process one.  tools/privacy.claim_export_slot
+--
+-- A personal-data export is the most expensive thing a user can ask for (it
+-- reads a dozen tables and packs every stored avatar), and it can now be asked
+-- for from TWO places: `?mydata export` in Discord and the dashboard's
+-- `mydata_export` queue action, which run in the same process but never see each
+-- other's in-memory cooldown bucket - and a restart wiped that bucket anyway.
+-- One row per user, holding the moment the last export was GRANTED; both callers
+-- claim their slot with the same single atomic statement, so the hour is shared
+-- and survives a restart.
+--
+-- Deliberately NOT a key in user_settings above: that blob is written by the
+-- /preferences panel AND by the dashboard, so anything stored there is something
+-- the rate-limited party can rewrite. This table has no writer but the claim
+-- itself. For the same reason it is absent from privacy.PROFILE_DELETE_QUERIES -
+-- being able to reset your own limiter by deleting your profile is the exact
+-- hole the table exists to close - but it IS in the export (it is your data, and
+-- one timestamp is all it holds).
+--
+-- Lifecycle: the daily maintenance pass deletes rows whose window has already
+-- elapsed (tools/retention.prune_expired_export_slots). Those are exactly the
+-- rows that grant on sight, so the prune cannot weaken the limiter, and without
+-- it the table would keep "this person exported once, on this date" for ever.
+CREATE TABLE IF NOT EXISTS mydata_export_cooldown (
+    user_id        BIGINT      PRIMARY KEY,
+    last_export_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Per-guild feature toggles & preferences (JSONB blob).  tools/settings.py, settings.py
 CREATE TABLE IF NOT EXISTS guild_settings (
     guild_id BIGINT PRIMARY KEY,
@@ -973,9 +1002,27 @@ CREATE TABLE IF NOT EXISTS applied_fixups (
 -- trusted) arguments; ``result`` is the JSON outcome the dashboard polls to show
 -- the user; ``requested_by`` is the Discord id of the user who asked (audit),
 -- written under the dashboard's requireManageGuild gate.  cogs/system/dashboard_actions.py
+--
+-- SCOPE: a row names EITHER a guild OR a user, never both and never neither -
+-- asserted by the dashboard_actions_scope_valid CHECK at the end of this file.
+-- Guild rows are the original ones (written under requireManageGuild); user rows
+-- exist for the kinds that act on somebody's OWN data (``mydata_export``), where
+-- the dashboard's gate is "this is your session", not "you manage this guild".
+-- Which column a kind reads is decided by the kind itself
+-- (``dashboard_actions._USER_KINDS``), never by which column happens to be set,
+-- so a guild kind smuggled onto a user row (or the reverse) is refused instead of
+-- acting on the wrong scope.
+--
+-- Lifecycle, per scope: guild rows die with their guild
+-- (tools/retention.GUILD_DELETE_QUERIES); user rows carry no guild_id, so that
+-- purge cannot reach them and the daily pass ages the TERMINAL ones out instead
+-- (tools/retention.prune_user_scoped_actions). They are also in the personal-data
+-- export, under `dashboard_requests` - a row saying "you asked for this, then"
+-- is that user's data and they must be able to see it.
 CREATE TABLE IF NOT EXISTS dashboard_actions (
     id           BIGSERIAL   PRIMARY KEY,
-    guild_id     BIGINT      NOT NULL,
+    guild_id     BIGINT,                                   -- NULL on a user-scoped row
+    user_id      BIGINT,                                   -- NULL on a guild-scoped row
     kind         TEXT        NOT NULL,
     payload      JSONB       NOT NULL DEFAULT '{}'::jsonb,
     status       TEXT        NOT NULL DEFAULT 'pending',   -- pending|running|done|failed
@@ -984,7 +1031,21 @@ CREATE TABLE IF NOT EXISTS dashboard_actions (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Migrate pre-existing installs (no-ops on a fresh database). DROP NOT NULL is
+-- itself idempotent: dropping it again is accepted and does nothing.
+ALTER TABLE dashboard_actions ADD COLUMN IF NOT EXISTS user_id BIGINT;
+ALTER TABLE dashboard_actions ALTER COLUMN guild_id DROP NOT NULL;
 CREATE INDEX IF NOT EXISTS dashboard_actions_guild_idx ON dashboard_actions (guild_id, status);
+-- The user-scoped twin of the index above, and for the same single reader: the
+-- dashboard polls "the actions of THIS scope, by status" to render progress. That
+-- read MUST be scoped by user_id (a status read keyed on the action id alone
+-- would let anyone poll anyone's export), so give it the same index shape the
+-- guild side has. PARTIAL because the two scopes are exclusive: guild rows all
+-- carry user_id IS NULL and would otherwise fill this index with dead entries.
+-- Nothing on the bot side needs it - the claim is by primary key and the boot
+-- reconciliation sweeps by status across every scope.
+CREATE INDEX IF NOT EXISTS dashboard_actions_user_idx
+    ON dashboard_actions (user_id, status) WHERE user_id IS NOT NULL;
 
 -- ============================================================
 -- Server statistics (aggregates only)
@@ -1224,6 +1285,19 @@ BEGIN
         ALTER TABLE dashboard_actions
             ADD CONSTRAINT dashboard_actions_status_valid
             CHECK (status IN ('pending', 'running', 'done', 'failed')) NOT VALID;
+    END IF;
+    -- Exactly one scope per row. `<>` on two booleans is XOR, so this rejects
+    -- both a row naming a guild AND a user (which scope would the executor act
+    -- on?) and a row naming neither (an action with nothing to act on). Added
+    -- NOT VALID like every constraint here, though every legacy row already
+    -- satisfies it: before this lot guild_id was NOT NULL and user_id did not
+    -- exist, so every one of them is (guild set, user NULL).
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'dashboard_actions_scope_valid'
+    ) THEN
+        ALTER TABLE dashboard_actions
+            ADD CONSTRAINT dashboard_actions_scope_valid
+            CHECK ((guild_id IS NULL) <> (user_id IS NULL)) NOT VALID;
     END IF;
 END
 $$;

@@ -599,9 +599,30 @@ class UserSettings(commands.Cog):
             )
 
     @mydata.command(name="export")
-    @commands.cooldown(1, 3600, commands.BucketType.user)
     async def mydata_export(self, ctx):
         """Export your Yasuho personal data without OAuth secrets."""
+        # The rate limit is a DB clock, NOT the @commands.cooldown bucket this
+        # replaces: that bucket lived in this process only, so the dashboard's
+        # mydata_export action could not see it and a restart handed out a free
+        # export. privacy.claim_export_slot is the one both callers share.
+        #
+        # Claimed BEFORE ctx.defer and before a single row is read, for two
+        # reasons: nothing expensive may run for a request the limiter is about
+        # to refuse, and raising here - rather than after a defer - keeps the
+        # refusal on the same code path the decorator used, so the user sees the
+        # very same "Remaining time" embed as before. CommandOnCooldown is a
+        # CommandError, which both the prefix path and the hybrid slash path
+        # deliver to the global handler unwrapped.
+        granted, retry_after = await privacy.claim_export_slot(
+            self.bot.db_pool, ctx.author.id
+        )
+        if not granted:
+            raise commands.CommandOnCooldown(
+                commands.Cooldown(1, privacy.EXPORT_COOLDOWN_SECONDS),
+                retry_after,
+                commands.BucketType.user,
+            )
+
         async def _build():
             data, avatar_rows = await privacy.collect_user_export(
                 self.bot.db_pool, ctx.author.id

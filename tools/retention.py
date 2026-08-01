@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime
 import logging
 
-from tools import settings
+from tools import privacy, settings
 from tools.db import affected_rows
 
 log = logging.getLogger(__name__)
@@ -22,6 +22,13 @@ AVATAR_PRUNE_BATCH_SIZE = 250
 AVATAR_PRUNE_MAX_BATCHES = 20
 GUILD_GRACE_DAYS = 30
 GUILD_PURGES_PER_RUN = 5
+# How long a TERMINAL user-scoped dashboard action stays readable before it is
+# pruned. Those rows are the user side of the queue ("you asked for an export at
+# T, it ended like this") and no guild purge can ever reach them - they carry no
+# guild_id by construction - so this is the only thing that bounds them. Long
+# enough that the dashboard can still show a recent history, short enough that
+# the table is not a permanent log of when somebody exported their data.
+USER_ACTION_AUDIT_DAYS = 30
 
 # Deletion order matters for the foreign keys installed by migration 0002.
 # Every query is static: no table or column name comes from user input.
@@ -103,6 +110,10 @@ GUILD_DELETE_QUERIES = (
         # The dashboard -> bot action queue. Rows are terminal audit records
         # (kind, payload, the requesting user's id) that nothing else ever
         # deletes, so without this they would outlive the guild for good.
+        # Since the queue gained a USER scope this only ever matches the
+        # guild-scoped rows - a user row carries guild_id NULL, which no
+        # equality matches, so a departing guild cannot take a member's own
+        # export requests with it.
         "dashboard_actions",
         "DELETE FROM dashboard_actions WHERE guild_id = $1",
     ),
@@ -151,7 +162,7 @@ UNION SELECT guild_id FROM role_menus
 UNION SELECT guild_id FROM anilist_feeds
 UNION SELECT guild_id FROM anilist_follows
 UNION SELECT guild_id FROM anilist_channel_subs
-UNION SELECT guild_id FROM dashboard_actions
+UNION SELECT guild_id FROM dashboard_actions WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION
@@ -311,6 +322,55 @@ async def prune_avatar_history_batch(pool, batch_size=AVATAR_PRUNE_BATCH_SIZE):
         AVATAR_MAX_AGE_MONTHS,
     )
     return len(rows), sum(int(row["bytes"] or 0) for row in rows)
+
+
+async def prune_user_scoped_actions(pool, max_age_days=USER_ACTION_AUDIT_DAYS):
+    """Delete TERMINAL user-scoped queue rows older than the audit window.
+
+    The user side of ``dashboard_actions``. Guild rows die with their guild
+    (``GUILD_DELETE_QUERIES``); user rows carry ``guild_id NULL``, so that purge
+    cannot see them by construction and nothing else deletes them - they are
+    personal data (who asked for their own export, when, and how it ended) that
+    would otherwise be kept for good.
+
+    Only ``done``/``failed`` rows are pruned: a ``pending``/``running`` row is
+    live work, and the queue's own boot reconciliation is what resolves a stale
+    one. ``updated_at`` is the terminal-write time, so the window starts when the
+    action ENDED, not when it was queued.
+    """
+    status = await pool.execute(
+        "DELETE FROM dashboard_actions "
+        "WHERE user_id IS NOT NULL "
+        "AND status IN ('done', 'failed') "
+        "AND updated_at < now() - $1 * INTERVAL '1 day'",
+        max_age_days,
+    )
+    return affected_rows(status)
+
+
+async def prune_expired_export_slots(
+    pool, window=privacy.EXPORT_COOLDOWN_SECONDS
+):
+    """Delete ``mydata_export_cooldown`` rows whose window has already elapsed.
+
+    The limiter keeps one timestamp per user who ever exported, and that
+    timestamp means nothing once the window has passed: ``claim_export_slot``
+    grants such a user immediately, whether the row is there or absent. Deleting
+    it therefore CANNOT weaken the limiter (the deleted rows are exactly the
+    grantable ones), while leaving it there would keep "this person exported
+    their data once, on this date" for ever - data minimisation on a table that
+    otherwise only grows.
+
+    The window is ``privacy.EXPORT_COOLDOWN_SECONDS`` itself rather than a copy,
+    so the prune cannot drift ahead of the limiter it serves and start eating
+    rows that are still enforcing something.
+    """
+    status = await pool.execute(
+        "DELETE FROM mydata_export_cooldown "
+        "WHERE last_export_at < now() - $1 * INTERVAL '1 second'",
+        window,
+    )
+    return affected_rows(status)
 
 
 def invalidate_guild_caches(bot, guild_id):

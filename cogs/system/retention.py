@@ -132,20 +132,42 @@ class DataRetention(commands.Cog):
                 break
             await asyncio.sleep(0)
 
-        if scheduled_guilds or purged_guilds or avatar_rows:
+        # The USER side of the lifecycle. Neither of these is reachable by the
+        # guild purge above (both hold rows keyed by user alone), and nothing
+        # else deletes them, so this pass is what bounds them. Both are single
+        # bounded statements over an indexed age predicate, not batched loops.
+        user_actions = await retention.prune_user_scoped_actions(
+            self.bot.db_pool
+        )
+        export_slots = await retention.prune_expired_export_slots(
+            self.bot.db_pool
+        )
+
+        if (
+            scheduled_guilds
+            or purged_guilds
+            or avatar_rows
+            or user_actions
+            or export_slots
+        ):
             log.info(
                 "Retention pass complete: scheduled_guilds=%s guilds=%s "
-                "avatar_rows=%s avatar_bytes=%s",
+                "avatar_rows=%s avatar_bytes=%s user_actions=%s "
+                "export_slots=%s",
                 scheduled_guilds,
                 purged_guilds,
                 avatar_rows,
                 avatar_bytes,
+                user_actions,
+                export_slots,
             )
         return {
             "scheduled_guilds": scheduled_guilds,
             "guilds": purged_guilds,
             "avatar_rows": avatar_rows,
             "avatar_bytes": avatar_bytes,
+            "user_actions": user_actions,
+            "export_slots": export_slots,
         }
 
     async def _check_backups(self):

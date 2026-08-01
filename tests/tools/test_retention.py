@@ -1,9 +1,10 @@
 import datetime
+import inspect
 import os
 import re
 import types
 
-from tools import retention
+from tools import privacy, retention
 
 # ---------------------------------------------------------------------------
 # Structural guard: schema.sql is the source of truth for "what is guild data"
@@ -275,3 +276,84 @@ def test_invalidate_guild_caches_clears_primary_bot_maps(monkeypatch):
     assert bot.autoroles == {2: 20}
     assert bot.muteroles == {2: 21}
     assert invalidated == [1]
+
+
+def test_the_guild_purge_leaves_user_scoped_queue_rows_alone():
+    """The action queue now holds BOTH guild-scoped and user-scoped rows.
+
+    A user row carries ``guild_id NULL``, so ``WHERE guild_id = $1`` can never
+    match it - a guild departure must not collaterally erase a member's own
+    ``mydata_export`` history, exactly like the timers carve-out above. The
+    discovery UNION is guarded the same way (a NULL guild id is not a guild).
+    """
+    query = dict(retention.GUILD_DELETE_QUERIES)["dashboard_actions"]
+    assert query == "DELETE FROM dashboard_actions WHERE guild_id = $1"
+    assert (
+        "SELECT guild_id FROM dashboard_actions WHERE guild_id IS NOT NULL"
+        in retention.STORED_GUILD_IDS_QUERY
+    )
+
+
+# ---------------------------------------------------------------------------
+# The USER side of the lifecycle: rows no guild purge can reach
+# ---------------------------------------------------------------------------
+
+
+class _PrunePool:
+    """Records the single statement a prune runs and replays a row count."""
+
+    def __init__(self, status="DELETE 3"):
+        self.status = status
+        self.calls = []
+
+    async def execute(self, query, *args):
+        self.calls.append((query, args))
+        return self.status
+
+
+async def test_terminal_user_scoped_queue_rows_are_aged_out():
+    """Nothing else deletes them: the guild purge cannot see a row with
+    ``guild_id NULL``, and the user has no delete surface for the queue. Without
+    this prune, "so-and-so exported their data on this date" is kept for ever."""
+    pool = _PrunePool()
+
+    deleted = await retention.prune_user_scoped_actions(pool)
+
+    assert deleted == 3
+    query, args = pool.calls[0]
+    assert args == (retention.USER_ACTION_AUDIT_DAYS,)
+    assert "DELETE FROM dashboard_actions" in query
+    # The user rows ONLY: a guild row is the guild's, and dies with it.
+    assert "user_id IS NOT NULL" in query
+    # ... and only the TERMINAL ones: a pending/running row is live work that the
+    # queue's own boot reconciliation resolves.
+    assert "status IN ('done', 'failed')" in query
+    # Aged on the terminal write, not on the request time.
+    assert "updated_at < now() - $1 * INTERVAL '1 day'" in query
+
+
+async def test_elapsed_export_slots_are_pruned_with_the_limiters_own_window():
+    """A row older than the window grants on sight, so deleting it cannot hand
+    anybody an export they owed a wait for. Taking the window from the limiter
+    itself is what stops the prune drifting ahead of it and eating rows that are
+    still enforcing something."""
+    pool = _PrunePool(status="DELETE 12")
+
+    deleted = await retention.prune_expired_export_slots(pool)
+
+    assert deleted == 12
+    query, args = pool.calls[0]
+    assert args == (privacy.EXPORT_COOLDOWN_SECONDS,)
+    assert "DELETE FROM mydata_export_cooldown" in query
+    assert "last_export_at < now() - $1 * INTERVAL '1 second'" in query
+
+
+async def test_the_export_slot_prune_can_never_shorten_a_live_window():
+    """The property behind the previous test, stated as arithmetic rather than
+    as a string: the deleted set is exactly the set the claim already grants."""
+    assert (
+        inspect.signature(retention.prune_expired_export_slots)
+        .parameters["window"]
+        .default
+        == privacy.EXPORT_COOLDOWN_SECONDS
+    )
