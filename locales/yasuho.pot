@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-31 18:56+0000\n"
+"POT-Creation-Date: 2026-08-01 09:28+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -555,7 +555,7 @@ msgstr ""
 
 #: cogs/anilist/components.py:305 cogs/anilist/components.py:803
 #: cogs/anilist/feed_views.py:1043 cogs/config/twitch.py:427
-#: cogs/config/welcome.py:435 cogs/config/welcome.py:557
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
 msgstr ""
 
@@ -591,13 +591,16 @@ msgid "No matching titles of that type."
 msgstr ""
 
 #: cogs/anilist/components.py:457 cogs/anilist/components.py:461
-#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:722
-#: cogs/community/level_config_ui.py:801 cogs/community/level_rewards.py:105
-#: cogs/community/seasons_views.py:214 cogs/community/seasons_views.py:236
+#: cogs/community/leveling/level_admin.py:91
+#: cogs/community/leveling/level_config_ui.py:724
+#: cogs/community/leveling/level_config_ui.py:803
+#: cogs/community/leveling/level_rewards.py:105
+#: cogs/community/leveling/seasons_views.py:215
+#: cogs/community/leveling/seasons_views.py:237
 #: cogs/community/serverstats/views.py:476 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:583 cogs/config/welcome.py:108
-#: cogs/config/welcome.py:263 cogs/config/welcome.py:517
-#: cogs/system/botstats.py:1096
+#: cogs/config/rolemenus.py:583 cogs/config/welcome.py:109
+#: cogs/config/welcome.py:264 cogs/config/welcome.py:518
+#: cogs/system/botstats.py:1252
 msgid "Something went wrong."
 msgstr ""
 
@@ -931,11 +934,11 @@ msgstr ""
 msgid "none"
 msgstr ""
 
-#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:96
+#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:97
 msgid "enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:96
+#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:97
 msgid "disabled"
 msgstr ""
 
@@ -970,7 +973,8 @@ msgstr ""
 msgid "Unknown title"
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:279 cogs/community/level_config_ui.py:631
+#: cogs/anilist/feed_delivery.py:279
+#: cogs/community/leveling/level_config_ui.py:633
 msgid "You are clicking too fast - give it a moment."
 msgstr ""
 
@@ -1190,17 +1194,17 @@ msgstr ""
 msgid "Members can join: {state}"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:151
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:451
-#: cogs/config/welcome.py:453 cogs/config/welcome.py:565
-#: cogs/config/welcome.py:567 cogs/config/welcome.py:569
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:152
+#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
+#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
 msgid "On"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:151
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:451
-#: cogs/config/welcome.py:453 cogs/config/welcome.py:565
-#: cogs/config/welcome.py:567 cogs/config/welcome.py:569
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:152
+#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
+#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
 #: cogs/music/views.py:439
 msgid "Off"
 msgstr ""
@@ -1246,8 +1250,8 @@ msgstr ""
 msgid "Stop tracking a title..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:233
-#: cogs/community/reminders.py:340 cogs/community/seasons_views.py:170
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:236
+#: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:340
 #: cogs/music/views.py:1310
 msgid "Next"
 msgstr ""
@@ -1287,12 +1291,12 @@ msgid "Tracked releases ({count})"
 msgstr ""
 
 #: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:309
-#: cogs/config/welcome.py:206
+#: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr ""
 
 #: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:309
-#: cogs/config/welcome.py:206
+#: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr ""
 
@@ -1300,9 +1304,10 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
-#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
-#: cogs/community/usersettings.py:279 tools/arg_completion.py:219
+#: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
+#: cogs/community/leveling/level_admin.py:176
+#: cogs/community/usersettings.py:215 cogs/community/usersettings.py:279
+#: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr ""
 
@@ -1321,8 +1326,8 @@ msgstr ""
 msgid "Feed deleted."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:989
-#: cogs/moderation/moderation.py:1050 tools/arg_completion.py:411
+#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:990
+#: cogs/moderation/moderation.py:1051 cogs/system/arg_completion.py:411
 msgid "Cancelled."
 msgstr ""
 
@@ -1364,15 +1369,15 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
 #: cogs/config/twitch.py:412 cogs/config/verification.py:100
-#: cogs/config/welcome.py:423 cogs/config/welcome.py:544
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr ""
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
 #: cogs/config/twitch.py:414 cogs/config/verification.py:102
-#: cogs/config/welcome.py:425 cogs/config/welcome.py:546
-#: cogs/config/welcome.py:784 cogs/moderation/modlog.py:255
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr ""
 
@@ -1389,8 +1394,8 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
-#: cogs/config/twitch.py:429 cogs/config/welcome.py:437
-#: cogs/config/welcome.py:559 cogs/config/welcome.py:763
+#: cogs/config/twitch.py:429 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:764
 #: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
 msgid "Channel"
 msgstr ""
@@ -1584,868 +1589,6 @@ msgstr ""
 msgid "Server default language set to **{lang}**."
 msgstr ""
 
-#: cogs/community/level_admin.py:62
-msgid "Reset XP"
-msgstr ""
-
-#: cogs/community/level_admin.py:78
-#, python-brace-format
-msgid "Reset {member}'s XP - they had **{xp} XP**."
-msgstr ""
-
-#: cogs/community/level_admin.py:98 cogs/community/level_admin.py:187
-msgid "Cancelled - no XP was changed."
-msgstr ""
-
-#: cogs/community/level_admin.py:113
-msgid "Confirm full XP reset"
-msgstr ""
-
-#: cogs/community/level_admin.py:118
-msgid "Type the server name to confirm"
-msgstr ""
-
-#: cogs/community/level_admin.py:131
-msgid "That doesn't match the server name - nothing was reset."
-msgstr ""
-
-#: cogs/community/level_admin.py:145
-#, python-brace-format
-msgid "{count} member's XP"
-msgid_plural "{count} members' XP"
-msgstr[0] ""
-msgstr[1] ""
-
-#: cogs/community/level_admin.py:149
-#, python-brace-format
-msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
-msgstr ""
-
-#: cogs/community/level_admin.py:156
-msgid "Something went wrong resetting XP."
-msgstr ""
-
-#: cogs/community/level_admin.py:170
-msgid "Reset ALL XP"
-msgstr ""
-
-#: cogs/community/level_admin.py:264
-msgid "XP updated"
-msgstr ""
-
-#: cogs/community/level_admin.py:266
-#, python-brace-format
-msgid "{member} now has **{xp} XP** (was {old_xp})."
-msgstr ""
-
-#: cogs/community/level_admin.py:270
-msgid "Level up"
-msgstr ""
-
-#: cogs/community/level_admin.py:271 cogs/community/level_admin.py:278
-#, python-brace-format
-msgid "Level {old} -> **{new}**"
-msgstr ""
-
-#: cogs/community/level_admin.py:277
-msgid "Level down"
-msgstr ""
-
-#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1621
-#: cogs/utility/searchweb.py:144
-msgid "Level"
-msgstr ""
-
-#: cogs/community/level_admin.py:285
-#, python-brace-format
-msgid "**{level}** (unchanged)"
-msgstr ""
-
-#: cogs/community/level_admin.py:375
-msgid "Admin XP tools"
-msgstr ""
-
-#: cogs/community/level_admin.py:377
-msgid ""
-"- `/levelconfig xp give <member> <amount>` - add XP\n"
-"- `/levelconfig xp take <member> <amount>` - remove XP\n"
-"- `/levelconfig xp set <member> <amount>` - set an exact total\n"
-"- `/levelconfig xp reset <member>` - reset one member (confirm)\n"
-"- `/levelconfig xp resetall` - reset the whole server (double confirm)"
-msgstr ""
-
-#: cogs/community/level_admin.py:392 cogs/community/level_admin.py:405
-#, python-brace-format
-msgid "The amount must be between {min} and {max}."
-msgstr ""
-
-#: cogs/community/level_admin.py:418
-#, python-brace-format
-msgid "The XP total must be between {min} and {max}."
-msgstr ""
-
-#: cogs/community/level_admin.py:428
-msgid "Reset this member's XP?"
-msgstr ""
-
-#: cogs/community/level_admin.py:430
-#, python-brace-format
-msgid ""
-"This resets {member}'s XP to **0** and removes them from the leaderboard."
-" This can't be undone."
-msgstr ""
-
-#: cogs/community/level_admin.py:445
-msgid "Reset ALL XP in this server?"
-msgstr ""
-
-#: cogs/community/level_admin.py:447
-#, python-brace-format
-msgid ""
-"This wipes **every** member's XP and every weekly/monthly leaderboard for"
-" **{guild}**. This can't be undone.\n"
-"\n"
-"Press the button below, then type the server name to confirm."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:64
-msgid "The message can't be empty."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:66
-#, python-brace-format
-msgid "That message has a stray '{' or '}' - check the placeholders."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:69
-#, python-brace-format
-msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:76
-#, python-brace-format
-msgid "The message is too long (max {max} characters)."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:85
-msgid "Off - level-ups are never announced."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:87
-msgid "DM - the member is messaged directly."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:90
-#, python-brace-format
-msgid "Fixed channel: <#{channel_id}>"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:94
-msgid "Fixed channel (none set yet - falls back to the message's own channel)."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:97
-msgid "Channel - announced where the message was sent."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:102
-#, python-brace-format
-msgid "Custom: \"{template}\""
-msgstr ""
-
-#: cogs/community/level_config_ui.py:103
-#, python-brace-format
-msgid "Default: \"{template}\""
-msgstr ""
-
-#: cogs/community/level_config_ui.py:111
-#, python-brace-format
-msgid "On - {rate} XP per eligible minute in voice."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:114
-msgid "Off - no XP for time spent in voice."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:123
-msgid "The multiplier must be a plain number."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:130
-#, python-brace-format
-msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:145
-#, python-brace-format
-msgid ""
-"The event must last between 1 minute and {max_days} days (e.g. \"2h\" or "
-"\"3d\")."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:149
-msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:163
-#, python-brace-format
-msgid "Server-wide: **{factor}x**"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:169 cogs/community/level_config_ui.py:175
-#: cogs/community/level_config_ui.py:831 cogs/community/level_config_ui.py:837
-#: cogs/config/verification.py:105
-msgid "(deleted)"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:196
-msgid "No XP event running. Use `/levelconfig event set` to start one."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:197
-#, python-brace-format
-msgid "**{factor}x** XP until {when}."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:248
-#, python-brace-format
-msgid "That image is too large - the limit is {mb} MB."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:253
-msgid "That image has too many pixels to process safely - try a smaller picture."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:257
-msgid "Only PNG, JPEG, and WebP images are supported."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:260
-msgid ""
-"That image is too complex to fit under the storage limit - try a simpler "
-"or smaller picture."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:265
-msgid ""
-"I couldn't read that as an image - make sure it's a valid PNG, JPEG, or "
-"WebP file."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:270
-msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:274
-msgid "That image couldn't be used for the rank card."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:355
-msgid "Set rank card accent"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:359
-msgid "Hex colour"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:384
-msgid "Set background..."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:395
-msgid "Reset background"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:407
-msgid "Set accent..."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:417
-msgid "Reset accent"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:430
-msgid "Preview my card"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:476
-#, python-brace-format
-msgid "Rank card - {guild}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:479
-msgid ""
-"Customise the background and accent colour used on this server's /rank "
-"cards."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:488
-#, python-brace-format
-msgid "Set - a custom {width}x{height} background image is used."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:492
-msgid "Not set - the stock panel background is used."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:496
-msgid "Background"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:510
-#, python-brace-format
-msgid "Set - {hex}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:513
-msgid "Default - each member's own role colour is used."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:238
-msgid "Accent colour"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:873
-#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
-#: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
-#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
-msgid "Only you can use these controls"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:875
-#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
-#: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
-#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
-msgid "times out after 3 min"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:564
-#, python-brace-format
-msgid ""
-"To set a background, run `/levelconfig card background` and attach an "
-"image (PNG, JPEG, or WebP; max {mb} MB)."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:681
-msgid "Channel/category"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:682 cogs/community/level_config_ui.py:686
-#: cogs/community/level_config_ui.py:761 cogs/community/level_config_ui.py:765
-msgid "Unknown (deleted)"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:685 cogs/config/buttonroles.py:220
-#: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
-msgid "Role"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:695
-msgid "Pick a no-XP zone to remove..."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:715
-msgid "Removed that no-XP zone."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:756
-msgid "Global boost"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:757
-msgid "Server-wide"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:760
-msgid "Channel/category boost"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:764
-msgid "Role boost"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:774
-msgid "Pick an XP boost to remove..."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:794
-msgid "Removed that XP boost."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:856
-#, python-brace-format
-msgid "No-XP zones | {guild}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:865
-msgid ""
-"No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a "
-"channel, category, or role."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:875 cogs/community/level_config_ui.py:930
-#, python-brace-format
-msgid ""
-"**Channels & categories**\n"
-"{lines}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:885 cogs/community/level_config_ui.py:940
-#, python-brace-format
-msgid ""
-"**Roles**\n"
-"{lines}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:906
-#, python-brace-format
-msgid "XP boosts | {guild}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:915
-msgid ""
-"No XP boosts configured yet. Use `/levelconfig boost add` to boost or "
-"reduce XP globally, per channel, or per role."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:946 cogs/community/level_config_ui.py:1043
-#, python-brace-format
-msgid ""
-"**XP event**\n"
-"{event}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:981
-#, python-brace-format
-msgid "Level config | {guild}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:988
-msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:994
-#, python-brace-format
-msgid ""
-"**No-XP zones ({count}/{max})**\n"
-"{summary}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1004
-#, python-brace-format
-msgid ""
-"**Announce mode**\n"
-"{mode}\n"
-"**Announce message**\n"
-"{template}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1013
-#, python-brace-format
-msgid ""
-"**Voice XP**\n"
-"{voice}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1023
-msgid "No XP boosts configured. Use `/levelconfig boost add`."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1033
-#, python-brace-format
-msgid ""
-"**XP boosts ({count}/{max})**\n"
-"{summary}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1095
-#: cogs/community/level_config_ui.py:1358
-#: cogs/community/level_config_ui.py:1384
-#: cogs/community/level_config_ui.py:1432
-#: cogs/community/level_config_ui.py:1481
-msgid "The leveling system isn't loaded right now."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1196 cogs/config/settings.py:89
-#: cogs/config/settings.py:215
-msgid "Leveling"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1198
-msgid "Leveling enabled for this server."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1200
-msgid "Leveling disabled for this server."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1233
-msgid "Give exactly one of a channel/category or a role."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1238
-msgid "You can't use @everyone as a no-XP zone."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1254
-#: cogs/community/level_config_ui.py:1291
-#, python-brace-format
-msgid "This server already has the maximum of {max} no-XP zones."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1283
-#, python-brace-format
-msgid "{target} is already a no-XP zone."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1300
-msgid "No-XP zone added"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1301
-#, python-brace-format
-msgid "{target} will no longer earn XP."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1315
-msgid "This server has no no-XP zones configured yet."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1319
-msgid "Pick a no-XP zone to remove:"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1353
-msgid "Give a channel when setting the fixed mode."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1366
-msgid "Announce mode updated"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1390
-#, python-brace-format
-msgid "The level-up message was reset to the default: \"{template}\""
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1410
-msgid "Level-up message updated"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1411
-#, python-brace-format
-msgid "Preview: {preview}"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1436
-msgid "Voice XP enabled"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1437
-msgid "Members now earn XP for time spent together in voice."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1440
-msgid ""
-"Heads up: server leveling is off, so no voice XP is granted until you "
-"turn leveling on."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1444
-msgid "Voice XP disabled"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1445
-msgid "Members no longer earn XP for time in voice."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1472
-#, python-brace-format
-msgid "The rate must be between {min} and {max} XP per minute."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1485
-msgid "Voice XP rate updated"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1487
-#, python-brace-format
-msgid "Members now earn **{rate}** XP per eligible minute in voice."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1525
-msgid ""
-"Give at most one of a channel/category or a role - give neither for a "
-"server-wide boost."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1533
-msgid ""
-"You can't target @everyone directly - leave both the channel and role "
-"empty for a server-wide boost instead."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1559
-msgid "the whole server"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1590
-#, python-brace-format
-msgid "This server already has the maximum of {max} XP boosts."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1598
-msgid "XP boost set"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1600
-#, python-brace-format
-msgid "{target} now has a **{factor}x** XP multiplier."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1613
-msgid "This server has no XP boosts configured yet."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1616
-msgid "Pick an XP boost to remove:"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1634
-msgid "XP event"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1709
-msgid "XP event started"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1721
-msgid "The XP event was stopped."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1808
-msgid "I couldn't download that attachment - try again."
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1821
-msgid "Rank card background updated"
-msgstr ""
-
-#: cogs/community/level_config_ui.py:1823
-msgid "This server's /rank cards now use the uploaded image as their background."
-msgstr ""
-
-#: cogs/community/level_rewards.py:66
-msgid "Unknown role (deleted)"
-msgstr ""
-
-#: cogs/community/level_rewards.py:69
-#, python-brace-format
-msgid "Level {level}"
-msgstr ""
-
-#: cogs/community/level_rewards.py:75
-msgid "Pick a reward rule to remove..."
-msgstr ""
-
-#: cogs/community/level_rewards.py:96
-#, python-brace-format
-msgid "Removed the level {level} reward ({role})."
-msgstr ""
-
-#: cogs/community/level_rewards.py:142
-#, python-brace-format
-msgid "Level rewards | {guild}"
-msgstr ""
-
-#: cogs/community/level_rewards.py:146
-msgid "Stack - members keep every role they've earned"
-msgstr ""
-
-#: cogs/community/level_rewards.py:148
-msgid "Replace - members only keep the highest tier they've earned"
-msgstr ""
-
-#: cogs/community/level_rewards.py:151
-#, python-brace-format
-msgid "Mode: **{mode}**"
-msgstr ""
-
-#: cogs/community/level_rewards.py:159
-msgid ""
-"No level rewards configured yet. Use `/levelconfig rewards add` to create"
-" one."
-msgstr ""
-
-#: cogs/community/level_rewards.py:167
-#, python-brace-format
-msgid "**Level {level}** -> {roles}"
-msgstr ""
-
-#: cogs/community/level_rewards.py:389
-msgid "That role isn't from this server."
-msgstr ""
-
-#: cogs/community/level_rewards.py:392
-msgid "You can't use @everyone as a level reward."
-msgstr ""
-
-#: cogs/community/level_rewards.py:395
-msgid "The level must be 1 or higher."
-msgstr ""
-
-#: cogs/community/level_rewards.py:408 cogs/community/level_rewards.py:449
-#, python-brace-format
-msgid "This server already has the maximum of {max} level rewards."
-msgstr ""
-
-#: cogs/community/level_rewards.py:441
-#, python-brace-format
-msgid "{role} is already a level {level} reward."
-msgstr ""
-
-#: cogs/community/level_rewards.py:456
-#, python-brace-format
-msgid "Added a level reward: reach level **{level}** to receive {role}."
-msgstr ""
-
-#: cogs/community/level_rewards.py:462
-msgid ""
-"I can add it, but that role is above me - move my role up so I can "
-"actually assign it."
-msgstr ""
-
-#: cogs/community/level_rewards.py:467
-msgid "Level reward added"
-msgstr ""
-
-#: cogs/community/level_rewards.py:478
-msgid "This server has no level rewards configured yet."
-msgstr ""
-
-#: cogs/community/level_rewards.py:483
-msgid "Pick a reward rule to remove:"
-msgstr ""
-
-#: cogs/community/level_rewards.py:519
-msgid ""
-"Members now keep only the roles from the highest level reward they've "
-"reached."
-msgstr ""
-
-#: cogs/community/level_rewards.py:524
-msgid "Members now keep every level reward role they've ever earned."
-msgstr ""
-
-#: cogs/community/level_rewards.py:528
-msgid "Reward mode updated"
-msgstr ""
-
-#: cogs/community/leveling.py:142
-#, python-brace-format
-msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
-msgstr ""
-
-#: cogs/community/leveling.py:148
-#, python-brace-format
-msgid "**#{rank}** {name} - {xp} XP"
-msgstr ""
-
-#: cogs/community/leveling.py:158
-#, python-brace-format
-msgid ""
-"{marker} **{name}**\n"
-"Level **{level}** - {xp} XP"
-msgstr ""
-
-#: cogs/community/leveling.py:165
-#, python-brace-format
-msgid ""
-"{marker} **{name}**\n"
-"{xp} XP"
-msgstr ""
-
-#: cogs/community/leveling.py:213
-#, python-brace-format
-msgid "{count} member"
-msgid_plural "{count} members"
-msgstr[0] ""
-msgstr[1] ""
-
-#: cogs/community/leveling.py:217
-#, python-brace-format
-msgid "-# Page {page}/{pages} - {members}"
-msgstr ""
-
-#: cogs/community/leveling.py:226 cogs/community/reminders.py:333
-#: cogs/community/seasons_views.py:163 cogs/music/views.py:1303
-msgid "Prev"
-msgstr ""
-
-#: cogs/community/leveling.py:1200
-#, python-brace-format
-msgid "{base} ... and earned {roles}"
-msgstr ""
-
-#: cogs/community/leveling.py:1208
-#, python-brace-format
-msgid "{user} reached level **{level}**! ... and earned {roles}"
-msgstr ""
-
-#: cogs/community/leveling.py:1215
-#, python-brace-format
-msgid "{user} reached level **{level}**!"
-msgstr ""
-
-#: cogs/community/leveling.py:1616
-#, python-brace-format
-msgid "Rank | {name}"
-msgstr ""
-
-#: cogs/community/leveling.py:1620 cogs/utility/searchweb.py:141
-msgid "Rank"
-msgstr ""
-
-#: cogs/community/leveling.py:1622
-msgid "XP"
-msgstr ""
-
-#: cogs/community/leveling.py:1624
-msgid "XP for next level"
-msgstr ""
-
-#: cogs/community/leveling.py:1652
-#, python-brace-format
-msgid "Leaderboard | {guild}"
-msgstr ""
-
-#: cogs/community/leveling.py:1657
-msgid "No one has earned any XP yet!"
-msgstr ""
-
-#: cogs/community/leveling.py:1671 cogs/community/leveling.py:1726
-#, python-brace-format
-msgid "User {uid}"
-msgstr ""
-
-#: cogs/community/leveling.py:1705
-#, python-brace-format
-msgid "Weekly leaderboard | {guild}"
-msgstr ""
-
-#: cogs/community/leveling.py:1706
-msgid "No one has earned any XP this week yet!"
-msgstr ""
-
-#: cogs/community/leveling.py:1708
-#, python-brace-format
-msgid "Monthly leaderboard | {guild}"
-msgstr ""
-
-#: cogs/community/leveling.py:1711
-msgid "No one has earned any XP this month yet!"
-msgstr ""
-
 #: cogs/community/reminders.py:68 cogs/community/reminders.py:173
 msgid "Set a reminder"
 msgstr ""
@@ -2460,7 +1603,7 @@ msgstr ""
 
 #: cogs/community/reminders.py:84 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:446 cogs/config/welcome.py:765
+#: cogs/config/twitch.py:446 cogs/config/welcome.py:766
 msgid "Message"
 msgstr ""
 
@@ -2539,6 +1682,12 @@ msgstr ""
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr ""
 
+#: cogs/community/leveling/leveling.py:229
+#: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:333
+#: cogs/music/views.py:1303
+msgid "Prev"
+msgstr ""
+
 #: cogs/community/reminders.py:631
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
@@ -2546,117 +1695,6 @@ msgstr ""
 
 #: cogs/community/reminders.py:703
 msgid "Tap the button below to set a reminder."
-msgstr ""
-
-#: cogs/community/seasons.py:684
-#, python-brace-format
-msgid "**Season {month} is over!** Here is the final podium:"
-msgstr ""
-
-#: cogs/community/seasons.py:690
-#, python-brace-format
-msgid "{medal} {user} - {xp} XP"
-msgstr ""
-
-#: cogs/community/seasons.py:698
-#, python-brace-format
-msgid "{user} is the new season champion and receives {role}."
-msgstr ""
-
-#: cogs/community/seasons.py:773
-msgid "No leveling season has closed here yet - check back next month."
-msgstr ""
-
-#: cogs/community/seasons_views.py:117
-#, python-brace-format
-msgid "{marker} <@{user_id}> - {xp} XP"
-msgstr ""
-
-#: cogs/community/seasons_views.py:127
-#, python-brace-format
-msgid "Hall of fame - {guild}"
-msgstr ""
-
-#: cogs/community/seasons_views.py:134
-#, python-brace-format
-msgid "Season {month}"
-msgstr ""
-
-#: cogs/community/seasons_views.py:145
-msgid "No podium recorded for this season."
-msgstr ""
-
-#: cogs/community/seasons_views.py:268
-msgid "None set - no role is granted for winning a season."
-msgstr ""
-
-#: cogs/community/seasons_views.py:276
-msgid "Off - the season podium is never announced."
-msgstr ""
-
-#: cogs/community/seasons_views.py:278
-#, python-brace-format
-msgid "On - posted in <#{channel_id}> when a season closes."
-msgstr ""
-
-#: cogs/community/seasons_views.py:285
-msgid ""
-"On, but no fixed announce channel is configured, so nothing will actually"
-" be posted. Set one with `/levelconfig announce mode`."
-msgstr ""
-
-#: cogs/community/seasons_views.py:297
-msgid "Pick the season champion role..."
-msgstr ""
-
-#: cogs/community/seasons_views.py:310
-msgid "Clear role"
-msgstr ""
-
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:335
-msgid "Turn off"
-msgstr ""
-
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:335
-msgid "Turn on"
-msgstr ""
-
-#: cogs/community/seasons_views.py:373
-#, python-brace-format
-msgid "Seasons - {guild}"
-msgstr ""
-
-#: cogs/community/seasons_views.py:376
-msgid ""
-"Configure the role handed to each season's champion and whether the "
-"podium is announced when a season closes."
-msgstr ""
-
-#: cogs/community/seasons_views.py:386
-msgid "Season champion role"
-msgstr ""
-
-#: cogs/community/seasons_views.py:411
-msgid "Season announce"
-msgstr ""
-
-#: cogs/community/seasons_views.py:442
-#, python-brace-format
-msgid ""
-"I can't manage {role} (it's above my top role, managed by an integration,"
-" or @everyone). Pick another role."
-msgstr ""
-
-#: cogs/community/seasons_views.py:454 cogs/community/seasons_views.py:466
-#: cogs/community/seasons_views.py:491 cogs/moderation/automod_panel.py:415
-#: cogs/moderation/warn_config.py:456
-msgid "Something went wrong updating the panel."
-msgstr ""
-
-#: cogs/community/seasons_views.py:479
-msgid ""
-"Set a fixed announce channel first with `/levelconfig announce mode` "
-"before turning the season announce on."
 msgstr ""
 
 #: cogs/community/usersettings.py:87
@@ -2760,6 +1798,16 @@ msgstr ""
 msgid "Avatar history deletion cancelled."
 msgstr ""
 
+#: cogs/community/leveling/seasons_views.py:324
+#: cogs/community/usersettings.py:335
+msgid "Turn off"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:324
+#: cogs/community/usersettings.py:335
+msgid "Turn on"
+msgstr ""
+
 #: cogs/community/usersettings.py:419
 msgid "## Your preferences"
 msgstr ""
@@ -2834,6 +1882,985 @@ msgid ""
 "This permanently deletes every saved global avatar, server avatar and "
 "banner for your account. It also turns future tracking off. This cannot "
 "be undone."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:64
+msgid "Reset XP"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:80
+#, python-brace-format
+msgid "Reset {member}'s XP - they had **{xp} XP**."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:100
+#: cogs/community/leveling/level_admin.py:189
+msgid "Cancelled - no XP was changed."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:115
+msgid "Confirm full XP reset"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:120
+msgid "Type the server name to confirm"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:133
+msgid "That doesn't match the server name - nothing was reset."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:147
+#, python-brace-format
+msgid "{count} member's XP"
+msgid_plural "{count} members' XP"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/leveling/level_admin.py:151
+#, python-brace-format
+msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:158
+msgid "Something went wrong resetting XP."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:172
+msgid "Reset ALL XP"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:266
+msgid "XP updated"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:268
+#, python-brace-format
+msgid "{member} now has **{xp} XP** (was {old_xp})."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:272
+msgid "Level up"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:273
+#: cogs/community/leveling/level_admin.py:280
+#, python-brace-format
+msgid "Level {old} -> **{new}**"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:279
+msgid "Level down"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:286
+#: cogs/community/leveling/leveling.py:1624 cogs/utility/searchweb.py:144
+msgid "Level"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:287
+#, python-brace-format
+msgid "**{level}** (unchanged)"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:377
+msgid "Admin XP tools"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:379
+msgid ""
+"- `/levelconfig xp give <member> <amount>` - add XP\n"
+"- `/levelconfig xp take <member> <amount>` - remove XP\n"
+"- `/levelconfig xp set <member> <amount>` - set an exact total\n"
+"- `/levelconfig xp reset <member>` - reset one member (confirm)\n"
+"- `/levelconfig xp resetall` - reset the whole server (double confirm)"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:394
+#: cogs/community/leveling/level_admin.py:407
+#, python-brace-format
+msgid "The amount must be between {min} and {max}."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:420
+#, python-brace-format
+msgid "The XP total must be between {min} and {max}."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:430
+msgid "Reset this member's XP?"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:432
+#, python-brace-format
+msgid ""
+"This resets {member}'s XP to **0** and removes them from the leaderboard."
+" This can't be undone."
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:447
+msgid "Reset ALL XP in this server?"
+msgstr ""
+
+#: cogs/community/leveling/level_admin.py:449
+#, python-brace-format
+msgid ""
+"This wipes **every** member's XP and every weekly/monthly leaderboard for"
+" **{guild}**. This can't be undone.\n"
+"\n"
+"Press the button below, then type the server name to confirm."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:66
+msgid "The message can't be empty."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:68
+#, python-brace-format
+msgid "That message has a stray '{' or '}' - check the placeholders."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:71
+#, python-brace-format
+msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:78
+#, python-brace-format
+msgid "The message is too long (max {max} characters)."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:87
+msgid "Off - level-ups are never announced."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:89
+msgid "DM - the member is messaged directly."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:92
+#, python-brace-format
+msgid "Fixed channel: <#{channel_id}>"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:96
+msgid "Fixed channel (none set yet - falls back to the message's own channel)."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:99
+msgid "Channel - announced where the message was sent."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:104
+#, python-brace-format
+msgid "Custom: \"{template}\""
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:105
+#, python-brace-format
+msgid "Default: \"{template}\""
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:113
+#, python-brace-format
+msgid "On - {rate} XP per eligible minute in voice."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:116
+msgid "Off - no XP for time spent in voice."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:125
+msgid "The multiplier must be a plain number."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:132
+#, python-brace-format
+msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:147
+#, python-brace-format
+msgid ""
+"The event must last between 1 minute and {max_days} days (e.g. \"2h\" or "
+"\"3d\")."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:151
+msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:165
+#, python-brace-format
+msgid "Server-wide: **{factor}x**"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:171
+#: cogs/community/leveling/level_config_ui.py:177
+#: cogs/community/leveling/level_config_ui.py:833
+#: cogs/community/leveling/level_config_ui.py:839
+#: cogs/config/verification.py:105
+msgid "(deleted)"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:198
+msgid "No XP event running. Use `/levelconfig event set` to start one."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:199
+#, python-brace-format
+msgid "**{factor}x** XP until {when}."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:250
+#, python-brace-format
+msgid "That image is too large - the limit is {mb} MB."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:255
+msgid "That image has too many pixels to process safely - try a smaller picture."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:259
+msgid "Only PNG, JPEG, and WebP images are supported."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:262
+msgid ""
+"That image is too complex to fit under the storage limit - try a simpler "
+"or smaller picture."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:267
+msgid ""
+"I couldn't read that as an image - make sure it's a valid PNG, JPEG, or "
+"WebP file."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:272
+msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:276
+msgid "That image couldn't be used for the rank card."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:357
+msgid "Set rank card accent"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:361
+msgid "Hex colour"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:386
+msgid "Set background..."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:397
+msgid "Reset background"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:409
+msgid "Set accent..."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:419
+msgid "Reset accent"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:432
+msgid "Preview my card"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:478
+#, python-brace-format
+msgid "Rank card - {guild}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:481
+msgid ""
+"Customise the background and accent colour used on this server's /rank "
+"cards."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:490
+#, python-brace-format
+msgid "Set - a custom {width}x{height} background image is used."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:494
+msgid "Not set - the stock panel background is used."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:498
+msgid "Background"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:512
+#, python-brace-format
+msgid "Set - {hex}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:515
+msgid "Default - each member's own role colour is used."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:519
+#: cogs/community/profile/registry.py:238
+msgid "Accent colour"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:537
+#: cogs/community/leveling/seasons_views.py:186
+#: cogs/community/leveling/seasons_views.py:427
+#: cogs/community/profile/views.py:873 cogs/community/serverstats/views.py:550
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
+msgid "Only you can use these controls"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:539
+#: cogs/community/leveling/seasons_views.py:188
+#: cogs/community/leveling/seasons_views.py:429
+#: cogs/community/profile/views.py:875 cogs/community/serverstats/views.py:552
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
+msgid "times out after 3 min"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:566
+#, python-brace-format
+msgid ""
+"To set a background, run `/levelconfig card background` and attach an "
+"image (PNG, JPEG, or WebP; max {mb} MB)."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:683
+msgid "Channel/category"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:684
+#: cogs/community/leveling/level_config_ui.py:688
+#: cogs/community/leveling/level_config_ui.py:763
+#: cogs/community/leveling/level_config_ui.py:767
+msgid "Unknown (deleted)"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:687
+#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:53
+#: cogs/config/reactionroles.py:184
+msgid "Role"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:697
+msgid "Pick a no-XP zone to remove..."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:717
+msgid "Removed that no-XP zone."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:758
+msgid "Global boost"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:759
+msgid "Server-wide"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:762
+msgid "Channel/category boost"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:766
+msgid "Role boost"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:776
+msgid "Pick an XP boost to remove..."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:796
+msgid "Removed that XP boost."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:858
+#, python-brace-format
+msgid "No-XP zones | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:867
+msgid ""
+"No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a "
+"channel, category, or role."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:877
+#: cogs/community/leveling/level_config_ui.py:932
+#, python-brace-format
+msgid ""
+"**Channels & categories**\n"
+"{lines}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:887
+#: cogs/community/leveling/level_config_ui.py:942
+#, python-brace-format
+msgid ""
+"**Roles**\n"
+"{lines}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:908
+#, python-brace-format
+msgid "XP boosts | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:917
+msgid ""
+"No XP boosts configured yet. Use `/levelconfig boost add` to boost or "
+"reduce XP globally, per channel, or per role."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:948
+#: cogs/community/leveling/level_config_ui.py:1045
+#, python-brace-format
+msgid ""
+"**XP event**\n"
+"{event}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:983
+#, python-brace-format
+msgid "Level config | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:990
+msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:996
+#, python-brace-format
+msgid ""
+"**No-XP zones ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1006
+#, python-brace-format
+msgid ""
+"**Announce mode**\n"
+"{mode}\n"
+"**Announce message**\n"
+"{template}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1015
+#, python-brace-format
+msgid ""
+"**Voice XP**\n"
+"{voice}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1025
+msgid "No XP boosts configured. Use `/levelconfig boost add`."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1035
+#, python-brace-format
+msgid ""
+"**XP boosts ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1097
+#: cogs/community/leveling/level_config_ui.py:1360
+#: cogs/community/leveling/level_config_ui.py:1386
+#: cogs/community/leveling/level_config_ui.py:1434
+#: cogs/community/leveling/level_config_ui.py:1483
+msgid "The leveling system isn't loaded right now."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1198 cogs/config/settings.py:89
+#: cogs/config/settings.py:215
+msgid "Leveling"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1200
+msgid "Leveling enabled for this server."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1202
+msgid "Leveling disabled for this server."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1235
+msgid "Give exactly one of a channel/category or a role."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1240
+msgid "You can't use @everyone as a no-XP zone."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1256
+#: cogs/community/leveling/level_config_ui.py:1293
+#, python-brace-format
+msgid "This server already has the maximum of {max} no-XP zones."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1285
+#, python-brace-format
+msgid "{target} is already a no-XP zone."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1302
+msgid "No-XP zone added"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1303
+#, python-brace-format
+msgid "{target} will no longer earn XP."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1317
+msgid "This server has no no-XP zones configured yet."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1321
+msgid "Pick a no-XP zone to remove:"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1355
+msgid "Give a channel when setting the fixed mode."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1368
+msgid "Announce mode updated"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1392
+#, python-brace-format
+msgid "The level-up message was reset to the default: \"{template}\""
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1412
+msgid "Level-up message updated"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1413
+#, python-brace-format
+msgid "Preview: {preview}"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1438
+msgid "Voice XP enabled"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1439
+msgid "Members now earn XP for time spent together in voice."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1442
+msgid ""
+"Heads up: server leveling is off, so no voice XP is granted until you "
+"turn leveling on."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1446
+msgid "Voice XP disabled"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1447
+msgid "Members no longer earn XP for time in voice."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1474
+#, python-brace-format
+msgid "The rate must be between {min} and {max} XP per minute."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1487
+msgid "Voice XP rate updated"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1489
+#, python-brace-format
+msgid "Members now earn **{rate}** XP per eligible minute in voice."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1527
+msgid ""
+"Give at most one of a channel/category or a role - give neither for a "
+"server-wide boost."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1535
+msgid ""
+"You can't target @everyone directly - leave both the channel and role "
+"empty for a server-wide boost instead."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1561
+msgid "the whole server"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1592
+#, python-brace-format
+msgid "This server already has the maximum of {max} XP boosts."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1600
+msgid "XP boost set"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1602
+#, python-brace-format
+msgid "{target} now has a **{factor}x** XP multiplier."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1615
+msgid "This server has no XP boosts configured yet."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1618
+msgid "Pick an XP boost to remove:"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1636
+msgid "XP event"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1711
+msgid "XP event started"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1723
+msgid "The XP event was stopped."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1810
+msgid "I couldn't download that attachment - try again."
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1823
+msgid "Rank card background updated"
+msgstr ""
+
+#: cogs/community/leveling/level_config_ui.py:1825
+msgid "This server's /rank cards now use the uploaded image as their background."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:66
+msgid "Unknown role (deleted)"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:69
+#, python-brace-format
+msgid "Level {level}"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:75
+msgid "Pick a reward rule to remove..."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:96
+#, python-brace-format
+msgid "Removed the level {level} reward ({role})."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:142
+#, python-brace-format
+msgid "Level rewards | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:146
+msgid "Stack - members keep every role they've earned"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:148
+msgid "Replace - members only keep the highest tier they've earned"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:151
+#, python-brace-format
+msgid "Mode: **{mode}**"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:159
+msgid ""
+"No level rewards configured yet. Use `/levelconfig rewards add` to create"
+" one."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:167
+#, python-brace-format
+msgid "**Level {level}** -> {roles}"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:389
+msgid "That role isn't from this server."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:392
+msgid "You can't use @everyone as a level reward."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:395
+msgid "The level must be 1 or higher."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:408
+#: cogs/community/leveling/level_rewards.py:449
+#, python-brace-format
+msgid "This server already has the maximum of {max} level rewards."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:441
+#, python-brace-format
+msgid "{role} is already a level {level} reward."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:456
+#, python-brace-format
+msgid "Added a level reward: reach level **{level}** to receive {role}."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:462
+msgid ""
+"I can add it, but that role is above me - move my role up so I can "
+"actually assign it."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:467
+msgid "Level reward added"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:478
+msgid "This server has no level rewards configured yet."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:483
+msgid "Pick a reward rule to remove:"
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:519
+msgid ""
+"Members now keep only the roles from the highest level reward they've "
+"reached."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:524
+msgid "Members now keep every level reward role they've ever earned."
+msgstr ""
+
+#: cogs/community/leveling/level_rewards.py:528
+msgid "Reward mode updated"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:145
+#, python-brace-format
+msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:151
+#, python-brace-format
+msgid "**#{rank}** {name} - {xp} XP"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:161
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"Level **{level}** - {xp} XP"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:168
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"{xp} XP"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:216
+#, python-brace-format
+msgid "{count} member"
+msgid_plural "{count} members"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/leveling/leveling.py:220
+#, python-brace-format
+msgid "-# Page {page}/{pages} - {members}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1203
+#, python-brace-format
+msgid "{base} ... and earned {roles}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1211
+#, python-brace-format
+msgid "{user} reached level **{level}**! ... and earned {roles}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1218
+#, python-brace-format
+msgid "{user} reached level **{level}**!"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1619
+#, python-brace-format
+msgid "Rank | {name}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1623 cogs/utility/searchweb.py:141
+msgid "Rank"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1625
+msgid "XP"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1627
+msgid "XP for next level"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1655
+#, python-brace-format
+msgid "Leaderboard | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1660
+msgid "No one has earned any XP yet!"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1674
+#: cogs/community/leveling/leveling.py:1729
+#, python-brace-format
+msgid "User {uid}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1708
+#, python-brace-format
+msgid "Weekly leaderboard | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1709
+msgid "No one has earned any XP this week yet!"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1711
+#, python-brace-format
+msgid "Monthly leaderboard | {guild}"
+msgstr ""
+
+#: cogs/community/leveling/leveling.py:1714
+msgid "No one has earned any XP this month yet!"
+msgstr ""
+
+#: cogs/community/leveling/seasons.py:685
+#, python-brace-format
+msgid "**Season {month} is over!** Here is the final podium:"
+msgstr ""
+
+#: cogs/community/leveling/seasons.py:691
+#, python-brace-format
+msgid "{medal} {user} - {xp} XP"
+msgstr ""
+
+#: cogs/community/leveling/seasons.py:699
+#, python-brace-format
+msgid "{user} is the new season champion and receives {role}."
+msgstr ""
+
+#: cogs/community/leveling/seasons.py:774
+msgid "No leveling season has closed here yet - check back next month."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:118
+#, python-brace-format
+msgid "{marker} <@{user_id}> - {xp} XP"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:128
+#, python-brace-format
+msgid "Hall of fame - {guild}"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:135
+#, python-brace-format
+msgid "Season {month}"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:146
+msgid "No podium recorded for this season."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:269
+msgid "None set - no role is granted for winning a season."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:277
+msgid "Off - the season podium is never announced."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:279
+#, python-brace-format
+msgid "On - posted in <#{channel_id}> when a season closes."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:286
+msgid ""
+"On, but no fixed announce channel is configured, so nothing will actually"
+" be posted. Set one with `/levelconfig announce mode`."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:298
+msgid "Pick the season champion role..."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:311
+msgid "Clear role"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:374
+#, python-brace-format
+msgid "Seasons - {guild}"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:377
+msgid ""
+"Configure the role handed to each season's champion and whether the "
+"podium is announced when a season closes."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:387
+msgid "Season champion role"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:412
+msgid "Season announce"
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:443
+#, python-brace-format
+msgid ""
+"I can't manage {role} (it's above my top role, managed by an integration,"
+" or @everyone). Pick another role."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:455
+#: cogs/community/leveling/seasons_views.py:467
+#: cogs/community/leveling/seasons_views.py:492
+#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
+msgid "Something went wrong updating the panel."
+msgstr ""
+
+#: cogs/community/leveling/seasons_views.py:480
+msgid ""
+"Set a fixed announce channel first with `/levelconfig announce mode` "
+"before turning the season announce on."
 msgstr ""
 
 #: cogs/community/profile/cog.py:348
@@ -3407,7 +3434,7 @@ msgid "Ping a role (optional)..."
 msgstr ""
 
 #: cogs/config/announcements.py:115 cogs/config/twitch.py:291
-#: cogs/config/welcome.py:188
+#: cogs/config/welcome.py:189
 msgid "Preview"
 msgstr ""
 
@@ -3417,7 +3444,7 @@ msgid "Add some content to the embed first."
 msgstr ""
 
 #: cogs/config/announcements.py:128 cogs/config/twitch.py:300
-#: cogs/config/welcome.py:197
+#: cogs/config/welcome.py:198
 msgid "Could not render the preview."
 msgstr ""
 
@@ -3468,13 +3495,13 @@ msgstr ""
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
-#: cogs/config/verification.py:107 cogs/config/welcome.py:421
-#: cogs/config/welcome.py:542 cogs/moderation/modlog.py:251
+#: cogs/config/verification.py:107 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr ""
 
-#: cogs/config/announcements.py:273 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:478 cogs/config/welcome.py:568
+#: cogs/config/announcements.py:273 cogs/config/welcome.py:453
+#: cogs/config/welcome.py:479 cogs/config/welcome.py:569
 msgid "Ping"
 msgstr ""
 
@@ -3485,7 +3512,7 @@ msgstr ""
 
 #: cogs/config/announcements.py:278 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:416 cogs/config/twitch.py:459
-#: cogs/config/welcome.py:461 cogs/config/welcome.py:582
+#: cogs/config/welcome.py:462 cogs/config/welcome.py:583
 msgid "Embed"
 msgstr ""
 
@@ -3513,7 +3540,7 @@ msgstr ""
 msgid "Announcement sent to {channel}."
 msgstr ""
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:544
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:545
 msgid "Scheduling is unavailable right now."
 msgstr ""
 
@@ -3675,7 +3702,7 @@ msgstr ""
 msgid "Your button-role panel is live in {channel}."
 msgstr ""
 
-#: cogs/config/buttonroles.py:693 cogs/moderation/moderation.py:718
+#: cogs/config/buttonroles.py:693 cogs/moderation/moderation.py:719
 msgid "Skipped"
 msgstr ""
 
@@ -4699,7 +4726,7 @@ msgid "Role granted to new members"
 msgstr ""
 
 #: cogs/config/settings.py:107 cogs/config/settings.py:224
-#: cogs/moderation/automod.py:94
+#: cogs/moderation/automod.py:95
 msgid "AutoMod"
 msgstr ""
 
@@ -4978,7 +5005,7 @@ msgstr ""
 msgid "Edit the alert embed..."
 msgstr ""
 
-#: cogs/config/twitch.py:486 cogs/config/welcome.py:489
+#: cogs/config/twitch.py:486 cogs/config/welcome.py:490
 #, python-brace-format
 msgid "Only you can use these controls. Placeholders: {placeholders}"
 msgstr ""
@@ -5121,130 +5148,130 @@ msgstr ""
 msgid "Verification disabled."
 msgstr ""
 
-#: cogs/config/welcome.py:83
+#: cogs/config/welcome.py:84
 msgid "Add a GIF"
 msgstr ""
 
-#: cogs/config/welcome.py:86
+#: cogs/config/welcome.py:87
 msgid "GIF or image URL"
 msgstr ""
 
-#: cogs/config/welcome.py:98
+#: cogs/config/welcome.py:99
 msgid "That doesn't look like a valid URL."
 msgstr ""
 
-#: cogs/config/welcome.py:127
+#: cogs/config/welcome.py:128
 msgid "Select the welcome channel..."
 msgstr ""
 
-#: cogs/config/welcome.py:174
+#: cogs/config/welcome.py:175
 msgid "Manage GIFs"
 msgstr ""
 
-#: cogs/config/welcome.py:238
+#: cogs/config/welcome.py:239
 msgid "GIF"
 msgstr ""
 
-#: cogs/config/welcome.py:244
+#: cogs/config/welcome.py:245
 msgid "Remove a GIF..."
 msgstr ""
 
-#: cogs/config/welcome.py:269
+#: cogs/config/welcome.py:270
 msgid "Add GIF"
 msgstr ""
 
-#: cogs/config/welcome.py:277
+#: cogs/config/welcome.py:278
 msgid "Could not open the form."
 msgstr ""
 
-#: cogs/config/welcome.py:298
+#: cogs/config/welcome.py:299
 msgid "Manage welcome GIFs"
 msgstr ""
 
-#: cogs/config/welcome.py:301
+#: cogs/config/welcome.py:302
 msgid ""
 "Add image/GIF URLs to the random pool, or remove one below. Turn on "
 "**Random GIF** on the main panel to use the pool."
 msgstr ""
 
-#: cogs/config/welcome.py:310
+#: cogs/config/welcome.py:311
 #, python-brace-format
 msgid "...and {count} more"
 msgstr ""
 
-#: cogs/config/welcome.py:315
+#: cogs/config/welcome.py:316
 #, python-brace-format
 msgid "Pool ({count})"
 msgstr ""
 
-#: cogs/config/welcome.py:324
+#: cogs/config/welcome.py:325
 msgid "Pool (0)"
 msgstr ""
 
-#: cogs/config/welcome.py:326
+#: cogs/config/welcome.py:327
 msgid "No GIFs yet. Add one to build the random pool."
 msgstr ""
 
-#: cogs/config/welcome.py:429
+#: cogs/config/welcome.py:430
 msgid "Welcome system"
 msgstr ""
 
-#: cogs/config/welcome.py:431
+#: cogs/config/welcome.py:432
 msgid ""
 "Design the greeting new members receive. Use the menus below; every "
 "change saves instantly. Hit **Preview** to see it live."
 msgstr ""
 
-#: cogs/config/welcome.py:441 cogs/config/welcome.py:572
+#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
 msgid "GIF pool"
 msgstr ""
 
-#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:574
 #, python-brace-format
 msgid "{count} saved"
 msgstr ""
 
-#: cogs/config/welcome.py:448 cogs/config/welcome.py:476
-#: cogs/config/welcome.py:564
+#: cogs/config/welcome.py:449 cogs/config/welcome.py:477
+#: cogs/config/welcome.py:565
 msgid "Card"
 msgstr ""
 
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:477
-#: cogs/config/welcome.py:566
+#: cogs/config/welcome.py:451 cogs/config/welcome.py:478
+#: cogs/config/welcome.py:567
 msgid "Random GIF"
 msgstr ""
 
-#: cogs/config/welcome.py:470
+#: cogs/config/welcome.py:471
 msgid "Edit the welcome embed..."
 msgstr ""
 
-#: cogs/config/welcome.py:551
+#: cogs/config/welcome.py:552
 #, python-brace-format
 msgid "Welcome | {guild}"
 msgstr ""
 
-#: cogs/config/welcome.py:589
+#: cogs/config/welcome.py:590
 msgid "Use `/welcome` to open the full builder."
 msgstr ""
 
-#: cogs/config/welcome.py:677
+#: cogs/config/welcome.py:678
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr ""
 
-#: cogs/config/welcome.py:762 cogs/config/welcome.py:782
+#: cogs/config/welcome.py:763 cogs/config/welcome.py:783
 msgid "Welcome message"
 msgstr ""
 
-#: cogs/config/welcome.py:769
+#: cogs/config/welcome.py:770
 msgid "Use /welcome to open the full builder."
 msgstr ""
 
-#: cogs/config/welcome.py:785
+#: cogs/config/welcome.py:786
 msgid "Welcome messages have been turned off."
 msgstr ""
 
-#: cogs/config/welcome.py:861
+#: cogs/config/welcome.py:862
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr ""
@@ -5492,34 +5519,34 @@ msgstr ""
 msgid "~{wpm:.0f} WPM"
 msgstr ""
 
-#: cogs/moderation/automod.py:95
+#: cogs/moderation/automod.py:96
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr ""
 
-#: cogs/moderation/automod.py:108
+#: cogs/moderation/automod.py:109
 msgid "Link filtering"
 msgstr ""
 
-#: cogs/moderation/automod.py:117
+#: cogs/moderation/automod.py:118
 msgid "Invite filtering"
 msgstr ""
 
-#: cogs/moderation/automod.py:126
+#: cogs/moderation/automod.py:127
 msgid "Spam filtering"
 msgstr ""
 
-#: cogs/moderation/automod.py:439
+#: cogs/moderation/automod.py:440
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr ""
 
-#: cogs/moderation/automod.py:449
+#: cogs/moderation/automod.py:450
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr ""
 
-#: cogs/moderation/automod.py:476
+#: cogs/moderation/automod.py:477
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr ""
@@ -5707,58 +5734,58 @@ msgstr ""
 msgid "The blacklist is empty."
 msgstr ""
 
-#: cogs/moderation/moderation.py:93
+#: cogs/moderation/moderation.py:94
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:109
+#: cogs/moderation/moderation.py:110
 msgid "New reason"
 msgstr ""
 
-#: cogs/moderation/moderation.py:117
+#: cogs/moderation/moderation.py:118
 msgid "The reason can't be empty."
 msgstr ""
 
-#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1138
-#: cogs/moderation/moderation.py:1211 cogs/moderation/moderation.py:1233
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1139
+#: cogs/moderation/moderation.py:1212 cogs/moderation/moderation.py:1234
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr ""
 
-#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1239
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1240
 msgid "Updated by"
 msgstr ""
 
-#: cogs/moderation/moderation.py:147
+#: cogs/moderation/moderation.py:148
 msgid "Sorry, I couldn't update that reason."
 msgstr ""
 
-#: cogs/moderation/moderation.py:165
+#: cogs/moderation/moderation.py:166
 msgid "## New Members"
 msgstr ""
 
-#: cogs/moderation/moderation.py:170
+#: cogs/moderation/moderation.py:171
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
 "joined {joined}, created {created}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:207
+#: cogs/moderation/moderation.py:208
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:367
+#: cogs/moderation/moderation.py:368
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:373
+#: cogs/moderation/moderation.py:374
 msgid "**🔴 Voice Kick Info**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:375
+#: cogs/moderation/moderation.py:376
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -5766,248 +5793,248 @@ msgid ""
 "Time: **{time}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:408
+#: cogs/moderation/moderation.py:409
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:432
+#: cogs/moderation/moderation.py:433
 msgid "Confirm ban"
 msgstr ""
 
-#: cogs/moderation/moderation.py:433
+#: cogs/moderation/moderation.py:434
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr ""
 
-#: cogs/moderation/moderation.py:438 cogs/moderation/moderation.py:653
-#: cogs/moderation/moderation.py:719
+#: cogs/moderation/moderation.py:439 cogs/moderation/moderation.py:654
+#: cogs/moderation/moderation.py:720
 msgid "Reason"
 msgstr ""
 
-#: cogs/moderation/moderation.py:443
+#: cogs/moderation/moderation.py:444
 msgid "Ban cancelled"
 msgstr ""
 
-#: cogs/moderation/moderation.py:444
+#: cogs/moderation/moderation.py:445
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr ""
 
-#: cogs/moderation/moderation.py:550
+#: cogs/moderation/moderation.py:551
 msgid "I don't have permission to ban that member."
 msgstr ""
 
-#: cogs/moderation/moderation.py:553
+#: cogs/moderation/moderation.py:554
 msgid "Sorry, I couldn't ban that member."
 msgstr ""
 
-#: cogs/moderation/moderation.py:584
+#: cogs/moderation/moderation.py:585
 msgid ""
 "The temporary ban could not be scheduled and the rollback failed. Please "
 "unban that user manually."
 msgstr ""
 
-#: cogs/moderation/moderation.py:589
+#: cogs/moderation/moderation.py:590
 msgid "The temporary ban could not be scheduled, so I rolled it back."
 msgstr ""
 
-#: cogs/moderation/moderation.py:616
+#: cogs/moderation/moderation.py:617
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr ""
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:637
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
 msgstr ""
 
-#: cogs/moderation/moderation.py:641
+#: cogs/moderation/moderation.py:642
 msgid "I can ban at most 200 users in one go."
 msgstr ""
 
-#: cogs/moderation/moderation.py:647
+#: cogs/moderation/moderation.py:648
 msgid "Confirm mass ban"
 msgstr ""
 
-#: cogs/moderation/moderation.py:649
+#: cogs/moderation/moderation.py:650
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr ""
 
-#: cogs/moderation/moderation.py:656
+#: cogs/moderation/moderation.py:657
 msgid "Mass ban cancelled"
 msgstr ""
 
-#: cogs/moderation/moderation.py:657
+#: cogs/moderation/moderation.py:658
 msgid "No action taken."
 msgstr ""
 
-#: cogs/moderation/moderation.py:692
+#: cogs/moderation/moderation.py:693
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:712
+#: cogs/moderation/moderation.py:713
 msgid "Mass ban complete"
 msgstr ""
 
-#: cogs/moderation/moderation.py:716
+#: cogs/moderation/moderation.py:717
 msgid "Banned"
 msgstr ""
 
-#: cogs/moderation/moderation.py:717
+#: cogs/moderation/moderation.py:718
 msgid "Failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:721
+#: cogs/moderation/moderation.py:722
 #, python-brace-format
 msgid "By {author}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:745
+#: cogs/moderation/moderation.py:746
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:755
+#: cogs/moderation/moderation.py:756
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:760
+#: cogs/moderation/moderation.py:761
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:776
+#: cogs/moderation/moderation.py:777
 msgid "Invalid amount. Maximum is 500."
 msgstr ""
 
-#: cogs/moderation/moderation.py:788
+#: cogs/moderation/moderation.py:789
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr ""
 
-#: cogs/moderation/moderation.py:858
+#: cogs/moderation/moderation.py:859
 msgid "Mute role is not defined"
 msgstr ""
 
-#: cogs/moderation/moderation.py:859
+#: cogs/moderation/moderation.py:860
 msgid "Creating role..."
 msgstr ""
 
-#: cogs/moderation/moderation.py:861
+#: cogs/moderation/moderation.py:862
 msgid "Mute role created!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:899
+#: cogs/moderation/moderation.py:900
 msgid "Already Muted"
 msgstr ""
 
-#: cogs/moderation/moderation.py:901
+#: cogs/moderation/moderation.py:902
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:911
+#: cogs/moderation/moderation.py:912
 msgid "Mute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:914
+#: cogs/moderation/moderation.py:915
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:955
+#: cogs/moderation/moderation.py:956
 msgid "Unmute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:958
+#: cogs/moderation/moderation.py:959
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:980
+#: cogs/moderation/moderation.py:981
 msgid "Confirm mass role add"
 msgstr ""
 
-#: cogs/moderation/moderation.py:982
+#: cogs/moderation/moderation.py:983
 #, python-brace-format
 msgid ""
 "Add the **{role}** role to **all** members of this server? This can take "
 "a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1011
+#: cogs/moderation/moderation.py:1012
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1020
+#: cogs/moderation/moderation.py:1021
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1041
+#: cogs/moderation/moderation.py:1042
 msgid "Confirm mass role remove"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1043
+#: cogs/moderation/moderation.py:1044
 #, python-brace-format
 msgid ""
 "Remove the **{role}** role from **all** members of this server? This can "
 "take a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1072
+#: cogs/moderation/moderation.py:1073
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1081
+#: cogs/moderation/moderation.py:1082
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1103 tools/modchecks.py:90
+#: cogs/moderation/moderation.py:1104 tools/modchecks.py:90
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1110
+#: cogs/moderation/moderation.py:1111
 msgid "You can't move a role to or above my highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1116
+#: cogs/moderation/moderation.py:1117
 #, python-brace-format
 msgid "{role} moved."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1118 cogs/system/errors.py:324
+#: cogs/moderation/moderation.py:1119 cogs/system/errors.py:324
 msgid "You do not have permission to do that"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1120
+#: cogs/moderation/moderation.py:1121
 msgid "Failed to move role"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1122
+#: cogs/moderation/moderation.py:1123
 msgid "Invalid argument"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1157
+#: cogs/moderation/moderation.py:1158
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1167
+#: cogs/moderation/moderation.py:1168
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1170
+#: cogs/moderation/moderation.py:1171
 msgid "No cases on record."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1177 cogs/moderation/warns.py:133
+#: cogs/moderation/moderation.py:1178 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr ""
 
@@ -6308,93 +6335,93 @@ msgstr ""
 msgid "This server already has the maximum of {max} escalation rules."
 msgstr ""
 
-#: cogs/moderation/warns.py:74
+#: cogs/moderation/warns.py:75
 msgid "Select a warn to remove..."
 msgstr ""
 
-#: cogs/moderation/warns.py:96
+#: cogs/moderation/warns.py:97
 #, python-brace-format
 msgid "Warnings - {member}"
 msgstr ""
 
-#: cogs/moderation/warns.py:103
+#: cogs/moderation/warns.py:104
 msgid "No warnings on record."
 msgstr ""
 
-#: cogs/moderation/warns.py:107
+#: cogs/moderation/warns.py:108
 msgid "*No reason provided*"
 msgstr ""
 
-#: cogs/moderation/warns.py:110
+#: cogs/moderation/warns.py:111
 #, python-brace-format
 msgid ""
 "**Case #{case}** - {reason}\n"
 "by {mod} - {when}"
 msgstr ""
 
-#: cogs/moderation/warns.py:120
+#: cogs/moderation/warns.py:121
 #, python-brace-format
 msgid "Page {current}/{total} - {count} warn(s)"
 msgstr ""
 
-#: cogs/moderation/warns.py:136
+#: cogs/moderation/warns.py:137
 #, python-brace-format
 msgid "Case #{case}"
 msgstr ""
 
-#: cogs/moderation/warns.py:147
+#: cogs/moderation/warns.py:148
 msgid "No warnings"
 msgstr ""
 
-#: cogs/moderation/warns.py:168
+#: cogs/moderation/warns.py:169
 msgid "Couldn't select that warn, please try again."
 msgstr ""
 
-#: cogs/moderation/warns.py:192 tools/paginator.py:94
+#: cogs/moderation/warns.py:193 tools/paginator.py:94
 msgid "Couldn't turn the page, please try again."
 msgstr ""
 
-#: cogs/moderation/warns.py:201
+#: cogs/moderation/warns.py:202
 msgid "Pick a warn from the dropdown first."
 msgstr ""
 
-#: cogs/moderation/warns.py:224
+#: cogs/moderation/warns.py:225
 msgid "Couldn't remove that warn, please try again."
 msgstr ""
 
-#: cogs/moderation/warns.py:274
+#: cogs/moderation/warns.py:275
 #, python-brace-format
 msgid "{member} has no warns."
 msgstr ""
 
-#: cogs/moderation/warns.py:278
+#: cogs/moderation/warns.py:279
 #, python-brace-format
 msgid "{member} has {count} warn(s)"
 msgstr ""
 
-#: cogs/moderation/warns.py:319
+#: cogs/moderation/warns.py:320
 msgid "Warns"
 msgstr ""
 
-#: cogs/moderation/warns.py:331
+#: cogs/moderation/warns.py:332
 msgid "Auto-action"
 msgstr ""
 
-#: cogs/moderation/warns.py:362
+#: cogs/moderation/warns.py:363
 msgid "The number of warns must be at least 1."
 msgstr ""
 
-#: cogs/moderation/warns.py:369
+#: cogs/moderation/warns.py:370
 #, python-brace-format
 msgid "{member} has no warns!"
 msgstr ""
 
-#: cogs/moderation/warns.py:374
+#: cogs/moderation/warns.py:375
 #, python-brace-format
 msgid "Removed all warns for {member}."
 msgstr ""
 
-#: cogs/moderation/warns.py:378
+#: cogs/moderation/warns.py:379
 #, python-brace-format
 msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
 msgstr ""
@@ -7510,243 +7537,379 @@ msgstr ""
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr ""
 
-#: cogs/system/botstats.py:534
+#: cogs/system/arg_completion.py:214
+msgid "Fill in"
+msgstr ""
+
+#: cogs/system/arg_completion.py:217
+msgid "Enter details"
+msgstr ""
+
+#: cogs/system/arg_completion.py:218
+msgid "Run"
+msgstr ""
+
+#: cogs/system/arg_completion.py:262
+msgid ""
+"Pick from the menus, use **Enter details** for the rest, then press "
+"**Run**."
+msgstr ""
+
+#: cogs/system/arg_completion.py:264
+msgid "Pick from the menus, then press **Run**."
+msgstr ""
+
+#: cogs/system/arg_completion.py:265
+msgid "Press **Fill in** to type the details."
+msgstr ""
+
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:491
+#: cogs/utility/info.py:46 cogs/utility/utility.py:171
+msgid "Yes"
+msgstr ""
+
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:492
+#: cogs/utility/info.py:46 cogs/utility/utility.py:172
+msgid "No"
+msgstr ""
+
+#: cogs/system/arg_completion.py:277
+msgid "Let's finish that command"
+msgstr ""
+
+#: cogs/system/arg_completion.py:279
+#, python-brace-format
+msgid ""
+"`{command}` needs a little more info.\n"
+"{instructions}"
+msgstr ""
+
+#: cogs/system/arg_completion.py:288
+#, python-brace-format
+msgid "Set: {preview}"
+msgstr ""
+
+#: cogs/system/arg_completion.py:290
+msgid "Required"
+msgstr ""
+
+#: cogs/system/arg_completion.py:292
+msgid "Optional - you can skip this"
+msgstr ""
+
+#: cogs/system/arg_completion.py:294
+msgid "Only you can use this - it times out in 3 minutes."
+msgstr ""
+
+#: cogs/system/arg_completion.py:304 cogs/system/arg_completion.py:346
+msgid "This prompt is no longer active. Please run the command again."
+msgstr ""
+
+#: cogs/system/arg_completion.py:330
+msgid "Something went wrong with that prompt."
+msgstr ""
+
+#: cogs/system/arg_completion.py:369
+#, python-brace-format
+msgid "Running `{command}`..."
+msgstr ""
+
+#: cogs/system/arg_completion.py:426
+msgid "This prompt timed out."
+msgstr ""
+
+#: cogs/system/arg_completion.py:437 cogs/system/arg_completion.py:452
+#: cogs/system/arg_completion.py:470 cogs/system/arg_completion.py:486
+#, python-brace-format
+msgid "Choose {name}"
+msgstr ""
+
+#: cogs/system/arg_completion.py:553
+#, python-brace-format
+msgid "Complete {command}"
+msgstr ""
+
+#: cogs/system/botstats.py:581
 msgid "unknown"
 msgstr ""
 
-#: cogs/system/botstats.py:555
+#: cogs/system/botstats.py:602
 #, python-brace-format
 msgid "Servers: {count}"
 msgstr ""
 
-#: cogs/system/botstats.py:556
+#: cogs/system/botstats.py:603
 #, python-brace-format
 msgid "Members: {count} (approximate, bots included)"
 msgstr ""
 
-#: cogs/system/botstats.py:559
+#: cogs/system/botstats.py:606
 #, python-brace-format
 msgid "Cached users: {count}"
 msgstr ""
 
-#: cogs/system/botstats.py:560
+#: cogs/system/botstats.py:607
 #, python-brace-format
 msgid "Channels: {count}"
 msgstr ""
 
-#: cogs/system/botstats.py:565 cogs/system/botstats.py:650
+#: cogs/system/botstats.py:612 cogs/system/botstats.py:697
 #, python-brace-format
 msgid "{count} server(s) report no member count and are excluded."
 msgstr ""
 
-#: cogs/system/botstats.py:572
+#: cogs/system/botstats.py:619
 msgid ""
 "Member counts come from Discord's guild payloads, not from a member cache"
 " (this bot never chunks one)."
 msgstr ""
 
-#: cogs/system/botstats.py:585
+#: cogs/system/botstats.py:632
 #, python-brace-format
 msgid "{duration} (since this cog loaded)"
 msgstr ""
 
-#: cogs/system/botstats.py:590
+#: cogs/system/botstats.py:637
 #, python-brace-format
 msgid "Uptime: {uptime}"
 msgstr ""
 
-#: cogs/system/botstats.py:591
+#: cogs/system/botstats.py:638
 #, python-brace-format
 msgid "Memory (RSS): {size}"
 msgstr ""
 
-#: cogs/system/botstats.py:594
+#: cogs/system/botstats.py:641
 #, python-brace-format
 msgid "Gateway latency: {latency}"
 msgstr ""
 
-#: cogs/system/botstats.py:601
+#: cogs/system/botstats.py:648
 #, python-brace-format
 msgid "Shards: {count}"
 msgstr ""
 
-#: cogs/system/botstats.py:605
+#: cogs/system/botstats.py:652
 #, python-brace-format
 msgid "Python {python} - discord.py {discord}"
 msgstr ""
 
-#: cogs/system/botstats.py:608
+#: cogs/system/botstats.py:655
 #, python-brace-format
 msgid "Database size: {size}"
 msgstr ""
 
-#: cogs/system/botstats.py:614
+#: cogs/system/botstats.py:661
 msgid "Reach"
 msgstr ""
 
-#: cogs/system/botstats.py:615
+#: cogs/system/botstats.py:662
 msgid "Process"
 msgstr ""
 
-#: cogs/system/botstats.py:616
+#: cogs/system/botstats.py:663
 msgid "Versions"
 msgstr ""
 
-#: cogs/system/botstats.py:623 cogs/system/botstats.py:810
+#: cogs/system/botstats.py:670 cogs/system/botstats.py:953
 msgid "Top servers"
 msgstr ""
 
-#: cogs/system/botstats.py:623
+#: cogs/system/botstats.py:670
 msgid "This bot is in no server."
 msgstr ""
 
-#: cogs/system/botstats.py:634
+#: cogs/system/botstats.py:681
 #, python-brace-format
 msgid "`{rank:>2}.` **{name}** - {members} members - joined {joined}"
 msgstr ""
 
-#: cogs/system/botstats.py:644
+#: cogs/system/botstats.py:691
 #, python-brace-format
 msgid "{guilds} servers, {members} members total"
 msgstr ""
 
-#: cogs/system/botstats.py:656
+#: cogs/system/botstats.py:703
 msgid "Member counts are Discord's approximation and include bots."
 msgstr ""
 
-#: cogs/system/botstats.py:661
+#: cogs/system/botstats.py:708
 #, python-brace-format
 msgid "Top {count} servers by members"
 msgstr ""
 
-#: cogs/system/botstats.py:664
+#: cogs/system/botstats.py:711
 msgid "Fleet total"
 msgstr ""
 
-#: cogs/system/botstats.py:674
+#: cogs/system/botstats.py:728
 #, python-brace-format
 msgid "{total} commands run since boot ({elapsed} ago)"
 msgstr ""
 
-#: cogs/system/botstats.py:677
+#: cogs/system/botstats.py:731
 #, python-brace-format
 msgid "{prefix} prefix - {slash} slash"
 msgstr ""
 
-#: cogs/system/botstats.py:681
+#: cogs/system/botstats.py:735
 msgid "In-memory counters: they reset on every restart."
 msgstr ""
 
-#: cogs/system/botstats.py:686
+#: cogs/system/botstats.py:740
 msgid "No command has completed yet."
 msgstr ""
 
-#: cogs/system/botstats.py:689
+#: cogs/system/botstats.py:743 cogs/system/botstats.py:843
 #, python-brace-format
 msgid "`{rank:>2}.` `{name}` - {count}"
 msgstr ""
 
-#: cogs/system/botstats.py:696
+#: cogs/system/botstats.py:753
 msgid "Commands since boot"
 msgstr ""
 
-#: cogs/system/botstats.py:697
+#: cogs/system/botstats.py:754
 msgid "Most used commands"
 msgstr ""
 
-#: cogs/system/botstats.py:699
+#: cogs/system/botstats.py:755
+msgid "Recorded usage (UTC days)"
+msgstr ""
+
+#: cogs/system/botstats.py:757
+#, python-brace-format
+msgid "Most used commands ({days} days)"
+msgstr ""
+
+#: cogs/system/botstats.py:761
 #, python-brace-format
 msgid "Observed activity ({days} days)"
 msgstr ""
 
-#: cogs/system/botstats.py:715
+#: cogs/system/botstats.py:791 cogs/system/botstats.py:839
+msgid "Recorded usage is unavailable right now."
+msgstr ""
+
+#: cogs/system/botstats.py:795
+msgid ""
+"Nothing has been recorded yet - collection starts with the first flush "
+"after this bot came up."
+msgstr ""
+
+#: cogs/system/botstats.py:804
+#, python-brace-format
+msgid "Today: {count}"
+msgstr ""
+
+#: cogs/system/botstats.py:805 cogs/system/botstats.py:810
+#, python-brace-format
+msgid "{days} days: {count} ({recorded} of {days} day(s) recorded)"
+msgstr ""
+
+#: cogs/system/botstats.py:817
+msgid ""
+"Calendar UTC days ending today, today included - so today is a partial "
+"day."
+msgstr ""
+
+#: cogs/system/botstats.py:826
+#, python-brace-format
+msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
+msgstr ""
+
+#: cogs/system/botstats.py:841
+msgid "No command has been recorded in this window."
+msgstr ""
+
+#: cogs/system/botstats.py:858
 msgid "Observed activity is unavailable right now."
 msgstr ""
 
-#: cogs/system/botstats.py:720
+#: cogs/system/botstats.py:863
 msgid "No server was observed in this window - this is not a zero."
 msgstr ""
 
-#: cogs/system/botstats.py:725
+#: cogs/system/botstats.py:868
 #, python-brace-format
 msgid ""
 "{messages} messages, across {guilds} observed server(s) and {days} "
 "observed day(s)"
 msgstr ""
 
-#: cogs/system/botstats.py:735
+#: cogs/system/botstats.py:878
 msgid "No join/leave day was recorded in this window."
 msgstr ""
 
-#: cogs/system/botstats.py:739
+#: cogs/system/botstats.py:882
 #, python-brace-format
 msgid ""
 "{joins} joins / {leaves} leaves, across {guilds} observed server(s) and "
 "{guild_days} observed server-day(s)"
 msgstr ""
 
-#: cogs/system/botstats.py:752
+#: cogs/system/botstats.py:895
 msgid ""
 "Observed servers only: a server with no row was not being watched, which "
 "is never the same as zero."
 msgstr ""
 
-#: cogs/system/botstats.py:762
+#: cogs/system/botstats.py:905
 msgid "Row counts are unavailable right now."
 msgstr ""
 
-#: cogs/system/botstats.py:764
+#: cogs/system/botstats.py:907
 msgid "No featured table was counted."
 msgstr ""
 
-#: cogs/system/botstats.py:772
+#: cogs/system/botstats.py:915
 msgid "Table sizes are unavailable right now."
 msgstr ""
 
-#: cogs/system/botstats.py:774
+#: cogs/system/botstats.py:917
 msgid "No table in this database."
 msgstr ""
 
-#: cogs/system/botstats.py:783
+#: cogs/system/botstats.py:926
 #, python-brace-format
 msgid "Every table: {size}"
 msgstr ""
 
-#: cogs/system/botstats.py:786
+#: cogs/system/botstats.py:929
 msgid "Sizes include indexes and TOAST storage."
 msgstr ""
 
-#: cogs/system/botstats.py:790
+#: cogs/system/botstats.py:933
 msgid "Featured tables"
 msgstr ""
 
-#: cogs/system/botstats.py:791
+#: cogs/system/botstats.py:934
 msgid "Largest tables"
 msgstr ""
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Overview"
 msgstr ""
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Usage"
 msgstr ""
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Data"
 msgstr ""
 
-#: cogs/system/botstats.py:1016
+#: cogs/system/botstats.py:1172
 #, python-brace-format
 msgid "Bot statistics - {page}"
 msgstr ""
 
-#: cogs/system/botstats.py:1049
+#: cogs/system/botstats.py:1205
 #, python-brace-format
 msgid "Snapshot taken {when}"
 msgstr ""
 
-#: cogs/system/botstats.py:1051
+#: cogs/system/botstats.py:1207
 msgid "times out after 5 min"
 msgstr ""
 
@@ -8183,16 +8346,6 @@ msgstr ""
 #: cogs/utility/info.py:45
 #, python-brace-format
 msgid "**Is bot:** {value}"
-msgstr ""
-
-#: cogs/utility/info.py:46 cogs/utility/utility.py:171
-#: tools/arg_completion.py:272 tools/arg_completion.py:491
-msgid "Yes"
-msgstr ""
-
-#: cogs/utility/info.py:46 cogs/utility/utility.py:172
-#: tools/arg_completion.py:272 tools/arg_completion.py:492
-msgid "No"
 msgstr ""
 
 #: cogs/utility/info.py:109
@@ -10000,88 +10153,6 @@ msgstr ""
 
 #: locales/command_strings.py:392
 msgid "🥁 Bass Boost"
-msgstr ""
-
-#: tools/arg_completion.py:214
-msgid "Fill in"
-msgstr ""
-
-#: tools/arg_completion.py:217
-msgid "Enter details"
-msgstr ""
-
-#: tools/arg_completion.py:218
-msgid "Run"
-msgstr ""
-
-#: tools/arg_completion.py:262
-msgid ""
-"Pick from the menus, use **Enter details** for the rest, then press "
-"**Run**."
-msgstr ""
-
-#: tools/arg_completion.py:264
-msgid "Pick from the menus, then press **Run**."
-msgstr ""
-
-#: tools/arg_completion.py:265
-msgid "Press **Fill in** to type the details."
-msgstr ""
-
-#: tools/arg_completion.py:277
-msgid "Let's finish that command"
-msgstr ""
-
-#: tools/arg_completion.py:279
-#, python-brace-format
-msgid ""
-"`{command}` needs a little more info.\n"
-"{instructions}"
-msgstr ""
-
-#: tools/arg_completion.py:288
-#, python-brace-format
-msgid "Set: {preview}"
-msgstr ""
-
-#: tools/arg_completion.py:290
-msgid "Required"
-msgstr ""
-
-#: tools/arg_completion.py:292
-msgid "Optional - you can skip this"
-msgstr ""
-
-#: tools/arg_completion.py:294
-msgid "Only you can use this - it times out in 3 minutes."
-msgstr ""
-
-#: tools/arg_completion.py:304 tools/arg_completion.py:346
-msgid "This prompt is no longer active. Please run the command again."
-msgstr ""
-
-#: tools/arg_completion.py:330
-msgid "Something went wrong with that prompt."
-msgstr ""
-
-#: tools/arg_completion.py:369
-#, python-brace-format
-msgid "Running `{command}`..."
-msgstr ""
-
-#: tools/arg_completion.py:426
-msgid "This prompt timed out."
-msgstr ""
-
-#: tools/arg_completion.py:437 tools/arg_completion.py:452
-#: tools/arg_completion.py:470 tools/arg_completion.py:486
-#, python-brace-format
-msgid "Choose {name}"
-msgstr ""
-
-#: tools/arg_completion.py:553
-#, python-brace-format
-msgid "Complete {command}"
 msgstr ""
 
 #: tools/embed_creator.py:283

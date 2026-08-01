@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-31 18:56+0000\n"
+"POT-Creation-Date: 2026-08-01 09:28+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -553,7 +553,7 @@ msgstr "Διατήρηση τρέχουσας κατάστασης"
 
 #: cogs/anilist/components.py:305 cogs/anilist/components.py:803
 #: cogs/anilist/feed_views.py:1043 cogs/config/twitch.py:427
-#: cogs/config/welcome.py:435 cogs/config/welcome.py:557
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
 msgstr "Κατάσταση"
 
@@ -589,13 +589,16 @@ msgid "No matching titles of that type."
 msgstr "Δεν υπάρχουν τίτλοι αυτού του τύπου που να ταιριάζουν."
 
 #: cogs/anilist/components.py:457 cogs/anilist/components.py:461
-#: cogs/community/level_admin.py:89 cogs/community/level_config_ui.py:722
-#: cogs/community/level_config_ui.py:801 cogs/community/level_rewards.py:105
-#: cogs/community/seasons_views.py:214 cogs/community/seasons_views.py:236
+#: cogs/community/leveling/level_admin.py:91
+#: cogs/community/leveling/level_config_ui.py:724
+#: cogs/community/leveling/level_config_ui.py:803
+#: cogs/community/leveling/level_rewards.py:105
+#: cogs/community/leveling/seasons_views.py:215
+#: cogs/community/leveling/seasons_views.py:237
 #: cogs/community/serverstats/views.py:476 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:583 cogs/config/welcome.py:108
-#: cogs/config/welcome.py:263 cogs/config/welcome.py:517
-#: cogs/system/botstats.py:1096
+#: cogs/config/rolemenus.py:583 cogs/config/welcome.py:109
+#: cogs/config/welcome.py:264 cogs/config/welcome.py:518
+#: cogs/system/botstats.py:1252
 msgid "Something went wrong."
 msgstr "Κάτι πήγε στραβά."
 
@@ -923,11 +926,11 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:96
+#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:97
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:96
+#: cogs/anilist/feed.py:1637 cogs/moderation/automod.py:97
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
@@ -965,7 +968,8 @@ msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
 msgid "Unknown title"
 msgstr "Άγνωστος τίτλος"
 
-#: cogs/anilist/feed_delivery.py:279 cogs/community/level_config_ui.py:631
+#: cogs/anilist/feed_delivery.py:279
+#: cogs/community/leveling/level_config_ui.py:633
 msgid "You are clicking too fast - give it a moment."
 msgstr "Κάνεις κλικ πολύ γρήγορα - περίμενε λίγο."
 
@@ -1183,17 +1187,17 @@ msgstr "Τουλάχιστον ένας τύπος δραστηριότητας 
 msgid "Members can join: {state}"
 msgstr "Τα μέλη μπορούν να μπουν: {state}"
 
-#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:151
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:451
-#: cogs/config/welcome.py:453 cogs/config/welcome.py:565
-#: cogs/config/welcome.py:567 cogs/config/welcome.py:569
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:152
+#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
+#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
 msgid "On"
 msgstr "Ενεργό"
 
-#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:151
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:451
-#: cogs/config/welcome.py:453 cogs/config/welcome.py:565
-#: cogs/config/welcome.py:567 cogs/config/welcome.py:569
+#: cogs/anilist/feed_views.py:266 cogs/config/welcome.py:152
+#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
+#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
+#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
 #: cogs/music/views.py:439
 msgid "Off"
 msgstr "Ανενεργό"
@@ -1239,8 +1243,8 @@ msgstr "Τίτλος για αναζήτηση"
 msgid "Stop tracking a title..."
 msgstr "Διακοπή παρακολούθησης τίτλου..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling.py:233
-#: cogs/community/reminders.py:340 cogs/community/seasons_views.py:170
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:236
+#: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:340
 #: cogs/music/views.py:1310
 msgid "Next"
 msgstr "Επόμ."
@@ -1278,12 +1282,12 @@ msgid "Tracked releases ({count})"
 msgstr "Κυκλοφορίες υπό παρακολούθηση ({count})"
 
 #: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:309
-#: cogs/config/welcome.py:206
+#: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr "Απενεργοποίηση"
 
 #: cogs/anilist/feed_views.py:712 cogs/config/twitch.py:309
-#: cogs/config/welcome.py:206
+#: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr "Ενεργοποίηση"
 
@@ -1291,9 +1295,10 @@ msgstr "Ενεργοποίηση"
 msgid "Delete"
 msgstr "Διαγραφή"
 
-#: cogs/anilist/feed_views.py:739 cogs/community/level_admin.py:66
-#: cogs/community/level_admin.py:174 cogs/community/usersettings.py:215
-#: cogs/community/usersettings.py:279 tools/arg_completion.py:219
+#: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
+#: cogs/community/leveling/level_admin.py:176
+#: cogs/community/usersettings.py:215 cogs/community/usersettings.py:279
+#: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "Ακύρωση"
 
@@ -1310,8 +1315,8 @@ msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο 
 msgid "Feed deleted."
 msgstr "Η ροή διαγράφηκε."
 
-#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:989
-#: cogs/moderation/moderation.py:1050 tools/arg_completion.py:411
+#: cogs/anilist/feed_views.py:773 cogs/moderation/moderation.py:990
+#: cogs/moderation/moderation.py:1051 cogs/system/arg_completion.py:411
 msgid "Cancelled."
 msgstr "Ακυρώθηκε."
 
@@ -1351,15 +1356,15 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
 #: cogs/config/twitch.py:412 cogs/config/verification.py:100
-#: cogs/config/welcome.py:423 cogs/config/welcome.py:544
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
 #: cogs/config/twitch.py:414 cogs/config/verification.py:102
-#: cogs/config/welcome.py:425 cogs/config/welcome.py:546
-#: cogs/config/welcome.py:784 cogs/moderation/modlog.py:255
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
@@ -1374,8 +1379,8 @@ msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικα
 
 #: cogs/anilist/feed_views.py:1041 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:537 cogs/config/starboard.py:180
-#: cogs/config/twitch.py:429 cogs/config/welcome.py:437
-#: cogs/config/welcome.py:559 cogs/config/welcome.py:763
+#: cogs/config/twitch.py:429 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:764
 #: cogs/moderation/modlog.py:523 cogs/moderation/modlog.py:561
 msgid "Channel"
 msgstr "Κανάλι"
@@ -1569,867 +1574,6 @@ msgstr "Άγνωστη γλώσσα. Διαθέσιμες: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Η προεπιλεγμένη γλώσσα του διακομιστή ορίστηκε σε **{lang}**."
 
-#: cogs/community/level_admin.py:62
-msgid "Reset XP"
-msgstr "Μηδενισμός XP"
-
-#: cogs/community/level_admin.py:78
-#, python-brace-format
-msgid "Reset {member}'s XP - they had **{xp} XP**."
-msgstr "Το XP του/της {member} μηδενίστηκε - είχε **{xp} XP**."
-
-#: cogs/community/level_admin.py:98 cogs/community/level_admin.py:187
-msgid "Cancelled - no XP was changed."
-msgstr "Ακυρώθηκε - κανένα XP δεν άλλαξε."
-
-#: cogs/community/level_admin.py:113
-msgid "Confirm full XP reset"
-msgstr "Επιβεβαίωση πλήρους μηδενισμού"
-
-#: cogs/community/level_admin.py:118
-msgid "Type the server name to confirm"
-msgstr "Πληκτρολόγησε το όνομα του διακομιστή για επιβεβαίωση"
-
-#: cogs/community/level_admin.py:131
-msgid "That doesn't match the server name - nothing was reset."
-msgstr "Δεν ταιριάζει με το όνομα του διακομιστή - τίποτα δεν μηδενίστηκε."
-
-#: cogs/community/level_admin.py:145
-#, python-brace-format
-msgid "{count} member's XP"
-msgid_plural "{count} members' XP"
-msgstr[0] "το XP {count} μέλους"
-msgstr[1] "το XP {count} μελών"
-
-#: cogs/community/level_admin.py:149
-#, python-brace-format
-msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
-msgstr "Μηδενίστηκε το XP στο **{guild}**: διαγράφηκαν {members} και όλες οι κατατάξεις περιόδου."
-
-#: cogs/community/level_admin.py:156
-msgid "Something went wrong resetting XP."
-msgstr "Κάτι πήγε στραβά κατά τον μηδενισμό του XP."
-
-#: cogs/community/level_admin.py:170
-msgid "Reset ALL XP"
-msgstr "Μηδενισμός ΟΛΩΝ"
-
-#: cogs/community/level_admin.py:264
-msgid "XP updated"
-msgstr "Το XP ενημερώθηκε"
-
-#: cogs/community/level_admin.py:266
-#, python-brace-format
-msgid "{member} now has **{xp} XP** (was {old_xp})."
-msgstr "Ο/Η {member} έχει τώρα **{xp} XP** (πριν: {old_xp})."
-
-#: cogs/community/level_admin.py:270
-msgid "Level up"
-msgstr "Άνοδος επιπέδου"
-
-#: cogs/community/level_admin.py:271 cogs/community/level_admin.py:278
-#, python-brace-format
-msgid "Level {old} -> **{new}**"
-msgstr "Επίπεδο {old} -> **{new}**"
-
-#: cogs/community/level_admin.py:277
-msgid "Level down"
-msgstr "Πτώση επιπέδου"
-
-#: cogs/community/level_admin.py:284 cogs/community/leveling.py:1621
-#: cogs/utility/searchweb.py:144
-msgid "Level"
-msgstr "Επίπεδο"
-
-#: cogs/community/level_admin.py:285
-#, python-brace-format
-msgid "**{level}** (unchanged)"
-msgstr "**{level}** (αμετάβλητο)"
-
-#: cogs/community/level_admin.py:375
-msgid "Admin XP tools"
-msgstr "Εργαλεία XP διαχειριστή"
-
-#: cogs/community/level_admin.py:377
-msgid ""
-"- `/levelconfig xp give <member> <amount>` - add XP\n"
-"- `/levelconfig xp take <member> <amount>` - remove XP\n"
-"- `/levelconfig xp set <member> <amount>` - set an exact total\n"
-"- `/levelconfig xp reset <member>` - reset one member (confirm)\n"
-"- `/levelconfig xp resetall` - reset the whole server (double confirm)"
-msgstr ""
-"- `/levelconfig xp give <μέλος> <ποσό>` - προσθήκη XP\n"
-"- `/levelconfig xp take <μέλος> <ποσό>` - αφαίρεση XP\n"
-"- `/levelconfig xp set <μέλος> <ποσό>` - ορισμός ακριβούς συνόλου\n"
-"- `/levelconfig xp reset <μέλος>` - μηδενισμός ενός μέλους (επιβεβαίωση)\n"
-"- `/levelconfig xp resetall` - μηδενισμός όλου του διακομιστή (διπλή επιβεβαίωση)"
-
-#: cogs/community/level_admin.py:392 cogs/community/level_admin.py:405
-#, python-brace-format
-msgid "The amount must be between {min} and {max}."
-msgstr "Το ποσό πρέπει να είναι μεταξύ {min} και {max}."
-
-#: cogs/community/level_admin.py:418
-#, python-brace-format
-msgid "The XP total must be between {min} and {max}."
-msgstr "Το σύνολο XP πρέπει να είναι μεταξύ {min} και {max}."
-
-#: cogs/community/level_admin.py:428
-msgid "Reset this member's XP?"
-msgstr "Μηδενισμός του XP αυτού του μέλους;"
-
-#: cogs/community/level_admin.py:430
-#, python-brace-format
-msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
-msgstr "Το XP του/της {member} επιστρέφει στο **0** και αφαιρείται από την κατάταξη. Δεν αναιρείται."
-
-#: cogs/community/level_admin.py:445
-msgid "Reset ALL XP in this server?"
-msgstr "Μηδενισμός ΟΛΟΥ του XP σε αυτόν τον διακομιστή;"
-
-#: cogs/community/level_admin.py:447
-#, python-brace-format
-msgid ""
-"This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
-"\n"
-"Press the button below, then type the server name to confirm."
-msgstr ""
-"Διαγράφει το XP **όλων** των μελών και όλες τις εβδομαδιαίες/μηνιαίες κατατάξεις του **{guild}**. Δεν αναιρείται.\n"
-"\n"
-"Πάτησε το κουμπί και μετά πληκτρολόγησε το όνομα του διακομιστή για επιβεβαίωση."
-
-#: cogs/community/level_config_ui.py:64
-msgid "The message can't be empty."
-msgstr "Το μήνυμα δεν μπορεί να είναι κενό."
-
-#: cogs/community/level_config_ui.py:66
-#, python-brace-format
-msgid "That message has a stray '{' or '}' - check the placeholders."
-msgstr "Αυτό το μήνυμα έχει ένα ορφανό '{' ή '}' - έλεγξε τα placeholders."
-
-#: cogs/community/level_config_ui.py:69
-#, python-brace-format
-msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
-msgstr "Επιτρέπονται μόνο αυτά τα placeholders: {user}, {level}, {guild}."
-
-#: cogs/community/level_config_ui.py:76
-#, python-brace-format
-msgid "The message is too long (max {max} characters)."
-msgstr "Το μήνυμα είναι πολύ μεγάλο (έως {max} χαρακτήρες)."
-
-#: cogs/community/level_config_ui.py:85
-msgid "Off - level-ups are never announced."
-msgstr "Off - οι άνοδοι επιπέδου δεν ανακοινώνονται ποτέ."
-
-#: cogs/community/level_config_ui.py:87
-msgid "DM - the member is messaged directly."
-msgstr "DM - το μέλος λαμβάνει προσωπικό μήνυμα."
-
-#: cogs/community/level_config_ui.py:90
-#, python-brace-format
-msgid "Fixed channel: <#{channel_id}>"
-msgstr "Σταθερό κανάλι: <#{channel_id}>"
-
-#: cogs/community/level_config_ui.py:94
-msgid "Fixed channel (none set yet - falls back to the message's own channel)."
-msgstr "Σταθερό κανάλι (δεν έχει οριστεί - επιστρέφει στο κανάλι του μηνύματος)."
-
-#: cogs/community/level_config_ui.py:97
-msgid "Channel - announced where the message was sent."
-msgstr "Κανάλι - ανακοινώνεται εκεί όπου στάλθηκε το μήνυμα."
-
-#: cogs/community/level_config_ui.py:102
-#, python-brace-format
-msgid "Custom: \"{template}\""
-msgstr "Προσαρμοσμένο: \"{template}\""
-
-#: cogs/community/level_config_ui.py:103
-#, python-brace-format
-msgid "Default: \"{template}\""
-msgstr "Προεπιλογή: \"{template}\""
-
-#: cogs/community/level_config_ui.py:111
-#, python-brace-format
-msgid "On - {rate} XP per eligible minute in voice."
-msgstr "On - {rate} XP ανά επιλέξιμο λεπτό στα φωνητικά."
-
-#: cogs/community/level_config_ui.py:114
-msgid "Off - no XP for time spent in voice."
-msgstr "Off - κανένα XP για τον χρόνο στα φωνητικά."
-
-#: cogs/community/level_config_ui.py:123
-msgid "The multiplier must be a plain number."
-msgstr "Ο πολλαπλασιαστής πρέπει να είναι απλός αριθμός."
-
-#: cogs/community/level_config_ui.py:130
-#, python-brace-format
-msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
-msgstr "Ο πολλαπλασιαστής πρέπει να είναι μεταξύ {min} και {max} (το 0 μηδενίζει το XP)."
-
-#: cogs/community/level_config_ui.py:145
-#, python-brace-format
-msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
-msgstr "Η εκδήλωση πρέπει να διαρκεί από 1 λεπτό έως {max_days} ημέρες (π.χ. \"2h\" ή \"3d\")."
-
-#: cogs/community/level_config_ui.py:149
-msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
-msgstr "Δεν κατάλαβα αυτή τη διάρκεια - δοκίμασε κάτι σαν \"2h\" ή \"3d\"."
-
-#: cogs/community/level_config_ui.py:163
-#, python-brace-format
-msgid "Server-wide: **{factor}x**"
-msgstr "Όλος ο διακομιστής: **x{factor}**"
-
-#: cogs/community/level_config_ui.py:169 cogs/community/level_config_ui.py:175
-#: cogs/community/level_config_ui.py:831 cogs/community/level_config_ui.py:837
-#: cogs/config/verification.py:105
-msgid "(deleted)"
-msgstr "(διαγράφηκε)"
-
-#: cogs/community/level_config_ui.py:196
-msgid "No XP event running. Use `/levelconfig event set` to start one."
-msgstr "Δεν τρέχει εκδήλωση XP. Χρησιμοποίησε το `/levelconfig event set` για να ξεκινήσεις μία."
-
-#: cogs/community/level_config_ui.py:197
-#, python-brace-format
-msgid "**{factor}x** XP until {when}."
-msgstr "XP **x{factor}** μέχρι {when}."
-
-#: cogs/community/level_config_ui.py:248
-#, python-brace-format
-msgid "That image is too large - the limit is {mb} MB."
-msgstr "Αυτή η εικόνα είναι πολύ μεγάλη - το όριο είναι {mb} MB."
-
-#: cogs/community/level_config_ui.py:253
-msgid "That image has too many pixels to process safely - try a smaller picture."
-msgstr "Αυτή η εικόνα έχει πάρα πολλά pixel για ασφαλή επεξεργασία - δοκιμάστε μια μικρότερη εικόνα."
-
-#: cogs/community/level_config_ui.py:257
-msgid "Only PNG, JPEG, and WebP images are supported."
-msgstr "Υποστηρίζονται μόνο εικόνες PNG, JPEG και WebP."
-
-#: cogs/community/level_config_ui.py:260
-msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
-msgstr "Αυτή η εικόνα είναι πολύ σύνθετη για να χωρέσει στο όριο αποθήκευσης - δοκιμάστε μια πιο απλή ή μικρότερη εικόνα."
-
-#: cogs/community/level_config_ui.py:265
-msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
-msgstr "Δεν μπόρεσα να το διαβάσω ως εικόνα - βεβαιωθείτε ότι είναι έγκυρο αρχείο PNG, JPEG ή WebP."
-
-#: cogs/community/level_config_ui.py:270
-msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
-msgstr "Αυτό δεν είναι έγκυρο χρώμα hex - δοκιμάστε κάτι σαν #5865F2 ή #58F."
-
-#: cogs/community/level_config_ui.py:274
-msgid "That image couldn't be used for the rank card."
-msgstr "Αυτή η εικόνα δεν μπόρεσε να χρησιμοποιηθεί για την κάρτα rank."
-
-#: cogs/community/level_config_ui.py:355
-msgid "Set rank card accent"
-msgstr "Ορισμός χρώματος έμφασης κάρτας rank"
-
-#: cogs/community/level_config_ui.py:359
-msgid "Hex colour"
-msgstr "Χρώμα hex"
-
-#: cogs/community/level_config_ui.py:384
-msgid "Set background..."
-msgstr "Ορισμός φόντου..."
-
-#: cogs/community/level_config_ui.py:395
-msgid "Reset background"
-msgstr "Επαναφορά φόντου"
-
-#: cogs/community/level_config_ui.py:407
-msgid "Set accent..."
-msgstr "Ορισμός χρώματος έμφασης..."
-
-#: cogs/community/level_config_ui.py:417
-msgid "Reset accent"
-msgstr "Επαναφορά χρώματος έμφασης"
-
-#: cogs/community/level_config_ui.py:430
-msgid "Preview my card"
-msgstr "Προεπισκόπηση της κάρτας μου"
-
-#: cogs/community/level_config_ui.py:476
-#, python-brace-format
-msgid "Rank card - {guild}"
-msgstr "Κάρτα rank - {guild}"
-
-#: cogs/community/level_config_ui.py:479
-msgid "Customise the background and accent colour used on this server's /rank cards."
-msgstr "Προσαρμόστε το φόντο και το χρώμα έμφασης που χρησιμοποιούνται στις κάρτες /rank αυτού του διακομιστή."
-
-#: cogs/community/level_config_ui.py:488
-#, python-brace-format
-msgid "Set - a custom {width}x{height} background image is used."
-msgstr "Ορίστηκε - χρησιμοποιείται προσαρμοσμένη εικόνα φόντου {width}x{height}."
-
-#: cogs/community/level_config_ui.py:492
-msgid "Not set - the stock panel background is used."
-msgstr "Δεν έχει οριστεί - χρησιμοποιείται το προεπιλεγμένο φόντο του panel."
-
-#: cogs/community/level_config_ui.py:496
-msgid "Background"
-msgstr "Φόντο"
-
-#: cogs/community/level_config_ui.py:510
-#, python-brace-format
-msgid "Set - {hex}"
-msgstr "Ορίστηκε - {hex}"
-
-#: cogs/community/level_config_ui.py:513
-msgid "Default - each member's own role colour is used."
-msgstr "Προεπιλογή - χρησιμοποιείται το χρώμα ρόλου του κάθε μέλους."
-
-#: cogs/community/level_config_ui.py:517 cogs/community/profile/registry.py:238
-msgid "Accent colour"
-msgstr "Χρώμα έμφασης"
-
-#: cogs/community/level_config_ui.py:535 cogs/community/profile/views.py:873
-#: cogs/community/seasons_views.py:185 cogs/community/seasons_views.py:426
-#: cogs/community/serverstats/views.py:550 cogs/config/settings.py:265
-#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
-msgid "Only you can use these controls"
-msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
-
-#: cogs/community/level_config_ui.py:537 cogs/community/profile/views.py:875
-#: cogs/community/seasons_views.py:187 cogs/community/seasons_views.py:428
-#: cogs/community/serverstats/views.py:552 cogs/config/settings.py:267
-#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
-msgid "times out after 3 min"
-msgstr "λήγει μετά από 3 λεπτά"
-
-#: cogs/community/level_config_ui.py:564
-#, python-brace-format
-msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
-msgstr "Για να ορίσετε φόντο, εκτελέστε `/levelconfig card background` και επισυνάψτε μια εικόνα (PNG, JPEG ή WebP· έως {mb} MB)."
-
-#: cogs/community/level_config_ui.py:681
-msgid "Channel/category"
-msgstr "Κανάλι/κατηγορία"
-
-#: cogs/community/level_config_ui.py:682 cogs/community/level_config_ui.py:686
-#: cogs/community/level_config_ui.py:761 cogs/community/level_config_ui.py:765
-msgid "Unknown (deleted)"
-msgstr "Άγνωστο (διαγράφηκε)"
-
-#: cogs/community/level_config_ui.py:685 cogs/config/buttonroles.py:220
-#: cogs/config/reactionroles.py:53 cogs/config/reactionroles.py:184
-msgid "Role"
-msgstr "Ρόλος"
-
-#: cogs/community/level_config_ui.py:695
-msgid "Pick a no-XP zone to remove..."
-msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση..."
-
-#: cogs/community/level_config_ui.py:715
-msgid "Removed that no-XP zone."
-msgstr "Η ζώνη χωρίς XP αφαιρέθηκε."
-
-#: cogs/community/level_config_ui.py:756
-msgid "Global boost"
-msgstr "Καθολική ενίσχυση"
-
-#: cogs/community/level_config_ui.py:757
-msgid "Server-wide"
-msgstr "Όλος ο διακομιστής"
-
-#: cogs/community/level_config_ui.py:760
-msgid "Channel/category boost"
-msgstr "Ενίσχυση καναλιού/κατηγορίας"
-
-#: cogs/community/level_config_ui.py:764
-msgid "Role boost"
-msgstr "Ενίσχυση ρόλου"
-
-#: cogs/community/level_config_ui.py:774
-msgid "Pick an XP boost to remove..."
-msgstr "Διάλεξε μια ενίσχυση XP για αφαίρεση..."
-
-#: cogs/community/level_config_ui.py:794
-msgid "Removed that XP boost."
-msgstr "Η ενίσχυση XP αφαιρέθηκε."
-
-#: cogs/community/level_config_ui.py:856
-#, python-brace-format
-msgid "No-XP zones | {guild}"
-msgstr "Ζώνες χωρίς XP | {guild}"
-
-#: cogs/community/level_config_ui.py:865
-msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
-msgstr "Δεν έχουν ρυθμιστεί ζώνες χωρίς XP. Χρησιμοποίησε το `/levelconfig noxp add` για να εξαιρέσεις κανάλι, κατηγορία ή ρόλο."
-
-#: cogs/community/level_config_ui.py:875 cogs/community/level_config_ui.py:930
-#, python-brace-format
-msgid ""
-"**Channels & categories**\n"
-"{lines}"
-msgstr ""
-"**Κανάλια και κατηγορίες**\n"
-"{lines}"
-
-#: cogs/community/level_config_ui.py:885 cogs/community/level_config_ui.py:940
-#, python-brace-format
-msgid ""
-"**Roles**\n"
-"{lines}"
-msgstr ""
-"**Ρόλοι**\n"
-"{lines}"
-
-#: cogs/community/level_config_ui.py:906
-#, python-brace-format
-msgid "XP boosts | {guild}"
-msgstr "Ενισχύσεις XP | {guild}"
-
-#: cogs/community/level_config_ui.py:915
-msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
-msgstr "Δεν έχουν ρυθμιστεί ενισχύσεις XP. Χρησιμοποίησε το `/levelconfig boost add` για να αυξήσεις ή να μειώσεις το XP καθολικά, ανά κανάλι ή ανά ρόλο."
-
-#: cogs/community/level_config_ui.py:946 cogs/community/level_config_ui.py:1043
-#, python-brace-format
-msgid ""
-"**XP event**\n"
-"{event}"
-msgstr ""
-"**Εκδήλωση XP**\n"
-"{event}"
-
-#: cogs/community/level_config_ui.py:981
-#, python-brace-format
-msgid "Level config | {guild}"
-msgstr "Ρυθμίσεις επιπέδων | {guild}"
-
-#: cogs/community/level_config_ui.py:988
-msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
-msgstr "Δεν έχουν ρυθμιστεί ζώνες χωρίς XP. Χρησιμοποίησε το `/levelconfig noxp add`."
-
-#: cogs/community/level_config_ui.py:994
-#, python-brace-format
-msgid ""
-"**No-XP zones ({count}/{max})**\n"
-"{summary}"
-msgstr ""
-"**Ζώνες χωρίς XP ({count}/{max})**\n"
-"{summary}"
-
-#: cogs/community/level_config_ui.py:1004
-#, python-brace-format
-msgid ""
-"**Announce mode**\n"
-"{mode}\n"
-"**Announce message**\n"
-"{template}"
-msgstr ""
-"**Λειτουργία ανακοίνωσης**\n"
-"{mode}\n"
-"**Μήνυμα ανακοίνωσης**\n"
-"{template}"
-
-#: cogs/community/level_config_ui.py:1013
-#, python-brace-format
-msgid ""
-"**Voice XP**\n"
-"{voice}"
-msgstr ""
-"**Φωνητικό XP**\n"
-"{voice}"
-
-#: cogs/community/level_config_ui.py:1023
-msgid "No XP boosts configured. Use `/levelconfig boost add`."
-msgstr "Καμία ενίσχυση XP. Χρησιμοποίησε το `/levelconfig boost add`."
-
-#: cogs/community/level_config_ui.py:1033
-#, python-brace-format
-msgid ""
-"**XP boosts ({count}/{max})**\n"
-"{summary}"
-msgstr ""
-"**Ενισχύσεις XP ({count}/{max})**\n"
-"{summary}"
-
-#: cogs/community/level_config_ui.py:1095
-#: cogs/community/level_config_ui.py:1358
-#: cogs/community/level_config_ui.py:1384
-#: cogs/community/level_config_ui.py:1432
-#: cogs/community/level_config_ui.py:1481
-msgid "The leveling system isn't loaded right now."
-msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
-
-#: cogs/community/level_config_ui.py:1196 cogs/config/settings.py:89
-#: cogs/config/settings.py:215
-msgid "Leveling"
-msgstr "Επίπεδα"
-
-#: cogs/community/level_config_ui.py:1198
-msgid "Leveling enabled for this server."
-msgstr "Τα επίπεδα ενεργοποιήθηκαν για αυτόν τον διακομιστή."
-
-#: cogs/community/level_config_ui.py:1200
-msgid "Leveling disabled for this server."
-msgstr "Τα επίπεδα απενεργοποιήθηκαν για αυτόν τον διακομιστή."
-
-#: cogs/community/level_config_ui.py:1233
-msgid "Give exactly one of a channel/category or a role."
-msgstr "Δώσε ακριβώς ένα κανάλι/κατηγορία Ή έναν ρόλο."
-
-#: cogs/community/level_config_ui.py:1238
-msgid "You can't use @everyone as a no-XP zone."
-msgstr "Δεν μπορείς να χρησιμοποιήσεις το @everyone ως ζώνη χωρίς XP."
-
-#: cogs/community/level_config_ui.py:1254
-#: cogs/community/level_config_ui.py:1291
-#, python-brace-format
-msgid "This server already has the maximum of {max} no-XP zones."
-msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ζωνών χωρίς XP."
-
-#: cogs/community/level_config_ui.py:1283
-#, python-brace-format
-msgid "{target} is already a no-XP zone."
-msgstr "Το {target} είναι ήδη ζώνη χωρίς XP."
-
-#: cogs/community/level_config_ui.py:1300
-msgid "No-XP zone added"
-msgstr "Η ζώνη χωρίς XP προστέθηκε"
-
-#: cogs/community/level_config_ui.py:1301
-#, python-brace-format
-msgid "{target} will no longer earn XP."
-msgstr "Το {target} δεν θα δίνει πια XP."
-
-#: cogs/community/level_config_ui.py:1315
-msgid "This server has no no-XP zones configured yet."
-msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ζώνες χωρίς XP."
-
-#: cogs/community/level_config_ui.py:1319
-msgid "Pick a no-XP zone to remove:"
-msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση:"
-
-#: cogs/community/level_config_ui.py:1353
-msgid "Give a channel when setting the fixed mode."
-msgstr "Δώσε ένα κανάλι όταν ορίζεις τη σταθερή λειτουργία."
-
-#: cogs/community/level_config_ui.py:1366
-msgid "Announce mode updated"
-msgstr "Η λειτουργία ανακοινώσεων ενημερώθηκε"
-
-#: cogs/community/level_config_ui.py:1390
-#, python-brace-format
-msgid "The level-up message was reset to the default: \"{template}\""
-msgstr "Το μήνυμα ανόδου επιπέδου επαναφέρθηκε στο προεπιλεγμένο: \"{template}\""
-
-#: cogs/community/level_config_ui.py:1410
-msgid "Level-up message updated"
-msgstr "Το μήνυμα ανόδου επιπέδου ενημερώθηκε"
-
-#: cogs/community/level_config_ui.py:1411
-#, python-brace-format
-msgid "Preview: {preview}"
-msgstr "Προεπισκόπηση: {preview}"
-
-#: cogs/community/level_config_ui.py:1436
-msgid "Voice XP enabled"
-msgstr "Το φωνητικό XP ενεργοποιήθηκε"
-
-#: cogs/community/level_config_ui.py:1437
-msgid "Members now earn XP for time spent together in voice."
-msgstr "Τα μέλη κερδίζουν πλέον XP για τον χρόνο μαζί στα φωνητικά."
-
-#: cogs/community/level_config_ui.py:1440
-msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
-msgstr "Προσοχή: το σύστημα επιπέδων του διακομιστή είναι ανενεργό, δεν δίνεται φωνητικό XP μέχρι να το ενεργοποιήσεις."
-
-#: cogs/community/level_config_ui.py:1444
-msgid "Voice XP disabled"
-msgstr "Το φωνητικό XP απενεργοποιήθηκε"
-
-#: cogs/community/level_config_ui.py:1445
-msgid "Members no longer earn XP for time in voice."
-msgstr "Τα μέλη δεν κερδίζουν πια XP για τον χρόνο στα φωνητικά."
-
-#: cogs/community/level_config_ui.py:1472
-#, python-brace-format
-msgid "The rate must be between {min} and {max} XP per minute."
-msgstr "Ο ρυθμός πρέπει να είναι μεταξύ {min} και {max} XP ανά λεπτό."
-
-#: cogs/community/level_config_ui.py:1485
-msgid "Voice XP rate updated"
-msgstr "Ο ρυθμός φωνητικού XP ενημερώθηκε"
-
-#: cogs/community/level_config_ui.py:1487
-#, python-brace-format
-msgid "Members now earn **{rate}** XP per eligible minute in voice."
-msgstr "Τα μέλη κερδίζουν πλέον **{rate}** XP ανά επιλέξιμο λεπτό στα φωνητικά."
-
-#: cogs/community/level_config_ui.py:1525
-msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
-msgstr "Δώσε το πολύ ένα κανάλι/κατηγορία Ή έναν ρόλο - κανένα για καθολική ενίσχυση."
-
-#: cogs/community/level_config_ui.py:1533
-msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
-msgstr "Δεν μπορείς να στοχεύσεις απευθείας το @everyone - άφησε κανάλι και ρόλο κενά για καθολική ενίσχυση."
-
-#: cogs/community/level_config_ui.py:1559
-msgid "the whole server"
-msgstr "όλος ο διακομιστής"
-
-#: cogs/community/level_config_ui.py:1590
-#, python-brace-format
-msgid "This server already has the maximum of {max} XP boosts."
-msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ενισχύσεων XP."
-
-#: cogs/community/level_config_ui.py:1598
-msgid "XP boost set"
-msgstr "Η ενίσχυση XP ορίστηκε"
-
-#: cogs/community/level_config_ui.py:1600
-#, python-brace-format
-msgid "{target} now has a **{factor}x** XP multiplier."
-msgstr "Το {target} έχει τώρα πολλαπλασιαστή XP **x{factor}**."
-
-#: cogs/community/level_config_ui.py:1613
-msgid "This server has no XP boosts configured yet."
-msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ενισχύσεις XP."
-
-#: cogs/community/level_config_ui.py:1616
-msgid "Pick an XP boost to remove:"
-msgstr "Διάλεξε μια ενίσχυση XP για αφαίρεση:"
-
-#: cogs/community/level_config_ui.py:1634
-msgid "XP event"
-msgstr "Εκδήλωση XP"
-
-#: cogs/community/level_config_ui.py:1709
-msgid "XP event started"
-msgstr "Η εκδήλωση XP ξεκίνησε"
-
-#: cogs/community/level_config_ui.py:1721
-msgid "The XP event was stopped."
-msgstr "Η εκδήλωση XP σταμάτησε."
-
-#: cogs/community/level_config_ui.py:1808
-msgid "I couldn't download that attachment - try again."
-msgstr "Δεν μπόρεσα να κατεβάσω αυτό το συνημμένο - δοκιμάστε ξανά."
-
-#: cogs/community/level_config_ui.py:1821
-msgid "Rank card background updated"
-msgstr "Το φόντο της κάρτας rank ενημερώθηκε"
-
-#: cogs/community/level_config_ui.py:1823
-msgid "This server's /rank cards now use the uploaded image as their background."
-msgstr "Οι κάρτες /rank αυτού του διακομιστή χρησιμοποιούν πλέον την εικόνα που ανεβάσατε ως φόντο."
-
-#: cogs/community/level_rewards.py:66
-msgid "Unknown role (deleted)"
-msgstr "Άγνωστος ρόλος (διαγράφηκε)"
-
-#: cogs/community/level_rewards.py:69
-#, python-brace-format
-msgid "Level {level}"
-msgstr "Επίπεδο {level}"
-
-#: cogs/community/level_rewards.py:75
-msgid "Pick a reward rule to remove..."
-msgstr "Διάλεξε έναν κανόνα για αφαίρεση..."
-
-#: cogs/community/level_rewards.py:96
-#, python-brace-format
-msgid "Removed the level {level} reward ({role})."
-msgstr "Η ανταμοιβή του επιπέδου {level} αφαιρέθηκε ({role})."
-
-#: cogs/community/level_rewards.py:142
-#, python-brace-format
-msgid "Level rewards | {guild}"
-msgstr "Ανταμοιβές επιπέδου | {guild}"
-
-#: cogs/community/level_rewards.py:146
-msgid "Stack - members keep every role they've earned"
-msgstr "Συσσώρευση - τα μέλη κρατούν όλους τους ρόλους"
-
-#: cogs/community/level_rewards.py:148
-msgid "Replace - members only keep the highest tier they've earned"
-msgstr "Αντικατάσταση - τα μέλη κρατούν μόνο το υψηλότερο επίπεδο"
-
-#: cogs/community/level_rewards.py:151
-#, python-brace-format
-msgid "Mode: **{mode}**"
-msgstr "Λειτουργία: **{mode}**"
-
-#: cogs/community/level_rewards.py:159
-msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
-msgstr "Δεν έχουν ρυθμιστεί ανταμοιβές επιπέδου. Χρησιμοποίησε το `/levelconfig rewards add` για να φτιάξεις μία."
-
-#: cogs/community/level_rewards.py:167
-#, python-brace-format
-msgid "**Level {level}** -> {roles}"
-msgstr "**Επίπεδο {level}** -> {roles}"
-
-#: cogs/community/level_rewards.py:389
-msgid "That role isn't from this server."
-msgstr "Αυτός ο ρόλος δεν είναι από αυτόν τον διακομιστή."
-
-#: cogs/community/level_rewards.py:392
-msgid "You can't use @everyone as a level reward."
-msgstr "Δεν μπορείς να χρησιμοποιήσεις το @everyone ως ανταμοιβή επιπέδου."
-
-#: cogs/community/level_rewards.py:395
-msgid "The level must be 1 or higher."
-msgstr "Το επίπεδο πρέπει να είναι 1 ή μεγαλύτερο."
-
-#: cogs/community/level_rewards.py:408 cogs/community/level_rewards.py:449
-#, python-brace-format
-msgid "This server already has the maximum of {max} level rewards."
-msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ανταμοιβών επιπέδου."
-
-#: cogs/community/level_rewards.py:441
-#, python-brace-format
-msgid "{role} is already a level {level} reward."
-msgstr "Το {role} είναι ήδη ανταμοιβή του επιπέδου {level}."
-
-#: cogs/community/level_rewards.py:456
-#, python-brace-format
-msgid "Added a level reward: reach level **{level}** to receive {role}."
-msgstr "Η ανταμοιβή προστέθηκε: φτάσε στο επίπεδο **{level}** για να λάβεις {role}."
-
-#: cogs/community/level_rewards.py:462
-msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
-msgstr "Μπορώ να το προσθέσω, αλλά αυτός ο ρόλος είναι πάνω από τον δικό μου - ανέβασε τον ρόλο μου για να μπορώ να τον αναθέσω."
-
-#: cogs/community/level_rewards.py:467
-msgid "Level reward added"
-msgstr "Η ανταμοιβή επιπέδου προστέθηκε"
-
-#: cogs/community/level_rewards.py:478
-msgid "This server has no level rewards configured yet."
-msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ανταμοιβές επιπέδου."
-
-#: cogs/community/level_rewards.py:483
-msgid "Pick a reward rule to remove:"
-msgstr "Διάλεξε έναν κανόνα για αφαίρεση:"
-
-#: cogs/community/level_rewards.py:519
-msgid "Members now keep only the roles from the highest level reward they've reached."
-msgstr "Τα μέλη κρατούν πλέον μόνο τους ρόλους του υψηλότερου επιπέδου που έχουν φτάσει."
-
-#: cogs/community/level_rewards.py:524
-msgid "Members now keep every level reward role they've ever earned."
-msgstr "Τα μέλη κρατούν πλέον κάθε ρόλο ανταμοιβής που έχουν κερδίσει."
-
-#: cogs/community/level_rewards.py:528
-msgid "Reward mode updated"
-msgstr "Η λειτουργία ανταμοιβών ενημερώθηκε"
-
-#: cogs/community/leveling.py:142
-#, python-brace-format
-msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
-msgstr "**#{rank}** {name} - επίπεδο **{level}** ({xp} XP)"
-
-#: cogs/community/leveling.py:148
-#, python-brace-format
-msgid "**#{rank}** {name} - {xp} XP"
-msgstr "**#{rank}** {name} - {xp} XP"
-
-#: cogs/community/leveling.py:158
-#, python-brace-format
-msgid ""
-"{marker} **{name}**\n"
-"Level **{level}** - {xp} XP"
-msgstr ""
-"{marker} **{name}**\n"
-"Επίπεδο **{level}** - {xp} XP"
-
-#: cogs/community/leveling.py:165
-#, python-brace-format
-msgid ""
-"{marker} **{name}**\n"
-"{xp} XP"
-msgstr ""
-"{marker} **{name}**\n"
-"{xp} XP"
-
-#: cogs/community/leveling.py:213
-#, python-brace-format
-msgid "{count} member"
-msgid_plural "{count} members"
-msgstr[0] "{count} μέλος"
-msgstr[1] "{count} μέλη"
-
-#: cogs/community/leveling.py:217
-#, python-brace-format
-msgid "-# Page {page}/{pages} - {members}"
-msgstr "-# Σελίδα {page}/{pages} - {members}"
-
-#: cogs/community/leveling.py:226 cogs/community/reminders.py:333
-#: cogs/community/seasons_views.py:163 cogs/music/views.py:1303
-msgid "Prev"
-msgstr "Προηγ."
-
-#: cogs/community/leveling.py:1200
-#, python-brace-format
-msgid "{base} ... and earned {roles}"
-msgstr "{base} ... και κέρδισε {roles}"
-
-#: cogs/community/leveling.py:1208
-#, python-brace-format
-msgid "{user} reached level **{level}**! ... and earned {roles}"
-msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
-
-#: cogs/community/leveling.py:1215
-#, python-brace-format
-msgid "{user} reached level **{level}**!"
-msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
-
-#: cogs/community/leveling.py:1616
-#, python-brace-format
-msgid "Rank | {name}"
-msgstr "Κατάταξη | {name}"
-
-#: cogs/community/leveling.py:1620 cogs/utility/searchweb.py:141
-msgid "Rank"
-msgstr "Κατάταξη"
-
-#: cogs/community/leveling.py:1622
-msgid "XP"
-msgstr "XP"
-
-#: cogs/community/leveling.py:1624
-msgid "XP for next level"
-msgstr "XP για το επόμενο επίπεδο"
-
-#: cogs/community/leveling.py:1652
-#, python-brace-format
-msgid "Leaderboard | {guild}"
-msgstr "Πίνακας κατάταξης | {guild}"
-
-#: cogs/community/leveling.py:1657
-msgid "No one has earned any XP yet!"
-msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
-
-#: cogs/community/leveling.py:1671 cogs/community/leveling.py:1726
-#, python-brace-format
-msgid "User {uid}"
-msgstr "Χρήστης {uid}"
-
-#: cogs/community/leveling.py:1705
-#, python-brace-format
-msgid "Weekly leaderboard | {guild}"
-msgstr "Εβδομαδιαία κατάταξη | {guild}"
-
-#: cogs/community/leveling.py:1706
-msgid "No one has earned any XP this week yet!"
-msgstr "Κανείς δεν έχει κερδίσει XP αυτή την εβδομάδα ακόμα!"
-
-#: cogs/community/leveling.py:1708
-#, python-brace-format
-msgid "Monthly leaderboard | {guild}"
-msgstr "Μηνιαία κατάταξη | {guild}"
-
-#: cogs/community/leveling.py:1711
-msgid "No one has earned any XP this month yet!"
-msgstr "Κανείς δεν έχει κερδίσει XP αυτόν τον μήνα ακόμα!"
-
 #: cogs/community/reminders.py:68 cogs/community/reminders.py:173
 msgid "Set a reminder"
 msgstr "Όρισε υπενθύμιση"
@@ -2444,7 +1588,7 @@ msgstr "π.χ. 10m, αύριο στις 18:00, ή μια ετικέτα <t:...>"
 
 #: cogs/community/reminders.py:84 cogs/config/reactionroles.py:182
 #: cogs/config/reactionroles.py:283 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:446 cogs/config/welcome.py:765
+#: cogs/config/twitch.py:446 cogs/config/welcome.py:766
 msgid "Message"
 msgstr "Μήνυμα"
 
@@ -2521,6 +1665,12 @@ msgstr "-# {count} σε εκκρεμότητα"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 
+#: cogs/community/leveling/leveling.py:229
+#: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:333
+#: cogs/music/views.py:1303
+msgid "Prev"
+msgstr "Προηγ."
+
 #: cogs/community/reminders.py:631
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
@@ -2529,109 +1679,6 @@ msgstr "<@{author_id}>, {when}: {message}"
 #: cogs/community/reminders.py:703
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
-
-#: cogs/community/seasons.py:684
-#, python-brace-format
-msgid "**Season {month} is over!** Here is the final podium:"
-msgstr "**Η σεζόν {month} ολοκληρώθηκε!** Αυτό είναι το τελικό βάθρο:"
-
-#: cogs/community/seasons.py:690
-#, python-brace-format
-msgid "{medal} {user} - {xp} XP"
-msgstr "{medal} {user} - {xp} XP"
-
-#: cogs/community/seasons.py:698
-#, python-brace-format
-msgid "{user} is the new season champion and receives {role}."
-msgstr "{user} είναι ο νέος πρωταθλητής της σεζόν και λαμβάνει τον ρόλο {role}."
-
-#: cogs/community/seasons.py:773
-msgid "No leveling season has closed here yet - check back next month."
-msgstr "Καμία σεζόν επιπέδων δεν έχει κλείσει ακόμη εδώ - επιστρέψτε τον επόμενο μήνα."
-
-#: cogs/community/seasons_views.py:117
-#, python-brace-format
-msgid "{marker} <@{user_id}> - {xp} XP"
-msgstr "{marker} <@{user_id}> - {xp} XP"
-
-#: cogs/community/seasons_views.py:127
-#, python-brace-format
-msgid "Hall of fame - {guild}"
-msgstr "Αίθουσα Δόξας - {guild}"
-
-#: cogs/community/seasons_views.py:134
-#, python-brace-format
-msgid "Season {month}"
-msgstr "Σεζόν {month}"
-
-#: cogs/community/seasons_views.py:145
-msgid "No podium recorded for this season."
-msgstr "Δεν καταγράφηκε βάθρο για αυτή τη σεζόν."
-
-#: cogs/community/seasons_views.py:268
-msgid "None set - no role is granted for winning a season."
-msgstr "Κανένας δεν έχει οριστεί - δεν απονέμεται ρόλος για τη νίκη μιας σεζόν."
-
-#: cogs/community/seasons_views.py:276
-msgid "Off - the season podium is never announced."
-msgstr "Ανενεργό - το βάθρο της σεζόν δεν ανακοινώνεται ποτέ."
-
-#: cogs/community/seasons_views.py:278
-#, python-brace-format
-msgid "On - posted in <#{channel_id}> when a season closes."
-msgstr "Ενεργό - δημοσιεύεται στο <#{channel_id}> όταν κλείνει μια σεζόν."
-
-#: cogs/community/seasons_views.py:285
-msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
-msgstr "Ενεργό, αλλά δεν έχει ρυθμιστεί σταθερό κανάλι ανακοινώσεων, οπότε τελικά δεν θα δημοσιευτεί τίποτα. Ορίστε ένα με `/levelconfig announce mode`."
-
-#: cogs/community/seasons_views.py:297
-msgid "Pick the season champion role..."
-msgstr "Επιλέξτε τον ρόλο πρωταθλητή σεζόν..."
-
-#: cogs/community/seasons_views.py:310
-msgid "Clear role"
-msgstr "Καθαρισμός ρόλου"
-
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:335
-msgid "Turn off"
-msgstr "Απενεργοποίηση"
-
-#: cogs/community/seasons_views.py:323 cogs/community/usersettings.py:335
-msgid "Turn on"
-msgstr "Ενεργοποίηση"
-
-#: cogs/community/seasons_views.py:373
-#, python-brace-format
-msgid "Seasons - {guild}"
-msgstr "Σεζόν - {guild}"
-
-#: cogs/community/seasons_views.py:376
-msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
-msgstr "Ρυθμίστε τον ρόλο που αποδίδεται στον πρωταθλητή κάθε σεζόν και αν το βάθρο ανακοινώνεται όταν κλείνει μια σεζόν."
-
-#: cogs/community/seasons_views.py:386
-msgid "Season champion role"
-msgstr "Ρόλος πρωταθλητή σεζόν"
-
-#: cogs/community/seasons_views.py:411
-msgid "Season announce"
-msgstr "Ανακοίνωση σεζόν"
-
-#: cogs/community/seasons_views.py:442
-#, python-brace-format
-msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
-msgstr "Δεν μπορώ να διαχειριστώ τον ρόλο {role} (είναι πάνω από τον ανώτατο ρόλο μου, διαχειρίζεται από ενσωμάτωση, ή είναι το @everyone). Επιλέξτε άλλον ρόλο."
-
-#: cogs/community/seasons_views.py:454 cogs/community/seasons_views.py:466
-#: cogs/community/seasons_views.py:491 cogs/moderation/automod_panel.py:415
-#: cogs/moderation/warn_config.py:456
-msgid "Something went wrong updating the panel."
-msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
-
-#: cogs/community/seasons_views.py:479
-msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
-msgstr "Ορίστε πρώτα ένα σταθερό κανάλι ανακοινώσεων με `/levelconfig announce mode` πριν ενεργοποιήσετε την ανακοίνωση σεζόν."
 
 #: cogs/community/usersettings.py:87
 msgid "Level-up announcements"
@@ -2726,6 +1773,16 @@ msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ι�
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
+#: cogs/community/leveling/seasons_views.py:324
+#: cogs/community/usersettings.py:335
+msgid "Turn off"
+msgstr "Απενεργοποίηση"
+
+#: cogs/community/leveling/seasons_views.py:324
+#: cogs/community/usersettings.py:335
+msgid "Turn on"
+msgstr "Ενεργοποίηση"
+
 #: cogs/community/usersettings.py:419
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
@@ -2798,6 +1855,976 @@ msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σο�
 #: cogs/community/usersettings.py:672
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
+
+#: cogs/community/leveling/level_admin.py:64
+msgid "Reset XP"
+msgstr "Μηδενισμός XP"
+
+#: cogs/community/leveling/level_admin.py:80
+#, python-brace-format
+msgid "Reset {member}'s XP - they had **{xp} XP**."
+msgstr "Το XP του/της {member} μηδενίστηκε - είχε **{xp} XP**."
+
+#: cogs/community/leveling/level_admin.py:100
+#: cogs/community/leveling/level_admin.py:189
+msgid "Cancelled - no XP was changed."
+msgstr "Ακυρώθηκε - κανένα XP δεν άλλαξε."
+
+#: cogs/community/leveling/level_admin.py:115
+msgid "Confirm full XP reset"
+msgstr "Επιβεβαίωση πλήρους μηδενισμού"
+
+#: cogs/community/leveling/level_admin.py:120
+msgid "Type the server name to confirm"
+msgstr "Πληκτρολόγησε το όνομα του διακομιστή για επιβεβαίωση"
+
+#: cogs/community/leveling/level_admin.py:133
+msgid "That doesn't match the server name - nothing was reset."
+msgstr "Δεν ταιριάζει με το όνομα του διακομιστή - τίποτα δεν μηδενίστηκε."
+
+#: cogs/community/leveling/level_admin.py:147
+#, python-brace-format
+msgid "{count} member's XP"
+msgid_plural "{count} members' XP"
+msgstr[0] "το XP {count} μέλους"
+msgstr[1] "το XP {count} μελών"
+
+#: cogs/community/leveling/level_admin.py:151
+#, python-brace-format
+msgid "Reset all XP in **{guild}**: wiped {members} and every period leaderboard."
+msgstr "Μηδενίστηκε το XP στο **{guild}**: διαγράφηκαν {members} και όλες οι κατατάξεις περιόδου."
+
+#: cogs/community/leveling/level_admin.py:158
+msgid "Something went wrong resetting XP."
+msgstr "Κάτι πήγε στραβά κατά τον μηδενισμό του XP."
+
+#: cogs/community/leveling/level_admin.py:172
+msgid "Reset ALL XP"
+msgstr "Μηδενισμός ΟΛΩΝ"
+
+#: cogs/community/leveling/level_admin.py:266
+msgid "XP updated"
+msgstr "Το XP ενημερώθηκε"
+
+#: cogs/community/leveling/level_admin.py:268
+#, python-brace-format
+msgid "{member} now has **{xp} XP** (was {old_xp})."
+msgstr "Ο/Η {member} έχει τώρα **{xp} XP** (πριν: {old_xp})."
+
+#: cogs/community/leveling/level_admin.py:272
+msgid "Level up"
+msgstr "Άνοδος επιπέδου"
+
+#: cogs/community/leveling/level_admin.py:273
+#: cogs/community/leveling/level_admin.py:280
+#, python-brace-format
+msgid "Level {old} -> **{new}**"
+msgstr "Επίπεδο {old} -> **{new}**"
+
+#: cogs/community/leveling/level_admin.py:279
+msgid "Level down"
+msgstr "Πτώση επιπέδου"
+
+#: cogs/community/leveling/level_admin.py:286
+#: cogs/community/leveling/leveling.py:1624 cogs/utility/searchweb.py:144
+msgid "Level"
+msgstr "Επίπεδο"
+
+#: cogs/community/leveling/level_admin.py:287
+#, python-brace-format
+msgid "**{level}** (unchanged)"
+msgstr "**{level}** (αμετάβλητο)"
+
+#: cogs/community/leveling/level_admin.py:377
+msgid "Admin XP tools"
+msgstr "Εργαλεία XP διαχειριστή"
+
+#: cogs/community/leveling/level_admin.py:379
+msgid ""
+"- `/levelconfig xp give <member> <amount>` - add XP\n"
+"- `/levelconfig xp take <member> <amount>` - remove XP\n"
+"- `/levelconfig xp set <member> <amount>` - set an exact total\n"
+"- `/levelconfig xp reset <member>` - reset one member (confirm)\n"
+"- `/levelconfig xp resetall` - reset the whole server (double confirm)"
+msgstr ""
+"- `/levelconfig xp give <μέλος> <ποσό>` - προσθήκη XP\n"
+"- `/levelconfig xp take <μέλος> <ποσό>` - αφαίρεση XP\n"
+"- `/levelconfig xp set <μέλος> <ποσό>` - ορισμός ακριβούς συνόλου\n"
+"- `/levelconfig xp reset <μέλος>` - μηδενισμός ενός μέλους (επιβεβαίωση)\n"
+"- `/levelconfig xp resetall` - μηδενισμός όλου του διακομιστή (διπλή επιβεβαίωση)"
+
+#: cogs/community/leveling/level_admin.py:394
+#: cogs/community/leveling/level_admin.py:407
+#, python-brace-format
+msgid "The amount must be between {min} and {max}."
+msgstr "Το ποσό πρέπει να είναι μεταξύ {min} και {max}."
+
+#: cogs/community/leveling/level_admin.py:420
+#, python-brace-format
+msgid "The XP total must be between {min} and {max}."
+msgstr "Το σύνολο XP πρέπει να είναι μεταξύ {min} και {max}."
+
+#: cogs/community/leveling/level_admin.py:430
+msgid "Reset this member's XP?"
+msgstr "Μηδενισμός του XP αυτού του μέλους;"
+
+#: cogs/community/leveling/level_admin.py:432
+#, python-brace-format
+msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
+msgstr "Το XP του/της {member} επιστρέφει στο **0** και αφαιρείται από την κατάταξη. Δεν αναιρείται."
+
+#: cogs/community/leveling/level_admin.py:447
+msgid "Reset ALL XP in this server?"
+msgstr "Μηδενισμός ΟΛΟΥ του XP σε αυτόν τον διακομιστή;"
+
+#: cogs/community/leveling/level_admin.py:449
+#, python-brace-format
+msgid ""
+"This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
+"\n"
+"Press the button below, then type the server name to confirm."
+msgstr ""
+"Διαγράφει το XP **όλων** των μελών και όλες τις εβδομαδιαίες/μηνιαίες κατατάξεις του **{guild}**. Δεν αναιρείται.\n"
+"\n"
+"Πάτησε το κουμπί και μετά πληκτρολόγησε το όνομα του διακομιστή για επιβεβαίωση."
+
+#: cogs/community/leveling/level_config_ui.py:66
+msgid "The message can't be empty."
+msgstr "Το μήνυμα δεν μπορεί να είναι κενό."
+
+#: cogs/community/leveling/level_config_ui.py:68
+#, python-brace-format
+msgid "That message has a stray '{' or '}' - check the placeholders."
+msgstr "Αυτό το μήνυμα έχει ένα ορφανό '{' ή '}' - έλεγξε τα placeholders."
+
+#: cogs/community/leveling/level_config_ui.py:71
+#, python-brace-format
+msgid "Only these placeholders are allowed: {user}, {level}, {guild}."
+msgstr "Επιτρέπονται μόνο αυτά τα placeholders: {user}, {level}, {guild}."
+
+#: cogs/community/leveling/level_config_ui.py:78
+#, python-brace-format
+msgid "The message is too long (max {max} characters)."
+msgstr "Το μήνυμα είναι πολύ μεγάλο (έως {max} χαρακτήρες)."
+
+#: cogs/community/leveling/level_config_ui.py:87
+msgid "Off - level-ups are never announced."
+msgstr "Off - οι άνοδοι επιπέδου δεν ανακοινώνονται ποτέ."
+
+#: cogs/community/leveling/level_config_ui.py:89
+msgid "DM - the member is messaged directly."
+msgstr "DM - το μέλος λαμβάνει προσωπικό μήνυμα."
+
+#: cogs/community/leveling/level_config_ui.py:92
+#, python-brace-format
+msgid "Fixed channel: <#{channel_id}>"
+msgstr "Σταθερό κανάλι: <#{channel_id}>"
+
+#: cogs/community/leveling/level_config_ui.py:96
+msgid "Fixed channel (none set yet - falls back to the message's own channel)."
+msgstr "Σταθερό κανάλι (δεν έχει οριστεί - επιστρέφει στο κανάλι του μηνύματος)."
+
+#: cogs/community/leveling/level_config_ui.py:99
+msgid "Channel - announced where the message was sent."
+msgstr "Κανάλι - ανακοινώνεται εκεί όπου στάλθηκε το μήνυμα."
+
+#: cogs/community/leveling/level_config_ui.py:104
+#, python-brace-format
+msgid "Custom: \"{template}\""
+msgstr "Προσαρμοσμένο: \"{template}\""
+
+#: cogs/community/leveling/level_config_ui.py:105
+#, python-brace-format
+msgid "Default: \"{template}\""
+msgstr "Προεπιλογή: \"{template}\""
+
+#: cogs/community/leveling/level_config_ui.py:113
+#, python-brace-format
+msgid "On - {rate} XP per eligible minute in voice."
+msgstr "On - {rate} XP ανά επιλέξιμο λεπτό στα φωνητικά."
+
+#: cogs/community/leveling/level_config_ui.py:116
+msgid "Off - no XP for time spent in voice."
+msgstr "Off - κανένα XP για τον χρόνο στα φωνητικά."
+
+#: cogs/community/leveling/level_config_ui.py:125
+msgid "The multiplier must be a plain number."
+msgstr "Ο πολλαπλασιαστής πρέπει να είναι απλός αριθμός."
+
+#: cogs/community/leveling/level_config_ui.py:132
+#, python-brace-format
+msgid "The multiplier must be between {min} and {max} (0 mutes XP entirely)."
+msgstr "Ο πολλαπλασιαστής πρέπει να είναι μεταξύ {min} και {max} (το 0 μηδενίζει το XP)."
+
+#: cogs/community/leveling/level_config_ui.py:147
+#, python-brace-format
+msgid "The event must last between 1 minute and {max_days} days (e.g. \"2h\" or \"3d\")."
+msgstr "Η εκδήλωση πρέπει να διαρκεί από 1 λεπτό έως {max_days} ημέρες (π.χ. \"2h\" ή \"3d\")."
+
+#: cogs/community/leveling/level_config_ui.py:151
+msgid "I couldn't understand that duration - try something like \"2h\" or \"3d\"."
+msgstr "Δεν κατάλαβα αυτή τη διάρκεια - δοκίμασε κάτι σαν \"2h\" ή \"3d\"."
+
+#: cogs/community/leveling/level_config_ui.py:165
+#, python-brace-format
+msgid "Server-wide: **{factor}x**"
+msgstr "Όλος ο διακομιστής: **x{factor}**"
+
+#: cogs/community/leveling/level_config_ui.py:171
+#: cogs/community/leveling/level_config_ui.py:177
+#: cogs/community/leveling/level_config_ui.py:833
+#: cogs/community/leveling/level_config_ui.py:839
+#: cogs/config/verification.py:105
+msgid "(deleted)"
+msgstr "(διαγράφηκε)"
+
+#: cogs/community/leveling/level_config_ui.py:198
+msgid "No XP event running. Use `/levelconfig event set` to start one."
+msgstr "Δεν τρέχει εκδήλωση XP. Χρησιμοποίησε το `/levelconfig event set` για να ξεκινήσεις μία."
+
+#: cogs/community/leveling/level_config_ui.py:199
+#, python-brace-format
+msgid "**{factor}x** XP until {when}."
+msgstr "XP **x{factor}** μέχρι {when}."
+
+#: cogs/community/leveling/level_config_ui.py:250
+#, python-brace-format
+msgid "That image is too large - the limit is {mb} MB."
+msgstr "Αυτή η εικόνα είναι πολύ μεγάλη - το όριο είναι {mb} MB."
+
+#: cogs/community/leveling/level_config_ui.py:255
+msgid "That image has too many pixels to process safely - try a smaller picture."
+msgstr "Αυτή η εικόνα έχει πάρα πολλά pixel για ασφαλή επεξεργασία - δοκιμάστε μια μικρότερη εικόνα."
+
+#: cogs/community/leveling/level_config_ui.py:259
+msgid "Only PNG, JPEG, and WebP images are supported."
+msgstr "Υποστηρίζονται μόνο εικόνες PNG, JPEG και WebP."
+
+#: cogs/community/leveling/level_config_ui.py:262
+msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
+msgstr "Αυτή η εικόνα είναι πολύ σύνθετη για να χωρέσει στο όριο αποθήκευσης - δοκιμάστε μια πιο απλή ή μικρότερη εικόνα."
+
+#: cogs/community/leveling/level_config_ui.py:267
+msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
+msgstr "Δεν μπόρεσα να το διαβάσω ως εικόνα - βεβαιωθείτε ότι είναι έγκυρο αρχείο PNG, JPEG ή WebP."
+
+#: cogs/community/leveling/level_config_ui.py:272
+msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
+msgstr "Αυτό δεν είναι έγκυρο χρώμα hex - δοκιμάστε κάτι σαν #5865F2 ή #58F."
+
+#: cogs/community/leveling/level_config_ui.py:276
+msgid "That image couldn't be used for the rank card."
+msgstr "Αυτή η εικόνα δεν μπόρεσε να χρησιμοποιηθεί για την κάρτα rank."
+
+#: cogs/community/leveling/level_config_ui.py:357
+msgid "Set rank card accent"
+msgstr "Ορισμός χρώματος έμφασης κάρτας rank"
+
+#: cogs/community/leveling/level_config_ui.py:361
+msgid "Hex colour"
+msgstr "Χρώμα hex"
+
+#: cogs/community/leveling/level_config_ui.py:386
+msgid "Set background..."
+msgstr "Ορισμός φόντου..."
+
+#: cogs/community/leveling/level_config_ui.py:397
+msgid "Reset background"
+msgstr "Επαναφορά φόντου"
+
+#: cogs/community/leveling/level_config_ui.py:409
+msgid "Set accent..."
+msgstr "Ορισμός χρώματος έμφασης..."
+
+#: cogs/community/leveling/level_config_ui.py:419
+msgid "Reset accent"
+msgstr "Επαναφορά χρώματος έμφασης"
+
+#: cogs/community/leveling/level_config_ui.py:432
+msgid "Preview my card"
+msgstr "Προεπισκόπηση της κάρτας μου"
+
+#: cogs/community/leveling/level_config_ui.py:478
+#, python-brace-format
+msgid "Rank card - {guild}"
+msgstr "Κάρτα rank - {guild}"
+
+#: cogs/community/leveling/level_config_ui.py:481
+msgid "Customise the background and accent colour used on this server's /rank cards."
+msgstr "Προσαρμόστε το φόντο και το χρώμα έμφασης που χρησιμοποιούνται στις κάρτες /rank αυτού του διακομιστή."
+
+#: cogs/community/leveling/level_config_ui.py:490
+#, python-brace-format
+msgid "Set - a custom {width}x{height} background image is used."
+msgstr "Ορίστηκε - χρησιμοποιείται προσαρμοσμένη εικόνα φόντου {width}x{height}."
+
+#: cogs/community/leveling/level_config_ui.py:494
+msgid "Not set - the stock panel background is used."
+msgstr "Δεν έχει οριστεί - χρησιμοποιείται το προεπιλεγμένο φόντο του panel."
+
+#: cogs/community/leveling/level_config_ui.py:498
+msgid "Background"
+msgstr "Φόντο"
+
+#: cogs/community/leveling/level_config_ui.py:512
+#, python-brace-format
+msgid "Set - {hex}"
+msgstr "Ορίστηκε - {hex}"
+
+#: cogs/community/leveling/level_config_ui.py:515
+msgid "Default - each member's own role colour is used."
+msgstr "Προεπιλογή - χρησιμοποιείται το χρώμα ρόλου του κάθε μέλους."
+
+#: cogs/community/leveling/level_config_ui.py:519
+#: cogs/community/profile/registry.py:238
+msgid "Accent colour"
+msgstr "Χρώμα έμφασης"
+
+#: cogs/community/leveling/level_config_ui.py:537
+#: cogs/community/leveling/seasons_views.py:186
+#: cogs/community/leveling/seasons_views.py:427
+#: cogs/community/profile/views.py:873 cogs/community/serverstats/views.py:550
+#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
+#: cogs/moderation/warn_config.py:437
+msgid "Only you can use these controls"
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
+
+#: cogs/community/leveling/level_config_ui.py:539
+#: cogs/community/leveling/seasons_views.py:188
+#: cogs/community/leveling/seasons_views.py:429
+#: cogs/community/profile/views.py:875 cogs/community/serverstats/views.py:552
+#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
+#: cogs/moderation/warn_config.py:439
+msgid "times out after 3 min"
+msgstr "λήγει μετά από 3 λεπτά"
+
+#: cogs/community/leveling/level_config_ui.py:566
+#, python-brace-format
+msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
+msgstr "Για να ορίσετε φόντο, εκτελέστε `/levelconfig card background` και επισυνάψτε μια εικόνα (PNG, JPEG ή WebP· έως {mb} MB)."
+
+#: cogs/community/leveling/level_config_ui.py:683
+msgid "Channel/category"
+msgstr "Κανάλι/κατηγορία"
+
+#: cogs/community/leveling/level_config_ui.py:684
+#: cogs/community/leveling/level_config_ui.py:688
+#: cogs/community/leveling/level_config_ui.py:763
+#: cogs/community/leveling/level_config_ui.py:767
+msgid "Unknown (deleted)"
+msgstr "Άγνωστο (διαγράφηκε)"
+
+#: cogs/community/leveling/level_config_ui.py:687
+#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:53
+#: cogs/config/reactionroles.py:184
+msgid "Role"
+msgstr "Ρόλος"
+
+#: cogs/community/leveling/level_config_ui.py:697
+msgid "Pick a no-XP zone to remove..."
+msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση..."
+
+#: cogs/community/leveling/level_config_ui.py:717
+msgid "Removed that no-XP zone."
+msgstr "Η ζώνη χωρίς XP αφαιρέθηκε."
+
+#: cogs/community/leveling/level_config_ui.py:758
+msgid "Global boost"
+msgstr "Καθολική ενίσχυση"
+
+#: cogs/community/leveling/level_config_ui.py:759
+msgid "Server-wide"
+msgstr "Όλος ο διακομιστής"
+
+#: cogs/community/leveling/level_config_ui.py:762
+msgid "Channel/category boost"
+msgstr "Ενίσχυση καναλιού/κατηγορίας"
+
+#: cogs/community/leveling/level_config_ui.py:766
+msgid "Role boost"
+msgstr "Ενίσχυση ρόλου"
+
+#: cogs/community/leveling/level_config_ui.py:776
+msgid "Pick an XP boost to remove..."
+msgstr "Διάλεξε μια ενίσχυση XP για αφαίρεση..."
+
+#: cogs/community/leveling/level_config_ui.py:796
+msgid "Removed that XP boost."
+msgstr "Η ενίσχυση XP αφαιρέθηκε."
+
+#: cogs/community/leveling/level_config_ui.py:858
+#, python-brace-format
+msgid "No-XP zones | {guild}"
+msgstr "Ζώνες χωρίς XP | {guild}"
+
+#: cogs/community/leveling/level_config_ui.py:867
+msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
+msgstr "Δεν έχουν ρυθμιστεί ζώνες χωρίς XP. Χρησιμοποίησε το `/levelconfig noxp add` για να εξαιρέσεις κανάλι, κατηγορία ή ρόλο."
+
+#: cogs/community/leveling/level_config_ui.py:877
+#: cogs/community/leveling/level_config_ui.py:932
+#, python-brace-format
+msgid ""
+"**Channels & categories**\n"
+"{lines}"
+msgstr ""
+"**Κανάλια και κατηγορίες**\n"
+"{lines}"
+
+#: cogs/community/leveling/level_config_ui.py:887
+#: cogs/community/leveling/level_config_ui.py:942
+#, python-brace-format
+msgid ""
+"**Roles**\n"
+"{lines}"
+msgstr ""
+"**Ρόλοι**\n"
+"{lines}"
+
+#: cogs/community/leveling/level_config_ui.py:908
+#, python-brace-format
+msgid "XP boosts | {guild}"
+msgstr "Ενισχύσεις XP | {guild}"
+
+#: cogs/community/leveling/level_config_ui.py:917
+msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
+msgstr "Δεν έχουν ρυθμιστεί ενισχύσεις XP. Χρησιμοποίησε το `/levelconfig boost add` για να αυξήσεις ή να μειώσεις το XP καθολικά, ανά κανάλι ή ανά ρόλο."
+
+#: cogs/community/leveling/level_config_ui.py:948
+#: cogs/community/leveling/level_config_ui.py:1045
+#, python-brace-format
+msgid ""
+"**XP event**\n"
+"{event}"
+msgstr ""
+"**Εκδήλωση XP**\n"
+"{event}"
+
+#: cogs/community/leveling/level_config_ui.py:983
+#, python-brace-format
+msgid "Level config | {guild}"
+msgstr "Ρυθμίσεις επιπέδων | {guild}"
+
+#: cogs/community/leveling/level_config_ui.py:990
+msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
+msgstr "Δεν έχουν ρυθμιστεί ζώνες χωρίς XP. Χρησιμοποίησε το `/levelconfig noxp add`."
+
+#: cogs/community/leveling/level_config_ui.py:996
+#, python-brace-format
+msgid ""
+"**No-XP zones ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+"**Ζώνες χωρίς XP ({count}/{max})**\n"
+"{summary}"
+
+#: cogs/community/leveling/level_config_ui.py:1006
+#, python-brace-format
+msgid ""
+"**Announce mode**\n"
+"{mode}\n"
+"**Announce message**\n"
+"{template}"
+msgstr ""
+"**Λειτουργία ανακοίνωσης**\n"
+"{mode}\n"
+"**Μήνυμα ανακοίνωσης**\n"
+"{template}"
+
+#: cogs/community/leveling/level_config_ui.py:1015
+#, python-brace-format
+msgid ""
+"**Voice XP**\n"
+"{voice}"
+msgstr ""
+"**Φωνητικό XP**\n"
+"{voice}"
+
+#: cogs/community/leveling/level_config_ui.py:1025
+msgid "No XP boosts configured. Use `/levelconfig boost add`."
+msgstr "Καμία ενίσχυση XP. Χρησιμοποίησε το `/levelconfig boost add`."
+
+#: cogs/community/leveling/level_config_ui.py:1035
+#, python-brace-format
+msgid ""
+"**XP boosts ({count}/{max})**\n"
+"{summary}"
+msgstr ""
+"**Ενισχύσεις XP ({count}/{max})**\n"
+"{summary}"
+
+#: cogs/community/leveling/level_config_ui.py:1097
+#: cogs/community/leveling/level_config_ui.py:1360
+#: cogs/community/leveling/level_config_ui.py:1386
+#: cogs/community/leveling/level_config_ui.py:1434
+#: cogs/community/leveling/level_config_ui.py:1483
+msgid "The leveling system isn't loaded right now."
+msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
+
+#: cogs/community/leveling/level_config_ui.py:1198 cogs/config/settings.py:89
+#: cogs/config/settings.py:215
+msgid "Leveling"
+msgstr "Επίπεδα"
+
+#: cogs/community/leveling/level_config_ui.py:1200
+msgid "Leveling enabled for this server."
+msgstr "Τα επίπεδα ενεργοποιήθηκαν για αυτόν τον διακομιστή."
+
+#: cogs/community/leveling/level_config_ui.py:1202
+msgid "Leveling disabled for this server."
+msgstr "Τα επίπεδα απενεργοποιήθηκαν για αυτόν τον διακομιστή."
+
+#: cogs/community/leveling/level_config_ui.py:1235
+msgid "Give exactly one of a channel/category or a role."
+msgstr "Δώσε ακριβώς ένα κανάλι/κατηγορία Ή έναν ρόλο."
+
+#: cogs/community/leveling/level_config_ui.py:1240
+msgid "You can't use @everyone as a no-XP zone."
+msgstr "Δεν μπορείς να χρησιμοποιήσεις το @everyone ως ζώνη χωρίς XP."
+
+#: cogs/community/leveling/level_config_ui.py:1256
+#: cogs/community/leveling/level_config_ui.py:1293
+#, python-brace-format
+msgid "This server already has the maximum of {max} no-XP zones."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ζωνών χωρίς XP."
+
+#: cogs/community/leveling/level_config_ui.py:1285
+#, python-brace-format
+msgid "{target} is already a no-XP zone."
+msgstr "Το {target} είναι ήδη ζώνη χωρίς XP."
+
+#: cogs/community/leveling/level_config_ui.py:1302
+msgid "No-XP zone added"
+msgstr "Η ζώνη χωρίς XP προστέθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1303
+#, python-brace-format
+msgid "{target} will no longer earn XP."
+msgstr "Το {target} δεν θα δίνει πια XP."
+
+#: cogs/community/leveling/level_config_ui.py:1317
+msgid "This server has no no-XP zones configured yet."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ζώνες χωρίς XP."
+
+#: cogs/community/leveling/level_config_ui.py:1321
+msgid "Pick a no-XP zone to remove:"
+msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση:"
+
+#: cogs/community/leveling/level_config_ui.py:1355
+msgid "Give a channel when setting the fixed mode."
+msgstr "Δώσε ένα κανάλι όταν ορίζεις τη σταθερή λειτουργία."
+
+#: cogs/community/leveling/level_config_ui.py:1368
+msgid "Announce mode updated"
+msgstr "Η λειτουργία ανακοινώσεων ενημερώθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1392
+#, python-brace-format
+msgid "The level-up message was reset to the default: \"{template}\""
+msgstr "Το μήνυμα ανόδου επιπέδου επαναφέρθηκε στο προεπιλεγμένο: \"{template}\""
+
+#: cogs/community/leveling/level_config_ui.py:1412
+msgid "Level-up message updated"
+msgstr "Το μήνυμα ανόδου επιπέδου ενημερώθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1413
+#, python-brace-format
+msgid "Preview: {preview}"
+msgstr "Προεπισκόπηση: {preview}"
+
+#: cogs/community/leveling/level_config_ui.py:1438
+msgid "Voice XP enabled"
+msgstr "Το φωνητικό XP ενεργοποιήθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1439
+msgid "Members now earn XP for time spent together in voice."
+msgstr "Τα μέλη κερδίζουν πλέον XP για τον χρόνο μαζί στα φωνητικά."
+
+#: cogs/community/leveling/level_config_ui.py:1442
+msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
+msgstr "Προσοχή: το σύστημα επιπέδων του διακομιστή είναι ανενεργό, δεν δίνεται φωνητικό XP μέχρι να το ενεργοποιήσεις."
+
+#: cogs/community/leveling/level_config_ui.py:1446
+msgid "Voice XP disabled"
+msgstr "Το φωνητικό XP απενεργοποιήθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1447
+msgid "Members no longer earn XP for time in voice."
+msgstr "Τα μέλη δεν κερδίζουν πια XP για τον χρόνο στα φωνητικά."
+
+#: cogs/community/leveling/level_config_ui.py:1474
+#, python-brace-format
+msgid "The rate must be between {min} and {max} XP per minute."
+msgstr "Ο ρυθμός πρέπει να είναι μεταξύ {min} και {max} XP ανά λεπτό."
+
+#: cogs/community/leveling/level_config_ui.py:1487
+msgid "Voice XP rate updated"
+msgstr "Ο ρυθμός φωνητικού XP ενημερώθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1489
+#, python-brace-format
+msgid "Members now earn **{rate}** XP per eligible minute in voice."
+msgstr "Τα μέλη κερδίζουν πλέον **{rate}** XP ανά επιλέξιμο λεπτό στα φωνητικά."
+
+#: cogs/community/leveling/level_config_ui.py:1527
+msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
+msgstr "Δώσε το πολύ ένα κανάλι/κατηγορία Ή έναν ρόλο - κανένα για καθολική ενίσχυση."
+
+#: cogs/community/leveling/level_config_ui.py:1535
+msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
+msgstr "Δεν μπορείς να στοχεύσεις απευθείας το @everyone - άφησε κανάλι και ρόλο κενά για καθολική ενίσχυση."
+
+#: cogs/community/leveling/level_config_ui.py:1561
+msgid "the whole server"
+msgstr "όλος ο διακομιστής"
+
+#: cogs/community/leveling/level_config_ui.py:1592
+#, python-brace-format
+msgid "This server already has the maximum of {max} XP boosts."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ενισχύσεων XP."
+
+#: cogs/community/leveling/level_config_ui.py:1600
+msgid "XP boost set"
+msgstr "Η ενίσχυση XP ορίστηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1602
+#, python-brace-format
+msgid "{target} now has a **{factor}x** XP multiplier."
+msgstr "Το {target} έχει τώρα πολλαπλασιαστή XP **x{factor}**."
+
+#: cogs/community/leveling/level_config_ui.py:1615
+msgid "This server has no XP boosts configured yet."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ενισχύσεις XP."
+
+#: cogs/community/leveling/level_config_ui.py:1618
+msgid "Pick an XP boost to remove:"
+msgstr "Διάλεξε μια ενίσχυση XP για αφαίρεση:"
+
+#: cogs/community/leveling/level_config_ui.py:1636
+msgid "XP event"
+msgstr "Εκδήλωση XP"
+
+#: cogs/community/leveling/level_config_ui.py:1711
+msgid "XP event started"
+msgstr "Η εκδήλωση XP ξεκίνησε"
+
+#: cogs/community/leveling/level_config_ui.py:1723
+msgid "The XP event was stopped."
+msgstr "Η εκδήλωση XP σταμάτησε."
+
+#: cogs/community/leveling/level_config_ui.py:1810
+msgid "I couldn't download that attachment - try again."
+msgstr "Δεν μπόρεσα να κατεβάσω αυτό το συνημμένο - δοκιμάστε ξανά."
+
+#: cogs/community/leveling/level_config_ui.py:1823
+msgid "Rank card background updated"
+msgstr "Το φόντο της κάρτας rank ενημερώθηκε"
+
+#: cogs/community/leveling/level_config_ui.py:1825
+msgid "This server's /rank cards now use the uploaded image as their background."
+msgstr "Οι κάρτες /rank αυτού του διακομιστή χρησιμοποιούν πλέον την εικόνα που ανεβάσατε ως φόντο."
+
+#: cogs/community/leveling/level_rewards.py:66
+msgid "Unknown role (deleted)"
+msgstr "Άγνωστος ρόλος (διαγράφηκε)"
+
+#: cogs/community/leveling/level_rewards.py:69
+#, python-brace-format
+msgid "Level {level}"
+msgstr "Επίπεδο {level}"
+
+#: cogs/community/leveling/level_rewards.py:75
+msgid "Pick a reward rule to remove..."
+msgstr "Διάλεξε έναν κανόνα για αφαίρεση..."
+
+#: cogs/community/leveling/level_rewards.py:96
+#, python-brace-format
+msgid "Removed the level {level} reward ({role})."
+msgstr "Η ανταμοιβή του επιπέδου {level} αφαιρέθηκε ({role})."
+
+#: cogs/community/leveling/level_rewards.py:142
+#, python-brace-format
+msgid "Level rewards | {guild}"
+msgstr "Ανταμοιβές επιπέδου | {guild}"
+
+#: cogs/community/leveling/level_rewards.py:146
+msgid "Stack - members keep every role they've earned"
+msgstr "Συσσώρευση - τα μέλη κρατούν όλους τους ρόλους"
+
+#: cogs/community/leveling/level_rewards.py:148
+msgid "Replace - members only keep the highest tier they've earned"
+msgstr "Αντικατάσταση - τα μέλη κρατούν μόνο το υψηλότερο επίπεδο"
+
+#: cogs/community/leveling/level_rewards.py:151
+#, python-brace-format
+msgid "Mode: **{mode}**"
+msgstr "Λειτουργία: **{mode}**"
+
+#: cogs/community/leveling/level_rewards.py:159
+msgid "No level rewards configured yet. Use `/levelconfig rewards add` to create one."
+msgstr "Δεν έχουν ρυθμιστεί ανταμοιβές επιπέδου. Χρησιμοποίησε το `/levelconfig rewards add` για να φτιάξεις μία."
+
+#: cogs/community/leveling/level_rewards.py:167
+#, python-brace-format
+msgid "**Level {level}** -> {roles}"
+msgstr "**Επίπεδο {level}** -> {roles}"
+
+#: cogs/community/leveling/level_rewards.py:389
+msgid "That role isn't from this server."
+msgstr "Αυτός ο ρόλος δεν είναι από αυτόν τον διακομιστή."
+
+#: cogs/community/leveling/level_rewards.py:392
+msgid "You can't use @everyone as a level reward."
+msgstr "Δεν μπορείς να χρησιμοποιήσεις το @everyone ως ανταμοιβή επιπέδου."
+
+#: cogs/community/leveling/level_rewards.py:395
+msgid "The level must be 1 or higher."
+msgstr "Το επίπεδο πρέπει να είναι 1 ή μεγαλύτερο."
+
+#: cogs/community/leveling/level_rewards.py:408
+#: cogs/community/leveling/level_rewards.py:449
+#, python-brace-format
+msgid "This server already has the maximum of {max} level rewards."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ανταμοιβών επιπέδου."
+
+#: cogs/community/leveling/level_rewards.py:441
+#, python-brace-format
+msgid "{role} is already a level {level} reward."
+msgstr "Το {role} είναι ήδη ανταμοιβή του επιπέδου {level}."
+
+#: cogs/community/leveling/level_rewards.py:456
+#, python-brace-format
+msgid "Added a level reward: reach level **{level}** to receive {role}."
+msgstr "Η ανταμοιβή προστέθηκε: φτάσε στο επίπεδο **{level}** για να λάβεις {role}."
+
+#: cogs/community/leveling/level_rewards.py:462
+msgid "I can add it, but that role is above me - move my role up so I can actually assign it."
+msgstr "Μπορώ να το προσθέσω, αλλά αυτός ο ρόλος είναι πάνω από τον δικό μου - ανέβασε τον ρόλο μου για να μπορώ να τον αναθέσω."
+
+#: cogs/community/leveling/level_rewards.py:467
+msgid "Level reward added"
+msgstr "Η ανταμοιβή επιπέδου προστέθηκε"
+
+#: cogs/community/leveling/level_rewards.py:478
+msgid "This server has no level rewards configured yet."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ανταμοιβές επιπέδου."
+
+#: cogs/community/leveling/level_rewards.py:483
+msgid "Pick a reward rule to remove:"
+msgstr "Διάλεξε έναν κανόνα για αφαίρεση:"
+
+#: cogs/community/leveling/level_rewards.py:519
+msgid "Members now keep only the roles from the highest level reward they've reached."
+msgstr "Τα μέλη κρατούν πλέον μόνο τους ρόλους του υψηλότερου επιπέδου που έχουν φτάσει."
+
+#: cogs/community/leveling/level_rewards.py:524
+msgid "Members now keep every level reward role they've ever earned."
+msgstr "Τα μέλη κρατούν πλέον κάθε ρόλο ανταμοιβής που έχουν κερδίσει."
+
+#: cogs/community/leveling/level_rewards.py:528
+msgid "Reward mode updated"
+msgstr "Η λειτουργία ανταμοιβών ενημερώθηκε"
+
+#: cogs/community/leveling/leveling.py:145
+#, python-brace-format
+msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
+msgstr "**#{rank}** {name} - επίπεδο **{level}** ({xp} XP)"
+
+#: cogs/community/leveling/leveling.py:151
+#, python-brace-format
+msgid "**#{rank}** {name} - {xp} XP"
+msgstr "**#{rank}** {name} - {xp} XP"
+
+#: cogs/community/leveling/leveling.py:161
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"Level **{level}** - {xp} XP"
+msgstr ""
+"{marker} **{name}**\n"
+"Επίπεδο **{level}** - {xp} XP"
+
+#: cogs/community/leveling/leveling.py:168
+#, python-brace-format
+msgid ""
+"{marker} **{name}**\n"
+"{xp} XP"
+msgstr ""
+"{marker} **{name}**\n"
+"{xp} XP"
+
+#: cogs/community/leveling/leveling.py:216
+#, python-brace-format
+msgid "{count} member"
+msgid_plural "{count} members"
+msgstr[0] "{count} μέλος"
+msgstr[1] "{count} μέλη"
+
+#: cogs/community/leveling/leveling.py:220
+#, python-brace-format
+msgid "-# Page {page}/{pages} - {members}"
+msgstr "-# Σελίδα {page}/{pages} - {members}"
+
+#: cogs/community/leveling/leveling.py:1203
+#, python-brace-format
+msgid "{base} ... and earned {roles}"
+msgstr "{base} ... και κέρδισε {roles}"
+
+#: cogs/community/leveling/leveling.py:1211
+#, python-brace-format
+msgid "{user} reached level **{level}**! ... and earned {roles}"
+msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
+
+#: cogs/community/leveling/leveling.py:1218
+#, python-brace-format
+msgid "{user} reached level **{level}**!"
+msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
+
+#: cogs/community/leveling/leveling.py:1619
+#, python-brace-format
+msgid "Rank | {name}"
+msgstr "Κατάταξη | {name}"
+
+#: cogs/community/leveling/leveling.py:1623 cogs/utility/searchweb.py:141
+msgid "Rank"
+msgstr "Κατάταξη"
+
+#: cogs/community/leveling/leveling.py:1625
+msgid "XP"
+msgstr "XP"
+
+#: cogs/community/leveling/leveling.py:1627
+msgid "XP for next level"
+msgstr "XP για το επόμενο επίπεδο"
+
+#: cogs/community/leveling/leveling.py:1655
+#, python-brace-format
+msgid "Leaderboard | {guild}"
+msgstr "Πίνακας κατάταξης | {guild}"
+
+#: cogs/community/leveling/leveling.py:1660
+msgid "No one has earned any XP yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
+
+#: cogs/community/leveling/leveling.py:1674
+#: cogs/community/leveling/leveling.py:1729
+#, python-brace-format
+msgid "User {uid}"
+msgstr "Χρήστης {uid}"
+
+#: cogs/community/leveling/leveling.py:1708
+#, python-brace-format
+msgid "Weekly leaderboard | {guild}"
+msgstr "Εβδομαδιαία κατάταξη | {guild}"
+
+#: cogs/community/leveling/leveling.py:1709
+msgid "No one has earned any XP this week yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP αυτή την εβδομάδα ακόμα!"
+
+#: cogs/community/leveling/leveling.py:1711
+#, python-brace-format
+msgid "Monthly leaderboard | {guild}"
+msgstr "Μηνιαία κατάταξη | {guild}"
+
+#: cogs/community/leveling/leveling.py:1714
+msgid "No one has earned any XP this month yet!"
+msgstr "Κανείς δεν έχει κερδίσει XP αυτόν τον μήνα ακόμα!"
+
+#: cogs/community/leveling/seasons.py:685
+#, python-brace-format
+msgid "**Season {month} is over!** Here is the final podium:"
+msgstr "**Η σεζόν {month} ολοκληρώθηκε!** Αυτό είναι το τελικό βάθρο:"
+
+#: cogs/community/leveling/seasons.py:691
+#, python-brace-format
+msgid "{medal} {user} - {xp} XP"
+msgstr "{medal} {user} - {xp} XP"
+
+#: cogs/community/leveling/seasons.py:699
+#, python-brace-format
+msgid "{user} is the new season champion and receives {role}."
+msgstr "{user} είναι ο νέος πρωταθλητής της σεζόν και λαμβάνει τον ρόλο {role}."
+
+#: cogs/community/leveling/seasons.py:774
+msgid "No leveling season has closed here yet - check back next month."
+msgstr "Καμία σεζόν επιπέδων δεν έχει κλείσει ακόμη εδώ - επιστρέψτε τον επόμενο μήνα."
+
+#: cogs/community/leveling/seasons_views.py:118
+#, python-brace-format
+msgid "{marker} <@{user_id}> - {xp} XP"
+msgstr "{marker} <@{user_id}> - {xp} XP"
+
+#: cogs/community/leveling/seasons_views.py:128
+#, python-brace-format
+msgid "Hall of fame - {guild}"
+msgstr "Αίθουσα Δόξας - {guild}"
+
+#: cogs/community/leveling/seasons_views.py:135
+#, python-brace-format
+msgid "Season {month}"
+msgstr "Σεζόν {month}"
+
+#: cogs/community/leveling/seasons_views.py:146
+msgid "No podium recorded for this season."
+msgstr "Δεν καταγράφηκε βάθρο για αυτή τη σεζόν."
+
+#: cogs/community/leveling/seasons_views.py:269
+msgid "None set - no role is granted for winning a season."
+msgstr "Κανένας δεν έχει οριστεί - δεν απονέμεται ρόλος για τη νίκη μιας σεζόν."
+
+#: cogs/community/leveling/seasons_views.py:277
+msgid "Off - the season podium is never announced."
+msgstr "Ανενεργό - το βάθρο της σεζόν δεν ανακοινώνεται ποτέ."
+
+#: cogs/community/leveling/seasons_views.py:279
+#, python-brace-format
+msgid "On - posted in <#{channel_id}> when a season closes."
+msgstr "Ενεργό - δημοσιεύεται στο <#{channel_id}> όταν κλείνει μια σεζόν."
+
+#: cogs/community/leveling/seasons_views.py:286
+msgid "On, but no fixed announce channel is configured, so nothing will actually be posted. Set one with `/levelconfig announce mode`."
+msgstr "Ενεργό, αλλά δεν έχει ρυθμιστεί σταθερό κανάλι ανακοινώσεων, οπότε τελικά δεν θα δημοσιευτεί τίποτα. Ορίστε ένα με `/levelconfig announce mode`."
+
+#: cogs/community/leveling/seasons_views.py:298
+msgid "Pick the season champion role..."
+msgstr "Επιλέξτε τον ρόλο πρωταθλητή σεζόν..."
+
+#: cogs/community/leveling/seasons_views.py:311
+msgid "Clear role"
+msgstr "Καθαρισμός ρόλου"
+
+#: cogs/community/leveling/seasons_views.py:374
+#, python-brace-format
+msgid "Seasons - {guild}"
+msgstr "Σεζόν - {guild}"
+
+#: cogs/community/leveling/seasons_views.py:377
+msgid "Configure the role handed to each season's champion and whether the podium is announced when a season closes."
+msgstr "Ρυθμίστε τον ρόλο που αποδίδεται στον πρωταθλητή κάθε σεζόν και αν το βάθρο ανακοινώνεται όταν κλείνει μια σεζόν."
+
+#: cogs/community/leveling/seasons_views.py:387
+msgid "Season champion role"
+msgstr "Ρόλος πρωταθλητή σεζόν"
+
+#: cogs/community/leveling/seasons_views.py:412
+msgid "Season announce"
+msgstr "Ανακοίνωση σεζόν"
+
+#: cogs/community/leveling/seasons_views.py:443
+#, python-brace-format
+msgid "I can't manage {role} (it's above my top role, managed by an integration, or @everyone). Pick another role."
+msgstr "Δεν μπορώ να διαχειριστώ τον ρόλο {role} (είναι πάνω από τον ανώτατο ρόλο μου, διαχειρίζεται από ενσωμάτωση, ή είναι το @everyone). Επιλέξτε άλλον ρόλο."
+
+#: cogs/community/leveling/seasons_views.py:455
+#: cogs/community/leveling/seasons_views.py:467
+#: cogs/community/leveling/seasons_views.py:492
+#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
+msgid "Something went wrong updating the panel."
+msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
+
+#: cogs/community/leveling/seasons_views.py:480
+msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
+msgstr "Ορίστε πρώτα ένα σταθερό κανάλι ανακοινώσεων με `/levelconfig announce mode` πριν ενεργοποιήσετε την ανακοίνωση σεζόν."
 
 #: cogs/community/profile/cog.py:348
 #, python-brace-format
@@ -3364,7 +3391,7 @@ msgid "Ping a role (optional)..."
 msgstr "Ping σε έναν ρόλο (προαιρετικό)..."
 
 #: cogs/config/announcements.py:115 cogs/config/twitch.py:291
-#: cogs/config/welcome.py:188
+#: cogs/config/welcome.py:189
 msgid "Preview"
 msgstr "Προεπισκόπηση"
 
@@ -3374,7 +3401,7 @@ msgid "Add some content to the embed first."
 msgstr "Πρόσθεσε πρώτα κάποιο περιεχόμενο στο embed."
 
 #: cogs/config/announcements.py:128 cogs/config/twitch.py:300
-#: cogs/config/welcome.py:197
+#: cogs/config/welcome.py:198
 msgid "Could not render the preview."
 msgstr "Δεν ήταν δυνατή η εμφάνιση της προεπισκόπησης."
 
@@ -3421,13 +3448,13 @@ msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κ
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
-#: cogs/config/verification.py:107 cogs/config/welcome.py:421
-#: cogs/config/welcome.py:542 cogs/moderation/modlog.py:251
+#: cogs/config/verification.py:107 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr "*Δεν έχει οριστεί.*"
 
-#: cogs/config/announcements.py:273 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:478 cogs/config/welcome.py:568
+#: cogs/config/announcements.py:273 cogs/config/welcome.py:453
+#: cogs/config/welcome.py:479 cogs/config/welcome.py:569
 msgid "Ping"
 msgstr "Ping"
 
@@ -3438,7 +3465,7 @@ msgstr "Κανένα"
 
 #: cogs/config/announcements.py:278 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:416 cogs/config/twitch.py:459
-#: cogs/config/welcome.py:461 cogs/config/welcome.py:582
+#: cogs/config/welcome.py:462 cogs/config/welcome.py:583
 msgid "Embed"
 msgstr "Embed"
 
@@ -3466,7 +3493,7 @@ msgstr "Η αποστολή απέτυχε, δοκίμασε ξανά."
 msgid "Announcement sent to {channel}."
 msgstr "Η ανακοίνωση στάλθηκε στο {channel}."
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:544
+#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:545
 msgid "Scheduling is unavailable right now."
 msgstr "Ο προγραμματισμός δεν είναι διαθέσιμος αυτή τη στιγμή."
 
@@ -3617,7 +3644,7 @@ msgstr "Κάτι πήγε στραβά κατά τη δημοσίευση του
 msgid "Your button-role panel is live in {channel}."
 msgstr "Το πάνελ ρόλων-κουμπιών σου είναι ενεργό στο {channel}."
 
-#: cogs/config/buttonroles.py:693 cogs/moderation/moderation.py:718
+#: cogs/config/buttonroles.py:693 cogs/moderation/moderation.py:719
 msgid "Skipped"
 msgstr "Παραλείφθηκε"
 
@@ -4623,7 +4650,7 @@ msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
 #: cogs/config/settings.py:107 cogs/config/settings.py:224
-#: cogs/moderation/automod.py:94
+#: cogs/moderation/automod.py:95
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -4897,7 +4924,7 @@ msgstr "**Γραμμή περιεχομένου:** {preview}"
 msgid "Edit the alert embed..."
 msgstr "Επεξεργάσου το embed ειδοποίησης..."
 
-#: cogs/config/twitch.py:486 cogs/config/welcome.py:489
+#: cogs/config/twitch.py:486 cogs/config/welcome.py:490
 #, python-brace-format
 msgid "Only you can use these controls. Placeholders: {placeholders}"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου. Placeholders: {placeholders}"
@@ -5040,126 +5067,126 @@ msgstr "Η επαλήθευση έχει ρυθμιστεί - το κλικ πα
 msgid "Verification disabled."
 msgstr "Η επαλήθευση απενεργοποιήθηκε."
 
-#: cogs/config/welcome.py:83
+#: cogs/config/welcome.py:84
 msgid "Add a GIF"
 msgstr "Πρόσθεσε ένα GIF"
 
-#: cogs/config/welcome.py:86
+#: cogs/config/welcome.py:87
 msgid "GIF or image URL"
 msgstr "URL GIF ή εικόνας"
 
-#: cogs/config/welcome.py:98
+#: cogs/config/welcome.py:99
 msgid "That doesn't look like a valid URL."
 msgstr "Αυτό δεν μοιάζει με έγκυρο URL."
 
-#: cogs/config/welcome.py:127
+#: cogs/config/welcome.py:128
 msgid "Select the welcome channel..."
 msgstr "Επίλεξε το κανάλι καλωσορίσματος..."
 
-#: cogs/config/welcome.py:174
+#: cogs/config/welcome.py:175
 msgid "Manage GIFs"
 msgstr "Διαχείριση GIF"
 
-#: cogs/config/welcome.py:238
+#: cogs/config/welcome.py:239
 msgid "GIF"
 msgstr "GIF"
 
-#: cogs/config/welcome.py:244
+#: cogs/config/welcome.py:245
 msgid "Remove a GIF..."
 msgstr "Αφαίρεσε ένα GIF..."
 
-#: cogs/config/welcome.py:269
+#: cogs/config/welcome.py:270
 msgid "Add GIF"
 msgstr "Προσθήκη GIF"
 
-#: cogs/config/welcome.py:277
+#: cogs/config/welcome.py:278
 msgid "Could not open the form."
 msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας."
 
-#: cogs/config/welcome.py:298
+#: cogs/config/welcome.py:299
 msgid "Manage welcome GIFs"
 msgstr "Διαχείριση GIF καλωσορίσματος"
 
-#: cogs/config/welcome.py:301
+#: cogs/config/welcome.py:302
 msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
 msgstr "Πρόσθεσε URL εικόνας/GIF στη συλλογή τυχαίων ή αφαίρεσε ένα παρακάτω. Ενεργοποίησε το **Random GIF** στο κύριο πάνελ για να χρησιμοποιήσεις τη συλλογή."
 
-#: cogs/config/welcome.py:310
+#: cogs/config/welcome.py:311
 #, python-brace-format
 msgid "...and {count} more"
 msgstr "...και {count} ακόμη"
 
-#: cogs/config/welcome.py:315
+#: cogs/config/welcome.py:316
 #, python-brace-format
 msgid "Pool ({count})"
 msgstr "Συλλογή ({count})"
 
-#: cogs/config/welcome.py:324
+#: cogs/config/welcome.py:325
 msgid "Pool (0)"
 msgstr "Συλλογή (0)"
 
-#: cogs/config/welcome.py:326
+#: cogs/config/welcome.py:327
 msgid "No GIFs yet. Add one to build the random pool."
 msgstr "Κανένα GIF ακόμη. Πρόσθεσε ένα για να φτιάξεις τη συλλογή τυχαίων."
 
-#: cogs/config/welcome.py:429
+#: cogs/config/welcome.py:430
 msgid "Welcome system"
 msgstr "Σύστημα καλωσορίσματος"
 
-#: cogs/config/welcome.py:431
+#: cogs/config/welcome.py:432
 msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
 msgstr "Σχεδίασε τον χαιρετισμό που λαμβάνουν τα νέα μέλη. Χρησιμοποίησε τα μενού παρακάτω, κάθε αλλαγή αποθηκεύεται αμέσως. Πάτησε **Preview** για να το δεις ζωντανά."
 
-#: cogs/config/welcome.py:441 cogs/config/welcome.py:572
+#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
 msgid "GIF pool"
 msgstr "Συλλογή GIF"
 
-#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
+#: cogs/config/welcome.py:443 cogs/config/welcome.py:574
 #, python-brace-format
 msgid "{count} saved"
 msgstr "{count} αποθηκευμένα"
 
-#: cogs/config/welcome.py:448 cogs/config/welcome.py:476
-#: cogs/config/welcome.py:564
+#: cogs/config/welcome.py:449 cogs/config/welcome.py:477
+#: cogs/config/welcome.py:565
 msgid "Card"
 msgstr "Κάρτα"
 
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:477
-#: cogs/config/welcome.py:566
+#: cogs/config/welcome.py:451 cogs/config/welcome.py:478
+#: cogs/config/welcome.py:567
 msgid "Random GIF"
 msgstr "Τυχαίο GIF"
 
-#: cogs/config/welcome.py:470
+#: cogs/config/welcome.py:471
 msgid "Edit the welcome embed..."
 msgstr "Επεξεργάσου το embed καλωσορίσματος..."
 
-#: cogs/config/welcome.py:551
+#: cogs/config/welcome.py:552
 #, python-brace-format
 msgid "Welcome | {guild}"
 msgstr "Καλωσόρισμα | {guild}"
 
-#: cogs/config/welcome.py:589
+#: cogs/config/welcome.py:590
 msgid "Use `/welcome` to open the full builder."
 msgstr "Χρησιμοποίησε το `/welcome` για να ανοίξεις τον πλήρη επεξεργαστή."
 
-#: cogs/config/welcome.py:677
+#: cogs/config/welcome.py:678
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "Καλώς ήρθες {mention}!"
 
-#: cogs/config/welcome.py:762 cogs/config/welcome.py:782
+#: cogs/config/welcome.py:763 cogs/config/welcome.py:783
 msgid "Welcome message"
 msgstr "Μήνυμα καλωσορίσματος"
 
-#: cogs/config/welcome.py:769
+#: cogs/config/welcome.py:770
 msgid "Use /welcome to open the full builder."
 msgstr "Χρησιμοποίησε /welcome για να ανοίξεις τον πλήρη δημιουργό."
 
-#: cogs/config/welcome.py:785
+#: cogs/config/welcome.py:786
 msgid "Welcome messages have been turned off."
 msgstr "Τα μηνύματα καλωσορίσματος απενεργοποιήθηκαν."
 
-#: cogs/config/welcome.py:861
+#: cogs/config/welcome.py:862
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Καλώς ήρθες {member}!"
@@ -5416,34 +5443,34 @@ msgstr "Ταχύτητα"
 msgid "~{wpm:.0f} WPM"
 msgstr "~{wpm:.0f} WPM"
 
-#: cogs/moderation/automod.py:95
+#: cogs/moderation/automod.py:96
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "Το {feature} είναι τώρα {state}."
 
-#: cogs/moderation/automod.py:108
+#: cogs/moderation/automod.py:109
 msgid "Link filtering"
 msgstr "Φιλτράρισμα συνδέσμων"
 
-#: cogs/moderation/automod.py:117
+#: cogs/moderation/automod.py:118
 msgid "Invite filtering"
 msgstr "Φιλτράρισμα προσκλήσεων"
 
-#: cogs/moderation/automod.py:126
+#: cogs/moderation/automod.py:127
 msgid "Spam filtering"
 msgstr "Φιλτράρισμα spam"
 
-#: cogs/moderation/automod.py:439
+#: cogs/moderation/automod.py:440
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι πρόσκλησης Discord δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:449
+#: cogs/moderation/automod.py:450
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:476
+#: cogs/moderation/automod.py:477
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} πιο αργά - στέλνεις μηνύματα πολύ γρήγορα."
@@ -5624,38 +5651,38 @@ msgstr "Μαύρη λίστα"
 msgid "The blacklist is empty."
 msgstr "Η μαύρη λίστα είναι κενή."
 
-#: cogs/moderation/moderation.py:93
+#: cogs/moderation/moderation.py:94
 #, python-brace-format
 msgid "Edit reason - case #{number}"
 msgstr "Επεξεργασία λόγου - υπόθεση #{number}"
 
-#: cogs/moderation/moderation.py:109
+#: cogs/moderation/moderation.py:110
 msgid "New reason"
 msgstr "Νέος λόγος"
 
-#: cogs/moderation/moderation.py:117
+#: cogs/moderation/moderation.py:118
 msgid "The reason can't be empty."
 msgstr "Ο λόγος δεν μπορεί να είναι κενός."
 
-#: cogs/moderation/moderation.py:131 cogs/moderation/moderation.py:1138
-#: cogs/moderation/moderation.py:1211 cogs/moderation/moderation.py:1233
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1139
+#: cogs/moderation/moderation.py:1212 cogs/moderation/moderation.py:1234
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "Δεν βρέθηκε υπόθεση #{number} σε αυτόν τον διακομιστή."
 
-#: cogs/moderation/moderation.py:138 cogs/moderation/moderation.py:1239
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1240
 msgid "Updated by"
 msgstr "Ενημερώθηκε από"
 
-#: cogs/moderation/moderation.py:147
+#: cogs/moderation/moderation.py:148
 msgid "Sorry, I couldn't update that reason."
 msgstr "Συγγνώμη, δεν μπόρεσα να ενημερώσω αυτόν τον λόγο."
 
-#: cogs/moderation/moderation.py:165
+#: cogs/moderation/moderation.py:166
 msgid "## New Members"
 msgstr "## Νέα μέλη"
 
-#: cogs/moderation/moderation.py:170
+#: cogs/moderation/moderation.py:171
 #, python-brace-format
 msgid ""
 "**{member}** (ID: {id})\n"
@@ -5664,20 +5691,20 @@ msgstr ""
 "**{member}** (ID: {id})\n"
 "μπήκε {joined}, δημιουργήθηκε {created}"
 
-#: cogs/moderation/moderation.py:207
+#: cogs/moderation/moderation.py:208
 msgid "**:x: Sorry, I am missing permissions to do this!**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό!**"
 
-#: cogs/moderation/moderation.py:367
+#: cogs/moderation/moderation.py:368
 #, python-brace-format
 msgid "Kick | {mod} has kicked {target}"
 msgstr "Kick | Ο/Η {mod} έδιωξε τον/την {target}"
 
-#: cogs/moderation/moderation.py:373
+#: cogs/moderation/moderation.py:374
 msgid "**🔴 Voice Kick Info**"
 msgstr "**🔴 Πληροφορίες Voice Kick**"
 
-#: cogs/moderation/moderation.py:375
+#: cogs/moderation/moderation.py:376
 #, python-brace-format
 msgid ""
 "Moderator: **{mod}**\n"
@@ -5688,56 +5715,56 @@ msgstr ""
 "Λόγος: **{reason}**\n"
 "Ώρα: **{time}**"
 
-#: cogs/moderation/moderation.py:408
+#: cogs/moderation/moderation.py:409
 #, python-brace-format
 msgid "{user} has been moved to {channel}"
 msgstr "Ο/Η {user} μετακινήθηκε στο {channel}"
 
-#: cogs/moderation/moderation.py:432
+#: cogs/moderation/moderation.py:433
 msgid "Confirm ban"
 msgstr "Επιβεβαίωση ban"
 
-#: cogs/moderation/moderation.py:433
+#: cogs/moderation/moderation.py:434
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban τον/την {target} (`{id}`);"
 
-#: cogs/moderation/moderation.py:438 cogs/moderation/moderation.py:653
-#: cogs/moderation/moderation.py:719
+#: cogs/moderation/moderation.py:439 cogs/moderation/moderation.py:654
+#: cogs/moderation/moderation.py:720
 msgid "Reason"
 msgstr "Λόγος"
 
-#: cogs/moderation/moderation.py:443
+#: cogs/moderation/moderation.py:444
 msgid "Ban cancelled"
 msgstr "Το ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:444
+#: cogs/moderation/moderation.py:445
 #, python-brace-format
 msgid "No action taken against {target}."
 msgstr "Δεν έγινε καμία ενέργεια κατά του/της {target}."
 
-#: cogs/moderation/moderation.py:550
+#: cogs/moderation/moderation.py:551
 msgid "I don't have permission to ban that member."
 msgstr "Δεν έχω δικαίωμα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:553
+#: cogs/moderation/moderation.py:554
 msgid "Sorry, I couldn't ban that member."
 msgstr "Συγγνώμη, δεν μπόρεσα να κάνω ban αυτό το μέλος."
 
-#: cogs/moderation/moderation.py:584
+#: cogs/moderation/moderation.py:585
 msgid "The temporary ban could not be scheduled and the rollback failed. Please unban that user manually."
 msgstr "Δεν ήταν δυνατός ο προγραμματισμός του προσωρινού ban και η επαναφορά απέτυχε. Κάνε unban αυτόν τον χρήστη χειροκίνητα, σε παρακαλώ."
 
-#: cogs/moderation/moderation.py:589
+#: cogs/moderation/moderation.py:590
 msgid "The temporary ban could not be scheduled, so I rolled it back."
 msgstr "Δεν ήταν δυνατός ο προγραμματισμός του προσωρινού ban, οπότε το ανέστρεψα."
 
-#: cogs/moderation/moderation.py:616
+#: cogs/moderation/moderation.py:617
 #, python-brace-format
 msgid "Banned {member} until {time}."
 msgstr "Ο/Η {member} αποκλείστηκε μέχρι {time}."
 
-#: cogs/moderation/moderation.py:636
+#: cogs/moderation/moderation.py:637
 msgid ""
 "Give me at least one user id to ban.\n"
 "Usage: `massban <id1> <id2> ... [reason]`"
@@ -5745,187 +5772,187 @@ msgstr ""
 "Δώσε μου τουλάχιστον ένα id χρήστη για ban.\n"
 "Χρήση: `massban <id1> <id2> ... [reason]`"
 
-#: cogs/moderation/moderation.py:641
+#: cogs/moderation/moderation.py:642
 msgid "I can ban at most 200 users in one go."
 msgstr "Μπορώ να κάνω ban το πολύ 200 χρήστες με τη μία."
 
-#: cogs/moderation/moderation.py:647
+#: cogs/moderation/moderation.py:648
 msgid "Confirm mass ban"
 msgstr "Επιβεβαίωση μαζικού ban"
 
-#: cogs/moderation/moderation.py:649
+#: cogs/moderation/moderation.py:650
 #, python-brace-format
 msgid "Are you sure you want to ban **{count}** user(s) by id?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban **{count}** χρήστη/ες με id;"
 
-#: cogs/moderation/moderation.py:656
+#: cogs/moderation/moderation.py:657
 msgid "Mass ban cancelled"
 msgstr "Το μαζικό ban ακυρώθηκε"
 
-#: cogs/moderation/moderation.py:657
+#: cogs/moderation/moderation.py:658
 msgid "No action taken."
 msgstr "Δεν έγινε καμία ενέργεια."
 
-#: cogs/moderation/moderation.py:692
+#: cogs/moderation/moderation.py:693
 msgid "**:x: Sorry, I could not ban those users (missing permissions?).**"
 msgstr "**:x: Συγγνώμη, δεν μπόρεσα να κάνω ban αυτούς τους χρήστες (λείπουν δικαιώματα;).**"
 
-#: cogs/moderation/moderation.py:712
+#: cogs/moderation/moderation.py:713
 msgid "Mass ban complete"
 msgstr "Το μαζικό ban ολοκληρώθηκε"
 
-#: cogs/moderation/moderation.py:716
+#: cogs/moderation/moderation.py:717
 msgid "Banned"
 msgstr "Έγινε ban"
 
-#: cogs/moderation/moderation.py:717
+#: cogs/moderation/moderation.py:718
 msgid "Failed"
 msgstr "Απέτυχε"
 
-#: cogs/moderation/moderation.py:721
+#: cogs/moderation/moderation.py:722
 #, python-brace-format
 msgid "By {author}"
 msgstr "Από {author}"
 
-#: cogs/moderation/moderation.py:745
+#: cogs/moderation/moderation.py:746
 msgid ":warning: | **Count can't be lesser than 0 and greater than 999**"
 msgstr ":warning: | **Ο αριθμός δεν μπορεί να είναι μικρότερος από 0 και μεγαλύτερος από 999**"
 
-#: cogs/moderation/moderation.py:755
+#: cogs/moderation/moderation.py:756
 msgid "**:x: Sorry, I am missing permissions to do this**"
 msgstr "**:x: Συγγνώμη, μου λείπουν δικαιώματα για να το κάνω αυτό**"
 
-#: cogs/moderation/moderation.py:760
+#: cogs/moderation/moderation.py:761
 #, python-brace-format
 msgid "{emoji} **Deleted successfully!**"
 msgstr "{emoji} **Διαγράφηκε με επιτυχία!**"
 
-#: cogs/moderation/moderation.py:776
+#: cogs/moderation/moderation.py:777
 msgid "Invalid amount. Maximum is 500."
 msgstr "Μη έγκυρη ποσότητα. Το μέγιστο είναι 500."
 
-#: cogs/moderation/moderation.py:788
+#: cogs/moderation/moderation.py:789
 #, python-brace-format
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Διαγράφηκαν **{deleted}/{num}** πιθανά μηνύματα για εσένα."
 
-#: cogs/moderation/moderation.py:858
+#: cogs/moderation/moderation.py:859
 msgid "Mute role is not defined"
 msgstr "Ο ρόλος mute δεν έχει οριστεί"
 
-#: cogs/moderation/moderation.py:859
+#: cogs/moderation/moderation.py:860
 msgid "Creating role..."
 msgstr "Δημιουργία ρόλου..."
 
-#: cogs/moderation/moderation.py:861
+#: cogs/moderation/moderation.py:862
 msgid "Mute role created!"
 msgstr "Ο ρόλος mute δημιουργήθηκε!"
 
-#: cogs/moderation/moderation.py:899
+#: cogs/moderation/moderation.py:900
 msgid "Already Muted"
 msgstr "Ήδη σε σίγαση"
 
-#: cogs/moderation/moderation.py:901
+#: cogs/moderation/moderation.py:902
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: Ο/Η {user} είναι ήδη σε σίγαση!"
 
-#: cogs/moderation/moderation.py:911
+#: cogs/moderation/moderation.py:912
 msgid "Mute failed"
 msgstr "Η σίγαση απέτυχε"
 
-#: cogs/moderation/moderation.py:914
+#: cogs/moderation/moderation.py:915
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η σίγαση του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:955
+#: cogs/moderation/moderation.py:956
 msgid "Unmute failed"
 msgstr "Η κατάργηση σίγασης απέτυχε"
 
-#: cogs/moderation/moderation.py:958
+#: cogs/moderation/moderation.py:959
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η κατάργηση σίγασης του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:980
+#: cogs/moderation/moderation.py:981
 msgid "Confirm mass role add"
 msgstr "Επιβεβαίωση μαζικής προσθήκης ρόλου"
 
-#: cogs/moderation/moderation.py:982
+#: cogs/moderation/moderation.py:983
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "Προσθήκη του ρόλου **{role}** σε **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1011
+#: cogs/moderation/moderation.py:1012
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "Προστέθηκε το **{role}** σε {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1020
+#: cogs/moderation/moderation.py:1021
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** προστέθηκε στον/στην **{member}**"
 
-#: cogs/moderation/moderation.py:1041
+#: cogs/moderation/moderation.py:1042
 msgid "Confirm mass role remove"
 msgstr "Επιβεβαίωση μαζικής αφαίρεσης ρόλου"
 
-#: cogs/moderation/moderation.py:1043
+#: cogs/moderation/moderation.py:1044
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "Αφαίρεση του ρόλου **{role}** από **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1072
+#: cogs/moderation/moderation.py:1073
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "Αφαιρέθηκε το **{role}** από {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1081
+#: cogs/moderation/moderation.py:1082
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** αφαιρέθηκε από τον/την **{member}**"
 
-#: cogs/moderation/moderation.py:1103 tools/modchecks.py:90
+#: cogs/moderation/moderation.py:1104 tools/modchecks.py:90
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "Δεν μπορείς να διαχειριστείς έναν ρόλο ίσο ή ανώτερο από τον υψηλότερο ρόλο σου."
 
-#: cogs/moderation/moderation.py:1110
+#: cogs/moderation/moderation.py:1111
 msgid "You can't move a role to or above my highest role."
 msgstr "Δεν μπορείς να μετακινήσεις έναν ρόλο στο ίδιο ή πάνω από τον υψηλότερο ρόλο μου."
 
-#: cogs/moderation/moderation.py:1116
+#: cogs/moderation/moderation.py:1117
 #, python-brace-format
 msgid "{role} moved."
 msgstr "Ο ρόλος {role} μετακινήθηκε."
 
-#: cogs/moderation/moderation.py:1118 cogs/system/errors.py:324
+#: cogs/moderation/moderation.py:1119 cogs/system/errors.py:324
 msgid "You do not have permission to do that"
 msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
 
-#: cogs/moderation/moderation.py:1120
+#: cogs/moderation/moderation.py:1121
 msgid "Failed to move role"
 msgstr "Αποτυχία μετακίνησης ρόλου"
 
-#: cogs/moderation/moderation.py:1122
+#: cogs/moderation/moderation.py:1123
 msgid "Invalid argument"
 msgstr "Μη έγκυρο όρισμα"
 
-#: cogs/moderation/moderation.py:1157
+#: cogs/moderation/moderation.py:1158
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Ιστορικό υποθέσεων - {guild}"
 
-#: cogs/moderation/moderation.py:1167
+#: cogs/moderation/moderation.py:1168
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Ιστορικό υποθέσεων - {member}"
 
-#: cogs/moderation/moderation.py:1170
+#: cogs/moderation/moderation.py:1171
 msgid "No cases on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες υποθέσεις."
 
-#: cogs/moderation/moderation.py:1177 cogs/moderation/warns.py:133
+#: cogs/moderation/moderation.py:1178 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "Χωρίς λόγο"
 
@@ -6209,24 +6236,24 @@ msgstr "Ένας κανόνας ενεργοποιείται τη στιγμή �
 msgid "This server already has the maximum of {max} escalation rules."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} κανόνων κλιμάκωσης."
 
-#: cogs/moderation/warns.py:74
+#: cogs/moderation/warns.py:75
 msgid "Select a warn to remove..."
 msgstr "Επίλεξε μια προειδοποίηση για αφαίρεση..."
 
-#: cogs/moderation/warns.py:96
+#: cogs/moderation/warns.py:97
 #, python-brace-format
 msgid "Warnings - {member}"
 msgstr "Προειδοποιήσεις - {member}"
 
-#: cogs/moderation/warns.py:103
+#: cogs/moderation/warns.py:104
 msgid "No warnings on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις."
 
-#: cogs/moderation/warns.py:107
+#: cogs/moderation/warns.py:108
 msgid "*No reason provided*"
 msgstr "*Δεν δόθηκε λόγος*"
 
-#: cogs/moderation/warns.py:110
+#: cogs/moderation/warns.py:111
 #, python-brace-format
 msgid ""
 "**Case #{case}** - {reason}\n"
@@ -6235,69 +6262,69 @@ msgstr ""
 "**Υπόθεση #{case}** - {reason}\n"
 "από {mod} - {when}"
 
-#: cogs/moderation/warns.py:120
+#: cogs/moderation/warns.py:121
 #, python-brace-format
 msgid "Page {current}/{total} - {count} warn(s)"
 msgstr "Σελίδα {current}/{total} - {count} προειδοποίηση/εις"
 
-#: cogs/moderation/warns.py:136
+#: cogs/moderation/warns.py:137
 #, python-brace-format
 msgid "Case #{case}"
 msgstr "Υπόθεση #{case}"
 
-#: cogs/moderation/warns.py:147
+#: cogs/moderation/warns.py:148
 msgid "No warnings"
 msgstr "Καμία προειδοποίηση"
 
-#: cogs/moderation/warns.py:168
+#: cogs/moderation/warns.py:169
 msgid "Couldn't select that warn, please try again."
 msgstr "Δεν ήταν δυνατή η επιλογή αυτής της προειδοποίησης, δοκίμασε ξανά."
 
-#: cogs/moderation/warns.py:192 tools/paginator.py:94
+#: cogs/moderation/warns.py:193 tools/paginator.py:94
 msgid "Couldn't turn the page, please try again."
 msgstr "Δεν ήταν δυνατή η αλλαγή σελίδας, δοκίμασε ξανά."
 
-#: cogs/moderation/warns.py:201
+#: cogs/moderation/warns.py:202
 msgid "Pick a warn from the dropdown first."
 msgstr "Διάλεξε πρώτα μια προειδοποίηση από το αναπτυσσόμενο μενού."
 
-#: cogs/moderation/warns.py:224
+#: cogs/moderation/warns.py:225
 msgid "Couldn't remove that warn, please try again."
 msgstr "Δεν ήταν δυνατή η αφαίρεση αυτής της προειδοποίησης, δοκίμασε ξανά."
 
-#: cogs/moderation/warns.py:274
+#: cogs/moderation/warns.py:275
 #, python-brace-format
 msgid "{member} has no warns."
 msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις."
 
-#: cogs/moderation/warns.py:278
+#: cogs/moderation/warns.py:279
 #, python-brace-format
 msgid "{member} has {count} warn(s)"
 msgstr "Ο/Η {member} έχει {count} προειδοποίηση/εις"
 
-#: cogs/moderation/warns.py:319
+#: cogs/moderation/warns.py:320
 msgid "Warns"
 msgstr "Προειδοποιήσεις"
 
-#: cogs/moderation/warns.py:331
+#: cogs/moderation/warns.py:332
 msgid "Auto-action"
 msgstr "Αυτόματη ενέργεια"
 
-#: cogs/moderation/warns.py:362
+#: cogs/moderation/warns.py:363
 msgid "The number of warns must be at least 1."
 msgstr "Ο αριθμός των warns πρέπει να είναι τουλάχιστον 1."
 
-#: cogs/moderation/warns.py:369
+#: cogs/moderation/warns.py:370
 #, python-brace-format
 msgid "{member} has no warns!"
 msgstr "Ο/Η {member} δεν έχει προειδοποιήσεις!"
 
-#: cogs/moderation/warns.py:374
+#: cogs/moderation/warns.py:375
 #, python-brace-format
 msgid "Removed all warns for {member}."
 msgstr "Αφαιρέθηκαν όλες οι προειδοποιήσεις για τον/την {member}."
 
-#: cogs/moderation/warns.py:378
+#: cogs/moderation/warns.py:379
 #, python-brace-format
 msgid "Removed {num} warn(s) for {member}. [{remaining} warns]"
 msgstr "Αφαιρέθηκαν {num} προειδοποίηση/εις για τον/την {member}. [{remaining} προειδοποιήσεις]"
@@ -7424,235 +7451,367 @@ msgstr "Απαιτείται επανεκκίνηση (δεν γίνεται hot
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Διάλεξε τα cogs για επαναφόρτωση παρακάτω ή επαναφόρτωσε τα πάντα."
 
-#: cogs/system/botstats.py:534
+#: cogs/system/arg_completion.py:214
+msgid "Fill in"
+msgstr "Συμπλήρωσε"
+
+#: cogs/system/arg_completion.py:217
+msgid "Enter details"
+msgstr "Εισαγωγή στοιχείων"
+
+#: cogs/system/arg_completion.py:218
+msgid "Run"
+msgstr "Εκτέλεση"
+
+#: cogs/system/arg_completion.py:262
+msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
+msgstr "Διάλεξε από τα μενού, χρησιμοποίησε το **Enter details** για τα υπόλοιπα και μετά πάτησε **Run**."
+
+#: cogs/system/arg_completion.py:264
+msgid "Pick from the menus, then press **Run**."
+msgstr "Διάλεξε από τα μενού και μετά πάτησε **Run**."
+
+#: cogs/system/arg_completion.py:265
+msgid "Press **Fill in** to type the details."
+msgstr "Πάτησε **Fill in** για να πληκτρολογήσεις τα στοιχεία."
+
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:491
+#: cogs/utility/info.py:46 cogs/utility/utility.py:171
+msgid "Yes"
+msgstr "Ναι"
+
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:492
+#: cogs/utility/info.py:46 cogs/utility/utility.py:172
+msgid "No"
+msgstr "Όχι"
+
+#: cogs/system/arg_completion.py:277
+msgid "Let's finish that command"
+msgstr "Ας ολοκληρώσουμε αυτή την εντολή"
+
+#: cogs/system/arg_completion.py:279
+#, python-brace-format
+msgid ""
+"`{command}` needs a little more info.\n"
+"{instructions}"
+msgstr ""
+"Η `{command}` χρειάζεται λίγες ακόμη πληροφορίες.\n"
+"{instructions}"
+
+#: cogs/system/arg_completion.py:288
+#, python-brace-format
+msgid "Set: {preview}"
+msgstr "Ορίστηκε: {preview}"
+
+#: cogs/system/arg_completion.py:290
+msgid "Required"
+msgstr "Απαιτείται"
+
+#: cogs/system/arg_completion.py:292
+msgid "Optional - you can skip this"
+msgstr "Προαιρετικό - μπορείς να το παραλείψεις"
+
+#: cogs/system/arg_completion.py:294
+msgid "Only you can use this - it times out in 3 minutes."
+msgstr "Μόνο εσύ μπορείς να το χρησιμοποιήσεις - λήγει σε 3 λεπτά."
+
+#: cogs/system/arg_completion.py:304 cogs/system/arg_completion.py:346
+msgid "This prompt is no longer active. Please run the command again."
+msgstr "Αυτή η προτροπή δεν είναι πλέον ενεργή. Τρέξε ξανά την εντολή."
+
+#: cogs/system/arg_completion.py:330
+msgid "Something went wrong with that prompt."
+msgstr "Κάτι πήγε στραβά με αυτή την προτροπή."
+
+#: cogs/system/arg_completion.py:369
+#, python-brace-format
+msgid "Running `{command}`..."
+msgstr "Εκτέλεση της `{command}`..."
+
+#: cogs/system/arg_completion.py:426
+msgid "This prompt timed out."
+msgstr "Αυτή η προτροπή έληξε."
+
+#: cogs/system/arg_completion.py:437 cogs/system/arg_completion.py:452
+#: cogs/system/arg_completion.py:470 cogs/system/arg_completion.py:486
+#, python-brace-format
+msgid "Choose {name}"
+msgstr "Διάλεξε {name}"
+
+#: cogs/system/arg_completion.py:553
+#, python-brace-format
+msgid "Complete {command}"
+msgstr "Ολοκλήρωσε την {command}"
+
+#: cogs/system/botstats.py:581
 msgid "unknown"
 msgstr "άγνωστο"
 
-#: cogs/system/botstats.py:555
+#: cogs/system/botstats.py:602
 #, python-brace-format
 msgid "Servers: {count}"
 msgstr "Διακομιστές: {count}"
 
-#: cogs/system/botstats.py:556
+#: cogs/system/botstats.py:603
 #, python-brace-format
 msgid "Members: {count} (approximate, bots included)"
 msgstr "Μέλη: {count} (κατά προσέγγιση, συμπεριλαμβανομένων των bot)"
 
-#: cogs/system/botstats.py:559
+#: cogs/system/botstats.py:606
 #, python-brace-format
 msgid "Cached users: {count}"
 msgstr "Χρήστες στην cache: {count}"
 
-#: cogs/system/botstats.py:560
+#: cogs/system/botstats.py:607
 #, python-brace-format
 msgid "Channels: {count}"
 msgstr "Κανάλια: {count}"
 
-#: cogs/system/botstats.py:565 cogs/system/botstats.py:650
+#: cogs/system/botstats.py:612 cogs/system/botstats.py:697
 #, python-brace-format
 msgid "{count} server(s) report no member count and are excluded."
 msgstr "{count} διακομιστής/ές δεν αναφέρουν αριθμό μελών και εξαιρούνται."
 
-#: cogs/system/botstats.py:572
+#: cogs/system/botstats.py:619
 msgid "Member counts come from Discord's guild payloads, not from a member cache (this bot never chunks one)."
 msgstr "Οι αριθμοί μελών προέρχονται από τα guild payloads του Discord, όχι από μια cache μελών (αυτό το bot δεν κάνει ποτέ chunk μιας τέτοιας)."
 
-#: cogs/system/botstats.py:585
+#: cogs/system/botstats.py:632
 #, python-brace-format
 msgid "{duration} (since this cog loaded)"
 msgstr "{duration} (από τη φόρτωση αυτού του cog)"
 
-#: cogs/system/botstats.py:590
+#: cogs/system/botstats.py:637
 #, python-brace-format
 msgid "Uptime: {uptime}"
 msgstr "Χρόνος λειτουργίας: {uptime}"
 
-#: cogs/system/botstats.py:591
+#: cogs/system/botstats.py:638
 #, python-brace-format
 msgid "Memory (RSS): {size}"
 msgstr "Μνήμη (RSS): {size}"
 
-#: cogs/system/botstats.py:594
+#: cogs/system/botstats.py:641
 #, python-brace-format
 msgid "Gateway latency: {latency}"
 msgstr "Καθυστέρηση gateway: {latency}"
 
-#: cogs/system/botstats.py:601
+#: cogs/system/botstats.py:648
 #, python-brace-format
 msgid "Shards: {count}"
 msgstr "Shards: {count}"
 
-#: cogs/system/botstats.py:605
+#: cogs/system/botstats.py:652
 #, python-brace-format
 msgid "Python {python} - discord.py {discord}"
 msgstr "Python {python} - discord.py {discord}"
 
-#: cogs/system/botstats.py:608
+#: cogs/system/botstats.py:655
 #, python-brace-format
 msgid "Database size: {size}"
 msgstr "Μέγεθος βάσης δεδομένων: {size}"
 
-#: cogs/system/botstats.py:614
+#: cogs/system/botstats.py:661
 msgid "Reach"
 msgstr "Εμβέλεια"
 
-#: cogs/system/botstats.py:615
+#: cogs/system/botstats.py:662
 msgid "Process"
 msgstr "Διεργασία"
 
-#: cogs/system/botstats.py:616
+#: cogs/system/botstats.py:663
 msgid "Versions"
 msgstr "Εκδόσεις"
 
-#: cogs/system/botstats.py:623 cogs/system/botstats.py:810
+#: cogs/system/botstats.py:670 cogs/system/botstats.py:953
 msgid "Top servers"
 msgstr "Κορυφαίοι διακομιστές"
 
-#: cogs/system/botstats.py:623
+#: cogs/system/botstats.py:670
 msgid "This bot is in no server."
 msgstr "Αυτό το bot δεν βρίσκεται σε κανέναν διακομιστή."
 
-#: cogs/system/botstats.py:634
+#: cogs/system/botstats.py:681
 #, python-brace-format
 msgid "`{rank:>2}.` **{name}** - {members} members - joined {joined}"
 msgstr "`{rank:>2}.` **{name}** - {members} μέλη - προστέθηκε {joined}"
 
-#: cogs/system/botstats.py:644
+#: cogs/system/botstats.py:691
 #, python-brace-format
 msgid "{guilds} servers, {members} members total"
 msgstr "{guilds} διακομιστές, {members} μέλη συνολικά"
 
-#: cogs/system/botstats.py:656
+#: cogs/system/botstats.py:703
 msgid "Member counts are Discord's approximation and include bots."
 msgstr "Οι αριθμοί μελών είναι κατά προσέγγιση του Discord και περιλαμβάνουν bot."
 
-#: cogs/system/botstats.py:661
+#: cogs/system/botstats.py:708
 #, python-brace-format
 msgid "Top {count} servers by members"
 msgstr "Κορυφαίοι {count} διακομιστές κατά μέλη"
 
-#: cogs/system/botstats.py:664
+#: cogs/system/botstats.py:711
 msgid "Fleet total"
 msgstr "Σύνολο στόλου"
 
-#: cogs/system/botstats.py:674
+#: cogs/system/botstats.py:728
 #, python-brace-format
 msgid "{total} commands run since boot ({elapsed} ago)"
 msgstr "{total} εντολές εκτελέστηκαν από την εκκίνηση (πριν από {elapsed})"
 
-#: cogs/system/botstats.py:677
+#: cogs/system/botstats.py:731
 #, python-brace-format
 msgid "{prefix} prefix - {slash} slash"
 msgstr "{prefix} με πρόθεμα - {slash} slash"
 
-#: cogs/system/botstats.py:681
+#: cogs/system/botstats.py:735
 msgid "In-memory counters: they reset on every restart."
 msgstr "Μετρητές σε μνήμη: μηδενίζονται σε κάθε επανεκκίνηση."
 
-#: cogs/system/botstats.py:686
+#: cogs/system/botstats.py:740
 msgid "No command has completed yet."
 msgstr "Καμία εντολή δεν έχει ολοκληρωθεί ακόμα."
 
-#: cogs/system/botstats.py:689
+#: cogs/system/botstats.py:743 cogs/system/botstats.py:843
 #, python-brace-format
 msgid "`{rank:>2}.` `{name}` - {count}"
 msgstr "`{rank:>2}.` `{name}` - {count}"
 
-#: cogs/system/botstats.py:696
+#: cogs/system/botstats.py:753
 msgid "Commands since boot"
 msgstr "Εντολές από την εκκίνηση"
 
-#: cogs/system/botstats.py:697
+#: cogs/system/botstats.py:754
 msgid "Most used commands"
 msgstr "Πιο χρησιμοποιημένες εντολές"
 
-#: cogs/system/botstats.py:699
+#: cogs/system/botstats.py:755
+msgid "Recorded usage (UTC days)"
+msgstr "Καταγεγραμμένη χρήση (ημέρες UTC)"
+
+#: cogs/system/botstats.py:757
+#, python-brace-format
+msgid "Most used commands ({days} days)"
+msgstr "Οι πιο χρησιμοποιούμενες εντολές ({days} ημέρες)"
+
+#: cogs/system/botstats.py:761
 #, python-brace-format
 msgid "Observed activity ({days} days)"
 msgstr "Παρατηρούμενη δραστηριότητα ({days} ημέρες)"
 
-#: cogs/system/botstats.py:715
+#: cogs/system/botstats.py:791 cogs/system/botstats.py:839
+msgid "Recorded usage is unavailable right now."
+msgstr "Η καταγεγραμμένη χρήση δεν είναι διαθέσιμη αυτή τη στιγμή."
+
+#: cogs/system/botstats.py:795
+msgid "Nothing has been recorded yet - collection starts with the first flush after this bot came up."
+msgstr "Δεν έχει καταγραφεί τίποτα ακόμη - η συλλογή ξεκινά με την πρώτη εγγραφή μετά την εκκίνηση του bot."
+
+#: cogs/system/botstats.py:804
+#, python-brace-format
+msgid "Today: {count}"
+msgstr "Σήμερα: {count}"
+
+#: cogs/system/botstats.py:805 cogs/system/botstats.py:810
+#, python-brace-format
+msgid "{days} days: {count} ({recorded} of {days} day(s) recorded)"
+msgstr "{days} ημέρες: {count} ({recorded} από {days} ημέρα(-ες) καταγεγραμμένη(-ες))"
+
+#: cogs/system/botstats.py:817
+msgid "Calendar UTC days ending today, today included - so today is a partial day."
+msgstr "Ημερολογιακές ημέρες UTC που τελειώνουν σήμερα, με το σήμερα να συμπεριλαμβάνεται - οπότε το σήμερα είναι μερική ημέρα."
+
+#: cogs/system/botstats.py:826
+#, python-brace-format
+msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
+msgstr "Καταγράφεται από {date} ({days} ημέρα(-ες)): το μεγαλύτερο παράθυρο δεν είναι ακόμη πλήρες."
+
+#: cogs/system/botstats.py:841
+msgid "No command has been recorded in this window."
+msgstr "Καμία εντολή δεν έχει καταγραφεί σε αυτό το παράθυρο."
+
+#: cogs/system/botstats.py:858
 msgid "Observed activity is unavailable right now."
 msgstr "Η παρατηρούμενη δραστηριότητα δεν είναι διαθέσιμη αυτή τη στιγμή."
 
-#: cogs/system/botstats.py:720
+#: cogs/system/botstats.py:863
 msgid "No server was observed in this window - this is not a zero."
 msgstr "Κανένας διακομιστής δεν παρατηρήθηκε σε αυτό το χρονικό παράθυρο - αυτό δεν είναι μηδέν."
 
-#: cogs/system/botstats.py:725
+#: cogs/system/botstats.py:868
 #, python-brace-format
 msgid "{messages} messages, across {guilds} observed server(s) and {days} observed day(s)"
 msgstr "{messages} μηνύματα, σε {guilds} παρατηρούμενο(-α) διακομιστή(-ές) και {days} παρατηρούμενη(-ες) ημέρα(-ες)"
 
-#: cogs/system/botstats.py:735
+#: cogs/system/botstats.py:878
 msgid "No join/leave day was recorded in this window."
 msgstr "Καμία ημέρα εισόδου/εξόδου δεν καταγράφηκε σε αυτό το χρονικό παράθυρο."
 
-#: cogs/system/botstats.py:739
+#: cogs/system/botstats.py:882
 #, python-brace-format
 msgid "{joins} joins / {leaves} leaves, across {guilds} observed server(s) and {guild_days} observed server-day(s)"
 msgstr "{joins} είσοδοι / {leaves} έξοδοι, σε {guilds} παρατηρούμενο(-α) διακομιστή(-ές) και {guild_days} παρατηρούμενη(-ες) ημέρα(-ες)-διακομιστή"
 
-#: cogs/system/botstats.py:752
+#: cogs/system/botstats.py:895
 msgid "Observed servers only: a server with no row was not being watched, which is never the same as zero."
 msgstr "Μόνο παρατηρούμενοι διακομιστές: ένας διακομιστής χωρίς εγγραφή δεν παρακολουθούνταν, κάτι που δεν είναι ποτέ το ίδιο με το μηδέν."
 
-#: cogs/system/botstats.py:762
+#: cogs/system/botstats.py:905
 msgid "Row counts are unavailable right now."
 msgstr "Οι αριθμοί εγγραφών δεν είναι διαθέσιμοι αυτή τη στιγμή."
 
-#: cogs/system/botstats.py:764
+#: cogs/system/botstats.py:907
 msgid "No featured table was counted."
 msgstr "Κανένας επιλεγμένος πίνακας δεν καταμετρήθηκε."
 
-#: cogs/system/botstats.py:772
+#: cogs/system/botstats.py:915
 msgid "Table sizes are unavailable right now."
 msgstr "Τα μεγέθη πινάκων δεν είναι διαθέσιμα αυτή τη στιγμή."
 
-#: cogs/system/botstats.py:774
+#: cogs/system/botstats.py:917
 msgid "No table in this database."
 msgstr "Κανένας πίνακας σε αυτή τη βάση δεδομένων."
 
-#: cogs/system/botstats.py:783
+#: cogs/system/botstats.py:926
 #, python-brace-format
 msgid "Every table: {size}"
 msgstr "Όλοι οι πίνακες: {size}"
 
-#: cogs/system/botstats.py:786
+#: cogs/system/botstats.py:929
 msgid "Sizes include indexes and TOAST storage."
 msgstr "Τα μεγέθη περιλαμβάνουν ευρετήρια (indexes) και αποθήκευση TOAST."
 
-#: cogs/system/botstats.py:790
+#: cogs/system/botstats.py:933
 msgid "Featured tables"
 msgstr "Επιλεγμένοι πίνακες"
 
-#: cogs/system/botstats.py:791
+#: cogs/system/botstats.py:934
 msgid "Largest tables"
 msgstr "Μεγαλύτεροι πίνακες"
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Overview"
 msgstr "Επισκόπηση"
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Usage"
 msgstr "Χρήση"
 
-#: cogs/system/botstats.py:810
+#: cogs/system/botstats.py:953
 msgid "Data"
 msgstr "Δεδομένα"
 
-#: cogs/system/botstats.py:1016
+#: cogs/system/botstats.py:1172
 #, python-brace-format
 msgid "Bot statistics - {page}"
 msgstr "Στατιστικά bot - {page}"
 
-#: cogs/system/botstats.py:1049
+#: cogs/system/botstats.py:1205
 #, python-brace-format
 msgid "Snapshot taken {when}"
 msgstr "Στιγμιότυπο ελήφθη {when}"
 
-#: cogs/system/botstats.py:1051
+#: cogs/system/botstats.py:1207
 msgid "times out after 5 min"
 msgstr "λήγει μετά από 5 λεπτά"
 
@@ -8099,16 +8258,6 @@ msgstr "**Αριθμός ρόλων:** {count}"
 #, python-brace-format
 msgid "**Is bot:** {value}"
 msgstr "**Είναι bot:** {value}"
-
-#: cogs/utility/info.py:46 cogs/utility/utility.py:171
-#: tools/arg_completion.py:272 tools/arg_completion.py:491
-msgid "Yes"
-msgstr "Ναι"
-
-#: cogs/utility/info.py:46 cogs/utility/utility.py:172
-#: tools/arg_completion.py:272 tools/arg_completion.py:492
-msgid "No"
-msgstr "Όχι"
 
 #: cogs/utility/info.py:109
 #, python-brace-format
@@ -9910,88 +10059,6 @@ msgstr "📼 Vaporwave"
 #: locales/command_strings.py:392
 msgid "🥁 Bass Boost"
 msgstr "🥁 Bass Boost"
-
-#: tools/arg_completion.py:214
-msgid "Fill in"
-msgstr "Συμπλήρωσε"
-
-#: tools/arg_completion.py:217
-msgid "Enter details"
-msgstr "Εισαγωγή στοιχείων"
-
-#: tools/arg_completion.py:218
-msgid "Run"
-msgstr "Εκτέλεση"
-
-#: tools/arg_completion.py:262
-msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
-msgstr "Διάλεξε από τα μενού, χρησιμοποίησε το **Enter details** για τα υπόλοιπα και μετά πάτησε **Run**."
-
-#: tools/arg_completion.py:264
-msgid "Pick from the menus, then press **Run**."
-msgstr "Διάλεξε από τα μενού και μετά πάτησε **Run**."
-
-#: tools/arg_completion.py:265
-msgid "Press **Fill in** to type the details."
-msgstr "Πάτησε **Fill in** για να πληκτρολογήσεις τα στοιχεία."
-
-#: tools/arg_completion.py:277
-msgid "Let's finish that command"
-msgstr "Ας ολοκληρώσουμε αυτή την εντολή"
-
-#: tools/arg_completion.py:279
-#, python-brace-format
-msgid ""
-"`{command}` needs a little more info.\n"
-"{instructions}"
-msgstr ""
-"Η `{command}` χρειάζεται λίγες ακόμη πληροφορίες.\n"
-"{instructions}"
-
-#: tools/arg_completion.py:288
-#, python-brace-format
-msgid "Set: {preview}"
-msgstr "Ορίστηκε: {preview}"
-
-#: tools/arg_completion.py:290
-msgid "Required"
-msgstr "Απαιτείται"
-
-#: tools/arg_completion.py:292
-msgid "Optional - you can skip this"
-msgstr "Προαιρετικό - μπορείς να το παραλείψεις"
-
-#: tools/arg_completion.py:294
-msgid "Only you can use this - it times out in 3 minutes."
-msgstr "Μόνο εσύ μπορείς να το χρησιμοποιήσεις - λήγει σε 3 λεπτά."
-
-#: tools/arg_completion.py:304 tools/arg_completion.py:346
-msgid "This prompt is no longer active. Please run the command again."
-msgstr "Αυτή η προτροπή δεν είναι πλέον ενεργή. Τρέξε ξανά την εντολή."
-
-#: tools/arg_completion.py:330
-msgid "Something went wrong with that prompt."
-msgstr "Κάτι πήγε στραβά με αυτή την προτροπή."
-
-#: tools/arg_completion.py:369
-#, python-brace-format
-msgid "Running `{command}`..."
-msgstr "Εκτέλεση της `{command}`..."
-
-#: tools/arg_completion.py:426
-msgid "This prompt timed out."
-msgstr "Αυτή η προτροπή έληξε."
-
-#: tools/arg_completion.py:437 tools/arg_completion.py:452
-#: tools/arg_completion.py:470 tools/arg_completion.py:486
-#, python-brace-format
-msgid "Choose {name}"
-msgstr "Διάλεξε {name}"
-
-#: tools/arg_completion.py:553
-#, python-brace-format
-msgid "Complete {command}"
-msgstr "Ολοκλήρωσε την {command}"
 
 #: tools/embed_creator.py:283
 msgid "default"
