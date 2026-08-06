@@ -8,6 +8,7 @@ report and hide the underlying error.
 import types
 
 import discord
+import pytest
 from discord.ext import commands
 
 from cogs.system import errors
@@ -363,3 +364,117 @@ async def test_command_not_found_does_not_reach_the_else(caplog):
     assert "Command invocation failed" not in caplog.text
     name = sent[0][1]["embed"].fields[0].name
     assert "Invalid command entered" in name
+
+
+def _untouchable_bot():
+    """Bot whose CommandNotFound surfaces fail loudly if touched.
+
+    Iterating ``commands`` (the suggestion scan) or calling ``get_cog`` (the
+    custom-command dispatch) raises, so a test proves the silent path does
+    neither, not merely that nothing was sent.
+    """
+
+    class _NoIter:
+        def __iter__(self):
+            raise AssertionError("suggestions must not be computed")
+
+    def get_cog(_name):
+        raise AssertionError("custom-command dispatch must not run")
+
+    return types.SimpleNamespace(
+        user=types.SimpleNamespace(name="Yasuho"),
+        on_command_error=None,
+        commands=_NoIter(),
+        get_cog=get_cog,
+    )
+
+
+@pytest.mark.parametrize("invoked", ["????", "!!!!", "?_?", "\U0001F600"])
+async def test_punctuation_only_invocation_is_silent(invoked):
+    """"?????" typed as chat punctuation parses as prefix + invoked_with
+    "????". Nothing alphanumeric means it was never a command attempt: no
+    reply, no suggestion scan, no custom-command lookup.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=_untouchable_bot())
+    ctx.invoked_with = invoked
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert sent == []
+
+
+@pytest.mark.parametrize("invoked", ["", None])
+async def test_empty_invoked_with_is_silent(invoked):
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=_untouchable_bot())
+    ctx.invoked_with = invoked
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert sent == []
+
+
+@pytest.mark.parametrize("invoked", ["foo", "4"])
+async def test_alnum_invocation_keeps_the_did_you_mean_reply(invoked):
+    """Any alphanumeric content ("foo" typo, "?4" -> "4") is a plausible
+    attempt: the custom-command lookup still runs first, then the reply.
+    """
+    looked_up = []
+    bot = types.SimpleNamespace(
+        user=types.SimpleNamespace(name="Yasuho"),
+        on_command_error=None,
+        commands=[],
+        get_cog=lambda name: looked_up.append(name),
+    )
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=bot)
+    ctx.invoked_with = invoked
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert looked_up == ["CustomCommands"]
+    assert "Invalid command entered" in sent[0][1]["embed"].fields[0].name
+
+
+async def test_custom_command_still_claims_before_suggestions():
+    """First-claim ordering: when a custom command handles the name, the
+    handler stops without computing or sending suggestions.
+    """
+
+    class _CC:
+        async def handle_unknown(self, _ctx):
+            return True
+
+    class _NoIter:
+        def __iter__(self):
+            raise AssertionError("suggestions must not be computed")
+
+    bot = types.SimpleNamespace(
+        user=types.SimpleNamespace(name="Yasuho"),
+        on_command_error=None,
+        commands=_NoIter(),
+        get_cog=lambda _name: _CC(),
+    )
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=bot)
+    ctx.invoked_with = "greet"
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert sent == []
+
+
+def test_command_naming_rejects_punctuation_only_names():
+    """Placement evidence: the silence guard runs BEFORE the custom-command
+    dispatch, which is safe only while no stored name can be punctuation-only.
+    validate_name requires an alphanumeric first character, so any name the
+    guard silences could never have been created.
+    """
+    from cogs.config import command_naming as cn
+
+    for raw in ("????", "!!!!", "?_?", "\U0001F600"):
+        name = cn.normalize_name(raw)
+        assert (
+            cn.validate_name(name, reserved=set(), existing=set()) == "bad_chars"
+        )

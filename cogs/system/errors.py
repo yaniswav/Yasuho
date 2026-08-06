@@ -153,6 +153,16 @@ class Errors(commands.Cog):
                 error.__cause__ = app_error
 
         if isinstance(error, commands.CommandNotFound):
+            # "?????" typed as ordinary punctuation parses as prefix +
+            # invoked_with "????": nothing alphanumeric means it was never a
+            # command attempt, so stay silent. Safe to check before the
+            # custom-command dispatch because command_naming rejects any stored
+            # name that does not start with an alphanumeric character.
+            invoked = ctx.invoked_with
+            if not invoked or not any(c.isalnum() for c in invoked):
+                log.debug("Ignoring non-command invocation %r", invoked)
+                return
+
             # A per-guild custom command may claim this name; if it does, it
             # replies and we stop (no "did you mean" for a real custom command).
             cc_cog = self.bot.get_cog("CustomCommands")
