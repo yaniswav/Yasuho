@@ -185,9 +185,11 @@ class DataRetention(commands.Cog):
         freshness condition we warn on. It is a single listdir, so we do it on
         every tick.
 
-        INTEGRITY. pg_restore --list reads the archive's table of contents
-        without touching any database - cheap, but not free. The newest dump
-        does not change unless a ?backup runs, so re-listing the same file every
+        INTEGRITY. verify_backup decrypts the newest dump to a private temp file
+        and reads its table of contents with pg_restore --list, touching no
+        database - cheap, but not free (it now reads the whole ciphertext, which
+        is exactly what makes truncation and a lost key visible). The newest dump
+        does not change unless a ?backup runs, so re-checking the same file every
         24h is wasted work. We verify ONCE PER BOOT (the first tick that finds a
         dump) instead; a corrupt newest dump surfaces as a grep-able error line.
         """
@@ -213,7 +215,7 @@ class DataRetention(commands.Cog):
             )
         else:
             log.error(
-                "BACKUP-CORRUPT: pg_restore --list failed for %s: %s",
+                "BACKUP-CORRUPT: integrity check failed for %s: %s",
                 report.name,
                 result.error,
             )

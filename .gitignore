@@ -16,6 +16,10 @@ ENV/
 config/bot.ini
 config/tokens.ini
 config.py
+# Passphrase for the encrypted pg_dump archives in backups/. Generated at
+# runtime by tools/backup.py on the first backup; committing it would put the
+# key next to nothing useful here but in every clone forever.
+config/backup.key
 
 # Lavalink server (jar + config downloaded by ./setup-lavalink.sh)
 lavalink/

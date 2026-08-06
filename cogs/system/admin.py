@@ -422,11 +422,20 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def backup(self, ctx):
-        """Take an on-demand pg_dump now, then rotate old dumps.
+        """Take an on-demand ENCRYPTED pg_dump now, then rotate old dumps.
 
-        Same seam as the startup backup. Owner-only; the reply names the file,
-        its size and how many old dumps were rotated. On failure it replies
-        briefly without leaking the DSN or any pg_dump internals.
+        Same seam as the startup backup, so the dump is encrypted at rest the
+        same way. Owner-only; the reply names the file, its size and how many
+        old dumps were rotated. On failure it replies briefly without leaking
+        the DSN or any pg_dump internals.
+
+        Decrypt one by hand with the following (config/backup.key is generated
+        on first use; keep a copy of it OUT OF BAND or these dumps are
+        unrecoverable):
+
+            gpg --batch --quiet --no-symkey-cache --pinentry-mode loopback --passphrase-file config/backup.key --output /tmp/yasuho-restore.dump --decrypt backups/yasuho-YYYYMMDD-HHMMSS.dump.gpg
+
+        The full restore procedure lives in the tools/backup.py docstring.
         """
         async with ctx.typing():
             result = await backup.run_backup(
@@ -435,17 +444,17 @@ class Admin(commands.Cog):
         if not result.ok:
             log.warning("?backup failed: %s", result.error)
             return await ctx.send("Backup failed. Check the logs.")
-        # Verify the dump we just wrote is a readable archive (pg_restore --list
-        # reads its table of contents; it never restores into any database).
+        # Verify the dump we just wrote: it decrypts end to end and the recovered
+        # archive's table of contents parses. Neither step touches a database.
         verify = await backup.verify_backup(result.path)
         if verify.ok:
-            integrity = "integrity OK"
+            integrity = "decrypts + integrity OK"
         else:
             log.error("BACKUP-CORRUPT: ?backup verify failed: %s", verify.error)
             integrity = "integrity CHECK FAILED (see logs)"
         await ctx.send(
-            "Backup saved: `{name}` ({size}), {deleted} old dump(s) rotated, "
-            "{integrity}.".format(
+            "Backup saved (encrypted): `{name}` ({size}), {deleted} old dump(s) "
+            "rotated, {integrity}.".format(
                 name=os.path.basename(result.path),
                 size=backup.human_size(result.size or 0),
                 deleted=result.deleted,
