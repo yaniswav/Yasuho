@@ -13,7 +13,7 @@ topggpy~=1.4.0
 parsedatetime~=2.6
 python-dateutil~=2.9.0
 wikipedia~=1.4.0
-cryptography~=49.0.0
+cryptography~=50.0.0
 # HTML parsing for the Backloggd profile connector (cogs/community/profile/
 # connectors/backloggd.py) - Backloggd has no public API. Imported nowhere
 # else in the codebase.
