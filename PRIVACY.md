@@ -64,9 +64,10 @@ ID, no server ID.
 ## Where data lives
 
 All data is stored in a private PostgreSQL database on a server operated by the
-bot owner, with access limited to the bot process and its operator. Encrypted
-backups are kept for disaster recovery and are subject to the same deletion
-schedule on restore.
+bot owner, with access limited to the bot process and its operator. Database
+backups are encrypted at rest; OAuth tokens are additionally encrypted at the
+application level. Backups are kept for disaster recovery and are subject to
+the same deletion schedule on restore.
 
 ## Retention
 
