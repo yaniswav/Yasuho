@@ -344,6 +344,17 @@ async def test_bypass_forces_handler_past_command_on_error():
     assert "do not have permission" in sent[0][0][0]
 
 
+class _FakeCommand:
+    """Visible bot command for the suggestion scan (name, hidden, str())."""
+
+    def __init__(self, name):
+        self.name = name
+        self.hidden = False
+
+    def __str__(self):
+        return self.name
+
+
 async def test_command_not_found_does_not_reach_the_else(caplog):
     """Non-regression: an unknown command keeps its "did you mean" branch and is
     never logged as a crash nor shown the generic report embed.
@@ -351,7 +362,7 @@ async def test_command_not_found_does_not_reach_the_else(caplog):
     bot = types.SimpleNamespace(
         user=types.SimpleNamespace(name="Yasuho"),
         on_command_error=None,
-        commands=[],
+        commands=[_FakeCommand("xyz2")],
         get_cog=lambda _name: None,
     )
     sent = []
@@ -415,16 +426,50 @@ async def test_empty_invoked_with_is_silent(invoked):
     assert sent == []
 
 
-@pytest.mark.parametrize("invoked", ["foo", "4"])
-async def test_alnum_invocation_keeps_the_did_you_mean_reply(invoked):
-    """Any alphanumeric content ("foo" typo, "?4" -> "4") is a plausible
-    attempt: the custom-command lookup still runs first, then the reply.
+@pytest.mark.parametrize("invoked", ["?play", "!ban", "??play", "?!ban"])
+async def test_other_bots_longer_prefix_is_silent(invoked):
+    """"??play" or "?!ban" aimed at another bot with a longer prefix, on a
+    server where our prefix is "?", parses as our prefix + an invoked_with
+    starting with the leftover punctuation. No command name can start with a
+    non-alphanumeric character, so this is fully silent: no custom-command
+    lookup, no suggestion scan, no reply at users talking to the other bot.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=_untouchable_bot())
+    ctx.invoked_with = invoked
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert sent == []
+
+
+async def test_leading_non_alnum_char_is_silent():
+    """"_rank" contains alphanumerics, but its FIRST character is not one, and
+    command_naming forbids that shape for any stored name: silent, with no
+    dispatch or suggestion scan.
+    """
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=_untouchable_bot())
+    ctx.invoked_with = "_rank"
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    assert sent == []
+
+
+@pytest.mark.parametrize(
+    ("invoked", "close"), [("foo", "food"), ("4", "42")]
+)
+async def test_alnum_invocation_keeps_the_did_you_mean_reply(invoked, close):
+    """A typo starting alphanumeric ("foo", "?4" -> "4") with a real nearby
+    command is a plausible attempt: the custom-command lookup still runs
+    first, then the reply carries the actual suggestion.
     """
     looked_up = []
     bot = types.SimpleNamespace(
         user=types.SimpleNamespace(name="Yasuho"),
         on_command_error=None,
-        commands=[],
+        commands=[_FakeCommand(close)],
         get_cog=lambda name: looked_up.append(name),
     )
     sent = []
@@ -435,6 +480,30 @@ async def test_alnum_invocation_keeps_the_did_you_mean_reply(invoked):
 
     assert looked_up == ["CustomCommands"]
     assert "Invalid command entered" in sent[0][1]["embed"].fields[0].name
+    assert close in sent[0][1]["embed"].fields[0].value
+
+
+async def test_no_suggestion_found_stays_silent():
+    """A garbage name far from every command draws NO reply at all: the old
+    "Sorry, no similar commands found" fallback embed must not come back.
+    """
+    looked_up = []
+    bot = types.SimpleNamespace(
+        user=types.SimpleNamespace(name="Yasuho"),
+        on_command_error=None,
+        commands=[_FakeCommand("play"), _FakeCommand("rank")],
+        get_cog=lambda name: looked_up.append(name),
+    )
+    sent = []
+    cog, ctx = _handler_ctx(sent, bot=bot)
+    ctx.invoked_with = "qwjxzvqwjxzv"
+
+    await cog._on_command_error(ctx, commands.CommandNotFound())
+
+    # The custom-command lookup still ran (a real cc may claim any name)...
+    assert looked_up == ["CustomCommands"]
+    # ...but with nothing close enough to suggest, the user hears nothing.
+    assert sent == []
 
 
 async def test_custom_command_still_claims_before_suggestions():
@@ -467,13 +536,15 @@ async def test_custom_command_still_claims_before_suggestions():
 
 def test_command_naming_rejects_punctuation_only_names():
     """Placement evidence: the silence guard runs BEFORE the custom-command
-    dispatch, which is safe only while no stored name can be punctuation-only.
-    validate_name requires an alphanumeric first character, so any name the
-    guard silences could never have been created.
+    dispatch, which is safe only while no stored name can start with a
+    non-alphanumeric character. validate_name (_NAME_RE) requires an
+    alphanumeric FIRST character, so any name the guard silences - pure
+    punctuation or merely a non-alnum first char like "??x" or "_x" - could
+    never have been created.
     """
     from cogs.config import command_naming as cn
 
-    for raw in ("????", "!!!!", "?_?", "\U0001F600"):
+    for raw in ("????", "!!!!", "?_?", "\U0001F600", "??x", "_x", "?play"):
         name = cn.normalize_name(raw)
         assert (
             cn.validate_name(name, reserved=set(), existing=set()) == "bad_chars"

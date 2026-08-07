@@ -153,13 +153,17 @@ class Errors(commands.Cog):
                 error.__cause__ = app_error
 
         if isinstance(error, commands.CommandNotFound):
-            # "?????" typed as ordinary punctuation parses as prefix +
-            # invoked_with "????": nothing alphanumeric means it was never a
-            # command attempt, so stay silent. Safe to check before the
-            # custom-command dispatch because command_naming rejects any stored
-            # name that does not start with an alphanumeric character.
+            # No built-in or custom command can START with a non-alphanumeric
+            # character (command_naming's _NAME_RE requires an alnum first
+            # char, pinned by test), so a non-alnum first character was never a
+            # command attempt: "?????" typed as punctuation parses as prefix +
+            # invoked_with "????", and "??play" aimed at ANOTHER bot with a
+            # longer prefix ("??", "?!") on a server where ours is "?" parses
+            # as prefix + "?play". Stay silent, before the custom-command
+            # dispatch, instead of replying "Invalid command" at users talking
+            # to the other bot.
             invoked = ctx.invoked_with
-            if not invoked or not any(c.isalnum() for c in invoked):
+            if not invoked or not invoked[0].isalnum():
                 log.debug("Ignoring non-command invocation %r", invoked)
                 return
 
@@ -174,15 +178,17 @@ class Errors(commands.Cog):
                     log.exception("Custom command dispatch failed")
 
             try:
-                suggestions = (
-                    " | ".join(
-                        str(command)
-                        for command in self.bot.commands
-                        if lv.distance(ctx.invoked_with, command.name) < 4
-                        and not command.hidden
-                    )
-                    or _("Sorry, no similar commands found")
+                suggestions = " | ".join(
+                    str(command)
+                    for command in self.bot.commands
+                    if lv.distance(ctx.invoked_with, command.name) < 4
+                    and not command.hidden
                 )
+                # Nothing close enough to suggest: a reply would carry no
+                # information ("no similar commands found"), so stay silent.
+                if not suggestions:
+                    log.debug("No suggestion for unknown command %r", invoked)
+                    return
                 await ctx.send(
                     embed=_error_embed(
                         ctx,
