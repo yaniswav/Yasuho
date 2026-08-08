@@ -413,6 +413,50 @@ async def test_dispatch_twitch_evicts_settings_blob():
 
 
 # ---------------------------------------------------------------------------
+# dispatch: tickets_config invalidation (lot T3).
+#
+# The six tickets_* keys ride the SAME guild_settings blob as welcome/automod/
+# music_*, and the ticket panel BUTTON re-reads them through tools.settings on
+# every click - so the eviction is the whole bridge, and one notification has to
+# cover all six keys because they share one row.
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_tickets_config_evicts_settings_blob():
+    bot = FakeBot(SyncPool())
+    key = (settings._GUILD[0], 100)
+    settings._cache[key] = {
+        "tickets_panel_channel": 201,
+        "tickets_max_open_per_user": 3,
+        "welcome": {"enabled": True},
+    }
+    assert key in settings._cache
+
+    handled = await dashboard_sync.dispatch(bot, _payload("tickets_config", 100))
+
+    assert handled == "tickets_config"
+    # The WHOLE blob goes, which is what makes one notification enough for the
+    # six keys - and harmless for the neighbours, since the LRU is read-through.
+    assert key not in settings._cache
+
+
+def test_tickets_config_is_guild_scoped_not_user_scoped():
+    """A tickets_config payload carrying userId is rejected, never guessed."""
+    import json
+
+    assert "tickets_config" not in dashboard_sync.USER_KINDS
+    assert dashboard_sync._parse_payload(
+        json.dumps({"kind": "tickets_config", "guildId": "100"})
+    ) == ("tickets_config", 100)
+    assert (
+        dashboard_sync._parse_payload(
+            json.dumps({"kind": "tickets_config", "userId": "100"})
+        )
+        is None
+    )
+
+
+# ---------------------------------------------------------------------------
 # dispatch: starboard invalidation (refresh the Starboard cog's _config entry).
 # ---------------------------------------------------------------------------
 
@@ -838,6 +882,7 @@ def test_valid_kinds_match_invalidators():
         "twitch",
         "autorooms",
         "music_config",
+        "tickets_config",
         "user_settings",
     }
 

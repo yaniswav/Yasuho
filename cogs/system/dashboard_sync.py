@@ -8,7 +8,7 @@ into the SAME Postgres database, then emits::
 with a JSON payload ``{"kind": "...", "guildId": "..."}`` where ``kind`` is one of
 ``prefix | autorole | modlog | muterole | welcome | starboard | automod |
 leveling | rank_card | warn_escalation | verify_role | locale | custom_commands |
-twitch | autorooms | music_config``.
+twitch | autorooms | music_config | tickets_config``.
 
 ONE kind is USER-scoped rather than guild-scoped and carries ``userId`` in place
 of ``guildId``: ``user_settings``, emitted when the dashboard writes somebody's
@@ -16,8 +16,8 @@ personal preferences (the ``/preferences`` panel's keys).
 See :data:`USER_KINDS`. The bot mirrors those settings in memory (``bot.prefixes`` /
 ``bot.autoroles`` / ``bot.muteroles``, the ModLog cog's ``_channels`` cache, the
 ``tools.settings`` LRU for the welcome + automod + modlog_events +
-warn_escalation + verify_role + locale + twitch + autorooms + music_* JSONB
-blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings``
+warn_escalation + verify_role + locale + twitch + autorooms + music_* +
+tickets_* JSONB blobs, the Starboard cog's ``_config`` cache, the AutoMod cog's ``_settings``
 cache for its boolean toggle table, the Leveling cog's three caches - ``_configs``
 (level_config scalar knobs), ``_no_xp`` (level_no_xp snapshot) and
 ``_multipliers`` (xp_multipliers + level_config event columns) - plus its
@@ -146,6 +146,7 @@ VALID_KINDS = frozenset(
         "twitch",
         "autorooms",
         "music_config",
+        "tickets_config",
         "user_settings",
     }
 )
@@ -584,6 +585,27 @@ async def _invalidate_music_config(bot, gid):
     settings.invalidate_guild(gid)
 
 
+async def _invalidate_tickets_config(bot, gid):
+    """Evict the guild's cached settings blob so the next read re-fetches it.
+
+    The per-guild support-ticket configuration (``tickets_panel_channel``,
+    ``tickets_support_role``, ``tickets_log_channel``,
+    ``tickets_max_open_per_user``, ``tickets_inactivity_hours``,
+    ``tickets_panel_message`` - see ``cogs/config/tickets/guild_config.py``) lives
+    under those keys in the SAME ``guild_settings`` JSONB row as welcome /
+    automod / music_*, served from the SAME ``tools.settings`` LRU. Evicting the
+    blob is therefore enough for all six keys at once, exactly as
+    :func:`_invalidate_music_config` is for its five.
+
+    There is deliberately NO derived tickets cache to refresh alongside it, and
+    the panel BUTTON is a single process-wide persistent view that bakes in no
+    guild state: every click re-reads through ``tools.settings``, so the LRU is
+    the only cache in the path. The ``tickets`` TABLE is never cached at all -
+    the dashboard only reads it - so nothing here touches open tickets.
+    """
+    settings.invalidate_guild(gid)
+
+
 async def _invalidate_user_settings(bot, uid):
     """Drop ONE user's ``tools.settings`` blob after a dashboard write.
 
@@ -617,6 +639,7 @@ _INVALIDATORS = {
     "twitch": _invalidate_twitch,
     "autorooms": _invalidate_autorooms,
     "music_config": _invalidate_music_config,
+    "tickets_config": _invalidate_tickets_config,
     "user_settings": _invalidate_user_settings,
 }
 

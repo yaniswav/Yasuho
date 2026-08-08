@@ -1,5 +1,5 @@
 """The only door to the ``tickets`` table: open one, count a member's open ones,
-read one back by its thread.
+read one back by its thread, claim it, close it, and sweep the stale ones.
 
 METADATA ONLY. Nothing in this module writes a subject, a transcript or any
 message text, and there is no column that could hold one (see schema.sql). The
@@ -43,6 +43,21 @@ Retries are scoped to the number collision. A violation of
 ``tickets_thread_id_key`` means the caller passed a thread that is already a
 ticket - retrying that would loop until the budget ran out and then raise the
 same error anyway, so it is re-raised immediately.
+
+Lot T2 adds three statements, and each one is a race decided by the DATABASE
+rather than by the caller reading first and acting second:
+
+* :func:`claim_ticket` takes the ticket in a single data-modifying CTE whose
+  ``WHERE`` carries every rule (still open, not already claimed, not the
+  opener's own), and whose fallback branch reads the row's pre-update snapshot -
+  so the loser of a two-staff race is TOLD who holds it, from the same round
+  trip that refused them;
+* :func:`close_ticket` is the whole close flow's mutual exclusion. Its
+  ``AND status = 'open'`` means exactly one caller ever gets the row back, so
+  two simultaneous Close clicks (or a Close racing the auto-archive listener)
+  produce one transcript, one archive and one log line, not two;
+* :func:`fetch_sweep_candidates` is the backstop's ONE query per pass: a bounded
+  window over the open set in id order from a rotating cursor.
 
 Typography rule: ASCII '-' and '...' only.
 """
@@ -88,7 +103,72 @@ _COUNT_OPEN_FOR_USER = (
 
 _BY_THREAD = (
     "SELECT id, guild_id, ticket_number, thread_id, opener_id, status, "
-    "opened_at, closed_at, closed_by FROM tickets WHERE thread_id = $1"
+    "opened_at, closed_at, closed_by, claimed_by FROM tickets WHERE thread_id = $1"
+)
+
+# Take the ticket, in one statement that also EXPLAINS a refusal.
+#
+# The four rules live in the UPDATE's WHERE, so none of them can be defeated by
+# a click that lands between a read and a write: the ticket must still be open,
+# nobody may hold it yet, and the opener may not claim their own. When the UPDATE
+# matches, the first branch returns the row it just wrote (``taken`` true).
+#
+# When it does not match, the second branch reads the SAME row - and reads it
+# from the statement's snapshot, i.e. as it was before this UPDATE, which is
+# exactly the state that refused us: the winner's ``claimed_by``, or
+# ``status = 'closed'``, or the ``opener_id`` that is the clicker's own. So the
+# caller can say WHICH rule refused without a second round trip. A thread that is
+# not a ticket at all matches neither branch and the statement returns no row,
+# which is the fourth answer. All four outcomes probed on PostgreSQL.
+_CLAIM_TICKET = (
+    "WITH claimed AS ("
+    "UPDATE tickets SET claimed_by = $2 "
+    "WHERE thread_id = $1 AND status = 'open' AND claimed_by IS NULL "
+    "AND opener_id <> $2 "
+    "RETURNING ticket_number, status, opener_id, claimed_by"
+    ") "
+    "SELECT ticket_number, status, opener_id, claimed_by, TRUE AS taken "
+    "FROM claimed "
+    "UNION ALL "
+    "SELECT ticket_number, status, opener_id, claimed_by, FALSE AS taken "
+    "FROM tickets WHERE thread_id = $1 AND NOT EXISTS (SELECT 1 FROM claimed)"
+)
+
+# Close it, and hand the caller everything the log line needs in the same trip.
+#
+# ``AND status = 'open'`` is the whole feature's exactly-once gate (see the
+# module docstring): a second closer gets no row and must therefore do nothing.
+# ``closed_by`` is NULL for every close nobody clicked - the auto-archive
+# listener, the sweep, a deleted thread - which is what the log summary reads to
+# say "auto-closed" instead of naming somebody.
+_CLOSE_TICKET = (
+    "UPDATE tickets SET status = 'closed', closed_at = now(), closed_by = $2 "
+    "WHERE thread_id = $1 AND status = 'open' "
+    "RETURNING id, guild_id, ticket_number, thread_id, opener_id, claimed_by, "
+    "opened_at, closed_at, closed_by"
+)
+
+# One bounded window over the open set, in id order, from a rotating cursor.
+#
+# ``id > $1`` is the cursor and ``ORDER BY id`` is what makes it advance, so a
+# pass that skips its whole batch (every thread still live) does not re-read the
+# same rows forever - the next pass starts after them. ``id`` is a BIGSERIAL, so
+# ordering by it IS oldest-first without needing a second sort key.
+#
+# The age cut is the WIDEST any guild could want (the minimum configurable
+# window), not the guild's own: the per-guild hours live in a JSONB settings
+# blob, and the untrusted-payload rule says that value is coerced in Python
+# (guild_config), never cast inside SQL where a dashboard bug would raise. So
+# this is the cheap first cut and the caller applies each guild's real window.
+#
+# Served by the partial ``tickets_open_sweep_idx`` (schema.sql). Probed: 50 rows
+# out of 2300 (2000 of them closed) is an index scan touching 2 shared buffers.
+_SWEEP_CANDIDATES = (
+    "SELECT id, guild_id, ticket_number, thread_id, opener_id, claimed_by, "
+    "opened_at FROM tickets "
+    "WHERE status = 'open' AND id > $1 "
+    "AND opened_at < now() - make_interval(hours => $2) "
+    "ORDER BY id LIMIT $3"
 )
 
 
@@ -140,3 +220,38 @@ async def fetch_by_thread(pool, thread_id):
     refuses cleanly in a thread that is not a ticket).
     """
     return await pool.fetchrow(_BY_THREAD, thread_id)
+
+
+async def claim_ticket(pool, thread_id, claimer_id):
+    """Take this ticket for ``claimer_id``; return the outcome row, or ``None``.
+
+    ``None`` means the thread is not a ticket. Otherwise the row's ``taken``
+    says whether the claim landed, and when it did not the other columns say
+    why: ``status`` is not ``'open'`` (already closed), ``claimed_by`` is
+    somebody else (they got there first), or ``opener_id`` is the clicker (you
+    do not claim your own ticket). Exactly one round trip either way.
+    """
+    return await pool.fetchrow(_CLAIM_TICKET, thread_id, claimer_id)
+
+
+async def close_ticket(pool, thread_id, closed_by):
+    """Close this ticket; return its row, or ``None`` if it was already closed.
+
+    THE gate for everything the close flow does afterwards. Only the caller that
+    gets a row back may write the transcript to the log channel, archive the
+    thread and post the summary - so a Close click that races another Close (or
+    races the auto-archive listener reacting to our own archive) does its work
+    exactly once. ``closed_by`` is ``None`` for every close no human clicked.
+    """
+    return await pool.fetchrow(_CLOSE_TICKET, thread_id, closed_by)
+
+
+async def fetch_sweep_candidates(pool, *, after_id, min_age_hours, limit):
+    """One bounded, ordered window over the open set for the inactivity sweep.
+
+    ``after_id`` is the caller's rotating cursor (0 restarts the scan) and
+    ``min_age_hours`` is the widest age cut - the caller still has to apply each
+    guild's own inactivity window, because that value is untrusted JSONB and is
+    coerced in Python, never inside this statement.
+    """
+    return await pool.fetch(_SWEEP_CANDIDATES, after_id, min_age_hours, limit)

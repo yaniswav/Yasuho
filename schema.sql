@@ -1309,6 +1309,19 @@ CREATE INDEX IF NOT EXISTS tickets_guild_open_idx
     ON tickets (guild_id) WHERE status = 'open';
 -- "every ticket this user opened", across guilds: the /mydata export path.
 CREATE INDEX IF NOT EXISTS tickets_opener_idx ON tickets (opener_id);
+-- Lot T2. Which staff member took the ticket, NULL while nobody has. Additive
+-- and nullable on purpose: NULL is a real answer ("unclaimed"), so no backfill
+-- and no default can be right here.
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS claimed_by BIGINT;
+-- The inactivity sweep's index. It reads the open set in ID order from a
+-- rotating cursor (cogs/config/tickets/lifecycle.py), which the guild_id partial
+-- index above cannot serve and the primary key can only serve by walking every
+-- CLOSED row in between - and closed rows are the ones that grow without bound.
+-- PARTIAL for the same reason as its sibling: it stays the size of the live
+-- workload rather than of the guild's whole ticket history. Probed on
+-- PostgreSQL: a 50-row pass over 2300 rows (2000 of them closed) is an index
+-- scan touching 2 shared buffers.
+CREATE INDEX IF NOT EXISTS tickets_open_sweep_idx ON tickets (id) WHERE status = 'open';
 
 -- ============================================================
 -- Guarded integrity constraints (added NOT VALID)

@@ -19,9 +19,21 @@ so that server moderation works; they are removed when the data ages out of the
 server's retention window or the server removes the bot.
 
 **Support tickets** (per server): metadata only - the ticket number, the private
-thread's ID, who opened it, when it was opened and closed, and whether it is
-still open. The conversation inside a ticket is never stored: it lives in the
-Discord thread and is gone when that thread is.
+thread's ID, who opened it, which staff member claimed it, who closed it, when
+it was opened and closed, and whether it is still open. The bot never stores the
+conversation: it has no database column for it, and none of it is written
+anywhere the bot keeps.
+
+Transcripts. If - and only if - a server manager has set a ticket log channel,
+the bot uploads a plain-text transcript of the thread to **that server's own
+channel** when the ticket closes, so the staff team keeps a record of what was
+agreed. The file is built in memory, sent once, and never stored by the bot;
+from then on it lives in that Discord channel, under that server's control, and
+it outlives the thread. It contains what was said in the ticket, so a server
+should point that setting at a staff-only channel - the bot warns when the
+channel it is pointed at is readable by everyone. A server with no ticket log
+channel gets no transcript at all, and the closing message in the thread says
+so.
 
 **Leveling**: your user ID with XP totals, levels, and monthly season results
 per server.

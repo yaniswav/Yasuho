@@ -36,10 +36,17 @@ its own.
 That is a comparison, not a proof: this order narrows the orphan-row window, it
 does not close it. If the INSERT COMMITS and the connection then drops, asyncpg
 still raises, the compensation deletes the thread, and a committed 'open' row is
-left holding a cap slot with nothing to release it in this lot. Nothing
-transactional spans Discord and Postgres, so the window is inherent - what
-retires it is lot T2's sweep, which must reconcile rows whose thread is GONE
-(not merely idle) and close them. Recorded here so the hand-off cannot lose it.
+left holding a cap slot with nothing here to release it. Nothing transactional
+spans Discord and Postgres, so the window is inherent - what retires it is the
+SWEEP (lifecycle.py), which closes rows whose thread is GONE rather than merely
+idle. Recorded here because that is the only thing standing behind this order.
+
+How long a ticket lives. The thread is created with the guild's own inactivity
+window as its ``auto_archive_duration``, so Discord archives a silent ticket
+exactly when the server said to and lifecycle.py turns that archive into a
+close. The window is therefore enforced by Discord, not by a timer of ours, and
+it is read HERE - at open time - like every other configuration value in this
+flow.
 
 Typography rule: ASCII '-' and '...' only.
 """
@@ -50,7 +57,7 @@ import logging
 
 import discord
 
-from . import guild_config, preflight, storage
+from . import guild_config, lifecycle, preflight, storage
 from tools import i18n, interactions
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -63,10 +70,10 @@ log = logging.getLogger(__name__)
 # captured-at-post-time state this design avoids.
 OPEN_CUSTOM_ID = "ticket_open"
 
-# Reserved for lot T2's IN-THREAD controls (close / claim / transcript), which
-# are per-thread and therefore ``discord.ui.DynamicItem`` templates rather than
-# one static id. Declared here, and pinned by a test, so the namespace cannot be
-# claimed by another feature between the two lots.
+# The namespace the IN-THREAD controls own (close / claim), which are per-thread
+# and therefore ``discord.ui.DynamicItem`` templates rather than one static id.
+# They live in lifecycle.py; this declaration is what a test pins, so no other
+# feature can take the prefix out from under them.
 DYNAMIC_NAMESPACE = "tk:"
 
 # The name a thread is created with, before the authoritative number is known.
@@ -259,12 +266,19 @@ async def _create_ticket(interaction, subject):
 async def _open_thread(interaction, guild, member, channel, subject, pool):
     """Create the thread, take the row, and compensate if the row is refused."""
     cap = await guild_config.max_open_per_user(pool, guild.id)
+    # The guild's inactivity window IS the thread's auto-archive duration: that
+    # is what makes the setting real. Discord then enforces it for free, the
+    # archive it fires is what lifecycle.py turns into a close, and no ticket
+    # needs a timer. Read here, at open time, from the same cached blob as the
+    # cap - a window changed later applies to the tickets opened after it, which
+    # is what the dashboard contract promises.
+    hours = await guild_config.inactivity_hours(pool, guild.id)
 
     try:
         thread = await channel.create_thread(
             name=PROVISIONAL_THREAD_NAME,
             message=None,  # explicit: no starter message => a PRIVATE thread
-            auto_archive_duration=guild_config.AUTO_ARCHIVE_MINUTES,
+            auto_archive_duration=guild_config.auto_archive_minutes(hours),
             invitable=False,  # discord.py defaults this to True
             reason=f"Support ticket opened by {member} ({member.id})",
         )
@@ -341,8 +355,18 @@ async def _post_opening_message(guild, thread, member, subject, number, pool):
         roles=[role] if role is not None else False,
         replied_user=False,
     )
+    # --- lot T2 seam: the in-thread controls ride this message ---------------
+    # The ONLY line open.py contributes to the lifecycle. The view is keyed on
+    # the thread id (the ticket's identity) and its buttons are DynamicItems, so
+    # nothing about it is stored per message and it keeps working across
+    # restarts. Built here, in the submitter's locale, so its labels match the
+    # embed printed right above them.
+    controls = lifecycle.TicketControlsView(thread.id)
+    # ------------------------------------------------------------------------
     try:
-        await thread.send(content, embed=embed, allowed_mentions=allowed)
+        await thread.send(
+            content, embed=embed, view=controls, allowed_mentions=allowed
+        )
     except discord.HTTPException:
         # The room exists and the row is written, so the ticket is real - but the
         # mention that failed to send is also what ADDS the opener to a private
@@ -356,6 +380,25 @@ async def _post_opening_message(guild, thread, member, subject, number, pool):
         except discord.HTTPException:
             log.warning(
                 "tickets: could not add the opener to thread %s either", thread.id
+            )
+        # add_user restores ACCESS, not the controls - and without them nobody
+        # in the room can close the ticket, which leaves the sweep as the only
+        # ending and the opener's cap slot held meanwhile. So retry the send
+        # stripped down to the two things that matter: the number and the
+        # buttons. A fresh view, because the one above was already handed to a
+        # failed send.
+        try:
+            await thread.send(
+                _("Ticket #{number} - use the buttons below to claim or close it.")
+                .format(number=number),
+                view=lifecycle.TicketControlsView(thread.id),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except discord.HTTPException:
+            log.warning(
+                "tickets: thread %s has no in-thread controls; only the sweep "
+                "can end it",
+                thread.id,
             )
 
 

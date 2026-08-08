@@ -181,6 +181,41 @@ def test_the_auto_archive_duration_is_one_discord_accepts():
     assert guild_config.AUTO_ARCHIVE_MINUTES == 4320
 
 
+def test_every_offerable_window_maps_to_a_duration_discord_accepts():
+    # The window IS the thread's auto-archive duration, so the two lists are
+    # the same list: a preset Discord would reject is a preset that cannot work.
+    for hours in guild_config.INACTIVITY_PRESET_HOURS:
+        assert guild_config.auto_archive_minutes(hours) in (60, 1440, 4320, 10080)
+        assert guild_config.auto_archive_minutes(hours) == hours * 60
+    assert (
+        guild_config.auto_archive_minutes(guild_config.DEFAULT_INACTIVITY_HOURS)
+        == guild_config.AUTO_ARCHIVE_MINUTES
+    )
+
+
+def test_a_window_between_two_presets_rounds_UP_never_down():
+    # Rounding down would close a ticket EARLIER than the server asked, in the
+    # middle of a conversation; rounding up only keeps a dead room longer.
+    assert guild_config.snap_inactivity_hours(2) == 24
+    assert guild_config.snap_inactivity_hours(100) == 168
+    assert guild_config.snap_inactivity_hours(1) == 1
+    assert guild_config.snap_inactivity_hours(72) == 72
+    # Past the top preset (only reachable un-clamped) it stays on the ceiling.
+    assert guild_config.snap_inactivity_hours(9000) == 168
+
+
+async def test_a_dashboard_written_window_is_read_back_snapped(fake_pool):
+    # The dashboard may write any integer in the bounds; what the bot SHOWS and
+    # what it ACTS on have to be the same number.
+    _seed({guild_config.KEY_INACTIVITY_HOURS: 100})
+    hours = await guild_config.inactivity_hours(fake_pool, GUILD_ID)
+    assert hours == 168
+    assert guild_config.auto_archive_minutes(hours) == 10080
+    assert guild_config.resolve({guild_config.KEY_INACTIVITY_HOURS: 100})[
+        "inactivity_hours"
+    ] == 168
+
+
 # ---------------------------------------------------------------------------
 # preflight
 # ---------------------------------------------------------------------------

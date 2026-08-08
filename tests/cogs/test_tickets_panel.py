@@ -1,6 +1,7 @@
-"""Unit tests for the tickets cog and the open flow (lot T1).
+"""Unit tests for the tickets cog, the open flow (lot T1) and the config panel
+(lot T3).
 
-Covers the two surfaces a guild actually touches:
+Covers the surfaces a guild actually touches:
 
 * ``/ticket setup|status|disable`` - the preflight that refuses to write a
   configuration the bot cannot act on, the fact that a setup writes ONLY the
@@ -10,7 +11,11 @@ Covers the two surfaces a guild actually touches:
 * the persistent panel button and the modal submit behind it - the checks a
   click runs in order, the shape of the PRIVATE thread that gets created, the
   compensating delete when the cap guard refuses after the thread exists, and
-  the fact that the subject a member typed never reaches the database.
+  the fact that the subject a member typed never reaches the database;
+* ``/ticket config`` - the editable twin of the status card, and the two rules
+  it exists to enforce: a key nobody wrote means the bot default (so the panel
+  marks inherited values as such), and a reset DELETES the key rather than
+  storing a neutral value.
 
 Discord objects are subclassed rather than duck-typed where the code under test
 legitimately asserts a type (``discord.Member``, ``discord.TextChannel``): the
@@ -151,6 +156,9 @@ class _Guild:
         self.id = GUILD_ID
         self.name = name
         self.me = object()
+        # The @everyone role, which is how "can the whole server read the log
+        # channel?" is asked (panel._is_public).
+        self.default_role = types.SimpleNamespace(id=GUILD_ID)
         self._channels = {c.id: c for c in channels}
         self._roles = {r.id: r for r in roles}
 
@@ -181,6 +189,10 @@ class _Response:
         self._parent.modals.append(modal)
         self._done = True
 
+    async def edit_message(self, **kwargs):
+        self._parent.edits.append(kwargs)
+        self._done = True
+
 
 class _Followup:
     def __init__(self, parent):
@@ -200,6 +212,7 @@ class _Interaction:
         self.defers = []
         self.modals = []
         self.followups = []
+        self.edits = []
         self.response = _Response(self)
         self.followup = _Followup(self)
 
@@ -242,15 +255,30 @@ class _Pool:
         self.open_count = open_count
         self.insert_result = insert_result
         self.insert_error = insert_error
+        # The stored guild_settings row, kept HONEST: the two statements this
+        # package issues against it (a per-key jsonb_set and a per-key delete)
+        # are applied here, so a surface that re-reads after a write sees what it
+        # actually wrote instead of a hand-maintained fixture.
+        self.blob = {}
+        self.execute_error = None
 
     async def execute(self, query, *args):
         self.calls.append(("execute", query, args))
+        if self.execute_error is not None:
+            raise self.execute_error
+        if "jsonb_set" in query and "guild_settings" in query:
+            self.blob[args[1]] = json.loads(args[2])
+        elif "settings - $2" in query:
+            self.blob.pop(args[1], None)
         return "INSERT 0 1"
 
     async def fetchval(self, query, *args):
         self.calls.append(("fetchval", query, args))
         if "COUNT(*) FROM tickets" in query:
             return self.open_count
+        if "FROM guild_settings" in query:
+            # asyncpg hands JSONB back as TEXT on this pool (no codec).
+            return json.dumps(self.blob)
         return None
 
     async def fetchrow(self, query, *args):
@@ -265,16 +293,31 @@ class _Pool:
 
     @property
     def settings_writes(self):
-        """(key, value) for every tools.settings.set_guild that landed.
+        """(key, value) for every VALUE write that landed on guild_settings.
 
         ``_save_key`` patches ONE key with ``jsonb_set``, so the value arrives
-        as JSON text and is decoded back here.
+        as JSON text and is decoded back here. Key DELETES are a different
+        statement and are reported by :attr:`settings_deletes`, so a test that
+        asserts on this list is asserting about values only.
         """
         out = []
         for method, query, args in self.calls:
-            if method == "execute" and "guild_settings" in query:
+            if method == "execute" and "jsonb_set" in query:
                 out.append((args[1], json.loads(args[2])))
         return out
+
+    @property
+    def settings_deletes(self):
+        """Every key REMOVED from the guild blob (``settings - $2``).
+
+        The reset rule of this feature: a key that is reset is deleted, never
+        set to null, so "was it reset" is a question about this list.
+        """
+        return [
+            args[1]
+            for method, query, args in self.calls
+            if method == "execute" and "settings - $2" in query
+        ]
 
     @property
     def ticket_queries(self):
@@ -309,16 +352,27 @@ async def test_the_cog_registers_exactly_one_global_persistent_view():
     assert isinstance(cog.bot.views[0], ticket_open.TicketPanelView)
 
 
-def test_the_dynamic_item_namespace_for_lot_t2_is_reserved_and_unclaimed():
-    """``tk:`` belongs to the in-thread controls; nothing else may take it."""
+def test_the_dynamic_item_namespace_belongs_to_the_lifecycle_module_alone():
+    """``tk:`` belongs to the in-thread controls; nothing else may take it.
+
+    Lot T1 asserted this namespace was UNCLAIMED, which is what a reservation
+    means while the module that will use it does not exist yet. Lot T2 built
+    that module, so the guard flips to its lasting form: every ``tk:`` template
+    in the tree lives in cogs/config/tickets/lifecycle.py and nowhere else, so a
+    later feature still cannot take a prefix whose clicks would be routed here.
+    """
     assert ticket_open.DYNAMIC_NAMESPACE == "tk:"
     repo = pathlib.Path(__file__).resolve().parent.parent.parent
+    owners = set()
     templates = []
     for path in (repo / "cogs").rglob("*.py"):
         source = path.read_text(encoding="utf-8")
-        templates += re.findall(r"^[A-Z_]*TEMPLATE\s*=\s*r?[\"'](.+?)[\"']", source, re.M)
+        found = re.findall(r"^[A-Z_]*TEMPLATE\s*=\s*r?[\"'](.+?)[\"']", source, re.M)
+        templates += found
+        if any(template.startswith("tk:") for template in found):
+            owners.add(path.name)
     assert templates, "the template scan found nothing - the guard would be vacuous"
-    assert [t for t in templates if t.startswith("tk:")] == []
+    assert owners == {"lifecycle.py"}
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +472,12 @@ async def test_a_blank_message_is_how_the_blurb_is_cleared():
 
     await cog.ticket_setup.callback(cog, ctx, channel, message="   ")
 
-    assert (guild_config.KEY_PANEL_MESSAGE, None) in pool.settings_writes
+    # DELETED, not stored as null: a cleared blurb leaves the guild exactly as
+    # unconfigured as one that never set a blurb (the reset rule).
+    assert guild_config.KEY_PANEL_MESSAGE in pool.settings_deletes
+    assert guild_config.KEY_PANEL_MESSAGE not in [
+        key for key, _value in pool.settings_writes
+    ]
     _args, kwargs = channel.sends[0]
     assert "Need a hand" in kwargs["embed"].description
 
@@ -524,7 +583,9 @@ async def test_disable_clears_only_the_panel_channel():
 
     await cog.ticket_disable.callback(cog, ctx)
 
-    assert pool.settings_writes == [(guild_config.KEY_PANEL_CHANNEL, None)]
+    # The switch is REMOVED, not nulled, and it is the only key touched.
+    assert pool.settings_deletes == [guild_config.KEY_PANEL_CHANNEL]
+    assert pool.settings_writes == []
 
 
 # ---------------------------------------------------------------------------
@@ -746,6 +807,39 @@ async def test_the_ticket_room_is_a_private_uninvitable_thread():
     assert kwargs["auto_archive_duration"] == guild_config.AUTO_ARCHIVE_MINUTES
 
 
+async def test_the_guild_window_is_what_the_thread_is_created_with():
+    # THE thing that makes tickets_inactivity_hours a real control: the window
+    # is the thread's auto-archive duration, so Discord enforces it and the
+    # archive it fires is what closes the ticket.
+    _seed(
+        {
+            guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID,
+            guild_config.KEY_INACTIVITY_HOURS: 24,
+        }
+    )
+    interaction, channel = _submit_context(_Pool())
+
+    await ticket_open._create_ticket(interaction, "printer on fire")
+
+    assert channel.thread_calls[0]["auto_archive_duration"] == 1440
+
+
+async def test_a_window_the_dashboard_wrote_off_grid_still_reaches_discord():
+    # 100 hours is not a duration Discord accepts; the reader rounds it up to
+    # 168, which is also what every surface shows.
+    _seed(
+        {
+            guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID,
+            guild_config.KEY_INACTIVITY_HOURS: 100,
+        }
+    )
+    interaction, channel = _submit_context(_Pool())
+
+    await ticket_open._create_ticket(interaction, "hi")
+
+    assert channel.thread_calls[0]["auto_archive_duration"] == 10080
+
+
 async def test_the_subject_reaches_the_thread_and_never_the_database():
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
     pool = _Pool()
@@ -872,6 +966,43 @@ async def test_the_happy_path_never_pays_for_an_explicit_add():
     assert channel.thread.added == []
 
 
+class _FlakyThread(_Thread):
+    """Fails its FIRST send - the opening message - and works from then on."""
+
+    def __init__(self, error, **kwargs):
+        super().__init__(**kwargs)
+        self._first_error = error
+
+    async def send(self, *args, **kwargs):
+        if self._first_error is not None:
+            error, self._first_error = self._first_error, None
+            raise error
+        return await super().send(*args, **kwargs)
+
+
+async def test_a_failed_opening_message_still_leaves_the_controls_in_the_room():
+    # add_user restores ACCESS but not the buttons, and without them nobody in
+    # the room can close the ticket: the opener's cap slot would be held until
+    # the sweep. So the controls are re-sent on their own.
+    _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
+    error = discord.HTTPException(types.SimpleNamespace(status=403, reason=""), "nope")
+    thread = _FlakyThread(error)
+    interaction, channel = _submit_context(_Pool(insert_result=8), thread=thread)
+
+    await ticket_open._create_ticket(interaction, "hi")
+
+    assert thread.added == [interaction.user]
+    args, kwargs = thread.sends[0]
+    assert "#8" in args[0]
+    view = kwargs["view"]
+    assert {child.item.custom_id for child in view.children} == {
+        "tk:claim:{0}".format(thread.id),
+        "tk:close:{0}".format(thread.id),
+    }
+    # A retry of the opening message would re-ping; this one pings nobody.
+    assert kwargs["allowed_mentions"].everyone is False
+
+
 async def test_a_fallback_add_that_also_fails_still_leaves_a_real_ticket():
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
     error = discord.HTTPException(types.SimpleNamespace(status=403, reason=""), "nope")
@@ -989,3 +1120,642 @@ def test_the_subject_input_is_bounded_and_required():
     assert field.required is True
     assert field.max_length == guild_config.MAX_SUBJECT_LENGTH
     assert field.style is discord.TextStyle.short
+
+
+# ---------------------------------------------------------------------------
+# /ticket config: the editable panel (lot T3)
+#
+# Two rules carry every test below, and they are the same two the dashboard
+# contract states: a key nobody wrote means "the bot default" (so the panel has
+# to be able to TELL the two apart), and resetting a key DELETES it (so a guild
+# that resets everything is indistinguishable from one that never configured
+# anything). The panel is built from the RAW key map for exactly that reason.
+# ---------------------------------------------------------------------------
+
+
+def _picker_role(role_id=ROLE_ID):
+    """A role a RoleSelect will accept as a default value.
+
+    ``_Role`` above is a plain stand-in and assigns ``mention``, which is a
+    read-only property on the real class. discord.py resolves a default value's
+    type by EXACT class for roles (unlike channels, which it normalises to
+    ``GuildChannel``), so a subclass is refused too and the picker tests need a
+    real :class:`discord.Role` - built without ``__init__`` and given only the
+    ``id`` everything else here derives from.
+    """
+    role = discord.Role.__new__(discord.Role)
+    role.id = role_id
+    return role
+
+
+class _Message:
+    def __init__(self):
+        self.edits = []
+
+    async def edit(self, **kwargs):
+        self.edits.append(kwargs)
+
+
+def _seed_both(pool, blob, guild_id=GUILD_ID):
+    """Seed the settings LRU AND the fake row, so a re-read agrees with it."""
+    _seed(blob, guild_id)
+    pool.blob = dict(blob)
+
+
+def _panel(pool, blob=None, channels=(), roles=(), guild=None):
+    """An open /ticket config panel over ``blob``, with a message to edit."""
+    _seed_both(pool, blob or {})
+    guild = guild if guild is not None else _Guild(channels=channels, roles=roles)
+    view = panel.TicketConfigPanel(_cog(pool), guild, MEMBER_ID, dict(pool.blob))
+    view.message = _Message()
+    return view
+
+
+def _panel_text(view):
+    return "\n".join(
+        child.content
+        for child in view.children[0].children
+        if hasattr(child, "content")
+    )
+
+
+def _selects(view):
+    return [
+        child
+        for child in view.walk_children()
+        if isinstance(child, discord.ui.Select)
+        or isinstance(child, (discord.ui.ChannelSelect, discord.ui.RoleSelect))
+    ]
+
+
+def _buttons(view):
+    return [c for c in view.walk_children() if isinstance(c, discord.ui.Button)]
+
+
+def _configured_blob():
+    return {
+        guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID,
+        guild_config.KEY_SUPPORT_ROLE: ROLE_ID,
+        guild_config.KEY_LOG_CHANNEL: LOG_ID,
+        guild_config.KEY_MAX_OPEN_PER_USER: 4,
+        guild_config.KEY_INACTIVITY_HOURS: 24,
+        guild_config.KEY_PANEL_MESSAGE: "Ask away",
+    }
+
+
+# -- what the panel shows ---------------------------------------------------
+
+
+def test_an_unconfigured_guild_sees_the_defaults_marked_as_defaults():
+    view = _panel(_Pool())
+    text = _panel_text(view)
+
+    assert "Disabled" in text
+    assert "*Not set.*" in text
+    # The two numeric keys are INHERITED here, and the card says so rather than
+    # presenting the bot's default as the server's choice.
+    assert "2 (default)" in text
+    assert "72h (default)" in text
+    assert "Default wording" in text
+
+
+def test_a_configured_guild_sees_its_own_values_without_the_default_marker():
+    channel = _TextChannel()
+    log_channel = _TextChannel(channel_id=LOG_ID)
+    role = _picker_role()
+    view = _panel(
+        _Pool(),
+        _configured_blob(),
+        channels=[channel, log_channel],
+        roles=[role],
+    )
+    text = _panel_text(view)
+
+    assert "Enabled" in text
+    assert channel.mention in text
+    assert log_channel.mention in text
+    assert role.mention in text
+    assert "Ask away" in text
+    assert "(default)" not in text
+
+
+def test_a_long_blurb_is_previewed_on_one_bounded_line():
+    blob = {guild_config.KEY_PANEL_MESSAGE: "line one\nline two " + "x" * 500}
+    view = _panel(_Pool(), blob)
+    text = _panel_text(view)
+
+    assert "line one line two" in text
+    assert "\n\n" not in text
+    assert len("x" * 500) > panel.BLURB_PREVIEW_LENGTH
+    assert "..." in text
+
+
+def test_the_selects_preselect_what_the_guild_stored():
+    channel = _TextChannel()
+    log_channel = _TextChannel(channel_id=LOG_ID)
+    role = _picker_role()
+    view = _panel(
+        _Pool(),
+        _configured_blob(),
+        channels=[channel, log_channel],
+        roles=[role],
+    )
+    counts = [s for s in _selects(view) if getattr(s, "options", None)]
+    chosen = {
+        option.value
+        for select in counts
+        for option in select.options
+        if option.default
+    }
+
+    assert chosen == {"4", "24"}
+
+
+def test_an_unconfigured_count_preselects_the_reset_option():
+    view = _panel(_Pool())
+    counts = [s for s in _selects(view) if getattr(s, "options", None)]
+    defaults = [
+        [o.value for o in select.options if o.default] for select in counts
+    ]
+
+    # Both count selects open on "Default", which is the option that DELETES.
+    assert defaults == [[panel.RESET_VALUE], [panel.RESET_VALUE]]
+
+
+def test_a_deleted_channel_is_never_offered_as_a_preselected_value():
+    # The id resolves to nothing (the channel was deleted); Discord rejects a
+    # default value it cannot resolve, so the picker opens empty and the
+    # overview line above is what says "(deleted)".
+    view = _panel(_Pool(), {guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
+
+    assert "(deleted)" in _panel_text(view)
+    for select in _selects(view):
+        assert list(getattr(select, "default_values", [])) == []
+
+
+def test_the_reset_message_button_is_dead_when_there_is_no_blurb():
+    without = _buttons(_panel(_Pool()))
+    with_blurb = _buttons(
+        _panel(_Pool(), {guild_config.KEY_PANEL_MESSAGE: "Ask away"})
+    )
+
+    assert [b.disabled for b in without] == [False, True]
+    assert [b.disabled for b in with_blurb] == [False, False]
+
+
+def test_the_panel_stays_inside_discords_component_budget():
+    # Components V2 caps a message at 40 components; this panel is fixed-size
+    # (six keys), so the check is a regression guard for whoever adds a seventh.
+    view = _panel(_Pool(), _configured_blob())
+
+    assert len(list(view.walk_children())) < 40
+
+
+# -- writing ----------------------------------------------------------------
+
+
+async def test_picking_a_panel_channel_writes_the_key_and_turns_tickets_on():
+    channel = _TextChannel()
+    pool = _Pool()
+    view = _panel(pool, channels=[channel])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_panel_channel(interaction, channel)
+
+    assert pool.settings_writes == [(guild_config.KEY_PANEL_CHANNEL, CHANNEL_ID)]
+    assert "Enabled" in _panel_text(view)
+
+
+async def test_clearing_the_panel_channel_deletes_the_key_and_turns_tickets_off():
+    channel = _TextChannel()
+    pool = _Pool()
+    view = _panel(pool, _configured_blob(), channels=[channel], roles=[_picker_role()])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_panel_channel(interaction, None)
+
+    assert pool.settings_deletes == [guild_config.KEY_PANEL_CHANNEL]
+    assert pool.settings_writes == []
+    assert guild_config.KEY_PANEL_CHANNEL not in pool.blob
+    # And ONLY that key: the rest of the configuration is the server's.
+    assert guild_config.KEY_SUPPORT_ROLE in pool.blob
+    assert "Disabled" in _panel_text(view)
+
+
+async def test_a_channel_the_bot_cannot_run_tickets_in_is_refused_unwritten():
+    channel = _TextChannel(perms=_Perms(create_private_threads=False))
+    pool = _Pool()
+    view = _panel(pool, channels=[channel])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_panel_channel(interaction, channel)
+
+    assert pool.settings_writes == []
+    assert pool.settings_deletes == []
+    assert "Create Private Threads" in interaction.replies[0]
+    # The select is showing a channel the configuration does not have, so the
+    # card is redrawn to put it back.
+    assert view.message.edits
+
+
+async def test_a_channel_the_guild_cache_cannot_resolve_is_refused():
+    # No permissions object at all reads as "everything is missing" - the safe
+    # direction, and the one that never writes an unusable configuration.
+    pool = _Pool()
+    view = _panel(pool)
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_panel_channel(interaction, types.SimpleNamespace(
+        id=CHANNEL_ID, mention=f"<#{CHANNEL_ID}>"
+    ))
+
+    assert pool.settings_writes == []
+    assert "View Channel" in interaction.replies[0]
+
+
+async def test_picking_and_clearing_the_support_role():
+    role = _picker_role()
+    pool = _Pool()
+    view = _panel(pool, roles=[role])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_support_role(interaction, role)
+    assert pool.settings_writes == [(guild_config.KEY_SUPPORT_ROLE, ROLE_ID)]
+
+    await view.set_support_role(interaction, None)
+    assert pool.settings_deletes == [guild_config.KEY_SUPPORT_ROLE]
+    assert guild_config.KEY_SUPPORT_ROLE not in pool.blob
+
+
+async def test_picking_and_clearing_the_log_channel():
+    log_channel = _TextChannel(channel_id=LOG_ID)
+    pool = _Pool()
+    view = _panel(pool, channels=[log_channel])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_log_channel(interaction, log_channel)
+    assert pool.settings_writes == [(guild_config.KEY_LOG_CHANNEL, LOG_ID)]
+
+    await view.set_log_channel(interaction, None)
+    assert pool.settings_deletes == [guild_config.KEY_LOG_CHANNEL]
+
+
+async def test_a_count_is_stored_as_a_number_not_as_the_select_string():
+    pool = _Pool()
+    view = _panel(pool)
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_count(interaction, guild_config.KEY_MAX_OPEN_PER_USER, "4")
+
+    assert pool.settings_writes == [(guild_config.KEY_MAX_OPEN_PER_USER, 4)]
+
+
+async def test_choosing_default_deletes_the_count_key():
+    pool = _Pool()
+    view = _panel(pool, {guild_config.KEY_INACTIVITY_HOURS: 24})
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_count(
+        interaction, guild_config.KEY_INACTIVITY_HOURS, panel.RESET_VALUE
+    )
+
+    assert pool.settings_deletes == [guild_config.KEY_INACTIVITY_HOURS]
+    assert pool.settings_writes == []
+    assert "72h (default)" in _panel_text(view)
+
+
+async def test_a_count_outside_the_bounds_is_clamped_before_it_is_stored():
+    # The panel only offers legal presets, so this can only happen if the preset
+    # list drifts out of the storage bounds - clamped there, never written raw.
+    pool = _Pool()
+    view = _panel(pool)
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_count(interaction, guild_config.KEY_INACTIVITY_HOURS, "9999")
+
+    assert pool.settings_writes == [
+        (guild_config.KEY_INACTIVITY_HOURS, guild_config.MAX_INACTIVITY_HOURS)
+    ]
+
+
+async def test_the_blurb_modal_stores_trimmed_text():
+    pool = _Pool()
+    view = _panel(pool)
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_blurb(interaction, "  Ask away  ")
+
+    assert pool.settings_writes == [(guild_config.KEY_PANEL_MESSAGE, "Ask away")]
+
+
+async def test_a_blank_modal_submit_deletes_the_blurb():
+    pool = _Pool()
+    view = _panel(pool, {guild_config.KEY_PANEL_MESSAGE: "Ask away"})
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_blurb(interaction, "   ")
+
+    assert pool.settings_deletes == [guild_config.KEY_PANEL_MESSAGE]
+    assert pool.settings_writes == []
+
+
+async def test_the_reset_message_button_deletes_the_blurb():
+    pool = _Pool()
+    view = _panel(pool, {guild_config.KEY_PANEL_MESSAGE: "Ask away"})
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+    reset = _buttons(view)[1]
+
+    await reset.callback(interaction)
+
+    assert pool.settings_deletes == [guild_config.KEY_PANEL_MESSAGE]
+
+
+async def test_the_modal_opens_on_the_stored_blurb():
+    view = _panel(_Pool(), {guild_config.KEY_PANEL_MESSAGE: "Ask away"})
+    modal = panel._PanelMessageModal(view)
+
+    assert modal.field.default == "Ask away"
+    assert modal.field.required is False
+    assert modal.field.max_length == guild_config.MAX_PANEL_MESSAGE_LENGTH
+
+
+async def test_a_redraw_never_re_pings_the_role_the_card_mentions():
+    # The card carries live <@&> / <#> tokens, and a Components V2 edit resends
+    # every TextDisplay - so every refresh suppresses mentions.
+    pool = _Pool()
+    view = _panel(pool, roles=[_picker_role()])
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_support_role(interaction, _picker_role())
+
+    assert interaction.edits
+    mentions = interaction.edits[-1]["allowed_mentions"]
+    assert (mentions.roles, mentions.users, mentions.everyone) == (False, False, False)
+
+
+async def test_a_failed_write_apologises_and_changes_nothing():
+    pool = _Pool()
+    view = _panel(pool, {guild_config.KEY_MAX_OPEN_PER_USER: 3})
+    pool.execute_error = RuntimeError("db down")
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+
+    await view.set_count(interaction, guild_config.KEY_MAX_OPEN_PER_USER, "5")
+
+    assert "went wrong" in interaction.replies[0]
+    assert interaction.edits == []
+    assert view.state["max_open"] == 3
+
+
+async def test_a_write_redraws_from_a_fresh_read_not_from_its_own_echo():
+    # Another surface (a second panel, /ticket setup, the dashboard) may have
+    # moved a different key since this panel opened; the redraw re-reads.
+    pool = _Pool()
+    view = _panel(pool, {guild_config.KEY_MAX_OPEN_PER_USER: 3})
+    interaction = _Interaction(view.guild, _Member(), view.cog.bot)
+    # Somebody else sets the inactivity window behind this panel's back.
+    await guild_config.set_key(
+        pool, GUILD_ID, guild_config.KEY_INACTIVITY_HOURS, 24
+    )
+
+    await view.set_count(interaction, guild_config.KEY_MAX_OPEN_PER_USER, "5")
+
+    assert view.state["max_open"] == 5
+    assert view.state["inactivity_hours"] == 24
+    assert "24h" in _panel_text(view)
+    assert "(default)" not in _panel_text(view)
+
+
+# -- the log channel is a transcript destination ----------------------------
+
+
+def _log_world(*, public):
+    """A guild whose log channel everybody can (or cannot) read."""
+    channel = _TextChannel()
+    log_channel = _TextChannel(channel_id=LOG_ID)
+    guild = _Guild(channels=[channel, log_channel])
+    log_channel.guild = guild
+    if not public:
+        log_channel.set_permissions_for(
+            guild.default_role, _Perms(view_channel=False)
+        )
+    return guild, channel, log_channel
+
+
+def test_both_surfaces_call_the_log_channel_what_it_is_a_transcript_sink():
+    # "Ticket activity" would be a comfortable label for a control that copies a
+    # private conversation into a channel of the manager's choosing.
+    guild, _channel, _log = _log_world(public=False)
+    card = panel.TicketStatusView(
+        guild, _config(panel_channel=CHANNEL_ID, log_channel=LOG_ID)
+    )
+    view = _panel(_Pool(), {guild_config.KEY_LOG_CHANNEL: LOG_ID}, guild=guild)
+
+    assert "transcript" in _card_text(card)
+    assert "transcript" in _panel_text(view)
+    placeholders = [s.placeholder for s in _selects(view) if s.placeholder]
+    assert any("transcript" in p for p in placeholders)
+
+
+def test_a_log_channel_everybody_can_read_is_warned_about_on_both_surfaces():
+    # A transcript in a public channel publishes a private thread server-wide.
+    guild, _channel, _log = _log_world(public=True)
+    card = panel.TicketStatusView(
+        guild, _config(panel_channel=CHANNEL_ID, log_channel=LOG_ID)
+    )
+    view = _panel(_Pool(), {guild_config.KEY_LOG_CHANNEL: LOG_ID}, guild=guild)
+
+    assert "everyone can read" in _card_text(card)
+    assert "everyone can read" in _panel_text(view)
+
+
+def test_a_staff_only_log_channel_is_not_nagged_about():
+    guild, _channel, _log = _log_world(public=False)
+    card = panel.TicketStatusView(
+        guild, _config(panel_channel=CHANNEL_ID, log_channel=LOG_ID)
+    )
+    view = _panel(_Pool(), {guild_config.KEY_LOG_CHANNEL: LOG_ID}, guild=guild)
+
+    assert "everyone can read" not in _card_text(card)
+    assert "everyone can read" not in _panel_text(view)
+
+
+async def test_setup_warns_when_the_log_channel_it_kept_is_public():
+    _seed({guild_config.KEY_LOG_CHANNEL: LOG_ID})
+    guild, channel, _log = _log_world(public=True)
+    cog = _cog(_Pool())
+    ctx = _Ctx(guild)
+
+    await cog.ticket_setup.callback(cog, ctx, channel)
+
+    assert "everyone can read" in ctx.texts[-1]
+    assert "transcript" in ctx.texts[-1]
+
+
+# -- the command ------------------------------------------------------------
+
+
+async def test_the_config_command_opens_a_panel_gated_to_its_invoker():
+    pool = _Pool()
+    _seed_both(pool, _configured_blob())
+    cog = _cog(pool)
+    ctx = _Ctx(_Guild(), author_id=MEMBER_ID)
+
+    await cog.ticket_config.callback(cog, ctx)
+
+    _args, kwargs = ctx.sends[0]
+    view = kwargs["view"]
+    assert isinstance(view, panel.TicketConfigPanel)
+    assert view.author_id == MEMBER_ID
+    assert view.message is not None
+    # Opened with mentions suppressed, like the status card.
+    assert isinstance(kwargs["allowed_mentions"], discord.AllowedMentions)
+
+
+async def test_the_config_panel_survives_a_settings_read_that_failed():
+    # read_raw answers None on failure; the panel must open on the defaults
+    # rather than raise in front of a manager.
+    class _DeadPool(_Pool):
+        async def fetchval(self, query, *args):
+            raise RuntimeError("db down")
+
+    pool = _DeadPool()
+    settings._cache.clear()
+    cog = _cog(pool)
+    ctx = _Ctx(_Guild(), author_id=MEMBER_ID)
+
+    await cog.ticket_config.callback(cog, ctx)
+
+    _args, kwargs = ctx.sends[0]
+    assert "2 (default)" in _panel_text(kwargs["view"])
+
+
+# ---------------------------------------------------------------------------
+# guild_config: the pieces lot T3 added under the panel
+# ---------------------------------------------------------------------------
+
+
+def test_every_inactivity_preset_is_storable_and_the_default_is_one_of_them():
+    assert guild_config.DEFAULT_INACTIVITY_HOURS in guild_config.INACTIVITY_PRESET_HOURS
+    for hours in guild_config.INACTIVITY_PRESET_HOURS:
+        assert guild_config.MIN_INACTIVITY_HOURS <= hours
+        assert hours <= guild_config.MAX_INACTIVITY_HOURS
+    assert list(guild_config.INACTIVITY_PRESET_HOURS) == sorted(
+        guild_config.INACTIVITY_PRESET_HOURS
+    )
+
+
+def test_the_key_order_is_stable_and_covers_every_key():
+    assert set(guild_config.KEY_ORDER) == guild_config.KEYS
+    assert len(guild_config.KEY_ORDER) == len(guild_config.KEYS) == 6
+
+
+async def test_set_key_removes_the_key_instead_of_storing_a_null():
+    pool = _Pool()
+    _seed_both(pool, {guild_config.KEY_SUPPORT_ROLE: ROLE_ID, "welcome": {"on": 1}})
+
+    await guild_config.set_key(pool, GUILD_ID, guild_config.KEY_SUPPORT_ROLE, None)
+
+    assert pool.settings_deletes == [guild_config.KEY_SUPPORT_ROLE]
+    assert guild_config.KEY_SUPPORT_ROLE not in pool.blob
+    # A sibling feature sharing the same row is untouched...
+    assert pool.blob["welcome"] == {"on": 1}
+    # ... and the LRU no longer serves the stale blob.
+    assert ("guild_settings", GUILD_ID) not in settings._cache
+
+
+async def test_set_key_writes_one_key_and_leaves_the_rest_of_the_row_alone():
+    pool = _Pool()
+    _seed_both(pool, {"welcome": {"on": 1}})
+
+    await guild_config.set_key(pool, GUILD_ID, guild_config.KEY_LOG_CHANNEL, LOG_ID)
+
+    assert pool.blob == {"welcome": {"on": 1}, guild_config.KEY_LOG_CHANNEL: LOG_ID}
+
+
+async def test_read_raw_says_none_on_failure_rather_than_faking_an_empty_config():
+    class _DeadPool(_Pool):
+        async def fetchval(self, query, *args):
+            raise RuntimeError("db down")
+
+    assert await guild_config.read_raw(_DeadPool(), GUILD_ID) is None
+    assert await guild_config.read_raw(None, GUILD_ID) is None
+
+
+def test_resolve_of_a_failed_read_is_exactly_the_bot_defaults():
+    assert guild_config.resolve(None) == {
+        "panel_channel": None,
+        "support_role": None,
+        "log_channel": None,
+        "max_open": guild_config.DEFAULT_MAX_OPEN_PER_USER,
+        "inactivity_hours": guild_config.DEFAULT_INACTIVITY_HOURS,
+        "panel_message": None,
+    }
+
+
+async def test_read_raw_keeps_the_values_uncoerced_so_absence_stays_visible():
+    pool = _Pool()
+    # The dashboard writes snowflakes as STRINGS; raw keeps them, resolve fixes
+    # them, and both answers are needed (presence vs. usable value).
+    _seed_both(pool, {guild_config.KEY_PANEL_CHANNEL: str(CHANNEL_ID)})
+
+    raw = await guild_config.read_raw(pool, GUILD_ID)
+
+    assert raw[guild_config.KEY_PANEL_CHANNEL] == str(CHANNEL_ID)
+    assert raw[guild_config.KEY_MAX_OPEN_PER_USER] is None
+    assert guild_config.resolve(raw)["panel_channel"] == CHANNEL_ID
+
+
+def test_every_picker_can_be_cleared_which_is_how_its_key_is_reset():
+    # A picker with min_values=1 could never be emptied, and the key behind it
+    # would have no reset at all - the property, not the label, is the contract.
+    channel = _TextChannel()
+    view = _panel(
+        _Pool(),
+        _configured_blob(),
+        channels=[channel, _TextChannel(channel_id=LOG_ID)],
+        roles=[_picker_role()],
+    )
+    pickers = [
+        child
+        for child in view.walk_children()
+        if isinstance(child, (discord.ui.ChannelSelect, discord.ui.RoleSelect))
+    ]
+
+    assert [type(p) for p in pickers] == [
+        panel._PanelChannelSelect,
+        panel._SupportRoleSelect,
+        panel._LogChannelSelect,
+    ]
+    assert [p.min_values for p in pickers] == [0, 0, 0]
+    assert [p.max_values for p in pickers] == [1, 1, 1]
+
+
+def test_the_channel_pickers_only_offer_channels_a_thread_can_live_on():
+    view = _panel(_Pool())
+    pickers = [
+        c for c in view.walk_children() if isinstance(c, discord.ui.ChannelSelect)
+    ]
+
+    assert pickers
+    for picker in pickers:
+        assert list(picker.channel_types) == [discord.ChannelType.text]
+
+
+def test_both_count_selects_carry_exactly_one_reset_option():
+    view = _panel(_Pool())
+    counts = [
+        c
+        for c in view.walk_children()
+        if isinstance(c, discord.ui.Select) and getattr(c, "options", None)
+    ]
+
+    assert len(counts) == 2
+    for select in counts:
+        assert select.min_values == select.max_values == 1
+        resets = [o for o in select.options if o.value == panel.RESET_VALUE]
+        assert len(resets) == 1
+    # ... and the choices behind them are the storable ones, nothing else.
+    assert [o.value for o in counts[0].options[1:]] == ["1", "2", "3", "4", "5"]
+    assert [o.value for o in counts[1].options[1:]] == [
+        str(h) for h in guild_config.INACTIVITY_PRESET_HOURS
+    ]
