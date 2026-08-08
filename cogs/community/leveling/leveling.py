@@ -345,6 +345,19 @@ class Leveling(commands.Cog):
     async def cog_load(self):
         """Load every enabled guild's leveling config once, at startup.
 
+        The read failure is swallowed HERE and only here: a failure at load
+        leaves leveling dormant until the next toggle, which must never block
+        the extension from loading. At runtime the same failure means something
+        else entirely, so ``reload_configs`` raises and lets its caller decide.
+        """
+        try:
+            await self.reload_configs()
+        except Exception:
+            log.exception("Failed to load leveling config")
+
+    async def reload_configs(self):
+        """Load every enabled guild's leveling config into the hot-path map.
+
         Runs during load_extension (setup_hook), before the gateway delivers any
         message, so the hot path sees a populated map from the very first event.
         Two reads, both over small tables: the level_config rows (the new source of
@@ -352,33 +365,45 @@ class Leveling(commands.Cog):
         READ-THROUGH fallback for guilds that turned leveling on before level_config
         existed and have not re-toggled since. A level_config row always wins, so a
         guild that later switched leveling OFF via the new table is never
-        resurrected by its stale JSONB value. A failure here only leaves leveling
-        dormant until the next toggle - it is logged and never blocks startup.
+        resurrected by its stale JSONB value.
+
+        RAISES on a failed read rather than logging and moving on: self._configs
+        is only rebound after BOTH fetches returned, so a failure leaves the live
+        map exactly as it was, and the caller has to be told - cog_load logs and
+        starts dormant, resync_all logs and reports the step as NOT done instead
+        of naming it on the "resynced" line.
+
+        Split out of cog_load as a REUSABLE seam because self._configs is an
+        eagerly-primed map whose ABSENCE means "leveling is off for this guild"
+        (get_config is a plain synchronous dict read, no DB, no read-through):
+        it can only ever be rebuilt, never cleared, or leveling would go silently
+        dead bot-wide. cogs/system/dashboard_sync.py re-runs it after its LISTEN
+        connection came back, where per-guild refresh_guild_config cannot help
+        because the missed guild ids are exactly what a dropped NOTIFY loses. The
+        map is built aside and swapped in one assignment, so the hot path never
+        observes a partially loaded map.
         """
-        try:
-            configs: dict[int, leveling.LevelConfig] = {}
-            rows = await self.bot.db_pool.fetch(
-                f"SELECT guild_id, {_CONFIG_COLUMNS} FROM level_config;"
-            )
-            configured = set()
-            for row in rows:
-                gid = row["guild_id"]
-                configured.add(gid)  # a row exists -> legacy fallback must skip it
-                config = leveling.resolve_config(row, False)
-                if config is not None:
-                    configs[gid] = config
-            legacy = await self.bot.db_pool.fetch(
-                "SELECT guild_id FROM guild_settings "
-                "WHERE settings @> '{\"leveling_enabled\": true}'::jsonb;"
-            )
-            for row in legacy:
-                gid = row["guild_id"]
-                if gid not in configured:
-                    configs[gid] = leveling.resolve_config(None, True)
-            self._configs = configs
-            log.info("Leveling enabled in %d guild(s)", len(self._configs))
-        except Exception:
-            log.exception("Failed to load leveling config")
+        configs: dict[int, leveling.LevelConfig] = {}
+        rows = await self.bot.db_pool.fetch(
+            f"SELECT guild_id, {_CONFIG_COLUMNS} FROM level_config;"
+        )
+        configured = set()
+        for row in rows:
+            gid = row["guild_id"]
+            configured.add(gid)  # a row exists -> legacy fallback must skip it
+            config = leveling.resolve_config(row, False)
+            if config is not None:
+                configs[gid] = config
+        legacy = await self.bot.db_pool.fetch(
+            "SELECT guild_id FROM guild_settings "
+            "WHERE settings @> '{\"leveling_enabled\": true}'::jsonb;"
+        )
+        for row in legacy:
+            gid = row["guild_id"]
+            if gid not in configured:
+                configs[gid] = leveling.resolve_config(None, True)
+        self._configs = configs
+        log.info("Leveling enabled in %d guild(s)", len(self._configs))
 
     async def set_enabled(self, guild_id, enabled):
         """Persist a leveling on/off toggle and refresh the hot-path config cache.

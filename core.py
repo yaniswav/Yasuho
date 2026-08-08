@@ -109,6 +109,11 @@ class Yasuho(commands.Bot):
         self.blacklist = set()
         self.autoroles = {}
         self.muteroles = {}
+        # Serialises the two ways those four maps change: the whole-map reload
+        # below and the per-id refreshes cogs/system/dashboard_sync.py performs
+        # on a NOTIFY. Without it a notify that lands mid-reload writes into the
+        # dict the reload is about to REPLACE, and the write is silently lost.
+        self.eager_cache_lock = asyncio.Lock()
         # Set by the Reminder cog on load; defaulted here so the tools.time
         # converters can read bot.reminder even if that cog fails to load.
         self.reminder = None
@@ -161,6 +166,55 @@ class Yasuho(commands.Bot):
         _background_tasks.add(task)
         task.add_done_callback(_background_tasks.discard)
 
+    async def load_eager_caches(self) -> None:
+        """(Re)load the EAGERLY-primed hot-path caches from the database.
+
+        These four maps are the ones primed once in setup_hook and then read
+        SYNCHRONOUSLY, with no read-through: get_prefix reads self.prefixes on
+        every message, events.py reads self.autoroles/self.muteroles on join and
+        self.blacklist to refuse a blacklisted member. Absence is therefore a
+        MEANING here ("no custom prefix", "not blacklisted"), not a cache miss -
+        which is why they can only ever be RELOADED, never cleared: an emptied
+        self.prefixes would silently reset every custom-prefix guild to the
+        default with nothing left to notice it.
+
+        Factored out of setup_hook so the dashboard_sync cog can re-run exactly
+        the startup queries after its LISTEN connection was down (Postgres drops
+        NOTIFY for an absent listener, so a dashboard write during the gap is
+        invisible to the invalidators - see cogs/system/dashboard_sync.py).
+
+        Every row is fetched BEFORE any attribute is rebound, and each map is
+        replaced wholesale rather than mutated in place, so a concurrent reader
+        always sees a complete map - the previous one or the new one, never a
+        half-filled one. Nothing aliases these dicts (every reader goes through
+        bot.<attr> on each access), so rebinding is safe.
+
+        WRITERS are a different matter, hence eager_cache_lock: the dashboard's
+        per-id invalidators mutate the map OBJECT in place (bot.prefixes[gid] =
+        ...), so one that fetched its row while this method was between its own
+        fetch and its rebind would write into the dict this rebind discards, and
+        the dashboard's change would vanish until the next write. Holding the
+        lock across fetch AND rebind makes the two orderings the only possible
+        ones: the invalidator's write is either already visible to the fetch
+        below, or lands on the new map afterwards.
+        """
+        async with self.eager_cache_lock:
+            prefixes = await self.db_pool.fetch(
+                "SELECT guild_id, prefix FROM prefixes;"
+            )
+            blacklist = await self.db_pool.fetch("SELECT member_id FROM blbot;")
+            autoroles = await self.db_pool.fetch(
+                "SELECT guild_id, role_id FROM autorole;"
+            )
+            muteroles = await self.db_pool.fetch(
+                "SELECT guild_id, role_id FROM muterole;"
+            )
+
+            self.prefixes = dict(prefixes)
+            self.blacklist = {r["member_id"] for r in blacklist}
+            self.autoroles = dict(autoroles)
+            self.muteroles = dict(muteroles)
+
     async def setup_hook(self) -> None:
         # schema.sql is THE schema source of truth and is applied on every boot.
         # It is idempotent (CREATE ... IF NOT EXISTS, additive ALTER ... IF NOT
@@ -190,19 +244,7 @@ class Yasuho(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(timeout=TIMEOUT)
 
-        self.prefixes = dict(
-            await self.db_pool.fetch("SELECT guild_id, prefix FROM prefixes;")
-        )
-        self.blacklist = {
-            r["member_id"]
-            for r in await self.db_pool.fetch("SELECT member_id FROM blbot;")
-        }
-        self.autoroles = dict(
-            await self.db_pool.fetch("SELECT guild_id, role_id FROM autorole;")
-        )
-        self.muteroles = dict(
-            await self.db_pool.fetch("SELECT guild_id, role_id FROM muterole;")
-        )
+        await self.load_eager_caches()
 
         for extension in discover_extensions():
             try:

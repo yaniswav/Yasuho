@@ -37,8 +37,14 @@ class Blacklist(commands.Cog):
             ON CONFLICT (member_id) DO NOTHING;
             """
 
-        await self.bot.db_pool.execute(query, user.id)
-        self.bot.blacklist.add(user.id)
+        # Under eager_cache_lock: bot.blacklist is mutated IN PLACE here while
+        # core.load_eager_caches REBINDS it (the dashboard resync re-runs that at
+        # runtime), so an unsynchronised add landing inside a reload would go to
+        # the set the rebind discards - and this one un-bans nobody, it just
+        # stops refusing them.
+        async with self.bot.eager_cache_lock:
+            await self.bot.db_pool.execute(query, user.id)
+            self.bot.blacklist.add(user.id)
         await ctx.send(_("{user} blacklisted.").format(user=user))
 
         for g in self.bot.guilds:
@@ -54,8 +60,10 @@ class Blacklist(commands.Cog):
 
         query = """DELETE FROM blbot WHERE member_id = $1;"""
 
-        await self.bot.db_pool.execute(query, user.id)
-        self.bot.blacklist.discard(user.id)
+        # Under eager_cache_lock, same reason as blacklist_add above.
+        async with self.bot.eager_cache_lock:
+            await self.bot.db_pool.execute(query, user.id)
+            self.bot.blacklist.discard(user.id)
         await ctx.send(_("{user} removed from the blacklist.").format(user=user))
 
         for g in self.bot.guilds:

@@ -187,3 +187,46 @@ async def test_targeted_invalidation_forces_only_that_scope_to_reread(fake_pool)
     await settings.get_guild(fake_pool, 5, "x")
     fetchvals = [call for call in fake_pool.calls if call[0] == "fetchval"]
     assert len(fetchvals) == 4
+
+
+async def test_invalidate_all_empties_both_scopes(fake_pool):
+    fake_pool.fetchval_return = None
+    await settings.get_user(fake_pool, 5, "x")
+    await settings.get_guild(fake_pool, 5, "x")
+    assert len(settings._cache) == 2
+
+    settings.invalidate_all()
+
+    assert len(settings._cache) == 0
+
+
+async def test_an_invalidation_mid_fetch_does_not_re_seat_the_stale_blob(fake_pool):
+    """The other half of the lost-update window, on the read-through side.
+
+    ``_load`` checks for a miss, awaits a fetch, then seats the result. An
+    invalidation landing in that window is announcing a write the fetch's
+    snapshot may PREDATE, so seating the result would put the pre-write value
+    straight back - and nothing re-reads a cache hit, so it would stay there for
+    the life of the process. The generation counter makes such a read serve
+    itself and cache nothing.
+    """
+    settings._cache.clear()
+    key = ("guild_settings", 42)
+    reached = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_fetchval(query, *args):
+        reached.set()
+        await release.wait()
+        return json.dumps({"x": "pre-gap"})
+
+    fake_pool.fetchval = slow_fetchval
+
+    reader = asyncio.create_task(settings.get_guild(fake_pool, 42, "x"))
+    await reached.wait()
+
+    settings.invalidate_all()  # the listener came back; every blob is suspect
+
+    release.set()
+    assert await reader == "pre-gap"  # this caller still gets a real DB answer
+    assert key not in settings._cache  # ...but the next reader re-reads

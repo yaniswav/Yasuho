@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import types
 
 import discord
@@ -2706,3 +2707,249 @@ async def test_autoroom_hub_messages_render_in_the_guild_locale(monkeypatch):
 def test_autoroom_hub_executors_are_registered():
     assert "autoroom_hub_create" in dashboard_actions._EXECUTORS
     assert "autoroom_hub_delete" in dashboard_actions._EXECUTORS
+
+
+# ---------------------------------------------------------------------------
+# The listen connection's own reconnect: the sweep is due again, not just at boot.
+#
+# The cousin of the cache-sync bug. LISTEN/NOTIFY does not buffer, so an action
+# INSERTed and notified while THIS connection was down is lost exactly like a
+# restart loses one - but until now the sweep only ever ran at boot, so such a
+# row sat 'pending' until the next restart (i.e. possibly for days, or never).
+# ---------------------------------------------------------------------------
+
+
+class StubActions(dashboard_actions.DashboardActions):
+    """The REAL supervisor loop with only the socket-touching seams stubbed.
+
+    ``__init__`` is bypassed on purpose (it opens a connection); every attribute
+    the loop touches is set here, so what is under test is the actual
+    ``_supervise`` / ``_maybe_reconcile`` wiring rather than a paraphrase of it.
+    """
+
+    def __init__(self, bot, cycles=1):
+        self.bot = bot
+        self._conn = None
+        self._closing = False
+        self._supervisor = None
+        self._reconciled = False
+        self._connected_once = False
+        self._reconcile_task = None
+        self._handlers = set()
+        self._dsn = "postgresql://stub"
+        self._cycles = cycles
+        self.events = []
+
+    async def _connect_and_listen(self):
+        self.events.append("listen")
+        self._connected_once = True
+
+    async def _watch_connection(self):
+        self.events.append("watch")
+        self._cycles -= 1
+        if self._cycles <= 0:
+            self._closing = True
+
+    async def _teardown_connection(self):
+        self._conn = None
+
+
+def _supervised_bot(pool):
+    bot = FakeBot(pool)
+    bot.loop = asyncio.get_running_loop()
+
+    async def _ready():
+        return None
+
+    bot.wait_until_ready = _ready
+    return bot
+
+
+async def _drain(cog):
+    """Let the tasks the supervisor scheduled finish."""
+    if cog._handlers:
+        await asyncio.gather(*list(cog._handlers))
+
+
+async def test_first_connection_reconciles_exactly_once(monkeypatch):
+    calls = []
+
+    async def _fake_reconcile(bot):
+        calls.append(bot)
+
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+    monkeypatch.setattr(dashboard_actions, "reconcile", _fake_reconcile)
+
+    cog = StubActions(_supervised_bot(ActionsPool()), cycles=1)
+    await cog._supervise()
+    await _drain(cog)
+
+    assert cog.events == ["listen", "watch"]
+    assert len(calls) == 1
+
+
+async def test_a_reconnect_re_runs_the_reconcile_sweep(monkeypatch, caplog):
+    """The fix: a second successful connect means a delivery gap just closed."""
+    calls = []
+
+    async def _fake_reconcile(bot):
+        calls.append(bot)
+
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+    monkeypatch.setattr(dashboard_actions, "reconcile", _fake_reconcile)
+
+    cog = StubActions(_supervised_bot(ActionsPool()), cycles=3)
+    with caplog.at_level(logging.INFO, logger=dashboard_actions.log.name):
+        await cog._supervise()
+        await _drain(cog)
+
+    # Three connects: boot + two reconnects = exactly one sweep per connect.
+    assert cog.events == ["listen", "watch"] * 3
+    assert len(calls) == 3
+    message = "\n".join(record.getMessage() for record in caplog.records)
+    assert "reconcile sweep is re-running" in message
+
+
+async def test_a_connect_then_die_loop_never_piles_up_sweeps(monkeypatch):
+    """One sweep in flight at a time, whatever the reconnect rate.
+
+    The backoff resets on every SUCCESSFUL connect, so a server that accepts the
+    connection then immediately kills it (pgbouncer in transaction mode refusing
+    LISTEN, connection churn) cycles about once a second. Without this guard each
+    cycle would launch another full sweep - expire, orphan reset and a re-drive
+    of every pending row - at exactly the moment the database is least able to
+    take it. Concurrent sweeps stay CORRECT (every claim is an atomic
+    ``WHERE status='pending' RETURNING``); they are simply a self-inflicted
+    storm.
+    """
+    started = 0
+    release = asyncio.Event()
+
+    async def _slow_reconcile(bot):
+        nonlocal started
+        started += 1
+        await release.wait()
+
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+    monkeypatch.setattr(dashboard_actions, "reconcile", _slow_reconcile)
+
+    cog = StubActions(_supervised_bot(ActionsPool()), cycles=5)
+    await cog._supervise()
+
+    assert cog.events.count("listen") == 5
+    assert started == 1  # the four later connects found one already running
+
+    release.set()
+    await _drain(cog)
+    assert started == 1
+
+
+async def test_a_failed_connect_does_not_schedule_a_reconnect_sweep(monkeypatch):
+    """``_connected_once`` flips only after add_listener succeeded, so a bot that
+    never reached Postgres still treats its first real connect as the boot one."""
+    calls = []
+
+    async def _fake_reconcile(bot):
+        calls.append(bot)
+
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+    monkeypatch.setattr(dashboard_actions, "reconcile", _fake_reconcile)
+
+    class Flaky(StubActions):
+        async def _connect_and_listen(self):
+            if not self.events:
+                self.events.append("failed")
+                raise OSError("connection refused")
+            await super()._connect_and_listen()
+
+    cog = Flaky(_supervised_bot(ActionsPool()), cycles=1)
+    await cog._supervise()
+    await _drain(cog)
+
+    assert cog.events == ["failed", "listen", "watch"]
+    assert len(calls) == 1  # the boot sweep, not a reconnect one
+
+
+async def test_the_reconnect_sweep_drives_an_action_enqueued_during_the_gap(
+    monkeypatch,
+):
+    """End to end through the real sweep: the row the dropped notify stranded.
+
+    Without this the user's request would sit 'pending' until the next restart,
+    which is the whole point of the lot.
+    """
+    ran = []
+
+    async def _exec(bot, guild_id, payload):
+        ran.append(payload.get("tag"))
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+
+    pool = ActionsPool()
+    bot = _supervised_bot(pool)
+    swept = []
+
+    class Enqueueing(StubActions):
+        async def _connect_and_listen(self):
+            if self._connected_once:
+                # The dashboard INSERTed + notified while this process was NOT
+                # listening: the notify is gone, and the BOOT sweep has already
+                # run and seen nothing. Only a reconnect sweep can find this row.
+                assert swept == [[]]
+                pool.add(1, 100, "test_kind", {"tag": "during-gap"}, status="pending")
+            await super()._connect_and_listen()
+
+    real_reconcile = dashboard_actions.reconcile
+
+    async def _recording_reconcile(inner_bot):
+        swept.append(sorted(pool.rows))
+        await real_reconcile(inner_bot)
+
+    monkeypatch.setattr(dashboard_actions, "reconcile", _recording_reconcile)
+
+    cog = Enqueueing(bot, cycles=2)
+    await cog._supervise()
+    await _drain(cog)
+
+    # The boot sweep found an empty table; the reconnect sweep found the row.
+    assert swept == [[], [1]]
+    assert ran == ["during-gap"]
+    assert pool.rows[1]["status"] == "done"
+
+
+async def test_the_reconnect_sweep_respects_the_in_flight_guard(monkeypatch):
+    """A runtime sweep is riskier than a boot one: this process has live work.
+
+    An executor that outlived the gap has a claim that is BOTH live and old, so
+    the age guard alone would read it as an orphan and step 3 would re-run its
+    side effect. The in-flight mark is what tells them apart, and the reconnect
+    path must go through it - hence driving the REAL reconcile here.
+    """
+    ran = []
+
+    async def _exec(bot, guild_id, payload):
+        ran.append(payload.get("tag"))
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    monkeypatch.setattr(dashboard_actions, "_BACKOFF_START", 0.0)
+
+    pool = ActionsPool()
+    # A row THIS process claimed before the gap and is still working on: running,
+    # and old enough (fresh_claim=False) that the age guard would let it through.
+    pool.add(1, 100, "test_kind", {"tag": "still-running"}, status="running")
+    bot = _supervised_bot(pool)
+
+    cog = StubActions(bot, cycles=2)
+    with dashboard_actions._inflight(1):
+        await cog._supervise()
+        await _drain(cog)
+
+        assert dashboard_actions._INFLIGHT_ACTIONS == {1: 1}
+        assert pool.rows[1]["status"] == "running"  # never reset to pending
+        assert ran == []  # and never re-driven
+
+    # The mark is released with the block, exactly as a real handler releases it.
+    assert dashboard_actions._INFLIGHT_ACTIONS == {}

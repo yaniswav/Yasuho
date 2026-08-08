@@ -83,6 +83,17 @@ log = logging.getLogger(__name__)
 CLEANUP_INTERVAL_SECONDS = 15
 
 
+def _hub_mapping(hubs):
+    """Derive one guild's ``{hub_channel_id: hub}`` lookup from its hub list.
+
+    The single definition of what the derived index holds, shared by the
+    per-guild ``_index_guild`` and the whole-index ``reload_hub_index`` so the
+    two can never drift into indexing the same hubs differently. A hub with no
+    ``hub_channel_id`` is unusable by the voice listener and is dropped.
+    """
+    return {hub["hub_channel_id"]: hub for hub in hubs if hub.get("hub_channel_id")}
+
+
 class TemporaryRooms(commands.Cog):
     """Create and clean up temporary voice rooms from join-to-create hubs."""
 
@@ -118,16 +129,61 @@ class TemporaryRooms(commands.Cog):
     # ------------------------------------------------------------------
 
     async def cog_load(self):
-        """Seed the hub index from settings, migrating legacy rows once."""
-        self._hub_index = {}
-        configured = set()
+        """Seed the hub index from settings, migrating legacy rows once.
+
+        This is the ONLY place the read failure is swallowed, and it swallows it
+        by giving up on BOTH halves: a failed read means we do not know which
+        guilds are already configured, and ``_migrate_legacy`` would then read
+        that empty set as "nobody is configured" and overwrite live hub lists
+        with legacy defaults. Startup is never blocked - the index is simply
+        empty until the next write, a rejoin or a resync rebuilds it, which is
+        exactly where it already was before this ran.
+        """
         try:
-            rows = await self.bot.db_pool.fetch(
-                "SELECT guild_id, settings FROM guild_settings"
-            )
+            configured = await self.reload_hub_index()
         except Exception:
             log.exception("Failed to load autoroom settings")
-            rows = []
+            return
+        await self._migrate_legacy(configured)
+
+    async def reload_hub_index(self):
+        """Rebuild the WHOLE derived hub index from the authoritative rows.
+
+        ``_hub_index`` is a DERIVED structure: nothing re-reads it from settings,
+        it is only ever rewritten by ``_index_guild`` (after a bot-side write, on
+        a guild rejoin, or here). So it cannot be "invalidated" like a cache -
+        dropping it would leave every hub dead until the next restart, and
+        rebuilding it one guild at a time only works when the changed guild ids
+        are known.
+
+        They are not, after the dashboard_sync LISTEN connection has been down:
+        Postgres drops NOTIFY for an absent listener, so the ids written during
+        the gap are exactly what was lost. Hence a whole-index rebuild from the
+        one query cog_load already used - it also picks up a guild that gained
+        its FIRST hub during the gap, which iterating over the current index by
+        construction cannot.
+
+        Built into a fresh map and swapped in a single assignment, so
+        ``on_voice_state_update`` never observes a half-built index while the
+        fetch is in flight. Returns the set of guild ids that carry an
+        ``autorooms`` key (what cog_load's legacy migration needs).
+
+        RAISES on a failed read, deliberately: this runs at RUNTIME now (the
+        dashboard_sync resync calls it right after a listen connection dropped,
+        i.e. precisely when the pool is most likely to be failing too). Catching
+        the error here and assigning the empty map anyway would not be a cache
+        miss, it would be a WRONG ANSWER - ``on_voice_state_update`` reads this
+        index synchronously and treats an absent guild as "no hubs here", so a
+        single DB blip would kill join-to-create in every guild until the next
+        per-guild write or a restart. The live index is left untouched instead,
+        and the caller decides what a failure means (cog_load logs and gives up;
+        resync_all logs and reports the step as NOT done).
+        """
+        rows = await self.bot.db_pool.fetch(
+            "SELECT guild_id, settings FROM guild_settings"
+        )
+        index = {}
+        configured = set()
         for row in rows:
             raw = row["settings"]
             try:
@@ -137,10 +193,11 @@ class TemporaryRooms(commands.Cog):
             if "autorooms" not in data:
                 continue
             configured.add(int(row["guild_id"]))
-            hubs = normalize_hubs(data.get("autorooms"))
-            if hubs:
-                self._index_guild(int(row["guild_id"]), hubs)
-        await self._migrate_legacy(configured)
+            mapping = _hub_mapping(normalize_hubs(data.get("autorooms")))
+            if mapping:
+                index[int(row["guild_id"])] = mapping
+        self._hub_index = index
+        return configured
 
     async def _migrate_legacy(self, configured):
         """Fold old ``auto_room`` rows into default hubs (best-effort, once)."""
@@ -292,7 +349,7 @@ class TemporaryRooms(commands.Cog):
 
     def _index_guild(self, guild_id, hubs):
         """Point the in-memory index at ``hubs`` for one guild."""
-        mapping = {hub["hub_channel_id"]: hub for hub in hubs if hub.get("hub_channel_id")}
+        mapping = _hub_mapping(hubs)
         if mapping:
             self._hub_index[guild_id] = mapping
         else:

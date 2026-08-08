@@ -38,8 +38,10 @@ Design (mirrors the house patterns and the security brief):
   mismatch yields a NULL id and the action is refused as ``bad_scope``. Every
   executor still receives that id as its second argument, so a guild executor is
   untouched by any of this.
-* Boot reconciliation (``reconcile``): a notify emitted while the bot was
-  restarting is lost (LISTEN/NOTIFY does not buffer), so once at startup we
+* Reconciliation (``reconcile``): a notify emitted while the bot was
+  restarting is lost (LISTEN/NOTIFY does not buffer), so at startup - and again
+  after every RECONNECT of this listen connection, which leaves the very same
+  hole in delivery, only without a restart to end it - we
   expire actions too old to still be wanted, reset every ``running`` row whose
   claim is older than a short grace window (``_ORPHAN_RESET_SECONDS``) and is not
   one this process is currently handling (``_INFLIGHT_ACTIONS``) back to
@@ -1402,6 +1404,13 @@ class DashboardActions(commands.Cog):
         self._closing = False
         self._supervisor = None
         self._reconciled = False
+        # True once a LISTEN has been registered at least once, so the
+        # supervisor can tell the FIRST connection from a RECONNECT (see
+        # _maybe_reconcile: the gap behind a reconnect is a hole in delivery).
+        self._connected_once = False
+        # The in-flight sweep, so a connect-then-die loop schedules one rather
+        # than one per cycle (see _maybe_reconcile).
+        self._reconcile_task = None
         # Strong refs to per-notification / reconcile tasks so the loop can't GC
         # one mid-run (the dashboard_sync / sponsorblock pattern).
         self._handlers = set()
@@ -1491,9 +1500,11 @@ class DashboardActions(commands.Cog):
         backoff = _BACKOFF_START
         while not self._closing:
             try:
+                # Sampled BEFORE the connect: _connect_and_listen sets the flag.
+                reconnect = self._connected_once
                 await self._connect_and_listen()
                 backoff = _BACKOFF_START  # healthy connect resets the backoff
-                self._maybe_reconcile()
+                self._maybe_reconcile(reconnect=reconnect)
                 await self._watch_connection()
             except asyncio.CancelledError:
                 break
@@ -1515,29 +1526,75 @@ class DashboardActions(commands.Cog):
 
         log.info("dashboard_actions: listener supervisor stopped.")
 
-    def _maybe_reconcile(self):
-        """Schedule the one-shot boot reconciliation as a tracked task.
+    def _maybe_reconcile(self, reconnect=False):
+        """Schedule the reconciliation sweep as a tracked task, when it is due.
 
-        Runs AFTER the listener is attached (so no live notify is lost while it
-        works) and only once per process. Decoupled from the watch loop so a
-        large backlog can't delay keepalive.
+        Due at BOOT (once per process) and after every RECONNECT. The reconnect
+        case is the twin of the cache-sync cog's post-reconnect resync and exists
+        for the same reason: LISTEN/NOTIFY does not buffer, so an action the
+        dashboard INSERTed and notified while this connection was down is lost
+        exactly like a restart loses one. Without this it would sit 'pending'
+        until the NEXT BOOT - the sweep only ever ran at startup - so a dropped
+        socket at 02:00 meant the user's Verify button appeared whenever the bot
+        next restarted, or never.
+
+        Re-running the sweep at runtime is safe because it was already written to
+        run alongside a LIVE listener: it is scheduled AFTER the new LISTEN is
+        attached (so nothing arriving meanwhile is lost), and reconcile's own two
+        guards do the rest - a 'running' row is only reset once its claim is
+        older than _ORPHAN_RESET_SECONDS AND its id is not in _INFLIGHT_ACTIONS,
+        so an executor of THIS process that outlived the gap (or the window) is
+        never re-driven, whatever its age. Each call schedules exactly ONE sweep;
+        the boot flag is what keeps the first connection from scheduling two.
+
+        And at most one sweep is ever IN FLIGHT: a server that accepts the
+        connection then immediately kills it (pgbouncer in transaction mode
+        refusing LISTEN, connection churn) cycles about once a second, because
+        the backoff resets on every SUCCESSFUL connect - so without this guard a
+        wedged server would collect a fresh full sweep every second. Concurrent
+        sweeps are correct (every claim is an atomic ``WHERE status='pending'
+        RETURNING``), just a self-inflicted storm at the worst moment.
+
+        Decoupled from the watch loop so a large backlog can't delay keepalive.
         """
-        if self._reconciled:
+        task = self._reconcile_task
+        if task is not None and not task.done():
+            log.debug(
+                "dashboard_actions: a reconcile sweep is still running; "
+                "not scheduling another"
+            )
             return
-        self._reconciled = True
+        if not reconnect:
+            if self._reconciled:
+                return
+            self._reconciled = True
+            reason = "boot"
+        else:
+            reason = "reconnect"
+            log.info(
+                "dashboard_actions: listen connection re-established after a "
+                "live connection; notifications sent during the gap were "
+                "dropped by Postgres, so the reconcile sweep is re-running."
+            )
 
         async def _run():
             try:
                 await reconcile(self.bot)
             except Exception:
-                log.exception("dashboard_actions: boot reconciliation failed")
+                log.exception(
+                    "dashboard_actions: %s reconciliation failed", reason
+                )
 
-        self._track(self.bot.loop.create_task(_run()))
+        self._reconcile_task = self.bot.loop.create_task(_run())
+        self._track(self._reconcile_task)
 
     async def _connect_and_listen(self):
         conn = await asyncpg.connect(self._dsn)
         self._conn = conn
         await conn.add_listener(CHANNEL, self._on_notify)
+        # Only now is a notification deliverable to this process; the reconnect
+        # marker flips HERE so a failed connect never counts as a connection.
+        self._connected_once = True
         log.info("dashboard_actions: listening on Postgres channel '%s'.", CHANNEL)
 
     async def _watch_connection(self):

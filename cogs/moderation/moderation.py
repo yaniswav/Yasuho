@@ -238,6 +238,9 @@ class Moderation(commands.Cog):
             "SELECT role_id FROM muterole WHERE guild_id = $1;", guild_id
         )
         if role_id is not None:
+            # No eager_cache_lock here, unlike the WRITERS of this map: this is
+            # a read-through fill of a value that is already in the row, so a
+            # reload discarding it costs one re-read, never a wrong answer.
             self.bot.muteroles[guild_id] = role_id
         return role_id
 
@@ -807,10 +810,15 @@ class Moderation(commands.Cog):
             speak=False,
         )
         mrole = await guild.create_role(name="Muted", permissions=perms)
-        await db.upsert_guild_value(
-            self.bot.db_pool, "muterole", "role_id", guild.id, mrole.id
-        )
-        self.bot.muteroles[guild.id] = mrole.id
+        # Under eager_cache_lock: bot.muteroles is mutated IN PLACE here while
+        # core.load_eager_caches REBINDS it (the dashboard resync re-runs that at
+        # runtime), so an unsynchronised write landing inside a reload would go
+        # to the dict the rebind discards.
+        async with self.bot.eager_cache_lock:
+            await db.upsert_guild_value(
+                self.bot.db_pool, "muterole", "role_id", guild.id, mrole.id
+            )
+            self.bot.muteroles[guild.id] = mrole.id
 
         for channel in guild.text_channels:
             await channel.set_permissions(

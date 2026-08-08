@@ -355,10 +355,16 @@ class Settings(commands.Cog):
                 _("The prefix can't be longer than 10 characters.")
             )
 
-        await db.upsert_guild_value(
-            self.bot.db_pool, "prefixes", "prefix", ctx.guild.id, prefix
-        )
-        self.bot.prefixes[ctx.guild.id] = prefix
+        # Under eager_cache_lock: bot.prefixes is mutated IN PLACE here while
+        # core.load_eager_caches REBINDS it to a map it fetched earlier (the
+        # dashboard resync re-runs that at runtime). Unsynchronised, a write
+        # landing inside that reload goes to the dict the rebind discards, and
+        # the guild keeps serving its old prefix although the row is correct.
+        async with self.bot.eager_cache_lock:
+            await db.upsert_guild_value(
+                self.bot.db_pool, "prefixes", "prefix", ctx.guild.id, prefix
+            )
+            self.bot.prefixes[ctx.guild.id] = prefix
         embed = discord.Embed(
             title=_("Server prefix"), colour=random_colour()
         )
@@ -404,10 +410,12 @@ class Settings(commands.Cog):
     async def autorole_set(self, ctx, role: discord.Role):
         """Assign an auto-role to your guild."""
 
-        await db.upsert_guild_value(
-            self.bot.db_pool, "autorole", "role_id", ctx.guild.id, role.id
-        )
-        self.bot.autoroles[ctx.guild.id] = role.id
+        # Under eager_cache_lock, for the reason spelled out in set_prefix.
+        async with self.bot.eager_cache_lock:
+            await db.upsert_guild_value(
+                self.bot.db_pool, "autorole", "role_id", ctx.guild.id, role.id
+            )
+            self.bot.autoroles[ctx.guild.id] = role.id
         embed = discord.Embed(
             title=_("Auto-role role"), colour=random_colour()
         )
@@ -425,8 +433,12 @@ class Settings(commands.Cog):
         query = """DELETE FROM autorole WHERE guild_id = $1 ;"""
 
         try:
-            await self.bot.db_pool.execute(query, ctx.guild.id)
-            self.bot.autoroles.pop(ctx.guild.id, None)
+            # Under eager_cache_lock, for the reason spelled out in set_prefix -
+            # a lost REMOVAL is worse than a lost set: the guild would keep
+            # granting a role its row no longer names.
+            async with self.bot.eager_cache_lock:
+                await self.bot.db_pool.execute(query, ctx.guild.id)
+                self.bot.autoroles.pop(ctx.guild.id, None)
             embed = discord.Embed(
                 title=_("Auto-role"), colour=random_colour()
             )

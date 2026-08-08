@@ -1048,6 +1048,42 @@ CREATE INDEX IF NOT EXISTS dashboard_actions_user_idx
     ON dashboard_actions (user_id, status) WHERE user_id IS NOT NULL;
 
 -- ============================================================
+-- Bot liveness heartbeat (read by the dashboard, written only by the bot)
+-- ============================================================
+-- ONE row, forever: the id column is a smallint pinned to 1 by a CHECK, so the
+-- table cannot grow a second row however it is written to - "the bot" is a
+-- singleton and the schema says so rather than hoping every writer remembers.
+--
+-- Owner: cogs/system/dashboard_sync.py, which upserts it every 30s over the
+-- MAIN connection pool - deliberately NOT over its dedicated LISTEN connection,
+-- because the interesting case is precisely when that connection is down.
+-- ``listening`` is that connection's state: true once a LISTEN is registered on
+-- 'yasuho_dashboard', false from the moment the watch loop calls it dead (and on
+-- a clean unload), so the dashboard can tell "the bot is offline" from "the bot
+-- is up but its dashboard link is broken - your changes may not apply live".
+-- ``version`` is the running commit's git short hash, or NULL when it cannot be
+-- read (no git, no checkout); it is diagnostics only, never a gate.
+--
+-- CONTRACT with the dashboard: it READS this row and NEVER writes it. That is
+-- CONVENTION, not permission - both processes connect as the same database role,
+-- so nothing at the grant level stops a dashboard write; say so in the handoff
+-- rather than letting the comment read as an enforced guarantee. Freshness
+-- threshold: updated_at older than 90 seconds (three missed beats) means the bot
+-- is offline. A shorter threshold would flap on a single slow write.
+--
+-- No guild_id and no user_id, by construction: this is process state, not
+-- anybody's data. That is also why neither structural guard applies to it - the
+-- guild purge guard (tests/tools/test_retention.py) enumerates tables with a
+-- guild_id column and the personal-export guard (tests/tools/test_privacy.py)
+-- tables with a user_id column, and this table has neither.
+CREATE TABLE IF NOT EXISTS bot_heartbeat (
+    id         SMALLINT    PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    updated_at TIMESTAMPTZ NOT NULL,
+    listening  BOOLEAN     NOT NULL,
+    version    TEXT
+);
+
+-- ============================================================
 -- Server statistics (aggregates only)
 -- ============================================================
 -- Owner: cogs/community/serverstats. Collected for every guild, with NO message

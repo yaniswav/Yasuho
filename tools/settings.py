@@ -80,26 +80,40 @@ class SettingsCache:
 # (table_name, id_value) -> settings dict, size-bounded per scope.
 _cache = SettingsCache()
 
+# Bumped by every invalidation. _load samples it BEFORE its fetch and refuses to
+# seat the result if it moved, which is what keeps an in-flight read from
+# re-seating a blob the invalidation just declared stale: the fetch's snapshot
+# can be OLDER than the write the invalidation was announcing, so caching it
+# would resurrect the pre-write value for as long as the entry survives (up to
+# the whole life of the process, since nothing re-reads a cache hit).
+_generation = 0
+
 
 async def _load(pool, spec, id_val):
     table, id_col = spec
     cache_key = (table, id_val)
-    if cache_key not in _cache:
-        raw = await pool.fetchval(
-            f"SELECT settings FROM {table} WHERE {id_col} = $1", id_val
-        )
-        if raw is None:
-            data = {}
-        elif isinstance(raw, str):
-            data = json.loads(raw)
-        else:
-            data = dict(raw)
-        # setdefault, not assignment: if another task populated (or wrote) this
-        # entry while we awaited the fetch above, keep that newer value rather
-        # than clobbering it with our now-stale DB read. This closes a cold-cache
-        # race where two concurrent writes to the same id could lose one.
-        _cache.setdefault(cache_key, data)
-    return _cache[cache_key]
+    if cache_key in _cache:
+        return _cache[cache_key]
+    generation = _generation
+    raw = await pool.fetchval(
+        f"SELECT settings FROM {table} WHERE {id_col} = $1", id_val
+    )
+    if raw is None:
+        data = {}
+    elif isinstance(raw, str):
+        data = json.loads(raw)
+    else:
+        data = dict(raw)
+    if generation != _generation:
+        # Invalidated mid-fetch: hand this read its own value (it is still the
+        # right answer for THIS caller - it came from the DB) but do not cache
+        # it, so the next reader re-reads instead of trusting our snapshot.
+        return data
+    # setdefault, not assignment: if another task populated (or wrote) this
+    # entry while we awaited the fetch above, keep that newer value rather
+    # than clobbering it with our now-stale DB read. This closes a cold-cache
+    # race where two concurrent writes to the same id could lose one.
+    return _cache.setdefault(cache_key, data)
 
 
 async def _save_key(pool, spec, id_val, key, value):
@@ -147,11 +161,48 @@ async def set_guild(pool, guild_id, key, value):
     await _save_key(pool, _GUILD, guild_id, key, value)
 
 
+def _bump_generation():
+    """Mark every in-flight read as untrustworthy for caching purposes.
+
+    Coarse on purpose: an invalidation is rare and a read that loses its cache
+    seat only pays one extra DB round-trip on the next access, whereas tracking
+    it per id would have to key on the very ids an invalidate_all does not know.
+    """
+    global _generation
+    _generation += 1
+
+
 def invalidate_user(user_id):
     """Drop one user's cached blob after an out-of-band transactional write."""
+    _bump_generation()
     _cache.discard((_USER[0], user_id))
 
 
 def invalidate_guild(guild_id):
     """Drop one guild's cached blob after retention deletes its source row."""
+    _bump_generation()
     _cache.discard((_GUILD[0], guild_id))
+
+
+def invalidate_all():
+    """Drop EVERY cached blob, both scopes.
+
+    The blunt instrument for the one case the per-id helpers cannot serve: the
+    dashboard writes straight into the same database and announces each write
+    with a NOTIFY, so when the bot's listen connection was down for a while it
+    does not know WHICH ids changed - Postgres drops notifications for an absent
+    listener rather than queuing them (see cogs/system/dashboard_sync.py). After
+    such a gap the only safe assumption is "any blob may be stale".
+
+    Safe precisely because this cache is READ-THROUGH: an evicted id re-reads its
+    authoritative row on the next access, so the cost of over-evicting is a few
+    extra reads, never a wrong value. Do NOT reach for this on a single write -
+    invalidate_guild / invalidate_user are the surgical versions.
+
+    Bumps the generation as well as clearing, so a ``_load`` that is between its
+    cache-miss check and its fetch result right now cannot re-seat a blob read
+    from BEFORE the gap - which would put back exactly the stale value this call
+    exists to remove.
+    """
+    _bump_generation()
+    _cache.clear()

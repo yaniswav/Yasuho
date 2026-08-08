@@ -59,19 +59,65 @@ Design mirrors the existing house patterns:
   ``bot.loop.create_task`` with a done-callback mirrors
   ``cogs/system/webstats.py``.
 
+EVERY successful connect - the first one included - triggers a FULL resync
+(:func:`resync_all`) of every structure the invalidators above maintain. That is
+not belt-and-braces: Postgres does not queue NOTIFY for an absent listener, it
+DROPS it. So every dashboard write made while no LISTEN was registered is lost
+forever - the bot would keep serving the pre-gap value from memory until an LRU
+eviction or the next restart, with nothing anywhere to hint at it. The changed
+ids are precisely what is unknown, so the resync is deliberately whole-cache
+rather than per-guild.
+
+The FIRST connection is covered too because boot has the same gap, not because
+it might: the caches are primed inside setup_hook, which runs BEFORE the gateway
+connects, while this LISTEN is only registered after wait_until_ready returns -
+i.e. after IDENTIFY, the guild stream and member chunking. On a 1000+ guild bot
+that is tens of seconds to minutes, on every start, and main is production with
+continuous deploy. The extra cost is one duplicate pass over caches that are cold
+anyway.
+
+The resync is NOT uniform, because the caches are not:
+
+* EAGERLY-primed maps read synchronously with no read-through - ``bot.prefixes``,
+  ``bot.autoroles``, ``bot.muteroles``, ``bot.blacklist`` (``Yasuho.load_eager_caches``)
+  and the Leveling cog's ``_configs`` (``reload_configs``) - are RELOADED by
+  re-running the startup queries. Clearing them would not be a cache miss, it
+  would be a WRONG ANSWER: an empty ``bot.prefixes`` silently resets every
+  custom-prefix guild to the default, an empty ``_configs`` silently turns
+  leveling off bot-wide.
+* READ-THROUGH caches - the ``tools.settings`` LRU (both scopes), ModLog's
+  ``_channels``, Starboard's ``_config``, AutoMod's ``_settings``, Leveling's
+  ``_no_xp`` / ``_multipliers`` / ``_rank_cards``, CustomCommands' ``_cache`` /
+  ``_uses`` - are simply emptied; the next access reloads from the DB.
+* DERIVED indexes - TemporaryRooms' ``_hub_index`` - are REBUILT the way the cog
+  builds them (``reload_hub_index``), since nothing would ever re-derive them.
+
+Two caches are deliberately left alone: CustomCommands' ``_cd`` (per-command
+cooldown CLOCKS, not configuration - dropping them would hand every member a free
+re-use) and Leveling's ``_period_markers`` (season rollover bookkeeping, not
+dashboard state, and cold-miss-safe by design).
+
+The cog also writes the ``bot_heartbeat`` row every 30s over the MAIN pool, which
+is what lets the dashboard tell "the bot is down" from "the bot is up but its
+dashboard listener is down": the beat keeps landing while this dedicated listen
+connection is dead, carrying ``listening = false`` for exactly that window.
+
 Everything is defensive: a malformed / unknown payload is a no-op, a missing cog
-or dict is a no-op, and a dropped listen connection is re-established with backoff
-without ever crashing the bot.
+or dict is a no-op, a resync step that fails is logged and the others still run,
+and a dropped listen connection is re-established with backoff without ever
+crashing the bot.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
+import os
 
 import asyncpg
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from tools import settings
 from tools.config_loader import config_loader
@@ -116,6 +162,19 @@ USER_KINDS = frozenset({"user_settings"})
 # Reconnect backoff bounds for the listen connection supervisor.
 _BACKOFF_START = 1.0
 _BACKOFF_MAX = 60.0
+# How often the bot_heartbeat row is refreshed, over the MAIN pool. The
+# dashboard's contract is "older than 90s => the bot is offline", i.e. three
+# missed beats, so a single slow write or a one-off blip never flips the badge.
+HEARTBEAT_SECONDS = 30.0
+HEARTBEAT_STALE_SECONDS = 90
+# How long cog_unload gives the final beat. Without it that write is bounded only
+# by pool.acquire (which waits on the pool queue with NO bound) plus the pool's
+# command_timeout (core.main: 60s), so a wedged pool could hold a clean shutdown
+# open over a single liveness beat. Same call, and same reasoning, as
+# botstats.UNLOAD_FLUSH_TIMEOUT - only here losing the write costs nothing at
+# all: the row simply ages past HEARTBEAT_STALE_SECONDS and the dashboard says
+# "offline", which by then is true.
+UNLOAD_BEAT_TIMEOUT = 5
 # How often to actively probe the listen connection for liveness. A dropped TCP
 # socket is not always reflected by ``is_closed()`` until a query is attempted,
 # so a light ``SELECT 1`` on this cadence detects a dead connection promptly.
@@ -160,46 +219,66 @@ def _parse_payload(payload):
 # ---------------------------------------------------------------------------
 
 
+def _eager_cache_lock(bot):
+    """The bot's eager-cache lock, or a no-op for a bot that has none.
+
+    The three invalidators below mutate the map OBJECT (``bot.prefixes[gid] =
+    ...``) while :meth:`core.Yasuho.load_eager_caches` REBINDS the attribute to a
+    freshly fetched map. Between that method's fetch and its rebind there is a
+    window in which a write here lands on a dict about to be discarded, losing
+    the dashboard's change until the next write to the same guild - and
+    ``resync_all`` runs that reload from this very cog, right after a gap during
+    which notifications piled up in the dashboard's database. Both sides take
+    this lock, so the two orderings are the only ones left.
+
+    ``getattr`` guard for the same reason ``_resync_eager_caches`` has one: a
+    stand-in bot or an older core simply has no lock, and must not crash.
+    """
+    lock = getattr(bot, "eager_cache_lock", None)
+    return lock if lock is not None else contextlib.nullcontext()
+
+
+async def _refresh_eager_entry(bot, attr, query, gid):
+    """Re-read one guild's row and set/pop it in the eager map named ``attr``.
+
+    The single body behind the three eager invalidators below, which differ only
+    in map, table and column. Under the lock throughout, and the map is resolved
+    from the bot AFTER the fetch (never from a local captured before it), so a
+    whole-map reload that ran while this was waiting or fetching cannot leave the
+    write on a dict nobody reads any more.
+    """
+    if getattr(bot, attr, None) is None:
+        return
+    async with _eager_cache_lock(bot):
+        row = await bot.db_pool.fetchval(query, gid)
+        cache = getattr(bot, attr, None)
+        if cache is None:  # defensive: the attribute cannot vanish in practice
+            return
+        if row is not None:
+            cache[gid] = row
+        else:
+            cache.pop(gid, None)
+
+
 async def _invalidate_prefix(bot, gid):
     """Mirror ``cogs/config/settings.py``: set ``bot.prefixes[gid]`` or pop it."""
-    cache = getattr(bot, "prefixes", None)
-    if cache is None:
-        return
-    row = await bot.db_pool.fetchval(
-        "SELECT prefix FROM prefixes WHERE guild_id = $1", gid
+    await _refresh_eager_entry(
+        bot, "prefixes", "SELECT prefix FROM prefixes WHERE guild_id = $1", gid
     )
-    if row is not None:
-        cache[gid] = row
-    else:
-        cache.pop(gid, None)
 
 
 async def _invalidate_autorole(bot, gid):
     """Mirror ``settings.py`` autorole set/remove: ``bot.autoroles[gid]`` / pop."""
-    cache = getattr(bot, "autoroles", None)
-    if cache is None:
-        return
-    row = await bot.db_pool.fetchval(
-        "SELECT role_id FROM autorole WHERE guild_id = $1", gid
+    await _refresh_eager_entry(
+        bot, "autoroles", "SELECT role_id FROM autorole WHERE guild_id = $1", gid
     )
-    if row is not None:
-        cache[gid] = row
-    else:
-        cache.pop(gid, None)
 
 
 async def _invalidate_muterole(bot, gid):
     """Mirror ``moderation.py`` mute-role handling: ``bot.muteroles[gid]`` / pop."""
-    cache = getattr(bot, "muteroles", None)
-    if cache is None:
-        return
-    row = await bot.db_pool.fetchval(
-        "SELECT role_id FROM muterole WHERE guild_id = $1", gid
+    await _refresh_eager_entry(
+        bot, "muteroles", "SELECT role_id FROM muterole WHERE guild_id = $1", gid
     )
-    if row is not None:
-        cache[gid] = row
-    else:
-        cache.pop(gid, None)
 
 
 async def _invalidate_modlog(bot, gid):
@@ -567,6 +646,278 @@ async def dispatch(bot, payload):
     return kind
 
 
+# ---------------------------------------------------------------------------
+# Reconnect resync: what the invalidators cannot do, because the ids are lost.
+#
+# One step per OWNER of state (the bot itself, then one per cog), each grounded
+# in how that owner's own cold start / write path maintains the structure. Every
+# step is independent and individually guarded: a cog that is not loaded, or one
+# whose reload hits a DB error, must not stop the others from being resynced.
+# ---------------------------------------------------------------------------
+
+
+async def _resync_eager_caches(bot):
+    """RELOAD (never clear) the bot-level maps primed once in setup_hook.
+
+    ``Yasuho.load_eager_caches`` re-runs the very queries setup_hook runs, for
+    ``bot.prefixes`` / ``bot.blacklist`` / ``bot.autoroles`` / ``bot.muteroles``.
+    These are read synchronously on hot paths with NO read-through, so an absent
+    key is an ANSWER ("no custom prefix", "not blacklisted"), not a miss: they
+    can only be rebuilt from the DB. Guarded by getattr so a bot object without
+    the seam (a stand-in, an older core) is a clean skip rather than a crash.
+    """
+    loader = getattr(bot, "load_eager_caches", None)
+    if callable(loader):
+        await loader()
+
+
+async def _resync_settings_cache(bot):
+    """Empty the ``tools.settings`` LRU, both scopes.
+
+    Read-through by construction, so clearing is always safe and is the only
+    option here: the blobs behind welcome / automod / modlog_events /
+    warn_escalation / verify_role / locale / twitch / autorooms / music_* and
+    every per-user preference belong to ids we cannot enumerate after a dropped
+    NOTIFY. The next ``get_guild`` / ``get_user`` re-reads its row.
+    """
+    settings.invalidate_all()
+
+
+async def _resync_modlog(bot):
+    """Empty ModLog's ``_channels`` negative cache (read-through in get_log_channel)."""
+    cog = bot.get_cog("ModLog")
+    if cog is None:
+        return
+    channels = getattr(cog, "_channels", None)
+    if isinstance(channels, dict):
+        channels.clear()
+
+
+async def _resync_starboard(bot):
+    """Empty Starboard's ``_config`` negative cache (read-through in get_config)."""
+    cog = bot.get_cog("Starboard")
+    if cog is None:
+        return
+    config = getattr(cog, "_config", None)
+    if isinstance(config, dict):
+        config.clear()
+
+
+async def _resync_automod(bot):
+    """Empty AutoMod's ``_settings`` negative cache (read-through in get_settings).
+
+    The JSONB half of AutoMod's config rides the settings LRU, which
+    :func:`_resync_settings_cache` has already emptied.
+    """
+    cog = bot.get_cog("AutoMod")
+    if cog is None:
+        return
+    cache = getattr(cog, "_settings", None)
+    if isinstance(cache, dict):
+        cache.clear()
+
+
+async def _resync_leveling(bot):
+    """RELOAD ``_configs``; empty the three read-through leveling caches.
+
+    ``_configs`` is the odd one out and the reason this step is not a loop of
+    ``.clear()``: ``Leveling.get_config`` is a plain synchronous dict lookup
+    where a missing guild MEANS "leveling is off" - clearing it would silently
+    stop XP bot-wide, with no read-through to heal it. ``reload_configs`` is the
+    same whole-map rebuild the cog runs at load. ``_no_xp`` / ``_multipliers`` /
+    ``_rank_cards`` are genuine read-through BoundedLRUs (``ensure_*`` /
+    ``refresh_*`` reload on a miss), so emptying them is enough.
+
+    ``_period_markers`` is deliberately untouched: it is season-rollover
+    bookkeeping, not dashboard state, and is cold-miss-safe by design.
+    """
+    cog = bot.get_cog("Leveling")
+    if cog is None:
+        return
+    reload_configs = getattr(cog, "reload_configs", None)
+    if callable(reload_configs):
+        await reload_configs()
+    for attr in ("_no_xp", "_multipliers", "_rank_cards"):
+        cache = getattr(cog, attr, None)
+        clear = getattr(cache, "clear", None)
+        if callable(clear):
+            clear()
+
+
+async def _resync_custom_commands(bot):
+    """Empty CustomCommands' ``_cache`` / ``_uses`` (read-through in get_custom_commands).
+
+    ``_cd`` is deliberately NOT cleared: those are per-(guild, name, user)
+    cooldown CLOCKS, not configuration. The per-guild invalidator drops a guild's
+    clocks because that guild's commands (and their cooldown values) just
+    changed; a reconnect says nothing of the sort, and wiping every clock would
+    hand every member of every guild one free re-use of every command.
+    """
+    cog = bot.get_cog("CustomCommands")
+    if cog is None:
+        return
+    for attr in ("_cache", "_uses"):
+        cache = getattr(cog, attr, None)
+        if isinstance(cache, dict):
+            cache.clear()
+
+
+async def _resync_rooms(bot):
+    """REBUILD TemporaryRooms' derived ``_hub_index`` from the authoritative rows.
+
+    ``reload_hub_index`` is the cog's own whole-index build (cog_load's, minus the
+    one-shot legacy migration): a derived index is never re-read from settings,
+    so it must be rebuilt rather than dropped, and rebuilding only the guilds
+    already in it would miss a guild that got its FIRST hub during the gap.
+
+    It also RAISES on a failed read instead of installing an empty index, which
+    is why this step can be a plain await: an empty ``_hub_index`` is not a miss,
+    it is the answer "this guild has no hubs" for every guild at once. A step
+    that raises is reported as NOT done by :func:`resync_all` and the live index
+    is left alone.
+
+    Ordered after :func:`_resync_settings_cache` for consistency with
+    ``_invalidate_autorooms``, but NOT for the same reason: that per-guild path
+    goes through ``_load_hubs`` -> ``settings.get_guild`` and would genuinely
+    re-index the stale blob, whereas this whole-index rebuild reads
+    ``guild_settings`` straight off the pool and never touches the LRU. Stated
+    plainly so a later refactor does not trust an ordering claim that is not
+    true of this step.
+    """
+    cog = bot.get_cog("TemporaryRooms")
+    if cog is None:
+        return
+    reload_index = getattr(cog, "reload_hub_index", None)
+    if callable(reload_index):
+        await reload_index()
+
+
+# Ordered: the settings LRU is emptied early, before any step that could read
+# through it (see _resync_rooms on what that ordering does and does not buy).
+_RESYNC_STEPS = (
+    ("eager_caches", _resync_eager_caches),
+    ("settings", _resync_settings_cache),
+    ("modlog", _resync_modlog),
+    ("starboard", _resync_starboard),
+    ("automod", _resync_automod),
+    ("leveling", _resync_leveling),
+    ("custom_commands", _resync_custom_commands),
+    ("rooms", _resync_rooms),
+)
+
+
+async def resync_all(bot):
+    """Run every resync step; return the names of the ones that succeeded.
+
+    Never raises: a step that fails is logged and the rest still run, because
+    each owns a different cache and there is no reason one cog's DB blip should
+    leave the others stale. The caller reports the result on one INFO line.
+
+    The returned list is a real success list, which is why the two RELOAD seams
+    (``Leveling.reload_configs``, ``TemporaryRooms.reload_hub_index``) raise on a
+    failed read rather than logging it themselves: a step that swallowed its own
+    exception would be named on the "resynced" line even though its cache is
+    untouched, and the log would assert the opposite of what happened.
+    """
+    done = []
+    for name, step in _RESYNC_STEPS:
+        try:
+            await step(bot)
+        except Exception:
+            log.exception("dashboard_sync: resync step %r failed", name)
+        else:
+            done.append(name)
+    return done
+
+
+# ---------------------------------------------------------------------------
+# Heartbeat: one row the dashboard polls to know the bot is alive AND listening.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_ref(git_dir, ref):
+    """Resolve a symbolic ref to its sha, loose file first then packed-refs."""
+    loose = os.path.join(git_dir, *ref.split("/"))
+    if os.path.exists(loose):
+        with open(loose, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    packed = os.path.join(git_dir, "packed-refs")
+    if not os.path.exists(packed):
+        return None
+    with open(packed, "r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line or line.startswith(("#", "^")):
+                continue
+            sha, _, name = line.partition(" ")
+            if name == ref:
+                return sha
+    return None
+
+
+def _git_short_hash():
+    """The running commit's short hash, or ``None``. Never raises.
+
+    Read once at cog load, by READING ``.git`` rather than forking git. The house
+    rule is that nothing blocks the event loop (every other git/pg_dump call in
+    the tree goes through ``asyncio.create_subprocess_exec`` - tools/backup.py,
+    cogs/system/admin.py), and this one runs in ``__init__``: harmless at boot,
+    where setup_hook precedes the websocket, but ``?reload dashboard_sync`` runs
+    it on a LIVE loop, where a slow fork would freeze every shard for up to the
+    old 5s timeout. Two small file reads have no such ceiling and need no async
+    seam at all.
+
+    Handles a detached HEAD (a raw sha in the file), a packed ref, and a ``.git``
+    that is a FILE pointing elsewhere (worktrees, submodules). Anything else - no
+    ``.git``, an unreadable file, a value that is not a hex sha - yields ``None``:
+    the column is nullable precisely because "unknown" is an acceptable answer.
+    """
+    repo_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    try:
+        git_dir = os.path.join(repo_root, ".git")
+        if os.path.isfile(git_dir):  # worktree / submodule: "gitdir: <path>"
+            with open(git_dir, "r", encoding="utf-8") as handle:
+                pointer = handle.read().strip()
+            if not pointer.startswith("gitdir:"):
+                return None
+            git_dir = pointer.partition(":")[2].strip()
+            if not os.path.isabs(git_dir):
+                git_dir = os.path.join(repo_root, git_dir)
+        with open(os.path.join(git_dir, "HEAD"), "r", encoding="utf-8") as handle:
+            head = handle.read().strip()
+        sha = _resolve_ref(git_dir, head[5:].strip()) if head.startswith("ref:") else head
+    except Exception:
+        return None
+    if not sha or len(sha) < 7:
+        return None
+    try:
+        int(sha, 16)
+    except ValueError:
+        return None
+    return sha[:7]
+
+
+async def write_heartbeat(pool, listening, version):
+    """Upsert THE single ``bot_heartbeat`` row (id = 1).
+
+    One statement (asyncpg is mono-statement), over the MAIN pool rather than the
+    dedicated listen connection - that is the whole point: the beat must keep
+    landing while the listen connection is down, which is exactly when
+    ``listening`` is false and the dashboard most needs to say "the bot is up,
+    its dashboard link is not".
+    """
+    await pool.execute(
+        "INSERT INTO bot_heartbeat (id, updated_at, listening, version) "
+        "VALUES (1, now(), $1, $2) "
+        "ON CONFLICT (id) DO UPDATE "
+        "SET updated_at = now(), listening = $1, version = $2",
+        bool(listening),
+        version,
+    )
+
+
 class DashboardSync(commands.Cog):
     """LISTENs on Postgres NOTIFY and invalidates the bot's in-memory caches."""
 
@@ -578,6 +929,24 @@ class DashboardSync(commands.Cog):
         # Strong refs to per-notification handler tasks so the loop can't GC one
         # mid-run (the sponsorblock / core startup-backup pattern).
         self._handlers = set()
+        # True once a LISTEN has been successfully registered at least once.
+        # BOTH cases resync (see _schedule_resync); this only names which one it
+        # was in the log, since the gaps have different shapes: setup_hook to
+        # READY at boot, socket death to reconnect afterwards.
+        self._connected_once = False
+        # The in-flight resync, so a connect-then-die loop schedules one sweep
+        # rather than one per cycle (see _schedule_resync).
+        self._resync_task = None
+        # Mirrored into bot_heartbeat.listening: true only while a registered
+        # LISTEN is believed live.
+        self._listening = False
+        # The running commit, read ONCE here at cog load (never per beat).
+        self._version = _git_short_hash()
+
+        # The heartbeat runs over the MAIN pool and is deliberately started even
+        # when the sync below is disabled: "the bot is alive but not listening"
+        # is a true and useful thing for the dashboard to be told.
+        self._heartbeat.start()
 
         # Resolve the DSN the same way core.py does. Missing config -> the cog
         # loads but stays idle (mirrors webstats' top.gg fallback guard).
@@ -600,13 +969,30 @@ class DashboardSync(commands.Cog):
     # -- teardown -------------------------------------------------------
     async def cog_unload(self):
         self._closing = True
+        self._heartbeat.cancel()
         if self._supervisor is not None:
             self._supervisor.cancel()
         for task in list(self._handlers):
             task.cancel()
         await self._teardown_connection()
+        # One last beat, best-effort, AFTER the teardown has cleared _listening:
+        # a reload/shutdown otherwise leaves the last row claiming listening =
+        # true until it ages past the staleness threshold, which is the one
+        # window where the dashboard would show a link that no longer exists.
+        # Bounded (UNLOAD_BEAT_TIMEOUT): TimeoutError is an Exception, so the
+        # handler below already covers it.
+        try:
+            await asyncio.wait_for(
+                write_heartbeat(self.bot.db_pool, False, self._version),
+                UNLOAD_BEAT_TIMEOUT,
+            )
+        except Exception:
+            log.debug("dashboard_sync: final heartbeat write failed", exc_info=True)
 
     async def _teardown_connection(self):
+        # The listener is gone the moment we start tearing down; say so before
+        # awaiting anything, so a beat that lands mid-teardown is already honest.
+        self._listening = False
         conn = self._conn
         self._conn = None
         if conn is None:
@@ -633,6 +1019,10 @@ class DashboardSync(commands.Cog):
         except Exception:
             log.exception("dashboard_sync: failed to schedule handler")
             return
+        self._track(task)
+
+    def _track(self, task):
+        """Hold a strong ref to a background task until it finishes."""
         self._handlers.add(task)
         task.add_done_callback(self._handlers.discard)
 
@@ -658,8 +1048,11 @@ class DashboardSync(commands.Cog):
         backoff = _BACKOFF_START
         while not self._closing:
             try:
+                # Sampled BEFORE the connect: _connect_and_listen sets the flag.
+                reconnect = self._connected_once
                 await self._connect_and_listen()
                 backoff = _BACKOFF_START  # healthy connect resets the backoff
+                self._schedule_resync(reconnect)
                 await self._watch_connection()
             except asyncio.CancelledError:
                 break
@@ -682,11 +1075,70 @@ class DashboardSync(commands.Cog):
 
         log.info("dashboard_sync: listener supervisor stopped.")
 
+    def _schedule_resync(self, reconnect):
+        """Run the full resync as a tracked background task, on EVERY connect.
+
+        Both cases are the same hole, and neither is theoretical:
+
+        * RECONNECT - the socket died, and Postgres drops (never queues) NOTIFY
+          for an absent listener, so every dashboard write during the gap is
+          gone.
+        * BOOT - the caches are primed inside ``setup_hook`` (load_eager_caches
+          plus every cog's cog_load), which runs BEFORE the gateway connects.
+          Only after IDENTIFY, the guild stream and member chunking does
+          ``wait_until_ready`` return and this LISTEN get registered. Every
+          dashboard write in between is dropped exactly the same way, and on a
+          1000+ guild bot that window is tens of seconds to minutes. ``main`` is
+          production with continuous deploy, so it opens on every push - far more
+          often than a socket failure. If the DB is also flaky at boot it
+          stretches to however long the first successful connect takes.
+
+        The cost of covering boot is one extra pass of the same seven steps over
+        caches that were primed moments ago (the read-through clears are free at
+        that point). ``dashboard_actions`` has never had this hole precisely
+        because its sweep always ran at boot too.
+
+        Scheduled AFTER the new LISTEN is registered, so a notification arriving
+        while it works is delivered rather than lost, and OFF the supervisor's
+        own path so a slow resync cannot delay the keepalive watch.
+
+        At most ONE resync is ever in flight: a server that accepts a connection
+        and immediately kills it (pgbouncer refusing LISTEN, connection churn)
+        cycles about once a second - the backoff resets on every SUCCESSFUL
+        connect - and each cycle would otherwise pile on another full sweep
+        (four eager queries, a level_config scan and two whole guild_settings
+        scans) at the exact moment the database is least able to take it.
+        Concurrent runs would be correct, every step being idempotent; they would
+        just be a self-inflicted storm.
+        """
+        task = self._resync_task
+        if task is not None and not task.done():
+            log.debug("dashboard_sync: a resync is still running; not scheduling another")
+            return
+        reason = "reconnect" if reconnect else "boot"
+
+        async def _run():
+            done = await resync_all(self.bot)
+            log.info(
+                "dashboard_sync: listen connection established (%s); "
+                "notifications emitted before it was registered were dropped by "
+                "Postgres, so a full cache resync ran (%s).",
+                reason,
+                ", ".join(done) if done else "no step succeeded",
+            )
+
+        self._resync_task = self.bot.loop.create_task(_run())
+        self._track(self._resync_task)
+
     async def _connect_and_listen(self):
         """Open the dedicated connection and register the LISTEN callback."""
         conn = await asyncpg.connect(self._dsn)
         self._conn = conn
         await conn.add_listener(CHANNEL, self._on_notify)
+        # Only now is a notification actually deliverable to this process: both
+        # the reconnect marker and the heartbeat's flag flip HERE, never earlier.
+        self._connected_once = True
+        self._listening = True
         log.info("dashboard_sync: listening on Postgres channel '%s'.", CHANNEL)
 
     async def _watch_connection(self):
@@ -694,19 +1146,41 @@ class DashboardSync(commands.Cog):
 
         Actively probes with ``SELECT 1`` on a fixed cadence because a dropped
         socket is not always reflected by ``is_closed()`` until a query runs.
+
+        Every exit is a "this connection is dead" verdict, so the heartbeat flag
+        drops HERE - before the backoff sleep, not after the reconnect - which is
+        precisely the window the dashboard needs to see as not-listening.
         """
         while not self._closing:
             conn = self._conn
             if conn is None or conn.is_closed():
+                self._listening = False
                 return
             try:
                 await conn.execute("SELECT 1")
             except asyncio.CancelledError:
                 raise
             except Exception:
+                self._listening = False
                 log.warning("dashboard_sync: keepalive failed; reconnecting.")
                 return
             await asyncio.sleep(_KEEPALIVE_INTERVAL)
+
+    # -- heartbeat ------------------------------------------------------
+    @tasks.loop(seconds=HEARTBEAT_SECONDS)
+    async def _heartbeat(self):
+        """Refresh the bot_heartbeat row over the MAIN pool.
+
+        Deliberately not gated on wait_until_ready and not tied to the listen
+        connection: this loop's whole value is that it keeps beating when that
+        connection is down. A failed write is logged and the loop carries on -
+        an unhandled exception would stop a tasks.Loop outright, which would turn
+        one blip into a permanent "bot offline" on the dashboard.
+        """
+        try:
+            await write_heartbeat(self.bot.db_pool, self._listening, self._version)
+        except Exception:
+            log.warning("dashboard_sync: heartbeat write failed", exc_info=True)
 
 
 async def setup(bot):
