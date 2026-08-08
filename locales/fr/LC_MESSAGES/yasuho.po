@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 11:09+0000\n"
+"POT-Creation-Date: 2026-08-08 16:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -1356,16 +1356,17 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous pour en créer un (jusqu'à {max} par serveur)."
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:412 cogs/config/verification.py:100
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:253
+#: cogs/config/tickets/panel.py:69 cogs/config/twitch.py:412
+#: cogs/config/verification.py:100 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "Activé"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:414 cogs/config/verification.py:102
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
+#: cogs/config/tickets/panel.py:71 cogs/config/twitch.py:414
+#: cogs/config/verification.py:102 cogs/config/welcome.py:426
+#: cogs/config/welcome.py:547 cogs/config/welcome.py:785
+#: cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "Désactivé"
 
@@ -1475,7 +1476,7 @@ msgstr "Toi"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:504 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:505 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -2136,7 +2137,7 @@ msgstr "Tout le serveur : **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:177
 #: cogs/community/leveling/level_config_ui.py:833
 #: cogs/community/leveling/level_config_ui.py:839
-#: cogs/config/verification.py:105
+#: cogs/config/tickets/panel.py:122 cogs/config/verification.py:105
 msgid "(deleted)"
 msgstr "(supprimé)"
 
@@ -3513,9 +3514,10 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un role a mentionner), puis **Envoyer**. L'apercu n'est visible que par toi."
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
-#: cogs/config/verification.py:107 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:251
+#: cogs/config/rolemenus.py:530 cogs/config/tickets/panel.py:123
+#: cogs/config/twitch.py:408 cogs/config/verification.py:107
+#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
+#: cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr "*Non défini.*"
 
@@ -5085,6 +5087,7 @@ msgstr "Vous êtes déjà vérifié."
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "Je ne peux pas attribuer ce rôle - il est peut-être au-dessus de mon rôle le plus élevé."
 
+#: cogs/config/tickets/open.py:165 cogs/config/tickets/open.py:283
 #: cogs/config/verification.py:72
 msgid "Something went wrong, please try again."
 msgstr "Une erreur est survenue, veuillez réessayer."
@@ -5256,6 +5259,160 @@ msgstr "Les messages de bienvenue ont été désactivés."
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Bienvenue {member} !"
+
+#: cogs/config/tickets/open.py:101 cogs/config/tickets/open.py:125
+msgid "Open a ticket"
+msgstr "Ouvrir un ticket"
+
+#: cogs/config/tickets/open.py:103
+msgid "What do you need help with?"
+msgstr "De quoi as-tu besoin ?"
+
+#: cogs/config/tickets/open.py:104
+msgid "A short summary - staff will read it first."
+msgstr "Un court résumé - l'équipe le consultera en premier."
+
+#: cogs/config/tickets/open.py:137 cogs/config/tickets/open.py:206
+msgid "Tickets only work inside a server."
+msgstr "Les tickets ne fonctionnent que dans un serveur."
+
+#: cogs/config/tickets/open.py:146 cogs/config/tickets/open.py:215
+msgid "You cannot use this."
+msgstr "Tu ne peux pas utiliser ceci."
+
+#: cogs/config/tickets/open.py:153 cogs/config/tickets/open.py:226
+msgid "Tickets are not set up here."
+msgstr "Les tickets ne sont pas configurés ici."
+
+#: cogs/config/tickets/open.py:172 cogs/config/tickets/open.py:250
+msgid "I am already opening a ticket for you - one moment."
+msgstr "Je suis déjà en train d'ouvrir un ticket pour toi - un instant."
+
+#: cogs/config/tickets/open.py:189
+#, python-brace-format
+msgid "You already have {count} ticket open here. Close it before opening another."
+msgid_plural "You already have {count} tickets open here. Close one before opening another."
+msgstr[0] "Tu as déjà {count} ticket ouvert ici. Ferme-le avant d'en ouvrir un autre."
+msgstr[1] "Tu as déjà {count} tickets ouverts ici. Fermes-en un avant d'en ouvrir un autre."
+
+#: cogs/config/tickets/open.py:242
+#, python-brace-format
+msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
+msgstr "Il me manque des permissions dans {channel} ({permissions}), donc je ne peux pas ouvrir de ticket. Merci de prévenir un admin du serveur."
+
+#: cogs/config/tickets/open.py:274
+msgid "I could not create the ticket, please try again."
+msgstr "Je n'ai pas pu créer le ticket, réessaie s'il te plaît."
+
+#: cogs/config/tickets/open.py:305
+#, python-brace-format
+msgid "Ticket #{number} opened: {thread}"
+msgstr "Ticket #{number} ouvert : {thread}"
+
+#: cogs/config/tickets/open.py:330
+#, python-brace-format
+msgid "Ticket #{number}"
+msgstr "Ticket #{number}"
+
+#: cogs/config/tickets/open.py:331
+msgid "*No subject given.*"
+msgstr "*Aucun sujet indiqué.*"
+
+#: cogs/config/tickets/open.py:335
+#, python-brace-format
+msgid "Opened by {user}"
+msgstr "Ouvert par {user}"
+
+#: cogs/config/tickets/panel.py:77
+#, python-brace-format
+msgid "Support tickets | {guild}"
+msgstr "Tickets de support | {guild}"
+
+#: cogs/config/tickets/panel.py:84
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Panel channel:** {channel}\n"
+"**Support role:** {role}\n"
+"**Log channel:** {log}\n"
+"**Open tickets per member:** {cap}\n"
+"**Inactivity window:** {hours}h"
+msgstr ""
+"**Statut :** {status}\n"
+"**Salon du panneau :** {channel}\n"
+"**Rôle de support :** {role}\n"
+"**Salon des logs :** {log}\n"
+"**Tickets ouverts par membre :** {cap}\n"
+"**Fenêtre d'inactivité :** {hours}h"
+
+#: cogs/config/tickets/panel.py:104
+msgid "Use `/ticket setup` to turn tickets on."
+msgstr "Utilise `/ticket setup` pour activer les tickets."
+
+#: cogs/config/tickets/panel.py:186
+#, python-brace-format
+msgid "I need these permissions in {channel} first: {permissions}."
+msgstr "J'ai d'abord besoin de ces permissions dans {channel} : {permissions}."
+
+#: cogs/config/tickets/panel.py:239
+msgid "Support tickets"
+msgstr "Tickets de support"
+
+#: cogs/config/tickets/panel.py:243
+msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
+msgstr "Besoin d'un coup de main ? Clique ci-dessous et j'ouvrirai un fil privé pour toi et l'équipe."
+
+#: cogs/config/tickets/panel.py:255
+#, python-brace-format
+msgid "I could not post the panel in {channel}."
+msgstr "Je n'ai pas pu publier le panneau dans {channel}."
+
+#: cogs/config/tickets/panel.py:261
+#, python-brace-format
+msgid "Tickets are on - the panel is up in {channel}. {jump}"
+msgstr "Les tickets sont activés - le panneau est en place dans {channel}. {jump}"
+
+#: cogs/config/tickets/panel.py:291
+#, python-brace-format
+msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
+msgstr "Rôle de support : {role} | Salon des logs : {log} | setup ne modifie que les options que tu précises."
+
+#: cogs/config/tickets/panel.py:304
+#, python-brace-format
+msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
+msgstr "Attention : {role} n'a pas {permissions} dans {channel}. Un ticket est un fil privé, donc l'équipe ne peut le voir qu'avec Gérer les fils sur le salon - sans cela, elle sera pingée dans des tickets qu'elle ne pourra pas ouvrir."
+
+#: cogs/config/tickets/panel.py:340
+msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
+msgstr "Les tickets sont désactivés. Les fils déjà ouverts restent en place, et le bouton du panneau indiquera que les tickets ne sont pas configurés."
+
+#: cogs/config/tickets/preflight.py:73
+msgid "View Channel"
+msgstr "Voir le salon"
+
+#: cogs/config/tickets/preflight.py:74
+msgid "Send Messages"
+msgstr "Envoyer des messages"
+
+#: cogs/config/tickets/preflight.py:75
+msgid "Embed Links"
+msgstr "Intégrer des liens"
+
+#: cogs/config/tickets/preflight.py:76
+msgid "Create Private Threads"
+msgstr "Créer des fils privés"
+
+#: cogs/config/tickets/preflight.py:77
+msgid "Send Messages in Threads"
+msgstr "Envoyer des messages dans les fils"
+
+#: cogs/config/tickets/preflight.py:78
+msgid "Manage Threads"
+msgstr "Gérer les fils"
+
+#: cogs/config/tickets/preflight.py:79
+msgid "Read Message History"
+msgstr "Voir l'historique des messages"
 
 #: cogs/fun/fun.py:51 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
@@ -8079,56 +8236,56 @@ msgstr "Expulsions, bannissements, avertissements, automod et logs de modératio
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Messages de bienvenue, starboard, commandes personnalisées et plus."
 
-#: cogs/system/help.py:127
+#: cogs/system/help.py:128
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Rôles par réaction, menus de rôles, rôles par bouton et vérification."
 
-#: cogs/system/help.py:135
+#: cogs/system/help.py:136
 msgid "Anything not yet sorted into a category."
 msgstr "Tout ce qui n'est pas encore classé dans une catégorie."
 
-#: cogs/system/help.py:237 cogs/system/help.py:284 cogs/system/help.py:297
-#: cogs/system/help.py:777
+#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
+#: cogs/system/help.py:778
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:289 cogs/system/help.py:781
+#: cogs/system/help.py:290 cogs/system/help.py:782
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:302
+#: cogs/system/help.py:303
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /preferences, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:307
+#: cogs/system/help.py:308
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} sous-commande"
 msgstr[1] "{n} sous-commandes"
 
-#: cogs/system/help.py:312
+#: cogs/system/help.py:313
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:341
+#: cogs/system/help.py:342
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:410 cogs/system/help.py:539 cogs/system/help.py:558
+#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:471
+#: cogs/system/help.py:472
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:473
+#: cogs/system/help.py:474
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -8139,19 +8296,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:507
+#: cogs/system/help.py:508
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -8162,66 +8319,66 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:522
+#: cogs/system/help.py:523
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:524
+#: cogs/system/help.py:525
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:550
+#: cogs/system/help.py:551
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:556
+#: cogs/system/help.py:557
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:562
+#: cogs/system/help.py:563
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:571
+#: cogs/system/help.py:572
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:577
+#: cogs/system/help.py:578
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:594
+#: cogs/system/help.py:595
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:659
+#: cogs/system/help.py:660
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:745
+#: cogs/system/help.py:746
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:761 cogs/system/help.py:801
+#: cogs/system/help.py:762 cogs/system/help.py:802
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:763
+#: cogs/system/help.py:764
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."

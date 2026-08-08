@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 11:09+0000\n"
+"POT-Creation-Date: 2026-08-08 16:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1356,16 +1356,17 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:412 cogs/config/verification.py:100
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:253
+#: cogs/config/tickets/panel.py:69 cogs/config/twitch.py:412
+#: cogs/config/verification.py:100 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:414 cogs/config/verification.py:102
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
+#: cogs/config/tickets/panel.py:71 cogs/config/twitch.py:414
+#: cogs/config/verification.py:102 cogs/config/welcome.py:426
+#: cogs/config/welcome.py:547 cogs/config/welcome.py:785
+#: cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
@@ -1475,7 +1476,7 @@ msgstr "Εσύ"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:504 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:505 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -2136,7 +2137,7 @@ msgstr "Όλος ο διακομιστής: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:177
 #: cogs/community/leveling/level_config_ui.py:833
 #: cogs/community/leveling/level_config_ui.py:839
-#: cogs/config/verification.py:105
+#: cogs/config/tickets/panel.py:122 cogs/config/verification.py:105
 msgid "(deleted)"
 msgstr "(διαγράφηκε)"
 
@@ -3513,9 +3514,10 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κανάλι (και προαιρετικά έναν ρόλο για ping) και μετά πάτησε **Αποστολή**. Η προεπισκόπηση το δείχνει μόνο σε εσένα."
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
-#: cogs/config/verification.py:107 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:251
+#: cogs/config/rolemenus.py:530 cogs/config/tickets/panel.py:123
+#: cogs/config/twitch.py:408 cogs/config/verification.py:107
+#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
+#: cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr "*Δεν έχει οριστεί.*"
 
@@ -5085,6 +5087,7 @@ msgstr "Είσαι ήδη επαληθευμένος/η."
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "Δεν μπορώ να αναθέσω αυτόν τον ρόλο - ίσως είναι πάνω από τον υψηλότερο ρόλο μου."
 
+#: cogs/config/tickets/open.py:165 cogs/config/tickets/open.py:283
 #: cogs/config/verification.py:72
 msgid "Something went wrong, please try again."
 msgstr "Κάτι πήγε στραβά, δοκίμασε ξανά."
@@ -5256,6 +5259,160 @@ msgstr "Τα μηνύματα καλωσορίσματος απενεργοπο�
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Καλώς ήρθες {member}!"
+
+#: cogs/config/tickets/open.py:101 cogs/config/tickets/open.py:125
+msgid "Open a ticket"
+msgstr "Άνοιγμα εισιτηρίου"
+
+#: cogs/config/tickets/open.py:103
+msgid "What do you need help with?"
+msgstr "Με τι χρειάζεσαι βοήθεια;"
+
+#: cogs/config/tickets/open.py:104
+msgid "A short summary - staff will read it first."
+msgstr "Μια σύντομη περίληψη - το προσωπικό θα τη διαβάσει πρώτα."
+
+#: cogs/config/tickets/open.py:137 cogs/config/tickets/open.py:206
+msgid "Tickets only work inside a server."
+msgstr "Τα εισιτήρια λειτουργούν μόνο μέσα σε server."
+
+#: cogs/config/tickets/open.py:146 cogs/config/tickets/open.py:215
+msgid "You cannot use this."
+msgstr "Δεν μπορείς να το χρησιμοποιήσεις αυτό."
+
+#: cogs/config/tickets/open.py:153 cogs/config/tickets/open.py:226
+msgid "Tickets are not set up here."
+msgstr "Τα εισιτήρια δεν έχουν ρυθμιστεί εδώ."
+
+#: cogs/config/tickets/open.py:172 cogs/config/tickets/open.py:250
+msgid "I am already opening a ticket for you - one moment."
+msgstr "Σου ανοίγω ήδη ένα εισιτήριο - μια στιγμή."
+
+#: cogs/config/tickets/open.py:189
+#, python-brace-format
+msgid "You already have {count} ticket open here. Close it before opening another."
+msgid_plural "You already have {count} tickets open here. Close one before opening another."
+msgstr[0] "Έχεις ήδη {count} ανοιχτό ticket εδώ. Κλείσε το πριν ανοίξεις άλλο."
+msgstr[1] "Έχεις ήδη {count} ανοιχτά tickets εδώ. Κλείσε ένα πριν ανοίξεις άλλο."
+
+#: cogs/config/tickets/open.py:242
+#, python-brace-format
+msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
+msgstr "Μου λείπουν δικαιώματα στο {channel} ({permissions}), οπότε δεν μπορώ να ανοίξω εισιτήριο. Ενημέρωσε έναν διαχειριστή του server."
+
+#: cogs/config/tickets/open.py:274
+msgid "I could not create the ticket, please try again."
+msgstr "Δεν μπόρεσα να δημιουργήσω το εισιτήριο, δοκίμασε ξανά."
+
+#: cogs/config/tickets/open.py:305
+#, python-brace-format
+msgid "Ticket #{number} opened: {thread}"
+msgstr "Το εισιτήριο #{number} ανοίχτηκε: {thread}"
+
+#: cogs/config/tickets/open.py:330
+#, python-brace-format
+msgid "Ticket #{number}"
+msgstr "Εισιτήριο #{number}"
+
+#: cogs/config/tickets/open.py:331
+msgid "*No subject given.*"
+msgstr "*Δεν δόθηκε θέμα.*"
+
+#: cogs/config/tickets/open.py:335
+#, python-brace-format
+msgid "Opened by {user}"
+msgstr "Ανοίχτηκε από {user}"
+
+#: cogs/config/tickets/panel.py:77
+#, python-brace-format
+msgid "Support tickets | {guild}"
+msgstr "Εισιτήρια υποστήριξης | {guild}"
+
+#: cogs/config/tickets/panel.py:84
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Panel channel:** {channel}\n"
+"**Support role:** {role}\n"
+"**Log channel:** {log}\n"
+"**Open tickets per member:** {cap}\n"
+"**Inactivity window:** {hours}h"
+msgstr ""
+"**Κατάσταση:** {status}\n"
+"**Κανάλι πάνελ:** {channel}\n"
+"**Ρόλος υποστήριξης:** {role}\n"
+"**Κανάλι καταγραφής:** {log}\n"
+"**Ανοιχτά εισιτήρια ανά μέλος:** {cap}\n"
+"**Παράθυρο αδράνειας:** {hours}h"
+
+#: cogs/config/tickets/panel.py:104
+msgid "Use `/ticket setup` to turn tickets on."
+msgstr "Χρησιμοποίησε `/ticket setup` για να ενεργοποιήσεις τα εισιτήρια."
+
+#: cogs/config/tickets/panel.py:186
+#, python-brace-format
+msgid "I need these permissions in {channel} first: {permissions}."
+msgstr "Χρειάζομαι πρώτα αυτά τα δικαιώματα στο {channel}: {permissions}."
+
+#: cogs/config/tickets/panel.py:239
+msgid "Support tickets"
+msgstr "Εισιτήρια υποστήριξης"
+
+#: cogs/config/tickets/panel.py:243
+msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
+msgstr "Χρειάζεσαι βοήθεια; Κάνε κλικ παρακάτω και θα ανοίξω ένα ιδιωτικό νήμα για εσένα και την ομάδα υποστήριξης."
+
+#: cogs/config/tickets/panel.py:255
+#, python-brace-format
+msgid "I could not post the panel in {channel}."
+msgstr "Δεν μπόρεσα να δημοσιεύσω το πάνελ στο {channel}."
+
+#: cogs/config/tickets/panel.py:261
+#, python-brace-format
+msgid "Tickets are on - the panel is up in {channel}. {jump}"
+msgstr "Τα εισιτήρια είναι ενεργά - το πάνελ είναι διαθέσιμο στο {channel}. {jump}"
+
+#: cogs/config/tickets/panel.py:291
+#, python-brace-format
+msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
+msgstr "Ρόλος υποστήριξης: {role} | Κανάλι καταγραφής: {log} | το setup αλλάζει μόνο τις επιλογές που ονομάζεις."
+
+#: cogs/config/tickets/panel.py:304
+#, python-brace-format
+msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
+msgstr "Προσοχή: στον ρόλο {role} λείπουν τα {permissions} στο {channel}. Ένα εισιτήριο είναι ιδιωτικό νήμα, οπότε το προσωπικό μπορεί να το δει μόνο με το Διαχείριση Νημάτων στο κανάλι - χωρίς αυτό θα λαμβάνουν ειδοποίηση σε εισιτήρια που δεν μπορούν να ανοίξουν."
+
+#: cogs/config/tickets/panel.py:340
+msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
+msgstr "Τα εισιτήρια είναι απενεργοποιημένα. Τα νήματα που είναι ήδη ανοιχτά παραμένουν όπως είναι, και το κουμπί του πάνελ θα αναφέρει ότι τα εισιτήρια δεν έχουν ρυθμιστεί."
+
+#: cogs/config/tickets/preflight.py:73
+msgid "View Channel"
+msgstr "Προβολή Καναλιού"
+
+#: cogs/config/tickets/preflight.py:74
+msgid "Send Messages"
+msgstr "Αποστολή Μηνυμάτων"
+
+#: cogs/config/tickets/preflight.py:75
+msgid "Embed Links"
+msgstr "Ενσωμάτωση Συνδέσμων"
+
+#: cogs/config/tickets/preflight.py:76
+msgid "Create Private Threads"
+msgstr "Δημιουργία Ιδιωτικών Νημάτων"
+
+#: cogs/config/tickets/preflight.py:77
+msgid "Send Messages in Threads"
+msgstr "Αποστολή Μηνυμάτων σε Νήματα"
+
+#: cogs/config/tickets/preflight.py:78
+msgid "Manage Threads"
+msgstr "Διαχείριση Νημάτων"
+
+#: cogs/config/tickets/preflight.py:79
+msgid "Read Message History"
+msgstr "Ανάγνωση Ιστορικού Μηνυμάτων"
 
 #: cogs/fun/fun.py:51 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
@@ -8079,56 +8236,56 @@ msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:127
+#: cogs/system/help.py:128
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:135
+#: cogs/system/help.py:136
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:237 cogs/system/help.py:284 cogs/system/help.py:297
-#: cogs/system/help.py:777
+#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
+#: cogs/system/help.py:778
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:289 cogs/system/help.py:781
+#: cogs/system/help.py:290 cogs/system/help.py:782
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:302
+#: cogs/system/help.py:303
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:307
+#: cogs/system/help.py:308
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:312
+#: cogs/system/help.py:313
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:341
+#: cogs/system/help.py:342
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:410 cogs/system/help.py:539 cogs/system/help.py:558
+#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:471
+#: cogs/system/help.py:472
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:473
+#: cogs/system/help.py:474
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -8139,19 +8296,19 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Enabled ✅"
 msgstr "Ενεργοποιημένο ✅"
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Disabled ❌"
 msgstr "Απενεργοποιημένο ❌"
 
-#: cogs/system/help.py:507
+#: cogs/system/help.py:508
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -8162,66 +8319,66 @@ msgstr ""
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
-#: cogs/system/help.py:522
+#: cogs/system/help.py:523
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:524
+#: cogs/system/help.py:525
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:550
+#: cogs/system/help.py:551
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:556
+#: cogs/system/help.py:557
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:562
+#: cogs/system/help.py:563
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:571
+#: cogs/system/help.py:572
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:577
+#: cogs/system/help.py:578
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:594
+#: cogs/system/help.py:595
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:659
+#: cogs/system/help.py:660
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:745
+#: cogs/system/help.py:746
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:761 cogs/system/help.py:801
+#: cogs/system/help.py:762 cogs/system/help.py:802
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:763
+#: cogs/system/help.py:764
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."

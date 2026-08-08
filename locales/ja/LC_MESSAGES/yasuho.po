@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 11:09+0000\n"
+"POT-Creation-Date: 2026-08-08 16:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1356,16 +1356,17 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:412 cogs/config/verification.py:100
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:253
+#: cogs/config/tickets/panel.py:69 cogs/config/twitch.py:412
+#: cogs/config/verification.py:100 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "有効"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/twitch.py:414 cogs/config/verification.py:102
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
+#: cogs/config/tickets/panel.py:71 cogs/config/twitch.py:414
+#: cogs/config/verification.py:102 cogs/config/welcome.py:426
+#: cogs/config/welcome.py:547 cogs/config/welcome.py:785
+#: cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "無効"
 
@@ -1475,7 +1476,7 @@ msgstr "あなた"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:504 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:505 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "不明"
 
@@ -2136,7 +2137,7 @@ msgstr "サーバー全体: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:177
 #: cogs/community/leveling/level_config_ui.py:833
 #: cogs/community/leveling/level_config_ui.py:839
-#: cogs/config/verification.py:105
+#: cogs/config/tickets/panel.py:122 cogs/config/verification.py:105
 msgid "(deleted)"
 msgstr "(削除済み)"
 
@@ -3513,9 +3514,10 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** を押してください。プレビューはあなたにのみ表示されます。"
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:530 cogs/config/twitch.py:408
-#: cogs/config/verification.py:107 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:251
+#: cogs/config/rolemenus.py:530 cogs/config/tickets/panel.py:123
+#: cogs/config/twitch.py:408 cogs/config/verification.py:107
+#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
+#: cogs/moderation/modlog.py:251
 msgid "*Not set.*"
 msgstr "*未設定。*"
 
@@ -5085,6 +5087,7 @@ msgstr "すでに認証済みです。"
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "そのロールを付与できません - 私の最上位ロールより上にある可能性があります。"
 
+#: cogs/config/tickets/open.py:165 cogs/config/tickets/open.py:283
 #: cogs/config/verification.py:72
 msgid "Something went wrong, please try again."
 msgstr "問題が発生しました。もう一度お試しください。"
@@ -5256,6 +5259,160 @@ msgstr "ウェルカムメッセージをオフにしました。"
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
+
+#: cogs/config/tickets/open.py:101 cogs/config/tickets/open.py:125
+msgid "Open a ticket"
+msgstr "チケットを開く"
+
+#: cogs/config/tickets/open.py:103
+msgid "What do you need help with?"
+msgstr "どんなお手伝いが必要ですか？"
+
+#: cogs/config/tickets/open.py:104
+msgid "A short summary - staff will read it first."
+msgstr "簡単な概要です。スタッフが最初に目を通します。"
+
+#: cogs/config/tickets/open.py:137 cogs/config/tickets/open.py:206
+msgid "Tickets only work inside a server."
+msgstr "チケットはサーバー内でのみ利用できます。"
+
+#: cogs/config/tickets/open.py:146 cogs/config/tickets/open.py:215
+msgid "You cannot use this."
+msgstr "これは使用できません。"
+
+#: cogs/config/tickets/open.py:153 cogs/config/tickets/open.py:226
+msgid "Tickets are not set up here."
+msgstr "このサーバーではチケットが設定されていません。"
+
+#: cogs/config/tickets/open.py:172 cogs/config/tickets/open.py:250
+msgid "I am already opening a ticket for you - one moment."
+msgstr "すでにチケットを開いています。少々お待ちください。"
+
+#: cogs/config/tickets/open.py:189
+#, python-brace-format
+msgid "You already have {count} ticket open here. Close it before opening another."
+msgid_plural "You already have {count} tickets open here. Close one before opening another."
+msgstr[0] "すでにここで{count}件のチケットを開いています。新しく開く前に閉じてください。"
+msgstr[1] "すでにここで{count}件のチケットを開いています。新しく開く前に閉じてください。"
+
+#: cogs/config/tickets/open.py:242
+#, python-brace-format
+msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
+msgstr "{channel} で権限（{permissions}）が不足しているため、チケットを開けません。サーバー管理者に伝えてください。"
+
+#: cogs/config/tickets/open.py:274
+msgid "I could not create the ticket, please try again."
+msgstr "チケットを作成できませんでした。もう一度お試しください。"
+
+#: cogs/config/tickets/open.py:305
+#, python-brace-format
+msgid "Ticket #{number} opened: {thread}"
+msgstr "チケット #{number} を開きました: {thread}"
+
+#: cogs/config/tickets/open.py:330
+#, python-brace-format
+msgid "Ticket #{number}"
+msgstr "チケット #{number}"
+
+#: cogs/config/tickets/open.py:331
+msgid "*No subject given.*"
+msgstr "*件名はありません。*"
+
+#: cogs/config/tickets/open.py:335
+#, python-brace-format
+msgid "Opened by {user}"
+msgstr "{user} が開きました"
+
+#: cogs/config/tickets/panel.py:77
+#, python-brace-format
+msgid "Support tickets | {guild}"
+msgstr "サポートチケット | {guild}"
+
+#: cogs/config/tickets/panel.py:84
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Panel channel:** {channel}\n"
+"**Support role:** {role}\n"
+"**Log channel:** {log}\n"
+"**Open tickets per member:** {cap}\n"
+"**Inactivity window:** {hours}h"
+msgstr ""
+"**ステータス:** {status}\n"
+"**パネルチャンネル:** {channel}\n"
+"**サポートロール:** {role}\n"
+"**ログチャンネル:** {log}\n"
+"**メンバーごとの上限:** {cap}\n"
+"**非アクティブ期間:** {hours}時間"
+
+#: cogs/config/tickets/panel.py:104
+msgid "Use `/ticket setup` to turn tickets on."
+msgstr "`/ticket setup` でチケットを有効にしてください。"
+
+#: cogs/config/tickets/panel.py:186
+#, python-brace-format
+msgid "I need these permissions in {channel} first: {permissions}."
+msgstr "まず {channel} で次の権限が必要です: {permissions}"
+
+#: cogs/config/tickets/panel.py:239
+msgid "Support tickets"
+msgstr "サポートチケット"
+
+#: cogs/config/tickets/panel.py:243
+msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
+msgstr "お困りですか？下のボタンを押すと、あなたとスタッフだけのプライベートスレッドを開きます。"
+
+#: cogs/config/tickets/panel.py:255
+#, python-brace-format
+msgid "I could not post the panel in {channel}."
+msgstr "{channel} にパネルを投稿できませんでした。"
+
+#: cogs/config/tickets/panel.py:261
+#, python-brace-format
+msgid "Tickets are on - the panel is up in {channel}. {jump}"
+msgstr "チケットがオンになりました。パネルは {channel} にあります。{jump}"
+
+#: cogs/config/tickets/panel.py:291
+#, python-brace-format
+msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
+msgstr "サポートロール: {role} | ログチャンネル: {log} | setup では指定したオプションのみ変更されます。"
+
+#: cogs/config/tickets/panel.py:304
+#, python-brace-format
+msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
+msgstr "ご注意: {role} には {channel} で {permissions} がありません。チケットはプライベートスレッドのため、そのチャンネルで「スレッドの管理」権限がないとスタッフは閲覧できません。この権限がないと、開けないチケットにメンションされてしまいます。"
+
+#: cogs/config/tickets/panel.py:340
+msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
+msgstr "チケットはオフになりました。すでに開いているスレッドはそのまま残り、パネルのボタンには「チケットが設定されていません」と表示されます。"
+
+#: cogs/config/tickets/preflight.py:73
+msgid "View Channel"
+msgstr "チャンネルを見る"
+
+#: cogs/config/tickets/preflight.py:74
+msgid "Send Messages"
+msgstr "メッセージを送信"
+
+#: cogs/config/tickets/preflight.py:75
+msgid "Embed Links"
+msgstr "埋め込みリンク"
+
+#: cogs/config/tickets/preflight.py:76
+msgid "Create Private Threads"
+msgstr "プライベートスレッドを作成"
+
+#: cogs/config/tickets/preflight.py:77
+msgid "Send Messages in Threads"
+msgstr "スレッドでメッセージを送信"
+
+#: cogs/config/tickets/preflight.py:78
+msgid "Manage Threads"
+msgstr "スレッドの管理"
+
+#: cogs/config/tickets/preflight.py:79
+msgid "Read Message History"
+msgstr "メッセージ履歴を読む"
 
 #: cogs/fun/fun.py:51 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
@@ -8079,56 +8236,56 @@ msgstr "キック、BAN、警告、自動モデレーション、モデレーシ
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "ウェルカムメッセージ、スターボード、カスタムコマンドなど。"
 
-#: cogs/system/help.py:127
+#: cogs/system/help.py:128
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "リアクションロール、ロールメニュー、ボタンロール、認証。"
 
-#: cogs/system/help.py:135
+#: cogs/system/help.py:136
 msgid "Anything not yet sorted into a category."
 msgstr "まだカテゴリに分類されていないもの。"
 
-#: cogs/system/help.py:237 cogs/system/help.py:284 cogs/system/help.py:297
-#: cogs/system/help.py:777
+#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
+#: cogs/system/help.py:778
 msgid "No description provided."
 msgstr "説明はありません。"
 
-#: cogs/system/help.py:289 cogs/system/help.py:781
+#: cogs/system/help.py:290 cogs/system/help.py:782
 msgid "Aliases"
 msgstr "エイリアス"
 
-#: cogs/system/help.py:302
+#: cogs/system/help.py:303
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} <subcommand>` を使ってください。"
 
-#: cogs/system/help.py:307
+#: cogs/system/help.py:308
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} 個のサブコマンド"
 msgstr[1] "{n} 個のサブコマンド"
 
-#: cogs/system/help.py:312
+#: cogs/system/help.py:313
 msgid "Subcommands"
 msgstr "サブコマンド"
 
-#: cogs/system/help.py:341
+#: cogs/system/help.py:342
 msgid "Jump to a category..."
 msgstr "カテゴリに移動..."
 
-#: cogs/system/help.py:410 cogs/system/help.py:539 cogs/system/help.py:558
+#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} 個のコマンド"
 msgstr[1] "{n} 個のコマンド"
 
-#: cogs/system/help.py:471
+#: cogs/system/help.py:472
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • ヘルプ"
 
-#: cogs/system/help.py:473
+#: cogs/system/help.py:474
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -8139,19 +8296,19 @@ msgstr ""
 "\n"
 "メニューでカテゴリに移動したり、矢印で閲覧したり、特定のコマンドは `{prefix}help <command>` で確認してください。"
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Enabled ✅"
 msgstr "有効 ✅"
 
-#: cogs/system/help.py:499
+#: cogs/system/help.py:500
 msgid "Disabled ❌"
 msgstr "無効 ❌"
 
-#: cogs/system/help.py:507
+#: cogs/system/help.py:508
 msgid "🏠 Server"
 msgstr "🏠 サーバー"
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -8162,66 +8319,66 @@ msgstr ""
 "メンバー: **{members}**\n"
 "レベリング: {leveling}"
 
-#: cogs/system/help.py:522
+#: cogs/system/help.py:523
 msgid "🏠 Direct Messages"
 msgstr "🏠 ダイレクトメッセージ"
 
-#: cogs/system/help.py:524
+#: cogs/system/help.py:525
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "デフォルトのプレフィックス: `{prefix}`"
 
-#: cogs/system/help.py:550
+#: cogs/system/help.py:551
 msgid "📚 Categories"
 msgstr "📚 カテゴリ"
 
-#: cogs/system/help.py:556
+#: cogs/system/help.py:557
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{categories} にわたる {commands} • メニューや矢印で探索してください"
 
-#: cogs/system/help.py:562
+#: cogs/system/help.py:563
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} 個のカテゴリー"
 msgstr[1] "{n} 個のカテゴリー"
 
-#: cogs/system/help.py:571
+#: cogs/system/help.py:572
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "カテゴリ {current}/{total} • 詳細は {prefix}help <command>"
 
-#: cogs/system/help.py:577
+#: cogs/system/help.py:578
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...他にもコマンドがあります。`{prefix}help <command>` を使って確認してください。"
 
-#: cogs/system/help.py:594
+#: cogs/system/help.py:595
 msgid "No commands available."
 msgstr "利用可能なコマンドがありません。"
 
-#: cogs/system/help.py:659
+#: cogs/system/help.py:660
 msgid "Something went wrong opening the help menu."
 msgstr "ヘルプメニューを開く際に問題が発生しました。"
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Collapse subcommands"
 msgstr "サブコマンドを折りたたむ"
 
-#: cogs/system/help.py:728
+#: cogs/system/help.py:729
 msgid "Expand subcommands"
 msgstr "サブコマンドを展開する"
 
-#: cogs/system/help.py:745
+#: cogs/system/help.py:746
 msgid "Something went wrong updating that preference."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/system/help.py:761 cogs/system/help.py:801
+#: cogs/system/help.py:762 cogs/system/help.py:802
 msgid "Help"
 msgstr "ヘルプ"
 
-#: cogs/system/help.py:763
+#: cogs/system/help.py:764
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "コマンドの詳細は `{prefix}help <command>` を使ってください。"
