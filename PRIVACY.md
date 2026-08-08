@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: August 3, 2026_
+_Last updated: August 8, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -45,6 +45,12 @@ the collected aggregates immediately.
 command; `?mydata deleteavatars` permanently deletes yours and disables future
 tracking for you.
 
+**Top.gg votes**: if you vote for the bot on top.gg, top.gg tells us that you
+did. We store your user ID with the time of your latest vote, your consecutive
+vote streak and your lifetime vote count, which is what lets a vote grant a
+temporary XP bonus. Nothing else about the vote is stored, and we never poll
+top.gg to find out who has voted.
+
 **Content you ask us to keep**: reminder texts, music favorites and playlists.
 Kept until you delete them.
 
@@ -76,6 +82,10 @@ the same deletion schedule on restore.
 - Dashboard request logs (your own actions on the web dashboard): 30 days after
   completion.
 - Anonymous command-usage aggregates: 400 days.
+- Top.gg vote record: kept until you delete it. There is no automatic window,
+  because the record IS the streak and the lifetime count it exists to show;
+  ageing it out would quietly take a reward away. One row per voter, deleted in
+  full by `?mydata deleteprofile`.
 - Server-scoped data (configuration, moderation records, leveling) is purged on
   a retention schedule after the bot is removed from a server.
 
@@ -85,7 +95,8 @@ the same deletion schedule on restore.
   the bot holds about you (rate-limited to once per hour). Also available from
   the web dashboard.
 - `?mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
-  accounts, visibility choices, and collected presence data.
+  accounts, visibility choices, collected presence data, and your top.gg vote
+  record.
 - `?mydata deleteavatars` - permanently delete your avatar history and disable
   future tracking.
 - `/connections unlink` - unlink an external account (removes its data and

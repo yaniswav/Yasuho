@@ -15,10 +15,14 @@ fakes for the four things it owns:
   cog's credit_voice_levelup seam) and the on_ready one-shot seeding.
 """
 
+import datetime
 import types
+
+import discord
 
 from cogs.community.leveling import engine as leveling
 from cogs.community.leveling import voice_xp
+from cogs.community.leveling.leveling import Leveling
 from cogs.community.leveling.voice_xp import VoiceXP, _VoiceSession
 
 
@@ -64,10 +68,20 @@ class _Guild:
 class _FakeLeveling:
     """Stand-in for the Leveling cog's cross-cog surface the VoiceXP cog reads."""
 
-    def __init__(self, configs=None, snapshots=None, multiplier_snapshots=None):
+    def __init__(
+        self,
+        configs=None,
+        snapshots=None,
+        multiplier_snapshots=None,
+        vote_boosts=None,
+    ):
         self._configs = configs or {}
         self._snapshots = snapshots or {}
         self._multiplier_snapshots = multiplier_snapshots or {}
+        # V1: user_id -> boost expiry, the same map the real cog keeps. Empty by
+        # default, so every pre-existing test still describes a bot where nobody
+        # has voted and the sweep's rate is untouched.
+        self._vote_boosts = dict(vote_boosts or {})
         self.levelup_calls = []
         self.prune_calls = []  # L6: (guild_id, now) per maybe_prune_expired_periods call
 
@@ -81,6 +95,12 @@ class _FakeLeveling:
         return self._multiplier_snapshots.get(
             guild_id, leveling.EMPTY_MULTIPLIER_SNAPSHOT
         )
+
+    # V1: the REAL method, borrowed off the class rather than re-implemented.
+    # It only ever touches self._vote_boosts and engine.apply_multiplier, so the
+    # fake gets the genuine boost maths (and the genuine delete-on-read) and
+    # cannot drift from the message path this sweep is supposed to match.
+    apply_vote_boost = Leveling.apply_vote_boost
 
     async def credit_voice_levelup(self, **kwargs):
         self.levelup_calls.append(kwargs)
@@ -206,7 +226,8 @@ def test_start_session_evicts_oldest_at_the_cap(fake_pool, monkeypatch):
 # ---------------------------------------------------------------------------
 def _wire_sweep(fake_pool, *, rate=5, humans=2, channel_id=10, category_id=None,
                 self_deaf=False, self_mute=False, afk=False, snapshot=None,
-                multiplier_snapshot=None, returned_xp=11000, roles=()):
+                multiplier_snapshot=None, returned_xp=11000, roles=(),
+                vote_boosts=None):
     """Build a one-guild, one-eligible-member scenario. Returns (cog, lvl, member,
     session). The member shares channel `channel_id` with `humans` non-bot
     people. `returned_xp` is the batch RETURNING total for that member."""
@@ -231,6 +252,7 @@ def _wire_sweep(fake_pool, *, rate=5, humans=2, channel_id=10, category_id=None,
         configs={1: _cfg(rate=rate)},
         snapshots=snapshots,
         multiplier_snapshots=multiplier_snapshots,
+        vote_boosts=vote_boosts,
     )
     bot = _FakeBot(lvl, fake_pool, guilds=[guild])
     fake_pool.fetch_return = [
@@ -408,6 +430,80 @@ async def test_sweep_trivial_multiplier_snapshot_leaves_the_rate_unchanged(
 
     _method, _query, args = _fetch_calls(fake_pool)[-1]
     assert args[:3] == ([1], [2], [25])  # unaffected: 5 minutes x 5 rate
+
+
+# ---------------------------------------------------------------------------
+# The sweep: the top.gg vote boost (V1), applied to the same per-minute rate.
+# ---------------------------------------------------------------------------
+def _live(hours=12):
+    return discord.utils.utcnow() + datetime.timedelta(hours=hours)
+
+
+async def test_sweep_scales_a_voters_rate(fake_pool):
+    """A voter's boost is worth the same in voice as in chat: applied ONCE to
+    the per-minute rate, exactly like the guild multiplier beside it."""
+    cog, _lvl, _m, _g = _wire_sweep(fake_pool, rate=10, vote_boosts={2: _live()})
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args[:3] == ([1], [2], [75])  # 5 minutes x (10 rate x 1.5 vote)
+
+
+async def test_sweep_stacks_the_vote_boost_on_top_of_the_guild_multiplier(
+    fake_pool,
+):
+    snap = leveling.MultiplierSnapshot(global_factor=2.0)
+    cog, _lvl, _m, _g = _wire_sweep(
+        fake_pool, rate=10, multiplier_snapshot=snap, vote_boosts={2: _live()}
+    )
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args[:3] == ([1], [2], [150])  # 5 x ((10 x 2.0 guild) x 1.5 vote)
+
+
+async def test_sweep_leaves_a_non_voters_rate_alone(fake_pool):
+    """Someone else's boost changes nothing for this member."""
+    cog, _lvl, _m, _g = _wire_sweep(
+        fake_pool, rate=10, vote_boosts={4242: _live()}
+    )
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args[:3] == ([1], [2], [50])  # 5 minutes x 10 rate, untouched
+
+
+async def test_sweep_drops_an_expired_boost_and_credits_the_plain_rate(fake_pool):
+    """Delete-on-read works from the voice path too, so a session that never
+    speaks still stops holding a lapsed entry."""
+    lapsed = {2: discord.utils.utcnow() - datetime.timedelta(minutes=1)}
+    cog, lvl, _m, _g = _wire_sweep(fake_pool, rate=10, vote_boosts=lapsed)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[-1]
+    assert args[:3] == ([1], [2], [50])
+    assert lvl._vote_boosts == {}
+
+
+async def test_sweep_keeps_a_muted_zone_muted_for_a_voter(fake_pool):
+    """Same ordering rule as the message path: the guild's 0.0 wins."""
+    snap = leveling.MultiplierSnapshot(global_factor=0.0)
+    cog, _lvl, _m, _g = _wire_sweep(
+        fake_pool, rate=10, multiplier_snapshot=snap, vote_boosts={2: _live()}
+    )
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    assert _fetch_calls(fake_pool) == []  # nothing credited, nothing written
 
 
 # ---------------------------------------------------------------------------

@@ -723,6 +723,12 @@ class Profiles(commands.Cog):
             # theirs is already rejected - see presence.forget_collected_presence
             # for why this is best-effort and what backs it up.
             presence.forget_collected_presence(self.bot, ctx.author.id)
+            # NOT the top.gg vote ledger, and nothing to un-arm for it either.
+            # This command has no confirmation step, so it stays on the narrow
+            # list (privacy.PROFILE_DELETE_QUERIES): a member resetting their
+            # bio must not silently lose an earned vote streak they cannot get
+            # back. `?mydata deleteprofile` is the verb that erases that, behind
+            # a button that says so.
 
             embed = discord.Embed(title=_("Profile cleared"), colour=random_colour())
             embed.add_field(name=_("Your profile has been cleared."), value="​")

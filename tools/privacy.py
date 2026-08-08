@@ -29,9 +29,11 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # the shared export limiter keeps - see claim_export_slot) and
 # `dashboard_requests` (the user-scoped rows of the dashboard action queue: what
 # was asked, when, and how it ended).
+# v5 added `topgg_votes`: the vote ledger (when you last voted for the bot, your
+# streak, your lifetime count and the deadline of the XP boost it armed).
 # Additive, but a consumer that keys on the version must be able to tell them
 # apart.
-EXPORT_VERSION = 4
+EXPORT_VERSION = 5
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -52,6 +54,39 @@ PROFILE_DELETE_QUERIES = (
     # The pre-migration table. Still holds the same gamer IDs until it is
     # dropped, so forgetting a profile must clear it too.
     ("profiles", "DELETE FROM profiles WHERE user_id = $1"),
+)
+
+# THE WIDER list: everything a profile is, PLUS the user-scoped records that are
+# not profile data but are still "about you". Behind `?mydata deleteprofile`
+# (delete_user_data) and nothing else.
+#
+# WHY TWO LISTS. The narrow one above is reached by `/profile clear`, which has
+# no confirmation step at all - it deletes inside a `ctx.typing()`. That is fine
+# for data the user typed in and can type again, and it is the whole of what
+# that command promises ("clear your entire profile, including who could see
+# what"). It is NOT fine for a record the user cannot recreate: a member who
+# runs `profile clear` to reset a bio must not silently lose an earned vote
+# streak and a lifetime count with no undo and no warning. So anything
+# unrecreatable goes here instead, on the path that asks first and says what it
+# is about to destroy.
+#
+# The privacy invariant is untouched by the split: every table below is still
+# user-erasable on request, still exported, and `?mydata deleteprofile` is the
+# erasure verb PRIVACY.md names.
+USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
+    # The top.gg vote ledger. Not "profile" data in the fields-and-visibility
+    # sense, but it is a per-user record of a behaviour ("this person votes for
+    # us, and last did on this date") with no other way out, so a forget that
+    # left it behind would not be a forget.
+    # This is the OPPOSITE call from mydata_export_cooldown, which is exported
+    # but deliberately NOT deleted, and the difference is the direction of the
+    # gain: deleting the limiter row would HAND the user a fresh export slot,
+    # while deleting this one only ever costs them (streak back to 1, boost
+    # gone). There is nothing here to game.
+    # The row is the durable half; the live XP boost is an in-memory entry on
+    # the Leveling cog, dropped by cogs/community/votes.forget_vote_boost at the
+    # one call site of delete_user_data.
+    ("topgg_votes", "DELETE FROM topgg_votes WHERE user_id = $1"),
 )
 
 
@@ -223,6 +258,14 @@ async def collect_user_export(pool, user_id):
         "SELECT last_export_at FROM mydata_export_cooldown WHERE user_id = $1",
         user_id,
     )
+    # The top.gg vote ledger: the whole row, because every column of it is a
+    # fact about this user and none of it is a credential. Absent row = never
+    # voted, stated as null below rather than as an invented zero.
+    votes = await pool.fetchrow(
+        "SELECT last_vote_at, streak, total_votes, boost_expires_at "
+        "FROM topgg_votes WHERE user_id = $1",
+        user_id,
+    )
     # The dashboard -> bot queue, USER-scoped rows ONLY (WHERE user_id, never
     # WHERE id): "you asked for this, at this time, and here is how it ended".
     # Guild-scoped rows of the same table belong to the guild, are gated by
@@ -329,6 +372,7 @@ async def collect_user_export(pool, user_id):
         },
         "afk": dict(afk) if afk else None,
         "data_export_requests": dict(export_slot) if export_slot else None,
+        "topgg_votes": dict(votes) if votes else None,
         # asyncpg hands JSONB back as text (no codec on the pool), so ``result``
         # is decoded rather than embedded as a quoted blob.
         "dashboard_requests": [
@@ -450,21 +494,46 @@ def build_export_archives(
     return archives
 
 
-async def delete_user_profile(pool, user_id):
-    """Erase a user's whole profile in one transaction; return per-table counts.
+async def _delete_tables(pool, user_id, queries):
+    """Run one erasure list in ONE transaction; return per-table row counts.
 
-    Every table in :data:`PROFILE_DELETE_QUERIES` dies together or none does, so
-    a half-forgotten profile (say the fields gone but the visibility rows, or a
-    linked Steam handle, left behind) cannot exist. Nothing is cached in memory,
-    so there is no invalidation to do afterwards.
+    Every table in the list dies together or none does, so a half-forgotten user
+    (say the profile fields gone but the visibility rows, or a linked Steam
+    handle, left behind) cannot exist.
     """
     counts = {}
     async with pool.acquire() as connection:
         async with connection.transaction():
-            for table, query in PROFILE_DELETE_QUERIES:
+            for table, query in queries:
                 status = await connection.execute(query, user_id)
                 counts[table] = affected_rows(status)
     return counts
+
+
+async def delete_user_profile(pool, user_id):
+    """Erase a user's whole PROFILE in one transaction; per-table counts.
+
+    :data:`PROFILE_DELETE_QUERIES` only - the data the user typed in and can
+    type again. This is what `/profile clear` runs, and that command asks for no
+    confirmation, so the list it reaches must never grow to hold something its
+    owner cannot recreate. Nothing is cached in memory, so there is no
+    invalidation to do afterwards.
+    """
+    return await _delete_tables(pool, user_id, PROFILE_DELETE_QUERIES)
+
+
+async def delete_user_data(pool, user_id):
+    """Erase everything /mydata promises, in one transaction; per-table counts.
+
+    :data:`USER_DELETE_QUERIES`: the profile, plus the user-scoped records that
+    are not profile data (today, the top.gg vote ledger). The wider, one-way
+    verb, and the reason it is a separate function is that its only caller sits
+    behind a confirmation button that names what is about to be destroyed.
+
+    In-memory twins of the deleted rows (the presence opt-in set, the live XP
+    boost) are dropped by that caller, right after this returns.
+    """
+    return await _delete_tables(pool, user_id, USER_DELETE_QUERIES)
 
 
 async def delete_user_avatar_history(pool, user_id):

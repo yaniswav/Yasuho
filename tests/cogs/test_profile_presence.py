@@ -1122,10 +1122,13 @@ async def test_mydata_deleteprofile_disarms_the_collector(monkeypatch):
     """The same erasure, offered from the privacy surface."""
     collector = _armed_collector()
 
-    async def delete_user_profile(pool, user_id):
+    # The WIDE verb: /mydata erases the profile AND the records that are not
+    # profile data (the top.gg vote ledger), which `/profile clear` above does
+    # not - see privacy.USER_DELETE_QUERIES.
+    async def delete_user_data(pool, user_id):
         return {"user_profiles": 1}
 
-    monkeypatch.setattr(privacy, "delete_user_profile", delete_user_profile)
+    monkeypatch.setattr(privacy, "delete_user_data", delete_user_data)
     view = usersettings.ProfileDeletionView(
         types.SimpleNamespace(bot=_bot_with(collector)), OWNER
     )

@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from cogs.community import votes
 from cogs.community.profile import presence
 from tools import i18n, privacy, rendering, settings
 from tools import mangadex as md
@@ -234,7 +235,10 @@ class ProfileDeletionView(AuthorView):
         self._running = True
         await interaction.response.defer()
         try:
-            await privacy.delete_user_profile(
+            # The WIDE erasure (privacy.USER_DELETE_QUERIES), not the narrow one
+            # `/profile clear` runs: this is the confirmed, one-way verb, and
+            # the message above it names the vote record it also destroys.
+            await privacy.delete_user_data(
                 self.cog.bot.db_pool, self.author_id
             )
             # The marker row that armed presence collection died with the rest
@@ -243,6 +247,11 @@ class ProfileDeletionView(AuthorView):
             # themselves. Best effort, and the presence flush re-checks the row
             # anyway - see presence.forget_collected_presence.
             presence.forget_collected_presence(self.cog.bot, self.author_id)
+            # Same shape, same reason, for the top.gg vote boost: the ledger row
+            # died with the rest, but the boost the XP hot path reads is an
+            # in-memory entry on the Leveling cog and would otherwise keep
+            # boosting someone who just erased themselves.
+            votes.forget_vote_boost(self.cog.bot, self.author_id)
             self.stop()
             for child in self.children:
                 child.disabled = True
@@ -250,7 +259,9 @@ class ProfileDeletionView(AuthorView):
                 content=_(
                     "Your profile is gone: fields, gaming IDs and every "
                     "visibility choice."
-                ),
+                )
+                + "\n"
+                + _("Your top.gg vote record is gone too."),
                 view=self,
             )
         except Exception:
@@ -686,11 +697,21 @@ class UserSettings(commands.Cog):
     async def mydata_deleteprofile(self, ctx):
         """Permanently delete your profile, gaming IDs and visibility choices."""
         view = ProfileDeletionView(self, ctx.author.id)
+        # Two strings, appended rather than one rewritten: the first is the
+        # long-standing warning (already translated in every locale), the second
+        # names the ONE thing this verb destroys that the user cannot recreate
+        # by typing it again. A confirmation that does not name it is not a
+        # confirmation - see privacy.USER_DELETE_QUERIES.
         view.message = await ctx.send(
             _(
                 "This permanently deletes your bio, pronouns, accent colour, "
                 "custom fields, gaming IDs and every choice you made about who "
                 "could see them. This cannot be undone."
+            )
+            + "\n"
+            + _(
+                "It also deletes your top.gg vote record: your vote streak and "
+                "your lifetime vote count start over from zero."
             ),
             view=view,
             ephemeral=ctx.interaction is not None,

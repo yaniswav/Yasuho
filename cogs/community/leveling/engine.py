@@ -485,6 +485,18 @@ def apply_multiplier(value, multiplier):
 MIN_MULTIPLIER_FACTOR = 0.0
 MAX_MULTIPLIER_FACTOR = 5.0
 
+# The top.gg vote boost (V1). It lives beside the guild factors above because it
+# is the same kind of number and goes through the same apply_multiplier rounding
+# - but it is NOT one of them: it is USER-scoped (see Leveling._vote_boosts, fed
+# by cogs/community/votes.py) and is applied AFTER the guild product, on top of
+# whatever that produced. It is deliberately not a per-guild knob: a boost you
+# earned by voting for the bot must be worth the same in every server, and no
+# admin should be able to turn someone else's reward off.
+# 1.5 is chosen to be clearly felt without distorting a leaderboard: a voter who
+# stays voting sits half a step ahead of an equally chatty non-voter, which the
+# XP curve (level**2 * 100) absorbs in a level or two.
+VOTE_BOOST_FACTOR = 1.5
+
 # Same 25-cap precedent as level_rewards / level_no_xp's admin pickers
 # (Discord's own 25-option select limit); counted across every kind
 # (global + channel + role) for a guild, so the "boost remove" picker never

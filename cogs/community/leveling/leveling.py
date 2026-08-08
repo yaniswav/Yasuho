@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import io
 import logging
 import os
@@ -322,6 +323,20 @@ class Leveling(commands.Cog):
         # primary-key lookup rides inside a render already gated by the shared
         # 2-slot image semaphore.
         self._rank_cards: BoundedLRU = BoundedLRU(_RANK_CARD_CACHE_CAP)
+        # Top.gg vote boost (V1): user_id -> the UTC datetime that voter's XP
+        # boost runs out. A PLAIN DICT, not a BoundedLRU like its siblings
+        # above, because eviction here would silently cancel a boost somebody
+        # earned - and it does not need one: entries are self-expiring and only
+        # a real vote ever creates one.
+        # SCALE STORY. Size is bounded by "people who voted for the bot and are
+        # still inside their boost window", plus at most the ones who have voted
+        # since the last sweep - a handful even at thousands of guilds, and each
+        # entry is an int key and a datetime. Three things keep it there: the
+        # boot read below loads ONLY unexpired rows, every read on the two XP
+        # hot paths deletes the entry it finds expired (apply_vote_boost), and
+        # every vote sweeps the whole map before adding its own (note_vote_boost
+        # - the only writer, and rare). No timer, no task, nothing to schedule.
+        self._vote_boosts: dict[int, datetime.datetime] = {}
         # Strong refs to the in-flight season-rollover tasks (S1), so the event
         # loop cannot garbage-collect one mid-flight (core.py's
         # _schedule_startup_backup pattern). Self-bounding: a guild schedules at
@@ -354,6 +369,92 @@ class Leveling(commands.Cog):
             await self.reload_configs()
         except Exception:
             log.exception("Failed to load leveling config")
+        # Its OWN try: a vote-boost read that fails must not cost the whole
+        # guild config map (and vice versa). Leveling works perfectly with an
+        # empty boost map - every voter simply earns the normal amount until
+        # their next vote re-arms them.
+        try:
+            await self.reload_vote_boosts()
+        except Exception:
+            log.exception("Failed to load top.gg vote boosts")
+
+    async def reload_vote_boosts(self):
+        """Prime the vote-boost map with every boost still running (V1).
+
+        A boost outlives a restart because ``topgg_votes.boost_expires_at`` is
+        stored, not derived: whoever was boosted when the process died is
+        boosted again the moment it comes back, for exactly the remaining time.
+
+        Reads ONLY unexpired rows, so the map starts at its true size rather
+        than at "every voter we ever had". Runs during load_extension, i.e.
+        before the gateway delivers a single message, so the hot path never sees
+        a half-filled map; and like reload_configs it builds aside and swaps in
+        one assignment.
+        """
+        rows = await self.bot.db_pool.fetch(
+            "SELECT user_id, boost_expires_at FROM topgg_votes "
+            "WHERE boost_expires_at > now();"
+        )
+        self._vote_boosts = {
+            row["user_id"]: row["boost_expires_at"] for row in rows
+        }
+        log.info("Vote XP boost live for %d voter(s)", len(self._vote_boosts))
+
+    def note_vote_boost(self, user_id, expires_at):
+        """Arm (or extend) a voter's XP boost. The vote cog's ONLY way in.
+
+        Called by cogs/community/votes.py right after the vote is banked, so the
+        boost is live for the voter's very next message - no restart, no poll.
+
+        This is also where the map is swept. It is the only writer and it runs
+        at most once per vote (a person may vote every 12h), so an O(n) pass
+        over a map of at most a few hundred entries is free here and saves both
+        XP hot paths from ever needing more than one dict.get. The alternative -
+        a timer - would be a scheduled task doing nothing 99.99% of the time.
+        """
+        now = discord.utils.utcnow()
+        for uid in [
+            uid for uid, expiry in self._vote_boosts.items() if expiry <= now
+        ]:
+            del self._vote_boosts[uid]
+        self._vote_boosts[user_id] = expires_at
+
+    def forget_vote_boost(self, user_id):
+        """Drop a user's live boost; the erasure seam (V1).
+
+        Reached from cogs/community/votes.forget_vote_boost, which the two
+        profile-erasure paths call after privacy.delete_user_profile has removed
+        the topgg_votes row. Returns whether anything was actually armed, and is
+        idempotent: forgetting a user with no boost is a no-op, not an error.
+        """
+        return self._vote_boosts.pop(user_id, None) is not None
+
+    def apply_vote_boost(self, user_id, amount, now):
+        """Multiply an XP amount by this voter's boost, if one is live (V1).
+
+        THE read shared by both XP paths - the on_message grant and the voice
+        sweep - so the two can never disagree about what a vote is worth. The
+        whole thing is ONE dict.get and a comparison against a ``now`` the
+        caller already had in hand: no await, no DB, no clock read of its own,
+        which is what lets it sit on a path that runs for every message that
+        clears the cooldown.
+
+        Deletes on read when it finds an expired entry: the map is only ever
+        touched from the event loop, so this is safe without a lock, and it
+        means a voter who stops voting stops costing memory the next time they
+        speak rather than at some sweep in the future.
+
+        Returns ``amount`` UNCHANGED for the overwhelming majority (everyone who
+        has not voted), and never returns zero for a positive amount - a vote
+        can only ever help.
+        """
+        expires_at = self._vote_boosts.get(user_id)
+        if expires_at is None:
+            return amount
+        if expires_at <= now:
+            del self._vote_boosts[user_id]
+            return amount
+        return leveling.apply_multiplier(amount, leveling.VOTE_BOOST_FACTOR)
 
     async def reload_configs(self):
         """Load every enabled guild's leveling config into the hot-path map.
@@ -988,6 +1089,17 @@ class Leveling(commands.Cog):
                 # never crosses a level threshold). The cooldown was already
                 # touched above, so this message still counts against it.
                 return
+
+        # Top.gg vote boost (V1): the ONE user-scoped factor in a system that is
+        # otherwise entirely guild-scoped. Deliberately applied HERE, after the
+        # guild maths and after the zero-gain early return above, which fixes
+        # the stacking rule in code: the boost multiplies WHATEVER THE GUILD
+        # PRODUCED, so a guild that muted this channel/role with a 0.0 factor
+        # stays muted for voters too (0 x 1.5 is still 0, and we never even get
+        # here). It can only ever raise a positive grant, never zero one.
+        # Cost on the common path: one dict.get on a map that is empty on a bot
+        # with no live voters. Zero awaits, zero DB - see apply_vote_boost.
+        gain = self.apply_vote_boost(message.author.id, gain, now)
 
         try:
             # L6: a grant credits the lifetime `levels` total AND both period

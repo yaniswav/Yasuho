@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 09:37+0000\n"
+"POT-Creation-Date: 2026-08-08 10:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -456,7 +456,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:412
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:423
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -1244,7 +1244,7 @@ msgstr "Τίτλος για αναζήτηση"
 msgid "Stop tracking a title..."
 msgstr "Διακοπή παρακολούθησης τίτλου..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:236
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:237
 #: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:340
 #: cogs/music/views.py:1310
 msgid "Next"
@@ -1298,7 +1298,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
-#: cogs/community/usersettings.py:228 cogs/community/usersettings.py:292
+#: cogs/community/usersettings.py:229 cogs/community/usersettings.py:303
 #: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "Ακύρωση"
@@ -1666,7 +1666,7 @@ msgstr "-# {count} σε εκκρεμότητα"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 
-#: cogs/community/leveling/leveling.py:229
+#: cogs/community/leveling/leveling.py:230
 #: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:333
 #: cogs/music/views.py:1303
 msgid "Prev"
@@ -1681,114 +1681,118 @@ msgstr "<@{author_id}>, {when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 
-#: cogs/community/usersettings.py:87
+#: cogs/community/usersettings.py:88
 msgid "Level-up announcements"
 msgstr "Ανακοινώσεις ανόδου επιπέδου"
 
-#: cogs/community/usersettings.py:89
+#: cogs/community/usersettings.py:90
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Λάβε ping στη συνομιλία όταν φτάνεις σε νέο επίπεδο."
 
-#: cogs/community/usersettings.py:98
+#: cogs/community/usersettings.py:99
 msgid "Level-up ping"
 msgstr "Ping ανόδου επιπέδου"
 
-#: cogs/community/usersettings.py:101
+#: cogs/community/usersettings.py:102
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
 msgstr "Σε αναφέρει με mention στις ανακοινώσεις ανόδου. Απενεργοποίησέ το για να εμφανίζεσαι χωρίς ping."
 
-#: cogs/community/usersettings.py:108
+#: cogs/community/usersettings.py:109
 msgid "Expanded help"
 msgstr "Εκτεταμένη βοήθεια"
 
-#: cogs/community/usersettings.py:110
+#: cogs/community/usersettings.py:111
 msgid "Show every subcommand inline when you browse help."
 msgstr "Εμφάνιση κάθε υποεντολής inline όταν περιηγείσαι στη βοήθεια."
 
-#: cogs/community/usersettings.py:130
+#: cogs/community/usersettings.py:131
 msgid "Music autoplay"
 msgstr "Αυτόματη αναπαραγωγή μουσικής"
 
-#: cogs/community/usersettings.py:133
+#: cogs/community/usersettings.py:134
 msgid "Keep playing recommended tracks when your music queue runs out. Servers can set their own default, which applies until you pick here."
 msgstr "Συνεχίζει να παίζει προτεινόμενα κομμάτια όταν αδειάσει η ουρά μουσικής σου. Οι διακομιστές μπορούν να ορίσουν τη δική τους προεπιλογή, που ισχύει μέχρι να επιλέξεις εδώ."
 
-#: cogs/community/usersettings.py:145
+#: cogs/community/usersettings.py:146
 msgid "Play search picker"
 msgstr "Επιλογέας αναζήτησης στο play"
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:149
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "Στο /play, διάλεξε ανάμεσα στα κορυφαία αποτελέσματα αντί να παίζει αμέσως το πρώτο."
 
-#: cogs/community/usersettings.py:155
+#: cogs/community/usersettings.py:156
 msgid "Avatar history tracking"
 msgstr "Παρακολούθηση ιστορικού avatar"
 
-#: cogs/community/usersettings.py:158
+#: cogs/community/usersettings.py:159
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "Άφησε τη Yasuho να αποθηκεύει τις μελλοντικές αλλαγές avatar και banner για δημόσιο ιστορικό."
 
-#: cogs/community/usersettings.py:172
+#: cogs/community/usersettings.py:173
 msgid "Chapter alert language"
 msgstr "Γλώσσα ειδοποιήσεων κεφαλαίων"
 
-#: cogs/community/usersettings.py:175
+#: cogs/community/usersettings.py:176
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "Η μετάφραση στην οποία συνδέονται τα DM νέων κεφαλαίων σου, όταν κυκλοφορήσει. Οι αναρτήσεις του διακομιστή ακολουθούν τη γλώσσα του διακομιστή."
 
-#: cogs/community/usersettings.py:180
+#: cogs/community/usersettings.py:181
 msgid "Pick a chapter language..."
 msgstr "Επιλέξτε γλώσσα κεφαλαίου..."
 
-#: cogs/community/usersettings.py:227
+#: cogs/community/usersettings.py:228
 msgid "Delete my profile"
 msgstr "Διαγραφή του προφίλ μου"
 
-#: cogs/community/usersettings.py:251
+#: cogs/community/usersettings.py:260
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Το προφίλ σου έχει εξαφανιστεί: πεδία, gaming IDs και κάθε επιλογή ορατότητας."
 
-#: cogs/community/usersettings.py:260
+#: cogs/community/usersettings.py:264
+msgid "Your top.gg vote record is gone too."
+msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
+
+#: cogs/community/usersettings.py:271
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:270
+#: cogs/community/usersettings.py:281
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:291
+#: cogs/community/usersettings.py:302
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:323
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:334
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:344
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:432
+#: cogs/community/usersettings.py:443
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:436
+#: cogs/community/usersettings.py:447
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1796,15 +1800,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:447
+#: cogs/community/usersettings.py:458
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1813,7 +1817,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:469
+#: cogs/community/usersettings.py:480
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -1822,38 +1826,42 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:483
+#: cogs/community/usersettings.py:494
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:509 cogs/community/usersettings.py:529
-#: cogs/community/usersettings.py:549
+#: cogs/community/usersettings.py:520 cogs/community/usersettings.py:540
+#: cogs/community/usersettings.py:560
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:608
+#: cogs/community/usersettings.py:619
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:671
+#: cogs/community/usersettings.py:682
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:675
+#: cogs/community/usersettings.py:686
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:680
+#: cogs/community/usersettings.py:691
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:691
+#: cogs/community/usersettings.py:707
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:706
+#: cogs/community/usersettings.py:713
+msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
+msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
+
+#: cogs/community/usersettings.py:727
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
 
@@ -1927,7 +1935,7 @@ msgid "Level down"
 msgstr "Πτώση επιπέδου"
 
 #: cogs/community/leveling/level_admin.py:286
-#: cogs/community/leveling/leveling.py:1649 cogs/utility/searchweb.py:144
+#: cogs/community/leveling/leveling.py:1761 cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "Επίπεδο"
 
@@ -2626,17 +2634,17 @@ msgstr "Τα μέλη κρατούν πλέον κάθε ρόλο ανταμοι
 msgid "Reward mode updated"
 msgstr "Η λειτουργία ανταμοιβών ενημερώθηκε"
 
-#: cogs/community/leveling/leveling.py:145
+#: cogs/community/leveling/leveling.py:146
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - επίπεδο **{level}** ({xp} XP)"
 
-#: cogs/community/leveling/leveling.py:151
+#: cogs/community/leveling/leveling.py:152
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:161
+#: cogs/community/leveling/leveling.py:162
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2645,7 +2653,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "Επίπεδο **{level}** - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:168
+#: cogs/community/leveling/leveling.py:169
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2654,80 +2662,80 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling/leveling.py:216
+#: cogs/community/leveling/leveling.py:217
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count} μέλος"
 msgstr[1] "{count} μέλη"
 
-#: cogs/community/leveling/leveling.py:220
+#: cogs/community/leveling/leveling.py:221
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Σελίδα {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1228
+#: cogs/community/leveling/leveling.py:1340
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... και κέρδισε {roles}"
 
-#: cogs/community/leveling/leveling.py:1236
+#: cogs/community/leveling/leveling.py:1348
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
 
-#: cogs/community/leveling/leveling.py:1243
+#: cogs/community/leveling/leveling.py:1355
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
 
-#: cogs/community/leveling/leveling.py:1644
+#: cogs/community/leveling/leveling.py:1756
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Κατάταξη | {name}"
 
-#: cogs/community/leveling/leveling.py:1648 cogs/utility/searchweb.py:141
+#: cogs/community/leveling/leveling.py:1760 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "Κατάταξη"
 
-#: cogs/community/leveling/leveling.py:1650
+#: cogs/community/leveling/leveling.py:1762
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1652
+#: cogs/community/leveling/leveling.py:1764
 msgid "XP for next level"
 msgstr "XP για το επόμενο επίπεδο"
 
-#: cogs/community/leveling/leveling.py:1680
+#: cogs/community/leveling/leveling.py:1792
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Πίνακας κατάταξης | {guild}"
 
-#: cogs/community/leveling/leveling.py:1685
+#: cogs/community/leveling/leveling.py:1797
 msgid "No one has earned any XP yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
 
-#: cogs/community/leveling/leveling.py:1699
-#: cogs/community/leveling/leveling.py:1754
+#: cogs/community/leveling/leveling.py:1811
+#: cogs/community/leveling/leveling.py:1866
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Χρήστης {uid}"
 
-#: cogs/community/leveling/leveling.py:1733
+#: cogs/community/leveling/leveling.py:1845
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Εβδομαδιαία κατάταξη | {guild}"
 
-#: cogs/community/leveling/leveling.py:1734
+#: cogs/community/leveling/leveling.py:1846
 msgid "No one has earned any XP this week yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP αυτή την εβδομάδα ακόμα!"
 
-#: cogs/community/leveling/leveling.py:1736
+#: cogs/community/leveling/leveling.py:1848
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Μηνιαία κατάταξη | {guild}"
 
-#: cogs/community/leveling/leveling.py:1739
+#: cogs/community/leveling/leveling.py:1851
 msgid "No one has earned any XP this month yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP αυτόν τον μήνα ακόμα!"
 
@@ -2896,11 +2904,11 @@ msgstr "Κάνε κλικ παρακάτω για να επεξεργαστεί�
 msgid "Failed to clear your profile, please try again later."
 msgstr "Αποτυχία εκκαθάρισης του προφίλ σου, δοκίμασε ξανά αργότερα."
 
-#: cogs/community/profile/cog.py:727
+#: cogs/community/profile/cog.py:733
 msgid "Profile cleared"
 msgstr "Το προφίλ εκκαθαρίστηκε"
 
-#: cogs/community/profile/cog.py:728
+#: cogs/community/profile/cog.py:734
 msgid "Your profile has been cleared."
 msgstr "Το προφίλ σου εκκαθαρίστηκε."
 
@@ -7732,6 +7740,8 @@ msgstr "Ημερολογιακές ημέρες UTC που τελειώνουν 
 msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
 msgstr "Καταγράφεται από {date} ({days} ημέρα(-ες)): το μεγαλύτερο παράθυρο δεν είναι ακόμη πλήρες."
 
+#. Translators: the seven weekday abbreviations, Monday first. They label
+#. hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
 #: cogs/system/botstats.py:855
 msgid "Mon"
 msgstr "Δευ"

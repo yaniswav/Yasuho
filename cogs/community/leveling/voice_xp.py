@@ -247,7 +247,10 @@ class VoiceXP(commands.Cog):
 
         snapshots: dict[int, object] = {}  # per-guild no-xp snapshot memo
         multiplier_snapshots: dict[int, object] = {}  # per-guild multiplier memo
-        wall_now = discord.utils.utcnow()  # for the multiplier event check only
+        # Wall clock, read ONCE per sweep and shared by everything in the loop
+        # that needs one: the multiplier event window and the vote-boost expiry
+        # check (V1).
+        wall_now = discord.utils.utcnow()
         credits: list[tuple[int, int, int]] = []  # (guild_id, user_id, gain)
         # (guild_id, user_id) -> (member, channel, config, gain) for level-up routing.
         pending: dict[tuple[int, int], tuple] = {}
@@ -325,6 +328,15 @@ class VoiceXP(commands.Cog):
                         wall_now,
                     )
                     rate = leveling.apply_multiplier(rate, multiplier)
+                # Top.gg vote boost (V1): the same seam the message path uses
+                # (Leveling.apply_vote_boost - one dict.get, no await, no DB),
+                # so a voter's boost is worth exactly the same in voice as in
+                # chat. Applied to the RATE and AFTER the guild multiplier for
+                # both of the reasons the block above already gives: rounding
+                # happens once per minute rather than once per aggregated tick,
+                # and the boost multiplies whatever the guild's own maths
+                # produced (a guild that muted this channel keeps it muted).
+                rate = leveling_cog.apply_vote_boost(user_id, rate, wall_now)
 
                 gain, consumed = leveling.voice_credit(
                     now - session.last_credit,

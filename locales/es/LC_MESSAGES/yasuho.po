@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 09:37+0000\n"
+"POT-Creation-Date: 2026-08-08 10:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -456,7 +456,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:412
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:423
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -1244,7 +1244,7 @@ msgstr "Título a buscar"
 msgid "Stop tracking a title..."
 msgstr "Dejar de seguir un título..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:236
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:237
 #: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:340
 #: cogs/music/views.py:1310
 msgid "Next"
@@ -1298,7 +1298,7 @@ msgstr "Eliminar"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
-#: cogs/community/usersettings.py:228 cogs/community/usersettings.py:292
+#: cogs/community/usersettings.py:229 cogs/community/usersettings.py:303
 #: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1666,7 +1666,7 @@ msgstr "-# {count} pendientes"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Página {page}/{pages} - {count} pendientes"
 
-#: cogs/community/leveling/leveling.py:229
+#: cogs/community/leveling/leveling.py:230
 #: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:333
 #: cogs/music/views.py:1303
 msgid "Prev"
@@ -1681,114 +1681,118 @@ msgstr "&lt;@{author_id}&gt;, {when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Toca el botón de abajo para crear un recordatorio."
 
-#: cogs/community/usersettings.py:87
+#: cogs/community/usersettings.py:88
 msgid "Level-up announcements"
 msgstr "Anuncios de subida de nivel"
 
-#: cogs/community/usersettings.py:89
+#: cogs/community/usersettings.py:90
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Recibe una mención en el chat cuando alcances un nuevo nivel."
 
-#: cogs/community/usersettings.py:98
+#: cogs/community/usersettings.py:99
 msgid "Level-up ping"
 msgstr "Ping de subida de nivel"
 
-#: cogs/community/usersettings.py:101
+#: cogs/community/usersettings.py:102
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
 msgstr "Te menciona en los anuncios de subida de nivel. Desactívalo para aparecer sin ping."
 
-#: cogs/community/usersettings.py:108
+#: cogs/community/usersettings.py:109
 msgid "Expanded help"
 msgstr "Ayuda ampliada"
 
-#: cogs/community/usersettings.py:110
+#: cogs/community/usersettings.py:111
 msgid "Show every subcommand inline when you browse help."
 msgstr "Muestra todos los subcomandos en línea al navegar por la ayuda."
 
-#: cogs/community/usersettings.py:130
+#: cogs/community/usersettings.py:131
 msgid "Music autoplay"
 msgstr "Reproducción automática de música"
 
-#: cogs/community/usersettings.py:133
+#: cogs/community/usersettings.py:134
 msgid "Keep playing recommended tracks when your music queue runs out. Servers can set their own default, which applies until you pick here."
 msgstr "Sigue reproduciendo pistas recomendadas cuando tu cola de música se vacía. Los servidores pueden definir su propio valor por defecto, que se aplica hasta que elijas aquí."
 
-#: cogs/community/usersettings.py:145
+#: cogs/community/usersettings.py:146
 msgid "Play search picker"
 msgstr "Selector de búsqueda en play"
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:149
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "En /play, elige entre los mejores resultados en lugar de poner el primero al instante."
 
-#: cogs/community/usersettings.py:155
+#: cogs/community/usersettings.py:156
 msgid "Avatar history tracking"
 msgstr "Seguimiento del historial de avatares"
 
-#: cogs/community/usersettings.py:158
+#: cogs/community/usersettings.py:159
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "Deja que Yasuho guarde los futuros cambios de avatar y banner para el historial público."
 
-#: cogs/community/usersettings.py:172
+#: cogs/community/usersettings.py:173
 msgid "Chapter alert language"
 msgstr "Idioma de las alertas de capítulos"
 
-#: cogs/community/usersettings.py:175
+#: cogs/community/usersettings.py:176
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "La traducción a la que enlazan tus MD de nuevos capítulos, una vez publicado. Las publicaciones del servidor siguen el idioma del servidor."
 
-#: cogs/community/usersettings.py:180
+#: cogs/community/usersettings.py:181
 msgid "Pick a chapter language..."
 msgstr "Elige un idioma de capítulo..."
 
-#: cogs/community/usersettings.py:227
+#: cogs/community/usersettings.py:228
 msgid "Delete my profile"
 msgstr "Eliminar mi perfil"
 
-#: cogs/community/usersettings.py:251
+#: cogs/community/usersettings.py:260
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Tu perfil ha desaparecido: campos, IDs de juego y todas las opciones de visibilidad."
 
-#: cogs/community/usersettings.py:260
+#: cogs/community/usersettings.py:264
+msgid "Your top.gg vote record is gone too."
+msgstr "Tu historial de votos de top.gg también se ha borrado."
+
+#: cogs/community/usersettings.py:271
 msgid "Something went wrong deleting your profile."
 msgstr "Algo salió mal al eliminar tu perfil."
 
-#: cogs/community/usersettings.py:270
+#: cogs/community/usersettings.py:281
 msgid "Profile deletion cancelled."
 msgstr "Eliminación del perfil cancelada."
 
-#: cogs/community/usersettings.py:291
+#: cogs/community/usersettings.py:302
 msgid "Delete my avatar history"
 msgstr "Eliminar mi historial de avatares"
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:323
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de avatares se ha desactivado a partir de ahora."
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:334
 msgid "Something went wrong deleting your avatar history."
 msgstr "Algo salió mal al eliminar tu historial de avatares."
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:344
 msgid "Avatar history deletion cancelled."
 msgstr "Eliminación del historial de avatares cancelada."
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn off"
 msgstr "Desactivar"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn on"
 msgstr "Activar"
 
-#: cogs/community/usersettings.py:432
+#: cogs/community/usersettings.py:443
 msgid "## Your preferences"
 msgstr "## Tus preferencias"
 
-#: cogs/community/usersettings.py:436
+#: cogs/community/usersettings.py:447
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1796,15 +1800,15 @@ msgstr ""
 "Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "ON"
 msgstr "ACTIVADO"
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "OFF"
 msgstr "DESACTIVADO"
 
-#: cogs/community/usersettings.py:447
+#: cogs/community/usersettings.py:458
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1813,7 +1817,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:469
+#: cogs/community/usersettings.py:480
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -1822,38 +1826,42 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:483
+#: cogs/community/usersettings.py:494
 msgid "-# Only you can use these controls."
 msgstr "-# Solo tú puedes usar estos controles."
 
-#: cogs/community/usersettings.py:509 cogs/community/usersettings.py:529
-#: cogs/community/usersettings.py:549
+#: cogs/community/usersettings.py:520 cogs/community/usersettings.py:540
+#: cogs/community/usersettings.py:560
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
-#: cogs/community/usersettings.py:608
+#: cogs/community/usersettings.py:619
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
 
-#: cogs/community/usersettings.py:671
+#: cogs/community/usersettings.py:682
 msgid "I sent your data export to you by direct message."
 msgstr "Te envié tu exportación de datos por mensaje directo."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:675
+#: cogs/community/usersettings.py:686
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "No pude enviarte un mensaje directo. Por favor, activa los MD."
 
-#: cogs/community/usersettings.py:680
+#: cogs/community/usersettings.py:691
 msgid "Something went wrong building your data export."
 msgstr "Algo salió mal al preparar tu exportación de datos."
 
-#: cogs/community/usersettings.py:691
+#: cogs/community/usersettings.py:707
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Esto elimina permanentemente tu biografía, tus pronombres, tu color de acento, tus campos personalizados, tus IDs de juego y todas las decisiones que tomaste sobre quién podía verlos. Esto no se puede deshacer."
 
-#: cogs/community/usersettings.py:706
+#: cogs/community/usersettings.py:713
+msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
+msgstr "También elimina tu historial de votos de top.gg: tu racha de votos y tu total acumulado vuelven a empezar desde cero."
+
+#: cogs/community/usersettings.py:727
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
 
@@ -1927,7 +1935,7 @@ msgid "Level down"
 msgstr "Bajada de nivel"
 
 #: cogs/community/leveling/level_admin.py:286
-#: cogs/community/leveling/leveling.py:1649 cogs/utility/searchweb.py:144
+#: cogs/community/leveling/leveling.py:1761 cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "Nivel"
 
@@ -2626,17 +2634,17 @@ msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan gan
 msgid "Reward mode updated"
 msgstr "Modo de recompensa actualizado"
 
-#: cogs/community/leveling/leveling.py:145
+#: cogs/community/leveling/leveling.py:146
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - nivel **{level}** ({xp} XP)"
 
-#: cogs/community/leveling/leveling.py:151
+#: cogs/community/leveling/leveling.py:152
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:161
+#: cogs/community/leveling/leveling.py:162
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2645,7 +2653,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "Nivel **{level}** - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:168
+#: cogs/community/leveling/leveling.py:169
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2654,80 +2662,80 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling/leveling.py:216
+#: cogs/community/leveling/leveling.py:217
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count} miembro"
 msgstr[1] "{count} miembros"
 
-#: cogs/community/leveling/leveling.py:220
+#: cogs/community/leveling/leveling.py:221
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Página {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1228
+#: cogs/community/leveling/leveling.py:1340
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1236
+#: cogs/community/leveling/leveling.py:1348
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "¡{user} alcanzó el nivel **{level}**! ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1243
+#: cogs/community/leveling/leveling.py:1355
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "¡{user} alcanzó el nivel **{level}**!"
 
-#: cogs/community/leveling/leveling.py:1644
+#: cogs/community/leveling/leveling.py:1756
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling/leveling.py:1648 cogs/utility/searchweb.py:141
+#: cogs/community/leveling/leveling.py:1760 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "Rango"
 
-#: cogs/community/leveling/leveling.py:1650
+#: cogs/community/leveling/leveling.py:1762
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1652
+#: cogs/community/leveling/leveling.py:1764
 msgid "XP for next level"
 msgstr "XP para el siguiente nivel"
 
-#: cogs/community/leveling/leveling.py:1680
+#: cogs/community/leveling/leveling.py:1792
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Clasificación | {guild}"
 
-#: cogs/community/leveling/leveling.py:1685
+#: cogs/community/leveling/leveling.py:1797
 msgid "No one has earned any XP yet!"
 msgstr "¡Nadie ha ganado XP todavía!"
 
-#: cogs/community/leveling/leveling.py:1699
-#: cogs/community/leveling/leveling.py:1754
+#: cogs/community/leveling/leveling.py:1811
+#: cogs/community/leveling/leveling.py:1866
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Usuario {uid}"
 
-#: cogs/community/leveling/leveling.py:1733
+#: cogs/community/leveling/leveling.py:1845
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Clasificación semanal | {guild}"
 
-#: cogs/community/leveling/leveling.py:1734
+#: cogs/community/leveling/leveling.py:1846
 msgid "No one has earned any XP this week yet!"
 msgstr "¡Nadie ha ganado XP esta semana todavía!"
 
-#: cogs/community/leveling/leveling.py:1736
+#: cogs/community/leveling/leveling.py:1848
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Clasificación mensual | {guild}"
 
-#: cogs/community/leveling/leveling.py:1739
+#: cogs/community/leveling/leveling.py:1851
 msgid "No one has earned any XP this month yet!"
 msgstr "¡Nadie ha ganado XP este mes todavía!"
 
@@ -2896,11 +2904,11 @@ msgstr "Haz clic abajo para editar un campo del perfil:"
 msgid "Failed to clear your profile, please try again later."
 msgstr "No se pudo borrar tu perfil, inténtalo de nuevo más tarde."
 
-#: cogs/community/profile/cog.py:727
+#: cogs/community/profile/cog.py:733
 msgid "Profile cleared"
 msgstr "Perfil borrado"
 
-#: cogs/community/profile/cog.py:728
+#: cogs/community/profile/cog.py:734
 msgid "Your profile has been cleared."
 msgstr "Tu perfil ha sido borrado."
 
@@ -7732,6 +7740,8 @@ msgstr "Días de calendario UTC que terminan hoy, hoy incluido - así que hoy es
 msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
 msgstr "Registrado desde el {date} ({days} día(s)): la ventana larga aún no está completa."
 
+#. Translators: the seven weekday abbreviations, Monday first. They label
+#. hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
 #: cogs/system/botstats.py:855
 msgid "Mon"
 msgstr "Lun"

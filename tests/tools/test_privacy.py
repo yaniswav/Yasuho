@@ -341,7 +341,7 @@ def test_the_mydata_surface_can_erase_the_profile_it_exports():
         assert f"mydata {name}" in help_text
 
     confirm = inspect.getsource(usersettings.ProfileDeletionView)
-    assert "delete_user_profile" in confirm
+    assert "delete_user_data" in confirm
 
 
 class _ProfileExportPool(_ExportPool):
@@ -388,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 4
+    assert data["export_version"] == privacy.EXPORT_VERSION == 5
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -441,6 +441,51 @@ async def test_forget_deletes_every_profile_table_in_one_transaction():
     }
 
 
+async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
+    """`?mydata deleteprofile` erases the profile AND the records that are not
+    profile data - today the top.gg vote ledger - in the SAME transaction, so a
+    confirmed forget can never half-happen."""
+    connection = _DeleteConnection()
+
+    counts = await privacy.delete_user_data(_DeletePool(connection), 42)
+
+    executed = [query for kind, query, _args in connection.calls if kind == "execute"]
+    assert [table for table, _query in privacy.USER_DELETE_QUERIES] == [
+        "user_profiles",
+        "profile_visibility",
+        "profile_connections",
+        "profiles",
+        "topgg_votes",
+    ]
+    assert len(executed) == 5
+    assert counts["topgg_votes"] == 1
+
+
+def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
+    """THE reason the two lists exist.
+
+    `/profile clear` has no confirmation view: it deletes everything in
+    PROFILE_DELETE_QUERIES inside a `ctx.typing()`, on one click. That is fine
+    for data its owner typed in and can type again, and wrong for an earned vote
+    streak and a lifetime count, which nothing can give back. So the ledger is
+    on the WIDE list only, behind the button that names it.
+    """
+    narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
+
+    assert "topgg_votes" not in narrow
+    assert "topgg_votes" in wide
+    assert narrow < wide  # the wide list is a strict superset, never a fork
+
+    from cogs.community.profile import cog as profile_cog
+
+    clear = inspect.getsource(profile_cog.Profiles.profile_clear.callback)
+    assert "delete_profile" in clear  # the narrow verb...
+    assert "delete_user_data" not in clear  # ...never the wide one
+    # And nothing to un-arm: the boost outlives a profile reset with its row.
+    assert "forget_vote_boost" not in clear
+
+
 def test_the_forget_list_covers_exactly_the_profile_tables():
     """A new profile table must join the forget path, not just the export."""
     listed = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
@@ -449,7 +494,9 @@ def test_the_forget_list_covers_exactly_the_profile_tables():
 
 
 def test_forget_never_widens_beyond_the_owner():
-    for _table, query in privacy.PROFILE_DELETE_QUERIES:
+    # The WIDE list, so the narrow one is covered by inclusion: no erasure query
+    # anywhere may reach a row that is not this user's.
+    for _table, query in privacy.USER_DELETE_QUERIES:
         assert query.count("$1") == 1
         assert query.endswith("WHERE user_id = $1")
 
@@ -558,12 +605,13 @@ def test_the_claim_is_one_atomic_statement_on_its_own_table():
 def test_the_limiter_row_is_out_of_reach_of_every_user_write_path():
     """The clock must not be resettable by its own subject.
 
-    ``?mydata deleteprofile`` erases every table in PROFILE_DELETE_QUERIES, so
+    ``?mydata deleteprofile`` erases every table in USER_DELETE_QUERIES, so
     listing the limiter there would turn "delete my profile" into "give me
-    another export now" - a one-click bypass. It is deliberately absent, and the
-    export below is what keeps the user's right to SEE it intact.
+    another export now" - a one-click bypass. It is deliberately absent from
+    BOTH erasure lists, and the export below is what keeps the user's right to
+    SEE it intact.
     """
-    listed = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    listed = {table for table, _query in privacy.USER_DELETE_QUERIES}
     assert "mydata_export_cooldown" not in listed
 
     # REPO-WIDE, not just this module: a writer added anywhere else would defeat
@@ -674,3 +722,78 @@ async def test_the_export_carries_the_users_own_queue_rows():
     assert "guild_id" not in query
     # The dashboard-written payload is deliberately not exported.
     assert "payload" not in query
+
+
+# ---------------------------------------------------------------------------
+# The top.gg vote ledger (V1)
+# ---------------------------------------------------------------------------
+#
+# A per-user record of a behaviour, keyed by user alone, so the guild purge can
+# never reach it: /mydata is the whole of its lifecycle. It is exported AND
+# erased - the opposite call from mydata_export_cooldown above, and the two
+# tests below pin both halves so a future lot cannot quietly drop one.
+
+
+async def test_the_export_carries_the_vote_ledger():
+    class _VotePool(_ExportPool):
+        async def fetchrow(self, query, *args):
+            self.queries.append(query)
+            if "FROM topgg_votes" in query:
+                return {
+                    "last_vote_at": datetime.datetime(
+                        2030, 5, 4, tzinfo=datetime.timezone.utc
+                    ),
+                    "streak": 7,
+                    "total_votes": 31,
+                    "boost_expires_at": datetime.datetime(
+                        2030, 5, 5, tzinfo=datetime.timezone.utc
+                    ),
+                }
+            return None
+
+    pool = _VotePool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["topgg_votes"]["streak"] == 7
+    assert data["topgg_votes"]["total_votes"] == 31
+    query = next(q for q in pool.queries if "FROM topgg_votes" in q)
+    assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_states_a_user_who_never_voted_as_null():
+    """An absent row means "never voted", stated as null rather than as an
+    invented streak of zero."""
+    data, _avatars = await privacy.collect_user_export(_ExportPool(), 42)
+
+    assert data["topgg_votes"] is None
+
+
+def test_the_forget_path_covers_the_vote_ledger():
+    """Erasing it can only ever COST its owner (streak back to 1, boost gone),
+    which is exactly why - unlike the export limiter - it belongs here."""
+    listed = dict(privacy.USER_DELETE_QUERIES)
+    assert listed["topgg_votes"] == "DELETE FROM topgg_votes WHERE user_id = $1"
+
+
+def test_the_confirmed_erasure_drops_the_live_xp_boost_with_the_row():
+    """The row is the durable half; the boost the XP hot path reads is an
+    in-memory entry on the Leveling cog. A forget that deleted only the row
+    would keep boosting someone who just asked to be forgotten."""
+    from cogs.community import usersettings
+
+    source = inspect.getsource(usersettings.ProfileDeletionView.confirm)
+    assert "delete_user_data" in source
+    assert "forget_vote_boost" in source
+
+
+def test_the_confirmation_names_the_vote_record_it_destroys():
+    """A permanent, unrecreatable loss must be stated BEFORE the button, not
+    discovered afterwards: the streak and the lifetime count are the only things
+    this verb erases that its owner cannot simply type again."""
+    from cogs.community import usersettings
+
+    warning = inspect.getsource(
+        usersettings.UserSettings.mydata_deleteprofile.callback
+    )
+    assert "top.gg vote record" in warning
+    assert "cannot be undone" in warning

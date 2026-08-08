@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 09:37+0000\n"
+"POT-Creation-Date: 2026-08-08 10:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -456,7 +456,7 @@ msgid "Edit"
 msgstr "編集"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:412
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:423
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
@@ -1244,7 +1244,7 @@ msgstr "検索するタイトル"
 msgid "Stop tracking a title..."
 msgstr "追跡を解除するタイトルを選択..."
 
-#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:236
+#: cogs/anilist/feed_views.py:524 cogs/community/leveling/leveling.py:237
 #: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:340
 #: cogs/music/views.py:1310
 msgid "Next"
@@ -1298,7 +1298,7 @@ msgstr "削除"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
-#: cogs/community/usersettings.py:228 cogs/community/usersettings.py:292
+#: cogs/community/usersettings.py:229 cogs/community/usersettings.py:303
 #: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1666,7 +1666,7 @@ msgstr "-# {count}件保留中"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# ページ {page}/{pages} - {count}件保留中"
 
-#: cogs/community/leveling/leveling.py:229
+#: cogs/community/leveling/leveling.py:230
 #: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:333
 #: cogs/music/views.py:1303
 msgid "Prev"
@@ -1681,114 +1681,118 @@ msgstr "<@{author_id}>、{when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
-#: cogs/community/usersettings.py:87
+#: cogs/community/usersettings.py:88
 msgid "Level-up announcements"
 msgstr "レベルアップのお知らせ"
 
-#: cogs/community/usersettings.py:89
+#: cogs/community/usersettings.py:90
 msgid "Get pinged in chat when you reach a new level."
 msgstr "新しいレベルに到達したときにチャットでメンションを受け取ります。"
 
-#: cogs/community/usersettings.py:98
+#: cogs/community/usersettings.py:99
 msgid "Level-up ping"
 msgstr "レベルアップ時のメンション"
 
-#: cogs/community/usersettings.py:101
+#: cogs/community/usersettings.py:102
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
 msgstr "レベルアップ通知でメンションします。オフにするとメンションなしで名前が表示されます。"
 
-#: cogs/community/usersettings.py:108
+#: cogs/community/usersettings.py:109
 msgid "Expanded help"
 msgstr "ヘルプの展開表示"
 
-#: cogs/community/usersettings.py:110
+#: cogs/community/usersettings.py:111
 msgid "Show every subcommand inline when you browse help."
 msgstr "ヘルプを閲覧するときにすべてのサブコマンドをインラインで表示します。"
 
-#: cogs/community/usersettings.py:130
+#: cogs/community/usersettings.py:131
 msgid "Music autoplay"
 msgstr "音楽の自動再生"
 
-#: cogs/community/usersettings.py:133
+#: cogs/community/usersettings.py:134
 msgid "Keep playing recommended tracks when your music queue runs out. Servers can set their own default, which applies until you pick here."
 msgstr "音楽キューが空になったらおすすめの曲を再生し続けます。サーバーは独自のデフォルトを設定でき、ここで選択するまで適用されます。"
 
-#: cogs/community/usersettings.py:145
+#: cogs/community/usersettings.py:146
 msgid "Play search picker"
 msgstr "play の検索ピッカー"
 
-#: cogs/community/usersettings.py:148
+#: cogs/community/usersettings.py:149
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "/play で最初の曲を即再生する代わりに、上位の候補から選べます。"
 
-#: cogs/community/usersettings.py:155
+#: cogs/community/usersettings.py:156
 msgid "Avatar history tracking"
 msgstr "アバター履歴の記録"
 
-#: cogs/community/usersettings.py:158
+#: cogs/community/usersettings.py:159
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "今後のアバターとバナーの変更を公開履歴としてヤスホに保存させます。"
 
-#: cogs/community/usersettings.py:172
+#: cogs/community/usersettings.py:173
 msgid "Chapter alert language"
 msgstr "チャプター通知の言語"
 
-#: cogs/community/usersettings.py:175
+#: cogs/community/usersettings.py:176
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "新しいチャプターのDMが公開時にリンクする翻訳版です。サーバーの投稿はサーバーの言語に従います。"
 
-#: cogs/community/usersettings.py:180
+#: cogs/community/usersettings.py:181
 msgid "Pick a chapter language..."
 msgstr "チャプターの言語を選択..."
 
-#: cogs/community/usersettings.py:227
+#: cogs/community/usersettings.py:228
 msgid "Delete my profile"
 msgstr "プロフィールを削除"
 
-#: cogs/community/usersettings.py:251
+#: cogs/community/usersettings.py:260
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "プロフィールが消去されました。フィールド、ゲームID、公開範囲の選択がすべて削除されました。"
 
-#: cogs/community/usersettings.py:260
+#: cogs/community/usersettings.py:264
+msgid "Your top.gg vote record is gone too."
+msgstr "top.ggの投票記録も削除されました。"
+
+#: cogs/community/usersettings.py:271
 msgid "Something went wrong deleting your profile."
 msgstr "プロフィールの削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:270
+#: cogs/community/usersettings.py:281
 msgid "Profile deletion cancelled."
 msgstr "プロフィールの削除をキャンセルしました。"
 
-#: cogs/community/usersettings.py:291
+#: cogs/community/usersettings.py:302
 msgid "Delete my avatar history"
 msgstr "アバター履歴を削除する"
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:323
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "保存された画像 {count} 件 ({size}) を削除しました。今後のアバター記録はオフになりました。"
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:334
 msgid "Something went wrong deleting your avatar history."
 msgstr "アバター履歴の削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:344
 msgid "Avatar history deletion cancelled."
 msgstr "アバター履歴の削除をキャンセルしました。"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn off"
 msgstr "オフにする"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:348
+#: cogs/community/usersettings.py:359
 msgid "Turn on"
 msgstr "オンにする"
 
-#: cogs/community/usersettings.py:432
+#: cogs/community/usersettings.py:443
 msgid "## Your preferences"
 msgstr "## あなたの設定"
 
-#: cogs/community/usersettings.py:436
+#: cogs/community/usersettings.py:447
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1796,15 +1800,15 @@ msgstr ""
 "これらの設定は、私が使われるすべての場所で **あなた** にのみ影響します。\n"
 "設定の横のボタンを使ってオン/オフを切り替えてください。"
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "ON"
 msgstr "オン"
 
-#: cogs/community/usersettings.py:446
+#: cogs/community/usersettings.py:457
 msgid "OFF"
 msgstr "オフ"
 
-#: cogs/community/usersettings.py:447
+#: cogs/community/usersettings.py:458
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1813,7 +1817,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:469
+#: cogs/community/usersettings.py:480
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -1822,38 +1826,42 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:483
+#: cogs/community/usersettings.py:494
 msgid "-# Only you can use these controls."
 msgstr "-# これらの操作はあなただけが使用できます。"
 
-#: cogs/community/usersettings.py:509 cogs/community/usersettings.py:529
-#: cogs/community/usersettings.py:549
+#: cogs/community/usersettings.py:520 cogs/community/usersettings.py:540
+#: cogs/community/usersettings.py:560
 msgid "Something went wrong updating that setting."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:608
+#: cogs/community/usersettings.py:619
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:671
+#: cogs/community/usersettings.py:682
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:675
+#: cogs/community/usersettings.py:686
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:680
+#: cogs/community/usersettings.py:691
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:691
+#: cogs/community/usersettings.py:707
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
-#: cogs/community/usersettings.py:706
+#: cogs/community/usersettings.py:713
+msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
+msgstr "top.ggの投票記録も削除されます: 投票の連続記録と累計回数はゼロからやり直しになります。"
+
+#: cogs/community/usersettings.py:727
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
 
@@ -1927,7 +1935,7 @@ msgid "Level down"
 msgstr "レベルダウン"
 
 #: cogs/community/leveling/level_admin.py:286
-#: cogs/community/leveling/leveling.py:1649 cogs/utility/searchweb.py:144
+#: cogs/community/leveling/leveling.py:1761 cogs/utility/searchweb.py:144
 msgid "Level"
 msgstr "レベル"
 
@@ -2626,17 +2634,17 @@ msgstr "メンバーは獲得したすべての報酬ロールを保持するよ
 msgid "Reward mode updated"
 msgstr "報酬モードを更新しました"
 
-#: cogs/community/leveling/leveling.py:145
+#: cogs/community/leveling/leveling.py:146
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - レベル **{level}** ({xp} XP)"
 
-#: cogs/community/leveling/leveling.py:151
+#: cogs/community/leveling/leveling.py:152
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:161
+#: cogs/community/leveling/leveling.py:162
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2645,7 +2653,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "レベル **{level}** - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:168
+#: cogs/community/leveling/leveling.py:169
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -2654,80 +2662,80 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling/leveling.py:216
+#: cogs/community/leveling/leveling.py:217
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count}人"
 msgstr[1] "{count}人"
 
-#: cogs/community/leveling/leveling.py:220
+#: cogs/community/leveling/leveling.py:221
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# ページ {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1228
+#: cogs/community/leveling/leveling.py:1340
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1236
+#: cogs/community/leveling/leveling.py:1348
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} がレベル **{level}** に到達しました！ ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1243
+#: cogs/community/leveling/leveling.py:1355
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} がレベル **{level}** に到達しました!"
 
-#: cogs/community/leveling/leveling.py:1644
+#: cogs/community/leveling/leveling.py:1756
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "ランク | {name}"
 
-#: cogs/community/leveling/leveling.py:1648 cogs/utility/searchweb.py:141
+#: cogs/community/leveling/leveling.py:1760 cogs/utility/searchweb.py:141
 msgid "Rank"
 msgstr "ランク"
 
-#: cogs/community/leveling/leveling.py:1650
+#: cogs/community/leveling/leveling.py:1762
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1652
+#: cogs/community/leveling/leveling.py:1764
 msgid "XP for next level"
 msgstr "次のレベルまでのXP"
 
-#: cogs/community/leveling/leveling.py:1680
+#: cogs/community/leveling/leveling.py:1792
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "リーダーボード | {guild}"
 
-#: cogs/community/leveling/leveling.py:1685
+#: cogs/community/leveling/leveling.py:1797
 msgid "No one has earned any XP yet!"
 msgstr "まだ誰もXPを獲得していません!"
 
-#: cogs/community/leveling/leveling.py:1699
-#: cogs/community/leveling/leveling.py:1754
+#: cogs/community/leveling/leveling.py:1811
+#: cogs/community/leveling/leveling.py:1866
 #, python-brace-format
 msgid "User {uid}"
 msgstr "ユーザー {uid}"
 
-#: cogs/community/leveling/leveling.py:1733
+#: cogs/community/leveling/leveling.py:1845
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "週間ランキング | {guild}"
 
-#: cogs/community/leveling/leveling.py:1734
+#: cogs/community/leveling/leveling.py:1846
 msgid "No one has earned any XP this week yet!"
 msgstr "今週はまだ誰もXPを獲得していません！"
 
-#: cogs/community/leveling/leveling.py:1736
+#: cogs/community/leveling/leveling.py:1848
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "月間ランキング | {guild}"
 
-#: cogs/community/leveling/leveling.py:1739
+#: cogs/community/leveling/leveling.py:1851
 msgid "No one has earned any XP this month yet!"
 msgstr "今月はまだ誰もXPを獲得していません！"
 
@@ -2896,11 +2904,11 @@ msgstr "下をクリックしてプロフィール項目を編集してくださ
 msgid "Failed to clear your profile, please try again later."
 msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:727
+#: cogs/community/profile/cog.py:733
 msgid "Profile cleared"
 msgstr "プロフィールを消去しました"
 
-#: cogs/community/profile/cog.py:728
+#: cogs/community/profile/cog.py:734
 msgid "Your profile has been cleared."
 msgstr "あなたのプロフィールを消去しました。"
 
@@ -7732,6 +7740,8 @@ msgstr "今日までのUTC暦日 (今日を含む) - そのため今日は部分
 msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
 msgstr "{date}から記録中 ({days}日間): 長い方のウィンドウはまだ埋まっていません。"
 
+#. Translators: the seven weekday abbreviations, Monday first. They label
+#. hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
 #: cogs/system/botstats.py:855
 msgid "Mon"
 msgstr "月"

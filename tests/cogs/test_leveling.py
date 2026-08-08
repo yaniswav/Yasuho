@@ -2116,3 +2116,244 @@ async def test_levels_builds_every_row_and_paginates(fake_pool, make_context):
     assert len(view.entries) == 20  # ALL rows built, not sliced to one page
     assert view.author_id == ctx.author.id  # pager bound to the invoker
     assert len(_action_rows(view.children[0])) == 1  # 20 > 15 -> pager present
+
+
+# ---------------------------------------------------------------------------
+# Top.gg vote boost (V1) - the one USER-scoped factor on the XP paths.
+# ---------------------------------------------------------------------------
+#
+# The vote itself (payload, upsert, hand-off) is covered in
+# tests/cogs/test_votes.py; the SQL's own semantics were proven against a real
+# Postgres. What is guarded HERE is the half that lives in this cog: the boot
+# read, the in-memory map's lifecycle, the stacking rule against the guild
+# multiplier, and above all the cost of the read on a path that runs for every
+# message that clears the cooldown.
+
+
+def _boost(cog, user_id, hours=12):
+    """Arm a boost the way a vote would, without going near the DB."""
+    cog._vote_boosts[user_id] = discord.utils.utcnow() + datetime.timedelta(
+        hours=hours
+    )
+
+
+async def test_a_voter_earns_the_boosted_grant(fake_pool):
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+    _boost(cog, 2)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 15  # 10 base x 1.5 vote boost
+
+
+async def test_a_non_voter_earns_exactly_what_they_did_before(fake_pool):
+    """The additive rule: with no boost armed, the grant is untouched."""
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 10
+    assert cog._vote_boosts == {}
+
+
+async def test_the_boost_only_follows_the_user_who_voted(fake_pool):
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+    _boost(cog, 2)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=3))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 10
+
+
+async def test_the_boost_multiplies_what_the_guild_maths_produced(fake_pool):
+    """The stacking rule, pinned: guild product FIRST, vote boost on top."""
+    fake_pool.fetchval_return = 11000
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[{"kind": "global", "target_id": 0, "factor": 2.0}],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+    _boost(cog, 2)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 30  # (10 x 2.0 guild) x 1.5 vote
+
+
+async def test_a_muted_zone_stays_muted_for_a_voter(fake_pool):
+    """A guild that zeroed XP here keeps it zero: the boost is applied AFTER
+    the zero-gain early return, so it can never resurrect a muted grant."""
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[{"kind": "global", "target_id": 0, "factor": 0.0}],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+    _boost(cog, 2)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    assert _fetchval_calls(fake_pool) == []
+    assert len(cog._cooldowns) == 1  # the cooldown still started
+
+
+async def test_an_expired_boost_neither_boosts_nor_lingers(fake_pool):
+    """Delete-on-read: a lapsed voter is back to normal AND stops costing
+    memory the next time they speak."""
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=10, xp_max=10)
+    _boost(cog, 2, hours=-1)  # expired an hour ago
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    (_method, _query, args), = _fetchval_calls(fake_pool)
+    assert args[2] == 10
+    assert cog._vote_boosts == {}
+
+
+async def test_a_boosted_voter_costs_the_hot_path_no_extra_round_trip(fake_pool):
+    """SCALE: the boost is read from memory, so a voter's message costs exactly
+    the same number of DB calls as a non-voter's."""
+    fake_pool.fetchval_return = 11000
+    _route_fetch(fake_pool)
+    plain = Leveling(_make_bot(fake_pool))
+    _enable(plain, 1, xp_min=10, xp_max=10)
+    await plain.on_message(_FakeMessage(guild_id=1, author_id=2))
+    baseline = len(fake_pool.calls)
+
+    fake_pool.calls.clear()
+    voter = Leveling(_make_bot(fake_pool))
+    _enable(voter, 1, xp_min=10, xp_max=10)
+    _boost(voter, 2)
+    await voter.on_message(_FakeMessage(guild_id=1, author_id=2))
+
+    assert len(fake_pool.calls) == baseline
+
+
+def test_the_boost_read_is_a_plain_synchronous_dict_lookup():
+    """HOT PATH guard. apply_vote_boost sits between the multiplier maths and
+    the XP write on a path taken by every message that clears the cooldown, so
+    it must be a plain def: no await, no DB, no clock read of its own (it is
+    handed the `now` on_message already read), and ONE dict lookup."""
+    import ast
+    import inspect
+    import textwrap
+
+    source = textwrap.dedent(inspect.getsource(Leveling.apply_vote_boost))
+    func = ast.parse(source).body[0]
+
+    assert isinstance(func, ast.FunctionDef)  # NOT an async def
+    assert not [
+        node
+        for node in ast.walk(func)
+        if isinstance(node, (ast.Await, ast.AsyncFor, ast.AsyncWith))
+    ]
+    assert "utcnow" not in source  # the caller's clock reading, not a second one
+    lookups = [
+        node
+        for node in ast.walk(func)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "get"
+    ]
+    assert len(lookups) == 1
+
+
+def test_the_hot_path_reads_the_boost_between_the_multiplier_and_the_write():
+    """Order guard, on the SOURCE: the call must sit after the multiplier block
+    (so the guild product is what gets multiplied, and a zeroed grant has
+    already returned) and before the grant statement."""
+    import inspect
+
+    source = inspect.getsource(Leveling.on_message)
+    boost = source.index("apply_vote_boost")
+    assert source.index("apply_multiplier") < boost
+    assert boost < source.index("INSERT INTO levels")
+
+
+async def test_the_boot_read_loads_only_the_boosts_still_running(fake_pool):
+    expiry = discord.utils.utcnow() + datetime.timedelta(hours=5)
+    fake_pool.fetch_return = [{"user_id": 7, "boost_expires_at": expiry}]
+    cog = Leveling(_make_bot(fake_pool))
+
+    await cog.reload_vote_boosts()
+
+    (_method, query, _args), = [c for c in fake_pool.calls if c[0] == "fetch"]
+    assert "FROM topgg_votes" in query
+    assert "boost_expires_at > now()" in query  # expired rows never enter memory
+    assert cog._vote_boosts == {7: expiry}
+
+
+async def test_a_failed_boost_read_never_costs_the_guild_config(fake_pool):
+    """cog_load guards the two loads separately: leveling must come up even
+    with no boosts, and vice versa."""
+    calls = []
+
+    async def fetch(query, *args):
+        calls.append(query)
+        if "topgg_votes" in query:
+            raise RuntimeError("db down")
+        return []
+
+    fake_pool.fetch = fetch
+    cog = Leveling(_make_bot(fake_pool))
+
+    await cog.cog_load()  # must not raise
+
+    assert any("topgg_votes" in q for q in calls)
+    assert cog._configs == {}  # loaded (empty), not left unbuilt
+    assert cog._vote_boosts == {}
+
+
+def test_arming_a_vote_sweeps_the_lapsed_boosts_with_it():
+    """The map's only sweep, on its only writer: a vote is rare, so an O(n)
+    pass here is what saves both XP hot paths from ever needing more than one
+    dict.get - and is why no timer exists."""
+    cog = Leveling(types.SimpleNamespace())
+    now = discord.utils.utcnow()
+    cog._vote_boosts = {
+        1: now - datetime.timedelta(hours=1),  # lapsed
+        2: now + datetime.timedelta(hours=3),  # live
+    }
+
+    cog.note_vote_boost(9, now + datetime.timedelta(hours=12))
+
+    assert sorted(cog._vote_boosts) == [2, 9]
+
+
+def test_arming_the_same_voter_twice_replaces_their_deadline():
+    cog = Leveling(types.SimpleNamespace())
+    first = discord.utils.utcnow() + datetime.timedelta(hours=12)
+    second = first + datetime.timedelta(hours=12)
+
+    cog.note_vote_boost(5, first)
+    cog.note_vote_boost(5, second)
+
+    assert cog._vote_boosts == {5: second}
+
+
+def test_forgetting_a_voter_drops_their_boost_and_is_idempotent():
+    """The erasure seam, reached from cogs.community.votes.forget_vote_boost
+    after privacy.delete_user_profile removed the row."""
+    cog = Leveling(types.SimpleNamespace())
+    _boost(cog, 3)
+
+    assert cog.forget_vote_boost(3) is True
+    assert cog._vote_boosts == {}
+    assert cog.forget_vote_boost(3) is False  # no row, no error

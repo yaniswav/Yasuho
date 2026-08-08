@@ -573,6 +573,59 @@ CREATE TABLE IF NOT EXISTS mydata_export_cooldown (
     last_export_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- The top.gg vote ledger: ONE row per user who has ever voted for the bot.
+-- cogs/community/votes.py
+--
+-- Exactly ONE writer, ever: the on_dbl_vote listener in that cog. top.gg POSTs a
+-- vote to the hardened webhook in cogs/system/webstats.py, which dispatches the
+-- event; the listener answers it with ONE atomic upsert that does the whole
+-- bookkeeping (streak, lifetime count and the boost deadline) in a single
+-- statement, so there is no read-modify-write for two deliveries to race on.
+-- Every other reader is READ-ONLY - the leveling cog's boot read, the export,
+-- and the dashboard.
+--
+-- `streak` counts CONSECUTIVE votes. top.gg itself enforces the 12h floor
+-- between two votes, so the rule here only has to say when a streak BREAKS: a
+-- vote landing more than 24h after the previous one starts over at 1, anything
+-- inside that window continues.
+-- The same 12h floor is what makes the row self-deduplicating: the writer's
+-- statement leaves EVERY column alone when the previous vote is under an hour
+-- old, so a redelivered vote (the v0 payload carries no vote id to key on)
+-- cannot add a step to a streak nobody voted for. `last_vote_at` is therefore
+-- the time of the vote itself, never of the delivery that reported it.
+-- `boost_expires_at` is when the XP boost this vote armed runs out - 12h
+-- normally, 24h when top.gg flags the vote as a weekend one (it counts weekend
+-- votes double, so the boost lasts double). It is stored rather than derived so
+-- the deadline a voter was promised survives a restart AND a later change to the
+-- durations: what was armed stays armed for exactly as long as it was armed for.
+--
+-- User-scoped, no guild_id: the guild purge (tools/retention.py) can never see
+-- these rows, so /mydata is what covers them - the row IS in the export and IS
+-- in privacy.USER_DELETE_QUERIES. That is the opposite call from
+-- mydata_export_cooldown above, and deliberately so: erasing this row can only
+-- ever COST its owner (streak back to 1, boost gone), so putting it on the
+-- forget path opens no hole, while leaving it would keep "this person votes for
+-- us, and last did on this date" after they asked to be forgotten.
+-- USER_DELETE_QUERIES, not PROFILE_DELETE_QUERIES: `/profile clear` has no
+-- confirmation step, and a streak is the one thing here its owner cannot type
+-- back in. Only the confirmed `?mydata deleteprofile` reaches this row.
+-- Nothing prunes it, on purpose: the row IS the streak and the lifetime count,
+-- so an age-out would silently take a reward away. PRIVACY.md's Retention
+-- section states that ("kept until you delete it"). It is one row per LIFETIME
+-- voter, which is what makes that affordable.
+--
+-- No index beyond the primary key: the only non-PK read is the leveling cog's
+-- ONE boot-time scan for still-running boosts, over a table with one row per
+-- LIFETIME voter (thousands, not millions). An index on boost_expires_at would
+-- tax every vote write to serve a query that runs once per process.
+CREATE TABLE IF NOT EXISTS topgg_votes (
+    user_id          BIGINT      PRIMARY KEY,
+    last_vote_at     TIMESTAMPTZ NOT NULL,
+    streak           INTEGER     NOT NULL DEFAULT 1,
+    total_votes      INTEGER     NOT NULL DEFAULT 1,
+    boost_expires_at TIMESTAMPTZ NOT NULL
+);
+
 -- Per-guild feature toggles & preferences (JSONB blob).  tools/settings.py, settings.py
 CREATE TABLE IF NOT EXISTS guild_settings (
     guild_id BIGINT PRIMARY KEY,
@@ -1276,6 +1329,16 @@ BEGIN
         ALTER TABLE level_rewards
             ADD CONSTRAINT level_rewards_level_positive
             CHECK (level >= 1) NOT VALID;
+    END IF;
+    -- A row of topgg_votes exists BECAUSE a vote was recorded, so both counters
+    -- start at 1 and only ever go up; zero or negative would mean the upsert's
+    -- streak CASE (or its DEFAULTs) had been broken.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'topgg_votes_counters_positive'
+    ) THEN
+        ALTER TABLE topgg_votes
+            ADD CONSTRAINT topgg_votes_counters_positive
+            CHECK (streak >= 1 AND total_votes >= 1) NOT VALID;
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'starboard_threshold_positive'
