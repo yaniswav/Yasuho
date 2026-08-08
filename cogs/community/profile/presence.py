@@ -207,6 +207,32 @@ TRACK_TEXT_MAX = 120
 # wedged.
 UNLOAD_CANCEL_TIMEOUT = 5
 
+# ... and how long the final flush itself gets. Without a bound the last write
+# is bounded only by the pool's own command_timeout (core.main: 60s), so a
+# wedged DB would hold a clean shutdown open for a minute over a cosmetic
+# aggregate.
+#
+# NOT the same 5s as the serverstats/botstats twins, and deliberately so: those
+# bound ONE statement, while a presence flush is one batched read plus up to
+# :data:`FLUSH_USER_CAP` (200) sequential single-row writes. Five seconds over
+# 200 round trips is 25ms each, which a merely BUSY pool exceeds - the bound
+# would then fire on a healthy system, which is exactly what a shutdown bound
+# must not do. Ten seconds is 50ms per write at the cap.
+#
+# It is also a COOPERATIVE deadline, checked by ``flush`` between two users
+# rather than only enforced by cancelling it: a pool too slow to finish inside
+# it stops cleanly between writes and hands the users it did not reach back to
+# the buffer, instead of being cancelled in the middle of one.
+UNLOAD_FLUSH_TIMEOUT = 10
+
+# The hard backstop over that deadline: one wedged statement can sit inside the
+# pool's own 60s command_timeout without ever returning to the loop that checks
+# the deadline, so the cooperative bound alone cannot bound teardown. This is
+# what does - one command's grace past the soft deadline, and a cancellation
+# after that (whose ``except BaseException`` clauses still hand the generation
+# back, so the cost is at most the last interval, exactly like a hard crash).
+UNLOAD_FLUSH_GRACE = 5
+
 
 # ---------------------------------------------------------------------------
 # Pure helpers: no bot, no database, no I/O. Everything the listener, the
@@ -815,8 +841,21 @@ class ProfilePresence(commands.Cog):
             await asyncio.wait({task}, timeout=UNLOAD_CANCEL_TIMEOUT)
         if self._buffer.is_empty:
             return
+        # BOUNDED, same reasoning as the cancel wait above - but bounded TWICE,
+        # because a presence flush is up to FLUSH_USER_CAP sequential writes and
+        # not the single statement the serverstats twin bounds:
+        #
+        # * the soft deadline is what flush() itself honours, between two users.
+        #   A slow-but-healthy pool writes as many as fit and hands the rest
+        #   back, so being out of time costs only the users not reached;
+        # * the hard wait_for is the backstop for the case the soft deadline
+        #   cannot see - one statement wedged inside the pool's own 60s
+        #   command_timeout, which never returns to the loop that checks.
         try:
-            await self.flush()
+            await asyncio.wait_for(
+                self.flush(deadline=_monotonic() + UNLOAD_FLUSH_TIMEOUT),
+                UNLOAD_FLUSH_TIMEOUT + UNLOAD_FLUSH_GRACE,
+            )
         except Exception:
             log.exception("presence: final flush on unload failed")
 
@@ -965,8 +1004,15 @@ class ProfilePresence(commands.Cog):
         log.exception("presence flush crashed; restarting", exc_info=error)
         self._flush_loop.restart()
 
-    async def flush(self, now=None):
+    async def flush(self, now=None, deadline=None):
         """Merge one interval of collected minutes into the stored aggregates.
+
+        ``deadline`` is an optional ``_monotonic()`` instant past which this
+        method stops starting new writes and hands everything it has not reached
+        back to the buffer. Only ``cog_unload`` passes one (teardown has to be
+        bounded); the periodic loop has all the time in the world and passes
+        none. It is checked BETWEEN two users, never inside one, so being out of
+        time is an ordinary deferral and not a cancelled write.
 
         DRAIN BEFORE AWAIT, without exception: the buffer is detached in the
         first statement of this method, so every minute the listener records
@@ -1043,6 +1089,17 @@ class ProfilePresence(commands.Cog):
         failed = {}
         written = 0
         for user_id, games in pending.items():
+            # Out of time (teardown only - see the ``deadline`` argument). Stop
+            # BETWEEN two writes, hand everything not yet reached back and let
+            # the caller finish: a cooperative stop defers users, where letting
+            # the caller's hard timeout cancel us would abandon a write in
+            # flight. Counted as deferred, which is what it is.
+            if deadline is not None and _monotonic() >= deadline:
+                if remaining:
+                    self._stats["deferred"] += len(remaining)
+                    self._buffer.restore(remaining)
+                    remaining = {}
+                break
             # An absent row means the marker is GONE: the user opted out, ran
             # `profile clear` or /mydata deleteprofile while this interval was
             # accumulating. Their minutes are dropped, not kept for later - and

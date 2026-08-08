@@ -52,6 +52,12 @@ PRUNE_MAX_BATCHES = 20
 # shutdown: the point is that teardown is bounded even if the pool is wedged.
 UNLOAD_CANCEL_TIMEOUT = 5
 
+# ... and how long the final flush itself gets. Without it the last write is
+# bounded only by the pool's command_timeout (core.main: 60s), so a wedged DB
+# would hold a clean shutdown open for a minute over statistics. Losing the
+# last interval to a wedged pool is the same loss a kill -9 already causes.
+UNLOAD_FLUSH_TIMEOUT = 5
+
 
 class ServerStats(commands.Cog):
     """Aggregate activity collectors: message/join/leave counters and a daily
@@ -96,10 +102,17 @@ class ServerStats(commands.Cog):
         # (core.main nests the bot inside the pool's context), so the last
         # partial interval is saved instead of dropped. Any failure here is
         # logged and swallowed - shutdown must never hang or raise on stats.
+        #
+        # BOUNDED, same as the cancel wait above: without it the final write is
+        # bounded only by the pool's own command_timeout (60s), so a wedged pool
+        # would hold a clean shutdown open for a minute over statistics. A
+        # timed-out write cancels _write_buffer, whose ``except BaseException``
+        # hands the counters back to a buffer nobody will write again - i.e. the
+        # timeout costs at most the last interval, exactly like a hard crash.
         if self._buffer.is_empty:
             return
         try:
-            await self._write_buffer()
+            await asyncio.wait_for(self._write_buffer(), UNLOAD_FLUSH_TIMEOUT)
         except Exception:
             log.exception("serverstats: final flush on unload failed")
 

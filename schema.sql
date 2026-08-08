@@ -1154,6 +1154,62 @@ CREATE TABLE IF NOT EXISTS command_usage (
 -- primary key. (server_stats_messages needs its own day index only because its
 -- PK leads with guild_id.)
 
+-- The WHEN of the same completions: a rolling (UTC weekday, UTC hour) profile of
+-- how much this bot is used, so ?botstats can answer "which hours of the week is
+-- a restart cheapest in". Fed by the SAME flush as command_usage, in the same
+-- statement (cogs/system/usage_stats.FLUSH), and kept SEPARATE from it because
+-- command_usage has no hour dimension and must not grow one: adding hours there
+-- would multiply its cardinality by 24 to answer a question asked of the whole
+-- fleet at once, never of a single command.
+--
+-- FIXED SIZE, FOR EVER: 7 weekdays x 24 hours = 168 rows on every install, from
+-- the first flush to the last. There is nothing to prune and no retention window
+-- here - the ageing is done by HALVING (see below), not by deleting.
+--
+-- ``dow`` is 0 = Monday ... 6 = Sunday, i.e. Python's date.weekday(), computed
+-- in Python from a UTC day (cogs/system/usage_stats.day_of_week). Postgres has
+-- two other conventions for the same seven days (EXTRACT(DOW) is Sunday = 0,
+-- EXTRACT(ISODOW) is Monday = 1), so nothing ever derives this column in SQL.
+-- ``hour`` is the UTC hour 0..23, captured when the command completed.
+--
+-- Counts are BIGINT and cumulative like command_usage's, for the same reason.
+-- They are also DECAYED: once every 7 days the whole table is halved
+-- (cogs/system/usage_stats.DECAY_HOURLY), which makes the profile an exponential
+-- moving average with a one-week half-life instead of a lifetime average no
+-- recent habit could ever move. Integer division floors, so a slot that stops
+-- being used fades to 0 rather than lingering for ever. The halving is
+-- at-most-once per pass rather than once per elapsed week (halved_on is set to
+-- today, not to halved_on + 7), so an outage of any length costs one halving.
+--
+-- Like command_usage: NO user_id and NO guild_id, so no /mydata entry and no
+-- departed-guild purge entry (both are driven structurally off those columns).
+CREATE TABLE IF NOT EXISTS command_usage_hourly (
+    dow   SMALLINT NOT NULL,          -- 0 = Monday ... 6 = Sunday (UTC)
+    hour  SMALLINT NOT NULL,          -- 0..23 (UTC)
+    count BIGINT   NOT NULL DEFAULT 0,
+    PRIMARY KEY (dow, hour),
+    CONSTRAINT command_usage_hourly_slot_valid
+        CHECK (dow BETWEEN 0 AND 6 AND hour BETWEEN 0 AND 23 AND count >= 0)
+);
+
+-- The profile's own bookkeeping, one row, id = 1 (the bot_heartbeat singleton
+-- idiom). Two dates, each carrying something the profile itself cannot:
+--
+-- ``started_on`` - when the profile began collecting. The dashboard needs it to
+-- know whether every one of the 168 slots has been LIVED THROUGH yet: on an
+-- existing install command_usage may hold a year of days on the very day this
+-- table is created, so coverage read from there would be a lie.
+-- ``halved_on``  - when the weekly decay last ran. It is in the DATABASE, unlike
+-- the daily retention prune's cadence marker (which is in memory on the cog and
+-- says so), because re-running the prune after a restart re-deletes already-
+-- expired rows and costs nothing, while re-running the halving DESTROYS data -
+-- and this deployment restarts on every deploy.
+CREATE TABLE IF NOT EXISTS command_usage_hourly_state (
+    id         SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    started_on DATE     NOT NULL,     -- first maintenance pass that saw this table
+    halved_on  DATE     NOT NULL      -- last weekly decay
+);
+
 -- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================

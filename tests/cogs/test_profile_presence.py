@@ -740,6 +740,87 @@ async def test_a_flush_cancelled_mid_write_survives_into_the_final_flush(
     assert sorted(user_id for user_id, _c, _p in state["writes"]) == [OWNER, FRIEND]
 
 
+async def test_cog_unload_gives_up_on_a_wedged_final_flush(monkeypatch):
+    """The final flush is BOUNDED too, not just the wait on the cancelled loop.
+
+    A wedged pool would otherwise hold a clean shutdown open for its whole
+    command_timeout (60s) over a cosmetic aggregate. Giving up costs the last
+    interval, which is exactly what a hard crash already costs.
+
+    This is the HARD bound: the batched read never returns, so the cooperative
+    deadline below never gets a turn and only the wait_for can end it.
+    """
+    cog = _cog()
+    cog._buffer.add(OWNER, "Celeste", 600)
+    never = asyncio.Event()
+
+    async def hang(*args, **kwargs):
+        await never.wait()
+
+    monkeypatch.setattr(storage, "get_payloads", hang)
+    monkeypatch.setattr(presence, "UNLOAD_FLUSH_TIMEOUT", 0.05)
+    monkeypatch.setattr(presence, "UNLOAD_FLUSH_GRACE", 0.05)
+
+    await asyncio.wait_for(cog.cog_unload(), timeout=1)  # must not hang
+
+    # The cancelled read still handed its generation back (except BaseException).
+    assert cog._buffer.drain()[0] == {OWNER: {"Celeste": 600}}
+
+
+async def test_the_unload_deadline_is_cooperative_not_a_cancellation(
+    flushable, monkeypatch
+):
+    """A slow pool defers the users it could not reach; it loses nothing.
+
+    The bound covers up to FLUSH_USER_CAP sequential writes, not one statement,
+    so it can genuinely expire on a merely BUSY pool. When it does, the flush has
+    to stop between two users and hand the rest back - not be cancelled with a
+    write in flight.
+    """
+    cog, state = flushable
+    users = (OWNER, OWNER + 1, OWNER + 2)
+    for user_id in users:
+        cog._buffer.add(user_id, "Celeste", 600)
+        state["payloads"][user_id] = {}
+
+    # A clock that jumps past the deadline right after the first user: one
+    # reading for the deadline itself, one for the flush's own ``now``, then one
+    # per loop iteration.
+    ticks = iter([0.0, 0.0, 0.0])
+    monkeypatch.setattr(presence, "_monotonic", lambda: next(ticks, 99.0))
+    monkeypatch.setattr(presence, "UNLOAD_FLUSH_TIMEOUT", 1.0)
+
+    await cog.cog_unload()
+
+    # Exactly one user was written; the other two went back to the buffer whole.
+    assert len(state["writes"]) == 1
+    written = state["writes"][0][0]
+    deferred, _dropped = cog._buffer.drain()
+    assert set(deferred) == set(users) - {written}
+    assert all(games == {"Celeste": 600} for games in deferred.values())
+    assert cog._stats["deferred"] == 2
+
+
+async def test_the_periodic_flush_has_no_deadline(flushable, monkeypatch):
+    """Only teardown is in a hurry: the loop's own flush passes no deadline.
+
+    Pinned because a deadline leaking into the periodic path would silently turn
+    every busy interval into a partial write.
+    """
+    cog, state = flushable
+    for user_id in (OWNER, OWNER + 1, OWNER + 2):
+        cog._buffer.add(user_id, "Celeste", 600)
+        state["payloads"][user_id] = {}
+
+    # Time races ahead of any deadline a caller could have set.
+    monkeypatch.setattr(presence, "_monotonic", lambda: 10_000.0)
+
+    await cog.flush()
+
+    assert len(state["writes"]) == 3
+    assert cog._buffer.is_empty
+
+
 async def test_an_erased_user_is_purged_by_the_flush_itself(flushable):
     """The batched SELECT is the authority on consent, whatever told this cog.
 

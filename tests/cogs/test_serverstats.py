@@ -401,6 +401,27 @@ async def test_unload_waits_for_the_cancelled_flush_then_writes_it():
     assert cog._buffer.is_empty
 
 
+async def test_cog_unload_gives_up_on_a_wedged_final_flush(monkeypatch):
+    """The final write is BOUNDED too, not just the wait on the cancelled loop.
+
+    A wedged pool would otherwise hold a clean shutdown open for its whole
+    command_timeout (60s) over statistics. Giving up costs the last interval,
+    which is exactly what a hard crash already costs.
+    """
+    pool = _BlockingPool()  # never released: the write hangs forever
+    cog = _cog(pool)
+    cog._snapshot_day = DAY
+    cog._prune_day = DAY
+    cog._buffer.record_message(1, 100, DAY, count=42)
+    monkeypatch.setattr(serverstats_cog, "UNLOAD_FLUSH_TIMEOUT", 0.05)
+
+    await asyncio.wait_for(cog.cog_unload(), timeout=1)  # must not hang
+
+    assert len(pool.calls) == 1
+    # The cancelled write still handed its generation back (except BaseException).
+    assert cog._buffer.drain().messages == [(1, 100, DAY, 42)]
+
+
 # ---------------------------------------------------------------------------
 # Once-a-day chores: member snapshot and prune
 # ---------------------------------------------------------------------------

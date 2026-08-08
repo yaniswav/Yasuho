@@ -15,6 +15,12 @@ share a createdAt second, so the createdAt filter alone can duplicate or skip at
 the boundary; dropping ids ``<= last_activity_id`` is the real dedup. Both marks
 only ever advance.
 
+Catch-up pacing. A tick that plans more than a normal tick's worth of cards
+(after an API outage the whole held backlog lands in one tick) spaces them out
+through :class:`_CatchUpPacer` instead of firing them into the channel inside a
+single second. A normal 1-3 card tick is not paced at all, and pacing never
+touches the cursor - see the class docstring for the budget and the arbitration.
+
 Rendering lives behind two methods - ``_render_activity`` / ``_render_digest`` -
 which return ``channel.send`` kwargs. They now build polished Components V2
 layouts (:class:`ActivityCard` / :class:`ActivityDigest`); the poller, cursor
@@ -135,6 +141,76 @@ REQUEST_SPACING = 2.0
 # Auto-disable a feed after this many consecutive delivery failures.
 MAX_DELIVERY_FAILURES = 10
 
+# --- Catch-up pacing --------------------------------------------------------
+#
+# A channel normally gets a card or three per tick and they are sent back to
+# back, which is fine. After an API outage the held backlog lands in ONE tick and
+# the whole thing used to hit the channel inside the same second (the 2026-08-02
+# incident: AniList was down ~7h and every card arrived at once). Pacing spaces a
+# BURSTING CHANNEL's cards out; every other channel keeps sending back to back
+# with no added latency at all.
+#
+# PER CHANNEL, not per tick. The burst a reader can perceive is the one in the
+# channel they are looking at, and ``plan_posts`` already caps that at
+# ``MAX_FULL_POSTS_PER_TICK`` (5) rich cards - the rest of a channel's share
+# collapses into ONE digest. A tick-wide threshold would instead measure FAN-OUT:
+# forty guilds each getting their one new card would trip it and pay a gap
+# between two cards nobody sees together. So the trigger is a channel's own card
+# count, and the fleet only ever contributes to the shared BUDGET below.
+#
+# Budget. ``tasks.Loop`` schedules the next iteration at
+# ``last_iteration + POLL_SECONDS`` and, when an iteration overruns that, starts
+# the next one IMMEDIATELY (``if now > self._next_iteration: self._next_iteration
+# = now``). So a tick that outlives the 120s period does not just run late - it
+# collapses the poll cadence and doubles the request rate against the shared
+# per-IP budget REQUEST_SPACING exists to protect. This ceiling is therefore a
+# QUARTER of the period, and the tick's fetch is charged against it before
+# pacing sees it (``_tick`` passes what is left of it once the fetch returns):
+# fetch + pacing together can never claim more than a quarter of the period,
+# whatever ``(requests - 1) * REQUEST_SPACING`` grows to, and the remaining 90s
+# stays margin for the sends themselves (one Discord round trip per card, plus
+# one per digest, which pacing deliberately does not model - it bounds SLEEPING,
+# not the tick).
+#
+# It is also what bounds the cursor: ``_tick`` saves the fetch cursor after
+# ``_dispatch`` returns, so a paced tick holds it for as long as it sleeps, and a
+# restart inside that window re-delivers the tick's batch. That replay is not new
+# (an unpaced dispatch has always had the same window, the length of its sends),
+# but pacing lengthens it - hence a quarter rather than the half a wall-clock
+# argument alone would allow, and hence the per-channel trigger above, which
+# keeps every ordinary tick's window at exactly zero.
+#
+# SCALE. Ordinary traffic is never paced at any fleet size: N channels x 1-3
+# cards is N x 0 gaps. Only channels at >= CATCHUP_MIN_CARDS cards pay, they are
+# bounded at 4 gaps each by MAX_FULL_POSTS_PER_TICK, and the tick's TOTAL
+# sleeping is capped by the budget no matter how many of them there are - past
+# CATCHUP_MAX_PACED_GAPS gaps the budget simply runs out and the remaining cards
+# are sent unpaced. Sleeping is thus O(1) in guild count, and the per-tick cost
+# of the feature at 1000 guilds is the same 30s ceiling it is at 3.
+CATCHUP_PACING_BUDGET = POLL_SECONDS / 4.0  # 30s of sleeping per tick, hard cap
+
+# Target gap between two cards of a bursting channel.
+CATCHUP_SPACING = 10.0
+
+# A channel receiving this many rich cards in one tick is catching up. 1-3 cards
+# is what an ordinary 120s tick brings a channel, and those are NEVER paced.
+CATCHUP_MIN_CARDS = 4
+
+# Floor on the compressed gap. Squeezing below it buys nothing - the sends
+# themselves (a round trip each, under Discord's 5-messages-per-5s per-channel
+# bucket) already space delivery about that far apart - so the gap never goes
+# under it. When the budget cannot afford every gap at the floor the TAIL goes
+# unpaced instead: total sleeping stays inside the budget either way, and one
+# extra card can never swing the tick's wall clock by a whole minute.
+CATCHUP_MIN_SPACING = 1.0
+
+# Derived documentation/assertion handles, in GAPS (a channel of N paced cards
+# contributes N - 1 gaps): how many gaps fit at the full 1-per-10s target, and
+# how many can be paced at all before the budget is spent. The pacer recomputes
+# both from the budget it is actually given, which is smaller on a slow tick.
+CATCHUP_TARGET_GAPS = int(CATCHUP_PACING_BUDGET // CATCHUP_SPACING)  # 3
+CATCHUP_MAX_PACED_GAPS = int(CATCHUP_PACING_BUDGET // CATCHUP_MIN_SPACING)  # 30
+
 # Upper bound on dead coalescing-card rows swept per poll tick. The sweep rides
 # the poll tick (no new timer) and this cap keeps it O(1)-ish: a huge backlog
 # drains over several ticks instead of one unbounded DELETE.
@@ -245,6 +321,94 @@ def _chunk_boundary(raw_activities):
     if best_id is None:
         return None
     return best_id, best_created
+
+
+def _monotonic():
+    """The tick's own clock, in its own function so a test can freeze it.
+
+    ``time.monotonic`` and never ``time.time``: the pacing budget is an ELAPSED
+    time, and it must not change because the host adjusted its wall clock in the
+    middle of a poll.
+    """
+    return time.monotonic()
+
+
+class _CatchUpPacer:
+    """Card spacing for the channels that are bursting, and only for those.
+
+    Built ONCE per tick from the tick's plan and consulted right before each
+    card, so the decision is a single comparison at delivery time. Two separate
+    questions, deliberately kept apart:
+
+    * WHICH channels are paced - :meth:`paces`, answered per channel from that
+      channel's OWN card count against :data:`CATCHUP_MIN_CARDS`. A channel with
+      1-3 cards (an ordinary tick, at any fleet size) is not paced at all: no
+      sleep, and no suspension point either, so ordinary delivery is unchanged.
+    * HOW LONG the gap is - one value for the whole tick, derived from the total
+      number of gaps the paced channels need:
+      ``max(CATCHUP_MIN_SPACING, min(CATCHUP_SPACING, budget / gaps))``. The gap
+      never squeezes below the floor, because below it spacing buys nothing.
+
+    Total sleeping is bounded by ``budget`` in every case, because the pacer also
+    counts how many gaps it can AFFORD at that gap (``paced_gaps``) and stops
+    sleeping once they are spent. A tick that needs more gaps than it can afford
+    paces its head and sends its tail back to back - it never bursts everything
+    and never overruns, and one extra card can only ever change the tick's wall
+    clock by one gap rather than by the whole budget.
+
+    ``budget`` is what :meth:`AniListFeed._tick` has left of
+    :data:`CATCHUP_PACING_BUDGET` once the fetch is paid for, so a slow fetch
+    shrinks pacing rather than adding to it; at zero the pacer is inert.
+
+    The gap is a real ``asyncio.sleep`` inside the poll task, so ``cog_unload``
+    (``self._poll_feeds.cancel()``) interrupts it at once: nothing on the
+    delivery path catches ``asyncio.CancelledError`` (a ``BaseException``), only
+    ``except Exception``.
+
+    Deliberately NOT a deferral. Holding the tail for the next tick would mean
+    clamping the cursor, and the cursor is ONE global row (``anilist_feed_state``
+    id = 1) with no per-channel delivery mark: a hold applies to every guild at
+    once, so one busy channel would stall the whole bot's feed. Pacing is a
+    presentation concern and stays entirely inside delivery - it never touches
+    the cursor, the dedup marks or the coalescing records.
+    """
+
+    __slots__ = ("gaps", "budget", "gap", "paced_gaps", "slept")
+
+    def __init__(self, gaps, budget=CATCHUP_PACING_BUDGET):
+        self.gaps = max(int(gaps), 0)
+        self.budget = max(float(budget), 0.0)
+        self.slept = 0.0
+        self.gap = 0.0
+        self.paced_gaps = 0
+        if self.gaps and self.budget:
+            self.gap = max(
+                CATCHUP_MIN_SPACING, min(CATCHUP_SPACING, self.budget / self.gaps)
+            )
+            # Integer count rather than a running float remainder: the total is
+            # then exactly ``paced_gaps * gap <= budget``, with no drift to argue
+            # about at the last gap. The epsilon is there so an uncompressed
+            # ``gap = budget / gaps`` affords all ``gaps`` of them - binary
+            # floating point makes that division come out a hair over.
+            self.paced_gaps = min(self.gaps, int(self.budget / self.gap + 1e-9))
+
+    def paces(self, cards):
+        """Whether a channel receiving ``cards`` rich cards this tick is paced."""
+
+        return bool(self.gap) and cards >= CATCHUP_MIN_CARDS
+
+    async def wait(self):
+        """Space one card from the previous one in the SAME channel.
+
+        A no-op once the tick's budget is spent, which is what lets a fleet-wide
+        backlog degrade smoothly instead of falling off a cliff.
+        """
+
+        if not self.paced_gaps:
+            return
+        self.paced_gaps -= 1
+        await asyncio.sleep(self.gap)
+        self.slept += self.gap
 
 
 def _normalize(raw):
@@ -530,6 +694,11 @@ class AniListFeed(commands.Cog):
         self._poll_feeds.restart()
 
     async def _tick(self):
+        # Wall clock spent by this tick so far, charged against the pacing
+        # ceiling further down (see the budget comment before _dispatch). A
+        # monotonic reading, not ``now``: it must not move if the system clock
+        # does.
+        tick_started = _monotonic()
         now = int(time.time())
         if now < self._embargo_until:
             return  # still under a 429 backoff
@@ -625,13 +794,32 @@ class AniListFeed(commands.Cog):
         # nothing beyond the safe boundary (>= new_id here) is delivered yet.
         fresh = [n for n in normalized if last_id < n["id"] <= new_id]
         if fresh:
-            await self._dispatch(feeds, follows_by_channel, fresh)
+            # Whatever is left of the pacing ceiling once the fetch is paid for.
+            # The fetch spaces its requests by REQUEST_SPACING and grows with the
+            # followed union, so charging it here is what keeps pacing from ever
+            # being the thing that pushes a tick past POLL_SECONDS: a fetch that
+            # already ate the ceiling leaves a budget of 0 and an inert pacer.
+            budget = max(
+                0.0, CATCHUP_PACING_BUDGET - (_monotonic() - tick_started)
+            )
+            await self._dispatch(
+                feeds, follows_by_channel, fresh, pacing_budget=budget
+            )
 
         if new_id != last_id or new_created != last_created:
             await self._save_state(new_id, new_created)
 
-    async def _dispatch(self, feeds, follows_by_channel, activities):
-        """Route ``activities`` to the feeds and deliver each channel's share."""
+    async def _dispatch(
+        self, feeds, follows_by_channel, activities, *,
+        pacing_budget=CATCHUP_PACING_BUDGET,
+    ):
+        """Route ``activities`` to the feeds and deliver each channel's share.
+
+        ``pacing_budget`` is the seconds of catch-up spacing this tick may still
+        afford (:data:`CATCHUP_PACING_BUDGET` minus what the tick has already
+        spent). It bounds SLEEPING only - every send, digests included, is paid
+        for out of the rest of the poll period.
+        """
 
         feed_dicts = []
         feed_by_channel = {}
@@ -650,11 +838,41 @@ class AniListFeed(commands.Cog):
             )
 
         routed = af.route_activities(activities, feed_dicts)
+
+        # What each channel will actually send as rich cards: its routed share
+        # capped by plan_posts' per-channel MAX_FULL (the remainder collapses
+        # into ONE digest, which is never paced). Every key of ``routed`` comes
+        # from ``feed_dicts``, so no membership guard is needed here.
+        cards_by_channel = {
+            channel_id: min(len(items), af.MAX_FULL_POSTS_PER_TICK)
+            for channel_id, items in routed.items()
+        }
+
+        # Only the channels that are themselves bursting are paced, and each of
+        # them needs cards - 1 gaps. Summing across them is what shares the one
+        # budget out; a tick where nobody is bursting sums to 0 and the pacer is
+        # inert, however many channels it fanned out to.
+        planned_gaps = sum(
+            cards - 1
+            for cards in cards_by_channel.values()
+            if cards >= CATCHUP_MIN_CARDS
+        )
+        pacer = _CatchUpPacer(planned_gaps, budget=pacing_budget)
+        if pacer.gap:
+            log.info(
+                "AniList feed: catch-up tick, spacing %s of %s gap(s) by %.2fs "
+                "(<= %.1fs of pacing)",
+                pacer.paced_gaps,
+                planned_gaps,
+                pacer.gap,
+                pacer.budget,
+            )
+
         for channel_id, items in routed.items():
             feed = feed_by_channel.get(channel_id)
             if feed is None:
                 continue
-            await self._deliver_channel(feed, channel_id, items)
+            await self._deliver_channel(feed, channel_id, items, pacer=pacer)
 
     def _allow_adult(self, channel_id):
         """Whether the destination channel/thread allows adult activities.
@@ -672,8 +890,18 @@ class AniListFeed(commands.Cog):
         except Exception:
             return False
 
-    async def _deliver_channel(self, feed, channel_id, items):
-        """Post one channel's activities, tracking delivery success/failure."""
+    async def _deliver_channel(self, feed, channel_id, items, *, pacer=None):
+        """Post one channel's activities, tracking delivery success/failure.
+
+        ``pacer`` is the tick-scoped :class:`_CatchUpPacer`. THIS channel is
+        paced only if its own card count says it is bursting - a channel with an
+        ordinary one to three cards sends them back to back even when some other
+        channel in the same tick is catching up, and the gap never straddles the
+        boundary between two channels (nobody reads both at once). The digest,
+        being one summary message, is never paced. Omitting the pacer (the
+        default) delivers at full speed, which is what every non-poller caller
+        wants.
+        """
 
         channel = self.bot.get_channel(channel_id)
         if channel is None:
@@ -690,7 +918,10 @@ class AniListFeed(commands.Cog):
         try:
             with i18n.locale(loc):
                 full, digest = af.plan_posts(items)
-                for activity in full:
+                paced = pacer is not None and pacer.paces(len(full))
+                for index, activity in enumerate(full):
+                    if paced and index:
+                        await pacer.wait()
                     await self._deliver_card(feed["guild_id"], channel, activity)
                 if digest:
                     # The digest (the busy-tick remainder) is never coalesced: it

@@ -800,9 +800,19 @@ async def test_top_guilds_page_issues_no_query_at_all():
 
 
 def _usage_row(query):
-    """fetchrow double for the Usage page's three reads (BS1 + BS2)."""
+    """fetchrow double for the Usage page's four fetchrow reads (BS1 + BS2 + A3).
+
+    Order matters here: ``command_usage_hourly_state`` contains the substring
+    ``command_usage``, so the profile's marker row has to be matched BEFORE the
+    windows read or it would be answered with the windows' columns.
+    """
     if "server_stats_messages" in query:
         return {"messages": 5, "guilds": 1, "days": 1}
+    if "command_usage_hourly_state" in query:
+        return {
+            "started_on": datetime.date(2026, 7, 1),
+            "halved_on": datetime.date(2026, 7, 28),
+        }
     if "command_usage" in query:
         return {
             "today": 3,
@@ -815,20 +825,33 @@ def _usage_row(query):
     return {"joins": 1, "leaves": 0, "guilds": 1, "guild_days": 1}
 
 
+def _usage_fetch(query):
+    if "command_usage_hourly" in query:
+        return [{"dow": 3, "hour": 4, "count": 7}]
+    return [{"command": "play", "total": 9}]
+
+
 def _usage_pool():
-    return _Pool(
-        fetchrow_return=_usage_row,
-        fetch_return=lambda query: [{"command": "play", "total": 9}],
-    )
+    return _Pool(fetchrow_return=_usage_row, fetch_return=_usage_fetch)
 
 
 async def test_usage_page_issues_the_activity_and_recorded_usage_reads():
-    """Two aggregates for the observed-activity block, then the two persisted
-    usage reads (windows + ranking) behind a single memo key."""
+    """Two aggregates for the observed-activity block, then the four persisted
+    usage reads (windows + ranking + hourly profile + its marker) behind a
+    SINGLE memo key: the quiet-hours block rides the same read as the windows
+    rather than adding a memo of its own."""
     pool = _usage_pool()
     card = _card(pool)
     await card._load(botstats.PAGE_USAGE)
-    assert [call[0] for call in pool.calls] == ["fetchrow", "fetchrow", "fetchrow", "fetch"]
+    assert [call[0] for call in pool.calls] == [
+        "fetchrow",  # observed messages
+        "fetchrow",  # observed member-days
+        "fetchrow",  # usage windows
+        "fetch",     # usage ranking
+        "fetch",     # hourly profile
+        "fetchrow",  # hourly marker
+    ]
+    assert len(card._reads) == 2  # activity + usage, no third key
 
 
 async def test_every_window_on_the_usage_page_ends_on_the_same_utc_day(monkeypatch):
@@ -846,7 +869,9 @@ async def test_every_window_on_the_usage_page_ends_on_the_same_utc_day(monkeypat
     pool = _usage_pool()
     card = _card(pool)
     await card._load(botstats.PAGE_USAGE)
-    days = {call[2][0] for call in pool.calls}
+    # The profile reads take no day at all (the table has no day column), so
+    # only the windowed reads carry one - and they must all carry the same one.
+    days = {call[2][0] for call in pool.calls if call[2]}
     assert days == {datetime.date(2026, 7, 31)}
 
 
@@ -917,12 +942,15 @@ async def test_usage_counters_are_live_on_every_open_but_the_db_is_read_once():
         card.cog.usage.record("play")
     sections, _taken = await card._load(botstats.PAGE_USAGE)
     assert "5 commands run since boot" in _flat(sections)
-    # ... while the DB half stayed at its one memoised set of reads.
+    # ... while the DB half stayed at its one memoised set of reads (six of
+    # them, the quiet-hours profile included - all behind two memo keys).
     assert [call[0] for call in pool.calls] == [
         "fetchrow",
         "fetchrow",
         "fetchrow",
         "fetch",
+        "fetch",
+        "fetchrow",
     ]
 
 

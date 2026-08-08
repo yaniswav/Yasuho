@@ -47,6 +47,13 @@ they answer different questions:
   a bounded buffer and flushed to ``command_usage`` every few minutes, so the
   day / week / month windows survive restarts (cogs/system/usage_stats.py owns
   that half: the buffer, the additive upsert, the bounded reads and the prune).
+* WHEN, not how much - the same flush also folds every completion into a 168-slot
+  (UTC weekday, UTC hour) profile, which the Usage page turns into the quietest
+  and busiest slots of the week. That is the restart-window question: this bot is
+  redeployed by hand, and the profile says which hours cost the fewest people.
+  It is a DECAYED profile (halved weekly), so it describes recent habits rather
+  than the install's whole history, and it stays silent until a full week has
+  been collected - a slot nobody has lived through yet is not a quiet slot.
 
 Both listeners stay O(1), await nothing and touch no DB - the ONLY writer is the
 flush loop below, so the write rate is a function of TIME (one statement per 5
@@ -753,6 +760,7 @@ def render_usage(counters, activity, persisted=None, *, now=None):
         (_("Commands since boot"), headline),
         (_("Most used commands"), ranking),
         (_("Recorded usage (UTC days)"), render_persisted_usage(persisted)),
+        (_("Quiet hours (UTC)"), render_quiet_hours(persisted)),
         (
             _("Most used commands ({days} days)").format(days=window_days),
             render_persisted_ranking(persisted),
@@ -831,6 +839,104 @@ def render_persisted_usage(persisted):
             )
         )
     return lines
+
+
+def weekday_abbreviations():
+    """The seven weekday labels, Monday first - the ``dow`` 0..6 order.
+
+    Built at render time (like page_labels) so they localize for the reader, and
+    NOT taken from the C library's locale: the process locale has nothing to do
+    with the reader's chosen language, and calendar.day_abbr would answer in
+    whatever the host is set to.
+    """
+    return (
+        # Translators: the seven weekday abbreviations, Monday first. They label
+        # hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
+        _("Mon"),
+        _("Tue"),
+        _("Wed"),
+        _("Thu"),
+        _("Fri"),
+        _("Sat"),
+        _("Sun"),
+    )
+
+
+def format_hour_slots(slots):
+    """``Mon 04:00 (0.3%)`` for each slot, comma-separated.
+
+    The share is what is shown rather than the count: the profile is decayed
+    (halved weekly), so its absolute numbers are not a number of commands and
+    must never be printed as if they were.
+    """
+    names = weekday_abbreviations()
+    return ", ".join(
+        "{day} {hour:02d}:00 ({share:.1f}%)".format(
+            day=names[slot.dow], hour=slot.hour, share=slot.share * 100
+        )
+        for slot in slots
+    )
+
+
+def render_quiet_hours(persisted):
+    """When a restart hurts least: the quietest and busiest slots of the week.
+
+    Same honesty rules as every other block on this page, and THREE refusals
+    rather than one, because a reader cannot act on them the same way:
+
+    * the read failed - say so;
+    * the profile is too young to have lived through all 168 slots - say how
+      young. A slot that has not happened yet is not a quiet slot, and that is
+      the one way this block could quietly send the owner to restart during
+      their busiest hour;
+    * the profile is old enough and holds nothing at all - say THAT, not the
+      day count. An old-but-empty profile used to print "needs 7 day(s) of
+      collection and has 232", which contradicts itself in one sentence.
+
+    The quiet side then refuses a fourth time, softly: when more than
+    :data:`usage_stats.QUIET_SLOT_LIMIT` slots are tied at zero, naming three of
+    them would dress the earliest hours of the week up as a finding, so it says
+    how many there are instead.
+    """
+    if persisted is None:
+        return [_("Recorded usage is unavailable right now.")]
+    if not usage_stats.hourly_is_ready(persisted.hourly_covered_days):
+        return [
+            _(
+                "Not enough hourly history yet: this needs {days} day(s) of "
+                "collection and has {have}."
+            ).format(
+                days=usage_stats.HOURLY_MIN_DAYS,
+                have=format_count(persisted.hourly_covered_days),
+            )
+        ]
+    ranked = usage_stats.rank_hour_slots(
+        persisted.hourly, covered_days=persisted.hourly_covered_days
+    )
+    if ranked is None:
+        return [
+            _("No commands have been recorded in the hourly profile yet.")
+        ]
+    if ranked.quiet_slots > usage_stats.QUIET_SLOT_LIMIT:
+        quietest = _(
+            "Quietest: {count} of {total} slots recorded nothing at all."
+        ).format(
+            count=format_count(ranked.quiet_slots),
+            total=format_count(ranked.total_slots),
+        )
+    else:
+        quietest = _("Quietest: {slots}").format(
+            slots=format_hour_slots(ranked.quietest)
+        )
+    return [
+        quietest,
+        _("Busiest: {slots}").format(slots=format_hour_slots(ranked.busiest)),
+        "-# "
+        + _(
+            "Share of all recorded commands, by UTC hour of the week. The "
+            "profile halves every {days} days, so recent weeks weigh most."
+        ).format(days=usage_stats.HOURLY_HALVE_DAYS),
+    ]
 
 
 def render_persisted_ranking(persisted):
@@ -1269,7 +1375,13 @@ class BotStats(commands.Cog):
         # already-expired rows, i.e. harmless.
         self._prune_day = None
         # Cumulative instrumentation (scale story).
-        self._flush_stats = {"flushes": 0, "rows": 0, "dropped": 0, "pruned": 0}
+        self._flush_stats = {
+            "flushes": 0,
+            "rows": 0,
+            "dropped": 0,
+            "pruned": 0,
+            "halved": 0,
+        }
         # Fallback uptime source for a host without /proc (see the Overview
         # page). It is the COG's load time, so it is always <= the process
         # uptime, and it is rendered with that caveat spelled out.
@@ -1329,8 +1441,12 @@ class BotStats(commands.Cog):
         """
         if not name:
             return
+        # ONE reading of the clock for both axes: taking the day and the hour
+        # separately could straddle a midnight between the two calls and file a
+        # 23:59 completion as hour 0 of the day before.
+        day, hour = usage_stats.utc_day_hour()
         self.usage.record(name, slash=slash)
-        self.buffer.record(usage_stats.utc_today(), name, slash=slash)
+        self.buffer.record(day, name, slash=slash, hour=hour)
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -1422,7 +1538,12 @@ class BotStats(commands.Cog):
         log.debug("botstats usage flush: %d command-day row(s)", len(drained.rows))
 
     async def _maybe_prune(self, today):
-        """Drop usage older than the retention window, once a day, in batches."""
+        """The once-a-day maintenance hook: the retention prune, then the decay.
+
+        Both ride this one gate because both are cheap, bounded and pointless to
+        run more often - and because the day marker below is what makes "once a
+        day" true for the pair rather than for one of them.
+        """
         if self._prune_day == today:
             return
         cutoff = today - datetime.timedelta(days=usage_stats.RETENTION_DAYS)
@@ -1437,6 +1558,7 @@ class BotStats(commands.Cog):
             deleted += batch
             if batch < usage_stats.PRUNE_BATCH_SIZE:
                 break
+        await self._decay_hourly(today)
         # Marked only after the batches ran, so a failed prune is retried on the
         # next tick instead of being lost for the whole day.
         self._prune_day = today
@@ -1446,6 +1568,43 @@ class BotStats(commands.Cog):
                 "botstats usage prune: removed %d row(s) older than %s",
                 deleted,
                 cutoff,
+            )
+
+    async def _decay_hourly(self, today):
+        """Age the weekly usage profile: halve all 168 counts, once a week.
+
+        Two statements, both trivial and both bounded by the 168-row ceiling of
+        the table they touch:
+
+        1. seed the marker row if this install has never had one (a no-op on
+           every call but the first);
+        2. the decay itself, which CLAIMS the week with ``UPDATE ... WHERE
+           halved_on <= today - 7 RETURNING`` and halves only when that claim
+           returned a row.
+
+        WHY THE CADENCE LIVES IN THE DATABASE. The prune above marks its day in
+        memory (``self._prune_day``) and can afford to: a restart re-runs it, and
+        re-deleting already-expired rows is a no-op. Halving is not idempotent
+        and this bot restarts on every deploy, so an in-memory weekly marker
+        would halve the profile several times a day and flatten it to zeros
+        inside a week. The claim-by-UPDATE-RETURNING shape is the repo's standard
+        at-most-once idiom (tools/retention.claim_due_guild, the dashboard action
+        queue), and its row lock also makes a racing second caller a no-op rather
+        than a second halving.
+
+        A failure here propagates: ``_prune_day`` is only marked after this
+        returns, so the whole hook is retried on the next tick.
+        """
+        await self.bot.db_pool.execute(usage_stats.SEED_HOURLY_STATE, today)
+        row = await self.bot.db_pool.fetchrow(
+            usage_stats.DECAY_HOURLY, today, usage_stats.HOURLY_HALVE_DAYS
+        )
+        halved = int(row["rows"]) if row else 0
+        if halved:
+            self._flush_stats["halved"] += halved
+            log.info(
+                "botstats usage profile: halved %d hourly slot(s) (weekly decay)",
+                halved,
             )
 
     # -- the command ---------------------------------------------------------
