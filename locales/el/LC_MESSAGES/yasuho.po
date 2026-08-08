@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 16:22+0000\n"
+"POT-Creation-Date: 2026-08-08 17:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1299,7 +1299,7 @@ msgstr "Διαγραφή"
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:319
-#: cogs/system/arg_completion.py:219
+#: cogs/config/tickets/lifecycle.py:261 cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "Ακύρωση"
 
@@ -1356,17 +1356,18 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:69 cogs/config/twitch.py:412
-#: cogs/config/verification.py:100 cogs/config/welcome.py:424
-#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:253
+#: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
+#: cogs/config/twitch.py:412 cogs/config/verification.py:100
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/moderation/modlog.py:253
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1029 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:71 cogs/config/twitch.py:414
-#: cogs/config/verification.py:102 cogs/config/welcome.py:426
-#: cogs/config/welcome.py:547 cogs/config/welcome.py:785
-#: cogs/moderation/modlog.py:255
+#: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
+#: cogs/config/twitch.py:414 cogs/config/verification.py:102
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:255
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
@@ -2137,7 +2138,7 @@ msgstr "Όλος ο διακομιστής: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:177
 #: cogs/community/leveling/level_config_ui.py:833
 #: cogs/community/leveling/level_config_ui.py:839
-#: cogs/config/tickets/panel.py:122 cogs/config/verification.py:105
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:105
 msgid "(deleted)"
 msgstr "(διαγράφηκε)"
 
@@ -2247,8 +2248,8 @@ msgstr "Χρώμα έμφασης"
 #: cogs/community/leveling/seasons_views.py:186
 #: cogs/community/leveling/seasons_views.py:427
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:550
-#: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
-#: cogs/moderation/warn_config.py:437
+#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:600
+#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
 
@@ -2256,8 +2257,8 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:188
 #: cogs/community/leveling/seasons_views.py:429
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:552
-#: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
-#: cogs/moderation/warn_config.py:439
+#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:602
+#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
 
@@ -3514,7 +3515,7 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κανάλι (και προαιρετικά έναν ρόλο για ping) και μετά πάτησε **Αποστολή**. Η προεπισκόπηση το δείχνει μόνο σε εσένα."
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:530 cogs/config/tickets/panel.py:123
+#: cogs/config/rolemenus.py:530 cogs/config/tickets/panel.py:156
 #: cogs/config/twitch.py:408 cogs/config/verification.py:107
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:251
@@ -4547,7 +4548,7 @@ msgstr "Μεταβίβαση ιδιοκτησίας"
 msgid "Bump to top"
 msgstr "Ανέβασμα στην κορυφή"
 
-#: cogs/config/rooms_panels.py:308
+#: cogs/config/rooms_panels.py:308 cogs/config/tickets/lifecycle.py:210
 msgid "Claim"
 msgstr "Διεκδίκηση"
 
@@ -5087,8 +5088,9 @@ msgstr "Είσαι ήδη επαληθευμένος/η."
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "Δεν μπορώ να αναθέσω αυτόν τον ρόλο - ίσως είναι πάνω από τον υψηλότερο ρόλο μου."
 
-#: cogs/config/tickets/open.py:165 cogs/config/tickets/open.py:283
-#: cogs/config/verification.py:72
+#: cogs/config/tickets/lifecycle.py:354 cogs/config/tickets/lifecycle.py:444
+#: cogs/config/tickets/lifecycle.py:501 cogs/config/tickets/open.py:172
+#: cogs/config/tickets/open.py:297 cogs/config/verification.py:72
 msgid "Something went wrong, please try again."
 msgstr "Κάτι πήγε στραβά, δοκίμασε ξανά."
 
@@ -5260,75 +5262,230 @@ msgstr "Τα μηνύματα καλωσορίσματος απενεργοπο�
 msgid "Welcome {member}!"
 msgstr "Καλώς ήρθες {member}!"
 
-#: cogs/config/tickets/open.py:101 cogs/config/tickets/open.py:125
-msgid "Open a ticket"
-msgstr "Άνοιγμα εισιτηρίου"
+#: cogs/config/tickets/lifecycle.py:185 cogs/config/tickets/lifecycle.py:257
+msgid "Close ticket"
+msgstr "Κλείσιμο εισιτηρίου"
 
-#: cogs/config/tickets/open.py:103
-msgid "What do you need help with?"
-msgstr "Με τι χρειάζεσαι βοήθεια;"
+#: cogs/config/tickets/lifecycle.py:274
+#, python-brace-format
+msgid "Closing ticket #{number}..."
+msgstr "Κλείσιμο του εισιτηρίου #{number}..."
 
-#: cogs/config/tickets/open.py:104
-msgid "A short summary - staff will read it first."
-msgstr "Μια σύντομη περίληψη - το προσωπικό θα τη διαβάσει πρώτα."
+#: cogs/config/tickets/lifecycle.py:285
+msgid "The ticket stays open."
+msgstr "Το εισιτήριο παραμένει ανοιχτό."
 
-#: cogs/config/tickets/open.py:137 cogs/config/tickets/open.py:206
+#: cogs/config/tickets/lifecycle.py:340 cogs/config/tickets/lifecycle.py:435
+#: cogs/config/tickets/open.py:144 cogs/config/tickets/open.py:213
 msgid "Tickets only work inside a server."
 msgstr "Τα εισιτήρια λειτουργούν μόνο μέσα σε server."
 
-#: cogs/config/tickets/open.py:146 cogs/config/tickets/open.py:215
+#: cogs/config/tickets/lifecycle.py:346
+msgid "Only the support team can claim a ticket."
+msgstr "Μόνο η ομάδα υποστήριξης μπορεί να διεκδικήσει ένα εισιτήριο."
+
+#: cogs/config/tickets/lifecycle.py:359 cogs/config/tickets/lifecycle.py:449
+msgid "This thread is not a ticket."
+msgstr "Αυτό το νήμα δεν είναι εισιτήριο."
+
+#: cogs/config/tickets/lifecycle.py:368 cogs/config/tickets/lifecycle.py:454
+#, python-brace-format
+msgid "Ticket #{number} is already closed."
+msgstr "Το εισιτήριο #{number} είναι ήδη κλειστό."
+
+#: cogs/config/tickets/lifecycle.py:375
+#, python-brace-format
+msgid "Ticket #{number} is already claimed by {user}."
+msgstr "Το εισιτήριο #{number} έχει ήδη διεκδικηθεί από {user}."
+
+#: cogs/config/tickets/lifecycle.py:380
+msgid "You cannot claim your own ticket."
+msgstr "Δεν μπορείς να διεκδικήσεις το δικό σου εισιτήριο."
+
+#: cogs/config/tickets/lifecycle.py:391
+#, python-brace-format
+msgid "Ticket #{number} is yours."
+msgstr "Το εισιτήριο #{number} είναι δικό σου."
+
+#: cogs/config/tickets/lifecycle.py:399
+#, python-brace-format
+msgid "{user} is taking care of this ticket."
+msgstr "{user} αναλαμβάνει αυτό το εισιτήριο."
+
+#: cogs/config/tickets/lifecycle.py:463
+msgid "Only the member who opened this ticket, or the support team, can close it."
+msgstr "Μόνο το μέλος που άνοιξε αυτό το εισιτήριο, ή η ομάδα υποστήριξης, μπορεί να το κλείσει."
+
+#: cogs/config/tickets/lifecycle.py:479
+#, python-brace-format
+msgid "Close ticket #{number}? The thread will be archived and locked."
+msgstr "Κλείσιμο του εισιτηρίου #{number}; Το νήμα θα αρχειοθετηθεί και θα κλειδωθεί."
+
+#: cogs/config/tickets/lifecycle.py:505 cogs/config/tickets/lifecycle.py:514
+msgid "This ticket is already closed."
+msgstr "Αυτό το εισιτήριο είναι ήδη κλειστό."
+
+#: cogs/config/tickets/lifecycle.py:518
+#, python-brace-format
+msgid "Ticket #{number} is closed."
+msgstr "Το εισιτήριο #{number} είναι κλειστό."
+
+#: cogs/config/tickets/lifecycle.py:614
+#, python-brace-format
+msgid "Ticket #{number} is closed. Thanks for reaching out."
+msgstr "Το εισιτήριο #{number} είναι κλειστό. Ευχαριστούμε που επικοινώνησες."
+
+#: cogs/config/tickets/lifecycle.py:619
+msgid "This server has no ticket log channel, so no transcript was saved."
+msgstr "Αυτός ο server δεν έχει κανάλι καταγραφής εισιτηρίων, οπότε δεν αποθηκεύτηκε μεταγραφή."
+
+#: cogs/config/tickets/lifecycle.py:638
+#, python-brace-format
+msgid "Transcript of ticket #{number}"
+msgstr "Μεταγραφή του εισιτηρίου #{number}"
+
+#: cogs/config/tickets/lifecycle.py:639
+#, python-brace-format
+msgid "Server: {guild}"
+msgstr "Server: {guild}"
+
+#: cogs/config/tickets/lifecycle.py:640
+#, python-brace-format
+msgid "Opened by {user} on {date}"
+msgstr "Ανοίχτηκε από {user} στις {date}"
+
+#: cogs/config/tickets/lifecycle.py:644
+#, python-brace-format
+msgid "Taken on {date}"
+msgstr "Διεκδικήθηκε στις {date}"
+
+#: cogs/config/tickets/lifecycle.py:647
+msgid "Attachment links are Discord CDN links and stop working after a while."
+msgstr "Οι σύνδεσμοι συνημμένων είναι σύνδεσμοι Discord CDN και σταματούν να λειτουργούν μετά από κάποιο διάστημα."
+
+#: cogs/config/tickets/lifecycle.py:685
+#, python-brace-format
+msgid "Ticket #{number} closed"
+msgstr "Το εισιτήριο #{number} έκλεισε"
+
+#: cogs/config/tickets/lifecycle.py:689
+msgid "Opened by"
+msgstr "Ανοίχτηκε από"
+
+#: cogs/config/tickets/lifecycle.py:692
+msgid "Claimed by"
+msgstr "Διεκδικήθηκε από"
+
+#: cogs/config/tickets/lifecycle.py:696
+msgid "Nobody"
+msgstr "Κανένας"
+
+#: cogs/config/tickets/lifecycle.py:700
+msgid "Ended by"
+msgstr "Έκλεισε από"
+
+#: cogs/config/tickets/lifecycle.py:702
+msgid "Opened"
+msgstr "Άνοιξε"
+
+#: cogs/config/tickets/lifecycle.py:705
+msgid "Closed"
+msgstr "Έκλεισε"
+
+#: cogs/config/tickets/lifecycle.py:720
+msgid "Transcript attached: what was said in the ticket thread. It stays in this channel."
+msgstr "Επισυναπτόμενη μεταγραφή: όσα ειπώθηκαν στο νήμα του εισιτηρίου. Παραμένει σε αυτό το κανάλι."
+
+#: cogs/config/tickets/lifecycle.py:744
+msgid "The thread was deleted."
+msgstr "Το νήμα διαγράφηκε."
+
+#: cogs/config/tickets/lifecycle.py:747
+msgid "Auto-closed after inactivity."
+msgstr "Έκλεισε αυτόματα λόγω αδράνειας."
+
+#: cogs/config/tickets/lifecycle.py:753
+msgid "No transcript: the thread was already gone."
+msgstr "Χωρίς μεταγραφή: το νήμα είχε ήδη διαγραφεί."
+
+#: cogs/config/tickets/lifecycle.py:755
+msgid "No transcript: I could not read the thread."
+msgstr "Χωρίς μεταγραφή: δεν μπόρεσα να διαβάσω το νήμα."
+
+#: cogs/config/tickets/lifecycle.py:756
+msgid "No transcript: I cannot attach files in this channel."
+msgstr "Χωρίς μεταγραφή: δεν μπορώ να επισυνάψω αρχεία σε αυτό το κανάλι."
+
+#: cogs/config/tickets/open.py:108 cogs/config/tickets/open.py:132
+msgid "Open a ticket"
+msgstr "Άνοιγμα εισιτηρίου"
+
+#: cogs/config/tickets/open.py:110
+msgid "What do you need help with?"
+msgstr "Με τι χρειάζεσαι βοήθεια;"
+
+#: cogs/config/tickets/open.py:111
+msgid "A short summary - staff will read it first."
+msgstr "Μια σύντομη περίληψη - το προσωπικό θα τη διαβάσει πρώτα."
+
+#: cogs/config/tickets/open.py:153 cogs/config/tickets/open.py:222
 msgid "You cannot use this."
 msgstr "Δεν μπορείς να το χρησιμοποιήσεις αυτό."
 
-#: cogs/config/tickets/open.py:153 cogs/config/tickets/open.py:226
+#: cogs/config/tickets/open.py:160 cogs/config/tickets/open.py:233
 msgid "Tickets are not set up here."
 msgstr "Τα εισιτήρια δεν έχουν ρυθμιστεί εδώ."
 
-#: cogs/config/tickets/open.py:172 cogs/config/tickets/open.py:250
+#: cogs/config/tickets/open.py:179 cogs/config/tickets/open.py:257
 msgid "I am already opening a ticket for you - one moment."
 msgstr "Σου ανοίγω ήδη ένα εισιτήριο - μια στιγμή."
 
-#: cogs/config/tickets/open.py:189
+#: cogs/config/tickets/open.py:196
 #, python-brace-format
 msgid "You already have {count} ticket open here. Close it before opening another."
 msgid_plural "You already have {count} tickets open here. Close one before opening another."
 msgstr[0] "Έχεις ήδη {count} ανοιχτό ticket εδώ. Κλείσε το πριν ανοίξεις άλλο."
 msgstr[1] "Έχεις ήδη {count} ανοιχτά tickets εδώ. Κλείσε ένα πριν ανοίξεις άλλο."
 
-#: cogs/config/tickets/open.py:242
+#: cogs/config/tickets/open.py:249
 #, python-brace-format
 msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
 msgstr "Μου λείπουν δικαιώματα στο {channel} ({permissions}), οπότε δεν μπορώ να ανοίξω εισιτήριο. Ενημέρωσε έναν διαχειριστή του server."
 
-#: cogs/config/tickets/open.py:274
+#: cogs/config/tickets/open.py:288
 msgid "I could not create the ticket, please try again."
 msgstr "Δεν μπόρεσα να δημιουργήσω το εισιτήριο, δοκίμασε ξανά."
 
-#: cogs/config/tickets/open.py:305
+#: cogs/config/tickets/open.py:319
 #, python-brace-format
 msgid "Ticket #{number} opened: {thread}"
 msgstr "Το εισιτήριο #{number} ανοίχτηκε: {thread}"
 
-#: cogs/config/tickets/open.py:330
+#: cogs/config/tickets/open.py:344
 #, python-brace-format
 msgid "Ticket #{number}"
 msgstr "Εισιτήριο #{number}"
 
-#: cogs/config/tickets/open.py:331
+#: cogs/config/tickets/open.py:345
 msgid "*No subject given.*"
 msgstr "*Δεν δόθηκε θέμα.*"
 
-#: cogs/config/tickets/open.py:335
+#: cogs/config/tickets/open.py:349
 #, python-brace-format
 msgid "Opened by {user}"
 msgstr "Ανοίχτηκε από {user}"
 
-#: cogs/config/tickets/panel.py:77
+#: cogs/config/tickets/open.py:392
+#, python-brace-format
+msgid "Ticket #{number} - use the buttons below to claim or close it."
+msgstr "Εισιτήριο #{number} - χρησιμοποίησε τα παρακάτω κουμπιά για να το διεκδικήσεις ή να το κλείσεις."
+
+#: cogs/config/tickets/panel.py:99
 #, python-brace-format
 msgid "Support tickets | {guild}"
 msgstr "Εισιτήρια υποστήριξης | {guild}"
 
-#: cogs/config/tickets/panel.py:84
+#: cogs/config/tickets/panel.py:106
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -5345,44 +5502,167 @@ msgstr ""
 "**Ανοιχτά εισιτήρια ανά μέλος:** {cap}\n"
 "**Παράθυρο αδράνειας:** {hours}h"
 
-#: cogs/config/tickets/panel.py:104
+#: cogs/config/tickets/panel.py:125 cogs/config/tickets/panel.py:919
+#, python-brace-format
+msgid "Closed tickets are logged in {channel}, transcript attached."
+msgstr "Τα κλειστά εισιτήρια καταγράφονται στο {channel}, με επισυναπτόμενη μεταγραφή."
+
+#: cogs/config/tickets/panel.py:132
 msgid "Use `/ticket setup` to turn tickets on."
 msgstr "Χρησιμοποίησε `/ticket setup` για να ενεργοποιήσεις τα εισιτήρια."
 
-#: cogs/config/tickets/panel.py:186
+#: cogs/config/tickets/panel.py:188
+#, python-brace-format
+msgid "Heads up: everyone can read {channel}, and a closed ticket is logged there with the full transcript of its thread. Pick a staff-only channel if that is not what you want."
+msgstr "Προσοχή: όλοι μπορούν να διαβάσουν το {channel}, και ένα κλειστό εισιτήριο καταγράφεται εκεί με την πλήρη μεταγραφή του νήματός του. Επίλεξε ένα κανάλι μόνο για προσωπικό αν δεν το θέλεις αυτό."
+
+#: cogs/config/tickets/panel.py:238
+msgid "Panel channel (clear to turn tickets off)..."
+msgstr "Κανάλι πάνελ (καθάρισε για απενεργοποίηση εισιτηρίων)..."
+
+#: cogs/config/tickets/panel.py:256
+msgid "Support role (clear for none)..."
+msgstr "Ρόλος υποστήριξης (καθάρισε για κανέναν)..."
+
+#: cogs/config/tickets/panel.py:284
+msgid "Log channel: closed tickets + transcripts..."
+msgstr "Κανάλι καταγραφής: κλειστά εισιτήρια + μεταγραφές..."
+
+#: cogs/config/tickets/panel.py:301
+msgid "Clears the setting and follows the bot default."
+msgstr "Καθαρίζει τη ρύθμιση και ακολουθεί την προεπιλογή του bot."
+
+#: cogs/config/tickets/panel.py:312
+#, python-brace-format
+msgid "Default ({count})"
+msgstr "Προεπιλογή ({count})"
+
+#: cogs/config/tickets/panel.py:323
+#, python-brace-format
+msgid "{count} at a time"
+msgstr "{count} τη φορά"
+
+#: cogs/config/tickets/panel.py:329
+msgid "Open tickets per member..."
+msgstr "Ανοιχτά εισιτήρια ανά μέλος..."
+
+#: cogs/config/tickets/panel.py:348
+#, python-brace-format
+msgid "Default ({hours}h)"
+msgstr "Προεπιλογή ({hours}h)"
+
+#: cogs/config/tickets/panel.py:357 cogs/config/tickets/panel.py:498
+#, python-brace-format
+msgid "{hours}h"
+msgstr "{hours}h"
+
+#: cogs/config/tickets/panel.py:363
+msgid "Close a ticket after this much silence..."
+msgstr "Κλείσιμο εισιτηρίου μετά από τόση σιωπή..."
+
+#: cogs/config/tickets/panel.py:379
+msgid "Panel message"
+msgstr "Μήνυμα πάνελ"
+
+#: cogs/config/tickets/panel.py:382
+msgid "Shown above the ticket button"
+msgstr "Εμφανίζεται πάνω από το κουμπί εισιτηρίου"
+
+#: cogs/config/tickets/panel.py:387
+msgid "Leave empty to use the default wording."
+msgstr "Άφησέ το κενό για να χρησιμοποιηθεί η προεπιλεγμένη διατύπωση."
+
+#: cogs/config/tickets/panel.py:398
+msgid "Edit panel message"
+msgstr "Επεξεργασία μηνύματος πάνελ"
+
+#: cogs/config/tickets/panel.py:409
+msgid "Reset message"
+msgstr "Επαναφορά μηνύματος"
+
+#: cogs/config/tickets/panel.py:478
+#, python-brace-format
+msgid ""
+"**Status:** {status}\n"
+"**Panel channel:** {channel}\n"
+"**Support role:** {role}\n"
+"**Log channel:** {log}\n"
+"**Open tickets per member:** {cap}\n"
+"**Inactivity window:** {hours}\n"
+"**Panel message:** {message}"
+msgstr ""
+"**Κατάσταση:** {status}\n"
+"**Κανάλι πάνελ:** {channel}\n"
+"**Ρόλος υποστήριξης:** {role}\n"
+"**Κανάλι καταγραφής:** {log}\n"
+"**Ανοιχτά εισιτήρια ανά μέλος:** {cap}\n"
+"**Παράθυρο αδράνειας:** {hours}\n"
+"**Μήνυμα πάνελ:** {message}"
+
+#: cogs/config/tickets/panel.py:502
+msgid "*Default wording.*"
+msgstr "*Προεπιλεγμένη διατύπωση.*"
+
+#: cogs/config/tickets/panel.py:510
+#, python-brace-format
+msgid "{value} (default)"
+msgstr "{value} (προεπιλογή)"
+
+#: cogs/config/tickets/panel.py:520
+#, python-brace-format
+msgid "Support tickets - {guild}"
+msgstr "Εισιτήρια υποστήριξης - {guild}"
+
+#: cogs/config/tickets/panel.py:523
+msgid "Every setting below is optional: clear a picker, or choose Default, and Yasuho goes back to her own default for it."
+msgstr "Κάθε ρύθμιση παρακάτω είναι προαιρετική: καθάρισε έναν επιλογέα, ή διάλεξε Προεπιλογή, και η Yasuho επιστρέφει στη δική της προεπιλογή γι' αυτήν."
+
+#: cogs/config/tickets/panel.py:585
+msgid "Changing the panel channel here does not post a panel there - run `/ticket setup` for that."
+msgstr "Η αλλαγή του καναλιού πάνελ εδώ δεν δημοσιεύει πάνελ εκεί - εκτέλεσε `/ticket setup` για αυτό."
+
+#: cogs/config/tickets/panel.py:589
+msgid "A closed ticket is logged with the full transcript of its thread; with no log channel, no transcript is kept at all."
+msgstr "Ένα κλειστό εισιτήριο καταγράφεται με την πλήρη μεταγραφή του νήματός του· χωρίς κανάλι καταγραφής, δεν διατηρείται καμία μεταγραφή."
+
+#: cogs/config/tickets/panel.py:632
+msgid "Something went wrong saving that setting."
+msgstr "Κάτι πήγε στραβά κατά την αποθήκευση αυτής της ρύθμισης."
+
+#: cogs/config/tickets/panel.py:667 cogs/config/tickets/panel.py:804
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Χρειάζομαι πρώτα αυτά τα δικαιώματα στο {channel}: {permissions}."
 
-#: cogs/config/tickets/panel.py:239
+#: cogs/config/tickets/panel.py:860
 msgid "Support tickets"
 msgstr "Εισιτήρια υποστήριξης"
 
-#: cogs/config/tickets/panel.py:243
+#: cogs/config/tickets/panel.py:864
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "Χρειάζεσαι βοήθεια; Κάνε κλικ παρακάτω και θα ανοίξω ένα ιδιωτικό νήμα για εσένα και την ομάδα υποστήριξης."
 
-#: cogs/config/tickets/panel.py:255
+#: cogs/config/tickets/panel.py:876
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "Δεν μπόρεσα να δημοσιεύσω το πάνελ στο {channel}."
 
-#: cogs/config/tickets/panel.py:261
+#: cogs/config/tickets/panel.py:882
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "Τα εισιτήρια είναι ενεργά - το πάνελ είναι διαθέσιμο στο {channel}. {jump}"
 
-#: cogs/config/tickets/panel.py:291
+#: cogs/config/tickets/panel.py:912
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "Ρόλος υποστήριξης: {role} | Κανάλι καταγραφής: {log} | το setup αλλάζει μόνο τις επιλογές που ονομάζεις."
 
-#: cogs/config/tickets/panel.py:304
+#: cogs/config/tickets/panel.py:934
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "Προσοχή: στον ρόλο {role} λείπουν τα {permissions} στο {channel}. Ένα εισιτήριο είναι ιδιωτικό νήμα, οπότε το προσωπικό μπορεί να το δει μόνο με το Διαχείριση Νημάτων στο κανάλι - χωρίς αυτό θα λαμβάνουν ειδοποίηση σε εισιτήρια που δεν μπορούν να ανοίξουν."
 
-#: cogs/config/tickets/panel.py:340
+#: cogs/config/tickets/panel.py:986
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "Τα εισιτήρια είναι απενεργοποιημένα. Τα νήματα που είναι ήδη ανοιχτά παραμένουν όπως είναι, και το κουμπί του πάνελ θα αναφέρει ότι τα εισιτήρια δεν έχουν ρυθμιστεί."
 
