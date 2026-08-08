@@ -407,7 +407,7 @@ class _CardBudget:
         )
 
 
-def _header_section(member, visible):
+def _header_section(member, visible, supporter=False):
     # Both halves carry a structural markdown prefix ("## " / "-# ") that a
     # newline in the value would escape from, so both are flattened for the
     # same reason the label/value rows are (see _one_line).
@@ -415,6 +415,15 @@ def _header_section(member, visible):
     pronouns = visible.get("pronouns")
     if pronouns:
         lines.append("-# " + _one_line(pronouns))
+    if supporter:
+        # V2 (top.gg vote chantier): a recent voter's badge. Folded into the
+        # SAME TextDisplay as the name/pronouns rather than a Section/row of
+        # its own - it costs zero extra Components V2 components either way,
+        # which matters because this section's budget is otherwise untouched
+        # by anything below (see votes.is_recent_supporter for the "recent"
+        # definition and cog.py's profile_view for the one extra bounded read
+        # that feeds it).
+        lines.append("-# " + _("Supporter"))
     return discord.ui.Section(
         discord.ui.TextDisplay("\n".join(lines)),
         accessory=discord.ui.Thumbnail(member.display_avatar.url),
@@ -583,16 +592,22 @@ class ProfileCard(discord.ui.LayoutView):
         super().__init__(timeout=None)
 
     @classmethod
-    async def create(cls, member, visible, connector_sections, viewer, connections):
+    async def create(
+        cls, member, visible, connector_sections, viewer, connections, *, supporter=False
+    ):
         card = cls()
-        await card._build(member, visible, connector_sections, viewer, connections)
+        await card._build(
+            member, visible, connector_sections, viewer, connections, supporter=supporter
+        )
         return card
 
-    async def _build(self, member, visible, connector_sections, viewer, connections):
+    async def _build(
+        self, member, visible, connector_sections, viewer, connections, *, supporter=False
+    ):
         accent = visible.get("accent")
         colour = discord.Colour(accent) if accent is not None else random_colour()
         container = discord.ui.Container(accent_colour=colour)
-        container.add_item(_header_section(member, visible))
+        container.add_item(_header_section(member, visible, supporter))
 
         budget = _CardBudget(container)
         bio = visible.get("bio")
@@ -671,7 +686,9 @@ def _connector_sections(visibility_map, viewer, linked):
     ]
 
 
-async def build_profile_card(member, profile, visibility_map, viewer, connections):
+async def build_profile_card(
+    member, profile, visibility_map, viewer, connections, *, supporter=False
+):
     """Assemble the card ``/profile view`` sends, or ``None`` when the viewer
     may see nothing at all (the caller falls back to a plain "no profile"
     message rather than sending an empty card).
@@ -687,6 +704,13 @@ async def build_profile_card(member, profile, visibility_map, viewer, connection
     table's own primary key). It is REQUIRED rather than optional: a caller who
     forgets it would silently render a profile with no connector section at
     all, which is a lie in the other direction.
+
+    ``supporter`` (V2, top.gg vote chantier) - whether ``member`` voted within
+    the badge window (see ``votes.is_recent_supporter``). Keyword-only with a
+    False default so every existing caller (and the many direct calls in
+    tests/cogs/test_profile_views.py) is unaffected; a card with nothing
+    visible still returns None regardless of ``supporter`` - a badge is never
+    reason enough to show a card with nothing else on it.
     """
     visible = resolve_visible_fields(profile, visibility_map, viewer)
     linked = _by_connector(connections)
@@ -694,7 +718,7 @@ async def build_profile_card(member, profile, visibility_map, viewer, connection
     if not visible and not connector_sections:
         return None
     return await ProfileCard.create(
-        member, visible, connector_sections, viewer, linked
+        member, visible, connector_sections, viewer, linked, supporter=supporter
     )
 
 

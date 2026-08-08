@@ -160,6 +160,22 @@ PREFS = [
         ),
         default=True,
     ),
+    # The 7th and LAST slot MAX_PREFS has room for (see MAX_PREFS' arithmetic
+    # above) - an 8th toggle needs pagination, not a raised cap. The key MUST
+    # match cogs/community/votes.VOTE_REMINDER_PREF_KEY; votes.py reads it (by
+    # literal, like every other preference here) after a real vote, and again
+    # at the reminder's fire time. Default OFF: the additive rule says a
+    # member who never opts in gets zero DMs about voting again, ever.
+    Preference(
+        key="vote_reminder",
+        label=N_("Vote-again reminder"),
+        emoji="🗳️",
+        description=N_(
+            "DM you once you can vote for Yasuho again (about 12h after your "
+            "last vote)."
+        ),
+        default=False,
+    ),
 ]
 
 # Non-boolean preferences, rendered under the toggles as one select each. The

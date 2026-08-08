@@ -49,6 +49,7 @@ from .views import (
     section_for,
 )
 from .visibility import ViewerContext
+from cogs.community import votes
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
@@ -503,8 +504,23 @@ class Profiles(commands.Cog):
                 viewer_id=ctx.author.id,
                 shares_guild=True,
             )
+            # The fourth read, and the ONE extra bounded read the "Supporter"
+            # badge costs (V2, top.gg vote chantier): a single primary-key
+            # lookup on topgg_votes (user_id is the PK), the same cost class as
+            # the three reads above it - not joined into any of them, since
+            # none of those three tables carries vote data. See
+            # views._header_section for where the badge itself renders.
+            last_vote_at = await votes.get_last_vote_at(pool, member.id)
+            supporter = votes.is_recent_supporter(
+                last_vote_at, discord.utils.utcnow()
+            )
             card = await build_profile_card(
-                member, profile, visibility_map, viewer, connections
+                member,
+                profile,
+                visibility_map,
+                viewer,
+                connections,
+                supporter=supporter,
             )
 
             if card is None:

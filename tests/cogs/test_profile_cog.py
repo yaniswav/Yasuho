@@ -16,6 +16,7 @@ tests/cogs/test_profile_views.py, not duplicated here.
 Offline: the storage seam is monkeypatched, so no database is involved.
 """
 
+import datetime
 import types
 import typing
 
@@ -23,6 +24,7 @@ import discord
 import pytest
 from discord.ext.commands.view import StringView
 
+from cogs.community import votes
 from cogs.community.profile import registry, storage, visibility
 from cogs.community.profile.cog import Profiles
 from cogs.community.profile.connectors import storage as connectors_storage
@@ -182,10 +184,17 @@ def reads(monkeypatch):
     """Serve one profile + visibility map + connection list to `profile view`.
 
     The third read is what makes a "Linked" badge true (see views.py): the card
-    draws a connector section only for a row that really exists, so the fixture
-    serves the same three reads the command performs.
+    draws a connector section only for a row that really exists. The fourth
+    (``last_vote_at``) is the V2 "Supporter" badge's one extra bounded read
+    (see cog.py's profile_view) - together this fixture serves the same four
+    reads the command performs.
     """
-    state = {"profile": None, "visibility": {}, "connections": []}
+    state = {
+        "profile": None,
+        "visibility": {},
+        "connections": [],
+        "last_vote_at": None,
+    }
 
     async def get_profile(pool, user_id):
         return state["profile"]
@@ -196,9 +205,13 @@ def reads(monkeypatch):
     async def get_connections(pool, user_id):
         return state["connections"]
 
+    async def get_last_vote_at(pool, user_id):
+        return state["last_vote_at"]
+
     monkeypatch.setattr(storage, "get_profile", get_profile)
     monkeypatch.setattr(storage, "get_visibility", get_visibility)
     monkeypatch.setattr(connectors_storage, "get_connections", get_connections)
+    monkeypatch.setattr(votes, "get_last_vote_at", get_last_vote_at)
     return state
 
 
@@ -425,6 +438,37 @@ async def test_view_defaults_to_the_caller(reads, owner):
     ctx = _Ctx(owner)
     await Profiles.profile_view.callback(_cog(), ctx, None)
     assert "Owner" in _card_text(_last_view(ctx))
+
+
+# ---------------------------------------------------------------------------
+# profile view: the V2 "Supporter" badge (top.gg vote chantier)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_recent_voter_gets_the_supporter_badge(reads, owner):
+    reads["profile"] = _profile(bio="hi")
+    reads["last_vote_at"] = datetime.datetime.now(datetime.timezone.utc)
+    ctx = _Ctx(owner)
+    await Profiles.profile_view.callback(_cog(), ctx, owner)
+    assert "Supporter" in _card_text(_last_view(ctx))
+
+
+async def test_a_never_voted_member_gets_no_badge(reads, owner):
+    reads["profile"] = _profile(bio="hi")
+    reads["last_vote_at"] = None
+    ctx = _Ctx(owner)
+    await Profiles.profile_view.callback(_cog(), ctx, owner)
+    assert "Supporter" not in _card_text(_last_view(ctx))
+
+
+async def test_a_vote_over_a_week_old_gets_no_badge(reads, owner):
+    reads["profile"] = _profile(bio="hi")
+    reads["last_vote_at"] = datetime.datetime.now(
+        datetime.timezone.utc
+    ) - datetime.timedelta(days=8)
+    ctx = _Ctx(owner)
+    await Profiles.profile_view.callback(_cog(), ctx, owner)
+    assert "Supporter" not in _card_text(_last_view(ctx))
 
 
 async def test_the_bare_group_shows_the_callers_profile(reads, owner):

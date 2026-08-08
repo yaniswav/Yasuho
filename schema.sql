@@ -101,6 +101,11 @@ CREATE INDEX IF NOT EXISTS timers_pending_expires_idx
 -- filter on (event, author) then read already-ordered by expires. Additive.
 CREATE INDEX IF NOT EXISTS timers_reminder_author_idx
     ON timers (event, (extra->>'author_id'), expires);
+-- Same shape, for the opt-in "vote again" reminder (cogs/community/votes.py):
+-- cancel-then-reschedule on every real vote filters on (event, user), so this
+-- keeps that scoped DELETE indexed instead of a scan over every timer row.
+CREATE INDEX IF NOT EXISTS timers_vote_reminder_user_idx
+    ON timers (event, (extra->>'user_id'), expires);
 
 -- Per-(guild, user) XP for the leveling system.  leveling.py
 CREATE TABLE IF NOT EXISTS levels (

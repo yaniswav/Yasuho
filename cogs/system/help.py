@@ -92,6 +92,7 @@ CATEGORIES = [
             "AvatarHistory",
             "UserSettings",
             "Language",
+            "Votes",
         ],
     ),
     (
