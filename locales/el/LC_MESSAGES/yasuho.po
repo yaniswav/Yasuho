@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 10:27+0000\n"
+"POT-Creation-Date: 2026-08-08 11:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -456,7 +456,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:423
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:439
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -1298,7 +1298,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
-#: cogs/community/usersettings.py:229 cogs/community/usersettings.py:303
+#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:319
 #: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "Ακύρωση"
@@ -1475,7 +1475,7 @@ msgstr "Εσύ"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:503 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:504 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -1729,70 +1729,78 @@ msgstr "Παρακολούθηση ιστορικού avatar"
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "Άφησε τη Yasuho να αποθηκεύει τις μελλοντικές αλλαγές avatar και banner για δημόσιο ιστορικό."
 
-#: cogs/community/usersettings.py:173
+#: cogs/community/usersettings.py:171
+msgid "Vote-again reminder"
+msgstr "Υπενθύμιση ψήφου"
+
+#: cogs/community/usersettings.py:174
+msgid "DM you once you can vote for Yasuho again (about 12h after your last vote)."
+msgstr "Σου στέλνει μήνυμα όταν μπορείς να ξαναψηφίσεις τη Yasuho (περίπου 12 ώρες μετά την τελευταία σου ψήφο)."
+
+#: cogs/community/usersettings.py:189
 msgid "Chapter alert language"
 msgstr "Γλώσσα ειδοποιήσεων κεφαλαίων"
 
-#: cogs/community/usersettings.py:176
+#: cogs/community/usersettings.py:192
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "Η μετάφραση στην οποία συνδέονται τα DM νέων κεφαλαίων σου, όταν κυκλοφορήσει. Οι αναρτήσεις του διακομιστή ακολουθούν τη γλώσσα του διακομιστή."
 
-#: cogs/community/usersettings.py:181
+#: cogs/community/usersettings.py:197
 msgid "Pick a chapter language..."
 msgstr "Επιλέξτε γλώσσα κεφαλαίου..."
 
-#: cogs/community/usersettings.py:228
+#: cogs/community/usersettings.py:244
 msgid "Delete my profile"
 msgstr "Διαγραφή του προφίλ μου"
 
-#: cogs/community/usersettings.py:260
+#: cogs/community/usersettings.py:276
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Το προφίλ σου έχει εξαφανιστεί: πεδία, gaming IDs και κάθε επιλογή ορατότητας."
 
-#: cogs/community/usersettings.py:264
+#: cogs/community/usersettings.py:280
 msgid "Your top.gg vote record is gone too."
 msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
 
-#: cogs/community/usersettings.py:271
+#: cogs/community/usersettings.py:287
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:281
+#: cogs/community/usersettings.py:297
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:302
+#: cogs/community/usersettings.py:318
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:339
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:334
+#: cogs/community/usersettings.py:350
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:344
+#: cogs/community/usersettings.py:360
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:375
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:375
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:443
+#: cogs/community/usersettings.py:459
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:447
+#: cogs/community/usersettings.py:463
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1800,15 +1808,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:457
+#: cogs/community/usersettings.py:473
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:457
+#: cogs/community/usersettings.py:473
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:458
+#: cogs/community/usersettings.py:474
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1817,7 +1825,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:480
+#: cogs/community/usersettings.py:496
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -1826,44 +1834,89 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:494
+#: cogs/community/usersettings.py:510
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:520 cogs/community/usersettings.py:540
-#: cogs/community/usersettings.py:560
+#: cogs/community/usersettings.py:536 cogs/community/usersettings.py:556
+#: cogs/community/usersettings.py:576
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:619
+#: cogs/community/usersettings.py:635
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:682
+#: cogs/community/usersettings.py:698
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:686
+#: cogs/community/usersettings.py:702
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:691
+#: cogs/community/usersettings.py:707
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:707
+#: cogs/community/usersettings.py:723
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:713
+#: cogs/community/usersettings.py:729
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
 
-#: cogs/community/usersettings.py:727
+#: cogs/community/usersettings.py:743
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
+
+#: cogs/community/votes.py:504
+#, python-brace-format
+msgid "Thanks for voting for Yasuho! Your XP is boosted x1.5 until {when}, and your streak is now {streak}."
+msgstr "Ευχαριστούμε που ψήφισες τη Yasuho! Το XP σου είναι ενισχυμένο x1.5 μέχρι {when}, και το σερί σου είναι τώρα {streak}."
+
+#: cogs/community/votes.py:642
+#, python-brace-format
+msgid "You can vote for Yasuho again! Every vote keeps your XP boost and streak going: {url}"
+msgstr "Μπορείς να ξαναψηφίσεις τη Yasuho! Κάθε ψήφος κρατά ζωντανά το boost XP και το σερί σου: {url}"
+
+#: cogs/community/votes.py:786
+msgid "**Boost:** none yet - vote below to start one!"
+msgstr "**Boost:** κανένα ακόμη - ψήφισε παρακάτω για να ξεκινήσεις!"
+
+#: cogs/community/votes.py:787 cogs/community/votes.py:801
+#, python-brace-format
+msgid "**Streak:** {streak}"
+msgstr "**Σερί:** {streak}"
+
+#: cogs/community/votes.py:788 cogs/community/votes.py:802
+#, python-brace-format
+msgid "**Lifetime votes:** {total}"
+msgstr "**Συνολικές ψήφοι:** {total}"
+
+#: cogs/community/votes.py:793
+#, python-brace-format
+msgid "**Boost:** active until {when}"
+msgstr "**Boost:** ενεργό μέχρι {when}"
+
+#: cogs/community/votes.py:797
+msgid "**Boost:** none right now - vote again to renew it!"
+msgstr "**Boost:** κανένα αυτή τη στιγμή - ξαναψήφισε για να το ανανεώσεις!"
+
+#: cogs/community/votes.py:824
+msgid "Vote for Yasuho"
+msgstr "Ψήφισε τη Yasuho"
+
+#: cogs/community/votes.py:832
+msgid "Voting gives you x1.5 XP for 12 hours (24 hours on weekends)."
+msgstr "Η ψήφος σου δίνει x1.5 XP για 12 ώρες (24 ώρες τα σαββατοκύριακα)."
+
+#: cogs/community/votes.py:841
+msgid "Vote on top.gg"
+msgstr "Ψήφισε στο top.gg"
 
 #: cogs/community/leveling/level_admin.py:64
 msgid "Reset XP"
@@ -2192,7 +2245,7 @@ msgstr "Χρώμα έμφασης"
 #: cogs/community/leveling/level_config_ui.py:537
 #: cogs/community/leveling/seasons_views.py:186
 #: cogs/community/leveling/seasons_views.py:427
-#: cogs/community/profile/views.py:873 cogs/community/serverstats/views.py:550
+#: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:550
 #: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
 #: cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
@@ -2201,7 +2254,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/level_config_ui.py:539
 #: cogs/community/leveling/seasons_views.py:188
 #: cogs/community/leveling/seasons_views.py:429
-#: cogs/community/profile/views.py:875 cogs/community/serverstats/views.py:552
+#: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:552
 #: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
 #: cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
@@ -2835,80 +2888,80 @@ msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του
 msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
 msgstr "Ορίστε πρώτα ένα σταθερό κανάλι ανακοινώσεων με `/levelconfig announce mode` πριν ενεργοποιήσετε την ανακοίνωση σεζόν."
 
-#: cogs/community/profile/cog.py:348
+#: cogs/community/profile/cog.py:349
 #, python-brace-format
 msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
 msgstr "Προς το παρόν, μόνο εσύ μπορείς να το δεις αυτό. Χρησιμοποίησε `{prefix}profile visibility {section} server` για να το εμφανίσεις στους διακομιστές που μοιράζεσαι."
 
-#: cogs/community/profile/cog.py:515
+#: cogs/community/profile/cog.py:531
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "Ο/Η {name} δεν έχει ορίσει προφίλ."
 
-#: cogs/community/profile/cog.py:544 cogs/community/profile/cog.py:620
-#: cogs/community/profile/cog.py:672
+#: cogs/community/profile/cog.py:560 cogs/community/profile/cog.py:636
+#: cogs/community/profile/cog.py:688
 #: cogs/community/profile/connectors/cog.py:146
 #: cogs/community/profile/presence.py:1241
 #: cogs/community/profile/presence.py:1260 cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr "Αποτυχία ενημέρωσης του προφίλ σου, δοκίμασε ξανά αργότερα."
 
-#: cogs/community/profile/cog.py:550
+#: cogs/community/profile/cog.py:566
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "Άγνωστο πεδίο. Διάλεξε: {options}"
 
-#: cogs/community/profile/cog.py:560
+#: cogs/community/profile/cog.py:576
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "Το πεδίο {field} διαγράφηκε."
 
-#: cogs/community/profile/cog.py:563 cogs/community/profile/views.py:141
+#: cogs/community/profile/cog.py:579 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr "Το προφίλ ενημερώθηκε"
 
-#: cogs/community/profile/cog.py:599
+#: cogs/community/profile/cog.py:615
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "Άγνωστη ενότητα. Επίλεξε: {options}"
 
-#: cogs/community/profile/cog.py:608
+#: cogs/community/profile/cog.py:624
 #: cogs/community/profile/connectors/cog.py:457
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "Άγνωστη ορατότητα. Επίλεξε: {options}"
 
-#: cogs/community/profile/cog.py:627
+#: cogs/community/profile/cog.py:643
 #: cogs/community/profile/connectors/cog.py:475
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "Το {field} είναι πλέον ορατό σε όλους."
 
-#: cogs/community/profile/cog.py:631
+#: cogs/community/profile/cog.py:647
 #: cogs/community/profile/connectors/cog.py:480
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "Το {field} είναι πλέον ορατό στους διακομιστές που μοιράζεσαι."
 
-#: cogs/community/profile/cog.py:637
+#: cogs/community/profile/cog.py:653
 #: cogs/community/profile/connectors/cog.py:487
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "Το {field} είναι πλέον ορατό μόνο σε εσένα."
 
-#: cogs/community/profile/cog.py:688
+#: cogs/community/profile/cog.py:704
 msgid "Click below to edit a profile field:"
 msgstr "Κάνε κλικ παρακάτω για να επεξεργαστείς ένα πεδίο του προφίλ:"
 
-#: cogs/community/profile/cog.py:717
+#: cogs/community/profile/cog.py:733
 msgid "Failed to clear your profile, please try again later."
 msgstr "Αποτυχία εκκαθάρισης του προφίλ σου, δοκίμασε ξανά αργότερα."
 
-#: cogs/community/profile/cog.py:733
+#: cogs/community/profile/cog.py:749
 msgid "Profile cleared"
 msgstr "Το προφίλ εκκαθαρίστηκε"
 
-#: cogs/community/profile/cog.py:734
+#: cogs/community/profile/cog.py:750
 msgid "Your profile has been cleared."
 msgstr "Το προφίλ σου εκκαθαρίστηκε."
 
@@ -2982,11 +3035,11 @@ msgstr "Βιογραφικό"
 msgid "Pronouns"
 msgstr "Αντωνυμίες"
 
-#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:607
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:622
 msgid "Custom fields"
 msgstr "Προσαρμοσμένα πεδία"
 
-#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:613
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:628
 msgid "Gaming IDs"
 msgstr "IDs παιχνιδιών"
 
@@ -3049,43 +3102,47 @@ msgstr "Διάλεξε ένα πεδίο και πληκτρολόγησε μι�
 msgid "Unknown field."
 msgstr "Άγνωστο πεδίο."
 
-#: cogs/community/profile/views.py:510
+#: cogs/community/profile/views.py:426
+msgid "Supporter"
+msgstr "Υποστηρικτής"
+
+#: cogs/community/profile/views.py:519
 msgid "Linked"
 msgstr "Συνδεδεμένο"
 
-#: cogs/community/profile/views.py:625
+#: cogs/community/profile/views.py:640
 msgid "This profile is too long to show in full."
 msgstr "Αυτό το προφίλ είναι πολύ μεγάλο για να εμφανιστεί πλήρως."
 
-#: cogs/community/profile/views.py:706 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:207
 msgid "Public"
 msgstr "Δημόσιο"
 
-#: cogs/community/profile/views.py:707
+#: cogs/community/profile/views.py:731
 msgid "Server"
 msgstr "Διακομιστής"
 
-#: cogs/community/profile/views.py:708 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:204
 msgid "Private"
 msgstr "Ιδιωτικό"
 
-#: cogs/community/profile/views.py:776
+#: cogs/community/profile/views.py:800
 msgid "Edit a gaming ID..."
 msgstr "Επεξεργασία αναγνωριστικού παιχνιδιού..."
 
-#: cogs/community/profile/views.py:842
+#: cogs/community/profile/views.py:866
 msgid "Profile visibility"
 msgstr "Ορατότητα προφίλ"
 
-#: cogs/community/profile/views.py:845
+#: cogs/community/profile/views.py:869
 msgid "Choose who can see each part of your profile: public (anyone), server (members of servers you share), or private (only you)."
 msgstr "Επίλεξε ποιος μπορεί να δει κάθε μέρος του προφίλ σου: δημόσιο (οποιοσδήποτε), διακομιστής (μέλη διακομιστών που μοιράζεσαι), ή ιδιωτικό (μόνο εσύ)."
 
-#: cogs/community/profile/views.py:854
+#: cogs/community/profile/views.py:878
 msgid "Current visibility"
 msgstr "Τρέχουσα ορατότητα"
 
-#: cogs/community/profile/views.py:921
+#: cogs/community/profile/views.py:945
 msgid "Something went wrong updating your profile visibility."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση της ορατότητας του προφίλ σου."
 
@@ -8010,68 +8067,68 @@ msgstr "Κέρδισε XP, ανέβα στην κατάταξη και όρισ�
 msgid "Your profile, reminders, AFK and personal preferences."
 msgstr "Το προφίλ σου, υπενθυμίσεις, AFK και προσωπικές προτιμήσεις."
 
-#: cogs/system/help.py:100
+#: cogs/system/help.py:101
 msgid "Server info, polls, translations and handy utilities."
 msgstr "Πληροφορίες διακομιστή, ψηφοφορίες, μεταφράσεις και χρήσιμα εργαλεία."
 
-#: cogs/system/help.py:106
+#: cogs/system/help.py:107
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία καταγραφής."
 
-#: cogs/system/help.py:112
+#: cogs/system/help.py:113
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:126
+#: cogs/system/help.py:127
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:134
+#: cogs/system/help.py:135
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:236 cogs/system/help.py:283 cogs/system/help.py:296
-#: cogs/system/help.py:776
+#: cogs/system/help.py:237 cogs/system/help.py:284 cogs/system/help.py:297
+#: cogs/system/help.py:777
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:288 cogs/system/help.py:780
+#: cogs/system/help.py:289 cogs/system/help.py:781
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:301
+#: cogs/system/help.py:302
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:306
+#: cogs/system/help.py:307
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:311
+#: cogs/system/help.py:312
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:340
+#: cogs/system/help.py:341
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:409 cogs/system/help.py:538 cogs/system/help.py:557
+#: cogs/system/help.py:410 cogs/system/help.py:539 cogs/system/help.py:558
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:470
+#: cogs/system/help.py:471
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:472
+#: cogs/system/help.py:473
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -8082,19 +8139,19 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:498
+#: cogs/system/help.py:499
 msgid "Enabled ✅"
 msgstr "Ενεργοποιημένο ✅"
 
-#: cogs/system/help.py:498
+#: cogs/system/help.py:499
 msgid "Disabled ❌"
 msgstr "Απενεργοποιημένο ❌"
 
-#: cogs/system/help.py:506
+#: cogs/system/help.py:507
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:509
+#: cogs/system/help.py:510
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -8105,66 +8162,66 @@ msgstr ""
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:522
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:524
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:549
+#: cogs/system/help.py:550
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:555
+#: cogs/system/help.py:556
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:561
+#: cogs/system/help.py:562
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:570
+#: cogs/system/help.py:571
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:576
+#: cogs/system/help.py:577
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:593
+#: cogs/system/help.py:594
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:658
+#: cogs/system/help.py:659
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:727
+#: cogs/system/help.py:728
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:727
+#: cogs/system/help.py:728
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:744
+#: cogs/system/help.py:745
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:760 cogs/system/help.py:800
+#: cogs/system/help.py:761 cogs/system/help.py:801
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:762
+#: cogs/system/help.py:763
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."

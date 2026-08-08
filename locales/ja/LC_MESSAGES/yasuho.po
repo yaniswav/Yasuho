@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 10:27+0000\n"
+"POT-Creation-Date: 2026-08-08 11:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -456,7 +456,7 @@ msgid "Edit"
 msgstr "編集"
 
 #: cogs/anilist/collection.py:352 cogs/anilist/feed_views.py:951
-#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:423
+#: cogs/anilist/hub.py:261 cogs/community/usersettings.py:439
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
@@ -1298,7 +1298,7 @@ msgstr "削除"
 
 #: cogs/anilist/feed_views.py:739 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176
-#: cogs/community/usersettings.py:229 cogs/community/usersettings.py:303
+#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:319
 #: cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1475,7 +1475,7 @@ msgstr "あなた"
 #: cogs/anilist/lookup.py:32 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:503 cogs/utility/info.py:34 cogs/utility/info.py:117
+#: cogs/system/help.py:504 cogs/utility/info.py:34 cogs/utility/info.py:117
 msgid "Unknown"
 msgstr "不明"
 
@@ -1729,70 +1729,78 @@ msgstr "アバター履歴の記録"
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "今後のアバターとバナーの変更を公開履歴としてヤスホに保存させます。"
 
-#: cogs/community/usersettings.py:173
+#: cogs/community/usersettings.py:171
+msgid "Vote-again reminder"
+msgstr "再投票リマインダー"
+
+#: cogs/community/usersettings.py:174
+msgid "DM you once you can vote for Yasuho again (about 12h after your last vote)."
+msgstr "Yasuhoに再投票できるようになったらDMでお知らせします (最後の投票から約12時間後)。"
+
+#: cogs/community/usersettings.py:189
 msgid "Chapter alert language"
 msgstr "チャプター通知の言語"
 
-#: cogs/community/usersettings.py:176
+#: cogs/community/usersettings.py:192
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "新しいチャプターのDMが公開時にリンクする翻訳版です。サーバーの投稿はサーバーの言語に従います。"
 
-#: cogs/community/usersettings.py:181
+#: cogs/community/usersettings.py:197
 msgid "Pick a chapter language..."
 msgstr "チャプターの言語を選択..."
 
-#: cogs/community/usersettings.py:228
+#: cogs/community/usersettings.py:244
 msgid "Delete my profile"
 msgstr "プロフィールを削除"
 
-#: cogs/community/usersettings.py:260
+#: cogs/community/usersettings.py:276
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "プロフィールが消去されました。フィールド、ゲームID、公開範囲の選択がすべて削除されました。"
 
-#: cogs/community/usersettings.py:264
+#: cogs/community/usersettings.py:280
 msgid "Your top.gg vote record is gone too."
 msgstr "top.ggの投票記録も削除されました。"
 
-#: cogs/community/usersettings.py:271
+#: cogs/community/usersettings.py:287
 msgid "Something went wrong deleting your profile."
 msgstr "プロフィールの削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:281
+#: cogs/community/usersettings.py:297
 msgid "Profile deletion cancelled."
 msgstr "プロフィールの削除をキャンセルしました。"
 
-#: cogs/community/usersettings.py:302
+#: cogs/community/usersettings.py:318
 msgid "Delete my avatar history"
 msgstr "アバター履歴を削除する"
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:339
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "保存された画像 {count} 件 ({size}) を削除しました。今後のアバター記録はオフになりました。"
 
-#: cogs/community/usersettings.py:334
+#: cogs/community/usersettings.py:350
 msgid "Something went wrong deleting your avatar history."
 msgstr "アバター履歴の削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:344
+#: cogs/community/usersettings.py:360
 msgid "Avatar history deletion cancelled."
 msgstr "アバター履歴の削除をキャンセルしました。"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:375
 msgid "Turn off"
 msgstr "オフにする"
 
 #: cogs/community/leveling/seasons_views.py:324
-#: cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:375
 msgid "Turn on"
 msgstr "オンにする"
 
-#: cogs/community/usersettings.py:443
+#: cogs/community/usersettings.py:459
 msgid "## Your preferences"
 msgstr "## あなたの設定"
 
-#: cogs/community/usersettings.py:447
+#: cogs/community/usersettings.py:463
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -1800,15 +1808,15 @@ msgstr ""
 "これらの設定は、私が使われるすべての場所で **あなた** にのみ影響します。\n"
 "設定の横のボタンを使ってオン/オフを切り替えてください。"
 
-#: cogs/community/usersettings.py:457
+#: cogs/community/usersettings.py:473
 msgid "ON"
 msgstr "オン"
 
-#: cogs/community/usersettings.py:457
+#: cogs/community/usersettings.py:473
 msgid "OFF"
 msgstr "オフ"
 
-#: cogs/community/usersettings.py:458
+#: cogs/community/usersettings.py:474
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -1817,7 +1825,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:480
+#: cogs/community/usersettings.py:496
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -1826,44 +1834,89 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:494
+#: cogs/community/usersettings.py:510
 msgid "-# Only you can use these controls."
 msgstr "-# これらの操作はあなただけが使用できます。"
 
-#: cogs/community/usersettings.py:520 cogs/community/usersettings.py:540
-#: cogs/community/usersettings.py:560
+#: cogs/community/usersettings.py:536 cogs/community/usersettings.py:556
+#: cogs/community/usersettings.py:576
 msgid "Something went wrong updating that setting."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:619
+#: cogs/community/usersettings.py:635
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:682
+#: cogs/community/usersettings.py:698
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:686
+#: cogs/community/usersettings.py:702
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:691
+#: cogs/community/usersettings.py:707
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:707
+#: cogs/community/usersettings.py:723
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
-#: cogs/community/usersettings.py:713
+#: cogs/community/usersettings.py:729
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "top.ggの投票記録も削除されます: 投票の連続記録と累計回数はゼロからやり直しになります。"
 
-#: cogs/community/usersettings.py:727
+#: cogs/community/usersettings.py:743
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
+
+#: cogs/community/votes.py:504
+#, python-brace-format
+msgid "Thanks for voting for Yasuho! Your XP is boosted x1.5 until {when}, and your streak is now {streak}."
+msgstr "Yasuhoへの投票ありがとうございます! XPは{when}までx1.5にブーストされ、連続記録は{streak}になりました。"
+
+#: cogs/community/votes.py:642
+#, python-brace-format
+msgid "You can vote for Yasuho again! Every vote keeps your XP boost and streak going: {url}"
+msgstr "Yasuhoにまた投票できます! 投票するたびにXPブーストと連続記録が続きます: {url}"
+
+#: cogs/community/votes.py:786
+msgid "**Boost:** none yet - vote below to start one!"
+msgstr "**ブースト:** まだありません - 下から投票して始めましょう!"
+
+#: cogs/community/votes.py:787 cogs/community/votes.py:801
+#, python-brace-format
+msgid "**Streak:** {streak}"
+msgstr "**連続記録:** {streak}"
+
+#: cogs/community/votes.py:788 cogs/community/votes.py:802
+#, python-brace-format
+msgid "**Lifetime votes:** {total}"
+msgstr "**累計投票数:** {total}"
+
+#: cogs/community/votes.py:793
+#, python-brace-format
+msgid "**Boost:** active until {when}"
+msgstr "**ブースト:** {when}まで有効"
+
+#: cogs/community/votes.py:797
+msgid "**Boost:** none right now - vote again to renew it!"
+msgstr "**ブースト:** 現在ありません - 再投票で更新しましょう!"
+
+#: cogs/community/votes.py:824
+msgid "Vote for Yasuho"
+msgstr "Yasuhoに投票"
+
+#: cogs/community/votes.py:832
+msgid "Voting gives you x1.5 XP for 12 hours (24 hours on weekends)."
+msgstr "投票すると12時間XPがx1.5になります (週末は24時間)。"
+
+#: cogs/community/votes.py:841
+msgid "Vote on top.gg"
+msgstr "top.ggで投票"
 
 #: cogs/community/leveling/level_admin.py:64
 msgid "Reset XP"
@@ -2192,7 +2245,7 @@ msgstr "アクセントカラー"
 #: cogs/community/leveling/level_config_ui.py:537
 #: cogs/community/leveling/seasons_views.py:186
 #: cogs/community/leveling/seasons_views.py:427
-#: cogs/community/profile/views.py:873 cogs/community/serverstats/views.py:550
+#: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:550
 #: cogs/config/settings.py:265 cogs/moderation/automod_panel.py:398
 #: cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
@@ -2201,7 +2254,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/level_config_ui.py:539
 #: cogs/community/leveling/seasons_views.py:188
 #: cogs/community/leveling/seasons_views.py:429
-#: cogs/community/profile/views.py:875 cogs/community/serverstats/views.py:552
+#: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:552
 #: cogs/config/settings.py:267 cogs/moderation/automod_panel.py:400
 #: cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
@@ -2835,80 +2888,80 @@ msgstr "パネルの更新中に問題が発生しました。"
 msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
 msgstr "シーズン告知をオンにする前に、まず `/levelconfig announce mode` で固定の告知チャンネルを設定してください。"
 
-#: cogs/community/profile/cog.py:348
+#: cogs/community/profile/cog.py:349
 #, python-brace-format
 msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
 msgstr "現在はあなただけがこれを見ることができます。共有しているサーバーに表示するには `{prefix}profile visibility {section} server` を使用してください。"
 
-#: cogs/community/profile/cog.py:515
+#: cogs/community/profile/cog.py:531
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "{name} はプロフィールを設定していません。"
 
-#: cogs/community/profile/cog.py:544 cogs/community/profile/cog.py:620
-#: cogs/community/profile/cog.py:672
+#: cogs/community/profile/cog.py:560 cogs/community/profile/cog.py:636
+#: cogs/community/profile/cog.py:688
 #: cogs/community/profile/connectors/cog.py:146
 #: cogs/community/profile/presence.py:1241
 #: cogs/community/profile/presence.py:1260 cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr "プロフィールの更新に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:550
+#: cogs/community/profile/cog.py:566
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "不明な項目です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:560
+#: cogs/community/profile/cog.py:576
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "{field}を削除しました。"
 
-#: cogs/community/profile/cog.py:563 cogs/community/profile/views.py:141
+#: cogs/community/profile/cog.py:579 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr "プロフィールを更新しました"
 
-#: cogs/community/profile/cog.py:599
+#: cogs/community/profile/cog.py:615
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "不明なセクションです。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:608
+#: cogs/community/profile/cog.py:624
 #: cogs/community/profile/connectors/cog.py:457
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "不明な公開範囲です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:627
+#: cogs/community/profile/cog.py:643
 #: cogs/community/profile/connectors/cog.py:475
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "{field}は今、誰でも見られるようになりました。"
 
-#: cogs/community/profile/cog.py:631
+#: cogs/community/profile/cog.py:647
 #: cogs/community/profile/connectors/cog.py:480
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "{field}は今、共有しているサーバーで見られるようになりました。"
 
-#: cogs/community/profile/cog.py:637
+#: cogs/community/profile/cog.py:653
 #: cogs/community/profile/connectors/cog.py:487
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "{field}は今、あなただけが見られるようになりました。"
 
-#: cogs/community/profile/cog.py:688
+#: cogs/community/profile/cog.py:704
 msgid "Click below to edit a profile field:"
 msgstr "下をクリックしてプロフィール項目を編集してください:"
 
-#: cogs/community/profile/cog.py:717
+#: cogs/community/profile/cog.py:733
 msgid "Failed to clear your profile, please try again later."
 msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:733
+#: cogs/community/profile/cog.py:749
 msgid "Profile cleared"
 msgstr "プロフィールを消去しました"
 
-#: cogs/community/profile/cog.py:734
+#: cogs/community/profile/cog.py:750
 msgid "Your profile has been cleared."
 msgstr "あなたのプロフィールを消去しました。"
 
@@ -2982,11 +3035,11 @@ msgstr "自己紹介"
 msgid "Pronouns"
 msgstr "代名詞"
 
-#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:607
+#: cogs/community/profile/registry.py:241 cogs/community/profile/views.py:622
 msgid "Custom fields"
 msgstr "カスタムフィールド"
 
-#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:613
+#: cogs/community/profile/registry.py:249 cogs/community/profile/views.py:628
 msgid "Gaming IDs"
 msgstr "ゲームID"
 
@@ -3049,43 +3102,47 @@ msgstr "項目を選んで値を入力してください。"
 msgid "Unknown field."
 msgstr "不明な項目です。"
 
-#: cogs/community/profile/views.py:510
+#: cogs/community/profile/views.py:426
+msgid "Supporter"
+msgstr "サポーター"
+
+#: cogs/community/profile/views.py:519
 msgid "Linked"
 msgstr "連携済み"
 
-#: cogs/community/profile/views.py:625
+#: cogs/community/profile/views.py:640
 msgid "This profile is too long to show in full."
 msgstr "このプロフィールは長すぎて全文を表示できません。"
 
-#: cogs/community/profile/views.py:706 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:207
 msgid "Public"
 msgstr "公開"
 
-#: cogs/community/profile/views.py:707
+#: cogs/community/profile/views.py:731
 msgid "Server"
 msgstr "サーバー"
 
-#: cogs/community/profile/views.py:708 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:204
 msgid "Private"
 msgstr "非公開"
 
-#: cogs/community/profile/views.py:776
+#: cogs/community/profile/views.py:800
 msgid "Edit a gaming ID..."
 msgstr "ゲームIDを編集する..."
 
-#: cogs/community/profile/views.py:842
+#: cogs/community/profile/views.py:866
 msgid "Profile visibility"
 msgstr "プロフィールの公開範囲"
 
-#: cogs/community/profile/views.py:845
+#: cogs/community/profile/views.py:869
 msgid "Choose who can see each part of your profile: public (anyone), server (members of servers you share), or private (only you)."
 msgstr "プロフィールの各項目を誰が見られるか選択してください: 公開（全員）、サーバー（共有サーバーのメンバー）、非公開（自分のみ）。"
 
-#: cogs/community/profile/views.py:854
+#: cogs/community/profile/views.py:878
 msgid "Current visibility"
 msgstr "現在の公開範囲"
 
-#: cogs/community/profile/views.py:921
+#: cogs/community/profile/views.py:945
 msgid "Something went wrong updating your profile visibility."
 msgstr "プロフィールの公開範囲の更新中に問題が発生しました。"
 
@@ -8010,68 +8067,68 @@ msgstr "XPを獲得してランキングを上げ、報酬を設定できます�
 msgid "Your profile, reminders, AFK and personal preferences."
 msgstr "プロフィール、リマインダー、AFK、個人設定。"
 
-#: cogs/system/help.py:100
+#: cogs/system/help.py:101
 msgid "Server info, polls, translations and handy utilities."
 msgstr "サーバー情報、投票、翻訳、便利なユーティリティ。"
 
-#: cogs/system/help.py:106
+#: cogs/system/help.py:107
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "キック、BAN、警告、自動モデレーション、モデレーションログ。"
 
-#: cogs/system/help.py:112
+#: cogs/system/help.py:113
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "ウェルカムメッセージ、スターボード、カスタムコマンドなど。"
 
-#: cogs/system/help.py:126
+#: cogs/system/help.py:127
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "リアクションロール、ロールメニュー、ボタンロール、認証。"
 
-#: cogs/system/help.py:134
+#: cogs/system/help.py:135
 msgid "Anything not yet sorted into a category."
 msgstr "まだカテゴリに分類されていないもの。"
 
-#: cogs/system/help.py:236 cogs/system/help.py:283 cogs/system/help.py:296
-#: cogs/system/help.py:776
+#: cogs/system/help.py:237 cogs/system/help.py:284 cogs/system/help.py:297
+#: cogs/system/help.py:777
 msgid "No description provided."
 msgstr "説明はありません。"
 
-#: cogs/system/help.py:288 cogs/system/help.py:780
+#: cogs/system/help.py:289 cogs/system/help.py:781
 msgid "Aliases"
 msgstr "エイリアス"
 
-#: cogs/system/help.py:301
+#: cogs/system/help.py:302
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} <subcommand>` を使ってください。"
 
-#: cogs/system/help.py:306
+#: cogs/system/help.py:307
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} 個のサブコマンド"
 msgstr[1] "{n} 個のサブコマンド"
 
-#: cogs/system/help.py:311
+#: cogs/system/help.py:312
 msgid "Subcommands"
 msgstr "サブコマンド"
 
-#: cogs/system/help.py:340
+#: cogs/system/help.py:341
 msgid "Jump to a category..."
 msgstr "カテゴリに移動..."
 
-#: cogs/system/help.py:409 cogs/system/help.py:538 cogs/system/help.py:557
+#: cogs/system/help.py:410 cogs/system/help.py:539 cogs/system/help.py:558
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} 個のコマンド"
 msgstr[1] "{n} 個のコマンド"
 
-#: cogs/system/help.py:470
+#: cogs/system/help.py:471
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • ヘルプ"
 
-#: cogs/system/help.py:472
+#: cogs/system/help.py:473
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -8082,19 +8139,19 @@ msgstr ""
 "\n"
 "メニューでカテゴリに移動したり、矢印で閲覧したり、特定のコマンドは `{prefix}help <command>` で確認してください。"
 
-#: cogs/system/help.py:498
+#: cogs/system/help.py:499
 msgid "Enabled ✅"
 msgstr "有効 ✅"
 
-#: cogs/system/help.py:498
+#: cogs/system/help.py:499
 msgid "Disabled ❌"
 msgstr "無効 ❌"
 
-#: cogs/system/help.py:506
+#: cogs/system/help.py:507
 msgid "🏠 Server"
 msgstr "🏠 サーバー"
 
-#: cogs/system/help.py:509
+#: cogs/system/help.py:510
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -8105,66 +8162,66 @@ msgstr ""
 "メンバー: **{members}**\n"
 "レベリング: {leveling}"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:522
 msgid "🏠 Direct Messages"
 msgstr "🏠 ダイレクトメッセージ"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:524
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "デフォルトのプレフィックス: `{prefix}`"
 
-#: cogs/system/help.py:549
+#: cogs/system/help.py:550
 msgid "📚 Categories"
 msgstr "📚 カテゴリ"
 
-#: cogs/system/help.py:555
+#: cogs/system/help.py:556
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{categories} にわたる {commands} • メニューや矢印で探索してください"
 
-#: cogs/system/help.py:561
+#: cogs/system/help.py:562
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} 個のカテゴリー"
 msgstr[1] "{n} 個のカテゴリー"
 
-#: cogs/system/help.py:570
+#: cogs/system/help.py:571
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "カテゴリ {current}/{total} • 詳細は {prefix}help <command>"
 
-#: cogs/system/help.py:576
+#: cogs/system/help.py:577
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...他にもコマンドがあります。`{prefix}help <command>` を使って確認してください。"
 
-#: cogs/system/help.py:593
+#: cogs/system/help.py:594
 msgid "No commands available."
 msgstr "利用可能なコマンドがありません。"
 
-#: cogs/system/help.py:658
+#: cogs/system/help.py:659
 msgid "Something went wrong opening the help menu."
 msgstr "ヘルプメニューを開く際に問題が発生しました。"
 
-#: cogs/system/help.py:727
+#: cogs/system/help.py:728
 msgid "Collapse subcommands"
 msgstr "サブコマンドを折りたたむ"
 
-#: cogs/system/help.py:727
+#: cogs/system/help.py:728
 msgid "Expand subcommands"
 msgstr "サブコマンドを展開する"
 
-#: cogs/system/help.py:744
+#: cogs/system/help.py:745
 msgid "Something went wrong updating that preference."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/system/help.py:760 cogs/system/help.py:800
+#: cogs/system/help.py:761 cogs/system/help.py:801
 msgid "Help"
 msgstr "ヘルプ"
 
-#: cogs/system/help.py:762
+#: cogs/system/help.py:763
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "コマンドの詳細は `{prefix}help <command>` を使ってください。"
