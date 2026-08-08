@@ -1269,6 +1269,48 @@ CREATE TABLE IF NOT EXISTS command_usage_hourly_state (
 );
 
 -- ============================================================
+-- Support tickets (METADATA ONLY)
+-- ============================================================
+-- Owner: cogs/config/tickets/. A ticket is a PRIVATE THREAD on the panel
+-- channel; the conversation lives in Discord and NOTHING of it is ever mirrored
+-- here. This table holds only the bookkeeping the bot cannot re-derive: which
+-- thread is which ticket, who opened it, when, and whether it is still open.
+-- There is deliberately no subject, no transcript and no message column - the
+-- subject the opener types goes into the thread's opening message and nowhere
+-- else, so a ticket's CONTENT can only ever be read where its participants can
+-- read it (and dies with the thread).
+--
+-- ticket_number is the per-guild human label (#1, #2, ...), computed as
+-- MAX + 1 INSIDE the INSERT exactly like `cases`. UNIQUE (guild_id,
+-- ticket_number) is what makes that safe under concurrency: two simultaneous
+-- opens in one guild compute the same number, so the second blocks on this
+-- index and then fails, and the caller's bounded retry recomputes both the
+-- number AND the per-user cap against the winner's now-visible row. That is
+-- also why the cap can never be exceeded by a double click - see
+-- cogs/config/tickets/storage.py.
+CREATE TABLE IF NOT EXISTS tickets (
+    id            BIGSERIAL   PRIMARY KEY,
+    guild_id      BIGINT      NOT NULL,
+    ticket_number INTEGER     NOT NULL,          -- sequential per guild (#1, #2, ...)
+    thread_id     BIGINT      NOT NULL UNIQUE,   -- the private thread; the ticket IS it
+    opener_id     BIGINT      NOT NULL,
+    status        TEXT        NOT NULL DEFAULT 'open',
+    opened_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    closed_at     TIMESTAMPTZ,                   -- NULL while open
+    closed_by     BIGINT,                        -- NULL while open
+    UNIQUE (guild_id, ticket_number)
+);
+-- PARTIAL on purpose: every recurring read is about the OPEN ones (the per-user
+-- cap at click time, and the inactivity sweep). Closed rows are history and only
+-- ever read one at a time by thread id, which the UNIQUE above already serves,
+-- so keeping them out of this index keeps it the size of the live workload
+-- rather than of the guild's whole ticket history.
+CREATE INDEX IF NOT EXISTS tickets_guild_open_idx
+    ON tickets (guild_id) WHERE status = 'open';
+-- "every ticket this user opened", across guilds: the /mydata export path.
+CREATE INDEX IF NOT EXISTS tickets_opener_idx ON tickets (opener_id);
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new

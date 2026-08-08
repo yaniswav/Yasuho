@@ -84,6 +84,14 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM guild_settings WHERE guild_id = $1",
     ),
     ("cases", "DELETE FROM cases WHERE guild_id = $1"),
+    (
+        # Support-ticket bookkeeping (cogs/config/tickets/). Metadata only - the
+        # conversations were Discord threads and left with the guild - but the
+        # rows still say who asked this server for help and when, so they die
+        # with it like every other guild record.
+        "tickets",
+        "DELETE FROM tickets WHERE guild_id = $1",
+    ),
     ("button_roles", "DELETE FROM button_roles WHERE guild_id = $1"),
     (
         "guild_playlists",
@@ -154,6 +162,7 @@ UNION SELECT guild_id FROM automod
 UNION SELECT guild_id FROM avatar_history WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM guild_settings
 UNION SELECT guild_id FROM cases
+UNION SELECT guild_id FROM tickets
 UNION SELECT guild_id FROM button_roles
 UNION SELECT guild_id FROM guild_playlists
 UNION SELECT guild_id FROM music_state

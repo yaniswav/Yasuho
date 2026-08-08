@@ -388,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 5
+    assert data["export_version"] == privacy.EXPORT_VERSION == 6
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -663,6 +663,52 @@ async def test_the_export_carries_the_limiter_row():
     }
     query = next(q for q in pool.queries if "mydata_export_cooldown" in q)
     assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_carries_ticket_metadata_and_no_ticket_content():
+    """A support ticket's CONVERSATION is a Discord thread and is never stored,
+    so the only thing there is to export is the bookkeeping - and the export must
+    both carry it and be incapable of carrying anything else."""
+
+    class _TicketPool(_ExportPool):
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            if "FROM tickets" in query:
+                return [
+                    {
+                        "guild_id": 7,
+                        "ticket_number": 3,
+                        "thread_id": 999,
+                        "status": "closed",
+                        "opened_at": datetime.datetime(
+                            2030, 5, 4, tzinfo=datetime.timezone.utc
+                        ),
+                        "closed_at": datetime.datetime(
+                            2030, 5, 5, tzinfo=datetime.timezone.utc
+                        ),
+                    }
+                ]
+            return []
+
+    pool = _TicketPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["tickets_opened"] == [
+        {
+            "guild_id": 7,
+            "ticket_number": 3,
+            "thread_id": 999,
+            "status": "closed",
+            "opened_at": datetime.datetime(2030, 5, 4, tzinfo=datetime.timezone.utc),
+            "closed_at": datetime.datetime(2030, 5, 5, tzinfo=datetime.timezone.utc),
+        }
+    ]
+    query = next(q for q in pool.queries if "FROM tickets" in q)
+    # Scoped to the tickets this user OPENED...
+    assert "WHERE opener_id = $1" in query
+    # ...and `closed_by` stays out: who acted on the ticket is the server's
+    # record, exactly like the moderator id on `cases`.
+    assert "closed_by" not in query
 
 
 async def test_the_export_states_a_never_exported_user_as_null():

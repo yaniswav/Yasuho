@@ -31,9 +31,12 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # was asked, when, and how it ended).
 # v5 added `topgg_votes`: the vote ledger (when you last voted for the bot, your
 # streak, your lifetime count and the deadline of the XP boost it armed).
+# v6 added `tickets_opened`: the METADATA of the support tickets this user
+# opened (server, number, thread, status, timestamps). Never any content - a
+# ticket's conversation is a Discord thread and is not stored at all.
 # Additive, but a consumer that keys on the version must be able to tell them
 # apart.
-EXPORT_VERSION = 5
+EXPORT_VERSION = 6
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -309,6 +312,17 @@ async def collect_user_export(pool, user_id):
         "WHERE moderator_id = $1 ORDER BY created_at",
         user_id,
     )
+    # Support tickets this user OPENED, metadata only. There is no content to
+    # export - the conversation was a Discord thread and nothing of it was ever
+    # stored (see schema.sql) - so this is the ids, the timestamps and the
+    # status. `closed_by` is deliberately not selected: like the moderator id on
+    # `cases` above, who acted on the ticket is the server's record, not this
+    # user's.
+    tickets = await pool.fetch(
+        "SELECT guild_id, ticket_number, thread_id, status, opened_at, "
+        "closed_at FROM tickets WHERE opener_id = $1 ORDER BY opened_at",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -385,6 +399,7 @@ async def collect_user_export(pool, user_id):
         "warnings": _records(warns),
         "moderation_cases_as_target": _records(cases),
         "moderation_cases_as_moderator": _records(moderated_cases),
+        "tickets_opened": _records(tickets),
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

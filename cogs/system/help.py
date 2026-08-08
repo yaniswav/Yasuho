@@ -118,6 +118,7 @@ CATEGORIES = [
             "CustomCommands",
             "Starboard",
             "TemporaryRooms",
+            "Tickets",
             "Twitch",
         ],
     ),

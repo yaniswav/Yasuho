@@ -18,6 +18,11 @@ that server's moderators (user ID, moderator ID, reason, timestamp). These exist
 so that server moderation works; they are removed when the data ages out of the
 server's retention window or the server removes the bot.
 
+**Support tickets** (per server): metadata only - the ticket number, the private
+thread's ID, who opened it, when it was opened and closed, and whether it is
+still open. The conversation inside a ticket is never stored: it lives in the
+Discord thread and is gone when that thread is.
+
 **Leveling**: your user ID with XP totals, levels, and monthly season results
 per server.
 

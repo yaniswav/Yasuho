@@ -86,6 +86,18 @@ def test_purge_exemptions_still_name_real_guild_scoped_tables():
     assert _PURGE_EXEMPT_TABLES <= _guild_scoped_tables()
 
 
+def test_guild_purge_covers_support_tickets():
+    """Ticket rows are metadata, but they still say who asked THIS server for
+    help and when, so they die with the guild like every other guild record -
+    and the guild has to be discoverable from them, or an orphaned ticket table
+    would keep a departed guild's rows for ever with nothing scheduling them."""
+    assert (
+        dict(retention.GUILD_DELETE_QUERIES)["tickets"]
+        == "DELETE FROM tickets WHERE guild_id = $1"
+    )
+    assert "FROM tickets" in retention.STORED_GUILD_IDS_QUERY
+
+
 def test_guild_purge_covers_the_season_podiums():
     """Season podiums are the one leveling artefact that outlives the xp_period
     prune, so a departed guild's are the one thing retention could forget."""
