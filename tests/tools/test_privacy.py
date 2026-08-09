@@ -388,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 7
+    assert data["export_version"] == privacy.EXPORT_VERSION == 8
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -415,6 +415,18 @@ async def test_the_export_reads_the_profile_of_that_user_only():
     for table in ("user_profiles", "profile_visibility"):
         query = next(q for q in pool.queries if f"FROM {table}" in q)
         assert "WHERE user_id = $1" in query
+
+
+async def test_the_favourites_export_states_the_blob_without_carrying_it():
+    """Same doctrine as the rank-card background: describe it, do not ship it."""
+    pool = _ProfileExportPool()
+
+    await privacy.collect_user_export(pool, 42)
+
+    query = next(q for q in pool.queries if "FROM music_favorites" in q)
+    assert "encoded IS NOT NULL AS has_encoded" in query
+    # The blob itself is never selected - only the fact that it is there.
+    assert "SELECT identifier" in query and ", encoded," not in query
 
 
 async def test_forget_deletes_every_profile_table_in_one_transaction():

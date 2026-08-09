@@ -42,9 +42,14 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # `avatar_history`, whose blobs DO ship because they are images the user has no
 # other copy of. The row is stated in full otherwise, so nothing about it is
 # hidden - and it is erasable from both delete paths below.
+# v8 added `has_encoded` to every `music_favorites` row: whether the favourite
+# carries the Lavalink blob it is replayed from (rows saved before that column
+# existed do not, and are resolved by search on first use). The BLOB itself is
+# not in the archive, for the same reason the rank-card image is not - see the
+# note at the query - so the row is still described completely.
 # Additive, but a consumer that keys on the version must be able to tell them
 # apart.
-EXPORT_VERSION = 7
+EXPORT_VERSION = 8
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -303,8 +308,15 @@ async def collect_user_export(pool, user_id):
         "FROM dashboard_actions WHERE user_id = $1 ORDER BY id",
         user_id,
     )
+    # The saved-track rows. `encoded` is the Lavalink blob the row is replayed
+    # from - stated by existence, never carried, on the same reasoning as the
+    # rank-card background below: it is a derivative the bot cached of a track
+    # the user does not own and cannot use outside a Lavalink node, and it is
+    # long enough to bloat the archive for no reader. `identifier`, `uri` and
+    # the metadata already say WHICH track it is, which is the user's fact.
     favorites = await pool.fetch(
-        "SELECT identifier, title, author, uri, source_name, added_at "
+        "SELECT identifier, title, author, uri, source_name, "
+        "encoded IS NOT NULL AS has_encoded, added_at "
         "FROM music_favorites WHERE user_id = $1 ORDER BY added_at",
         user_id,
     )

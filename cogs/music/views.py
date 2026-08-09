@@ -46,6 +46,8 @@ from cogs.music.music import (
     effect_select_options,
     format_clock,
     format_duration,
+    history_entries,
+    history_entry_at,
     is_autoplay_track,
     purge_queue_lanes,
     queue_page,
@@ -1738,6 +1740,648 @@ class QueueView(discord.ui.LayoutView):
         except Exception:
             log.exception("Queue view clear failed")
             await self._report_failure(interaction)
+
+
+class _HistoryTrackSelect(discord.ui.Select):
+    """Picker of the played tracks on the history card's CURRENT page.
+
+    Values are indexes into the MOST-RECENT-FIRST history view, so the number a
+    member reads on the line and the entry the re-queue acts on are the same
+    position. The rendered track travels with the pick (``_tracks``) so the
+    action can re-check the slot still holds THAT track before queueing anything
+    - the lane keeps moving while the card sits open (every finished track
+    appends, and a full lane drops its oldest).
+
+    One action per entry, so the pick IS the action (no intermediate panel): a
+    re-queue adds to the END of the queue and interrupts nothing, so there is
+    nothing to confirm. The queue view's two-offer panel exists because both of
+    its offers are destructive.
+    """
+
+    def __init__(
+        self, owner: "HistoryCard", tracks: typing.Sequence[typing.Any], start: int
+    ) -> None:
+        self._owner = owner
+        self._tracks: typing.Dict[str, typing.Any] = {}
+        options = []
+        for offset, track in enumerate(tracks):
+            index = start + offset
+            value = str(index)
+            self._tracks[value] = track
+            options.append(
+                discord.SelectOption(
+                    label=truncate(
+                        "{index}. {title}".format(index=index + 1, title=track.title),
+                        SELECT_TEXT_MAX,
+                    ),
+                    value=value,
+                    description=truncate(
+                        _("by {author} - {duration}").format(
+                            author=track.author, duration=format_duration(track)
+                        ),
+                        SELECT_TEXT_MAX,
+                    ),
+                )
+            )
+        super().__init__(
+            placeholder=_("Play it again..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            value = self.values[0]
+            await self._owner._requeue(
+                interaction, int(value), self._tracks.get(value)
+            )
+        except Exception:
+            log.exception("History card re-queue select failed")
+            await interactions.notify_failure(interaction)
+
+
+class HistoryCard(discord.ui.LayoutView):
+    """What this session already played, newest first, as a Components V2 card.
+
+    A read-only listing plus ONE offer per line: re-queue it. The card is a room
+    surface like the queue view (:func:`_ensure_in_voice`), and the re-queue is
+    deliberately NOT DJ-gated - it appends to the end of the queue and touches
+    neither the current track nor anyone's place in the line, which is exactly
+    the gate the queue view's "Add track" already carries. Re-queue is not a
+    jump: a member who wants a played track NOW picks it from the queue card,
+    which is gated because it is destructive.
+
+    Every render re-reads the live history lane, so a card left open never lists
+    an entry that has since rotated out; the page index is re-clamped by
+    :func:`queue_page` for the same reason. The lane itself is hard-bounded
+    (``HISTORY_MAX_ITEMS``), so this surface is bounded by construction - no
+    query, no growth, one deque copy per render.
+    """
+
+    def __init__(self, cog: "Music", player: Player, *, timeout: float = 180) -> None:
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.player = player
+        self.page = 0
+        self.message: typing.Optional[discord.Message] = None
+        self._build()
+
+    def _build(self) -> None:
+        """(Re)assemble the layout from the player's live history lane."""
+        self.clear_items()
+        container = discord.ui.Container(accent_colour=random_colour())
+        container.add_item(discord.ui.TextDisplay(_("### 🕘 Recently played")))
+        container.add_item(discord.ui.Separator())
+
+        entries = history_entries(self.player.queue)
+        total = len(entries)
+        self.page, total_pages, start, end = queue_page(total, self.page)
+
+        if total == 0:
+            container.add_item(
+                discord.ui.TextDisplay(_("Nothing has played yet in this session."))
+            )
+            self.add_item(container)
+            return
+
+        lines = [
+            _("{index}. {title} by {author} ({duration})").format(
+                index=index,
+                title=track.title[:60],
+                author=track.author,
+                duration=format_duration(track),
+            )
+            for index, track in enumerate(entries[start:end], start=start + 1)
+        ]
+        container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("-# Page {page}/{pages} - {count} track(s)").format(
+                    page=self.page + 1, pages=total_pages, count=total
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        container.add_item(
+            discord.ui.ActionRow(_HistoryTrackSelect(self, entries[start:end], start))
+        )
+
+        if total_pages > 1:
+            container.add_item(
+                discord.ui.ActionRow(
+                    _ControllerButton(
+                        self._prev,
+                        label=_("Prev"),
+                        emoji="◀️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page <= 0,
+                    ),
+                    _ControllerButton(
+                        self._next,
+                        label=_("Next"),
+                        emoji="▶️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page >= total_pages - 1,
+                    ),
+                )
+            )
+
+        self.add_item(container)
+
+    def _disable_all(self) -> None:
+        for child in self.walk_children():
+            if isinstance(child, (discord.ui.Button, discord.ui.Select)):
+                child.disabled = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Room surface: anyone currently in the player's voice channel."""
+        return await _ensure_in_voice(self.player, interaction)
+
+    async def on_timeout(self) -> None:
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(
+                    view=self, allowed_mentions=discord.AllowedMentions.none()
+                )
+            except discord.HTTPException:
+                log.exception("Failed to disable the history card on timeout")
+
+    async def _report_failure(self, interaction: discord.Interaction) -> None:
+        await interactions.notify_failure(
+            interaction, _("Something went wrong handling that action.")
+        )
+
+    async def _rerender(self) -> None:
+        """Re-render in place off the live history lane.
+
+        Mentions suppressed on every edit, exactly as on the first send: this is
+        a Components V2 card, so each edit resends the listing - and a track
+        TITLE is attacker-supplied text that can be shaped like ``<@id>``.
+        discord.py folds the CLIENT default (core.Yasuho: users=True) into any
+        edit that stays silent, so an unsuppressed refresh would ping whoever
+        that id names. Same discipline as AuthorLayoutView.on_timeout.
+        """
+        self._build()
+        if self.message is None:
+            return
+        try:
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except discord.HTTPException:
+            log.exception("Failed to refresh the history card")
+
+    async def _rerender_from(self, interaction: discord.Interaction) -> None:
+        self._build()
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def _prev(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page -= 1
+            await self._rerender_from(interaction)
+        except Exception:
+            log.exception("History card prev failed")
+            await self._report_failure(interaction)
+
+    async def _next(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page += 1
+            await self._rerender_from(interaction)
+        except Exception:
+            log.exception("History card next failed")
+            await self._report_failure(interaction)
+
+    async def _requeue(
+        self, interaction: discord.Interaction, index: int, track: typing.Any
+    ) -> None:
+        """Append a played track to the END of the queue.
+
+        The very entry object is re-queued rather than decoded afresh: it is a
+        complete ``Playable`` already in memory, and a decode per click would put
+        a Lavalink round trip behind a button that a thousand guilds can press.
+        Landing in both lanes is harmless - the lanes are plain deques and every
+        lookup here compares by the ``encoded`` blob, not by identity.
+        """
+        try:
+            entries = history_entries(self.player.queue)
+            entry = history_entry_at(entries, index, track)
+            if entry is None:
+                await interaction.response.send_message(
+                    _("That track is no longer in the history."), ephemeral=True
+                )
+                await self._rerender()
+                return
+            # Same defensive guard the queue view's jump carries: a track with no
+            # payload cannot be played, and queueing it would only fail later, at
+            # the boundary, with no one around to explain why.
+            if not getattr(entry, "encoded", None):
+                log.warning("History re-queue refused: entry has no encoded payload")
+                await self._report_failure(interaction)
+                return
+            entry.extras.requester = interaction.user.id
+            self.player.queue.put(entry)
+            # An explicit add turns a radio session into a normal one, exactly as
+            # the add-track modal does.
+            self.player.radio_genre = None
+            if not self.player.current:
+                await self.player.play(self.player.queue.get())
+            await self.cog._snapshot(self.player)
+            # The history lane itself did not change, so the listing above is
+            # still accurate - no re-render, no edit spent on a click that only
+            # added to the queue.
+            await interaction.response.send_message(
+                _("Queued **{title}**.").format(title=entry.title), ephemeral=True
+            )
+        except Exception:
+            log.exception("History card re-queue failed")
+            await self._report_failure(interaction)
+
+
+class _FavouriteSelect(discord.ui.Select):
+    """Picker of the favourites on the card's CURRENT page, one option per line.
+
+    Values are page-absolute indexes (the number on the line), and each maps back
+    to the ROW it was rendered from, so every action addresses a favourite by its
+    stored ``identifier``. That is the end of the index-versus-listing footgun
+    ``/playlist remove <n>`` had: whatever the list looks like when the click
+    lands, the delete names the exact track the member picked.
+    """
+
+    def __init__(
+        self, owner: "FavouritesCard", rows: typing.Sequence[typing.Any], start: int
+    ) -> None:
+        self._owner = owner
+        self._rows: typing.Dict[str, typing.Any] = {}
+        options = []
+        for offset, row in enumerate(rows):
+            index = start + offset
+            value = str(index)
+            self._rows[value] = row
+            title = row["title"] or _("Unknown title")
+            author = row["author"] or _("Unknown artist")
+            options.append(
+                discord.SelectOption(
+                    label=truncate(
+                        "{index}. {title}".format(index=index + 1, title=title),
+                        SELECT_TEXT_MAX,
+                    ),
+                    value=value,
+                    description=truncate(
+                        _("by {author}").format(author=author), SELECT_TEXT_MAX
+                    ),
+                )
+            )
+        super().__init__(
+            placeholder=_("Manage a favourite..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            row = self._rows.get(self.values[0])
+            if row is None:
+                await self._owner._notify_stale(interaction)
+                return
+            await self._owner._manage(interaction, row)
+        except Exception:
+            log.exception("Favourites card manage select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _FavouriteActions(discord.ui.View):
+    """The ephemeral Play / Remove panel for one picked favourite.
+
+    The queue browser's two-offer shape (:class:`_QueueTrackActions`), for the
+    same reason: the pick itself changes nothing, so ONE ephemeral message
+    carries both offers and the second click IS the confirmation. No gate of its
+    own - the panel is ephemeral on an author-gated card, so only the owner of
+    the list ever sees it, and the Play path re-checks voice through the shared
+    connect seam at action time.
+    """
+
+    def __init__(
+        self, owner: "FavouritesCard", row: typing.Any, *, timeout: float = 60
+    ) -> None:
+        super().__init__(timeout=timeout)
+        self._owner = owner
+        self.row = row
+        self.origin: typing.Optional[discord.Interaction] = None
+        self.add_item(
+            _ControllerButton(
+                self._play,
+                label=_("Play"),
+                emoji="▶️",
+                style=discord.ButtonStyle.primary,
+            )
+        )
+        self.add_item(
+            _ControllerButton(
+                self._remove,
+                label=_("Remove"),
+                emoji="🗑️",
+                style=discord.ButtonStyle.danger,
+            )
+        )
+
+    async def _play(self, interaction: discord.Interaction) -> None:
+        if await self._owner._play_one(interaction, self.row):
+            self.stop()
+
+    async def _remove(self, interaction: discord.Interaction) -> None:
+        if await self._owner._remove(interaction, self.row):
+            self.stop()
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.origin is None:
+            return
+        try:
+            await self.origin.edit_original_response(view=self)
+        except discord.HTTPException:
+            log.exception("Failed to disable the favourite panel on timeout")
+
+
+class FavouritesCard(AuthorLayoutView):
+    """A member's saved favourites as a paginated Components V2 card.
+
+    Replaces the legacy embed paginator so the surface matches the house style -
+    and so the list can carry its own actions: picking a favourite offers Play
+    (queue just that one) and Remove. Author-gated through
+    :class:`~tools.views.AuthorLayoutView`, and the actions only exist when the
+    viewer is looking at their OWN list; someone else's favourites render as a
+    read-only listing, because their saved tracks are theirs to manage.
+
+    The rows are fetched once and held for the card's lifetime (one query per
+    ``/playlist``, not one per page flip - the list is hard-capped at
+    ``MAX_FAVOURITES``, so it is a bounded, cheap thing to hold). A removal drops
+    its row locally and re-renders, the reminders-card shape.
+    """
+
+    def __init__(
+        self,
+        cog: "Music",
+        author_id: int,
+        owner: typing.Any,
+        rows: typing.List[typing.Any],
+        *,
+        timeout: float = 180,
+    ) -> None:
+        super().__init__(author_id, timeout=timeout)
+        self.cog = cog
+        self.owner = owner
+        self.rows = rows
+        self.page = 0
+        self._build()
+
+    @property
+    def is_own_list(self) -> bool:
+        """True when the viewer is looking at their own favourites."""
+        return getattr(self.owner, "id", None) == self.author_id
+
+    def _build(self) -> None:
+        self.clear_items()
+        container = discord.ui.Container(accent_colour=random_colour())
+        if self.is_own_list:
+            container.add_item(discord.ui.TextDisplay(_("### ⭐ Your favourites")))
+        else:
+            container.add_item(
+                discord.ui.TextDisplay(
+                    _("### ⭐ {name}'s favourites").format(
+                        name=getattr(self.owner, "display_name", "?")
+                    )
+                )
+            )
+        container.add_item(discord.ui.Separator())
+
+        total = len(self.rows)
+        self.page, total_pages, start, end = queue_page(total, self.page)
+
+        if total == 0:
+            container.add_item(
+                discord.ui.TextDisplay(_("You have no saved favourites yet."))
+            )
+            self.add_item(container)
+            return
+
+        page_rows = self.rows[start:end]
+        lines = []
+        for index, row in enumerate(page_rows, start=start + 1):
+            title = row["title"] or _("Unknown title")
+            author = row["author"] or _("Unknown artist")
+            uri = row["uri"]
+            label = "[{title}]({uri})".format(title=title, uri=uri) if uri else title
+            lines.append(
+                _("`{index}.` {label} by `{author}`").format(
+                    index=index, label=label, author=author
+                )
+            )
+        container.add_item(discord.ui.TextDisplay("\n".join(lines)))
+        container.add_item(
+            discord.ui.TextDisplay(
+                _("-# Page {page}/{pages} - {count} track(s)").format(
+                    page=self.page + 1, pages=total_pages, count=total
+                )
+            )
+        )
+
+        # Actions belong to the owner of the list only; a visitor gets the
+        # listing and the pager, nothing that could touch someone else's rows.
+        if self.is_own_list:
+            container.add_item(discord.ui.Separator())
+            container.add_item(
+                discord.ui.ActionRow(_FavouriteSelect(self, page_rows, start))
+            )
+
+        if total_pages > 1:
+            container.add_item(
+                discord.ui.ActionRow(
+                    _ControllerButton(
+                        self._prev,
+                        label=_("Prev"),
+                        emoji="◀️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page <= 0,
+                    ),
+                    _ControllerButton(
+                        self._next,
+                        label=_("Next"),
+                        emoji="▶️",
+                        style=discord.ButtonStyle.secondary,
+                        disabled=self.page >= total_pages - 1,
+                    ),
+                )
+            )
+
+        self.add_item(container)
+
+    async def _report_failure(self, interaction: discord.Interaction) -> None:
+        await interactions.notify_failure(
+            interaction, _("Something went wrong handling that action.")
+        )
+
+    async def _rerender(self) -> None:
+        """Re-render the public card in place (the panel edits itself).
+
+        The rebuild happens even with no bound message: the card object carries
+        the list state, so a removal must leave the layout consistent whether or
+        not there is anything to edit yet.
+        """
+        self._build()
+        if self.message is None:
+            return
+        try:
+            # Mentions suppressed on every re-render, exactly as on the first
+            # send: this is a Components V2 card, so the edit resends the header
+            # TextDisplay - which carries a member's display_name. discord.py
+            # folds the CLIENT default (core.Yasuho: users=True) into any edit
+            # that stays silent, so a nickname shaped like <@id> would ping that
+            # user again on each refresh. Same discipline as
+            # AuthorLayoutView.on_timeout.
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except discord.HTTPException:
+            log.exception("Failed to refresh the favourites card")
+
+    async def _notify_stale(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(
+            _("That favourite is no longer in your list."), ephemeral=True
+        )
+        await self._rerender()
+
+    async def _prev(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page -= 1
+            self._build()
+            # Mentions suppressed - see _rerender: paging resends the header
+            # TextDisplay that holds a display_name.
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except Exception:
+            log.exception("Favourites card prev failed")
+            await self._report_failure(interaction)
+
+    async def _next(self, interaction: discord.Interaction) -> None:
+        try:
+            self.page += 1
+            self._build()
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except Exception:
+            log.exception("Favourites card next failed")
+            await self._report_failure(interaction)
+
+    async def _manage(self, interaction: discord.Interaction, row: typing.Any) -> None:
+        """Open the Play / Remove panel for a picked favourite."""
+        try:
+            panel = _FavouriteActions(self, row)
+            # Opening the panel mutates nothing, so the public card is NOT
+            # re-rendered here: browsing must not cost an edit per pick.
+            await interaction.response.send_message(
+                _("**{title}**\nQueue this track, or drop it from your favourites.")
+                .format(title=(row["title"] or _("Unknown title"))[:120]),
+                view=panel,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            panel.origin = interaction
+        except Exception:
+            log.exception("Favourites card manage failed")
+            await self._report_failure(interaction)
+
+    async def _play_one(
+        self, interaction: discord.Interaction, row: typing.Any
+    ) -> bool:
+        """Queue exactly the picked favourite. True when it was queued.
+
+        Resolves through the cog's shared two-path loader, so ONE favourite costs
+        one bulk decode of one blob (and backfills the blob when the row is a
+        legacy one) - the same seam ``/playlist play`` uses for a hundred.
+        """
+        try:
+            # A type-6 defer keeps the panel on screen while the node is asked,
+            # and lets the connect seam post its refusals as followups.
+            await interaction.response.defer()
+            if not self.cog._nodes_available():
+                await interaction.followup.send(
+                    _(
+                        "Music is currently unavailable - no Lavalink node is "
+                        "connected."
+                    ),
+                    ephemeral=True,
+                )
+                return False
+
+            # Only the tracks matter for a single pick: the failure tally is the
+            # empty list itself, and one row can never be deferred by the cap.
+            tracks = (await self.cog.resolve_favourites(self.author_id, [row]))[0]
+            if not tracks:
+                await interaction.followup.send(
+                    _("That favourite could not be loaded right now."), ephemeral=True
+                )
+                return False
+            track = tracks[0]
+
+            player = await self.cog._connect_for_playlist(
+                _ModalPlayContext(interaction)
+            )
+            if player is None:
+                return False
+
+            track.extras.requester = interaction.user.id
+            player.queue.put(track)
+            # An explicit pick ends any radio session, as every other add does.
+            player.radio_genre = None
+            if not player.current:
+                await player.play(player.queue.get())
+            await self.cog._snapshot(player)
+
+            await interaction.edit_original_response(
+                content=_("Queued **{title}**.").format(title=track.title),
+                view=None,
+            )
+            return True
+        except Exception:
+            log.exception("Favourites card play failed")
+            await self._report_failure(interaction)
+            return False
+
+    async def _remove(self, interaction: discord.Interaction, row: typing.Any) -> bool:
+        """Delete the picked favourite. True when the row is gone from the card.
+
+        Identifier-addressed, so it removes the track the member picked and no
+        other. A row that was already deleted elsewhere still leaves the card -
+        it IS gone - with the stale wording instead of a removal claim.
+        """
+        try:
+            deleted = await self.cog.delete_favourite(
+                self.author_id, row["identifier"]
+            )
+            self.rows = [
+                r for r in self.rows if r["identifier"] != row["identifier"]
+            ]
+            title = (row["title"] or _("Unknown title"))[:120]
+            content = (
+                _("Removed **{title}** from your favourites.").format(title=title)
+                if deleted
+                else _("That favourite is no longer in your list.")
+            )
+            await interaction.response.edit_message(content=content, view=None)
+            await self._rerender()
+            return True
+        except Exception:
+            log.exception("Favourites card remove failed")
+            await self._report_failure(interaction)
+            return False
 
 
 class _StationSelect(discord.ui.Select):

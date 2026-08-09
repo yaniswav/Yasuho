@@ -33,7 +33,6 @@ from cogs.music.player import (
 from cogs.music.playlists_shared import ServerPlaylistMixin
 from tools import music_state, settings
 from tools.i18n import _, ngettext
-from tools.paginator import Paginator, paginate_lines
 from tools.quotas import QuotaRegistry
 
 log = logging.getLogger(__name__)
@@ -64,6 +63,20 @@ PROGRESS_REFRESH_CONCURRENCY = 10
 
 # Cap a user's saved favourites so the table cannot grow without bound.
 MAX_FAVOURITES = 100
+
+# How many LEGACY favourites (rows saved before the `encoded` column existed, so
+# they carry no blob to bulk-decode) one `/playlist play` may resolve by search.
+# Every resolved row is backfilled with its blob, so a list drains into the
+# one-round-trip decode path after at most ceil(100/25) runs and then never
+# searches again. 25 keeps the worst case a handful of seconds instead of the
+# hundred serial round trips this replaces.
+FAVOURITE_SEARCH_CAP = 25
+
+# How many of those legacy searches run at once. Small on purpose: the searches
+# fan out to Lavalink, and at 1000+ guilds a burst of one-per-favourite requests
+# from several members at once is exactly the load pattern that starves a node.
+# Three cuts the wall time by ~3x while keeping the burst per invocation tiny.
+FAVOURITE_SEARCH_CONCURRENCY = 3
 
 # Per-user preference key (JSONB in user_settings, owned by the UserSettings cog)
 # that seeds a NEW session's autoplay mode. Kept in sync with the matching
@@ -614,6 +627,111 @@ def remove_queue_index(
     return track
 
 
+def history_entries(queue: typing.Any) -> typing.List[typing.Any]:
+    """Return a player's played tracks, MOST RECENT FIRST.
+
+    sonolink appends to ``queue.history``, so its natural order is oldest-first;
+    a "what did we just play" surface reads the other way round. The lane is
+    already hard-bounded at :data:`cogs.music.player.HISTORY_MAX_ITEMS`, so this
+    copy is bounded too. None-safe over a queue with no history lane at all (the
+    stub-sonolink dev box), returning an empty list rather than raising. Pure.
+
+    The CURRENT track is never in this lane - sonolink pushes a track to history
+    only when it is replaced - so the history card never lists what is playing.
+    """
+    history = getattr(queue, "history", None)
+    if not history:
+        return []
+    return list(reversed(list(history)))
+
+
+def history_entry_at(
+    entries: typing.Sequence[typing.Any],
+    index: int,
+    expected: typing.Any = None,
+) -> typing.Optional[typing.Any]:
+    """Resolve the history entry at ``index``, or None when the click went stale.
+
+    The sibling of :func:`queued_track_at` for the history card, and stale for
+    the same reason: the lane keeps moving while a rendered page sits on screen
+    (every finished track appends, and a full lane drops its oldest), so the
+    index a member picked minutes ago may now address a DIFFERENT song. Takes the
+    already-reversed :func:`history_entries` list rather than the queue, so the
+    index the select rendered and the index re-checked here are the same
+    most-recent-first index.
+
+    ``expected`` is the track the option was rendered from; the slot must still
+    hold an equal track (sonolink's ``Playable.__eq__`` compares the ``encoded``
+    blob). Two byte-identical copies of the same song compare equal, which is
+    correct here: replaying a song puts a second equal entry in the lane, and
+    either one re-queues exactly the song the member picked. Pure - no mutation.
+    """
+    if not isinstance(index, int) or isinstance(index, bool):
+        return None
+    if index < 0 or index >= len(entries):
+        return None
+    entry = entries[index]
+    if expected is not None and entry != expected:
+        return None
+    return entry
+
+
+def plan_favourite_resolution(
+    rows: typing.Sequence[typing.Any],
+    cap: int = FAVOURITE_SEARCH_CAP,
+) -> typing.Tuple[
+    typing.List[typing.Any], typing.List[typing.Any], int
+]:
+    """Split stored favourites into ``(decodable, searchable, deferred)``.
+
+    The whole point of the ``encoded`` column: a favourite that carries its blob
+    is rebuilt by ONE bulk ``decode_tracks`` call for the entire list, exactly as
+    the cold restore and the shared server playlists do. Only LEGACY rows (saved
+    before the column existed, or saved from a track that had no blob) need a
+    network search each, so only those are capped - at ``cap`` per invocation,
+    with the rest reported as deferred rather than silently dropped.
+
+    A row with no ``uri`` either is unplayable by both paths and is dropped here
+    (it counts as deferred nothing - it is simply not resolvable and shows up in
+    the "could not be loaded" tally downstream).
+
+    Order is preserved inside each bucket, so the caller can re-thread the
+    resolved tracks back into the stored (newest-first) order. Pure.
+    """
+    decodable: typing.List[typing.Any] = []
+    searchable: typing.List[typing.Any] = []
+    for row in rows:
+        if row["encoded"]:
+            decodable.append(row)
+        elif row["uri"]:
+            searchable.append(row)
+    safe_cap = max(cap, 0)
+    deferred = max(len(searchable) - safe_cap, 0)
+    return decodable, searchable[:safe_cap], deferred
+
+
+def pair_decoded_favourites(
+    rows: typing.Sequence[typing.Any],
+    decoded: typing.Optional[typing.Sequence[typing.Any]],
+) -> typing.Tuple[typing.List[typing.Tuple[typing.Any, typing.Any]], int]:
+    """Zip decoded tracks back onto the rows they came from; count the failures.
+
+    ``decode_tracks`` answers positionally, and may return ``None`` entries (a
+    blob Lavalink can no longer decode) or a SHORT list (a truncated / failed
+    batch); both are failures, so the skipped count is derived from the rows, not
+    from the answer's length. The pairing is what
+    :func:`cogs.music.playlists_shared.account_decoded` cannot give - the shared
+    playlists only need a tally, whereas a favourites load must know WHICH row
+    produced which track to keep the list's order. Pure.
+    """
+    pairs = [
+        (row, track)
+        for row, track in zip(rows, decoded or ())
+        if track is not None
+    ]
+    return pairs, max(len(rows) - len(pairs), 0)
+
+
 def joinable_voice_channels(
     guild: discord.Guild,
     member: discord.Member,
@@ -839,12 +957,23 @@ class Music(ServerPlaylistMixin, commands.Cog):
         Returns "added" on a new row, "exists" if it was already saved, or
         "full" when the user is at the MAX_FAVOURITES cap and a new track was
         refused. The INSERT only fires while under the cap, so growth is bounded.
+
+        The track's ``encoded`` blob is stored alongside the metadata so
+        ``/playlist play`` can rebuild the whole list in one bulk decode instead
+        of one search per track. It is read defensively (a stub / partially built
+        track may not carry one), and a missing blob simply lands NULL - the
+        legacy search path resolves and backfills that row later.
+
+        A conflicting row is left ALONE (``DO NOTHING``, not a blob-filling
+        ``DO UPDATE``): an update would make asyncpg report "INSERT 0 1" and this
+        method would answer "added" for a track that was already saved. The
+        backfill belongs to the load path, which knows it is backfilling.
         """
         query = """
             INSERT INTO music_favorites
-                (user_id, identifier, title, author, uri, source_name)
-            SELECT $1, $2, $3, $4, $5, $6
-            WHERE (SELECT COUNT(*) FROM music_favorites WHERE user_id = $1) < $7
+                (user_id, identifier, title, author, uri, source_name, encoded)
+            SELECT $1, $2, $3, $4, $5, $6, $7
+            WHERE (SELECT COUNT(*) FROM music_favorites WHERE user_id = $1) < $8
             ON CONFLICT (user_id, identifier) DO NOTHING
         """
         status = await self.bot.db_pool.execute(
@@ -855,6 +984,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             track.author,
             track.uri,
             track.source_name,
+            getattr(track, "encoded", None),
             MAX_FAVOURITES,
         )
         # asyncpg returns a status string like "INSERT 0 1" (or "... 0" on a
@@ -871,13 +1001,156 @@ class Music(ServerPlaylistMixin, commands.Cog):
     async def _fetch_favourites(self, user_id: int) -> list:
         """Return a user's favourites, newest first (bounded by the cap)."""
         query = """
-            SELECT identifier, title, author, uri, source_name
+            SELECT identifier, title, author, uri, source_name, encoded
             FROM music_favorites
             WHERE user_id = $1
             ORDER BY added_at DESC
             LIMIT $2
         """
         return await self.bot.db_pool.fetch(query, user_id, MAX_FAVOURITES)
+
+    async def delete_favourite(self, user_id: int, identifier: str) -> bool:
+        """Drop one favourite by its identifier. True when a row was deleted.
+
+        Identifier-addressed on purpose: the favourites card acts on the value
+        carried by the option a member picked, so a list that changed under the
+        card (a second surface removed something, an add pushed the ordering
+        around) can never make a click delete a DIFFERENT track the way a
+        positional delete could. False means the row was already gone, which the
+        card answers by re-rendering rather than by claiming a removal.
+        """
+        status = await self.bot.db_pool.execute(
+            "DELETE FROM music_favorites WHERE user_id = $1 AND identifier = $2",
+            user_id,
+            identifier,
+        )
+        return status.rsplit(" ", 1)[-1] != "0"
+
+    async def _backfill_favourite_blobs(
+        self, user_id: int, pairs: typing.Sequence[typing.Tuple[typing.Any, typing.Any]]
+    ) -> None:
+        """Store the blobs of freshly searched legacy favourites (best-effort).
+
+        One statement for the whole batch (asyncpg is one-statement-per-call, and
+        a per-row UPDATE loop would trade the serial search storm this lot
+        removes for a serial write storm). ``encoded IS NULL`` keeps it a pure
+        backfill: a row that gained a blob in the meantime is never rewritten,
+        so two concurrent loads cannot fight over it.
+
+        The row is addressed by its STORED identifier while the blob comes from
+        the track the stored URI resolved to - that is the point (the blob is
+        what plays the URI). Failure is logged and swallowed: the tracks are
+        already queued, and a missed backfill only means this row is searched
+        again next time.
+        """
+        rows = [(row["identifier"], getattr(track, "encoded", None)) for row, track in pairs]
+        rows = [(identifier, blob) for identifier, blob in rows if blob]
+        if not rows:
+            return
+        try:
+            await self.bot.db_pool.execute(
+                """
+                UPDATE music_favorites AS f
+                   SET encoded = v.encoded
+                  FROM unnest($2::text[], $3::text[]) AS v(identifier, encoded)
+                 WHERE f.user_id = $1
+                   AND f.identifier = v.identifier
+                   AND f.encoded IS NULL
+                """,
+                user_id,
+                [identifier for identifier, _blob in rows],
+                [blob for _identifier, blob in rows],
+            )
+        except Exception:
+            log.exception("Favourite blob backfill failed")
+
+    async def _search_favourite_rows(
+        self, rows: typing.Sequence[typing.Any]
+    ) -> typing.List[typing.Tuple[typing.Any, typing.Any]]:
+        """Resolve legacy favourites by URI, BOUNDED-parallel, order preserved.
+
+        The paper cut this replaces: the old load awaited one search per
+        favourite, one after another, so a full list was a hundred serial
+        Lavalink round trips - a stall measured in minutes on a slow node, with
+        the invoker staring at a deferred response the whole time.
+
+        Only rows with no stored blob ever reach here (the rest are one bulk
+        decode), the batch is capped by the caller, and a semaphore of
+        :data:`FAVOURITE_SEARCH_CONCURRENCY` keeps the fan-out per invocation
+        tiny - the same bounded-concurrency shape as the startup restore, chosen
+        for the same reason: never turn one member's command into a burst that a
+        shared node feels. ``gather`` answers positionally, so the surviving
+        pairs keep the stored order.
+        """
+        semaphore = asyncio.Semaphore(FAVOURITE_SEARCH_CONCURRENCY)
+
+        async def resolve(row: typing.Any) -> typing.Optional[typing.Any]:
+            async with semaphore:
+                return _first_track(await self._search(row["uri"]))
+
+        results = await asyncio.gather(
+            *(resolve(row) for row in rows), return_exceptions=True
+        )
+        pairs: typing.List[typing.Tuple[typing.Any, typing.Any]] = []
+        for row, track in zip(rows, results):
+            if isinstance(track, BaseException):
+                log.exception(
+                    "Favourite search failed for %s", row["identifier"], exc_info=track
+                )
+                continue
+            if track is not None:
+                pairs.append((row, track))
+        return pairs
+
+    async def resolve_favourites(
+        self, user_id: int, rows: typing.Sequence[typing.Any]
+    ) -> typing.Tuple[typing.List[typing.Any], int, int]:
+        """Rebuild playable tracks for stored favourites: ``(tracks, failed, deferred)``.
+
+        The two-path load, in stored (newest-first) order:
+
+        * every row that carries an ``encoded`` blob is rebuilt in ONE bulk
+          ``decode_tracks`` round trip - a full 100-track list costs a single
+          request, the seam ``_restore_one`` and the shared server playlists
+          already use;
+        * only LEGACY rows are searched, capped and bounded-parallel, and their
+          blobs are backfilled so the same list never pays that cost twice.
+
+        ``failed`` counts rows that resolved to nothing (a dead blob, a search
+        that found nothing, a row with no URI at all); ``deferred`` counts legacy
+        rows left for a later run by the cap. The caller states both - a load
+        that silently queued 25 of 100 would be the dishonest half of the fix.
+        """
+        decodable, searchable, deferred = plan_favourite_resolution(rows)
+
+        pairs: typing.List[typing.Tuple[typing.Any, typing.Any]] = []
+        failed = len(rows) - len(decodable) - len(searchable) - deferred
+        if decodable:
+            try:
+                decoded = await self.bot.sl_client.decode_tracks(
+                    *[row["encoded"] for row in decodable]
+                )
+            except RuntimeError:
+                log.exception("Favourite decode failed: no node available")
+                decoded = None
+            paired, skipped = pair_decoded_favourites(decodable, decoded)
+            pairs.extend(paired)
+            failed += skipped
+
+        if searchable:
+            found = await self._search_favourite_rows(searchable)
+            failed += len(searchable) - len(found)
+            pairs.extend(found)
+            await self._backfill_favourite_blobs(user_id, found)
+
+        # Re-thread both buckets into the order the member sees on their card.
+        by_identifier = {row["identifier"]: track for row, track in pairs}
+        tracks = [
+            by_identifier[row["identifier"]]
+            for row in rows
+            if row["identifier"] in by_identifier
+        ]
+        return tracks, failed, deferred
 
     async def _send_controller(
         self,
@@ -2549,6 +2822,30 @@ class Music(ServerPlaylistMixin, commands.Cog):
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
 
+    # NOT named "history": the moderation cog's /cases already claims that as an
+    # alias, and a prefix user typing ?history must keep reaching the moderation
+    # case log they have always reached (test_command_tree_hygiene enforces it).
+    @commands.hybrid_command(name="played", aliases=["hist", "recent"])
+    @commands.guild_only()
+    async def played(self, ctx: commands.Context) -> None:
+        """Show what this session has already played, newest first."""
+        # Read-only browse, so the same gate as /queue: connected player, no
+        # same-voice requirement to LOOK. Re-queueing from the card is gated on
+        # the card itself (same-voice, like the queue view's Add track).
+        player = await self._require_player(ctx, in_channel=False)
+        if player is None:
+            return
+
+        entries = history_entries(player.queue)
+        if not entries:
+            await ctx.send(_("Nothing has played yet in this session."))
+            return
+
+        view = HistoryCard(self, player)
+        view.message = await ctx.send(
+            view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
     @commands.hybrid_command(name="nowplaying", aliases=["np", "current"])
     @commands.guild_only()
     async def nowplaying(self, ctx: commands.Context) -> None:
@@ -2754,7 +3051,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
     async def _show_favourites(
         self, ctx: commands.Context, member: discord.Member
     ) -> None:
-        """Send a paginated, numbered list of a member's favourites (newest first)."""
+        """Send the interactive favourites card for a member (newest first).
+
+        Own list: every listed track carries Play / Remove actions, so removing
+        one is a pick rather than a number typed against a listing that may have
+        moved. Someone else's list stays a read-only card - their saved tracks
+        are theirs to manage.
+        """
         rows = await self._fetch_favourites(member.id)
         if not rows:
             if member == ctx.author:
@@ -2767,23 +3070,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 )
             return
 
-        lines: list[str] = []
-        for index, row in enumerate(rows, start=1):
-            title = row["title"] or _("Unknown title")
-            author = row["author"] or _("Unknown artist")
-            uri = row["uri"]
-            label = f"[{title}]({uri})" if uri else title
-            lines.append(
-                _("`{index}.` {label} by `{author}`").format(
-                    index=index, label=label, author=author
-                )
-            )
-
-        embeds = paginate_lines(
-            lines,
-            title=_("{name}'s Favourites").format(name=member.display_name),
+        card = FavouritesCard(self, ctx.author.id, member, list(rows))
+        card.message = await ctx.send(
+            view=card, allowed_mentions=discord.AllowedMentions.none()
         )
-        await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
     @commands.hybrid_group(
         name="playlist",
@@ -2802,7 +3092,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @playlist.command(name="play")
     @commands.guild_only()
     async def playlist_play(self, ctx: commands.Context) -> None:
-        """Queue every track in your favourites and start playing."""
+        """Queue every track in your favourites and start playing.
+
+        Resolve first, connect second - the sibling ``/serverplaylist play``
+        shape, so a load that turns up nothing never drags the bot into a voice
+        channel to announce its own failure.
+        """
         await ctx.defer()
 
         if not self._nodes_available():
@@ -2816,43 +3111,41 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await ctx.send(_("You have no saved favourites to play."))
             return
 
-        player = ctx.voice_client
+        # Cheap refusal BEFORE the resolve. The connect seam below says the same
+        # thing, but reaching it costs up to a full batch of Lavalink searches
+        # (legacy favourites carry no blob) plus a backfill write - work for a
+        # caller who cannot hear the result. Word-for-word the connect seam's
+        # line, so there is one refusal wording, not two.
+        if ctx.voice_client is None and (
+            not ctx.author.voice or not ctx.author.voice.channel
+        ):
+            await ctx.send(_("You must be in a voice channel first."))
+            return
+
+        tracks, skipped, deferred = await self.resolve_favourites(ctx.author.id, rows)
+        if not tracks:
+            message = _("None of your favourites could be loaded right now.")
+            if deferred:
+                # The cap is stated even when the batch it covered failed, so a
+                # list whose loadable half is still queued behind it never looks
+                # like it was tried in full. Same wording as the success path.
+                message += ngettext(
+                    " {deferred} older favourite is still waiting - run this again"
+                    " to add it.",
+                    " {deferred} older favourites are still waiting - run this again"
+                    " to add them.",
+                    deferred,
+                ).format(deferred=deferred)
+            await ctx.send(message)
+            return
+
+        player = await self._connect_for_playlist(ctx)
         if player is None:
-            if not ctx.author.voice or not ctx.author.voice.channel:
-                await ctx.send(_("You must be in a voice channel first."))
-                return
-            try:
-                player = await ctx.author.voice.channel.connect(cls=Player)
-            except discord.ClientException:
-                log.exception("Failed to connect to the voice channel")
-                await ctx.send(
-                    _("I was unable to join your voice channel. Please try again.")
-                )
-                return
-            player.dj = ctx.author
-            player.home = ctx.channel
-            # Player birth: autoplay seed, this guild's default volume, and the
-            # SponsorBlock categories - the one shared configuration seam.
-            await self._init_session(player, ctx.author)
+            return
 
-        if player.home is None:
-            player.home = ctx.channel
-
-        queued = 0
-        for row in rows:
-            uri = row["uri"]
-            if not uri:
-                continue
-            track = _first_track(await self._search(uri))
-            if track is None:
-                continue
+        for track in tracks:
             track.extras.requester = ctx.author.id
             player.queue.put(track)
-            queued += 1
-
-        if queued == 0:
-            await ctx.send(_("None of your favourites could be loaded right now."))
-            return
 
         # Playing favourites is an explicit choice: it ends any radio session.
         player.radio_genre = None
@@ -2860,9 +3153,32 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await player.play(player.queue.get())
         await self._snapshot(player)
 
-        await ctx.send(
-            _("Queued {count} track(s) from your favourites.").format(count=queued)
-        )
+        count = len(tracks)
+        message = ngettext(
+            "Queued {count} track from your favourites.",
+            "Queued {count} tracks from your favourites.",
+            count,
+        ).format(count=count)
+        if skipped:
+            # Byte-identical to the shared-playlist skip line on purpose: same
+            # fact, same wording, one msgid already translated in every locale.
+            message += ngettext(
+                " {skipped} track was skipped - it could not be loaded.",
+                " {skipped} tracks were skipped - they could not be loaded.",
+                skipped,
+            ).format(skipped=skipped)
+        if deferred:
+            # Honest about the cap instead of pretending the list is done: these
+            # are older favourites with no stored blob, and every run converts a
+            # batch of them, so running it again finishes the job for good.
+            message += ngettext(
+                " {deferred} older favourite is still waiting - run this again"
+                " to add it.",
+                " {deferred} older favourites are still waiting - run this again"
+                " to add them.",
+                deferred,
+            ).format(deferred=deferred)
+        await ctx.send(message)
 
     @playlist.command(name="add")
     @commands.guild_only()
@@ -2917,7 +3233,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @commands.guild_only()
     @app_commands.describe(index="The 1-based position of the favourite to remove.")
     async def playlist_remove(self, ctx: commands.Context, index: int) -> None:
-        """Remove the favourite at the given position in your list."""
+        """Remove the favourite at the given position in your list.
+
+        Kept for back-compat (and for anyone who prefers typing), but the card
+        ``/playlist`` opens is the primary surface now: it removes by pick, so
+        there is no position to miscount. Both paths end at the same
+        identifier-addressed delete.
+        """
         rows = await self._fetch_favourites(ctx.author.id)
         if not rows:
             await ctx.send(_("You have no saved favourites to remove."))
@@ -2929,11 +3251,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
 
         row = rows[index - 1]
-        await self.bot.db_pool.execute(
-            "DELETE FROM music_favorites WHERE user_id = $1 AND identifier = $2",
-            ctx.author.id,
-            row["identifier"],
-        )
+        await self.delete_favourite(ctx.author.id, row["identifier"])
         await ctx.send(
             _("Removed **{title}** from your favourites.").format(
                 title=row["title"] or _("Unknown title")
@@ -2959,6 +3277,8 @@ async def setup(bot: commands.Bot) -> None:
 # suite, which references them as cogs.music.music.<name> - keep working.
 from cogs.music import search
 from cogs.music.views import (
+    FavouritesCard,
+    HistoryCard,
     JoinVoiceCard,
     MusicController,
     QueueView,

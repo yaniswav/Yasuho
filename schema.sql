@@ -718,10 +718,17 @@ CREATE TABLE IF NOT EXISTS music_favorites (
     author      TEXT,
     uri         TEXT,
     source_name TEXT,
+    encoded     TEXT,              -- Lavalink `encoded` blob (bulk-decode seam)
     added_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, identifier)
 );
 CREATE INDEX IF NOT EXISTS music_favorites_user_idx ON music_favorites (user_id, added_at DESC);
+-- Migrate pre-existing installs (no-op on a fresh database). `encoded` lets
+-- `/playlist play` rebuild a whole favourites list in ONE bulk decode round trip
+-- instead of one search per track - the exact seam guild_playlists and the cold
+-- restore already use. NULL on rows saved before this column existed; those are
+-- resolved once by search and backfilled, so the search path drains to nothing.
+ALTER TABLE music_favorites ADD COLUMN IF NOT EXISTS encoded TEXT;
 
 -- Shared server playlists: a named snapshot of a guild's current track + queue
 -- (Lavalink `encoded` strings, the music_state precedent) that any member can

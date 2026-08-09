@@ -10,6 +10,7 @@ from .collection import CollectionMixin
 from .feed import AniListFeed
 from .hub import HubMixin
 from .lookup import LookupMixin
+from .schedule import ScheduleMixin
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class AniList(
     LookupMixin,
     AccountMixin,
     AiringMixin,
+    ScheduleMixin,
     ChaptersMixin,
     HubMixin,
     CollectionMixin,
