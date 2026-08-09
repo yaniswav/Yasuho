@@ -61,6 +61,18 @@ RESTORE_CONCURRENCY = 5
 # roughly constant-time while never bursting a whole fleet at the rate limiter.
 PROGRESS_REFRESH_CONCURRENCY = 10
 
+# Hard ceiling on how many tracks ONE guild may keep waiting in its player queue,
+# counted over BOTH lanes (the user lane and the hidden autoplay lane).
+#
+# Arbitration: 500 is deliberately generous - at a ~4 minute average that is over
+# a full day of continuous music, past any real session - but it is FINITE, and
+# that is the whole point. Nothing in the package bounded the queue before, so a
+# scripted /play loop, or a handful of 200-track playlist loads, could grow one
+# guild's in-memory queue (and the JSONB snapshot written from it) without limit;
+# at 1000+ guilds that is a per-guild memory leak with no ceiling. The check is a
+# len() over the two lanes, so it costs no await and no query on any path.
+MAX_QUEUE_TRACKS = 500
+
 # Cap a user's saved favourites so the table cannot grow without bound.
 MAX_FAVOURITES = 100
 
@@ -519,6 +531,62 @@ def queued_track_count(queue: typing.Any) -> int:
     tracks = getattr(queue, "tracks", None) or ()
     autoplay = getattr(queue, "autoplay_tracks", None) or ()
     return len(tracks) + len(autoplay)
+
+
+def queue_room_left(queue: typing.Any) -> int:
+    """How many more tracks fit under :data:`MAX_QUEUE_TRACKS`. Never negative.
+
+    Reads the SAME two lanes :func:`queued_track_count` counts, so the cap covers
+    the hidden autoplay lane too and cannot be walked around by a path that fills
+    it. Clamped at 0 so a queue that somehow sits over the cap (an old snapshot,
+    a cap lowered between versions) reads as "no room" instead of a negative
+    slice. Pure, in-memory, no await.
+
+    Cheap but not allocation-free: sonolink's ``tracks`` / ``autoplay_tracks`` are
+    COPYING properties, so each call builds two lists of up to
+    :data:`MAX_QUEUE_TRACKS` pointers. Bounded and fine on the enqueue seams that
+    call it once per add; do not put it in a per-tick loop.
+    """
+    return max(0, MAX_QUEUE_TRACKS - queued_track_count(queue))
+
+
+def fit_queue_additions(
+    queue: typing.Any, tracks: typing.Iterable[typing.Any]
+) -> typing.Tuple[typing.List[typing.Any], int]:
+    """Split ``tracks`` into ``(accepted, dropped)`` against the queue cap.
+
+    The one seam every BULK enqueue goes through: it takes as many tracks as fit
+    and reports how many were cut, so the caller can queue the head and say so
+    honestly rather than silently swallowing the tail. Materialises the iterable
+    once (callers pass generators and playlist track lists alike). Pure.
+    """
+    candidates = list(tracks)
+    accepted = candidates[: queue_room_left(queue)]
+    return accepted, len(candidates) - len(accepted)
+
+
+def queue_full_message() -> str:
+    """The refusal a SINGLE add gets when the queue already sits at the cap."""
+    return _("The queue is full ({cap} tracks). Skip or clear a few first.").format(
+        cap=MAX_QUEUE_TRACKS
+    )
+
+
+def queue_full_suffix(dropped: int) -> str:
+    """Tail a BULK add appends when the cap cut it short ("" when nothing was cut).
+
+    Deliberately the same shape as the "could not be loaded" skip line the
+    playlist and favourites paths already append, so one message can carry both
+    facts ("Queued 40 tracks. 3 were skipped ... 12 were not added ...") without
+    inventing a second grammar for the same kind of bad news.
+    """
+    if dropped <= 0:
+        return ""
+    return ngettext(
+        " {dropped} track was not added - the queue is full at {cap}.",
+        " {dropped} tracks were not added - the queue is full at {cap}.",
+        dropped,
+    ).format(dropped=dropped, cap=MAX_QUEUE_TRACKS)
 
 
 def purge_queue_lanes(queue: typing.Any) -> None:
@@ -1914,8 +1982,22 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if sponsorblock_on:
             sponsorblock.schedule_apply(player)
         player.queue.mode = loop_mode
-        for track in queue_tracks or []:
+        # Restores obey the cap too, defensively: a snapshot written by a build
+        # from before MAX_QUEUE_TRACKS existed can carry more rows than the cap
+        # now allows, and the restore must not be the one path that quietly
+        # reintroduces an unbounded queue. Silent by design - a cold restore
+        # speaks through the controller it reposts, not through chat, and there
+        # is no invoker standing there to tell.
+        restored, dropped = fit_queue_additions(player.queue, queue_tracks or [])
+        for track in restored:
             player.queue.put(track)
+        if dropped:
+            log.warning(
+                "Restore for guild %s dropped %d queued track(s) over the %d cap",
+                guild_id,
+                dropped,
+                MAX_QUEUE_TRACKS,
+            )
         # Restore the persisted session autoplay mode so a cold restart resumes
         # with the same behaviour. Defensive ON default if the column somehow
         # predates this row (it is added by schema.sql's additive migration).
@@ -2109,6 +2191,14 @@ class Music(ServerPlaylistMixin, commands.Cog):
             )
             return
 
+        # The cap is checked BEFORE the search: a full queue cannot take this
+        # result either way, so refusing here spares the node a round trip that a
+        # thousand guilds could otherwise fire at it for nothing. It also leaves
+        # the single-track branch below with at least one slot guaranteed.
+        if queue_room_left(player.queue) <= 0:
+            await ctx.send(queue_full_message())
+            return
+
         try:
             result = await self.bot.sl_client.search_track(query, source=SEARCH_SOURCE)
         except RuntimeError:
@@ -2125,15 +2215,36 @@ class Music(ServerPlaylistMixin, commands.Cog):
         data = result.result
 
         if isinstance(data, sonolink.models.Playlist):
-            for track in data.tracks:
+            # A playlist is a bulk add: queue the head that fits and state the
+            # tail that did not, rather than refusing a 300-track load outright
+            # over the last few slots.
+            queued, dropped = fit_queue_additions(player.queue, data.tracks)
+            if not queued:
+                # The queue filled during the search: nothing landed, so say the
+                # plain refusal rather than "added the playlist (0 tracks)".
+                await ctx.send(queue_full_message())
+                return
+            for track in queued:
                 track.extras.requester = ctx.author.id
-            player.queue.put(data.tracks)
+            player.queue.put(queued)
+            # Plural-aware: the cap can truncate a playlist down to exactly ONE
+            # accepted track, so "(1 tracks)" is now an ordinary outcome rather
+            # than the edge case a 1-track playlist used to be. Same ngettext
+            # shape the favourites path uses for the identical fact.
             await ctx.send(
-                _(
-                    "Added the playlist **{name}** ({count} tracks) to the queue."
-                ).format(name=data.name, count=len(data.tracks))
+                ngettext(
+                    "Added the playlist **{name}** ({count} track) to the queue.",
+                    "Added the playlist **{name}** ({count} tracks) to the queue.",
+                    len(queued),
+                ).format(name=data.name, count=len(queued))
+                + queue_full_suffix(dropped)
             )
         else:
+            # Re-checked at the put: the search above is an await, so a bulk load
+            # can have taken the slot the pre-search check saw.
+            if queue_room_left(player.queue) <= 0:
+                await ctx.send(queue_full_message())
+                return
             track = data[0] if isinstance(data, list) else data
             track.extras.requester = ctx.author.id
             player.queue.put(track)
@@ -2212,6 +2323,23 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # is non-empty), so leave it untouched.
             if player.queue.mode == sonolink.QueueMode.LOOP:
                 player.queue.mode = sonolink.QueueMode.NORMAL
+        # The seed obeys the cap and RETURNS only what it queued, so both callers'
+        # "({count} track(s))" line stays honest without either of them learning
+        # about the cap. A zap (replace=True) purged both lanes a few lines up, so
+        # it always has the full room; only a seed onto a loaded queue can be cut.
+        tracks, dropped = fit_queue_additions(player.queue, tracks)
+        if dropped:
+            log.info(
+                "Genre seed for %s trimmed by the queue cap: %d track(s) dropped",
+                genre.key,
+                dropped,
+            )
+        if not tracks:
+            # Only reachable on the non-replace path (a zap purged both lanes
+            # just above, so it always has the full cap to spend): the queue was
+            # already full, so the caller reports "nothing found right now" and
+            # the player is left exactly as it was.
+            return tier, []
         for track in tracks:
             track.extras.requester = requester_id
             track.extras.radio = True
@@ -2252,6 +2380,19 @@ class Music(ServerPlaylistMixin, commands.Cog):
             if genre is None:
                 return
             guild_id = player.channel.guild.id if player.channel else None
+            # A refill is best-effort filler, so a full queue simply skips this
+            # cycle - SILENTLY and before the two searches, since there is nobody
+            # to tell (no invoker, no interaction) and a chat line about a queue
+            # nobody asked to extend would be pure noise. The station is unharmed:
+            # the next track-start retries, and by then the queue has drained.
+            if queue_room_left(player.queue) <= 0:
+                log.info(
+                    "Radio refill for %s skipped: queue at the %d cap (guild=%s)",
+                    genre.key,
+                    MAX_QUEUE_TRACKS,
+                    guild_id,
+                )
+                return
             seen = radio_seen_ids(
                 player.played_ids,
                 (getattr(t, "identifier", None) for t in player.queue.tracks),
@@ -2280,6 +2421,20 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 return
             dj = getattr(player, "dj", None)
             requester_id = dj.id if dj is not None else None
+            # Re-check the cap at the put: the two searches above are awaits, and
+            # a bulk add can land in that window. Truncate to whatever fits (the
+            # log below then reports the real +N), still silently.
+            tracks, dropped = fit_queue_additions(player.queue, tracks)
+            if not tracks:
+                log.info(
+                    "Radio refill for %s dropped all %d track(s): queue hit the "
+                    "%d cap mid-search (guild=%s)",
+                    genre.key,
+                    dropped,
+                    MAX_QUEUE_TRACKS,
+                    guild_id,
+                )
+                return
             for track in tracks:
                 if requester_id is not None:
                     track.extras.requester = requester_id
@@ -2368,6 +2523,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     ephemeral=True,
                 )
                 return
+        # A zap purges both lanes before it seeds, so only the start-from-silence
+        # pick can meet a full queue. Say so plainly here: the seed seam refuses
+        # by returning nothing, and "I couldn't find any tracks" would be a lie.
+        if not replace and queue_room_left(player.queue) <= 0:
+            await interaction.followup.send(queue_full_message(), ephemeral=True)
+            return
         _tier, tracks = await self._apply_genre(
             player, genre, author.id, replace=replace
         )
@@ -3122,6 +3283,16 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await ctx.send(_("You must be in a voice channel first."))
             return
 
+        # Second cheap refusal, same reasoning as the one above: a queue already
+        # at the cap has no room for ANY of these, and the resolve below can cost
+        # a full batch of Lavalink searches plus a backfill write for a caller who
+        # will hear none of it. Only a live player can be full - no voice client
+        # (or one with no queue at all) reads as "all the room in the world", so
+        # a session about to be born is never refused here.
+        if queue_room_left(getattr(ctx.voice_client, "queue", None)) <= 0:
+            await ctx.send(queue_full_message())
+            return
+
         tracks, skipped, deferred = await self.resolve_favourites(ctx.author.id, rows)
         if not tracks:
             message = _("None of your favourites could be loaded right now.")
@@ -3141,6 +3312,14 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         player = await self._connect_for_playlist(ctx)
         if player is None:
+            return
+
+        # The cap decides last, at the put: the connect and the resolve above are
+        # awaits, so the queue can have grown since the cheap refusal. Queue the
+        # head that fits and state the tail below.
+        tracks, over_cap = fit_queue_additions(player.queue, tracks)
+        if not tracks:
+            await ctx.send(queue_full_message())
             return
 
         for track in tracks:
@@ -3178,6 +3357,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 " to add them.",
                 deferred,
             ).format(deferred=deferred)
+        message += queue_full_suffix(over_cap)
         await ctx.send(message)
 
     @playlist.command(name="add")

@@ -262,9 +262,15 @@ class _GenreCog:
         return (None, [object()])
 
 
-def _live_player(fake_player_cls, *, dj_id, current):
+def _live_player(fake_player_cls, *, dj_id, current, queued=0):
     player = fake_player_cls()
     player.current = current
+    # An empty two-lane queue by default: _start_genre reads it for the per-guild
+    # queue cap before it seeds, and a start-from-silence pick must never be
+    # refused by it. ``queued`` fills the user lane to drive the cap refusal.
+    player.queue = types.SimpleNamespace(
+        tracks=[object()] * queued, autoplay_tracks=[]
+    )
     player.dj = (
         None if dj_id is None else types.SimpleNamespace(id=dj_id, mention=f"<@{dj_id}>")
     )
@@ -353,4 +359,64 @@ async def test_start_genre_opens_from_silence_for_a_plain_listener(
     await music.Music._start_genre(cog, interaction, genre)
 
     # No gate from silence: the fresh session started (replace=False).
+    assert cog.apply_calls == [(genre, 9, False)]
+
+
+async def test_start_genre_refuses_a_start_from_silence_on_a_full_queue(
+    make_interaction, monkeypatch
+):
+    """The queue cap (lot P2) is the OTHER thing standing between the card and
+    the seed, and it is the only refusal a start-from-silence pick can meet.
+
+    A zap purges both lanes before it seeds, so only this path can find the queue
+    already at the cap. It has to say so plainly: the seed seam refuses by
+    returning nothing, so without this branch the member would be told
+    "I couldn't find any Lo-fi tracks right now", which is a lie about a full
+    queue. Pins the refusal AND that the destructive seed never ran.
+    """
+
+    class _FakePlayer:
+        pass
+
+    cog = _GenreCog(manager=False)
+    # Nothing playing, but the user lane already sits at the cap.
+    player = _live_player(
+        _FakePlayer, dj_id=None, current=None, queued=music.MAX_QUEUE_TRACKS
+    )
+    interaction = _member_interaction(
+        make_interaction, user_id=9, player=player, monkeypatch=monkeypatch
+    )
+    genre = types.SimpleNamespace(label="Lo-fi")
+
+    await music.Music._start_genre(cog, interaction, genre)
+
+    assert cog.apply_calls == []
+    assert len(interaction.followups) == 1
+    (args, kwargs) = interaction.followups[0]
+    assert kwargs.get("ephemeral") is True
+    # The cap refusal, not the "found nothing" line the empty seed would produce.
+    assert args[0] == music.queue_full_message()
+    assert str(music.MAX_QUEUE_TRACKS) in args[0]
+
+
+async def test_start_genre_still_seeds_when_the_queue_has_one_slot_left(
+    make_interaction, monkeypatch
+):
+    """Counter-test: the refusal is ``<= 0`` room, not "nearly full". One free
+    slot still starts a station."""
+
+    class _FakePlayer:
+        pass
+
+    cog = _GenreCog(manager=False)
+    player = _live_player(
+        _FakePlayer, dj_id=None, current=None, queued=music.MAX_QUEUE_TRACKS - 1
+    )
+    interaction = _member_interaction(
+        make_interaction, user_id=9, player=player, monkeypatch=monkeypatch
+    )
+    genre = types.SimpleNamespace(label="Lo-fi")
+
+    await music.Music._start_genre(cog, interaction, genre)
+
     assert cog.apply_calls == [(genre, 9, False)]

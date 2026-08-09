@@ -4,15 +4,7 @@ import time
 
 import discord
 
-from .components import (
-    EditSelectView,
-    MediaView,
-    OnListSelectView,
-    ResultView,
-    SeasonSelectView,
-    SeasonView,
-    TypeView,
-)
+from .edit_forms import EditSelectView, OnListSelectView, SeasonSelectView, TypeView
 from .helpers import (
     API_URL,
     DEFAULT_SCORE_FORMAT,
@@ -25,6 +17,7 @@ from .helpers import (
     _progress_max,
     render_score,
 )
+from .media_view import MediaView, ResultView, SeasonView
 from .queries import (
     CANDIDATE_QUERY,
     ID_MEDIA_QUERY,

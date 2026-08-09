@@ -5,8 +5,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .components import LoginView
 from .helpers import REDIRECT_URI, _parse_status, _profile_colour
+from .login import LoginView
 from .queries import (
     AUTOCOMPLETE_QUERY,
     LIST_ENTRIES_QUERY,

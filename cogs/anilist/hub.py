@@ -14,8 +14,8 @@ import logging
 
 import discord
 
-from .components import LoginView
 from .helpers import _current_season
+from .login import LoginView
 from .queries import VIEWER_QUERY
 from tools import i18n, interactions
 from tools.i18n import N_, _

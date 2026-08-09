@@ -17,7 +17,7 @@ import logging
 
 import discord
 
-from .components import EditEntryModal
+from .edit_forms import EditEntryModal
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY
 from tools import i18n, interactions
@@ -124,7 +124,8 @@ query ($id: Int) {
 
 
 # Human-readable words for the viewer's current list status on a media, mirroring
-# the wording used by the media editor's status picker (see ``components.py``).
+# the wording used by the media editor's status picker (see
+# ``edit_forms.EditEntryModal``).
 # ``N_`` marks the msgids for extraction; ``_()`` resolves them at click time. An
 # unknown status degrades to its raw enum value.
 _ADD_STATUS_WORDS = {
@@ -171,7 +172,7 @@ def _throttle_for(client):
     that same cog so the buttons, the lookup commands and the admin searches all
     consume ONE process-wide window - two instances would mean two ceilings, which
     would defeat the point. Degrades to None (never blocks) if the cog is somehow
-    unavailable, mirroring ``components._deny_if_throttled``.
+    unavailable, mirroring ``edit_forms._deny_if_throttled``.
     """
 
     get_cog = getattr(client, "get_cog", None)

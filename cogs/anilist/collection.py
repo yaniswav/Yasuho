@@ -21,7 +21,7 @@ import logging
 
 import discord
 
-from .components import CompletePromptView, EditEntryModal
+from .edit_forms import EditEntryModal
 from .helpers import (
     DEFAULT_SCORE_FORMAT,
     _media_title,
@@ -29,6 +29,7 @@ from .helpers import (
     _progress_max,
     render_score,
 )
+from .media_view import CompletePromptView
 from .queries import COLLECTION_QUERY, VIEWER_QUERY
 from tools import i18n, interactions
 from tools.i18n import _, ngettext

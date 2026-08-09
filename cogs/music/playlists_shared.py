@@ -525,6 +525,23 @@ class ServerPlaylistMixin:
         if player is None:
             return
 
+        # The per-guild queue cap decides here, at the enqueue seam - imported
+        # lazily like ``format_clock`` above, because music.py imports THIS module
+        # at load time, so a module-level import back would be a cycle. One bulk
+        # decode is a single round trip (bounded by MAX_PLAYLIST_TRACKS), so there
+        # is nothing expensive to spare with an earlier refusal: queue the head
+        # that fits and state the tail in the message below.
+        from cogs.music.music import (
+            fit_queue_additions,
+            queue_full_message,
+            queue_full_suffix,
+        )
+
+        usable, over_cap = fit_queue_additions(player.queue, usable)
+        if not usable:
+            await ctx.send(queue_full_message())
+            return
+
         for track in usable:
             track.extras.requester = ctx.author.id
             player.queue.put(track)
@@ -547,6 +564,7 @@ class ServerPlaylistMixin:
                 " {skipped} tracks were skipped - they could not be loaded.",
                 skipped,
             ).format(skipped=skipped)
+        message += queue_full_suffix(over_cap)
         await ctx.send(message)
 
     @serverplaylist_play.autocomplete("name")

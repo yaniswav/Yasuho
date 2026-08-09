@@ -22,7 +22,7 @@ constant, not ``anilist_airing_state``, not ``LIST_FETCH_BUDGET``. This is
 INTERACTIVE traffic and is paced as such - every AniList call goes through
 :meth:`cogs.anilist.base.AniListBase._graphql` (so the process-wide
 ``allow_global`` ceiling applies) and every fetching button first passes
-:func:`cogs.anilist.components._deny_if_throttled` (per-user + per-guild
+:func:`cogs.anilist.edit_forms._deny_if_throttled` (per-user + per-guild
 ``allow_interactive``). The command itself carries the house 1/5s per-user
 cooldown.
 
@@ -71,7 +71,7 @@ from discord.ext import commands
 
 from .account import AccountMixin
 from .airing import AIRING_LIST_QUERY
-from .components import _deny_if_throttled
+from .edit_forms import _deny_if_throttled
 from .helpers import _media_title
 from .queries import VIEWER_QUERY
 from tools import interactions
@@ -400,7 +400,7 @@ class AiringScheduleView(AuthorLayoutView):
     Holds the window's rows AND the media-id set it was fetched with, so paging
     inside the window is a pure local re-render and only a window step costs an
     AniList request. Only the window buttons pass through
-    :func:`~cogs.anilist.components._deny_if_throttled`: the page buttons issue
+    :func:`~cogs.anilist.edit_forms._deny_if_throttled`: the page buttons issue
     no AniList call, so gating them would spend an interactive quota slot for
     nothing.
 

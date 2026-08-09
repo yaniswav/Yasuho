@@ -50,7 +50,9 @@ from cogs.music.music import (
     history_entry_at,
     is_autoplay_track,
     purge_queue_lanes,
+    queue_full_message,
     queue_page,
+    queue_room_left,
     queued_track_at,
     queued_track_count,
     remove_queue_index,
@@ -252,11 +254,29 @@ class AddSongModal(LocaleModal, title="Add a song"):
                 )
                 return
 
+            # Refuse BEFORE the search: a full queue has no slot for whatever
+            # comes back, and the round trip would be spent for nothing.
+            if queue_room_left(player.queue) <= 0:
+                await interaction.response.send_message(
+                    queue_full_message(), ephemeral=True
+                )
+                return
+
             track = _first_track(await self.cog._search(query))
             if track is None:
                 await interaction.response.send_message(
                     _("Could not find anything for `{query}`.").format(query=query),
                     ephemeral=True,
+                )
+                return
+
+            # Re-checked at the put itself: the search above is an await, so a
+            # bulk load can have filled the queue in that window. Cheap enough to
+            # do twice (a len over two lanes), and it keeps the cap a property of
+            # the enqueue seam rather than of one lucky ordering.
+            if queue_room_left(player.queue) <= 0:
+                await interaction.response.send_message(
+                    queue_full_message(), ephemeral=True
                 )
                 return
 
@@ -1982,6 +2002,13 @@ class HistoryCard(discord.ui.LayoutView):
                 log.warning("History re-queue refused: entry has no encoded payload")
                 await self._report_failure(interaction)
                 return
+            # One click, one track: a full queue refuses outright. No await stands
+            # between this check and the put, so the answer cannot go stale.
+            if queue_room_left(self.player.queue) <= 0:
+                await interaction.response.send_message(
+                    queue_full_message(), ephemeral=True
+                )
+                return
             entry.extras.requester = interaction.user.id
             self.player.queue.put(entry)
             # An explicit add turns a radio session into a normal one, exactly as
@@ -2321,6 +2348,14 @@ class FavouritesCard(AuthorLayoutView):
                 )
                 return False
 
+            # Refuse a full queue BEFORE the resolve: a legacy favourite (no
+            # stored blob) costs a Lavalink search plus a backfill write, and the
+            # pick has nowhere to land anyway. Only a live player can be full.
+            existing = getattr(interaction.guild, "voice_client", None)
+            if queue_room_left(getattr(existing, "queue", None)) <= 0:
+                await interaction.followup.send(queue_full_message(), ephemeral=True)
+                return False
+
             # Only the tracks matter for a single pick: the failure tally is the
             # empty list itself, and one row can never be deferred by the cap.
             tracks = (await self.cog.resolve_favourites(self.author_id, [row]))[0]
@@ -2335,6 +2370,11 @@ class FavouritesCard(AuthorLayoutView):
                 _ModalPlayContext(interaction)
             )
             if player is None:
+                return False
+
+            # Re-checked at the put: the resolve and the connect above are awaits.
+            if queue_room_left(player.queue) <= 0:
+                await interaction.followup.send(queue_full_message(), ephemeral=True)
                 return False
 
             track.extras.requester = interaction.user.id

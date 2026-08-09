@@ -7,7 +7,7 @@ and the button-callback guard are exercised against tiny fakes.
 
 import types
 
-from cogs.anilist import airing, chapters, components, feed_delivery
+from cogs.anilist import airing, chapters, edit_forms, feed_delivery
 from cogs.anilist.base import AniListBase
 from cogs.anilist.feed import AniListFeed
 from cogs.anilist.throttle import (
@@ -195,7 +195,7 @@ async def test_deny_if_throttled_lets_first_click_through():
     cog = types.SimpleNamespace(_throttle=AniListThrottle(clock=_Clock()))
     interaction = _FakeInteraction(1, 7)
 
-    denied = await components._deny_if_throttled(cog, interaction)
+    denied = await edit_forms._deny_if_throttled(cog, interaction)
     assert denied is False
     assert interaction.response.sent is None
 
@@ -205,10 +205,10 @@ async def test_deny_if_throttled_refuses_once_quota_is_spent():
 
     # Exhaust the per-user window.
     for _ in range(USER_LIMIT):
-        await components._deny_if_throttled(cog, _FakeInteraction(1, 7))
+        await edit_forms._deny_if_throttled(cog, _FakeInteraction(1, 7))
 
     interaction = _FakeInteraction(1, 7)
-    denied = await components._deny_if_throttled(cog, interaction)
+    denied = await edit_forms._deny_if_throttled(cog, interaction)
     assert denied is True
     # A terse ephemeral 'slow down' was sent on the button path.
     content, ephemeral = interaction.response.sent
@@ -219,7 +219,7 @@ async def test_deny_if_throttled_refuses_once_quota_is_spent():
 async def test_deny_if_throttled_no_throttle_never_blocks():
     cog = types.SimpleNamespace()  # older wiring: no _throttle attribute
     interaction = _FakeInteraction(1, 7)
-    assert await components._deny_if_throttled(cog, interaction) is False
+    assert await edit_forms._deny_if_throttled(cog, interaction) is False
 
 
 # ---------------------------------------------------------------------------
