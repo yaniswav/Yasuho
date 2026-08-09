@@ -7457,8 +7457,8 @@ msgstr "Aucune piste trouvée pour cette recherche."
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Playlist **{name}** ajoutée à la file ({count} piste)."
+msgstr[1] "Playlist **{name}** ajoutée à la file ({count} pistes)."
 
 #: cogs/music/music.py:2252
 #, python-brace-format

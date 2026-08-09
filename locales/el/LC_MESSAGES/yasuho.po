@@ -7457,8 +7457,8 @@ msgstr "Δεν βρέθηκαν κομμάτια για αυτό το ερώτη
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτι)."
+msgstr[1] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτια)."
 
 #: cogs/music/music.py:2252
 #, python-brace-format

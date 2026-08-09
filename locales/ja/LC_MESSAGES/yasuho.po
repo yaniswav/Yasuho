@@ -7457,8 +7457,8 @@ msgstr "そのクエリに該当するトラックが見つかりませんでし
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
+msgstr[1] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
 
 #: cogs/music/music.py:2252
 #, python-brace-format
