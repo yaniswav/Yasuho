@@ -34,9 +34,17 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # v6 added `tickets_opened`: the METADATA of the support tickets this user
 # opened (server, number, thread, status, timestamps). Never any content - a
 # ticket's conversation is a Discord thread and is not stored at all.
+# v7 added `rank_card`: the personal /rank card style (user_rank_cards) - the
+# accent colour, and whether a background image is stored plus its size. The
+# IMAGE ITSELF is deliberately not in the archive, and that is a considered
+# call, not an omission: it is a derivative the bot made of a file the user
+# uploaded and still holds (re-encoded WebP, cropped to the card), unlike
+# `avatar_history`, whose blobs DO ship because they are images the user has no
+# other copy of. The row is stated in full otherwise, so nothing about it is
+# hidden - and it is erasable from both delete paths below.
 # Additive, but a consumer that keys on the version must be able to tell them
 # apart.
-EXPORT_VERSION = 6
+EXPORT_VERSION = 7
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -90,6 +98,19 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # the Leveling cog, dropped by cogs/community/votes.forget_vote_boost at the
     # one call site of delete_user_data.
     ("topgg_votes", "DELETE FROM topgg_votes WHERE user_id = $1"),
+    # The personal /rank card style (lot U1): the accent colour a member chose
+    # and the BACKGROUND IMAGE they uploaded. Here and not on the narrow list
+    # above, for two independent reasons:
+    #   * the image is not "data the user typed in and can type again" - it is a
+    #     file they may no longer hold, and `/profile clear` has no confirmation
+    #     step and says nothing about rank cards, so it must not be able to
+    #     destroy one. Same reasoning as topgg_votes right above.
+    #   * it is not profile data at all: it is a LEVELING row, and the narrow
+    #     list is "THE list of tables a profile lives in".
+    # The member's own verb for this is `/rankcard clear` (which is instant and
+    # explicit); `?mydata deleteprofile` erases it here, behind the confirmation
+    # view that names what is about to go.
+    ("user_rank_cards", "DELETE FROM user_rank_cards WHERE user_id = $1"),
 )
 
 
@@ -287,6 +308,16 @@ async def collect_user_export(pool, user_id):
         "FROM music_favorites WHERE user_id = $1 ORDER BY added_at",
         user_id,
     )
+    # The personal /rank card style. The BLOB is deliberately not selected (see
+    # EXPORT_VERSION's v7 note): its size and its existence are stated instead,
+    # so the archive describes the row completely without carrying a derivative
+    # of a file its owner uploaded and still holds.
+    rank_card = await pool.fetchrow(
+        "SELECT accent, background IS NOT NULL AS has_background, "
+        "octet_length(background) AS background_bytes, updated_at "
+        "FROM user_rank_cards WHERE user_id = $1",
+        user_id,
+    )
     levels = await pool.fetch(
         "SELECT guild_id, xp FROM levels WHERE user_id = $1 ORDER BY guild_id",
         user_id,
@@ -393,6 +424,9 @@ async def collect_user_export(pool, user_id):
             {**dict(row), "result": _json_value(row["result"], None)}
             for row in dashboard_requests
         ],
+        # Absent row = never customised, stated as null rather than as invented
+        # defaults (the same discipline as `afk` and `topgg_votes` above).
+        "rank_card": dict(rank_card) if rank_card else None,
         "music_favorites": _records(favorites),
         "levels": _records(levels),
         "period_xp": _records(periods),
@@ -531,8 +565,11 @@ async def delete_user_profile(pool, user_id):
     :data:`PROFILE_DELETE_QUERIES` only - the data the user typed in and can
     type again. This is what `/profile clear` runs, and that command asks for no
     confirmation, so the list it reaches must never grow to hold something its
-    owner cannot recreate. Nothing is cached in memory, so there is no
-    invalidation to do afterwards.
+    owner cannot recreate.
+
+    Nothing here needs an in-memory invalidation afterwards: no cog caches a
+    value read from these tables. Contrast :func:`delete_user_data`, whose caller
+    must drop real cached values.
     """
     return await _delete_tables(pool, user_id, PROFILE_DELETE_QUERIES)
 
@@ -541,12 +578,18 @@ async def delete_user_data(pool, user_id):
     """Erase everything /mydata promises, in one transaction; per-table counts.
 
     :data:`USER_DELETE_QUERIES`: the profile, plus the user-scoped records that
-    are not profile data (today, the top.gg vote ledger). The wider, one-way
-    verb, and the reason it is a separate function is that its only caller sits
-    behind a confirmation button that names what is about to be destroyed.
+    are not profile data (today, the top.gg vote ledger and the personal rank
+    card). The wider, one-way verb, and the reason it is a separate function is
+    that its only caller sits behind a confirmation button that names what is
+    about to be destroyed.
 
     In-memory twins of the deleted rows (the presence opt-in set, the live XP
-    boost) are dropped by that caller, right after this returns.
+    boost) are dropped by that caller, right after this returns. The rank card
+    needs no such hook, and that is a property of its cache rather than an
+    oversight: Leveling keeps a self-healing "does this member have a row?" HINT
+    and never a value, so a stale hint costs one lookup that finds nothing,
+    renders the guild card correctly and corrects itself (see
+    cogs/community/leveling/rank_card_user.py).
     """
     return await _delete_tables(pool, user_id, USER_DELETE_QUERIES)
 

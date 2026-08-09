@@ -42,6 +42,8 @@ from discord.ext import commands
 
 from . import engine as leveling
 from . import rank_card
+from .rank_card_user import MAX_SOURCE_MB as _MAX_SOURCE_MB
+from .rank_card_user import rank_card_error_message as _rank_card_error_message
 from tools import interactions, rendering
 from tools.cooldowns import Cooldowns
 from tools.formats import format_dt, random_colour
@@ -223,12 +225,14 @@ async def _fetch_config(pool, guild_id):
 # storage functions directly, so the cache-invalidation contract that seam
 # exists to enforce can never be bypassed from here.
 
-# The upload cap as it is SPOKEN to admins, derived from the single authority
-# (cogs.community.leveling.rank_card.MAX_SOURCE_BYTES) so the number in a message or in a slash
-# command's help can never drift from the number the validator enforces. Binary
-# megabytes floor-divided (8 * 1024 * 1024 -> 8), labelled "MB" the way every
-# other user-facing string in this codebase does.
-MAX_SOURCE_MB = rank_card.MAX_SOURCE_BYTES // (1024 * 1024)
+# The upload cap as it is SPOKEN to admins, and the typed-error -> message map,
+# both re-exported from the module that now owns them (U1's member surface
+# validates through the SAME pipeline, so the two surfaces must refuse in the
+# same words and quote the same cap). Imported under this module's original
+# private name so every call site below reads unchanged, and re-bound at module
+# level so `level_config_ui.MAX_SOURCE_MB` stays the number this file's slash
+# help interpolates.
+MAX_SOURCE_MB = _MAX_SOURCE_MB
 
 # SCALE STORY: "Preview my card" runs the FULL render pipeline - a CDN avatar
 # read plus a Pillow compose - inside tools.rendering's BOT-WIDE 2-slot image
@@ -240,40 +244,6 @@ MAX_SOURCE_MB = rank_card.MAX_SOURCE_BYTES // (1024 * 1024)
 # command cooldown). Keyed on user id only: the panel is already author-gated,
 # so a per-guild key would just be the same person twice.
 _PREVIEW_DEBOUNCE = Cooldowns(5.0)
-
-
-def _rank_card_error_message(exc):
-    """Map a typed :class:`cogs.community.leveling.rank_card.RankCardError` to a short,
-    translated message - one clause per failure so a rejected upload always
-    tells the admin WHY, never a bare "something went wrong"."""
-    if isinstance(exc, rank_card.SourceTooLarge):
-        return _("That image is too large - the limit is {mb} MB.").format(
-            mb=MAX_SOURCE_MB
-        )
-    if isinstance(exc, rank_card.ImageTooLarge):
-        return _(
-            "That image has too many pixels to process safely - try a "
-            "smaller picture."
-        )
-    if isinstance(exc, rank_card.UnsupportedFormat):
-        return _("Only PNG, JPEG, and WebP images are supported.")
-    if isinstance(exc, rank_card.EncodedTooLarge):
-        return _(
-            "That image is too complex to fit under the storage limit - "
-            "try a simpler or smaller picture."
-        )
-    if isinstance(exc, rank_card.DecodeFailed):
-        return _(
-            "I couldn't read that as an image - make sure it's a valid "
-            "PNG, JPEG, or WebP file."
-        )
-    if isinstance(exc, rank_card.InvalidAccent):
-        return _(
-            "That's not a valid hex colour - try something like #5865F2 "
-            "or #58F."
-        )
-    # Defensive only: every RankCardError subclass is handled above.
-    return _("That image couldn't be used for the rank card.")
 
 
 def card_panel_state(row):
@@ -294,13 +264,20 @@ def card_panel_state(row):
 
 
 async def _render_card_preview(bot, leveling_cog, guild, member):
-    """Render ``member``'s rank card exactly as ``/rank`` would, using the
-    guild's CURRENT customisation (not the panel's possibly-stale in-memory
+    """Render ``member``'s rank card through the real ``/rank`` pipeline, using
+    the guild's CURRENT customisation (not the panel's possibly-stale in-memory
     state) - the preview button's whole point is to show the real pipeline's
     output. Lives here rather than on the Leveling cog because this lot's
     leveling.py changes are scoped to the write seam alone; every piece this
     calls (ensure_rank_card_style, the render, cogs.community.leveling.rank_card.fetch_background)
     already existed for /rank, so nothing new is added there.
+
+    GUILD LAYER ONLY, deliberately (U1): it shows what THIS PANEL controls. If it
+    resolved the clicking admin's personal style too (Leveling's
+    resolve_rank_card_render), an admin who happens to have their own background
+    would upload a guild one, click preview, see their own and conclude the
+    upload failed. What a member with a personal style actually sees is their own
+    /rank, and the panel says so next to the switch that governs it.
     """
     pool = bot.db_pool
     xp = (
@@ -437,6 +414,33 @@ class _RankCardPreviewButton(discord.ui.Button):
         await self.panel.preview(interaction)
 
 
+class _RankCardUserStylesButton(discord.ui.Button):
+    """Toggle whether members' own card styles render in this guild (U1).
+
+    The guild's moderation tool for the per-member layer: one click, no write on
+    anybody's row, reversible - so a server that dislikes an image (or simply
+    wants one look for its cards) turns the layer off without destroying what its
+    members stored for their other servers.
+    """
+
+    def __init__(self, panel, *, allowed):
+        super().__init__(
+            label=(
+                _("Turn off member styles") if allowed
+                else _("Turn on member styles")
+            ),
+            style=(
+                discord.ButtonStyle.secondary if allowed
+                else discord.ButtonStyle.primary
+            ),
+        )
+        self.panel = panel
+        self.allowed = allowed
+
+    async def callback(self, interaction):
+        await self.panel.set_user_styles(interaction, not self.allowed)
+
+
 class RankCardPanel(AuthorLayoutView):
     """Author-restricted admin panel for the ``rank_cards`` row (RC2).
 
@@ -452,14 +456,30 @@ class RankCardPanel(AuthorLayoutView):
     (``leveling_cog.set_rank_background`` / ``set_rank_accent`` /
     ``clear_rank_card``), never ``cogs.community.leveling.rank_card`` directly, so the cache
     invalidation contract holds from this surface too.
+
+    ``allow_user_styles`` (U1) is the third knob, and the only one that is NOT
+    part of ``state``: it lives in guild_settings, not in the ``rank_cards`` row,
+    so it is carried separately rather than smuggled into the dict
+    :func:`card_panel_state` builds from that row.
     """
 
-    def __init__(self, bot, leveling_cog, guild, author_id, state, *, timeout=180):
+    def __init__(
+        self,
+        bot,
+        leveling_cog,
+        guild,
+        author_id,
+        state,
+        *,
+        allow_user_styles=True,
+        timeout=180,
+    ):
         super().__init__(author_id, timeout=timeout)
         self.bot = bot
         self.leveling_cog = leveling_cog
         self.guild = guild
         self.state = state
+        self.allow_user_styles = allow_user_styles
         self._build()
 
     def _build(self):
@@ -525,6 +545,28 @@ class RankCardPanel(AuthorLayoutView):
                 _RankCardResetAccentButton(
                     self, disabled=state["accent"] is None
                 ),
+            )
+        )
+        container.add_item(discord.ui.Separator())
+
+        if self.allow_user_styles:
+            user_styles_desc = _(
+                "On - members who set their own card style with /rankcard "
+                "see it here. Turn this off to keep one look for every card."
+            )
+        else:
+            user_styles_desc = _(
+                "Off - every card here uses this server's look. Nothing "
+                "members set is deleted; it still applies elsewhere."
+            )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "**" + _("Member card styles") + "**\n" + user_styles_desc
+            )
+        )
+        container.add_item(
+            discord.ui.ActionRow(
+                _RankCardUserStylesButton(self, allowed=self.allow_user_styles)
             )
         )
         container.add_item(discord.ui.Separator())
@@ -618,6 +660,27 @@ class RankCardPanel(AuthorLayoutView):
             await interactions.notify_failure(interaction)
             return
         self.state["accent"] = accent
+        self._build()
+        await self._rerender(interaction)
+
+    async def set_user_styles(self, interaction, allowed):
+        """Flip the per-member layer for this guild and redraw the panel.
+
+        Through the Leveling seam like every other write here, so the settings
+        key stays spelled in exactly one module (see
+        cogs/community/leveling/rank_card_user.py). No cache to invalidate on
+        this one: tools.settings updates its own blob on write, and the render
+        reads the flag from there.
+        """
+        try:
+            await self.leveling_cog.set_user_rank_card_styles_allowed(
+                self.guild.id, allowed
+            )
+        except Exception:
+            log.exception("Rank card panel member-styles toggle failed")
+            await interactions.notify_failure(interaction)
+            return
+        self.allow_user_styles = allowed
         self._build()
         await self._rerender(interaction)
 
@@ -1159,8 +1222,19 @@ class LevelConfigUI(commands.Cog):
             return
         row = await rank_card.fetch_config(self.bot.db_pool, ctx.guild.id)
         state = card_panel_state(row)
+        # The third knob lives in guild_settings, not in the row above, and is
+        # read through the same seam the render uses so the panel can never
+        # describe it differently from what /rank obeys.
+        allow_user_styles = await leveling_cog.allows_user_rank_card_styles(
+            ctx.guild.id
+        )
         view = RankCardPanel(
-            self.bot, leveling_cog, ctx.guild, ctx.author.id, state
+            self.bot,
+            leveling_cog,
+            ctx.guild,
+            ctx.author.id,
+            state,
+            allow_user_styles=allow_user_styles,
         )
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
@@ -1824,6 +1898,41 @@ class LevelConfigUI(commands.Cog):
             description=_(
                 "This server's /rank cards now use the uploaded image as "
                 "their background."
+            ),
+            colour=random_colour(),
+        )
+        await ctx.send(embed=embed)
+
+    @levelconfig_card.command(name="userstyles")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        mode="True to let members use their own card style here, False to keep one look."
+    )
+    async def levelconfig_card_userstyles(self, ctx, mode: bool):
+        """Allow or refuse members' personal /rankcard styles on this server.
+
+        This is the moderation switch for member backgrounds: turning it off
+        makes every card here use the server's look. It deletes nothing, so a
+        member's style still applies in their other servers and comes back the
+        moment it is turned on again.
+        """
+        leveling_cog = await self._require(ctx, "Leveling")
+        if leveling_cog is None:
+            return
+        await leveling_cog.set_user_rank_card_styles_allowed(ctx.guild.id, mode)
+        embed = discord.Embed(
+            title=_("Member card styles"),
+            description=(
+                _(
+                    "Members can use their own /rankcard background and accent "
+                    "on this server."
+                )
+                if mode
+                else _(
+                    "Every /rank card here uses this server's look. Nothing "
+                    "members set was deleted."
+                )
             ),
             colour=random_colour(),
         )

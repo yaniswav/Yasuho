@@ -36,7 +36,12 @@ channel gets no transcript at all, and the closing message in the thread says
 so.
 
 **Leveling**: your user ID with XP totals, levels, and monthly season results
-per server.
+per server. If you customise your own rank card (`/rankcard`), the accent colour
+you chose and the background image you uploaded are stored under your user ID -
+the image re-encoded and cropped to the card, never the original file. Servers
+can refuse personal card styles on their own cards; that setting displays
+nothing and deletes nothing. Clearing it (`/rankcard clear`) or erasing your data
+removes both.
 
 **Server statistics**: aggregate counters only (messages per day, joins/leaves
 per day). No message content and no per-user activity is stored.

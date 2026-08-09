@@ -388,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 6
+    assert data["export_version"] == privacy.EXPORT_VERSION == 7
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -443,8 +443,8 @@ async def test_forget_deletes_every_profile_table_in_one_transaction():
 
 async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
     """`?mydata deleteprofile` erases the profile AND the records that are not
-    profile data - today the top.gg vote ledger - in the SAME transaction, so a
-    confirmed forget can never half-happen."""
+    profile data - the top.gg vote ledger, the personal rank card - in the SAME
+    transaction, so a confirmed forget can never half-happen."""
     connection = _DeleteConnection()
 
     counts = await privacy.delete_user_data(_DeletePool(connection), 42)
@@ -456,9 +456,11 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
         "profile_connections",
         "profiles",
         "topgg_votes",
+        "user_rank_cards",
     ]
-    assert len(executed) == 5
+    assert len(executed) == 6
     assert counts["topgg_votes"] == 1
+    assert counts["user_rank_cards"] == 1
 
 
 def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
@@ -469,12 +471,19 @@ def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
     for data its owner typed in and can type again, and wrong for an earned vote
     streak and a lifetime count, which nothing can give back. So the ledger is
     on the WIDE list only, behind the button that names it.
+
+    Same verdict for the personal rank card (lot U1): its background is an image
+    file its owner uploaded and may no longer hold, and `/profile clear` neither
+    warns about it nor mentions rank cards at all. `/rankcard clear` is the
+    explicit verb for it; `?mydata deleteprofile` is the erasure one.
     """
     narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
     wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
 
     assert "topgg_votes" not in narrow
     assert "topgg_votes" in wide
+    assert "user_rank_cards" not in narrow
+    assert "user_rank_cards" in wide
     assert narrow < wide  # the wide list is a strict superset, never a fork
 
     from cogs.community.profile import cog as profile_cog
@@ -832,14 +841,17 @@ def test_the_confirmed_erasure_drops_the_live_xp_boost_with_the_row():
     assert "forget_vote_boost" in source
 
 
-def test_the_confirmation_names_the_vote_record_it_destroys():
+def test_the_confirmation_names_everything_it_destroys():
     """A permanent, unrecreatable loss must be stated BEFORE the button, not
-    discovered afterwards: the streak and the lifetime count are the only things
-    this verb erases that its owner cannot simply type again."""
+    discovered afterwards. That is the entry price for being on the wide list at
+    all, so every table there that its owner cannot simply type again has to be
+    named in the warning: the vote streak and lifetime count, and the rank-card
+    background - an image FILE they may no longer hold a copy of."""
     from cogs.community import usersettings
 
     warning = inspect.getsource(
         usersettings.UserSettings.mydata_deleteprofile.callback
     )
     assert "top.gg vote record" in warning
+    assert "background image you" in warning
     assert "cannot be undone" in warning

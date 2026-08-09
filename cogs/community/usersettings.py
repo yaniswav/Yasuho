@@ -253,7 +253,8 @@ class ProfileDeletionView(AuthorView):
         try:
             # The WIDE erasure (privacy.USER_DELETE_QUERIES), not the narrow one
             # `/profile clear` runs: this is the confirmed, one-way verb, and
-            # the message above it names the vote record it also destroys.
+            # the message above it names the vote record and the rank card it
+            # also destroys.
             await privacy.delete_user_data(
                 self.cog.bot.db_pool, self.author_id
             )
@@ -277,7 +278,9 @@ class ProfileDeletionView(AuthorView):
                     "visibility choice."
                 )
                 + "\n"
-                + _("Your top.gg vote record is gone too."),
+                + _("Your top.gg vote record is gone too.")
+                + "\n"
+                + _("So is your personal rank card."),
                 view=self,
             )
         except Exception:
@@ -713,11 +716,14 @@ class UserSettings(commands.Cog):
     async def mydata_deleteprofile(self, ctx):
         """Permanently delete your profile, gaming IDs and visibility choices."""
         view = ProfileDeletionView(self, ctx.author.id)
-        # Two strings, appended rather than one rewritten: the first is the
-        # long-standing warning (already translated in every locale), the second
-        # names the ONE thing this verb destroys that the user cannot recreate
-        # by typing it again. A confirmation that does not name it is not a
-        # confirmation - see privacy.USER_DELETE_QUERIES.
+        # Strings appended rather than one rewritten: the first is the
+        # long-standing warning (already translated in every locale), and each
+        # one after it names something this verb destroys that the user cannot
+        # recreate by typing it again - the vote record, and the rank-card
+        # background, which is an IMAGE FILE they may no longer hold. A
+        # confirmation that does not name them is not a confirmation, which is
+        # the whole reason those tables are on the wide list and not the
+        # unconfirmed one - see privacy.USER_DELETE_QUERIES.
         view.message = await ctx.send(
             _(
                 "This permanently deletes your bio, pronouns, accent colour, "
@@ -728,6 +734,11 @@ class UserSettings(commands.Cog):
             + _(
                 "It also deletes your top.gg vote record: your vote streak and "
                 "your lifetime vote count start over from zero."
+            )
+            + "\n"
+            + _(
+                "And your personal rank card: the background image you "
+                "uploaded and the accent colour you picked."
             ),
             view=view,
             ephemeral=ctx.interaction is not None,

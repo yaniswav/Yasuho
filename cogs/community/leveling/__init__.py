@@ -22,9 +22,16 @@ Layout:
 * reward_rules.py   - the pure decision engine for level-up role rewards
                        (stack vs replace, which roles to add/remove) -
                        re-homed from ``tools/level_rewards.py``;
-* rank_card.py      - rank-card validation, normalisation and the four
-                       one-statement ``rank_cards`` storage queries - re-homed
-                       from ``tools/rank_card.py`` (no collision, kept its name);
+* rank_card.py      - rank-card validation, normalisation and the
+                       one-statement ``rank_cards`` / ``user_rank_cards``
+                       storage queries - re-homed from ``tools/rank_card.py``
+                       (no collision, kept its name);
+* rank_card_user.py - ``RankCardUserMixin``: the per-MEMBER card layer (U1) -
+                       the ``/rankcard`` surface, the marker cache and the
+                       precedence resolver /rank draws with. A MIXIN of the
+                       ``Leveling`` cog, not a seventh cog (cogs/anilist/'s
+                       shape): it customises what ``/rank`` draws and needs that
+                       cog's guild-side card accessor;
 * leveling.py        - the ``Leveling`` cog: the on_message grant path, the
                        leaderboard/rank commands, the rank-card render seam;
 * level_admin.py     - the ``LevelAdmin`` cog: the ``/levelconfig xp`` group

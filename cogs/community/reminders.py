@@ -10,7 +10,7 @@ from discord.ext import commands
 
 from . import reminders_store as reminders_tool
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import _, ngettext
 from tools.time import (
     FutureTime,
     ShortTime,
@@ -28,6 +28,30 @@ DEFAULT_REMINDER_MESSAGE = "something"
 
 # Cap pending reminders per user so nobody can flood the timers table.
 MAX_PENDING_REMINDERS = 25
+
+# Cap RECURRING reminders per user, bot-wide. A recurring reminder is the only
+# kind that re-inserts itself, so it is the only kind whose row count does not
+# drain on its own: five of them at the 1h floor is 120 rows/day of churn per
+# user, which is the ceiling we are willing to underwrite at 1000+ guilds.
+MAX_RECURRING_REMINDERS = 5
+
+# The recurring cap's count, shared by the pre-flight read and the guarded
+# creation below so the two can never drift into counting different things.
+RECURRING_COUNT_QUERY = (
+    "SELECT COUNT(*) FROM timers "
+    "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
+    "AND extra->>'repeat_seconds' IS NOT NULL"
+)
+
+# Advisory-lock class id for the recurring cap (see create_reminder_timer).
+# The TWO-ARGUMENT form of pg_advisory_xact_lock has a key space entirely
+# separate from the one-argument bigint form tools/privacy.py locks avatar
+# history on, so this lock provably cannot collide with any other in the bot.
+# The second half is the user id folded into int4; a fold collision only ever
+# costs two unrelated members microseconds on a command neither runs often.
+_RECURRING_LOCK_CLASS = 0x52454D49  # 'REMI'
+_INT4_FOLD = 2147483647
+
 TIMER_CLAIM_TIMEOUT_MINUTES = 5
 TIMER_RETRY_MAX_SECONDS = 3600
 
@@ -51,9 +75,100 @@ DURABLE_TIMER_EVENTS = frozenset({"tempban"})
 MAX_TIMER_ATTEMPTS = 12
 
 
+class ReminderChannelGone(Exception):
+    """A reminder's target channel no longer exists (a 404 on fetch_channel).
+
+    Raised rather than swallowed because the two delivery shapes have to answer
+    it differently: a one-shot is simply dropped (its row is already gone), while
+    a RECURRING one must also unwind the next occurrence its claim committed, or
+    the series would re-fire into the same dead channel for ever. Carrying that
+    distinction in the return value of ``call_timer`` would let a future caller
+    ignore it by accident; an exception cannot be ignored silently.
+    """
+
+
 def timer_retry_delay(attempts):
     """Return the bounded exponential retry delay after a delivery failure."""
     return min(60 * (2 ** max(0, attempts)), TIMER_RETRY_MAX_SECONDS)
+
+
+def format_interval(seconds):
+    """A localized 'every 2 days' label for a recurrence interval.
+
+    The unit choice is the store's pure ``split_interval`` (coarsest exact unit);
+    only the pluralisation lives here, through ``ngettext`` so languages with
+    other plural rules than English get real forms rather than an '(s)' suffix.
+    """
+    unit, count = reminders_tool.split_interval(seconds)
+    if unit == "week":
+        return ngettext("every week", "every {count} weeks", count).format(count=count)
+    if unit == "day":
+        return ngettext("every day", "every {count} days", count).format(count=count)
+    if unit == "hour":
+        return ngettext("every hour", "every {count} hours", count).format(count=count)
+    if unit == "minute":
+        return ngettext(
+            "every minute", "every {count} minutes", count
+        ).format(count=count)
+    return ngettext(
+        "every second", "every {count} seconds", count
+    ).format(count=count)
+
+
+def repeat_problem_message(problem):
+    """The user-facing explanation for a rejected repeat interval.
+
+    Mirrors the ``problem`` codes ``reminders_store.parse_repeat`` returns, kept
+    out of that module so the parsing stays free of any i18n dependency.
+    """
+    if problem == "too_short":
+        return _(
+            "I can only repeat a reminder once an hour at most. Try `hourly` "
+            "or something longer like `2d`."
+        )
+    if problem == "too_long":
+        return _("I can only repeat a reminder for up to a year - try `365d` or less.")
+    return _(
+        "I couldn't understand that repeat interval. Try `hourly`, `daily`, "
+        "`weekly`, or a duration like `2d` or `12h`."
+    )
+
+
+def recurring_limit_message():
+    """The refusal shown when a member is already at the recurring cap."""
+    return _(
+        "You already have {count} repeating reminders - cancel one with "
+        "`/reminders` before adding another."
+    ).format(count=MAX_RECURRING_REMINDERS)
+
+
+def reminder_confirmation(dt, message, repeat_seconds):
+    """The 'Okay, reminding you ...' acknowledgement, shared by both surfaces.
+
+    The one-shot wording is untouched (same msgid, same arguments as before this
+    feature existed); a recurring reminder gets its own sentence carrying the
+    interval, so nobody has to guess whether the repeat was accepted.
+    """
+    when = discord.utils.format_dt(dt, "R")
+    if repeat_seconds is None:
+        return _("Okay, reminding you {when}: {message}").format(
+            when=when, message=message
+        )
+    return _("Okay, reminding you {when} and then {interval}: {message}").format(
+        when=when, interval=format_interval(repeat_seconds), message=message
+    )
+
+
+def recurrence_extra(repeat_seconds):
+    """The ``extra`` fragment that turns a new timer into a recurring series.
+
+    Empty for a one-shot, so ``create_timer`` receives exactly the keyword
+    arguments it always did and the stored JSON of a non-repeating reminder is
+    byte-identical to what this feature replaced.
+    """
+    if repeat_seconds is None:
+        return {}
+    return {"repeat_seconds": repeat_seconds, "occurrence": 1}
 
 
 class RemindModal(LocaleModal):
@@ -64,12 +179,15 @@ class RemindModal(LocaleModal):
     then the same "reminder" timer row the text command creates is inserted.
     """
 
-    def __init__(self, cog, channel_id, author_id, guild_id=None):
+    def __init__(self, cog, channel_id, author_id, guild_id=None, repeat=None):
         super().__init__(title=_("Set a reminder"))
         self.cog = cog
         self.channel_id = channel_id
         self.author_id = author_id
         self.guild_id = guild_id
+        # Prefilled when /remind was invoked with a repeat but no time, so the
+        # option the member already picked is not silently lost to the form.
+        self.repeat_default = (repeat or "").strip()[:32] or None
 
         self.when_input = discord.ui.TextInput(
             label=_("When"),
@@ -89,11 +207,32 @@ class RemindModal(LocaleModal):
         )
         self.add_item(self.message_input)
 
+        # Optional third field: leaving it blank keeps the historical one-shot
+        # behaviour exactly. It exists mainly for the prefix surface, which
+        # cannot pass the slash command's `repeat` option.
+        self.repeat_input = discord.ui.TextInput(
+            label=_("Repeat (optional)"),
+            placeholder=_("hourly, daily, weekly, or e.g. 2d - blank for once"),
+            style=discord.TextStyle.short,
+            required=False,
+            max_length=32,
+            default=self.repeat_default,
+        )
+        self.add_item(self.repeat_input)
+
     async def on_submit(self, interaction):
         when_raw = (self.when_input.value or "").strip()
         message = (self.message_input.value or "").strip() or _(
             DEFAULT_REMINDER_MESSAGE
         )
+
+        repeat_seconds, problem = reminders_tool.parse_repeat(
+            self.repeat_input.value
+        )
+        if problem is not None:
+            return await interaction.response.send_message(
+                repeat_problem_message(problem), ephemeral=True
+            )
 
         tzinfo = await self.cog.get_tzinfo(interaction.user.id)
         now = interaction.created_at.astimezone(tzinfo)
@@ -136,18 +275,24 @@ class RemindModal(LocaleModal):
                 ephemeral=True,
             )
 
-        await self.cog.create_timer(
+        # The recurring cap is enforced BY the insert (one locked count-and-
+        # insert), not by a separate read before it, so two concurrent submits
+        # cannot both squeeze past a cap they each read as clear.
+        created = await self.cog.create_reminder_timer(
             dt,
-            "reminder",
+            repeat_seconds=repeat_seconds,
             author_id=self.author_id,
             channel_id=self.channel_id,
             guild_id=self.guild_id,
             message=message,
         )
+        if created is None:
+            return await interaction.response.send_message(
+                recurring_limit_message(), ephemeral=True
+            )
+
         await interaction.response.send_message(
-            _("Okay, reminding you {when}: {message}").format(
-                when=discord.utils.format_dt(dt, "R"), message=message
-            ),
+            reminder_confirmation(dt, message, repeat_seconds),
             ephemeral=True,
         )
 
@@ -160,7 +305,7 @@ class RemindLauncherView(AuthorView):
     """
 
     def __init__(
-        self, cog, author_id, channel_id, guild_id=None, timeout=180
+        self, cog, author_id, channel_id, guild_id=None, timeout=180, repeat=None
     ):
         super().__init__(
             author_id, timeout=timeout, deny_message="This prompt isn't for you."
@@ -168,6 +313,7 @@ class RemindLauncherView(AuthorView):
         self.cog = cog
         self.channel_id = channel_id
         self.guild_id = guild_id
+        self.repeat = repeat
 
         button = discord.ui.Button(
             label=_("Set a reminder"),
@@ -184,6 +330,7 @@ class RemindLauncherView(AuthorView):
                 self.channel_id,
                 self.author_id,
                 self.guild_id,
+                repeat=self.repeat,
             )
         )
 
@@ -270,18 +417,35 @@ class RemindersCard(AuthorLayoutView):
         self._build()
 
     def _line(self, r):
+        """One card line: fire time + text, plus a subtext of context notes.
+
+        The notes row carries where it fires and - for a recurring reminder -
+        the repeat glyph and its interval. Composing the subtext from parts
+        keeps the msgid count flat (one note per fact) instead of needing one
+        combined msgid per combination of facts; a one-shot channel reminder
+        still renders exactly the string it always did.
+        """
         text = reminders_tool.truncate(
             r["message"], reminders_tool.LINE_TEXT_MAX
         ) or _("(no text)")
-        if r["channel_id"]:
-            return _("{when} - {text}\n-# in <#{channel}>").format(
-                when=discord.utils.format_dt(r["expires"], "R"),
-                text=text,
-                channel=r["channel_id"],
-            )
-        return _("{when} - {text}").format(
+        line = _("{when} - {text}").format(
             when=discord.utils.format_dt(r["expires"], "R"), text=text
         )
+        notes = []
+        if r["channel_id"]:
+            notes.append(
+                _("in <#{channel}>").format(channel=r["channel_id"])
+            )
+        if r.get("repeat_seconds"):
+            notes.append(
+                "{glyph} {interval}".format(
+                    glyph=reminders_tool.REPEAT_GLYPH,
+                    interval=format_interval(r["repeat_seconds"]),
+                )
+            )
+        if notes:
+            return line + "\n-# " + " - ".join(notes)
+        return line
 
     def _build(self):
         self.clear_items()
@@ -403,6 +567,32 @@ class Reminder(commands.Cog):
             or 0
         )
 
+    async def _pending_recurring_count(self, user_id, connection=None):
+        """How many RECURRING reminders this user currently has queued.
+
+        ``connection`` runs the count on a caller-held connection, which is how
+        :meth:`create_reminder_timer` counts inside its lock; the default reads
+        through the pool.
+
+        Cost: the same ``timers_reminder_author_idx (event, (extra->>'author_id'),
+        expires)`` the pending-count guard already rides. Both predicates are
+        equality on the index's leading columns, so Postgres walks only this
+        user's own entries - bounded by :data:`MAX_PENDING_REMINDERS` (25) - and
+        rechecks ``repeat_seconds`` on those few heap rows (``extra`` is not in
+        the index, so this is not an index-only scan). At 1000+ guilds the scan
+        width is a function of one user's cap, never of the table size, so no
+        new index is warranted.
+        """
+        executor = connection if connection is not None else self.bot.db_pool
+        return await executor.fetchval(RECURRING_COUNT_QUERY, str(user_id)) or 0
+
+    async def _recurring_limit_reached(self, user_id, connection=None):
+        """True when this user cannot add another recurring reminder."""
+        return (
+            await self._pending_recurring_count(user_id, connection)
+            >= MAX_RECURRING_REMINDERS
+        )
+
     async def list_pending_reminders(self, user_id):
         """This user's pending reminders, soonest first, bounded and parsed.
 
@@ -423,8 +613,7 @@ class Reminder(commands.Cog):
         )
         parsed = []
         for row in rows:
-            extra = row["extra"]
-            extra = json.loads(extra) if isinstance(extra, str) else (extra or {})
+            extra = reminders_tool.parse_extra(row["extra"])
             parsed.append(
                 {
                     "id": row["id"],
@@ -432,6 +621,8 @@ class Reminder(commands.Cog):
                     "channel_id": extra.get("channel_id"),
                     "message": extra.get("message") or "",
                     "event": "reminder",
+                    # None for a one-shot; the card only marks a line when set.
+                    "repeat_seconds": reminders_tool.recurrence_seconds(extra),
                 }
             )
         # Defensive type scoping on top of the SQL filter, then apply the cap.
@@ -449,6 +640,16 @@ class Reminder(commands.Cog):
         is currently sleeping on, we wake the loop so it re-sleeps against the
         new earliest timer. Returns False when the row was already gone, already
         claimed, or a previous cancel removed it.
+
+        For a RECURRING reminder this cancels the whole series, with no extra
+        code: a series is never more than one pending row (the next occurrence
+        is only inserted when the current one fires), so deleting that row is
+        deleting the series. Cancelling mid-delivery is the one race the
+        ``claimed_at IS NULL`` guard leaves - and the recurring dispatch path
+        deletes and re-inserts inside a single transaction, so the cancel either
+        wins outright (nothing fires, nothing is rescheduled) or loses to a
+        delivery that has already committed the next occurrence, which the user
+        can then cancel again.
         """
         row = await self.bot.db_pool.fetchrow(
             "DELETE FROM timers WHERE id = $1 AND event = 'reminder' "
@@ -463,6 +664,53 @@ class Reminder(commands.Cog):
             self._have_data.set()
             return True
         return False
+
+    async def create_reminder_timer(self, when, *, repeat_seconds=None, **extra):
+        """Create a reminder timer; return the row, or None if the cap refused it.
+
+        THE creation entry point for both surfaces (the command and the modal).
+        A one-shot goes straight to :meth:`create_timer` and is byte-identical to
+        what it always was - the recurrence keys are absent and no cap is
+        consulted at all.
+
+        A RECURRING one counts and inserts under one per-user advisory lock,
+        instead of the check-then-act the pending cap uses, because the two caps
+        fail differently. A one-shot that slips past its cap fires once and is
+        gone, so the overshoot drains itself. A recurring one re-inserts itself
+        for ever and nothing re-checks the cap afterwards, so a single burst of
+        concurrent `/remind ... repeat:` calls would park that member above the
+        ceiling permanently. The lock closes that window outright rather than
+        merely narrowing it: a plain guarded INSERT would still let two
+        READ COMMITTED snapshots miss each other's uncommitted row.
+
+        Scale note: the lock is transaction-scoped (released by COMMIT/ROLLBACK,
+        never leaked), keyed by THIS member, and taken only on the recurring
+        creation path - a rare, human-paced command. Two members never wait on
+        each other, so it adds no contention at 1000+ guilds.
+        """
+        if repeat_seconds is None:
+            return await self.create_timer(when, "reminder", **extra)
+
+        user_id = extra["author_id"]
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "SELECT pg_advisory_xact_lock($1, $2)",
+                    _RECURRING_LOCK_CLASS,
+                    user_id % _INT4_FOLD,
+                )
+                if await self._recurring_limit_reached(user_id, conn):
+                    return None
+                row = await conn.fetchrow(
+                    "INSERT INTO timers(event, expires, created, extra) "
+                    "VALUES($1, $2, $3, $4::jsonb) RETURNING id",
+                    "reminder",
+                    when,
+                    datetime.datetime.now(datetime.timezone.utc),
+                    json.dumps({**extra, **recurrence_extra(repeat_seconds)}),
+                )
+        self._have_data.set()
+        return row
 
     async def create_timer(self, when, event, **extra):
         row = await self.bot.db_pool.fetchrow(
@@ -526,11 +774,26 @@ class Reminder(commands.Cog):
         at most one firing - it can never double-fire. ``cancel_reminder``
         competes on the very same conditional DELETE, so a race there simply
         means the loser sees no row and does nothing.
+
+        A recurring reminder takes the same claim, wrapped in a transaction that
+        also enqueues its next occurrence (see :meth:`_claim_and_reschedule`).
+        Every other row - every non-``reminder`` event, and every reminder
+        without a valid ``repeat_seconds`` - takes the untouched single-statement
+        path below.
         """
-        claimed = await self.bot.db_pool.fetchrow(
-            "DELETE FROM timers WHERE id = $1 AND claimed_at IS NULL RETURNING *",
-            row["id"],
-        )
+        repeat_seconds = None
+        next_id = None
+        if row["event"] == "reminder":
+            repeat_seconds = reminders_tool.recurrence_seconds(
+                reminders_tool.parse_extra(row["extra"])
+            )
+        if repeat_seconds is not None:
+            claimed, next_id = await self._claim_and_reschedule(row, repeat_seconds)
+        else:
+            claimed = await self.bot.db_pool.fetchrow(
+                "DELETE FROM timers WHERE id = $1 AND claimed_at IS NULL RETURNING *",
+                row["id"],
+            )
         if claimed is None:
             # Someone else (another worker, or a cancel) already took it.
             return
@@ -538,6 +801,16 @@ class Reminder(commands.Cog):
             await self.call_timer(claimed)
         except asyncio.CancelledError:
             raise
+        except ReminderChannelGone:
+            # The claim IS the delete, so a one-shot is already dropped and there
+            # is nothing more to do - exactly the behaviour this path always had.
+            # A recurring one is different: the reschedule is committed by now,
+            # so leaving it would re-fire this series into a channel that cannot
+            # exist again, for ever, at up to 24 deliveries a day. Nothing else
+            # would ever stop it (the series re-inserts itself, and no other
+            # timer kind survives this path), so it ends here.
+            if next_id is not None:
+                await self._end_recurring_series(next_id, claimed)
         except Exception:
             # The row is already gone, so there is nothing to retry: at-most-once
             # deliberately drops this firing rather than risk a double-send.
@@ -547,6 +820,109 @@ class Reminder(commands.Cog):
                 claimed["id"],
                 claimed["event"],
             )
+
+    async def _end_recurring_series(self, next_id, claimed):
+        """Delete the next occurrence a claim already committed, ending a series.
+
+        The unwind half of :meth:`_claim_and_reschedule`'s ordering: that method
+        deliberately commits the next occurrence BEFORE delivering, so a crash
+        costs one firing instead of the whole series. When the delivery instead
+        proves the series can never be delivered again, the same ordering has to
+        be paid back - here.
+
+        Best-effort and never raised out of: the reminder itself is already gone,
+        so the worst case of a failure here is the series limping on until the
+        next attempt takes the very same path.
+        """
+        try:
+            await self.bot.db_pool.execute(
+                "DELETE FROM timers WHERE id = $1 AND claimed_at IS NULL", next_id
+            )
+        except Exception:
+            log.exception(
+                "Failed to end recurring reminder series at timer %s", next_id
+            )
+            return
+        log.warning(
+            "Ended recurring reminder series (next timer %s, author %s): its "
+            "channel no longer exists",
+            next_id,
+            reminders_tool.parse_extra(claimed["extra"]).get("author_id"),
+        )
+
+    async def _claim_and_reschedule(self, row, repeat_seconds):
+        """Claim a due recurring reminder AND enqueue its next occurrence.
+
+        Ordering, and why: the reschedule happens BEFORE the delivery, never
+        after. The two orderings fail differently and only one of them is
+        recoverable by the user.
+
+        * reschedule AFTER the send: a crash between the send and the INSERT
+          ends the series silently. The member keeps waiting for a daily
+          reminder that will never come again and has no way to notice - the
+          failure is invisible.
+        * reschedule BEFORE the send (this): a crash between the INSERT and the
+          send costs exactly ONE delivery, and the series lives. The member sees
+          a gap, not a disappearance, and the next occurrence arrives on time.
+
+        At-most-once is preserved either way, because the claim IS the delete:
+        the fired row is gone before anything is sent, so no crash can replay
+        it. Losing one delivery is the price of never double-sending, which is
+        the same trade the non-recurring path already makes.
+
+        The claim and the INSERT run in ONE transaction, so the remaining window
+        - crash after the claim but before the reschedule, which WOULD kill the
+        series - does not exist: either both commit or neither does, and if
+        neither does the row is still pending and simply fires again later.
+
+        Returns ``(claimed, next_id)``: the claimed row as a plain dict whose
+        ``extra`` carries the delivery-only keys ``missed`` and ``next_at``
+        (never persisted: the row written for the next occurrence is built from
+        the claimed extra, not from this copy), plus the id of that next
+        occurrence so the caller can unwind it if the delivery proves the series
+        is undeliverable (see :meth:`_end_recurring_series`). ``(None, None)``
+        when someone else won the claim.
+        """
+        now = datetime.datetime.now(datetime.timezone.utc)
+        next_at, missed = reminders_tool.next_occurrence(
+            row["expires"], repeat_seconds, now
+        )
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                claimed = await conn.fetchrow(
+                    "DELETE FROM timers WHERE id = $1 AND claimed_at IS NULL "
+                    "RETURNING *",
+                    row["id"],
+                )
+                if claimed is None:
+                    # A cancel or another worker took it; the transaction has
+                    # written nothing, so there is no orphan next occurrence.
+                    return None, None
+                extra = reminders_tool.parse_extra(claimed["extra"])
+                next_extra = dict(extra)
+                # The counter is the ordinal of the SCHEDULED slot, so slots
+                # skipped by an outage still advance it - it stays a faithful
+                # "how far along the series is", not a delivery count. A corrupt
+                # counter must NOT raise here: the transaction would roll back,
+                # leaving the row pending and re-firing every few seconds
+                # forever, so it falls back to 1 instead.
+                next_extra["occurrence"] = (
+                    reminders_tool.occurrence_number(extra) + 1 + missed
+                )
+                next_id = await conn.fetchval(
+                    "INSERT INTO timers(event, expires, created, extra) "
+                    "VALUES($1, $2, $3, $4::jsonb) RETURNING id",
+                    claimed["event"],
+                    next_at,
+                    now,
+                    json.dumps(next_extra),
+                )
+        delivery_extra = dict(extra)
+        delivery_extra["missed"] = missed
+        delivery_extra["next_at"] = next_at.isoformat()
+        delivered = dict(claimed)
+        delivered["extra"] = delivery_extra
+        return delivered, next_id
 
     async def _deliver_durable(self, row):
         """Fire a durable (idempotent) timer with claim -> deliver -> delete.
@@ -611,9 +987,57 @@ class Reminder(commands.Cog):
                 "DELETE FROM timers WHERE id = $1", claimed["id"]
             )
 
+    @staticmethod
+    def _recurrence_footer(extra):
+        """The subtext appended to a RECURRING reminder's delivery, else ''.
+
+        Two facts, both only knowable at delivery time: how many occurrences an
+        outage swallowed (so a gap never looks like the bot silently dropping
+        the series), and when the next one lands. Both keys are injected by
+        :meth:`_claim_and_reschedule` and are absent from every one-shot
+        reminder, so a non-recurring delivery is byte-identical to before.
+        """
+        repeat_seconds = reminders_tool.recurrence_seconds(extra)
+        if repeat_seconds is None:
+            return ""
+        parts = []
+        # Total, like every other reader of `extra`: the key is injected
+        # in-process today and never persisted, but the whole point of parsing
+        # `extra` defensively is that nothing downstream has to know that. A
+        # ValueError here would cost this delivery outright (at-most-once has
+        # already deleted the row), so a corrupt count means "say nothing about
+        # missed occurrences", never "lose the reminder".
+        try:
+            missed = int(extra.get("missed") or 0)
+        except (TypeError, ValueError):
+            missed = 0
+        if missed > 0:
+            parts.append(
+                ngettext(
+                    "I was offline, so {count} occurrence was missed.",
+                    "I was offline, so {count} occurrences were missed.",
+                    missed,
+                ).format(count=missed)
+            )
+        next_at = extra.get("next_at")
+        if next_at:
+            try:
+                when = datetime.datetime.fromisoformat(next_at)
+            except (TypeError, ValueError):
+                when = None
+            if when is not None:
+                parts.append(
+                    _("Repeats {interval} - next {when}").format(
+                        interval=format_interval(repeat_seconds),
+                        when=discord.utils.format_dt(when, "R"),
+                    )
+                )
+        if not parts:
+            return ""
+        return "\n-# " + " ".join(parts)
+
     async def call_timer(self, row):
-        extra = row["extra"]
-        extra = json.loads(extra) if isinstance(extra, str) else (extra or {})
+        extra = reminders_tool.parse_extra(row["extra"])
         event = row["event"]
         if event == "reminder":
             ch = self.bot.get_channel(extra["channel_id"])
@@ -626,13 +1050,14 @@ class Reminder(commands.Cog):
                         row["id"],
                         extra["channel_id"],
                     )
-                    return
+                    raise ReminderChannelGone(extra["channel_id"]) from None
             await ch.send(
                 _("<@{author_id}>, {when}: {message}").format(
                     author_id=extra["author_id"],
                     when=human_timedelta(row["created"]),
                     message=extra["message"],
                 )
+                + self._recurrence_footer(extra)
             )
         elif event == "tempban":
             g = self.bot.get_guild(extra["guild_id"])
@@ -670,6 +1095,10 @@ class Reminder(commands.Cog):
             "A Discord timestamp to fire at, e.g. a <t:...> tag. "
             "Overrides the time in 'when'."
         ),
+        repeat=(
+            "Repeat it: hourly, daily, weekly, or a duration like 2d "
+            "(min 1h, max 365d). Blank fires once."
+        ),
     )
     async def remind(
         self,
@@ -677,8 +1106,21 @@ class Reminder(commands.Cog):
         at: Optional[commands.Timestamp] = None,
         *,
         when: str = None,
+        repeat: Optional[str] = None,
     ):
-        """Reminds you of something after a certain amount of time."""
+        """Reminds you of something after a certain amount of time.
+
+        ``repeat`` is deliberately declared AFTER the consume-rest ``when``:
+        discord.py's prefix parser stops at the first keyword-only parameter, so
+        on the prefix surface ``repeat`` is never parsed and always keeps its
+        default - ``?remind 10m buy milk`` behaves exactly as it always has,
+        with no risk of the repeat option swallowing the message. Prefix users
+        reach the recurrence through the modal's "Repeat" field instead.
+        """
+
+        repeat_seconds, problem = reminders_tool.parse_repeat(repeat)
+        if problem is not None:
+            return await ctx.send(repeat_problem_message(problem))
 
         # Nothing at all supplied -> offer the interactive form. Slash
         # invocations can open the modal straight away; prefix invocations have
@@ -691,6 +1133,7 @@ class Reminder(commands.Cog):
                         ctx.channel.id,
                         ctx.author.id,
                         ctx.guild.id if ctx.guild else None,
+                        repeat=repeat,
                     )
                 )
             view = RemindLauncherView(
@@ -698,6 +1141,7 @@ class Reminder(commands.Cog):
                 ctx.author.id,
                 ctx.channel.id,
                 ctx.guild.id if ctx.guild else None,
+                repeat=repeat,
             )
             view.message = await ctx.send(
                 _("Tap the button below to set a reminder."), view=view
@@ -739,19 +1183,43 @@ class Reminder(commands.Cog):
                 ).format(count=MAX_PENDING_REMINDERS)
             )
 
-        await self.create_timer(
+        # Same as the modal: the recurring cap lives inside the insert, so it
+        # cannot be raced by two invocations that both read it as clear.
+        created = await self.create_reminder_timer(
             dt,
-            "reminder",
+            repeat_seconds=repeat_seconds,
             author_id=ctx.author.id,
             channel_id=ctx.channel.id,
             guild_id=ctx.guild.id if ctx.guild else None,
             message=message,
         )
-        await ctx.send(
-            _("Okay, reminding you {when}: {message}").format(
-                when=discord.utils.format_dt(dt, "R"), message=message
+        if created is None:
+            return await ctx.send(recurring_limit_message())
+
+        await ctx.send(reminder_confirmation(dt, message, repeat_seconds))
+
+    @remind.autocomplete("repeat")
+    async def repeat_autocomplete(self, interaction, current):
+        """Suggest the named presets while still allowing any free duration.
+
+        Autocomplete rather than fixed choices on purpose: fixed choices would
+        make Discord REFUSE anything but hourly/daily/weekly, and the whole point
+        is that "2d" or "12h" work too. So the presets are offered as
+        suggestions and whatever the member types is echoed back - already
+        parsed - as the first entry when it is a valid interval, which doubles as
+        live validation before they ever submit.
+        """
+        typed = (current or "").strip().lower()
+        choices = []
+        seconds = reminders_tool.parse_repeat(typed)[0]
+        if seconds is not None and typed not in reminders_tool.REPEAT_PRESETS:
+            choices.append(
+                app_commands.Choice(name=format_interval(seconds)[:100], value=typed)
             )
-        )
+        for name in reminders_tool.REPEAT_PRESETS:
+            if not typed or name.startswith(typed):
+                choices.append(app_commands.Choice(name=name, value=name))
+        return choices[:25]
 
 
     @commands.hybrid_command(name="reminders", aliases=["myreminders"])

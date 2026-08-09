@@ -1,4 +1,4 @@
-"""Per-guild rank-card customisation: validation, normalisation, storage.
+"""Rank-card customisation: validation, normalisation, storage.
 
 Two halves, deliberately kept in one small module because they describe the
 SAME contract from both ends:
@@ -7,10 +7,16 @@ SAME contract from both ends:
   guild uploads - ``validate_and_downscale`` turns an arbitrary PNG/JPEG/WebP
   into a bounded WebP cropped to the card's EXACT pixel size, and
   ``validate_accent`` turns arbitrary user input into a packed 0xRRGGBB int;
-* the STORAGE half is four one-statement queries over the ``rank_cards`` table
+* the STORAGE half is one-statement queries over the ``rank_cards`` table
   (``fetch_config`` / ``fetch_background`` / ``set_background`` / ``set_accent``
   / the ``clear_*`` trio), taking an asyncpg pool explicitly so nothing here
-  needs a bot object.
+  needs a bot object, plus their PER-USER twins over ``user_rank_cards``
+  (``fetch_user_card`` / ``fetch_user_config`` / ``set_user_*`` / ``clear_user*``,
+  lot U1) at the bottom of the file.
+
+The pure half is shared verbatim by both scopes: whether a background arrives
+from a server admin or from a member customising their own card, it goes through
+the same sniff, the same pre-decode pixel ceiling and the same WebP ladder.
 
 Everything the render seam (``cogs/community/leveling/leveling.py``) and the future
 Discord panel (RC2) and the Node dashboard need lives here, so the three
@@ -404,3 +410,162 @@ async def clear_accent(pool, guild_id):
 async def clear(pool, guild_id):
     """Reset a guild's card entirely by deleting its row (stock card again)."""
     await pool.execute("DELETE FROM rank_cards WHERE guild_id = $1;", guild_id)
+
+
+# ---------------------------------------------------------------------------
+# Per-USER half (lot U1): the same contract, keyed by user_id.
+# ---------------------------------------------------------------------------
+# The ``user_rank_cards`` table is the guild table's twin: a member picks their
+# own background and/or accent ONCE and it follows them into every server that
+# allows it. Everything above is reused VERBATIM - validate_and_downscale (same
+# sniff, same pre-decode pixel ceiling, same WebP quality ladder, same stored
+# cap) and validate_accent - so a member cannot store anything an admin could
+# not, and the render only ever decodes a blob this bot itself produced.
+#
+# WHY A SEPARATE TABLE rather than a nullable guild_id on rank_cards: the two
+# rows mean different things (a guild's branding vs a member's own look), they
+# are erased by different paths (a guild purge vs tools/privacy's user erasure),
+# and the PK is the whole index either way. Splitting them keeps
+# tools/retention's guild-side structural guard and tools/privacy's user-side
+# one each looking at exactly one table.
+#
+# READ SHAPE, and why it differs from the guild one above. The guild path splits
+# metadata from blob because the CACHE is per guild and long-lived. The user
+# path caches only a self-healing "does this member have a row at all?" marker
+# (cogs/community/leveling/rank_card_user.py), so the render either does NOTHING
+# at all (the overwhelmingly common case) or ONE statement that already carries
+# both the accent and the bytes - never two. fetch_user_config is the
+# metadata-only read for the surfaces that describe a card without drawing it.
+
+# The guild_settings key that lets a server refuse per-user styles on ITS /rank
+# cards. Declared here, next to the storage it gates, because the dashboard is
+# an independent writer of the same key and must not invent its own spelling.
+# ABSENT MEANS ALLOWED: the feature is on by default, and a guild that never
+# heard of it never had to act.
+ALLOW_USER_STYLES_KEY = "rank_card_allow_user_styles"
+ALLOW_USER_STYLES_DEFAULT = True
+
+# Everything one render needs, in one round trip (see the read-shape note).
+USER_CARD_QUERY = "SELECT accent, background FROM user_rank_cards WHERE user_id = $1;"
+# What a surface needs to DESCRIBE a card without drawing it: no blob.
+USER_CONFIG_QUERY = (
+    "SELECT accent, background IS NOT NULL AS has_background, updated_at "
+    "FROM user_rank_cards WHERE user_id = $1;"
+)
+
+
+async def fetch_user_card(pool, user_id):
+    """Return ``(accent, background_bytes)`` for a member, or ``None``.
+
+    ``None`` means NO ROW - the member never customised their card - which is a
+    different answer from a row whose two columns are both NULL, and the caller
+    uses that difference to drop its presence marker.
+    """
+    row = await pool.fetchrow(USER_CARD_QUERY, user_id)
+    if row is None:
+        return None
+    raw = row["background"]
+    return row["accent"], (bytes(raw) if raw is not None else None)
+
+
+async def fetch_user_config(pool, user_id):
+    """Return the member's ``(accent, has_background, updated_at)`` row, or ``None``.
+
+    The blob-free read, for surfaces that describe the card (``/rankcard view``)
+    rather than draw it.
+    """
+    return await pool.fetchrow(USER_CONFIG_QUERY, user_id)
+
+
+async def set_user_background(pool, user_id, background):
+    """Store (or replace) a member's background. Already normalised.
+
+    The caller MUST have passed the bytes through :func:`validate_and_downscale`
+    first. Upserts, so a member who only ever set an accent keeps it. There is
+    no format column to write: the validator only ever emits
+    :data:`STORED_FORMAT` (see schema.sql).
+    """
+    await pool.execute(
+        "INSERT INTO user_rank_cards (user_id, background, updated_at) "
+        "VALUES ($1, $2, now()) "
+        "ON CONFLICT (user_id) DO UPDATE SET "
+        "background = EXCLUDED.background, updated_at = now();",
+        user_id,
+        background,
+    )
+
+
+async def set_user_accent(pool, user_id, accent):
+    """Store (or replace) a member's accent colour, keeping any background.
+
+    ``accent`` must already have been through :func:`validate_accent` (the
+    table's CHECK is the second line of defence, not the first).
+    """
+    await pool.execute(
+        "INSERT INTO user_rank_cards (user_id, accent, updated_at) "
+        "VALUES ($1, $2, now()) "
+        "ON CONFLICT (user_id) DO UPDATE SET "
+        "accent = EXCLUDED.accent, updated_at = now();",
+        user_id,
+        accent,
+    )
+
+
+# Clearing ONE knob: null it when the other knob is still set, and delete the
+# row outright when it is not. A row with both columns NULL is indistinguishable
+# from no row at all in every read this module has, but it is NOT free: it makes
+# ensure_user_rank_card_style mark the member as "has a row" and pay
+# USER_CARD_QUERY on every /rank of theirs for the life of the process, to learn
+# (None, None) - exactly the case the marker exists to make cost nothing.
+#
+# One statement, not two, and deterministic despite both sub-statements
+# targeting the same key: the DELETE and the UPDATE have MUTUALLY EXCLUSIVE
+# predicates on the same snapshot (the other column IS NULL / IS NOT NULL), so
+# no row is ever reached by both - the case Postgres leaves unspecified for
+# data-modifying CTEs. Returns whether a row SURVIVED, which is what the caller
+# writes into the marker (a member who never had a row gets a truthful False
+# instead of the optimistic True a bare UPDATE would leave).
+_CLEAR_USER_BACKGROUND = (
+    "WITH gone AS ("
+    "  DELETE FROM user_rank_cards WHERE user_id = $1 AND accent IS NULL"
+    "), kept AS ("
+    "  UPDATE user_rank_cards SET background = NULL, updated_at = now() "
+    "  WHERE user_id = $1 AND accent IS NOT NULL RETURNING user_id"
+    ") SELECT EXISTS (SELECT 1 FROM kept);"
+)
+
+_CLEAR_USER_ACCENT = (
+    "WITH gone AS ("
+    "  DELETE FROM user_rank_cards WHERE user_id = $1 AND background IS NULL"
+    "), kept AS ("
+    "  UPDATE user_rank_cards SET accent = NULL, updated_at = now() "
+    "  WHERE user_id = $1 AND background IS NOT NULL RETURNING user_id"
+    ") SELECT EXISTS (SELECT 1 FROM kept);"
+)
+
+
+async def clear_user_background(pool, user_id):
+    """Drop a member's background; return whether a row survived.
+
+    Keeps their accent when they have one, and deletes the row when they do not
+    (see :data:`_CLEAR_USER_BACKGROUND`). No-op returning False without a row.
+    """
+    return bool(await pool.fetchval(_CLEAR_USER_BACKGROUND, user_id))
+
+
+async def clear_user_accent(pool, user_id):
+    """Drop a member's accent; return whether a row survived.
+
+    Keeps their background when they have one, and deletes the row when they do
+    not (see :data:`_CLEAR_USER_ACCENT`). No-op returning False without a row.
+    """
+    return bool(await pool.fetchval(_CLEAR_USER_ACCENT, user_id))
+
+
+async def clear_user(pool, user_id):
+    """Reset a member's card entirely by deleting their row.
+
+    The same statement tools/privacy.py runs on an erasure request, kept here so
+    the two spellings cannot drift.
+    """
+    await pool.execute("DELETE FROM user_rank_cards WHERE user_id = $1;", user_id)

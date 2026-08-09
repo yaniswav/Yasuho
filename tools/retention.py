@@ -115,6 +115,14 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM server_stats_days WHERE guild_id = $1",
     ),
     (
+        # Weekly-digest delivery state (which ISO week this guild was last sent
+        # a digest for). Not statistics and not personal data, but it is keyed
+        # by guild and would otherwise outlive the guild for ever - nothing else
+        # ever deletes a row here.
+        "serverstats_digest_state",
+        "DELETE FROM serverstats_digest_state WHERE guild_id = $1",
+    ),
+    (
         # The dashboard -> bot action queue. Rows are terminal audit records
         # (kind, payload, the requesting user's id) that nothing else ever
         # deletes, so without this they would outlive the guild for good.
@@ -174,6 +182,7 @@ UNION SELECT guild_id FROM anilist_channel_subs
 UNION SELECT guild_id FROM dashboard_actions WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
+UNION SELECT guild_id FROM serverstats_digest_state
 UNION
 SELECT (extra->>'guild_id')::bigint FROM timers
 WHERE extra->>'guild_id' ~ '^[0-9]+$'

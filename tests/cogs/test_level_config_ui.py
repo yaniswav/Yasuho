@@ -122,6 +122,10 @@ class _FakeLevelingCog:
         self.set_rank_accent_error = None
         self.clear_rank_card_calls = []
         self.rank_card_style = (None, False)  # (accent_rgb | None, has_background)
+        # U1 seam: the per-member layer's switch, read when the panel opens and
+        # written by its toggle button.
+        self.allow_user_styles = True
+        self.set_user_styles_calls = []
 
     async def refresh_no_xp_snapshot(self, guild_id):
         self.refresh_calls.append(guild_id)
@@ -158,6 +162,13 @@ class _FakeLevelingCog:
 
     async def ensure_rank_card_style(self, guild_id):
         return self.rank_card_style
+
+    async def allows_user_rank_card_styles(self, guild_id):
+        return self.allow_user_styles
+
+    async def set_user_rank_card_styles_allowed(self, guild_id, allowed):
+        self.set_user_styles_calls.append((guild_id, allowed))
+        self.allow_user_styles = allowed
 
     async def set_voice_xp_rate(self, guild_id, rate):
         self.set_voice_xp_rate_calls.append((guild_id, rate))

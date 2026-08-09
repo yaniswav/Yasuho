@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from . import engine as leveling
 from . import gate as leveling_gate
 from . import rank_card
+from .rank_card_user import RankCardUserMixin
 from tools import rendering, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
@@ -261,8 +262,15 @@ class LeaderboardView(AuthorLayoutView):
             log.exception("Leaderboard next failed")
 
 
-class Leveling(commands.Cog):
-    """XP and leveling commands."""
+class Leveling(RankCardUserMixin, commands.Cog):
+    """XP and leveling commands.
+
+    The per-MEMBER rank-card layer (``/rankcard``, lot U1) is folded in from
+    cogs/community/leveling/rank_card_user.py rather than living in its own cog:
+    it customises exactly what ``/rank`` below draws, and its render resolver
+    needs this cog's guild-side card accessor. See that module for why a mixin
+    (the cogs/anilist/ precedent) and for the precedence rules.
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -323,6 +331,12 @@ class Leveling(commands.Cog):
         # primary-key lookup rides inside a render already gated by the shared
         # 2-slot image semaphore.
         self._rank_cards: BoundedLRU = BoundedLRU(_RANK_CARD_CACHE_CAP)
+        # Per-USER rank-card marker cache (U1). Owned by RankCardUserMixin, and
+        # deliberately NOT the same shape as the guild cache above - it holds a
+        # self-healing "has a row?" boolean, never a style - so the common case
+        # (a member who never customised anything) costs the render no awaits at
+        # all. See cogs/community/leveling/rank_card_user.py.
+        self._init_user_rank_card_state()
         # Top.gg vote boost (V1): user_id -> the UTC datetime that voter's XP
         # boost runs out. A PLAIN DICT, not a BoundedLRU like its siblings
         # above, because eviction here would silently cancel a boost somebody
@@ -1713,27 +1727,18 @@ class Leveling(commands.Cog):
                     if member.colour.value
                     else (88, 101, 242)
                 )
-                # Per-guild look (RC1). A configured accent is the guild's card
-                # branding and therefore outranks the member's role colour; the
-                # background bytes are fetched only when the cached style says
-                # there is one, and a row that vanished meanwhile just renders
-                # the stock panel.
-                guild_accent, has_background = await self.ensure_rank_card_style(
-                    ctx.guild.id
+                # The card's look, resolved in ONE place (U1's seam, see
+                # cogs/community/leveling/rank_card_user.py): the MEMBER's own
+                # style outranks the guild's, the guild's outranks the role
+                # colour computed above, and a guild that switched personal
+                # styles off collapses that to the RC1 behaviour. Every read in
+                # there degrades to "draw what we do have" - the card is
+                # cosmetic, and a hiccup must never cost a member their /rank.
+                style_accent, background = await self.resolve_rank_card_render(
+                    ctx.guild.id, member.id
                 )
-                if guild_accent is not None:
-                    accent = guild_accent
-                background = None
-                if has_background:
-                    try:
-                        background = await rank_card.fetch_background(
-                            self.bot.db_pool, ctx.guild.id
-                        )
-                    except Exception:
-                        log.exception(
-                            "Failed to read rank card background for guild %s",
-                            ctx.guild.id,
-                        )
+                if style_accent is not None:
+                    accent = style_accent
 
                 def _render():
                     return self._render_rank_card(

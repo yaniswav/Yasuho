@@ -330,6 +330,42 @@ ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS background_format TEXT;
 ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS accent INTEGER;
 ALTER TABLE rank_cards ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
+-- PER-MEMBER look of the /rank card (lot U1): the same two knobs as rank_cards
+-- above, chosen by the member for THEMSELVES, in every server at once. One row
+-- per user, created only when that user customises their card; no row means
+-- "fall back to the guild's card, then to the stock one".
+-- Owner: cogs/community/leveling/rank_card_user.py (the /rankcard surface and
+-- the render resolver) + cogs/community/leveling/rank_card.py (validation and
+-- the write API, SHARED verbatim with rank_cards - the same sniff, the same
+-- pixel ceiling, the same WebP ladder, so a member cannot store anything an
+-- admin could not).
+--
+-- PRECEDENCE, resolved per render: user background > guild background > stock,
+-- and user accent > guild accent > the member's role colour. A guild can turn
+-- the whole per-user layer off for its own /rank cards with the
+-- ``rank_card_allow_user_styles`` key in guild_settings (absent = allowed) -
+-- that is the moderation tool for an unwanted image, and it needs no write
+-- here, so it can never destroy what a member stored for their other servers.
+--
+-- BOTH columns are nullable and INDEPENDENT: a member may set only an accent,
+-- only a background, or both. The CHECKs are the guild table's, verbatim - the
+-- 512 KiB bound especially, because this blob is re-read on every /rank that
+-- renders this member and, unlike the guild table, ANY member can write it.
+-- No background_format column on purpose (the guild table's predates a single
+-- stored encoding): every blob here is written by validate_and_downscale, which
+-- only ever emits rank_card.STORED_FORMAT ('webp'), so the column would be a
+-- constant.
+-- USER-SCOPED, so no guild purge can ever reach it: it is exported by
+-- tools/privacy.collect_user_export and erased by BOTH delete lists there.
+CREATE TABLE IF NOT EXISTS user_rank_cards (
+    user_id    BIGINT      PRIMARY KEY,
+    background BYTEA,                 -- normalised WebP, NULL = no background
+    accent     INTEGER,               -- packed 0xRRGGBB, NULL = default
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT user_rank_cards_accent_range CHECK (accent IS NULL OR (accent >= 0 AND accent <= 16777215)),
+    CONSTRAINT user_rank_cards_background_size CHECK (background IS NULL OR octet_length(background) <= 524288)
+);
+
 -- Starboard config + posted-entry mapping.  starboard.py
 CREATE TABLE IF NOT EXISTS starboard (
     guild_id   BIGINT  PRIMARY KEY,
@@ -1174,6 +1210,53 @@ CREATE TABLE IF NOT EXISTS server_stats_days (
     PRIMARY KEY (guild_id, day)
 );
 CREATE INDEX IF NOT EXISTS server_stats_days_day_idx ON server_stats_days (day);
+
+-- Weekly digest delivery bookkeeping: which ISO week a guild last received its
+-- digest for. Owner: cogs/community/serverstats/digest.py.
+--
+-- One row per guild that has EVER been delivered a digest, and the whole point
+-- of the row is exactly-once-per-week: the loop CLAIMS the week here (an
+-- INSERT ... ON CONFLICT DO UPDATE ... WHERE last_iso_week <> EXCLUDED, whose
+-- RETURNING is the permission to send) before it posts anything, so a restart
+-- mid-fan-out, a duplicated tick or two concurrent ticks can never post the same
+-- week twice. It is DELIVERY state, not statistics: nothing here is a count, and
+-- it holds no user id and no content.
+--
+-- last_iso_week is the 'W2026-31' key cogs.community.leveling.engine.
+-- iso_week_period_key builds - the same vocabulary xp_period and the retention
+-- block already speak, so the state row names a week exactly as every other
+-- weekly artefact in this database does.
+--
+-- No index beyond the primary key: every access is by guild_id (the claim) or
+-- as the anti-join side of the candidate query, which is bounded by the number
+-- of guilds that opted in.
+CREATE TABLE IF NOT EXISTS serverstats_digest_state (
+    guild_id      BIGINT PRIMARY KEY,
+    last_iso_week TEXT   NOT NULL
+);
+
+-- The digest's opt-in switch lives in the guild_settings JSONB blob (absent =
+-- off, never materialised), and the hourly delivery tick has to find the guilds
+-- that carry it. A PARTIAL index whose predicate IS that presence test holds
+-- only the opted-in guilds, so the scan is proportional to how many servers
+-- turned the digest on rather than to how many servers exist.
+--
+-- MEASURED with psql (NOT with asyncpg: it caches prepared statements by query
+-- text, so a naive before/after EXPLAIN of the same string replays the stale
+-- plan and reports a Seq Scan with the index in place) in a rolled-back
+-- transaction on a 50k-row guild_settings fixture with 1250 guilds opted in:
+-- without it, `Seq Scan ... Rows Removed by Filter: 48760`, 1334 buffers,
+-- ~9 ms, growing with the FLEET; with it, `Index Scan using
+-- guild_settings_digest_channel_idx`, 30 buffers, 0.16 ms, flat in fleet size.
+-- The drained case - a later tick of a week in which every opted-in guild has
+-- already been delivered - still walks this index whole and returns nothing:
+-- 681 buffers, 1.3 ms, proportional to the OPTED-IN count and not to the fleet,
+-- which is the whole point.
+-- The write side pays only on guild_settings writes (a manager changing a
+-- setting), which are rare by construction.
+CREATE INDEX IF NOT EXISTS guild_settings_digest_channel_idx
+    ON guild_settings (guild_id)
+    WHERE settings ? 'serverstats_digest_channel';
 
 -- ============================================================
 -- Command usage (GLOBAL aggregates only)
