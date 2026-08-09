@@ -38,6 +38,10 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM anilist_channel_subs WHERE guild_id = $1",
     ),
     (
+        "anilist_feed_mutes",
+        "DELETE FROM anilist_feed_mutes WHERE guild_id = $1",
+    ),
+    (
         "anilist_follows",
         "DELETE FROM anilist_follows WHERE guild_id = $1",
     ),
@@ -178,6 +182,7 @@ UNION SELECT guild_id FROM custom_commands
 UNION SELECT guild_id FROM role_menus
 UNION SELECT guild_id FROM anilist_feeds
 UNION SELECT guild_id FROM anilist_follows
+UNION SELECT guild_id FROM anilist_feed_mutes
 UNION SELECT guild_id FROM anilist_channel_subs
 UNION SELECT guild_id FROM dashboard_actions WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM server_stats_messages

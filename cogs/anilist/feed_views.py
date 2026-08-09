@@ -18,7 +18,7 @@ import discord
 from . import feed_policy as af
 from .feed_delivery import _run_add, _run_like, _run_reply
 from tools import i18n, interactions
-from tools.i18n import N_, _
+from tools.i18n import N_, _, ngettext
 from tools.views import _DISABLEABLE, AuthorLayoutView, AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -702,6 +702,250 @@ class _TrackedReleasesButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
+class _MuteToggleSelect(discord.ui.Select):
+    """Pick a followed user to mute here, or a muted one to bring back.
+
+    One select rather than two: the option's description carries the CURRENT
+    state ("Posted here" / "Muted here"), so choosing a name always means "flip
+    this one" and the manager re-renders from fresh DB state right after.
+    """
+
+    def __init__(self, manager, window):
+        self._manager = manager
+        options = []
+        for row in window:
+            user_id = row["anilist_user_id"]
+            name = row["anilist_username"] or str(user_id)
+            muted = user_id in manager.muted_ids
+            options.append(
+                discord.SelectOption(
+                    label=name[:100],
+                    description=(
+                        _("Muted here - pick to unmute")
+                        if muted
+                        else _("Posted here - pick to mute")
+                    ),
+                    value=str(user_id),
+                )
+            )
+        super().__init__(
+            placeholder=_("Mute or unmute a followed user..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction):
+        try:
+            manager = self._manager
+            user_id = int(self.values[0])
+            name = manager.name_for(user_id)
+            if user_id in manager.muted_ids:
+                await manager.cog._remove_mute(
+                    manager.guild.id, manager.channel_id, user_id
+                )
+                note = _("**{name}** is posted in this feed again.").format(
+                    name=name
+                )
+            else:
+                error = await manager.cog._add_mute(
+                    manager.guild.id, manager.channel_id, user_id, name
+                )
+                note = error or _(
+                    "**{name}** is hidden here. They stay followed, so other "
+                    "feeds still receive them."
+                ).format(name=name)
+            # Stop the old view first so its timeout can never fire and clobber
+            # the re-rendered message with a stale, disabled layout.
+            manager.stop()
+            await manager.cog._render_mute_manager(
+                interaction,
+                manager.guild,
+                manager.author_id,
+                manager.channel_id,
+                page=manager.page,
+                note=note,
+            )
+        except Exception:
+            log.exception("AniList feed panel mute toggle failed")
+            await interactions.notify_failure(interaction)
+
+
+class _MutesPageButton(discord.ui.Button):
+    """Page the mute select through a feed's follows (25 per page)."""
+
+    def __init__(self, manager, *, forward, disabled):
+        self._manager = manager
+        self._forward = forward
+        super().__init__(
+            label=_("Next") if forward else _("Previous"),
+            style=discord.ButtonStyle.secondary,
+            disabled=disabled,
+        )
+
+    async def callback(self, interaction):
+        try:
+            page = self._manager.page + (1 if self._forward else -1)
+            self._manager.stop()
+            await self._manager.cog._render_mute_manager(
+                interaction,
+                self._manager.guild,
+                self._manager.author_id,
+                self._manager.channel_id,
+                page=page,
+            )
+        except Exception:
+            log.exception("AniList feed panel mute paging failed")
+            await interactions.notify_failure(interaction)
+
+
+class _MuteManagerView(AuthorLayoutView):
+    """Ephemeral per-feed muted-users manager, mirroring _SubsManagerView.
+
+    A single ANILIST_BLUE :class:`~discord.ui.Container` in the panel's house
+    style: a ``###`` heading, an optional note paragraph, the explanation that a
+    mute hides someone HERE without unfollowing them anywhere, the feed's
+    follows as a bullet list marking who is muted, then the controls - a toggle
+    :class:`~discord.ui.ActionRow` select (paged at 25 per page) and, when there
+    is more than one page, Previous/Next buttons. Every mutation persists
+    through a cog helper and the cog re-renders this same ephemeral message from
+    fresh DB state, so the list can never drift from what is stored.
+
+    The paging is structural, not currently reachable: a page holds exactly
+    :data:`MAX_FOLLOWS_PER_FEED` entries today, so a feed cannot follow enough
+    users to produce a second page and Previous/Next never render. It is kept
+    (rather than flattened to a single page) because the page size is Discord's
+    select-option ceiling while the follow cap is a policy number - raising the
+    cap must not silently truncate this manager, the way it would if the second
+    page had to be re-invented. Same shape as :class:`_SubsManagerView`, whose
+    cap (50) already pages.
+    """
+
+    # Discord's hard ceiling on select options, NOT a tuned page size.
+    PAGE_SIZE = 25
+
+    def __init__(
+        self, cog, guild, author_id, channel_id, follows, muted_ids, *, page=0,
+        note=None, timeout=180,
+    ):
+        super().__init__(author_id, timeout=timeout)
+        self.cog = cog
+        self.guild = guild
+        self.channel_id = channel_id
+        self.follows = list(follows)
+        self.muted_ids = set(muted_ids)
+        self.note = note
+        page_count = max(
+            1, (len(self.follows) + self.PAGE_SIZE - 1) // self.PAGE_SIZE
+        )
+        self.page = max(0, min(page, page_count - 1))
+        self._page_count = page_count
+        self._build()
+
+    def name_for(self, user_id):
+        """The cached display name of a followed user, else their numeric id."""
+
+        for row in self.follows:
+            if row["anilist_user_id"] == user_id:
+                return row["anilist_username"] or str(user_id)
+        return str(user_id)
+
+    def _build(self):
+        container = discord.ui.Container(accent_colour=ANILIST_BLUE)
+
+        channel = self.guild.get_channel_or_thread(self.channel_id)
+        label = channel.mention if channel is not None else str(self.channel_id)
+        header_parts = ["### " + _("Muted users")]
+        if self.note:
+            # The note already carries its own inline emphasis (e.g. a bold
+            # name), so it is its own paragraph, not re-wrapped in bold.
+            header_parts.append(self.note)
+        header_parts.append(
+            _(
+                "A muted user is still followed and still polled - their "
+                "activity is simply not posted in {channel}. Any other feed "
+                "following them keeps receiving everything."
+            ).format(channel=label)
+        )
+        container.add_item(discord.ui.TextDisplay("\n\n".join(header_parts)))
+
+        lines = []
+        for row in self.follows:
+            user_id = row["anilist_user_id"]
+            name = row["anilist_username"] or str(user_id)
+            mark = _("muted here") if user_id in self.muted_ids else _("posted")
+            lines.append("- {name} - {mark}".format(name=name, mark=mark))
+        listing = "\n".join(lines) if lines else _("This feed follows no one yet.")
+        if len(listing) > 3500:
+            listing = listing[:3500].rstrip() + "\n..."
+        muted_count = len(self.muted_ids)
+        subline = "-# " + ngettext(
+            "{count} muted user out of {total} followed",
+            "{count} muted users out of {total} followed",
+            muted_count,
+        ).format(count=muted_count, total=len(self.follows))
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(listing + "\n\n" + subline))
+
+        # Controls: the toggle select (own ActionRow, only when the page has
+        # rows), then, when paged, a Prev/Next row.
+        start = self.page * self.PAGE_SIZE
+        window = self.follows[start : start + self.PAGE_SIZE]
+        container.add_item(discord.ui.Separator())
+        if window:
+            container.add_item(
+                discord.ui.ActionRow(_MuteToggleSelect(self, window))
+            )
+        if self._page_count > 1:
+            button_row = discord.ui.ActionRow()
+            button_row.add_item(
+                _MutesPageButton(self, forward=False, disabled=self.page == 0)
+            )
+            button_row.add_item(
+                _MutesPageButton(
+                    self, forward=True, disabled=self.page >= self._page_count - 1
+                )
+            )
+            container.add_item(button_row)
+
+        container.add_item(
+            discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
+        )
+        self.add_item(container)
+
+
+class _MutedUsersButton(discord.ui.Button):
+    """Open the ephemeral muted-users manager for the selected feed.
+
+    Manage-guild gated exactly like the sibling controls: the panel is only
+    opened from the admin-only bare-panel path and is author-restricted, so no
+    per-button permission check is needed. The count in the label is a snapshot
+    from the last panel render; the manager itself always shows live state.
+    """
+
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(
+            label=_("Muted here ({count})").format(count=panel.mutes_count),
+            style=discord.ButtonStyle.secondary,
+            disabled=not panel.follows,
+        )
+
+    async def callback(self, interaction):
+        try:
+            panel = self._owner
+            await panel.cog._render_mute_manager(
+                interaction,
+                panel.guild,
+                panel.author_id,
+                panel.selected_channel_id,
+                new=True,
+            )
+        except Exception:
+            log.exception("AniList feed panel muted-users open failed")
+            await interactions.notify_failure(interaction)
+
+
 class _EnableButton(discord.ui.Button):
     """Enable/disable the selected feed; re-enabling clears fail_count."""
 
@@ -929,6 +1173,7 @@ class AniListFeedPanel(discord.ui.LayoutView):
         selected_channel_id,
         follows,
         subs_count=0,
+        mutes_count=0,
         timeout=180,
     ):
         super().__init__(timeout=timeout)
@@ -940,6 +1185,7 @@ class AniListFeedPanel(discord.ui.LayoutView):
         self.selected_channel_id = selected_channel_id
         self.follows = list(follows)
         self.subs_count = subs_count
+        self.mutes_count = mutes_count
         self._build()
 
     async def interaction_check(self, interaction):
@@ -1100,6 +1346,9 @@ class AniListFeedPanel(discord.ui.LayoutView):
                 _EnableButton(self), _DeleteButton(self), _AddFollowButton(self)
             )
         )
+        # Muting is a per-channel DELIVERY setting on top of the follows above,
+        # so its manager sits right under them (and is inert with no follows).
+        container.add_item(discord.ui.ActionRow(_MutedUsersButton(self)))
 
         container.add_item(
             discord.ui.TextDisplay("-# " + _("Only you can use these controls."))
@@ -1124,6 +1373,11 @@ class AniListFeedPanel(discord.ui.LayoutView):
             if selected_channel_id is not None
             else 0
         )
+        mutes_count = (
+            await cog._mute_count(self.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else 0
+        )
         new = AniListFeedPanel(
             cog,
             self.guild,
@@ -1132,6 +1386,7 @@ class AniListFeedPanel(discord.ui.LayoutView):
             selected_channel_id,
             follows,
             subs_count,
+            mutes_count,
         )
         new.message = self.message
         return new

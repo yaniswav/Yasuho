@@ -545,6 +545,75 @@ def queue_page(
     return clamped, total_pages, start, end
 
 
+def queued_track_at(
+    queue: typing.Any,
+    index: int,
+    expected: typing.Any = None,
+) -> typing.Optional[typing.Any]:
+    """Resolve the upcoming track at ``index``, or None when the click went stale.
+
+    The queue browser renders absolute queue indexes into a select, and minutes
+    can pass before someone picks one: the queue may have advanced, been
+    shuffled, cleared or purged in between. This is the single re-check every
+    per-track action runs at ACTION time, so a stale index can never raise
+    IndexError - it returns None and the caller answers "that track is no longer
+    in the queue".
+
+    ``expected`` is the track object the surface was rendered from. When given,
+    the slot must still hold an equal track (sonolink's ``Playable.__eq__``
+    compares the ``encoded`` blob), otherwise the queue shifted under the viewer
+    and the index now addresses a DIFFERENT song - refusing beats silently acting
+    on the wrong one. Two byte-identical copies of the same song compare equal, so
+    a duplicate at that slot is accepted: it is the very track the member picked.
+
+    Reads only the user lane (``queue.tracks``), the lane the browser lists; the
+    hidden autoplay lane is never addressable from the view. Pure - no mutation.
+    """
+    tracks = getattr(queue, "tracks", None) or ()
+    if not isinstance(index, int) or isinstance(index, bool):
+        return None
+    if index < 0 or index >= len(tracks):
+        return None
+    track = tracks[index]
+    if expected is not None and track != expected:
+        return None
+    return track
+
+
+def remove_queue_index(
+    queue: typing.Any,
+    index: int,
+    expected: typing.Any = None,
+) -> typing.Optional[typing.Any]:
+    """Drop the upcoming track at ``index`` from the user lane, index-faithfully.
+
+    Returns the removed track, or None when :func:`queued_track_at` says the
+    index (or the track that sat there) is gone - the stale-click path, which
+    never mutates anything.
+
+    Why not ``Queue.remove_wait(track, remove_all=False)``: sonolink compares
+    tracks by their ``encoded`` blob (``models/track.py::Playable.__eq__``) and
+    ``BaseQueue.remove`` walks the lane dropping the FIRST equal item, so with the
+    same song queued twice, a click on the SECOND copy would delete the first.
+    That is not cosmetic - removing index 2 instead of index 5 out of
+    ``[A, B, X, C, D, X]`` leaves ``[A, B, C, D, X]`` instead of
+    ``[A, B, X, C, D]``, a different playback order. ``Queue.pop_at`` IS
+    index-faithful but also PROMOTES the popped track to ``current_track`` (it is
+    the jump primitive), so it cannot serve a removal either. The user lane is a
+    plain ``deque`` (``Queue._items``), so the index-faithful delete is a direct
+    ``del`` - the same grounded private access :func:`purge_queue_lanes` already
+    makes on ``_autoplay_items``, verified against the installed sonolink source.
+
+    ``queue.tracks`` is ``list(queue._items)``, so the index read and the delete
+    address the same slot, and nothing is awaited between them.
+    """
+    track = queued_track_at(queue, index, expected)
+    if track is None:
+        return None
+    del queue._items[index]
+    return track
+
+
 def joinable_voice_channels(
     guild: discord.Guild,
     member: discord.Member,

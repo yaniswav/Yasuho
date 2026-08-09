@@ -211,10 +211,18 @@ def route_activities(activities, feeds):
 
     ``activities`` are dicts (``id``, ``type``, ``user_id``, ``is_adult`` bool,
     ...). ``feeds`` are dicts (``channel_id``, ``types`` set/list,
-    ``followed_ids`` set, ``allow_adult`` bool - the cog passes
-    ``channel.is_nsfw()``). An activity reaches a feed when the feed follows its
-    user AND the activity's type is in the feed's types; adult activities are
-    dropped unless the feed allows them.
+    ``followed_ids`` set, ``muted_ids`` set - optional, ``allow_adult`` bool -
+    the cog passes ``channel.is_nsfw()``). An activity reaches a feed when the
+    feed follows its user, that user is not muted FOR THIS FEED, and the
+    activity's type is in the feed's types; adult activities are dropped unless
+    the feed allows them.
+
+    Muting is a DELIVERY-ONLY filter and it lives here, at the very end of the
+    pipeline, on purpose. The poller fetches a muted user exactly as before (the
+    follow is untouched) and the global cursor is advanced by the caller from
+    everything FETCHED, not from what this function returns - so a mute can
+    never make an activity skip the cursor, and the same activity still reaches
+    a second feed that follows the user without muting them.
 
     Returns ``{channel_id: [activities]}`` with each channel's list sorted by
     ``id`` ascending, and channels that matched nothing omitted.
@@ -225,11 +233,14 @@ def route_activities(activities, feeds):
         if channel_id is None:
             continue
         followed = set(feed.get("followed_ids") or ())
+        muted = set(feed.get("muted_ids") or ())
         types = set(feed.get("types") or ())
         allow_adult = bool(feed.get("allow_adult"))
         bucket = routed.setdefault(channel_id, [])
         for activity in activities:
             if activity.get("user_id") not in followed:
+                continue
+            if activity.get("user_id") in muted:
                 continue
             if activity.get("type") not in types:
                 continue

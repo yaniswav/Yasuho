@@ -102,14 +102,16 @@ from .feed_views import (
     FeedReplyButton,
     _FeedListView,
     _FeedNoticeView,
+    _MuteManagerView,
     _refresh_layout,  # noqa: F401
     _SubsManagerView,
 )
 from .helpers import API_URL
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from tools import i18n
+from tools.db import affected_rows
 from tools.http import TIMEOUT, get_session
-from tools.i18n import _
+from tools.i18n import _, ngettext
 
 log = logging.getLogger(__name__)
 
@@ -611,6 +613,24 @@ class AniListFeed(commands.Cog):
             "WHERE fe.enabled = TRUE;"
         )
 
+    async def _load_mutes(self):
+        """Every per-channel mute of every ENABLED feed, in one query per tick.
+
+        The mirror of :meth:`_load_follows`, and deliberately a SEPARATE query
+        rather than a LEFT JOIN on it: the follow rows drive the fetch scope
+        (the followed union sent to AniList) and that scope must stay
+        byte-identical whatever is muted. Muted rows only ever reach
+        :meth:`_dispatch`, i.e. delivery.
+        """
+
+        return await self.bot.db_pool.fetch(
+            "SELECT m.guild_id, m.channel_id, m.anilist_user_id "
+            "FROM anilist_feed_mutes m "
+            "JOIN anilist_feeds fe "
+            "  ON fe.guild_id = m.guild_id AND fe.channel_id = m.channel_id "
+            "WHERE fe.enabled = TRUE;"
+        )
+
     async def _load_state(self):
         row = await self.bot.db_pool.fetchrow(
             "SELECT last_activity_id, last_created_at "
@@ -794,6 +814,18 @@ class AniListFeed(commands.Cog):
         # nothing beyond the safe boundary (>= new_id here) is delivered yet.
         fresh = [n for n in normalized if last_id < n["id"] <= new_id]
         if fresh:
+            # Per-channel mutes are loaded HERE, one query, and nowhere else:
+            # every cursor decision above (the high-water marks, the safe
+            # boundary clamp, the dedup window) is already made and cannot see
+            # them. A mute therefore only ever removes a card from ONE channel;
+            # it can never make an activity skip the global cursor, nor hide it
+            # from another feed following the same user.
+            mute_rows = await self._load_mutes()
+            mutes_by_channel = {}
+            for row in mute_rows:
+                key = (row["guild_id"], row["channel_id"])
+                mutes_by_channel.setdefault(key, set()).add(row["anilist_user_id"])
+
             # Whatever is left of the pacing ceiling once the fetch is paid for.
             # The fetch spaces its requests by REQUEST_SPACING and grows with the
             # followed union, so charging it here is what keeps pacing from ever
@@ -803,7 +835,11 @@ class AniListFeed(commands.Cog):
                 0.0, CATCHUP_PACING_BUDGET - (_monotonic() - tick_started)
             )
             await self._dispatch(
-                feeds, follows_by_channel, fresh, pacing_budget=budget
+                feeds,
+                follows_by_channel,
+                fresh,
+                mutes_by_channel=mutes_by_channel,
+                pacing_budget=budget,
             )
 
         if new_id != last_id or new_created != last_created:
@@ -811,9 +847,16 @@ class AniListFeed(commands.Cog):
 
     async def _dispatch(
         self, feeds, follows_by_channel, activities, *,
+        mutes_by_channel=None,
         pacing_budget=CATCHUP_PACING_BUDGET,
     ):
         """Route ``activities`` to the feeds and deliver each channel's share.
+
+        ``mutes_by_channel`` maps ``(guild_id, channel_id)`` to the set of
+        followed AniList user ids that THIS feed does not want delivered. It is
+        threaded into each feed dict and applied by ``route_activities``, i.e.
+        at delivery only: the feed still counts as following those users, so the
+        fetch scope and the global cursor are untouched by a mute.
 
         ``pacing_budget`` is the seconds of catch-up spacing this tick may still
         afford (:data:`CATCHUP_PACING_BUDGET` minus what the tick has already
@@ -821,10 +864,12 @@ class AniListFeed(commands.Cog):
         for out of the rest of the poll period.
         """
 
+        mutes_by_channel = mutes_by_channel or {}
         feed_dicts = []
         feed_by_channel = {}
         for feed in feeds:
-            ids = follows_by_channel.get((feed["guild_id"], feed["channel_id"]))
+            key = (feed["guild_id"], feed["channel_id"])
+            ids = follows_by_channel.get(key)
             if not ids:
                 continue
             feed_by_channel[feed["channel_id"]] = feed
@@ -833,6 +878,7 @@ class AniListFeed(commands.Cog):
                     "channel_id": feed["channel_id"],
                     "types": set(feed["types"] or ()),
                     "followed_ids": ids,
+                    "muted_ids": mutes_by_channel.get(key) or (),
                     "allow_adult": self._allow_adult(feed["channel_id"]),
                 }
             )
@@ -1189,10 +1235,23 @@ class AniListFeed(commands.Cog):
     async def _move_feed(self, guild_id, old_channel_id, new_channel_id):
         """Move a feed (and its follows) to a new channel, in one transaction.
 
-        ``channel_id`` is part of the primary key on both tables, so a move is
-        implemented as delete+insert of the feed row plus an UPDATE of its
-        follows' ``channel_id`` - all inside a single transaction so a failure
-        partway through can never leave the feed split across two channels.
+        ``channel_id`` is part of the primary key on every table, so a move is
+        implemented as insert+delete of the feed row plus an UPDATE of the
+        ``channel_id`` on each of its child tables (follows, title subs AND
+        mutes) - all inside a single transaction so a failure partway through can
+        never leave the feed split across two channels.
+
+        ORDER IS LOAD-BEARING, twice over. The new feed row is inserted FIRST:
+        the children carry ``(guild_id, channel_id)`` foreign keys to
+        anilist_feeds and those are enforced on every UPDATE (the migration adds
+        them NOT VALID, which only skips the initial scan), so moving a child to
+        a channel with no feed row yet is a ForeignKeyViolationError. The old
+        feed row is deleted LAST, and only once every child has been moved off
+        it: those keys are ON DELETE CASCADE, so a child still pointing at the
+        old channel would be destroyed instead of moved - which is exactly how a
+        mute would have been silently dropped, un-hiding someone who never asked
+        to be un-hidden.
+
         Returns an error string, else None.
         """
 
@@ -1218,6 +1277,17 @@ class AniListFeed(commands.Cog):
                 if row is None:
                     return _("That feed no longer exists.")
                 await conn.execute(
+                    "INSERT INTO anilist_feeds "
+                    "(guild_id, channel_id, types, self_add, enabled, fail_count) "
+                    "VALUES ($1, $2, $3, $4, $5, $6);",
+                    guild_id,
+                    new_channel_id,
+                    row["types"],
+                    row["self_add"],
+                    row["enabled"],
+                    row["fail_count"],
+                )
+                await conn.execute(
                     "UPDATE anilist_follows SET channel_id = $3 "
                     "WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
@@ -1231,21 +1301,20 @@ class AniListFeed(commands.Cog):
                     old_channel_id,
                     new_channel_id,
                 )
+                # Mutes move with the feed too: leaving them behind would let the
+                # ON DELETE CASCADE below erase them, and a member who muted
+                # someone here would start being posted at again after a move.
+                await conn.execute(
+                    "UPDATE anilist_feed_mutes SET channel_id = $3 "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    old_channel_id,
+                    new_channel_id,
+                )
                 await conn.execute(
                     "DELETE FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
                     guild_id,
                     old_channel_id,
-                )
-                await conn.execute(
-                    "INSERT INTO anilist_feeds "
-                    "(guild_id, channel_id, types, self_add, enabled, fail_count) "
-                    "VALUES ($1, $2, $3, $4, $5, $6);",
-                    guild_id,
-                    new_channel_id,
-                    row["types"],
-                    row["self_add"],
-                    row["enabled"],
-                    row["fail_count"],
                 )
         return None
 
@@ -1411,6 +1480,47 @@ class AniListFeed(commands.Cog):
             view.message = await interaction.original_response()
         return view
 
+    async def _render_mute_manager(
+        self, interaction, guild, author_id, channel_id, *, page=0, note=None,
+        new=False,
+    ):
+        """Render the ephemeral muted-users manager from fresh DB state.
+
+        ``new=True`` sends a fresh ephemeral message (the panel button's first
+        open); otherwise it edits the manager message in place (a toggle or a
+        paging step). Loads the feed's follows AND its mutes - the manager lists
+        every followed user and marks who is hidden - builds a
+        :class:`_MuteManagerView` and binds its ``message`` so the timeout
+        cleanup works.
+        """
+
+        follows = await self._follows_for_feed(guild.id, channel_id)
+        mute_rows = await self._mutes_for_feed(guild.id, channel_id)
+        muted_ids = {row["anilist_user_id"] for row in mute_rows}
+        view = _MuteManagerView(
+            self,
+            guild,
+            author_id,
+            channel_id,
+            follows,
+            muted_ids,
+            page=page,
+            note=note,
+        )
+        # A Components V2 LayoutView carries its content inside the view, so every
+        # send/edit passes ``view=`` only (no embed): Discord rejects an ``embed=``
+        # on a CV2 message and this manager is CV2 from its first render.
+        if new:
+            await interaction.response.send_message(view=view, ephemeral=True)
+            view.message = await interaction.original_response()
+            return view
+        if interaction.response.is_done():
+            view.message = await interaction.edit_original_response(view=view)
+        else:
+            await interaction.response.edit_message(view=view)
+            view.message = await interaction.original_response()
+        return view
+
     async def _set_enabled(self, guild_id, channel_id, enabled):
         await self.bot.db_pool.execute(
             "UPDATE anilist_feeds SET enabled = $3, "
@@ -1422,13 +1532,19 @@ class AniListFeed(commands.Cog):
         )
 
     async def _delete_feed_rows(self, guild_id, channel_id):
-        """Delete a feed and its follows in one transaction.
+        """Delete a feed and its follows, mutes and subscriptions in one transaction.
 
         Returns ``True`` when a feed row was actually deleted, else ``False``.
         """
 
         async with self.bot.db_pool.acquire() as conn:
             async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM anilist_feed_mutes "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
                 await conn.execute(
                     "DELETE FROM anilist_follows "
                     "WHERE guild_id = $1 AND channel_id = $2;",
@@ -1560,13 +1676,126 @@ class AniListFeed(commands.Cog):
         return None
 
     async def _remove_follow(self, guild_id, channel_id, user_id):
-        await self.bot.db_pool.execute(
-            "DELETE FROM anilist_follows "
+        """Unfollow a user in this feed AND drop the mute row that shadowed them.
+
+        A mute only ever qualifies an existing follow ("keep polling them, just
+        not here"). Leaving the row behind after an unfollow would make a later
+        re-follow arrive silently muted, which nobody asked for - so the two
+        deletes ride one transaction.
+
+        Returns True when a follow row was actually deleted. Callers that read a
+        row before calling can therefore still tell a real unfollow from a race
+        (the follow vanished between their read and this delete) and avoid
+        confirming something that did not happen.
+        """
+
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                deleted = await conn.fetchval(
+                    "DELETE FROM anilist_follows "
+                    "WHERE guild_id = $1 AND channel_id = $2 "
+                    "AND anilist_user_id = $3 RETURNING 1;",
+                    guild_id,
+                    channel_id,
+                    user_id,
+                )
+                await conn.execute(
+                    "DELETE FROM anilist_feed_mutes "
+                    "WHERE guild_id = $1 AND channel_id = $2 "
+                    "AND anilist_user_id = $3;",
+                    guild_id,
+                    channel_id,
+                    user_id,
+                )
+        return deleted is not None
+
+    # ------------------------------------------------------------------
+    # Per-channel mutes (delivery-only: the follow keeps being polled)
+    # ------------------------------------------------------------------
+    async def _mutes_for_feed(self, guild_id, channel_id):
+        """Every mute of a feed, ordered for the panel."""
+
+        return await self.bot.db_pool.fetch(
+            "SELECT anilist_user_id, anilist_username FROM anilist_feed_mutes "
+            "WHERE guild_id = $1 AND channel_id = $2 "
+            "ORDER BY lower(anilist_username), anilist_user_id;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _mute_count(self, guild_id, channel_id):
+        return await self.bot.db_pool.fetchval(
+            "SELECT COUNT(*) FROM anilist_feed_mutes "
+            "WHERE guild_id = $1 AND channel_id = $2;",
+            guild_id,
+            channel_id,
+        )
+
+    async def _followed_user_by_name(self, guild_id, channel_id, username):
+        """Resolve a username against THIS feed's follows (case-insensitive).
+
+        Muting is only meaningful for a user the feed already follows, so the
+        name is matched against the stored follows rather than AniList: no
+        network call, no way to mute a stranger, and the caller can tell the
+        admin exactly what went wrong. Returns the row, or None.
+        """
+
+        return await self.bot.db_pool.fetchrow(
+            "SELECT anilist_user_id, anilist_username FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 "
+            "AND lower(anilist_username) = lower($3);",
+            guild_id,
+            channel_id,
+            username,
+        )
+
+    async def _add_mute(self, guild_id, channel_id, user_id, name):
+        """Insert/refresh a mute, enforcing the per-feed cap.
+
+        The cap is :data:`af.MAX_FOLLOWS_PER_FEED`: a feed can at most mute
+        everyone it follows, so the mute table can never outgrow the follow
+        table it qualifies. Re-muting an already-muted user only refreshes the
+        cached name (no new row), so it is never blocked. Returns an error
+        string when the cap is reached, else None.
+        """
+
+        already = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM anilist_feed_mutes "
             "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
             guild_id,
             channel_id,
             user_id,
         )
+        if not already:
+            count = await self._mute_count(guild_id, channel_id)
+            if count >= af.MAX_FOLLOWS_PER_FEED:
+                return _(
+                    "This feed already mutes the maximum of {max} users."
+                ).format(max=af.MAX_FOLLOWS_PER_FEED)
+        await self.bot.db_pool.execute(
+            "INSERT INTO anilist_feed_mutes "
+            "(guild_id, channel_id, anilist_user_id, anilist_username) "
+            "VALUES ($1, $2, $3, $4) "
+            "ON CONFLICT (guild_id, channel_id, anilist_user_id) "
+            "DO UPDATE SET anilist_username = EXCLUDED.anilist_username;",
+            guild_id,
+            channel_id,
+            user_id,
+            name,
+        )
+        return None
+
+    async def _remove_mute(self, guild_id, channel_id, user_id):
+        """Unmute a user in this feed. Returns True when a row was removed."""
+
+        result = await self.bot.db_pool.execute(
+            "DELETE FROM anilist_feed_mutes "
+            "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
+            guild_id,
+            channel_id,
+            user_id,
+        )
+        return affected_rows(result) > 0
 
     async def _open_panel(self, ctx):
         feeds = await self._feeds_for_guild(ctx.guild.id)
@@ -1581,6 +1810,11 @@ class AniListFeed(commands.Cog):
             if selected_channel_id is not None
             else 0
         )
+        mutes_count = (
+            await self._mute_count(ctx.guild.id, selected_channel_id)
+            if selected_channel_id is not None
+            else 0
+        )
         view = AniListFeedPanel(
             self,
             ctx.guild,
@@ -1589,6 +1823,7 @@ class AniListFeed(commands.Cog):
             selected_channel_id,
             follows,
             subs_count,
+            mutes_count,
         )
         view.message = await ctx.send(view=view)
 
@@ -1738,21 +1973,95 @@ class AniListFeed(commands.Cog):
             return await ctx.send(error)
 
         name = username.strip()
+        # Resolve first, then delete through _remove_follow: the mute row that
+        # qualified this follow has to die with it, and that pairing lives in
+        # one helper so no caller can unfollow and leave a stale mute behind.
+        row = await self._followed_user_by_name(ctx.guild.id, channel_id, name)
+        if row is None:
+            return await ctx.send(
+                _("This feed is not following **{name}**.").format(name=name)
+            )
+        # The delete reports what it actually did, so a follow that vanished
+        # between the read above and here is answered honestly instead of being
+        # confirmed as an unfollow this command did not perform.
+        removed = await self._remove_follow(
+            ctx.guild.id, channel_id, row["anilist_user_id"]
+        )
+        if not removed:
+            return await ctx.send(
+                _("This feed is not following **{name}**.").format(name=name)
+            )
+        await ctx.send(
+            _("Unfollowed **{name}**.").format(name=row["anilist_username"])
+        )
+
+    @anilistfeed.command(name="mute")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        username="A followed AniList user to hide from this feed's channel."
+    )
+    async def anilistfeed_mute(self, ctx: commands.Context, *, username: str):
+        """Hide a followed AniList user's activity in this feed only."""
+
+        channel_id, error = await self._resolve_target(ctx)
+        if error:
+            return await ctx.send(error)
+
+        name = username.strip()
+        row = await self._followed_user_by_name(ctx.guild.id, channel_id, name)
+        if row is None:
+            return await ctx.send(
+                _(
+                    "This feed is not following **{name}**, so there is nothing "
+                    "to mute. Muting only hides someone the feed already "
+                    "follows - see `/anilistfeed list`."
+                ).format(name=name)
+            )
+
+        error = await self._add_mute(
+            ctx.guild.id, channel_id, row["anilist_user_id"], row["anilist_username"]
+        )
+        if error:
+            return await ctx.send(error)
+
+        body = _(
+            "**{name}** stays followed, but their activity is no longer posted "
+            "in <#{channel}>. Other feeds following them are unaffected."
+        ).format(name=row["anilist_username"] or name, channel=channel_id)
+        await ctx.send(view=_FeedNoticeView(_("Muted here"), body))
+
+    @anilistfeed.command(name="unmute")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        username="A muted AniList user to show again in this feed's channel."
+    )
+    async def anilistfeed_unmute(self, ctx: commands.Context, *, username: str):
+        """Show a muted AniList user's activity in this feed again."""
+
+        channel_id, error = await self._resolve_target(ctx)
+        if error:
+            return await ctx.send(error)
+
+        name = username.strip()
         row = await self.bot.db_pool.fetchrow(
-            "DELETE FROM anilist_follows "
+            "SELECT anilist_user_id, anilist_username FROM anilist_feed_mutes "
             "WHERE guild_id = $1 AND channel_id = $2 "
-            "AND lower(anilist_username) = lower($3) "
-            "RETURNING anilist_username;",
+            "AND lower(anilist_username) = lower($3);",
             ctx.guild.id,
             channel_id,
             name,
         )
         if row is None:
             return await ctx.send(
-                _("This feed is not following **{name}**.").format(name=name)
+                _("**{name}** is not muted in this feed.").format(name=name)
             )
+        await self._remove_mute(ctx.guild.id, channel_id, row["anilist_user_id"])
         await ctx.send(
-            _("Unfollowed **{name}**.").format(name=row["anilist_username"])
+            _("Unmuted **{name}** - their activity is posted here again.").format(
+                name=row["anilist_username"] or name
+            )
         )
 
     @anilistfeed.command(name="me")
@@ -1858,6 +2167,19 @@ class AniListFeed(commands.Cog):
                 row["anilist_username"]
             )
 
+        # One guild-wide query for the mutes too, so the listing stays two reads
+        # whatever the number of feeds.
+        mute_rows = await self.bot.db_pool.fetch(
+            "SELECT channel_id, anilist_username FROM anilist_feed_mutes "
+            "WHERE guild_id = $1 ORDER BY lower(anilist_username);",
+            ctx.guild.id,
+        )
+        mutes_by_channel = {}
+        for row in mute_rows:
+            mutes_by_channel.setdefault(row["channel_id"], []).append(
+                row["anilist_username"]
+            )
+
         blocks = []
         for feed in feeds:
             cid = feed["channel_id"]
@@ -1874,9 +2196,27 @@ class AniListFeed(commands.Cog):
             else:
                 following = _("no one yet")
 
+            muted_names = [n for n in (mutes_by_channel.get(cid) or []) if n]
+            if muted_names:
+                muted = ", ".join(muted_names)
+                if len(muted) > 500:
+                    muted = muted[:500].rstrip() + "..."
+                muted = ngettext(
+                    "{names} ({count} user hidden here, still followed)",
+                    "{names} ({count} users hidden here, still followed)",
+                    len(muted_names),
+                ).format(names=muted, count=len(muted_names))
+            else:
+                muted = _("no one")
+
+            # The Muted line is its OWN msgid, appended: folding it into the
+            # existing three-line msgid would have invalidated that string in
+            # every locale and reverted the whole block to English until the next
+            # translation pass.
             value = _(
                 "Status: {status}\nTypes: {types}\nFollowing: {names}"
             ).format(status=status, types=types, names=following)
+            value += "\n" + _("Muted: {muted}").format(muted=muted)
             blocks.append((label, value))
 
         await ctx.send(view=_FeedListView(_("AniList feeds"), blocks))

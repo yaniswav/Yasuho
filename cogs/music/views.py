@@ -49,9 +49,12 @@ from cogs.music.music import (
     is_autoplay_track,
     purge_queue_lanes,
     queue_page,
+    queued_track_at,
     queued_track_count,
+    remove_queue_index,
     station_select_options,
 )
+from cogs.music.search import truncate
 from tools import interactions
 from tools.config_loader import config_loader
 from tools.cooldowns import Cooldowns
@@ -80,6 +83,10 @@ _STATION_DEBOUNCE = Cooldowns(2.0)
 PROGRESS_SEGMENTS = 12
 PROGRESS_FILLED = "▓"  # dark shade block
 PROGRESS_EMPTY = "░"  # light shade block
+
+
+# Discord's hard cap on a select option's label and description.
+SELECT_TEXT_MAX = 100
 
 
 def progress_state(
@@ -935,6 +942,10 @@ class MusicController(discord.ui.LayoutView):
                 )
                 return
             self.player.queue.shuffle()
+            # The order changed, so the persisted state must follow it - otherwise
+            # a restart would restore the pre-shuffle queue and this surface would
+            # disagree with the queue view's Shuffle, which does snapshot.
+            await self.cog._snapshot(self.player)
             await self._rerender()
             await interaction.response.send_message(
                 _("Shuffled the queue."), ephemeral=True
@@ -1209,14 +1220,152 @@ async def _check_station_debounce(interaction: discord.Interaction) -> bool:
     return True
 
 
+class _QueueTrackSelect(discord.ui.Select):
+    """Picker of the tracks on the queue view's CURRENT page, one option per line.
+
+    Values are ABSOLUTE queue indexes rendered as strings, so the number the
+    member reads on the line ("12. Song") and the index the action acts on are
+    the same number, and the option order matches the listing exactly. The
+    rendered ``Playable`` travels with the pick (``_tracks``) so the action can
+    re-check that the slot still holds THAT track before touching anything.
+
+    Rebuilt from scratch on every render (never persisted), the same shape as the
+    reminders card's cancel select.
+    """
+
+    def __init__(
+        self,
+        owner: "QueueView",
+        tracks: typing.Sequence[typing.Any],
+        start: int,
+    ) -> None:
+        self._owner = owner
+        # value -> the exact track object this option was rendered from.
+        self._tracks: typing.Dict[str, typing.Any] = {}
+        options = []
+        for offset, track in enumerate(tracks):
+            index = start + offset
+            value = str(index)
+            self._tracks[value] = track
+            options.append(
+                discord.SelectOption(
+                    label=truncate(
+                        "{index}. {title}".format(index=index + 1, title=track.title),
+                        SELECT_TEXT_MAX,
+                    ),
+                    value=value,
+                    description=truncate(
+                        _("by {author} - {duration}").format(
+                            author=track.author, duration=format_duration(track)
+                        ),
+                        SELECT_TEXT_MAX,
+                    ),
+                )
+            )
+        super().__init__(
+            placeholder=_("Manage a track..."),
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            value = self.values[0]
+            await self._owner._manage(interaction, int(value), self._tracks.get(value))
+        except Exception:
+            log.exception("Queue view manage select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _QueueTrackActions(discord.ui.View):
+    """The ephemeral Jump / Remove panel for one picked queue entry.
+
+    Deliberately a two-button panel instead of a yes/no confirm per action: the
+    pick itself changes nothing, so ONE ephemeral message carries both offers and
+    the member's second click IS the confirmation. Either action costs exactly two
+    clicks, and a mis-pick fires nothing.
+
+    Only the picker can see the panel (it is ephemeral), so no author gate is
+    needed; the room gate IS re-run here because minutes can pass before a button
+    is pressed, and the DJ gate is re-run inside each action on the owning view -
+    browse stays open, destructive stays gated.
+    """
+
+    def __init__(
+        self,
+        owner: "QueueView",
+        index: int,
+        track: typing.Any,
+        *,
+        timeout: float = 60,
+    ) -> None:
+        super().__init__(timeout=timeout)
+        self._owner = owner
+        self.track_index = index
+        self.track = track
+        # The interaction that sent this ephemeral panel; the only handle an
+        # ephemeral message can be edited through on timeout.
+        self.origin: typing.Optional[discord.Interaction] = None
+        self.add_item(
+            _ControllerButton(
+                self._jump,
+                label=_("Play now"),
+                emoji="⏭️",
+                style=discord.ButtonStyle.primary,
+            )
+        )
+        self.add_item(
+            _ControllerButton(
+                self._remove,
+                label=_("Remove"),
+                emoji="🗑️",
+                style=discord.ButtonStyle.danger,
+            )
+        )
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Same room gate as the queue view itself, re-checked at action time."""
+        return await _ensure_in_voice(self._owner.player, interaction)
+
+    async def _jump(self, interaction: discord.Interaction) -> None:
+        # Only a completed action closes the panel: a refusal (not the DJ, track
+        # gone) leaves the buttons live so the member can retry or pick Remove.
+        if await self._owner._jump(interaction, self.track_index, self.track):
+            self.stop()
+
+    async def _remove(self, interaction: discord.Interaction) -> None:
+        if await self._owner._remove(interaction, self.track_index, self.track):
+            self.stop()
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.origin is None:
+            return
+        try:
+            await self.origin.edit_original_response(view=self)
+        except discord.HTTPException:
+            log.exception("Failed to disable the queue track panel on timeout")
+
+
 class QueueView(discord.ui.LayoutView):
     """The upcoming queue as a paginated Components V2 layout.
 
     A single accent :class:`~discord.ui.Container` in the controller's house
     style: a "Queue" heading, the now-playing line, the upcoming tracks paged
-    ten at a time, and one action row (Prev / Next / Add track / Clear queue).
-    Like the controller it is a room surface, not an author-gated panel - anyone
-    in the player's voice channel may drive it (see :func:`_ensure_in_voice`).
+    ten at a time, a per-page "Manage a track..." select and one action row
+    (Prev / Next / Shuffle / Add track / Clear queue). Like the controller it is
+    a room surface, not an author-gated panel - anyone in the player's voice
+    channel may drive it (see :func:`_ensure_in_voice`).
+
+    Paging stays open to the room; every path that can CHANGE playback or the
+    queue goes through :func:`_ensure_can_control`. That includes OPENING the
+    manage select: both offers on the panel it opens (jump, remove) are
+    destructive, so the DJ gate is answered on the pick rather than after a
+    wasted ephemeral. It is then re-checked inside each action (jump, remove,
+    shuffle, clear), which stays the authoritative point, and every mutation is
+    followed by a fresh snapshot so a restart restores what the room can see.
 
     Every render re-reads ``player.queue.tracks`` live, so the view never shows
     stale state after an add or a clear, and the page index is re-clamped by
@@ -1294,6 +1443,15 @@ class QueueView(discord.ui.LayoutView):
             )
         container.add_item(discord.ui.Separator())
 
+        # The per-track picker lists exactly the lines above it (same slice, same
+        # numbering) and is omitted entirely when there is nothing to manage.
+        if total:
+            container.add_item(
+                discord.ui.ActionRow(
+                    _QueueTrackSelect(self, upcoming[start:end], start)
+                )
+            )
+
         single_page = total_pages <= 1
         has_queued = queued_track_count(self.player.queue) > 0
         container.add_item(
@@ -1311,6 +1469,13 @@ class QueueView(discord.ui.LayoutView):
                     emoji="▶️",
                     style=discord.ButtonStyle.secondary,
                     disabled=single_page or self.page >= total_pages - 1,
+                ),
+                self._make_button(
+                    self._shuffle,
+                    label=_("Shuffle"),
+                    emoji="\U0001f500",
+                    style=discord.ButtonStyle.secondary,
+                    disabled=total < 2,
                 ),
                 self._make_button(
                     self._add,
@@ -1331,9 +1496,13 @@ class QueueView(discord.ui.LayoutView):
         self.add_item(container)
 
     def _disable_all(self) -> None:
-        """Disable every button in the layout (walks nested ActionRows)."""
+        """Disable every control in the layout (walks nested ActionRows).
+
+        Covers the manage select as well as the buttons - an expired view must
+        not leave a live dropdown behind.
+        """
         for child in self.walk_children():
-            if isinstance(child, discord.ui.Button):
+            if isinstance(child, (discord.ui.Button, discord.ui.Select)):
                 child.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -1391,6 +1560,159 @@ class QueueView(discord.ui.LayoutView):
             log.exception("Queue view add-track failed")
             await self._report_failure(interaction)
 
+    async def _notify_stale(self, interaction: discord.Interaction) -> None:
+        """Refuse a click whose track has moved on, then resync this surface.
+
+        The single answer to every stale index: the queue advanced, was shuffled,
+        cleared or purged between the render and the click. The refusal is
+        ephemeral (only the clicker was looking at the stale line) and the public
+        listing is re-rendered off the live queue so the next click is accurate.
+        """
+        await interaction.response.send_message(
+            _("That track is no longer in the queue."), ephemeral=True
+        )
+        await self._rerender()
+
+    async def _manage(
+        self, interaction: discord.Interaction, index: int, track: typing.Any
+    ) -> None:
+        """Open the Jump / Remove panel for a picked queue entry."""
+        try:
+            # Fail fast: both offers on the panel are destructive, so the DJ gate
+            # is answered on the pick rather than after a wasted ephemeral. It is
+            # re-checked inside each action, which stays the authoritative point
+            # (a DJ handoff can land while the panel sits open).
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
+            current = queued_track_at(self.player.queue, index, track)
+            if current is None:
+                await self._notify_stale(interaction)
+                return
+            panel = _QueueTrackActions(self, index, current)
+            # Opening the panel mutates nothing, so the public listing is NOT
+            # re-rendered here: browsing must not cost one message edit per pick
+            # across a thousand guilds.
+            await interaction.response.send_message(
+                _(
+                    "**{title}**\n"
+                    "Jump straight to this track, or drop it from the queue."
+                ).format(title=current.title[:120]),
+                view=panel,
+                ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            panel.origin = interaction
+        except Exception:
+            log.exception("Queue view manage failed")
+            await self._report_failure(interaction)
+
+    async def _jump(
+        self, interaction: discord.Interaction, index: int, track: typing.Any
+    ) -> bool:
+        """Play the picked queued track right now. True when playback moved.
+
+        The click lands on the ephemeral panel, so the panel message is collapsed
+        into the confirmation and the queue listing is refreshed separately.
+        """
+        try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return False
+            # Authoritative stale re-check: the index AND the track that sat there
+            # must both still be live, so a shifted queue can never make this jump
+            # to a song the member did not pick (and never raises IndexError).
+            candidate = queued_track_at(self.player.queue, index, track)
+            if candidate is None:
+                await self._notify_stale(interaction)
+                return False
+            # Peek before mutating, exactly as Music._play_previous does: pop_at
+            # would already have promoted the entry to current_track and pushed the
+            # outgoing track to history by the time play() choked on a dead entry,
+            # leaving the room's state wrong. Unreachable today (_snapshot filters
+            # encoded-less tracks out and decode_track never yields one), kept so a
+            # future track source cannot corrupt the queue behind this button.
+            if not getattr(candidate, "encoded", None):
+                log.warning(
+                    "Queue view jump refused: queued track has no encoded payload"
+                )
+                await self._report_failure(interaction)
+                return False
+            # pop_at is sonolink's jump primitive: it removes the entry AND sets it
+            # as the current track (pushing the outgoing one to history), so the
+            # direct play() below is exactly the seam Music._play_previous uses -
+            # Lavalink ends the outgoing track with REPLACED, whose can_start_next
+            # is False, so nothing auto-advances and autoplay never fires behind us.
+            chosen = self.player.queue.pop_at(index)
+            await self.player.play(chosen)
+            # The queue AND the current track changed: persist before the UI, the
+            # same order _play_previous keeps.
+            await self.cog._snapshot(self.player)
+            await interaction.response.edit_message(
+                content=_("Jumped to **{title}**.").format(title=chosen.title[:120]),
+                view=None,
+            )
+            await self._rerender()
+            return True
+        except Exception:
+            log.exception("Queue view jump failed")
+            await self._report_failure(interaction)
+            return False
+
+    async def _remove(
+        self, interaction: discord.Interaction, index: int, track: typing.Any
+    ) -> bool:
+        """Drop the picked track from the queue. True when it was removed.
+
+        Playback is untouched: removing an upcoming entry never interrupts the
+        current track.
+        """
+        try:
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return False
+            # Index-faithful even when the same song is queued twice; None means
+            # the slot moved on (see remove_queue_index), so nothing was mutated.
+            removed = remove_queue_index(self.player.queue, index, track)
+            if removed is None:
+                await self._notify_stale(interaction)
+                return False
+            await self.cog._snapshot(self.player)
+            await interaction.response.edit_message(
+                content=_("Removed **{title}** from the queue.").format(
+                    title=removed.title[:120]
+                ),
+                view=None,
+            )
+            await self._rerender()
+            return True
+        except Exception:
+            log.exception("Queue view remove failed")
+            await self._report_failure(interaction)
+            return False
+
+    async def _shuffle(self, interaction: discord.Interaction) -> None:
+        try:
+            # Destructive (it reorders what everyone is waiting for), so the same
+            # DJ gate as Clear - and the same wordings as the controller's Shuffle.
+            if not await _ensure_can_control(self.cog, self.player, interaction):
+                return
+            # The button renders disabled under two tracks, but a stale view can
+            # still deliver the click, so the count is re-checked here.
+            if len(self.player.queue.tracks) < 2:
+                await interaction.response.send_message(
+                    _("Add a few more tracks before shuffling."), ephemeral=True
+                )
+                return
+            self.player.queue.shuffle()
+            # The order changed, so the persisted state must follow it - otherwise
+            # a restart would restore the pre-shuffle queue.
+            await self.cog._snapshot(self.player)
+            await self._rerender_from(interaction)
+            await interaction.followup.send(
+                _("Shuffled the queue."), ephemeral=True
+            )
+        except Exception:
+            log.exception("Queue view shuffle failed")
+            await self._report_failure(interaction)
+
     async def _clear(self, interaction: discord.Interaction) -> None:
         try:
             # Destructive: DJ-gated to match /clearqueue and the controller
@@ -1408,8 +1730,7 @@ class QueueView(discord.ui.LayoutView):
             purge_queue_lanes(self.player.queue)
             await self.cog._snapshot(self.player)
             # Refresh this surface off the now-empty queue, then confirm.
-            self._build()
-            await interaction.response.edit_message(view=self)
+            await self._rerender_from(interaction)
             await interaction.followup.send(
                 _("Cleared {count} track(s) from the queue.").format(count=count),
                 ephemeral=True,

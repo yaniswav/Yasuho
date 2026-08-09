@@ -485,6 +485,11 @@ def _tick_harness(cog, monkeypatch, elapsed):
     async def _load_follows():
         return [{"guild_id": 1, "channel_id": 100, "anilist_user_id": 7}]
 
+    async def _load_mutes():
+        # Nothing muted here: this harness is about the pacing budget. The
+        # per-channel mute list is pinned in test_anilist_feed_mutes.py.
+        return []
+
     async def _load_state():
         return 0, 1_000
 
@@ -492,8 +497,9 @@ def _tick_harness(cog, monkeypatch, elapsed):
         clock["now"] += elapsed
         return [_text_activity(i) for i in range(1, 6)], None
 
-    async def _dispatch(feeds, follows, activities, *, pacing_budget):
+    async def _dispatch(feeds, follows, activities, *, mutes_by_channel, pacing_budget):
         captured["budget"] = pacing_budget
+        captured["mutes"] = mutes_by_channel
 
     clock = {"now": 0.0}
     monkeypatch.setattr(feed_mod, "_monotonic", lambda: clock["now"])
@@ -502,6 +508,7 @@ def _tick_harness(cog, monkeypatch, elapsed):
     cog._prune_coalesce_posts = _noop
     cog._load_feeds = _load_feeds
     cog._load_follows = _load_follows
+    cog._load_mutes = _load_mutes
     cog._load_state = _load_state
     cog._fetch_activities = _fetch
     cog._save_state = _noop

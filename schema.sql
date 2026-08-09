@@ -852,6 +852,26 @@ CREATE TABLE IF NOT EXISTS anilist_follows (
     PRIMARY KEY (guild_id, channel_id, anilist_user_id)
 );
 
+-- Per-channel mutes: a FOLLOWED AniList user whose activity this ONE feed does
+-- not want. The follow itself is untouched, so the poller keeps fetching that
+-- user globally and a second feed following them still receives everything -
+-- a mute is a DELIVERY filter (cogs/anilist/feed_policy.py route_activities),
+-- never a fetch or cursor filter. Muting must not change what the global
+-- cursor (anilist_feed_state) sees, or a mute in one channel would silently
+-- skip that activity for every other channel too.
+-- Capped at MAX_FOLLOWS_PER_FEED per feed (enforced in code): a feed can at
+-- most mute everyone it follows. ``anilist_username`` is a cached display name
+-- for the panel, like anilist_follows. Lookups by feed ride the
+-- (guild_id, channel_id, ...) PK prefix.  cogs/anilist/feed.py
+CREATE TABLE IF NOT EXISTS anilist_feed_mutes (
+    guild_id         BIGINT      NOT NULL,
+    channel_id       BIGINT      NOT NULL,
+    anilist_user_id  INTEGER     NOT NULL,                 -- AniList numeric user id
+    anilist_username TEXT,                                 -- cached name for the panel
+    muted_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, channel_id, anilist_user_id)
+);
+
 -- Global high-water mark for the AniList activity poller: a single row holding
 -- the newest activity already fanned out. AniList's Page.activities has NO
 -- id_greater argument, so the poller cursors on ``last_created_at``
@@ -1618,6 +1638,15 @@ BEGIN
     ) THEN
         ALTER TABLE anilist_follows
             ADD CONSTRAINT anilist_follows_feed_fk
+            FOREIGN KEY (guild_id, channel_id)
+            REFERENCES anilist_feeds(guild_id, channel_id)
+            ON DELETE CASCADE NOT VALID;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'anilist_feed_mutes_feed_fk'
+    ) THEN
+        ALTER TABLE anilist_feed_mutes
+            ADD CONSTRAINT anilist_feed_mutes_feed_fk
             FOREIGN KEY (guild_id, channel_id)
             REFERENCES anilist_feeds(guild_id, channel_id)
             ON DELETE CASCADE NOT VALID;
