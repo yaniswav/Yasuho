@@ -68,7 +68,7 @@ from dataclasses import dataclass
 
 import discord
 
-from . import rollups
+from . import charts, rollups
 from cogs.community.leveling.engine import iso_week_period_key
 from tools import settings
 from tools.formats import random_colour
@@ -97,6 +97,15 @@ FAN_OUT_LIMIT = 50
 # overwrite can change any time in between) - the same double check
 # cogs/config/tickets/preflight.py performs, against its own list.
 DIGEST_PERMISSIONS = ("view_channel", "send_messages", "embed_links")
+
+# U3: the PNG chart attached alongside the digest embed. Same rendering seam
+# and the same graceful-fallback discipline as views.py's card chart (see
+# CHART_RENDER_TIMEOUT there) - cog.py's _deliver_digest never lets a
+# saturated semaphore or a Pillow error hold up a weekly broadcast; a digest
+# without its chart is still the text-only embed this feature shipped with
+# before U3.
+CHART_FILENAME = "serverstats_digest_chart.png"
+CHART_RENDER_TIMEOUT = 2.0
 
 _PERMISSION_LABELS = {
     "view_channel": N_("View Channel"),
@@ -292,6 +301,16 @@ class DigestReport:
     week has no xp_period row at all - the read cannot tell "nobody earned XP"
     from "the week aged out of the leveling prune"
     (cogs.community.leveling.engine.PRUNE_PERIODS_BACK), so it says neither.
+
+    ``chart_points`` (U3) is the reported week as :class:`~.charts.ChartPoint`
+    tuples, one per day, oldest first - built by :func:`shape_digest` from the
+    SAME ``activity_rows``/``growth_rows`` this dataclass's other fields sum,
+    so the chart and the numbers next to it can never disagree about which
+    days are holes. ``chart_previous_points`` is the week before it, for the
+    ghosted week-over-week overlay, and is ``None`` unless BOTH weeks were
+    fully observed - the exact same gate :attr:`delta_pct` uses, because a
+    ghost drawn through holes is not an honest comparison, it is a guess with
+    a line through it.
     """
 
     week: str
@@ -307,6 +326,8 @@ class DigestReport:
     busiest_day: datetime.date | None
     busiest_messages: int
     active_members: int | None
+    chart_points: tuple = ()
+    chart_previous_points: tuple | None = None
 
     @property
     def net(self):
@@ -392,6 +413,39 @@ def shape_digest(activity_rows, growth_rows, active_members, today):
             busiest = count
             busiest_day = day
 
+    # U3: the chart's raw points, built from the exact same two dicts
+    # (messages_by_day, observed) the totals above sum - a day outside
+    # `observed` is a HOLE here too (charts.ChartPoint(messages=None,
+    # net=None)), never a zero. growth_by_day carries the same rows
+    # `observed` was built from, so a day IN `observed` always has a row.
+    growth_by_day = {row["day"]: row for row in growth_rows or ()}
+
+    def _chart_points(window_start, window_end):
+        result = []
+        for day in rollups.day_span(window_start, window_end):
+            if day not in observed:
+                result.append(charts.ChartPoint(day=day, messages=None, net=None))
+                continue
+            row = growth_by_day.get(day)
+            net = (
+                int(row["joins"] or 0) - int(row["leaves"] or 0)
+                if row is not None
+                else None
+            )
+            result.append(
+                charts.ChartPoint(
+                    day=day, messages=messages_by_day.get(day, 0), net=net
+                )
+            )
+        return tuple(result)
+
+    chart_points = _chart_points(start, end)
+    chart_previous_points = None
+    if observed_days == DAYS_PER_WEEK and previous_observed == DAYS_PER_WEEK:
+        # The SAME gate delta_pct uses (see the DigestReport docstring): a
+        # ghost is only honest when the whole period it covers was watched.
+        chart_previous_points = _chart_points(previous_start, previous_end)
+
     return DigestReport(
         week=period_key(start),
         period_start=start,
@@ -406,6 +460,8 @@ def shape_digest(activity_rows, growth_rows, active_members, today):
         busiest_day=busiest_day,
         busiest_messages=busiest,
         active_members=active_members,
+        chart_points=chart_points,
+        chart_previous_points=chart_previous_points,
     )
 
 
@@ -414,13 +470,20 @@ def _signed(value):
     return f"+{value}" if value >= 0 else str(value)
 
 
-def render(report, guild_name):
+def render(report, guild_name, chart_filename=None):
     """The digest as ONE compact embed. Pure (no I/O, no Discord call).
 
     A rich embed rather than a Components V2 container on purpose: this message
     is a broadcast nobody clicks - it carries no control, it must survive in a
     channel for weeks, and an embed is what the permission preflight
     (``embed_links``) is stated in terms of.
+
+    ``chart_filename`` (U3) is the attachment name of the PNG chart cog.py
+    rendered for THIS call, or ``None`` when no chart was rendered (never
+    attempted, timed out, or raised - see CHART_RENDER_TIMEOUT and
+    cog.py's _deliver_digest). Still pure either way: this function never
+    renders anything itself, it only points the embed's image at whatever
+    attachment the caller says it is sending alongside it.
     """
     embed = discord.Embed(
         title="\N{BAR CHART} " + _("Weekly server digest"),
@@ -488,6 +551,8 @@ def render(report, guild_name):
             end=report.period_end.isoformat(),
         )
     )
+    if chart_filename:
+        embed.set_image(url=f"attachment://{chart_filename}")
     return embed
 
 

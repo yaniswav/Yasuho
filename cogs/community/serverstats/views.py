@@ -41,7 +41,7 @@ import logging
 
 import discord
 
-from . import rollups
+from . import charts, rollups
 from tools import interactions
 from tools.formats import random_colour
 from tools.i18n import _
@@ -73,7 +73,45 @@ BAR_FILLED = "\N{DARK SHADE}"  # "▓" - matches cogs/music/views.py PROGRESS_FI
 BAR_EMPTY = "\N{LIGHT SHADE}"  # "░" - matches cogs/music/views.py PROGRESS_EMPTY
 BAR_UNKNOWN = "-"  # an unknown value/day, never a bar level (see rule 2 above)
 
+# U3: the PNG chart the card attaches alongside its text sparklines. Filename
+# is a constant (not derived per-render) because it only ever needs to match
+# the "attachment://<name>" reference the MediaGallery item below points at -
+# there is exactly one chart per card, never several competing for a name.
+CHART_FILENAME = "serverstats_chart.png"
+
+# The rendering budget: charts.render_activity_chart runs through the
+# bot-wide image semaphore (tools.rendering.run_image_job, 2 slots - the same
+# seam cogs/community/leveling/rank_card.py's render uses), and this timeout
+# is what keeps a saturated semaphore from ever making the card WAIT for its
+# chart. On a timeout, an exception from the Pillow work, or anything else,
+# cmd_serverstats falls back to sending the card without an attachment - the
+# text sparklines in _render_growth / _render_activity already carry the same
+# information, just less prettily, and are drawn unconditionally either way.
+CHART_RENDER_TIMEOUT = 2.0
+
 _NO_PINGS = discord.AllowedMentions.none()
+
+
+def build_chart_points(activity, growth):
+    """Zip a :class:`~.rollups.ActivitySeries` and a :class:`~.rollups.Growth`
+    - the SAME window, see cmd_serverstats, which reads both over identical
+    days - into a tuple of :class:`~.charts.ChartPoint`.
+
+    Pure: reads only the two rollups value objects the card already holds,
+    no new query, no I/O. A day becomes a hole (``messages=None``,
+    ``net=None``) exactly when its point's ``has_data`` is ``False`` - the
+    SAME honesty test the text sparklines above already apply (rule 2 of the
+    module docstring), so the PNG chart and its text fallback can never
+    disagree about which days are unknown.
+    """
+    growth_by_day = {point.day: point for point in growth.points}
+    result = []
+    for point in activity.points:
+        matching = growth_by_day.get(point.day)
+        net = matching.net if (matching is not None and matching.has_data) else None
+        messages = point.messages if point.has_data else None
+        result.append(charts.ChartPoint(day=point.day, messages=messages, net=net))
+    return tuple(result)
 
 
 # ---------------------------------------------------------------------------
@@ -432,10 +470,22 @@ class ServerStatsCard(AuthorLayoutView):
         retention,
         *,
         timeout=180,
+        chart_filename=None,
     ):
         super().__init__(author.id, timeout=timeout)
         self.pool = pool
         self.guild = guild
+        # The PNG chart's attachment filename, or None when the card has no
+        # chart to show (rendering failed, timed out, or was never attempted
+        # - cmd_serverstats decides). Stored on self, not recomputed, so the
+        # 7/30-day TOGGLE's rebuild (_build below) keeps referencing the
+        # SAME attachment rather than needing a second render: the chart
+        # covers the fixed 30-day series window, which the toggle never
+        # touches (see the module docstring - only overview/top_channels
+        # change on a click), and discord.py's edit_message call in
+        # _toggle_days does not pass `attachments=`, so the file already on
+        # the message survives the edit untouched.
+        self.chart_filename = chart_filename
         # The invoking MEMBER, not just an id: the top-channels ranking is cut
         # to this member's own view_channel permissions (see
         # _render_top_channels). It is the Member the command was invoked with
@@ -450,6 +500,19 @@ class ServerStatsCard(AuthorLayoutView):
         self.growth = growth
         self.activity = activity
         self.retention = retention
+        self._build()
+
+    def drop_chart(self):
+        """Rebuild this card WITHOUT its chart reference.
+
+        Called by cmd_serverstats when the send that carried the attachment
+        was refused (no ``attach_files`` in this channel, an upload Discord
+        would not take): a Components V2 message whose MediaGallery points
+        at an ``attachment://`` file that is not being uploaded is a broken
+        card, so the retry has to drop the gallery, not just the file. The
+        text sparklines below it already carry the same information.
+        """
+        self.chart_filename = None
         self._build()
 
     async def _toggle_days(self, interaction):
@@ -496,6 +559,20 @@ class ServerStatsCard(AuthorLayoutView):
                 discord.ui.TextDisplay("-# " + _("No statistics collected yet."))
             )
         container.add_item(discord.ui.Separator())
+
+        if self.chart_filename:
+            # A single-item gallery pointing at the file cmd_serverstats
+            # attached alongside this view - see tools.rendering.run_image_job
+            # for the render seam and CHART_RENDER_TIMEOUT above for the
+            # fallback discipline. Never added at all when there is no
+            # chart: an empty MediaGallery is invalid, and the text
+            # sparklines further down already stand on their own.
+            container.add_item(
+                discord.ui.MediaGallery(
+                    discord.MediaGalleryItem(f"attachment://{self.chart_filename}")
+                )
+            )
+            container.add_item(discord.ui.Separator())
 
         container.add_item(
             discord.ui.TextDisplay(

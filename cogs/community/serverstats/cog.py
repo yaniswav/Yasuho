@@ -32,13 +32,14 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import io
 import logging
 
 import discord
 from discord.ext import commands, tasks
 
-from . import buffer, digest, queries, rollups, views
-from tools import i18n
+from . import buffer, charts, digest, queries, rollups, views
+from tools import i18n, rendering
 from tools.i18n import _
 from tools.snowflake import coerce_id
 
@@ -466,7 +467,8 @@ class ServerStats(commands.Cog):
                 row["channel_id"],
             )
             return False
-        missing = digest.missing_permissions(channel.permissions_for(guild.me))
+        permissions = channel.permissions_for(guild.me)
+        missing = digest.missing_permissions(permissions)
         if missing:
             log.warning(
                 "serverstats digest: missing %s in channel %s of guild %s",
@@ -491,32 +493,155 @@ class ServerStats(commands.Cog):
             )
             return False
 
+        # U3: the PNG chart, from the SAME collect() read above - no extra
+        # query. A failure, a saturated semaphore or a channel that does not
+        # take uploads falls back to the text-only embed this feature shipped
+        # with before U3 (see _render_chart_file and _may_attach); a weekly
+        # broadcast must never stall on it, and must never be LOST over it -
+        # attach_files is deliberately NOT in digest.DIGEST_PERMISSIONS, so a
+        # guild that never granted it still gets its digest, without a chart.
+        chart_file = None
+        if self._may_attach(channel, guild.me):
+            chart_file = await self._render_chart_file(
+                report.chart_points,
+                report.chart_previous_points,
+                digest.CHART_FILENAME,
+                digest.CHART_RENDER_TIMEOUT,
+            )
+
         # The digest is a PUBLIC, per-guild artifact the whole server reads, so
         # it renders in the GUILD's locale - there is no invoker here at all.
         locale = await i18n.resolve_guild_locale(self.bot, guild)
         with i18n.locale(locale):
-            embed = digest.render(report, guild.name)
+            embed = digest.render(
+                report,
+                guild.name,
+                chart_filename=digest.CHART_FILENAME if chart_file is not None else None,
+            )
         try:
             await channel.send(
-                embed=embed, allowed_mentions=discord.AllowedMentions.none()
+                embed=embed,
+                file=chart_file,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
         except discord.HTTPException as exc:
-            # WARNING without a traceback: the interesting part is which guild
-            # and what Discord said, and a fleet-wide outage must not print a
-            # stack per guild.
+            if chart_file is None:
+                # WARNING without a traceback: the interesting part is which
+                # guild and what Discord said, and a fleet-wide outage must
+                # not print a stack per guild.
+                log.warning(
+                    "serverstats digest: could not post in channel %s of guild %s: %r",
+                    channel.id,
+                    guild_id,
+                    exc,
+                )
+                return False
+            # The attachment is the ONE thing this send does that the
+            # pre-U3 digest did not, and permissions can change between the
+            # preflight above and this call. Drop it and post the week's
+            # numbers rather than losing the whole broadcast over a picture.
             log.warning(
-                "serverstats digest: could not post in channel %s of guild %s: %r",
+                "serverstats digest: upload refused in channel %s of guild %s "
+                "(%r); posting the text-only digest",
                 channel.id,
                 guild_id,
                 exc,
             )
-            return False
+            embed.set_image(url=None)
+            try:
+                await channel.send(
+                    embed=embed, allowed_mentions=discord.AllowedMentions.none()
+                )
+            except discord.HTTPException as retry_exc:
+                log.warning(
+                    "serverstats digest: could not post in channel %s of guild %s: %r",
+                    channel.id,
+                    guild_id,
+                    retry_exc,
+                )
+                return False
         return True
 
     def _leveling_enabled(self, guild_id):
         """Whether leveling runs here (in-memory read, no query)."""
         cog = self.bot.get_cog("Leveling")
         return bool(cog and cog.is_enabled(guild_id))
+
+    # ------------------------------------------------------------------
+    # U3: the PNG chart, shared by the card and the digest. ONE seam so the
+    # graceful-fallback discipline (never blocks, never fails the caller)
+    # lives in exactly one place instead of being duplicated per surface.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _may_attach(channel, me):
+        """Whether uploading a file in ``channel`` is allowed right now.
+
+        A channel where the bot has no ``attach_files`` refuses the upload
+        AND the message carrying it, which before this check turned a
+        cosmetic chart into a lost card / a lost weekly digest. Checked
+        BEFORE rendering so a guild that can never take the attachment does
+        not pay a Pillow job for it every time either.
+
+        Unknown reads as YES on purpose (a destination with no
+        ``permissions_for``, no member to resolve against): the send-time
+        fallbacks below are the real guarantee - this check only spares a
+        pointless render plus a refused upload in the common, knowable case,
+        and it must never be the thing that silently withholds a chart.
+        """
+        permissions_for = getattr(channel, "permissions_for", None)
+        if permissions_for is None or me is None:
+            return True
+        return bool(getattr(permissions_for(me), "attach_files", True))
+
+    async def _render_chart_file(self, points, previous_points, filename, timeout):
+        """Render one activity chart through the shared image semaphore and
+        wrap it as a ``discord.File``, or ``None`` on ANY failure.
+
+        Runs through ``tools.rendering.run_image_job`` - the same bot-wide
+        Pillow semaphore (2 slots) cogs/community/leveling/rank_card.py's
+        render uses - wrapped in ``asyncio.wait_for(timeout)`` so a
+        saturated semaphore can never make the caller WAIT for its chart:
+        past the timeout this gives up and returns None, exactly as it does
+        on a Pillow exception, a cold test double with no ``bot.loop``, or
+        any other failure. The caller's own fallback (the card's text
+        sparklines, or the digest's plain text-only embed) is what a
+        ``None`` here means to fall back TO - never re-raised, never
+        retried, never blocking.
+
+        A timeout gives up on WAITING, which is not the same as stopping the
+        work: the Pillow call already handed to the executor runs to
+        completion in its thread and its semaphore slot is released by the
+        cancellation. That is acceptable here precisely because the job is
+        bounded (charts.MAX_POINTS: ~13 ms for the card's real 30-day
+        window, ~17 ms at the ceiling) and
+        both callers are rate-limited upstream - the /serverstats cooldown
+        (1/5s/user) and the digest's own 50-guilds-per-tick fan-out.
+
+        A window where NOTHING is known renders nothing: an all-hatch
+        rectangle would say exactly what the card's "No statistics collected
+        yet." line and the digest's observed-day count already say, in more
+        pixels.
+        """
+        if not any(
+            point.messages is not None or point.net is not None for point in points
+        ):
+            return None
+        try:
+            chart_bytes = await asyncio.wait_for(
+                rendering.run_image_job(
+                    self.bot,
+                    charts.render_activity_chart,
+                    points,
+                    previous_points=previous_points,
+                ),
+                timeout=timeout,
+            )
+        except Exception:
+            log.debug(
+                "serverstats: chart render skipped (%s)", filename, exc_info=True
+            )
+            return None
+        return discord.File(io.BytesIO(chart_bytes), filename=filename)
 
     # ------------------------------------------------------------------
     # ST3: /serverstats - a PUBLIC read of the aggregates above (no
@@ -652,6 +777,19 @@ class ServerStats(commands.Cog):
             since=since,
         )
 
+        # U3: the PNG chart, built from growth/activity ALREADY in hand - no
+        # extra query, no new read. A failure, a saturated semaphore or a
+        # channel the bot cannot upload into falls back to sending the card
+        # without an attachment (see _render_chart_file and _may_attach); the
+        # text sparklines are drawn unconditionally either way, so the card is
+        # never blank on rendering trouble.
+        chart_points = views.build_chart_points(activity, growth)
+        chart_file = None
+        if self._may_attach(ctx.channel, ctx.me):
+            chart_file = await self._render_chart_file(
+                chart_points, None, views.CHART_FILENAME, views.CHART_RENDER_TIMEOUT
+            )
+
         view = views.ServerStatsCard(
             pool,
             guild,
@@ -666,7 +804,35 @@ class ServerStats(commands.Cog):
             growth,
             activity,
             retention_report,
+            chart_filename=views.CHART_FILENAME if chart_file is not None else None,
         )
-        view.message = await ctx.send(
-            view=view, allowed_mentions=discord.AllowedMentions.none()
-        )
+        send_kwargs = dict(view=view, allowed_mentions=discord.AllowedMentions.none())
+        if chart_file is not None:
+            send_kwargs["file"] = chart_file
+        try:
+            view.message = await ctx.send(**send_kwargs)
+        except discord.HTTPException as exc:
+            if chart_file is None:
+                # Nothing U3 added is involved: this is the pre-chart card
+                # failing to send, and the command's error handler owns it
+                # exactly as it did before.
+                raise
+            # The upload is the only thing this send does that the pre-U3
+            # card did not (a channel without attach_files refuses the whole
+            # message, not just the file). Drop the chart - gallery included,
+            # or the card would point at an attachment nobody uploaded - and
+            # send the card the user actually asked for.
+            # Same discipline as the digest above: the repr, not a stack. A
+            # channel misconfigured fleet-wide must not print one traceback
+            # per invocation.
+            log.warning(
+                "serverstats: upload refused in channel %s of guild %s (%r); "
+                "sending the card without its chart",
+                getattr(ctx.channel, "id", None),
+                guild.id,
+                exc,
+            )
+            view.drop_chart()
+            view.message = await ctx.send(
+                view=view, allowed_mentions=discord.AllowedMentions.none()
+            )

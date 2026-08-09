@@ -24,13 +24,15 @@ Covers, in order of how much it would hurt to get wrong:
    other :class:`~tools.views.AuthorLayoutView`.
 """
 
+import asyncio
 import datetime
 import types
 
 import discord
+import pytest
 
+from cogs.community.serverstats import charts, rollups, views
 from cogs.community.serverstats import cog as serverstats_cog
-from cogs.community.serverstats import rollups, views
 from tools import i18n
 
 TODAY = datetime.date(2026, 7, 28)
@@ -556,6 +558,71 @@ def test_retention_active_members_shown_and_labeled_via_leveling():
 
 
 # ---------------------------------------------------------------------------
+# U3: the PNG chart - build_chart_points (pure) and the card's attachment
+# ---------------------------------------------------------------------------
+def test_build_chart_points_marks_holes_from_has_data():
+    """A day is a hole in the CHART exactly when its rollups point says
+    has_data is False - the same test the text sparklines already apply, so
+    the PNG and its text fallback can never disagree about which days are
+    unknown."""
+    growth_points = [
+        rollups.GrowthPoint(TODAY - ONE_DAY, 100, 3, 1, True),
+        rollups.GrowthPoint(TODAY, None, None, None, False),
+    ]
+    activity_points = [
+        rollups.ActivityPoint(TODAY - ONE_DAY, 50, True),
+        rollups.ActivityPoint(TODAY, None, False),
+    ]
+    growth = _growth(growth_points, days=2)
+    activity = _activity(activity_points, days=2)
+
+    points = views.build_chart_points(activity, growth)
+
+    assert points[0] == charts.ChartPoint(TODAY - ONE_DAY, 50, 2)
+    assert points[1] == charts.ChartPoint(TODAY, None, None)
+
+
+def test_build_chart_points_is_empty_for_an_empty_window():
+    assert views.build_chart_points(_activity([]), _growth([])) == ()
+
+
+def test_card_omits_the_media_gallery_without_a_chart_filename():
+    card = _card()
+    assert not any(
+        isinstance(child, discord.ui.MediaGallery) for child in card.walk_children()
+    )
+
+
+def test_card_adds_a_media_gallery_pointing_at_the_attachment():
+    card = _card()
+    card.chart_filename = views.CHART_FILENAME
+    card._build()
+
+    galleries = [
+        child for child in card.walk_children() if isinstance(child, discord.ui.MediaGallery)
+    ]
+    assert len(galleries) == 1
+    assert len(galleries[0].items) == 1
+    assert galleries[0].items[0].media.url == f"attachment://{views.CHART_FILENAME}"
+
+
+def test_card_gallery_survives_the_window_toggle_rebuild():
+    """The toggle rebuilds the whole container (_build), and the chart is
+    NOT re-rendered on a toggle (it covers the fixed 30-day series, which
+    the toggle never touches) - the same filename must still be referenced
+    after a rebuild."""
+    card = _card()
+    card.chart_filename = views.CHART_FILENAME
+    card._build()
+    card._build()  # a second rebuild, as the toggle performs
+
+    galleries = [
+        child for child in card.walk_children() if isinstance(child, discord.ui.MediaGallery)
+    ]
+    assert len(galleries) == 1
+
+
+# ---------------------------------------------------------------------------
 # Toggle: exactly two reads replayed (the ST2 contract)
 # ---------------------------------------------------------------------------
 def _wire_overview_and_top(fake_pool, *, current=500, previous=400, first_day=None):
@@ -773,9 +840,26 @@ class _RoutingPool:
 
 
 class _Ctx:
-    def __init__(self, guild, author_id, trace):
+    """A commands.Context stand-in.
+
+    ``channel``/``me`` are the pair cmd_serverstats resolves the card's
+    attach_files permission against (cog._may_attach) - ``attach_files``
+    True by default, ``refuses_upload`` to make the send behave like a
+    channel that takes a message but not a file.
+    """
+
+    def __init__(self, guild, author_id, trace, attach_files=True, refuses_upload=False):
         self.guild = guild
         self.author = types.SimpleNamespace(id=author_id, mention=f"<@{author_id}>")
+        self.me = types.SimpleNamespace(id=99)
+        self.channel = types.SimpleNamespace(
+            id=1,
+            permissions_for=lambda _member: types.SimpleNamespace(
+                attach_files=attach_files
+            ),
+        )
+        self.refuses_upload = refuses_upload
+        self.raises = None
         self.sends = []
         self.trace = trace
 
@@ -783,6 +867,13 @@ class _Ctx:
         self.trace.append("defer")
 
     async def send(self, *args, **kwargs):
+        if self.raises is not None:
+            raise self.raises
+        if self.refuses_upload and kwargs.get("file") is not None:
+            raise discord.HTTPException(
+                types.SimpleNamespace(status=403, reason="Forbidden"),
+                "Missing Permissions",
+            )
         self.trace.append("send")
         self.sends.append((args, kwargs))
         return types.SimpleNamespace(id=1)
@@ -926,6 +1017,171 @@ async def test_cmd_serverstats_with_leveling_enabled_reads_active_members():
     view = ctx.sends[0][1]["view"]
     assert view.retention.has_activity_data is True
     assert any(query == rollups.RETENTION_ACTIVITY for _m, query, _a in pool.calls)
+
+
+# ---------------------------------------------------------------------------
+# cmd_serverstats: U3's chart wiring - attaches on success, falls back on
+# ANY failure (a raise, a timeout on a saturated semaphore), never blocks.
+# ---------------------------------------------------------------------------
+def _make_cog_with_loop(pool, leveling_cog=None, semaphore=None):
+    """The same fake bot _make_cog builds, PLUS a real event loop - the
+    fake bot in _make_cog deliberately has none, which is what makes every
+    OTHER cmd_serverstats test above exercise the fallback path already (no
+    bot.loop -> AttributeError -> caught -> no chart). These chart-specific
+    tests need a working loop to prove the SUCCESS path too."""
+    bot = types.SimpleNamespace(
+        db_pool=pool,
+        get_cog=lambda name: leveling_cog if name == "Leveling" else None,
+        loop=asyncio.get_event_loop(),
+    )
+    if semaphore is not None:
+        bot.image_render_semaphore = semaphore
+    return serverstats_cog.ServerStats(bot)
+
+
+async def test_cmd_serverstats_attaches_a_rendered_chart():
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace)
+    cog = _make_cog_with_loop(pool)
+
+    await cog.cmd_serverstats(ctx)
+
+    args, kwargs = ctx.sends[0]
+    assert kwargs["file"].filename == views.CHART_FILENAME
+    assert kwargs["view"].chart_filename == views.CHART_FILENAME
+
+
+async def test_cmd_serverstats_falls_back_when_the_render_raises(monkeypatch):
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace)
+    cog = _make_cog_with_loop(pool)
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("pillow exploded")
+
+    monkeypatch.setattr(charts, "render_activity_chart", boom)
+
+    await cog.cmd_serverstats(ctx)
+
+    args, kwargs = ctx.sends[0]
+    assert "file" not in kwargs
+    assert kwargs["view"].chart_filename is None
+    # The card itself must still be sent - a broken chart never costs the
+    # whole card, only its own attachment.
+    assert isinstance(kwargs["view"], views.ServerStatsCard)
+
+
+async def test_cmd_serverstats_never_blocks_on_a_saturated_semaphore(monkeypatch):
+    """A permanently-empty semaphore (every slot held elsewhere) must not
+    make the command hang - it gives up after CHART_RENDER_TIMEOUT and sends
+    the card without an attachment."""
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace)
+    monkeypatch.setattr(views, "CHART_RENDER_TIMEOUT", 0.05)
+    cog = _make_cog_with_loop(pool, semaphore=asyncio.Semaphore(0))
+
+    await asyncio.wait_for(cog.cmd_serverstats(ctx), timeout=5)
+
+    args, kwargs = ctx.sends[0]
+    assert "file" not in kwargs
+    assert kwargs["view"].chart_filename is None
+
+
+async def test_cmd_serverstats_never_renders_without_attach_files(monkeypatch):
+    """A channel the bot cannot upload into refuses the whole MESSAGE, not
+    just the file, so the chart is skipped BEFORE it is rendered - the card
+    still goes out, and no Pillow job is spent on an upload that could only
+    be rejected."""
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace, attach_files=False)
+    cog = _make_cog_with_loop(pool)
+
+    renders = []
+    monkeypatch.setattr(
+        charts, "render_activity_chart", lambda *a, **k: renders.append(a) or b""
+    )
+
+    await cog.cmd_serverstats(ctx)
+
+    assert renders == []
+    _args, kwargs = ctx.sends[0]
+    assert "file" not in kwargs
+    assert kwargs["view"].chart_filename is None
+
+
+async def test_cmd_serverstats_sends_the_card_when_the_upload_is_refused():
+    """The permission can be revoked between the preflight and the send (and
+    an interaction followup can be refused for its own reasons): the card
+    must still arrive, with the gallery dropped so it never points at an
+    attachment nobody uploaded."""
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace, refuses_upload=True)
+    cog = _make_cog_with_loop(pool)
+
+    await cog.cmd_serverstats(ctx)
+
+    assert len(ctx.sends) == 1
+    _args, kwargs = ctx.sends[0]
+    assert "file" not in kwargs
+    view = kwargs["view"]
+    assert view.chart_filename is None
+    assert not any(
+        isinstance(child, discord.ui.MediaGallery) for child in view.walk_children()
+    )
+    assert view.message is not None
+
+
+async def test_cmd_serverstats_still_raises_a_send_failure_that_is_not_the_chart():
+    """The chart fallback must not swallow a real send failure: without an
+    attachment in play, cmd_serverstats behaves exactly as it did before U3
+    and lets the command's error handler own it."""
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace, attach_files=False)
+    ctx.raises = discord.HTTPException(
+        types.SimpleNamespace(status=500, reason="Server Error"), "nope"
+    )
+    cog = _make_cog_with_loop(pool)
+
+    with pytest.raises(discord.HTTPException):
+        await cog.cmd_serverstats(ctx)
+
+
+async def test_cmd_serverstats_renders_no_chart_when_nothing_is_known(monkeypatch):
+    """A guild with no observed day at all would render a rectangle of pure
+    hatch, which says nothing the card's own "No statistics collected yet."
+    line does not. No points known, no chart, no Pillow job."""
+    trace = []
+    answers = dict(_make_answers())
+    answers[rollups.DATA_SINCE] = None
+    answers[rollups.GROWTH] = []
+    answers[rollups.ACTIVITY_SERIES] = []
+    pool = _RoutingPool(answers, trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace)
+    cog = _make_cog_with_loop(pool)
+
+    renders = []
+    monkeypatch.setattr(
+        charts, "render_activity_chart", lambda *a, **k: renders.append(a) or b""
+    )
+
+    await cog.cmd_serverstats(ctx)
+
+    assert renders == []
+    _args, kwargs = ctx.sends[0]
+    assert "file" not in kwargs
 
 
 def test_serverstats_command_description_is_a_literal_english_string():

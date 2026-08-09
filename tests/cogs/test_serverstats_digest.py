@@ -24,6 +24,7 @@ Nothing here touches a database, Discord or the network: the SQL shapes were
 probed separately in a rolled-back transaction (see the lot report).
 """
 
+import asyncio
 import datetime
 import pathlib
 import types
@@ -32,8 +33,8 @@ import discord
 import pytest
 
 from cogs.community.leveling.engine import iso_week_period_key
+from cogs.community.serverstats import charts, digest, rollups
 from cogs.community.serverstats import cog as serverstats_cog
-from cogs.community.serverstats import digest, rollups
 from tools import retention, settings
 
 # A Monday (2026-08-03) - a delivery day. The week it reports is
@@ -251,6 +252,66 @@ def test_active_members_is_carried_through_untouched_including_none():
 
 
 # ---------------------------------------------------------------------------
+# U3: the chart points shape_digest builds alongside the totals
+# ---------------------------------------------------------------------------
+def test_shape_digest_chart_points_span_the_reported_week():
+    activity, growth = _full_two_weeks(current=700, previous=350)
+    report = digest.shape_digest(activity, growth, None, MONDAY)
+
+    assert len(report.chart_points) == 7
+    assert report.chart_points[0].day == WEEK_START
+    assert report.chart_points[-1].day == WEEK_END
+    assert all(point.messages is not None for point in report.chart_points)
+
+
+def test_shape_digest_ghost_present_only_when_both_weeks_fully_observed():
+    """The exact same gate delta_pct uses (both weeks 7/7 observed) - a
+    ghost is never offered for a week the collector partly missed."""
+    activity, growth = _full_two_weeks(current=700, previous=350)
+    full = digest.shape_digest(activity, growth, None, MONDAY)
+    assert full.chart_previous_points is not None
+    assert len(full.chart_previous_points) == 7
+    assert full.chart_previous_points[0].day == PREVIOUS_START
+
+    partial_growth = [row for row in growth if row["day"] != WEEK_END]
+    partial = digest.shape_digest(activity, partial_growth, None, MONDAY)
+    assert partial.chart_previous_points is None
+    # The reported week's own points are still built, holes and all - only
+    # the GHOST is withheld, never the main series.
+    assert len(partial.chart_points) == 7
+    assert any(point.messages is None for point in partial.chart_points)
+
+
+def test_shape_digest_chart_holes_match_the_totals_holes():
+    """The same day excluded from the message total (see
+    test_messages_on_an_unwatched_day_are_never_counted) is a hole in
+    chart_points too - one honesty test, not two that could drift apart."""
+    watched = _span(WEEK_START, WEEK_END)[:-1]
+    growth = _growth_rows(watched)
+    activity = _activity_rows({day: 10 for day in _span(WEEK_START, WEEK_END)})
+    report = digest.shape_digest(activity, growth, None, MONDAY)
+
+    holes = [point for point in report.chart_points if point.messages is None]
+    assert len(holes) == 1
+    assert holes[0].day == WEEK_END
+    assert holes[0].net is None
+
+
+def test_shape_digest_chart_net_is_joins_minus_leaves_per_day():
+    days = _span(WEEK_START, WEEK_END)
+    growth = _growth_rows(days, joins=3, leaves=1)
+    report = digest.shape_digest([], growth, None, MONDAY)
+
+    assert all(point.net == 2 for point in report.chart_points)
+
+
+def test_shape_digest_chart_points_are_charts_chartpoint_instances():
+    activity, growth = _full_two_weeks()
+    report = digest.shape_digest(activity, growth, None, MONDAY)
+    assert all(isinstance(point, charts.ChartPoint) for point in report.chart_points)
+
+
+# ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
 
@@ -300,6 +361,21 @@ def test_the_optional_sections_are_omitted_rather_than_dashed():
     )
     assert len(_fields(with_extras)) == len(_fields(without)) + 2
     assert all(value.strip() for value in _fields(with_extras).values())
+
+
+def test_render_sets_the_embed_image_only_when_a_chart_filename_is_given():
+    """render() is still pure either way - it never renders anything itself,
+    it only points the embed at whatever attachment the caller says it is
+    sending. No filename means the embed carries no image, same as before
+    U3."""
+    activity, growth = _full_two_weeks()
+    report = digest.shape_digest(activity, growth, None, MONDAY)
+
+    plain = digest.render(report, "Guild")
+    assert plain.image.url is None
+
+    with_chart = digest.render(report, "Guild", chart_filename=digest.CHART_FILENAME)
+    assert with_chart.image.url == f"attachment://{digest.CHART_FILENAME}"
 
 
 def test_every_rendered_field_stays_inside_discord_limits():
@@ -473,7 +549,12 @@ class _Permissions:
         return self._granted.get(name, False)
 
 
+# The three REQUIRED permissions (digest.DIGEST_PERMISSIONS), plus
+# attach_files - which is deliberately NOT required: a channel without it
+# still gets the whole text digest, only without the U3 chart, so it is
+# granted here and revoked explicitly by the tests that care.
 ALL_GRANTED = {name: True for name in digest.DIGEST_PERMISSIONS}
+ALL_GRANTED["attach_files"] = True
 
 
 class _Channel:
@@ -743,6 +824,154 @@ async def test_a_cold_bot_delivers_nothing():
     cog.bot.is_ready = lambda: False
     assert await cog.run_digest_once(_moment(MONDAY)) == 0
     assert pool.calls == []
+
+
+def _cog_with_loop(pool, guild=None, leveling=False, semaphore=None):
+    """The same fake bot :func:`_cog` builds, PLUS a real event loop.
+
+    Every OTHER delivery test above uses a bot with no ``.loop`` at all,
+    which is what already exercises the chart's fallback path implicitly
+    (tools.rendering.run_image_job needs ``bot.loop`` and raises
+    AttributeError without one, caught by cog._render_chart_file). These
+    chart-specific tests need a WORKING loop to prove the success path too.
+    """
+    bot = types.SimpleNamespace(
+        db_pool=pool,
+        is_ready=lambda: True,
+        get_guild=lambda gid: guild if guild is not None and gid == guild.id else None,
+        get_cog=lambda name: (
+            types.SimpleNamespace(is_enabled=lambda gid: True)
+            if leveling and name == "Leveling"
+            else None
+        ),
+        loop=asyncio.get_event_loop(),
+    )
+    if semaphore is not None:
+        bot.image_render_semaphore = semaphore
+    return serverstats_cog.ServerStats(bot)
+
+
+async def test_a_delivered_digest_attaches_a_rendered_chart():
+    channel = _Channel()
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    cog = _cog_with_loop(pool, guild=_Guild(channel=channel))
+
+    assert await cog.run_digest_once(_moment(MONDAY)) == 1
+
+    _args, kwargs = channel.sends[0]
+    assert kwargs["file"] is not None
+    assert kwargs["file"].filename == digest.CHART_FILENAME
+    assert kwargs["embed"].image.url == f"attachment://{digest.CHART_FILENAME}"
+
+
+async def test_a_digest_chart_render_failure_falls_back_to_text_only(monkeypatch):
+    """A broken chart must never cost the whole digest - the same guild
+    still gets its (text-only) message this week."""
+    channel = _Channel()
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    cog = _cog_with_loop(pool, guild=_Guild(channel=channel))
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("pillow exploded")
+
+    monkeypatch.setattr(charts, "render_activity_chart", boom)
+
+    assert await cog.run_digest_once(_moment(MONDAY)) == 1
+
+    _args, kwargs = channel.sends[0]
+    assert kwargs["file"] is None
+    assert kwargs["embed"].image.url is None
+
+
+async def test_a_saturated_semaphore_never_blocks_digest_delivery(monkeypatch):
+    """A permanently-empty semaphore must not hang a weekly broadcast - it
+    gives up after CHART_RENDER_TIMEOUT and posts without the attachment."""
+    channel = _Channel()
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    monkeypatch.setattr(digest, "CHART_RENDER_TIMEOUT", 0.05)
+    cog = _cog_with_loop(
+        pool, guild=_Guild(channel=channel), semaphore=asyncio.Semaphore(0)
+    )
+
+    delivered = await asyncio.wait_for(
+        cog.run_digest_once(_moment(MONDAY)), timeout=5
+    )
+
+    assert delivered == 1
+    _args, kwargs = channel.sends[0]
+    assert kwargs["file"] is None
+
+
+async def test_a_channel_without_attach_files_still_gets_its_text_digest(monkeypatch):
+    """attach_files is deliberately NOT one of digest.DIGEST_PERMISSIONS: a
+    guild that never granted it configured its digest before U3 and must
+    keep receiving it. The chart is skipped BEFORE it is rendered - an
+    upload that could only be refused is not worth a Pillow job, and the
+    refusal would have cost the whole broadcast."""
+    granted = dict(ALL_GRANTED)
+    granted["attach_files"] = False
+    channel = _Channel(permissions=granted)
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    cog = _cog_with_loop(pool, guild=_Guild(channel=channel))
+
+    renders = []
+    monkeypatch.setattr(
+        charts, "render_activity_chart", lambda *a, **k: renders.append(a) or b""
+    )
+
+    assert await cog.run_digest_once(_moment(MONDAY)) == 1
+
+    assert renders == []
+    _args, kwargs = channel.sends[0]
+    assert kwargs["file"] is None
+    assert kwargs["embed"].image.url is None
+
+
+class _UploadRefusingChannel(_Channel):
+    """A channel that takes a plain message but refuses any upload - the
+    race the preflight cannot close (attach_files revoked between the
+    permission read and the send)."""
+
+    async def send(self, *args, **kwargs):
+        if kwargs.get("file") is not None:
+            raise discord.HTTPException(
+                types.SimpleNamespace(status=403, reason="Forbidden"),
+                "Missing Permissions",
+            )
+        return await super().send(*args, **kwargs)
+
+
+async def test_a_refused_upload_falls_back_to_the_text_digest(caplog):
+    """The week's numbers are the point; the chart is decoration. A refused
+    attachment costs the picture, never the broadcast."""
+    channel = _UploadRefusingChannel()
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    cog = _cog_with_loop(pool, guild=_Guild(channel=channel))
+
+    with caplog.at_level("WARNING"):
+        assert await cog.run_digest_once(_moment(MONDAY)) == 1
+
+    assert len(channel.sends) == 1
+    _args, kwargs = channel.sends[0]
+    assert kwargs.get("file") is None
+    # The embed no longer points at an attachment that was never uploaded.
+    assert kwargs["embed"].image.url is None
+    assert "text-only" in caplog.text
+
+
+async def test_a_digest_that_cannot_be_posted_at_all_is_still_only_a_warning(caplog):
+    """The retry is a fallback, not a second chance at an unusable channel:
+    when the plain send fails too, the guild is skipped exactly as it was
+    before U3 - one warning, tick unharmed."""
+    channel = _Channel()
+    channel.raises = discord.HTTPException(
+        types.SimpleNamespace(status=403, reason="Forbidden"), "nope"
+    )
+    pool = _DeliveryPool(candidates=[_candidate()], answers=_observed_week())
+    cog = _cog_with_loop(pool, guild=_Guild(channel=channel))
+
+    with caplog.at_level("WARNING"):
+        assert await cog.run_digest_once(_moment(MONDAY)) == 0
 
 
 async def test_a_leveling_guild_gets_its_actives_line():
