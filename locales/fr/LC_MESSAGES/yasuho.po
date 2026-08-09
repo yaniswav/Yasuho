@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-09 21:48+0000\n"
+"POT-Creation-Date: 2026-08-09 22:31+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -201,10 +201,12 @@ msgstr "Lie d'abord ton compte AniList avec `/anilist login`, puis relance cette
 
 #: cogs/anilist/airing.py:542 cogs/anilist/chapters.py:775
 #: cogs/anilist/feed.py:2107 cogs/anilist/feed_delivery.py:348
+#: cogs/anilist/schedule.py:642
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Ton lien AniList n'est plus valide - relie-le avec `/anilist login`."
 
 #: cogs/anilist/airing.py:553 cogs/anilist/chapters.py:786
+#: cogs/anilist/schedule.py:651
 msgid "Could not resolve your AniList account - try again shortly."
 msgstr "Impossible de récupérer ton compte AniList - réessaie dans un instant."
 
@@ -493,7 +495,8 @@ msgstr "Note : {score}"
 msgid "Nothing on your {status} {media_type} list."
 msgstr "Aucun élément dans votre liste {status} {media_type}."
 
-#: cogs/anilist/collection.py:476 tools/paginator.py:60
+#: cogs/anilist/collection.py:476 cogs/anilist/schedule.py:501
+#: tools/paginator.py:60
 #, python-brace-format
 msgid "Page {current}/{total}"
 msgstr "Page {current}/{total}"
@@ -1010,7 +1013,8 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "Flux AniList supprimé dans {channel}."
 
 #: cogs/anilist/feed_delivery.py:69 cogs/anilist/feed_views.py:317
-#: cogs/music/music.py:2772 cogs/music/music.py:2939 cogs/music/search.py:342
+#: cogs/music/music.py:3257 cogs/music/search.py:342 cogs/music/views.py:2024
+#: cogs/music/views.py:2176 cogs/music/views.py:2291 cogs/music/views.py:2372
 msgid "Unknown title"
 msgstr "Titre inconnu"
 
@@ -1244,7 +1248,7 @@ msgstr "Activé"
 #: cogs/config/welcome.py:450 cogs/config/welcome.py:452
 #: cogs/config/welcome.py:454 cogs/config/welcome.py:566
 #: cogs/config/welcome.py:568 cogs/config/welcome.py:570
-#: cogs/music/views.py:446
+#: cogs/music/views.py:448
 msgid "Off"
 msgstr "Désactivé"
 
@@ -1252,7 +1256,7 @@ msgstr "Désactivé"
 msgid "Pick the title to track..."
 msgstr "Choisis le titre à suivre..."
 
-#: cogs/anilist/feed_views.py:348 cogs/music/views.py:597
+#: cogs/anilist/feed_views.py:348 cogs/music/views.py:599
 msgid "Back"
 msgstr "Retour"
 
@@ -1292,7 +1296,7 @@ msgstr "Arrêter de suivre un titre..."
 #: cogs/anilist/feed_views.py:524 cogs/anilist/feed_views.py:781
 #: cogs/community/leveling/leveling.py:238
 #: cogs/community/leveling/seasons_views.py:171 cogs/community/reminders.py:504
-#: cogs/music/views.py:1468
+#: cogs/music/views.py:1470 cogs/music/views.py:1882 cogs/music/views.py:2214
 msgid "Next"
 msgstr "Suiv."
 
@@ -1602,6 +1606,93 @@ msgstr "Aucun personnage trouvé."
 msgid "No studio found."
 msgstr "Aucun studio trouvé."
 
+#: cogs/anilist/schedule.py:372
+msgid "Earlier"
+msgstr "Plus tôt"
+
+#: cogs/anilist/schedule.py:388
+msgid "Later"
+msgstr "Plus tard"
+
+#: cogs/anilist/schedule.py:447
+msgid "Titles tracked in this channel"
+msgstr "Titres suivis dans ce salon"
+
+#: cogs/anilist/schedule.py:448
+msgid "Your Watching list"
+msgstr "Ta liste En cours de visionnage"
+
+#: cogs/anilist/schedule.py:455
+msgid "What airs next"
+msgstr "Ce qui sort bientôt"
+
+#: cogs/anilist/schedule.py:457
+#, python-brace-format
+msgid "{scope} - {start} to {end}"
+msgstr "{scope} - {start} au {end}"
+
+#: cogs/anilist/schedule.py:475
+msgid "Nothing airing in this window."
+msgstr "Rien ne sort dans cette période."
+
+#: cogs/anilist/schedule.py:487
+#, python-brace-format
+msgid "**{title}** - {when}"
+msgstr "**{title}** - {when}"
+
+#: cogs/anilist/schedule.py:491
+#, python-brace-format
+msgid "**{title}** - Episode {episode} - {when}"
+msgstr "**{title}** - Épisode {episode} - {when}"
+
+#: cogs/anilist/schedule.py:504
+#, python-brace-format
+msgid "{count} episode"
+msgid_plural "{count} episodes"
+msgstr[0] "{count} épisode"
+msgstr[1] "{count} épisodes"
+
+#: cogs/anilist/schedule.py:510
+msgid "There are more airings in this window than I can show at once."
+msgstr "Il y a plus de sorties dans cette période que je ne peux en afficher d'un coup."
+
+#: cogs/anilist/schedule.py:515
+msgid "That list is very large, so only its first titles are covered here."
+msgstr "Cette liste est très grande, donc seuls ses premiers titres sont couverts ici."
+
+#: cogs/anilist/schedule.py:563
+msgid "That is as far ahead as I can look."
+msgstr "C'est aussi loin que je peux regarder dans le futur."
+
+#: cogs/anilist/schedule.py:565
+msgid "That is as far back as I can look."
+msgstr "C'est aussi loin que je peux regarder dans le passé."
+
+#: cogs/anilist/schedule.py:578 cogs/anilist/schedule.py:753
+#: cogs/anilist/schedule.py:765
+msgid "Could not reach AniList right now - try again shortly."
+msgstr "Impossible de joindre AniList pour le moment - réessaie dans un instant."
+
+#: cogs/anilist/schedule.py:637
+msgid "Link your AniList account first with `/anilist login`, then run this again to see what airs next."
+msgstr "Lie d'abord ton compte AniList avec `/anilist login`, puis relance cette commande pour voir ce qui sort bientôt."
+
+#: cogs/anilist/schedule.py:737
+msgid "Run this in a server channel to see that channel's tracked titles."
+msgstr "Lance cette commande dans un salon du serveur pour voir les titres suivis par ce salon."
+
+#: cogs/anilist/schedule.py:743
+msgid "This channel does not track any anime titles yet - add some from the `/anilistfeed` panel."
+msgstr "Ce salon ne suit encore aucun titre d'anime - ajoutes-en depuis le panneau `/anilistfeed`."
+
+#: cogs/anilist/schedule.py:757
+msgid "I cannot see anything on your **Watching** anime list - add some titles on AniList, and make sure your anime list is public."
+msgstr "Je ne vois rien sur ta liste anime **En cours de visionnage** - ajoute des titres sur AniList, et assure-toi que ta liste d'anime est publique."
+
+#: cogs/anilist/schedule.py:792
+msgid "Scope must be `me` or `channel`."
+msgstr "La portée doit être `me` ou `channel`."
+
 #: cogs/community/afk.py:41
 #, python-brace-format
 msgid "{user} you are now AFK: {message}"
@@ -1832,7 +1923,7 @@ msgstr "-# Page {page}/{pages} - {count} en attente"
 
 #: cogs/community/leveling/leveling.py:231
 #: cogs/community/leveling/seasons_views.py:164 cogs/community/reminders.py:497
-#: cogs/music/views.py:1461
+#: cogs/music/views.py:1463 cogs/music/views.py:1875 cogs/music/views.py:2207
 msgid "Prev"
 msgstr "Préc."
 
@@ -7216,7 +7307,7 @@ msgstr "Ajoute un écho traînant à chaque son."
 msgid "Smooth the lows and even the volume for gentle listening."
 msgstr "Adoucit les graves et égalise le volume pour une écoute douce."
 
-#: cogs/music/lyrics.py:648 cogs/music/views.py:413
+#: cogs/music/lyrics.py:648 cogs/music/views.py:415
 #, python-brace-format
 msgid "by **{author}**"
 msgstr "par **{author}**"
@@ -7244,7 +7335,7 @@ msgid "Follow along"
 msgstr "Suivre en direct"
 
 #: cogs/music/lyrics.py:769 cogs/music/lyrics.py:1134 cogs/music/lyrics.py:1157
-#: cogs/music/views.py:176 cogs/music/voteskip.py:192
+#: cogs/music/views.py:178 cogs/music/voteskip.py:192
 msgid "You must be in my voice channel to use these controls."
 msgstr "Vous devez être dans mon salon vocal pour utiliser ces commandes."
 
@@ -7302,301 +7393,307 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "Stop"
 
-#: cogs/music/music.py:788
+#: cogs/music/music.py:906
 msgid "I'm not connected to a voice channel."
 msgstr "Je ne suis pas connectée à un salon vocal."
 
-#: cogs/music/music.py:799
+#: cogs/music/music.py:917
 msgid "You must be in my voice channel to do that."
 msgstr "Tu dois etre dans mon salon vocal pour faire ca."
 
-#: cogs/music/music.py:809 cogs/music/views.py:204
+#: cogs/music/music.py:927 cogs/music/views.py:206
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "Seul le DJ ({dj}) ou un modérateur peut contrôler la lecture."
 
-#: cogs/music/music.py:1258
+#: cogs/music/music.py:1531
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Un problème est survenu lors de la lecture de **{title}**, on la passe."
 
-#: cogs/music/music.py:1766 cogs/music/music.py:2563
+#: cogs/music/music.py:2039 cogs/music/music.py:2860
 msgid "Here is the player."
 msgstr "Voici le lecteur."
 
-#: cogs/music/music.py:1806 cogs/music/music.py:1844 cogs/music/music.py:2053
-#: cogs/music/music.py:2810 cogs/music/music.py:2887
+#: cogs/music/music.py:2079 cogs/music/music.py:2117 cogs/music/music.py:2326
+#: cogs/music/music.py:3105 cogs/music/music.py:3203
 #: cogs/music/playlists_shared.py:492 cogs/music/playlists_shared.py:511
-#: cogs/music/search.py:516
+#: cogs/music/search.py:516 cogs/music/views.py:2317
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "La musique est actuellement indisponible - aucun nœud Lavalink n'est connecté."
 
-#: cogs/music/music.py:1813 cogs/music/music.py:2048 cogs/music/music.py:2822
+#: cogs/music/music.py:2086 cogs/music/music.py:2321 cogs/music/music.py:3122
 #: cogs/music/playlists_shared.py:357
 msgid "You must be in a voice channel first."
 msgstr "Vous devez d'abord être dans un salon vocal."
 
-#: cogs/music/music.py:1820 cogs/music/music.py:2067 cogs/music/music.py:2829
+#: cogs/music/music.py:2093 cogs/music/music.py:2340
 #: cogs/music/playlists_shared.py:364
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "Je n'ai pas pu rejoindre votre salon vocal. Veuillez réessayer."
 
-#: cogs/music/music.py:1833
+#: cogs/music/music.py:2106
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "Le lecteur est déjà actif dans {channel}."
 
-#: cogs/music/music.py:1849 cogs/music/music.py:2893
+#: cogs/music/music.py:2122 cogs/music/music.py:3209
 msgid "Could not find any tracks for that query."
 msgstr "Aucune piste trouvée pour cette recherche."
 
-#: cogs/music/music.py:1860
+#: cogs/music/music.py:2133
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr "Playlist **{name}** ({count} pistes) ajoutée à la file d'attente."
 
-#: cogs/music/music.py:1868
+#: cogs/music/music.py:2141
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "**{title}** par `{author}` ajouté à la file d'attente."
 
-#: cogs/music/music.py:2092 cogs/music/views.py:1061
+#: cogs/music/music.py:2365 cogs/music/views.py:1063
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "Seul le DJ ({dj}) peut changer de station."
 
-#: cogs/music/music.py:2103 cogs/music/views.py:1081
+#: cogs/music/music.py:2376 cogs/music/views.py:1083
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "Je n'ai trouvé aucune piste {genre} pour le moment."
 
-#: cogs/music/music.py:2112 cogs/music/views.py:1088
+#: cogs/music/music.py:2385 cogs/music/views.py:1090
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "Station {genre} lancée ({count} piste(s))."
 
-#: cogs/music/music.py:2119
+#: cogs/music/music.py:2392
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "Lancement d'une session {genre} avec {count} piste(s). Profite bien !"
 
-#: cogs/music/music.py:2146
+#: cogs/music/music.py:2419
 msgid "The player is already paused."
 msgstr "Le lecteur est déjà en pause."
 
-#: cogs/music/music.py:2151
+#: cogs/music/music.py:2424
 msgid "Paused the player."
 msgstr "Lecteur mis en pause."
 
-#: cogs/music/music.py:2161
+#: cogs/music/music.py:2434
 msgid "The player is not paused."
 msgstr "Le lecteur n'est pas en pause."
 
-#: cogs/music/music.py:2166
+#: cogs/music/music.py:2439
 msgid "Resumed the player."
 msgstr "Lecture du lecteur reprise."
 
-#: cogs/music/music.py:2342 cogs/music/voteskip.py:375
+#: cogs/music/music.py:2615 cogs/music/voteskip.py:375
 msgid "There are no more tracks in the queue to skip to."
 msgstr "Il n'y a plus de pistes dans la file vers lesquelles passer."
 
-#: cogs/music/music.py:2345
+#: cogs/music/music.py:2618
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Passé à **{title}** par `{author}`."
 
-#: cogs/music/music.py:2350
+#: cogs/music/music.py:2623
 msgid "Skipped. The queue is now empty."
 msgstr "Passé. La file d'attente est maintenant vide."
 
-#: cogs/music/music.py:2407 cogs/music/views.py:842
+#: cogs/music/music.py:2680 cogs/music/views.py:844
 msgid "There's no previous track to go back to."
 msgstr "Il n'y a pas de piste précédente où revenir."
 
-#: cogs/music/music.py:2412 cogs/music/views.py:848
+#: cogs/music/music.py:2685 cogs/music/views.py:850
 msgid "I can't go back - the previous track is no longer available."
 msgstr "Je ne peux pas revenir en arrière - la piste précédente n'est plus disponible."
 
-#: cogs/music/music.py:2416 cogs/music/views.py:853
+#: cogs/music/music.py:2689 cogs/music/views.py:855
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "Retour à **{title}** par `{author}`."
 
-#: cogs/music/music.py:2433 cogs/music/music.py:2703
+#: cogs/music/music.py:2706 cogs/music/music.py:3000
 msgid "There's nothing playing right now."
 msgstr "Rien n'est en cours de lecture pour le moment."
 
-#: cogs/music/music.py:2436
+#: cogs/music/music.py:2709
 msgid "I can't seek within a live stream."
 msgstr "Je ne peux pas me déplacer dans un stream en direct."
 
-#: cogs/music/music.py:2441
+#: cogs/music/music.py:2714
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "Je n'ai pas compris cette position. Essaie `1:23`, `90` ou `+30`."
 
-#: cogs/music/music.py:2453
+#: cogs/music/music.py:2726
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "Sauté à {position}."
 
-#: cogs/music/music.py:2465
+#: cogs/music/music.py:2738
 msgid "Stopped playback and cleared the queue."
 msgstr "Lecture arrêtée et file d'attente vidée."
 
-#: cogs/music/music.py:2478
+#: cogs/music/music.py:2751
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Volume réglé sur {volume}%."
 
-#: cogs/music/music.py:2488
+#: cogs/music/music.py:2761
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Ajoutez quelques pistes supplémentaires à la file avant de mélanger."
 
-#: cogs/music/music.py:2491 cogs/music/views.py:951 cogs/music/views.py:1710
+#: cogs/music/music.py:2764 cogs/music/views.py:953 cogs/music/views.py:1712
 msgid "Shuffled the queue."
 msgstr "File d'attente mélangée."
 
-#: cogs/music/music.py:2502 cogs/music/views.py:1727
+#: cogs/music/music.py:2775 cogs/music/views.py:1729
 msgid "The queue is already empty."
 msgstr "La file d'attente est déjà vide."
 
-#: cogs/music/music.py:2512 cogs/music/views.py:1735
+#: cogs/music/music.py:2785 cogs/music/views.py:1737
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "{count} piste(s) retirée(s) de la file d'attente."
 
-#: cogs/music/music.py:2533
+#: cogs/music/music.py:2806
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Mode de boucle réglé sur `{mode}`."
 
-#: cogs/music/music.py:2558 cogs/music/views.py:401
+#: cogs/music/music.py:2841 cogs/music/views.py:1843
+msgid "Nothing has played yet in this session."
+msgstr "Rien n'a encore été joué dans cette session."
+
+#: cogs/music/music.py:2855 cogs/music/views.py:403
 msgid "Nothing is playing right now."
 msgstr "Rien n'est en lecture pour le moment."
 
-#: cogs/music/music.py:2574
+#: cogs/music/music.py:2871
 msgid "Disconnected from the voice channel."
 msgstr "Déconnectée du salon vocal."
 
-#: cogs/music/music.py:2593
+#: cogs/music/music.py:2890
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} seconde"
 msgstr[1] "{count} secondes"
 
-#: cogs/music/music.py:2597
+#: cogs/music/music.py:2894
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count} minute"
 msgstr[1] "{count} minutes"
 
-#: cogs/music/music.py:2621
+#: cogs/music/music.py:2918
 msgid "That effect isn't available."
 msgstr "Cet effet n'est pas disponible."
 
-#: cogs/music/music.py:2630
+#: cogs/music/music.py:2927
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "Tu changes d'effet trop vite. Réessaie dans {delay}."
 
-#: cogs/music/music.py:2635
+#: cogs/music/music.py:2932
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "Beaucoup de serveurs utilisent les effets en ce moment - réessaie dans un instant."
 
-#: cogs/music/music.py:2638
+#: cogs/music/music.py:2935
 msgid "Something went wrong applying that effect."
 msgstr "Un problème est survenu en appliquant cet effet."
 
-#: cogs/music/music.py:2647
+#: cogs/music/music.py:2944
 msgid "Effects cleared."
 msgstr "Effets retirés."
 
-#: cogs/music/music.py:2648
+#: cogs/music/music.py:2945
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "Effet réglé sur {emoji} {label}."
 
-#: cogs/music/music.py:2718
+#: cogs/music/music.py:3015
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "Tu as consulté trop de paroles. Réessaie dans {delay}."
 
-#: cogs/music/music.py:2729
+#: cogs/music/music.py:3026
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "Ce serveur a consulté trop de paroles. Réessaie dans {delay}."
 
-#: cogs/music/music.py:2743
+#: cogs/music/music.py:3040
 msgid "I couldn't find any lyrics for this track."
 msgstr "Je n'ai trouvé aucune parole pour cette piste."
 
-#: cogs/music/music.py:2761
+#: cogs/music/music.py:3064 cogs/music/views.py:2168
 msgid "You have no saved favourites yet."
 msgstr "Vous n'avez pas encore de favoris enregistrés."
 
-#: cogs/music/music.py:2764
+#: cogs/music/music.py:3067
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} n'a pas encore de favoris enregistrés."
 
-#: cogs/music/music.py:2773
-msgid "Unknown artist"
-msgstr "Artiste inconnu"
-
-#: cogs/music/music.py:2777
-#, python-brace-format
-msgid "`{index}.` {label} by `{author}`"
-msgstr "`{index}.` {label} par `{author}`"
-
-#: cogs/music/music.py:2784
-#, python-brace-format
-msgid "{name}'s Favourites"
-msgstr "Favoris de {name}"
-
-#: cogs/music/music.py:2816
+#: cogs/music/music.py:3111
 msgid "You have no saved favourites to play."
 msgstr "Vous n'avez aucun favori enregistré à lire."
 
-#: cogs/music/music.py:2854
+#: cogs/music/music.py:3127
 msgid "None of your favourites could be loaded right now."
 msgstr "Aucun de vos favoris n'a pu être chargé pour le moment."
 
-#: cogs/music/music.py:2864
+#: cogs/music/music.py:3133 cogs/music/music.py:3175
 #, python-brace-format
-msgid "Queued {count} track(s) from your favourites."
-msgstr "{count} piste(s) de vos favoris ajoutée(s) à la file d'attente."
+msgid " {deferred} older favourite is still waiting - run this again to add it."
+msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
+msgstr[0] " {deferred} ancien favori attend encore - relance la commande pour l'ajouter."
+msgstr[1] " {deferred} anciens favoris attendent encore - relance la commande pour les ajouter."
 
-#: cogs/music/music.py:2880
+#: cogs/music/music.py:3158
+#, python-brace-format
+msgid "Queued {count} track from your favourites."
+msgid_plural "Queued {count} tracks from your favourites."
+msgstr[0] "{count} piste de tes favoris ajoutée à la file."
+msgstr[1] "{count} pistes de tes favoris ajoutées à la file."
+
+#: cogs/music/music.py:3166 cogs/music/playlists_shared.py:546
+#, python-brace-format
+msgid " {skipped} track was skipped - it could not be loaded."
+msgid_plural " {skipped} tracks were skipped - they could not be loaded."
+msgstr[0] " {skipped} piste a été ignorée - impossible de la charger."
+msgstr[1] " {skipped} pistes ont été ignorées - impossible de les charger."
+
+#: cogs/music/music.py:3196
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "Rien n'est en lecture - donnez-moi un nom de chanson ou une URL à enregistrer."
 
-#: cogs/music/music.py:2899
+#: cogs/music/music.py:3215
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "**{title}** par `{author}` ajouté à vos favoris."
 
-#: cogs/music/music.py:2905 cogs/music/views.py:995
+#: cogs/music/music.py:3221 cogs/music/views.py:997
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "Vos favoris sont complets (max {max}). Retirez-en quelques-uns d'abord."
 
-#: cogs/music/music.py:2911 cogs/music/views.py:998
+#: cogs/music/music.py:3227 cogs/music/views.py:1000
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** est déjà dans vos favoris."
 
-#: cogs/music/music.py:2923
+#: cogs/music/music.py:3245
 msgid "You have no saved favourites to remove."
 msgstr "Vous n'avez aucun favori enregistré à retirer."
 
-#: cogs/music/music.py:2927
+#: cogs/music/music.py:3249
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Choisissez un nombre entre 1 et {max}."
 
-#: cogs/music/music.py:2938
+#: cogs/music/music.py:3256 cogs/music/views.py:2374
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** retiré de vos favoris."
@@ -7670,13 +7767,6 @@ msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "{count} piste de **{name}** ajoutée à la file."
 msgstr[1] "{count} pistes de **{name}** ajoutées à la file."
-
-#: cogs/music/playlists_shared.py:546
-#, python-brace-format
-msgid " {skipped} track was skipped - it could not be loaded."
-msgid_plural " {skipped} tracks were skipped - they could not be loaded."
-msgstr[0] " {skipped} piste a été ignorée - impossible de la charger."
-msgstr[1] " {skipped} pistes ont été ignorées - impossible de les charger."
 
 #: cogs/music/playlists_shared.py:579
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
@@ -7786,57 +7876,57 @@ msgstr "Du jazz doux et décontracté"
 msgid "Anime openings and J-pop"
 msgstr "Des openings d'anime et de la J-pop"
 
-#: cogs/music/views.py:130
+#: cogs/music/views.py:132
 msgid "**LIVE**"
 msgstr "**LIVE**"
 
-#: cogs/music/views.py:165 cogs/music/views.py:242 cogs/music/views.py:1125
+#: cogs/music/views.py:167 cogs/music/views.py:244 cogs/music/views.py:1127
 msgid "The player is no longer active."
 msgstr "Le lecteur n'est plus actif."
 
-#: cogs/music/views.py:249 cogs/music/views.py:1789
+#: cogs/music/views.py:251 cogs/music/views.py:2433
 msgid "Give me a song name or URL to add."
 msgstr "Donnez-moi un nom de chanson ou une URL à ajouter."
 
-#: cogs/music/views.py:256
+#: cogs/music/views.py:258
 #, python-brace-format
 msgid "Could not find anything for `{query}`."
 msgstr "Aucun résultat trouvé pour `{query}`."
 
-#: cogs/music/views.py:271
+#: cogs/music/views.py:273 cogs/music/views.py:1997 cogs/music/views.py:2349
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "**{title}** ajouté à la file d'attente."
 
-#: cogs/music/views.py:277
+#: cogs/music/views.py:279
 msgid "Something went wrong adding that song."
 msgstr "Une erreur est survenue lors de l'ajout de cette chanson."
 
-#: cogs/music/views.py:410
+#: cogs/music/views.py:412
 msgid "### 🎵 Now Playing"
 msgstr "### 🎵 Lecture en cours"
 
-#: cogs/music/views.py:422
+#: cogs/music/views.py:424
 msgid "✨ I'm keeping the music going with recommendations based on this session's listening. Tap Autoplay below to turn it off."
 msgstr "✨ Je continue la musique avec des recommandations basées sur ce que tu as écouté cette session. Appuie sur Autoplay ci-dessous pour désactiver."
 
-#: cogs/music/views.py:439
+#: cogs/music/views.py:441
 msgid "⏸ Paused"
 msgstr "⏸ En pause"
 
-#: cogs/music/views.py:439
+#: cogs/music/views.py:441
 msgid "▶ Playing"
 msgstr "▶ En lecture"
 
-#: cogs/music/views.py:442
+#: cogs/music/views.py:444
 msgid "On (queue)"
 msgstr "Activée (file)"
 
-#: cogs/music/views.py:444
+#: cogs/music/views.py:446
 msgid "On (track)"
 msgstr "Activée (piste)"
 
-#: cogs/music/views.py:453
+#: cogs/music/views.py:455
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7847,32 +7937,32 @@ msgstr ""
 "**Volume :** `{volume}%`\n"
 "**Boucle :** {loop}"
 
-#: cogs/music/views.py:466
+#: cogs/music/views.py:468
 #, python-brace-format
 msgid "**Channel:** {emoji} {channel}"
 msgstr "**Salon :** {emoji} {channel}"
 
-#: cogs/music/views.py:472
+#: cogs/music/views.py:474
 #, python-brace-format
 msgid "**DJ:** {dj}"
 msgstr "**DJ :** {dj}"
 
-#: cogs/music/views.py:477
+#: cogs/music/views.py:479
 #, python-brace-format
 msgid "**Station:** {emoji} {label}"
 msgstr "**Station :** {emoji} {label}"
 
-#: cogs/music/views.py:484
+#: cogs/music/views.py:486
 #, python-brace-format
 msgid "**Effect:** {emoji} {label}"
 msgstr "**Effet :** {emoji} {label}"
 
-#: cogs/music/views.py:491
+#: cogs/music/views.py:493
 #, python-brace-format
 msgid "**Requested by:** <@{requester_id}>"
 msgstr "**Demandé par :** <@{requester_id}>"
 
-#: cogs/music/views.py:505
+#: cogs/music/views.py:507
 #, python-brace-format
 msgid ""
 "\n"
@@ -7881,7 +7971,7 @@ msgstr ""
 "\n"
 "`+{count}` de plus dans la file d'attente"
 
-#: cogs/music/views.py:508
+#: cogs/music/views.py:510
 #, python-brace-format
 msgid ""
 "**Up Next ({count})**\n"
@@ -7890,7 +7980,7 @@ msgstr ""
 "**À suivre ({count})**\n"
 "{lines}"
 
-#: cogs/music/views.py:513
+#: cogs/music/views.py:515
 msgid ""
 "**Up Next**\n"
 "Nothing queued. Add a song to keep the music going!"
@@ -7898,190 +7988,191 @@ msgstr ""
 "**À suivre**\n"
 "Rien dans la file. Ajoutez une chanson pour que la musique continue !"
 
-#: cogs/music/views.py:523
+#: cogs/music/views.py:525
 msgid "Pause/Resume"
 msgstr "Pause/Reprendre"
 
-#: cogs/music/views.py:529
+#: cogs/music/views.py:531
 msgid "Skip"
 msgstr "Passer"
 
-#: cogs/music/views.py:535
+#: cogs/music/views.py:537
 msgid "Vol -"
 msgstr "Vol -"
 
-#: cogs/music/views.py:541
+#: cogs/music/views.py:543
 msgid "Vol +"
 msgstr "Vol +"
 
-#: cogs/music/views.py:547
+#: cogs/music/views.py:549
 msgid "Loop"
 msgstr "Boucle"
 
-#: cogs/music/views.py:557 cogs/music/views.py:1475
+#: cogs/music/views.py:559 cogs/music/views.py:1477
 msgid "Shuffle"
 msgstr "Mélanger"
 
-#: cogs/music/views.py:563
+#: cogs/music/views.py:565
 msgid "Queue"
 msgstr "File d'attente"
 
-#: cogs/music/views.py:569
+#: cogs/music/views.py:571
 msgid "Add"
 msgstr "Ajouter"
 
-#: cogs/music/views.py:575
+#: cogs/music/views.py:577
 msgid "Favorite"
 msgstr "Favori"
 
-#: cogs/music/views.py:581
+#: cogs/music/views.py:583
 msgid "Disconnect"
 msgstr "Déconnecter"
 
-#: cogs/music/views.py:603
+#: cogs/music/views.py:605
 msgid "Autoplay"
 msgstr "Autoplay"
 
-#: cogs/music/views.py:613
+#: cogs/music/views.py:615
 msgid "Effects"
 msgstr "Effets"
 
-#: cogs/music/views.py:629
+#: cogs/music/views.py:631
 msgid "-# Use the buttons to control playback"
 msgstr "-# Utilisez les boutons pour contrôler la lecture"
 
-#: cogs/music/views.py:730 cogs/music/views.py:1522
+#: cogs/music/views.py:732 cogs/music/views.py:1524 cogs/music/views.py:1913
+#: cogs/music/views.py:2226
 msgid "Something went wrong handling that action."
 msgstr "Une erreur est survenue lors du traitement de cette action."
 
-#: cogs/music/views.py:786
+#: cogs/music/views.py:788
 msgid "Resumed."
 msgstr "Lecture reprise."
 
-#: cogs/music/views.py:789
+#: cogs/music/views.py:791
 msgid "Paused."
 msgstr "Mis en pause."
 
-#: cogs/music/views.py:818 cogs/music/views.py:825
+#: cogs/music/views.py:820 cogs/music/views.py:827
 msgid "There is nothing left to skip to."
 msgstr "Il n'y a plus rien vers quoi passer."
 
-#: cogs/music/views.py:822
+#: cogs/music/views.py:824
 msgid "Skipped."
 msgstr "Passé."
 
-#: cogs/music/views.py:870 cogs/music/views.py:887
+#: cogs/music/views.py:872 cogs/music/views.py:889
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr "Volume réglé sur {volume}%."
 
-#: cogs/music/views.py:899 locales/command_strings.py:366
+#: cogs/music/views.py:901 locales/command_strings.py:366
 msgid "off"
 msgstr "désactivée"
 
-#: cogs/music/views.py:902 locales/command_strings.py:368
+#: cogs/music/views.py:904 locales/command_strings.py:368
 msgid "on"
 msgstr "activée"
 
-#: cogs/music/views.py:905
+#: cogs/music/views.py:907
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr "Boucle de la file {state}."
 
-#: cogs/music/views.py:923
+#: cogs/music/views.py:925
 msgid "Autoplay is on. I'll keep the music going with recommendations when the queue runs out."
 msgstr "L'autoplay est activé. Je continuerai la musique avec des recommandations quand la file sera vide."
 
-#: cogs/music/views.py:928
+#: cogs/music/views.py:930
 msgid "Autoplay is off. Playback will stop once the queue is empty."
 msgstr "L'autoplay est désactivé. La lecture s'arrêtera une fois la file d'attente vide."
 
-#: cogs/music/views.py:941 cogs/music/views.py:1701
+#: cogs/music/views.py:943 cogs/music/views.py:1703
 msgid "Add a few more tracks before shuffling."
 msgstr "Ajoutez quelques pistes supplémentaires avant de mélanger."
 
-#: cogs/music/views.py:985
+#: cogs/music/views.py:987
 msgid "Nothing is playing to favourite right now."
 msgstr "Rien n'est en lecture à ajouter aux favoris pour le moment."
 
-#: cogs/music/views.py:990
+#: cogs/music/views.py:992
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr "**{title}** ajouté à vos favoris."
 
-#: cogs/music/views.py:1071 cogs/music/views.py:1859
+#: cogs/music/views.py:1073 cogs/music/views.py:2503
 msgid "That vibe isn't available right now."
 msgstr "Cette ambiance n'est pas disponible pour le moment."
 
-#: cogs/music/views.py:1110
+#: cogs/music/views.py:1112
 msgid "Pick an effect..."
 msgstr "Choisis un effet..."
 
-#: cogs/music/views.py:1191
+#: cogs/music/views.py:1193
 msgid "Pick a vibe..."
 msgstr "Choisis une ambiance..."
 
-#: cogs/music/views.py:1215
+#: cogs/music/views.py:1217
 msgid "You are changing the station too fast - give it a moment."
 msgstr "Tu changes de station trop vite - attends un instant."
 
-#: cogs/music/views.py:1258
+#: cogs/music/views.py:1260 cogs/music/views.py:1779
 #, python-brace-format
 msgid "by {author} - {duration}"
 msgstr "par {author} - {duration}"
 
-#: cogs/music/views.py:1266
+#: cogs/music/views.py:1268
 msgid "Manage a track..."
 msgstr "Gérer une piste..."
 
-#: cogs/music/views.py:1313
+#: cogs/music/views.py:1315
 msgid "Play now"
 msgstr "Lire maintenant"
 
-#: cogs/music/views.py:1321
+#: cogs/music/views.py:1323 cogs/music/views.py:2086
 msgid "Remove"
 msgstr "Retirer"
 
-#: cogs/music/views.py:1397
+#: cogs/music/views.py:1399
 msgid "### 🎶 Queue"
 msgstr "### 🎶 File d'attente"
 
-#: cogs/music/views.py:1403
+#: cogs/music/views.py:1405
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}` `{duration}`"
 msgstr "**En lecture :** {title} par `{author}` `{duration}`"
 
-#: cogs/music/views.py:1412
+#: cogs/music/views.py:1414
 msgid "**Now Playing:** Nothing right now."
 msgstr "**En lecture :** Rien pour le moment."
 
-#: cogs/music/views.py:1423
+#: cogs/music/views.py:1425
 msgid "The queue is empty. Add a track to keep the music going!"
 msgstr "La file d'attente est vide. Ajoute une piste pour que la musique continue !"
 
-#: cogs/music/views.py:1428
+#: cogs/music/views.py:1430 cogs/music/views.py:1849
 #, python-brace-format
 msgid "{index}. {title} by {author} ({duration})"
 msgstr "{index}. {title} par {author} ({duration})"
 
-#: cogs/music/views.py:1439
+#: cogs/music/views.py:1441 cogs/music/views.py:1860 cogs/music/views.py:2188
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} track(s)"
 msgstr "-# Page {page}/{pages} - {count} piste(s)"
 
-#: cogs/music/views.py:1482
+#: cogs/music/views.py:1484
 msgid "Add track"
 msgstr "Ajouter une piste"
 
-#: cogs/music/views.py:1488
+#: cogs/music/views.py:1490
 msgid "Clear queue"
 msgstr "Vider la file"
 
-#: cogs/music/views.py:1572
+#: cogs/music/views.py:1574
 msgid "That track is no longer in the queue."
 msgstr "Cette piste n'est plus dans la file d'attente."
 
-#: cogs/music/views.py:1597
+#: cogs/music/views.py:1599
 #, python-brace-format
 msgid ""
 "**{title}**\n"
@@ -8090,69 +8181,129 @@ msgstr ""
 "**{title}**\n"
 "Passe directement à cette piste, ou retire-la de la file d'attente."
 
-#: cogs/music/views.py:1650
+#: cogs/music/views.py:1652
 #, python-brace-format
 msgid "Jumped to **{title}**."
 msgstr "Passé à **{title}**."
 
-#: cogs/music/views.py:1679
+#: cogs/music/views.py:1681
 #, python-brace-format
 msgid "Removed **{title}** from the queue."
 msgstr "**{title}** retiré de la file d'attente."
 
-#: cogs/music/views.py:1754
+#: cogs/music/views.py:1787
+msgid "Play it again..."
+msgstr "Rejouer..."
+
+#: cogs/music/views.py:1834
+msgid "### 🕘 Recently played"
+msgstr "### 🕘 Récemment joué"
+
+#: cogs/music/views.py:1974
+msgid "That track is no longer in the history."
+msgstr "Cette piste n'est plus dans l'historique."
+
+#: cogs/music/views.py:2025 cogs/music/views.py:2177
+msgid "Unknown artist"
+msgstr "Artiste inconnu"
+
+#: cogs/music/views.py:2034
+#, python-brace-format
+msgid "by {author}"
+msgstr "par {author}"
+
+#: cogs/music/views.py:2039
+msgid "Manage a favourite..."
+msgstr "Gérer un favori..."
+
+#: cogs/music/views.py:2078
+msgid "Play"
+msgstr "Lire"
+
+#: cogs/music/views.py:2152
+msgid "### ⭐ Your favourites"
+msgstr "### ⭐ Tes favoris"
+
+#: cogs/music/views.py:2156
+#, python-brace-format
+msgid "### ⭐ {name}'s favourites"
+msgstr "### ⭐ Favoris de {name}"
+
+#: cogs/music/views.py:2181
+#, python-brace-format
+msgid "`{index}.` {label} by `{author}`"
+msgstr "`{index}.` {label} par `{author}`"
+
+#: cogs/music/views.py:2255 cogs/music/views.py:2376
+msgid "That favourite is no longer in your list."
+msgstr "Ce favori n'est plus dans ta liste."
+
+#: cogs/music/views.py:2290
+#, python-brace-format
+msgid ""
+"**{title}**\n"
+"Queue this track, or drop it from your favourites."
+msgstr ""
+"**{title}**\n"
+"Ajoute cette piste à la file, ou retire-la de tes favoris."
+
+#: cogs/music/views.py:2329
+msgid "That favourite could not be loaded right now."
+msgstr "Ce favori n'a pas pu être chargé pour le moment."
+
+#: cogs/music/views.py:2398
 msgid "Change station..."
 msgstr "Changer de station..."
 
-#: cogs/music/views.py:1772
+#: cogs/music/views.py:2416
 msgid "Search for music"
 msgstr "Rechercher de la musique"
 
-#: cogs/music/views.py:1776
+#: cogs/music/views.py:2420
 msgid "Song or URL"
 msgstr "Titre ou URL"
 
-#: cogs/music/views.py:1777
+#: cogs/music/views.py:2421
 msgid "A song name to search, or a full URL"
 msgstr "Un nom de chanson à rechercher, ou une URL complète"
 
-#: cogs/music/views.py:1797
+#: cogs/music/views.py:2441
 msgid "Something went wrong searching for that."
 msgstr "Un problème est survenu pendant la recherche."
 
-#: cogs/music/views.py:1807
+#: cogs/music/views.py:2451
 msgid "Search for music instead"
 msgstr "Rechercher de la musique à la place"
 
-#: cogs/music/views.py:1840
+#: cogs/music/views.py:2484
 msgid "## 🎧 Choose your vibe"
 msgstr "## 🎧 Choisis ton ambiance"
 
-#: cogs/music/views.py:1843
+#: cogs/music/views.py:2487
 msgid "Pick a genre and I'll spin up a mix, or search for a track."
 msgstr "Choisis un genre et je te prépare un mix, ou cherche un titre."
 
-#: cogs/music/views.py:1851
+#: cogs/music/views.py:2495
 msgid "-# Only you can use this menu."
 msgstr "-# Toi seul peux utiliser ce menu."
 
-#: cogs/music/views.py:1888
+#: cogs/music/views.py:2532
 msgid "## 👋 Welcome"
 msgstr "## 👋 Bienvenue"
 
-#: cogs/music/views.py:1891
+#: cogs/music/views.py:2535
 msgid "I'm all set to bring the music - let's get you into a room first."
 msgstr "Je suis prête à mettre l'ambiance - mais il faut d'abord que tu rejoignes un salon."
 
-#: cogs/music/views.py:1896
+#: cogs/music/views.py:2540
 msgid "To get started, join a voice channel:"
 msgstr "Pour commencer, rejoins un salon vocal :"
 
-#: cogs/music/views.py:1902
+#: cogs/music/views.py:2546
 msgid "I couldn't find a voice channel here that you can join."
 msgstr "Je n'ai trouvé aucun salon vocal ici que tu puisses rejoindre."
 
-#: cogs/music/views.py:1907
+#: cogs/music/views.py:2551
 msgid "-# Once you join, this message will automatically update."
 msgstr "-# Une fois que tu rejoins, ce message se met à jour automatiquement."
 
