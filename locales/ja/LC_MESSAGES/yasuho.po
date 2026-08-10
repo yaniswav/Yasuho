@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-10 10:34+0000\n"
+"POT-Creation-Date: 2026-08-10 11:20+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -815,7 +815,7 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "{channel} のAniListフィードを削除しました。"
 
 #: cogs/anilist/feed_delivery.py:69 cogs/anilist/feed_views.py:317
-#: cogs/music/music.py:3452 cogs/music/search.py:342 cogs/music/views.py:2051
+#: cogs/music/music.py:3525 cogs/music/search.py:342 cogs/music/views.py:2051
 #: cogs/music/views.py:2203 cogs/music/views.py:2318 cogs/music/views.py:2412
 msgid "Unknown title"
 msgstr "不明なタイトル"
@@ -1204,9 +1204,9 @@ msgid "Delete"
 msgstr "削除"
 
 #: cogs/anilist/feed_views.py:983 cogs/community/leveling/level_admin.py:68
-#: cogs/community/leveling/level_admin.py:176
+#: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:327
-#: cogs/config/tickets/lifecycle.py:261 cogs/system/arg_completion.py:219
+#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:219
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -1224,7 +1224,7 @@ msgid "Feed deleted."
 msgstr "フィードを削除しました。"
 
 #: cogs/anilist/feed_views.py:1017 cogs/moderation/moderation.py:998
-#: cogs/moderation/moderation.py:1059 cogs/system/arg_completion.py:411
+#: cogs/moderation/moderation.py:1059 cogs/system/arg_completion.py:423
 msgid "Cancelled."
 msgstr "キャンセルしました。"
 
@@ -2123,81 +2123,81 @@ msgstr "その設定の更新中に問題が発生しました。"
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:706
+#: cogs/community/usersettings.py:716
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:710
+#: cogs/community/usersettings.py:720
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:715
+#: cogs/community/usersettings.py:725
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:738
+#: cogs/community/usersettings.py:748
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
-#: cogs/community/usersettings.py:744
+#: cogs/community/usersettings.py:754
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "top.ggの投票記録も削除されます: 投票の連続記録と累計回数はゼロからやり直しになります。"
 
-#: cogs/community/usersettings.py:749
+#: cogs/community/usersettings.py:759
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "そして、あなたの個人的なランクカード: アップロードした背景画像と選んだアクセントカラーです。"
 
-#: cogs/community/usersettings.py:754
+#: cogs/community/usersettings.py:764
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "そしてAniListの連携: 保存されたログインが削除されるため、再連携にはAniListで再度サインインが必要です。エピソードとチャプターのアラート登録も一緒に削除されます。"
 
-#: cogs/community/usersettings.py:769
+#: cogs/community/usersettings.py:779
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
 
-#: cogs/community/votes.py:547
+#: cogs/community/votes.py:554
 #, python-brace-format
 msgid "Thanks for voting for Yasuho! Your XP is boosted x1.5 until {when}, and your streak is now {streak}."
 msgstr "Yasuhoへの投票ありがとうございます! XPは{when}までx1.5にブーストされ、連続記録は{streak}になりました。"
 
-#: cogs/community/votes.py:685
+#: cogs/community/votes.py:692
 #, python-brace-format
 msgid "You can vote for Yasuho again! Every vote keeps your XP boost and streak going: {url}"
 msgstr "Yasuhoにまた投票できます! 投票するたびにXPブーストと連続記録が続きます: {url}"
 
-#: cogs/community/votes.py:838
+#: cogs/community/votes.py:845
 msgid "**Boost:** none yet - vote below to start one!"
 msgstr "**ブースト:** まだありません - 下から投票して始めましょう!"
 
-#: cogs/community/votes.py:839 cogs/community/votes.py:853
+#: cogs/community/votes.py:846 cogs/community/votes.py:860
 #, python-brace-format
 msgid "**Streak:** {streak}"
 msgstr "**連続記録:** {streak}"
 
-#: cogs/community/votes.py:840 cogs/community/votes.py:854
+#: cogs/community/votes.py:847 cogs/community/votes.py:861
 #, python-brace-format
 msgid "**Lifetime votes:** {total}"
 msgstr "**累計投票数:** {total}"
 
-#: cogs/community/votes.py:845
+#: cogs/community/votes.py:852
 #, python-brace-format
 msgid "**Boost:** active until {when}"
 msgstr "**ブースト:** {when}まで有効"
 
-#: cogs/community/votes.py:849
+#: cogs/community/votes.py:856
 msgid "**Boost:** none right now - vote again to renew it!"
 msgstr "**ブースト:** 現在ありません - 再投票で更新しましょう!"
 
-#: cogs/community/votes.py:876
+#: cogs/community/votes.py:883
 msgid "Vote for Yasuho"
 msgstr "Yasuhoに投票"
 
-#: cogs/community/votes.py:884
+#: cogs/community/votes.py:891
 msgid "Voting gives you x1.5 XP for 12 hours (24 hours on weekends)."
 msgstr "投票すると12時間XPがx1.5になります (週末は24時間)。"
 
-#: cogs/community/votes.py:893
+#: cogs/community/votes.py:900
 msgid "Vote on top.gg"
 msgstr "top.ggで投票"
 
@@ -3263,121 +3263,129 @@ msgstr "パネルの更新中に問題が発生しました。"
 msgid "Set a fixed announce channel first with `/levelconfig announce mode` before turning the season announce on."
 msgstr "シーズン告知をオンにする前に、まず `/levelconfig announce mode` で固定の告知チャンネルを設定してください。"
 
-#: cogs/community/profile/cog.py:349
+#: cogs/community/profile/cog.py:246
+msgid "Clear my profile"
+msgstr "プロフィールを削除"
+
+#: cogs/community/profile/cog.py:271
+msgid "Failed to clear your profile, please try again later."
+msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
+
+#: cogs/community/profile/cog.py:286
+msgid "Your profile is cleared: fields, gaming IDs, every visibility choice, your linked accounts and the games presence had collected."
+msgstr "プロフィールを削除しました: 各項目、ゲームID、すべての公開設定、連携アカウント、収集したゲーム。"
+
+#: cogs/community/profile/cog.py:299
+msgid "Nothing was cleared."
+msgstr "何も削除されませんでした。"
+
+#: cogs/community/profile/cog.py:442
 #, python-brace-format
 msgid "Only you can see this for now. Use `{prefix}profile visibility {section} server` to show it to the servers you share."
 msgstr "現在はあなただけがこれを見ることができます。共有しているサーバーに表示するには `{prefix}profile visibility {section} server` を使用してください。"
 
-#: cogs/community/profile/cog.py:536
+#: cogs/community/profile/cog.py:629
 #, python-brace-format
 msgid "{name} has no profile set."
 msgstr "{name} はプロフィールを設定していません。"
 
-#: cogs/community/profile/cog.py:565 cogs/community/profile/cog.py:641
-#: cogs/community/profile/cog.py:693
+#: cogs/community/profile/cog.py:658 cogs/community/profile/cog.py:734
+#: cogs/community/profile/cog.py:786
 #: cogs/community/profile/connectors/cog.py:146
-#: cogs/community/profile/presence.py:1241
-#: cogs/community/profile/presence.py:1260 cogs/community/profile/views.py:154
+#: cogs/community/profile/presence.py:1251
+#: cogs/community/profile/presence.py:1270 cogs/community/profile/views.py:154
 msgid "Failed to update your profile, please try again later."
 msgstr "プロフィールの更新に失敗しました。後でもう一度お試しください。"
 
-#: cogs/community/profile/cog.py:571
+#: cogs/community/profile/cog.py:664
 #, python-brace-format
 msgid "Unknown field. Choose: {options}"
 msgstr "不明な項目です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:581
+#: cogs/community/profile/cog.py:674
 #, python-brace-format
 msgid "Cleared {field}."
 msgstr "{field}を削除しました。"
 
-#: cogs/community/profile/cog.py:584 cogs/community/profile/views.py:141
+#: cogs/community/profile/cog.py:677 cogs/community/profile/views.py:141
 msgid "Profile updated"
 msgstr "プロフィールを更新しました"
 
-#: cogs/community/profile/cog.py:620
+#: cogs/community/profile/cog.py:713
 #, python-brace-format
 msgid "Unknown section. Choose: {options}"
 msgstr "不明なセクションです。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:629
+#: cogs/community/profile/cog.py:722
 #: cogs/community/profile/connectors/cog.py:457
 #, python-brace-format
 msgid "Unknown visibility. Choose: {options}"
 msgstr "不明な公開範囲です。選択してください: {options}"
 
-#: cogs/community/profile/cog.py:648
+#: cogs/community/profile/cog.py:741
 #: cogs/community/profile/connectors/cog.py:475
 #, python-brace-format
 msgid "{field} is now visible to anyone."
 msgstr "{field}は今、誰でも見られるようになりました。"
 
-#: cogs/community/profile/cog.py:652
+#: cogs/community/profile/cog.py:745
 #: cogs/community/profile/connectors/cog.py:480
 #, python-brace-format
 msgid "{field} is now visible to the servers you share."
 msgstr "{field}は今、共有しているサーバーで見られるようになりました。"
 
-#: cogs/community/profile/cog.py:658
+#: cogs/community/profile/cog.py:751
 #: cogs/community/profile/connectors/cog.py:487
 #, python-brace-format
 msgid "{field} is now visible to you only."
 msgstr "{field}は今、あなただけが見られるようになりました。"
 
-#: cogs/community/profile/cog.py:709
+#: cogs/community/profile/cog.py:802
 msgid "Click below to edit a profile field:"
 msgstr "下をクリックしてプロフィール項目を編集してください:"
 
-#: cogs/community/profile/cog.py:738
-msgid "Failed to clear your profile, please try again later."
-msgstr "プロフィールの消去に失敗しました。後でもう一度お試しください。"
+#: cogs/community/profile/cog.py:838
+msgid "Clear your whole profile? This deletes your fields and gaming IDs, every visibility choice you made, the accounts you linked, and the games your profile had collected while presence was on. The collected games cannot be recovered."
+msgstr "プロフィール全体を削除しますか? 各項目とゲームID、すべての公開設定、連携アカウント、収集したゲームが削除されます - 復元できません。"
 
-#: cogs/community/profile/cog.py:754
-msgid "Profile cleared"
-msgstr "プロフィールを消去しました"
-
-#: cogs/community/profile/cog.py:755
-msgid "Your profile has been cleared."
-msgstr "あなたのプロフィールを消去しました。"
-
-#: cogs/community/profile/presence.py:603
+#: cogs/community/profile/presence.py:613
 #, python-brace-format
 msgid "{game} - {hours}h {minutes}m"
 msgstr "{game} - {hours}時間{minutes}分"
 
-#: cogs/community/profile/presence.py:606
+#: cogs/community/profile/presence.py:616
 #, python-brace-format
 msgid "{game} - {minutes}m"
 msgstr "{game} - {minutes}分"
 
-#: cogs/community/profile/presence.py:623
+#: cogs/community/profile/presence.py:633
 #, python-brace-format
 msgid "Playing {game} right now"
 msgstr "今、{game}をプレイ中"
 
-#: cogs/community/profile/presence.py:700
+#: cogs/community/profile/presence.py:710
 #, python-brace-format
 msgid "Listening to {track}"
 msgstr "{track}を再生中"
 
-#: cogs/community/profile/presence.py:1269
+#: cogs/community/profile/presence.py:1279
 msgid "Games: I record what you play and show it on your profile."
 msgstr "ゲーム: プレイ内容を記録してプロフィールに表示します。"
 
-#: cogs/community/profile/presence.py:1271
+#: cogs/community/profile/presence.py:1281
 msgid "Games: off - I record nothing about what you play."
 msgstr "ゲーム: オフ - プレイ内容は一切記録しません。"
 
-#: cogs/community/profile/presence.py:1275
+#: cogs/community/profile/presence.py:1285
 msgid "Spotify: your profile shows what you are listening to, live."
 msgstr "Spotify: プロフィールにリアルタイムの再生状況が表示されます。"
 
-#: cogs/community/profile/presence.py:1277
+#: cogs/community/profile/presence.py:1287
 msgid "Spotify: off - your profile shows no listening."
 msgstr "Spotify: オフ - プロフィールに再生状況は表示されません。"
 
 #: cogs/community/profile/connectors/cog.py:173
-#: cogs/community/profile/presence.py:1287
+#: cogs/community/profile/presence.py:1297
 #, python-brace-format
 msgid "Only you can see this for now. Use `{command}` to show it to the servers you share."
 msgstr "現在はあなたにのみ表示されています。共有サーバーに表示するには `{command}` を使用してください。"
@@ -5013,7 +5021,7 @@ msgstr "オーナーを譲渡"
 msgid "Bump to top"
 msgstr "最上部に移動"
 
-#: cogs/config/rooms_panels.py:308 cogs/config/tickets/lifecycle.py:210
+#: cogs/config/rooms_panels.py:308 cogs/config/tickets/lifecycle.py:228
 msgid "Claim"
 msgstr "取得"
 
@@ -5553,8 +5561,8 @@ msgstr "すでに認証済みです。"
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "そのロールを付与できません - 私の最上位ロールより上にある可能性があります。"
 
-#: cogs/config/tickets/lifecycle.py:354 cogs/config/tickets/lifecycle.py:444
-#: cogs/config/tickets/lifecycle.py:501 cogs/config/tickets/open.py:172
+#: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
+#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:172
 #: cogs/config/tickets/open.py:297 cogs/config/verification.py:72
 msgid "Something went wrong, please try again."
 msgstr "問題が発生しました。もう一度お試しください。"
@@ -5727,159 +5735,168 @@ msgstr "ウェルカムメッセージをオフにしました。"
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
 
-#: cogs/config/tickets/lifecycle.py:185 cogs/config/tickets/lifecycle.py:257
+#: cogs/config/tickets/lifecycle.py:203 cogs/config/tickets/lifecycle.py:275
 msgid "Close ticket"
 msgstr "チケットを閉じる"
 
-#: cogs/config/tickets/lifecycle.py:274
+#: cogs/config/tickets/lifecycle.py:292
 #, python-brace-format
 msgid "Closing ticket #{number}..."
 msgstr "チケット #{number} を閉じています..."
 
-#: cogs/config/tickets/lifecycle.py:285
+#: cogs/config/tickets/lifecycle.py:303
 msgid "The ticket stays open."
 msgstr "チケットは開いたままです。"
 
-#: cogs/config/tickets/lifecycle.py:340 cogs/config/tickets/lifecycle.py:435
+#: cogs/config/tickets/lifecycle.py:358 cogs/config/tickets/lifecycle.py:453
 #: cogs/config/tickets/open.py:144 cogs/config/tickets/open.py:213
 msgid "Tickets only work inside a server."
 msgstr "チケットはサーバー内でのみ利用できます。"
 
-#: cogs/config/tickets/lifecycle.py:346
+#: cogs/config/tickets/lifecycle.py:364
 msgid "Only the support team can claim a ticket."
 msgstr "チケットを取得できるのはサポートチームのみです。"
 
-#: cogs/config/tickets/lifecycle.py:359 cogs/config/tickets/lifecycle.py:449
+#: cogs/config/tickets/lifecycle.py:377 cogs/config/tickets/lifecycle.py:467
 msgid "This thread is not a ticket."
 msgstr "このスレッドはチケットではありません。"
 
-#: cogs/config/tickets/lifecycle.py:368 cogs/config/tickets/lifecycle.py:454
+#: cogs/config/tickets/lifecycle.py:386 cogs/config/tickets/lifecycle.py:472
 #, python-brace-format
 msgid "Ticket #{number} is already closed."
 msgstr "チケット #{number} はすでに閉じられています。"
 
-#: cogs/config/tickets/lifecycle.py:375
+#: cogs/config/tickets/lifecycle.py:393
 #, python-brace-format
 msgid "Ticket #{number} is already claimed by {user}."
 msgstr "チケット #{number} はすでに {user} が取得しています。"
 
-#: cogs/config/tickets/lifecycle.py:380
+#: cogs/config/tickets/lifecycle.py:398
 msgid "You cannot claim your own ticket."
 msgstr "自分のチケットを取得することはできません。"
 
-#: cogs/config/tickets/lifecycle.py:391
+#: cogs/config/tickets/lifecycle.py:409
 #, python-brace-format
 msgid "Ticket #{number} is yours."
 msgstr "チケット #{number} はあなたが取得しました。"
 
-#: cogs/config/tickets/lifecycle.py:399
+#: cogs/config/tickets/lifecycle.py:417
 #, python-brace-format
 msgid "{user} is taking care of this ticket."
 msgstr "{user} がこのチケットを担当しています。"
 
-#: cogs/config/tickets/lifecycle.py:463
+#: cogs/config/tickets/lifecycle.py:481
 msgid "Only the member who opened this ticket, or the support team, can close it."
 msgstr "このチケットを閉じられるのは、開いた本人かサポートチームだけです。"
 
-#: cogs/config/tickets/lifecycle.py:479
+#: cogs/config/tickets/lifecycle.py:497
 #, python-brace-format
 msgid "Close ticket #{number}? The thread will be archived and locked."
 msgstr "チケット #{number} を閉じますか？スレッドはアーカイブされ、ロックされます。"
 
-#: cogs/config/tickets/lifecycle.py:505 cogs/config/tickets/lifecycle.py:514
+#: cogs/config/tickets/lifecycle.py:523 cogs/config/tickets/lifecycle.py:544
 msgid "This ticket is already closed."
 msgstr "このチケットはすでに閉じられています。"
 
-#: cogs/config/tickets/lifecycle.py:518
+#: cogs/config/tickets/lifecycle.py:538
+#, python-brace-format
+msgid "I could not close ticket #{number}. Nothing has changed, so please try again."
+msgstr "チケット #{number} を閉じられませんでした。何も変更されていないので、もう一度お試しください。"
+
+#: cogs/config/tickets/lifecycle.py:548
 #, python-brace-format
 msgid "Ticket #{number} is closed."
 msgstr "チケット #{number} は閉じられました。"
 
-#: cogs/config/tickets/lifecycle.py:614
+#: cogs/config/tickets/lifecycle.py:670
 #, python-brace-format
 msgid "Ticket #{number} is closed. Thanks for reaching out."
 msgstr "チケット #{number} は閉じられました。お問い合わせありがとうございました。"
 
-#: cogs/config/tickets/lifecycle.py:619
+#: cogs/config/tickets/lifecycle.py:675
 msgid "This server has no ticket log channel, so no transcript was saved."
 msgstr "このサーバーにはチケットログチャンネルが設定されていないため、会話記録は保存されませんでした。"
 
-#: cogs/config/tickets/lifecycle.py:638
+#: cogs/config/tickets/lifecycle.py:684
+msgid "A transcript of this conversation was saved to this server's ticket log channel, where its staff team keeps it."
+msgstr "この会話の記録がサーバーのチケットログチャンネルに保存され、スタッフが確認できます。"
+
+#: cogs/config/tickets/lifecycle.py:704
 #, python-brace-format
 msgid "Transcript of ticket #{number}"
 msgstr "チケット #{number} の会話記録"
 
-#: cogs/config/tickets/lifecycle.py:639
+#: cogs/config/tickets/lifecycle.py:705
 #, python-brace-format
 msgid "Server: {guild}"
 msgstr "サーバー: {guild}"
 
-#: cogs/config/tickets/lifecycle.py:640
+#: cogs/config/tickets/lifecycle.py:706
 #, python-brace-format
 msgid "Opened by {user} on {date}"
 msgstr "{date} に {user} が開始"
 
-#: cogs/config/tickets/lifecycle.py:644
+#: cogs/config/tickets/lifecycle.py:710
 #, python-brace-format
 msgid "Taken on {date}"
 msgstr "{date} に取得"
 
-#: cogs/config/tickets/lifecycle.py:647
+#: cogs/config/tickets/lifecycle.py:713
 msgid "Attachment links are Discord CDN links and stop working after a while."
 msgstr "添付ファイルのリンクはDiscordのCDNリンクであり、しばらくすると無効になります。"
 
-#: cogs/config/tickets/lifecycle.py:685
+#: cogs/config/tickets/lifecycle.py:762
 #, python-brace-format
 msgid "Ticket #{number} closed"
 msgstr "チケット #{number} 終了"
 
-#: cogs/config/tickets/lifecycle.py:689
+#: cogs/config/tickets/lifecycle.py:766
 msgid "Opened by"
 msgstr "開始者"
 
-#: cogs/config/tickets/lifecycle.py:692
+#: cogs/config/tickets/lifecycle.py:769
 msgid "Claimed by"
 msgstr "取得者"
 
-#: cogs/config/tickets/lifecycle.py:696
+#: cogs/config/tickets/lifecycle.py:773
 msgid "Nobody"
 msgstr "なし"
 
-#: cogs/config/tickets/lifecycle.py:700
+#: cogs/config/tickets/lifecycle.py:777
 msgid "Ended by"
 msgstr "終了者"
 
-#: cogs/config/tickets/lifecycle.py:702
+#: cogs/config/tickets/lifecycle.py:779
 msgid "Opened"
 msgstr "開始"
 
-#: cogs/config/tickets/lifecycle.py:705
+#: cogs/config/tickets/lifecycle.py:782
 msgid "Closed"
 msgstr "終了"
 
-#: cogs/config/tickets/lifecycle.py:720
+#: cogs/config/tickets/lifecycle.py:795
 msgid "Transcript attached: what was said in the ticket thread. It stays in this channel."
 msgstr "会話記録を添付: チケットスレッドでのやり取りです。このチャンネルに保存されます。"
 
-#: cogs/config/tickets/lifecycle.py:744
+#: cogs/config/tickets/lifecycle.py:819
 msgid "The thread was deleted."
 msgstr "スレッドは削除されました。"
 
-#: cogs/config/tickets/lifecycle.py:747
+#: cogs/config/tickets/lifecycle.py:822
 msgid "Auto-closed after inactivity."
 msgstr "非アクティブのため自動終了。"
 
-#: cogs/config/tickets/lifecycle.py:753
+#: cogs/config/tickets/lifecycle.py:836
 msgid "No transcript: the thread was already gone."
 msgstr "会話記録なし: スレッドはすでに削除されていました。"
 
-#: cogs/config/tickets/lifecycle.py:755
-msgid "No transcript: I could not read the thread."
-msgstr "会話記録なし: スレッドを読み取れませんでした。"
-
-#: cogs/config/tickets/lifecycle.py:756
+#: cogs/config/tickets/lifecycle.py:838
 msgid "No transcript: I cannot attach files in this channel."
 msgstr "会話記録なし: このチャンネルではファイルを添付できません。"
+
+#: cogs/config/tickets/lifecycle.py:840
+msgid "No transcript: I could not read the thread."
+msgstr "会話記録なし: スレッドを読み取れませんでした。"
 
 #: cogs/config/tickets/open.py:108 cogs/config/tickets/open.py:132
 msgid "Open a ticket"
@@ -6411,17 +6428,17 @@ msgstr "招待リンクのフィルタリング"
 msgid "Spam filtering"
 msgstr "スパムのフィルタリング"
 
-#: cogs/moderation/automod.py:526
+#: cogs/moderation/automod.py:536
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} ここではDiscordの招待リンクは許可されていません。"
 
-#: cogs/moderation/automod.py:536
+#: cogs/moderation/automod.py:546
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} ここではリンクは許可されていません。"
 
-#: cogs/moderation/automod.py:563
+#: cogs/moderation/automod.py:573
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} 落ち着いて - メッセージの送信が速すぎます。"
@@ -7402,321 +7419,321 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "停止"
 
-#: cogs/music/music.py:570
+#: cogs/music/music.py:581
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "キューが満杯です ({cap}曲)。先にスキップするか削除してください。"
 
-#: cogs/music/music.py:586
+#: cogs/music/music.py:597
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " {dropped}曲は追加されませんでした - キューは{cap}曲で満杯です。"
 msgstr[1] " {dropped}曲は追加されませんでした - キューは{cap}曲で満杯です。"
 
-#: cogs/music/music.py:983
+#: cogs/music/music.py:994
 msgid "I'm not connected to a voice channel."
 msgstr "ボイスチャンネルに接続していません。"
 
-#: cogs/music/music.py:994
+#: cogs/music/music.py:1005
 msgid "You must be in my voice channel to do that."
 msgstr "それを行うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:1004 cogs/music/views.py:208
+#: cogs/music/music.py:1015 cogs/music/views.py:208
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "再生を操作できるのは DJ ({dj}) かモデレーターだけです。"
 
-#: cogs/music/music.py:1614
+#: cogs/music/music.py:1672
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "**{title}** の再生に問題が発生したため、スキップします。"
 
-#: cogs/music/music.py:2136 cogs/music/music.py:3036
+#: cogs/music/music.py:2209 cogs/music/music.py:3109
 msgid "Here is the player."
 msgstr "プレイヤーはこちらです。"
 
-#: cogs/music/music.py:2176 cogs/music/music.py:2222 cogs/music/music.py:2496
-#: cogs/music/music.py:3281 cogs/music/music.py:3398
+#: cogs/music/music.py:2249 cogs/music/music.py:2295 cogs/music/music.py:2569
+#: cogs/music/music.py:3354 cogs/music/music.py:3471
 #: cogs/music/playlists_shared.py:492 cogs/music/playlists_shared.py:511
 #: cogs/music/search.py:516 cogs/music/views.py:2344
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "音楽は現在利用できません - Lavalinkノードが接続されていません。"
 
-#: cogs/music/music.py:2183 cogs/music/music.py:2491 cogs/music/music.py:3298
+#: cogs/music/music.py:2256 cogs/music/music.py:2564 cogs/music/music.py:3371
 #: cogs/music/playlists_shared.py:357
 msgid "You must be in a voice channel first."
 msgstr "まずボイスチャンネルに参加する必要があります。"
 
-#: cogs/music/music.py:2190 cogs/music/music.py:2510
+#: cogs/music/music.py:2263 cogs/music/music.py:2583
 #: cogs/music/playlists_shared.py:364
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "あなたのボイスチャンネルに参加できませんでした。もう一度お試しください。"
 
-#: cogs/music/music.py:2203
+#: cogs/music/music.py:2276
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "プレイヤーはすでに {channel} でアクティブです。"
 
-#: cogs/music/music.py:2227 cogs/music/music.py:3404
+#: cogs/music/music.py:2300 cogs/music/music.py:3477
 msgid "Could not find any tracks for that query."
 msgstr "そのクエリに該当するトラックが見つかりませんでした。"
 
-#: cogs/music/music.py:2251
+#: cogs/music/music.py:2324
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
 msgstr[1] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
 
-#: cogs/music/music.py:2267
+#: cogs/music/music.py:2340
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "`{author}` の **{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:2535 cogs/music/views.py:1083
+#: cogs/music/music.py:2608 cogs/music/views.py:1083
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "ステーションを変更できるのは DJ ({dj}) だけです。"
 
-#: cogs/music/music.py:2552 cogs/music/views.py:1103
+#: cogs/music/music.py:2625 cogs/music/views.py:1103
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "{genre}の曲は今のところ見つかりませんでした。"
 
-#: cogs/music/music.py:2561 cogs/music/views.py:1110
+#: cogs/music/music.py:2634 cogs/music/views.py:1110
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "{genre} ステーションに切り替えました ({count}曲)。"
 
-#: cogs/music/music.py:2568
+#: cogs/music/music.py:2641
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "{genre}のセッションを{count}件のトラックでスタートします。楽しんでください！"
 
-#: cogs/music/music.py:2595
+#: cogs/music/music.py:2668
 msgid "The player is already paused."
 msgstr "プレイヤーはすでに一時停止しています。"
 
-#: cogs/music/music.py:2600
+#: cogs/music/music.py:2673
 msgid "Paused the player."
 msgstr "プレイヤーを一時停止しました。"
 
-#: cogs/music/music.py:2610
+#: cogs/music/music.py:2683
 msgid "The player is not paused."
 msgstr "プレイヤーは一時停止していません。"
 
-#: cogs/music/music.py:2615
+#: cogs/music/music.py:2688
 msgid "Resumed the player."
 msgstr "プレイヤーを再開しました。"
 
-#: cogs/music/music.py:2791 cogs/music/voteskip.py:375
+#: cogs/music/music.py:2864 cogs/music/voteskip.py:375
 msgid "There are no more tracks in the queue to skip to."
 msgstr "キューにスキップできるトラックがもうありません。"
 
-#: cogs/music/music.py:2794
+#: cogs/music/music.py:2867
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "`{author}` の **{title}** にスキップしました。"
 
-#: cogs/music/music.py:2799
+#: cogs/music/music.py:2872
 msgid "Skipped. The queue is now empty."
 msgstr "スキップしました。キューは空になりました。"
 
-#: cogs/music/music.py:2856 cogs/music/views.py:864
+#: cogs/music/music.py:2929 cogs/music/views.py:864
 msgid "There's no previous track to go back to."
 msgstr "戻れる前の曲がありません。"
 
-#: cogs/music/music.py:2861 cogs/music/views.py:870
+#: cogs/music/music.py:2934 cogs/music/views.py:870
 msgid "I can't go back - the previous track is no longer available."
 msgstr "戻れません。前の曲はもう利用できません。"
 
-#: cogs/music/music.py:2865 cogs/music/views.py:875
+#: cogs/music/music.py:2938 cogs/music/views.py:875
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "**{title}** - `{author}` に戻りました。"
 
-#: cogs/music/music.py:2882 cogs/music/music.py:3176
+#: cogs/music/music.py:2955 cogs/music/music.py:3249
 msgid "There's nothing playing right now."
 msgstr "今は何も再生されていません。"
 
-#: cogs/music/music.py:2885
+#: cogs/music/music.py:2958
 msgid "I can't seek within a live stream."
 msgstr "ライブ配信内では移動できません。"
 
-#: cogs/music/music.py:2890
+#: cogs/music/music.py:2963
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "その位置を読み取れませんでした。`1:23`、`90`、`+30` の形式で試してくださいね。"
 
-#: cogs/music/music.py:2902
+#: cogs/music/music.py:2975
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "{position} にジャンプしました。"
 
-#: cogs/music/music.py:2914
+#: cogs/music/music.py:2987
 msgid "Stopped playback and cleared the queue."
 msgstr "再生を停止してキューをクリアしました。"
 
-#: cogs/music/music.py:2927
+#: cogs/music/music.py:3000
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:2937
+#: cogs/music/music.py:3010
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "シャッフルする前に、キューにもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:2940 cogs/music/views.py:973 cogs/music/views.py:1732
+#: cogs/music/music.py:3013 cogs/music/views.py:973 cogs/music/views.py:1732
 msgid "Shuffled the queue."
 msgstr "キューをシャッフルしました。"
 
-#: cogs/music/music.py:2951 cogs/music/views.py:1749
+#: cogs/music/music.py:3024 cogs/music/views.py:1749
 msgid "The queue is already empty."
 msgstr "キューはすでに空です。"
 
-#: cogs/music/music.py:2961 cogs/music/views.py:1757
+#: cogs/music/music.py:3034 cogs/music/views.py:1757
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "キューから{count}曲を削除しました。"
 
-#: cogs/music/music.py:2982
+#: cogs/music/music.py:3055
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "ループモードを `{mode}` に設定しました。"
 
-#: cogs/music/music.py:3017 cogs/music/views.py:1863
+#: cogs/music/music.py:3090 cogs/music/views.py:1863
 msgid "Nothing has played yet in this session."
 msgstr "このセッションではまだ何も再生されていません。"
 
-#: cogs/music/music.py:3031 cogs/music/views.py:423
+#: cogs/music/music.py:3104 cogs/music/views.py:423
 msgid "Nothing is playing right now."
 msgstr "現在再生中の曲はありません。"
 
-#: cogs/music/music.py:3047
+#: cogs/music/music.py:3120
 msgid "Disconnected from the voice channel."
 msgstr "ボイスチャンネルから切断しました。"
 
-#: cogs/music/music.py:3066
+#: cogs/music/music.py:3139
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count}秒"
 msgstr[1] "{count}秒"
 
-#: cogs/music/music.py:3070
+#: cogs/music/music.py:3143
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count}分"
 msgstr[1] "{count}分"
 
-#: cogs/music/music.py:3094
+#: cogs/music/music.py:3167
 msgid "That effect isn't available."
 msgstr "そのエフェクトは利用できません。"
 
-#: cogs/music/music.py:3103
+#: cogs/music/music.py:3176
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "エフェクトの変更が早すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:3108
+#: cogs/music/music.py:3181
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "現在多くのサーバーがエフェクトを使用中です。少し待ってからお試しください。"
 
-#: cogs/music/music.py:3111
+#: cogs/music/music.py:3184
 msgid "Something went wrong applying that effect."
 msgstr "エフェクトの適用中に問題が発生しました。"
 
-#: cogs/music/music.py:3120
+#: cogs/music/music.py:3193
 msgid "Effects cleared."
 msgstr "エフェクトを解除しました。"
 
-#: cogs/music/music.py:3121
+#: cogs/music/music.py:3194
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "エフェクトを {emoji} {label} に設定しました。"
 
-#: cogs/music/music.py:3191
+#: cogs/music/music.py:3264
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "歌詞の検索が多すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:3202
+#: cogs/music/music.py:3275
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "このサーバーでは歌詞の検索が多すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:3216
+#: cogs/music/music.py:3289
 msgid "I couldn't find any lyrics for this track."
 msgstr "この曲の歌詞は見つかりませんでした。"
 
-#: cogs/music/music.py:3240 cogs/music/views.py:2195
+#: cogs/music/music.py:3313 cogs/music/views.py:2195
 msgid "You have no saved favourites yet."
 msgstr "保存されたお気に入りはまだありません。"
 
-#: cogs/music/music.py:3243
+#: cogs/music/music.py:3316
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} には保存されたお気に入りがまだありません。"
 
-#: cogs/music/music.py:3287
+#: cogs/music/music.py:3360
 msgid "You have no saved favourites to play."
 msgstr "再生できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:3313
+#: cogs/music/music.py:3386
 msgid "None of your favourites could be loaded right now."
 msgstr "現在、お気に入りを1つも読み込めませんでした。"
 
-#: cogs/music/music.py:3319 cogs/music/music.py:3369
+#: cogs/music/music.py:3392 cogs/music/music.py:3442
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " 古いお気に入りが{deferred}件残っています。もう一度実行すると追加されます。"
 msgstr[1] " 古いお気に入りが{deferred}件残っています。もう一度実行すると追加されます。"
 
-#: cogs/music/music.py:3352
+#: cogs/music/music.py:3425
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "お気に入りから{count}曲をキューに追加しました。"
 msgstr[1] "お気に入りから{count}曲をキューに追加しました。"
 
-#: cogs/music/music.py:3360 cogs/music/playlists_shared.py:563
+#: cogs/music/music.py:3433 cogs/music/playlists_shared.py:563
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped}曲は読み込めなかったためスキップされました。"
 msgstr[1] " {skipped}曲は読み込めなかったためスキップされました。"
 
-#: cogs/music/music.py:3391
+#: cogs/music/music.py:3464
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "再生中の曲がありません - 保存する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:3410
+#: cogs/music/music.py:3483
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "`{author}` の **{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:3416 cogs/music/views.py:1017
+#: cogs/music/music.py:3489 cogs/music/views.py:1017
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "お気に入りはすでに上限({max}件)に達しています。まずいくつか削除してください。"
 
-#: cogs/music/music.py:3422 cogs/music/views.py:1020
+#: cogs/music/music.py:3495 cogs/music/views.py:1020
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** はすでにお気に入りに入っています。"
 
-#: cogs/music/music.py:3440
+#: cogs/music/music.py:3513
 msgid "You have no saved favourites to remove."
 msgstr "削除できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:3444
+#: cogs/music/music.py:3517
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "1から {max} までの数を選んでください。"
 
-#: cogs/music/music.py:3451 cogs/music/views.py:2414
+#: cogs/music/music.py:3524 cogs/music/views.py:2414
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** をお気に入りから削除しました。"
@@ -8540,12 +8557,12 @@ msgstr "メニューから選んでから、**Run** を押してください。"
 msgid "Press **Fill in** to type the details."
 msgstr "**Fill in** を押して詳細を入力してください。"
 
-#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:491
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:503
 #: cogs/utility/info.py:46 cogs/utility/utility.py:171
 msgid "Yes"
 msgstr "はい"
 
-#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:492
+#: cogs/system/arg_completion.py:272 cogs/system/arg_completion.py:504
 #: cogs/utility/info.py:46 cogs/utility/utility.py:172
 msgid "No"
 msgstr "いいえ"
@@ -8593,17 +8610,17 @@ msgstr "そのプロンプトで問題が発生しました。"
 msgid "Running `{command}`..."
 msgstr "`{command}` を実行中..."
 
-#: cogs/system/arg_completion.py:426
+#: cogs/system/arg_completion.py:438
 msgid "This prompt timed out."
 msgstr "このプロンプトはタイムアウトしました。"
 
-#: cogs/system/arg_completion.py:437 cogs/system/arg_completion.py:452
-#: cogs/system/arg_completion.py:470 cogs/system/arg_completion.py:486
+#: cogs/system/arg_completion.py:449 cogs/system/arg_completion.py:464
+#: cogs/system/arg_completion.py:482 cogs/system/arg_completion.py:498
 #, python-brace-format
 msgid "Choose {name}"
 msgstr "{name} を選択"
 
-#: cogs/system/arg_completion.py:553
+#: cogs/system/arg_completion.py:565
 #, python-brace-format
 msgid "Complete {command}"
 msgstr "{command} を完成"
