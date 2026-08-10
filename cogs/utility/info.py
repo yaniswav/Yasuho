@@ -86,7 +86,10 @@ class Info(commands.Cog):
                 banner_url = full.banner.url
             ah = self.bot.get_cog("AvatarHistory")
             if ah:
-                await ah.capture_banner(member)
+                # Hand over the user we JUST fetched: capture_banner would
+                # otherwise fetch the same uncached user a second time, so
+                # every ?userinfo cost two REST calls where one will do.
+                await ah.capture_banner(member, fetched=full)
         except Exception:
             log.exception("failed to fetch/capture banner for %s", member.id)
 

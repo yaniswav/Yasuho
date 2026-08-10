@@ -24,7 +24,9 @@ import pytest
 
 from cogs.community.leveling import engine as leveling
 from cogs.community.leveling.leveling import LeaderboardView, Leveling
+from tools import cooldowns as cooldowns_module
 from tools import settings
+from tools.cooldowns import Cooldowns
 
 
 @pytest.fixture(autouse=True)
@@ -2357,3 +2359,37 @@ def test_forgetting_a_voter_drops_their_boost_and_is_idempotent():
     assert cog.forget_vote_boost(3) is True
     assert cog._vote_boosts == {}
     assert cog.forget_vote_boost(3) is False  # no row, no error
+
+
+async def test_a_sweep_cannot_grant_xp_early_in_a_long_cooldown_guild(
+    fake_pool, monkeypatch
+):
+    """REGRESSION: the debounce map is shared by every guild the bot is in, so
+    an entry seated under the INSTANCE default (60s) is what the sweep judges,
+    no matter what window the guild actually configured. A guild on a 300s
+    cooldown therefore had its still-cooling key evicted by a sweep tripped by
+    unrelated traffic, and the very next message granted XP again roughly four
+    minutes early. The hot path now names the guild window on touch as well as
+    on the check, so the entry is judged by the window that governs it."""
+    clock = {"t": 0.0}
+    monkeypatch.setattr(
+        cooldowns_module, "time", types.SimpleNamespace(monotonic=lambda: clock["t"])
+    )
+
+    cog = Leveling(_make_bot(fake_pool))
+    # sweep_at=1 so the unrelated traffic below trips the sweep immediately.
+    cog._cooldowns = Cooldowns(leveling.DEFAULT_COOLDOWN_SECONDS, sweep_at=1)
+    _enable(cog, 1, xp_min=10, xp_max=10, cooldown_seconds=300)
+
+    await cog.on_message(_FakeMessage(content="hi", guild_id=1, author_id=2))
+    assert len(_fetchval_calls(fake_pool)) == 1
+
+    # Unrelated traffic 70s later: past the 60s default, well inside the 300s
+    # this guild configured. Two touches trip the sweep past sweep_at=1.
+    clock["t"] = 70.0
+    cog._cooldowns.touch(("other", 1))
+    cog._cooldowns.touch(("other", 2))
+
+    assert cog._cooldowns.is_active((1, 2), seconds=300) is True
+    await cog.on_message(_FakeMessage(content="again", guild_id=1, author_id=2))
+    assert len(_fetchval_calls(fake_pool)) == 1  # still refused, no second grant

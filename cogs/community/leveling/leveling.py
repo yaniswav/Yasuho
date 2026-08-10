@@ -1063,7 +1063,12 @@ class Leveling(RankCardUserMixin, commands.Cog):
         if self._cooldowns.is_active(key, seconds=config.cooldown_seconds):
             return
 
-        self._cooldowns.touch(key)
+        # Store the entry under the SAME window the check above used: the map
+        # is shared by every guild, so an entry left carrying the instance
+        # default would be judged by that default when the sweep runs, and a
+        # guild with a longer cooldown would have a still-cooling key evicted -
+        # which reads as "cooldown over" and grants XP early. See Cooldowns.
+        self._cooldowns.touch(key, seconds=config.cooldown_seconds)
         gain = leveling.grant_amount(config.xp_min, config.xp_max)
 
         # XP multipliers (L4): a per-guild snapshot lives in self._multipliers,

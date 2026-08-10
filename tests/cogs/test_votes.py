@@ -301,6 +301,17 @@ async def test_a_payload_with_no_weekend_flag_falls_back_to_the_short_boost(
 # ---------------------------------------------------------------------------
 
 
+# The exact replay predicate, spelled once so every test below reads the same
+# text the statement runs. Both halves matter: the time floor, and "$5 OR NOT
+# caught_up", which is what stops the floor from swallowing a genuine webhook
+# vote that lands on a row the /vote catch-up poll stamped (see below).
+_REPLAY_GUARD = (
+    "WHEN (now() - topgg_votes.last_vote_at\n"
+    "              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')\n"
+    "             AND ($5 OR NOT topgg_votes.caught_up)"
+)
+
+
 def test_the_vote_is_one_atomic_statement_on_its_own_table():
     """No read-modify-write: the streak is decided from the row's own previous
     timestamp INSIDE the upsert, so two deliveries serialise on the row lock
@@ -326,17 +337,14 @@ def test_a_redelivered_vote_changes_nothing_at_all():
     replay window - including last_vote_at, without which repeated deliveries
     would slide the window forward and keep a dead streak alive."""
     query = votes.RECORD_VOTE
-    guard = (
-        "WHEN now() - topgg_votes.last_vote_at\n"
-        "             BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour'"
-    )
     # One per SET column: nothing may move on a replay.
-    assert query.count(guard) == 4
+    assert query.count(_REPLAY_GUARD) == 5
     for kept in (
         "THEN topgg_votes.last_vote_at",
         "THEN topgg_votes.streak\n",
         "THEN topgg_votes.total_votes\n",
         "THEN topgg_votes.boost_expires_at\n",
+        "THEN topgg_votes.caught_up\n",
     ):
         assert kept in query
     # Bounded BELOW by zero: a last_vote_at in the FUTURE (a clock stepping
@@ -359,7 +367,8 @@ def test_the_replay_floor_sits_far_under_the_vote_floor():
 def test_the_vote_never_touches_a_table_but_its_own():
     referenced = set(
         re.findall(
-            r"(\w+)\.(?:user_id|last_vote_at|streak|total_votes|boost_expires_at)",
+            r"(\w+)\."
+            r"(?:user_id|last_vote_at|streak|total_votes|boost_expires_at|caught_up)",
             votes.RECORD_VOTE,
         )
     )
@@ -1138,3 +1147,118 @@ async def test_the_vote_command_runs_the_catch_up_when_the_ledger_is_stale(fake_
     await Votes.vote.callback(cog, ctx)
 
     assert client.calls == [4242]
+
+
+# ---------------------------------------------------------------------------
+# WAVE-B-B1: a catch-up row must not make the NEXT real vote look like a replay
+# ---------------------------------------------------------------------------
+#
+# THE BUG: the catch-up poll banks a vote on the evidence "top.gg says this
+# member voted some time in the last 12h" and can only stamp last_vote_at =
+# now() for it. top.gg then lets that member vote again as soon as their TRUE
+# 12h is up - which can be minutes later - and that genuine webhook delivery
+# landed inside the one-hour replay floor and was thrown away: no streak step,
+# no lifetime count, no thank-you DM.
+#
+# THE FIX: the row remembers WHICH kind of write stamped it (topgg_votes
+# .caught_up), and the replay predicate yields to it for a webhook delivery.
+#
+# The SQL's own semantics are proven against a real Postgres (the lot's probe
+# transcript: DDL applied twice, then both orders), not re-implemented here:
+#   catch-up, then a webhook 5 min later -> streak 1 -> 2, total 1 -> 2,
+#                                           caught_up t -> f, replayed false
+#   that webhook, then another 5 min later -> streak stays 2, replayed TRUE
+#   webhook, then a webhook 5 min later    -> streak stays 1, replayed TRUE
+#   catch-up, then a catch-up 5 min later  -> streak stays 1, caught_up stays t
+# What these tests hold is the shape of the statement and the arguments each
+# caller hands it - the halves that live in this repo.
+
+
+def test_the_replay_predicate_yields_to_a_catch_up_stamped_row():
+    """The predicate's second half. Without it the one-hour floor swallows the
+    first REAL vote after any catch-up."""
+    query = votes.RECORD_VOTE
+    assert "AND ($5 OR NOT topgg_votes.caught_up)" in query
+    # In EVERY branch, not just the one that decides last_vote_at: a streak or
+    # a lifetime count that moved while the timestamp did not would be worse
+    # than either behaviour on its own.
+    assert query.count(_REPLAY_GUARD) == 5
+
+
+def test_the_row_remembers_which_kind_of_write_stamped_it():
+    """caught_up is set from the SAME parameter the predicate reads, on both
+    the insert and the update - so the first webhook after a catch-up counts
+    the vote AND clears the flag, and the one after that is a replay again."""
+    query = votes.RECORD_VOTE
+    columns = query.split("VALUES", 1)[0]
+    assert "caught_up" in columns
+    values_line = query.split("VALUES", 1)[1].splitlines()[0]
+    assert values_line.rstrip().endswith("$5)")  # seeded on the FIRST vote too
+    assert "caught_up = CASE" in query
+    assert "THEN topgg_votes.caught_up\n        ELSE $5" in query
+
+
+def test_the_two_flag_values_say_what_they_mean():
+    assert votes.FROM_WEBHOOK is False
+    assert votes.FROM_CATCHUP is True
+
+
+async def test_a_webhook_vote_is_recorded_as_a_webhook_vote(fake_pool):
+    bot, _ = _make_bot(fake_pool)
+    fake_pool.fetchrow_return = _row()
+
+    await Votes(bot).on_dbl_vote(_vote())
+
+    (method, query, args), = [c for c in fake_pool.calls if c[0] == "fetchrow"]
+    assert args[3] == votes.REPLAY_WINDOW_HOURS  # the narrow floor, unchanged
+    assert args[4] is votes.FROM_WEBHOOK
+
+
+async def test_a_catch_up_marks_the_row_it_stamps(fake_pool):
+    """The write that stamps now() for a vote it only knows happened "some time
+    in the last 12h" is exactly the one that must be marked as soft."""
+    client = _FakeDBLClient(voted=True)
+    bot = _make_rich_bot(fake_pool, leveling=_FakeLeveling(), webstats=_FakeWebstats(client))
+    fake_pool.fetchrow_return = _row()
+
+    await Votes(bot)._maybe_catch_up(4242, None)
+
+    (method, query, args), = [c for c in fake_pool.calls if c[0] == "fetchrow"]
+    assert args[3] == votes.CATCHUP_STALE_HOURS
+    assert args[4] is votes.FROM_CATCHUP
+
+
+async def test_a_catch_up_then_a_real_webhook_vote_both_count(fake_pool):
+    """The order the bug was about. Both writes go to the same statement, and
+    the two arguments that differ are what let the DB tell them apart: the
+    catch-up marks the row, the webhook that follows overrides the floor,
+    counts, and clears the mark (streak 1 -> 2 in the probe)."""
+    client = _FakeDBLClient(voted=True)
+    bot = _make_rich_bot(fake_pool, leveling=_FakeLeveling(), webstats=_FakeWebstats(client))
+    fake_pool.fetchrow_return = _row()
+    cog = Votes(bot)
+
+    await cog._maybe_catch_up(4242, None)
+    await cog.on_dbl_vote(_vote())
+
+    writes = [c for c in fake_pool.calls if c[0] == "fetchrow"]
+    assert [c[1] for c in writes] == [votes.RECORD_VOTE, votes.RECORD_VOTE]
+    catch_up, webhook = (c[2] for c in writes)
+    assert (catch_up[3], catch_up[4]) == (votes.CATCHUP_STALE_HOURS, True)
+    assert (webhook[3], webhook[4]) == (votes.REPLAY_WINDOW_HOURS, False)
+
+
+async def test_two_webhook_deliveries_are_still_one_vote(fake_pool):
+    """The redelivery the floor exists for is untouched: both deliveries hand
+    the statement the SAME narrow floor and the SAME flag, so the second one
+    finds a row that is neither old enough nor marked, and changes nothing."""
+    bot, _ = _make_bot(fake_pool)
+    fake_pool.fetchrow_return = _row()
+    cog = Votes(bot)
+
+    await cog.on_dbl_vote(_vote())
+    await cog.on_dbl_vote(_vote())
+
+    writes = [c[2] for c in fake_pool.calls if c[0] == "fetchrow"]
+    assert len(writes) == 2
+    assert writes[0][3:] == writes[1][3:] == (votes.REPLAY_WINDOW_HOURS, False)

@@ -25,6 +25,7 @@ from cogs.community.profile.connectors import (
 from cogs.community.profile.connectors import (
     backloggd as backloggd_module,
 )
+from tools import cooldowns as cooldowns_module
 
 # ---------------------------------------------------------------------------
 # Shared aiohttp fakes (same shape as tests/cogs/test_anilist_http.py)
@@ -1370,6 +1371,57 @@ async def test_a_dead_account_is_attempted_far_less_often_than_the_flat_floor(
 
 async def _always_not_found(user_id, connection):
     raise base.InvalidHandle("backloggd", "not_found")
+
+
+async def test_a_sweep_cannot_reset_a_dead_handles_backoff(monkeypatch):
+    """REGRESSION: the attempt map is shared by every (owner, connector) pair,
+    so an entry seated under the flat 300s floor is the window the SWEEP judges
+    it by, whatever backoff the pair had actually earned. A sweep tripped by
+    unrelated traffic therefore evicted a key whose real window was Backloggd's
+    12-hour courtesy and handed a permanently-dead handle its 288 scrapes a day
+    straight back - the exact number F4 exists to kill. The scheduler now names
+    the backoff window on touch as well as on the check."""
+    calls = []
+
+    async def _counting(user_id, connection):
+        calls.append(user_id)
+        raise base.InvalidHandle("backloggd", "not_found")
+
+    monkeypatch.setattr(base.CONNECTORS["backloggd"], "refresh", _counting)
+    clock = {"t": 0.0}
+    monkeypatch.setattr(
+        cooldowns_module, "time", types.SimpleNamespace(monotonic=lambda: clock["t"])
+    )
+
+    cog = _profiles_cog()
+    key = (1, "backloggd")
+    connection = {"connector": "backloggd", "external_id": "ghost", "last_refresh": None}
+    # sweep_at=1 so the unrelated traffic below trips the sweep immediately.
+    cog._connector_attempts = profile_cog.Cooldowns(
+        profile_cog.CONNECTOR_REFRESH_MIN_INTERVAL, sweep_at=1
+    )
+    for _failure in range(40):
+        cog._connector_failures.record(key)
+    window = cog._retry_interval(base.CONNECTORS["backloggd"], key)
+    assert window == backloggd_module.REFRESH_TTL_SECONDS  # 12h, not the 300s floor
+
+    cog._schedule_stale_refreshes(1, [connection])
+    for task in list(cog._connector_tasks):
+        await task
+    await asyncio.sleep(0)  # let the done callbacks clear the inflight guard
+    assert calls == [1]
+    assert cog._connector_inflight == set()  # the refusal below is the COOLDOWN
+
+    # Unrelated traffic an hour later: past the 300s floor, deep inside the 12h.
+    clock["t"] = 3600.0
+    cog._connector_attempts.touch(("other", "osu"))
+    cog._connector_attempts.touch(("other", "lastfm"))
+
+    assert cog._connector_attempts.is_active(key, seconds=window) is True
+    cog._schedule_stale_refreshes(1, [connection])
+    for task in list(cog._connector_tasks):
+        await task
+    assert calls == [1]  # not scraped again
 
 
 def test_the_failure_map_prunes_itself():

@@ -94,6 +94,25 @@ def _hub_mapping(hubs):
     return {hub["hub_channel_id"]: hub for hub in hubs if hub.get("hub_channel_id")}
 
 
+def _rebuild_lock(cog):
+    """The cog's whole-index rebuild lock, materialised on first use.
+
+    A module-level function taking the owner, the shape
+    ``cogs/system/dashboard_sync.py`` uses for ``_eager_cache_lock(bot)``, and
+    for the same reason: ``reload_hub_index`` is reached from outside the cog by
+    attribute lookup (``getattr(cog, "reload_hub_index", None)``) and is run
+    unbound against stand-ins, so it must not assume the owner carries anything
+    beyond ``bot`` and ``_hub_index`` - not a method of its own, and not an
+    attribute only ``__init__`` installs. Materialising the lock lazily also
+    keeps it created inside the loop that is about to await it.
+    """
+    lock = getattr(cog, "_hub_index_lock", None)
+    if lock is None:
+        lock = asyncio.Lock()
+        cog._hub_index_lock = lock
+    return lock
+
+
 class TemporaryRooms(commands.Cog):
     """Create and clean up temporary voice rooms from join-to-create hubs."""
 
@@ -103,6 +122,9 @@ class TemporaryRooms(commands.Cog):
         # the voice event consults. A guild absent here has no hubs, so
         # unconfigured guilds cost zero work on every voice update.
         self._hub_index = {}
+        # Serialises WHOLE-index rebuilds against each other (reload_hub_index).
+        # Per-guild writers do not take it and do not need to - see that method.
+        self._hub_index_lock = asyncio.Lock()
         # {(guild_id, hub_id): set(channel_id)} temp rooms alive per hub.
         self._active = defaultdict(set)
         # Per-(guild, user) anti-spam debounce that prunes itself (was an
@@ -168,6 +190,39 @@ class TemporaryRooms(commands.Cog):
         fetch is in flight. Returns the set of guild ids that carry an
         ``autorooms`` key (what cog_load's legacy migration needs).
 
+        CONCURRENCY. This is the only writer that REBINDS ``_hub_index``; every
+        other writer mutates the live map for ONE guild:
+
+        * ``_index_guild`` (below) - after a bot-side write through
+          ``_save_hubs``, on a guild rejoin (``cogs/system/events.py``), and from
+          the dashboard's autorooms invalidator (``cogs/system/dashboard_sync.py``
+          ``_invalidate_autorooms``);
+        * ``tools/retention.py`` - pops a guild outright when its data is erased.
+
+        All of them are SYNCHRONOUS, hence atomic against the event loop, so the
+        only window in which one can be lost is this method's own ``await`` on
+        the fetch: a write landing there used to be overwritten by the rebind of
+        a map fetched BEFORE it. Such a write is always the newer truth (it
+        follows a committed row write, or a fresh read of one), so the diff below
+        carries it over - every guild whose live entry is no longer the object it
+        was before the fetch is taken from the LIVE map rather than from the
+        snapshot, and a guild a writer removed stays removed. Comparing object
+        identity, not equality, is what makes that exact: ``_hub_mapping`` builds
+        a brand-new dict on every write, so "not the same object" is precisely
+        "somebody wrote this slot" (and nothing mutates an entry in place - every
+        reader treats ``_hub_index[gid]`` as read-only). Grounding the guard here
+        rather than at each write site is deliberate: it also covers the writer
+        that never calls ``_index_guild`` at all (retention's direct ``pop``).
+
+        The lock guards rebuild against REBUILD, which the diff alone cannot:
+        two overlapping rebuilds (cog_load plus a dashboard resync) would each
+        see the other's freshly built entries as "changed" and carry them over
+        wholesale, so whichever rebound second would silently discard its own
+        newer read. Held across the fetch AND the rebind, leaving one rebuild at
+        a time as the only ordering. Per-guild writers do not take it - they
+        cannot (``_index_guild`` is synchronous and is called synchronously from
+        two other modules) and they do not need to.
+
         RAISES on a failed read, deliberately: this runs at RUNTIME now (the
         dashboard_sync resync calls it right after a listen connection dropped,
         i.e. precisely when the pool is most likely to be failing too). Catching
@@ -179,25 +234,49 @@ class TemporaryRooms(commands.Cog):
         and the caller decides what a failure means (cog_load logs and gives up;
         resync_all logs and reports the step as NOT done).
         """
-        rows = await self.bot.db_pool.fetch(
-            "SELECT guild_id, settings FROM guild_settings"
-        )
-        index = {}
-        configured = set()
-        for row in rows:
-            raw = row["settings"]
-            try:
-                data = json.loads(raw) if isinstance(raw, str) else dict(raw)
-            except (TypeError, ValueError):
-                continue
-            if "autorooms" not in data:
-                continue
-            configured.add(int(row["guild_id"]))
-            mapping = _hub_mapping(normalize_hubs(data.get("autorooms")))
-            if mapping:
-                index[int(row["guild_id"])] = mapping
-        self._hub_index = index
-        return configured
+        async with _rebuild_lock(self):
+            before = dict(self._hub_index)
+            rows = await self.bot.db_pool.fetch(
+                "SELECT guild_id, settings FROM guild_settings"
+            )
+            index = {}
+            configured = set()
+            for row in rows:
+                raw = row["settings"]
+                try:
+                    data = json.loads(raw) if isinstance(raw, str) else dict(raw)
+                except (TypeError, ValueError):
+                    continue
+                if "autorooms" not in data:
+                    continue
+                configured.add(int(row["guild_id"]))
+                mapping = _hub_mapping(normalize_hubs(data.get("autorooms")))
+                if mapping:
+                    index[int(row["guild_id"])] = mapping
+
+            # Carry over every per-guild write that landed while the fetch was in
+            # flight (see the docstring). The live map is resolved AFTER the
+            # fetch, never captured before it, so a writer that ran meanwhile is
+            # visible here.
+            live = self._hub_index
+            for guild_id in set(before) | set(live):
+                was = before.get(guild_id)
+                now = live.get(guild_id)
+                if was is now:
+                    continue
+                if now is None:
+                    index.pop(guild_id, None)
+                else:
+                    index[guild_id] = now
+
+            # A guild that gained its FIRST hub during the window is configured
+            # even though the snapshot predates its row: without this, cog_load's
+            # legacy migration would read it as un-migrated and write default
+            # hubs over the list that writer just saved.
+            configured.update(index)
+
+            self._hub_index = index
+            return configured
 
     async def _migrate_legacy(self, configured):
         """Fold old ``auto_room`` rows into default hubs (best-effort, once)."""
@@ -348,7 +427,15 @@ class TemporaryRooms(commands.Cog):
     # ------------------------------------------------------------------
 
     def _index_guild(self, guild_id, hubs):
-        """Point the in-memory index at ``hubs`` for one guild."""
+        """Point the in-memory index at ``hubs`` for one guild.
+
+        Stays SYNCHRONOUS (it is called synchronously from
+        ``cogs/system/events.py`` and ``cogs/system/dashboard_sync.py``), which
+        is also what makes it atomic against the event loop. Always installs a
+        FRESH mapping object rather than editing the one already indexed: that is
+        the signal :meth:`reload_hub_index` diffs on to keep this write when it
+        races a whole-index rebuild.
+        """
         mapping = _hub_mapping(hubs)
         if mapping:
             self._hub_index[guild_id] = mapping

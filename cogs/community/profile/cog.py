@@ -396,11 +396,16 @@ class Profiles(commands.Cog):
                 key = (owner_id, name)
                 if key in self._connector_inflight:
                     continue
-                if self._connector_attempts.is_active(
-                    key, seconds=self._retry_interval(implementation, key)
-                ):
+                # Computed ONCE and passed to both calls: the entry has to be
+                # stored under the same window it is judged by, or the sweep
+                # would judge a backed-off pair by the flat floor and evict it
+                # while it is still cooling - resetting a dead handle's backoff
+                # to the floor (288 attempts a day against a 12h TTL), which is
+                # exactly what the doubling exists to prevent. See Cooldowns.
+                retry_after = self._retry_interval(implementation, key)
+                if self._connector_attempts.is_active(key, seconds=retry_after):
                     continue
-                self._connector_attempts.touch(key)
+                self._connector_attempts.touch(key, seconds=retry_after)
                 self._connector_inflight.add(key)
                 task = asyncio.ensure_future(
                     self._refresh_connection(owner_id, name, implementation, connection)

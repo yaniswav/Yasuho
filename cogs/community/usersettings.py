@@ -280,7 +280,12 @@ class ProfileDeletionView(AuthorView):
                 + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
-                + _("So is your personal rank card."),
+                + _("So is your personal rank card.")
+                + "\n"
+                + _(
+                    "Your AniList link is gone as well, and your episode and "
+                    "chapter alert opt-ins with it."
+                ),
                 view=self,
             )
         except Exception:
@@ -719,11 +724,15 @@ class UserSettings(commands.Cog):
         # Strings appended rather than one rewritten: the first is the
         # long-standing warning (already translated in every locale), and each
         # one after it names something this verb destroys that the user cannot
-        # recreate by typing it again - the vote record, and the rank-card
-        # background, which is an IMAGE FILE they may no longer hold. A
+        # recreate by typing it again - the vote record; the rank-card
+        # background, which is an IMAGE FILE they may no longer hold; and the
+        # AniList link, which is a LIVE OAuth credential that only exists again
+        # after a fresh round trip through AniList, not by typing anything. A
         # confirmation that does not name them is not a confirmation, which is
         # the whole reason those tables are on the wide list and not the
-        # unconfirmed one - see privacy.USER_DELETE_QUERIES.
+        # unconfirmed one - see privacy.USER_DELETE_QUERIES. The guard in
+        # tests/tools/test_privacy.py derives the required phrases FROM that
+        # list, so it cannot grow again without this screen growing with it.
         view.message = await ctx.send(
             _(
                 "This permanently deletes your bio, pronouns, accent colour, "
@@ -739,6 +748,12 @@ class UserSettings(commands.Cog):
             + _(
                 "And your personal rank card: the background image you "
                 "uploaded and the accent colour you picked."
+            )
+            + "\n"
+            + _(
+                "And your AniList link: the stored login is deleted, so "
+                "relinking needs a fresh sign-in with AniList. Your episode "
+                "and chapter alert opt-ins go with it."
             ),
             view=view,
             ephemeral=ctx.interaction is not None,

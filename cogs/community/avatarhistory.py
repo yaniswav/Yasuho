@@ -255,12 +255,33 @@ class AvatarHistory(commands.Cog):
                 after.id, after.guild.id, "guild", after.guild_avatar
             )
 
-    async def capture_banner(self, user):
+    async def capture_banner(self, user, *, fetched=None):
         """Best-effort banner capture (Discord never pushes banner changes).
 
-        The opt-out check is a warm cached read, so it runs before the
-        uncached `fetch_user` REST call - an opted-out user costs zero
-        network round-trips.
+        LAZY ON PURPOSE: it runs only when somebody actually asks to see a
+        banner - the Banner button on a history card (AvatarHistoryView._show)
+        or `?userinfo`, which shows one - never on an ambient gateway event.
+        There used to be an on_member_join listener here that fetched a banner
+        for EVERY join, bots included, ungated - one uncached REST call per join
+        across every guild the bot is in. At 1000+ guilds that is a fleet-wide
+        cost paid on raids, bot invites and every member who will never open the
+        command, to pre-warm a history nobody may ever look at. The demand-side
+        capture covers the same ground at the moment it is worth anything: the
+        first person to look captures the banner then and there, and every later
+        look adds a new one whenever it changed.
+
+        ``fetched`` is the already-fetched `discord.User` when the CALLER had to
+        fetch it anyway. `?userinfo` does, to render the banner it is about to
+        show; without this it fetched the very same uncached user twice per
+        invocation, and the archiving half was pure waste. Pass it whenever one
+        is in hand; leave it off and this does its own fetch.
+
+        Avatars are unaffected - Discord DOES push those, so on_user_update and
+        on_member_update still record them for free, with no REST call at all.
+
+        The opt-out check is a warm cached read and runs first, so an opted-out
+        user costs zero round-trips on the path that still has to fetch (and
+        nothing is recorded on the path that already fetched).
         """
         try:
             tracking_enabled = await settings.get_user(
@@ -268,15 +289,12 @@ class AvatarHistory(commands.Cog):
             )
             if not tracking_enabled:
                 return
-            fetched = await self.bot.fetch_user(user.id)
+            if fetched is None:
+                fetched = await self.bot.fetch_user(user.id)
             if fetched.banner:
                 await self._record(user.id, None, "banner", fetched.banner)
         except Exception:
             log.exception("failed to capture banner for user %s", user.id)
-
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        await self.capture_banner(member)
 
     @staticmethod
     def build_collage(images):

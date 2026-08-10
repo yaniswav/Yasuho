@@ -902,6 +902,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # never leave two controllers standing - even across different Player
         # object instances. The lock serialises delete+post per guild.
         self._controllers: typing.Dict[int, MusicController] = {}
+        # NEVER evicted, deliberately: _clear used to pop a guild's lock, which
+        # could destroy the very object a _send_controller was holding - the next
+        # poster then created a FRESH lock, took it uncontended and posted a
+        # second controller, exactly what this map exists to prevent. One
+        # uncontended asyncio.Lock per guild that has ever played is a few dozen
+        # bytes, binds no event loop until it is awaited, and is the same
+        # unbounded-by-design trade the sibling per-guild lock maps take
+        # (cogs/system/dashboard_music_actions.py _MUSIC_LOCKS,
+        # cogs/system/dashboard_actions.py _AUTOROOM_LOCKS).
         self._controller_locks: typing.Dict[int, asyncio.Lock] = {}
         # Bounded, in-memory map of open "join a voice channel" cards awaiting the
         # invoker to join voice, so on_voice_state_update can swap each into the
@@ -1502,7 +1511,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
         none) keeps the process-wide ceiling honest without touching each path.
         """
         self._controllers.pop(guild_id, None)
-        self._controller_locks.pop(guild_id, None)
+        # The guild's controller LOCK is deliberately NOT popped here: _clear
+        # runs on disconnect / stop / idle-teardown, any of which can land while
+        # a _send_controller is holding that lock across its delete+post awaits.
+        # Dropping it there left the holder guarding an orphan while the next
+        # poster built a fresh lock and walked straight in - two controllers, the
+        # exact race the lock exists to close. See the map's note in __init__ for
+        # why keeping one lock per guild is the cheap side of the trade.
         self.quotas.filtered_players.release(guild_id)
         # End any live synced-lyrics session (idempotent; releases its ceiling
         # slot) - every disconnect / stop / idle-teardown / restore-drop lands here.

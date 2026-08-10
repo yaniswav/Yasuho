@@ -388,7 +388,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 8
+    assert data["export_version"] == privacy.EXPORT_VERSION == 9
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -455,8 +455,9 @@ async def test_forget_deletes_every_profile_table_in_one_transaction():
 
 async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
     """`?mydata deleteprofile` erases the profile AND the records that are not
-    profile data - the top.gg vote ledger, the personal rank card - in the SAME
-    transaction, so a confirmed forget can never half-happen."""
+    profile data - the top.gg vote ledger, the personal rank card, the AniList
+    OAuth token and the two alert opt-ins - in the SAME transaction, so a
+    confirmed forget can never half-happen."""
     connection = _DeleteConnection()
 
     counts = await privacy.delete_user_data(_DeletePool(connection), 42)
@@ -469,10 +470,16 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
         "profiles",
         "topgg_votes",
         "user_rank_cards",
+        "anilist_tokens",
+        "anilist_airing_optins",
+        "anilist_chapter_optins",
     ]
-    assert len(executed) == 6
+    assert len(executed) == 9
     assert counts["topgg_votes"] == 1
     assert counts["user_rank_cards"] == 1
+    assert counts["anilist_tokens"] == 1
+    assert counts["anilist_airing_optins"] == 1
+    assert counts["anilist_chapter_optins"] == 1
 
 
 def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
@@ -842,6 +849,167 @@ def test_the_forget_path_covers_the_vote_ledger():
     assert listed["topgg_votes"] == "DELETE FROM topgg_votes WHERE user_id = $1"
 
 
+# ---------------------------------------------------------------------------
+# The AniList rows: the OAuth token and the two alert opt-ins (WAVE-B-D1)
+# ---------------------------------------------------------------------------
+#
+# All three are keyed by user alone, so the guild purge can never reach them and
+# /mydata is the only place their deletion can live. The token is a live
+# credential the bot holds on the user's behalf; the opt-ins were deleted by
+# NOTHING at all before this - their off-switch only sets `enabled = FALSE`.
+
+
+def test_the_forget_path_takes_the_anilist_oauth_token():
+    """A forget that leaves the token behind leaves the bot able to read and
+    write that person's AniList list after they asked to be forgotten."""
+    listed = dict(privacy.USER_DELETE_QUERIES)
+    assert listed["anilist_tokens"] == "DELETE FROM anilist_tokens WHERE user_id = $1"
+    assert listed["anilist_tokens"] == privacy.ANILIST_TOKEN_DELETE
+
+    # Not on the narrow, unconfirmed list: `/profile clear` says nothing about
+    # AniList, and the row only exists again after a fresh OAuth round trip.
+    assert "anilist_tokens" not in dict(privacy.PROFILE_DELETE_QUERIES)
+
+
+def test_the_voluntary_unlink_runs_the_very_same_statement():
+    """`?anilist logout` and `?mydata deleteprofile` must reach the same row by
+    the same predicate; an inline copy of the DELETE is exactly how the two
+    drift apart."""
+    from cogs.anilist import account
+
+    logout = inspect.getsource(account.AccountMixin.anilist_logout.callback)
+    assert "delete_anilist_token" in logout
+    assert "DELETE FROM" not in logout
+
+    helper = inspect.getsource(privacy.delete_anilist_token)
+    assert "ANILIST_TOKEN_DELETE" in helper
+
+
+def test_the_forget_path_takes_both_alert_optins():
+    listed = dict(privacy.USER_DELETE_QUERIES)
+    assert (
+        listed["anilist_airing_optins"]
+        == "DELETE FROM anilist_airing_optins WHERE user_id = $1"
+    )
+    assert (
+        listed["anilist_chapter_optins"]
+        == "DELETE FROM anilist_chapter_optins WHERE user_id = $1"
+    )
+
+
+def test_the_alert_optins_have_no_other_deletion_path_in_the_repo():
+    """THE finding, pinned repo-wide rather than in this module only.
+
+    Turning an alert off writes `enabled = FALSE` and keeps the row on purpose
+    (a member whose DMs closed re-arms it with one command), so the toggle is
+    not an erasure and never was. If this list ever grows a second file, that
+    file is either a real second erasure path - fine, say so here - or a row
+    quietly deleted somewhere the privacy surface knows nothing about.
+    """
+    deleters = {}
+    for path in _repo_python_files():
+        source = open(path, encoding="utf-8").read()
+        tables = sorted(
+            set(
+                re.findall(
+                    r"DELETE FROM\s+(anilist_(?:airing|chapter)_optins)", source
+                )
+            )
+        )
+        if tables:
+            deleters[os.path.relpath(path, _REPO_ROOT).replace(os.sep, "/")] = tables
+
+    assert deleters == {
+        "tools/privacy.py": ["anilist_airing_optins", "anilist_chapter_optins"],
+    }
+
+
+async def test_the_export_still_shows_both_optins_it_now_deletes():
+    """Erasure and export are the two halves of the same right: a row the user
+    can now delete must still be one they can SEE."""
+
+    class _OptinPool(_ExportPool):
+        async def fetchrow(self, query, *args):
+            self.queries.append(query)
+            if "anilist_airing_optins" in query or "anilist_chapter_optins" in query:
+                return {
+                    "anilist_user_id": 7,
+                    "enabled": True,
+                    "created_at": datetime.datetime(
+                        2030, 5, 4, tzinfo=datetime.timezone.utc
+                    ),
+                }
+            return None
+
+    pool = _OptinPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["anilist"]["airing_notifications"]["anilist_user_id"] == 7
+    assert data["anilist"]["chapter_notifications"]["enabled"] is True
+    for table in ("anilist_airing_optins", "anilist_chapter_optins"):
+        query = next(q for q in pool.queries if table in q)
+        assert "WHERE user_id = $1" in query
+
+
+# ---------------------------------------------------------------------------
+# The moderator side of `cases` (WAVE-B-D1)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_moderator_export_carries_the_action_and_not_the_third_party():
+    """A former moderator's export must not be a roster of who they sanctioned.
+
+    The rows filed under `moderator_id` are the requester's ACTION facts (which
+    server, which case, what they did, when). The target's user id, the
+    free-text reason and the sanction's expiry are about the OTHER person, and
+    they leave with them - same call as `closed_by` on tickets.
+    """
+
+    class _ModeratorPool(_ExportPool):
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            if "moderator_id = $1" in query:
+                return [
+                    {
+                        "guild_id": 7,
+                        "case_number": 12,
+                        "action": "ban",
+                        "created_at": datetime.datetime(
+                            2030, 5, 4, tzinfo=datetime.timezone.utc
+                        ),
+                    }
+                ]
+            return []
+
+    pool = _ModeratorPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["moderation_cases_as_moderator"] == [
+        {
+            "guild_id": 7,
+            "case_number": 12,
+            "action": "ban",
+            "created_at": datetime.datetime(2030, 5, 4, tzinfo=datetime.timezone.utc),
+        }
+    ]
+
+    query = next(q for q in pool.queries if "moderator_id = $1" in q)
+    assert query.startswith("SELECT guild_id, case_number, action, created_at")
+    for column in ("target_user_id", "user_id AS", "reason", "expires"):
+        assert column not in query
+
+    # The TARGET-side projection is untouched: that record IS the requester's,
+    # reason and all, and reducing it would take away their own data.
+    target_query = next(
+        q
+        for q in pool.queries
+        if "FROM cases" in q and "WHERE user_id = $1" in q
+    )
+    assert "reason" in target_query
+    # ...and it still never names the moderator who acted.
+    assert "moderator_id" not in target_query
+
+
 def test_the_confirmed_erasure_drops_the_live_xp_boost_with_the_row():
     """The row is the durable half; the boost the XP hot path reads is an
     in-memory entry on the Leveling cog. A forget that deleted only the row
@@ -853,17 +1021,58 @@ def test_the_confirmed_erasure_drops_the_live_xp_boost_with_the_row():
     assert "forget_vote_boost" in source
 
 
+# Every table the WIDE list deletes that the narrow `/profile clear` does not
+# already cover, mapped to the phrase the confirmation prompt and the result
+# message must each contain for it. The mapping is asserted EXHAUSTIVE against
+# USER_DELETE_QUERIES below, which is the whole point: a table added to the wide
+# list with no phrase registered here fails this test until somebody writes the
+# sentence that tells its owner it is about to go.
+_WIDE_ONLY_PROMPT_PHRASES = {
+    "topgg_votes": "top.gg vote record",
+    "user_rank_cards": "background image you",
+    "anilist_tokens": "AniList link",
+    "anilist_airing_optins": "alert opt-in",
+    "anilist_chapter_optins": "alert opt-in",
+}
+_WIDE_ONLY_RESULT_PHRASES = {
+    "topgg_votes": "top.gg vote record is gone",
+    "user_rank_cards": "personal rank card",
+    "anilist_tokens": "AniList link is gone",
+    "anilist_airing_optins": "alert opt-in",
+    "anilist_chapter_optins": "alert opt-in",
+}
+
+
 def test_the_confirmation_names_everything_it_destroys():
     """A permanent, unrecreatable loss must be stated BEFORE the button, not
     discovered afterwards. That is the entry price for being on the wide list at
     all, so every table there that its owner cannot simply type again has to be
-    named in the warning: the vote streak and lifetime count, and the rank-card
-    background - an image FILE they may no longer hold a copy of."""
+    named in the warning: the vote streak and lifetime count, the rank-card
+    background (an image FILE they may no longer hold a copy of), and the
+    AniList link (a live OAuth credential that comes back only through a fresh
+    sign-in, never by typing something again).
+
+    Derived from USER_DELETE_QUERIES rather than hardcoded, so growing the wide
+    list without growing the consent screen is a test failure and not a silent
+    widening of what one button destroys."""
     from cogs.community import usersettings
+
+    narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    wide_only = {
+        table for table, _query in privacy.USER_DELETE_QUERIES if table not in narrow
+    }
+    assert wide_only == set(_WIDE_ONLY_PROMPT_PHRASES)
+    assert wide_only == set(_WIDE_ONLY_RESULT_PHRASES)
 
     warning = inspect.getsource(
         usersettings.UserSettings.mydata_deleteprofile.callback
     )
-    assert "top.gg vote record" in warning
-    assert "background image you" in warning
+    for table in sorted(wide_only):
+        assert _WIDE_ONLY_PROMPT_PHRASES[table] in warning, table
     assert "cannot be undone" in warning
+
+    # ... and the message shown AFTER the button has to agree with the prompt:
+    # a screen that warned about something must confirm it actually went.
+    result = inspect.getsource(usersettings.ProfileDeletionView.confirm)
+    for table in sorted(wide_only):
+        assert _WIDE_ONLY_RESULT_PHRASES[table] in result, table

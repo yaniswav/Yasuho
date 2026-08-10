@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: August 8, 2026_
+_Last updated: August 10, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -15,8 +15,10 @@ their responses, role menus. This data belongs to the server, not to a user.
 
 **Moderation records** (per server): warnings and moderation cases created by
 that server's moderators (user ID, moderator ID, reason, timestamp). These exist
-so that server moderation works; they are removed when the data ages out of the
-server's retention window or the server removes the bot.
+so that server moderation works. There is no automatic expiry: a warning is kept
+until a moderator removes it (`?delwarn`, or the remove button on the warn
+list), and every moderation record is kept until the server removes the bot,
+after which that server's data is purged on the schedule below.
 
 **Support tickets** (per server): metadata only - the ticket number, the private
 thread's ID, who opened it, which staff member claimed it, who closed it, when
@@ -54,6 +56,13 @@ external account usernames (AniList, Steam, osu!, Last.fm, Backloggd) that you
 explicitly link, with per-field visibility you control. AniList OAuth tokens are
 stored encrypted at rest. Public data fetched from those services is cached
 briefly to render your profile card.
+
+**AniList / MangaDex alerts** (strictly OPT-IN): if you turn on new-episode
+alerts (`/anilist airing`) or new-chapter alerts (`/anilist chapters`), we store
+your Discord user ID, your AniList numeric user ID and the date you opted in,
+which is what lets the alert poller read your PUBLIC list without using your
+token. Turning an alert off stops the DMs and keeps the row so you can turn it
+back on later; `?mydata deleteprofile` deletes the row itself.
 
 **Presence / "recently played"** (strictly OPT-IN): if - and only if - you
 enable it (`/profile presence gaming on`), the bot stores aggregate play data:
@@ -115,14 +124,20 @@ the same deletion schedule on restore.
 
 - `?mydata export` - receive a complete machine-readable export of everything
   the bot holds about you (rate-limited to once per hour). Also available from
-  the web dashboard.
+  the web dashboard. Records that involve someone else are limited to your own
+  half of them: if you moderated a member, the export states which server, which
+  case number, what action you took and when, never who the member was or what
+  reason was written about them.
 - `?mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
-  accounts, visibility choices, collected presence data, and your top.gg vote
-  record.
+  accounts, visibility choices, collected presence data, your top.gg vote
+  record, your personal rank card, your AniList link (the stored OAuth token)
+  and your AniList / MangaDex alert opt-ins.
 - `?mydata deleteavatars` - permanently delete your avatar history and disable
   future tracking.
 - `/connections unlink` - unlink an external account (removes its data and
   visibility immediately).
+- `?anilist logout` - unlink your AniList account on its own: the stored OAuth
+  token is deleted immediately.
 - `/profile presence gaming off` - stop and forget presence collection.
 
 ## Contact

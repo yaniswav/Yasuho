@@ -44,6 +44,83 @@ _SPAM_THRESHOLD = 5
 _SPAM_SWEEP_AT = 1000
 
 
+class _SettingsCache(dict):
+    """The ``automod``-table read-through cache, with a generation guard.
+
+    Mirrors ``tools/settings.py``: every invalidation bumps a generation, and a
+    cold read samples it BEFORE its fetch and refuses to seat the result if it
+    moved. Without that, a read already in flight when the dashboard invalidator
+    lands re-seats the row it fetched from BEFORE the dashboard's write, and
+    nothing ever re-reads a cache hit - so the stale toggles drive
+    ``on_message`` until the next write to that guild.
+
+    A ``dict`` SUBCLASS on purpose. The invalidators are not in this cog: they
+    reach in from ``cogs/system/dashboard_sync.py`` through
+    ``getattr(cog, "_settings", None)`` and mutate the mapping directly
+    (``cache[gid] = row`` in ``_invalidate_automod``, ``cache.clear()`` in
+    ``_resync_automod``), both behind an ``isinstance(cache, dict)`` guard this
+    class satisfies. Bumping inside the mutation methods therefore covers every
+    invalidator that exists today and any future one automatically - there is no
+    way to invalidate this cache that bypasses the guard, and no way to forget.
+    Only :meth:`seat` writes without bumping, because seating a cold read is not
+    an invalidation: if it bumped, two concurrent misses would cancel each
+    other's caching and the hot path would never keep a value at all.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.generation = 0
+
+    def _bump(self):
+        self.generation += 1
+
+    def __setitem__(self, key, value):
+        self._bump()
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        self._bump()
+        super().__delitem__(key)
+
+    def pop(self, *args, **kwargs):
+        self._bump()
+        return super().pop(*args, **kwargs)
+
+    def popitem(self):
+        self._bump()
+        return super().popitem()
+
+    def setdefault(self, key, default=None):
+        self._bump()
+        return super().setdefault(key, default)
+
+    def update(self, *args, **kwargs):
+        self._bump()
+        super().update(*args, **kwargs)
+
+    def clear(self):
+        self._bump()
+        super().clear()
+
+    def seat(self, key, value, generation):
+        """Cache a cold read's result unless an invalidation raced it.
+
+        Returns the value the caller should use either way: a read that lost its
+        cache seat still came from the database and is still the right answer for
+        THIS caller - it is only untrustworthy to seat for the NEXT one. And if
+        another task populated the key while we awaited the fetch, that value
+        wins (the same reason ``tools/settings.py`` seats with ``setdefault``):
+        it cannot be older than ours.
+        """
+        if generation != self.generation:
+            return value
+        if key in self:
+            return dict.__getitem__(self, key)
+        # dict.__setitem__, not self[key]: seating must not bump the generation.
+        dict.__setitem__(self, key, value)
+        return value
+
+
 class AutoMod(commands.Cog):
     """Hybrid auto-moderation: Yasuho's message scanning plus Discord's native AutoMod."""
 
@@ -66,7 +143,7 @@ class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._spam = {}
-        self._settings = {}
+        self._settings = _SettingsCache()
 
     # ------------------------------------------------------------------
     # Command group
@@ -136,13 +213,20 @@ class AutoMod(commands.Cog):
     # Custom-rule settings (cached, mirrors the original pattern)
     # ------------------------------------------------------------------
     async def get_settings(self, guild_id):
+        """Read the guild's ``automod`` row, caching misses (negative cache too).
+
+        The generation is sampled BEFORE the fetch and re-checked by
+        :meth:`_SettingsCache.seat`, so a dashboard invalidation that lands while
+        this fetch is in flight cannot be undone by seating our older snapshot -
+        see :class:`_SettingsCache`.
+        """
         if guild_id in self._settings:
             return self._settings[guild_id]
 
+        generation = self._settings.generation
         query = """SELECT antilink, antispam FROM automod WHERE guild_id = $1;"""
         row = await self.bot.db_pool.fetchrow(query, guild_id)
-        self._settings[guild_id] = row
-        return row
+        return self._settings.seat(guild_id, row, generation)
 
     def _update_cache(self, guild_id, **changes):
         current = self._settings.get(guild_id)
@@ -151,6 +235,8 @@ class AutoMod(commands.Cog):
             "antispam": bool(current["antispam"]) if current else False,
         }
         data.update(changes)
+        # Plain assignment, so the generation bumps: this IS a write, and a cold
+        # read still in flight must not re-seat the pre-write row over it.
         self._settings[guild_id] = data
 
     async def set_custom_rule(self, guild_id, key, value):

@@ -664,8 +664,18 @@ CREATE TABLE IF NOT EXISTS topgg_votes (
     last_vote_at     TIMESTAMPTZ NOT NULL,
     streak           INTEGER     NOT NULL DEFAULT 1,
     total_votes      INTEGER     NOT NULL DEFAULT 1,
-    boost_expires_at TIMESTAMPTZ NOT NULL
+    boost_expires_at TIMESTAMPTZ NOT NULL,
+    -- TRUE while last_vote_at was stamped by the lazy /vote catch-up poll
+    -- rather than by a webhook delivery (cogs/community/votes.py, RECORD_VOTE).
+    -- A catch-up only knows "top.gg says they voted some time in the last 12h",
+    -- so it stamps now() for a vote that may be hours old; the flag tells the
+    -- next webhook delivery that the timestamp under it is that soft evidence,
+    -- so the one-hour replay floor must not swallow a genuine new vote. The
+    -- first webhook after a catch-up counts and clears the flag.
+    caught_up        BOOLEAN     NOT NULL DEFAULT FALSE
 );
+-- Migrate pre-existing installs (no-op on a fresh database):
+ALTER TABLE topgg_votes ADD COLUMN IF NOT EXISTS caught_up BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Per-guild feature toggles & preferences (JSONB blob).  tools/settings.py, settings.py
 CREATE TABLE IF NOT EXISTS guild_settings (

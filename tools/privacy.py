@@ -47,9 +47,16 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # existed do not, and are resolved by search on first use). The BLOB itself is
 # not in the archive, for the same reason the rank-card image is not - see the
 # note at the query - so the row is still described completely.
-# Additive, but a consumer that keys on the version must be able to tell them
-# apart.
-EXPORT_VERSION = 8
+# Everything up to here was additive, but a consumer that keys on the version
+# must be able to tell them apart.
+# v9 REMOVES fields, which is why the bump matters more than any before it: the
+# `moderation_cases_as_moderator` rows are now the requester's OWN action facts
+# only (guild, case number, action, timestamp). The target's user id and the
+# moderator's free-text reason are gone from that projection - they are data
+# about a THIRD PARTY that happens to be filed next to this user's id, and the
+# old shape handed a former moderator a roster of who they sanctioned and why.
+# A consumer written against v8 must not assume those columns are still there.
+EXPORT_VERSION = 9
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -71,6 +78,13 @@ PROFILE_DELETE_QUERIES = (
     # dropped, so forgetting a profile must clear it too.
     ("profiles", "DELETE FROM profiles WHERE user_id = $1"),
 )
+
+# THE statement that unlinks an AniList account, written ONCE. `?anilist logout`
+# runs it through :func:`delete_anilist_token` and the wide erasure list below
+# runs the same string, so the voluntary unlink and the forget cannot drift into
+# meaning two different things (the same reason
+# cogs/community/profile/storage.delete_profile delegates here).
+ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 
 # THE WIDER list: everything a profile is, PLUS the user-scoped records that are
 # not profile data but are still "about you". Behind `?mydata deleteprofile`
@@ -116,6 +130,32 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # explicit); `?mydata deleteprofile` erases it here, behind the confirmation
     # view that names what is about to go.
     ("user_rank_cards", "DELETE FROM user_rank_cards WHERE user_id = $1"),
+    # The AniList OAuth token. It is ciphertext at rest, and it is still a LIVE
+    # credential the bot holds on this user's behalf: a forget that left it
+    # behind would leave the bot able to read and write their AniList list after
+    # they asked to be forgotten. Wide list rather than narrow, for the standard
+    # reason: `/profile clear` neither warns about AniList nor mentions it, and
+    # this row is not something its owner can type back - it only exists again
+    # after a fresh OAuth round trip (`/anilist login`).
+    # The voluntary verb for the same row is `?anilist logout`, which runs the
+    # very same statement - see ANILIST_TOKEN_DELETE above.
+    ("anilist_tokens", ANILIST_TOKEN_DELETE),
+    # The two notification opt-ins (airing episodes, new chapters). Their
+    # off-switch (`/anilist airing`, `/anilist chapters`) only sets
+    # `enabled = FALSE`, deliberately - a member whose DMs closed can flip it
+    # back on without re-resolving anything - so until this list grew, NOTHING
+    # anywhere deleted these rows: the Discord id, the resolved AniList numeric
+    # id and the opt-in date outlived every erasure path the bot had. Both are
+    # keyed by user alone, so the guild purge can never reach them either, which
+    # made /mydata the only possible home for their deletion.
+    (
+        "anilist_airing_optins",
+        "DELETE FROM anilist_airing_optins WHERE user_id = $1",
+    ),
+    (
+        "anilist_chapter_optins",
+        "DELETE FROM anilist_chapter_optins WHERE user_id = $1",
+    ),
 )
 
 
@@ -287,9 +327,15 @@ async def collect_user_export(pool, user_id):
         "SELECT last_export_at FROM mydata_export_cooldown WHERE user_id = $1",
         user_id,
     )
-    # The top.gg vote ledger: the whole row, because every column of it is a
-    # fact about this user and none of it is a credential. Absent row = never
-    # voted, stated as null below rather than as an invented zero.
+    # The top.gg vote ledger: every column that is a fact ABOUT this user, and
+    # none of it is a credential. Absent row = never voted, stated as null below
+    # rather than as an invented zero.
+    # ``caught_up`` is deliberately left out and is the one column that is not
+    # theirs: it records HOW WE LEARNED of the vote (a missed webhook that the
+    # catch-up poll reconciled, versus a webhook that arrived), which is our own
+    # delivery bookkeeping and tells the member nothing about their own
+    # behaviour. Everything they did - when they last voted, the streak, the
+    # lifetime count, the boost they are holding - is here.
     votes = await pool.fetchrow(
         "SELECT last_vote_at, streak, total_votes, boost_expires_at "
         "FROM topgg_votes WHERE user_id = $1",
@@ -349,9 +395,18 @@ async def collect_user_export(pool, user_id):
         "FROM cases WHERE user_id = $1 ORDER BY created_at",
         user_id,
     )
+    # Cases this user filed AS A MODERATOR: their own ACTION facts only - which
+    # server, which case number, what they did, when. The target's user id, the
+    # free-text reason and the sanction's expiry are deliberately not selected:
+    # all three are about the person who was moderated, not about the requester,
+    # and an export must not be a way to walk out of a staff team holding a list
+    # of who you sanctioned and what you wrote about them. Exactly the call made
+    # for `closed_by` on tickets below, and the mirror image of the target-side
+    # projection just above, which carries the reason (it is about the requester)
+    # but never the moderator id (that is the server's record). Each side gets
+    # its own half; neither gets the other party's.
     moderated_cases = await pool.fetch(
-        "SELECT guild_id, case_number, user_id AS target_user_id, action, "
-        "reason, expires, created_at FROM cases "
+        "SELECT guild_id, case_number, action, created_at FROM cases "
         "WHERE moderator_id = $1 ORDER BY created_at",
         user_id,
     )
@@ -586,14 +641,29 @@ async def delete_user_profile(pool, user_id):
     return await _delete_tables(pool, user_id, PROFILE_DELETE_QUERIES)
 
 
+async def delete_anilist_token(pool, user_id):
+    """Unlink an AniList account: drop the token row, return how many died.
+
+    The VOLUNTARY verb (`?anilist logout`) for the row `?mydata deleteprofile`
+    also erases, running the same :data:`ANILIST_TOKEN_DELETE` statement so the
+    two can never come to mean different things.
+
+    Nothing needs invalidating in memory afterwards: every reader of the token
+    re-reads this table on each use (cogs/anilist/base._token_status), so the
+    unlink takes effect on the very next command rather than at some cache TTL.
+    """
+    return affected_rows(await pool.execute(ANILIST_TOKEN_DELETE, user_id))
+
+
 async def delete_user_data(pool, user_id):
     """Erase everything /mydata promises, in one transaction; per-table counts.
 
     :data:`USER_DELETE_QUERIES`: the profile, plus the user-scoped records that
-    are not profile data (today, the top.gg vote ledger and the personal rank
-    card). The wider, one-way verb, and the reason it is a separate function is
-    that its only caller sits behind a confirmation button that names what is
-    about to be destroyed.
+    are not profile data (today, the top.gg vote ledger, the personal rank card,
+    the AniList OAuth token and the two AniList/MangaDex notification opt-ins).
+    The wider, one-way verb, and the reason it is a separate function is that its
+    only caller sits behind a confirmation button that names what is about to be
+    destroyed.
 
     In-memory twins of the deleted rows (the presence opt-in set, the live XP
     boost) are dropped by that caller, right after this returns. The rank card
@@ -602,6 +672,14 @@ async def delete_user_data(pool, user_id):
     and never a value, so a stale hint costs one lookup that finds nothing,
     renders the guild card correctly and corrects itself (see
     cogs/community/leveling/rank_card_user.py).
+
+    The AniList rows need no hook either, for the same kind of reason: the token
+    is re-read from the table on every use, and both pollers select the opt-in
+    rows themselves each tick, so a deleted user simply stops being fanned out
+    to. The one residue is the per-process viewer-id map in
+    cogs/anilist/schedule.py, which can still answer "this Discord user is that
+    AniList user" for up to its one-hour TTL; it is never a delivery path (the
+    pollers read the table), it holds no credential, and it dies with the TTL.
     """
     return await _delete_tables(pool, user_id, USER_DELETE_QUERIES)
 

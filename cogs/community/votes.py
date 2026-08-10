@@ -102,18 +102,43 @@ REPLAY_WINDOW_HOURS = 1
 # actually wrote.
 #
 # $1 user id, $2 boost hours (12, or 24 on a weekend), $3 the streak window,
-# $4 the replay floor. ``now()`` is the transaction timestamp, so every column of
+# $4 the replay floor, $5 whether THIS write is a catch-up (see below).
+# ``now()`` is the transaction timestamp, so every column of
 # a given vote is stamped from ONE clock reading - last_vote_at and
 # boost_expires_at can never disagree about when the vote happened.
 #
 # THE REPLAY BRANCH, repeated in each SET because SQL has no way to say "leave
 # this row alone" conditionally: when the previous vote is less than $4 old, all
-# four columns keep the value they already had, which makes a redelivery a true
+# five columns keep the value they already had, which makes a redelivery a true
 # no-op rather than a free streak step. The predicate is bounded BELOW by zero
 # on purpose - a last_vote_at in the FUTURE (a clock stepping backwards) is not
 # a replay, and must fall through to the streak rules so the next real vote
 # re-stamps the row from the current clock instead of freezing the ledger until
 # the future timestamp is reached.
+#
+# THE SECOND HALF OF THAT PREDICATE, ``$5 OR NOT topgg_votes.caught_up``, is what
+# keeps the replay floor from eating a REAL vote (see CATCHUP_STALE_HOURS for the
+# other side of it). The catch-up poll banks a vote on the evidence "top.gg says
+# this member voted some time in the last 12h" and can only stamp last_vote_at =
+# now() for it, so the row may claim a vote is minutes old when it is really
+# nearly twelve hours old. A member who then votes again for real - which top.gg
+# allows the moment their true 12h is up - would have that genuine webhook
+# delivery land inside the one-hour floor and be discarded: no streak step, no
+# lifetime count, no thank-you. So a row STAMPED BY A CATCH-UP is soft evidence,
+# and a webhook delivery ($5 false) landing on one is treated as the real thing:
+# it re-stamps the row, steps the streak, and clears the flag.
+#
+# The cost of that choice, stated plainly: when a webhook is merely SLOW and a
+# catch-up beats it to the same vote, that delivery is now counted twice. It is
+# bounded to exactly one extra count - the flag is cleared by the first webhook,
+# so any further delivery inside the hour is a replay again - and it can only
+# happen at all when the ledger already looked 12h stale, which is the rare case
+# the catch-up exists for. One over-counted vote in that corner is the right
+# trade against silently dropping genuine ones.
+#
+# A catch-up write itself ($5 true) is unaffected by the flag: it stays purely
+# time-based against its own wider floor, so two catch-ups in a row can never
+# bank two votes.
 #
 # Clock skew cannot explode a streak either way: a negative interval is <= the
 # streak window, so it continues by exactly +1, and the same statement stamps
@@ -131,41 +156,58 @@ REPLAY_WINDOW_HOURS = 1
 # log line is quieter than it deserved.
 RECORD_VOTE = """
 INSERT INTO topgg_votes (
-    user_id, last_vote_at, streak, total_votes, boost_expires_at
+    user_id, last_vote_at, streak, total_votes, boost_expires_at, caught_up
 )
-VALUES ($1, now(), 1, 1, now() + $2 * INTERVAL '1 hour')
+VALUES ($1, now(), 1, 1, now() + $2 * INTERVAL '1 hour', $5)
 ON CONFLICT (user_id) DO UPDATE SET
     last_vote_at = CASE
-        WHEN now() - topgg_votes.last_vote_at
-             BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour'
+        WHEN (now() - topgg_votes.last_vote_at
+              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')
+             AND ($5 OR NOT topgg_votes.caught_up)
         THEN topgg_votes.last_vote_at
         ELSE now()
     END,
     streak = CASE
-        WHEN now() - topgg_votes.last_vote_at
-             BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour'
+        WHEN (now() - topgg_votes.last_vote_at
+              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')
+             AND ($5 OR NOT topgg_votes.caught_up)
         THEN topgg_votes.streak
         WHEN now() - topgg_votes.last_vote_at <= $3 * INTERVAL '1 hour'
         THEN topgg_votes.streak + 1
         ELSE 1
     END,
     total_votes = CASE
-        WHEN now() - topgg_votes.last_vote_at
-             BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour'
+        WHEN (now() - topgg_votes.last_vote_at
+              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')
+             AND ($5 OR NOT topgg_votes.caught_up)
         THEN topgg_votes.total_votes
         ELSE topgg_votes.total_votes + 1
     END,
     boost_expires_at = CASE
-        WHEN now() - topgg_votes.last_vote_at
-             BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour'
+        WHEN (now() - topgg_votes.last_vote_at
+              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')
+             AND ($5 OR NOT topgg_votes.caught_up)
         THEN topgg_votes.boost_expires_at
         ELSE GREATEST(
             topgg_votes.boost_expires_at, now() + $2 * INTERVAL '1 hour'
         )
+    END,
+    caught_up = CASE
+        WHEN (now() - topgg_votes.last_vote_at
+              BETWEEN INTERVAL '0 hours' AND $4 * INTERVAL '1 hour')
+             AND ($5 OR NOT topgg_votes.caught_up)
+        THEN topgg_votes.caught_up
+        ELSE $5
     END
 RETURNING last_vote_at, streak, total_votes, boost_expires_at,
           last_vote_at < now() AS replayed
 """
+
+# The two values $5 ever takes, named rather than spelled as bare booleans at
+# the call sites: a vote that came in on the webhook, and one the /vote
+# catch-up poll found. See RECORD_VOTE's comment for what the flag buys.
+FROM_WEBHOOK = False
+FROM_CATCHUP = True
 
 # --- V2: user-facing surfaces built on the ledger above ---------------------
 
@@ -370,6 +412,7 @@ class Votes(commands.Cog):
                 hours,
                 STREAK_WINDOW_HOURS,
                 REPLAY_WINDOW_HOURS,
+                FROM_WEBHOOK,
             )
         except Exception:
             log.exception("votes: failed to record the vote of %s", user_id)
@@ -709,7 +752,10 @@ class Votes(commands.Cog):
         # here rather than silently: a member who catches up on a weekend gets
         # the shorter window, which only ever under-rewards, never over.
         #
-        # The ONE argument that differs from the webhook's call is the replay
+        # TWO arguments differ from the webhook's call, and they are the two
+        # halves of the same fact: this path's evidence is weaker.
+        #
+        # The first is the replay
         # floor: CATCHUP_STALE_HOURS, not REPLAY_WINDOW_HOURS. The webhook's one
         # hour is sized for a redelivery of the same POST; this path's evidence
         # is only "top.gg says they voted some time in the last 12h", which is
@@ -718,6 +764,11 @@ class Votes(commands.Cog):
         # decided on the app clock, so no amount of drift between the two can
         # turn one vote into two rows' worth of streak. When it does bite, the
         # row comes back `replayed` and _apply_vote_row sends nothing.
+        #
+        # The second is FROM_CATCHUP, which MARKS the row as stamped on that
+        # weaker evidence. Without it the wider floor above would then swallow
+        # the member's next genuine webhook vote for up to twelve hours - the
+        # very votes this poll exists to protect. See RECORD_VOTE.
         try:
             fresh = await self.bot.db_pool.fetchrow(
                 RECORD_VOTE,
@@ -725,6 +776,7 @@ class Votes(commands.Cog):
                 BOOST_HOURS,
                 STREAK_WINDOW_HOURS,
                 CATCHUP_STALE_HOURS,
+                FROM_CATCHUP,
             )
         except Exception:
             log.exception("votes: catch-up record failed for %s", user_id)

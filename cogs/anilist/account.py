@@ -13,7 +13,7 @@ from .queries import (
     USER_STATS_QUERY,
     VIEWER_QUERY,
 )
-from tools import crypto
+from tools import crypto, privacy
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -329,9 +329,11 @@ class AccountMixin:
     async def anilist_logout(self, ctx):
         """Unlink your AniList account."""
 
-        await self.bot.db_pool.execute(
-            "DELETE FROM anilist_tokens WHERE user_id = $1;", ctx.author.id
-        )
+        # Through tools.privacy, not an inline DELETE: `?mydata deleteprofile`
+        # erases this same row (privacy.USER_DELETE_QUERIES) and the two must
+        # never come to mean different things - "unlink" here and "forget" there
+        # have to reach exactly the same table with exactly the same predicate.
+        await privacy.delete_anilist_token(self.bot.db_pool, ctx.author.id)
         await ctx.send(
             _("Your AniList account has been unlinked."),
             ephemeral=ctx.interaction is not None,
