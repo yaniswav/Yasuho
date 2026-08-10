@@ -52,10 +52,11 @@ log = logging.getLogger(__name__)
 async def _resolve_user(bot, user_id):
     """Return the ``discord.User`` for ``user_id``, or ``None``. Never raises.
 
-    Checked BEFORE the cooldown slot is claimed: a user the bot cannot resolve
-    can never be DM'd, and burning their one export per hour on an attempt that
-    was doomed before it started would be a denial of service on the person the
-    export belongs to.
+    Two-step by cost: the in-memory ``bot.get_user`` is free; ``bot.fetch_user``
+    is a REST call, reached ONLY on a cache miss. That cost split is what lets the
+    caller keep the documented resolve-then-cooldown order on a cache hit (resolve
+    is free there) while consulting the cooldown before the REST on a miss - see
+    :func:`_exec_mydata_export` for why the miss path reorders.
     """
     user = bot.get_user(user_id)
     if user is not None:
@@ -103,8 +104,12 @@ async def _exec_mydata_export(bot, user_id, payload):
 
     Order is load-bearing:
 
-    1. resolve the user (cheap, no side effect, and see :func:`_resolve_user` for
-       why it comes first);
+    1. resolve the user, but the resolve/cooldown order flips by COST. On an
+       in-memory cache hit resolving is free, so the documented order stands:
+       resolve, then claim (never burn the honest user's hourly slot on a doomed
+       attempt - see :func:`_resolve_user`). On a cache MISS resolving would cost
+       a REST fetch, so the cooldown is claimed FIRST and a rate-limited abusive
+       request is refused before that REST call ever happens;
     2. claim the shared cooldown slot - refused means ``cooldown`` with the exact
        ``retryAfter`` in seconds, and NOTHING has been read or built at that
        point;
@@ -125,13 +130,33 @@ async def _exec_mydata_export(bot, user_id, payload):
     ``privacy.claim_export_slot`` for why releasing it would be the abusable
     direction.
     """
-    user = await _resolve_user(bot, user_id)
-    if user is None:
-        return {"ok": False, "reason": "failed"}
+    # Whether to resolve BEFORE or AFTER the cooldown depends on whether
+    # resolving is FREE. The documented order is resolve-then-cooldown so a
+    # doomed attempt never burns the honest user's one export per hour (see
+    # _resolve_user). That reasoning holds only while resolving costs nothing: an
+    # in-memory cache HIT (bot.get_user) is free, so on a hit we keep the
+    # documented order EXACTLY - resolve, then claim.
+    #
+    # A cache MISS is the abuse signal. Resolving then needs a REST bot.fetch_user
+    # (see _resolve_user), and a throwaway account that shares no guild with the
+    # bot misses the cache on every queued request. So on a miss we consult the
+    # cooldown FIRST: a doomed/abusive request that is already rate-limited pays
+    # the cheap DB check instead of a REST round-trip. The tradeoff is that a
+    # granted-then-unresolvable attempt on the miss path consumes the slot - but
+    # that path is exactly the uncached, abuse-shaped one, and the honest
+    # cache-hit path (where get_user cannot "resolve to nobody") is byte-for-byte
+    # unchanged.
+    user = bot.get_user(user_id)
+    resolve_via_rest = user is None
 
     granted, retry_after = await privacy.claim_export_slot(bot.db_pool, user_id)
     if not granted:
         return {"ok": False, "reason": "cooldown", "retryAfter": retry_after}
+
+    if resolve_via_rest:
+        user = await _resolve_user(bot, user_id)
+        if user is None:
+            return {"ok": False, "reason": "failed"}
 
     try:
         data, avatar_rows = await privacy.collect_user_export(bot.db_pool, user_id)

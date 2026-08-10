@@ -367,17 +367,92 @@ async def test_a_build_failure_is_reported_as_failed(monkeypatch, stub_export):
     assert user.sent == []
 
 
-async def test_an_unresolvable_user_is_failed_without_burning_the_slot(stub_export):
-    """The user is resolved BEFORE the slot is claimed, so an action for someone
-    the bot cannot reach never costs that person their hourly export."""
+async def test_an_uncached_unresolvable_user_is_failed_after_claiming(stub_export):
+    """The no-burn guarantee is scoped to the HONEST (cache-hit) path. On a cache
+    MISS the cooldown is now consulted BEFORE the REST resolve (the whole point of
+    the reorder: a rate-limited, uncached, abuse-shaped request must not cost a
+    REST call). The consequence is that a granted-then-unresolvable miss DOES
+    consume the slot - acceptable, because only the uncached path (never the
+    honest cached one, where get_user cannot 'resolve to nobody') can reach it."""
     pool = SlotPool()
     bot = FakeBot(pool, user=None, cached=False, fetch_error=RuntimeError("gone"))
 
     result = await dua._exec_mydata_export(bot, 4242, {})
 
     assert result == {"ok": False, "reason": "failed"}
-    assert pool.slots == {}  # the slot was never taken
+    assert bot.fetched == [4242]  # the REST was reached (the claim was granted)
+    assert 4242 in pool.slots  # ... so the slot is consumed on the miss path
     assert _ran(stub_export) == {"collect": 0, "build": 0}
+
+
+async def test_a_cache_hit_keeps_the_documented_resolve_then_cooldown_order(
+    monkeypatch, stub_export
+):
+    """Honest path, unchanged: a user in the in-memory cache is resolved for free
+    FIRST, then the cooldown is claimed - and the REST fetch_user is never
+    touched. The order (resolve, then cooldown) is observed, not just implied."""
+    pool = SlotPool()
+    user = FakeUser()
+    bot = FakeBot(pool, user=user)  # cached=True by default -> a cache HIT
+
+    order = []
+    real_get_user = bot.get_user
+
+    def _get_user(user_id):
+        order.append("resolve")
+        return real_get_user(user_id)
+
+    bot.get_user = _get_user
+
+    real_claim = privacy.claim_export_slot
+
+    async def _claim(db_pool, user_id):
+        order.append("cooldown")
+        return await real_claim(db_pool, user_id)
+
+    monkeypatch.setattr(privacy, "claim_export_slot", _claim)
+
+    result = await dua._exec_mydata_export(bot, 4242, {})
+
+    assert result == {"ok": True, "delivered": "dm"}
+    assert bot.fetched == []  # a cache hit never reaches the REST
+    assert order == ["resolve", "cooldown"]  # documented order preserved
+
+
+async def test_a_cache_miss_on_cooldown_skips_the_rest_fetch(stub_export):
+    """The defense: an uncached user who is ALSO on cooldown is refused by the
+    cheap DB check, so the REST fetch_user - the cost the abuse burns - never
+    runs. Same cooldown result shape the dashboard already contracted for."""
+    pool = SlotPool()
+    pool.slots[4242] = pool.now  # already exported this hour
+    # The user exists but is NOT cached, so resolving WOULD need a REST fetch.
+    bot = FakeBot(pool, user=FakeUser(4242), cached=False)
+
+    result = await dua._exec_mydata_export(bot, 4242, {})
+
+    assert result == {
+        "ok": False,
+        "reason": "cooldown",
+        "retryAfter": privacy.EXPORT_COOLDOWN_SECONDS,
+    }
+    assert bot.fetched == []  # the REST was skipped: cooldown refused first
+    assert _ran(stub_export) == {"collect": 0, "build": 0}
+
+
+async def test_a_cache_miss_off_cooldown_claims_then_fetches_and_delivers(stub_export):
+    """A cache miss that is NOT on cooldown still resolves via the REST and
+    proceeds: the reorder only moves the cooldown ahead of the fetch, it does not
+    drop the honest uncached user."""
+    pool = SlotPool()
+    user = FakeUser()
+    bot = FakeBot(pool, user=user, cached=False)  # miss, fresh cooldown
+
+    result = await dua._exec_mydata_export(bot, 4242, {})
+
+    assert result == {"ok": True, "delivered": "dm"}
+    assert bot.fetched == [4242]  # resolved via the REST, after the claim
+    assert 4242 in pool.slots  # the slot was claimed
+    assert _ran(stub_export) == {"collect": 1, "build": 1}
 
 
 # ---------------------------------------------------------------------------
