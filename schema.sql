@@ -1179,6 +1179,56 @@ CREATE INDEX IF NOT EXISTS dashboard_actions_user_idx
     ON dashboard_actions (user_id, status) WHERE user_id IS NOT NULL;
 
 -- ============================================================
+-- Dashboard configuration journal (written by the dashboard, never by the bot)
+-- ============================================================
+-- "Who changed what, in which section of the dashboard, and when." The DASHBOARD
+-- (the separate Node process) is the only writer: the bot NEVER INSERTs here,
+-- and grepping the repo for `INTO dashboard_audit` returning nothing is the
+-- check. The bot only ever PURGES this table (retention) and READS it (the
+-- courtesy export below), which is why it is declared here rather than left to
+-- the dashboard's own migrations - schema.sql is the one place that says what
+-- this database contains.
+--
+-- VALUES ARE NEVER STORED. `section` is the dashboard page (e.g. 'leveling'),
+-- `action` is the verb ('update', 'reset'), and `detail` is a short free-text
+-- note about WHICH knob moved - never the old or the new value. A journal that
+-- carried values would quietly become a second copy of the guild's whole
+-- configuration, with none of the deletion paths the real tables have.
+--
+-- LIFECYCLE, decided on the `cases`/`warns` precedent and nothing else:
+--   * guild_id is NOT NULL, so every row is guild data and the row DIES WITH THE
+--     GUILD (tools/retention.GUILD_DELETE_QUERIES, plus the discovery UNION so an
+--     orphaned journal schedules its own purge). Guild-scoped is the whole
+--     governance model here: the audit trail belongs to the server, not to the
+--     admin who happened to click.
+--   * actor_user_id is NOT ERASABLE by its own subject. It is on NO user
+--     erasure list, deliberately: an admin who leaves a staff team must not be
+--     able to blank the record of the changes they made, exactly as they cannot
+--     erase the `cases` they filed as a moderator. The 90-day age prune
+--     (retention.prune_stale_dashboard_audit) is what bounds it instead.
+--   * the actor MAY EXPORT their own rows, as a courtesy, under
+--     `dashboard_audit` in /mydata - the same reduction `cases` gets on the
+--     moderator side (tools/privacy.collect_user_export): their own action
+--     facts, scoped WHERE actor_user_id, never another actor's rows.
+CREATE TABLE IF NOT EXISTS dashboard_audit (
+    id            BIGSERIAL   PRIMARY KEY,
+    guild_id      BIGINT      NOT NULL,
+    actor_user_id BIGINT      NOT NULL,
+    section       TEXT        NOT NULL,   -- dashboard page, never a value
+    action        TEXT        NOT NULL,   -- the verb: update, reset, ...
+    detail        TEXT,                   -- which knob moved, never what to
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- The dashboard's own read: "this guild's journal, newest first". id DESC rather
+-- than created_at DESC because id is the tiebreaker anyway (BIGSERIAL is
+-- monotonic per row) and it keeps the index one column narrower.
+CREATE INDEX IF NOT EXISTS dashboard_audit_guild_idx ON dashboard_audit (guild_id, id DESC);
+-- The actor's own read, and the ONE query the courtesy export runs. Same shape,
+-- other key: without it that export would seq-scan the whole journal of every
+-- guild to find one person's rows.
+CREATE INDEX IF NOT EXISTS dashboard_audit_actor_idx ON dashboard_audit (actor_user_id, id DESC);
+
+-- ============================================================
 -- Bot liveness heartbeat (read by the dashboard, written only by the bot)
 -- ============================================================
 -- ONE row, forever: the id column is a smallint pinned to 1 by a CHECK, so the

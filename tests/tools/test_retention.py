@@ -1,5 +1,6 @@
 import datetime
 import inspect
+import logging
 import os
 import re
 import types
@@ -306,6 +307,25 @@ def test_the_guild_purge_leaves_user_scoped_queue_rows_alone():
     )
 
 
+def test_the_dashboard_journal_dies_with_its_guild():
+    """The governance call for ``dashboard_audit``, in the purge list.
+
+    Modelled on ``cases``/``warns`` and nothing else: ``guild_id`` is NOT NULL,
+    so every row is the SERVER's audit trail - it dies with the guild, and its
+    actor cannot erase it (no user erasure path touches this table; see
+    tests/tools/test_privacy.py). The discovery UNION carries no NULL guard, and
+    does not need one: unlike ``dashboard_actions`` there is no second scope
+    here, so every row names a guild.
+    """
+    assert (
+        dict(retention.GUILD_DELETE_QUERIES)["dashboard_audit"]
+        == "DELETE FROM dashboard_audit WHERE guild_id = $1"
+    )
+    assert (
+        "SELECT guild_id FROM dashboard_audit" in retention.STORED_GUILD_IDS_QUERY
+    )
+
+
 # ---------------------------------------------------------------------------
 # The USER side of the lifecycle: rows no guild purge can reach
 # ---------------------------------------------------------------------------
@@ -369,6 +389,136 @@ async def test_the_export_slot_prune_can_never_shorten_a_live_window():
         .default
         == privacy.EXPORT_COOLDOWN_SECONDS
     )
+
+
+# ---------------------------------------------------------------------------
+# The dashboard journal: guild-scoped, and still unbounded without an age prune
+# ---------------------------------------------------------------------------
+#
+# The odd one out on this tick. `dashboard_audit` IS guild data (guild_id NOT
+# NULL), so the purge above covers a DEPARTURE - but only a departure, and a
+# guild that never leaves is the normal case. The bot never writes the table
+# (the dashboard does), so there is no writer-side prune either: without this
+# pass the journal is a permanent record of every configuration click. Guild
+# scope is not the same promise as a bounded lifetime.
+
+
+async def test_the_dashboard_journal_is_aged_out_at_ninety_days():
+    pool = _PrunePool(status="DELETE 5")
+
+    deleted = await retention.prune_stale_dashboard_audit(pool)
+
+    assert deleted == 5
+    query, args = pool.calls[0]
+    assert args == (
+        retention.DASHBOARD_AUDIT_MAX_AGE_DAYS,
+        retention.DASHBOARD_AUDIT_PRUNE_BATCH_SIZE,
+    )
+    assert retention.DASHBOARD_AUDIT_MAX_AGE_DAYS == 90
+    assert "DELETE FROM dashboard_audit" in query
+    # The window, and only the window: rows are aged on their own timestamp,
+    # never on who wrote them. The actor has no early exit from this table.
+    assert "created_at < now() - $1 * INTERVAL '1 day'" in query
+    assert "actor_user_id" not in query
+
+
+def test_the_journal_prune_is_bounded_by_a_limited_ctid_subselect():
+    """Bounded per pass, the same shape as the serverstats and usage prunes.
+
+    The LIMITed ``ctid`` sub-select runs as an InitPlan, so the number of rows
+    deleted - and therefore LOCKED - is capped whatever state the table is in. A
+    first pass over a journal nobody has ever pruned cannot take a wide lock for
+    minutes, and the caller simply meets the rest on the next daily tick.
+    """
+    source = inspect.getsource(retention.prune_stale_dashboard_audit)
+    assert "ctid = ANY(ARRAY(" in source
+    assert "LIMIT $2" in source
+    # The bound has to be a real cap, not a comment: an unlimited DELETE would
+    # still pass the window test above.
+    assert re.search(r"SELECT ctid FROM dashboard_audit", source)
+
+
+class _JournalTablePool:
+    """A stateful stand-in for ``dashboard_audit``: batched, oldest-first delete.
+
+    Holds the ``created_at`` of every row already past the window (the only rows
+    the prune can reach) and answers each DELETE the way Postgres would - ``ORDER
+    BY created_at`` then ``LIMIT batch_size`` - so the drain loop is exercised
+    for real (rows genuinely leave the table), not merely string-matched.
+    """
+
+    def __init__(self, created_ats):
+        # A smaller datetime is an older row; store unsorted so a prune that
+        # forgot ORDER BY could not accidentally pass.
+        self.rows = list(created_ats)
+        self.batches = []
+
+    async def execute(self, query, *args):
+        assert "ORDER BY created_at" in query
+        assert "LIMIT $2" in query
+        _max_age_days, batch_size = args
+        self.rows.sort()  # ORDER BY created_at ASC: oldest first
+        victims = self.rows[:batch_size]
+        self.rows = self.rows[batch_size:]
+        self.batches.append(victims)
+        return f"DELETE {len(victims)}"
+
+
+async def test_the_journal_prune_drains_every_stale_row_oldest_first():
+    """One pass must clear the WHOLE backlog, not a single 500-row batch.
+
+    dashboard_audit is an event stream (one row per config action across every
+    guild), so its daily inflow past the window is the fleet's write rate. A
+    delete-one-batch-per-tick prune would cap retention at batch_size rows a day
+    and let the table grow without bound - the exact failure it exists to stop.
+    """
+    base = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+    # Seven stale rows with distinct ages, deliberately out of order.
+    ages = [base + datetime.timedelta(days=n) for n in (3, 0, 5, 1, 6, 2, 4)]
+    pool = _JournalTablePool(ages)
+
+    deleted = await retention.prune_stale_dashboard_audit(
+        pool, batch_size=3, max_batches=10
+    )
+
+    # The whole backlog is gone in one pass...
+    assert deleted == 7
+    assert pool.rows == []
+    # ... drained in bounded batches whose last one is short (the stop signal)...
+    assert [len(batch) for batch in pool.batches] == [3, 3, 1]
+    # ... and OLDEST-first, never an arbitrary tail: the first batch is the three
+    # earliest created_at, the last batch the single newest of the stale set.
+    assert pool.batches[0] == sorted(ages)[:3]
+    assert pool.batches[-1] == sorted(ages)[6:]
+
+
+async def test_the_journal_prune_stops_at_its_cap_and_reports_being_behind(
+    caplog,
+):
+    """A pathological first-run backlog cannot run unbounded in one tick.
+
+    The loop is capped at ``max_batches``; when it reaches the cap the table is
+    still behind, which is logged (plain warning naming the table), and the rest
+    is met on the next daily tick rather than dropped.
+    """
+    base = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+    # More rows than batch_size * max_batches can drain in a single pass.
+    ages = [base + datetime.timedelta(seconds=n) for n in range(25)]
+    pool = _JournalTablePool(ages)
+
+    with caplog.at_level(logging.WARNING, logger="tools.retention"):
+        deleted = await retention.prune_stale_dashboard_audit(
+            pool, batch_size=5, max_batches=3
+        )
+
+    # Exactly the cap: three batches of five, then it STOPS.
+    assert [len(batch) for batch in pool.batches] == [5, 5, 5]
+    assert deleted == 15
+    # The remaining ten are left for the next tick, not silently dropped.
+    assert len(pool.rows) == 10
+    # ... and the operator is told the table is still behind.
+    assert "dashboard_audit" in caplog.text
+    assert "still behind" in caplog.text
 
 
 # ---------------------------------------------------------------------------

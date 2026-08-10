@@ -20,6 +20,14 @@ until a moderator removes it (`?delwarn`, or the remove button on the warn
 list), and every moderation record is kept until the server removes the bot,
 after which that server's data is purged on the schedule below.
 
+**Dashboard change log** (per server): if a server manager uses the web
+dashboard, each configuration change made there is recorded - which setting was
+changed, the acting manager's user ID, and when. This is the server's audit
+trail of who changed what, not the manager's own record: like moderation
+records, the manager who made a change can see it in their own data export but
+cannot erase it, and the whole log dies with the server when the bot is removed
+(it is also aged out on the schedule below meanwhile).
+
 **Support tickets** (per server): metadata only - the ticket number, the private
 thread's ID, who opened it, which staff member claimed it, who closed it, when
 it was opened and closed, and whether it is still open. The bot never stores the
@@ -128,6 +136,9 @@ the same deletion schedule on restore.
   we show. Opting out deletes it immediately and entirely.
 - Dashboard request logs (your own actions on the web dashboard): 30 days after
   completion.
+- Dashboard change log (server configuration changes made on the web
+  dashboard): 90 days, and purged in full when the bot is removed from the
+  server.
 - Anonymous command-usage aggregates: 400 days.
 - Top.gg vote record: kept until you delete it. There is no automatic window,
   because the record IS the streak and the lifetime count it exists to show;

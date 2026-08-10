@@ -150,6 +150,15 @@ class DataRetention(commands.Cog):
         presence_rows = await retention.prune_stale_presence_aggregates(
             self.bot.db_pool
         )
+        # The dashboard's configuration journal. GUILD-scoped, unlike the three
+        # above, so the guild purge does cover a departure - but only a
+        # departure, and a guild that stays would otherwise keep every "who
+        # changed what" line for ever, since the bot never writes that table and
+        # nothing else ages it out. Bounded per pass by a LIMITed ctid
+        # sub-select.
+        audit_rows = await retention.prune_stale_dashboard_audit(
+            self.bot.db_pool
+        )
 
         if (
             scheduled_guilds
@@ -158,11 +167,12 @@ class DataRetention(commands.Cog):
             or user_actions
             or export_slots
             or presence_rows
+            or audit_rows
         ):
             log.info(
                 "Retention pass complete: scheduled_guilds=%s guilds=%s "
                 "avatar_rows=%s avatar_bytes=%s user_actions=%s "
-                "export_slots=%s presence_rows=%s",
+                "export_slots=%s presence_rows=%s audit_rows=%s",
                 scheduled_guilds,
                 purged_guilds,
                 avatar_rows,
@@ -170,6 +180,7 @@ class DataRetention(commands.Cog):
                 user_actions,
                 export_slots,
                 presence_rows,
+                audit_rows,
             )
         return {
             "scheduled_guilds": scheduled_guilds,
@@ -179,6 +190,7 @@ class DataRetention(commands.Cog):
             "user_actions": user_actions,
             "export_slots": export_slots,
             "presence_rows": presence_rows,
+            "audit_rows": audit_rows,
         }
 
     async def _check_backups(self):

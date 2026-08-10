@@ -42,6 +42,26 @@ USER_ACTION_AUDIT_DAYS = 30
 PRESENCE_AGGREGATE_MAX_AGE_DAYS = 30
 PRESENCE_PRUNE_BATCH_SIZE = 500
 
+# How long a dashboard configuration-journal row is kept, and how many one pass
+# may delete. The journal is guild data and dies with its guild like `cases`, but
+# a guild that never leaves would otherwise keep every "who changed what" line it
+# ever produced for ever - nothing else ages them out. 90 days is the same window
+# the serverstats aggregates are held to: long enough to answer "who broke the
+# leveling config last month", short enough that the table is not a permanent
+# record of an admin's every click.
+DASHBOARD_AUDIT_MAX_AGE_DAYS = 90
+DASHBOARD_AUDIT_PRUNE_BATCH_SIZE = 500
+# One pass DRAINS the backlog rather than deleting a single batch: the journal
+# is an event stream (one row per config action across every guild), so above
+# ~500 fleet-wide writes a day a single-batch-per-tick prune could never hold
+# the 90-day window and the table would grow without bound - the exact failure
+# this prune exists to prevent. So the pass loops the bounded delete until it
+# catches up, capped at this many batches so a pathological first-run backlog
+# (millions of rows a nobody ever pruned) cannot take an unbounded lock in one
+# tick; the cap is the same 20 the serverstats and avatar drains use. Hitting
+# it is logged and the rest is met on the next daily tick.
+DASHBOARD_AUDIT_PRUNE_MAX_BATCHES = 20
+
 # Deletion order matters for the foreign keys installed by migration 0002.
 # Every query is static: no table or column name comes from user input.
 GUILD_DELETE_QUERIES = (
@@ -150,6 +170,16 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM dashboard_actions WHERE guild_id = $1",
     ),
     (
+        # The dashboard's configuration journal (who changed what, when). Written
+        # only by the dashboard, never by the bot. guild_id is NOT NULL by
+        # construction, so every row is guild data and dies with the guild -
+        # the same call as `cases` and `warns`: the trail belongs to the server,
+        # not to the admin who clicked, which is also why no user erasure path
+        # touches it.
+        "dashboard_audit",
+        "DELETE FROM dashboard_audit WHERE guild_id = $1",
+    ),
+    (
         # Reminders are user-owned even when created in a guild. A departed
         # guild must not collaterally delete a member's pending reminders; any
         # that are genuinely undeliverable die naturally at fire time via the
@@ -197,6 +227,7 @@ UNION SELECT guild_id FROM anilist_follows
 UNION SELECT guild_id FROM anilist_feed_mutes
 UNION SELECT guild_id FROM anilist_channel_subs
 UNION SELECT guild_id FROM dashboard_actions WHERE guild_id IS NOT NULL
+UNION SELECT guild_id FROM dashboard_audit
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION SELECT guild_id FROM serverstats_digest_state
@@ -406,6 +437,83 @@ async def prune_expired_export_slots(
         window,
     )
     return affected_rows(status)
+
+
+async def prune_stale_dashboard_audit(
+    pool,
+    max_age_days=DASHBOARD_AUDIT_MAX_AGE_DAYS,
+    batch_size=DASHBOARD_AUDIT_PRUNE_BATCH_SIZE,
+    max_batches=DASHBOARD_AUDIT_PRUNE_MAX_BATCHES,
+):
+    """Delete dashboard journal rows older than the retention window.
+
+    THE GAP THIS CLOSES. Every row of ``dashboard_audit`` is guild data
+    (``guild_id NOT NULL``), so the guild purge above covers a DEPARTURE - but a
+    guild that never leaves is the normal case, and for it nothing else ever
+    deletes a row. The bot does not write this table at all (the dashboard does),
+    so there is no writer-side prune either: without this pass the journal is an
+    unbounded, permanent record of every configuration click an admin ever made.
+    Guild-scoped storage is not the same promise as bounded storage, and this is
+    the half the purge cannot make.
+
+    NOT A USER PATH. The window ages rows out on their own age, never on who
+    wrote them: the actor cannot erase their trail early (see the note in
+    schema.sql and the `cases` precedent it follows), and no user erasure list
+    reaches this table.
+
+    DRAINS, NOT ONE BATCH. The journal is an event stream - one row per config
+    action across every guild - so its daily inflow past the window is the whole
+    fleet's write rate, not a handful of rows. A single bounded delete per tick
+    would cap the pass at ``batch_size`` rows a day and, above that many
+    fleet-wide writes, the table would grow without bound: the very failure this
+    prune exists to prevent. So the pass LOOPS the bounded delete until a batch
+    comes back short (the backlog is drained), the same drain shape the avatar
+    and serverstats prunes use. ``max_batches`` caps the loop so a first run over
+    a journal nobody has ever pruned - millions of rows - cannot take an
+    unbounded lock in one tick; if the cap is reached the table is still behind,
+    which is logged, and the remainder is taken on the next daily tick.
+
+    OLDEST FIRST. Each batch's LIMITed ``ctid`` sub-select is ``ORDER BY
+    created_at``, so it deletes the OLDEST rows, not an arbitrary tail - the same
+    oldest-first drain ``prune_stale_presence_aggregates`` does with ``ORDER BY
+    last_refresh``. Without the ordering the retention floor would be "90 days
+    plus an unpredictable tail of whatever the scan happened to reach".
+
+    BOUNDED PER BATCH by the LIMITed ``ctid`` sub-select, the same shape as
+    cogs/community/serverstats/queries.PRUNE and cogs/system/usage_stats.PRUNE:
+    it runs as an InitPlan (verified on the 11.22 dev server, where the outer
+    half is a filtered scan rather than the Tid Scan 14+ gives - the LIMIT bounds
+    the work either way), so the number of rows deleted - and therefore locked -
+    is capped at ``batch_size`` per statement whatever state the table is in, and
+    no single batch can take a wide lock for minutes. The scan runs once a day
+    over a table the window itself keeps small.
+    """
+    deleted = 0
+    for _batch in range(max_batches):
+        status = await pool.execute(
+            "DELETE FROM dashboard_audit "
+            "WHERE ctid = ANY(ARRAY("
+            "SELECT ctid FROM dashboard_audit "
+            "WHERE created_at < now() - $1 * INTERVAL '1 day' "
+            "ORDER BY created_at "
+            "LIMIT $2"
+            "))",
+            max_age_days,
+            batch_size,
+        )
+        batch = affected_rows(status)
+        deleted += batch
+        if batch < batch_size:
+            break
+    else:
+        log.warning(
+            "dashboard_audit prune hit its per-pass cap of %s batches x %s rows "
+            "and is still behind; the remaining backlog will be drained on the "
+            "next daily tick",
+            max_batches,
+            batch_size,
+        )
+    return deleted
 
 
 async def prune_stale_presence_aggregates(

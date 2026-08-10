@@ -7,7 +7,7 @@ from cogs.system import retention as retention_cog
 
 @pytest.fixture(autouse=True)
 def _stub_user_prunes(monkeypatch):
-    """Neutralise the three user-side prunes for the tick tests.
+    """Neutralise the four age prunes for the tick tests.
 
     They are single statements against a real pool, while every test here drives
     a fake one; the test that actually pins them re-patches with recorders.
@@ -24,6 +24,9 @@ def _stub_user_prunes(monkeypatch):
     )
     monkeypatch.setattr(
         retention_cog.retention, "prune_stale_presence_aggregates", _none
+    )
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_stale_dashboard_audit", _none
     )
 
 
@@ -248,6 +251,7 @@ async def test_avatar_cleanup_stops_after_short_batch(monkeypatch):
         "user_actions": 0,
         "export_slots": 0,
         "presence_rows": 0,
+        "audit_rows": 0,
     }
 
 
@@ -278,6 +282,10 @@ async def test_the_pass_prunes_the_rows_no_guild_purge_can_reach(monkeypatch):
         pruned.append("presence")
         return 6
 
+    async def prune_audit(_pool):
+        pruned.append("audit")
+        return 11
+
     monkeypatch.setattr(
         retention_cog.retention, "reconcile_guild_jobs", reconcile
     )
@@ -296,6 +304,11 @@ async def test_the_pass_prunes_the_rows_no_guild_purge_can_reach(monkeypatch):
         "prune_stale_presence_aggregates",
         prune_presence,
     )
+    monkeypatch.setattr(
+        retention_cog.retention,
+        "prune_stale_dashboard_audit",
+        prune_audit,
+    )
     bot = types.SimpleNamespace(
         db_pool=object(),
         get_guild=lambda _guild_id: None,
@@ -303,13 +316,18 @@ async def test_the_pass_prunes_the_rows_no_guild_purge_can_reach(monkeypatch):
 
     result = await _cog(bot).run_once()
 
-    assert pruned == ["actions", "slots", "presence"]
+    assert pruned == ["actions", "slots", "presence", "audit"]
     assert result["user_actions"] == 4
     assert result["export_slots"] == 9
     # The presence aggregates ride this same pass: keyed by user alone like the
     # other two, and the feature's own 30-day rule only ever fired for a member
     # who was still being seen - so this is what bounds the ones who stopped.
     assert result["presence_rows"] == 6
+    # The dashboard journal is the odd one out on this tick: it IS guild-scoped,
+    # so the purge covers a departure - but only a departure. A guild that never
+    # leaves keeps every row for ever without this, since the bot never writes
+    # that table and nothing else ages it out.
+    assert result["audit_rows"] == 11
 
 
 # ---------------------------------------------------------------------------

@@ -68,7 +68,14 @@ EXPORT_COOLDOWN_SECONDS = 3600
 #     can ever reach it and the export is the only thing that can state it. See
 #     the note above USER_DELETE_QUERIES for why it is exported and never
 #     deleted.
-EXPORT_VERSION = 10
+# v11 added `dashboard_audit`: the dashboard configuration journal, reduced to
+# the requester's OWN entries (which server, which section, what verb, when).
+# It is a COURTESY, and the same reduction `moderation_cases_as_moderator` got
+# in v9: an admin can see the changes THEY made, never another actor's rows.
+# Guild-scoped (guild_id NOT NULL), so it dies with the guild like `cases` and
+# appears on no user erasure list - a departing admin does not get to erase the
+# server's audit trail. The bot never writes this table; the dashboard does.
+EXPORT_VERSION = 11
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -381,6 +388,23 @@ async def collect_user_export(pool, user_id):
         "FROM dashboard_actions WHERE user_id = $1 ORDER BY id",
         user_id,
     )
+    # The dashboard's configuration journal, reduced to THIS actor's own entries
+    # (WHERE actor_user_id, never a guild-wide read): which server, which
+    # section, what verb, when. A COURTESY, not an obligation, and the same call
+    # made for `moderation_cases_as_moderator` below - the rows are the SERVER's
+    # audit trail, not the admin's personal data, so what ships is the requester's
+    # own action facts and nothing else. Another actor's lines in the same guild
+    # are none of their business and the predicate cannot reach them.
+    # `actor_user_id` is deliberately not selected: it is $1 by construction, so
+    # repeating it would only add noise. The row is guild-scoped (guild_id NOT
+    # NULL), which is why it dies with the guild
+    # (retention.GUILD_DELETE_QUERIES) and appears on NO user erasure list: a
+    # departing admin exports their trail, they do not erase it.
+    dashboard_audit = await pool.fetch(
+        "SELECT guild_id, section, action, detail, created_at "
+        "FROM dashboard_audit WHERE actor_user_id = $1 ORDER BY id",
+        user_id,
+    )
     # The saved-track rows. `encoded` is the Lavalink blob the row is replayed
     # from - stated by existence, never carried, on the same reasoning as the
     # rank-card background below: it is a derivative the bot cached of a track
@@ -543,6 +567,7 @@ async def collect_user_export(pool, user_id):
             {**dict(row), "result": _json_value(row["result"], None)}
             for row in dashboard_requests
         ],
+        "dashboard_audit": _records(dashboard_audit),
         # Absent row = never customised, stated as null rather than as invented
         # defaults (the same discipline as `afk` and `topgg_votes` above).
         "rank_card": dict(rank_card) if rank_card else None,

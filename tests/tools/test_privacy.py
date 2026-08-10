@@ -270,6 +270,13 @@ _EXPORT_EXEMPT_TABLES = set()
 # a privacy boundary, so the guard now asks what the column MEANS.
 _ACTOR_COLUMNS = (
     "user_id",
+    # ``dashboard_audit`` spells it with a prefix, and the guard is anchored at
+    # the start of the column name - so ``user_id`` above does NOT cover it and
+    # the exemption it earns (a guild column, therefore export-not-required)
+    # would not be structural at all: the table would simply be invisible to the
+    # guard, which is the same failure ``blbot`` was. Naming it here is what
+    # makes the verdict a decision instead of an oversight.
+    "actor_user_id",
     "member_id",
     "opener_id",
     "creator_id",
@@ -355,6 +362,11 @@ def test_every_user_scoped_table_is_covered_by_the_export():
     # actor side, but the row is guild-scoped through ``mguild_id`` and dies
     # with its guild.
     assert "mutedmembers" not in tables
+    # The dashboard journal makes the same trip for the same reason: the guard
+    # DOES see its actor column (``actor_user_id`` is named in _ACTOR_COLUMNS),
+    # and its NOT NULL guild column is what excuses it. See the test below,
+    # which pins both halves rather than this one absence.
+    assert "dashboard_audit" not in tables
 
     source = inspect.getsource(privacy.collect_user_export)
     missing = sorted(
@@ -366,6 +378,66 @@ def test_every_user_scoped_table_is_covered_by_the_export():
         "user-scoped table(s) never read by collect_user_export - their owner "
         "cannot export them: " + ", ".join(missing)
     )
+
+
+def _schema_table_body(name):
+    """The CREATE TABLE body of one table, comments stripped.
+
+    The same text the guard above parses, isolated so a test can apply the two
+    halves of its rule to ONE table and say which half fired.
+    """
+    with open(_SCHEMA_PATH, encoding="utf-8") as handle:
+        ddl = re.sub(r"--[^\n]*", "", handle.read())
+    match = re.search(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"
+        + name
+        + r"\s*\((.*?)\n\s*\)\s*;",
+        ddl,
+        re.S | re.I,
+    )
+    assert match is not None, f"{name} is not declared in schema.sql"
+    return match.group(1)
+
+
+def test_the_dashboard_journal_is_seen_by_the_guard_and_excused_by_its_guild():
+    """The `mutedmembers` shape, one table further on - and the reason the
+    exemption had to be made STRUCTURAL rather than assumed.
+
+    ``dashboard_audit`` is written by the dashboard alone and says who changed
+    what, where, and when. Its actor column is spelled ``actor_user_id``, and the
+    guard anchors at the start of a column name, so plain ``user_id`` does not
+    cover it: without naming it in :data:`_ACTOR_COLUMNS` the table would have
+    been INVISIBLE to the export guard, which is exactly how ``blbot`` slipped
+    through for the life of that table. Named, it is seen - and then excused, by
+    the one thing that is allowed to excuse it: a NOT NULL guild column, which
+    means the row dies with its guild and the guild-side guard in
+    tests/tools/test_retention.py owns it instead.
+    """
+    body = _schema_table_body("dashboard_audit")
+    actor = r"(?:{0})".format("|".join(_ACTOR_COLUMNS))
+    guild_column = r"(?:{0})".format("|".join(_GUILD_COLUMNS))
+
+    # Half one: the guard SEES the actor column...
+    assert re.search(rf"^\s*{actor}\s+BIGINT\b", body, re.M | re.I)
+    # ... and would not have, on the literal ``user_id`` it used to key on.
+    assert not re.search(r"^\s*user_id\s+BIGINT\b", body, re.M | re.I)
+
+    # Half two: the guild column is what excuses it, and only because NOT NULL -
+    # a nullable one would mean rows no guild purge can reach (the
+    # ``dashboard_actions`` case) and the export would be mandatory.
+    guild = re.search(rf"^\s*{guild_column}\b([^\n,]*)", body, re.M | re.I)
+    assert guild is not None
+    assert "NOT NULL" in guild.group(1).upper()
+    assert "dashboard_audit" not in _user_scoped_tables()
+
+    # And the excuse is only good if the guild purge really does own it: the
+    # delete, plus the discovery UNION, or an orphaned journal would keep a
+    # departed guild's rows with nothing ever scheduling them.
+    assert (
+        dict(retention.GUILD_DELETE_QUERIES)["dashboard_audit"]
+        == "DELETE FROM dashboard_audit WHERE guild_id = $1"
+    )
+    assert "FROM dashboard_audit" in retention.STORED_GUILD_IDS_QUERY
 
 
 def test_the_mydata_surface_can_erase_the_profile_it_exports():
@@ -433,7 +505,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 10
+    assert data["export_version"] == privacy.EXPORT_VERSION == 11
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -981,6 +1053,112 @@ async def test_the_export_carries_the_users_own_queue_rows():
     assert "guild_id" not in query
     # The dashboard-written payload is deliberately not exported.
     assert "payload" not in query
+
+
+# ---------------------------------------------------------------------------
+# The dashboard configuration journal (dashboard_audit)
+# ---------------------------------------------------------------------------
+#
+# The governance call, modelled on `cases`/`warns` and on nothing else: the
+# journal is the SERVER's audit trail, so it dies with the guild and its actor
+# cannot erase it - but the actor may EXPORT their own entries, the same courtesy
+# `moderation_cases_as_moderator` extends to a moderator. Written only by the
+# dashboard; the bot purges and reads it.
+
+
+async def test_the_export_carries_the_actors_own_journal_entries_only():
+    """A courtesy reduction, not a guild-wide read.
+
+    An admin gets their OWN action facts (which server, which section, what verb,
+    when). Another actor's lines in the same guild are that server's record and
+    the predicate cannot reach them - the same split `cases` makes between the
+    target side and the moderator side.
+    """
+
+    class _AuditPool(_ExportPool):
+        def __init__(self):
+            super().__init__()
+            self.args = []
+
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            self.args.append(args)
+            if "FROM dashboard_audit" in query:
+                return [
+                    {
+                        "guild_id": 7,
+                        "section": "leveling",
+                        "action": "update",
+                        "detail": "role rewards",
+                        "created_at": datetime.datetime(
+                            2030, 5, 4, tzinfo=datetime.timezone.utc
+                        ),
+                    }
+                ]
+            return []
+
+    pool = _AuditPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["export_version"] == privacy.EXPORT_VERSION == 11
+    assert data["dashboard_audit"] == [
+        {
+            "guild_id": 7,
+            "section": "leveling",
+            "action": "update",
+            "detail": "role rewards",
+            "created_at": datetime.datetime(
+                2030, 5, 4, tzinfo=datetime.timezone.utc
+            ),
+        }
+    ]
+
+    query = next(q for q in pool.queries if "FROM dashboard_audit" in q)
+    # Scoped to THIS actor, and to nothing else: never by guild (that would hand
+    # a departing admin the whole server's trail), never by id.
+    assert "WHERE actor_user_id = $1" in query
+    assert query.count("$1") == 1
+    assert "WHERE guild_id" not in query
+
+    # An admin who never touched a dashboard is told so with an empty list rather
+    # than a missing key.
+    empty, _avatars = await privacy.collect_user_export(_ExportPool(), 42)
+    assert empty["dashboard_audit"] == []
+
+
+def test_the_journal_is_exported_and_reachable_by_no_erasure_path():
+    """The `blbot` shape, reached from the opposite direction.
+
+    ``blbot`` is exported-never-erased because erasing it would hand its subject
+    an unban. This one is exported-never-erased because the rows are not the
+    actor's to erase at all: they are the SERVER's audit trail, and an admin
+    leaving a staff team must not be able to blank the record of what they
+    changed - exactly as they cannot erase the `cases` they filed. It dies with
+    the guild (the `cases` lifecycle) and is aged out at 90 days meanwhile; the
+    export is a courtesy on top, never the lever.
+    """
+    narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
+    assert "dashboard_audit" not in narrow
+    assert "dashboard_audit" not in wide
+
+    export_source = inspect.getsource(privacy.collect_user_export)
+    assert "FROM dashboard_audit WHERE actor_user_id = $1" in export_source
+
+    # REPO-WIDE, the same shape as the blacklist and export-limiter guards: the
+    # bot NEVER writes this table (the dashboard does), and exactly one file may
+    # delete from it - retention, on the guild purge and the age prune, never a
+    # privacy path and never a user-facing command.
+    writers = {}
+    for path in _repo_python_files():
+        text = open(path, encoding="utf-8").read()
+        verbs = re.findall(
+            r"(INSERT INTO|UPDATE|DELETE FROM)\s+dashboard_audit\b", text
+        )
+        if verbs:
+            writers[os.path.relpath(path, _REPO_ROOT).replace(os.sep, "/")] = verbs
+
+    assert writers == {"tools/retention.py": ["DELETE FROM", "DELETE FROM"]}
 
 
 # ---------------------------------------------------------------------------
