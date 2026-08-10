@@ -369,3 +369,81 @@ async def test_the_export_slot_prune_can_never_shorten_a_live_window():
         .default
         == privacy.EXPORT_COOLDOWN_SECONDS
     )
+
+
+# ---------------------------------------------------------------------------
+# The presence aggregates: making a DISPLAY window a STORAGE window
+# ---------------------------------------------------------------------------
+#
+# presence.PURGE_AFTER_DAYS was enforced in two places and neither of them was
+# storage: the merge drops stale entries of a row it is already writing, and
+# the renderer filters what it draws. Both only ever fire for a member who is
+# still being seen - so somebody who opted in, played for a week and stopped
+# kept their aggregate for ever while the card politely showed nothing. The
+# card said 30 days; the table said always.
+
+
+async def test_presence_aggregates_stop_being_kept_past_their_own_window():
+    pool = _PrunePool(status="UPDATE 7")
+
+    emptied = await retention.prune_stale_presence_aggregates(pool)
+
+    assert emptied == 7
+    query, args = pool.calls[0]
+    assert args == (
+        retention.PRESENCE_AGGREGATE_MAX_AGE_DAYS,
+        retention.PRESENCE_PRUNE_BATCH_SIZE,
+    )
+    assert "connector = 'presence_gaming'" in query
+    assert "last_refresh < now() - $1 * INTERVAL '1 day'" in query
+    # Bounded per pass, like every other statement on the daily tick.
+    assert "LIMIT $2" in query
+
+
+def test_the_presence_prune_empties_the_payload_and_keeps_the_opt_in():
+    """The row IS the consent (presence.py: no row, no collection, no section).
+
+    Deleting it would turn a retention pass into a silent withdrawal of
+    somebody's consent, which is the exact inversion of what the pass is for.
+    Only the aggregate goes.
+    """
+    query = inspect.getsource(retention.prune_stale_presence_aggregates)
+    assert "SET payload = '{}'::jsonb" in query
+    assert "DELETE FROM profile_connections" not in query
+    # ... and it is self-limiting: an emptied row no longer matches, so no row
+    # is ever rewritten twice and a quiet pass does no work at all.
+    assert "payload <> '{}'::jsonb" in query
+
+
+def test_the_presence_prune_never_reaches_a_row_the_card_would_still_draw():
+    """Why the predicate is ``last_refresh`` and not the JSON timestamps.
+
+    Every write to this row goes through connectors.storage.set_payload, which
+    stamps ``last_refresh = now()``, and the presence flush is its only writer
+    for this connector - so a row untouched for the window cannot hold a play
+    NEWER than the window. Reading the stamps out of the payload would instead
+    mean casting user-reachable text to timestamptz inside the statement, where
+    one malformed value aborts the whole pass.
+    """
+    source = inspect.getsource(retention.prune_stale_presence_aggregates)
+    assert "::timestamptz" not in source
+    assert "jsonb_array_elements" not in source
+    # A row the flush never wrote has no aggregate to empty and no age to
+    # measure, so it is left alone rather than aged from its opt-in date.
+    assert "last_refresh IS NOT NULL" in source
+
+
+def test_the_prune_window_is_the_one_the_feature_and_the_policy_state():
+    """Restated, never forked. tools/ cannot import a cog (the import runs the
+    other way), so the number lives in both files - and this is what makes the
+    copy a copy instead of a second opinion."""
+    from cogs.community.profile import presence
+
+    assert (
+        retention.PRESENCE_AGGREGATE_MAX_AGE_DAYS == presence.PURGE_AFTER_DAYS == 30
+    )
+
+    policy = open(
+        os.path.join(os.path.dirname(_SCHEMA_PATH), "PRIVACY.md"), encoding="utf-8"
+    ).read()
+    assert "Presence aggregates: 30 days" in policy

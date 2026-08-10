@@ -26,7 +26,7 @@ from discord.ext.commands.view import StringView
 
 from cogs.community import votes
 from cogs.community.profile import registry, storage, visibility
-from cogs.community.profile.cog import Profiles
+from cogs.community.profile.cog import ProfileClearView, Profiles
 from cogs.community.profile.connectors import storage as connectors_storage
 
 OWNER = 111
@@ -664,11 +664,89 @@ async def test_visibility_degrades_politely_when_the_database_fails(
 # ---------------------------------------------------------------------------
 
 
-async def test_clear_erases_the_whole_profile(writes, owner):
+class _ClearInteraction:
+    """Just enough interaction for the two ProfileClearView buttons."""
+
+    def __init__(self):
+        self.edited = []
+        self.followups = []
+        self.deferred = 0
+        self.response = types.SimpleNamespace(
+            defer=self._defer, edit_message=self._edit_message
+        )
+        self.followup = types.SimpleNamespace(send=self._send)
+
+    async def _defer(self, **kwargs):
+        self.deferred += 1
+
+    async def _edit_message(self, **kwargs):
+        self.edited.append(kwargs)
+
+    async def _send(self, *args, **kwargs):
+        self.followups.append((args, kwargs))
+
+    async def edit_original_response(self, **kwargs):
+        self.edited.append(kwargs)
+
+
+async def test_clear_prompts_first_and_deletes_nothing_yet(writes, owner):
+    """The command puts a confirmation in front of the user and stops.
+
+    It reaches ``profile_connections``, where the presence aggregates live -
+    weeks of minutes the bot collected on its own, which nobody can type back -
+    so one unwarned word may not destroy them.
+    """
     ctx = _Ctx(owner)
     await Profiles.profile_clear.callback(_cog(), ctx)
+
+    view = _last_view(ctx)
+    assert isinstance(view, ProfileClearView)
+    assert view.author_id == OWNER
+    assert writes["deleted"] == []
+    prompt = _last_text(ctx)
+    assert "cannot be recovered" in prompt
+
+
+async def test_the_confirmed_clear_erases_the_whole_profile(writes, owner):
+    view = ProfileClearView(_cog(), OWNER)
+    interaction = _ClearInteraction()
+
+    await view.confirm.callback(interaction)
+
     assert writes["deleted"] == [OWNER]
-    assert _last_embed(ctx).title
+    assert all(child.disabled for child in view.children)
+    assert "cleared" in interaction.edited[-1]["content"]
+
+
+async def test_a_second_click_erases_nothing_and_still_answers_discord(writes, owner):
+    """The re-entrancy guard must not answer with silence.
+
+    Discord shows an interaction nobody responded to as "This interaction
+    failed", which is the last thing to tell a member halfway through an erasure
+    they asked for. The second click is deferred and does nothing; the first one
+    still owns the delete and the final message.
+    """
+    view = ProfileClearView(_cog(), OWNER)
+    first = _ClearInteraction()
+    second = _ClearInteraction()
+
+    await view.confirm.callback(first)
+    await view.confirm.callback(second)
+
+    assert writes["deleted"] == [OWNER]  # deleted once, not twice
+    assert second.deferred == 1  # ... and Discord was answered anyway
+    assert second.edited == []
+    assert second.followups == []
+
+
+async def test_cancelling_the_clear_erases_nothing(writes, owner):
+    view = ProfileClearView(_cog(), OWNER)
+    interaction = _ClearInteraction()
+
+    await view.cancel.callback(interaction)
+
+    assert writes["deleted"] == []
+    assert "Nothing was cleared" in interaction.edited[-1]["content"]
 
 
 async def test_clear_degrades_politely_when_the_database_fails(monkeypatch, owner):
@@ -676,9 +754,14 @@ async def test_clear_degrades_politely_when_the_database_fails(monkeypatch, owne
         raise RuntimeError("pool is gone")
 
     monkeypatch.setattr(storage, "delete_profile", boom)
-    ctx = _Ctx(owner)
-    await Profiles.profile_clear.callback(_cog(), ctx)
-    assert "later" in _last_text(ctx)
+    view = ProfileClearView(_cog(), OWNER)
+    interaction = _ClearInteraction()
+
+    await view.confirm.callback(interaction)
+
+    assert "later" in interaction.followups[-1][0][0]
+    # ... and the prompt is still live, so the member can press it again.
+    assert view._running is False
 
 
 # ---------------------------------------------------------------------------

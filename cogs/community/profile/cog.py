@@ -53,6 +53,7 @@ from cogs.community import votes
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
@@ -205,6 +206,98 @@ def _payload_age(now, connection):
     if stamp.tzinfo is None:
         stamp = stamp.replace(tzinfo=datetime.timezone.utc)
     return (now - stamp).total_seconds()
+
+
+class ProfileClearView(AuthorView):
+    """The confirmation `profile clear` stands behind.
+
+    THE DOCTRINE, applied to the narrow list. `?mydata deleteprofile` has always
+    asked first because it destroys things nobody can recreate (an earned vote
+    streak, an uploaded rank-card background); `profile clear` asked nothing,
+    on the reasoning that everything it erases is "data the user typed in and
+    can type again".
+
+    That reasoning stopped being true when the profile grew presence
+    aggregates. Those live in ``profile_connections`` - which IS on the narrow
+    list (privacy.PROFILE_DELETE_QUERIES) - and they are WEEKS of collected
+    minutes the bot built up on its own: nobody can type them back, and there is
+    no second copy anywhere. A member resetting a bio must not lose them to one
+    unwarned command, and the visibility choices that go with the linked
+    accounts are the same kind of loss on a smaller scale.
+
+    So the fix is the doctrine and not an exception to it: the narrow list is
+    left exactly as it is (it is still "THE list of tables a profile lives in",
+    and `profile clear` still clears the whole profile), and the command that
+    reaches it now names what it is about to destroy first. The alternative -
+    moving the connector rows onto the wide list - would have left
+    `profile clear` unable to forget a linked Steam handle, which is the one
+    thing privacy.PROFILE_DELETE_QUERIES was widened to fix in the first place.
+    """
+
+    def __init__(self, cog, author_id):
+        super().__init__(
+            author_id,
+            timeout=60,
+            # A registered N_ literal (see tools.views._DENY_STRINGS).
+            deny_message="This prompt isn't for you.",
+        )
+        self.cog = cog
+        self._running = False
+        self.confirm.label = _("Clear my profile")
+        self.cancel.label = _("Cancel")
+
+    @discord.ui.button(label="Clear my profile", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction, button):
+        if self._running:
+            # A second click while the first is still deleting. Answered with a
+            # deferred no-op rather than a bare return: an interaction nobody
+            # responds to shows the clicker "This interaction failed", which is
+            # exactly the wrong thing to tell somebody in the middle of an
+            # erasure they just asked for. Defer, do nothing, let the first
+            # click finish and edit the message.
+            await interaction.response.defer()
+            return
+        self._running = True
+        await interaction.response.defer()
+        try:
+            # The NARROW erasure (privacy.PROFILE_DELETE_QUERIES), never the
+            # wide one: the vote ledger, the rank card and the AniList token
+            # belong to `?mydata deleteprofile` and its own confirmation.
+            await storage.delete_profile(self.cog.bot.db_pool, self.author_id)
+        except Exception:
+            self._running = False
+            log.exception("Failed to clear profile")
+            await interaction.followup.send(
+                _("Failed to clear your profile, please try again later."),
+                ephemeral=True,
+            )
+            return
+        # The rows are gone; the presence collector still holds this user in
+        # memory (it is armed by an in-process set, not by a query). Told here
+        # rather than left to the next flush so the very next event of theirs is
+        # already rejected - see presence.forget_collected_presence for why this
+        # is best-effort and what backs it up.
+        presence.forget_collected_presence(self.cog.bot, self.author_id)
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+        await interaction.edit_original_response(
+            content=_(
+                "Your profile is cleared: fields, gaming IDs, every "
+                "visibility choice, your linked accounts and the games "
+                "presence had collected."
+            ),
+            view=self,
+        )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(
+            content=_("Nothing was cleared."), view=self
+        )
 
 
 class Profiles(commands.Cog):
@@ -729,28 +822,24 @@ class Profiles(commands.Cog):
     async def profile_clear(self, ctx):
         """Clear your entire profile, including who could see what."""
 
-        async with ctx.typing():
-            try:
-                await storage.delete_profile(self.bot.db_pool, ctx.author.id)
-            except Exception:
-                log.exception("Failed to clear profile")
-                await ctx.send(
-                    _("Failed to clear your profile, please try again later.")
-                )
-                return
-            # The rows are gone; the presence collector still holds this user in
-            # memory (it is armed by an in-process set, not by a query). Told
-            # here rather than left to the next flush so the very next event of
-            # theirs is already rejected - see presence.forget_collected_presence
-            # for why this is best-effort and what backs it up.
-            presence.forget_collected_presence(self.bot, ctx.author.id)
-            # NOT the top.gg vote ledger, and nothing to un-arm for it either.
-            # This command has no confirmation step, so it stays on the narrow
-            # list (privacy.PROFILE_DELETE_QUERIES): a member resetting their
-            # bio must not silently lose an earned vote streak they cannot get
-            # back. `?mydata deleteprofile` is the verb that erases that, behind
-            # a button that says so.
-
-            embed = discord.Embed(title=_("Profile cleared"), colour=random_colour())
-            embed.add_field(name=_("Your profile has been cleared."), value="​")
-            await ctx.send(embed=embed)
+        # BEHIND A CONFIRMATION, and the prompt below names every kind of thing
+        # that dies with the click. See ProfileClearView for the doctrine: this
+        # command reaches the presence aggregates, which are weeks of collected
+        # minutes nobody can type back, so it cannot be a one-word command that
+        # deletes on sight any more.
+        #
+        # Still the NARROW list. The top.gg vote ledger, the personal rank card
+        # and the AniList OAuth token stay out of reach of this verb entirely -
+        # they belong to `?mydata deleteprofile` and its own confirmation - so
+        # there is nothing here to un-arm for them either.
+        view = ProfileClearView(self, ctx.author.id)
+        view.message = await ctx.send(
+            _(
+                "Clear your whole profile? This deletes your fields and gaming "
+                "IDs, every visibility choice you made, the accounts you "
+                "linked, and the games your profile had collected while "
+                "presence was on. The collected games cannot be recovered."
+            ),
+            view=view,
+            ephemeral=True,
+        )

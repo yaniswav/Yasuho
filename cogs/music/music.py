@@ -61,6 +61,17 @@ RESTORE_CONCURRENCY = 5
 # roughly constant-time while never bursting a whole fleet at the rate limiter.
 PROGRESS_REFRESH_CONCURRENCY = 10
 
+# How many persisted player snapshots the idle tick may write at once. Same shape
+# as the panel refreshes above: every playing player gets its music_state row
+# refreshed each tick (volume / loop / pause / position drift between the
+# event-driven snapshots), and awaiting those upserts one after another made the
+# 60s tick grow linearly with the fleet - hundreds of players meant hundreds of
+# serial round trips inside one period. Deliberately much lower than the panel
+# ceiling: these all land on the ONE asyncpg pool the whole bot shares
+# (max_size=30 in core.py), so the bound is about never letting a background tick
+# monopolise the connections every command needs, not about a rate limiter.
+SNAPSHOT_CONCURRENCY = 5
+
 # Hard ceiling on how many tracks ONE guild may keep waiting in its player queue,
 # counted over BOTH lanes (the user lane and the hidden autoplay lane).
 #
@@ -1502,6 +1513,53 @@ class Music(ServerPlaylistMixin, commands.Cog):
         except Exception:
             log.exception("Failed to snapshot player state")
 
+    async def _persist_snapshots(
+        self,
+        players: typing.Sequence[Player],
+        *,
+        concurrency: int = SNAPSHOT_CONCURRENCY,
+    ) -> None:
+        """Refresh a batch of persisted player states, bounded-concurrently.
+
+        The idle tick used to await :meth:`_snapshot` player by player, so one
+        tick cost the SUM of its DB round trips and a large fleet could spend its
+        whole 60s period writing. This owns the fan-out policy only - what to
+        persist is still :meth:`_snapshot`'s business:
+
+        * bounded-concurrent, like the startup restore and the panel refreshes,
+          so the tick is roughly constant-time without ever handing the whole
+          fleet's worth of upserts to the shared pool at once;
+        * isolated per player - one guild's failed write is logged and dropped,
+          it can never sink the batch nor cost the other guilds their snapshot
+          (or, further down the tick, their idle disconnect).
+
+        Free when the batch is empty, so a bot with no playing player pays
+        nothing.
+
+        Batch membership is the caller's call, exactly as it is for
+        :func:`refresh_progress_bars`: the caller must drop any player it tore
+        down itself (a cleared row must not be written back), while a player
+        stopped out of band between collection and write is left to
+        :meth:`_snapshot`'s own channel / current guards.
+        """
+        if not players:
+            return
+
+        semaphore = asyncio.Semaphore(max(concurrency, 1))
+
+        async def _guarded(player: Player) -> None:
+            async with semaphore:
+                try:
+                    await self._snapshot(player)
+                except Exception:
+                    # _snapshot is already best-effort (it logs and swallows its
+                    # own failures), so this only catches what escapes it - a
+                    # cancellation-adjacent surprise, an attribute blowing up in
+                    # a way it did not anticipate. Either way the batch survives.
+                    log.exception("Failed to snapshot a player on the idle tick")
+
+        await asyncio.gather(*(_guarded(player) for player in players))
+
     async def _clear(self, guild_id: int) -> None:
         """Forget a guild's persisted player state (best-effort).
 
@@ -1802,13 +1860,22 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # once the (fast, local) idle bookkeeping is done - see
             # refresh_progress_bars for why the edits must not be serialised.
             pending: typing.List[typing.Tuple[Player, typing.Any]] = []
+            # Players whose persisted state to refresh this tick, collected here
+            # and written together afterwards - see _persist_snapshots for why
+            # the upserts must not be serialised.
+            snapshots: typing.List[Player] = []
+            # Players torn down during this pass, by identity. Their music_state
+            # row was just DELETED by _clear, so a snapshot collected earlier in
+            # the same tick must never be written back: doing so would resurrect
+            # a dead player and the next restart would rejoin its channel.
+            torn_down: typing.Set[int] = set()
             for voice_client in list(self.bot.voice_clients):
                 if not isinstance(voice_client, Player):
                     continue
                 # Refresh the persisted snapshot: volume / loop / pause / position
                 # drift between the event-driven snapshots.
                 if voice_client.current is not None:
-                    await self._snapshot(voice_client)
+                    snapshots.append(voice_client)
                     # Same tick advances the now-playing progress bar. The view
                     # itself decides whether anything moved, so an unchanged bar
                     # (paused player, live stream, long track between segments)
@@ -1825,8 +1892,14 @@ class Music(ServerPlaylistMixin, commands.Cog):
                             getattr(voice_client.channel, "guild", None),
                         )
                         await self._teardown(voice_client)
+                        torn_down.add(id(voice_client))
                 else:
                     voice_client.idle_since = None
+            # Write every surviving snapshot at once (a paused player can be both
+            # snapshotted and torn down in the SAME pass, and the teardown wins).
+            await self._persist_snapshots(
+                [player for player in snapshots if id(player) not in torn_down]
+            )
             # Advance every surviving panel at once. A player torn down above has
             # had its controller dropped (and its message deleted), so it is
             # filtered out here rather than edited into a 404.

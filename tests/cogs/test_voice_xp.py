@@ -20,6 +20,8 @@ import types
 
 import discord
 
+from conftest import FakePool
+
 from cogs.community.leveling import engine as leveling
 from cogs.community.leveling import voice_xp
 from cogs.community.leveling.leveling import Leveling
@@ -639,6 +641,205 @@ async def test_sweep_credits_two_guilds_prunes_each_guild_once(fake_pool):
 
     assert len(_fetch_calls(fake_pool)) == 1  # still ONE round trip
     assert sorted(gid for gid, _now in lvl.prune_calls) == [1, 2]
+
+
+# ---------------------------------------------------------------------------
+# The sweep: a failed grant must not consume anybody's minutes
+# ---------------------------------------------------------------------------
+#
+# The marker is what says "these minutes are paid for". It used to be advanced
+# inside the evaluation loop, BEFORE the one batched write and outside every
+# guard, so a single blip on that write silently burned the tick's XP for every
+# member in voice - nothing raised at the caller, nothing retried, and the
+# minutes were marked consumed. Write first, advance after.
+
+
+class _FailingFetchPool(FakePool):
+    """A pool whose batched grant raises; every other call behaves normally."""
+
+    def __init__(self, error=None):
+        super().__init__()
+        self.error = error or RuntimeError("connection reset by peer")
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        raise self.error
+
+
+async def test_a_failed_grant_leaves_every_credited_marker_untouched():
+    """THE regression. The write fails; the minutes stay owed."""
+    pool = _FailingFetchPool()
+    cog, _lvl, _member, _guild = _wire_sweep(pool, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)  # 300s == a full window, one blip
+
+    assert len(_fetch_calls(pool)) == 1  # it really did try to write
+    assert cog._sessions[(1, 2)].last_credit == 700.0  # ... and nothing moved
+    assert cog._stats["credited"] == 0  # nor was it counted as credited
+    assert cog._stats["writes"] == 0
+
+
+async def test_the_next_tick_pays_the_window_the_failed_one_could_not(fake_pool):
+    """The other half of the same guarantee: unadvanced means RETRIED - and PAID.
+
+    Holding the marker back is not enough on its own, and this is the assertion
+    that says so. engine.voice_credit caps a returning window at
+    ``interval_seconds // 60`` minutes; feed it the bare sweep interval and the
+    cap is exactly one tick, so the retry tick would see two windows, pay ONE and
+    consume BOTH - the same XP burnt, one tick later, with the marker dance
+    proving nothing. The failed tick therefore records what it could not pay
+    (_VoiceSession.owed_seconds) and the retry's cap is widened by exactly that.
+    """
+    failing = _FailingFetchPool()
+    cog, lvl, member, guild = _wire_sweep(failing, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+    await cog._run_sweep(now=1000.0)
+
+    assert cog._sessions[(1, 2)].owed_seconds == 300  # one window, unpaid
+
+    # Same cog, healthy pool, one interval later.
+    fake_pool.fetch_return = [{"guild_id": 1, "user_id": 2, "xp": 11000}]
+    cog.bot.db_pool = fake_pool
+    await cog._run_sweep(now=1300.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[0]
+    # BOTH windows: 10 minutes x 5 XP. Under a one-interval cap this would be 25,
+    # which is the failed tick's XP quietly burnt.
+    assert args[:3] == ([1], [2], [50])
+    assert cog._sessions[(1, 2)].last_credit == 1300.0  # both windows consumed
+    assert cog._sessions[(1, 2)].owed_seconds == 0  # ... and nothing still owed
+
+
+async def test_a_healthy_tick_is_capped_at_one_window_as_before(fake_pool):
+    """The counter-test: the widened cap is owed-only, never a free backlog.
+
+    A session that returns after a long gap with nothing owed (a missed sweep, a
+    stalled loop) is still paid one interval and no more - the anti-idle rule the
+    carry must not become a hole in.
+    """
+    cog, _lvl, _m, _g = _wire_sweep(fake_pool, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=100.0)
+
+    await cog._run_sweep(now=1000.0)  # 900s == three windows of elapsed time
+
+    _method, _query, args = _fetch_calls(fake_pool)[0]
+    assert args[:3] == ([1], [2], [25])  # one window, exactly as before
+    assert cog._sessions[(1, 2)].last_credit == 1000.0  # the rest is consumed
+    assert cog._sessions[(1, 2)].owed_seconds == 0
+
+
+async def test_repeated_failures_accrue_and_are_paid_together(fake_pool):
+    """Three blips in a row cost a delay, not three windows of XP."""
+    failing = _FailingFetchPool()
+    cog, _lvl, _m, _g = _wire_sweep(failing, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+    await cog._run_sweep(now=1300.0)
+    await cog._run_sweep(now=1600.0)
+
+    assert cog._sessions[(1, 2)].owed_seconds == 900  # three unpaid windows
+    assert cog._sessions[(1, 2)].last_credit == 700.0
+
+    fake_pool.fetch_return = [{"guild_id": 1, "user_id": 2, "xp": 11000}]
+    cog.bot.db_pool = fake_pool
+    await cog._run_sweep(now=1900.0)
+
+    _method, _query, args = _fetch_calls(fake_pool)[0]
+    assert args[:3] == ([1], [2], [100])  # 20 minutes x 5 XP: all four windows
+    assert cog._sessions[(1, 2)].owed_seconds == 0
+
+
+async def test_a_long_outage_stops_accruing_at_the_bound(fake_pool):
+    """MAX_OWED_SECONDS: a blip is repaid, an incident is not repaid in full.
+
+    Carrying forever would land half a day of unreachable database as ONE
+    colossal grant (and one burst of level-up announcements) the moment it came
+    back. Past the bound the tail is dropped on purpose.
+    """
+    failing = _FailingFetchPool()
+    cog, _lvl, _m, _g = _wire_sweep(failing, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    now = 700.0
+    for _tick in range(20):  # 20 failed ticks, far past the 6-interval bound
+        now += 300.0
+        await cog._run_sweep(now=now)
+
+    assert cog._sessions[(1, 2)].owed_seconds == voice_xp.MAX_OWED_SECONDS
+    assert voice_xp.MAX_OWED_SECONDS == voice_xp.VOICE_SWEEP_INTERVAL * 6
+
+    fake_pool.fetch_return = [{"guild_id": 1, "user_id": 2, "xp": 11000}]
+    cog.bot.db_pool = fake_pool
+    now += 300.0
+    await cog._run_sweep(now=now)
+
+    _method, _query, args = _fetch_calls(fake_pool)[0]
+    # The bound plus this tick's own window: 35 minutes x 5 XP, not the 105
+    # minutes the session actually sat through.
+    assert args[:3] == ([1], [2], [175])
+    assert cog._sessions[(1, 2)].owed_seconds == 0
+
+
+async def test_an_ineligible_retry_tick_drops_what_was_owed(fake_pool):
+    """A carry must not outlive the window it belonged to.
+
+    The failed tick's minutes are owed; the tick that finds the member idle
+    consumes them unpaid, like any other ineligible window. Keeping the carry
+    would let it be spent the moment they became eligible again - banking
+    ineligible time by the back door.
+    """
+    failing = _FailingFetchPool()
+    cog, _lvl, member, _g = _wire_sweep(failing, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+    await cog._run_sweep(now=1000.0)
+    assert cog._sessions[(1, 2)].owed_seconds == 300
+
+    member.voice.self_mute = True  # idle now: nothing to grant, nothing to fail
+    cog.bot.db_pool = fake_pool
+    await cog._run_sweep(now=1300.0)
+
+    assert _fetch_calls(fake_pool) == []  # no batch at all
+    assert cog._sessions[(1, 2)].last_credit == 1300.0  # consumed unpaid
+    assert cog._sessions[(1, 2)].owed_seconds == 0
+
+
+async def test_a_failed_grant_still_consumes_the_time_nobody_earned(fake_pool):
+    """An INELIGIBLE session is advanced on the spot, and must stay that way.
+
+    Its minutes are not in the batch - there is no write for them to wait on -
+    and holding them back would bank ineligible time and pay it out the moment
+    the member became eligible again, which is the one thing the anti-idle
+    rules exist to prevent. A neighbour's failed write must not resurrect it.
+    """
+    pool = _FailingFetchPool()
+    # Two members in the same guild: one alone in a channel (ineligible), one
+    # eligible, so the batch exists and fails.
+    idle_channel = _Chan(20)
+    cog, lvl, member, guild = _wire_sweep(pool, rate=5)
+    idle = _Member(3, guild=guild, voice=_VS(idle_channel))
+    idle_channel.members = [idle]
+    guild._members[3] = idle
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+    cog._sessions[(1, 3)] = _VoiceSession(channel_id=20, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    assert cog._sessions[(1, 2)].last_credit == 700.0  # owed, so held back
+    assert cog._sessions[(1, 3)].last_credit == 1000.0  # earned nothing, consumed
+
+
+async def test_a_failed_grant_routes_no_level_up(fake_pool):
+    """Nothing downstream of the write may run on a write that did not land."""
+    pool = _FailingFetchPool()
+    cog, lvl, _member, _guild = _wire_sweep(pool, rate=5)
+    cog._sessions[(1, 2)] = _VoiceSession(channel_id=10, last_credit=700.0)
+
+    await cog._run_sweep(now=1000.0)
+
+    assert lvl.levelup_calls == []
+    assert lvl.prune_calls == []
 
 
 # ---------------------------------------------------------------------------

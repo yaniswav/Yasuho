@@ -33,10 +33,17 @@ THE CLOSE ORDER, and why it is that order
    stop a close.
 
 WHERE THE TRANSCRIPT GOES: the configured log channel, and nowhere else. It is
-built only when such a channel exists and the bot may post a file there, it
-never touches the database (transcripts.py has no pool), and it is never sent to
-the opener, the thread, or a DM. A guild with no log channel gets no transcript
-at all - the close says so and carries on.
+built only when such a channel exists and the bot may attach a file there (both
+tested before a single page of history is read), it never touches the database
+(transcripts.py has no pool), and it is never sent to the opener, the thread, or
+a DM. A guild with no log channel gets no transcript at all - the close says so
+and carries on.
+
+The room is told EITHER WAY, and that symmetry is deliberate: the closing notice
+states that no transcript was saved when none was, and states that one was saved
+when one was. The person being helped is the only party who cannot see the log
+channel, so they are the one who has to be told a copy of the conversation just
+went there.
 
 THE THREE ENDINGS
 -----------------
@@ -166,6 +173,17 @@ _CLOSING = set()
 # UPDATE lands, and everything the semaphore delays is the artefact around it.
 _ARCHIVE_CLOSE_LIMIT = 4
 _ARCHIVE_CLOSES = asyncio.Semaphore(_ARCHIVE_CLOSE_LIMIT)
+
+# What :func:`perform_close` answers when the close FAILED, as opposed to the
+# ``None`` that means somebody else closed this ticket first.
+#
+# The two used to be the same answer, and that was a real bug with a real
+# victim: a close whose UPDATE raised told the clicker "this ticket is already
+# closed", so nobody retried and the room stayed live on an open row, holding
+# its opener's cap slot behind a button that had apparently already worked.
+# "Somebody else did it" and "it did not happen" are opposite facts and the
+# person who clicked has to be told which one they got.
+CLOSE_FAILED = object()
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +527,18 @@ async def _confirmed_close(interaction, thread_id):
     closed = await perform_close(
         bot, guild, thread, row, closed_by=interaction.user, reason=REASON_MANUAL
     )
+    if closed is CLOSE_FAILED:
+        # The close did NOT happen: the ticket is still open, the room is still
+        # live and the cap slot is still held. Say so, because the only thing
+        # that fixes it is somebody clicking again - and a clicker told "already
+        # closed" never does.
+        return await interactions.reply(
+            interaction,
+            _(
+                "I could not close ticket #{number}. Nothing has changed, so "
+                "please try again."
+            ).format(number=row["ticket_number"]),
+        )
     if closed is None:
         return await interactions.reply(
             interaction, _("This ticket is already closed.")
@@ -520,12 +550,16 @@ async def _confirmed_close(interaction, thread_id):
 
 
 async def perform_close(bot, guild, thread, row, *, closed_by, reason):
-    """Close a ticket end to end. Returns the closed row, or ``None``.
+    """Close a ticket end to end. Returns the closed row, ``None``, or
+    :data:`CLOSE_FAILED`.
 
     ``None`` means somebody else closed it first and this caller must do nothing
     - see storage.close_ticket, which is the mutual exclusion for every step
-    below it. ``thread`` may be ``None`` (the sweep and the deleted-thread path
-    have no object to act on), and an ARCHIVED thread is left archived.
+    below it. :data:`CLOSE_FAILED` means the close did not happen at all: the
+    row is still open and a caller that reports to a human must say so rather
+    than claim the ticket ended. ``thread`` may be ``None`` (the sweep and the
+    deleted-thread path have no object to act on), and an ARCHIVED thread is
+    left archived.
 
     The step order and the reasoning for it are in the module docstring; this
     function is that list, in that order.
@@ -556,9 +590,14 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
     channel = await _log_channel(guild, pool)
 
     # 1. The transcript, from the live thread, and ONLY when there is a log
-    # channel to receive it: no destination, no transcript, ever.
+    # channel to receive it AND we may attach a file there: no destination, no
+    # transcript, ever. The attachment permission is tested HERE rather than
+    # only at the send for two reasons - a channel that refuses files costs no
+    # history pages at all, and the closing notice below can then state whether
+    # a transcript was saved without ever claiming one that could not land.
+    can_attach = channel is not None and _can_attach(channel)
     transcript = None
-    if thread is not None and channel is not None:
+    if thread is not None and can_attach:
         with i18n.locale(locale_code):
             header = _transcript_header(guild, row)
         transcript = await transcripts.build(
@@ -573,8 +612,11 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
             pool, thread_id, getattr(closed_by, "id", None)
         )
     except Exception:
+        # NOT the same answer as the gate below: this ticket is still OPEN. See
+        # CLOSE_FAILED - a caller reporting to a human has to be able to tell
+        # "somebody beat you to it" from "it did not happen".
         log.exception("tickets: closing ticket %s failed", thread_id)
-        return None
+        return CLOSE_FAILED
     if closed is None:
         return None
 
@@ -585,7 +627,12 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
         # The GUILD's locale, not the closer's: this line is read by everybody
         # in the room, the same reasoning that renders the panel per guild.
         with i18n.locale(locale_code):
-            await _post_closing_notice(thread, number, channel is None)
+            await _post_closing_notice(
+                thread,
+                number,
+                no_log_channel=channel is None,
+                transcript_saved=transcript is not None,
+            )
         try:
             await thread.edit(
                 archived=True,
@@ -605,18 +652,37 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
                 reason=reason,
                 transcript=transcript,
                 had_thread=thread is not None,
+                can_attach=can_attach,
             )
     return closed
 
 
-async def _post_closing_notice(thread, number, no_log_channel):
-    """The last message in the room, so the lock is not a surprise."""
+async def _post_closing_notice(thread, number, *, no_log_channel, transcript_saved):
+    """The last message in the room, so the lock is not a surprise.
+
+    BOTH answers are stated, and that symmetry is the point. The room used to be
+    told only when NO transcript was kept, which left the loud case silent: the
+    person being helped learned that their conversation was NOT filed anywhere,
+    and never learned when a copy of it had just been sent to a staff channel
+    they cannot see. A privacy notice that only fires when there is nothing to
+    disclose is not a notice.
+    """
     text = _("Ticket #{number} is closed. Thanks for reaching out.").format(
         number=number
     )
     if no_log_channel:
         text += "\n-# " + _(
             "This server has no ticket log channel, so no transcript was saved."
+        )
+    elif transcript_saved:
+        # Only when one was really built, for a channel this bot may post in
+        # AND attach to - all three tested before this line runs (see
+        # _close_now). What is left is a transient failure on the send itself,
+        # which is logged as a warning; erring towards "we told you" is the
+        # right side to err on for a disclosure.
+        text += "\n-# " + _(
+            "A transcript of this conversation was saved to this server's "
+            "ticket log channel, where its staff team keeps it."
         )
     try:
         await thread.send(text, allowed_mentions=discord.AllowedMentions.none())
@@ -671,8 +737,19 @@ async def _log_channel(guild, pool):
     return channel
 
 
+def _can_attach(channel):
+    """Whether the bot may attach the transcript file in this log channel.
+
+    Its own function because two callers need the SAME answer: _close_now
+    decides whether to read the thread at all (and what the room is told), and
+    the log summary decides whether the file rides the embed.
+    """
+    me = channel.guild.me
+    return me is not None and channel.permissions_for(me).attach_files
+
+
 async def _post_log_summary(
-    channel, closed, *, closed_by, reason, transcript, had_thread
+    channel, closed, *, closed_by, reason, transcript, had_thread, can_attach
 ):
     """One embed per closed ticket, with the transcript attached to it.
 
@@ -705,11 +782,9 @@ async def _post_log_summary(
         name=_("Closed"), value=format_dt(closed["closed_at"], "f"), inline=True
     )
 
-    me = channel.guild.me
-    can_attach = me is not None and channel.permissions_for(me).attach_files
     file = transcript if (transcript is not None and can_attach) else None
     if file is None:
-        embed.set_footer(text=_no_transcript_note(had_thread, transcript))
+        embed.set_footer(text=_no_transcript_note(had_thread, can_attach))
     else:
         # Say what the attachment IS, on every close. A server that configured a
         # log channel is not asked again, so this line is the notice: the file
@@ -747,13 +822,22 @@ def _ending(closed_by, reason):
     return _("Auto-closed after inactivity.")
 
 
-def _no_transcript_note(had_thread, transcript):
-    """Why the embed has no file attached - never silence."""
+def _no_transcript_note(had_thread, can_attach):
+    """Why the embed has no file attached - never silence.
+
+    Two facts decide it and the transcript itself is not one of them, which is
+    the point of the ordering: ``can_attach`` is tested BEFORE the read now (see
+    _close_now), so a channel that refuses files leaves the transcript None as
+    well, and asking about it would blame a thread this path never even opened.
+    The caller has already established there is no file to attach; these two
+    answer WHY.
+    """
     if not had_thread:
         return _("No transcript: the thread was already gone.")
-    if transcript is None:
-        return _("No transcript: I could not read the thread.")
-    return _("No transcript: I cannot attach files in this channel.")
+    if not can_attach:
+        return _("No transcript: I cannot attach files in this channel.")
+    # The only case left: a thread we could open a file for and failed to read.
+    return _("No transcript: I could not read the thread.")
 
 
 # ---------------------------------------------------------------------------
@@ -934,7 +1018,10 @@ class TicketLifecycle(commands.Cog):
             # not passed, so leave it for a later pass.
             return False
 
-        await perform_close(
+        closed = await perform_close(
             self.bot, guild, None, row, closed_by=None, reason=REASON_INACTIVITY
         )
-        return True
+        # A close that failed is not a close: the row stays open, the next pass
+        # sees it again, and the pass log must not count it. ``None`` still
+        # counts - somebody else closed it, so the ticket did end.
+        return closed is not CLOSE_FAILED

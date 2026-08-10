@@ -157,10 +157,18 @@ class Webstats(commands.Cog):
 
     @commands.Cog.listener()
     async def on_dbl_vote(self, data):
+        # NEITHER BRANCH DUMPS THE PAYLOAD, and that is the whole point of this
+        # listener's shape. A top.gg vote payload carries the voter's user id
+        # (plus whatever query string the vote url was called with), and a log
+        # file is durable, greppable and outside every erasure path the bot has:
+        # `?mydata deleteprofile` can delete the vote ROW and can do nothing at
+        # all about a line already written to disk. Nothing is lost by dropping
+        # it either - cogs/community/votes.py logs one structured line per vote
+        # with the facts an operator actually reads (streak, total, boost).
         if data.get("type") == "test":
-            log.info("Received a test vote:\n%s", data)
+            log.info("Received a test vote from top.gg")
             return
-        log.info("Received a vote:\n%s", data)
+        log.debug("Received a vote webhook from top.gg")
 
 
 async def setup(bot):

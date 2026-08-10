@@ -23,7 +23,7 @@ import pytest
 
 from cogs.music import guild_config, music, sponsorblock, voteskip
 from cogs.system import dashboard_music_actions, dashboard_sync
-from tools import settings
+from tools import settings, snowflake
 
 GUILD_ID = 4242
 MEMBER_ID = 77
@@ -159,6 +159,41 @@ def test_coerce_role_id_accepts_an_int_and_a_string_snowflake():
 def test_coerce_role_id_rejects_non_snowflakes():
     for raw in (None, 0, -5, True, False, "", "abc", [], {}):
         assert guild_config.coerce_role_id(raw) is None
+
+
+def test_coerce_role_id_is_the_shared_snowflake_reader():
+    """One reader for ids out of a JSONB blob, not a private copy per module.
+
+    ``coerce_role_id`` had grown its own int/str coercion beside
+    ``tools.snowflake.coerce_id``, which exists for exactly this job and is what
+    every other blob reader in the bot uses. It now delegates, so the two can
+    never drift into disagreeing about what a stored id is.
+    """
+    for raw in (
+        None,
+        True,
+        False,
+        0,
+        -5,
+        1,
+        123456789012345678,
+        "123456789012345678",
+        "  123456789012345678  ",
+        "",
+        "abc",
+        "12.5",
+        1.0,
+        [],
+        {},
+        # The shapes a bare int() used to swallow and turn into a confident,
+        # wrong id: a signed literal, a PEP 515 underscore separator, and
+        # non-ASCII digits. The shared reader says "no role" to all three, which
+        # is the only honest answer - the dashboard writes none of them.
+        "+12",
+        "1_2",
+        "\u0661\u0662",  # Arabic-Indic digits: int() reads them, coerce_id does not
+    ):
+        assert guild_config.coerce_role_id(raw) == snowflake.coerce_id(raw)
 
 
 def test_member_has_role_uses_get_role_when_available():

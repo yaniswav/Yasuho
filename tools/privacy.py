@@ -56,7 +56,19 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # about a THIRD PARTY that happens to be filed next to this user's id, and the
 # old shape handed a former moderator a roster of who they sanctioned and why.
 # A consumer written against v8 must not assume those columns are still there.
-EXPORT_VERSION = 9
+# v10 added two rows the archive had no way to show before:
+#   * `season_podiums` - the monthly leveling podiums this user placed on. The
+#     ONE permanent leveling record the bot keeps (every other XP row is a
+#     running total that is overwritten), it is what PRIVACY.md means by
+#     "monthly season results per server", and until now nothing surfaced it. It
+#     is guild-scoped, so it dies with the guild like the rest of that server's
+#     records - which is why it is exported but appears on no user erasure list.
+#   * `bot_access` - whether this user is on the bot-wide blacklist (`blbot`).
+#     One boolean, keyed by user alone with no guild anywhere, so no guild purge
+#     can ever reach it and the export is the only thing that can state it. See
+#     the note above USER_DELETE_QUERIES for why it is exported and never
+#     deleted.
+EXPORT_VERSION = 10
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -103,6 +115,21 @@ ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 # The privacy invariant is untouched by the split: every table below is still
 # user-erasable on request, still exported, and `?mydata deleteprofile` is the
 # erasure verb PRIVACY.md names.
+#
+# WHAT IS ON NEITHER LIST, and why. Two user-keyed tables are deliberately
+# exported and deliberately never deleted, for the SAME reason: erasing them
+# would hand their subject something.
+#   * `mydata_export_cooldown` - deleting it grants a fresh export slot, so
+#     "delete my profile" would become a one-click way around the rate limit.
+#   * `blbot` - the bot-wide blacklist. It is one column (member_id) and it is
+#     moderation state, not profile data: it is set by the bot owner alone, it
+#     is guild-independent (which is exactly why no guild purge reaches it), and
+#     deleting it here would be a self-service unban of the bot's only
+#     anti-abuse decision. It is still EXPORTED rather than hidden - the person
+#     is already told in as many words when it happens (they are banned from
+#     every guild with reason "Blacklisted" and DMed why), so the fact is theirs
+#     to read, and the structural guard in tests/tools/test_privacy.py holds
+#     every user-keyed table to that rule with no exemption spent here.
 USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # The top.gg vote ledger. Not "profile" data in the fields-and-visibility
     # sense, but it is a per-user record of a behaviour ("this person votes for
@@ -385,6 +412,21 @@ async def collect_user_export(pool, user_id):
         "WHERE user_id = $1 ORDER BY guild_id, period_key",
         user_id,
     )
+    # The monthly season podiums this user placed on. THE permanent leveling
+    # record: `levels` and `xp_period` are running totals that get overwritten
+    # (and pruned), while a podium row is written once when a month closes and
+    # is never touched again - it is the "monthly season results per server"
+    # PRIVACY.md promises, and nothing surfaced it to its owner before v10.
+    # Guild-scoped by construction, so it dies with the guild
+    # (retention.GUILD_DELETE_QUERIES) and is on no user erasure list; the
+    # export is what makes it visible while it lives. `rank` is quoted because
+    # it reads as a window function otherwise.
+    podiums = await pool.fetch(
+        'SELECT guild_id, period_key, "rank", xp, snapshot_at '
+        "FROM season_podiums WHERE user_id = $1 "
+        "ORDER BY guild_id, period_key",
+        user_id,
+    )
     warns = await pool.fetch(
         "SELECT guild_id, warns_count FROM warns "
         "WHERE user_id = $1 ORDER BY guild_id",
@@ -438,6 +480,16 @@ async def collect_user_export(pool, user_id):
         "FROM custom_commands "
         "WHERE created_by = $1 ORDER BY created_at",
         user_id,
+    )
+    # The bot-wide blacklist. One BOOLEAN, and the row is the whole of it: the
+    # table has a single column (member_id), so "there is a row" is the entire
+    # fact and there is nothing else to select. Keyed by user with no guild
+    # anywhere, so the guild purge cannot reach it and this export is the only
+    # thing that can state it. It is stated rather than hidden because the
+    # person was already told directly when it happened; it is not erasable
+    # here, and the note above USER_DELETE_QUERIES says why.
+    blocked = await pool.fetchrow(
+        "SELECT member_id FROM blbot WHERE member_id = $1", user_id
     )
     avatar_rows = await pool.fetch(
         "SELECT id, guild_id, kind, ref, image_format, changed_at, avatar "
@@ -497,6 +549,10 @@ async def collect_user_export(pool, user_id):
         "music_favorites": _records(favorites),
         "levels": _records(levels),
         "period_xp": _records(periods),
+        "season_podiums": _records(podiums),
+        # A fact, not a row: the table holds nothing but the id, so there is
+        # nothing to state except whether it is there.
+        "bot_access": {"blacklisted": blocked is not None},
         "warnings": _records(warns),
         "moderation_cases_as_target": _records(cases),
         "moderation_cases_as_moderator": _records(moderated_cases),

@@ -1101,6 +1101,10 @@ async def test_profile_clear_disarms_the_collector(monkeypatch):
 
     Without the hook the collector would keep recording someone who just
     erased themselves, for as long as the process lives.
+
+    Driven through the CONFIRMATION button, because that is where the deletion
+    lives now: the aggregates this erases are weeks of collected minutes nobody
+    can type back, so the command asks first (see cog.ProfileClearView).
     """
     collector = _armed_collector()
 
@@ -1109,13 +1113,34 @@ async def test_profile_clear_disarms_the_collector(monkeypatch):
 
     monkeypatch.setattr(profile_storage, "delete_profile", delete_profile)
     profiles = profile_cog.Profiles(_bot_with(collector))
-    ctx = _Ctx()
+    view = profile_cog.ProfileClearView(profiles, OWNER)
 
-    await profile_cog.Profiles.profile_clear.callback(profiles, ctx)
+    await view.confirm.callback(_Interaction())
 
     assert collector._opted == set()
     assert collector._sessions == {}
     assert collector._buffer.is_empty
+
+
+async def test_profile_clear_only_prompts_and_collects_nothing_less(monkeypatch):
+    """The command itself must not delete: an unconfirmed click may not reach
+    aggregates its owner cannot recreate, and the collector must stay armed
+    until the button is actually pressed."""
+    collector = _armed_collector()
+
+    async def boom(pool, user_id):
+        raise AssertionError("the command deleted without a confirmation")
+
+    monkeypatch.setattr(profile_storage, "delete_profile", boom)
+    profiles = profile_cog.Profiles(_bot_with(collector))
+    ctx = _Ctx()
+
+    await profile_cog.Profiles.profile_clear.callback(profiles, ctx)
+
+    assert isinstance(
+        ctx.sends[-1][1]["view"], profile_cog.ProfileClearView
+    )
+    assert collector._opted == {OWNER}
 
 
 async def test_mydata_deleteprofile_disarms_the_collector(monkeypatch):

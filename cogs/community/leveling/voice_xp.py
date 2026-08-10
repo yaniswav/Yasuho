@@ -51,6 +51,18 @@ log = logging.getLogger(__name__)
 # story) while still crediting time at a fair, minute-level granularity.
 VOICE_SWEEP_INTERVAL = 300
 
+# Ceiling on the unpaid voice time ONE session may carry forward across failed
+# batched grants (_VoiceSession.owed_seconds, set in _run_sweep's failure path).
+#
+# Why a ceiling at all: the carry-forward exists so a DB blip costs a delay
+# rather than everybody's XP, and it works by widening the next tick's anti-idle
+# cap by exactly what the failed tick could not pay. That is right for a blip and
+# wrong for an outage - half a day of unreachable database would otherwise land
+# as one colossal grant (and one burst of level-up announcements) the moment it
+# came back. Past this bound the excess is simply dropped: an outage that long is
+# an incident, and losing the tail of it is the cheaper failure.
+MAX_OWED_SECONDS = VOICE_SWEEP_INTERVAL * 6
+
 # Hard ceiling on the live-session map. This is a BACKSTOP against a pathological
 # leak of sessions whose leave event was missed (a gateway outage can drop the
 # on_voice_state_update that would end a session) - the sweep is the real,
@@ -116,10 +128,29 @@ class _VoiceSession:
     that consumed this session's minutes; the sweep advances it by the whole
     minutes it consumes (credited or not - see cogs.community.leveling.engine.voice_credit), so
     ineligible or capped time is never banked.
+
+    WHEN it advances is load-bearing: a window that earned XP is only marked
+    consumed AFTER the batched grant has landed (see :meth:`VoiceXP._run_sweep`),
+    so a failed write leaves the marker where it was and the minutes are
+    credited on the next tick instead of vanishing. A window that earned nothing
+    is marked immediately - there is no write for it to wait on.
+
+    ``owed_seconds`` is what makes that retry worth anything, and it is not
+    optional bookkeeping. Holding the marker back is NOT enough on its own:
+    engine.voice_credit caps a returning window at ``interval_seconds // 60``
+    minutes, and the sweep passes VOICE_SWEEP_INTERVAL, so the cap is exactly one
+    tick - the next tick would see twice the elapsed time, pay the same single
+    window, and CONSUME both. The un-acked minutes would be lost just as surely
+    as if the marker had advanced. So a failed grant records what it could not
+    pay here, and the next tick adds it to the cap: the retry gets exactly enough
+    headroom for the window that was lost, and never more (MAX_OWED_SECONDS
+    bounds the carry). Any tick that pays - or that earns nothing, so consumes
+    its time unpaid - clears it back to 0.
     """
 
     channel_id: int
     last_credit: float
+    owed_seconds: int = 0
 
 
 class VoiceXP(commands.Cog):
@@ -252,6 +283,10 @@ class VoiceXP(commands.Cog):
         # check (V1).
         wall_now = discord.utils.utcnow()
         credits: list[tuple[int, int, int]] = []  # (guild_id, user_id, gain)
+        # (session, consumed_seconds) for every session whose minutes are IN the
+        # batch below. Their markers are advanced only once that write has
+        # landed - see the block after the fetch.
+        marks: list[tuple[_VoiceSession, int]] = []
         # (guild_id, user_id) -> (member, channel, config, gain) for level-up routing.
         pending: dict[tuple[int, int], tuple] = {}
         evicted = 0
@@ -338,16 +373,32 @@ class VoiceXP(commands.Cog):
                 # produced (a guild that muted this channel keeps it muted).
                 rate = leveling_cog.apply_vote_boost(user_id, rate, wall_now)
 
+                # The anti-idle cap is one sweep interval PLUS whatever a failed
+                # grant still owes this session (0 in the normal case, so the cap
+                # is exactly one tick). See _VoiceSession.owed_seconds: without
+                # that term the retry below would be decorative.
                 gain, consumed = leveling.voice_credit(
                     now - session.last_credit,
                     rate,
-                    VOICE_SWEEP_INTERVAL,
+                    VOICE_SWEEP_INTERVAL + session.owed_seconds,
                     eligible=eligible,
                 )
-                session.last_credit += consumed
                 if gain > 0:
                     credits.append((guild_id, user_id, gain))
                     pending[key] = (member, channel, config, gain)
+                    # NOT advanced here: this session's minutes are owed a DB
+                    # write that has not happened yet. See `marks` below.
+                    marks.append((session, consumed))
+                else:
+                    # Nothing to grant, so nothing can fail for this session:
+                    # advance it now, and drop any carry with it. It MUST be
+                    # advanced (engine.voice_credit's rule) or ineligible and
+                    # capped time would bank up and be paid out later, which is
+                    # exactly what the anti-idle rules exist to prevent - and a
+                    # carry that outlived the window it belonged to would bank
+                    # by the back door.
+                    session.last_credit += consumed
+                    session.owed_seconds = 0
             except Exception:
                 # One bad session must never abort the whole sweep (or block the
                 # batch write for everyone else). Skip it; it is retried next tick.
@@ -362,9 +413,45 @@ class VoiceXP(commands.Cog):
 
         guild_ids, user_ids, gains = leveling.build_voice_grant_payload(credits)
         week_key, month_key = leveling.current_period_keys(wall_now)
-        rows = await self.bot.db_pool.fetch(
-            _BATCH_GRANT_QUERY, guild_ids, user_ids, gains, week_key, month_key
-        )
+        try:
+            rows = await self.bot.db_pool.fetch(
+                _BATCH_GRANT_QUERY, guild_ids, user_ids, gains, week_key, month_key
+            )
+        except Exception:
+            # WRITE FIRST, ADVANCE AFTER. Every marker in `marks` is still where
+            # it was, so this tick's minutes are not consumed and the NEXT tick
+            # sees them again: a single DB blip costs a delay, never the XP of
+            # everybody who was in voice.
+            #
+            # Holding the marker is only HALF of that, and the other half is the
+            # `owed_seconds` line below. engine.voice_credit caps a returning
+            # window at ``interval_seconds // 60`` minutes; pass the bare sweep
+            # interval and the cap is exactly one tick, so the retry tick would
+            # see two windows, pay one, and consume both - the same XP burnt,
+            # just one tick later. Recording what this tick could not pay widens
+            # the next tick's cap by precisely that much, and by nothing else:
+            # `payable` is what the cap would have allowed HERE, so a session
+            # already over the anti-idle limit carries only the part it was
+            # actually owed, and MAX_OWED_SECONDS bounds a long outage.
+            #
+            # The direction of the remaining risk is chosen, not accidental: a
+            # write that COMMITTED and then lost its acknowledgement is credited
+            # twice, at most the owed window, for the members of one tick. Paying
+            # a rare window twice is better than silently burning everyone's.
+            for session, consumed in marks:
+                payable = min(consumed, VOICE_SWEEP_INTERVAL + session.owed_seconds)
+                session.owed_seconds = min(payable, MAX_OWED_SECONDS)
+            log.exception(
+                "voice-xp: batched grant failed; %d session(s) keep their "
+                "marker and are retried next tick",
+                len(marks),
+            )
+            return
+        for session, consumed in marks:
+            session.last_credit += consumed
+            # Paid: the carry has done its job (and a session that never had one
+            # is unchanged).
+            session.owed_seconds = 0
         self._stats["credited"] += len(credits)
         self._stats["writes"] += 1
         log.debug(

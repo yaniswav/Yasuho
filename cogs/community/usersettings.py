@@ -680,6 +680,16 @@ class UserSettings(commands.Cog):
                 privacy.build_export_archives,
                 data,
                 avatar_rows,
+                # The one caller that must NOT give up on the queue. Every other
+                # user of the image ceiling degrades to a fallback it can send
+                # instead; this one already CLAIMED its once-an-hour slot above
+                # and never gives it back, so an acquire timeout would not cost
+                # a render, it would cost the user an hour of their data-rights
+                # path for a queue somebody else caused. It is also the longest
+                # job in the pool and the one most likely to be queued behind
+                # another of its own kind, which is exactly the wait the default
+                # bound would cut short.
+                timeout=None,
             )
 
         try:

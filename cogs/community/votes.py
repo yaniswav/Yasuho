@@ -377,7 +377,14 @@ class Votes(commands.Cog):
             # voted - but only the first one is routine, so only the other is
             # worth waking an operator up for.
             if kind == "test":
-                log.info("votes: ignoring a top.gg test vote (%s)", data)
+                # NO PAYLOAD, for the reason cogs/system/webstats.py's listener
+                # spells out at length: a top.gg payload carries a user id (and
+                # whatever query string the vote url was called with), and a log
+                # file is durable, greppable, and outside every erasure path the
+                # bot has. `?mydata deleteprofile` can drop the vote ROW and can
+                # do nothing about a line already on disk. Nothing is lost - the
+                # fact that a test arrived IS the whole diagnostic.
+                log.info("votes: ignoring a top.gg test vote")
             else:
                 log.warning(
                     "votes: ignoring a top.gg payload of unknown type %r "

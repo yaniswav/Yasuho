@@ -142,6 +142,14 @@ class DataRetention(commands.Cog):
         export_slots = await retention.prune_expired_export_slots(
             self.bot.db_pool
         )
+        # The presence aggregates. Same shape and the same reason: keyed by user
+        # alone, so no guild purge reaches them, and the feature's own 30-day
+        # rule only ever fired for a member who was still being seen - which is
+        # exactly the wrong half. This is what makes the stored data match the
+        # window the card and PRIVACY.md both state.
+        presence_rows = await retention.prune_stale_presence_aggregates(
+            self.bot.db_pool
+        )
 
         if (
             scheduled_guilds
@@ -149,17 +157,19 @@ class DataRetention(commands.Cog):
             or avatar_rows
             or user_actions
             or export_slots
+            or presence_rows
         ):
             log.info(
                 "Retention pass complete: scheduled_guilds=%s guilds=%s "
                 "avatar_rows=%s avatar_bytes=%s user_actions=%s "
-                "export_slots=%s",
+                "export_slots=%s presence_rows=%s",
                 scheduled_guilds,
                 purged_guilds,
                 avatar_rows,
                 avatar_bytes,
                 user_actions,
                 export_slots,
+                presence_rows,
             )
         return {
             "scheduled_guilds": scheduled_guilds,
@@ -168,6 +178,7 @@ class DataRetention(commands.Cog):
             "avatar_bytes": avatar_bytes,
             "user_actions": user_actions,
             "export_slots": export_slots,
+            "presence_rows": presence_rows,
         }
 
     async def _check_backups(self):

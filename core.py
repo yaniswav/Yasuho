@@ -92,7 +92,12 @@ class Yasuho(commands.Bot):
             heartbeat_timeout=150.0,
             allowed_mentions=allowed_mentions,
             intents=intents,
-            enable_debug_events=True,
+            # enable_debug_events is deliberately NOT set. It makes discord.py
+            # dispatch on_socket_raw_receive and on_socket_event_type for EVERY
+            # inbound gateway packet - the raw payload string included - and
+            # nothing in this bot listens for either event (no cog, no tool, no
+            # test). That was a per-packet dispatch, on the busiest path there
+            # is, whose every listener list was empty.
             help_command=None,
         )
 

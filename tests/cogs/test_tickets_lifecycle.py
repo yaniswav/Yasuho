@@ -662,6 +662,56 @@ async def test_a_close_with_no_log_channel_still_closes_and_says_so():
     assert "no transcript was saved" in world.thread.sends[0][0][0]
 
 
+async def test_the_room_is_told_when_a_transcript_WAS_saved():
+    """The symmetric half of the notice above.
+
+    The opener is the one party who cannot see the log channel, so they are the
+    one who has to be told that a copy of the conversation just went there. The
+    close only ever announced the opposite case, which made the notice fire
+    exactly when there was nothing to disclose.
+    """
+    _configured()
+    world = _world(thread_messages=[_message("hello")],
+                   pool_kwargs={"by_thread": _row()})
+
+    await lifecycle.perform_close(
+        world.bot, world.guild, world.thread, _row(),
+        closed_by=_Member(OPENER_ID), reason=lifecycle.REASON_MANUAL,
+    )
+
+    notice = world.thread.sends[0][0][0]
+    assert "transcript of this conversation was saved" in notice
+    assert "ticket log channel" in notice
+    # ... and the file really did ride the log embed, so the notice is true.
+    assert isinstance(world.channel.sends[0][1]["file"], discord.File)
+
+
+async def test_a_transcript_that_cannot_be_attached_is_never_read_nor_announced():
+    """No claim, and no ten pages of history to back a claim we cannot make.
+
+    A log channel the bot may post in but not attach files to used to cost a
+    full history read for a file that was then dropped at the send. Testing the
+    permission first is what lets the closing notice stay honest: it promises
+    nothing, because nothing was saved.
+    """
+    _configured()
+    world = _world(thread_messages=[_message("hello")],
+                   pool_kwargs={"by_thread": _row()})
+    world.channel._perms = _Perms(attach_files=False)
+
+    await lifecycle.perform_close(
+        world.bot, world.guild, world.thread, _row(),
+        closed_by=_Member(OPENER_ID), reason=lifecycle.REASON_MANUAL,
+    )
+
+    assert "history" not in world.journal  # the thread was never read
+    notice = world.thread.sends[0][0][0]
+    assert "transcript" not in notice.lower()
+    # The staff channel is told why its embed has no file.
+    footer = world.channel.sends[0][1]["embed"].footer.text
+    assert "cannot attach files" in footer
+
+
 async def test_the_transcript_goes_to_the_log_channel_and_nowhere_else():
     _configured()
     world = _world(thread_messages=[_message("secret")],
@@ -879,11 +929,12 @@ async def test_a_close_that_raises_still_releases_its_in_flight_entry():
     world = _world(pool_kwargs={"by_thread": _row()})
     world.pool.raise_on = "SET status = 'closed'"
 
-    # close_ticket failures are swallowed into a None; nothing may leak either way.
+    # close_ticket failures are answered with CLOSE_FAILED (never the None that
+    # means "somebody else won"); nothing may leak either way.
     assert await lifecycle.perform_close(
         world.bot, world.guild, world.thread, _row(),
         closed_by=None, reason=lifecycle.REASON_MANUAL,
-    ) is None
+    ) is lifecycle.CLOSE_FAILED
     assert THREAD_ID not in lifecycle._CLOSING
 
 
@@ -1184,6 +1235,71 @@ async def test_confirming_the_prompt_actually_runs_the_close():
         "db-read", "history", "db-close", "thread-send", "thread-edit", "log-send"
     ]
     assert "#7" in interaction.replies[-1]
+
+
+async def test_a_close_whose_update_failed_tells_the_clicker_it_failed():
+    """THE regression, and the reason CLOSE_FAILED exists.
+
+    A close whose UPDATE raised used to answer exactly like a close somebody
+    else had already won: "this ticket is already closed". So nobody ever
+    clicked again, and the ticket stayed OPEN - a live room and a held cap slot
+    behind a button that had apparently worked. The two facts are opposites and
+    the person who clicked has to be told which one they got.
+    """
+    _configured()
+    world = _world(pool_kwargs={"by_thread": _row()})
+    world.pool.raise_on = "SET status = 'closed'"
+    opener = _Member(OPENER_ID, "Kira")
+    interaction = _Interaction(world.guild, opener, world.bot, channel=world.thread)
+    view = lifecycle._CloseConfirmView(OPENER_ID, THREAD_ID, 7)
+
+    await view._confirm(interaction)
+
+    answer = interaction.replies[-1]
+    assert "could not close" in answer
+    assert "try again" in answer
+    assert "already closed" not in answer
+    # ... and nothing downstream of the gate ran on a close that did not happen.
+    assert world.thread.edits == []
+    assert world.channel.sends == []
+
+
+async def test_the_already_closed_race_still_says_exactly_that():
+    """The other side of the same fork: somebody else won, so the ticket really
+    is closed and there is nothing to retry."""
+    _configured()
+    world = _world(pool_kwargs={"by_thread": _row(), "close": None})
+    opener = _Member(OPENER_ID, "Kira")
+    interaction = _Interaction(world.guild, opener, world.bot, channel=world.thread)
+    view = lifecycle._CloseConfirmView(OPENER_ID, THREAD_ID, 7)
+
+    await view._confirm(interaction)
+
+    assert "already closed" in interaction.replies[-1]
+
+
+async def test_a_failed_close_is_reported_as_the_sentinel_not_as_a_race():
+    """The seam itself, so every caller can tell the two apart."""
+    _configured()
+    world = _world(pool_kwargs={"by_thread": _row()})
+    world.pool.raise_on = "SET status = 'closed'"
+
+    result = await lifecycle.perform_close(
+        world.bot, world.guild, world.thread, _row(),
+        closed_by=_Member(OPENER_ID), reason=lifecycle.REASON_MANUAL,
+    )
+
+    assert result is lifecycle.CLOSE_FAILED
+    assert result is not None
+
+
+async def test_the_sweep_does_not_count_a_close_that_failed():
+    _configured()
+    world = _world(guild_threads=(),
+                   pool_kwargs={"sweep": [_sweep_row()], "by_thread": _row()})
+    world.pool.raise_on = "SET status = 'closed'"
+
+    assert await _cog(world).run_sweep_once() == 0
 
 
 async def test_cancelling_the_prompt_leaves_the_ticket_alone():

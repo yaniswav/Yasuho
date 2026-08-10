@@ -158,21 +158,30 @@ class Events(commands.Cog):
                     pass
 
         # Re-apply the mute role to evaders who left while muted and rejoined.
+        # The eager cache is consulted FIRST, exactly like the autorole above: a
+        # guild with no mute role can never re-mute anyone, so its joins have no
+        # reason to pay a round trip to mutedmembers. Most guilds never configure
+        # one, and joins arrive in bursts (a raid, a bot re-invite), so this is
+        # the difference between a query per join and none at all.
+        mute_role_id = self.bot.muteroles.get(guild_id)
+        if not mute_role_id:
+            return
+        mute_role = member.guild.get_role(mute_role_id)
+        if mute_role is None:
+            return
+
         muted = await pool.fetchval(
             "SELECT member_id FROM mutedmembers WHERE mguild_id = $1 AND member_id = $2;",
             guild_id,
             member.id,
         )
         if muted:
-            mute_role_id = self.bot.muteroles.get(guild_id)
-            mute_role = member.guild.get_role(mute_role_id) if mute_role_id else None
-            if mute_role:
-                try:
-                    await member.add_roles(
-                        mute_role, reason="Re-muted on rejoin (mute evasion)"
-                    )
-                except discord.HTTPException:
-                    log.exception("Failed to re-apply mute")
+            try:
+                await member.add_roles(
+                    mute_role, reason="Re-muted on rejoin (mute evasion)"
+                )
+            except discord.HTTPException:
+                log.exception("Failed to re-apply mute")
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):

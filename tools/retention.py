@@ -30,6 +30,18 @@ GUILD_PURGES_PER_RUN = 5
 # the table is not a permanent log of when somebody exported their data.
 USER_ACTION_AUDIT_DAYS = 30
 
+# How long a presence aggregate may sit untouched before it is emptied, and how
+# many rows one pass may empty.
+#
+# This number is NOT free to drift: it is the same 30 days
+# cogs/community/profile/presence.PURGE_AFTER_DAYS applies at the merge and at
+# the render, and PRIVACY.md promises as the presence window. It is restated
+# here rather than imported because tools/ must not import a cog (the cog
+# imports tools), and tests/tools/test_retention.py pins the two together so the
+# restatement cannot become a second opinion.
+PRESENCE_AGGREGATE_MAX_AGE_DAYS = 30
+PRESENCE_PRUNE_BATCH_SIZE = 500
+
 # Deletion order matters for the foreign keys installed by migration 0002.
 # Every query is static: no table or column name comes from user input.
 GUILD_DELETE_QUERIES = (
@@ -392,6 +404,63 @@ async def prune_expired_export_slots(
         "DELETE FROM mydata_export_cooldown "
         "WHERE last_export_at < now() - $1 * INTERVAL '1 second'",
         window,
+    )
+    return affected_rows(status)
+
+
+async def prune_stale_presence_aggregates(
+    pool,
+    max_age_days=PRESENCE_AGGREGATE_MAX_AGE_DAYS,
+    batch_size=PRESENCE_PRUNE_BATCH_SIZE,
+):
+    """Empty ``presence_gaming`` payloads nobody has added to for the window.
+
+    THE GAP THIS CLOSES. The 30 days presence promises were a DISPLAY window,
+    not a storage one, and only half of that was even a promise about the data:
+    ``merge_games`` drops stale entries of a row it is already writing, and the
+    renderer filters what it draws. Both only fire for a member who is still
+    being seen. Someone who opted in, played for a week and then stopped - or
+    left, or simply fell out of the member cache - is never flushed again, so
+    their row sat at its last state for ever while the card politely showed
+    nothing. The card said 30 days; the database said "always".
+
+    THE PREDICATE IS ``last_refresh``, deliberately, and not a scan into the
+    JSON for the newest ``last_played``. Every write to this row goes through
+    ``connectors.storage.set_payload``, which stamps ``last_refresh = now()``,
+    and the only writer for this connector is the presence flush - so a row
+    untouched for the window CANNOT contain a play newer than the window
+    (``last_played`` is stamped at the flush that wrote it, which is
+    ``last_refresh`` at the latest). Reading the timestamps out of the payload
+    would mean casting user-reachable text to ``timestamptz`` inside a DELETE,
+    where one malformed value aborts the whole pass. This way the pass cannot
+    remove anything the card would still be drawing, and it needs no cast at
+    all. It is also the query the ``(connector, last_refresh)`` index in
+    schema.sql already exists to serve.
+
+    THE ROW SURVIVES; only its payload is emptied. The row IS the opt-in (see
+    presence.py: no row, no collection, no section), so deleting it would turn a
+    retention pass into a silent withdrawal of somebody's consent - the exact
+    inversion of what this is for. Emptying the aggregate is the whole of what
+    the promise requires.
+
+    Bounded per pass (``batch_size``) and self-limiting: an emptied row no
+    longer matches ``payload <> '{}'``, so a pass that finds nothing new does no
+    work, and no row is ever rewritten twice.
+    """
+    status = await pool.execute(
+        "WITH stale AS ("
+        "SELECT user_id FROM profile_connections "
+        "WHERE connector = 'presence_gaming' "
+        "AND last_refresh IS NOT NULL "
+        "AND last_refresh < now() - $1 * INTERVAL '1 day' "
+        "AND payload <> '{}'::jsonb "
+        "ORDER BY last_refresh LIMIT $2"
+        ") UPDATE profile_connections AS connections "
+        "SET payload = '{}'::jsonb FROM stale "
+        "WHERE connections.user_id = stale.user_id "
+        "AND connections.connector = 'presence_gaming'",
+        max_age_days,
+        batch_size,
     )
     return affected_rows(status)
 

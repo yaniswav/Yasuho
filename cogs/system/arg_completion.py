@@ -398,7 +398,19 @@ class _CompletionView(AuthorView):
                 new_ctx.command.reset_cooldown(new_ctx)
             await self.ctx.bot.invoke(new_ctx)
         except Exception:
-            log.exception("arg completion: re-invoke failed for %r", content)
+            # THE COMMAND, NEVER THE COMMAND LINE. ``content`` is a rebuilt
+            # message: it carries the arguments this member just typed into the
+            # form - a reason for a ban, a reminder's text, a tag's body - and
+            # PRIVACY.md states in as many words that the bot does not store
+            # message content. A log file is storage: durable, greppable, and
+            # reachable by no erasure path the bot offers. The name plus how
+            # many arguments were filled is what a failure here is actually
+            # diagnosed from, and it says nothing about anybody.
+            log.exception(
+                "arg completion: re-invoke failed for %s (%d argument(s))",
+                self.command.qualified_name,
+                len(self.provided),
+            )
         finally:
             # Leave the shared cached Message object exactly as we found it.
             message.content = original

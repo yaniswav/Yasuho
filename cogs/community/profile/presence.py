@@ -185,15 +185,25 @@ MAX_GAMES = 10
 GAME_NAME_MAX = 60
 
 # A game untouched for this long stops being "what they have been playing".
-# TWO half-measures that only add up together, and the docstring says so rather
-# than promising a sweep this module deliberately does not run:
+# THREE measures that only add up together:
 #   * LAZY AT THE FLUSH - merge_games drops the stale entries of the row it
 #     already has in hand. Never a sweep of its own, which would be a scan over
-#     every opted-in user for a cosmetic list;
+#     every opted-in user on the feature's own clock;
 #   * FILTERED AT THE RENDER - a member who stopped playing (or stopped being
 #     seen) is never flushed again, so their row can sit at its last state for
 #     months. The renderer therefore re-applies the same cutoff, and that is
-#     what makes the 30 days true on the card rather than only in the merge.
+#     what makes the 30 days true on the card rather than only in the merge;
+#   * PRUNED IN STORAGE - and this one is why the first two were not enough. The
+#     render filter made the 30 days true on the CARD while the row itself kept
+#     the aggregate for ever: the window was a display promise sitting on top of
+#     permanent storage, which is not what "presence aggregates: 30-day window"
+#     says to the person reading it. tools/retention.prune_stale_presence_aggregates
+#     empties a payload nobody has written to for this long, on the daily
+#     retention pass, bounded per pass. It empties the payload and KEEPS the row,
+#     because the row is the opt-in and a retention job must never withdraw
+#     somebody's consent for them.
+# That prune restates this number (tools/ cannot import a cog); the two are
+# pinned together by tests/tools/test_retention.py.
 PURGE_AFTER_DAYS = 30
 
 # Bound on the Spotify strings read live out of the gateway cache. Same reason

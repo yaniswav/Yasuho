@@ -42,6 +42,7 @@ import math
 import typing
 
 from tools import settings
+from tools.snowflake import coerce_id
 
 log = logging.getLogger(__name__)
 
@@ -183,19 +184,17 @@ def coerce_role_id(raw: typing.Any) -> typing.Optional[int]:
     Accepts an int or a numeric string (JS serialises snowflakes as strings).
     Zero and negatives are not snowflakes, so they read as "no role" rather than
     as a role nobody holds. Pure.
+
+    Delegates to :func:`tools.snowflake.coerce_id`, which is THE reader for ids
+    out of a JSONB blob - the exact job this had grown its own copy of. The
+    shared one is marginally STRICTER on junk, and only on junk: it takes ASCII
+    decimal digits, where a bare ``int()`` also swallowed ``"+12"``, ``"1_2"``
+    and non-ASCII digit strings and turned them into a confident, wrong id. The
+    dashboard writes none of those shapes, every value this module actually sees
+    reads identically, and a role id nobody could have meant is better read as
+    "no role" than as a role.
     """
-    if raw is None or isinstance(raw, bool):
-        return None
-    if isinstance(raw, int):
-        value = raw
-    elif isinstance(raw, str):
-        try:
-            value = int(raw.strip())
-        except (TypeError, ValueError):
-            return None
-    else:
-        return None
-    return value if value > 0 else None
+    return coerce_id(raw)
 
 
 def member_has_role(member: typing.Any, role_id: typing.Optional[int]) -> bool:

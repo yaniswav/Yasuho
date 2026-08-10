@@ -262,23 +262,57 @@ _SCHEMA_PATH = os.path.join(
 _EXPORT_EXEMPT_TABLES = set()
 
 
+# Column names that identify a PERSON, not a thing. The guard used to key on the
+# literal ``user_id`` alone, and that is precisely how ``blbot`` escaped it for
+# the whole life of the table: it calls its column ``member_id``, so a table
+# keyed by one human being with no guild anywhere read as "not user-scoped" and
+# nothing ever asked whether its owner could see it. A naming convention is not
+# a privacy boundary, so the guard now asks what the column MEANS.
+_ACTOR_COLUMNS = (
+    "user_id",
+    "member_id",
+    "opener_id",
+    "creator_id",
+    "created_by",
+    "moderator_id",
+    "closed_by",
+    "claimed_by",
+    "requested_by",
+    "owner_id",
+    "author_id",
+)
+# ... and the same lesson on the other side of the test. ``mutedmembers`` spells
+# its guild column ``mguild_id``, so a scope test keyed on the literal
+# ``guild_id`` would call that table user-scoped and demand it be exported -
+# a false positive, because those rows die with their guild like every other
+# guild record (retention.GUILD_DELETE_QUERIES deletes it WHERE mguild_id).
+_GUILD_COLUMNS = ("guild_id", "mguild_id")
+
+
 def _user_scoped_tables():
     """Tables in schema.sql holding rows NO guild purge can ever reach.
 
-    That is: a ``user_id`` column, and either no ``guild_id`` at all or a
-    NULLABLE one. The nullable case is not a technicality - it is how
+    That is: a BIGINT column that names a PERSON (:data:`_ACTOR_COLUMNS`,
+    whatever it is spelled), and either no guild column at all or a NULLABLE
+    one. The nullable case is not a technicality - it is how
     ``dashboard_actions`` gained a user scope: rows of the very same table are
     guild-scoped (purged with the guild) or user-scoped (``guild_id NULL``, which
     ``WHERE guild_id = $1`` can never match). A guard keyed on "has no guild_id
     column" stopped applying to that table the moment it grew a second scope,
     which is exactly when its user rows appeared.
 
-    A NOT NULL ``guild_id`` is the other side of the tiling: those rows die with
+    A NOT NULL guild column is the other side of the tiling: those rows die with
     their guild, and ``tests/tools/test_retention.py`` is the structural guard
     that makes sure they do.
+
+    BIGINT is part of the test and not decoration: an actor id is a Discord
+    snowflake, so a TEXT or BOOLEAN column that happens to share one of these
+    names is a different thing wearing the name and must not drag its table in.
     """
     with open(_SCHEMA_PATH, encoding="utf-8") as handle:
         ddl = re.sub(r"--[^\n]*", "", handle.read())
+    actor = r"(?:{0})".format("|".join(_ACTOR_COLUMNS))
+    guild_column = r"(?:{0})".format("|".join(_GUILD_COLUMNS))
     tables = set()
     for match in re.finditer(
         r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\n\s*\)\s*;",
@@ -286,9 +320,13 @@ def _user_scoped_tables():
         re.S | re.I,
     ):
         body = match.group(2)
-        has_user = re.search(r"^\s*user_id\b", body, re.M | re.I)
-        guild = re.search(r"^\s*guild_id\b([^\n,]*)", body, re.M | re.I)
-        if not has_user:
+        has_actor = re.search(
+            rf"^\s*{actor}\s+BIGINT\b", body, re.M | re.I
+        )
+        guild = re.search(
+            rf"^\s*{guild_column}\b([^\n,]*)", body, re.M | re.I
+        )
+        if not has_actor:
             continue
         if guild is None or "NOT NULL" not in guild.group(1).upper():
             tables.add(match.group(1))
@@ -310,6 +348,13 @@ def test_every_user_scoped_table_is_covered_by_the_export():
     assert {"user_profiles", "profile_visibility", "afk", "profiles"} <= tables
     assert "dashboard_actions" in tables
     assert "season_podiums" not in tables
+    # THE table the old ``user_id``-only guard could not see: one BIGINT naming
+    # one person, spelled ``member_id``, with no guild column anywhere.
+    assert "blbot" in tables
+    # ... and the false positive the widening has to avoid: same spelling on the
+    # actor side, but the row is guild-scoped through ``mguild_id`` and dies
+    # with its guild.
+    assert "mutedmembers" not in tables
 
     source = inspect.getsource(privacy.collect_user_export)
     missing = sorted(
@@ -388,7 +433,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 9
+    assert data["export_version"] == privacy.EXPORT_VERSION == 10
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -482,19 +527,16 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
     assert counts["anilist_chapter_optins"] == 1
 
 
-def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
+def test_the_narrow_erasure_never_reaches_what_the_wide_one_warns_about():
     """THE reason the two lists exist.
 
-    `/profile clear` has no confirmation view: it deletes everything in
-    PROFILE_DELETE_QUERIES inside a `ctx.typing()`, on one click. That is fine
-    for data its owner typed in and can type again, and wrong for an earned vote
-    streak and a lifetime count, which nothing can give back. So the ledger is
-    on the WIDE list only, behind the button that names it.
-
-    Same verdict for the personal rank card (lot U1): its background is an image
-    file its owner uploaded and may no longer hold, and `/profile clear` neither
-    warns about it nor mentions rank cards at all. `/rankcard clear` is the
-    explicit verb for it; `?mydata deleteprofile` is the erasure one.
+    `profile clear` erases everything in PROFILE_DELETE_QUERIES and nothing
+    else. An earned vote streak and a lifetime count are not on it, and neither
+    is the personal rank card whose background is an image file its owner
+    uploaded and may no longer hold: nothing can give either back, and
+    `profile clear` neither warns about them nor mentions them, so they live on
+    the WIDE list only, behind the button that names them. `/rankcard clear` is
+    the explicit verb for the card; `?mydata deleteprofile` is the erasure one.
     """
     narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
     wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
@@ -507,11 +549,44 @@ def test_the_unconfirmed_erasure_never_reaches_what_a_user_cannot_recreate():
 
     from cogs.community.profile import cog as profile_cog
 
-    clear = inspect.getsource(profile_cog.Profiles.profile_clear.callback)
-    assert "delete_profile" in clear  # the narrow verb...
-    assert "delete_user_data" not in clear  # ...never the wide one
+    confirm = inspect.getsource(profile_cog.ProfileClearView.confirm)
+    assert "delete_profile" in confirm  # the narrow verb...
+    assert "delete_user_data" not in confirm  # ...never the wide one
     # And nothing to un-arm: the boost outlives a profile reset with its row.
-    assert "forget_vote_boost" not in clear
+    assert "forget_vote_boost" not in confirm
+
+
+def test_the_narrow_erasure_asks_before_destroying_the_unrecreatable():
+    """The doctrine, applied to the one thing on the NARROW list that its owner
+    cannot type back.
+
+    ``profile_connections`` is on the narrow list on purpose - a clear that left
+    a linked Steam handle behind is not a clear - but that same table holds the
+    presence aggregates, which are weeks of minutes the bot collected on its own
+    and nobody can recreate. `profile clear` used to delete them on sight, with
+    no confirmation and no mention. It is a prompt-first command now, and the
+    prompt has to SAY what goes: the doctrine is "nothing unrecreatable dies
+    unannounced", not "the wide list is the only list that asks".
+    """
+    from cogs.community.profile import cog as profile_cog
+
+    assert "profile_connections" in dict(privacy.PROFILE_DELETE_QUERIES)
+
+    clear = inspect.getsource(profile_cog.Profiles.profile_clear.callback)
+    # The command itself must not delete anything any more: it puts a view in
+    # front of the user and stops there.
+    assert "delete_profile" not in clear
+    assert "ProfileClearView" in clear
+    # ... and the prompt names each kind of thing the click destroys.
+    for phrase in ("visibility choice", "linked", "presence was on"):
+        assert phrase in clear, phrase
+    assert "cannot be recovered" in clear
+
+    # The result message has to agree with the prompt, the same rule the wide
+    # path's own screens are held to below.
+    confirm = inspect.getsource(profile_cog.ProfileClearView.confirm)
+    for phrase in ("visibility choice", "linked accounts", "presence had collected"):
+        assert phrase in confirm, phrase
 
 
 def test_the_forget_list_covers_exactly_the_profile_tables():
@@ -527,6 +602,116 @@ def test_forget_never_widens_beyond_the_owner():
     for _table, query in privacy.USER_DELETE_QUERIES:
         assert query.count("$1") == 1
         assert query.endswith("WHERE user_id = $1")
+
+
+# ---------------------------------------------------------------------------
+# The permanent leveling record (season_podiums) and the bot-wide blacklist
+# ---------------------------------------------------------------------------
+#
+# Two rows the archive could not show before v10, and they fail the guards above
+# for opposite reasons: a podium row is GUILD-scoped (so the user-side
+# structural guard cannot see it, by construction) and `blbot` spells its actor
+# column ``member_id`` (so the guard could not see it either, until the guard
+# stopped keying on a name).
+
+
+async def test_the_export_carries_the_monthly_season_podiums():
+    """THE permanent leveling record, and the one PRIVACY.md names.
+
+    Every other XP row is a running total that gets overwritten or pruned; a
+    podium row is written once when a month closes and then never touched. It
+    dies with its guild like the rest of that server's records, so the export is
+    the only thing that can show it to the person standing on it.
+    """
+
+    class _PodiumPool(_ExportPool):
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            if "FROM season_podiums" in query:
+                return [
+                    {
+                        "guild_id": 7,
+                        "period_key": "M2026-07",
+                        "rank": 1,
+                        "xp": 4242,
+                        "snapshot_at": datetime.datetime(
+                            2026, 8, 1, tzinfo=datetime.timezone.utc
+                        ),
+                    }
+                ]
+            return []
+
+    pool = _PodiumPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["season_podiums"] == [
+        {
+            "guild_id": 7,
+            "period_key": "M2026-07",
+            "rank": 1,
+            "xp": 4242,
+            "snapshot_at": datetime.datetime(
+                2026, 8, 1, tzinfo=datetime.timezone.utc
+            ),
+        }
+    ]
+    query = next(q for q in pool.queries if "FROM season_podiums" in q)
+    # This user's placements, never the rest of the podium: the other two names
+    # on that month belong to them, not to the requester.
+    assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_states_the_bot_wide_blacklist_as_a_fact():
+    """One boolean, and both values are stated.
+
+    ``blbot`` holds a single column, so "there is a row" IS the entire record.
+    Keyed by one person with no guild anywhere, which is why no purge reaches it
+    and why the export is the only surface that can ever state it.
+    """
+
+    class _BlockedPool(_ExportPool):
+        async def fetchrow(self, query, *args):
+            self.queries.append(query)
+            if "FROM blbot" in query:
+                return {"member_id": 42}
+            return None
+
+    data, _avatars = await privacy.collect_user_export(_BlockedPool(), 42)
+    assert data["bot_access"] == {"blacklisted": True}
+
+    # ... and a user who is not on it is told so, rather than left to read an
+    # absent key as an answer.
+    clean, _avatars = await privacy.collect_user_export(_ExportPool(), 42)
+    assert clean["bot_access"] == {"blacklisted": False}
+
+
+def test_the_blacklist_is_exported_and_reachable_by_no_erasure_path():
+    """The mydata_export_cooldown call, made a second time and for the same
+    reason: erasing this row would HAND its subject something.
+
+    A blacklist entry is the bot owner's only anti-abuse decision, it is
+    guild-independent (no guild purge can reach it), and listing it on
+    `?mydata deleteprofile` would turn "delete my profile" into a self-service
+    unban. So it is exported - the person is already told directly when it
+    happens - and deleted by nothing here.
+    """
+    narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
+    assert "blbot" not in narrow
+    assert "blbot" not in wide
+
+    source = inspect.getsource(privacy.collect_user_export)
+    assert "FROM blbot WHERE member_id = $1" in source
+
+    # REPO-WIDE, the same shape as the export-limiter guard below: exactly one
+    # file may delete from this table, and it is the owner-only command, never a
+    # privacy path.
+    deleters = set()
+    for path in _repo_python_files():
+        source = open(path, encoding="utf-8").read()
+        if re.search(r"DELETE FROM\s+blbot", source):
+            deleters.add(os.path.relpath(path, _REPO_ROOT).replace(os.sep, "/"))
+    assert deleters == {"cogs/moderation/blacklist.py"}
 
 
 # ---------------------------------------------------------------------------

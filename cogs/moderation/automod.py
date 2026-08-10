@@ -500,9 +500,14 @@ class AutoMod(commands.Cog):
         if message.author.bot or message.guild is None:
             return
 
-        if message.author.guild_permissions.manage_messages:
-            return
-
+        # The enabled gate comes FIRST, before any permission work. Both reads
+        # below are in-process caches on the hot path (the automod row cache and
+        # tools.settings' bounded LRU), i.e. a dict lookup each, whereas
+        # Member.guild_permissions FOLDS every one of the author's role
+        # permission sets on every call. Computing that for every message in
+        # every guild - the overwhelming majority of which have automod off -
+        # bought nothing: a member with manage_messages is let through either
+        # way, so the order is pure cost, not behaviour.
         s = await self.get_settings(message.guild.id)
         antilink = bool(s["antilink"]) if s else False
         antispam = bool(s["antispam"]) if s else False
@@ -513,6 +518,11 @@ class AutoMod(commands.Cog):
         )
 
         if not (antilink or antispam or antiinvite):
+            return
+
+        # Moderators are never auto-moderated; checked here, once we know at
+        # least one feature is actually on.
+        if message.author.guild_permissions.manage_messages:
             return
 
         if await self._is_exempt(message):

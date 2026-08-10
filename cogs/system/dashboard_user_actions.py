@@ -140,6 +140,11 @@ async def _exec_mydata_export(bot, user_id, payload):
             privacy.build_export_archives,
             data,
             avatar_rows,
+            # timeout=None for the same reason the prefix/slash export gives
+            # (cogs/community/usersettings.py's mydata_export): the hourly slot
+            # is already claimed and is not released on failure, so waiting for
+            # a busy pool is strictly better than burning the user's hour.
+            timeout=None,
         )
     except Exception:
         log.exception(
