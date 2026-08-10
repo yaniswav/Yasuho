@@ -111,8 +111,16 @@ class ActionsPool:
                 row["result"] = json.loads(result_json)
             return "UPDATE 1"
         if "created_at < now()" in query:  # reconcile: expire the too-old
-            _stale_minutes, result_json = args
-            for row in self.rows.values():
+            # The in-flight mark excludes ids THIS process is handling, whatever
+            # their age - the same guard step 2 carries, modelled from the
+            # `id = ANY($3)` clause and its parameter so a test of a long-running
+            # executor caught by a reconnect-time reconcile stays red without it.
+            _stale_minutes, result_json = args[0], args[1]
+            mark_guarded = "id = ANY(" in query
+            inflight = set(args[2]) if mark_guarded and len(args) > 2 else set()
+            for action_id, row in self.rows.items():
+                if action_id in inflight:
+                    continue
                 if row["status"] in ("pending", "running") and row["stale"]:
                     row["status"] = "failed"
                     row["result"] = json.loads(result_json)
@@ -1290,6 +1298,31 @@ async def test_reconcile_never_resets_a_claim_this_process_is_still_working_on(
     assert runs == ["slow"]
     assert pool.rows[1]["status"] == "done"
     assert pool.rows[1]["result"] == {"ok": True}
+
+
+async def test_reconcile_does_not_expire_a_long_running_action_this_process_holds():
+    """Step 1 must carry the same in-flight guard as step 2.
+
+    A reconnect-time reconcile (not just boot) can run while a legitimately long
+    executor - mydata_export packing and uploading an archive - is still alive on
+    a row older than the stale window. Without the in-flight exclusion on step 1,
+    it stamps that live row failed/expired out from under its own executor: the
+    dashboard shows "expired" for work in progress and a retry hits the taken
+    cooldown. Boot is unaffected (the set is empty there, so a genuine orphan of
+    a dead previous process still expires - covered by the sweep test above).
+    """
+    pool = ActionsPool()
+    pool.add(1, None, "mydata_export", {}, status="running", stale=True, user_id=100)
+    bot = FakeBot(pool)
+
+    # This process is actively handling id 1 (the mark is up from before the
+    # claim until after the terminal write, per _inflight's contract).
+    with dashboard_actions._inflight(1):
+        await dashboard_actions.reconcile(bot)
+
+    # The live row is untouched - not expired out from under the executor.
+    assert pool.rows[1]["status"] == "running"
+    assert pool.rows[1]["result"] is None
 
 
 async def test_the_inflight_mark_is_a_refcount_and_is_always_released():

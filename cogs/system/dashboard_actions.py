@@ -1373,15 +1373,24 @@ async def reconcile(bot):
     """
     pool = bot.db_pool
 
-    # (1) Expire the too-old. Bound age is a fixed constant, not user input,
-    # but it's still passed as a bound parameter rather than interpolated.
+    # (1) Expire the too-old, EXCEPT ids this process is actively handling. The
+    # in-flight guard is the same one step (2) uses and for the same reason: a
+    # reconnect-time reconcile (not just boot) can run while a long executor -
+    # mydata_export packing and uploading an archive - is still alive on a row
+    # older than the window; without the exclusion this step would stamp its
+    # live row failed/expired out from under it, the dashboard would show
+    # "expired" for work in progress, and a retry would hit the already-taken
+    # cooldown. At boot the set is empty, so genuinely orphaned rows still
+    # expire. Both bounds are code constants / process state, never user input.
     await pool.execute(
         "UPDATE dashboard_actions "
         "SET status = 'failed', result = $2::jsonb, updated_at = now() "
         "WHERE status IN ('pending', 'running') "
-        "AND created_at < now() - $1 * INTERVAL '1 minute'",
+        "AND created_at < now() - $1 * INTERVAL '1 minute' "
+        "AND NOT (id = ANY($3::bigint[]))",
         _STALE_ACTION_MINUTES,
         json.dumps({"ok": False, "error": "expired"}),
+        sorted(_INFLIGHT_ACTIONS),
     )
 
     # (2) Reset orphaned 'running' rows. Two guards, because neither alone is
