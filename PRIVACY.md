@@ -34,8 +34,9 @@ from then on it lives in that Discord channel, under that server's control, and
 it outlives the thread. It contains what was said in the ticket, so a server
 should point that setting at a staff-only channel - the bot warns when the
 channel it is pointed at is readable by everyone. A server with no ticket log
-channel gets no transcript at all, and the closing message in the thread says
-so.
+channel gets no transcript at all. The closing message in the thread tells you
+which of the two happened, every time: that no transcript was saved, or that
+one was just saved to that server's ticket log.
 
 **Leveling**: your user ID with XP totals, levels, and monthly season results
 per server. If you customise your own rank card (`/rankcard`), the accent colour
@@ -66,9 +67,9 @@ back on later; `?mydata deleteprofile` deletes the row itself.
 
 **Presence / "recently played"** (strictly OPT-IN): if - and only if - you
 enable it (`/profile presence gaming on`), the bot stores aggregate play data:
-game name, total minutes, last-played timestamp (top games, 30-day display
-window). Never a minute-by-minute timeline. Users who have not opted in are
-discarded at the event level: nothing is recorded. Spotify listening status is
+game name, total minutes, last-played timestamp (top games, 30-day window - see
+Retention below). Never a minute-by-minute timeline. Users who have not opted
+in are discarded at the event level: nothing is recorded. Spotify listening status is
 displayed live from Discord and never stored. Turning the feature off deletes
 the collected aggregates immediately.
 
@@ -94,9 +95,21 @@ ID, no server ID.
   commands, automod filtering, custom command triggers, mini-games) and
   discarded.
 - We do not use any data to train machine learning or AI models.
-- We do not sell or share data with third parties. External services (AniList,
-  MangaDex, Steam, osu!, Last.fm, Backloggd, top.gg) are only queried with
-  identifiers you provided, to render features you asked for.
+- We do not sell or share data with third parties. External services are only
+  contacted to render a feature you asked for, and only with what that feature
+  needs:
+  - **AniList, MangaDex, Steam, osu!, Last.fm, Backloggd, top.gg** receive the
+    identifiers you gave us (a username, a numeric id) so we can fetch what
+    they publish about you.
+  - **Music sources.** When you use a music command, the words you type - your
+    search terms, or the link you paste - are sent to our audio backend and on
+    to the service that can answer them: **YouTube**, **Spotify**,
+    **SoundCloud**, **Bandcamp**, **Twitch**, **Vimeo**, and any direct URL you
+    ask us to play. Those searches are what makes music work; they are not
+    stored by the bot and are not tied to your identity at those services (we
+    hold no account of yours there), but the search itself does leave the bot.
+    Lyrics, when you ask for them, are fetched the same way. If you would
+    rather a query never leave, do not run the command.
 
 ## Where data lives
 
@@ -109,7 +122,10 @@ the same deletion schedule on restore.
 ## Retention
 
 - Server statistics aggregates: 90 days.
-- Presence aggregates: 30-day display window, deleted entirely on opt-out.
+- Presence aggregates: 30 days. A game you have not played for 30 days drops
+  off your profile, and a whole aggregate nothing has added to for 30 days is
+  emptied by the daily cleanup - so the 30 days is what we keep, not only what
+  we show. Opting out deletes it immediately and entirely.
 - Dashboard request logs (your own actions on the web dashboard): 30 days after
   completion.
 - Anonymous command-usage aggregates: 400 days.
