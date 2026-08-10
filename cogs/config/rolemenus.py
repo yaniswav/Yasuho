@@ -19,7 +19,7 @@ import re
 import discord
 from discord.ext import commands
 
-from tools import i18n, interactions, role_menus
+from tools import i18n, interactions, modchecks, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorLayoutView, LocaleModal
@@ -365,6 +365,22 @@ class _RolePicker(discord.ui.RoleSelect):
 
     async def callback(self, interaction):
         try:
+            # manage_roles opens the builder but proves nothing about hierarchy:
+            # a mod must outrank every role they publish as self-assignable, and
+            # Yasuho must be able to grant it at all (@everyone and managed roles
+            # sit below everyone yet can never be handed out, so the menu would
+            # 403 on every pick and the member would just see nothing happen).
+            # Refused roles are DROPPED from the pick rather than failing the
+            # whole selection, so one bad choice does not discard the good ones.
+            picked, refused = [], []
+            for r in self.values:
+                if modchecks.self_assignable_role_error(
+                    interaction.user, self._owner.guild, r
+                ):
+                    refused.append(r)
+                else:
+                    picked.append(r)
+
             self._owner.draft["options"] = [
                 {
                     "role_id": r.id,
@@ -372,9 +388,33 @@ class _RolePicker(discord.ui.RoleSelect):
                     "emoji": None,
                     "description": None,
                 }
-                for r in self.values
+                for r in picked
             ]
             await self._owner._rerender(interaction)
+            if refused:
+                # Normally the panel refresh already consumed the response and
+                # this is a followup - but refresh_layout falls back to editing
+                # the stored message when the live edit fails, leaving the
+                # response UNUSED, and a followup on an unanswered interaction
+                # 404s. Ask which one is still open instead of assuming. Pure
+                # feedback either way: never let it fail the pick.
+                notify = (
+                    interaction.followup.send
+                    if interaction.response.is_done()
+                    else interaction.response.send_message
+                )
+                try:
+                    await notify(
+                        _(
+                            "Left out {roles}: a self-assignable role must sit "
+                            "below both your highest role and mine, and can't be "
+                            "managed by an integration."
+                        ).format(roles=", ".join(r.mention for r in refused)),
+                        ephemeral=True,
+                        allowed_mentions=discord.AllowedMentions.none(),
+                    )
+                except discord.HTTPException:
+                    log.debug("Role menu refusal notice failed", exc_info=True)
         except Exception:
             log.exception("Role menu role picker failed")
             await self._owner._error(interaction)

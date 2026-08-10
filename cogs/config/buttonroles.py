@@ -26,7 +26,7 @@ import discord
 from discord.ext import commands
 
 from .message_ref import parse_message_ref
-from tools import embed_creator, i18n, interactions
+from tools import embed_creator, i18n, interactions, modchecks
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
@@ -594,14 +594,18 @@ class BuilderView(AuthorLayoutView):
     # ---- component callbacks ----
     async def on_add_role(self, interaction, role):
         try:
-            if not self._can_assign(role):
-                await interaction.response.send_message(
-                    _(
-                        "I can't assign that role - it's either managed by an "
-                        "integration or above my highest role."
-                    ),
-                    ephemeral=True,
-                )
+            # Both halves of the publish question, in one shared check: the
+            # configurer must outrank the role (manage_roles gates the builder
+            # but proves nothing about position, so without it a mod could
+            # publish a button granting a role above their own head), and Yasuho
+            # must be able to hand it out at all. _can_assign stays for the
+            # render-time filter, which asks the bot half of the same question
+            # about roles that were already accepted.
+            err = modchecks.self_assignable_role_error(
+                interaction.user, self.guild, role
+            )
+            if err:
+                await interaction.response.send_message(err, ephemeral=True)
                 return
             if any(b["role_id"] == role.id for b in self.config["buttons"]):
                 await interaction.response.send_message(

@@ -75,6 +75,20 @@ DURABLE_TIMER_EVENTS = frozenset({"tempban"})
 MAX_TIMER_ATTEMPTS = 12
 
 
+def _author_mention_only(author_id):
+    """The single-entry ``users=`` list a reminder delivery may ping.
+
+    ``[]`` (no user mention resolves) rather than a raise when the id is
+    missing or corrupt: the delivery it guards happens after the row has
+    already been deleted, so nothing here may cost a firing. An unresolvable
+    id also cannot produce a working ``<@...>`` tag in the body anyway.
+    """
+    try:
+        return [discord.Object(id=int(author_id))]
+    except (TypeError, ValueError):
+        return []
+
+
 class ReminderChannelGone(Exception):
     """A reminder's target channel no longer exists (a 404 on fetch_channel).
 
@@ -294,6 +308,10 @@ class RemindModal(LocaleModal):
         await interaction.response.send_message(
             reminder_confirmation(dt, message, repeat_seconds),
             ephemeral=True,
+            # The modal body is stored verbatim (the prefix surface defangs
+            # its own through clean_content), so this echo carries raw user
+            # text. Nothing in an acknowledgement needs to ping anyone.
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
 
@@ -521,13 +539,17 @@ class RemindersCard(AuthorLayoutView):
         # so the "25+" overflow marker no longer applies.
         self.capped = False
         self._build()
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     async def _prev(self, interaction):
         try:
             self.page -= 1
             self._build()
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except Exception:
             log.exception("Reminders prev failed")
 
@@ -535,7 +557,9 @@ class RemindersCard(AuthorLayoutView):
         try:
             self.page += 1
             self._build()
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except Exception:
             log.exception("Reminders next failed")
 
@@ -1057,7 +1081,21 @@ class Reminder(commands.Cog):
                     when=human_timedelta(row["created"]),
                     message=extra["message"],
                 )
-                + self._recurrence_footer(extra)
+                + self._recurrence_footer(extra),
+                # The body is free text the author typed, and a recurring
+                # reminder re-broadcasts it on a schedule - with default
+                # mentions that is a ping-harassment tool pointed at whoever
+                # they named. Only the author's own mention (the one the
+                # template itself writes) may resolve; everything else in the
+                # body is inert text. Total, like every other reader of
+                # `extra`: the row is already deleted by the time we get here,
+                # so a corrupt author_id must cost the mention, never the
+                # delivery.
+                allowed_mentions=discord.AllowedMentions(
+                    users=_author_mention_only(extra.get("author_id")),
+                    roles=False,
+                    everyone=False,
+                ),
             )
         elif event == "tempban":
             g = self.bot.get_guild(extra["guild_id"])

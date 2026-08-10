@@ -69,6 +69,28 @@ def bot_can_assign_role(role, guild):
     )
 
 
+def role_hierarchy_error_for(author, guild, role):
+    """Return a reason string if ``author`` may not manage ``role``, else None.
+
+    The member/guild-shaped core of :func:`role_hierarchy_error`, split out so
+    the component surfaces (a modal submit, a builder select) can run the exact
+    same check: they only ever hold an ``Interaction`` (``interaction.user``),
+    never a ``commands.Context``, and duplicating the comparison per builder is
+    how the self-role builders ended up with no configurer guard at all.
+    """
+    if (
+        author.id != guild.owner_id
+        and not author.guild_permissions.administrator
+        and role >= author.top_role
+    ):
+        return _("You can't manage a role that is equal to or above your highest role.")
+
+    if role >= guild.me.top_role:
+        return _("My highest role isn't above that role, so I can't manage it.")
+
+    return None
+
+
 def role_hierarchy_error(ctx, role):
     """Return a reason string if ctx.author may not manage ``role``, else None.
 
@@ -79,17 +101,36 @@ def role_hierarchy_error(ctx, role):
     strictly above it, and the bot must outrank it too or the edit just fails
     with a confusing silent Forbidden.
     """
-    author = ctx.author
-    guild = ctx.guild
+    return role_hierarchy_error_for(ctx.author, ctx.guild, role)
 
-    if (
-        author.id != guild.owner_id
-        and not author.guild_permissions.administrator
-        and role >= author.top_role
-    ):
-        return _("You can't manage a role that is equal to or above your highest role.")
 
-    if role >= guild.me.top_role:
-        return _("My highest role isn't above that role, so I can't manage it.")
+def self_assignable_role_error(author, guild, role):
+    """Return a reason string if ``role`` may not be PUBLISHED as self-assignable.
+
+    The self-role surfaces (reaction roles, button panels, role menus) ask a
+    strictly bigger question than addrole does: the configurer must outrank the
+    role (:func:`role_hierarchy_error_for`) AND Yasuho must be able to hand it
+    out at all (:func:`bot_can_assign_role`). Position alone is not enough here
+    - @everyone sits below everyone and an integration-managed role (a Nitro
+    booster role, another bot's own role) can sit below both parties, yet
+    neither can ever be granted: publishing one yields a button/emoji/option
+    whose grant 403s forever, and the failure is swallowed at the grant site, so
+    the member just sees nothing happen. Refusing at publish time is the only
+    place the configurer can be told.
+
+    The two halves are kept as separate functions because addrole/removerole
+    want the hierarchy half ALONE (a moderator legitimately removes a managed
+    role from someone), and the automatic grants (level rewards, season
+    champion) want the bot half alone (no invoker exists).
+    """
+    err = role_hierarchy_error_for(author, guild, role)
+    if err:
+        return err
+
+    if not bot_can_assign_role(role, guild):
+        return _(
+            "I can't assign that role - it's either managed by an "
+            "integration or above my highest role."
+        )
 
     return None

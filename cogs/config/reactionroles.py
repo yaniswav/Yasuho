@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 from .message_ref import parse_message_ref
+from tools import modchecks
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.interactions import notify_failure
@@ -58,6 +59,19 @@ class AddReactionRoleModal(LocaleModal):
             await interaction.response.send_message(
                 _("Pick a role to grant."), ephemeral=True
             )
+            return
+
+        # manage_roles alone does NOT prove the configurer outranks the role they
+        # are about to make self-assignable: without this, any manage_roles mod
+        # could publish an emoji that hands out a role above their own (up to the
+        # bot's ceiling). The same check also refuses a role Yasuho could never
+        # grant (@everyone, integration-managed), whose mapping would 403 on
+        # every reaction. Member-shaped, since a modal only holds an Interaction.
+        err = modchecks.self_assignable_role_error(
+            interaction.user, self.guild, role
+        )
+        if err:
+            await interaction.response.send_message(err, ephemeral=True)
             return
 
         emoji = (self.emoji_field.value or "").strip()
@@ -234,6 +248,15 @@ class ReactionRoles(commands.Cog):
             mid = int(message_id)
         except ValueError:
             await ctx.send(_("That doesn't look like a valid message ID."))
+            return
+
+        # manage_roles gates the command but proves nothing about hierarchy: a
+        # mod must outrank the role they are making self-assignable, and Yasuho
+        # must be able to grant it at all (not @everyone, not managed by an
+        # integration, below her own top role) or every grant would silently 403.
+        err = modchecks.self_assignable_role_error(ctx.author, ctx.guild, role)
+        if err:
+            await ctx.send(err)
             return
 
         # Show a typing indicator (and let the slash interaction resolve) so the

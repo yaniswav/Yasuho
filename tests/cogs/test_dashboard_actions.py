@@ -723,15 +723,23 @@ async def test_verify_button_post_full_flow_via_handle_action(verify_env):
 
 
 class RRPool:
-    """Minimal pool that records reaction_roles writes for the executor tests."""
+    """Minimal pool that records reaction_roles writes for the executor tests.
 
-    def __init__(self):
+    ``delete_status`` is what the guild-scoped DELETE reports back: "DELETE 1"
+    (a row of THIS guild matched) or "DELETE 0" (nothing matched - the row
+    belongs to another guild, or is already gone). A fake that always answered
+    "DELETE 1" made the cross-tenant cache-eviction bug untestable, which is
+    exactly how it shipped: the executor discarded the status entirely.
+    """
+
+    def __init__(self, delete_status="DELETE 1"):
         self.executed = []
+        self.delete_status = delete_status
 
     async def execute(self, query, *args):
         self.executed.append((query, args))
         if "DELETE FROM reaction_roles" in query:
-            return "DELETE 1"
+            return self.delete_status
         return "INSERT 0 1"
 
 
@@ -762,8 +770,38 @@ class FakeReactionChannel:
 
 
 class FakeRole:
-    def __init__(self, role_id=888):
+    """A guild role plus the three things an assignability guard reads.
+
+    ``position`` drives the ``role < me.top_role`` comparison (roles order by
+    position), ``managed`` marks an integration-owned role and ``is_default()``
+    marks @everyone - none of those can ever be handed out.
+    """
+
+    def __init__(self, role_id=888, position=1, managed=False, default=False):
         self.id = role_id
+        self.position = position
+        self.managed = managed
+        self._default = default
+
+    def is_default(self):
+        return self._default
+
+    def __lt__(self, other):
+        # Faithful to discord.Role.__lt__, tiebreak included: equal positions are
+        # ordered by id, and the OLDER role (smaller id) is the higher one. The
+        # at-bot-top case relies on that tiebreak rather than on position alone.
+        if self.position != other.position:
+            return self.position < other.position
+        return self.id > other.id
+
+
+# Yasuho's own member object: only her top role matters to the guards. Its id is
+# deliberately LARGER than every role the tests compare against, because a bot's
+# managed role is created when it is invited - later than the roles that were
+# already there - and at equal positions the younger (bigger id) role is the
+# LOWER one. That is what makes the at-bot-top case a refusal.
+def _fake_me(top_position=10):
+    return types.SimpleNamespace(top_role=FakeRole(999_000, position=top_position))
 
 
 class FakeReactionGuild:
@@ -771,7 +809,7 @@ class FakeReactionGuild:
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
-        self.me = object() if has_me else None
+        self.me = _fake_me() if has_me else None
 
     def get_channel_or_thread(self, channel_id):
         return self._channels.get(channel_id)
@@ -923,6 +961,82 @@ async def test_reaction_role_add_bad_role():
     assert pool.executed == []
 
 
+@pytest.mark.parametrize(
+    "role",
+    [
+        FakeRole(888, position=10),  # exactly the bot's top role
+        FakeRole(888, position=11),  # above the bot's top role
+        FakeRole(888, position=1, managed=True),  # integration-owned
+        FakeRole(888, position=1, default=True),  # @everyone
+    ],
+    ids=["at-bot-top", "above-bot-top", "managed", "everyone"],
+)
+async def test_reaction_role_add_refuses_unassignable_role(role):
+    """A role Yasuho could never hand out must not become a mapping.
+
+    Without this the dashboard could persist a mapping whose grant 403s on every
+    single reaction, and leave a stray bot reaction on the message advertising a
+    role nobody can get. The message is the SAME guard the button-panel executor
+    and the /buttonrole builder already apply.
+    """
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(channels={555: channel}, roles={888: role})
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+
+    assert result == {"ok": False, "error": "role_not_assignable"}
+    # Refused BEFORE the reaction: no row, no cache entry, no stray reaction.
+    assert pool.executed == []
+    assert cog.cache == {}
+    assert channel.message.reactions == []
+
+
+async def test_reaction_role_add_assignable_role_below_the_bot_still_works():
+    """Counter-test to the guard: a normal role under the bot is still mapped."""
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(
+        channels={555: channel}, roles={888: FakeRole(888, position=9)}
+    )
+    cog = FakeCog()
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+
+    assert result["ok"] is True
+    assert cog.cache[(777, "🎮")] == 888
+
+
+async def test_reaction_role_add_without_me_is_unavailable():
+    """No guild.me = nothing to compare the role against; refuse, never crash."""
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(
+        channels={555: channel}, roles={888: FakeRole(888)}, has_me=False
+    )
+    pool = RRPool()
+    bot = _rr_bot(pool, guild, FakeCog())
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+    )
+
+    assert result == {"ok": False, "error": "guild_unavailable"}
+    assert pool.executed == []
+
+
 async def test_reaction_role_add_cant_add_reaction():
     channel = FakeReactionChannel(555, message=FakeMessage(777, fail_add=True))
     guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
@@ -1038,6 +1152,29 @@ async def test_reaction_role_remove_bad_message_id_does_not_delete():
     )
     assert result == {"ok": False, "error": "message_not_found"}
     assert pool.executed == []
+
+
+async def test_reaction_role_remove_keeps_cache_when_no_row_matched():
+    """DELETE 0 = the mapping is NOT this guild's, so the cache must not move.
+
+    The cache key is ``(message_id, emoji)`` with NO guild in it. A manage-guild
+    user of guild B who fires this executor with guild A's message id gets a
+    no-op DELETE (the WHERE is guild-scoped) - but an unconditional pop would
+    still kill guild A's LIVE mapping while its row survives, so the breakage
+    would last until the next restart and look like nothing at all in the table.
+    """
+    cog = FakeCog()
+    cog.cache[(777, "🎮")] = 888  # guild A's live mapping
+    pool = RRPool(delete_status="DELETE 0")
+    bot = _rr_bot(pool, guild=None, cog=cog)
+
+    result = await dashboard_actions._exec_reaction_role_remove(
+        bot, 100, {"message_id": "777", "emoji": "🎮"}
+    )
+
+    assert result == {"ok": True}
+    assert pool.executed[0][1] == (777, "🎮", 100)  # still guild-scoped
+    assert cog.cache == {(777, "🎮"): 888}  # untouched
 
 
 async def test_reaction_role_remove_works_without_cog_loaded():
@@ -1777,7 +1914,10 @@ class RMGuild:
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
-        self.me = object() if has_me else None
+        # A real member object (not a bare sentinel): the option filter now asks
+        # whether Yasuho could actually grant each picked role, which reads her
+        # top role.
+        self.me = _fake_me() if has_me else None
         self.preferred_locale = preferred_locale
 
     def get_channel(self, channel_id):
@@ -1967,6 +2107,64 @@ async def test_role_menu_post_filters_foreign_roles(rolemenu_env):
     assert [o["role_id"] for o in stored["options"]] == [888]
 
 
+async def test_role_menu_post_filters_roles_yasuho_cannot_grant(rolemenu_env):
+    """Same guard as the reaction/button executors, applied per option.
+
+    An option Yasuho can never hand out (@everyone, integration-managed, at or
+    above her own top role) would 403 on every pick with the failure swallowed at
+    the grant site, so the member just sees nothing happen. Drop it here, exactly
+    like a foreign role, and keep the options that work.
+    """
+    channel = FakeRMChannel(555)
+    guild = RMGuild(
+        channels={555: channel},
+        roles={
+            888: FakeRole(888, position=1),
+            777: FakeRole(777, position=1, managed=True),
+            666: FakeRole(666, position=1, default=True),
+            555: FakeRole(555, position=11),  # above her top role
+        },
+    )
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot,
+        100,
+        _menu_payload(
+            options=[
+                {"role_id": "888", "label": "Blue"},
+                {"role_id": "777", "label": "Booster"},
+                {"role_id": "666", "label": "everyone"},
+                {"role_id": "555", "label": "Admin"},
+            ]
+        ),
+    )
+
+    assert result["ok"] is True
+    stored = json.loads(pool.inserted[0][3])
+    assert [o["role_id"] for o in stored["options"]] == [888]
+
+
+async def test_role_menu_post_refuses_when_no_option_is_grantable(rolemenu_env):
+    """All-unassignable is rejected wholesale, like all-foreign: posting a menu
+    whose every pick 403s is worse than telling the dashboard it failed."""
+    channel = FakeRMChannel(555)
+    guild = RMGuild(
+        channels={555: channel}, roles={777: FakeRole(777, position=1, managed=True)}
+    )
+    pool = RMPool()
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot, 100, _menu_payload(options=[{"role_id": "777", "label": "Booster"}])
+    )
+
+    assert result == {"ok": False, "error": "bad_role_all"}
+    assert channel.sent == []  # refused BEFORE anything was posted
+    assert pool.inserted == []
+
+
 async def test_role_menu_post_bad_role_all(rolemenu_env):
     channel = FakeRMChannel(555)
     guild = RMGuild(channels={555: channel}, roles={})  # no roles at all
@@ -2132,6 +2330,30 @@ async def test_role_menu_delete_no_rows_is_still_ok(rolemenu_env):
     )
     assert result == {"ok": True}
     assert pool.delete_calls == [(777, 100)]
+
+
+async def test_role_menu_delete_keeps_menu_id_when_no_row_matched(rolemenu_env):
+    """No row matched = the menu is NOT this guild's, so _menu_ids must not move.
+
+    ``_menu_ids`` is keyed by message id ALONE. Discarding on a miss would let a
+    manage-guild user of guild B unhook guild A's live menu from the cog's
+    on_raw_message_delete pruning (the row survives, so the menu would linger in
+    the table forever once its message is deleted) - the cross-tenant twin of the
+    reaction-role cache pop.
+    """
+    guild = RMGuild(channels={})
+    cog = FakeRMCog()
+    cog._menu_ids.add(777)  # guild A's live menu
+    pool = RMPool(delete_return=[])
+    bot = _rm_bot(pool, guild, cog)
+
+    result = await dashboard_actions._exec_role_menu_delete(
+        bot, 100, {"message_id": "777"}
+    )
+
+    assert result == {"ok": True}
+    assert pool.delete_calls == [(777, 100)]  # still guild-scoped
+    assert cog._menu_ids == {777}  # untouched
 
 
 @pytest.mark.parametrize("message_id", [None, "abc", "", "not-a-number"])

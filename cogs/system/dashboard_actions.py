@@ -79,7 +79,7 @@ from discord.ext import commands
 
 from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
 from cogs.system.dashboard_user_actions import EXECUTORS as _USER_EXECUTORS
-from tools import autoroom, i18n, role_menus, settings
+from tools import autoroom, i18n, modchecks, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -352,9 +352,20 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
     if channel is None:
         return {"ok": False, "error": "channel_not_found"}
 
+    me = guild.me
+    if me is None:
+        return {"ok": False, "error": "guild_unavailable"}
+
     role = guild.get_role(role_id)
     if role is None:
         return {"ok": False, "error": "bad_role"}
+    # Mirror the button-panel executor's assignability guard (and the /buttonrole
+    # builder's BuilderView._can_assign) so a dashboard write can't map an emoji
+    # to a role Yasuho could never hand out: @everyone, an integration-managed
+    # role, or one at/above her own top role. Checked BEFORE the reaction is
+    # added so a refused mapping leaves no stray reaction on the message.
+    if not modchecks.bot_can_assign_role(role, guild):
+        return {"ok": False, "error": "role_not_assignable"}
 
     # Fetch first (a missing / inaccessible message is distinct from a reaction
     # that can't be added), then react. Both raise on failure and are mapped to a
@@ -400,7 +411,8 @@ async def _exec_reaction_role_remove(bot, guild_id, payload):
     Payload: ``{"message_id", "emoji"}``. ``guild_id`` is authoritative (the
     claimed row): the DELETE is scoped to it so a crafted request can never wipe
     another guild's mapping by guessing a message id. The cog cache entry is
-    popped so ``on_raw_reaction_add`` stops granting immediately. Best-effort, we
+    popped - ONLY when that DELETE matched a row, since the cache key carries no
+    guild - so ``on_raw_reaction_add`` stops granting immediately. Best-effort, we
     also try to strip the bot's own reaction from the message IF it is still in
     the gateway message cache (the payload carries no channel id, so we cannot
     fetch it by REST); any failure there is ignored -- a leftover reaction is
@@ -419,10 +431,15 @@ async def _exec_reaction_role_remove(bot, guild_id, payload):
         DELETE FROM reaction_roles
         WHERE message_id = $1 AND emoji = $2 AND guild_id = $3;
         """
-    await bot.db_pool.execute(query, message_id, stored, guild_id)
+    result = await bot.db_pool.execute(query, message_id, stored, guild_id)
 
+    # Only evict when the guild-scoped DELETE actually matched a row, exactly
+    # like the cog's own reactionrole_remove. The cache key is (message_id,
+    # emoji) with NO guild in it, so an unconditional pop would let a
+    # manage-guild user of guild B kill guild A's LIVE mapping (its row would
+    # survive, so the breakage would last until the next restart).
     cog = bot.get_cog("ReactionRoles")
-    if cog is not None:
+    if cog is not None and result != "DELETE 0":
         cog.cache.pop((message_id, stored), None)
 
     # Best-effort: unreact if the message is still cached (no channel id to fetch
@@ -518,7 +535,7 @@ async def _exec_button_panel_post(bot, guild_id, payload):
         # _can_assign) so a dashboard write can't persist a button for a
         # dead/dangerous role: @everyone, an integration-managed role, or one
         # at/above our own top role.
-        if role.is_default() or role.managed or not (role < me.top_role):
+        if not modchecks.bot_can_assign_role(role, guild):
             return {"ok": False, "error": "role_not_assignable"}
         if role_id in seen_roles:
             continue  # one button per role, mirroring the primary key
@@ -743,10 +760,20 @@ async def _exec_role_menu_post(bot, guild_id, payload):
     if not options:
         return {"ok": False, "error": "no_options"}
 
-    # belongs-to-guild defence: keep only options whose role is a real role of THIS
-    # guild. A crafted payload naming only foreign/gone roles is rejected wholesale
-    # rather than posting an empty menu.
-    options = [o for o in options if guild.get_role(o["role_id"]) is not None]
+    # belongs-to-guild + assignability defence: keep only options whose role is a
+    # real role of THIS guild that Yasuho could actually hand out (not @everyone,
+    # not integration-managed, below her top role) - the same guard the reaction
+    # and button executors apply, and the one the /rolemenu picker now runs. An
+    # unassignable option would 403 on every pick with the failure swallowed at
+    # the grant site, so the member just sees nothing happen. A crafted payload
+    # naming only foreign/gone/unassignable roles is rejected wholesale rather
+    # than posting a menu that can do nothing.
+    kept = []
+    for o in options:
+        role = guild.get_role(o["role_id"])
+        if role is not None and modchecks.bot_can_assign_role(role, guild):
+            kept.append(o)
+    options = kept
     if not options:
         return {"ok": False, "error": "bad_role_all"}
 
@@ -846,9 +873,11 @@ async def _exec_role_menu_delete(bot, guild_id, payload):
     the DELETE is scoped to it so a crafted request can never wipe another guild's
     menu by guessing a message id. ``RETURNING channel_id`` lets us best-effort
     fetch the message and ``msg.edit(view=None)`` to strip the live select; any
-    failure there is cosmetic and never affects the ``ok`` result. The message id
-    is also dropped from the RoleMenus cog's in-memory ``_menu_ids`` set (parity
-    with the cog's own on_raw_message_delete pruning).
+    failure there is cosmetic and never affects the ``ok`` result. When (and ONLY
+    when) a row matched, the message id is also dropped from the RoleMenus cog's
+    in-memory ``_menu_ids`` set (parity with the cog's own on_raw_message_delete
+    pruning) - that set is not guild-keyed, so evicting on a miss would be a
+    cross-guild write.
     """
     try:
         message_id = int(payload.get("message_id"))
@@ -863,13 +892,18 @@ async def _exec_role_menu_delete(bot, guild_id, payload):
         guild_id,
     )
 
-    cog = bot.get_cog("RoleMenus")
-    if cog is not None and hasattr(cog, "_menu_ids"):
-        cog._menu_ids.discard(message_id)
-
-    # Best-effort: strip the select off the message. Never let a hiccup here fail
-    # the delete (the row is already gone).
+    # Everything below is conditional on the guild-scoped DELETE having matched:
+    # _menu_ids is keyed by message id alone, with NO guild in it, so evicting on
+    # a miss would let a manage-guild user of guild B unhook guild A's LIVE menu
+    # from on_raw_message_delete pruning (its row would survive) - the same
+    # cross-tenant shape the reaction-role cache pop has.
     if rows:
+        cog = bot.get_cog("RoleMenus")
+        if cog is not None and hasattr(cog, "_menu_ids"):
+            cog._menu_ids.discard(message_id)
+
+        # Best-effort: strip the select off the message. Never let a hiccup here
+        # fail the delete (the row is already gone).
         try:
             guild = bot.get_guild(guild_id)
             channel = (

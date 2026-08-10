@@ -63,6 +63,12 @@ class AFK(commands.Cog):
                             duration=human_timedelta(deleted["since"], suffix=False),
                         ),
                         delete_after=10,
+                        # No free text here, but the policy is stated on every
+                        # send in this cog: the only pingable party is the
+                        # member the line is about.
+                        allowed_mentions=discord.AllowedMentions(
+                            users=[message.author], roles=False, everyone=False
+                        ),
                     )
 
             # (2) Notify when an AFK user gets mentioned.
@@ -78,7 +84,17 @@ class AFK(commands.Cog):
                             name=user.display_name,
                             message=r["message"],
                             duration=human_timedelta(r["since"]),
-                        )
+                        ),
+                        # The status text (and the display name) are free text
+                        # authored by the AFK member, and this line is
+                        # re-broadcast every single time somebody pings them.
+                        # With default mentions that turns an AFK status into a
+                        # ping amplifier aimed at anyone the author names, so
+                        # only the AFK member - the subject of the sentence -
+                        # can ever be mentioned here.
+                        allowed_mentions=discord.AllowedMentions(
+                            users=[user], roles=False, everyone=False
+                        ),
                     )
 
         except Exception:
