@@ -180,9 +180,14 @@ def _cog(sl_client=None, player=None):
 
 
 def _ctx(player=None, author_id=7):
+    # The caller is IN the bot's voice channel whenever there is a live player:
+    # ``_play_query`` now refuses to enqueue into a session from outside its room
+    # (see test_music_room_gates.py), and these cap tests are about the CAP, not
+    # about that gate - so the fixture models an ordinary listener in the room.
+    voice_channel = getattr(player, "channel", None) or object()
     ctx = types.SimpleNamespace(
         author=types.SimpleNamespace(
-            id=author_id, voice=types.SimpleNamespace(channel=object())
+            id=author_id, voice=types.SimpleNamespace(channel=voice_channel)
         ),
         voice_client=player,
         channel=types.SimpleNamespace(id=77),

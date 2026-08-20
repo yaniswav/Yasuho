@@ -12,7 +12,17 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
-from cogs.music import effects, guild_config, lyrics, sponsorblock, vibes, voteskip
+from cogs.music import (
+    effects,
+    failures,
+    guild_config,
+    lyrics,
+    safetext,
+    sponsorblock,
+    urlguard,
+    vibes,
+    voteskip,
+)
 
 # The playback engine core (Player, its YouTube-seed autoplay handler, the
 # search-result normalisers and the voice-channel resolver) lives in player.py,
@@ -117,6 +127,19 @@ ANTI_MIX_SKIP_CAP = 3
 # after its panel went up, past this window, so it reposts the panel to the
 # channel bottom instead of silently keeping the old message.
 CONTROLLER_REFIRE_WINDOW = 30.0
+
+# How long a PRIVATE (ephemeral) copy of the controller stays live. The public
+# one is timeout=None because the cog explicitly deletes it; nothing deletes an
+# ephemeral message, so a private copy has to expire on its own or every read of
+# a session from outside its home channel would park a view in memory for ever.
+PRIVATE_CONTROLLER_TIMEOUT = 300
+
+# How much of a TRACK TITLE a chat message quotes back. A title is third-party
+# text (on an HTTP-source track it is ICY / ID3 metadata written by whoever hosts
+# the file), so every chat echo of one goes through safetext.public_echo under
+# this cap - long enough for a real song title, short enough that a crafted one
+# cannot wall a channel.
+TITLE_ECHO_LIMIT = 120
 
 # How often (seconds) the idle loop folds and logs the QuotaRegistry snapshot.
 # The loop ticks every 60s; this gates the log to a ~10-minute heartbeat, and it
@@ -878,6 +901,32 @@ def effect_select_options(
     ]
 
 
+def is_in_player_voice(player: typing.Any, actor: typing.Any) -> bool:
+    """True when ``actor`` is a member sitting in ``player``'s voice channel RIGHT NOW.
+
+    THE single "are you in the room?" predicate. It was written out by hand in
+    three places (``_require_player``, the view gate ``views._ensure_in_voice``,
+    and - by omission - the paths that forgot it entirely, which is how a member
+    outside the channel could push tracks into it and drag the controller
+    around). One pure function instead, so a caller that needs the answer WITHOUT
+    a refusal message (:meth:`Music._may_rebind_home`) shares the rule rather
+    than growing a fourth copy of it.
+
+    A player with no channel is not a room anyone is in, and an actor with no
+    voice state cannot be in one - both are False. The voice state is read by
+    duck typing rather than by ``isinstance(actor, discord.Member)``, which is
+    what the hand-written copies did: only a Member HAS a ``voice`` attribute, so
+    a ``discord.User`` (or any other stray actor) still answers False through the
+    ``getattr`` - the same verdict, without making the rule untestable outside a
+    live gateway.
+    """
+    channel = getattr(player, "channel", None)
+    if channel is None:
+        return False
+    voice = getattr(actor, "voice", None)
+    return voice is not None and getattr(voice, "channel", None) == channel
+
+
 def is_bot_channel_move(
     is_own: bool,
     before_channel_id: typing.Optional[int],
@@ -943,6 +992,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # and self-limiting (a 30s vote, self-detaching on pass / expiry / track
         # change / teardown), so it needs no quota slot; cleaned via _clear.
         self.skip_votes = voteskip.SkipVotes()
+        # Burst accounting for track-failure announcements. A queue of tracks all
+        # failing on the same cause used to post one message per track and earn
+        # the bot a Discord 429 (see cogs/music/failures.py); this coalesces the
+        # burst into a leading message plus one summary. Empty at rest - an entry
+        # exists only while a guild has a burst open - so it lives for the process
+        # like its siblings above, and is torn down in cog_unload.
+        self.track_failures = failures.TrackFailureBursts()
         # Monotonic timestamp of the last quota-stats heartbeat log (see _idle_check).
         self._last_quota_log = time.monotonic()
         self._idle_check.start()
@@ -950,6 +1006,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     def cog_unload(self) -> None:
         self._idle_check.cancel()
         self.lyrics_sessions.shutdown()
+        self.track_failures.shutdown()
 
     def _client(self) -> typing.Optional[sonolink.Client]:
         return getattr(self.bot, "sl_client", None)
@@ -993,17 +1050,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if not isinstance(player, sonolink.Player):
             await ctx.send(_("I'm not connected to a voice channel."))
             return None
-        if in_channel:
-            author = ctx.author
-            channel = getattr(player, "channel", None)
-            if (
-                channel is None
-                or not isinstance(author, discord.Member)
-                or author.voice is None
-                or author.voice.channel != channel
-            ):
-                await ctx.send(_("You must be in my voice channel to do that."))
-                return None
+        if in_channel and not is_in_player_voice(player, ctx.author):
+            await ctx.send(_("You must be in my voice channel to do that."))
+            return None
         if control and not await self._can_control(player, ctx.author):
             dj = getattr(player, "dj", None)
             # A None DJ opens the gate in _can_control, so dj is a real member on
@@ -1019,6 +1068,50 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return None
         return player
 
+    async def _may_rebind_home(self, player: Player, actor: typing.Any) -> bool:
+        """Whether ``actor`` may MOVE a live session's output channel. Silent.
+
+        Exactly the ``_require_player(ctx, control=True)`` rule - in my voice
+        channel (:func:`is_in_player_voice`) AND past the DJ/mod gate
+        (:meth:`_can_control`) - but it ANSWERS instead of refusing, because the
+        callers still owe the invoker a reply. Rebinding ``player.home`` decides
+        where a live session speaks for the rest of its life, which makes it an
+        act of driving the room, not a read.
+        """
+        return is_in_player_voice(player, actor) and await self._can_control(
+            player, actor
+        )
+
+    async def _guard_query(self, ctx, query: str) -> bool:
+        """Refuse a URL that would aim Lavalink at our own infrastructure.
+
+        Lavalink's HTTP source manager is ON, so a raw ``http(s)://`` query is
+        fetched BY THE BOT'S HOST - see :mod:`cogs.music.urlguard` for the full
+        threat model, what is rejected and the residual DNS-rebinding /
+        redirect risk that only ``sources.http: false`` closes for good. This is
+        the seam that runs it: every user-typed query the cog hands to Lavalink
+        passes through here or through :meth:`_search`.
+
+        Returns True when the caller may proceed. On a refusal it has already
+        told the member, in ONE wording for every reason code - a per-reason
+        message would turn the bot into an oracle answering "does this internal
+        host exist?" one query at a time. The real reason is logged instead.
+        """
+        reason = await urlguard.check_query(query)
+        if reason is None:
+            return True
+        log.warning(
+            "Refused unsafe music URL (%s) from user %s in guild %s",
+            reason,
+            getattr(getattr(ctx, "author", None), "id", None),
+            getattr(getattr(ctx, "guild", None), "id", None),
+        )
+        await ctx.send(
+            _("I can only play public links - I can't reach that one."),
+            ephemeral=True,
+        )
+        return False
+
     async def _search(
         self, query: str, *, source: TrackSourceType = SEARCH_SOURCE
     ) -> typing.Optional[typing.Any]:
@@ -1026,7 +1119,18 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         Full URLs are resolved by Lavalink regardless of ``source``, so this is
         safe to call with a stored favourite's URI.
+
+        SSRF: this is the cog's one shared search seam (the Add-track modal, the
+        ``/search`` browser and its Spotify-outage degrade, the favourites
+        resolver), so the :mod:`cogs.music.urlguard` check lives here too and a
+        refused URL returns None - which every caller already handles as "found
+        nothing". A non-URL query returns from the guard before any parse or
+        lookup, so the internal genre / autoplay queries pay nothing.
         """
+        reason = await urlguard.check_query(query)
+        if reason is not None:
+            log.warning("Refused unsafe music URL (%s) at the search seam", reason)
+            return None
         try:
             return await self.bot.sl_client.search_track(query, source=source)
         except RuntimeError:
@@ -1660,21 +1764,80 @@ class Music(ServerPlaylistMixin, commands.Cog):
     async def on_sonolink_track_exception(
         self, player: Player, event: sonolink.gateway.TrackExceptionEvent
     ) -> None:
+        """Announce a failed track - ONCE PER BURST, not once per track.
+
+        This listener used to send a message for every failure. When a whole
+        queue fails on the same cause (the YouTube breakage of 2026-08-20: forty
+        tracks, all dead, inside a couple of seconds) that was forty messages
+        into one channel, and Discord answered with 429s that the bot's shared
+        HTTP client then paid for in every other guild.
+
+        The failure is still ALWAYS logged - the log is the diagnostic record and
+        it stays one line per track. Only the user-facing announcement coalesces:
+        the first failure speaks for itself (with its title, un-delayed - a lone
+        dead track is by far the common case and it keeps the exact message it
+        had), and everything the burst window swallows after it is stated once,
+        as a count. See :mod:`cogs.music.failures`.
+        """
         log.error(
             "Track exception on %s: %s",
             event.track.title,
             event.exception.message,
         )
         home = getattr(player, "home", None)
-        if home is not None:
-            try:
-                await home.send(
-                    _("There was a problem playing **{title}**, skipping it.").format(
-                        title=event.track.title
-                    )
-                )
-            except discord.HTTPException:
-                log.exception("Failed to notify channel of track exception")
+        if home is None:
+            return
+        guild = getattr(player, "guild", None)
+        # Keyed per guild (one player, one home channel per guild); id(player) is
+        # only a defensive fallback for a player with no guild attached, which
+        # keeps a burst from being mis-shared across guilds under a None key.
+        key = getattr(guild, "id", None) or id(player)
+        if not self.track_failures.record(key):
+            # A burst is already open and its summary is armed: this failure is
+            # now a number in that summary, and sending here is exactly the
+            # behaviour that earned the rate limit.
+            return
+        await self._send_failure_notice(
+            home,
+            _("There was a problem playing **{title}**, skipping it.").format(
+                title=safetext.public_echo(event.track.title, limit=TITLE_ECHO_LIMIT)
+            ),
+        )
+        self.track_failures.arm(key, self._summarise_track_failures(key, home))
+
+    async def _summarise_track_failures(self, key, home) -> None:
+        """Wait out the burst window, then state what it swallowed in one message.
+
+        Nothing to say when the leading edge was the only failure (``close``
+        returns 0) - it was already announced with its title.
+        """
+        await asyncio.sleep(self.track_failures.window)
+        count = self.track_failures.close(key)
+        if count <= 0:
+            return
+        await self._send_failure_notice(
+            home,
+            ngettext(
+                "{count} more track could not be played, skipping it.",
+                "{count} more tracks could not be played, skipping them.",
+                count,
+            ).format(count=count),
+        )
+
+    @staticmethod
+    async def _send_failure_notice(home, content: str) -> None:
+        """Post a failure notice to a session's home channel, never raising.
+
+        Mentions are suppressed: the leading message carries a track TITLE, which
+        on an HTTP-source track is metadata the requester wrote, so it must never
+        be able to ping anyone.
+        """
+        try:
+            await home.send(
+                content, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except discord.HTTPException:
+            log.exception("Failed to notify channel of track exception")
 
     @commands.Cog.listener()
     async def on_sonolink_websocket_closed(
@@ -2236,20 +2399,93 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """
         await search.run_search(self, ctx, query)
 
-    async def _play_no_query(self, ctx: commands.Context) -> None:
-        """Handle a bare /play: repost the controller, or offer the vibe / join card.
+    async def _repost_controller(
+        self, ctx, player: Player, *, may_read_elsewhere: bool = False
+    ) -> None:
+        """Re-post the now-playing controller, moving its home ONLY if allowed.
 
-        The already-playing branch preserves the original behaviour (re-post the
-        now-playing controller at the bottom of the channel). With nothing playing,
-        a member in a voice channel gets the vibe picker and a member not in voice
-        gets the auto-updating join prompt.
+        The shared body of ``/nowplaying`` and a bare ``/play`` on a live session.
+        Both used to assign ``player.home = ctx.channel`` unconditionally, so ANY
+        member - not in the voice channel, no permissions, from any channel they
+        could type in - could drag a live session's controller into a channel of
+        their choosing, or bury it in one nobody reads, and every later
+        announcement (track starts, failures, votes) followed it there for the
+        rest of the session.
+
+        Moving the session's output is now gated exactly like driving it
+        (:meth:`_may_rebind_home`). Two cases need no gate at all and keep the
+        old behaviour for everyone: a session with no home yet (nothing to steal)
+        and an invocation from the home channel itself (the controller is simply
+        re-posted where it already lives, which is the everyday case). Only a
+        genuine MOVE is gated, and a member who may not move it is not stonewalled
+        - they get pointed at the channel the session already speaks in, in the
+        wording ``/play <query>`` has always used for the same fact, and the live
+        session does not budge.
+
+        THE MOVE IS GATED, THE READ IS NOT. Gating both cost a legitimate
+        listener - somebody sitting in the voice channel who simply is not the DJ
+        - the controller they had every right to look at, from anywhere but the
+        home channel. ``may_read_elsewhere`` splits the two: with it, a refused
+        MOVE still hands the invoker a PRIVATE copy of the controller. It is
+        ephemeral (nobody else's channel is touched), it is never registered as
+        the session's controller (``player.controller`` and the cog registry keep
+        pointing at the live one in ``home``), and it carries a finite timeout
+        because nothing ever deletes an ephemeral message.
+
+        Its controls are DISABLED, which is what keeps this a read. Two reasons,
+        and either alone would be enough. Not being registered, the copy never
+        re-renders on a track change, so a live button here would act on a panel
+        showing a track that stopped playing minutes ago. And the whole finding
+        was that the READ was refused, not that the drive was - handing out a
+        working control surface in a channel the session was refused would be
+        answering a different question. Driving the session is still exactly
+        where it was: the live controller, or the commands.
+
+        ``/nowplaying`` passes the flag because it is a read; a bare ``/play``
+        does not, because it is asking to take the room over.
+
+        A prefix invocation gets the pointer alone: ``ephemeral`` means nothing
+        without an interaction, so "private copy" would in fact be a second
+        public controller in a channel the session was refused.
         """
-        player = ctx.voice_client
-        if isinstance(player, sonolink.Player) and player.current:
+        home = getattr(player, "home", None)
+        if (
+            home is None
+            or home == ctx.channel
+            or await self._may_rebind_home(player, ctx.author)
+        ):
             player.home = ctx.channel
             await self._send_controller(player)
             if ctx.interaction is not None:
                 await ctx.send(_("Here is the player."), ephemeral=True)
+            return
+        await ctx.send(
+            _("The player is already active in {channel}.").format(
+                channel=home.mention
+            ),
+            ephemeral=True,
+        )
+        if may_read_elsewhere and ctx.interaction is not None:
+            # A LayoutView carries its own content, so this cannot ride along
+            # with the pointer above and is sent as its own ephemeral follow-up.
+            private = MusicController(
+                self, player, timeout=PRIVATE_CONTROLLER_TIMEOUT
+            )
+            private._disable_all()
+            await ctx.send(view=private, ephemeral=True)
+
+    async def _play_no_query(self, ctx: commands.Context) -> None:
+        """Handle a bare /play: repost the controller, or offer the vibe / join card.
+
+        The already-playing branch re-posts the now-playing controller through the
+        shared :meth:`_repost_controller` seam (which is what keeps a bystander
+        from moving the live session's output channel). With nothing playing, a
+        member in a voice channel gets the vibe picker and a member not in voice
+        gets the auto-updating join prompt.
+        """
+        player = ctx.voice_client
+        if isinstance(player, sonolink.Player) and player.current:
+            await self._repost_controller(ctx, player)
             return
 
         author = ctx.author
@@ -2286,11 +2522,23 @@ class Music(ServerPlaylistMixin, commands.Cog):
         Extracted verbatim from the play command so the vibe card's "Search for
         music instead" modal runs the identical path through a minimal ctx adapter
         (:class:`_ModalPlayContext`). The caller has already deferred.
+
+        This is the busiest user-input seam in the cog - ``/play <query>``, the
+        vibe card's search modal, every ``/music search`` browser pick and every
+        ``/play`` picker pick land here - so it carries BOTH of this lot's
+        entry-point guards, in this order and before any state changes:
+
+        1. the SSRF check (:meth:`_guard_query`), so a URL aimed at our own host
+           never reaches Lavalink - and never even causes a voice connect;
+        2. the same-voice gate on an EXISTING session, below.
         """
         if not self._nodes_available():
             await ctx.send(
                 _("Music is currently unavailable - no Lavalink node is connected.")
             )
+            return
+
+        if not await self._guard_query(ctx, query):
             return
 
         player = ctx.voice_client
@@ -2311,6 +2559,21 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # Player birth: autoplay seed, this guild's default volume, and the
             # SponsorBlock categories - the one shared configuration seam.
             await self._init_session(player, ctx.author)
+        elif not is_in_player_voice(player, ctx.author):
+            # ENQUEUEING INTO A SESSION THAT ALREADY EXISTS IS DRIVING THE ROOM.
+            # Only the fresh-connect branch above is open to everyone - that is
+            # how a session begins, and the connect itself already requires the
+            # member to be in a voice channel. Once the bot is in a room, adding
+            # to its queue is an act ON that room: without this, a member who
+            # never joined could push tracks (a jingle, an air horn, a slur read
+            # aloud) into a channel they are not in and cannot hear, from any
+            # text channel they can type in. Same rule and same wording as every
+            # other "you are not in here" refusal (``_require_player``); the
+            # DJ/mod tier is deliberately NOT applied - adding a song is a
+            # room-open action for the people actually listening, exactly like
+            # the controller's Add-track button.
+            await ctx.send(_("You must be in my voice channel to do that."))
+            return
 
         if player.home is None:
             player.home = ctx.channel
@@ -2381,7 +2644,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             player.queue.put(track)
             await ctx.send(
                 _("Added **{title}** by `{author}` to the queue.").format(
-                    title=track.title, author=track.author
+                    title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT),
+                    author=safetext.code_span(track.author, limit=TITLE_ECHO_LIMIT),
                 )
             )
 
@@ -2908,7 +3172,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
         elif result == voteskip.SKIP_RESULT_ADVANCED:
             await ctx.send(
                 _("Skipped to **{title}** by `{author}`.").format(
-                    title=track.title, author=track.author
+                    title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT),
+                    author=safetext.code_span(track.author, limit=TITLE_ECHO_LIMIT),
                 )
             )
         else:
@@ -2979,7 +3244,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         await ctx.send(
             _("Went back to **{title}** by `{author}`.").format(
-                title=track.title, author=track.author
+                title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT),
+                author=safetext.code_span(track.author, limit=TITLE_ECHO_LIMIT),
             )
         )
 
@@ -3146,10 +3412,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if not isinstance(player, sonolink.Player) or not player.current:
             await ctx.send(_("Nothing is playing right now."))
             return
-        player.home = ctx.channel
-        await self._send_controller(player)
-        if ctx.interaction is not None:
-            await ctx.send(_("Here is the player."), ephemeral=True)
+        # Same shared body as a bare /play: re-post here, but only MOVE the live
+        # session's output channel for someone allowed to drive the room. Unlike
+        # /play this is a READ, so a refused move still answers the question -
+        # privately, with a copy nobody else sees (may_read_elsewhere).
+        await self._repost_controller(ctx, player, may_read_elsewhere=True)
 
     @music.command(name="disconnect")
     @commands.guild_only()
@@ -3608,7 +3875,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if result == "added":
             await ctx.send(
                 _("Added **{title}** by `{author}` to your favourites.").format(
-                    title=track.title, author=track.author
+                    title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT),
+                    author=safetext.code_span(track.author, limit=TITLE_ECHO_LIMIT),
                 )
             )
         elif result == "full":
@@ -3620,7 +3888,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         else:
             await ctx.send(
                 _("**{title}** is already in your favourites.").format(
-                    title=track.title
+                    title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT)
                 )
             )
 
@@ -3649,7 +3917,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await self.delete_favourite(ctx.author.id, row["identifier"])
         await ctx.send(
             _("Removed **{title}** from your favourites.").format(
-                title=row["title"] or _("Unknown title")
+                title=safetext.public_echo(
+                    row["title"] or _("Unknown title"), limit=TITLE_ECHO_LIMIT
+                )
             )
         )
 

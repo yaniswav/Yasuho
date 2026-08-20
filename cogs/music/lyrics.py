@@ -52,6 +52,7 @@ import urllib.parse
 
 import discord
 
+from . import safetext
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -637,15 +638,24 @@ class _DelegateButton(discord.ui.Button):
 
 
 def _track_header(track: typing.Any) -> str:
-    """Render the track's title (linked when it has a URI) and author, or ''."""
+    """Render the track's title (linked when it has a URI) and author, or ''.
+
+    Both halves of the link are attacker-controlled on an HTTP-source track (ICY
+    / ID3 title, requester-chosen uri), and the synced card draws this header
+    into a PUBLIC, live-updating message - so it goes through the same guard as
+    the now-playing controller rather than a second, weaker copy of it. See
+    :mod:`cogs.music.safetext`.
+    """
     if track is None:
         return ""
-    title = (getattr(track, "title", "") or "")[:256]
-    uri = getattr(track, "uri", None)
-    header = f"## [{title}]({uri})" if uri else f"## {title}"
+    title = safetext.link_label(getattr(track, "title", "") or "", limit=256)
+    target = safetext.link_target(getattr(track, "uri", None))
+    header = f"## [{title}]({target})" if target else f"## {title}"
     author = getattr(track, "author", None)
     if author:
-        header += "\n" + _("by **{author}**").format(author=author)
+        header += "\n" + _("by **{author}**").format(
+            author=safetext.public_echo(author, limit=100)
+        )
     return header
 
 

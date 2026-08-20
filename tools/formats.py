@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
+
+import discord
+
+# How much of a quoted-back argument a public message shows. Long enough for any
+# real name (playlist names cap at 60, a voice channel name at 100), short enough
+# that a 2000-character argument can neither blow the 2000-char message limit nor
+# wall a channel.
+ECHO_LIMIT = 80
 
 
 def random_colour() -> int:
@@ -44,3 +52,44 @@ def format_dt(dt: datetime.datetime, style: Optional[str] = None) -> str:
     if style is None:
         return f'<t:{int(dt.timestamp())}>'
     return f'<t:{int(dt.timestamp())}:{style}>'
+
+
+# ---------------------------------------------------------------------------
+# Quoting somebody else's text into a message the bot signs
+# ---------------------------------------------------------------------------
+# Third-party text (a track title, a playlist name, a channel name a moderator
+# typed) is markup until it is made inert. These two live HERE, and not in one
+# package, because three of them already need the same rule: cogs/music's
+# safetext, cogs/community/profile's presence card and cogs/moderation. A rule
+# with three copies is a rule that drifts.
+
+
+def one_line(text: Any) -> str:
+    """Collapse every run of whitespace, newlines included, into single spaces.
+
+    Markdown structure (``#``, ``-#``, ``>``) only means anything at the START of
+    a line, so a value with no interior newline left cannot forge a heading or a
+    quote block inside a message someone else's text is embedded in.
+    """
+    return " ".join(str(text).split())
+
+
+def public_echo(text: Any, *, limit: int = ECHO_LIMIT) -> str:
+    """A user-typed value made inert for quoting back into a PUBLIC message.
+
+    Flattened, clipped to ``limit``, then markdown-escaped. The escape is
+    ``discord.utils.escape_markdown``, which neutralises ``* _ ~ | `` ` `` \\``,
+    a line-leading ``>`` and a complete ``[text](url)`` - so a name like
+    ``[click here](https://evil.example)`` is quoted as visible text instead of
+    becoming a link the bot appears to endorse. Clipping happens BEFORE the
+    escape so the cap governs what the member wrote, not how many backslashes it
+    took to defuse it (and so the clip can never cut a ``\\x`` pair in half).
+
+    This is only half the guard: it stops the MARKUP. The PINGS are stopped at
+    the send, by passing ``allowed_mentions=discord.AllowedMentions.none()`` -
+    the two always travel together.
+    """
+    flattened = one_line(text)
+    if len(flattened) > limit:
+        flattened = flattened[: max(0, limit - 3)] + "..."
+    return discord.utils.escape_markdown(flattened)

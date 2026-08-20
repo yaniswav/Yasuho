@@ -33,6 +33,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from cogs.music import safetext
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 
@@ -48,6 +49,13 @@ MAX_PLAYLIST_TRACKS = 200
 # under Discord's 100-char autocomplete-choice limit so a name always renders.
 MAX_NAME_LEN = 60
 
+# The house pattern for a message carrying third-party text. The bot's global
+# allowed_mentions leaves USER mentions enabled (core.py), so a public reply that
+# echoes a name a member typed would happily ping whoever they named - repeatedly,
+# from a command with no cooldown. Every send in this module that interpolates a
+# playlist name passes this, paired with :func:`echo_name` for the markdown.
+NO_PINGS = discord.AllowedMentions.none()
+
 
 # ---------------------------------------------------------------------------
 # Pure helpers (no I/O - unit tested in isolation)
@@ -57,6 +65,31 @@ MAX_NAME_LEN = 60
 def clean_name(raw: typing.Optional[str]) -> str:
     """Collapse whitespace and trim a user-supplied playlist name (display form)."""
     return " ".join((raw or "").split())
+
+
+def echo_name(raw: typing.Optional[str]) -> str:
+    """A playlist name made safe to quote back into a PUBLIC message.
+
+    Every ``/serverplaylist`` reply quotes a name as ``**{name}**``, and two
+    different kinds of name reach those messages: one the caller just typed
+    (the not-found and clash replies, which echo an argument that was never
+    stored and, on the delete / play / rename lookups, never even length-checked)
+    and one read back from the row (which some other member typed earlier). Both
+    are third-party text in a message the bot signs, so both come through here.
+
+    :func:`safetext.public_echo` clips it - a 2000-character argument could
+    otherwise push the reply past Discord's message limit and make the command
+    fail outright - and neutralises the markdown, so a playlist named
+    ``[click here](https://evil.example)`` is quoted as visible text rather than
+    published as a link the bot appears to vouch for.
+
+    It is only half the guard. The other half is at the send:
+    ``allowed_mentions=discord.AllowedMentions.none()``, which is what stops a
+    name of ``<@1234>`` from pinging (the bot's global allowed_mentions permits
+    user mentions, so this cannot be left to the default). Neither half is
+    optional and they always travel together - see :data:`NO_PINGS`.
+    """
+    return safetext.public_echo(clean_name(raw), limit=MAX_NAME_LEN + 20)
 
 
 def normalize_name(raw: typing.Optional[str]) -> str:
@@ -179,7 +212,9 @@ class _PlaylistListCard(discord.ui.LayoutView):
         container = discord.ui.Container(accent_colour=random_colour())
         container.add_item(
             discord.ui.TextDisplay(
-                _("### 🎵 Server Playlists - {guild}").format(guild=guild_name)
+                _("### 🎵 Server Playlists - {guild}").format(
+                    guild=safetext.public_echo(guild_name)
+                )
             )
         )
         lines: typing.List[str] = []
@@ -189,7 +224,11 @@ class _PlaylistListCard(discord.ui.LayoutView):
                 "**{name}** - {count} track - {duration}",
                 "**{name}** - {count} tracks - {duration}",
                 count,
-            ).format(name=row["name"], count=count, duration=row["duration"])
+            ).format(
+                name=echo_name(row["name"]),
+                count=count,
+                duration=row["duration"],
+            )
             meta = _("-# by {creator} - saved {date}").format(
                 creator=f"<@{row['creator_id']}>",
                 date=f"<t:{row['created_ts']}:D>",
@@ -342,13 +381,24 @@ class ServerPlaylistMixin:
         which the bot joins as a fresh session configured by the shared
         ``Music._init_session`` player-birth seam. Sends the reason and returns
         ``None`` on failure.
+
+        Reusing an EXISTING session takes the same-voice gate, for the same reason
+        ``_play_query`` does: adding to a live queue is an act on the room that is
+        listening. This path is the one that hurts most if it is left open - a
+        server playlist is up to 200 tracks at a time - and it is reached from
+        ``/serverplaylist play`` and the favourites card alike. Starting a fresh
+        session stays open (the connect below already requires the caller to be
+        in a voice channel).
         """
         # Player and Music seams live in music.py; import lazily to avoid the
         # package import cycle (music.py imports this module at class definition).
-        from cogs.music.music import Player
+        from cogs.music.music import Player, is_in_player_voice
 
         player = ctx.voice_client
         if player is not None:
+            if not is_in_player_voice(player, ctx.author):
+                await ctx.send(_("You must be in my voice channel to do that."))
+                return None
             if player.home is None:
                 player.home = ctx.channel
             return player
@@ -455,7 +505,8 @@ class ServerPlaylistMixin:
                 _(
                     "A playlist called **{name}** already exists here. Pick "
                     "another name or delete it first."
-                ).format(name=display)
+                ).format(name=echo_name(display)),
+                allowed_mentions=NO_PINGS,
             )
             return
         if result == "full":
@@ -475,7 +526,12 @@ class ServerPlaylistMixin:
                 "Saved **{name}** with {count} track ({duration}).",
                 "Saved **{name}** with {count} tracks ({duration}).",
                 count,
-            ).format(name=display, count=count, duration=format_clock(total_ms))
+            ).format(
+                name=echo_name(display),
+                count=count,
+                duration=format_clock(total_ms),
+            ),
+            allowed_mentions=NO_PINGS,
         )
 
     @serverplaylist.command(name="play")
@@ -497,8 +553,9 @@ class ServerPlaylistMixin:
         if row is None:
             await ctx.send(
                 _("There's no server playlist called **{name}**.").format(
-                    name=clean_name(name)
-                )
+                    name=echo_name(name)
+                ),
+                allowed_mentions=NO_PINGS,
             )
             return
 
@@ -516,8 +573,9 @@ class ServerPlaylistMixin:
         if not usable:
             await ctx.send(
                 _("None of **{name}**'s tracks could be loaded right now.").format(
-                    name=row["name"]
-                )
+                    name=echo_name(row["name"])
+                ),
+                allowed_mentions=NO_PINGS,
             )
             return
 
@@ -557,7 +615,7 @@ class ServerPlaylistMixin:
             "Queued {count} track from **{name}**.",
             "Queued {count} tracks from **{name}**.",
             count,
-        ).format(count=count, name=row["name"])
+        ).format(count=count, name=echo_name(row["name"]))
         if skipped:
             message += ngettext(
                 " {skipped} track was skipped - it could not be loaded.",
@@ -565,7 +623,7 @@ class ServerPlaylistMixin:
                 skipped,
             ).format(skipped=skipped)
         message += queue_full_suffix(over_cap)
-        await ctx.send(message)
+        await ctx.send(message, allowed_mentions=NO_PINGS)
 
     @serverplaylist_play.autocomplete("name")
     async def _serverplaylist_play_autocomplete(
@@ -626,8 +684,9 @@ class ServerPlaylistMixin:
         if row is None:
             await ctx.send(
                 _("There's no server playlist called **{name}**.").format(
-                    name=clean_name(name)
-                )
+                    name=echo_name(name)
+                ),
+                allowed_mentions=NO_PINGS,
             )
             return
         if not can_manage(
@@ -639,7 +698,10 @@ class ServerPlaylistMixin:
             return
         await self._delete_guild_playlist(ctx.guild.id, normalize_name(name))
         await ctx.send(
-            _("Deleted the server playlist **{name}**.").format(name=row["name"])
+            _("Deleted the server playlist **{name}**.").format(
+                name=echo_name(row["name"])
+            ),
+            allowed_mentions=NO_PINGS,
         )
 
     @serverplaylist_delete.autocomplete("name")
@@ -662,8 +724,9 @@ class ServerPlaylistMixin:
         if row is None:
             await ctx.send(
                 _("There's no server playlist called **{name}**.").format(
-                    name=clean_name(old)
-                )
+                    name=echo_name(old)
+                ),
+                allowed_mentions=NO_PINGS,
             )
             return
         if not can_manage(
@@ -698,7 +761,8 @@ class ServerPlaylistMixin:
                     _(
                         "A playlist called **{name}** already exists here. Pick "
                         "another name or delete it first."
-                    ).format(name=new_display)
+                    ).format(name=echo_name(new_display)),
+                    allowed_mentions=NO_PINGS,
                 )
                 return
 
@@ -707,8 +771,9 @@ class ServerPlaylistMixin:
         )
         await ctx.send(
             _("Renamed **{old}** to **{new}**.").format(
-                old=row["name"], new=new_display
-            )
+                old=echo_name(row["name"]), new=echo_name(new_display)
+            ),
+            allowed_mentions=NO_PINGS,
         )
 
     @serverplaylist_rename.autocomplete("old")

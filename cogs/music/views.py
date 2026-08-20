@@ -34,7 +34,7 @@ import discord
 import sonolink
 import sonolink.models
 
-from cogs.music import effects, vibes, voteskip
+from cogs.music import effects, safetext, vibes, voteskip
 from cogs.music.music import (
     MAX_FAVOURITES,
     Player,
@@ -427,12 +427,27 @@ class MusicController(discord.ui.LayoutView):
             accent_colour=self._accent_for(getattr(track, "identifier", None))
         )
 
-        title = track.title[:256]
-        header = f"## [{title}]({track.uri})" if track.uri else f"## {title}"
+        # BOTH halves of this link are third-party text: on an HTTP-source track
+        # the title is ICY / ID3 metadata written by whoever hosts the file, and
+        # the uri is the URL the requester typed (urlguard vets where it POINTS,
+        # not what it spells). Escaping only the label left the breakout wide
+        # open through the target - a url may contain ``)``, which ends the link,
+        # and everything after it is markup of their choosing. So the label goes
+        # through link_label (flattened, brackets escaped, clipped before the
+        # escape) and the target through link_target, which cannot come back
+        # containing a ``)``; a target it refuses drops to the plain-text branch,
+        # which takes the same label treatment so the two cannot drift.
+        title = safetext.link_label(track.title, limit=256)
+        target = safetext.link_target(track.uri)
+        header = f"## [{title}]({target})" if target else f"## {title}"
         container.add_item(discord.ui.TextDisplay(_("### 🎵 Now Playing")))
         container.add_item(discord.ui.TextDisplay(header))
         container.add_item(
-            discord.ui.TextDisplay(_("by **{author}**").format(author=track.author))
+            discord.ui.TextDisplay(
+                _("by **{author}**").format(
+                    author=safetext.public_echo(track.author, limit=120)
+                )
+            )
         )
         # Recommendation notice: only when THIS track came from autoplay, so a
         # user-queued track never claims to be a pick. sonolink stamps the flag on
@@ -521,7 +536,10 @@ class MusicController(discord.ui.LayoutView):
         upcoming = self.player.queue.tracks
         if upcoming:
             lines = "\n".join(
-                f"`{i}.` {t.title[:60]}" for i, t in enumerate(upcoming[:5], 1)
+                "`{i}.` {title}".format(
+                    i=i, title=safetext.public_echo(t.title, limit=60)
+                )
+                for i, t in enumerate(upcoming[:5], 1)
             )
             if len(upcoming) > 5:
                 lines += _("\n`+{count}` more in the queue").format(
@@ -873,7 +891,8 @@ class MusicController(discord.ui.LayoutView):
                 return
             await interaction.response.send_message(
                 _("Went back to **{title}** by `{author}`.").format(
-                    title=track.title, author=track.author
+                    title=safetext.public_echo(track.title, limit=120),
+                    author=safetext.code_span(track.author, limit=120),
                 ),
                 ephemeral=True,
             )
@@ -1423,8 +1442,8 @@ class QueueView(discord.ui.LayoutView):
             container.add_item(
                 discord.ui.TextDisplay(
                     _("**Now Playing:** {title} by `{author}` `{duration}`").format(
-                        title=current.title[:120],
-                        author=current.author,
+                        title=safetext.public_echo(current.title, limit=120),
+                        author=safetext.code_span(current.author, limit=120),
                         duration=format_duration(current),
                     )
                 )
@@ -1449,8 +1468,8 @@ class QueueView(discord.ui.LayoutView):
             lines = [
                 _("{index}. {title} by {author} ({duration})").format(
                     index=index,
-                    title=track.title[:60],
-                    author=track.author,
+                    title=safetext.public_echo(track.title, limit=60),
+                    author=safetext.public_echo(track.author, limit=60),
                     duration=format_duration(track),
                 )
                 for index, track in enumerate(upcoming[start:end], start=start + 1)
@@ -1868,8 +1887,8 @@ class HistoryCard(discord.ui.LayoutView):
         lines = [
             _("{index}. {title} by {author} ({duration})").format(
                 index=index,
-                title=track.title[:60],
-                author=track.author,
+                title=safetext.public_echo(track.title, limit=60),
+                author=safetext.public_echo(track.author, limit=60),
                 duration=format_duration(track),
             )
             for index, track in enumerate(entries[start:end], start=start + 1)
@@ -2181,7 +2200,9 @@ class FavouritesCard(AuthorLayoutView):
             container.add_item(
                 discord.ui.TextDisplay(
                     _("### ⭐ {name}'s favourites").format(
-                        name=getattr(self.owner, "display_name", "?")
+                        name=safetext.public_echo(
+                            getattr(self.owner, "display_name", "?"), limit=60
+                        )
                     )
                 )
             )
@@ -2201,9 +2222,21 @@ class FavouritesCard(AuthorLayoutView):
         lines = []
         for index, row in enumerate(page_rows, start=start + 1):
             title = row["title"] or _("Unknown title")
-            author = row["author"] or _("Unknown artist")
-            uri = row["uri"]
-            label = "[{title}]({uri})".format(title=title, uri=uri) if uri else title
+            author = safetext.code_span(
+                row["author"] or _("Unknown artist"), limit=60
+            )
+            # Same two-halves hazard as the now-playing header, and stored: a
+            # favourite keeps whatever title AND uri Lavalink reported when it
+            # was saved, so a row written before this guard existed is still
+            # rendered through it here.
+            uri = safetext.link_target(row["uri"])
+            label = (
+                "[{title}]({uri})".format(
+                    title=safetext.link_label(title, limit=60), uri=uri
+                )
+                if uri
+                else safetext.public_echo(title, limit=60)
+            )
             lines.append(
                 _("`{index}.` {label} by `{author}`").format(
                     index=index, label=label, author=author
