@@ -4,6 +4,7 @@ import time
 
 import discord
 
+from . import feed_policy as af
 from .edit_forms import EditSelectView, OnListSelectView, SeasonSelectView, TypeView
 from .helpers import (
     API_URL,
@@ -15,9 +16,10 @@ from .helpers import (
     _media_title,
     _media_unit,
     _progress_max,
+    channel_allows_adult,
     render_score,
 )
-from .media_view import MediaView, ResultView, SeasonView
+from .media_view import MediaView, ResultView, SeasonView, adult_blocked_message
 from .queries import (
     CANDIDATE_QUERY,
     ID_MEDIA_QUERY,
@@ -533,6 +535,11 @@ class AniListBase:
         media = ((data or {}).get("data") or {}).get("Media") or fallback
         if not media:
             return await ctx.send(_("Could not load that title."))
+        # The wizard is a WRITE flow, but the editor it opens is the same public
+        # card (cover, banner, synopsis) the lookups draw, so it obeys the same
+        # rule - editing an adult entry is done in a channel allowed to show it.
+        if af.blocks_adult(media.get("isAdult"), channel_allows_adult(ctx.channel)):
+            return await ctx.send(adult_blocked_message())
 
         view = MediaView(self, media, ctx.author.id, token=token)
         view.message = await ctx.send(embed=view.overview_embed(), view=view)
@@ -619,7 +626,7 @@ class AniListBase:
     # ------------------------------------------------------------------
     # Lookup commands (no auth required)
     # ------------------------------------------------------------------
-    async def _lookup_payload(self, author_id, search, media_type):
+    async def _lookup_payload(self, author_id, search, media_type, allow_adult=False):
         """Search AniList and build the interactive send payload.
 
         Returns ``(kwargs, view)``: ``kwargs`` are the send arguments
@@ -628,15 +635,28 @@ class AniListBase:
         the ``anime``/``manga`` command path (:meth:`_media_lookup`) and the
         discoverability hub's Search button, so both re-enter the exact same
         ResultSelect / MediaView experience without duplicating the fetch.
+
+        ``allow_adult`` is the DESTINATION's answer to "may adult media be shown
+        here?" (``helpers.channel_allows_adult`` of the channel this payload is
+        being sent to). It defaults to False so a new caller that forgets it is
+        safe rather than permissive: adult candidates are dropped from the picker
+        and a single adult hit is refused outright, exactly as the feed drops
+        adult activities outside an age-restricted channel.
         """
 
         data = await self._graphql(
             CANDIDATE_QUERY, {"search": search, "type": media_type}
         )
-        candidates = (
-            ((data or {}).get("data") or {}).get("Page") or {}
-        ).get("media") or []
+        found = (((data or {}).get("data") or {}).get("Page") or {}).get("media") or []
+        candidates = af.drop_adult(found, allow_adult)
         if not candidates:
+            # A search that DID find something, all of it adult, is answered with
+            # the rule rather than with "No result.": the member typed a title
+            # they know exists, and a false empty only makes them retype it.
+            # Browsing is different (see _browse_payload): nobody asked for a
+            # particular title there, so the drop stays silent.
+            if found:
+                return {"content": adult_blocked_message()}, None
             return {"content": _("No result.")}, None
 
         token = await self._get_token(author_id)
@@ -647,6 +667,11 @@ class AniListBase:
             media = ((full or {}).get("data") or {}).get("Media")
             if not media:
                 return {"content": _("No result.")}, None
+            # Re-checked on the FULL media, not only on the candidate row: the
+            # card is built from this object, and it is the object that carries
+            # the cover, banner and synopsis being drawn.
+            if af.blocks_adult(media.get("isAdult"), allow_adult):
+                return {"content": adult_blocked_message()}, None
             view = MediaView(self, media, author_id, token=token)
             return {"embed": view.overview_embed(), "view": view}, view
 
@@ -661,26 +686,31 @@ class AniListBase:
     async def _media_lookup(self, ctx, search, media_type):
         """Search AniList and present results via the interactive flow."""
 
+        allow_adult = channel_allows_adult(ctx.channel)
         async with ctx.typing():
             kwargs, view = await self._lookup_payload(
-                ctx.author.id, search, media_type
+                ctx.author.id, search, media_type, allow_adult
             )
             message = await ctx.send(**kwargs)
         if view is not None:
             view.message = message
 
-    async def _browse_payload(self, author_id, variables, media_type, label):
+    async def _browse_payload(
+        self, author_id, variables, media_type, label, allow_adult=False
+    ):
         """Run a PAGE_QUERY browse and build the picker payload.
 
-        Returns ``(kwargs, view)`` like :meth:`_lookup_payload`. Shared by the
-        ``trending``/``popular`` commands (:meth:`_browse`) and the hub's browse
-        buttons.
+        Returns ``(kwargs, view)`` like :meth:`_lookup_payload`, and applies the
+        same ``allow_adult`` rule to the listing: AniList's trending / popular
+        pages do carry adult titles, and a picker row is one click away from the
+        full card.
         """
 
         data = await self._graphql(PAGE_QUERY, variables)
-        media = (
-            ((data or {}).get("data") or {}).get("Page") or {}
-        ).get("media") or []
+        media = af.drop_adult(
+            (((data or {}).get("data") or {}).get("Page") or {}).get("media"),
+            allow_adult,
+        )
         if not media:
             return {"content": _("No result.")}, None
 
@@ -695,20 +725,22 @@ class AniListBase:
     async def _browse(self, ctx, variables, media_type, label):
         """Run a PAGE_QUERY browse and offer the results as a picker."""
 
+        allow_adult = channel_allows_adult(ctx.channel)
         async with ctx.typing():
             kwargs, view = await self._browse_payload(
-                ctx.author.id, variables, media_type, label
+                ctx.author.id, variables, media_type, label, allow_adult
             )
             message = await ctx.send(**kwargs)
         if view is not None:
             view.message = message
 
-    async def _seasonal_payload(self, author_id, season, year):
+    async def _seasonal_payload(self, author_id, season, year, allow_adult=False):
         """Fetch a season's anime and build the seasonal browser payload.
 
-        Returns ``(kwargs, view)`` like :meth:`_browse_payload`. Shared by the
-        ``seasonal`` command and the hub's Seasonal button (which passes the
-        current season), so both re-enter the same SeasonView navigation.
+        Returns ``(kwargs, view)`` like :meth:`_browse_payload`, under the same
+        ``allow_adult`` rule. Stepping to another season re-asks the question of
+        the channel the click came from (SeasonView._change_season), so the
+        navigation cannot walk around it either.
         """
 
         data = await self._graphql(
@@ -720,9 +752,10 @@ class AniListBase:
                 "seasonYear": year,
             },
         )
-        media = (
-            ((data or {}).get("data") or {}).get("Page") or {}
-        ).get("media") or []
+        media = af.drop_adult(
+            (((data or {}).get("data") or {}).get("Page") or {}).get("media"),
+            allow_adult,
+        )
         if not media:
             return {
                 "content": _("No anime found for {season} {year}.").format(

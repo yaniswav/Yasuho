@@ -25,6 +25,8 @@ Everything is offline: the cog is built with ``__new__`` and fed hand-rolled
 fakes, exactly like tests/cogs/test_anilist_feed_pacing.py.
 """
 
+import types
+
 import pytest
 
 from cogs.anilist import feed as feed_mod
@@ -734,3 +736,155 @@ async def test_a_username_is_resolved_against_this_feeds_follows_only():
 @pytest.mark.parametrize("cap", [af.MAX_FOLLOWS_PER_FEED])
 def test_the_mute_cap_is_the_follow_cap(cap):
     assert cap == 25
+
+
+# ---------------------------------------------------------------------------
+# A mute is MODERATOR state: a member cannot drop it by leaving and re-joining
+# ---------------------------------------------------------------------------
+
+
+class _Typing:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _MeCtx:
+    """The minimum ``/anilistfeed me`` reads: a guild, an author, sends."""
+
+    def __init__(self, guild_id=GUILD, author_id=4242):
+        self.guild = types.SimpleNamespace(id=guild_id)
+        self.author = types.SimpleNamespace(id=author_id, display_name="member")
+        self.sent = []
+
+    def typing(self):
+        return _Typing()
+
+    async def send(self, content=None, **kwargs):
+        self.sent.append(content)
+        return content
+
+
+class _FakeAniList:
+    """The AniList cog ``/anilistfeed me`` borrows to resolve the viewer."""
+
+    def __init__(self, viewer_id=MUTED_USER, name="reader"):
+        self._viewer = {"id": viewer_id, "name": name}
+
+    async def _token_status(self, user_id):
+        return "ok", "token"
+
+    async def _graphql(self, query, variables, token=None):
+        return {"data": {"Viewer": dict(self._viewer)}}
+
+
+async def _run_me(cog, ctx):
+    """Drive the real ``/anilistfeed me`` callback against the fakes."""
+
+    cog._resolve_target = lambda _ctx: _resolved(100)
+    cog.bot.get_cog = lambda name: _FakeAniList() if name == "AniList" else None
+    return await AniListFeed.anilistfeed_me.callback(cog, ctx)
+
+
+async def _resolved(channel_id):
+    return channel_id, None
+
+
+async def test_a_member_leaving_a_feed_does_not_clear_their_mute():
+    """THE fix: a mute is a moderator decision about a member, and the member
+    must not be able to undo it by toggling ``/anilistfeed me`` twice.
+
+    Leaving deletes the follow only. Were the mute deleted with it (what the
+    moderator-driven unfollow rightly does), re-joining would arrive unmuted
+    and a muted member would have talked their way back into the channel.
+    """
+
+    pool = _FakePool(
+        rows={"SELECT self_add": {"self_add": True}},
+        values={"SELECT 1 FROM anilist_follows": 1},  # they are followed -> leave
+    )
+    cog = _cog(pool=pool)
+    ctx = _MeCtx()
+
+    await _run_me(cog, ctx)
+
+    statements = [sql for sql, _args in pool.executes]
+    assert any("DELETE FROM anilist_follows" in sql for sql in statements)
+    assert not any("DELETE FROM anilist_feed_mutes" in sql for sql in statements)
+    assert "left the AniList feed" in ctx.sent[-1]
+
+
+async def test_a_moderator_unfollow_still_clears_the_mute():
+    """The documented intent, unchanged: an ADMIN unfollow drops the mute so a
+    later re-follow is not silently muted. Only the member's own leave differs.
+    """
+
+    pool = _FakePool()
+    cog = _cog(pool=pool)
+
+    await cog._remove_follow(GUILD, 100, MUTED_USER)
+
+    statements = [sql for sql, _args in pool.executes]
+    assert any("DELETE FROM anilist_feed_mutes" in sql for sql in statements)
+
+
+async def test_clear_mute_false_deletes_the_follow_and_nothing_else():
+    """The helper's two modes, at the statement level."""
+
+    pool = _FakePool()
+    cog = _cog(pool=pool)
+
+    assert await cog._remove_follow(GUILD, 100, MUTED_USER, clear_mute=False) is True
+
+    statements = [sql for sql, _args in pool.executes]
+    assert [("DELETE FROM anilist_follows" in sql) for sql in statements] == [True]
+
+
+async def test_re_joining_while_muted_says_so_instead_of_going_quiet():
+    """The mute survives the leave, so a re-join can land on a hidden member.
+
+    Confirming the join and then posting nothing forever would look broken;
+    the surviving mute is stated instead, in its own msgid appended to the
+    unchanged join line.
+    """
+
+    pool = _FakePool(
+        rows={"SELECT self_add": {"self_add": True}},
+        values={"SELECT 1 FROM anilist_feed_mutes": 1},  # not followed, still muted
+    )
+    cog = _cog(pool=pool)
+    ctx = _MeCtx()
+
+    await _run_me(cog, ctx)
+
+    statements = [sql for sql, _args in pool.executes]
+    assert any("INSERT INTO anilist_follows" in sql for sql in statements)
+    assert "joined the AniList feed" in ctx.sent[-1]
+    assert "hidden your activity" in ctx.sent[-1]
+
+
+async def test_re_joining_unmuted_says_only_that_it_joined():
+    pool = _FakePool(rows={"SELECT self_add": {"self_add": True}})
+    cog = _cog(pool=pool)
+    ctx = _MeCtx()
+
+    await _run_me(cog, ctx)
+
+    assert "joined the AniList feed" in ctx.sent[-1]
+    assert "hidden your activity" not in ctx.sent[-1]
+
+
+def test_a_surviving_mute_hides_nobody_until_the_follow_returns():
+    """Why keeping the row is safe: routing reads mutes only for FOLLOWED users,
+    so the leftover row is inert while they are gone - and hides them again the
+    moment they come back."""
+
+    gone = {"channel_id": 100, "types": {"TEXT"}, "followed_ids": set(),
+            "muted_ids": {MUTED_USER}}
+    back = dict(gone, followed_ids={MUTED_USER})
+    activities = [_act(1, MUTED_USER)]
+
+    assert af.route_activities(activities, [gone]) == {}
+    assert af.route_activities(activities, [back]) == {}

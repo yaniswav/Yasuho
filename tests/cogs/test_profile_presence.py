@@ -142,7 +142,7 @@ def _spotify(title="The Mother We Share", artist="Chvrches", **overrides):
         "details": title,
         "state": artist,
         "assets": {"large_image": "spotify:ab/cd", "large_text": "Every Open Eye"},
-        "sync_id": "6Vjkc",
+        "sync_id": "11dFghVXANMlKmJXsNCbNl",
         "session_id": "s",
         "timestamps": {},
         "party": {},
@@ -1257,7 +1257,7 @@ def test_enrich_attaches_the_live_spotify_listen():
         "title": "The Mother We Share",
         "artist": "Chvrches",
         "cover": "https://i.scdn.co/image/ab/cd",
-        "url": "https://open.spotify.com/track/6Vjkc",
+        "url": "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
     }
 
 
@@ -1520,7 +1520,7 @@ async def test_the_spotify_section_draws_the_live_listen_only():
     connection["live"] = {
         "title": "The Mother We Share",
         "artist": "Chvrches",
-        "url": "https://open.spotify.com/track/6Vjkc",
+        "url": "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
         "cover": "https://i.scdn.co/image/ab",
     }
 
@@ -1530,7 +1530,7 @@ async def test_the_spotify_section_draws_the_live_listen_only():
 
     text = _rendered(container)
     assert "Chvrches - The Mother We Share" in text
-    assert "https://open.spotify.com/track/6Vjkc" in text
+    assert "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl" in text
     assert isinstance(container.items[0], discord.ui.Section)
 
 
@@ -1547,7 +1547,7 @@ async def test_a_track_title_cannot_open_a_markdown_link_of_its_own():
     connection["live"] = {
         "title": "song](https://evil.example/phish) Free Nitro [click here",
         "artist": "Ghost",
-        "url": "https://open.spotify.com/track/6Vjkc",
+        "url": "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
     }
 
     await presence._render_spotify(
@@ -1561,7 +1561,7 @@ async def test_a_track_title_cannot_open_a_markdown_link_of_its_own():
     assert [text[index - 1] == "\\" for index in openers] == [True, False]
     assert "\\](https://evil.example/phish)" in text
     assert "\\[click here" in text
-    assert text.endswith("](https://open.spotify.com/track/6Vjkc)")
+    assert text.endswith("](https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl)")
     # Still one line, still one row: the flattening guard is untouched.
     assert len(text.split("\n")) == 2
 
@@ -1737,3 +1737,99 @@ def test_the_sections_are_declared_in_the_schema_check():
     assert check is not None
     for section in base.PRESENCE_SECTIONS:
         assert "'%s'" % section in check.group(1)
+
+
+# ---------------------------------------------------------------------------
+# The other half of the Spotify row: the LINK TARGET
+#
+# ``discord.Spotify.track_url`` is a fixed prefix plus the raw gateway
+# ``sync_id``, and discord.py builds a Spotify activity out of ANY listening
+# activity carrying sync_id + session_id - so the id is a string somebody
+# else's client chose, interpolated straight into ``[label](url)``. Escaping
+# the label (tested above) does nothing for the half after the ')'.
+# ---------------------------------------------------------------------------
+
+HOSTILE_SYNC_ID = "x) [Free Nitro](https://evil.example"
+
+
+@pytest.mark.parametrize(
+    "track_id",
+    [
+        HOSTILE_SYNC_ID,
+        "short",
+        "11dFghVXANMlKmJXsNCbN",  # 21: one short of a Spotify ID
+        "11dFghVXANMlKmJXsNCbNlx",  # 23: one over
+        "11dFghVXANMlKmJXsNCb-l",  # base-62 has no '-'
+        "11dFghVXANMlKmJXsNCb l",  # nor a space
+        None,
+        123,
+    ],
+)
+def test_only_a_base62_spotify_id_can_become_a_link(track_id):
+    assert presence.spotify_track_url(track_id) is None
+
+
+def test_a_well_formed_spotify_id_still_links():
+    assert (
+        presence.spotify_track_url("11dFghVXANMlKmJXsNCbNl")
+        == "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl"
+    )
+
+
+def test_a_spoofed_sync_id_never_reaches_the_live_dict():
+    """The url is BUILT from a validated id, not read off the activity: a
+    breakout attempt loses its link rather than being escaped into one."""
+
+    member = _Member(activities=[_spotify(sync_id=HOSTILE_SYNC_ID)])
+
+    now = presence.spotify_now_playing(member)
+
+    assert "url" not in now
+    # The listen itself still shows - the section is not collateral damage.
+    assert now["title"] == "The Mother We Share"
+    assert "evil.example" not in repr(now)
+
+
+async def test_a_spoofed_track_url_cannot_open_a_second_link_on_the_card():
+    """The render seam, given a hostile ``live`` dict directly: the target is
+    re-derived from the id inside it, so only the shape this module builds can
+    be drawn, and anything else costs the link and nothing more."""
+
+    container = _Container()
+    connection = _connection(presence.SPOTIFY_SECTION)
+    connection["live"] = {
+        "title": "song",
+        "artist": "Ghost",
+        "url": "https://open.spotify.com/track/" + HOSTILE_SYNC_ID,
+    }
+
+    await presence._render_spotify(
+        container, registry.get(presence.SPOTIFY_SECTION), None, connection, BIG_BUDGET
+    )
+
+    text = _rendered(container)
+    assert "evil.example" not in text
+    assert "](" not in text
+    assert "Ghost - song" in text
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://evil.example/track/11dFghVXANMlKmJXsNCbNl",  # right shape, wrong host
+        "http://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",  # not https
+        "https://open.spotify.com/album/11dFghVXANMlKmJXsNCbNl",
+        None,
+        42,
+    ],
+)
+async def test_the_renderer_draws_only_the_link_shape_it_builds(url):
+    container = _Container()
+    connection = _connection(presence.SPOTIFY_SECTION)
+    connection["live"] = {"title": "song", "artist": "Ghost", "url": url}
+
+    await presence._render_spotify(
+        container, registry.get(presence.SPOTIFY_SECTION), None, connection, BIG_BUDGET
+    )
+
+    assert "](" not in _rendered(container)

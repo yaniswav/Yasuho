@@ -14,7 +14,7 @@ import logging
 
 import discord
 
-from .helpers import _current_season
+from .helpers import _current_season, channel_allows_adult
 from .login import LoginView
 from .queries import VIEWER_QUERY
 from tools import i18n, interactions
@@ -63,7 +63,10 @@ class HubSearchModal(LocaleModal):
             if not query:
                 return await interaction.followup.send(_("No result."))
             kwargs, view = await self.cog._lookup_payload(
-                interaction.user.id, query, media_type
+                interaction.user.id,
+                query,
+                media_type,
+                channel_allows_adult(interaction.channel),
             )
             message = await interaction.followup.send(**kwargs)
             if view is not None:
@@ -120,12 +123,17 @@ class _HubBrowseButton(discord.ui.Button):
         try:
             await interaction.response.defer()
             cog = self._hub.cog
+            # The hub posts into the channel it was opened in, so the adult rule
+            # is that channel's, asked at click time (the panel can outlive an
+            # edit to the channel's age restriction).
+            allow_adult = channel_allows_adult(interaction.channel)
             if self.kind == "trending":
                 kwargs, view = await cog._browse_payload(
                     interaction.user.id,
                     {"sort": ["TRENDING_DESC"], "type": "ANIME"},
                     "ANIME",
                     _("Trending anime"),
+                    allow_adult,
                 )
             elif self.kind == "popular":
                 kwargs, view = await cog._browse_payload(
@@ -133,11 +141,12 @@ class _HubBrowseButton(discord.ui.Button):
                     {"sort": ["POPULARITY_DESC"], "type": "ANIME"},
                     "ANIME",
                     _("Popular anime"),
+                    allow_adult,
                 )
             else:  # seasonal - default to the current season, like the command
                 season, year = _current_season()
                 kwargs, view = await cog._seasonal_payload(
-                    interaction.user.id, season, year
+                    interaction.user.id, season, year, allow_adult
                 )
             message = await interaction.followup.send(**kwargs)
             if view is not None:
@@ -160,7 +169,10 @@ class _HubListButton(discord.ui.Button):
         try:
             await interaction.response.defer()
             error, view = await self._hub.cog._collection_payload(
-                interaction.user.id, "anime", "CURRENT"
+                interaction.user.id,
+                "anime",
+                "CURRENT",
+                channel_allows_adult(interaction.channel),
             )
             if error:
                 return await interactions.reply(interaction, error)

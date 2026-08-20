@@ -4,7 +4,12 @@ import discord
 from discord.ext import commands
 
 from .account import AccountMixin
-from .helpers import SEASONS, _clean_description, _current_season
+from .helpers import (
+    SEASONS,
+    _clean_description,
+    _current_season,
+    channel_allows_adult,
+)
 from .queries import CHARACTER_QUERY, STUDIO_QUERY
 from tools.formats import random_colour
 from tools.i18n import _
@@ -208,8 +213,11 @@ class LookupMixin:
             if year is None:
                 year = current_year
 
+        allow_adult = channel_allows_adult(ctx.channel)
         async with ctx.typing():
-            kwargs, view = await self._seasonal_payload(ctx.author.id, season, year)
+            kwargs, view = await self._seasonal_payload(
+                ctx.author.id, season, year, allow_adult
+            )
             message = await ctx.send(**kwargs)
         if view is not None:
             view.message = message

@@ -20,6 +20,7 @@ import logging
 
 import discord
 
+from . import feed_policy as af
 from .edit_forms import EditEntryModal, _deny_if_throttled
 from .helpers import (
     DEFAULT_SCORE_FORMAT,
@@ -31,6 +32,7 @@ from .helpers import (
     _media_unit,
     _progress_max,
     _step_season,
+    channel_allows_adult,
     render_score,
 )
 from .queries import MEDIA_QUERY, PAGE_QUERY
@@ -38,6 +40,23 @@ from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
+
+
+def adult_blocked_message():
+    """The one refusal used wherever an adult card cannot be drawn here.
+
+    A media card renders AniList's cover, banner and synopsis, so the package
+    treats it exactly like an adult feed activity: it is shown only where the
+    destination channel is age-restricted (see
+    :func:`cogs.anilist.feed_policy.blocks_adult`). One msgid, so the wording is
+    the same whichever door the member came through - a search hit, a picker
+    click, a browse result or the update wizard.
+    """
+
+    return _(
+        "That title is marked adult on AniList, so I can only show it in an "
+        "age-restricted (NSFW) channel."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -84,6 +103,16 @@ class ResultSelect(discord.ui.Select):
             if not media:
                 return await interaction.followup.send(
                     _("Could not load that title."), ephemeral=True
+                )
+            # The list this select was built from was already filtered for the
+            # channel, but the card is drawn from THIS object and the click can
+            # land minutes later: the rule is re-applied against the channel the
+            # click came from rather than assumed.
+            if af.blocks_adult(
+                media.get("isAdult"), channel_allows_adult(interaction.channel)
+            ):
+                return await interaction.followup.send(
+                    adult_blocked_message(), ephemeral=True
                 )
 
             token = await self.cog._get_token(self.author_id)
@@ -145,9 +174,12 @@ class SeasonView(AuthorView):
                     "seasonYear": year,
                 },
             )
-            media = (
-                ((data or {}).get("data") or {}).get("Page") or {}
-            ).get("media") or []
+            # Same rule as the command that opened this browser, re-asked of the
+            # channel the click came from: a season page carries adult titles.
+            media = af.drop_adult(
+                (((data or {}).get("data") or {}).get("Page") or {}).get("media"),
+                channel_allows_adult(interaction.channel),
+            )
             if not media:
                 return await interaction.followup.send(
                     _("No anime found for {season} {year}.").format(

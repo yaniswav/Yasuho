@@ -119,6 +119,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import re
 import time
 
 import discord
@@ -210,6 +211,15 @@ PURGE_AFTER_DAYS = 30
 # as GAME_NAME_MAX: a track title is whatever was uploaded to Spotify, and it
 # is being drawn on a card that belongs to someone else.
 TRACK_TEXT_MAX = 120
+
+# The track link, and the ONLY shape of it this module will draw. A Spotify ID
+# is the base-62 identifier at the end of a Spotify URI (Spotify's documented
+# example, "11dFghVXANMlKmJXsNCbNl", is 22 characters), and discord.py's
+# ``Spotify.track_url`` is nothing but this prefix plus the raw ``sync_id`` a
+# client sent over the gateway. See spotify_track_url for what that means for a
+# markdown link target.
+SPOTIFY_TRACK_PREFIX = "https://open.spotify.com/track/"
+_SPOTIFY_ID_RE = re.compile(r"[A-Za-z0-9]{22}")
 
 # How long cog_unload waits for a cancelled in-flight flush to unwind before it
 # runs the final one. Generous next to a handful of single-row updates, tiny
@@ -334,6 +344,49 @@ def _escape_link_label(text):
     return str(text).replace("[", "\\[").replace("]", "\\]")
 
 
+def spotify_track_url(track_id):
+    """The open.spotify.com link for a WELL-FORMED track id, else ``None``.
+
+    ``discord.Spotify.track_url`` is ``SPOTIFY_TRACK_PREFIX + self._sync_id``,
+    and ``_sync_id`` is a raw gateway field: discord.py builds a
+    :class:`discord.Spotify` out of ANY listening activity carrying ``sync_id``
+    and ``session_id``, so a custom client can put whatever it likes there.
+    Interpolated into ``[label](url)``, a sync_id of
+    ``x) [Free Nitro](https://evil.example`` closes the renderer's own link and
+    opens a second one, of their choosing, on SOMEBODY ELSE'S profile card - the
+    :func:`_escape_link_label` breakout, one level down, in the half of the line
+    escaping the label cannot reach.
+
+    So the id is VALIDATED rather than escaped, and the url is built here from
+    the id that passed: a Spotify ID is the base-62 identifier at the end of a
+    ``spotify:track:<id>`` URI, exactly 22 characters (Spotify's own documented
+    example, ``11dFghVXANMlKmJXsNCbNl``, is 22). Base-62 has no bracket, no
+    parenthesis and no space, so a url built from one CANNOT carry markdown.
+    Anything else - a local file, a podcast episode, a hand-crafted breakout
+    attempt, a future id shape - yields ``None`` and the row is simply drawn
+    without a link, which costs a click and leaks nothing.
+    """
+
+    if not isinstance(track_id, str) or _SPOTIFY_ID_RE.fullmatch(track_id) is None:
+        return None
+    return SPOTIFY_TRACK_PREFIX + track_id
+
+
+def _live_track_url(value):
+    """The link a ``live`` dict may draw: only the exact shape we build.
+
+    The renderer is handed a dict, not an activity, and it is the LAST place
+    before the markdown. It re-derives the url from the id inside it through
+    :func:`spotify_track_url`, so the only string that can reach the link target
+    is one this module built out of a validated base-62 id - a whitelist of one
+    shape, not an escape of the characters we happened to think of.
+    """
+
+    if not isinstance(value, str) or not value.startswith(SPOTIFY_TRACK_PREFIX):
+        return None
+    return spotify_track_url(value[len(SPOTIFY_TRACK_PREFIX) :])
+
+
 def _clip(text, limit=TRACK_TEXT_MAX):
     flattened = _one_line(text) if text is not None else ""
     if not flattened:
@@ -365,10 +418,12 @@ def spotify_now_playing(member):
         cover = base.safe_url(getattr(activity, "album_cover_url", None))
         if cover:
             now["cover"] = cover
-        if getattr(activity, "track_id", None):
-            url = base.safe_url(getattr(activity, "track_url", None))
-            if url:
-                now["url"] = url
+        # Built from the id, NOT read from ``activity.track_url``: that property
+        # is the prefix plus a raw gateway ``sync_id``, which is a link target
+        # somebody else's client chose. See spotify_track_url.
+        url = spotify_track_url(getattr(activity, "track_id", None))
+        if url:
+            now["url"] = url
         return now
     except Exception:
         # A malformed activity object must cost one section, never the card.
@@ -695,13 +750,15 @@ async def _render_spotify(container, field, viewer, connection, budget):
         return
 
     track = "{artist} - {title}".format(artist=artist, title=title)
-    url = base.safe_url(live.get("url"))
+    url = _live_track_url(live.get("url"))
     if url:
-        # A markdown link, so the url is the only structural part of the line -
-        # which is only true once the label's own brackets are escaped, or the
-        # track title itself could close it and open a link of its own (see
-        # _escape_link_label). The clip already flattened the text; this is the
-        # second half of the same guard.
+        # A markdown link has TWO halves that a third party can try to close,
+        # and each is guarded where it comes from. The LABEL is text Spotify
+        # hands over verbatim, so its brackets are escaped (_escape_link_label,
+        # on top of the clip that already flattened it). The TARGET is built
+        # from a gateway-supplied track id, so it is re-derived here from a
+        # validated base-62 id and dropped when it is not one (_live_track_url)
+        # - a url that cannot contain ')' cannot end the link early.
         track = "[{track}]({url})".format(
             track=_escape_link_label(track), url=url
         )

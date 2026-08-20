@@ -381,3 +381,28 @@ def _clean_description(text):
     if len(text) > 600:
         text = text[:600].rstrip() + "..."
     return text
+
+
+def channel_allows_adult(channel):
+    """Whether a destination channel may be shown AniList adult media.
+
+    The ONE resolver behind :func:`cogs.anilist.feed_policy.blocks_adult`, used
+    by both surfaces that can put adult content in a channel: the feed poller
+    (which resolves the channel by id first) and the lookup commands (which
+    already hold ``ctx.channel`` / ``interaction.channel``).
+
+    ``is_nsfw()`` is duck-typed rather than isinstance-checked so a Thread works
+    for free - discord.py delegates a thread's ``is_nsfw()`` to its parent - and
+    so this module keeps its discord-free imports. Anything that cannot answer
+    the question (a DM, a partial or unresolvable channel, an object that
+    raises) is treated as NOT age-restricted: the safe answer to "may I show
+    adult content here?" is no.
+    """
+
+    is_nsfw = getattr(channel, "is_nsfw", None)
+    if not callable(is_nsfw):
+        return False
+    try:
+        return bool(is_nsfw())
+    except Exception:
+        return False

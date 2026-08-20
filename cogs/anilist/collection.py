@@ -21,6 +21,7 @@ import logging
 
 import discord
 
+from . import feed_policy as af
 from .edit_forms import EditEntryModal
 from .helpers import (
     DEFAULT_SCORE_FORMAT,
@@ -282,6 +283,7 @@ class CollectionView(discord.ui.LayoutView):
         entries,
         *,
         score_format=DEFAULT_SCORE_FORMAT,
+        allow_adult=False,
         timeout=180,
     ):
         super().__init__(timeout=timeout)
@@ -291,6 +293,14 @@ class CollectionView(discord.ui.LayoutView):
         self.media_type = media_type
         self.status = status
         self.score_format = score_format
+        # Whether THIS channel may be shown adult media. The panel posts into
+        # the channel it was opened in, so the rule is that channel's, and it is
+        # decided once at open: a panel cannot follow the channel's age
+        # restriction being edited under it, and re-deciding on every reload
+        # would let a list quietly repopulate after a moderator un-flagged the
+        # room. Defaults to False - the safe answer to "may I show this here?".
+        self.allow_adult = bool(allow_adult)
+        self.hidden_adult = 0
         self.message = None
         self.page = 0
         self.selected_media_id = None
@@ -304,13 +314,30 @@ class CollectionView(discord.ui.LayoutView):
         Dedup is not cosmetic: a media that sits in two custom lists would
         otherwise yield two select options sharing a value, which Discord
         rejects.
+
+        ADULT ENTRIES ARE DROPPED HERE unless the channel allows them, which is
+        the package's one rule (:func:`cogs.anilist.feed_policy.blocks_adult`)
+        applied at the one place every entry passes through - the select options,
+        the entry card, its cover thumbnail and the quick actions all read
+        ``self.entries`` / ``self._by_id``, so filtering the source is what makes
+        the rule unbypassable rather than five render-site checks. The list is
+        the invoker's own, but the CARD - cover art included - is posted into a
+        shared channel, exactly like a feed activity.
+
+        The count is kept so the panel can say so; silently short lists are how
+        a member concludes the bot lost their data.
         """
 
         self.entries = []
         self._by_id = {}
+        self.hidden_adult = 0
         for entry in entries or []:
-            mid = (entry.get("media") or {}).get("id")
+            media = entry.get("media") or {}
+            mid = media.get("id")
             if mid is None or mid in self._by_id:
+                continue
+            if af.blocks_adult(media.get("isAdult"), self.allow_adult):
+                self.hidden_adult += 1
                 continue
             self._by_id[mid] = entry
             self.entries.append(entry)
@@ -376,7 +403,7 @@ class CollectionView(discord.ui.LayoutView):
         count = ngettext("{count} entry", "{count} entries", total).format(
             count=total
         )
-        return (
+        header = (
             "## "
             + _("Your {type} list").format(type=self._type_word())
             + "\n-# "
@@ -384,6 +411,15 @@ class CollectionView(discord.ui.LayoutView):
             + " - "
             + count
         )
+        if self.hidden_adult:
+            header += "\n-# " + ngettext(
+                "{count} adult title is hidden here - open this list in an "
+                "age-restricted (NSFW) channel to see it.",
+                "{count} adult titles are hidden here - open this list in an "
+                "age-restricted (NSFW) channel to see them.",
+                self.hidden_adult,
+            ).format(count=self.hidden_adult)
+        return header
 
     def _add_entry_card(self, container, entry):
         media = entry.get("media") or {}
@@ -744,13 +780,20 @@ class CollectionMixin:
                 entries.append(entry)
         return entries
 
-    async def _collection_payload(self, user_id, media_type, status):
+    async def _collection_payload(
+        self, user_id, media_type, status, allow_adult=False
+    ):
         """Build the invoker's collection dashboard view.
 
         Returns ``(error, view)``: exactly one is set. ``error`` is a localised
         string (missing link / unreachable account); ``view`` is a ready
         :class:`CollectionView` otherwise. Shared by the ``list`` command and the
         hub's My list button.
+
+        ``allow_adult`` is the DESTINATION channel's verdict
+        (:func:`cogs.anilist.helpers.channel_allows_adult`), threaded exactly as
+        the lookup and browse payloads thread it. It defaults to False so a
+        future caller that forgets it under-shows rather than over-shows.
         """
 
         token = await self._get_token(user_id)
@@ -772,5 +815,6 @@ class CollectionMixin:
             status,
             entries,
             score_format=score_format,
+            allow_adult=allow_adult,
         )
         return None, view

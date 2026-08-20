@@ -1,9 +1,15 @@
+# ``isAdult`` is fetched on every query whose result can be RENDERED (the media
+# card's cover, banner and synopsis; the picker rows that lead to one), because
+# the package refuses to draw adult media outside an age-restricted channel -
+# the same rule the feed applies to adult activities. See
+# feed_policy.blocks_adult and helpers.channel_allows_adult.
 MEDIA_QUERY = """
 query ($id: Int, $search: String, $type: MediaType) {
   Media(id: $id, search: $search, type: $type) {
     id
     idMal
     type
+    isAdult
     title { romaji english native }
     format
     status
@@ -50,6 +56,7 @@ query ($search: String, $type: MediaType) {
   Page(perPage: 10) {
     media(search: $search, type: $type) {
       id
+      isAdult
       title { romaji english }
       format
       seasonYear
@@ -101,6 +108,7 @@ query ($sort: [MediaSort], $type: MediaType, $season: MediaSeason, $seasonYear: 
   Page(perPage: 25) {
     media(sort: $sort, type: $type, season: $season, seasonYear: $seasonYear) {
       id
+      isAdult
       title { romaji english }
       format
       averageScore
@@ -192,6 +200,7 @@ query ($userId: Int, $type: MediaType, $status: MediaListStatus) {
         media {
           id
           type
+          isAdult
           title { romaji english }
           siteUrl
           episodes

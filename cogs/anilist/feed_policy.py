@@ -14,6 +14,12 @@ tests can run without a bot. Every Discord/DB side effect lives in the cog.
 It is also translation-free on purpose (no ``_()`` imports): it returns raw
 data (statuses, numbers, cleaned text) and the cog does all user-facing wording
 and localisation.
+
+One rule here is NOT feed-only: :func:`blocks_adult` (and its list form
+:func:`drop_adult`) is the package's single adult-content rule, obeyed by the
+feed's delivery AND by the lookup surface, which renders the same covers and
+synopses through another door. It lives here because this is where it was born
+and where it can stay pure.
 """
 
 from __future__ import annotations
@@ -25,6 +31,48 @@ MAX_FEEDS_PER_GUILD = 2  # at most 2 feed channels per guild
 MAX_FOLLOWS_PER_FEED = 25  # at most 25 followed AniList users per feed
 MAX_SUBS_PER_FEED = 50  # at most 50 explicitly-subscribed titles per feed channel
 MAX_FULL_POSTS_PER_TICK = 5  # rich cards per channel per tick; the rest coalesce
+
+
+def blocks_adult(is_adult, allow_adult):
+    """THE adult rule of this package, in one place: no adult media off-NSFW.
+
+    ``is_adult`` is AniList's own ``isAdult`` flag (on the activity's media, or
+    on a looked-up media); ``allow_adult`` is whether the DESTINATION allows it -
+    in practice ``channel.is_nsfw()``, resolved by
+    :func:`cogs.anilist.helpers.channel_allows_adult`. True means "do not put
+    this in front of that channel".
+
+    It started as one line inside :func:`route_activities` (the feed drops adult
+    activities unless the feed's channel is age-restricted). It is a function
+    because the LOOKUP surface has to obey exactly the same rule - ``/anime``,
+    ``/manga``, ``/trending``, ``/seasonal`` and the hub render an AniList cover,
+    banner and synopsis, which is the same content by another door - and two
+    copies of a rule like this drift.
+
+    Missing/None ``is_adult`` is NOT adult: AniList leaves the flag null on some
+    media and a null must not blank a channel's lookups. It is a bool question
+    both ways, so junk (a string, a number) is read for truthiness rather than
+    raising - this is called on the render path of every card.
+    """
+
+    return bool(is_adult) and not bool(allow_adult)
+
+
+def drop_adult(media, allow_adult):
+    """The lookup-list half of :func:`blocks_adult`: filter, keeping order.
+
+    Used on the picker/browse lists (search candidates, trending, popular, a
+    season) so an adult title never even appears as an option in a channel that
+    may not show it - refusing at the click would be a worse experience and
+    would still have named the title. Returns a new list; a non-dict entry is
+    dropped rather than trusted.
+    """
+
+    return [
+        item
+        for item in media or ()
+        if isinstance(item, dict) and not blocks_adult(item.get("isAdult"), allow_adult)
+    ]
 
 
 def sub_cap_exceeded(current_count, already_subscribed):
@@ -244,7 +292,7 @@ def route_activities(activities, feeds):
                 continue
             if activity.get("type") not in types:
                 continue
-            if activity.get("is_adult") and not allow_adult:
+            if blocks_adult(activity.get("is_adult"), allow_adult):
                 continue
             bucket.append(activity)
     return {

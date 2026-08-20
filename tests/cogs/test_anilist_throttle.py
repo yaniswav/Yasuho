@@ -5,9 +5,10 @@ pure and clock-injected, so time is driven explicitly; the ``_graphql`` 429 path
 and the button-callback guard are exercised against tiny fakes.
 """
 
+import time
 import types
 
-from cogs.anilist import airing, chapters, edit_forms, feed_delivery
+from cogs.anilist import AniList, account, airing, chapters, edit_forms, feed_delivery
 from cogs.anilist.base import AniListBase
 from cogs.anilist.feed import AniListFeed
 from cogs.anilist.throttle import (
@@ -416,3 +417,155 @@ async def test_run_read_refused_when_global_ceiling_spent():
     content, kwargs = interaction.response.sent
     assert "Slow down" in content
     assert kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# Slash AUTOCOMPLETE: the one interactive surface discord.py runs no check on.
+#
+# Verified against discord.py's tree: an autocomplete interaction is dispatched
+# straight to the callback stored on the parameter - no command check, no
+# cooldown, no interaction_check - so before this the title autocomplete was
+# unbounded per user AND per guild while still spending the process-wide
+# ceiling on every keystroke that fetched. One member holding a key down could
+# starve feed card clicks and lookups in every guild.
+# ---------------------------------------------------------------------------
+class _AutocompleteInteraction:
+    def __init__(self, user_id=1, guild_id=7):
+        self.user = types.SimpleNamespace(id=user_id)
+        self.guild_id = guild_id
+
+
+def _account_cog(clock=None, token=None):
+    """An AniList cog with only what the autocomplete touches (no __init__)."""
+
+    cog = AniList.__new__(AniList)
+    cog._throttle = AniListThrottle(clock=clock or _Clock())
+    cog.fetches = []
+
+    async def _get_token(user_id):
+        return token
+
+    async def _global_media(current):
+        cog.fetches.append(current)
+        return [{"id": 1, "type": "ANIME", "title": {"romaji": "T"}}]
+
+    cog._get_token = _get_token
+    cog._global_media = _global_media
+    return cog
+
+
+def _clear_list_cache():
+    account._list_cache.clear()
+
+
+async def test_autocomplete_is_bounded_per_user_like_every_other_surface():
+    _clear_list_cache()
+    cog = _account_cog()
+
+    results = [
+        await cog._title_autocomplete(_AutocompleteInteraction(), "attack")
+        for _ in range(USER_LIMIT + 3)
+    ]
+
+    # Exactly USER_LIMIT keystrokes reached AniList; the rest answered with no
+    # suggestions instead of adding to the shared per-IP budget.
+    assert len(cog.fetches) == USER_LIMIT
+    assert all(results[index] for index in range(USER_LIMIT))
+    assert results[USER_LIMIT:] == [[], [], []]
+
+
+async def test_autocomplete_is_bounded_per_guild_across_members():
+    _clear_list_cache()
+    cog = _account_cog()
+
+    for member in range(GUILD_LIMIT):
+        await cog._title_autocomplete(_AutocompleteInteraction(member, 7), "attack")
+    assert len(cog.fetches) == GUILD_LIMIT
+
+    # A fresh member in the same hyped guild is refused on the guild axis.
+    assert await cog._title_autocomplete(_AutocompleteInteraction(999, 7), "attack") == []
+    assert len(cog.fetches) == GUILD_LIMIT
+
+
+async def test_autocomplete_stops_when_the_process_wide_ceiling_is_spent():
+    """The backstop the whole point of the finding: a spent ceiling means feed
+    clicks are already degraded, so a keystroke must not queue another call."""
+
+    _clear_list_cache()
+    cog = _account_cog()
+    for _ in range(GLOBAL_LIMIT):
+        cog._throttle.allow_global()
+
+    assert await cog._title_autocomplete(_AutocompleteInteraction(), "attack") == []
+    assert cog.fetches == []
+
+
+async def test_the_autocomplete_gate_peeks_at_the_ceiling_without_taking_a_slot():
+    """``_graphql`` consumes the global slot on the very next line; taking one
+    here too would count one request twice and shrink the real ceiling."""
+
+    _clear_list_cache()
+    cog = _account_cog()
+
+    await cog._title_autocomplete(_AutocompleteInteraction(), "attack")
+
+    assert cog.fetches == ["attack"]
+    # The gate spent a per-user and a per-guild slot, and NO global one (the
+    # stubbed fetch stands in for _graphql, which is where that slot is taken).
+    assert cog._throttle.stats()["user"]["hits"] == 1
+    assert cog._throttle.stats()["global"]["hits"] == 0
+
+
+async def test_a_cached_keystroke_costs_no_slot_at_all():
+    """A slot is per AniList REQUEST, not per keystroke: the list-first cache
+    answers most of a typed word with zero API calls, and charging those would
+    let one word exhaust a member's budget for the wizard buttons that follow.
+    """
+
+    _clear_list_cache()
+    cog = _account_cog(token="tok")
+    entries = [
+        ({"id": index, "type": "ANIME", "title": {"romaji": "Attack %d" % index}},
+         "attack %d" % index)
+        for index in range(25)
+    ]
+    account._list_cache[1] = (time.monotonic(), entries)
+
+    for _ in range(USER_LIMIT + 10):
+        choices = await cog._title_autocomplete(_AutocompleteInteraction(), "attack")
+        assert len(choices) == 25
+
+    assert cog._throttle.stats()["user"]["hits"] == 0
+    assert cog.fetches == []
+    _clear_list_cache()
+
+
+async def test_a_throttled_top_up_still_returns_the_list_matches():
+    """Degrade, never blank: the cached list still answers, only the global
+    top-up is skipped."""
+
+    _clear_list_cache()
+    cog = _account_cog(token="tok")
+    account._list_cache[1] = (
+        time.monotonic(),
+        [({"id": 1, "type": "ANIME", "title": {"romaji": "Attack"}}, "attack")],
+    )
+    for _ in range(USER_LIMIT):
+        cog._throttle.allow_interactive(1, 7)
+
+    choices = await cog._title_autocomplete(_AutocompleteInteraction(), "attack")
+
+    assert [choice.value for choice in choices] == ["id:1"]
+    assert cog.fetches == []
+    _clear_list_cache()
+
+
+async def test_autocomplete_without_a_throttle_still_answers():
+    """Best-effort, like every other gate: older wiring never blocks a member."""
+
+    _clear_list_cache()
+    cog = _account_cog()
+    del cog._throttle
+
+    assert await cog._title_autocomplete(_AutocompleteInteraction(), "attack")
+    assert cog.fetches == ["attack"]

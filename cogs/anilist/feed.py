@@ -106,7 +106,7 @@ from .feed_views import (
     _refresh_layout,  # noqa: F401
     _SubsManagerView,
 )
-from .helpers import API_URL
+from .helpers import API_URL, channel_allows_adult
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from tools import i18n
 from tools.db import affected_rows
@@ -923,18 +923,14 @@ class AniListFeed(commands.Cog):
     def _allow_adult(self, channel_id):
         """Whether the destination channel/thread allows adult activities.
 
-        Threads delegate ``is_nsfw()`` to their parent; an unresolvable channel
-        defaults to False (and is handled as a delivery failure at send time).
+        Resolves the id, then defers to :func:`helpers.channel_allows_adult` -
+        the same resolver the lookup surface uses, so "is this channel allowed
+        adult content?" has one answer in this package. Threads delegate
+        ``is_nsfw()`` to their parent; an unresolvable channel defaults to False
+        (and is handled as a delivery failure at send time).
         """
 
-        channel = self.bot.get_channel(channel_id)
-        is_nsfw = getattr(channel, "is_nsfw", None)
-        if not callable(is_nsfw):
-            return False
-        try:
-            return bool(is_nsfw())
-        except Exception:
-            return False
+        return channel_allows_adult(self.bot.get_channel(channel_id))
 
     async def _deliver_channel(self, feed, channel_id, items, *, pacer=None):
         """Post one channel's activities, tracking delivery success/failure.
@@ -1675,13 +1671,25 @@ class AniListFeed(commands.Cog):
         await self._insert_follow(guild_id, channel_id, user_id, name, added_by)
         return None
 
-    async def _remove_follow(self, guild_id, channel_id, user_id):
-        """Unfollow a user in this feed AND drop the mute row that shadowed them.
+    async def _remove_follow(self, guild_id, channel_id, user_id, *, clear_mute=True):
+        """Unfollow a user in this feed, optionally dropping their mute row too.
 
         A mute only ever qualifies an existing follow ("keep polling them, just
-        not here"). Leaving the row behind after an unfollow would make a later
-        re-follow arrive silently muted, which nobody asked for - so the two
-        deletes ride one transaction.
+        not here"). When a MODERATOR unfollows, leaving the row behind would make
+        a later re-follow arrive silently muted, which nobody asked for - so the
+        two deletes ride one transaction. That is the default and it is what
+        every manage_guild surface (``/anilistfeed unfollow``, the panel's remove
+        select) wants.
+
+        ``clear_mute=False`` is for the one caller that is NOT a moderator:
+        ``/anilistfeed me`` leaving a feed. A mute is moderator state about a
+        member, so the member must not be able to erase it by leaving and
+        re-joining; their mute row survives the leave and is still there (still
+        hiding them) if they come back. Nothing else reads a mute whose follow is
+        gone - :func:`feed_policy.route_activities` only ever consults the muted
+        set for a user the feed FOLLOWS - so the surviving row is inert until the
+        follow returns, and ``/anilistfeed unmute`` (which reads the mute table,
+        not the follow table) can still clear it by hand.
 
         Returns True when a follow row was actually deleted. Callers that read a
         row before calling can therefore still tell a real unfollow from a race
@@ -1699,19 +1707,33 @@ class AniListFeed(commands.Cog):
                     channel_id,
                     user_id,
                 )
-                await conn.execute(
-                    "DELETE FROM anilist_feed_mutes "
-                    "WHERE guild_id = $1 AND channel_id = $2 "
-                    "AND anilist_user_id = $3;",
-                    guild_id,
-                    channel_id,
-                    user_id,
-                )
+                if clear_mute:
+                    await conn.execute(
+                        "DELETE FROM anilist_feed_mutes "
+                        "WHERE guild_id = $1 AND channel_id = $2 "
+                        "AND anilist_user_id = $3;",
+                        guild_id,
+                        channel_id,
+                        user_id,
+                    )
         return deleted is not None
 
     # ------------------------------------------------------------------
     # Per-channel mutes (delivery-only: the follow keeps being polled)
     # ------------------------------------------------------------------
+    async def _mute_exists(self, guild_id, channel_id, user_id):
+        """Whether this feed currently mutes ``user_id`` (moderator state)."""
+
+        return bool(
+            await self.bot.db_pool.fetchval(
+                "SELECT 1 FROM anilist_feed_mutes "
+                "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
+                guild_id,
+                channel_id,
+                user_id,
+            )
+        )
+
     async def _mutes_for_feed(self, guild_id, channel_id):
         """Every mute of a feed, ordered for the panel."""
 
@@ -2119,7 +2141,14 @@ class AniListFeed(commands.Cog):
         name = viewer.get("name") or ctx.author.display_name
 
         if await self._follow_exists(ctx.guild.id, channel_id, user_id):
-            await self._remove_follow(ctx.guild.id, channel_id, user_id)
+            # clear_mute=False: this is the MEMBER leaving, not a moderator
+            # unfollowing them. Dropping the mute row here would hand any muted
+            # member a one-command way to undo a moderator decision (leave, then
+            # re-join unmuted), so the mute outlives the leave and is waiting if
+            # they come back. See _remove_follow.
+            await self._remove_follow(
+                ctx.guild.id, channel_id, user_id, clear_mute=False
+            )
             return await ctx.send(
                 _("You have left the AniList feed in <#{channel}>.").format(
                     channel=channel_id
@@ -2132,11 +2161,18 @@ class AniListFeed(commands.Cog):
                 _("This feed is full right now - ask a moderator to make room.")
             )
         await self._insert_follow(ctx.guild.id, channel_id, user_id, name, ctx.author.id)
-        await ctx.send(
-            _("You have joined the AniList feed in <#{channel}>.").format(
-                channel=channel_id
-            )
+        message = _("You have joined the AniList feed in <#{channel}>.").format(
+            channel=channel_id
         )
+        # A member re-joining a feed that still mutes them would otherwise wait
+        # for activity that is never going to be posted. Its own msgid, appended:
+        # the join line is unchanged (and still translated) for everyone else.
+        if await self._mute_exists(ctx.guild.id, channel_id, user_id):
+            message += "\n" + _(
+                "A moderator has hidden your activity in that channel, so "
+                "nothing of yours is posted there until they unhide it."
+            )
+        await ctx.send(message)
 
     @anilistfeed.command(name="list")
     @commands.guild_only()

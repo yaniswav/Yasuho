@@ -5,7 +5,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .helpers import REDIRECT_URI, _parse_status, _profile_colour
+from .helpers import (
+    REDIRECT_URI,
+    _parse_status,
+    _profile_colour,
+    channel_allows_adult,
+)
 from .login import LoginView
 from .queries import (
     AUTOCOMPLETE_QUERY,
@@ -380,6 +385,41 @@ class AccountMixin:
 
         await self._edit_flow(ctx, title, "score", score)
 
+    def _autocomplete_slot(self, interaction):
+        """Take one interactive throttle slot for a keystroke that WILL fetch.
+
+        discord.py runs NO check on an autocomplete callback - not the command's
+        cooldown, not ``interaction_check``, nothing but the predicates stored on
+        the autocomplete callback itself - so the title autocomplete was the one
+        AniList surface with no per-user and no per-guild bound at all: a single
+        member holding a key down could drain the process-wide ceiling
+        (``AniListBase._graphql``'s ``allow_global``) and degrade feed card
+        clicks and lookups for EVERY guild. This is the same gate the buttons
+        take through :func:`~cogs.anilist.edit_forms._deny_if_throttled`, minus
+        the ephemeral (an autocomplete has no way to talk back - it answers with
+        choices or with nothing).
+
+        A slot is spent per AniList REQUEST, never per keystroke: the cached
+        keystrokes of the list-first path reach no API at all, and charging them
+        would let a fast typer exhaust their own budget in one word and then be
+        refused on the wizard buttons that follow. The process-wide ceiling is
+        only PEEKED at (:meth:`~cogs.anilist.throttle.AniListThrottle.
+        global_available`) because ``_graphql`` consumes it for real on the very
+        next line - peeking keeps the ceiling equal to the calls actually made,
+        and lets the callback answer with nothing instead of paying for a fetch
+        that would be dropped anyway.
+
+        Returns True when the fetch may proceed. Best-effort: a missing throttle
+        (older wiring) never blocks a keystroke.
+        """
+
+        throttle = getattr(self, "_throttle", None)
+        if throttle is None:
+            return True
+        if not throttle.allow_interactive(interaction.user.id, interaction.guild_id):
+            return False
+        return throttle.global_available()
+
     async def _global_media(self, current):
         """Run the global cross-type search and return its raw media dicts.
 
@@ -446,7 +486,7 @@ class AccountMixin:
             log.exception("AniList list autocomplete fetch failed")
             return []
 
-    async def _list_first_autocomplete(self, user_id, current, token):
+    async def _list_first_autocomplete(self, interaction, current, token):
         """List-first choices: the user's tracked titles, topped up with global.
 
         Their CURRENT entries come first (filtered by the typed text, or the head
@@ -454,9 +494,23 @@ class AccountMixin:
         resolution is untouched. If those alone fill 25 choices the global search
         is skipped entirely (one fewer API call). Otherwise the remainder is
         topped up with global results, deduped by media id.
+
+        Each of those two fetches - and only they, never a cache hit - first
+        takes an interactive throttle slot (:meth:`_autocomplete_slot`). A
+        refused list fetch answers with no choices; a refused top-up answers with
+        the (shorter) list matches it already has, which is still useful.
         """
 
-        entries = await self._current_list_entries(user_id, token)
+        # The cache is read HERE, ahead of _current_list_entries' own read, only
+        # to answer "will this keystroke hit AniList?" before spending a slot on
+        # it. A miss falls through to that method, which owns the fetch and the
+        # caching; the second lookup is a dict get on the same map.
+        user_id = interaction.user.id
+        entries = _list_cache_get(user_id, time.monotonic())
+        if entries is None:
+            if not self._autocomplete_slot(interaction):
+                return []
+            entries = await self._current_list_entries(user_id, token)
         lowered = current.lower()
         matches = (
             [m for (m, s) in entries if lowered in s]
@@ -478,6 +532,8 @@ class AccountMixin:
         # List matches already fill the menu, or the query is too short for a
         # meaningful global search: no global top-up.
         if len(choices) >= 25 or len(current) < 2:
+            return choices
+        if not self._autocomplete_slot(interaction):
             return choices
 
         for media in await self._global_media(current):
@@ -506,6 +562,12 @@ class AccountMixin:
         sentinel so a numeric title (e.g. the anime "86") can never be mistaken
         for an id in the edit flow. Any AniList failure degrades to global-only,
         then to no suggestions - the command still works without them.
+
+        THROTTLED like every other interactive surface, and here in the callback
+        because discord.py runs no command check and no cooldown for an
+        autocomplete (see :meth:`_autocomplete_slot`). A throttled keystroke
+        answers with no suggestions rather than raising - the option stays
+        typable by hand, and the ceiling stays there for the feed buttons.
         """
 
         try:
@@ -513,11 +575,14 @@ class AccountMixin:
             token = await self._get_token(interaction.user.id)
             if token:
                 return await self._list_first_autocomplete(
-                    interaction.user.id, current, token
+                    interaction, current, token
                 )
 
-            # Unlinked: byte-identical to the historical global-only behaviour.
+            # Unlinked: the historical global-only behaviour, save for the
+            # throttle slot its fetch now takes first.
             if len(current) < 2:
+                return []
+            if not self._autocomplete_slot(interaction):
                 return []
             return [
                 app_commands.Choice(
@@ -589,7 +654,10 @@ class AccountMixin:
 
         async with ctx.typing():
             error, view = await self._collection_payload(
-                ctx.author.id, media_type, status
+                ctx.author.id,
+                media_type,
+                status,
+                channel_allows_adult(ctx.channel),
             )
         if error:
             return await ctx.send(error)

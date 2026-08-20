@@ -22,7 +22,10 @@ Two layers, deliberately separate:
 * Per-user and per-guild sliding windows checked at the top of the expensive
   interactive callbacks (lookup components and feed card buttons), so one member
   (or one hyped guild) is told to slow down BEFORE the expensive fetch, with a
-  friendly ephemeral.
+  friendly ephemeral. The slash TITLE AUTOCOMPLETE takes the same two windows in
+  its own callback (``AccountMixin._autocomplete_slot``) because discord.py runs
+  no command check and no cooldown for an autocomplete - without it, one member
+  typing was bounded by nothing at all while still spending the global ceiling.
 
 A shared counter records how many interactive responses (lookups and feed card
 actions) came back as HTTP 429, so the operator can SEE "AniList is throttling
@@ -88,6 +91,19 @@ class AniListThrottle:
         budget the pollers depend on.
         """
         return self._global.hit(_GLOBAL_KEY, now)
+
+    def global_available(self, now: float | None = None) -> bool:
+        """Whether a process-wide interactive slot is free, WITHOUT taking one.
+
+        For callers that gate a surface whose own request already spends the
+        global slot downstream (the slash autocomplete, whose fetches go through
+        ``AniListBase._graphql``): they need to know the ceiling is spent so they
+        can degrade quietly, but taking a slot here would charge the window twice
+        for one request and make the ceiling drift away from the number of calls
+        actually put on the wire. Consuming paths keep using
+        :meth:`allow_global`.
+        """
+        return self._global.check(_GLOBAL_KEY, now)
 
     def allow_interactive(
         self, user_id: typing.Any, guild_id: typing.Any, now: float | None = None
