@@ -45,11 +45,17 @@ MEMBER_ID = 42
 
 @pytest.fixture(autouse=True)
 def _isolate_module_state():
+    # The open-rate cooldown is process-wide and keyed by (guild, member), and
+    # every test here opens as the SAME member in the SAME guild - so without
+    # this, test number two would be refused by test number one's ticket. The
+    # cooldown itself is exercised in test_tickets_open_cooldown.py.
     settings._cache.clear()
     ticket_open._IN_FLIGHT.clear()
+    ticket_open._OPEN_COOLDOWNS._seen.clear()
     yield
     settings._cache.clear()
     ticket_open._IN_FLIGHT.clear()
+    ticket_open._OPEN_COOLDOWNS._seen.clear()
 
 
 def _seed(blob, guild_id=GUILD_ID):

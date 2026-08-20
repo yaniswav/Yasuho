@@ -18,6 +18,7 @@ classic usage message. It can never make a command less usable than before.
 
 from __future__ import annotations
 
+import datetime
 import logging
 import typing
 
@@ -185,6 +186,64 @@ def _build_fields(command):
 def _clip(text: str, limit: int) -> str:
     """Plain ASCII clip to a length limit (used for labels and previews)."""
     return text if len(text) <= limit else text[: max(0, limit - 3)] + "..."
+
+
+# --- the cooldown the failed attempt already paid ------------------------
+
+
+def _refund_one_token(ctx) -> bool:
+    """Hand back the ONE cooldown token the missing-argument attempt charged.
+
+    WHY ANYTHING IS OWED. discord.py bills a prefix command BEFORE it parses it
+    (``Command.prepare`` runs ``_prepare_cooldowns`` and only then
+    ``_parse_arguments``, unless the command sets ``cooldown_after_parsing``),
+    so by the time ``MissingRequiredArgument`` reaches the error handler the
+    token for that attempt is already gone. The rebuilt line is re-invoked
+    through the full ``bot.invoke`` - which is the point: every check, converter
+    and cooldown runs exactly as if the member had typed the whole thing - so it
+    charges a SECOND token for the SAME command. Without a refund, using the
+    form would cost double.
+
+    WHY NOT ``reset_cooldown``, which is what this used to call. That clears the
+    bucket outright, which does not merely repay one token, it returns the
+    member to a FULL bucket - and it does so on a path any member can drive at
+    will. On any command with ``rate >= 2`` that is an unlimited-use bypass:
+    invoke with an argument missing (charge 1), let the form clear the bucket
+    (back to ``rate``), let the rebuilt run charge 1 again, and the bucket never
+    reaches zero no matter how many times the cycle repeats. (``rate == 1``
+    happened to be safe: the second cycle's first attempt is refused by the
+    cooldown before parsing, so no form is ever offered.)
+
+    WHAT THIS DOES INSTEAD. It refunds exactly one token, and never more than
+    the bucket's own ceiling, so the completion flow costs precisely what typing
+    the command out in full would have: one token, once.
+
+    Both the clock and the key are taken the way ``Command._prepare_cooldowns``
+    takes them - the MESSAGE's timestamp (not wall time) and the CONTEXT (not
+    the message) - because the re-invocation about to run will use exactly
+    those. Reading either differently would credit a different bucket, or credit
+    this one inside a different window.
+    """
+    command = ctx.command
+    buckets = getattr(command, "_buckets", None)
+    if buckets is None or not buckets.valid:
+        return False
+    dt = ctx.message.edited_at or ctx.message.created_at
+    current = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
+    bucket = buckets.get_bucket(ctx, current)
+    if bucket is None:
+        return False
+    if bucket.get_tokens(current) >= bucket.rate:
+        # The bucket is already full, so this attempt was never charged: either
+        # the command parses before it bills (``cooldown_after_parsing``), or
+        # the window rolled over while the form was open. Refunding here would
+        # not repay a debt, it would mint a free token - which is the very hole
+        # this function exists to close.
+        return False
+    # tokens=-1 is a credit. It is safe only behind the guard above: on a full
+    # bucket the same call would push the count PAST the rate.
+    bucket.update_rate_limit(current, tokens=-1)
+    return True
 
 
 # --- the interactive view -------------------------------------------------
@@ -392,10 +451,22 @@ class _CompletionView(AuthorView):
         try:
             message.content = content
             new_ctx = await self.ctx.bot.get_context(message)
-            # The failed (missing-argument) attempt already charged any cooldown,
-            # so clear it before the rebuilt run to avoid a false CommandOnCooldown.
+            # The failed (missing-argument) attempt already charged one cooldown
+            # token, and the rebuilt run below charges another for the same
+            # command. Give exactly that one token back - never the whole bucket,
+            # which is a cooldown bypass any member can drive. See
+            # :func:`_refund_one_token`.
             if new_ctx.command is not None:
-                new_ctx.command.reset_cooldown(new_ctx)
+                try:
+                    _refund_one_token(new_ctx)
+                except Exception:
+                    # Degrade to "the member paid twice", never to "the bucket
+                    # was cleared" and never to "the command did not run".
+                    log.warning(
+                        "arg completion: cooldown refund failed for %s",
+                        self.command.qualified_name,
+                        exc_info=True,
+                    )
             await self.ctx.bot.invoke(new_ctx)
         except Exception:
             # THE COMMAND, NEVER THE COMMAND LINE. ``content`` is a rebuilt

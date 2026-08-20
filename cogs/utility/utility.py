@@ -107,6 +107,110 @@ class QuickPollLauncher(AuthorView):
 _SNIPE_TTL = 15 * 60
 _SNIPE_SWEEP_AT = 500
 
+# --------------------------------------------------------------------------
+# THE MARKER: message ids THIS BOT deleted, as {message_id: monotonic expiry}.
+#
+# Snipe used to re-publish ANY deletion, which handed every member an undo
+# button for the bot's own moderation: post an invite, let AutoMod delete it,
+# type ?snipe and the invite is back in the channel - now inside an embed the
+# bot itself posted. The same held for `?purge 1` and, worse, for the AniList
+# flow that deletes a member's message BECAUSE it contains an API token.
+#
+# MESSAGE_DELETE does not say who deleted a message, so the answer has to be
+# recorded on the way out. Every bot-side deletion in this process - AutoMod's
+# `message.delete()`, `purge`, `delete_after=`, the token cleanup, the music
+# controller's own tidying - funnels through exactly ONE call,
+# `HTTPClient.delete_message`, so wrapping that one call marks all of them for
+# one dict store apiece and couples this cog to no other cog. Re-running
+# AutoMod's own verdict here was the alternative and it is strictly worse: it
+# reads per-guild settings on every deletion, it cannot see a spam deletion at
+# all (that verdict is rate-based, not content-based), and it knows nothing
+# about the non-AutoMod deletions above.
+#
+# The window only has to outlive the round trip from our DELETE to the gateway
+# event it produces; two minutes is generous for that and keeps the map small.
+# --------------------------------------------------------------------------
+_BOT_DELETED_TTL = 120
+_BOT_DELETED_SWEEP_AT = 512
+_bot_deleted = {}
+
+
+def mark_bot_deleted(message_id, *, now=None):
+    """Record that this process is deleting ``message_id`` right now."""
+    now = time.monotonic() if now is None else now
+    if len(_bot_deleted) > _BOT_DELETED_SWEEP_AT:
+        for mid in [mid for mid, until in _bot_deleted.items() if until < now]:
+            del _bot_deleted[mid]
+    _bot_deleted[int(message_id)] = now + _BOT_DELETED_TTL
+
+
+def take_bot_deleted(message_id, *, now=None):
+    """True when this bot deleted that message. CONSUMES the marker.
+
+    Consuming it is what keeps the map bounded in the common case: every mark
+    is followed by the gateway event it predicts, so the entry is claimed rather
+    than left to age out. The TTL is only for the deletions that never land (a
+    403 on our side, a message somebody else removed first).
+    """
+    until = _bot_deleted.pop(int(message_id), None)
+    if until is None:
+        return False
+    return until >= (time.monotonic() if now is None else now)
+
+
+def install_bot_delete_marker(bot):
+    """Wrap the one HTTP call every bot-side message deletion goes through.
+
+    Returns the original callable so :meth:`Utility.cog_unload` can put it back,
+    or ``None`` when there was nothing to wrap (already installed, or the
+    library seam moved - which test_snipe_moderation pins so an upgrade breaks
+    loudly rather than quietly re-opening the hole).
+    """
+    http = getattr(bot, "http", None)
+    if http is None:
+        return None
+    if getattr(http, "_yasuho_snipe_marker", False):
+        return None
+    original = getattr(http, "delete_message", None)
+    if original is None:
+        log.warning(
+            "snipe: no delete_message seam on the HTTP client, so this bot's "
+            "own moderation deletions cannot be filtered out of ?snipe"
+        )
+        return None
+
+    async def delete_message(*args, **kwargs):
+        # MARK FIRST, delete second. The gateway can deliver MESSAGE_DELETE to
+        # on_message_delete before this await returns - the two run on the same
+        # loop and nothing orders them - so marking afterwards would race the
+        # very event the marker exists to filter.
+        try:
+            message_id = args[1] if len(args) > 1 else kwargs["message_id"]
+            mark_bot_deleted(message_id)
+        except Exception:
+            # A marker is a nicety; the deletion is not. Never let this stop it.
+            log.warning("snipe: could not mark a bot deletion", exc_info=True)
+        return await original(*args, **kwargs)
+
+    http.delete_message = delete_message
+    http._yasuho_snipe_marker = True
+    return original
+
+
+def remove_bot_delete_marker(bot, original):
+    """Put the library's own method back (cog reload / unload)."""
+    http = getattr(bot, "http", None)
+    if http is None or original is None:
+        return
+    try:
+        # ``original`` is the bound library method, so re-binding it as an
+        # instance attribute behaves identically to the class attribute it
+        # shadows; the flag is what stops a reload from wrapping twice.
+        http.delete_message = original
+        http._yasuho_snipe_marker = False
+    except Exception:
+        log.warning("snipe: could not restore the delete hook", exc_info=True)
+
 
 class Utility(commands.Cog):
     """Handy utility commands."""
@@ -115,6 +219,11 @@ class Utility(commands.Cog):
         self.bot = bot
         # channel_id -> (content, author, created_at, monotonic_expiry)
         self._snipes = {}
+        self._delete_marker = install_bot_delete_marker(bot)
+
+    def cog_unload(self):
+        remove_bot_delete_marker(self.bot, self._delete_marker)
+        self._delete_marker = None
 
     def _sweep_snipes(self, now):
         self._snipes = {
@@ -124,6 +233,13 @@ class Utility(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.author.bot or not message.content:
+            return
+        if take_bot_deleted(message.id):
+            # WE deleted it. In this codebase that only ever happens for a
+            # reason - a moderation action, or a message that had to go because
+            # of what it contained - so it must not be handed back to the room.
+            # Dropped at CACHE time, not at snipe time: a message the bot
+            # removed should not sit in memory waiting to be asked for.
             return
         now = time.monotonic()
         self._snipes[message.channel.id] = (
@@ -140,6 +256,11 @@ class Utility(commands.Cog):
     async def snipe(self, ctx):
         """Show the last deleted message in this channel."""
 
+        # Channel scoping is the cache key itself: a deletion is only ever
+        # stored under the channel it happened in and only ever read back under
+        # the channel the command was invoked in, so a member can never pull a
+        # message out of a room they are not currently standing in. Nothing
+        # crosses guilds, and threads are their own channel id.
         data = self._snipes.get(ctx.channel.id)
         if not data or data[3] < time.monotonic():
             self._snipes.pop(ctx.channel.id, None)
@@ -152,7 +273,10 @@ class Utility(commands.Cog):
             timestamp=when,
         )
         embed.set_author(name=str(author), icon_url=author.display_avatar.url)
-        await ctx.send(embed=embed)
+        # Belt and braces on top of "embeds do not resolve mentions": the body
+        # is somebody else's raw text being replayed by the bot, so nothing in
+        # it may ping, whatever Discord decides to do with embed content later.
+        await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
 
     # ------------------------------------------------------------------
     # /poll - the polls group.

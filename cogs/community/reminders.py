@@ -89,16 +89,77 @@ def _author_mention_only(author_id):
         return []
 
 
-class ReminderChannelGone(Exception):
-    """A reminder's target channel no longer exists (a 404 on fetch_channel).
+class ReminderUndeliverable(Exception):
+    """This reminder must not be delivered right now.
 
-    Raised rather than swallowed because the two delivery shapes have to answer
-    it differently: a one-shot is simply dropped (its row is already gone), while
-    a RECURRING one must also unwind the next occurrence its claim committed, or
-    the series would re-fire into the same dead channel for ever. Carrying that
-    distinction in the return value of ``call_timer`` would let a future caller
-    ignore it by accident; an exception cannot be ignored silently.
+    Raised rather than swallowed because the delivery shapes have to answer it
+    differently: a one-shot is simply dropped (its row is already gone), while a
+    RECURRING one has a next occurrence its claim already committed. Carrying
+    that distinction in the return value of ``call_timer`` would let a future
+    caller ignore it by accident; an exception cannot be ignored silently.
+
+    ``terminal`` says whether the SERIES dies with this firing. True means the
+    cause is permanent and nothing will ever make the next occurrence
+    deliverable (the channel is gone; the author left the guild), so the
+    committed next occurrence is unwound or the series re-fires for ever. False
+    means only THIS occurrence is undeliverable and the series is left alone -
+    the difference between "there is nobody to remind" and "not today".
+
+    ``reason`` is what the operator log says, so every subclass names one.
     """
+
+    reason = "it can no longer be delivered"
+    terminal = True
+
+
+class ReminderChannelGone(ReminderUndeliverable):
+    """A reminder's target channel no longer exists (a 404 on fetch_channel)."""
+
+    reason = "its channel no longer exists"
+
+
+class ReminderAudienceGone(ReminderUndeliverable):
+    """The author is no longer in the guild, so nobody is left to remind.
+
+    They left, or were kicked or banned. A reminder is a self-addressed message
+    that happens to be delivered in public, and it PINGS its author every time.
+    Left unchecked, a banned member keeps being announced and mentioned, on a
+    schedule, in a room they can no longer even open - which is a standing
+    notification pointed at somebody the server has already shown the door, and
+    the one party who could cancel it is the one party who can no longer reach
+    ``/reminders``.
+
+    TERMINAL, and only on proof: the sole thing that reaches this class is a
+    REST 404 on ``fetch_member`` (see :meth:`Reminder._audience_gone`).
+    """
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
+class ReminderChannelHidden(ReminderUndeliverable):
+    """The author cannot currently SEE the channel this reminder is posted in.
+
+    NOT terminal, and that is the whole point of the class existing. Losing
+    ``view_channel`` is not losing your membership: a moderator locking a channel
+    down for an afternoon, an ongoing raid lockdown, a role handed out at 9am and
+    back at 5pm all read identically at fire time. Ending the series there would
+    silently and permanently delete every recurring reminder everyone had in that
+    room, with no notice to anybody - a moderator's temporary decision destroying
+    members' data, discovered only by its absence.
+
+    So this firing is skipped and the series lives: when the channel opens again,
+    the next occurrence simply delivers. The one-shot case still loses its
+    delivery (its row was already claimed and deleted, which is the at-most-once
+    contract this whole path is built on), and the skip is logged either way.
+    """
+
+    terminal = False
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
 
 
 def timer_retry_delay(attempts):
@@ -825,16 +886,40 @@ class Reminder(commands.Cog):
             await self.call_timer(claimed)
         except asyncio.CancelledError:
             raise
-        except ReminderChannelGone:
+        except ReminderUndeliverable as undeliverable:
             # The claim IS the delete, so a one-shot is already dropped and there
             # is nothing more to do - exactly the behaviour this path always had.
             # A recurring one is different: the reschedule is committed by now,
-            # so leaving it would re-fire this series into a channel that cannot
-            # exist again, for ever, at up to 24 deliveries a day. Nothing else
-            # would ever stop it (the series re-inserts itself, and no other
+            # so a PERMANENT cause left alone would re-fire this series for ever,
+            # at up to 24 deliveries a day, into a channel that cannot exist
+            # again or at a member who is no longer there to receive it. Nothing
+            # else would ever stop it (the series re-inserts itself, and no other
             # timer kind survives this path), so it ends here.
-            if next_id is not None:
-                await self._end_recurring_series(next_id, claimed)
+            #
+            # A NON-terminal cause is the opposite instruction: skip this
+            # occurrence and leave the committed next one exactly where it is.
+            # Deleting a member's whole series because a moderator closed a
+            # channel this afternoon would be the bot destroying their data over
+            # a state that routinely reverts. See ReminderChannelHidden.
+            if next_id is not None and undeliverable.terminal:
+                await self._end_recurring_series(
+                    next_id, claimed, reason=undeliverable.reason
+                )
+            elif next_id is not None:
+                log.info(
+                    "Reminder series %s skipped one occurrence: %s",
+                    claimed["id"],
+                    undeliverable.reason,
+                )
+            else:
+                # A one-shot leaves no row behind to explain itself, so the drop
+                # is stated here. Ids and a reason only: PRIVACY.md says the bot
+                # does not store message content, and a log file is storage.
+                log.info(
+                    "Reminder %s dropped without delivering: %s",
+                    claimed["id"],
+                    undeliverable.reason,
+                )
         except Exception:
             # The row is already gone, so there is nothing to retry: at-most-once
             # deliberately drops this firing rather than risk a double-send.
@@ -845,7 +930,7 @@ class Reminder(commands.Cog):
                 claimed["event"],
             )
 
-    async def _end_recurring_series(self, next_id, claimed):
+    async def _end_recurring_series(self, next_id, claimed, *, reason):
         """Delete the next occurrence a claim already committed, ending a series.
 
         The unwind half of :meth:`_claim_and_reschedule`'s ordering: that method
@@ -868,10 +953,10 @@ class Reminder(commands.Cog):
             )
             return
         log.warning(
-            "Ended recurring reminder series (next timer %s, author %s): its "
-            "channel no longer exists",
+            "Ended recurring reminder series (next timer %s, author %s): %s",
             next_id,
             reminders_tool.parse_extra(claimed["extra"]).get("author_id"),
+            reason,
         )
 
     async def _claim_and_reschedule(self, row, repeat_seconds):
@@ -1060,6 +1145,68 @@ class Reminder(commands.Cog):
             return ""
         return "\n-# " + " ".join(parts)
 
+    async def _audience_gone(self, channel, extra):
+        """The exception this delivery must raise, or ``None`` to deliver.
+
+        Asked at FIRE time, every time, because everything it checks can change
+        between scheduling and delivery and a recurring reminder is scheduled
+        once and delivered for ever. Two ways to lose the right to be pinged in
+        a room, and they are NOT the same verdict:
+
+        * no longer a member of the guild -> :class:`ReminderAudienceGone`,
+          terminal: nobody will ever receive this series again;
+        * still a member, cannot currently see the channel ->
+          :class:`ReminderChannelHidden`, NOT terminal: this occurrence is
+          skipped and the series survives, because a channel being closed is
+          routinely temporary and a moderator must not be able to delete
+          everyone's recurring reminders by restricting a room for an afternoon.
+
+        DELIBERATELY CONSERVATIVE about what counts as proof. ``get_member``
+        answering ``None`` is not proof of absence (a cache can miss), so it is
+        confirmed with a REST ``fetch_member`` and only a 404 - the API stating
+        outright that this user is not in the guild - ends anything. Any other
+        HTTP failure returns ``None`` and the reminder is delivered: a network
+        blip must never be able to cancel somebody's series.
+
+        A DM has no guild and no channel overwrites - the recipient IS the
+        channel - so it is skipped whole, which also keeps every DM reminder on
+        exactly the path it took before this check existed.
+
+        Scale story (1000+ guilds). Zero queries and no REST call in the normal
+        case: the members intent is on, so ``get_member`` is a dict hit and
+        ``permissions_for`` is a local permission fold. The REST fallback only
+        runs on a genuine cache miss, at most once per DELIVERY - a schedule
+        bounded by MAX_PENDING_REMINDERS per member and paced in hours by the
+        one-hour recurrence floor - so it cannot burst.
+        """
+        guild = getattr(channel, "guild", None)
+        if guild is None:
+            return None
+        try:
+            author_id = int(extra.get("author_id"))
+        except (TypeError, ValueError):
+            # A corrupt id cannot be checked and cannot be mentioned either (see
+            # _author_mention_only); it must not cost the delivery on top.
+            return None
+
+        member = guild.get_member(author_id)
+        if member is None:
+            fetch = getattr(guild, "fetch_member", None)
+            if fetch is None:
+                return None
+            try:
+                member = await fetch(author_id)
+            except discord.NotFound:
+                return ReminderAudienceGone("is no longer a member of the server")
+            except discord.HTTPException:
+                return None
+        try:
+            if not channel.permissions_for(member).view_channel:
+                return ReminderChannelHidden("cannot currently see the channel")
+        except Exception:
+            log.debug("Could not read reminder channel permissions", exc_info=True)
+        return None
+
     async def call_timer(self, row):
         extra = reminders_tool.parse_extra(row["extra"])
         event = row["event"]
@@ -1075,6 +1222,15 @@ class Reminder(commands.Cog):
                         extra["channel_id"],
                     )
                     raise ReminderChannelGone(extra["channel_id"]) from None
+            undeliverable = await self._audience_gone(ch, extra)
+            if undeliverable is not None:
+                log.warning(
+                    "Not delivering timer %s: its author %s %s",
+                    row["id"],
+                    extra.get("author_id"),
+                    undeliverable.reason,
+                )
+                raise undeliverable
             await ch.send(
                 _("<@{author_id}>, {when}: {message}").format(
                     author_id=extra["author_id"],

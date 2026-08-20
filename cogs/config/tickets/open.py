@@ -59,6 +59,7 @@ import discord
 
 from . import guild_config, lifecycle, preflight, storage
 from tools import i18n, interactions
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.views import LocaleModal
@@ -94,6 +95,38 @@ PROVISIONAL_THREAD_NAME = "ticket"
 # the number of opens IN FLIGHT (every add has a matching discard in a finally),
 # so it is a handful of tuples at any instant even at 1000+ guilds.
 _IN_FLIGHT = set()
+
+# How long a member waits between two ticket OPENS in the same guild.
+#
+# The cap above bounds how many tickets a member may hold AT ONCE; it says
+# nothing about how fast they may cycle through them, and open-then-close is a
+# loop any member can run: every close renders the whole thread and UPLOADS it
+# as a file attachment to the staff log channel (lifecycle.perform_close). With
+# only a concurrency guard in front of it, that is an unbounded file-upload
+# primitive aimed at a channel the staff cannot moderate faster than a script
+# can fill it - and every cycle also costs the ticket-number sequence, a thread
+# creation and up to ten pages of history reads.
+#
+# Sixty seconds is picked to be invisible to a person and fatal to a loop. A
+# member who genuinely needs a second ticket right after closing one is asked
+# for one minute, once; a script drops from as fast as Discord's own rate limits
+# allow to sixty transcripts an hour per member per guild, which is a volume a
+# staff channel can survive and a human moderator can notice.
+#
+# Cooldowns (tools/cooldowns.py) is an in-memory debounce, not a durable
+# contract: a restart forgets it. That is the right strength here - the thing
+# being bounded is a burst, the cap is what bounds the standing state, and
+# nobody can make the bot restart on demand to clear it.
+OPEN_COOLDOWN_SECONDS = 60
+_OPEN_COOLDOWNS = Cooldowns(OPEN_COOLDOWN_SECONDS)
+
+
+def _cooldown_message():
+    """The refusal a rate-limited opener sees. It names the remedy: wait."""
+    return _(
+        "You have just opened a ticket. Please wait a moment before opening "
+        "another one."
+    )
 
 
 class TicketSubjectModal(LocaleModal):
@@ -160,6 +193,12 @@ class TicketOpenButton(discord.ui.Button):
                 interaction, _("Tickets are not set up here.")
             )
 
+        # Before the cap, because this one is free: an in-memory dict lookup
+        # against no database at all, so a member cycling the button pays a
+        # dict read per click instead of a COUNT per click.
+        if _OPEN_COOLDOWNS.is_active((guild.id, member.id)):
+            return await interactions.reply(interaction, _cooldown_message())
+
         # Courtesy pre-check: refuse a capped member before making them type a
         # subject. NOT the guard - that is the INSERT in storage.open_ticket,
         # which is what two simultaneous clicks actually run into.
@@ -220,6 +259,13 @@ async def _create_ticket(interaction, subject):
     blacklist = getattr(interaction.client, "blacklist", None) or ()
     if member.id in blacklist:
         return await interactions.reply(interaction, _("You cannot use this."))
+
+    # Re-checked here for the same reason as the blacklist, and it is the check
+    # that actually holds: a member can keep a modal open and submit it later,
+    # so a gate that only ran at the click could be walked straight past by
+    # queueing up modals. Free, and it costs a legitimate opener nothing.
+    if _OPEN_COOLDOWNS.is_active((guild.id, member.id)):
+        return await interactions.reply(interaction, _cooldown_message())
 
     await interactions.defer(
         interaction, ephemeral=True, thinking=True, surface="ticket-open"
@@ -302,6 +348,13 @@ async def _open_thread(interaction, guild, member, channel, subject, pool):
         # a ticket (no row), so it must not survive.
         await _discard_thread(thread)
         return await interactions.reply(interaction, _cap_message(cap))
+
+    # The clock starts HERE: on the committed row, not on the click. A member
+    # whose open was refused by the cap, failed on permissions, or died on a
+    # Discord error has not consumed anything and must not be made to wait -
+    # only an actual ticket, which is the only thing that leads to an actual
+    # transcript upload, arms the next member's wait.
+    _OPEN_COOLDOWNS.touch((guild.id, member.id))
 
     try:
         await thread.edit(name=f"{PROVISIONAL_THREAD_NAME}-{number}")
