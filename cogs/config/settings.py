@@ -3,7 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import db, settings
+from tools import db, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.interactions import notify_failure, refresh_layout
@@ -409,6 +409,18 @@ class Settings(commands.Cog):
     @discord.app_commands.describe(role="The role to grant new members automatically.")
     async def autorole_set(self, ctx, role: discord.Role):
         """Assign an auto-role to your guild."""
+
+        # An auto-role is a self-grant with extra steps: whatever lands here is
+        # handed to EVERY member who joins, so manage_guild alone would let its
+        # holder point it at any role below Yasuho and then rejoin (or invite an
+        # alt) to collect it. Same helper the reaction-role / button-role
+        # publishers use - the configurer must outrank the role AND Yasuho must
+        # be able to grant it at all, or on_member_join would 403 forever with
+        # nobody ever told.
+        err = modchecks.self_assignable_role_error(ctx.author, ctx.guild, role)
+        if err:
+            await ctx.send(err)
+            return
 
         # Under eager_cache_lock, for the reason spelled out in set_prefix.
         async with self.bot.eager_cache_lock:

@@ -224,6 +224,19 @@ class _MassGuild:
     def get_member(self, uid):
         return self._members.get(uid)
 
+    async def query_members(self, *, user_ids, limit=100, cache=True):
+        """Gateway confirmation that the uncached ids really are non-members.
+
+        massban resolves its bare ids before comparing ranks (a sparse member
+        cache cannot tell "absent" from "not seen yet"), so the fake must be able
+        to answer. Here every real member is already in ``_members``, so anything
+        that reaches this call is genuinely not in the guild: an empty reply is
+        the truthful answer, and it keeps the hackban cases below eligible.
+        See tests/cogs/test_moderation_uncached_target.py for the case where the
+        gateway DOES find someone the cache had never seen.
+        """
+        return []
+
     async def bulk_ban(self, users, *, reason=None, delete_message_seconds=0):
         ids = [u.id for u in users]
         self.bulk_ban_lots.append(ids)

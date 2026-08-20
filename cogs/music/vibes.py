@@ -284,10 +284,10 @@ def interleave_results(
 
 
 # ---------------------------------------------------------------------------
-# /seek target parsing
+# /music seek target parsing
 # ---------------------------------------------------------------------------
 #
-# The /seek command accepts several human spellings of a position and turns them
+# The /music seek command accepts several human spellings of a position and turns them
 # into a millisecond target. Parsing lives here, pure and discord-free, so every
 # accepted form and every rejected junk string is exercised without a voice
 # connection or a live node. The cog owns clamping the resolved target against
@@ -309,7 +309,7 @@ _SEEK_BARE_RE = re.compile(r"^\d+$")
 
 @dataclass(frozen=True)
 class SeekTarget:
-    """A parsed /seek request: a millisecond value plus whether it is relative.
+    """A parsed /music seek request: a millisecond value plus whether it is relative.
 
     ``relative`` targets carry a signed offset (``+30s`` -> ``+30000``) to add to
     the live playback position; absolute targets carry a non-negative position
@@ -322,7 +322,7 @@ class SeekTarget:
 
 
 def parse_seek_target(text: typing.Optional[str]) -> typing.Optional[SeekTarget]:
-    """Parse a /seek argument into a :class:`SeekTarget`, or None on junk.
+    """Parse a /music seek argument into a :class:`SeekTarget`, or None on junk.
 
     Accepted forms (outer whitespace tolerated throughout):
 

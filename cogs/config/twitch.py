@@ -5,7 +5,7 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, interactions, settings
+from tools import embed_creator, interactions, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
@@ -198,9 +198,21 @@ class TwitchRoleSelect(discord.ui.RoleSelect):
 
     async def callback(self, interaction):
         try:
-            self.panel.config["role_id"] = (
-                self.values[0].id if self.values else None
-            )
+            role = self.values[0] if self.values else None
+            if role is not None:
+                # The Live role is handed out by Yasuho to whoever goes live, so
+                # storing it unvalidated turns the panel (manage_guild) into a
+                # self-grant: point it at a staff role, start a stream, collect.
+                # Same shared helper as the reaction-role / autorole publishers -
+                # the configurer must outrank it and Yasuho must be able to
+                # assign it, or every go-live grant would 403 in silence.
+                err = modchecks.self_assignable_role_error(
+                    interaction.user, self.panel.guild, role
+                )
+                if err:
+                    await interaction.response.send_message(err, ephemeral=True)
+                    return
+            self.panel.config["role_id"] = role.id if role is not None else None
             await self.panel.cog.save(self.panel.guild.id, self.panel.config)
             await self.panel._rerender(interaction)
         except Exception:
@@ -835,6 +847,27 @@ class Twitch(commands.Cog):
         role = self._resolve_role(ctx.guild, config)
         if role is None:
             return await ctx.send(_("No Live streamer role is set up."))
+
+        # This DELETES a real role, and the role it deletes is whatever the
+        # config names - which may have been set long ago, or resolved from the
+        # legacy name. manage_guild is not a licence to destroy a role above the
+        # invoker's own head, so run the shared role-management guard (invoker
+        # outranks it, Yasuho outranks it) before touching Discord.
+        err = modchecks.role_hierarchy_error(ctx, role)
+        if err:
+            # The refusal covers the DELETION only, but this command also
+            # unlinks, so a flat "no" would leave someone unable to do either.
+            # Name the escape hatch: clearing the panel's role select writes
+            # role_id = None and touches no role, which is exactly the unlink
+            # half and is safe for anyone with manage_guild.
+            return await ctx.send(
+                err
+                + "\n\n"
+                + _(
+                    "To just unlink it without deleting it, open `/twitch` and "
+                    "clear the Live role select."
+                )
+            )
 
         try:
             await role.delete(reason="Twitch live role removed")

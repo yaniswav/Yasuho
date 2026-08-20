@@ -63,6 +63,30 @@ Everything is defensive: a malformed payload, a missing guild/channel, a DB
 blip or an executor exception is caught, logged without secrets, and recorded as
 a ``failed`` result; a single bad action can never take down the listener, and a
 dropped listen connection is re-established with backoff.
+
+KNOWN GAP - NO CONFIGURER RANK ON GUILD-SCOPED ROLE WRITES
+----------------------------------------------------------
+Every executor here that publishes a role a member can obtain (the reaction-role
+mapping, the button-panel buttons, the role-menu options) asks
+``modchecks.bot_can_assign_role``: can Yasuho hand this role out at all? What no
+executor here can ask is the other half the cog-side commands now ask - can the
+person who configured this outrank the role they are publishing
+(``modchecks.self_assignable_role_error``) - because a guild-scoped action row
+carries no actor: ``user_id`` is NULL for every kind outside :data:`_USER_KINDS`,
+by the DB CHECK. So the dashboard's authorization stops at its own
+``requireManageGuild`` gate, and a manage_guild user who is not an administrator
+can publish, from the web app, a role that ``/buttonrole`` or ``/reactionrole``
+would refuse them in Discord. ``autorole`` is the same shape from the other
+direction: the web app writes ``role_id`` straight into guild settings and
+``dashboard_sync`` only refreshes the cache, so ``/autorole set``'s configurer
+guard is dashboard-bypassable too.
+
+Closing this needs the ACTOR threaded through the action row (a nullable
+``actor_id`` alongside the scope columns, written by the dashboard, resolved to
+a Member here and fed to ``self_assignable_role_error`` whenever it resolves) -
+a schema + web-app change, not something an executor can do on its own. Recorded
+here rather than fixed so the asymmetry is a known, findable limitation instead
+of a silent one.
 """
 
 from __future__ import annotations
@@ -320,9 +344,12 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
     a bad emoji -- yields a short code, never a stack).
 
     On success it upserts ``reaction_roles`` (keyed on (message_id, emoji), so a
-    re-add just repoints the role) with the AUTHORITATIVE ``guild_id``, then live-
-    patches the ReactionRoles cog's in-memory ``cache`` -- CRUCIAL, because
-    ``on_raw_reaction_add`` reads that cache, not the table, on every reaction.
+    re-add just repoints the role) under the AUTHORITATIVE ``guild_id`` -- the
+    upsert only ever touches a row already owned by THIS guild, so a message id
+    claimed by another server yields ``message_claimed_elsewhere`` instead of a
+    silent cross-tenant overwrite -- then live-patches the ReactionRoles cog's
+    in-memory ``cache`` -- CRUCIAL, because ``on_raw_reaction_add`` reads that
+    cache, not the table, on every reaction.
     The emoji is stored WITHOUT U+FE0F to match an incoming reaction payload,
     exactly like the cog's own ``_persist_reaction_role``.
     """
@@ -364,6 +391,8 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
     # to a role Yasuho could never hand out: @everyone, an integration-managed
     # role, or one at/above her own top role. Checked BEFORE the reaction is
     # added so a refused mapping leaves no stray reaction on the message.
+    # Only the BOT half: see this module's "KNOWN GAP" note - a guild-scoped
+    # action row carries no actor, so the configurer half cannot be asked here.
     if not modchecks.bot_can_assign_role(role, guild):
         return {"ok": False, "error": "role_not_assignable"}
 
@@ -382,14 +411,26 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
 
     stored = emoji.replace("\uFE0F", "")
 
+    # The upsert is scoped to the AUTHORITATIVE guild_id the same way the
+    # remove executor's DELETE is: the primary key is (message_id, emoji) with
+    # no guild in it, so an unqualified DO UPDATE would let a manage-guild user
+    # of guild B repoint guild A's live mapping by naming a known message id.
+    # RETURNING is what distinguishes "written" from "that row is someone
+    # else's", and the cache patch below hangs off it - the cache key carries no
+    # guild either, so a blind patch would break the victim guild until restart.
     query = """
         INSERT INTO reaction_roles
         (message_id, emoji, role_id, guild_id)
         VALUES
         ($1, $2, $3, $4)
-        ON CONFLICT (message_id, emoji) DO UPDATE SET role_id = $3;
+        ON CONFLICT (message_id, emoji) DO UPDATE
+            SET role_id = EXCLUDED.role_id
+            WHERE reaction_roles.guild_id = EXCLUDED.guild_id
+        RETURNING role_id;
         """
-    await bot.db_pool.execute(query, message_id, stored, role_id, guild_id)
+    written = await bot.db_pool.fetchval(query, message_id, stored, role_id, guild_id)
+    if written is None:
+        return {"ok": False, "error": "message_claimed_elsewhere"}
 
     # Live-patch the cog cache so the very next reaction is honoured without a
     # restart (on_raw_reaction_add reads self.cache). No-op if the cog is absent.
@@ -534,7 +575,8 @@ async def _exec_button_panel_post(bot, guild_id, payload):
         # Mirror the /buttonrole builder's assignability guard (BuilderView.
         # _can_assign) so a dashboard write can't persist a button for a
         # dead/dangerous role: @everyone, an integration-managed role, or one
-        # at/above our own top role.
+        # at/above our own top role. Only the BOT half - see this module's
+        # "KNOWN GAP" note for why the configurer half is unavailable here.
         if not modchecks.bot_can_assign_role(role, guild):
             return {"ok": False, "error": "role_not_assignable"}
         if role_id in seen_roles:
@@ -767,7 +809,8 @@ async def _exec_role_menu_post(bot, guild_id, payload):
     # unassignable option would 403 on every pick with the failure swallowed at
     # the grant site, so the member just sees nothing happen. A crafted payload
     # naming only foreign/gone/unassignable roles is rejected wholesale rather
-    # than posting a menu that can do nothing.
+    # than posting a menu that can do nothing. Only the BOT half - see this
+    # module's "KNOWN GAP" note for why the configurer half is unavailable here.
     kept = []
     for o in options:
         role = guild.get_role(o["role_id"])

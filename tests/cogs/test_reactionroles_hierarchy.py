@@ -179,12 +179,13 @@ async def test_add_allows_a_role_below_both(fake_pool):
     mod = FakeMember(7, top_position=9)
     ctx = FakeContext(mod, guild)
     cog = _cog(fake_pool)
+    fake_pool.fetchval_return = 888  # the upsert wrote this guild's row
 
     await cog.reactionrole_add(cog, ctx, "777", "\U0001F3AE", FakeRole(888, position=5))
 
     assert len(fake_pool.calls) == 1
     method, query, args = fake_pool.calls[0]
-    assert method == "execute" and "INSERT INTO reaction_roles" in query
+    assert method == "fetchval" and "INSERT INTO reaction_roles" in query
     assert args == (777, "\U0001F3AE", 888, 100)
     assert cog.cache[(777, "\U0001F3AE")] == 888
     assert guild.channel.message.reactions == ["\U0001F3AE"]
@@ -196,6 +197,7 @@ async def test_add_allows_the_guild_owner_to_pick_any_role_under_the_bot(fake_po
     owner = FakeMember(7, top_position=1)
     ctx = FakeContext(owner, guild)
     cog = _cog(fake_pool)
+    fake_pool.fetchval_return = 888
 
     await cog.reactionrole_add(cog, ctx, "777", "\U0001F3AE", FakeRole(888, position=9))
 
@@ -279,6 +281,7 @@ async def test_modal_allows_a_role_below_both(
     modal = _modal(cog, guild, FakeRole(888, position=4))
     interaction = make_interaction()
     interaction.user = FakeMember(7, top_position=9)
+    fake_pool.fetchval_return = 888
 
     await modal.on_submit(interaction)
 

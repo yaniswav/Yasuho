@@ -116,7 +116,13 @@ async def test_userinfo_fetches_the_user_once_and_hands_it_to_the_archiver(
     monkeypatch,
 ):
     """The end-to-end count, at the seam that pays it: ONE fetch_user per
-    ?userinfo, whose result feeds both the card and the archive."""
+    ?userinfo, whose result feeds both the card and the archive.
+
+    The body moved under the /info group (``Info.info_user``) when the command
+    tree was folded to stay under Discord's 100-command cap; ``?userinfo`` now
+    reaches it through a prefix-only shim. This still drives the one body both
+    surfaces share.
+    """
     from cogs.utility import info as info_module
 
     fetched_ids = []
@@ -148,7 +154,7 @@ async def test_userinfo_fetches_the_user_once_and_hands_it_to_the_archiver(
         info_module, "UserInfoView", lambda member, banner_url=None: object()
     )
 
-    await info_module.Info.userinfo.callback(cog, _Ctx(), member)
+    await info_module.Info.info_user.callback(cog, _Ctx(), member)
 
     assert fetched_ids == [99]  # exactly one REST call, not two
     assert captured == [(99, full)]

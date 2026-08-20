@@ -34,6 +34,7 @@ import discord
 from discord.ext import commands
 
 from . import reward_rules as level_rewards
+from tools import modchecks
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
@@ -391,6 +392,20 @@ class LevelRewards(commands.Cog):
         if role.is_default():
             await ctx.send(_("You can't use @everyone as a level reward."))
             return
+        # manage_guild opens /levelconfig, but it proves nothing about the
+        # configurer's own position: without this, an admin-adjacent mod could
+        # attach ANY role below Yasuho to level 1 and have the bot hand it to
+        # them automatically on their next message. A level reward is a role
+        # Yasuho grants to members on her own, so it asks the SAME question as a
+        # reaction role or an autorole - the configurer must outrank it and
+        # Yasuho must be able to grant it at all - and gets the same shared
+        # helper. Refusing an ungrantable role here also replaces the old "I can
+        # add it, but that role is above me" warning: that stored a rule which
+        # then 403'd forever, silently, every time somebody hit the level.
+        err = modchecks.self_assignable_role_error(ctx.author, ctx.guild, role)
+        if err:
+            await ctx.send(err)
+            return
         if level < 1:
             await ctx.send(_("The level must be 1 or higher."))
             return
@@ -452,20 +467,15 @@ class LevelRewards(commands.Cog):
                 )
             return
 
-        lines = [
-            _("Added a level reward: reach level **{level}** to receive "
-              "{role}.").format(level=level, role=role.mention)
-        ]
-        if not _assignable(role, ctx.guild):
-            lines.append(
-                _(
-                    "I can add it, but that role is above me - move my role "
-                    "up so I can actually assign it."
-                )
-            )
+        # No "...but that role is above me" caveat any more: self_assignable_
+        # role_error refused that rule up front, so anything reaching here is a
+        # role Yasuho can actually hand out.
         embed = discord.Embed(
             title=_("Level reward added"),
-            description="\n".join(lines),
+            description=_(
+                "Added a level reward: reach level **{level}** to receive "
+                "{role}."
+            ).format(level=level, role=role.mention),
             colour=random_colour(),
         )
         await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())

@@ -144,7 +144,7 @@ def _live_session(bot, guild_id):
       session);
     * the player still holds a voice channel (``player.channel`` - the guard
       ``Music._snapshot`` uses; a torn-down player has none);
-    * something is actually loaded (``player.current`` - the guard ``/seek``
+    * something is actually loaded (``player.current`` - the guard ``/music seek``
       uses, and the SAME condition under which ``Music._snapshot`` persists a
       ``music_state`` row at all). This is what keeps the two sides in step:
       the dashboard's music panel is rendered FROM that row, so with no current

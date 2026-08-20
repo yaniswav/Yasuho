@@ -349,6 +349,14 @@ class ModLog(commands.Cog):
         return key in events
 
     # -- commands -------------------------------------------------------
+    # SECURITY: every subcommand below repeats guild_only + has_permissions.
+    # That is NOT redundant with the group's own checks. discord.py forces
+    # ``HybridGroup.invoke_without_command = True``, so Group.invoke takes the
+    # ``early_invoke = False`` branch and never calls the group's prepare() -
+    # the group's checks run ONLY on a bare ``?modlog``. The slash path is worse
+    # still: HybridAppCommand._check_can_run consults ``self.wrapped.checks``,
+    # i.e. the SUBCOMMAND's checks alone. A check that lives only on the parent
+    # gates neither path for a subcommand.
     @commands.hybrid_group(name="modlog")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -369,6 +377,8 @@ class ModLog(commands.Cog):
         view.message = await ctx.send(view=view)
 
     @modlog.command(name="set")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     @discord.app_commands.describe(channel="The channel to send moderation logs to.")
     async def modlog_set(self, ctx, channel: discord.TextChannel):
         """Set the channel where moderation logs are sent."""
@@ -384,6 +394,8 @@ class ModLog(commands.Cog):
         await ctx.send(embed=embed)
 
     @modlog.command(name="disable")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     async def modlog_disable(self, ctx):
         """Disable moderation logging for this guild."""
 
@@ -396,6 +408,8 @@ class ModLog(commands.Cog):
         await ctx.send(embed=embed)
 
     @modlog.command(name="status")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     async def modlog_status(self, ctx):
         """Show the current moderation-log configuration."""
 

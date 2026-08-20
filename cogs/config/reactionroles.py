@@ -112,6 +112,12 @@ class AddReactionRoleModal(LocaleModal):
             log.exception("Reaction-role add modal failed")
             await notify_failure(interaction)
             return
+        if embed is None:
+            await interaction.followup.send(
+                _("That message already has a reaction role in another server."),
+                ephemeral=True,
+            )
+            return
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
@@ -164,7 +170,21 @@ class ReactionRoles(commands.Cog):
         """Best-effort react + upsert the mapping and refresh the cache.
 
         Shared by the classic text command and the guided modal so both paths
-        behave identically. Returns the confirmation embed to send.
+        behave identically. Returns the confirmation embed to send, or None when
+        the mapping belongs to ANOTHER guild (see below).
+
+        The table's primary key is (message_id, emoji) with guild_id as a plain
+        column, so an unqualified DO UPDATE repoints whatever row that key finds
+        - INCLUDING one owned by a different server. Message ids are guessable
+        (they are printed by ``reactionrole list``, quoted in links, and simply
+        ordered snowflakes), so a mod with manage_roles on their OWN guild could
+        aim at a known id and silently re-point a live mapping in someone else's.
+        The ``WHERE reaction_roles.guild_id = EXCLUDED.guild_id`` guard turns
+        that into a no-op, and ``RETURNING`` is what tells us it happened: the
+        in-memory cache MUST NOT be written on a refused upsert either, since its
+        key carries no guild and ``on_raw_reaction_add`` reads the cache, not the
+        table - a blind write would break the victim guild until the next restart
+        even though its row survived.
         """
 
         try:
@@ -180,12 +200,17 @@ class ReactionRoles(commands.Cog):
             (message_id, emoji, role_id, guild_id)
             VALUES
             ($1, $2, $3, $4)
-            ON CONFLICT (message_id, emoji) DO UPDATE SET role_id = $3;
+            ON CONFLICT (message_id, emoji) DO UPDATE
+                SET role_id = EXCLUDED.role_id
+                WHERE reaction_roles.guild_id = EXCLUDED.guild_id
+            RETURNING role_id;
             """
 
-        await self.bot.db_pool.execute(
+        written = await self.bot.db_pool.fetchval(
             query, mid, stored_emoji, role.id, guild.id
         )
+        if written is None:
+            return None
 
         self.cache[(mid, stored_emoji)] = role.id
 
@@ -265,6 +290,12 @@ class ReactionRoles(commands.Cog):
             embed = await self._persist_reaction_role(
                 ctx.guild, ctx.channel, mid, emoji, role
             )
+
+        if embed is None:
+            await ctx.send(
+                _("That message already has a reaction role in another server.")
+            )
+            return
 
         await ctx.send(embed=embed)
 

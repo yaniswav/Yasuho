@@ -65,8 +65,22 @@ def _duration():
     )
 
 
+async def _hierarchy_ok(*_args, **_kwargs):
+    """Stand in for the hierarchy guard, which tempban now AWAITS.
+
+    ``discord.User`` targets are resolved against the guild before their rank is
+    compared (a sparse member cache cannot tell "absent" from "not seen yet"), so
+    the guard is a coroutine. These tests are about tempban's scheduler
+    reliability, not hierarchy - that lives in test_moderation_hierarchy.py and
+    test_moderation_uncached_target.py.
+    """
+    return None
+
+
 async def test_tempban_preflights_scheduler_before_ban(fake_pool, monkeypatch):
-    monkeypatch.setattr(moderation.modchecks, "hierarchy_error", lambda *_: None)
+    monkeypatch.setattr(
+        moderation.modchecks, "hierarchy_error_resolved", _hierarchy_ok
+    )
     guild = _Guild()
     ctx = _Context(guild)
     cog = moderation.Moderation(_Bot(fake_pool, None))
@@ -80,7 +94,9 @@ async def test_tempban_preflights_scheduler_before_ban(fake_pool, monkeypatch):
 
 
 async def test_tempban_rolls_back_when_timer_insert_fails(fake_pool, monkeypatch):
-    monkeypatch.setattr(moderation.modchecks, "hierarchy_error", lambda *_: None)
+    monkeypatch.setattr(
+        moderation.modchecks, "hierarchy_error_resolved", _hierarchy_ok
+    )
     guild = _Guild()
     reminder = _Reminder(RuntimeError("database unavailable"))
     ctx = _Context(guild)
@@ -98,7 +114,9 @@ async def test_tempban_rolls_back_when_timer_insert_fails(fake_pool, monkeypatch
 async def test_tempban_persists_timer_before_reporting_success(
     fake_pool, monkeypatch
 ):
-    monkeypatch.setattr(moderation.modchecks, "hierarchy_error", lambda *_: None)
+    monkeypatch.setattr(
+        moderation.modchecks, "hierarchy_error_resolved", _hierarchy_ok
+    )
     fake_pool.fetchrow_return = {"case_number": 4}
     guild = _Guild()
     reminder = _Reminder()

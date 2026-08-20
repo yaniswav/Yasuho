@@ -165,9 +165,14 @@ class ActionsPool:
         raise AssertionError("unexpected fetch: %r" % query)  # pragma: no cover
 
     async def fetchval(self, query, *args):
-        # Only reached via settings.get_guild inside resolve_guild_locale; an
-        # unconfigured guild reads no locale row.
         self.calls.append(("fetchval", query, args))
+        if "INSERT INTO reaction_roles" in query:
+            # The guild-scoped upsert RETURNS the role it wrote (None would mean
+            # the row belongs to another guild); args are
+            # (message_id, emoji, role_id, guild_id).
+            return args[2]
+        # Otherwise only reached via settings.get_guild inside
+        # resolve_guild_locale; an unconfigured guild reads no locale row.
         return None
 
 
@@ -738,17 +743,30 @@ class RRPool:
     belongs to another guild, or is already gone). A fake that always answered
     "DELETE 1" made the cross-tenant cache-eviction bug untestable, which is
     exactly how it shipped: the executor discarded the status entirely.
+
+    ``upsert_result`` is what the guild-scoped UPSERT returns: the written
+    role_id, or None when the (message_id, emoji) row is owned by ANOTHER guild
+    and the ``ON CONFLICT ... WHERE guild_id = EXCLUDED.guild_id`` branch was
+    skipped. Same lesson as ``delete_status``: a fake that always reported
+    success made the cross-tenant overwrite untestable.
     """
 
-    def __init__(self, delete_status="DELETE 1"):
+    def __init__(self, delete_status="DELETE 1", upsert_result=888):
         self.executed = []
         self.delete_status = delete_status
+        self.upsert_result = upsert_result
 
     async def execute(self, query, *args):
         self.executed.append((query, args))
         if "DELETE FROM reaction_roles" in query:
             return self.delete_status
         return "INSERT 0 1"
+
+    async def fetchval(self, query, *args):
+        self.executed.append((query, args))
+        if "INSERT INTO reaction_roles" in query:
+            return self.upsert_result
+        return None
 
 
 class FakeMessage:

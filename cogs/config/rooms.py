@@ -838,6 +838,11 @@ class TemporaryRooms(commands.Cog):
 
     @autoroom.command(name="list", aliases=["ls"])
     @commands.guild_only()
+    # manage_channels repeated from the group on purpose: a hybrid group's own
+    # checks never run for a subcommand (invoke_without_command is forced True,
+    # and the slash path only reads the subcommand's own checks), so without
+    # this any member could enumerate the guild's autoroom hub configuration.
+    @commands.has_permissions(manage_channels=True)
     async def list_autorooms(self, ctx):
         """List the configured autoroom hubs in this server."""
         hubs = await self._load_hubs(ctx.guild.id)

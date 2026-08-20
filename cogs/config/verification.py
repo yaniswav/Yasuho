@@ -15,7 +15,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import i18n, settings
+from tools import i18n, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -169,12 +169,17 @@ class Verification(commands.Cog):
         message: str = None,
     ):
         """Post a Verify button that grants a role (one click, one way)."""
-        if role >= ctx.guild.me.top_role or role.managed:
-            return await ctx.send(
-                _("I can't assign {role} - it must be below my highest role and not managed.").format(
-                    role=role.mention
-                )
-            )
+        # The old check only asked whether YASUHO could assign the role, never
+        # whether the CONFIGURER outranks it - so manage_roles alone turned
+        # /verify setup into "grant myself any role below the bot": publish the
+        # gate on an admin role, click your own button, done. The shared
+        # self-assignable helper asks both halves at once (configurer outranks
+        # the role, and Yasuho can actually hand it out), which is exactly what a
+        # verification gate is: a one-click self-grant.
+        err = modchecks.self_assignable_role_error(ctx.author, ctx.guild, role)
+        if err:
+            return await ctx.send(err)
+
         channel = channel or ctx.channel
         if not channel.permissions_for(ctx.guild.me).send_messages:
             return await ctx.send(

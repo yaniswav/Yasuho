@@ -1737,11 +1737,11 @@ class QueueView(discord.ui.LayoutView):
 
     async def _clear(self, interaction: discord.Interaction) -> None:
         try:
-            # Destructive: DJ-gated to match /clearqueue and the controller
+            # Destructive: DJ-gated to match /music clearqueue and the controller
             # controls (Prev/Next/Add stay open to the room; only the purge locks).
             if not await _ensure_can_control(self.cog, self.player, interaction):
                 return
-            # Same semantics as the /clearqueue command: count both lanes, purge
+            # Same semantics as the /music clearqueue command: count both lanes, purge
             # both lanes, persist, then confirm - reusing its exact wordings.
             count = queued_track_count(self.player.queue)
             if count == 0:

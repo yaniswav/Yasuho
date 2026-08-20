@@ -319,7 +319,10 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        err = modchecks.hierarchy_error(ctx, target)
+        # ``discord.User`` means the target may not be in the member cache
+        # (chunk_guilds_at_startup=False), and a cache miss is NOT proof they
+        # left: resolve first, refuse if their rank stays unknown.
+        err = await modchecks.hierarchy_error_resolved(ctx, target)
         if err:
             return await ctx.send(err, delete_after=10)
 
@@ -428,7 +431,10 @@ class Moderation(commands.Cog):
         if reason is None:
             reason = "No reason specified"
 
-        err = modchecks.hierarchy_error(ctx, target)
+        # Resolve before deciding: on a ``discord.User`` an uncached member used
+        # to fall through the guard entirely, so a mod could ban staff above them
+        # simply because nobody had spoken to that staffer recently.
+        err = await modchecks.hierarchy_error_resolved(ctx, target)
         if err:
             return await ctx.send(err, delete_after=10)
 
@@ -536,7 +542,9 @@ class Moderation(commands.Cog):
     ):
         """Temporarily bans a member for the given duration."""
 
-        err = modchecks.hierarchy_error(ctx, member)
+        # ``discord.User`` again: resolve the target so an uncached staffer is
+        # not silently exempt from the rank comparison.
+        err = await modchecks.hierarchy_error_resolved(ctx, member)
         if err:
             return await ctx.send(err)
 
@@ -667,12 +675,23 @@ class Moderation(commands.Cog):
         # Discord evaluates a bulk_ban's hierarchy against the BOT's top role, not
         # the invoker's, so a Ban-Members moderator could otherwise wipe staff
         # ranked above them. Gate each target the same way the single-target
-        # commands do. Non-members (hackbans by id) have no role to compare and
-        # stay eligible - hierarchy_error degrades to None for them.
+        # commands do - but massban's targets are BARE IDS, so the member cache
+        # (sparse: chunk_guilds_at_startup=False) is asked about people it has
+        # every reason not to know. Resolve the whole lot up front instead: two
+        # gateway round-trips at the 200-id cap, versus 200 REST fetches. Ids
+        # proven absent from the guild stay eligible (that is what a hackban IS);
+        # ids we could NOT resolve are skipped, never banned on a guess.
+        resolved, unresolved = await modchecks.resolve_guild_members(
+            ctx.guild, [obj.id for obj in users]
+        )
         eligible = []
         skipped = 0
         for obj in users:
-            if modchecks.hierarchy_error(ctx, obj) is not None:
+            if obj.id in unresolved:
+                skipped += 1
+                continue
+            member = resolved.get(obj.id)
+            if modchecks.hierarchy_error_with_member(ctx, obj, member) is not None:
                 skipped += 1
                 continue
             eligible.append(obj)

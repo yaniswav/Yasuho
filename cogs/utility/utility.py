@@ -154,9 +154,43 @@ class Utility(commands.Cog):
         embed.set_author(name=str(author), icon_url=author.display_avatar.url)
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    # ------------------------------------------------------------------
+    # /poll - the polls group.
+    #
+    # This is the cog that actually broke: Discord caps a bot at 100 GLOBAL
+    # top-level application commands, the tree had reached 101, and whichever
+    # cog loaded last died with CommandLimitReached. It was this one, so /poll,
+    # /quickpoll, /snipe and /translate were all missing from production.
+    # Pairing the two poll commands under one group frees a slot; the bulk of
+    # the headroom comes from the folds in the sibling cogs.
+    #
+    # HybridGroup always forces invoke_without_command, and an unrecognised
+    # first word rewinds the parser, so `?poll Is this a good idea?` still
+    # creates the yes/no poll it always did. The one edge case is a question
+    # whose FIRST word is exactly a subcommand name (`?poll multi ...`), which
+    # now routes to that subcommand - the same trade every group in this bot
+    # already makes (see /playlist).
+    # ------------------------------------------------------------------
+    @commands.hybrid_group(name="poll")
+    async def poll(self, ctx, *, question: str = None):
+        """Create a poll: a quick yes/no, or a multiple-choice one."""
+
+        if ctx.invoked_subcommand is not None:
+            return
+        if question is None:
+            return await ctx.send(
+                _(
+                    "Create a poll with one of these:\n"
+                    "- `{p}poll <question>` - a yes/no poll\n"
+                    "- `{p}poll multi question | option 1 | option 2` - "
+                    "multiple choice (no options opens a form)"
+                ).format(p=ctx.clean_prefix)
+            )
+        await self.poll_yesno(ctx, question=question)
+
+    @poll.command(name="yesno")
     @discord.app_commands.describe(question="The yes/no question to ask.")
-    async def poll(self, ctx, *, question: str):
+    async def poll_yesno(self, ctx, *, question: str):
         """Create a native yes/no poll (runs for 24 hours)."""
 
         question = question.strip()
@@ -177,11 +211,11 @@ class Utility(commands.Cog):
             log.exception("Failed to send native poll")
             await ctx.send(_("I could not create that poll here."))
 
-    @commands.hybrid_command()
+    @poll.command(name="multi")
     @discord.app_commands.describe(
         args="question | option 1 | option 2 ... (blank opens a form)."
     )
-    async def quickpoll(self, ctx, *, args: str = None):
+    async def poll_multi(self, ctx, *, args: str = None):
         """Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."""
 
         # Interactive path: no args opens the modal (slash) or offers a button
@@ -206,6 +240,16 @@ class Utility(commands.Cog):
         except (discord.HTTPException, ValueError):
             log.exception("Failed to send native quickpoll")
             await ctx.send(_("I could not create that poll here."))
+
+    # Prefix compatibility shim for the command folded into /poll. Prefix-only
+    # (commands.command, never hybrid), so it registers no application command
+    # and costs none of the 100 global slash slots; `?quickpoll ...` behaves
+    # exactly as it always has, and ?help still lists it.
+    @commands.command(name="quickpoll")
+    async def quickpoll_prefix(self, ctx, *, args: str = None):
+        """Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."""
+
+        await self.poll_multi(ctx, args=args)
 
     @commands.hybrid_command(aliases=["tr"])
     @discord.app_commands.describe(text="The text to translate.")

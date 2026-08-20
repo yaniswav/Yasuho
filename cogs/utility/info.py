@@ -70,10 +70,36 @@ class Info(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="userinfo", aliases=["whois", "ui"])
+    # ------------------------------------------------------------------
+    # /info - the one informational group.
+    #
+    # Discord caps a bot at 100 GLOBAL top-level application commands. This
+    # tree had grown to 101, so whichever cog happened to load last died with
+    # CommandLimitReached - in production that was cogs/utility/utility.py, and
+    # /poll, /quickpoll, /snipe and /translate silently vanished. A GROUP costs
+    # exactly ONE slot however many subcommands it holds, so folding these five
+    # standalone commands in here hands four slots back without dropping a
+    # single feature.
+    #
+    # Prefix users lose nothing: every old name and every old alias survives as
+    # a root PREFIX-ONLY command in the "prefix compatibility" block at the
+    # bottom of this cog. commands.command never registers an application
+    # command, so those shims cost zero slots.
+    # ------------------------------------------------------------------
+    @commands.hybrid_group(name="info")
+    async def info(self, ctx):
+        """Bot, server, member and latency info."""
+
+        # HybridGroup always forces invoke_without_command, so a bare `?info`
+        # lands here. `info` used to be an alias of ?botinfo, so keep showing
+        # exactly the bot card a prefix user has always got from `?info`.
+        if ctx.invoked_subcommand is None:
+            await self.info_bot(ctx)
+
+    @info.command(name="user")
     @commands.guild_only()
     @discord.app_commands.describe(member="Whose info to show (defaults to you).")
-    async def userinfo(self, ctx, member: discord.Member = None):
+    async def info_user(self, ctx, member: discord.Member = None):
         """Show information about a member of the guild."""
 
         member = member or ctx.author
@@ -98,9 +124,9 @@ class Info(commands.Cog):
         # content, and suppress pings since the TextDisplay resolves mentions.
         await ctx.send(view=view, allowed_mentions=discord.AllowedMentions.none())
 
-    @commands.hybrid_command(name="serverinfo", aliases=["guildinfo", "si"])
+    @info.command(name="server")
     @commands.guild_only()
-    async def serverinfo(self, ctx):
+    async def info_server(self, ctx):
         """Show information about the current guild."""
 
         guild = ctx.guild
@@ -136,9 +162,9 @@ class Info(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="avatar", aliases=["av", "pfp"])
+    @info.command(name="avatar")
     @discord.app_commands.describe(member="Whose avatar to show (defaults to you).")
-    async def avatar(self, ctx, member: discord.Member = None):
+    async def info_avatar(self, ctx, member: discord.Member = None):
         """Show the avatar of a member."""
 
         member = member or ctx.author
@@ -151,8 +177,8 @@ class Info(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="ping")
-    async def ping(self, ctx):
+    @info.command(name="ping")
+    async def info_ping(self, ctx):
         """Show the bot's websocket latency."""
 
         embed = discord.Embed(
@@ -165,8 +191,8 @@ class Info(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="botinfo", aliases=["about", "info"])
-    async def botinfo(self, ctx):
+    @info.command(name="bot")
+    async def info_bot(self, ctx):
         """Show information about the bot."""
 
         total_users = sum(
@@ -186,6 +212,57 @@ class Info(commands.Cog):
         )
 
         await ctx.send(embed=embed)
+
+    # ------------------------------------------------------------------
+    # Prefix compatibility shims for the commands folded into /info.
+    #
+    # These are commands.command (NOT hybrid): they exist only on the text
+    # side, so they register no application command and cost none of the 100
+    # global slash slots. Each one keeps the exact name, aliases, checks and
+    # short_doc the standalone command had, so `?userinfo`, `?whois`, `?ui`,
+    # `?serverinfo`, `?guildinfo`, `?si`, `?avatar`, `?av`, `?pfp`, `?ping`,
+    # `?botinfo` and `?about` all behave exactly as before, and ?help still
+    # lists them one per line.
+    #
+    # The one alias that could not survive as an alias is `?info`: it is now
+    # the group's own name. It still reaches the bot card, via the group
+    # callback above, so nothing a prefix user types changes meaning.
+    #
+    # Each shim delegates through Command.__call__ (discord.py's documented
+    # "call the callback directly" API), so the bodies live in exactly one
+    # place - the subcommand above.
+    # ------------------------------------------------------------------
+    @commands.command(name="userinfo", aliases=["whois", "ui"])
+    @commands.guild_only()
+    async def userinfo_prefix(self, ctx, member: discord.Member = None):
+        """Show information about a member of the guild."""
+
+        await self.info_user(ctx, member)
+
+    @commands.command(name="serverinfo", aliases=["guildinfo", "si"])
+    @commands.guild_only()
+    async def serverinfo_prefix(self, ctx):
+        """Show information about the current guild."""
+
+        await self.info_server(ctx)
+
+    @commands.command(name="avatar", aliases=["av", "pfp"])
+    async def avatar_prefix(self, ctx, member: discord.Member = None):
+        """Show the avatar of a member."""
+
+        await self.info_avatar(ctx, member)
+
+    @commands.command(name="ping")
+    async def ping_prefix(self, ctx):
+        """Show the bot's websocket latency."""
+
+        await self.info_ping(ctx)
+
+    @commands.command(name="botinfo", aliases=["about"])
+    async def botinfo_prefix(self, ctx):
+        """Show information about the bot."""
+
+        await self.info_bot(ctx)
 
 
 async def setup(bot):

@@ -34,7 +34,7 @@ JSON into bounded, immutable :class:`SearchResults`. The default query prefix is
 ``spsearch`` (the only source that returns all four result types); a Spotify
 outage (``/loadsearch`` errors) degrades to a tracks-only ``ytsearch`` result via
 the plain loader, with the other tabs showing a friendly unavailable note, so a
-Spotify hiccup never kills ``/search`` outright.
+Spotify hiccup never kills ``/music search`` outright.
 
 Scale. Every structure here is per-invocation and bounded: LavaSearch returns at
 most twenty entries per type, and the parser clamps to ``MAX_PER_TAB`` regardless,
@@ -42,7 +42,7 @@ so a :class:`SearchResults` holds at most eighty small frozen ``Entry`` records
 and a browser view holds one Container with four buttons and one <=20-option
 select. There is no shared/global state, no cache, no background task and no
 timer beyond each view's finite ``timeout`` (after which it disables and is
-garbage-collected). ``/search`` is one ``/loadsearch`` round trip (plus at most
+garbage-collected). ``/music search`` is one ``/loadsearch`` round trip (plus at most
 one fallback ``/loadtracks`` on a Spotify outage); the ``/play`` picker adds, for
 a NON-URL slash ``/play`` only, a single in-process-cached preference read and
 one ``/loadtracks`` it would have made anyway. All the option/label/prefix/pick

@@ -123,7 +123,7 @@ CONTROLLER_REFIRE_WINDOW = 30.0
 # only ever logs when a counter is nonzero (see effects.stats_are_nonzero).
 QUOTA_LOG_INTERVAL = 600.0
 
-# Slash choices for /filter, built once from the effect catalog. Text (prefix)
+# Slash choices for /music filter, built once from the effect catalog. Text (prefix)
 # callers pass the raw key/label and are resolved with effects.resolve_preset.
 EFFECT_CHOICES = [
     app_commands.Choice(name=f"{preset.emoji} {preset.label}", value=preset.key)
@@ -136,7 +136,7 @@ def format_clock(total_ms: int) -> str:
 
     Hours only appear once the value crosses an hour, so a short track reads
     ``03:42`` while a long one reads ``1:05:09``. Negative input is floored to
-    zero. Pure - shared by :func:`format_duration` and the /seek confirmation so
+    zero. Pure - shared by :func:`format_duration` and the /music seek confirmation so
     a track's length and a seek target always render identically.
     """
     total_seconds = max(total_ms, 0) // 1000
@@ -2149,7 +2149,50 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
     # ------------------------------------------------------------------
     # Commands
+    #
+    # /music - the secondary-controls group.
+    #
+    # Discord caps a bot at 100 GLOBAL top-level application commands. This
+    # tree had grown to 101, so whichever cog happened to load last died with
+    # CommandLimitReached - in production that was cogs/utility/utility.py, and
+    # /poll, /quickpoll, /snipe and /translate were simply absent. A GROUP
+    # costs exactly ONE slot no matter how many subcommands it holds, and this
+    # cog owned by far the most top-level commands, so folding the ten
+    # secondary controls under /music hands NINE slots back with nothing
+    # removed. The now-playing controller already exposes most of them as
+    # buttons, so the day-to-day cost is close to zero.
+    #
+    # The daily drivers stay top-level and are NOT to be nested: play, queue,
+    # skip, stop, pause, resume, nowplaying, volume.
+    #
+    # Every folded command keeps its prefix form: the "prefix compatibility"
+    # block right after the group re-declares each old name and alias as a root
+    # PREFIX-ONLY command, which registers no application command and so costs
+    # no slot.
     # ------------------------------------------------------------------
+
+    @commands.hybrid_group(name="music")
+    @commands.guild_only()
+    async def music(self, ctx: commands.Context) -> None:
+        """Secondary music controls: seek, loop, shuffle, lyrics, effects..."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(
+                _(
+                    "Secondary music controls (the everyday ones - play, queue, "
+                    "skip, pause, resume, stop, volume, nowplaying - stay on "
+                    "their own):\n"
+                    "- `{p}music search <query>` - browse tracks and albums\n"
+                    "- `{p}music seek <position>` - jump within the track\n"
+                    "- `{p}music previous` - replay the previous track\n"
+                    "- `{p}music shuffle` - shuffle the queue\n"
+                    "- `{p}music loop <mode>` - loop track, all, or off\n"
+                    "- `{p}music clearqueue` - empty the upcoming queue\n"
+                    "- `{p}music played` - what this session has played\n"
+                    "- `{p}music lyrics` - lyrics for the current track\n"
+                    "- `{p}music filter <preset>` - apply an audio effect\n"
+                    "- `{p}music disconnect` - leave the voice channel"
+                ).format(p=ctx.clean_prefix)
+            )
 
     @commands.hybrid_command(name="play", aliases=["p"])
     @commands.guild_only()
@@ -2178,7 +2221,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await ctx.defer()
         await self._play_query(ctx, query)
 
-    @commands.hybrid_command(name="search")
+    @music.command(name="search")
     @commands.guild_only()
     @commands.cooldown(1, 5, commands.BucketType.user)
     @app_commands.describe(
@@ -2874,7 +2917,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     async def _play_previous(
         self, player: Player
     ) -> typing.Optional[sonolink.models.Playable]:
-        """Step back to the previous track; the shared /previous + Back seam.
+        """Step back to the previous track; the shared /music previous + Back seam.
 
         The single engine implementation both the command and the controller
         button call. Returns the now-playing previous track on success, or None
@@ -2915,7 +2958,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await self._snapshot(player)
         return track
 
-    @commands.hybrid_command(name="previous", aliases=["back"])
+    @music.command(name="previous")
     @commands.guild_only()
     async def previous(self, ctx: commands.Context) -> None:
         """Replay the previous track and requeue the current one."""
@@ -2940,7 +2983,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             )
         )
 
-    @commands.hybrid_command(name="seek")
+    @music.command(name="seek")
     @commands.guild_only()
     @app_commands.describe(
         position="A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / -15."
@@ -2999,7 +3042,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await player.set_volume(value)
         await ctx.send(_("Set the volume to {volume}%.").format(volume=value))
 
-    @commands.hybrid_command(name="shuffle", aliases=["mix"])
+    @music.command(name="shuffle")
     @commands.guild_only()
     async def shuffle(self, ctx: commands.Context) -> None:
         """Shuffle the upcoming tracks in the queue."""
@@ -3012,7 +3055,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         player.queue.shuffle()
         await ctx.send(_("Shuffled the queue."))
 
-    @commands.hybrid_command(name="clearqueue", aliases=["cq", "clearq"])
+    @music.command(name="clearqueue")
     @commands.guild_only()
     async def clearqueue(self, ctx: commands.Context) -> None:
         """Clear the upcoming queue while the current track keeps playing."""
@@ -3034,7 +3077,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             _("Cleared {count} track(s) from the queue.").format(count=count)
         )
 
-    @commands.hybrid_command(name="loop")
+    @music.command(name="loop")
     @commands.guild_only()
     @app_commands.describe(mode="One of: track, all, off.")
     async def loop(
@@ -3074,7 +3117,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     # NOT named "history": the moderation cog's /cases already claims that as an
     # alias, and a prefix user typing ?history must keep reaching the moderation
     # case log they have always reached (test_command_tree_hygiene enforces it).
-    @commands.hybrid_command(name="played", aliases=["hist", "recent"])
+    @music.command(name="played")
     @commands.guild_only()
     async def played(self, ctx: commands.Context) -> None:
         """Show what this session has already played, newest first."""
@@ -3108,7 +3151,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if ctx.interaction is not None:
             await ctx.send(_("Here is the player."), ephemeral=True)
 
-    @commands.hybrid_command(name="disconnect", aliases=["dc", "leave"])
+    @music.command(name="disconnect")
     @commands.guild_only()
     async def disconnect(self, ctx: commands.Context) -> None:
         """Disconnect the player from the voice channel."""
@@ -3149,7 +3192,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     ) -> str:
         """Gate, apply and confirm an effect change; return a translated line.
 
-        The single seam behind both /filter and the controller's ephemeral
+        The single seam behind both /music filter and the controller's ephemeral
         picker. Same-voice is enforced by the callers. Here: resolve the preset,
         spend the guild effects quota (unless the actor is the DJ or a music
         manager, or the change is Off), apply through the effects seam (which owns
@@ -3195,7 +3238,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             emoji=preset.emoji, label=preset.label
         )
 
-    @commands.hybrid_command(name="filter", aliases=["fx", "effect", "effects", "filters"])
+    @music.command(name="filter")
     @commands.guild_only()
     @app_commands.describe(preset="The audio effect to apply, or Off to clear.")
     @app_commands.choices(preset=EFFECT_CHOICES)
@@ -3236,7 +3279,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         )
         return lyrics.START_OK if session is not None else lyrics.START_CEILING_FULL
 
-    @commands.hybrid_command(name="lyrics", aliases=["ly"])
+    @music.command(name="lyrics")
     @commands.guild_only()
     async def lyrics_command(self, ctx: commands.Context) -> None:
         """Show the lyrics for the current track, with an optional live follow."""
@@ -3292,6 +3335,90 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await ctx.send(
             view=lyrics.StaticLyricsCard(self, player, result), ephemeral=True
         )
+
+    # ------------------------------------------------------------------
+    # Prefix compatibility shims for the commands folded into /music.
+    #
+    # These are commands.command (NOT hybrid): they exist only on the text
+    # side, so they register no application command and cost none of the 100
+    # global slash slots that forced the fold. Each shim re-declares the exact
+    # name, aliases, checks and short_doc of the command it replaces, so every
+    # prefix invocation anyone has in muscle memory keeps working unchanged -
+    # ?search, ?previous, ?back, ?seek, ?shuffle, ?mix, ?clearqueue, ?cq,
+    # ?clearq, ?loop, ?played, ?hist, ?recent, ?disconnect, ?dc, ?leave,
+    # ?filter, ?fx, ?effect, ?effects, ?filters, ?lyrics, ?ly - and ?help still
+    # lists them one per line.
+    #
+    # Each shim delegates through Command.__call__ (discord.py's documented
+    # "call the callback directly" API), so every body stays in exactly one
+    # place: the subcommand above. Cooldowns are declared on the shim as well
+    # as on the subcommand where the original carried one - the two are
+    # separate commands with separate buckets, so each surface needs its own.
+    # ------------------------------------------------------------------
+    @commands.command(name="search")
+    @commands.guild_only()
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def search_prefix(self, ctx: commands.Context, *, query: str) -> None:
+        """Browse tracks, albums, artists and playlists, and queue any of them."""
+        await self.search_cmd(ctx, query=query)
+
+    @commands.command(name="previous", aliases=["back"])
+    @commands.guild_only()
+    async def previous_prefix(self, ctx: commands.Context) -> None:
+        """Replay the previous track and requeue the current one."""
+        await self.previous(ctx)
+
+    @commands.command(name="seek")
+    @commands.guild_only()
+    async def seek_prefix(self, ctx: commands.Context, *, position: str) -> None:
+        """Jump to a position in the current track."""
+        await self.seek(ctx, position=position)
+
+    @commands.command(name="shuffle", aliases=["mix"])
+    @commands.guild_only()
+    async def shuffle_prefix(self, ctx: commands.Context) -> None:
+        """Shuffle the upcoming tracks in the queue."""
+        await self.shuffle(ctx)
+
+    @commands.command(name="clearqueue", aliases=["cq", "clearq"])
+    @commands.guild_only()
+    async def clearqueue_prefix(self, ctx: commands.Context) -> None:
+        """Clear the upcoming queue while the current track keeps playing."""
+        await self.clearqueue(ctx)
+
+    @commands.command(name="loop")
+    @commands.guild_only()
+    async def loop_prefix(
+        self,
+        ctx: commands.Context,
+        mode: typing.Literal["track", "all", "off"] = "track",
+    ) -> None:
+        """Set the loop mode for the queue."""
+        await self.loop(ctx, mode)
+
+    @commands.command(name="played", aliases=["hist", "recent"])
+    @commands.guild_only()
+    async def played_prefix(self, ctx: commands.Context) -> None:
+        """Show what this session has already played, newest first."""
+        await self.played(ctx)
+
+    @commands.command(name="disconnect", aliases=["dc", "leave"])
+    @commands.guild_only()
+    async def disconnect_prefix(self, ctx: commands.Context) -> None:
+        """Disconnect the player from the voice channel."""
+        await self.disconnect(ctx)
+
+    @commands.command(name="filter", aliases=["fx", "effect", "effects", "filters"])
+    @commands.guild_only()
+    async def filter_prefix(self, ctx: commands.Context, *, preset: str) -> None:
+        """Apply an audio effect preset to the current playback (Off to clear)."""
+        await self.filter_command(ctx, preset=preset)
+
+    @commands.command(name="lyrics", aliases=["ly"])
+    @commands.guild_only()
+    async def lyrics_prefix(self, ctx: commands.Context) -> None:
+        """Show the lyrics for the current track, with an optional live follow."""
+        await self.lyrics_command(ctx)
 
     # ------------------------------------------------------------------
     # Favourites / playlist commands

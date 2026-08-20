@@ -3,6 +3,7 @@ import datetime
 import discord
 from discord.ext import commands
 
+from .account import AccountMixin
 from .helpers import SEASONS, _clean_description, _current_season
 from .queries import CHARACTER_QUERY, STUDIO_QUERY
 from tools.formats import random_colour
@@ -119,7 +120,30 @@ class StudioCard(discord.ui.LayoutView):
 
 
 class LookupMixin:
-    """AniList lookup commands (no auth required)."""
+    """AniList lookup commands (no auth required).
+
+    ``/anime`` and ``/manga`` stay top-level: they are the two people reach for
+    constantly and the package's whole reason to exist. The five secondary
+    lookups (trending, popular, seasonal, character, studio) were folded into
+    the existing ``/anilist`` group, freeing five of the global slash slots.
+
+    Why: Discord caps a bot at 100 GLOBAL top-level application commands. This
+    tree had reached 101, so whichever cog happened to load last died with
+    CommandLimitReached and its commands vanished from production. A group
+    costs exactly ONE slot no matter how many subcommands it holds, and
+    ``/anilist`` already existed - these five cost nothing at all now.
+
+    This mixin is part of the SAME cog as ``AccountMixin`` (see
+    cogs/anilist/__init__.py: both are bases of ``AniList``), so parenting
+    subcommands onto ``AccountMixin.anilist`` is legal - a hybrid subcommand
+    may not live in a different cog from its group parent. It is also exactly
+    how airing.py, schedule.py and chapters.py already attach theirs.
+
+    Every folded command keeps its prefix form: ``?trending``, ``?popular``,
+    ``?seasonal``, ``?character`` and ``?studio`` are root prefix-only shims at
+    the bottom of this mixin, and a prefix-only command registers no
+    application command, so they cost no slots.
+    """
 
     @commands.hybrid_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -137,9 +161,9 @@ class LookupMixin:
 
         await self._media_lookup(ctx, search, "MANGA")
 
-    @commands.hybrid_command()
+    @AccountMixin.anilist.command(name="trending")
     @commands.cooldown(1, 10, commands.BucketType.user)
-    async def trending(self, ctx):
+    async def anilist_trending(self, ctx):
         """Browse the anime trending on AniList right now."""
 
         await self._browse(
@@ -149,9 +173,9 @@ class LookupMixin:
             _("Trending anime"),
         )
 
-    @commands.hybrid_command()
+    @AccountMixin.anilist.command(name="popular")
     @commands.cooldown(1, 10, commands.BucketType.user)
-    async def popular(self, ctx):
+    async def anilist_popular(self, ctx):
         """Browse the most popular anime on AniList."""
 
         await self._browse(
@@ -161,13 +185,13 @@ class LookupMixin:
             _("Popular anime"),
         )
 
-    @commands.hybrid_command()
+    @AccountMixin.anilist.command(name="seasonal")
     @commands.cooldown(1, 10, commands.BucketType.user)
     @discord.app_commands.describe(
         season="WINTER, SPRING, SUMMER, or FALL (defaults to the current season).",
         year="The year to browse (defaults to the current year).",
     )
-    async def seasonal(self, ctx, season: str = None, year: int = None):
+    async def anilist_seasonal(self, ctx, season: str = None, year: int = None):
         """Browse anime from a season (defaults to the current season)."""
 
         if season:
@@ -190,10 +214,10 @@ class LookupMixin:
         if view is not None:
             view.message = message
 
-    @commands.hybrid_command()
+    @AccountMixin.anilist.command(name="character")
     @commands.cooldown(1, 5, commands.BucketType.user)
     @discord.app_commands.describe(search="The character name to look up.")
-    async def character(self, ctx, *, search: str):
+    async def anilist_character(self, ctx, *, search: str):
         """Look up a character on AniList."""
 
         async with ctx.typing():
@@ -204,10 +228,10 @@ class LookupMixin:
 
             await ctx.send(view=CharacterCard(char))
 
-    @commands.hybrid_command()
+    @AccountMixin.anilist.command(name="studio")
     @commands.cooldown(1, 5, commands.BucketType.user)
     @discord.app_commands.describe(search="The studio name to look up.")
-    async def studio(self, ctx, *, search: str):
+    async def anilist_studio(self, ctx, *, search: str):
         """Look up an animation studio on AniList."""
 
         async with ctx.typing():
@@ -217,3 +241,52 @@ class LookupMixin:
                 return await ctx.send(_("No studio found."))
 
             await ctx.send(view=StudioCard(studio))
+
+    # ------------------------------------------------------------------
+    # Prefix compatibility shims for the commands folded into /anilist.
+    #
+    # commands.command (NOT hybrid): text-side only, so they register no
+    # application command and cost none of the 100 global slash slots. Each
+    # keeps the exact name, cooldown and short_doc of the standalone command
+    # it replaces, so `?trending`, `?popular`, `?seasonal`, `?character` and
+    # `?studio` are unchanged and ?help still lists them one per line.
+    #
+    # Each shim delegates through Command.__call__ (discord.py's documented
+    # "call the callback directly" API) so the bodies live in one place only.
+    # The cooldown is declared on both surfaces: they are separate commands
+    # with separate buckets, so each needs its own.
+    # ------------------------------------------------------------------
+    @commands.command(name="trending")
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def trending_prefix(self, ctx):
+        """Browse the anime trending on AniList right now."""
+
+        await self.anilist_trending(ctx)
+
+    @commands.command(name="popular")
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def popular_prefix(self, ctx):
+        """Browse the most popular anime on AniList."""
+
+        await self.anilist_popular(ctx)
+
+    @commands.command(name="seasonal")
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def seasonal_prefix(self, ctx, season: str = None, year: int = None):
+        """Browse anime from a season (defaults to the current season)."""
+
+        await self.anilist_seasonal(ctx, season, year)
+
+    @commands.command(name="character")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def character_prefix(self, ctx, *, search: str):
+        """Look up a character on AniList."""
+
+        await self.anilist_character(ctx, search=search)
+
+    @commands.command(name="studio")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def studio_prefix(self, ctx, *, search: str):
+        """Look up an animation studio on AniList."""
+
+        await self.anilist_studio(ctx, search=search)

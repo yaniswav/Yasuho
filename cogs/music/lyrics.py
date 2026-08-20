@@ -5,7 +5,7 @@ node's ``lyrics`` plugin (DuncteBot java-timed-lyrics, reported as ``lyrics`` in
 ``/v4/info``) and presenting them two ways:
 
 * a **static card** - the full lyrics, paginated when long, sent ephemerally by
-  ``/lyrics``. Every track that has any lyrics gets this.
+  ``/music lyrics``. Every track that has any lyrics gets this.
 * a **synced session** - for tracks whose lyrics are *timed*, a single public
   message in the music channel that edits itself to follow playback, the current
   line in bold with a little context around it. Plain-text-only tracks get the
@@ -655,7 +655,7 @@ def _track_header(track: typing.Any) -> str:
 
 
 class StaticLyricsCard(discord.ui.LayoutView):
-    """The ephemeral ``/lyrics`` card: the full lyrics, paginated, with controls.
+    """The ephemeral ``/music lyrics`` card: the full lyrics, paginated, with controls.
 
     A single accent container in the music house style: a heading, the track,
     the current page of lyrics, an attribution / page footer, and an action row -
@@ -917,7 +917,7 @@ class SyncedLyricsSession:
     scheduler bounds edits to at most one per ``min_edit_gap`` and re-checks at
     least every ``max_tick_sleep`` so a seek or pause never strands it; a paused
     player is detected (its position is frozen) and skipped without an edit. A
-    :meth:`nudge` from the cog's /seek wakes the loop early for a prompt resync.
+    :meth:`nudge` from the cog's /music seek wakes the loop early for a prompt resync.
     It stops itself when the track ends, changes or the player disconnects;
     external stops (the Stop button, a track change, the cog's teardown) go
     through :meth:`stop`, which is idempotent.
@@ -989,7 +989,7 @@ class SyncedLyricsSession:
     def nudge(self) -> None:
         """Wake the loop early so the next tick resyncs at once (best-effort).
 
-        Called by the cog after a /seek: the position jumped, so re-picking the
+        Called by the cog after a /music seek: the position jumped, so re-picking the
         current line right away lands the bold line on the new spot instead of
         waiting out the current sleep. A no-op when the loop is not running (the
         loop clears the flag on its next wake), so it is always safe to call.

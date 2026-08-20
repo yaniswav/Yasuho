@@ -45,14 +45,31 @@ class _FakeRole:
 
 
 class _FakeGuild:
-    def __init__(self, guild_id, roles=(), bot_top_position=100):
+    def __init__(self, guild_id, roles=(), bot_top_position=100, owner_id=999):
         self.id = guild_id
         self.name = f"guild-{guild_id}"
+        self.owner_id = owner_id
         self._roles = {r.id: r for r in roles}
         self.me = types.SimpleNamespace(top_role=_FakeRole(0, position=bot_top_position))
 
     def get_role(self, role_id):
         return self._roles.get(role_id)
+
+
+def _configurer(member_id=5, top_position=90, administrator=False):
+    """The admin running /levelconfig, as the shared hierarchy helper reads them.
+
+    ``cmd_add`` now refuses a reward role the CONFIGURER does not outrank (else
+    manage_guild alone would let its holder attach any role below Yasuho to a
+    level and collect it automatically), so every cmd_add ctx needs an author
+    with a position. The escalation and refusal cases live in
+    tests/cogs/test_config_role_hierarchy.py.
+    """
+    return types.SimpleNamespace(
+        id=member_id,
+        top_role=_FakeRole(1, position=top_position),
+        guild_permissions=types.SimpleNamespace(administrator=administrator),
+    )
 
 
 class _FakeMember:
@@ -290,6 +307,7 @@ class _ModeCtx:
     def __init__(self, guild_id=1):
         self.sends = []
         self.guild = types.SimpleNamespace(id=guild_id)
+        self.author = _configurer()
 
     async def send(self, *args, **kwargs):
         self.sends.append((args, kwargs))

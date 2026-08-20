@@ -57,13 +57,47 @@ class WeatherView(discord.ui.LayoutView):
 
 
 class Meta(commands.Cog):
-    """Miscellaneous informational commands (NASA APOD, weather)."""
+    """Miscellaneous informational commands (NASA APOD, weather).
+
+    Slash surface: these two live under SearchWeb's ``/lookup`` group as
+    ``/lookup apod`` and ``/lookup weather``. Discord caps a bot at 100 GLOBAL
+    top-level application commands and this tree had reached 101 (a cog was
+    dying at load with CommandLimitReached), so every standalone command that
+    could reasonably be grouped was folded; a group costs one slot no matter
+    how many subcommands it holds.
+
+    A hybrid SUBCOMMAND cannot live in a different cog from its group parent,
+    and these bodies belong here rather than in the web-search cog, so the two
+    ``/lookup`` subcommands are thin wrappers over the ``cmd_*`` methods below.
+    That is the same cross-cog seam ``/levelconfig xp`` uses for LevelAdmin:
+    the parent looks the sibling up by name with ``bot.get_cog``, guarded so a
+    missing cog degrades to a friendly refusal rather than a crash.
+
+    The prefix side stays exactly where it was: ``?apod`` and ``?weather`` are
+    still root commands here, only prefix-only now (``commands.command``), so
+    they cost none of the 100 slots.
+    """
 
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command()
+    @commands.command(name="apod")
     async def apod(self, ctx):
+        """
+        Show NASA's Astronomy Picture of the Day.
+        """
+
+        await self.cmd_apod(ctx)
+
+    @commands.command(name="weather")
+    @commands.guild_only()
+    async def weather(self, ctx, city: str):
+        """Show the current weather for a given city."""
+
+        await self.cmd_weather(ctx, city)
+
+    # -- command bodies (also reached as /lookup apod and /lookup weather) --
+    async def cmd_apod(self, ctx):
         """
         Show NASA's Astronomy Picture of the Day.
         """
@@ -117,10 +151,7 @@ class Meta(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
-    @commands.guild_only()
-    @discord.app_commands.describe(city="The city to look up.")
-    async def weather(self, ctx, city: str):
+    async def cmd_weather(self, ctx, city: str):
         """Show the current weather for a given city."""
         async with ctx.typing():
             try:

@@ -19,8 +19,11 @@ What is pinned here:
 * a season's podium renders every place in rank order;
 * the seasons panel refuses to turn the announce toggle ON unless
   announce_mode is "fixed" with a channel set, but always allows turning it
-  OFF; the champion-role write is refused for a role the bot could not
-  actually manage; the clear button always succeeds; and the panel is
+  OFF; the champion-role write asks BOTH halves of the publish question
+  (``modchecks.self_assignable_role_error``) - it is refused for a role Yasuho
+  could not actually manage AND for one at or above the configurer's own top
+  role, since the panel is only Manage Server and the champion role is one she
+  hands out for you; the clear button always succeeds; and the panel is
   author-gated and locale-resolving like every other AuthorLayoutView.
 """
 
@@ -61,14 +64,33 @@ class _FakeRole(discord.Object):
 
 
 class _FakeGuild:
-    def __init__(self, guild_id=1, name="guild", roles=(), bot_top_position=100):
+    def __init__(
+        self, guild_id=1, name="guild", roles=(), bot_top_position=100, owner_id=999
+    ):
         self.id = guild_id
         self.name = name
+        self.owner_id = owner_id
         self._roles = {r.id: r for r in roles}
         self.me = types.SimpleNamespace(top_role=_FakeRole(0, position=bot_top_position))
 
     def get_role(self, role_id):
         return self._roles.get(role_id)
+
+
+def _configurer(interaction, top_position=500, administrator=False):
+    """Give the interaction's user the MEMBER shape the hierarchy check needs.
+
+    The shared ``make_interaction`` fixture hands back a bare user (id +
+    mention). ``self_assignable_role_error`` asks the configurer half of the
+    question, so it reads ``top_role`` and ``guild_permissions.administrator``.
+    Defaults put the configurer comfortably above an ordinary role and below
+    the bot, which is the boring, allowed case.
+    """
+    interaction.user.top_role = _FakeRole(1, position=top_position)
+    interaction.user.guild_permissions = types.SimpleNamespace(
+        administrator=administrator
+    )
+    return interaction
 
 
 class _Ctx:
@@ -378,7 +400,7 @@ async def test_role_above_the_bot_is_refused(fake_pool, make_interaction):
     panel = SeasonsPanel(cog, guild, 1, _panel_state())
     panel.message = types.SimpleNamespace()
 
-    await panel.set_champion_role(make_interaction(), role)
+    await panel.set_champion_role(_configurer(make_interaction(), 9999), role)
 
     assert panel.state["champion_role_id"] is None
     assert not any(c[0] == "execute" for c in fake_pool.calls)
@@ -391,9 +413,42 @@ async def test_role_managed_is_refused(fake_pool, make_interaction):
     panel = SeasonsPanel(cog, guild, 1, _panel_state())
     panel.message = types.SimpleNamespace()
 
-    await panel.set_champion_role(make_interaction(), role)
+    await panel.set_champion_role(_configurer(make_interaction()), role)
 
     assert panel.state["champion_role_id"] is None
+
+
+async def test_role_at_or_above_the_configurer_is_refused(fake_pool, make_interaction):
+    """The self-grant primitive: the panel only asks for Manage Server, so a
+    non-admin moderator naming a role above their own head - but below Yasuho,
+    so she can happily hand it out - would collect it at the next rollover."""
+    cog = _make_cog(fake_pool)
+    guild = _FakeGuild(5, bot_top_position=100)
+    role = _FakeRole(50, position=80)  # below the bot, ABOVE the configurer
+    panel = SeasonsPanel(cog, guild, 1, _panel_state())
+    panel.message = types.SimpleNamespace()
+
+    interaction = _configurer(make_interaction(), top_position=20)
+    await panel.set_champion_role(interaction, role)
+
+    assert panel.state["champion_role_id"] is None
+    assert not any(c[0] == "execute" for c in fake_pool.calls)
+    assert interaction.sent or interaction.edits or interaction.followups
+
+
+async def test_administrator_may_name_a_role_above_their_own(fake_pool, make_interaction):
+    """The hierarchy half exempts admins and the owner, exactly as everywhere
+    else - so the guard does not lock a legitimate admin out of their own panel."""
+    cog = _make_cog(fake_pool)
+    guild = _FakeGuild(5, bot_top_position=100)
+    role = _FakeRole(50, position=80)
+    panel = SeasonsPanel(cog, guild, 1, _panel_state())
+    panel.message = types.SimpleNamespace()
+
+    interaction = _configurer(make_interaction(), top_position=20, administrator=True)
+    await panel.set_champion_role(interaction, role)
+
+    assert panel.state["champion_role_id"] == 50
 
 
 async def test_assignable_role_is_accepted(fake_pool, make_interaction):
@@ -403,7 +458,7 @@ async def test_assignable_role_is_accepted(fake_pool, make_interaction):
     panel = SeasonsPanel(cog, guild, 1, _panel_state())
     panel.message = types.SimpleNamespace()
 
-    await panel.set_champion_role(make_interaction(), role)
+    await panel.set_champion_role(_configurer(make_interaction()), role)
 
     assert panel.state["champion_role_id"] == 50
     write = next(c for c in fake_pool.calls if c[0] == "execute")

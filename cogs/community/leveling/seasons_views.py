@@ -28,10 +28,9 @@ import logging
 import discord
 
 from . import engine as leveling
-from tools import interactions
+from tools import interactions, modchecks
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.modchecks import bot_can_assign_role
 from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
@@ -341,10 +340,15 @@ class SeasonsPanel(AuthorLayoutView):
     directly - this module owns no query, only the layout and the callbacks.
 
     The champion-role write is guarded by :func:`tools.modchecks.
-    bot_can_assign_role` (the same hierarchy check the engine itself applies
-    at role-move time, see Seasons._apply_champion_role): picking a role the
-    bot could never actually hand out is refused here, before it is ever
-    written, rather than silently accepted and failing a month later.
+    self_assignable_role_error`, the same both-halves check the reaction-role
+    and button-role publishers use. The bot half is the one the engine itself
+    applies at role-move time (see Seasons._apply_champion_role): picking a
+    role Yasuho could never actually hand out is refused here, before it is
+    ever written, rather than silently accepted and failing a month later. The
+    configurer half is what stops this panel from being a self-grant
+    primitive: the panel only asks for Manage Server, so without it a non-admin
+    moderator could name any role below Yasuho - including one above their own
+    head - and collect it at the next rollover.
 
     The announce toggle enforces the S1 rule: turning it ON while
     announce_mode is not "fixed" (or the fixed channel is unset) would create
@@ -436,15 +440,18 @@ class SeasonsPanel(AuthorLayoutView):
 
     async def set_champion_role(self, interaction, role):
         try:
-            if not bot_can_assign_role(role, self.guild):
-                return await interactions.notify_failure(
-                    interaction,
-                    _(
-                        "I can't manage {role} (it's above my top role, "
-                        "managed by an integration, or @everyone). Pick "
-                        "another role."
-                    ).format(role=role.mention),
-                )
+            # Both halves of the publish question, not just the bot's. The
+            # champion role is a role Yasuho GRANTS to a member every rollover
+            # (Seasons._apply_champion_role), so pointing this panel at a role
+            # above the configurer's own head but below Yasuho is the same
+            # self-grant primitive /autorole set and /levelconfig rewards add
+            # were just fixed for - and this callback, unlike the automatic
+            # grant sites, has the actor right there in interaction.user.
+            err = modchecks.self_assignable_role_error(
+                interaction.user, self.guild, role
+            )
+            if err:
+                return await interactions.notify_failure(interaction, err)
             await self.cog.set_champion_role(self.guild.id, role.id)
             self.state["champion_role_id"] = role.id
             self._build()

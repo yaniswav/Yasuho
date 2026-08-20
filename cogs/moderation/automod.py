@@ -148,6 +148,14 @@ class AutoMod(commands.Cog):
     # ------------------------------------------------------------------
     # Command group
     # ------------------------------------------------------------------
+    # SECURITY: every subcommand below repeats guild_only + has_permissions.
+    # That is NOT redundant with the group's own checks. discord.py forces
+    # ``HybridGroup.invoke_without_command = True``, so Group.invoke takes the
+    # ``early_invoke = False`` branch and never calls the group's prepare() -
+    # the group's checks run ONLY on a bare ``?automod``. The slash path is
+    # worse still: HybridAppCommand._check_can_run consults
+    # ``self.wrapped.checks``, i.e. the SUBCOMMAND's checks alone. A check that
+    # lives only on the parent gates neither path for a subcommand.
     @commands.hybrid_group(name="automod")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -177,6 +185,8 @@ class AutoMod(commands.Cog):
         )
 
     @automod.command(name="links", aliases=["antilink"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     @discord.app_commands.describe(state="Turn link filtering on or off.")
     async def automod_links(self, ctx, state: Literal["on", "off"]):
         """Turn link filtering on or off for this server."""
@@ -186,6 +196,8 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=self._toggle_embed(_("Link filtering"), on))
 
     @automod.command(name="invites", aliases=["antiinvite"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     @discord.app_commands.describe(state="Turn invite filtering on or off.")
     async def automod_invites(self, ctx, state: Literal["on", "off"]):
         """Turn Discord-invite filtering on or off for this server."""
@@ -195,6 +207,8 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=self._toggle_embed(_("Invite filtering"), on))
 
     @automod.command(name="spam", aliases=["antispam"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     @discord.app_commands.describe(state="Turn spam filtering on or off.")
     async def automod_spam(self, ctx, state: Literal["on", "off"]):
         """Turn spam filtering on or off for this server."""
@@ -204,6 +218,8 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=self._toggle_embed(_("Spam filtering"), on))
 
     @automod.command(name="panel")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     async def automod_panel(self, ctx):
         """Open the interactive AutoMod control panel."""
 
