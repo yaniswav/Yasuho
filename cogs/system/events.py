@@ -4,6 +4,7 @@ from itertools import cycle
 import discord
 from discord.ext import commands, tasks
 
+from cogs.moderation import mute_perms
 from tools import retention
 from tools.i18n import _
 
@@ -185,8 +186,23 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
-        # Keep the mute role effective in newly created channels so muted members
-        # cannot simply talk in a freshly created channel.
+        """Keep the mute role effective in a channel created after the mute.
+
+        The deny shape is NOT written here. It is asked of
+        :func:`cogs.moderation.mute_perms.overwrite_for`, which is the same
+        answer the mute role's creation path and ``?mutesync`` get.
+
+        It used to be written here, inline, and that copy is exactly how the
+        thread hole survived being fixed: this listener re-applied the OLD shape
+        (``send_messages`` for text, ``speak`` for voice, and no forum branch at
+        all), so in a guild where the mute role was correct, every channel
+        created afterwards re-opened it - and a new forum, being nothing but
+        threads, came up 100% unmuted. Two copies of a permission shape is one
+        copy too many.
+        """
+        overwrite = mute_perms.overwrite_for(channel)
+        if overwrite is None:
+            return
         mute_role_id = self.bot.muteroles.get(channel.guild.id)
         if not mute_role_id:
             return
@@ -194,15 +210,15 @@ class Events(commands.Cog):
         if mute_role is None:
             return
         try:
-            if isinstance(channel, discord.VoiceChannel):
-                await channel.set_permissions(mute_role, speak=False)
-            elif isinstance(channel, (discord.TextChannel, discord.CategoryChannel)):
-                await channel.set_permissions(
-                    mute_role,
-                    send_messages=False,
-                    add_reactions=False,
-                    send_tts_messages=False,
-                )
+            # Merged, never written flat: a channel created from a template (or
+            # cloned) can already carry overwrites for this role, and a mute fix
+            # must not widen access anywhere as a side effect.
+            await channel.set_permissions(
+                mute_role,
+                overwrite=mute_perms.merged(
+                    channel.overwrites_for(mute_role), overwrite
+                ),
+            )
         except discord.HTTPException:
             log.exception("Failed to sync mute role perms")
 

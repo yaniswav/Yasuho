@@ -30,6 +30,7 @@ from cogs.moderation.automod_panel import (
 from tools import db, settings, warn_escalation
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.lru_cache import BoundedLRU
 from tools.snowflake import coerce_ids
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,12 @@ log = logging.getLogger(__name__)
 _SPAM_WINDOW = 5
 _SPAM_THRESHOLD = 5
 _SPAM_SWEEP_AT = 1000
+
+# Message ids that must not be scanned (again): claimed by an in-flight edit scan
+# or already actioned. Bounded LRU, not a growing set - see AutoMod._claim_scan.
+# Only a violation or an edit that got past the enabled gate ever inserts, so at
+# 1000+ guilds this holds the last few thousand INTERESTING messages, not traffic.
+_SCANNED_CAP = 2048
 
 
 class _SettingsCache(dict):
@@ -144,6 +151,7 @@ class AutoMod(commands.Cog):
         self.bot = bot
         self._spam = {}
         self._settings = _SettingsCache()
+        self._scanned = BoundedLRU(_SCANNED_CAP)
 
     # ------------------------------------------------------------------
     # Command group
@@ -438,6 +446,11 @@ class AutoMod(commands.Cog):
     async def _handle_violation(self, message, *, kind, notice, reason):
         """Delete the message, apply the configured action, and log a case."""
 
+        # Marked BEFORE the first await, so a second MESSAGE_UPDATE for this same
+        # message cannot land a second warn/kick/timeout while this one is still
+        # deleting and writing its case.
+        self._scanned[message.id] = True
+
         guild = message.guild
         member = message.author
         action = await settings.get_guild(
@@ -511,27 +524,80 @@ class AutoMod(commands.Cog):
             if ts and now - ts[-1] <= _SPAM_WINDOW
         }
 
+    async def _enabled(self, guild_id):
+        """The hot-path gate: ``(antilink, antispam, antiinvite)`` for a guild.
+
+        Both reads are in-process caches (the automod row cache and
+        tools.settings' bounded LRU), i.e. a dict lookup each on a warm cache -
+        which is why every listener may call this before doing anything else.
+        """
+        s = await self.get_settings(guild_id)
+        antilink = bool(s["antilink"]) if s else False
+        antispam = bool(s["antispam"]) if s else False
+        antiinvite = bool(
+            await settings.get_guild(self.bot.db_pool, guild_id, "antiinvite", False)
+        )
+        return antilink, antispam, antiinvite
+
+    async def _scan_content(self, message, *, antilink, antiinvite):
+        """Run the content filters on ``message``; True if one of them acted.
+
+        The invite/link half of the pipeline, shared verbatim by the send and the
+        edit path - editing a message must be judged by exactly the rules that
+        would have judged it on send, or the edit is just a slower way to post
+        the same invite.
+        """
+        if antiinvite and self.invite_re.search(message.content):
+            await self._handle_violation(
+                message,
+                kind="invite",
+                notice=_(
+                    "{user} Discord invite links aren't allowed here."
+                ).format(user=message.author.mention),
+                reason="Posted a Discord invite link",
+            )
+            return True
+
+        if antilink and self.url_re.search(message.content):
+            await self._handle_violation(
+                message,
+                kind="link",
+                notice=_("{user} links aren't allowed here.").format(
+                    user=message.author.mention
+                ),
+                reason="Posted a disallowed link",
+            )
+            return True
+
+        return False
+
+    def _claim_scan(self, message_id):
+        """Claim a message for scanning; False if it is already claimed/actioned.
+
+        Check-and-set with NO await in between, so it is atomic against every
+        other listener callback: two MESSAGE_UPDATEs for the same message cannot
+        both win it, and an id already marked by :meth:`_handle_violation` is
+        never re-judged. The claim is released again by the caller when the scan
+        finds nothing, so a member's later edits are still scanned.
+        """
+        if message_id in self._scanned:
+            return False
+        self._scanned[message_id] = True
+        return True
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or message.guild is None:
             return
 
-        # The enabled gate comes FIRST, before any permission work. Both reads
-        # below are in-process caches on the hot path (the automod row cache and
-        # tools.settings' bounded LRU), i.e. a dict lookup each, whereas
-        # Member.guild_permissions FOLDS every one of the author's role
-        # permission sets on every call. Computing that for every message in
-        # every guild - the overwhelming majority of which have automod off -
-        # bought nothing: a member with manage_messages is let through either
-        # way, so the order is pure cost, not behaviour.
-        s = await self.get_settings(message.guild.id)
-        antilink = bool(s["antilink"]) if s else False
-        antispam = bool(s["antispam"]) if s else False
-        antiinvite = bool(
-            await settings.get_guild(
-                self.bot.db_pool, message.guild.id, "antiinvite", False
-            )
-        )
+        # The enabled gate comes FIRST, before any permission work. The two reads
+        # behind _enabled are in-process caches on the hot path, i.e. a dict
+        # lookup each, whereas Member.guild_permissions FOLDS every one of the
+        # author's role permission sets on every call. Computing that for every
+        # message in every guild - the overwhelming majority of which have
+        # automod off - bought nothing: a member with manage_messages is let
+        # through either way, so the order is pure cost, not behaviour.
+        antilink, antispam, antiinvite = await self._enabled(message.guild.id)
 
         if not (antilink or antispam or antiinvite):
             return
@@ -544,26 +610,9 @@ class AutoMod(commands.Cog):
         if await self._is_exempt(message):
             return
 
-        if antiinvite and self.invite_re.search(message.content):
-            await self._handle_violation(
-                message,
-                kind="invite",
-                notice=_(
-                    "{user} Discord invite links aren't allowed here."
-                ).format(user=message.author.mention),
-                reason="Posted a Discord invite link",
-            )
-            return
-
-        if antilink and self.url_re.search(message.content):
-            await self._handle_violation(
-                message,
-                kind="link",
-                notice=_("{user} links aren't allowed here.").format(
-                    user=message.author.mention
-                ),
-                reason="Posted a disallowed link",
-            )
+        if await self._scan_content(
+            message, antilink=antilink, antiinvite=antiinvite
+        ):
             return
 
         if antispam:
@@ -590,6 +639,96 @@ class AutoMod(commands.Cog):
                     ).format(user=message.author.mention),
                     reason="Spamming messages",
                 )
+
+    @commands.Cog.listener()
+    async def on_raw_message_edit(self, payload):
+        """Re-scan an edited message: posting clean and editing the invite in.
+
+        AutoMod used to see NEW messages only, which made every content filter
+        opt-out: post "hello", edit it into a discord.gg link, and nothing ever
+        looked at it again. The filters run here on exactly the same content
+        pipeline as on send (:meth:`_scan_content`) - a message must not become
+        legal by arriving in two steps.
+
+        WHY RAW AND NOT ``on_message_edit``. discord.py dispatches
+        ``message_edit`` only when the message is still in ``ConnectionState``'s
+        message cache, and this bot never passes ``max_messages``, so that cache
+        is the default 1000 entries BOT-WIDE, across every guild. At the scale
+        this project designs for (1000+ guilds) that deque turns over in seconds,
+        so the "edit it in later" bypass survived the fix for anything but the
+        last few hundred messages the bot happened to see - which is to say, for
+        the common case. ``raw_message_edit`` is dispatched on EVERY
+        MESSAGE_UPDATE, cached or not, and since discord.py 2.5 it carries a
+        fully built ``payload.message``, so nothing has to be fetched.
+
+        ORDERING (this is a hot listener - MESSAGE_UPDATE also fires when
+        Discord attaches a link preview to somebody else's message, on its own,
+        seconds after the fact, and now we see those for every guild):
+
+        1. bot/DM guard, free;
+        2. the content-changed gate, free and SYNCHRONOUS. With the message
+           cached it is the exact comparison it always was
+           (``payload.cached_message.content``). Without it, an unfurl is told
+           apart by ``edited_timestamp``: Discord sets that only when the AUTHOR
+           edits, never when it attaches an embed or flips a flag, so an
+           unfurl on an uncached message still costs nothing;
+        3. only then the enabled gate, keeping the house rule that no permission
+           folding happens for a guild with automod off;
+        4. the permission fold, the scan claim, the exemption check, the scan.
+
+        Spam is deliberately NOT re-evaluated here: the sliding window counts
+        messages SENT, and feeding edits into it would let an edit burst trip a
+        spam action on a single message (and double-count the one it belongs to).
+        """
+        after = getattr(payload, "message", None)
+        if after is None:
+            return
+        if after.author.bot or after.guild is None:
+            return
+
+        before = getattr(payload, "cached_message", None)
+        if before is not None:
+            if before.content == after.content:
+                return
+        elif getattr(after, "edited_timestamp", None) is None:
+            return
+
+        antilink, _antispam, antiinvite = await self._enabled(after.guild.id)
+
+        # antispam alone does not open this gate: an edit is not a send.
+        if not (antilink or antiinvite):
+            return
+
+        # The author of a RAW payload is a Member whenever the gateway sent the
+        # `member` field (it does for a guild message) or the member is cached;
+        # if neither held, permissions cannot be folded off a bare User, so the
+        # guild cache gets one more chance and then the check is skipped rather
+        # than crashed. Skipping means the message IS scanned, which is the safe
+        # direction: the alternative would let anyone who can suppress that field
+        # opt out of automod entirely.
+        author = after.author
+        if not isinstance(author, discord.Member):
+            author = after.guild.get_member(author.id) or author
+        permissions = getattr(author, "guild_permissions", None)
+        if permissions is not None and permissions.manage_messages:
+            return
+
+        if not self._claim_scan(after.id):
+            return
+
+        acted = False
+        try:
+            if await self._is_exempt(after):
+                return
+            acted = await self._scan_content(
+                after, antilink=antilink, antiinvite=antiinvite
+            )
+        finally:
+            # A clean (or exempt, or failed) scan releases the claim, so the next
+            # edit of this message is judged on its own merits. Only a message
+            # that was actually actioned stays marked.
+            if not acted:
+                self._scanned.discard(after.id)
 
 
 async def setup(bot):

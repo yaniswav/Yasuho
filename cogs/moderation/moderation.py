@@ -4,15 +4,15 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 
-from . import modactions
+from . import modactions, mute_perms
 from cogs.moderation.warns import (  # noqa: F401  (WarningsView re-exported for back-compat)
     WarningsView,
     Warns,
 )
 from tools import db, modchecks
 from tools.config_loader import config_loader
-from tools.formats import random_colour
-from tools.i18n import _
+from tools.formats import public_echo, random_colour
+from tools.i18n import _, ngettext
 from tools.interactions import notify_failure
 from tools.paginator import Paginator, paginate_lines
 from tools.time import ShortTime
@@ -408,7 +408,38 @@ class Moderation(commands.Cog):
     async def _move(self, ctx, user: discord.Member, room: str):
         """Move a member to a different voice channel."""
 
+        # Same guard as voicekick, and for the same reason: this command is a
+        # voice kick with extra steps. ``move_to(None)`` disconnects, and an
+        # unmatched room name resolves to None, so without a hierarchy check a
+        # kick_members moderator could eject staff ranked above them (or the
+        # owner) just by typing a room that does not exist - the exact
+        # escalation voicekick refuses. Runs before anything is resolved.
+        err = modchecks.hierarchy_error(ctx, user)
+        if err:
+            return await ctx.send(err, delete_after=10)
+
         channel = discord.utils.get(ctx.guild.voice_channels, name=room)
+        if channel is None:
+            # Refusing beats silently disconnecting them: a typo must not be a
+            # voice kick.
+            #
+            # `room` is free text the invoker typed and this echoes it into a
+            # PUBLIC message, so it goes through the same two-part guard every
+            # other public echo in the bot uses: public_echo for the markdown
+            # (an unescaped `**` or a `[label](url)` would let a moderator make
+            # the bot post formatted text and links of their choosing) and the
+            # length, and allowed_mentions for the pings the escape cannot
+            # touch. The clip also keeps a 2000-character argument from pushing
+            # the reply past Discord's message limit, which turned this into a
+            # silent failure rather than a refusal.
+            return await ctx.send(
+                _("I couldn't find a voice channel named **{room}**.").format(
+                    room=public_echo(room)
+                ),
+                delete_after=10,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+
         try:
             await user.move_to(channel, reason=None)
             await ctx.send(
@@ -814,21 +845,115 @@ class Moderation(commands.Cog):
             delete_after=3,
         )
 
+    @staticmethod
+    async def _sync_mute_overwrites(guild, role):
+        """Apply the mute deny shape to every channel of ``guild``. Returns counts.
+
+        ONE pass over ``guild.channels``, dispatching on channel type, instead of
+        three passes over text/voice/categories: those three lists do not add up
+        to the guild's channels. Forums are in none of them, and a forum post is
+        a thread, so the busiest place a muted member could still talk was the
+        one place the loops never visited.
+
+        Shared by the creation path and the admin re-apply, which is the whole
+        point: the fix that only the creation path knows about is a fix no
+        existing guild ever receives.
+
+        Two properties come from :mod:`.mute_perms`. Channels already carrying
+        every deny are SKIPPED (``needs_update``), so re-running this on a
+        correct guild costs zero REST calls; and a channel that does need the
+        edit is written with its existing overwrite MERGED under ours
+        (``merged``), so an unrelated deny a server put there by hand survives.
+
+        Per-channel failures are counted rather than raised: one channel the bot
+        cannot edit (a staff category above its role) must not abort the other
+        four hundred.
+        """
+        applied = 0
+        failed = 0
+        for channel in guild.channels:
+            overwrite = mute_perms.overwrite_for(channel)
+            if overwrite is None:
+                continue
+            existing = channel.overwrites_for(role)
+            if not mute_perms.needs_update(existing, overwrite):
+                continue
+            try:
+                await channel.set_permissions(
+                    role, overwrite=mute_perms.merged(existing, overwrite)
+                )
+            except discord.HTTPException:
+                failed += 1
+                log.warning(
+                    "Could not apply the mute overwrite in channel %s",
+                    getattr(channel, "id", channel),
+                )
+            else:
+                applied += 1
+        return applied, failed
+
+    @commands.hybrid_command(name="mutesync")
+    @commands.guild_only()
+    @commands.cooldown(1.0, 300.0, commands.BucketType.guild)
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(manage_roles=True)
+    async def mutesync(self, ctx):
+        """Re-apply the mute role's channel permissions everywhere."""
+
+        # WHY THIS COMMAND EXISTS. The deny shape is only ever written when the
+        # Muted role is CREATED, and every guild that already has one created it
+        # long ago - so a correction to that shape (the thread permissions, the
+        # voice channel's text chat) would otherwise reach nobody who is already
+        # running the bot. This is the door that lets an admin take the fix.
+        # It is also the repair tool for a role whose overwrites were edited by
+        # hand, and it is idempotent and free when nothing needs changing.
+        role_id = await self._get_mute_role_id(ctx.guild.id)
+        role = (
+            ctx.guild.get_role(role_id) if role_id is not None else None
+        )
+        if role is None:
+            return await ctx.send(
+                _(
+                    "This server has no mute role yet - I create one the first "
+                    "time you use `mute`."
+                ),
+                delete_after=15,
+            )
+
+        if ctx.interaction is not None:
+            await ctx.interaction.response.defer()
+        applied, failed = await self._sync_mute_overwrites(ctx.guild, role)
+
+        message = ngettext(
+            "Mute role re-applied in {count} channel.",
+            "Mute role re-applied in {count} channels.",
+            applied,
+        ).format(count=applied)
+        if failed:
+            message += " " + ngettext(
+                "{count} channel refused the change - check my role position "
+                "and permissions there.",
+                "{count} channels refused the change - check my role position "
+                "and permissions there.",
+                failed,
+            ).format(count=failed)
+        await ctx.send(message)
+
     async def _ensure_mute_role(self, guild):
         """Create the guild's "Muted" role, persist it, and return it.
 
-        Provisions the role with deny overwrites across every text channel,
-        voice channel and category, persists the role id via the muterole
-        upsert, and primes the in-memory ``bot.muteroles`` cache so subsequent
-        mutes resolve it without recreating it.
+        Provisions the role with deny overwrites across every channel that can
+        carry speech - text, forum, voice, stage and category - persists the role
+        id via the muterole upsert, and primes the in-memory ``bot.muteroles``
+        cache so subsequent mutes resolve it without recreating it.
+
+        The deny shape itself lives in :mod:`cogs.moderation.mute_perms`, and the
+        walk is :meth:`_sync_mute_overwrites`, shared with ``mutesync`` so this
+        path and the re-apply can never answer the question differently.
         """
-        perms = discord.Permissions(
-            send_messages=False,
-            add_reactions=False,
-            send_tts_messages=False,
-            speak=False,
+        mrole = await guild.create_role(
+            name="Muted", permissions=mute_perms.role_permissions()
         )
-        mrole = await guild.create_role(name="Muted", permissions=perms)
         # Under eager_cache_lock: bot.muteroles is mutated IN PLACE here while
         # core.load_eager_caches REBINDS it (the dashboard resync re-runs that at
         # runtime), so an unsynchronised write landing inside a reload would go
@@ -839,29 +964,7 @@ class Moderation(commands.Cog):
             )
             self.bot.muteroles[guild.id] = mrole.id
 
-        for channel in guild.text_channels:
-            await channel.set_permissions(
-                mrole,
-                overwrite=discord.PermissionOverwrite(
-                    send_messages=False,
-                    add_reactions=False,
-                    send_tts_messages=False,
-                ),
-            )
-        for channel in guild.voice_channels:
-            await channel.set_permissions(
-                mrole, overwrite=discord.PermissionOverwrite(speak=False)
-            )
-        for channel in guild.categories:
-            await channel.set_permissions(
-                mrole,
-                overwrite=discord.PermissionOverwrite(
-                    send_messages=False,
-                    add_reactions=False,
-                    send_tts_messages=False,
-                    speak=False,
-                ),
-            )
+        await self._sync_mute_overwrites(guild, mrole)
         return mrole
 
     @commands.hybrid_command()

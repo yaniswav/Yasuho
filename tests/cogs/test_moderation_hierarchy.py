@@ -8,10 +8,15 @@ Covers the privilege-escalation fixes:
   the role (or, for ``moverole``, the target position).
 * ``warn`` (gated by ``kick_members``) now runs ``modchecks.hierarchy_error``
   before recording anything, like its ban/kick/mute siblings.
+* ``move`` (voice) now runs the same check ``voicekick`` runs. It had none, and
+  it is a voice kick with extra steps: ``move_to(None)`` disconnects, and an
+  unmatched room name resolved to None, so it ejected anyone - the owner
+  included - from a command that carried no rank guard at all.
 
 Pure fakes only - no Discord, DB or network.
 """
 
+import re
 import types
 
 from cogs.moderation import moderation
@@ -164,6 +169,138 @@ async def test_moverole_owner_below_role_still_moves():
     await moderation.Moderation.moverole.callback(_mod_cog(), ctx, role, 5)
 
     assert role.edits == [5]
+
+
+# ---------------------------------------------------------------------------
+# M1b - move (voice) refuses a higher-ranked target, and refuses to "move"
+#       someone to a room that does not exist (which used to disconnect them)
+# ---------------------------------------------------------------------------
+class _VoiceMember:
+    """A move target that records every move_to it is asked to perform."""
+
+    def __init__(self, uid, top_pos):
+        self.id = uid
+        self.name = f"member-{uid}"
+        self.mention = f"<@{uid}>"
+        self.top_role = _Role(top_pos, f"member-{uid}")
+        self.moves = []
+
+    async def move_to(self, channel, reason=None):
+        self.moves.append(channel)
+
+
+def _voice_guild(owner_id, bot_top_pos, members=(), rooms=()):
+    guild = _guild(owner_id, bot_top_pos, members=list(members))
+    guild.voice_channels = [
+        types.SimpleNamespace(id=i, name=name) for i, name in enumerate(rooms, 1)
+    ]
+    return guild
+
+
+async def _run_move(ctx, user, room):
+    await moderation.Moderation._move.callback(_mod_cog(), ctx, user, room)
+
+
+async def test_move_refuses_a_higher_ranked_member():
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=20)  # staff, ranked above the moderator
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["afk"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, target, "afk")
+
+    assert target.moves == []  # never dragged anywhere
+    assert "role is equal to or above yours" in _last_text(ctx)
+
+
+async def test_move_to_an_unknown_room_never_disconnects_the_target():
+    """A typo must not be a voice kick: move_to(None) ejects from voice."""
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=5)
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["General"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, target, "Genral")  # room that does not exist
+
+    assert target.moves == []
+    assert "couldn't find a voice channel" in _last_text(ctx)
+
+
+async def test_move_refuses_the_guild_owner():
+    author = _author(1, top_pos=10)
+    owner = _VoiceMember(100, top_pos=5)  # low role, but owns the guild
+    guild = _voice_guild(100, bot_top_pos=50, members=[owner], rooms=["afk"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, owner, "afk")
+
+    assert owner.moves == []
+    assert "server owner" in _last_text(ctx)
+
+
+async def test_move_of_an_eligible_member_still_moves_them():
+    """The guard must not break the command it protects."""
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=5)
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["afk"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, target, "afk")
+
+    assert [c.name for c in target.moves] == ["afk"]
+    assert "has been moved to" in _last_text(ctx)
+
+
+# --- ... and the refusal QUOTES the argument back, publicly ----------------
+# `room` is free text the invoker typed and the refusal echoes it into a public
+# message. Unescaped that is a kick_members moderator making the bot post
+# formatted text, links and pings of their choosing, and a 2000-character room
+# pushed the reply past the message limit so the refusal silently failed to send
+# - which is a voice kick with an extra step, again.
+
+
+async def test_the_unknown_room_echo_cannot_ping():
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=5)
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["General"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, target, "@everyone <@&5>")
+
+    mentions = ctx.sent[-1][1].get("allowed_mentions")
+    assert mentions is not None
+    assert mentions.everyone is False
+    assert mentions.roles is False
+    assert mentions.users is False
+
+
+async def test_the_unknown_room_echo_is_defused_and_bounded():
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=5)
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["General"])
+
+    ctx = _Ctx(author, guild)
+    await _run_move(ctx, target, "[click here](https://evil.example)")
+    text = _last_text(ctx)
+    # An unescaped ``[`` is what opens a masked link; a ``\[`` renders as a
+    # plain bracket. Asserting on the raw substring ``](`` would prove nothing.
+    assert re.search(r"(?<!\\)\[", text) is None
+    assert "evil.example" in text  # quoted as visible text, not published
+
+    ctx = _Ctx(author, guild)
+    await _run_move(ctx, target, "x" * 4000)
+    assert len(_last_text(ctx)) < 2000
+
+
+async def test_an_ordinary_room_name_is_still_quoted_readably():
+    author = _author(1, top_pos=10)
+    target = _VoiceMember(2, top_pos=5)
+    guild = _voice_guild(100, bot_top_pos=50, members=[target], rooms=["General"])
+    ctx = _Ctx(author, guild)
+
+    await _run_move(ctx, target, "Genral")
+
+    assert "**Genral**" in _last_text(ctx)
 
 
 # ---------------------------------------------------------------------------
