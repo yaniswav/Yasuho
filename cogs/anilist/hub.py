@@ -17,6 +17,7 @@ import discord
 from .helpers import _current_season, channel_allows_adult
 from .login import LoginView
 from .queries import VIEWER_QUERY
+from .replies import NO_PINGS, no_ping
 from tools import i18n, interactions
 from tools.i18n import N_, _
 from tools.views import LocaleModal
@@ -61,14 +62,19 @@ class HubSearchModal(LocaleModal):
             query = (self.query_input.value or "").strip()
             media_type = self.kind.value or "ANIME"
             if not query:
-                return await interaction.followup.send(_("No result."))
+                return await interaction.followup.send(
+                    _("No result."), allowed_mentions=NO_PINGS
+                )
             kwargs, view = await self.cog._lookup_payload(
                 interaction.user.id,
                 query,
                 media_type,
                 channel_allows_adult(interaction.channel),
             )
-            message = await interaction.followup.send(**kwargs)
+            # The payload's content quotes the term they typed; a hub button
+            # posts it through an interaction, which the cog-level rule cannot
+            # reach (see replies.NoPingReplies).
+            message = await interaction.followup.send(**no_ping(kwargs))
             if view is not None:
                 view.message = message
         except Exception:
@@ -148,7 +154,7 @@ class _HubBrowseButton(discord.ui.Button):
                 kwargs, view = await cog._seasonal_payload(
                     interaction.user.id, season, year, allow_adult
                 )
-            message = await interaction.followup.send(**kwargs)
+            message = await interaction.followup.send(**no_ping(kwargs))
             if view is not None:
                 view.message = message
         except Exception:
@@ -176,7 +182,13 @@ class _HubListButton(discord.ui.Button):
             )
             if error:
                 return await interactions.reply(interaction, error)
-            view.message = await interaction.followup.send(view=view)
+            # No payload dict to run through no_ping() here, but the same
+            # hazard: the CollectionView's TextDisplays are built from AniList
+            # media titles, and a followup that omits allowed_mentions inherits
+            # the client default (users=True), so a <@id> in a title would ping.
+            view.message = await interaction.followup.send(
+                view=view, allowed_mentions=NO_PINGS
+            )
         except Exception:
             log.exception("AniList hub list failed")
             await interactions.notify_failure(interaction)
@@ -199,7 +211,7 @@ class _HubStatsButton(discord.ui.Button):
             )
             if error:
                 return await interactions.reply(interaction, error)
-            await interaction.followup.send(**kwargs)
+            await interaction.followup.send(**no_ping(kwargs))
         except Exception:
             log.exception("AniList hub stats failed")
             await interactions.notify_failure(interaction)

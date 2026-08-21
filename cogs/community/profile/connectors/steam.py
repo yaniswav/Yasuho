@@ -364,7 +364,12 @@ async def _render(container, field, viewer, connection, budget):
             or connection.get("external_id")
         )
         if handle:
-            lines.append(str(handle))
+            # A Steam persona name is whatever its owner typed, and this is the
+            # one place it is drawn at the START of a line: "## Gaming IDs" would
+            # otherwise render as a heading standing over someone else's card.
+            # profile_views.defuse_lines is the package's answer (it keeps the
+            # exact characters and only stops them being line-leading).
+            lines.append(profile_views.defuse_lines(str(handle)))
 
     text = discord.ui.TextDisplay("\n".join(lines))
     # Re-filtered here and not only at the parse: the payload is a row a PAST

@@ -58,6 +58,7 @@ from .feed import (
 )
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
+from .replies import NoPingReplies
 from tools import i18n, interactions
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
@@ -596,7 +597,7 @@ class AiringMixin:
 # --- Poller cog -------------------------------------------------------------
 
 
-class AniListAiring(commands.Cog):
+class AniListAiring(NoPingReplies, commands.Cog):
     """Opt-in airing tracker: DM a user when a tracked title's new episode airs."""
 
     def __init__(self, bot):

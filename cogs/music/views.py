@@ -760,7 +760,9 @@ class MusicController(discord.ui.LayoutView):
         self._disable_all()
         if self.message is not None:
             try:
-                await self.message.edit(view=self)
+                await self.message.edit(
+                    view=self, allowed_mentions=discord.AllowedMentions.none()
+                )
             except discord.HTTPException:
                 log.exception("Failed to disable controller on timeout")
 
@@ -782,7 +784,9 @@ class MusicController(discord.ui.LayoutView):
             return
         self._build(keep_rendered_id=keep_rendered_id)
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to refresh the controller view")
 
@@ -805,7 +809,9 @@ class MusicController(discord.ui.LayoutView):
         self._track = track
         self._build()
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to re-render the controller for a new track")
             return False
@@ -1049,7 +1055,9 @@ class MusicController(discord.ui.LayoutView):
             if not await _ensure_can_control(self.cog, self.player, interaction):
                 return
             self._disable_all()
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
             guild = getattr(self.player.channel, "guild", None)
             await self.player.disconnect()
             if guild is not None:
@@ -1385,7 +1393,9 @@ class _QueueTrackActions(discord.ui.View):
         if self.origin is None:
             return
         try:
-            await self.origin.edit_original_response(view=self)
+            await self.origin.edit_original_response(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to disable the queue track panel on timeout")
 
@@ -1554,7 +1564,9 @@ class QueueView(discord.ui.LayoutView):
         self._disable_all()
         if self.message is not None:
             try:
-                await self.message.edit(view=self)
+                await self.message.edit(
+                    view=self, allowed_mentions=discord.AllowedMentions.none()
+                )
             except discord.HTTPException:
                 log.exception("Failed to disable the queue view on timeout")
 
@@ -1569,14 +1581,18 @@ class QueueView(discord.ui.LayoutView):
             return
         self._build()
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to refresh the queue view")
 
     async def _rerender_from(self, interaction: discord.Interaction) -> None:
         """Re-render in place, editing the message the click landed on."""
         self._build()
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     async def _prev(self, interaction: discord.Interaction) -> None:
         try:
@@ -1690,6 +1706,7 @@ class QueueView(discord.ui.LayoutView):
             await interaction.response.edit_message(
                 content=_("Jumped to **{title}**.").format(title=chosen.title[:120]),
                 view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
             await self._rerender()
             return True
@@ -1721,6 +1738,7 @@ class QueueView(discord.ui.LayoutView):
                     title=removed.title[:120]
                 ),
                 view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
             await self._rerender()
             return True
@@ -2149,7 +2167,9 @@ class _FavouriteActions(discord.ui.View):
         if self.origin is None:
             return
         try:
-            await self.origin.edit_original_response(view=self)
+            await self.origin.edit_original_response(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to disable the favourite panel on timeout")
 
@@ -2421,6 +2441,7 @@ class FavouritesCard(AuthorLayoutView):
             await interaction.edit_original_response(
                 content=_("Queued **{title}**.").format(title=track.title),
                 view=None,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
             return True
         except Exception:
@@ -2448,7 +2469,9 @@ class FavouritesCard(AuthorLayoutView):
                 if deleted
                 else _("That favourite is no longer in your list.")
             )
-            await interaction.response.edit_message(content=content, view=None)
+            await interaction.response.edit_message(
+                content=content, view=None, allowed_mentions=discord.AllowedMentions.none()
+            )
             await self._rerender()
             return True
         except Exception:

@@ -108,6 +108,7 @@ from .feed_views import (
 )
 from .helpers import API_URL, channel_allows_adult
 from .queries import SEARCH_QUERY, VIEWER_QUERY
+from .replies import NoPingReplies
 from tools import i18n
 from tools.db import affected_rows
 from tools.http import TIMEOUT, get_session
@@ -456,7 +457,7 @@ def _normalize(raw):
     return base
 
 
-class AniListFeed(commands.Cog):
+class AniListFeed(NoPingReplies, commands.Cog):
     """Mirror followed AniList users' activity into per-guild feed channels."""
 
     def __init__(self, bot):
@@ -2086,19 +2087,114 @@ class AniListFeed(commands.Cog):
             )
         )
 
+    async def _member_follow_id(self, ctx, channel_id):
+        """The follow row in this feed that is ``ctx.author``'s own, or None.
+
+        TOKEN-FREE ON PURPOSE. Leaving is a data-subject action - "stop posting
+        MY activity in this channel" - so it must not depend on a live AniList
+        link. Someone who ran ``/anilist logout`` (or whose token simply
+        expired) still has their activity mirrored, and asking them to re-link
+        an account they deliberately unlinked before they may leave is exactly
+        the trap this closes. Two rungs, neither of which the member has to act
+        on first:
+
+        1. the numeric AniList id an airing / chapter opt-in already stored for
+           this Discord user - the same durable mapping
+           ``ScheduleMixin._resolve_anilist_user_id`` reads at its second rung,
+           written once at opt-in precisely so a poller needs no token. It
+           survives ``/anilist logout``, and it is what makes leaving work
+           REGARDLESS OF WHO ADDED THEM: a moderator-added follow of their
+           account matches on the id like any other.
+        2. failing that, the self-add TRAIL: a row of this feed whose
+           ``added_by`` is the caller. ``/anilistfeed me`` is the only add a
+           member without Manage Server can perform, and it can only ever add
+           THEIR OWN account - so such a row is proof of ownership when no id
+           could be resolved. Restricted to exactly one candidate row and to
+           callers without Manage Server, because a moderator's ``added_by``
+           trail is other people (``/anilistfeed follow`` stamps the moderator),
+           and a moderator is never the stuck data subject anyway: they have
+           ``/anilistfeed unfollow <username>``.
+
+        Deliberately NO token rung here, and not only because a token may be
+        gone: the command's join path below already spends the one authed VIEWER
+        call a linked member costs, and leaves on its result. Resolving the id a
+        second time here would double this command's AniList budget for every
+        join, on an API the poller already shares at 30 requests a minute.
+
+        Returns an AniList user id this feed currently follows, or None. None
+        is not the end of the road: the command's own token path below is the
+        third chance, and it is the one that catches the last residual case -
+        a member a moderator added, who never opted into either tracker and
+        never self-added, has nothing in this bot tying their Discord account to
+        that AniList account except a live link.
+        """
+
+        # One statement, and it answers "which followed row is theirs" rather
+        # than "what is their id": the id lands in the anilist_follows PK prefix
+        # this feed's reads already ride.
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT anilist_user_id FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id IN ("
+            "SELECT anilist_user_id FROM anilist_airing_optins WHERE user_id = $3 "
+            "UNION ALL "
+            "SELECT anilist_user_id FROM anilist_chapter_optins WHERE user_id = $3"
+            ") LIMIT 1;",
+            ctx.guild.id,
+            channel_id,
+            ctx.author.id,
+        )
+        if row is not None and row["anilist_user_id"]:
+            return row["anilist_user_id"]
+
+        perms = getattr(ctx.author, "guild_permissions", None)
+        if getattr(perms, "manage_guild", False):
+            return None
+        rows = await self.bot.db_pool.fetch(
+            "SELECT anilist_user_id FROM anilist_follows "
+            "WHERE guild_id = $1 AND channel_id = $2 AND added_by = $3 LIMIT 2;",
+            ctx.guild.id,
+            channel_id,
+            ctx.author.id,
+        )
+        if len(rows) == 1:
+            return rows[0]["anilist_user_id"]
+        return None
+
     @anilistfeed.command(name="me")
     @commands.guild_only()
     async def anilistfeed_me(self, ctx: commands.Context):
         """Join or leave this server's AniList feed with your linked account.
 
-        Toggle: already followed -> leave; not yet followed -> join. Requires
-        the feed's member self-add setting to be on, and your AniList account
-        linked with ``/anilist login``.
+        Toggle: already followed -> leave; not yet followed -> join.
+
+        LEAVING IS UNCONDITIONAL and comes first, before both gates joining
+        takes. Neither gate has any business standing between a member and
+        "stop mirroring me": the self-add setting is a JOIN policy (a server
+        that turns it off is refusing new members, not trapping the ones
+        already in), and requiring a live token made the feed impossible to
+        leave for exactly the person most likely to want out - someone who has
+        already unlinked their AniList account. Joining still needs both.
         """
 
         channel_id, error = await self._resolve_target(ctx)
         if error:
             return await ctx.send(error)
+
+        leaving_id = await self._member_follow_id(ctx, channel_id)
+        if leaving_id is not None:
+            # clear_mute=False: this is the MEMBER leaving, not a moderator
+            # unfollowing them. Dropping the mute row here would hand any muted
+            # member a one-command way to undo a moderator decision (leave, then
+            # re-join unmuted), so the mute outlives the leave and is waiting if
+            # they come back. See _remove_follow.
+            await self._remove_follow(
+                ctx.guild.id, channel_id, leaving_id, clear_mute=False
+            )
+            return await ctx.send(
+                _("You have left the AniList feed in <#{channel}>.").format(
+                    channel=channel_id
+                )
+            )
 
         feed = await self.bot.db_pool.fetchrow(
             "SELECT self_add FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
@@ -2141,11 +2237,12 @@ class AniListFeed(commands.Cog):
         name = viewer.get("name") or ctx.author.display_name
 
         if await self._follow_exists(ctx.guild.id, channel_id, user_id):
-            # clear_mute=False: this is the MEMBER leaving, not a moderator
-            # unfollowing them. Dropping the mute row here would hand any muted
-            # member a one-command way to undo a moderator decision (leave, then
-            # re-join unmuted), so the mute outlives the leave and is waiting if
-            # they come back. See _remove_follow.
+            # Still a leave, not a join: the id this LIVE viewer call just
+            # returned can differ from the one _member_follow_id resolved (it
+            # may answer from the schedule cache, which a re-link to a second
+            # AniList account does not invalidate). Same rule as up there,
+            # clear_mute=False included - a mute is moderator state and must
+            # outlive the member's own leave.
             await self._remove_follow(
                 ctx.guild.id, channel_id, user_id, clear_mute=False
             )

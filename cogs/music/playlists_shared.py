@@ -34,6 +34,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from cogs.music import safetext
+from cogs.music.player import VoiceConnectFailed, connect_player
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 
@@ -390,9 +391,12 @@ class ServerPlaylistMixin:
         session stays open (the connect below already requires the caller to be
         in a voice channel).
         """
-        # Player and Music seams live in music.py; import lazily to avoid the
-        # package import cycle (music.py imports this module at class definition).
-        from cogs.music.music import Player, is_in_player_voice
+        # The same-voice gate lives in music.py; import lazily to avoid the
+        # package import cycle (music.py imports this module at class
+        # definition). The connect seam itself comes from player.py, the
+        # package's lowest layer, which has no such cycle - see the module
+        # import above.
+        from cogs.music.music import is_in_player_voice
 
         player = ctx.voice_client
         if player is not None:
@@ -407,12 +411,9 @@ class ServerPlaylistMixin:
             await ctx.send(_("You must be in a voice channel first."))
             return None
         try:
-            player = await ctx.author.voice.channel.connect(cls=Player)
-        except discord.ClientException:
-            log.exception("Failed to connect to the voice channel")
-            await ctx.send(
-                _("I was unable to join your voice channel. Please try again.")
-            )
+            player = await connect_player(ctx.author.voice.channel)
+        except VoiceConnectFailed as exc:
+            await ctx.send(exc.message)
             return None
         player.dj = ctx.author
         player.home = ctx.channel

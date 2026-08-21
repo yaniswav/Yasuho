@@ -55,6 +55,7 @@ Typography rule: ASCII '-' and '...' only.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import urllib.parse
@@ -91,6 +92,55 @@ REFRESH_TTL_SECONDS = 12 * 60 * 60
 # this process buffer: ``response.text()`` reads until EOF, so without a cap
 # the only limit is whatever fits down the pipe inside the 15s timeout.
 MAX_PAGE_BYTES = 2 * 1024 * 1024
+
+# How many profile pages may be parsed OFF the event loop at once, and how long
+# a parse waits for one of those slots.
+#
+# The 2 MiB cap above bounds what one parse can cost; it does not bound what
+# that cost does to everything else. ``BeautifulSoup`` is a synchronous CPU
+# walk, so parsing on the loop froze every guild - every command, every poller,
+# every heartbeat - for as long as the walk took, and a page near the cap is
+# seconds, not milliseconds. The parse therefore runs in a thread, and behind a
+# ceiling: without one, a burst of ``/profile link backloggd`` would hand the
+# default executor (shared with every Pillow render, see tools/rendering.py) as
+# many threads as there are callers.
+#
+# The shape is copied from :func:`tools.rendering.run_image_job` - two slots, a
+# few seconds of queue wait, and the WAIT is what times out (a thread already
+# running cannot be cancelled, and unwinding the semaphore under it would break
+# the ceiling it exists to enforce). That function itself cannot be reused here:
+# it takes a ``bot`` for its semaphore and loop, and a ``Connector`` is built by
+# a bare module import with no bot anywhere (the same reason this package owns
+# its own session registry - see sessions.py).
+#
+# WHY THE DEFAULT EXECUTOR AND NOT A POOL OF ITS OWN, unlike
+# cogs/utility/searchweb.py, which owns a two-thread pool for the same class of
+# hazard. The doctrine is about how long a borrowed thread is HELD, not about
+# who owns it. The semaphore above is what bounds concurrency, and it bounds it
+# either way; the only question left is whether the two threads this can occupy
+# are worth taking out of the shared pool. A soup walk is CPU that finishes -
+# sub-second on a normal page, bounded by the byte cap on a hostile one - so
+# borrowing is fine. The wiki lookup is a 15s NETWORK wait that would sit on a
+# shared thread doing nothing, which is why that one pays for its own.
+_PARSE_CONCURRENCY = 2
+_PARSE_ACQUIRE_TIMEOUT = 5.0
+_parse_semaphore = asyncio.Semaphore(_PARSE_CONCURRENCY)
+
+
+async def parse_profile_off_loop(html):
+    """:func:`parse_profile`, run in a thread behind the parse ceiling.
+
+    Raises :exc:`asyncio.TimeoutError` when no slot came free in time - the
+    caller degrades to the same typed "try later" a network failure gets, which
+    is honest: a parse queue this deep means the answer would have been late
+    anyway.
+    """
+    await asyncio.wait_for(_parse_semaphore.acquire(), _PARSE_ACQUIRE_TIMEOUT)
+    try:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, parse_profile, html)
+    finally:
+        _parse_semaphore.release()
 
 
 async def _get_session():
@@ -434,7 +484,12 @@ class BackloggdConnector(base.Connector):
         # raises, instead of an untyped traceback the cog can only answer
         # with its generic failure.
         try:
-            parsed = parse_profile(html)
+            parsed = await parse_profile_off_loop(html)
+        except asyncio.TimeoutError:
+            log.warning(
+                "Backloggd parse slots are saturated; refusing %r for now", handle
+            )
+            raise base.ConnectorUnavailable("backloggd", "remote") from None
         except Exception as exc:
             log.exception("Failed to parse the Backloggd profile page for %r", handle)
             raise base.ConnectorUnavailable("backloggd", "remote") from exc

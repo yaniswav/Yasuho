@@ -711,7 +711,9 @@ class SearchBrowser(AuthorLayoutView):
         """Flip the active tab and re-render the browser in place."""
         self.active_tab = tab
         self._build()
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     async def pick(self, interaction: discord.Interaction, index: int) -> None:
         """Queue the picked entry through the EXACT ``_play_query`` seam.
@@ -724,10 +726,14 @@ class SearchBrowser(AuthorLayoutView):
         """
         entries = self.results.entries_for(self.active_tab)
         if index < 0 or index >= len(entries):
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
             return
         entry = entries[index]
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
 
         route = entry.uri
         if self.active_tab == TAB_ARTISTS and entry.uri:
@@ -781,8 +787,12 @@ class PlayPickerView(AuthorView):
 
     async def choose(self, interaction: discord.Interaction, index: int) -> None:
         if index < 0 or index >= len(self.entries):
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=discord.AllowedMentions.none()
+            )
             return
         entry = self.entries[index]
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
         await self.cog._play_query(_play_context(interaction), entry.uri)

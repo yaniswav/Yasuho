@@ -79,6 +79,7 @@ from .feed import (
 )
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
+from .replies import NoPingReplies
 from tools import i18n, interactions, settings
 from tools import mangadex as md
 from tools import round_robin as rr
@@ -829,7 +830,7 @@ class ChaptersMixin:
 # --- Poller cog -------------------------------------------------------------
 
 
-class AniListChapters(commands.Cog):
+class AniListChapters(NoPingReplies, commands.Cog):
     """Opt-in chapter tracker: DM (and optionally post) when a tracked manga updates."""
 
     def __init__(self, bot):

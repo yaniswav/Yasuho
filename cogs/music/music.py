@@ -33,9 +33,11 @@ from cogs.music import (
 from cogs.music.player import (
     SEARCH_SOURCE,
     Player,
+    VoiceConnectFailed,
     _first_track,
     _normalize_result_tracks,
     _YouTubeSeedAutoPlayHandler,  # noqa: F401
+    connect_player,
     resolve_voice_channel,  # noqa: F401
     seed_needs_youtube_resolution,  # noqa: F401
     youtube_seed_query,  # noqa: F401
@@ -2218,7 +2220,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # explicitly below.
         player = guild.voice_client
         if not isinstance(player, Player):
-            player = await channel.connect(cls=Player)
+            # Same seam as every member-driven connect: a restore that races the
+            # node's websocket coming up is logged as the state it is, not as a
+            # traceback (nobody is standing there to be told).
+            player = await connect_player(channel)
         player.home = home
         player.dj = dj
         # Player birth: hand the node its SponsorBlock skip categories (best-effort,
@@ -2547,12 +2552,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 await ctx.send(_("You must be in a voice channel first."))
                 return
             try:
-                player = await ctx.author.voice.channel.connect(cls=Player)
-            except discord.ClientException:
-                log.exception("Failed to connect to the voice channel")
-                await ctx.send(
-                    _("I was unable to join your voice channel. Please try again.")
-                )
+                player = await connect_player(ctx.author.voice.channel)
+            except VoiceConnectFailed as exc:
+                # Both refusals (Discord said no, no Lavalink node is ready yet)
+                # come back already worded - see player.connect_player.
+                await ctx.send(exc.message)
                 return
             player.dj = ctx.author
             player.home = ctx.channel
@@ -2883,13 +2887,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         player = interaction.guild.voice_client
         if not isinstance(player, sonolink.Player):
             try:
-                player = await author.voice.channel.connect(cls=Player)
-            except discord.ClientException:
-                log.exception("Failed to connect to the voice channel")
-                await interaction.followup.send(
-                    _("I was unable to join your voice channel. Please try again."),
-                    ephemeral=True,
-                )
+                player = await connect_player(author.voice.channel)
+            except VoiceConnectFailed as exc:
+                await interaction.followup.send(exc.message, ephemeral=True)
                 return
             player.dj = author
             player.home = interaction.channel
@@ -2958,7 +2958,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         try:
             card = VibeCard(self, member.id)
-            await view.message.edit(view=card)
+            await view.message.edit(
+                view=card, allowed_mentions=discord.AllowedMentions.none()
+            )
             card.message = view.message
             view.stop()
         except discord.HTTPException:

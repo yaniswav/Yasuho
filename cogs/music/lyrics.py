@@ -761,7 +761,9 @@ class StaticLyricsCard(discord.ui.LayoutView):
 
     async def _rerender(self, interaction: discord.Interaction) -> None:
         self._build()
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     async def _prev(self, interaction: discord.Interaction) -> None:
         if self.index > 0:
@@ -1103,7 +1105,9 @@ class SyncedLyricsSession:
             return
         self._card.set_state(body=body)
         try:
-            await self.message.edit(view=self._card)
+            await self.message.edit(
+                view=self._card, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             # The message was deleted out of band: no point following a ghost.
             log.debug("Synced lyrics edit failed for guild %s; stopping", self.guild_id)
@@ -1133,7 +1137,9 @@ class SyncedLyricsSession:
             return
         self._card.set_state(body=self._last_body, stopped=True)
         try:
-            await self.message.edit(view=self._card)
+            await self.message.edit(
+                view=self._card, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             pass
 
@@ -1178,7 +1184,9 @@ class SyncedLyricsSession:
         self._last_body = render_window(self.lines, index)
         self._last_edit_ts = self._clock()
         self._card.set_state(body=self._last_body)
-        await interaction.response.edit_message(view=self._card)
+        await interaction.response.edit_message(
+            view=self._card, allowed_mentions=discord.AllowedMentions.none()
+        )
         self.nudge()
 
 

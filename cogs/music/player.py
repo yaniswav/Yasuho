@@ -13,11 +13,13 @@ acyclic - music.py imports from here.
 import logging
 import typing
 
+import discord
 import sonolink
 import sonolink.models
 from sonolink.rest.enums import TrackSourceType
 
 from cogs.music import vibes
+from tools.i18n import _
 
 # sonolink's autoplay builds its discovery query from the seed track's raw
 # identifier, which only resolves for a YouTube seed (see
@@ -32,8 +34,6 @@ except Exception:  # pragma: no cover - stub sonolink lacks the internals
     _SonoAutoPlayHandler = None
 
 if typing.TYPE_CHECKING:
-    import discord
-
     from cogs.music.views import MusicController
 
 log = logging.getLogger(__name__)
@@ -134,6 +134,61 @@ class Player(sonolink.Player):
                 self.channel = new_channel
         except Exception:
             log.exception("Failed to sync player channel after a voice-state update")
+
+
+class VoiceConnectFailed(Exception):
+    """A fresh voice connect that did not happen, carrying its member-facing reason.
+
+    ``message`` is already translated and already the whole answer: a caller
+    catches this and says it, on whatever surface it owns (``ctx.send``, an
+    ephemeral followup), instead of re-deciding what went wrong.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+async def connect_player(channel: typing.Any) -> "Player":
+    """``channel.connect(cls=Player)`` - the ONE seam every session is born at.
+
+    THE INCIDENT (production, 2026-08-20 12:27:35). A member ran ``/play`` 35
+    seconds after a restart, while Lavalink was still loading its plugins, and
+    got a raw traceback: sonolink's ``Player._ensure_node`` asks
+    ``Client.get_best_node``, which raises ``RuntimeError("No nodes are
+    currently connected.")``. The cog's pre-check does not catch that window -
+    ``Music._nodes_available`` only asks whether a node was REGISTERED, and
+    ``create_node()`` registers one at startup long before its websocket is up
+    (that exact distinction is why ``_nodes_connected`` exists next to it). So
+    for the tens of seconds a restart takes, every entry point that starts a
+    session answered with an error report.
+
+    Pre-checking harder would not have been enough either: the node can drop
+    between the check and the connect, and every entry point would have to
+    remember the same two-step. Catching it HERE means every fresh connect -
+    ``/play`` and its picker, the vibe card's search modal and genre picks,
+    ``/music search``, the server-playlist and favourites play paths, the cold
+    restore - answers the same way, and a future entry point inherits it by
+    calling this function instead of ``channel.connect``.
+    """
+
+    try:
+        return await channel.connect(cls=Player)
+    except discord.ClientException as exc:
+        log.exception("Failed to connect to the voice channel")
+        raise VoiceConnectFailed(
+            _("I was unable to join your voice channel. Please try again.")
+        ) from exc
+    except RuntimeError as exc:
+        # Every RuntimeError sonolink raises on this path means the same thing:
+        # there is no node to attach a player to (no connected node, no client
+        # bound). That is a STATE, not a bug, so it is logged as a warning and
+        # answered as one - the member is told to try again, not handed an
+        # error report for something a few seconds will fix.
+        log.warning("Voice connect refused, no Lavalink node is ready: %s", exc)
+        raise VoiceConnectFailed(
+            _("I am still starting up - try again in a moment.")
+        ) from exc
 
 
 def _first_track(

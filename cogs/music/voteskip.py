@@ -383,7 +383,9 @@ class SkipVote:
             return
         self._view.set_count(self.count(), self.required())
         try:
-            await self.message.edit(view=self._view)
+            await self.message.edit(
+                view=self._view, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to refresh skip-vote message for guild %s", self.guild_id)
 
@@ -395,7 +397,9 @@ class SkipVote:
         if self.message is None:
             return
         try:
-            await self.message.edit(content=text, view=self._view)
+            await self.message.edit(
+                content=text, view=self._view, allowed_mentions=discord.AllowedMentions.none()
+            )
         except discord.HTTPException:
             log.exception("Failed to finalise skip-vote message for guild %s", self.guild_id)
 
