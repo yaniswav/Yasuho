@@ -558,13 +558,25 @@ ALL_GRANTED["attach_files"] = True
 
 
 class _Channel:
-    def __init__(self, channel_id=500, permissions=None):
+    def __init__(self, channel_id=500, permissions=None, configurer_permissions=None):
         self.id = channel_id
         self._permissions = _Permissions(**(permissions or ALL_GRANTED))
+        # /serverstats digest set preflights TWO parties against this channel -
+        # the bot and the member configuring it - so the fake has to be able to
+        # answer differently for each, or a test can pass on the wrong half.
+        self._configurer_permissions = (
+            _Permissions(**configurer_permissions)
+            if configurer_permissions is not None
+            else None
+        )
         self.sends = []
         self.raises = None
 
-    def permissions_for(self, _member):
+    def permissions_for(self, member):
+        if self._configurer_permissions is not None and getattr(
+            member, "is_configurer", False
+        ):
+            return self._configurer_permissions
         return self._permissions
 
     async def send(self, *args, **kwargs):
@@ -994,6 +1006,9 @@ async def test_a_leveling_guild_gets_its_actives_line():
 class _Ctx:
     def __init__(self, guild):
         self.guild = guild
+        # The member running the command. ``is_configurer`` is what _Channel
+        # keys its second permission answer on.
+        self.author = types.SimpleNamespace(id=42, is_configurer=True)
         self.sends = []
 
     async def send(self, *args, **kwargs):
@@ -1024,7 +1039,10 @@ async def test_setting_a_channel_the_bot_cannot_post_in_writes_nothing(monkeypat
     monkeypatch.setattr(
         digest, "set_channel", lambda *args: written.append(args)
     )
-    channel = _Channel(permissions={"view_channel": True})
+    # The configurer is fine here; it is the BOT that cannot post.
+    channel = _Channel(
+        permissions={"view_channel": True}, configurer_permissions=ALL_GRANTED
+    )
     channel.mention = "<#500>"
     guild = _Guild(channel=channel)
     ctx = _Ctx(guild)
@@ -1033,7 +1051,65 @@ async def test_setting_a_channel_the_bot_cannot_post_in_writes_nothing(monkeypat
     await serverstats_cog.ServerStats.serverstats_digest_set.callback(cog, ctx, channel)
 
     assert written == []
-    assert "Send Messages" in ctx.sends[0][0][0]
+    said = ctx.sends[0][0][0]
+    assert "Send Messages" in said
+    assert said.startswith("I need")  # the bot's half, not the configurer's
+
+
+async def test_setting_a_channel_the_configurer_cannot_post_in_writes_nothing(
+    monkeypatch,
+):
+    """Manage Server is not a licence to post anywhere. The bot holds every
+    permission on this channel, so without the configurer preflight a manager
+    who cannot write a word in it themselves could still schedule a RECURRING
+    post there and have the bot deliver it every Monday."""
+    written = []
+
+    async def _set_channel(pool, guild_id, channel_id):
+        written.append((guild_id, channel_id))
+
+    monkeypatch.setattr(digest, "set_channel", _set_channel)
+    channel = _Channel(configurer_permissions={"view_channel": True})
+    channel.mention = "<#500>"
+    guild = _Guild(channel=channel)
+    ctx = _Ctx(guild)
+    cog = _cog(_RoutingPool(), guild=guild)
+
+    await serverstats_cog.ServerStats.serverstats_digest_set.callback(cog, ctx, channel)
+
+    assert written == []
+    said = ctx.sends[0][0][0]
+    assert said.startswith("You need")
+    assert "Send Messages" in said
+
+
+async def test_a_configurer_who_cannot_even_see_the_channel_is_refused(monkeypatch):
+    """The other half of the same rule: a channel they cannot view at all."""
+    written = []
+
+    async def _set_channel(pool, guild_id, channel_id):
+        written.append((guild_id, channel_id))
+
+    monkeypatch.setattr(digest, "set_channel", _set_channel)
+    channel = _Channel(configurer_permissions={})
+    channel.mention = "<#500>"
+    guild = _Guild(channel=channel)
+    ctx = _Ctx(guild)
+    cog = _cog(_RoutingPool(), guild=guild)
+
+    await serverstats_cog.ServerStats.serverstats_digest_set.callback(cog, ctx, channel)
+
+    assert written == []
+    assert "View Channel" in ctx.sends[0][0][0]
+
+
+def test_the_configurer_is_not_held_to_the_bots_embed_permission():
+    """Deliberately shorter than DIGEST_PERMISSIONS: embed_links is the bot's
+    problem (it is the one embedding), and refusing a manager over it would
+    block a working configuration for nothing."""
+    assert set(digest.CONFIGURER_PERMISSIONS) == {"view_channel", "send_messages"}
+    assert "embed_links" not in digest.CONFIGURER_PERMISSIONS
+    assert set(digest.CONFIGURER_PERMISSIONS) < set(digest.DIGEST_PERMISSIONS)
 
 
 async def test_setting_a_usable_channel_turns_the_digest_on(monkeypatch):

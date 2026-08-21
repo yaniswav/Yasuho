@@ -39,6 +39,16 @@ _PURGE_EXEMPT_TABLES = {
     # 30-day purge grace. A departed guild's rows are long gone before the
     # purge job even becomes due.
     "anilist_feed_posts",
+    # A member's own AFK status: ONE row per user, keyed by user_id, exported
+    # under /mydata as their data and deleted by the USER purge. Its guild_id
+    # (cogs/community/afk.py) is a SCOPE TAG on that user row - which audience
+    # the text was written for, so it is announced there and nowhere else - not
+    # an owner. The guild purge deliberately does not touch a user's global row:
+    # test_guild_purge_is_transactional_scoped_and_excludes_global_tables below
+    # names this very table, and both statements have to stay true at once. A row
+    # tagged with a guild the bot has left announces nowhere at all (the closed
+    # direction) and is replaced the next time its author sets one.
+    "afk",
 }
 
 

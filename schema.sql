@@ -405,6 +405,13 @@ CREATE TABLE IF NOT EXISTS afk (
     message TEXT,
     since   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- The guild the status was set in. An AFK message is free text its author wrote
+-- for ONE server, so the notice is only ever replayed there; without this column
+-- it was re-broadcast verbatim in every other server they share with the bot.
+-- ADDITIVE on purpose (one nullable column, no key change): a row written before
+-- this existed reads NULL, which announces nowhere and is cleared the first time
+-- its author speaks. Still one row per user - a member is AFK in one place.
+ALTER TABLE afk ADD COLUMN IF NOT EXISTS guild_id BIGINT;
 
 -- Per-guild automod toggles.  automod.py
 CREATE TABLE IF NOT EXISTS automod (

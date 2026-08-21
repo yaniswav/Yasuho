@@ -21,10 +21,14 @@ has to obey them:
    ``xp_period``), never shown as a wall of dashes.
 
 One rule of its own, which no rollups value object can enforce: /serverstats is
-PUBLIC, so anything naming a specific channel is cut to the INVOKING member's
-visibility (:func:`_render_top_channels`), never the bot's. The read layer keeps
-returning complete rows; the filtering is a rendering decision, so it re-applies
-on every rebuild (the 7/30-day toggle included).
+PUBLIC, so anything naming a specific channel is cut to what the card's AUDIENCE
+may see (:func:`_render_top_channels`), never to what the bot sees. The card is a
+message in a room, not a private answer: the invoker's own visibility is a floor,
+not the rule - a moderator running it in general chat must not publish the name
+and message volume of a staff channel to everyone reading that room. The audience
+is the destination channel's own viewers (:func:`audience_roles`). The read layer
+keeps returning complete rows; the filtering is a rendering decision, so it
+re-applies on every rebuild (the 7/30-day toggle included).
 
 Precedents followed: :class:`~cogs.community.leveling.seasons_views.HallOfFameCard`
 (``AuthorLayoutView``, the ``_handler``-bound button shape, the house footer)
@@ -267,7 +271,72 @@ def _render_overview(overview):
     return lines
 
 
-def _render_top_channels(guild, top_channels, member):
+def audience_roles(guild, destination):
+    """The roles that stand in for "everyone who can read this card".
+
+    The card is a PUBLIC message posted into ``destination``, so the people it
+    publishes to are that channel's readers - not the one member who typed the
+    command. Discord gives no way to enumerate them, so they are approximated by
+    the roles that can view the destination, which is the same proxy
+    ``cogs/config/tickets/panel.py::_is_public`` uses to decide whether a
+    transcript would land in front of the whole server.
+
+    Two cases, one rule:
+
+    * ``@everyone`` can view the destination -> the audience IS the guild, and
+      ``@everyone`` alone is the whole test. Cheap, and exact enough: a channel
+      the default role can read is not a secret from anybody in the room.
+    * the destination is itself restricted (a staff room, or a members-only
+      channel in a verification-gated server) -> the audience is every role that
+      can still view it. A row then has to clear all of them, which is what lets
+      the staff channels show up in the staff room, and what keeps a gated
+      server - where ``@everyone`` can view nothing at all - from losing the
+      whole section.
+
+    Returns a tuple, EMPTY when the audience cannot be established (no
+    destination, no guild default role, a partial channel, an uncached thread
+    parent - ``Thread.permissions_for`` raises there). Empty means UNKNOWN, and
+    :func:`_audience_can_view` publishes nothing to an unknown audience.
+
+    Scale story (1000+ guilds): pure local permission folds, no query and no
+    REST call. The common case (a public destination) is ONE fold per render;
+    the sweep only runs for a restricted destination and is bounded by the
+    guild's role count, at most once per card build - and the card is built
+    behind /serverstats' 1-per-5s-per-user cooldown.
+    """
+    everyone = getattr(guild, "default_role", None)
+    if destination is None or everyone is None:
+        return ()
+    try:
+        if destination.permissions_for(everyone).view_channel:
+            return (everyone,)
+        return tuple(
+            role
+            for role in getattr(guild, "roles", ())
+            if destination.permissions_for(role).view_channel
+        )
+    except Exception:  # pragma: no cover - a partial channel or an uncached parent
+        log.debug("serverstats: could not resolve the card's audience", exc_info=True)
+        return ()
+
+
+def _audience_can_view(channel, audience):
+    """Can everyone this card is published to already see ``channel``?
+
+    False on an EMPTY audience (unknown - see :func:`audience_roles`) and False
+    on anything that raises: a name published by mistake cannot be unpublished,
+    so every uncertain answer is a no.
+    """
+    if not audience:
+        return False
+    try:
+        return all(channel.permissions_for(role).view_channel for role in audience)
+    except Exception:  # pragma: no cover - a partial channel stand-in
+        log.debug("serverstats: could not read channel visibility", exc_info=True)
+        return False
+
+
+def _render_top_channels(guild, top_channels, member, audience):
     resolved = [
         (channel_count, guild.get_channel(channel_count.channel_id))
         for channel_count in top_channels
@@ -277,17 +346,27 @@ def _render_top_channels(guild, top_channels, member):
     # comment: names are never resolved at read time, so this is the ONE place
     # that decides what is actually shown.
     #
-    # CONFIDENTIALITY: /serverstats is a PUBLIC command, so the ranking must be
-    # cut to the INVOKER's visibility, never the bot's - the bot sees the staff
-    # channels too, and a row here leaks both a private channel's existence and
-    # how busy it is. The filter lives at RENDER time (the DB rows stay
-    # complete), so the 7/30-day toggle re-filters for free on every rebuild,
-    # and the mention token <#id> is only ever emitted for a channel this member
-    # can already read.
+    # CONFIDENTIALITY: /serverstats is a PUBLIC command whose answer is a
+    # message everyone in the destination channel reads, so a row is published
+    # only when BOTH hold:
+    #
+    #   1. the AUDIENCE can already see that channel (audience_roles above) -
+    #      otherwise a moderator running the command in general chat publishes
+    #      the existence and the message volume of every staff channel to the
+    #      whole server, which is the leak this filter exists for;
+    #   2. the INVOKER can see it too - a floor kept from the first version, so
+    #      the member who asked is never shown a room they cannot open.
+    #
+    # The filter lives at RENDER time (the DB rows stay complete), so the
+    # 7/30-day toggle re-filters for free on every rebuild, an overwrite changed
+    # between two renders is re-read, and the mention token <#id> is only ever
+    # emitted for a channel the room it lands in can already read.
     visible = [
         (cc, ch)
         for cc, ch in resolved
-        if ch is not None and ch.permissions_for(member).view_channel
+        if ch is not None
+        and _audience_can_view(ch, audience)
+        and ch.permissions_for(member).view_channel
     ]
     if not visible:
         return [_("No channel activity in this window.")]
@@ -469,12 +548,20 @@ class ServerStatsCard(AuthorLayoutView):
         activity,
         retention,
         *,
+        destination,
         timeout=180,
         chart_filename=None,
     ):
         super().__init__(author.id, timeout=timeout)
         self.pool = pool
         self.guild = guild
+        # The channel this card is POSTED IN - the audience the top-channels
+        # ranking is cut to (see audience_roles / _render_top_channels). Kept
+        # on the card, not just used once, because the 7/30-day toggle rebuilds
+        # the whole container and has to re-apply the same rule; keyword-only
+        # and REQUIRED so a future caller cannot silently fall back to
+        # publishing the invoker's private rooms into whatever room it picked.
+        self.destination = destination
         # The PNG chart's attachment filename, or None when the card has no
         # chart to show (rendering failed, timed out, or was never attempted
         # - cmd_serverstats decides). Stored on self, not recomputed, so the
@@ -487,8 +574,9 @@ class ServerStatsCard(AuthorLayoutView):
         # the message survives the edit untouched.
         self.chart_filename = chart_filename
         # The invoking MEMBER, not just an id: the top-channels ranking is cut
-        # to this member's own view_channel permissions (see
-        # _render_top_channels). It is the Member the command was invoked with
+        # to this member's own view_channel permissions as well as the
+        # audience's (see _render_top_channels). It is the Member the command
+        # was invoked with
         # (a guild_only command always has one) - never re-resolved through
         # guild.get_member, which returns None on a partial member cache
         # (chunk_guilds_at_startup=False) and would silently blank the section.
@@ -587,7 +675,10 @@ class ServerStatsCard(AuthorLayoutView):
                 "**" + _("Top channels ({days} days)").format(days=self.overview.days) + "**\n"
                 + "\n".join(
                     _render_top_channels(
-                        self.guild, self.top_channels, self.author
+                        self.guild,
+                        self.top_channels,
+                        self.author,
+                        audience_roles(self.guild, self.destination),
                     )
                 )
             )

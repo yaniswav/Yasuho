@@ -703,6 +703,33 @@ class ServerStats(commands.Cog):
         # candidate on the very next hourly tick, so its FIRST digest - the last
         # complete week, labelled with its exact window in the footer - can
         # arrive today. Every one after that lands on a Monday.
+        #
+        # TWO preflights, because Manage Server is not a licence to post
+        # anywhere: it is granted for what it is (managing the server), and it
+        # does not by itself grant a single permission in a channel with its own
+        # overwrites. Without the second check a manager could schedule a
+        # RECURRING post into a room they cannot write in themselves - a staff
+        # channel, an announcement channel locked to one team - and the bot
+        # would carry it out every Monday on their behalf. So the configurer is
+        # held to the permissions they would need to post the digest by hand
+        # (digest.CONFIGURER_PERMISSIONS), against the SAME pure helper the
+        # bot's own check uses. An administrator passes it for free, exactly as
+        # Discord resolves permissions everywhere else.
+        author_missing = digest.missing_permissions(
+            channel.permissions_for(ctx.author),
+            required=digest.CONFIGURER_PERMISSIONS,
+        )
+        if author_missing:
+            return await ctx.send(
+                _(
+                    "You need these permissions in {channel} yourself before you "
+                    "can schedule a weekly digest there: {permissions}."
+                ).format(
+                    channel=channel.mention,
+                    permissions=digest.describe_permissions(author_missing),
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
         missing = digest.missing_permissions(
             channel.permissions_for(ctx.guild.me)
         )
@@ -711,7 +738,8 @@ class ServerStats(commands.Cog):
                 _("I need these permissions in {channel} first: {permissions}.").format(
                     channel=channel.mention,
                     permissions=digest.describe_permissions(missing),
-                )
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
             )
         await digest.set_channel(self.bot.db_pool, ctx.guild.id, channel.id)
         await ctx.send(
@@ -804,6 +832,12 @@ class ServerStats(commands.Cog):
             growth,
             activity,
             retention_report,
+            # The room the card is about to be posted in. The top-channels
+            # ranking names channels, and this card is read by everyone who
+            # can read THIS channel - not just by the member who typed the
+            # command - so the destination is what the ranking is cut to (see
+            # views.audience_roles).
+            destination=ctx.channel,
             chart_filename=views.CHART_FILENAME if chart_file is not None else None,
         )
         send_kwargs = dict(view=view, allowed_mentions=discord.AllowedMentions.none())

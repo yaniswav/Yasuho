@@ -98,6 +98,15 @@ FAN_OUT_LIMIT = 50
 # cogs/config/tickets/preflight.py performs, against its own list.
 DIGEST_PERMISSIONS = ("view_channel", "send_messages", "embed_links")
 
+# What the MEMBER turning the digest on must hold in that same channel. A
+# recurring post the bot signs is still that member's post, so they are held to
+# what they would need to write it themselves - Manage Server grants neither of
+# these in a channel with its own overwrites. Deliberately SHORTER than
+# DIGEST_PERMISSIONS: embed_links is the bot's problem (it is the one embedding),
+# and refusing a manager over a permission that only the poster needs would block
+# a working configuration for nothing.
+CONFIGURER_PERMISSIONS = ("view_channel", "send_messages")
+
 # U3: the PNG chart attached alongside the digest embed. Same rendering seam
 # and the same graceful-fallback discipline as views.py's card chart (see
 # CHART_RENDER_TIMEOUT there) - cog.py's _deliver_digest never lets a

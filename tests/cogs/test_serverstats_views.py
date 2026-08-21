@@ -13,8 +13,9 @@ Covers, in order of how much it would hurt to get wrong:
    "active members" half is omitted outright without ``has_activity_data``.
 3. The unresolvable-channel drop (queries.py's contract: names are never
    resolved at read time, so the card is the one place that decides
-   visibility), the INVOKER-visibility filter that keeps a public command from
-   leaking a staff channel's existence and volume, and the sober empty-state
+   visibility), the AUDIENCE filter that keeps a public command from leaking a
+   staff channel's existence and volume to the room it answers in (with the
+   invoker's own visibility kept as a floor), and the sober empty-state
    messages.
 4. The 7/30-day toggle replays EXACTLY two reads (rollups.overview,
    rollups.top_channels) - the ST2 contract - and answers the clicker even
@@ -37,6 +38,10 @@ from tools import i18n
 
 TODAY = datetime.date(2026, 7, 28)
 ONE_DAY = datetime.timedelta(days=1)
+
+# "argument not given", so a test can pass destination=None (an UNKNOWN
+# audience) and mean it, without colliding with the helper's own default.
+_UNSET = object()
 
 
 # ---------------------------------------------------------------------------
@@ -151,28 +156,46 @@ class _FakeMember:
         self.id = member_id
 
 
-class _FakeChannel:
-    """A channel whose ``permissions_for`` answers PER MEMBER.
+class _FakeRole:
+    """A role, which ``permissions_for`` accepts exactly like a member (that is
+    real discord.py: ``GuildChannel.permissions_for(Union[Member, Role])``)."""
 
-    ``visible_to`` is a set of member ids allowed to read the channel, or None
-    for "everyone can" - the /serverstats card cuts its top-channels ranking to
-    the invoker's own view_channel, so this is the fake that makes a staff-only
+    def __init__(self, role_id):
+        self.id = role_id
+
+
+# The @everyone role of every fake guild below. Id 0 like the real thing, where
+# the default role's id IS the guild's.
+EVERYONE_ID = 0
+STAFF_ROLE_ID = 7
+MEMBER_ROLE_ID = 8
+
+
+class _FakeChannel:
+    """A channel whose ``permissions_for`` answers PER MEMBER OR ROLE.
+
+    ``visible_to`` is a set of member/role ids allowed to read the channel, or
+    None for "everyone can". The /serverstats card cuts its top-channels ranking
+    to what the ROOM IT ANSWERS IN can already see (plus the invoker's own
+    view_channel as a floor), so this is the fake that makes a staff-only
     channel actually staff-only in the tests.
     """
 
     def __init__(self, visible_to=None):
         self.visible_to = visible_to
 
-    def permissions_for(self, member):
-        allowed = self.visible_to is None or member.id in self.visible_to
+    def permissions_for(self, obj):
+        allowed = self.visible_to is None or obj.id in self.visible_to
         return types.SimpleNamespace(view_channel=allowed)
 
 
 class _FakeGuild:
-    def __init__(self, guild_id=1, name="Guild", channels=None):
+    def __init__(self, guild_id=1, name="Guild", channels=None, roles=None):
         self.id = guild_id
         self.name = name
         self._channels = channels or {}
+        self.default_role = _FakeRole(EVERYONE_ID)
+        self.roles = [self.default_role, *(roles or ())]
 
     def get_channel(self, channel_id):
         return self._channels.get(channel_id)
@@ -209,13 +232,17 @@ def _button_labels(view):
 
 def _card(guild=None, since=TODAY - datetime.timedelta(days=30), overview=None,
           top_channels=None, growth=None, activity=None, retention=None, pool=None,
-          author=None):
+          author=None, destination=_UNSET):
     guild = guild or _FakeGuild()
     overview = overview or _overview()
     top_channels = top_channels if top_channels is not None else []
     growth = growth or _growth([])
     activity = activity or _activity([])
     retention = retention or _retention([])
+    # Default destination: an ordinary public room, which is where a card that
+    # says nothing about its destination is posted in real life.
+    if destination is _UNSET:
+        destination = _FakeChannel()
     return views.ServerStatsCard(
         pool,
         guild,
@@ -226,6 +253,7 @@ def _card(guild=None, since=TODAY - datetime.timedelta(days=30), overview=None,
         growth,
         activity,
         retention,
+        destination=destination,
     )
 
 
@@ -292,8 +320,8 @@ def test_overview_zero_days_available_publishes_no_number_at_all():
 
 
 # ---------------------------------------------------------------------------
-# Top channels: unresolvable drop, INVOKER visibility, proportional bars,
-# sober empty state
+# Top channels: unresolvable drop, AUDIENCE visibility (with the invoker's own
+# as a floor), proportional bars, sober empty state
 # ---------------------------------------------------------------------------
 def test_top_channels_drops_a_channel_the_bot_cannot_see():
     guild = _FakeGuild(channels={1: _FakeChannel()})  # channel 2 is unresolvable
@@ -320,17 +348,127 @@ def test_top_channels_hides_a_channel_the_invoker_cannot_read():
     assert "999" not in text
 
 
-def test_top_channels_shows_a_private_channel_to_a_member_who_can_read_it():
-    """The same card, the same rows: the filter is the CLICKER's own
-    view_channel, not a blanket hide."""
+def test_top_channels_hides_a_staff_channel_the_INVOKER_can_read_from_a_public_room():
+    """THE LEAK THIS FILTER EXISTS FOR. A moderator CAN read the staff channel,
+    so the invoker filter alone happily prints its name and its message volume
+    into general chat, where everybody else reads it. The card is a message in a
+    room, so the room - not the one member who typed the command - is what the
+    ranking is cut to."""
+    staff = _FakeChannel(visible_to={STAFF_ROLE_ID, 99})
     guild = _FakeGuild(
-        channels={1: _FakeChannel(), 2: _FakeChannel(visible_to={99})}
+        channels={1: _FakeChannel(), 2: staff}, roles=[_FakeRole(STAFF_ROLE_ID)]
     )
     top = [rollups.ChannelCount(1, 100), rollups.ChannelCount(2, 999)]
-    card = _card(guild=guild, top_channels=top, author=_FakeMember(99))
+    card = _card(
+        guild=guild,
+        top_channels=top,
+        author=_FakeMember(99),  # a moderator: they CAN see channel 2
+        destination=_FakeChannel(),  # ... but they are asking in public
+    )
+    text = _dump_text(card)
+    assert "<#1>" in text
+    assert "<#2>" not in text
+    assert "999" not in text
+
+
+def test_top_channels_shows_a_staff_channel_when_the_room_is_that_staff_room():
+    """Not a blanket hide: asked from a room whose audience already sees the
+    channel, the row is published. Same card, same rows, different room."""
+    staff = _FakeChannel(visible_to={STAFF_ROLE_ID, 99})
+    guild = _FakeGuild(
+        channels={1: _FakeChannel(), 2: staff}, roles=[_FakeRole(STAFF_ROLE_ID)]
+    )
+    top = [rollups.ChannelCount(1, 100), rollups.ChannelCount(2, 999)]
+    card = _card(
+        guild=guild,
+        top_channels=top,
+        author=_FakeMember(99),
+        destination=staff,  # asked IN the staff room
+    )
     text = _dump_text(card)
     assert "<#2>" in text
     assert "999" in text
+
+
+def test_top_channels_survives_a_verification_gated_server():
+    """@everyone can view nothing at all in a gated server - every channel is
+    behind a Member role. A naive "must be @everyone-visible" rule would empty
+    the whole section there; the audience is the ROOM's viewers, so a channel
+    every reader of that room can see is still published."""
+    member_role = _FakeRole(MEMBER_ROLE_ID)
+    gated_general = _FakeChannel(visible_to={MEMBER_ROLE_ID, STAFF_ROLE_ID, 99})
+    staff = _FakeChannel(visible_to={STAFF_ROLE_ID, 99})
+    guild = _FakeGuild(
+        channels={1: gated_general, 2: staff},
+        roles=[member_role, _FakeRole(STAFF_ROLE_ID)],
+    )
+    top = [rollups.ChannelCount(1, 100), rollups.ChannelCount(2, 999)]
+    card = _card(
+        guild=guild,
+        top_channels=top,
+        author=_FakeMember(99),
+        destination=gated_general,
+    )
+    text = _dump_text(card)
+    assert "<#1>" in text  # the gated room's own audience can see it
+    assert "<#2>" not in text  # the staff room is still not theirs to see
+    assert "999" not in text
+
+
+def test_top_channels_publishes_nothing_to_an_unknown_audience():
+    """No destination means the audience cannot be established, and a name
+    published by mistake cannot be unpublished - so nothing is."""
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    card = _card(
+        guild=guild,
+        top_channels=[rollups.ChannelCount(1, 100)],
+        author=_FakeMember(1),
+        destination=None,
+    )
+    text = _dump_text(card)
+    assert "<#1>" not in text
+    assert "No channel activity in this window." in text
+
+
+def test_audience_roles_collapses_to_everyone_in_a_public_room():
+    """The cheap path: a room @everyone can read has the whole guild as its
+    audience, so @everyone alone is the test - no sweep over the role list."""
+    guild = _FakeGuild(roles=[_FakeRole(STAFF_ROLE_ID)])
+    audience = views.audience_roles(guild, _FakeChannel())
+    assert [role.id for role in audience] == [EVERYONE_ID]
+
+
+def test_audience_roles_of_a_restricted_room_is_the_roles_that_can_read_it():
+    guild = _FakeGuild(roles=[_FakeRole(STAFF_ROLE_ID), _FakeRole(MEMBER_ROLE_ID)])
+    audience = views.audience_roles(guild, _FakeChannel(visible_to={STAFF_ROLE_ID}))
+    assert [role.id for role in audience] == [STAFF_ROLE_ID]
+
+
+def test_audience_roles_is_empty_when_it_cannot_be_resolved():
+    """A partial channel or an uncached thread parent raises; unknown must read
+    as 'publish nothing', never as 'publish everything'."""
+
+    class _Raising:
+        def permissions_for(self, obj):
+            raise RuntimeError("parent channel not cached")
+
+    assert views.audience_roles(_FakeGuild(), _Raising()) == ()
+    assert views.audience_roles(_FakeGuild(), None) == ()
+
+
+def test_top_channels_keeps_the_invoker_floor_inside_a_room_that_can_see_it():
+    """The invoker's own visibility is a FLOOR the audience rule does not
+    replace: a channel @everyone can read but this member is denied by a
+    member-level overwrite is still not shown to them."""
+    guild = _FakeGuild(
+        channels={1: _FakeChannel(), 2: _FakeChannel(visible_to={EVERYONE_ID})}
+    )
+    top = [rollups.ChannelCount(1, 100), rollups.ChannelCount(2, 999)]
+    card = _card(guild=guild, top_channels=top, author=_FakeMember(1))
+    text = _dump_text(card)
+    assert "<#1>" in text
+    assert "<#2>" not in text
+    assert "999" not in text
 
 
 def test_top_channels_filtered_empty_falls_back_to_the_sober_message():
@@ -845,7 +983,9 @@ class _Ctx:
     ``channel``/``me`` are the pair cmd_serverstats resolves the card's
     attach_files permission against (cog._may_attach) - ``attach_files``
     True by default, ``refuses_upload`` to make the send behave like a
-    channel that takes a message but not a file.
+    channel that takes a message but not a file. The same channel is the
+    card's DESTINATION, the audience its top-channels ranking is cut to, so
+    it answers ``view_channel`` too: a public room by default.
     """
 
     def __init__(self, guild, author_id, trace, attach_files=True, refuses_upload=False):
@@ -854,8 +994,8 @@ class _Ctx:
         self.me = types.SimpleNamespace(id=99)
         self.channel = types.SimpleNamespace(
             id=1,
-            permissions_for=lambda _member: types.SimpleNamespace(
-                attach_files=attach_files
+            permissions_for=lambda _obj: types.SimpleNamespace(
+                attach_files=attach_files, view_channel=True
             ),
         )
         self.refuses_upload = refuses_upload
@@ -1002,6 +1142,23 @@ async def test_cmd_serverstats_without_leveling_hides_active_members():
     view = ctx.sends[0][1]["view"]
     assert view.retention.has_activity_data is False
     assert not any(query == rollups.RETENTION_ACTIVITY for _m, query, _a in pool.calls)
+
+
+async def test_cmd_serverstats_hands_the_card_the_room_it_is_posted_in():
+    """The audience filter is only worth anything if the command actually names
+    the room: a card built without a destination publishes nothing, and one
+    built with the wrong one publishes to the wrong audience."""
+    trace = []
+    pool = _RoutingPool(_make_answers(), trace)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    ctx = _Ctx(guild, 1, trace)
+    cog = _make_cog(pool)
+
+    await cog.cmd_serverstats(ctx)
+
+    view = ctx.sends[0][1]["view"]
+    assert view.destination is ctx.channel
+    assert "<#1>" in _dump_text(view)
 
 
 async def test_cmd_serverstats_with_leveling_enabled_reads_active_members():

@@ -8,6 +8,7 @@ from discord.ext import commands
 from PIL import Image
 
 from tools import privacy, rendering, retention, settings
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.views import AuthorView
@@ -18,6 +19,26 @@ HISTORY_LIMIT = retention.AVATAR_MAX_PER_SERIES
 STORAGE_MAX_SIZE = 192
 STORAGE_WEBP_QUALITY = 76
 COMPRESSION_BATCH_SIZE = 25
+
+# ONE LENGTH for the ONE expensive thing this cog does - fetch a history and
+# paint a collage through the bot-wide Pillow semaphore (tools.rendering, 2
+# slots for the whole fleet). There are TWO doors into that work and they are
+# throttled by two DIFFERENT mechanisms (a discord.py command cooldown keyed on
+# the invoking message, an in-memory debounce keyed on the user id), so what is
+# shared here is the number, not the window: the two windows run independently,
+# and a member who both types the command and clicks a button can get 2 renders
+# per 10s rather than 1. That is the bound this cog wants - the leak it closes
+# is the button that had NO throttle at all, and one number in one place is how
+# the two doors stay comparable.
+HISTORY_COOLDOWN_SECONDS = 10
+
+# The buttons' half of it. A per-user in-memory debounce (tools.cooldowns.
+# Cooldowns, the same shape cogs/music/views.py's station select and the AniList
+# feed's action buttons use) rather than the command's discord.py cooldown,
+# because that one is keyed on a Message whose author is the invoker and a
+# component interaction has no such message - its message is the BOT's. Bounded
+# and self-pruning, so a raid on the buttons cannot grow it without limit.
+_RENDER_DEBOUNCE = Cooldowns(HISTORY_COOLDOWN_SECONDS)
 
 # Human-readable titles and nouns per tracked image kind. Marked with N_ so
 # pybabel extracts them; each is translated at the use site via _(...).
@@ -65,6 +86,20 @@ class AvatarHistoryView(AuthorView):
         )
 
     async def _show(self, interaction, kind):
+        # THROTTLE FIRST, before anything expensive is started. A click is not
+        # a cheap redraw: it can run an uncached fetch_user (the banner tab) and
+        # always repaints a collage through the bot-wide image semaphore, which
+        # is exactly what the command's own cooldown rations. Only view CREATION
+        # was rationed, so one member holding a card open could hammer three
+        # buttons and monopolise the fleet's two Pillow slots for free.
+        # Rejected clicks never touch the window (see Cooldowns.touch below), so
+        # hammering cannot extend anyone's own wait either.
+        if _RENDER_DEBOUNCE.is_active(interaction.user.id):
+            return await interaction.response.send_message(
+                _("You are flipping through this too fast - give it a moment."),
+                ephemeral=True,
+            )
+        _RENDER_DEBOUNCE.touch(interaction.user.id)
         await interaction.response.defer()
         try:
             # Banners are not pushed by Discord, so grab one at view time too.
@@ -355,13 +390,75 @@ class AvatarHistory(commands.Cog):
         embed.set_image(url="attachment://history.png")
         return embed, buf
 
+    async def _is_member_here(self, ctx, user):
+        """Is ``user`` a member of the guild the command was run in?
+
+        True / False / None, where None means UNKNOWN and the caller must
+        refuse: this is a privacy gate, so the only answer that opens the door
+        is a positive one.
+
+        The history is a record of somebody's past faces, keyed by a raw user
+        id. Without this the command answered for ANY id on Discord, so anyone
+        could read the stored history of a person they share no server with -
+        someone who has no way of even knowing this bot exists. The audience is
+        therefore cut to the room the question is asked from: a server the asker
+        is in, since running the command there proves it.
+
+        THE MEMBER CACHE IS SPARSE (core.py sets chunk_guilds_at_startup=False),
+        so ``get_member`` answering None is not evidence of absence - only of
+        ignorance. It is confirmed with a REST ``fetch_member``, the same
+        discipline cogs/community/reminders.py's audience check follows, and
+        every outcome that is not "yes, they are here" refuses:
+        ``NotFound`` because the API said so, any other HTTP failure because a
+        blip must not be a way to read a stranger's history.
+
+        Scale story (1000+ guilds): zero REST calls for a cached member (the
+        members intent keeps the people who talk in cache) and at most ONE per
+        invocation otherwise, behind the command's 1-per-10s-per-user cooldown.
+        No fleet-wide loop over bot.guilds, at any size.
+        """
+        guild = ctx.guild
+        if guild is None:
+            return False
+        if guild.get_member(user.id) is not None:
+            return True
+        fetch = getattr(guild, "fetch_member", None)
+        if fetch is None:  # pragma: no cover - a stand-in guild without REST
+            return None
+        try:
+            await fetch(user.id)
+        except discord.NotFound:
+            return False
+        except discord.HTTPException:
+            log.debug("could not confirm membership for %s", user.id, exc_info=True)
+            return None
+        return True
+
     @commands.hybrid_command(aliases=["avh"])
-    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.cooldown(1, HISTORY_COOLDOWN_SECONDS, commands.BucketType.user)
     @discord.app_commands.describe(member="Whose history to show (defaults to you).")
     async def avatarhistory(self, ctx, member: discord.User = None):
         """Show a collage of a user's avatar / server avatar / banner history."""
 
         member = member or ctx.author
+        if member.id != ctx.author.id:
+            # Your own history is always yours to look at, anywhere, DMs
+            # included. Anyone else's is readable only from a server you share
+            # with them - see _is_member_here.
+            here = await self._is_member_here(ctx, member)
+            if here is None:
+                return await ctx.send(
+                    _("I could not check that right now - try again in a moment."),
+                    ephemeral=True,
+                )
+            if not here:
+                return await ctx.send(
+                    _(
+                        "I only show someone else's history in a server you "
+                        "share with them - ask again there."
+                    ),
+                    ephemeral=True,
+                )
         async with ctx.typing():
             view = AvatarHistoryView(self, ctx, member)
             embed, buf = await self.build_payload(member, "global", None)
