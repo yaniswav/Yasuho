@@ -116,6 +116,11 @@ class CardPool:
         raise AssertionError("unexpected fetchrow: %s" % query)
 
     async def fetchval(self, query, *args):
+        if "FROM levels" in query:
+            # The two reads /rank does before it draws anything: the member's
+            # XP total, then their rank position. Canned - this file is about
+            # the CARD, and the XP maths has its own tests.
+            return 1 if "COUNT(*)" in query else 0
         if "user_rank_cards" in query and "DELETE FROM user_rank_cards" in query:
             # The single-knob clear. MODELLED rather than stubbed - it nulls one
             # column and drops the row when the other one is unset too - so the
@@ -158,6 +163,90 @@ class CardPool:
 
 def _cog(pool):
     return Leveling(types.SimpleNamespace(db_pool=pool, get_cog=lambda name: None))
+
+
+# ---------------------------------------------------------------------------
+# Driving /rank itself: the command decides WHICH background reaches the
+# renderer, so the only honest place to pin that decision is the command.
+# ---------------------------------------------------------------------------
+
+
+class _Avatar:
+    url = "https://cdn.example/avatar.png"
+
+    def replace(self, **kwargs):
+        return self
+
+    async def read(self):
+        return b"avatar-bytes"
+
+
+class _Typing:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _RankCtx:
+    """A commands.Context stand-in for /rank, with a channel that answers
+    ``permissions_for`` the way the real one does."""
+
+    def __init__(self, cog, *, guild_id=7, author_id=42, may_attach=True):
+        self.bot = cog.bot
+        self.guild = types.SimpleNamespace(id=guild_id)
+        self.author = types.SimpleNamespace(
+            id=author_id,
+            display_name="Yasuho Hirose",
+            display_avatar=_Avatar(),
+            # A member with no colour: the stock accent path, so the accent
+            # under test is only ever the one the resolver hands back.
+            colour=types.SimpleNamespace(value=0, to_rgb=lambda: (0, 0, 0)),
+        )
+        self.channel = _PermChannel(may_attach)
+        self.sends = []
+
+    def typing(self):
+        return _Typing()
+
+    async def send(self, *args, **kwargs):
+        self.sends.append((args, kwargs))
+
+
+def _record_renders(monkeypatch):
+    """Capture what /rank hands the renderer, without running Pillow.
+
+    Returns the list the recorder appends to. ``run_image_job`` is collapsed to
+    a direct call so the job runs inline (its thread pool and semaphore are
+    tools/rendering's business, tested there).
+    """
+    renders = []
+
+    def _render_rank_card(
+        avatar_bytes,
+        name,
+        level,
+        rank_pos,
+        xp,
+        cur_threshold,
+        next_threshold,
+        accent,
+        background,
+    ):
+        renders.append({"name": name, "accent": accent, "background": background})
+        return io.BytesIO(b"card")
+
+    async def _run_image_job(bot, function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(
+        Leveling, "_render_rank_card", staticmethod(_render_rank_card)
+    )
+    monkeypatch.setattr(
+        leveling_module.rendering, "run_image_job", _run_image_job
+    )
+    return renders
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +858,106 @@ def test_the_surface_lives_on_the_leveling_cog_next_to_rank():
     names = {command.qualified_name for command in Leveling.__cog_commands__}
     assert "rankcard" in names
     assert "rank" in names
+
+
+# ---------------------------------------------------------------------------
+# Attach Files: a member-supplied image is a member-supplied image, even when
+# the bot is the one posting it.
+# ---------------------------------------------------------------------------
+
+
+class _Perms:
+    def __init__(self, attach_files):
+        self.attach_files = attach_files
+
+
+class _PermChannel:
+    """A channel that resolves permissions per member, like the real one."""
+
+    def __init__(self, granted=True, raises=False):
+        self.granted = granted
+        self.raises = raises
+
+    def permissions_for(self, member):
+        if self.raises:
+            raise RuntimeError("parent channel not cached")
+        return _Perms(self.granted)
+
+
+def test_may_attach_files_reads_the_channels_answer():
+    assert rank_card_user.may_attach_files(_PermChannel(True), object()) is True
+    assert rank_card_user.may_attach_files(_PermChannel(False), object()) is False
+
+
+def test_may_attach_files_fails_closed_when_it_cannot_tell():
+    """The opposite default from serverstats' bot-side check, on purpose: that
+    one risks losing a chart nobody could otherwise get, this one risks putting
+    a member's picture in a channel that refused it. Thread.permissions_for can
+    raise (uncached parent), so a raise is one of the ways it cannot tell."""
+    assert rank_card_user.may_attach_files(_PermChannel(raises=True), object()) is False
+    assert rank_card_user.may_attach_files(object(), object()) is False
+    assert rank_card_user.may_attach_files(_PermChannel(True), None) is False
+
+
+async def test_the_member_image_is_dropped_but_the_member_accent_is_not():
+    """The seam. Refusing the image must not cost the member their accent - a
+    colour is a number they picked, not a file they uploaded - and the guild's
+    own background (staff-chosen, identical for everyone) still shows through
+    underneath, exactly as it does for a member with no card at all."""
+    guild_blob = _background((10, 10, 200))
+    member_blob = _background((200, 10, 10))
+    pool = CardPool(
+        guild_rows={
+            7: {"accent": None, "background_format": "webp", "has_background": True}
+        },
+        guild_backgrounds={7: guild_blob},
+        user_cards={42: {"accent": 0xFF0000, "background": member_blob}},
+    )
+    cog = _cog(pool)
+
+    accent, background = await cog.resolve_rank_card_render(
+        7, 42, allow_user_background=False
+    )
+
+    assert background == guild_blob  # not the member's
+    assert accent == rank_card.accent_to_rgb(0xFF0000)  # still the member's
+
+
+async def test_rank_refuses_a_member_background_where_the_invoker_cannot_attach(
+    monkeypatch,
+):
+    """P3, end to end. /rank paints a member-uploaded image into whatever
+    channel it was run in, so a member with Attach Files taken away could use
+    the bot as a courier for their own picture - and could do it in someone
+    else's name with ``/rank @them``. The card still renders; only the
+    member-supplied half of it is left out."""
+    member_blob = _background((200, 10, 10))
+    pool = CardPool(user_cards={42: {"accent": None, "background": member_blob}})
+    cog = _cog(pool)
+    renders = _record_renders(monkeypatch)
+
+    ctx = _RankCtx(cog, guild_id=7, author_id=42, may_attach=False)
+    await Leveling.rank.callback(cog, ctx, ctx.author)
+
+    assert len(renders) == 1, "the card must still render, just without the image"
+    assert renders[0]["background"] is None
+    assert ctx.sends and "file" in ctx.sends[0][1]  # a card, not the fallback embed
+
+
+async def test_rank_still_paints_the_member_background_when_the_invoker_may_attach(
+    monkeypatch,
+):
+    """The counter-test: the gate must not quietly strip every card. A member
+    who could have posted the image themselves gets it."""
+    member_blob = _background((200, 10, 10))
+    pool = CardPool(user_cards={42: {"accent": None, "background": member_blob}})
+    cog = _cog(pool)
+    renders = _record_renders(monkeypatch)
+
+    ctx = _RankCtx(cog, guild_id=7, author_id=42, may_attach=True)
+    await Leveling.rank.callback(cog, ctx, ctx.author)
+
+    assert renders[0]["background"] == member_blob
 
 
 def test_the_render_seam_delegates_to_one_resolver():

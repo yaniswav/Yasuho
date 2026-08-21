@@ -12,10 +12,10 @@ from PIL import Image, ImageDraw, ImageFont
 from . import engine as leveling
 from . import gate as leveling_gate
 from . import rank_card
-from .rank_card_user import RankCardUserMixin
+from .rank_card_user import RankCardUserMixin, may_attach_files
 from tools import rendering, settings
 from tools.cooldowns import Cooldowns
-from tools.formats import random_colour
+from tools.formats import public_echo, random_colour
 from tools.i18n import _, ngettext
 from tools.lru_cache import BoundedLRU
 from tools.views import AuthorLayoutView
@@ -34,6 +34,16 @@ _DEFAULT_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png"
 # as a plain text list. The per-page rank count itself lives in
 # cogs.community.leveling.engine.LEADERBOARD_PAGE_SIZE (the pager's home).
 _PODIUM_SLOTS = 5
+
+# The leaderboard names its ranks with member-written display names, and a page
+# flip REPLACES them with fifteen other members' names. The bot's client-wide
+# default allows user mentions (core.Yasuho: users=True) and discord.py folds
+# that default into every edit it sends (InteractionResponse.edit_message passes
+# previous_allowed_mentions=state.allowed_mentions), so a name of "<@victim>"
+# would notify that victim on EVERY page flip of EVERY member's leaderboard -
+# the initial send suppresses it, and before this every edit handed the
+# suppression back. Same constant, same reason as seasons_views._NO_PINGS.
+_NO_PINGS = discord.AllowedMentions.none()
 
 # Medal glyphs for the top three; lower ranks fall back to a plain number.
 # Shared with the season announce and the hall-of-fame card through
@@ -249,7 +259,9 @@ class LeaderboardView(AuthorLayoutView):
         try:
             self.page -= 1
             self._build()
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=_NO_PINGS
+            )
         except Exception:
             log.exception("Leaderboard prev failed")
 
@@ -257,7 +269,9 @@ class LeaderboardView(AuthorLayoutView):
         try:
             self.page += 1
             self._build()
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(
+                view=self, allowed_mentions=_NO_PINGS
+            )
         except Exception:
             log.exception("Leaderboard next failed")
 
@@ -1051,11 +1065,32 @@ class Leveling(RankCardUserMixin, commands.Cog):
         # touches the fresh-list-building Member.roles property). Only a guild
         # that actually muted a channel/category/role pays for the membership
         # test - the pure set lookups in cogs.community.leveling.engine.is_no_xp_message.
+        #
+        # THREADS. A thread has its OWN channel id, so passing only
+        # ``message.channel.id`` asked about the thread and never about the
+        # channel it hangs under: a mute on #general did nothing to a thread
+        # inside #general, and any member could farm XP by opening one there.
+        # ``parent_id`` is the parent channel of a thread (or a forum post) and
+        # ``None`` on every normal channel - a plain slot attribute on
+        # discord.Thread, so reading it is one getattr with no allocation, no
+        # property, no cache lookup and nothing that can raise. Still zero
+        # awaits.
+        #
+        # It only LOOKS like the category getattr beside it. ``Thread.category_id``
+        # is a property that resolves through the parent OBJECT and raises
+        # ClientException when that parent is not cached, and getattr's default
+        # swallows AttributeError only - so that one can still propagate out of
+        # this listener. Pre-existing, and unreachable while the guild channel
+        # cache is complete (which it is: channels are not lazily chunked the
+        # way members are), so it is left alone rather than wrapped in a
+        # try/except on the hot path. Noted here so the two are not read as
+        # equally safe.
         if (no_xp.channels or no_xp.roles) and leveling.is_no_xp_message(
             no_xp,
             message.channel.id,
             getattr(message.channel, "category_id", None),
             (role.id for role in getattr(message.author, "roles", ())),
+            getattr(message.channel, "parent_id", None),
         ):
             return
 
@@ -1099,6 +1134,12 @@ class Leveling(RankCardUserMixin, commands.Cog):
                 getattr(message.channel, "category_id", None),
                 role_ids,
                 now,
+                # The thread's parent channel - see the no-xp check above for
+                # why this getattr is free. compute_multiplier ranks the three:
+                # a rule on the thread itself wins, then the parent's, then the
+                # category's, so a boost on #general reaches its threads and a
+                # thread with its own rule still overrides it.
+                getattr(message.channel, "parent_id", None),
             )
             gain = leveling.apply_multiplier(gain, multiplier)
             if gain <= 0:
@@ -1341,7 +1382,15 @@ class Leveling(RankCardUserMixin, commands.Cog):
         ping = await settings.get_user(
             self.bot.db_pool, member.id, "levelup_ping", True
         )
-        user_text = member.mention if ping else member.display_name
+        # A display name is MEMBER-CONTROLLED text going into a message the bot
+        # signs, so it is defused like every other quoted-back value in the
+        # house (tools.formats.public_echo: flattened to one line, clipped,
+        # markdown-escaped) - a nickname of "[click me](https://evil.example)"
+        # is quoted as visible text instead of becoming a link the bot appears
+        # to endorse. The PINGS inside it are stopped separately, at the send,
+        # by the allowed_mentions below: escaping cannot neutralise "<@id>",
+        # only the send can. The two always travel together.
+        user_text = member.mention if ping else public_echo(member.display_name)
 
         if config.announce_template:
             # A custom template replaces the whole sentence, so the granted-
@@ -1380,8 +1429,16 @@ class Leveling(RankCardUserMixin, commands.Cog):
         # bot's mention permissions those would notify EVERY holder of a
         # reward role (a mass ping) on each level-up, so roles/@everyone stay
         # suppressed regardless of destination.
+        #
+        # ``users`` is the MEMBER, not True. True means "honour every user
+        # mention the text parses to", and part of that text is a display name
+        # the member writes themselves: renaming to "<@victim>" made the bot
+        # ping that victim on every single level-up, forever, from a name no
+        # moderator would think to read as an exploit. A one-element list allows
+        # exactly the one mention this message is about - the member's own -
+        # so any other id in the text renders as inert grey text.
         allowed_mentions = discord.AllowedMentions(
-            everyone=False, roles=False, users=True
+            everyone=False, roles=False, users=[member] if ping else False
         )
 
         try:
@@ -1739,8 +1796,19 @@ class Leveling(RankCardUserMixin, commands.Cog):
                 # styles off collapses that to the RC1 behaviour. Every read in
                 # there degrades to "draw what we do have" - the card is
                 # cosmetic, and a hiccup must never cost a member their /rank.
+                #
+                # The member-supplied BACKGROUND is gated on the invoker's own
+                # Attach Files in this channel: without that check /rank was a
+                # way to post an arbitrary member-uploaded image into a channel
+                # that took attachments away from them. Only the image is
+                # dropped - accents, the guild's own background and the stock
+                # card are unaffected. See may_attach_files.
                 style_accent, background = await self.resolve_rank_card_render(
-                    ctx.guild.id, member.id
+                    ctx.guild.id,
+                    member.id,
+                    allow_user_background=may_attach_files(
+                        ctx.channel, ctx.author
+                    ),
                 )
                 if style_accent is not None:
                     accent = style_accent

@@ -113,9 +113,20 @@ def test_is_staticmethod_callable_without_instance():
 
 
 class _FakeChannel:
-    def __init__(self, channel_id=100, category_id=None):
+    """A message's channel. ``parent_id`` models a THREAD.
+
+    Faithful to discord.py: only ``discord.Thread`` carries ``parent_id`` (a
+    plain slot attribute holding the id of the channel or forum it hangs
+    under), and a thread's ``category_id`` is its PARENT's category, not one of
+    its own - so a thread fake is built with a parent id and, when the parent
+    sits in a category, that category's id.
+    """
+
+    def __init__(self, channel_id=100, category_id=None, parent_id=None):
         self.id = channel_id
         self.category_id = category_id
+        if parent_id is not None:
+            self.parent_id = parent_id
         self.sends = []
 
     async def send(self, *args, **kwargs):
@@ -146,17 +157,22 @@ class _FakeMessage:
         category_id=None,
         role_ids=(),
         guild_channels=None,
+        parent_id=None,
+        display_name=None,
+        guild_name="guild",
     ):
         self.content = content
         if guild_id is not None:
             channels = dict(guild_channels or {})
-            guild = types.SimpleNamespace(id=guild_id, name="guild")
+            guild = types.SimpleNamespace(id=guild_id, name=guild_name)
             guild.get_channel = channels.get
             self.guild = guild
         else:
             self.guild = None
-        self.author = _FakeMsgAuthor(author_id, is_bot, role_ids=role_ids)
-        self.channel = _FakeChannel(channel_id, category_id)
+        self.author = _FakeMsgAuthor(
+            author_id, is_bot, role_ids=role_ids, display_name=display_name
+        )
+        self.channel = _FakeChannel(channel_id, category_id, parent_id)
 
 
 def _make_bot(
@@ -511,10 +527,13 @@ async def test_levelup_grants_roles_and_appends_announce_suffix(fake_pool):
 
     # The reward-role mention must NOT mass-ping every holder of that role: the
     # send suppresses role/@everyone pings while keeping the leveler's own ping.
+    # ``users`` is the leveler HERSELF and nobody else (it used to be True,
+    # i.e. "ping whoever the text parses to", which a display name could
+    # steer - see test_levelup_never_pings_a_user_named_in_a_display_name).
     allowed = msg.channel.sends[0][1]["allowed_mentions"]
     assert allowed.roles is False
     assert allowed.everyone is False
-    assert allowed.users is True
+    assert allowed.users == [msg.author]
 
 
 async def test_levelup_opt_out_still_grants_roles_but_skips_announce(fake_pool):
@@ -674,6 +693,103 @@ async def test_no_xp_zone_does_not_affect_an_unrelated_channel(fake_pool):
     await cog.on_message(msg)
 
     assert len(_fetchval_calls(fake_pool)) == 1  # earned XP normally
+
+
+async def test_a_muted_channel_mutes_the_threads_under_it(fake_pool):
+    """P2, end to end on the hot path. #general is muted; a member opens a
+    thread inside it and talks there. Before the parent lookup the thread's own
+    id matched nothing and the message earned XP - a one-click XP farm in the
+    very channel a moderator had just silenced."""
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 100}])
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, channel_id=777, parent_id=100
+    )
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []  # no XP grant query at all
+    assert len(cog._cooldowns) == 0  # and the cooldown never started
+
+
+async def test_a_thread_under_an_unmuted_channel_earns_normally(fake_pool):
+    """The counter-test: the parent lookup must not mute what nobody muted."""
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 100}])
+    fake_pool.fetchval_return = 11000  # mid-band, no level-up noise
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, channel_id=777, parent_id=200
+    )
+    await cog.on_message(msg)
+
+    assert len(_fetchval_calls(fake_pool)) == 1  # earned XP normally
+
+
+async def test_a_thread_can_be_muted_on_its_own_id(fake_pool):
+    """A rule aimed at the thread itself still decides its own case."""
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 777}])
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, channel_id=777, parent_id=100
+    )
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []
+
+
+async def test_resolving_a_threads_parent_costs_the_hot_path_no_round_trip(
+    fake_pool,
+):
+    """THE hot-path bar for P2: on_message runs for every message in every
+    guild, so closing the thread hole had to cost ZERO new awaits and ZERO new
+    DB reads. A thread message and a plain-channel message in the same guild
+    must therefore hit the pool exactly the same number of times - the parent
+    id is one attribute read off the channel object already in hand, never a
+    fetch of the parent channel."""
+    _route_fetch(fake_pool, no_xp_rows=[{"kind": "channel", "target_id": 999}])
+    fake_pool.fetchval_return = 11000
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, cooldown_seconds=0)
+
+    # Warm both snapshots (the one-per-guild cold reads) before counting.
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=2, channel_id=100))
+    baseline = len(fake_pool.calls)
+
+    await cog.on_message(_FakeMessage(guild_id=1, author_id=3, channel_id=100))
+    plain_cost = len(fake_pool.calls) - baseline
+
+    before_thread = len(fake_pool.calls)
+    await cog.on_message(
+        _FakeMessage(guild_id=1, author_id=4, channel_id=777, parent_id=100)
+    )
+    thread_cost = len(fake_pool.calls) - before_thread
+
+    assert thread_cost == plain_cost
+
+
+async def test_a_boost_on_a_channel_follows_into_its_threads(fake_pool):
+    """The multiplier half of P2. A 0.0 factor on #general is the sharpest
+    probe available: it zeroes the grant, and a zeroed grant skips the write
+    entirely - so the absence of the INSERT proves the thread inherited the
+    parent's factor instead of silently falling back to 1.0."""
+    _route_fetch(
+        fake_pool,
+        multiplier_rows=[{"kind": "channel", "target_id": 100, "factor": 0.0}],
+    )
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1)
+
+    msg = _FakeMessage(
+        content="hi", guild_id=1, author_id=2, channel_id=777, parent_id=100
+    )
+    await cog.on_message(msg)
+
+    assert _fetchval_calls(fake_pool) == []
 
 
 async def test_refresh_no_xp_snapshot_reloads_from_the_db(fake_pool):
@@ -928,6 +1044,60 @@ async def test_levelup_ping_off_names_the_member_without_mentioning_them(fake_po
     text = msg.channel.sends[0][0][0]
     assert msg.author.mention not in text
     assert msg.author.display_name in text
+
+
+async def test_a_display_name_can_never_make_the_bot_ping_someone_else(fake_pool):
+    """P3. The announce quotes a MEMBER-WRITTEN display name, so a member who
+    renames themselves to "<@victim>" had the bot ping that victim on every
+    single level-up of theirs - from a name no moderator reads as an exploit.
+    Two guards, both required: the send allows no user mention at all when the
+    leveler asked not to be pinged, and the name itself is defused so its
+    markdown cannot forge a link the bot appears to endorse."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(cog, 1, xp_min=1, xp_max=1)
+    _route_fetchval_multi(
+        fake_pool, xp_value=10000, user_prefs={2: {"levelup_ping": False}}
+    )
+
+    msg = _FakeMessage(
+        guild_id=1,
+        author_id=2,
+        display_name="<@1337> [click](https://evil.example)",
+    )
+    await cog.on_message(msg)
+
+    args, kwargs = msg.channel.sends[0]
+    # The ping guard: nobody at all, since this member opted out of their own.
+    assert kwargs["allowed_mentions"].users is False
+    assert kwargs["allowed_mentions"].roles is False
+    assert kwargs["allowed_mentions"].everyone is False
+    # The markup guard: the link is broken open into visible text.
+    assert "\\[click]" in args[0]
+
+
+async def test_the_announce_allows_only_the_levelers_own_mention(fake_pool):
+    """With the ping ON, ``users`` names the leveler instead of saying True.
+    True means "honour every user mention this text parses to", and the text
+    also carries values the bot does not own - the guild name here, a display
+    name in the test above - so a mention smuggled into one of them would ping
+    a stranger. A one-element list allows the one mention this message is
+    about and renders every other id as inert text."""
+    cog = Leveling(_make_bot(fake_pool))
+    _enable(
+        cog,
+        1,
+        xp_min=1,
+        xp_max=1,
+        announce_template="{user} hit {level} in {guild}",
+    )
+    _route_fetchval(fake_pool, xp_value=10000)
+
+    msg = _FakeMessage(guild_id=1, author_id=2, guild_name="<@1337>")
+    await cog.on_message(msg)
+
+    args, kwargs = msg.channel.sends[0]
+    assert "<@1337>" in args[0]  # the smuggled id IS in the text ...
+    assert kwargs["allowed_mentions"].users == [msg.author]  # ... and inert
 
 
 async def test_levelup_ping_default_on_mentions_the_member(fake_pool):
@@ -2097,6 +2267,29 @@ def test_leaderboard_period_entries_paginate_without_a_level_key():
     list_text = container.children[2].content
     assert "**#16**" in list_text
     assert "level" not in list_text.lower()  # period rows show XP, never a level
+
+
+@pytest.mark.parametrize("direction", ["_next", "_prev"])
+async def test_a_page_flip_never_re_arms_the_mentions(direction, make_interaction):
+    """P3. The board names its ranks with member-written display names, and the
+    initial send suppresses mentions - but an EDIT re-evaluates them, and
+    discord.py folds the client-wide default (users=True) into any edit that
+    does not say otherwise. So a member named "<@victim>" pinged that victim
+    again on every page flip, of every member's leaderboard. Both directions
+    have to say it, because either can be the flip that renders their row."""
+    view = LeaderboardView(1, "Board", _lb_entries(30))
+    if direction == "_prev":
+        view.page = 1
+        view._build()
+    interaction = make_interaction(user_id=1)
+
+    await getattr(view, direction)(interaction)
+
+    assert interaction.edits, "the flip must still edit the message"
+    allowed = interaction.edits[0][1]["allowed_mentions"]
+    assert allowed.users is False
+    assert allowed.roles is False
+    assert allowed.everyone is False
 
 
 def test_leaderboard_is_author_gated():

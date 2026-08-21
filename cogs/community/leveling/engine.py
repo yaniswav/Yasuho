@@ -20,6 +20,7 @@ module they already share (see the S1 section below).
 
 from __future__ import annotations
 
+import math
 import random
 import re
 import string
@@ -241,18 +242,33 @@ class NoXpSnapshot:
 EMPTY_NO_XP_SNAPSHOT = NoXpSnapshot()
 
 
-def is_no_xp_message(snapshot, channel_id, category_id, role_ids):
+def is_no_xp_message(snapshot, channel_id, category_id, role_ids, parent_id=None):
     """Whether a message posted under these ids must earn zero XP.
 
     Pure set membership, allocation-free: the message's channel id OR its
+    PARENT channel id (``parent_id``, set only for a thread - see below) OR its
     category id (so a category-level mute covers every channel inside it, see
     :class:`NoXpSnapshot`) hits ``snapshot.channels``, OR any id in
     ``role_ids`` (the author's role ids) is in ``snapshot.roles``. ``role_ids``
     may be any iterable; an empty snapshot short-circuits both checks without
     ever iterating ``role_ids`` at all, so a guild with no rules configured
     (the overwhelming majority) pays only two ``in frozenset()`` tests.
+
+    THREADS. A thread carries its OWN channel id, so before ``parent_id``
+    existed a mute on #general did nothing to a thread hanging under #general
+    and any member could farm XP by opening one there. ``parent_id`` is the
+    thread's parent channel (``discord.Thread.parent_id``, ``None`` for every
+    normal channel), and a mute on the parent covers every thread and forum post
+    under it. The three ids are OR-ed rather than ranked because this snapshot
+    only ever holds MUTES - there is no "unmute" row that a thread-level rule
+    could use to override its parent - so a rule on the thread itself still
+    decides its own case, it simply cannot un-mute what the parent muted. The
+    precedence that DOES matter (thread over parent over category) lives in
+    :func:`compute_multiplier`, where the rules carry values that can disagree.
     """
     if channel_id in snapshot.channels:
+        return True
+    if parent_id is not None and parent_id in snapshot.channels:
         return True
     if category_id is not None and category_id in snapshot.channels:
         return True
@@ -529,12 +545,47 @@ def validate_multiplier_factor(factor):
     A bool is rejected explicitly (an ``int`` subclass in Python) so an admin
     can never set a factor to "True"/"False". 0.0 is IN range - muting XP via
     a zero factor is an explicitly supported outcome.
+
+    NON-FINITE VALUES ARE REJECTED BEFORE THE RANGE TEST, and that order is the
+    whole point: NaN compares False against everything, so ``nan < 0.0 or nan >
+    5.0`` is False and a bare range check WELCOMES it. The factor reaches
+    :func:`apply_multiplier`, ``round(nan)`` raises ValueError, and on_message
+    then dies on EVERY message in that guild - one prefix invocation of
+    ``levelconfig boost nan`` (``float("nan")`` parses happily) would take the
+    guild's leveling down until an admin found the row. ``math.isfinite`` also
+    covers the infinities, which the range test happens to catch already.
     """
     if isinstance(factor, bool) or not isinstance(factor, (int, float)):
+        return False, "invalid"
+    if not math.isfinite(factor):
         return False, "invalid"
     if factor < MIN_MULTIPLIER_FACTOR or factor > MAX_MULTIPLIER_FACTOR:
         return False, "out_of_range"
     return True, None
+
+
+def sane_stored_factor(value, default=1.0):
+    """A factor READ BACK from the database, made safe to multiply an XP grant.
+
+    :func:`validate_multiplier_factor` closes the door on new poison; this is
+    what happens to the poison already through it. A NaN written before that
+    validation existed keeps sitting in ``xp_multipliers`` / ``level_config``
+    forever, and every read of it would crash the grant path again - so a stored
+    factor that is not a finite number is replaced by ``default`` (1.0, the
+    "no rule" value, or ``None`` for the event columns) instead of being carried
+    into :func:`apply_multiplier`. Deliberately NOT a clamp: a value outside
+    ``MIN``/``MAX`` is a real, harmless number that some admin chose, and
+    silently rewriting it is not this function's business - only unmultipliable
+    values are.
+
+    Runs on the COLD path only (a snapshot build, i.e. one cache miss per
+    guild), never per message.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return default
+    if not math.isfinite(value):
+        return default
+    return value
 
 
 def validate_event_duration(seconds):
@@ -647,7 +698,11 @@ class MultiplierSnapshot:
         roles: dict = {}
         for row in rows:
             kind = row["kind"]
-            factor = row["factor"]
+            # Every factor is sanitised HERE, once per snapshot build, so no
+            # unmultipliable stored value (a NaN predating
+            # validate_multiplier_factor's finiteness check) can reach the grant
+            # path - see sane_stored_factor.
+            factor = sane_stored_factor(row["factor"])
             if kind == MULTIPLIER_GLOBAL:
                 global_factor = factor
             elif kind == MULTIPLIER_CHANNEL:
@@ -658,7 +713,10 @@ class MultiplierSnapshot:
             global_factor=global_factor,
             channels=channels,
             roles=roles,
-            event_factor=event_factor,
+            # None default: a non-finite stored event factor reads as "no event
+            # running", which is_trivial and compute_multiplier both already
+            # handle - not as a 1.0 event that would keep the snapshot busy.
+            event_factor=sane_stored_factor(event_factor, None),
             event_ends_at=event_ends_at,
         )
 
@@ -668,18 +726,31 @@ class MultiplierSnapshot:
 EMPTY_MULTIPLIER_SNAPSHOT = MultiplierSnapshot()
 
 
-def compute_multiplier(snapshot, channel_id, category_id, role_ids, now):
+def compute_multiplier(
+    snapshot, channel_id, category_id, role_ids, now, parent_id=None
+):
     """The effective XP multiplier for a grant, per the Lurkr stacking rule:
 
         effective = global_factor * channel_factor * role_factor * event_factor
 
     Each tier defaults to 1.0 when this guild has no rule for it.
 
-    ``channel_factor`` is the entry for ``channel_id`` OR - only when there is
-    no channel-specific entry - the entry for ``category_id``: a channel-level
-    rule always wins over its category (mirrors NoXpSnapshot's own
-    channel-or-category lookup order in is_no_xp_message, so the two L3/L4
-    "which wins" rules read identically).
+    ``channel_factor`` walks ONE chain, most specific first, and stops at the
+    first tier this guild actually configured:
+
+        the channel itself > its parent channel (``parent_id``) > its category
+
+    A channel-level rule therefore always wins over its category, exactly as
+    before. ``parent_id`` is the new middle rung and is set only for a THREAD
+    (``discord.Thread.parent_id``; ``None`` for every normal channel, which
+    leaves the old two-rung chain byte-for-byte intact): a boost or a reduction
+    set on #general now follows into the threads hanging under it, where before
+    a thread's own id matched nothing and silently fell back to 1.0. A rule set
+    on the THREAD ITSELF still wins over its parent's - that is what "most
+    specific first" means, and it is the only way an admin can give one thread a
+    different factor from its channel (mirrors is_no_xp_message's own
+    channel-or-parent-or-category lookup, so the two L3/L4 "which wins" rules
+    still read identically).
 
     ``role_factor`` is the HIGHEST factor among every role in ``role_ids``
     that has its own entry - NOT a product across roles: a member holding two
@@ -694,6 +765,8 @@ def compute_multiplier(snapshot, channel_id, category_id, role_ids, now):
     behind the cog's own lazy-null refresh.
     """
     channel_factor = snapshot.channels.get(channel_id)
+    if channel_factor is None and parent_id is not None:
+        channel_factor = snapshot.channels.get(parent_id)
     if channel_factor is None and category_id is not None:
         channel_factor = snapshot.channels.get(category_id)
     if channel_factor is None:

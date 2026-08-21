@@ -124,6 +124,41 @@ _UPLOAD_COOLDOWN_SECONDS = 30
 _MAX_INFLIGHT_UPLOADS = 8
 
 
+def may_attach_files(channel, member):
+    """Whether ``member`` may attach a file in ``channel`` right now.
+
+    The gate on the member-supplied HALF of a rank card. A background is an
+    arbitrary image its owner uploaded, and /rank paints it into whatever
+    channel the command was run in - which quietly handed a member a way to put
+    their own picture in a channel where the moderators took Attach Files away
+    from them, using the bot as the courier. So the card only carries a
+    member-supplied background when the INVOKER could have posted an image there
+    themselves; otherwise it falls back to the guild/stock look, which is staff-
+    chosen, identical for everyone, and therefore not a member's content at all.
+
+    The invoker, not the card's owner: the invoker is the one whose action puts
+    the image in the channel (``/rank @someone`` would otherwise be the same
+    bypass with one extra step).
+
+    Unknown reads as NO, the opposite of the bot-side ``_may_attach`` in
+    serverstats: that one guards a chart nobody could otherwise get, and the
+    cost of guessing wrong is a lost chart; this one guards a restriction a
+    moderator applied on purpose, and the cost of guessing wrong is a member's
+    picture in a channel that refused it. What we lose on a channel we cannot
+    read permissions for is a cosmetic background, so failing closed is cheap.
+    ``Thread.permissions_for`` can raise (an uncached parent channel), hence the
+    catch rather than a bare ``getattr``.
+    """
+    permissions_for = getattr(channel, "permissions_for", None)
+    if permissions_for is None or member is None:
+        return False
+    try:
+        return bool(permissions_for(member).attach_files)
+    except Exception:
+        log.exception("Failed to resolve attach_files for a rank card render")
+        return False
+
+
 class _InflightUploads:
     """A fail-fast bot-wide counter for member background uploads.
 
@@ -288,7 +323,9 @@ class RankCardUserMixin:
         else:
             self._user_rank_cards[user_id] = bool(has_row)
 
-    async def resolve_rank_card_render(self, guild_id, user_id):
+    async def resolve_rank_card_render(
+        self, guild_id, user_id, *, allow_user_background=True
+    ):
         """Return the ``(accent | None, background_bytes | None)`` to draw with.
 
         THE precedence seam, and the only thing /rank needs to call: it folds the
@@ -299,6 +336,15 @@ class RankCardUserMixin:
 
         ``accent`` is None when neither layer overrides, i.e. the caller keeps
         the member's own role colour (the stock behaviour).
+
+        ``allow_user_background=False`` drops the member layer's IMAGE and lets
+        the guild's background (or the stock panel) show through, while keeping
+        that member's ACCENT - a colour is a number the member picked, not a
+        file they uploaded, so it carries none of the risk the caller is
+        refusing. /rank passes False when the invoker may not attach files in
+        the destination channel (see :func:`may_attach_files`); the member's row
+        is untouched, so the same card renders in full the moment they run the
+        command somewhere they could have posted the image themselves.
         """
         guild_accent, guild_has_background = await self.ensure_rank_card_style(
             guild_id
@@ -308,6 +354,8 @@ class RankCardUserMixin:
             user_accent, background = await self.ensure_user_rank_card_style(
                 user_id
             )
+            if not allow_user_background:
+                background = None
         accent = user_accent if user_accent is not None else guild_accent
         if background is None and guild_has_background:
             # Either the member set no background, or their row vanished between

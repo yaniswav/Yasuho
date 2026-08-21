@@ -13,6 +13,8 @@ These pin the four contracts the cog leans on:
 
 import datetime
 
+import pytest
+
 from cogs.community.leveling import engine as leveling
 
 # ---------------------------------------------------------------------------
@@ -254,6 +256,30 @@ def test_is_no_xp_message_channel_and_role_both_configured():
     assert leveling.is_no_xp_message(snapshot, 10, None, []) is True
     assert leveling.is_no_xp_message(snapshot, 1, None, [7]) is True
     assert leveling.is_no_xp_message(snapshot, 1, None, [8]) is False
+
+
+def test_is_no_xp_message_a_muted_channel_also_mutes_its_threads():
+    """THE thread hole (P2). A thread carries its OWN channel id, so a mute on
+    #general matched nothing inside a thread hanging under #general and any
+    member could farm XP by opening one there. The parent id closes it."""
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({10}))
+    # 777 is the thread's own id; 10 is #general, the parent it hangs under.
+    assert leveling.is_no_xp_message(snapshot, 777, None, [], 10) is True
+
+
+def test_is_no_xp_message_a_thread_under_an_unmuted_channel_still_earns():
+    """The other half: the parent id must not over-block. A thread under a
+    channel nobody muted is exactly as earning as the channel itself."""
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({10}))
+    assert leveling.is_no_xp_message(snapshot, 777, None, [], 11) is False
+    assert leveling.is_no_xp_message(snapshot, 777, None, []) is False
+
+
+def test_is_no_xp_message_a_thread_can_be_muted_on_its_own_id():
+    """A rule on the thread ITSELF decides its own case, parent or no parent -
+    the snapshot holds only mutes, so the three ids are OR-ed."""
+    snapshot = leveling.NoXpSnapshot(channels=frozenset({777}))
+    assert leveling.is_no_xp_message(snapshot, 777, None, [], 10) is True
 
 
 def test_can_add_no_xp_entry_below_and_at_cap():
@@ -648,6 +674,56 @@ def test_validate_multiplier_factor_rejects_bool_and_non_numeric():
         assert leveling.validate_multiplier_factor(bad) == (False, "invalid")
 
 
+def test_validate_multiplier_factor_rejects_nan_and_the_infinities():
+    """NaN is the one bad number a range check CANNOT catch: every comparison
+    against it is False, so ``nan < MIN or nan > MAX`` is False and a bare
+    range test welcomes it. See the counter-test below for what that costs."""
+    for bad in (float("nan"), float("inf"), float("-inf")):
+        assert leveling.validate_multiplier_factor(bad)[0] is False
+
+
+def test_a_nan_factor_would_crash_the_grant_path_for_the_whole_guild():
+    """WHY the check above exists, stated as the failure it prevents: a factor
+    that reaches apply_multiplier as NaN raises out of on_message for EVERY
+    message in that guild (round() cannot convert NaN), so one accepted config
+    value takes leveling down guild-wide until an admin finds the row."""
+    with pytest.raises(ValueError):
+        leveling.apply_multiplier(10, float("nan"))
+
+
+def test_a_stored_nan_is_neutralised_when_the_snapshot_is_built():
+    """The poison already in the table. Validation only guards NEW writes, so
+    a NaN written before it existed would keep crashing the grant on every
+    read - from_rows sanitises what it loads, on the cold path, once."""
+    rows = [
+        {"kind": leveling.MULTIPLIER_GLOBAL, "target_id": 0, "factor": float("nan")},
+        {"kind": leveling.MULTIPLIER_CHANNEL, "target_id": 10, "factor": float("nan")},
+        {"kind": leveling.MULTIPLIER_ROLE, "target_id": 20, "factor": float("nan")},
+    ]
+    snapshot = leveling.MultiplierSnapshot.from_rows(
+        rows, event_factor=float("nan"), event_ends_at=_NOW
+    )
+    assert snapshot.global_factor == 1.0
+    assert snapshot.channels == {10: 1.0}
+    assert snapshot.roles == {20: 1.0}
+    assert snapshot.event_factor is None
+    # And the grant it feeds is a plain, multipliable number again.
+    assert leveling.apply_multiplier(
+        10, leveling.compute_multiplier(snapshot, 10, None, [20], _NOW)
+    ) == 10
+
+
+def test_sane_stored_factor_leaves_every_real_number_alone():
+    """It is NOT a clamp: an out-of-range factor is a real number some admin
+    chose, and rewriting it is not this function's job - only unmultipliable
+    values are replaced."""
+    assert leveling.sane_stored_factor(0.0) == 0.0
+    assert leveling.sane_stored_factor(2.5) == 2.5
+    assert leveling.sane_stored_factor(99.0) == 99.0
+    assert leveling.sane_stored_factor(None) == 1.0
+    assert leveling.sane_stored_factor(None, None) is None
+
+
 def test_can_add_multiplier_below_and_at_cap():
     assert leveling.can_add_multiplier(0) is True
     assert leveling.can_add_multiplier(leveling.MAX_MULTIPLIERS_PER_GUILD - 1) is True
@@ -788,6 +864,32 @@ def test_compute_multiplier_category_alone():
     assert leveling.compute_multiplier(snapshot, 999, 50, [], _NOW) == 0.5
     assert leveling.compute_multiplier(snapshot, 999, None, [], _NOW) == 1.0
     assert leveling.compute_multiplier(snapshot, 999, 51, [], _NOW) == 1.0
+
+
+def test_compute_multiplier_a_thread_inherits_its_parent_channels_factor():
+    """The P2 hole on the multiplier side: a thread's own id matched nothing,
+    so a reduction on #general was worth 1.0 inside its threads."""
+    snapshot = leveling.MultiplierSnapshot(channels={10: 0.5})
+    assert leveling.compute_multiplier(snapshot, 777, None, [], _NOW, 10) == 0.5
+    # ... and a thread under an unconfigured parent is still neutral.
+    assert leveling.compute_multiplier(snapshot, 777, None, [], _NOW, 11) == 1.0
+
+
+def test_compute_multiplier_a_rule_on_the_thread_beats_its_parents():
+    """THE precedence decision, pinned: most specific wins. A thread with its
+    own factor keeps it even when the parent channel has one too - otherwise
+    an admin could never give one thread a different factor."""
+    snapshot = leveling.MultiplierSnapshot(channels={777: 3.0, 10: 0.5})
+    assert leveling.compute_multiplier(snapshot, 777, None, [], _NOW, 10) == 3.0
+
+
+def test_compute_multiplier_a_parent_channel_beats_the_category():
+    """The middle rung sits where it belongs: thread > parent > category."""
+    snapshot = leveling.MultiplierSnapshot(channels={10: 2.0, 50: 4.0})
+    assert leveling.compute_multiplier(snapshot, 777, 50, [], _NOW, 10) == 2.0
+    # With no rule on the parent, the category still applies to the thread.
+    snapshot = leveling.MultiplierSnapshot(channels={50: 4.0})
+    assert leveling.compute_multiplier(snapshot, 777, 50, [], _NOW, 10) == 4.0
 
 
 def test_compute_multiplier_channel_wins_over_category():
