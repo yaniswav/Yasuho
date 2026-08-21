@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-20 15:19+0000\n"
+"POT-Creation-Date: 2026-08-21 16:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -85,12 +85,12 @@ msgid "Link your account first with `/anilist login`."
 msgstr "Vincula tu cuenta primero con `/anilist login`."
 
 #: cogs/anilist/account.py:272 cogs/anilist/account.py:620
-#: cogs/anilist/feed.py:2138
+#: cogs/anilist/feed.py:2234
 msgid "Could not resolve your AniList account."
 msgstr "No se pudo encontrar tu cuenta de AniList."
 
 #: cogs/anilist/account.py:291 cogs/anilist/account.py:312
-#: cogs/anilist/hub.py:224
+#: cogs/anilist/hub.py:236
 msgid "AniList account linking is not configured."
 msgstr "La vinculación de cuenta de AniList no está configurada."
 
@@ -127,94 +127,94 @@ msgstr "Indica un nombre o vincula tu cuenta con `/anilist login`."
 msgid "Media type must be `anime` or `manga`."
 msgstr "El tipo de medio debe ser `anime` o `manga`."
 
-#: cogs/anilist/airing.py:304 cogs/anilist/airing.py:350
-#: cogs/anilist/chapters.py:519 cogs/anilist/chapters.py:565
+#: cogs/anilist/airing.py:305 cogs/anilist/airing.py:351
+#: cogs/anilist/chapters.py:520 cogs/anilist/chapters.py:566
 #: cogs/anilist/feed_delivery.py:388 cogs/anilist/feed_delivery.py:510
 #: cogs/anilist/feed_delivery.py:554 cogs/anilist/feed_delivery.py:660
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/airing.py:310 cogs/anilist/airing.py:356
-#: cogs/anilist/chapters.py:525 cogs/anilist/chapters.py:571
+#: cogs/anilist/airing.py:311 cogs/anilist/airing.py:357
+#: cogs/anilist/chapters.py:526 cogs/anilist/chapters.py:572
 #: cogs/anilist/feed_delivery.py:394 cogs/anilist/feed_delivery.py:516
 #: cogs/anilist/feed_delivery.py:560 cogs/anilist/feed_delivery.py:666
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr "Tu vinculación de AniList parece inválida ahora - vuelve a vincularla con `/anilist login`."
 
-#: cogs/anilist/airing.py:316 cogs/anilist/airing.py:326
-#: cogs/anilist/airing.py:362 cogs/anilist/chapters.py:531
-#: cogs/anilist/chapters.py:541 cogs/anilist/chapters.py:577
+#: cogs/anilist/airing.py:317 cogs/anilist/airing.py:327
+#: cogs/anilist/airing.py:363 cogs/anilist/chapters.py:532
+#: cogs/anilist/chapters.py:542 cogs/anilist/chapters.py:578
 #: cogs/anilist/feed_delivery.py:522 cogs/anilist/feed_delivery.py:532
 #: cogs/anilist/feed_delivery.py:566
 msgid "I couldn't find that title on AniList anymore."
 msgstr "No pude volver a encontrar ese título en AniList."
 
-#: cogs/anilist/airing.py:320 cogs/anilist/airing.py:366
-#: cogs/anilist/airing.py:371 cogs/anilist/chapters.py:535
-#: cogs/anilist/chapters.py:581 cogs/anilist/chapters.py:586
-#: cogs/anilist/feed.py:1611 cogs/anilist/feed_delivery.py:404
+#: cogs/anilist/airing.py:321 cogs/anilist/airing.py:367
+#: cogs/anilist/airing.py:372 cogs/anilist/chapters.py:536
+#: cogs/anilist/chapters.py:582 cogs/anilist/chapters.py:587
+#: cogs/anilist/feed.py:1612 cogs/anilist/feed_delivery.py:404
 #: cogs/anilist/feed_delivery.py:526 cogs/anilist/feed_delivery.py:570
 #: cogs/anilist/feed_delivery.py:575 cogs/anilist/feed_delivery.py:676
 msgid "I could not reach AniList - try again shortly."
 msgstr "No pude contactar con AniList - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/airing.py:334
+#: cogs/anilist/airing.py:335
 #, python-brace-format
 msgid "You are already at episode {progress} of **{title}**."
 msgstr "Ya estás en el episodio {progress} de **{title}**."
 
-#: cogs/anilist/airing.py:375
+#: cogs/anilist/airing.py:376
 #, python-brace-format
 msgid "Marked **{title}** as watched up to episode {episode}."
 msgstr "**{title}** marcado como visto hasta el episodio {episode}."
 
-#: cogs/anilist/airing.py:399
+#: cogs/anilist/airing.py:400
 msgid "Seen"
 msgstr "Visto"
 
-#: cogs/anilist/airing.py:437
+#: cogs/anilist/airing.py:438
 msgid "A new episode just aired."
 msgstr "Acaba de estrenarse un nuevo episodio."
 
-#: cogs/anilist/airing.py:448
+#: cogs/anilist/airing.py:449
 #, python-brace-format
 msgid "Episode {episode} of **{title}** just aired."
 msgstr "El episodio {episode} de **{title}** acaba de estrenarse."
 
-#: cogs/anilist/airing.py:452
+#: cogs/anilist/airing.py:453
 msgid "New episode"
 msgstr "Nuevo episodio"
 
-#: cogs/anilist/airing.py:479 cogs/anilist/feed_render.py:274
-#: cogs/anilist/hub.py:305 cogs/anilist/lookup.py:67 cogs/anilist/lookup.py:119
+#: cogs/anilist/airing.py:480 cogs/anilist/feed_render.py:274
+#: cogs/anilist/hub.py:317 cogs/anilist/lookup.py:67 cogs/anilist/lookup.py:119
 #: cogs/community/profile/registry.py:256
 msgid "AniList"
 msgstr "AniList"
 
-#: cogs/anilist/airing.py:523
+#: cogs/anilist/airing.py:524
 msgid "Airing alerts are now **off**. I will not DM you about new episodes anymore - run this again to turn them back on."
 msgstr "Las alertas de emisión ahora están **desactivadas**. Ya no te enviaré mensajes privados sobre nuevos episodios - ejecuta esto de nuevo para volver a activarlas."
 
-#: cogs/anilist/airing.py:534
+#: cogs/anilist/airing.py:535
 msgid "Link your AniList account first with `/anilist login`, then run this again to turn on airing alerts."
 msgstr "Vincula tu cuenta de AniList primero con `/anilist login`, luego ejecuta esto de nuevo para activar las alertas de emisión."
 
-#: cogs/anilist/airing.py:542 cogs/anilist/chapters.py:775
-#: cogs/anilist/feed.py:2129 cogs/anilist/feed_delivery.py:349
+#: cogs/anilist/airing.py:543 cogs/anilist/chapters.py:776
+#: cogs/anilist/feed.py:2225 cogs/anilist/feed_delivery.py:349
 #: cogs/anilist/schedule.py:642
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Tu vinculación de AniList ya no es válida - vuelve a vincularla con `/anilist login`."
 
-#: cogs/anilist/airing.py:553 cogs/anilist/chapters.py:786
+#: cogs/anilist/airing.py:554 cogs/anilist/chapters.py:787
 #: cogs/anilist/schedule.py:651
 msgid "Could not resolve your AniList account - try again shortly."
 msgstr "No se pudo encontrar tu cuenta de AniList - inténtalo de nuevo en un momento."
 
-#: cogs/anilist/airing.py:580
+#: cogs/anilist/airing.py:581
 msgid "-# Heads up: I could not see any titles on your Watching list. Make sure your AniList anime list is set to public."
 msgstr "-# Aviso: no pude ver ningún título en tu lista Viendo. Asegúrate de que tu lista de anime de AniList esté configurada como pública."
 
-#: cogs/anilist/airing.py:586
+#: cogs/anilist/airing.py:587
 msgid ""
 "Airing alerts are now **on**. I will DM you when a new episode of a title on your **Watching** anime list airs, with a one-click Seen button.\n"
 "-# Your AniList anime list must be public for this to work."
@@ -287,7 +287,7 @@ msgid "Pick the exact title to update:"
 msgstr "Elige el título exacto que quieres actualizar:"
 
 #: cogs/anilist/base.py:660 cogs/anilist/base.py:669 cogs/anilist/base.py:715
-#: cogs/anilist/hub.py:64
+#: cogs/anilist/hub.py:66
 msgid "No result."
 msgstr "Sin resultados."
 
@@ -311,63 +311,63 @@ msgstr "No se encontró ningún anime para {season} {year}."
 msgid "**{season} {year} anime** - pick one for details:"
 msgstr "**Anime de {season} {year}** - elige uno para ver los detalles:"
 
-#: cogs/anilist/chapters.py:504
+#: cogs/anilist/chapters.py:505
 msgid "I couldn't read that chapter number."
 msgstr "No pude leer ese número de capítulo."
 
-#: cogs/anilist/chapters.py:549
+#: cogs/anilist/chapters.py:550
 #, python-brace-format
 msgid "You are already at chapter {progress} of **{title}**."
 msgstr "Ya vas por el capítulo {progress} de **{title}**."
 
-#: cogs/anilist/chapters.py:590
+#: cogs/anilist/chapters.py:591
 #, python-brace-format
 msgid "Marked **{title}** as read up to chapter {chapter}."
 msgstr "Marqué **{title}** como leído hasta el capítulo {chapter}."
 
-#: cogs/anilist/chapters.py:616
+#: cogs/anilist/chapters.py:617
 msgid "Read"
 msgstr "Leer"
 
-#: cogs/anilist/chapters.py:662
+#: cogs/anilist/chapters.py:663
 msgid "A new chapter is out."
 msgstr "Ha salido un nuevo capítulo."
 
-#: cogs/anilist/chapters.py:673
+#: cogs/anilist/chapters.py:674
 #, python-brace-format
 msgid "Chapter {chapter} of **{title}** is out."
 msgstr "Ya salió el capítulo {chapter} de **{title}**."
 
-#: cogs/anilist/chapters.py:677
+#: cogs/anilist/chapters.py:678
 msgid "New chapter"
 msgstr "Nuevo capítulo"
 
-#: cogs/anilist/chapters.py:682
+#: cogs/anilist/chapters.py:683
 #, python-brace-format
 msgid "Vol. {volume}"
 msgstr "Vol. {volume}"
 
-#: cogs/anilist/chapters.py:708
+#: cogs/anilist/chapters.py:709
 msgid "Official site"
 msgstr "Sitio oficial"
 
-#: cogs/anilist/chapters.py:708
+#: cogs/anilist/chapters.py:709
 msgid "MangaDex"
 msgstr "MangaDex"
 
-#: cogs/anilist/chapters.py:756
+#: cogs/anilist/chapters.py:757
 msgid "Chapter alerts are now **off**. I will not DM you about new chapters anymore - run this again to turn them back on."
 msgstr "Las alertas de capítulos ahora están **desactivadas**. Ya no te enviaré MD sobre nuevos capítulos - vuelve a ejecutar esto para reactivarlas."
 
-#: cogs/anilist/chapters.py:767
+#: cogs/anilist/chapters.py:768
 msgid "Link your AniList account first with `/anilist login`, then run this again to turn on chapter alerts."
 msgstr "Vincula primero tu cuenta de AniList con `/anilist login`, y luego vuelve a ejecutar esto para activar las alertas de capítulos."
 
-#: cogs/anilist/chapters.py:813
+#: cogs/anilist/chapters.py:814
 msgid "-# Heads up: I could not see any titles on your Reading list. Make sure your AniList manga list is set to public."
 msgstr "-# Aviso: no he podido ver ningún título en tu lista Reading. Asegúrate de que tu lista de manga en AniList sea pública."
 
-#: cogs/anilist/chapters.py:819
+#: cogs/anilist/chapters.py:820
 msgid ""
 "Chapter alerts are now **on**. I will DM you when a new chapter of a title on your **Reading** manga list drops, with a one-click Read button.\n"
 "-# Your AniList manga list must be public for this to work."
@@ -430,14 +430,14 @@ msgstr "Filtrar por estado..."
 #: cogs/anilist/collection.py:109 cogs/anilist/collection.py:358
 #: cogs/anilist/feed_views.py:133 cogs/anilist/feed_views.py:314
 #: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
-#: cogs/anilist/hub.py:54
+#: cogs/anilist/hub.py:55
 msgid "Anime"
 msgstr "Anime"
 
 #: cogs/anilist/collection.py:109 cogs/anilist/collection.py:358
 #: cogs/anilist/feed_views.py:134 cogs/anilist/feed_views.py:314
 #: cogs/anilist/feed_views.py:480 cogs/anilist/feed_views.py:601
-#: cogs/anilist/hub.py:55
+#: cogs/anilist/hub.py:56
 msgid "Manga"
 msgstr "Manga"
 
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:380 cogs/anilist/feed_views.py:1197
-#: cogs/anilist/hub.py:273 cogs/community/usersettings.py:447
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:447
 #: cogs/config/rooms_config.py:451 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -593,7 +593,7 @@ msgstr "No hay títulos coincidentes de ese tipo."
 #: cogs/community/leveling/level_rewards.py:106
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
-#: cogs/community/serverstats/views.py:539 cogs/config/announcements.py:298
+#: cogs/community/serverstats/views.py:627 cogs/config/announcements.py:298
 #: cogs/config/rolemenus.py:623 cogs/config/welcome.py:109
 #: cogs/config/welcome.py:264 cogs/config/welcome.py:518
 #: cogs/system/botstats.py:1358
@@ -613,189 +613,189 @@ msgstr "Algo salió mal al abrir el editor."
 msgid "Pick which one to update..."
 msgstr "Elige cuál quieres actualizar..."
 
-#: cogs/anilist/feed.py:1213 cogs/anilist/feed.py:1262
-#: cogs/anilist/feed.py:1952
+#: cogs/anilist/feed.py:1214 cogs/anilist/feed.py:1263
+#: cogs/anilist/feed.py:1953
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "{channel} ya es un feed de AniList."
 
-#: cogs/anilist/feed.py:1221
+#: cogs/anilist/feed.py:1222
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "Este servidor ya tiene el máximo de {max} feeds. Elimina uno primero."
 
-#: cogs/anilist/feed.py:1274
+#: cogs/anilist/feed.py:1275
 msgid "That feed no longer exists."
 msgstr "Ese feed ya no existe."
 
-#: cogs/anilist/feed.py:1379 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:1380 tests/cogs/test_anilist_feed_subs.py:14
 msgid "I couldn't read that title - try searching again."
 msgstr "No pude leer ese título - intenta buscar de nuevo."
 
-#: cogs/anilist/feed.py:1391 cogs/anilist/feed_views.py:462
+#: cogs/anilist/feed.py:1392 cogs/anilist/feed_views.py:462
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr "Este feed ya sigue el máximo de {max} títulos. Elimina uno primero."
 
-#: cogs/anilist/feed.py:1572
+#: cogs/anilist/feed.py:1573
 msgid "Give me an AniList username to follow."
 msgstr "Dame un nombre de usuario de AniList para seguir."
 
-#: cogs/anilist/feed.py:1589 cogs/anilist/feed.py:1602
+#: cogs/anilist/feed.py:1590 cogs/anilist/feed.py:1603
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "AniList me está limitando la frecuencia de peticiones ahora mismo - inténtalo de nuevo en un minuto."
 
-#: cogs/anilist/feed.py:1620
+#: cogs/anilist/feed.py:1621
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "No encontré ningún usuario de AniList llamado **{name}**."
 
-#: cogs/anilist/feed.py:1669 cogs/anilist/feed_views.py:1093
+#: cogs/anilist/feed.py:1670 cogs/anilist/feed_views.py:1093
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr "Este feed ya sigue al máximo de {max} usuarios."
 
-#: cogs/anilist/feed.py:1795
+#: cogs/anilist/feed.py:1796
 #, python-brace-format
 msgid "This feed already mutes the maximum of {max} users."
 msgstr "Este feed ya silencia al máximo de {max} usuarios."
 
-#: cogs/anilist/feed.py:1870
+#: cogs/anilist/feed.py:1871
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "Este servidor no tiene ningún feed de AniList activo. Crea uno o vuelve a activarlo primero con `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:1881
+#: cogs/anilist/feed.py:1882
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "Este servidor tiene varios feeds. Ejecuta esto en un canal de feed ({channels})."
 
-#: cogs/anilist/feed.py:1928
+#: cogs/anilist/feed.py:1929
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "Este servidor ya tiene el máximo de {max} feeds. Quita uno primero con `/anilistfeed remove`."
 
-#: cogs/anilist/feed.py:1938
+#: cogs/anilist/feed.py:1939
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "Feed de AniList creado en {channel}. Añade usuarios con `/anilistfeed follow`."
 
-#: cogs/anilist/feed.py:1948
+#: cogs/anilist/feed.py:1949
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "Feed de AniList reactivado en {channel}."
 
-#: cogs/anilist/feed.py:1956
+#: cogs/anilist/feed.py:1957
 msgid "AniList feed"
 msgstr "Feed de AniList"
 
-#: cogs/anilist/feed.py:1982
+#: cogs/anilist/feed.py:1983
 msgid "User"
 msgstr "Usuario"
 
-#: cogs/anilist/feed.py:1982
+#: cogs/anilist/feed.py:1983
 msgid "Feed"
 msgstr "Feed"
 
-#: cogs/anilist/feed.py:1984
+#: cogs/anilist/feed.py:1985
 msgid "Now following"
 msgstr "Ahora siguiendo"
 
-#: cogs/anilist/feed.py:2004 cogs/anilist/feed.py:2014
+#: cogs/anilist/feed.py:2005 cogs/anilist/feed.py:2015
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "Este feed no sigue a **{name}**."
 
-#: cogs/anilist/feed.py:2017
+#: cogs/anilist/feed.py:2018
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "Dejaste de seguir a **{name}**."
 
-#: cogs/anilist/feed.py:2038
+#: cogs/anilist/feed.py:2039
 #, python-brace-format
 msgid "This feed is not following **{name}**, so there is nothing to mute. Muting only hides someone the feed already follows - see `/anilistfeed list`."
 msgstr "Este feed no sigue a **{name}**, así que no hay nada que silenciar. Silenciar solo oculta a alguien que el feed ya sigue - consulta `/anilistfeed list`."
 
-#: cogs/anilist/feed.py:2051
+#: cogs/anilist/feed.py:2052
 #, python-brace-format
 msgid "**{name}** stays followed, but their activity is no longer posted in <#{channel}>. Other feeds following them are unaffected."
 msgstr "**{name}** sigue siendo seguido, pero su actividad ya no se publica en <#{channel}>. Los demás feeds que lo siguen no se ven afectados."
 
-#: cogs/anilist/feed.py:2054
+#: cogs/anilist/feed.py:2055
 msgid "Muted here"
 msgstr "Silenciado aquí"
 
-#: cogs/anilist/feed.py:2080
+#: cogs/anilist/feed.py:2081
 #, python-brace-format
 msgid "**{name}** is not muted in this feed."
 msgstr "**{name}** no está silenciado en este feed."
 
-#: cogs/anilist/feed.py:2084
+#: cogs/anilist/feed.py:2085
 #, python-brace-format
 msgid "Unmuted **{name}** - their activity is posted here again."
 msgstr "Se ha quitado el silencio a **{name}** - su actividad se publica aquí de nuevo."
 
-#: cogs/anilist/feed.py:2111
-msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
-msgstr "Este feed no permite que los miembros se unan por su cuenta. Pide a un moderador que active **Los miembros pueden unirse** en `/anilistfeed`."
-
-#: cogs/anilist/feed.py:2119 cogs/anilist/feed_delivery.py:331
-msgid "AniList actions are unavailable right now."
-msgstr "Las acciones de AniList no están disponibles en este momento."
-
-#: cogs/anilist/feed.py:2124
-msgid "Link your AniList account first with `/anilist login`."
-msgstr "Vincula tu cuenta de AniList primero con `/anilist login`."
-
-#: cogs/anilist/feed.py:2153
+#: cogs/anilist/feed.py:2194 cogs/anilist/feed.py:2250
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "Has dejado el feed de AniList en <#{channel}>."
 
-#: cogs/anilist/feed.py:2161
+#: cogs/anilist/feed.py:2207
+msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
+msgstr "Este feed no permite que los miembros se unan por su cuenta. Pide a un moderador que active **Los miembros pueden unirse** en `/anilistfeed`."
+
+#: cogs/anilist/feed.py:2215 cogs/anilist/feed_delivery.py:331
+msgid "AniList actions are unavailable right now."
+msgstr "Las acciones de AniList no están disponibles en este momento."
+
+#: cogs/anilist/feed.py:2220
+msgid "Link your AniList account first with `/anilist login`."
+msgstr "Vincula tu cuenta de AniList primero con `/anilist login`."
+
+#: cogs/anilist/feed.py:2258
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "Este feed está lleno ahora mismo - pide a un moderador que haga espacio."
 
-#: cogs/anilist/feed.py:2164
+#: cogs/anilist/feed.py:2261
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "Te has unido al feed de AniList en <#{channel}>."
 
-#: cogs/anilist/feed.py:2172
+#: cogs/anilist/feed.py:2269
 msgid "A moderator has hidden your activity in that channel, so nothing of yours is posted there until they unhide it."
 msgstr "Un moderador ha ocultado tu actividad en ese canal, asi que no se publicara nada tuyo alli hasta que vuelva a mostrarla."
 
-#: cogs/anilist/feed.py:2190
+#: cogs/anilist/feed.py:2287
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "Este servidor todavía no tiene un feed de AniList. Crea uno con `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:2225
+#: cogs/anilist/feed.py:2322
 msgid "none"
 msgstr "ninguno"
 
-#: cogs/anilist/feed.py:2226 cogs/moderation/automod.py:190
+#: cogs/anilist/feed.py:2323 cogs/moderation/automod.py:203
 msgid "enabled"
 msgstr "activado"
 
-#: cogs/anilist/feed.py:2226 cogs/moderation/automod.py:190
+#: cogs/anilist/feed.py:2323 cogs/moderation/automod.py:203
 msgid "disabled"
 msgstr "desactivado"
 
-#: cogs/anilist/feed.py:2233 cogs/anilist/feed_views.py:1333
+#: cogs/anilist/feed.py:2330 cogs/anilist/feed_views.py:1333
 msgid "no one yet"
 msgstr "nadie todavía"
 
-#: cogs/anilist/feed.py:2241
+#: cogs/anilist/feed.py:2338
 #, python-brace-format
 msgid "{names} ({count} user hidden here, still followed)"
 msgid_plural "{names} ({count} users hidden here, still followed)"
 msgstr[0] "{names} ({count} usuario oculto aquí, aún seguido)"
 msgstr[1] "{names} ({count} usuarios ocultos aquí, aún seguidos)"
 
-#: cogs/anilist/feed.py:2246
+#: cogs/anilist/feed.py:2343
 msgid "no one"
 msgstr "nadie"
 
-#: cogs/anilist/feed.py:2253
+#: cogs/anilist/feed.py:2350
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -806,28 +806,28 @@ msgstr ""
 "Tipos: {types}\n"
 "Siguiendo: {names}"
 
-#: cogs/anilist/feed.py:2255
+#: cogs/anilist/feed.py:2352
 #, python-brace-format
 msgid "Muted: {muted}"
 msgstr "Silenciados: {muted}"
 
-#: cogs/anilist/feed.py:2258
+#: cogs/anilist/feed.py:2355
 msgid "AniList feeds"
 msgstr "Feeds de AniList"
 
-#: cogs/anilist/feed.py:2278
+#: cogs/anilist/feed.py:2375
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "{channel} no es un feed de AniList."
 
-#: cogs/anilist/feed.py:2283
+#: cogs/anilist/feed.py:2380
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "Se quitó el feed de AniList en {channel}."
 
 #: cogs/anilist/feed_delivery.py:69 cogs/anilist/feed_views.py:317
-#: cogs/music/music.py:3921 cogs/music/search.py:342 cogs/music/views.py:2070
-#: cogs/music/views.py:2224 cogs/music/views.py:2351 cogs/music/views.py:2445
+#: cogs/music/music.py:3923 cogs/music/search.py:342 cogs/music/views.py:2088
+#: cogs/music/views.py:2244 cogs/music/views.py:2371 cogs/music/views.py:2466
 msgid "Unknown title"
 msgstr "Título desconocido"
 
@@ -1084,7 +1084,7 @@ msgstr "Elige el título exacto a seguir:"
 
 #: cogs/anilist/feed_views.py:390 cogs/anilist/feed_views.py:634
 #: cogs/anilist/feed_views.py:912 cogs/anilist/feed_views.py:1264
-#: cogs/anilist/feed_views.py:1354 cogs/anilist/hub.py:321
+#: cogs/anilist/feed_views.py:1354 cogs/anilist/hub.py:333
 #: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:220
 msgid "Only you can use these controls."
 msgstr "Solo tú puedes usar estos controles."
@@ -1107,9 +1107,9 @@ msgid "Stop tracking a title..."
 msgstr "Dejar de seguir un título..."
 
 #: cogs/anilist/feed_views.py:524 cogs/anilist/feed_views.py:781
-#: cogs/community/leveling/leveling.py:238
+#: cogs/community/leveling/leveling.py:248
 #: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:583
-#: cogs/music/views.py:1509 cogs/music/views.py:1921 cogs/music/views.py:2274
+#: cogs/music/views.py:1519 cogs/music/views.py:1939 cogs/music/views.py:2294
 msgid "Next"
 msgstr "Sig."
 
@@ -1299,7 +1299,7 @@ msgid "Configure how AniList activity is mirrored into this server. Every change
 msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
 
 #: cogs/anilist/feed_views.py:1287 cogs/config/announcements.py:268
-#: cogs/config/rolemenus.py:577 cogs/config/starboard.py:180
+#: cogs/config/rolemenus.py:577 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:560 cogs/config/welcome.py:764
 #: cogs/moderation/modlog.py:537 cogs/moderation/modlog.py:575
@@ -1319,81 +1319,81 @@ msgstr "Tipos"
 msgid "Following ({count})"
 msgstr "Siguiendo ({count})"
 
-#: cogs/anilist/hub.py:39
+#: cogs/anilist/hub.py:40
 msgid "Search AniList"
 msgstr "Buscar en AniList"
 
-#: cogs/anilist/hub.py:47
+#: cogs/anilist/hub.py:48
 msgid "Title to search for..."
 msgstr "Título a buscar..."
 
-#: cogs/anilist/hub.py:50 cogs/anilist/hub.py:85
+#: cogs/anilist/hub.py:51 cogs/anilist/hub.py:91
 msgid "Search"
 msgstr "Buscar"
 
-#: cogs/anilist/hub.py:56
+#: cogs/anilist/hub.py:57
 msgid "Type"
 msgstr "Tipo"
 
-#: cogs/anilist/hub.py:109
+#: cogs/anilist/hub.py:115
 msgid "Trending"
 msgstr "Tendencias"
 
-#: cogs/anilist/hub.py:110
+#: cogs/anilist/hub.py:116
 msgid "Seasonal"
 msgstr "Temporada"
 
-#: cogs/anilist/hub.py:111
+#: cogs/anilist/hub.py:117
 msgid "Popular"
 msgstr "Popular"
 
-#: cogs/anilist/hub.py:135 cogs/anilist/lookup.py:178
+#: cogs/anilist/hub.py:141 cogs/anilist/lookup.py:178
 msgid "Trending anime"
 msgstr "Anime en tendencia"
 
-#: cogs/anilist/hub.py:143 cogs/anilist/lookup.py:190
+#: cogs/anilist/hub.py:149 cogs/anilist/lookup.py:190
 msgid "Popular anime"
 msgstr "Anime popular"
 
-#: cogs/anilist/hub.py:165
+#: cogs/anilist/hub.py:171
 msgid "My list"
 msgstr "Mi lista"
 
-#: cogs/anilist/hub.py:191
+#: cogs/anilist/hub.py:203
 msgid "My stats"
 msgstr "Mis estadísticas"
 
-#: cogs/anilist/hub.py:214
+#: cogs/anilist/hub.py:226
 msgid "Link my account"
 msgstr "Vincular mi cuenta"
 
-#: cogs/anilist/hub.py:296 cogs/anilist/login.py:66
+#: cogs/anilist/hub.py:308 cogs/anilist/login.py:66
 #, python-brace-format
 msgid "✅ Linked as **{name}**."
 msgstr "✅ Vinculado como **{name}**."
 
-#: cogs/anilist/hub.py:300
+#: cogs/anilist/hub.py:312
 msgid "Your AniList account is linked."
 msgstr "Tu cuenta de AniList está vinculada."
 
-#: cogs/anilist/hub.py:302
+#: cogs/anilist/hub.py:314
 msgid "Your AniList account is not linked yet."
 msgstr "Tu cuenta de AniList aún no está vinculada."
 
-#: cogs/anilist/hub.py:307
+#: cogs/anilist/hub.py:319
 msgid "Discover anime and manga, and manage your own lists."
 msgstr "Descubre anime y manga, y gestiona tus propias listas."
 
-#: cogs/anilist/hub.py:317
+#: cogs/anilist/hub.py:329
 #, python-brace-format
 msgid "Activity feed: {channels}"
 msgstr "Feed de actividad: {channels}"
 
-#: cogs/anilist/hub.py:332
+#: cogs/anilist/hub.py:344
 msgid "Discover"
 msgstr "Descubrir"
 
-#: cogs/anilist/hub.py:342
+#: cogs/anilist/hub.py:354
 msgid "You"
 msgstr "Tú"
 
@@ -1708,58 +1708,70 @@ msgstr "No puedo ver nada en tu lista de anime **Viendo** - añade algunos títu
 msgid "Scope must be `me` or `channel`."
 msgstr "El ámbito debe ser `me` o `channel`."
 
-#: cogs/community/afk.py:41
+#: cogs/community/afk.py:92
 #, python-brace-format
 msgid "{user} you are now AFK: {message}"
 msgstr "{user}, ahora estás AFK: {message}"
 
-#: cogs/community/afk.py:61
+#: cogs/community/afk.py:122
 #, python-brace-format
 msgid "Welcome back {user}, you were AFK for {duration}."
 msgstr "Bienvenido de nuevo, {user}, estuviste AFK durante {duration}."
 
-#: cogs/community/afk.py:83
+#: cogs/community/afk.py:170
 #, python-brace-format
 msgid "{name} is AFK: {message} ({duration})"
 msgstr "{name} está ausente: {message} ({duration})"
 
-#: cogs/community/avatarhistory.py:25
+#: cogs/community/avatarhistory.py:46
 msgid "Global avatar history"
 msgstr "Historial global de avatares"
 
-#: cogs/community/avatarhistory.py:26
+#: cogs/community/avatarhistory.py:47
 msgid "Server avatar history"
 msgstr "Historial de avatares del servidor"
 
-#: cogs/community/avatarhistory.py:27
+#: cogs/community/avatarhistory.py:48
 msgid "Banner history"
 msgstr "Historial de banners"
 
-#: cogs/community/avatarhistory.py:30
+#: cogs/community/avatarhistory.py:51
 msgid "global"
 msgstr "global"
 
-#: cogs/community/avatarhistory.py:31 locales/command_strings.py:378
+#: cogs/community/avatarhistory.py:52 locales/command_strings.py:378
 msgid "server"
 msgstr "servidor"
 
-#: cogs/community/avatarhistory.py:32
+#: cogs/community/avatarhistory.py:53
 msgid "banner"
 msgstr "banner"
 
-#: cogs/community/avatarhistory.py:87
+#: cogs/community/avatarhistory.py:99
+msgid "You are flipping through this too fast - give it a moment."
+msgstr "Estas pasando paginas demasiado rapido - dame un momento."
+
+#: cogs/community/avatarhistory.py:122
 msgid "Something went wrong loading that history."
 msgstr "Algo salió mal al cargar ese historial."
 
-#: cogs/community/avatarhistory.py:347
+#: cogs/community/avatarhistory.py:382
 #, python-brace-format
 msgid "No {kind} history recorded yet."
 msgstr "Aún no hay historial de {kind} registrado."
 
-#: cogs/community/avatarhistory.py:353
+#: cogs/community/avatarhistory.py:388
 #, python-brace-format
 msgid "Showing `{count}` of up to `{limit}` changes"
 msgstr "Mostrando `{count}` de hasta `{limit}` cambios"
+
+#: cogs/community/avatarhistory.py:451
+msgid "I could not check that right now - try again in a moment."
+msgstr "No he podido comprobarlo ahora mismo - intentalo de nuevo en un momento."
+
+#: cogs/community/avatarhistory.py:457
+msgid "I only show someone else's history in a server you share with them - ask again there."
+msgstr "Solo muestro el historial de otra persona en un servidor que compartas con ella - pidelo alli."
 
 #: cogs/community/language.py:78
 #, python-brace-format
@@ -1936,9 +1948,9 @@ msgstr "-# {count} pendientes"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Página {page}/{pages} - {count} pendientes"
 
-#: cogs/community/leveling/leveling.py:231
+#: cogs/community/leveling/leveling.py:241
 #: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:576
-#: cogs/music/views.py:1502 cogs/music/views.py:1914 cogs/music/views.py:2267
+#: cogs/music/views.py:1512 cogs/music/views.py:1932 cogs/music/views.py:2287
 msgid "Prev"
 msgstr "Ant."
 
@@ -2286,7 +2298,7 @@ msgid "Level down"
 msgstr "Bajada de nivel"
 
 #: cogs/community/leveling/level_admin.py:286
-#: cogs/community/leveling/leveling.py:1771 cogs/utility/searchweb.py:197
+#: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:282
 msgid "Level"
 msgstr "Nivel"
 
@@ -2502,12 +2514,12 @@ msgid "Not set - the stock panel background is used."
 msgstr "No establecido - se usa el fondo predeterminado del panel."
 
 #: cogs/community/leveling/level_config_ui.py:518
-#: cogs/community/leveling/rank_card_user.py:403
+#: cogs/community/leveling/rank_card_user.py:451
 msgid "Background"
 msgstr "Fondo"
 
 #: cogs/community/leveling/level_config_ui.py:532
-#: cogs/community/leveling/rank_card_user.py:416
+#: cogs/community/leveling/rank_card_user.py:464
 #, python-brace-format
 msgid "Set - {hex}"
 msgstr "Establecido - {hex}"
@@ -2517,7 +2529,7 @@ msgid "Default - each member's own role colour is used."
 msgstr "Predeterminado - se usa el color de rol propio de cada miembro."
 
 #: cogs/community/leveling/level_config_ui.py:539
-#: cogs/community/leveling/rank_card_user.py:414
+#: cogs/community/leveling/rank_card_user.py:462
 #: cogs/community/profile/registry.py:238
 msgid "Accent colour"
 msgstr "Color de acento"
@@ -2538,7 +2550,7 @@ msgstr "Estilos de tarjeta de los miembros"
 #: cogs/community/leveling/level_config_ui.py:579
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
-#: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:627
+#: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:718
 #: cogs/config/settings.py:265 cogs/config/tickets/panel.py:600
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
@@ -2547,7 +2559,7 @@ msgstr "Solo tú puedes usar estos controles"
 #: cogs/community/leveling/level_config_ui.py:581
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
-#: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:629
+#: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:720
 #: cogs/config/settings.py:267 cogs/config/tickets/panel.py:602
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
@@ -2868,12 +2880,12 @@ msgid "The XP event was stopped."
 msgstr "El evento de XP se detuvo."
 
 #: cogs/community/leveling/level_config_ui.py:1884
-#: cogs/community/leveling/rank_card_user.py:521
+#: cogs/community/leveling/rank_card_user.py:569
 msgid "I couldn't download that attachment - try again."
 msgstr "No pude descargar ese archivo adjunto - inténtalo de nuevo."
 
 #: cogs/community/leveling/level_config_ui.py:1897
-#: cogs/community/leveling/rank_card_user.py:536
+#: cogs/community/leveling/rank_card_user.py:584
 msgid "Rank card background updated"
 msgstr "Fondo de la tarjeta de rango actualizado"
 
@@ -2986,17 +2998,17 @@ msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan gan
 msgid "Reward mode updated"
 msgstr "Modo de recompensa actualizado"
 
-#: cogs/community/leveling/leveling.py:147
+#: cogs/community/leveling/leveling.py:157
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - nivel **{level}** ({xp} XP)"
 
-#: cogs/community/leveling/leveling.py:153
+#: cogs/community/leveling/leveling.py:163
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:163
+#: cogs/community/leveling/leveling.py:173
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -3005,7 +3017,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "Nivel **{level}** - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:170
+#: cogs/community/leveling/leveling.py:180
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -3014,167 +3026,167 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling/leveling.py:218
+#: cogs/community/leveling/leveling.py:228
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count} miembro"
 msgstr[1] "{count} miembros"
 
-#: cogs/community/leveling/leveling.py:222
+#: cogs/community/leveling/leveling.py:232
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Página {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1359
+#: cogs/community/leveling/leveling.py:1408
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1367
+#: cogs/community/leveling/leveling.py:1416
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "¡{user} alcanzó el nivel **{level}**! ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1374
+#: cogs/community/leveling/leveling.py:1423
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "¡{user} alcanzó el nivel **{level}**!"
 
-#: cogs/community/leveling/leveling.py:1766
+#: cogs/community/leveling/leveling.py:1834
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling/leveling.py:1770 cogs/utility/searchweb.py:194
+#: cogs/community/leveling/leveling.py:1838 cogs/utility/searchweb.py:279
 msgid "Rank"
 msgstr "Rango"
 
-#: cogs/community/leveling/leveling.py:1772
+#: cogs/community/leveling/leveling.py:1840
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1774
+#: cogs/community/leveling/leveling.py:1842
 msgid "XP for next level"
 msgstr "XP para el siguiente nivel"
 
-#: cogs/community/leveling/leveling.py:1802
+#: cogs/community/leveling/leveling.py:1870
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Clasificación | {guild}"
 
-#: cogs/community/leveling/leveling.py:1807
+#: cogs/community/leveling/leveling.py:1875
 msgid "No one has earned any XP yet!"
 msgstr "¡Nadie ha ganado XP todavía!"
 
-#: cogs/community/leveling/leveling.py:1821
-#: cogs/community/leveling/leveling.py:1876
+#: cogs/community/leveling/leveling.py:1889
+#: cogs/community/leveling/leveling.py:1944
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Usuario {uid}"
 
-#: cogs/community/leveling/leveling.py:1855
+#: cogs/community/leveling/leveling.py:1923
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Clasificación semanal | {guild}"
 
-#: cogs/community/leveling/leveling.py:1856
+#: cogs/community/leveling/leveling.py:1924
 msgid "No one has earned any XP this week yet!"
 msgstr "¡Nadie ha ganado XP esta semana todavía!"
 
-#: cogs/community/leveling/leveling.py:1858
+#: cogs/community/leveling/leveling.py:1926
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Clasificación mensual | {guild}"
 
-#: cogs/community/leveling/leveling.py:1861
+#: cogs/community/leveling/leveling.py:1929
 msgid "No one has earned any XP this month yet!"
 msgstr "¡Nadie ha ganado XP este mes todavía!"
 
-#: cogs/community/leveling/rank_card_user.py:167
+#: cogs/community/leveling/rank_card_user.py:202
 #, python-brace-format
 msgid "That image is too large - the limit is {mb} MB."
 msgstr "Esa imagen es demasiado grande - el límite es de {mb} MB."
 
-#: cogs/community/leveling/rank_card_user.py:172
+#: cogs/community/leveling/rank_card_user.py:207
 msgid "That image has too many pixels to process safely - try a smaller picture."
 msgstr "Esa imagen tiene demasiados píxeles para procesarla de forma segura - prueba con una imagen más pequeña."
 
-#: cogs/community/leveling/rank_card_user.py:176
+#: cogs/community/leveling/rank_card_user.py:211
 msgid "Only PNG, JPEG, and WebP images are supported."
 msgstr "Solo se admiten imágenes PNG, JPEG y WebP."
 
-#: cogs/community/leveling/rank_card_user.py:179
+#: cogs/community/leveling/rank_card_user.py:214
 msgid "That image is too complex to fit under the storage limit - try a simpler or smaller picture."
 msgstr "Esa imagen es demasiado compleja para ajustarse al límite de almacenamiento - prueba con una imagen más simple o más pequeña."
 
-#: cogs/community/leveling/rank_card_user.py:184
+#: cogs/community/leveling/rank_card_user.py:219
 msgid "I couldn't read that as an image - make sure it's a valid PNG, JPEG, or WebP file."
 msgstr "No pude leer eso como una imagen - asegúrate de que sea un archivo PNG, JPEG o WebP válido."
 
-#: cogs/community/leveling/rank_card_user.py:189
+#: cogs/community/leveling/rank_card_user.py:224
 msgid "That's not a valid hex colour - try something like #5865F2 or #58F."
 msgstr "Eso no es un color hexadecimal válido - prueba algo como #5865F2 o #58F."
 
-#: cogs/community/leveling/rank_card_user.py:193
+#: cogs/community/leveling/rank_card_user.py:228
 msgid "That image couldn't be used for the rank card."
 msgstr "Esa imagen no se pudo usar para la tarjeta de rango."
 
-#: cogs/community/leveling/rank_card_user.py:399
+#: cogs/community/leveling/rank_card_user.py:447
 msgid "Your rank card"
 msgstr "Tu tarjeta de rango"
 
-#: cogs/community/leveling/rank_card_user.py:405
+#: cogs/community/leveling/rank_card_user.py:453
 #, python-brace-format
 msgid "Set - your own image, {width}x{height}."
 msgstr "Establecido - tu propia imagen, {width}x{height}."
 
-#: cogs/community/leveling/rank_card_user.py:409
+#: cogs/community/leveling/rank_card_user.py:457
 msgid "Not set - this server's background is used."
 msgstr "No establecido - se usa el fondo de este servidor."
 
-#: cogs/community/leveling/rank_card_user.py:418
+#: cogs/community/leveling/rank_card_user.py:466
 msgid "Not set - your role colour is used."
 msgstr "No establecido - se usa el color de tu rol."
 
-#: cogs/community/leveling/rank_card_user.py:424
+#: cogs/community/leveling/rank_card_user.py:472
 msgid "Not used here"
 msgstr "No se usa aquí"
 
-#: cogs/community/leveling/rank_card_user.py:426
+#: cogs/community/leveling/rank_card_user.py:474
 msgid "This server keeps its own rank-card look, so your personal style is ignored on its cards. It still applies everywhere else."
 msgstr "Este servidor mantiene su propio aspecto de tarjeta de rango, así que tu estilo personal se ignora en sus tarjetas. Sigue aplicándose en cualquier otro lugar."
 
-#: cogs/community/leveling/rank_card_user.py:496
+#: cogs/community/leveling/rank_card_user.py:544
 msgid "Too many card uploads are being processed right now - try again in a few seconds."
 msgstr "Se están procesando demasiadas subidas de tarjetas ahora mismo - inténtalo de nuevo en unos segundos."
 
-#: cogs/community/leveling/rank_card_user.py:538
+#: cogs/community/leveling/rank_card_user.py:586
 msgid "Your /rank card now uses that image, in every server that allows personal card styles."
 msgstr "Tu tarjeta /rank ahora usa esa imagen, en todos los servidores que permiten estilos de tarjeta personales."
 
-#: cogs/community/leveling/rank_card_user.py:563
+#: cogs/community/leveling/rank_card_user.py:611
 msgid "Rank card accent updated"
 msgstr "Color de acento de la tarjeta de rango actualizado"
 
-#: cogs/community/leveling/rank_card_user.py:564
+#: cogs/community/leveling/rank_card_user.py:612
 #, python-brace-format
 msgid "Your /rank card now uses {hex}."
 msgstr "Tu tarjeta /rank ahora usa {hex}."
 
-#: cogs/community/leveling/rank_card_user.py:584
+#: cogs/community/leveling/rank_card_user.py:632
 msgid "Your rank-card background is gone."
 msgstr "El fondo de tu tarjeta de rango ha desaparecido."
 
-#: cogs/community/leveling/rank_card_user.py:586
+#: cogs/community/leveling/rank_card_user.py:634
 msgid "Your rank-card accent colour is gone."
 msgstr "El color de acento de tu tarjeta de rango ha desaparecido."
 
-#: cogs/community/leveling/rank_card_user.py:589
+#: cogs/community/leveling/rank_card_user.py:637
 msgid "Your personal rank-card style is gone - your /rank cards follow each server's look again."
 msgstr "Tu estilo personal de tarjeta de rango ha desaparecido - tus tarjetas /rank vuelven a seguir el aspecto de cada servidor."
 
-#: cogs/community/leveling/rank_card_user.py:593
+#: cogs/community/leveling/rank_card_user.py:641
 msgid "Rank card cleared"
 msgstr "Tarjeta de rango borrada"
 
@@ -3550,26 +3562,26 @@ msgid "Manga: {count} - {chapters} chapters read, mean score {score}"
 msgstr "Manga: {count} - {chapters} capítulos leídos, puntuación media {score}"
 
 #: cogs/community/profile/connectors/anilist.py:292
-#: cogs/community/profile/connectors/backloggd.py:514
+#: cogs/community/profile/connectors/backloggd.py:569
 #, python-brace-format
 msgid "Favourites: {titles}"
 msgstr "Favoritos: {titles}"
 
-#: cogs/community/profile/connectors/backloggd.py:425
+#: cogs/community/profile/connectors/backloggd.py:475
 msgid "your Backloggd username"
 msgstr "tu nombre de usuario de Backloggd"
 
-#: cogs/community/profile/connectors/backloggd.py:476
+#: cogs/community/profile/connectors/backloggd.py:531
 #, python-brace-format
 msgid "{count} played"
 msgstr "{count} jugados"
 
-#: cogs/community/profile/connectors/backloggd.py:478
+#: cogs/community/profile/connectors/backloggd.py:533
 #, python-brace-format
 msgid "{count} backlogged"
 msgstr "{count} en backlog"
 
-#: cogs/community/profile/connectors/backloggd.py:518
+#: cogs/community/profile/connectors/backloggd.py:573
 #: cogs/community/profile/connectors/steam.py:343
 #, python-brace-format
 msgid "Recently played: {names}"
@@ -3708,222 +3720,227 @@ msgstr "Este perfil de Steam es privado."
 msgid "Owns {count} games"
 msgstr "Posee {count} juegos"
 
-#: cogs/community/serverstats/cog.py:711 cogs/config/tickets/panel.py:667
+#: cogs/community/serverstats/cog.py:725
+#, python-brace-format
+msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
+msgstr "Necesitas tu mismo estos permisos en {channel} para programar alli un resumen semanal: {permissions}."
+
+#: cogs/community/serverstats/cog.py:738 cogs/config/tickets/panel.py:667
 #: cogs/config/tickets/panel.py:804
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Primero necesito estos permisos en {channel}: {permissions}."
 
-#: cogs/community/serverstats/cog.py:719
+#: cogs/community/serverstats/cog.py:747
 #, python-brace-format
 msgid "Weekly digest on - I will post the last complete week's statistics in {channel} once a week, normally on Monday. Weeks I did not observe are skipped rather than reported as empty."
 msgstr "Resumen semanal activado - publicaré las estadísticas de la última semana completa en {channel} una vez por semana, normalmente el lunes. Las semanas que no observé se omiten en lugar de reportarse como vacías."
 
-#: cogs/community/serverstats/cog.py:736
+#: cogs/community/serverstats/cog.py:764
 msgid "Weekly digest off. Nothing else changes - I keep collecting."
 msgstr "Resumen semanal desactivado. Nada más cambia - sigo recopilando datos."
 
-#: cogs/community/serverstats/digest.py:111 cogs/config/tickets/preflight.py:73
+#: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
 msgid "View Channel"
 msgstr "Ver canal"
 
-#: cogs/community/serverstats/digest.py:112 cogs/config/tickets/preflight.py:74
+#: cogs/community/serverstats/digest.py:121 cogs/config/tickets/preflight.py:74
 msgid "Send Messages"
 msgstr "Enviar mensajes"
 
-#: cogs/community/serverstats/digest.py:113 cogs/config/tickets/preflight.py:75
+#: cogs/community/serverstats/digest.py:122 cogs/config/tickets/preflight.py:75
 msgid "Embed Links"
 msgstr "Insertar enlaces"
 
-#: cogs/community/serverstats/digest.py:489
+#: cogs/community/serverstats/digest.py:498
 msgid "Weekly server digest"
 msgstr "Resumen semanal del servidor"
 
-#: cogs/community/serverstats/digest.py:490
+#: cogs/community/serverstats/digest.py:499
 #, python-brace-format
 msgid "Here is what happened on {guild} last week."
 msgstr "Esto es lo que pasó en {guild} la semana pasada."
 
-#: cogs/community/serverstats/digest.py:496
+#: cogs/community/serverstats/digest.py:505
 #, python-brace-format
 msgid "{total} messages"
 msgstr "{total} mensajes"
 
-#: cogs/community/serverstats/digest.py:500
+#: cogs/community/serverstats/digest.py:509
 msgid "No comparable full week before this one."
 msgstr "No hay una semana completa comparable antes de esta."
 
-#: cogs/community/serverstats/digest.py:504
+#: cogs/community/serverstats/digest.py:513
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the week before"
 msgstr "{sign}{pct:.1f}% frente a la semana anterior"
 
-#: cogs/community/serverstats/digest.py:508
+#: cogs/community/serverstats/digest.py:517
 msgid "Messages"
 msgstr "Mensajes"
 
-#: cogs/community/serverstats/digest.py:511 cogs/utility/info.py:153
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:153
 msgid "Members"
 msgstr "Miembros"
 
-#: cogs/community/serverstats/digest.py:512
-#: cogs/community/serverstats/views.py:335
+#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/views.py:414
 #, python-brace-format
 msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
 msgstr "{joins} entradas / {leaves} salidas (neto {net}, solo humanos)"
 
-#: cogs/community/serverstats/digest.py:520
+#: cogs/community/serverstats/digest.py:529
 msgid "Most active day"
 msgstr "Día más activo"
 
-#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/digest.py:530
 #, python-brace-format
 msgid "{day} - {messages} messages"
 msgstr "{day} - {messages} mensajes"
 
-#: cogs/community/serverstats/digest.py:529
+#: cogs/community/serverstats/digest.py:538
 msgid "Active members"
 msgstr "Miembros activos"
 
-#: cogs/community/serverstats/digest.py:530
+#: cogs/community/serverstats/digest.py:539
 #, python-brace-format
 msgid "{count} members earned XP this week"
 msgstr "{count} miembros ganaron XP esta semana"
 
-#: cogs/community/serverstats/digest.py:540
+#: cogs/community/serverstats/digest.py:549
 msgid "Heads up"
 msgstr "Aviso"
 
-#: cogs/community/serverstats/digest.py:541
+#: cogs/community/serverstats/digest.py:550
 #, python-brace-format
 msgid "Only {observed} of {days} days were observed."
 msgstr "Solo se observaron {observed} de {days} días."
 
-#: cogs/community/serverstats/digest.py:548
+#: cogs/community/serverstats/digest.py:557
 #, python-brace-format
 msgid "Week {week}: {start} to {end} (complete UTC days)."
 msgstr "Semana {week}: del {start} al {end} (días UTC completos)."
 
-#: cogs/community/serverstats/views.py:210
+#: cogs/community/serverstats/views.py:214
 msgid "Last bar: today, still in progress."
 msgstr "Última barra: hoy, día en curso."
 
-#: cogs/community/serverstats/views.py:234
+#: cogs/community/serverstats/views.py:238
 #, python-brace-format
 msgid "Complete days only, through {end_day}."
 msgstr "Solo días completos, hasta {end_day}."
 
-#: cogs/community/serverstats/views.py:243
-#: cogs/community/serverstats/views.py:332
-#: cogs/community/serverstats/views.py:369
+#: cogs/community/serverstats/views.py:247
+#: cogs/community/serverstats/views.py:411
+#: cogs/community/serverstats/views.py:448
 msgid "No day of this window was observed yet."
 msgstr "Aún no se ha observado ningún día de esta ventana."
 
-#: cogs/community/serverstats/views.py:246
+#: cogs/community/serverstats/views.py:250
 #, python-brace-format
 msgid "{total} messages - {average:.1f}/day average"
 msgstr "{total} mensajes - {average:.1f}/día de promedio"
 
-#: cogs/community/serverstats/views.py:252
+#: cogs/community/serverstats/views.py:256
 #, python-brace-format
 msgid "Partial window: only {available} of {days} days have data."
 msgstr "Ventana parcial: solo {available} de {days} días tienen datos."
 
-#: cogs/community/serverstats/views.py:257
+#: cogs/community/serverstats/views.py:261
 msgid "Not enough history yet to compare against a previous window."
 msgstr "Aún no hay suficiente historial para comparar con una ventana anterior."
 
-#: cogs/community/serverstats/views.py:261
+#: cogs/community/serverstats/views.py:265
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the {days} days before"
 msgstr "{sign}{pct:.1f}% frente a los {days} días anteriores"
 
-#: cogs/community/serverstats/views.py:293
+#: cogs/community/serverstats/views.py:372
 msgid "No channel activity in this window."
 msgstr "Sin actividad de canales en esta ventana."
 
-#: cogs/community/serverstats/views.py:312
+#: cogs/community/serverstats/views.py:391
 msgid "No member count recorded yet."
 msgstr "Aún no se ha registrado el número de miembros."
 
-#: cogs/community/serverstats/views.py:315
+#: cogs/community/serverstats/views.py:394
 #, python-brace-format
 msgid "{count} members now"
 msgstr "{count} miembros ahora"
 
-#: cogs/community/serverstats/views.py:320
+#: cogs/community/serverstats/views.py:399
 #, python-brace-format
 msgid "{count} members now (net {delta} over the window, bots included)"
 msgstr "{count} miembros ahora (neto {delta} en la ventana, bots incluidos)"
 
-#: cogs/community/serverstats/views.py:343
+#: cogs/community/serverstats/views.py:422
 #, python-brace-format
 msgid "Only {watched} of {days} days were observed."
 msgstr "Solo se observaron {watched} de {days} días."
 
-#: cogs/community/serverstats/views.py:354
+#: cogs/community/serverstats/views.py:433
 msgid "Member count, relative to this window's low point."
 msgstr "Número de miembros, en relación con el punto más bajo de esta ventana."
 
-#: cogs/community/serverstats/views.py:372
+#: cogs/community/serverstats/views.py:451
 #, python-brace-format
 msgid "{total} messages over {watched} observed day(s)"
 msgstr "{total} mensajes en {watched} día(s) observado(s)"
 
-#: cogs/community/serverstats/views.py:378
+#: cogs/community/serverstats/views.py:457
 #, python-brace-format
 msgid "Peak: {peak} messages on {day}"
 msgstr "Pico: {peak} mensajes el {day}"
 
-#: cogs/community/serverstats/views.py:396
+#: cogs/community/serverstats/views.py:475
 #, python-brace-format
 msgid "{week}: net {net} ({joins} joins / {leaves} leaves)"
 msgstr "{week}: neto {net} ({joins} entradas / {leaves} salidas)"
 
-#: cogs/community/serverstats/views.py:405
+#: cogs/community/serverstats/views.py:484
 msgid "Active members (via leveling)"
 msgstr "Miembros activos (mediante niveles)"
 
-#: cogs/community/serverstats/views.py:439
+#: cogs/community/serverstats/views.py:518
 #, python-brace-format
 msgid "Show {days} days"
 msgstr "Mostrar {days} días"
 
-#: cogs/community/serverstats/views.py:548
+#: cogs/community/serverstats/views.py:636
 #, python-brace-format
 msgid "{guild} - Server statistics"
 msgstr "{guild} - Estadísticas del servidor"
 
-#: cogs/community/serverstats/views.py:554
+#: cogs/community/serverstats/views.py:642
 #, python-brace-format
 msgid "Data collected since {date}"
 msgstr "Datos recopilados desde {date}"
 
-#: cogs/community/serverstats/views.py:559
+#: cogs/community/serverstats/views.py:647
 msgid "No statistics collected yet."
 msgstr "Aún no se han recopilado estadísticas."
 
-#: cogs/community/serverstats/views.py:579
+#: cogs/community/serverstats/views.py:667
 #, python-brace-format
 msgid "Overview ({days} days)"
 msgstr "Resumen ({days} días)"
 
-#: cogs/community/serverstats/views.py:587
+#: cogs/community/serverstats/views.py:675
 #, python-brace-format
 msgid "Top channels ({days} days)"
 msgstr "Canales principales ({days} días)"
 
-#: cogs/community/serverstats/views.py:600
+#: cogs/community/serverstats/views.py:691
 #, python-brace-format
 msgid "Growth ({days} days)"
 msgstr "Crecimiento ({days} días)"
 
-#: cogs/community/serverstats/views.py:608
+#: cogs/community/serverstats/views.py:699
 #, python-brace-format
 msgid "Activity ({days} days)"
 msgstr "Actividad ({days} días)"
 
-#: cogs/community/serverstats/views.py:617
+#: cogs/community/serverstats/views.py:708
 #, python-brace-format
 msgid "Retention ({weeks} weeks)"
 msgstr "Retención ({weeks} semanas)"
@@ -5202,7 +5219,7 @@ msgid "Role granted to new members"
 msgstr "Rol otorgado a los nuevos miembros"
 
 #: cogs/config/settings.py:107 cogs/config/settings.py:224
-#: cogs/moderation/automod.py:188
+#: cogs/moderation/automod.py:201
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -5219,13 +5236,13 @@ msgid "Open the mod-log control panel"
 msgstr "Abrir el panel de control del registro de moderación"
 
 #: cogs/config/settings.py:119 cogs/config/settings.py:221
-#: cogs/config/starboard.py:179 cogs/config/starboard.py:216
-#: cogs/config/starboard.py:247 cogs/config/starboard.py:268
+#: cogs/config/starboard.py:283 cogs/config/starboard.py:320
+#: cogs/config/starboard.py:351 cogs/config/starboard.py:372
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:32
-#: cogs/config/starboard.py:114
+#: cogs/config/settings.py:122 cogs/config/starboard.py:136
+#: cogs/config/starboard.py:218
 msgid "Configure the starboard"
 msgstr "Configurar el starboard"
 
@@ -5303,70 +5320,70 @@ msgstr "El auto-rol ha sido eliminado del servidor"
 msgid "Current auto-role"
 msgstr "Auto-rol actual"
 
-#: cogs/config/starboard.py:38
+#: cogs/config/starboard.py:142
 msgid "Pick the starboard channel"
 msgstr "Elige el canal de starboard"
 
-#: cogs/config/starboard.py:44
+#: cogs/config/starboard.py:148
 msgid "Starboard channel"
 msgstr "Canal de starboard"
 
-#: cogs/config/starboard.py:50
+#: cogs/config/starboard.py:154
 msgid "How many stars a message needs"
 msgstr "Cuántas estrellas necesita un mensaje"
 
-#: cogs/config/starboard.py:57
+#: cogs/config/starboard.py:161
 msgid "Star threshold"
 msgstr "Umbral de estrellas"
 
-#: cogs/config/starboard.py:71
+#: cogs/config/starboard.py:175
 msgid "The star threshold must be a positive whole number."
 msgstr "El umbral de estrellas debe ser un número entero positivo."
 
-#: cogs/config/starboard.py:77
+#: cogs/config/starboard.py:181
 msgid "Please pick a starboard channel."
 msgstr "Por favor, elige un canal de starboard."
 
-#: cogs/config/starboard.py:96
+#: cogs/config/starboard.py:200
 msgid "Starboard configured!"
 msgstr "¡Starboard configurado!"
 
-#: cogs/config/starboard.py:181
+#: cogs/config/starboard.py:285
 msgid "Threshold"
 msgstr "Umbral"
 
-#: cogs/config/starboard.py:218
+#: cogs/config/starboard.py:322
 msgid "Use the button below to pick the channel where starred messages should be posted and set the star threshold."
 msgstr "Usa el botón de abajo para elegir el canal donde se publicarán los mensajes destacados y define el umbral de estrellas."
 
-#: cogs/config/starboard.py:223
+#: cogs/config/starboard.py:327
 msgid "Only you can use this menu."
 msgstr "Solo tú puedes usar este menú."
 
-#: cogs/config/starboard.py:250
+#: cogs/config/starboard.py:354
 msgid "Threshold has been set to:"
 msgstr "El umbral se ha establecido en:"
 
-#: cogs/config/starboard.py:271
+#: cogs/config/starboard.py:375
 msgid "Starboard has been disabled for this guild"
 msgstr "El starboard ha sido desactivado para este servidor"
 
-#: cogs/config/starboard.py:294 cogs/config/starboard.py:326
+#: cogs/config/starboard.py:398 cogs/config/starboard.py:430
 #, python-brace-format
 msgid "Starboard top | {guild}"
 msgstr "Top del starboard | {guild}"
 
-#: cogs/config/starboard.py:295
+#: cogs/config/starboard.py:399
 msgid "No starred messages yet."
 msgstr "Aún no hay mensajes destacados."
 
-#: cogs/config/starboard.py:320 cogs/config/starboard.py:390
+#: cogs/config/starboard.py:424 cogs/config/starboard.py:555
 #: cogs/utility/extras.py:47
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[Ir]({url})"
 
-#: cogs/config/starboard.py:389
+#: cogs/config/starboard.py:554
 msgid "Source"
 msgstr "Fuente"
 
@@ -6172,35 +6189,35 @@ msgstr "Gestionar hilos"
 msgid "Read Message History"
 msgstr "Ver historial de mensajes"
 
-#: cogs/fun/fun.py:51 cogs/fun/games.py:75
+#: cogs/fun/fun.py:100 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
 msgstr "Algo salió mal con ese movimiento."
 
-#: cogs/fun/fun.py:65
+#: cogs/fun/fun.py:114
 msgid "Rock"
 msgstr "Piedra"
 
-#: cogs/fun/fun.py:66
+#: cogs/fun/fun.py:115
 msgid "Paper"
 msgstr "Papel"
 
-#: cogs/fun/fun.py:67
+#: cogs/fun/fun.py:116
 msgid "Scissors"
 msgstr "Tijera"
 
-#: cogs/fun/fun.py:78
+#: cogs/fun/fun.py:127
 msgid "Draw"
 msgstr "Empate"
 
-#: cogs/fun/fun.py:81
+#: cogs/fun/fun.py:130
 msgid "You won"
 msgstr "Has ganado"
 
-#: cogs/fun/fun.py:81
+#: cogs/fun/fun.py:130
 msgid "You lost"
 msgstr "Has perdido"
 
-#: cogs/fun/fun.py:85
+#: cogs/fun/fun.py:134
 #, python-brace-format
 msgid ""
 "I choose {bot_choice}\n"
@@ -6213,35 +6230,39 @@ msgstr ""
 "\n"
 "Resultado : `{result}`"
 
-#: cogs/fun/fun.py:91 cogs/fun/fun.py:106 cogs/fun/fun.py:480
+#: cogs/fun/fun.py:140 cogs/fun/fun.py:155 cogs/fun/fun.py:576
 msgid "RPS Game"
 msgstr "Juego de piedra, papel o tijera"
 
-#: cogs/fun/fun.py:94
+#: cogs/fun/fun.py:143
 msgid "Thanks for playing!"
 msgstr "¡Gracias por jugar!"
 
-#: cogs/fun/fun.py:107
+#: cogs/fun/fun.py:156
 msgid "Game timed out! Please try again."
 msgstr "¡Se agotó el tiempo de la partida! Inténtalo de nuevo."
 
-#: cogs/fun/fun.py:131
+#: cogs/fun/fun.py:183
 msgid "You can't hug the air..."
 msgstr "No puedes abrazar el aire..."
 
-#: cogs/fun/fun.py:176
+#: cogs/fun/fun.py:191
+msgid "One hug at a time please, give me a few seconds."
+msgstr "Un abrazo cada vez, por favor, dame unos segundos."
+
+#: cogs/fun/fun.py:238
 msgid "Sorry, I couldn't make the hug image."
 msgstr "Lo siento, no pude crear la imagen del abrazo."
 
-#: cogs/fun/fun.py:196 cogs/fun/fun.py:213 cogs/fun/fun.py:231
+#: cogs/fun/fun.py:258 cogs/fun/fun.py:275 cogs/fun/fun.py:293
 msgid ":warning: **ERROR !**"
 msgstr ":warning: **¡ERROR!**"
 
-#: cogs/fun/fun.py:248 cogs/fun/fun.py:264
+#: cogs/fun/fun.py:330
 msgid ":warning: Warning!"
 msgstr ":warning: ¡Advertencia!"
 
-#: cogs/fun/fun.py:249
+#: cogs/fun/fun.py:349
 #, python-brace-format
 msgid ""
 "Don't mention everyone {author}\n"
@@ -6250,7 +6271,7 @@ msgstr ""
 "No menciones a todo el mundo, {author}\n"
 " Mensaje: {message}"
 
-#: cogs/fun/fun.py:265
+#: cogs/fun/fun.py:358
 #, python-brace-format
 msgid ""
 "Please, don't send links {author}\n"
@@ -6259,94 +6280,94 @@ msgstr ""
 "Por favor, no envíes enlaces {author}\n"
 " Mensaje : {message}"
 
-#: cogs/fun/fun.py:274
+#: cogs/fun/fun.py:365
 msgid "Yes, we know."
 msgstr "Sí, lo sabemos."
 
-#: cogs/fun/fun.py:291
+#: cogs/fun/fun.py:387
 msgid "That doesn't look like an emoji I can enlarge."
 msgstr "Eso no parece un emoji que pueda ampliar."
 
-#: cogs/fun/fun.py:307
+#: cogs/fun/fun.py:403
 msgid "**Download link**"
 msgstr "**Enlace de descarga**"
 
-#: cogs/fun/fun.py:308
+#: cogs/fun/fun.py:404
 #, python-brace-format
 msgid "**[➡️ URL]({url})**"
 msgstr "**[➡️ URL]({url})**"
 
-#: cogs/fun/fun.py:312 cogs/fun/fun.py:370
+#: cogs/fun/fun.py:408 cogs/fun/fun.py:466
 #, python-brace-format
 msgid "Requested by: {user}"
 msgstr "Solicitado por: {user}"
 
-#: cogs/fun/fun.py:331
+#: cogs/fun/fun.py:427
 msgid "*Message too long.*"
 msgstr "*Mensaje demasiado largo.*"
 
-#: cogs/fun/fun.py:340
+#: cogs/fun/fun.py:436
 msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
 msgstr "**Por favor, introduce el texto para convertir en arte ascii. Ej: ``<prefix> ascii stuff``**"
 
-#: cogs/fun/fun.py:351
+#: cogs/fun/fun.py:447
 msgid "Ask me a question..."
 msgstr "Hazme una pregunta..."
 
-#: cogs/fun/fun.py:368
+#: cogs/fun/fun.py:464
 msgid "Reversed:"
 msgstr "Invertido:"
 
-#: cogs/fun/fun.py:388
+#: cogs/fun/fun.py:484
 #, python-brace-format
 msgid "I'd rate {thing} a **{num}.{deci}/ 100**"
 msgstr "Le daría a {thing} un **{num}.{deci}/ 100**"
 
-#: cogs/fun/fun.py:403
+#: cogs/fun/fun.py:499
 #, python-brace-format
 msgid "**{user}** is **1000%** hot :heart_eyes: :lips:"
 msgstr "**{user}** está **1000%** buenorro/a :heart_eyes: :lips:"
 
-#: cogs/fun/fun.py:412
+#: cogs/fun/fun.py:508
 #, python-brace-format
 msgid "{user} is hot like a pineapple :pineapple:"
 msgstr "{user} está buenísimo/a como una piña :pineapple:"
 
-#: cogs/fun/fun.py:428
+#: cogs/fun/fun.py:524
 #, python-brace-format
 msgid "**{user}** is **{hot:.2f}%** hot {emoji}"
 msgstr "**{user}** tiene un **{hot:.2f}%** de atractivo {emoji}"
 
-#: cogs/fun/fun.py:445
+#: cogs/fun/fun.py:541
 #, python-brace-format
 msgid "{member} is **0%** gay 👑"
 msgstr "{member} es **0%** gay 👑"
 
-#: cogs/fun/fun.py:449
+#: cogs/fun/fun.py:545
 #, python-brace-format
 msgid "{member} is **{y}.{rand}%** gay {emj}"
 msgstr "{member} es **{y}.{rand}%** gay {emj}"
 
-#: cogs/fun/fun.py:466
+#: cogs/fun/fun.py:562
 #, python-brace-format
 msgid "{slot} All matching, you won! 🎉"
 msgstr "{slot} ¡Todo coincide, has ganado! 🎉"
 
-#: cogs/fun/fun.py:468
+#: cogs/fun/fun.py:564
 #, python-brace-format
 msgid "{slot} 2 in a row, you won! 🎉"
 msgstr "{slot} 2 seguidos, ¡has ganado! 🎉"
 
-#: cogs/fun/fun.py:470
+#: cogs/fun/fun.py:566
 #, python-brace-format
 msgid "{slot} No match, you lost 😢"
 msgstr "{slot} Sin coincidencia, perdiste 😢"
 
-#: cogs/fun/fun.py:481
+#: cogs/fun/fun.py:577
 msgid "Pick your move below: Rock, Paper or Scissors!"
 msgstr "¡Elige tu jugada abajo: Piedra, Papel o Tijera!"
 
-#: cogs/fun/fun.py:483
+#: cogs/fun/fun.py:579
 msgid "I'm waiting for you!"
 msgstr "¡Te estoy esperando!"
 
@@ -6424,34 +6445,34 @@ msgstr "Velocidad"
 msgid "~{wpm:.0f} WPM"
 msgstr "~{wpm:.0f} PPM"
 
-#: cogs/moderation/automod.py:189
+#: cogs/moderation/automod.py:202
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "{feature} ahora está {state}."
 
-#: cogs/moderation/automod.py:204
+#: cogs/moderation/automod.py:217
 msgid "Link filtering"
 msgstr "Filtrado de enlaces"
 
-#: cogs/moderation/automod.py:215
+#: cogs/moderation/automod.py:228
 msgid "Invite filtering"
 msgstr "Filtrado de invitaciones"
 
-#: cogs/moderation/automod.py:226
+#: cogs/moderation/automod.py:239
 msgid "Spam filtering"
 msgstr "Filtrado de spam"
 
-#: cogs/moderation/automod.py:555
+#: cogs/moderation/automod.py:590
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} los enlaces de invitación de Discord no están permitidos aquí."
 
-#: cogs/moderation/automod.py:565
+#: cogs/moderation/automod.py:600
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} los enlaces no están permitidos aquí."
 
-#: cogs/moderation/automod.py:638
+#: cogs/moderation/automod.py:673
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} más despacio - estás enviando mensajes demasiado rápido."
@@ -7378,7 +7399,7 @@ msgstr "por **{author}**"
 msgid "### 🎤 Lyrics"
 msgstr "### 🎤 Letra"
 
-#: cogs/music/lyrics.py:715 cogs/music/lyrics.py:840
+#: cogs/music/lyrics.py:715 cogs/music/lyrics.py:842
 #, python-brace-format
 msgid "-# Lyrics from {source}"
 msgstr "-# Letra proporcionada por {source}"
@@ -7396,108 +7417,108 @@ msgstr "-# La sincronización en directo no está disponible para esta pista."
 msgid "Follow along"
 msgstr "Seguir en directo"
 
-#: cogs/music/lyrics.py:779 cogs/music/lyrics.py:1144 cogs/music/lyrics.py:1167
+#: cogs/music/lyrics.py:781 cogs/music/lyrics.py:1150 cogs/music/lyrics.py:1173
 #: cogs/music/views.py:180 cogs/music/voteskip.py:192
 msgid "You must be in my voice channel to use these controls."
 msgstr "Debes estar en mi canal de voz para usar estos controles."
 
-#: cogs/music/lyrics.py:787
+#: cogs/music/lyrics.py:789
 msgid "the music channel"
 msgstr "el canal de música"
 
-#: cogs/music/lyrics.py:788
+#: cogs/music/lyrics.py:790
 #, python-brace-format
 msgid "Now following the lyrics in {channel}."
 msgstr "Ahora sigo la letra en {channel}."
 
-#: cogs/music/lyrics.py:793
+#: cogs/music/lyrics.py:795
 msgid "A lot of servers are following lyrics right now - try again in a moment."
 msgstr "Muchos servidores están siguiendo letras ahora mismo - inténtalo de nuevo en un momento."
 
-#: cogs/music/lyrics.py:796
+#: cogs/music/lyrics.py:798
 msgid "I can't follow the lyrics here right now."
 msgstr "No puedo seguir la letra aquí ahora mismo."
 
-#: cogs/music/lyrics.py:830
+#: cogs/music/lyrics.py:832
 msgid "### 🎤 Live Lyrics"
 msgstr "### 🎤 Letra en directo"
 
-#: cogs/music/lyrics.py:846
+#: cogs/music/lyrics.py:848
 #, python-brace-format
 msgid "-# Lyrics offset: {offset}s"
 msgstr "-# Desfase de la letra: {offset}s"
 
-#: cogs/music/lyrics.py:853
+#: cogs/music/lyrics.py:855
 msgid "-# Stopped following the lyrics."
 msgstr "-# Se dejó de seguir la letra."
 
-#: cogs/music/lyrics.py:858
+#: cogs/music/lyrics.py:860
 msgid "-# Following along - the lyrics update as the song plays."
 msgstr "-# Siguiendo la letra - se actualiza mientras suena la canción."
 
-#: cogs/music/lyrics.py:871
+#: cogs/music/lyrics.py:873
 msgid "-5s"
 msgstr "-5s"
 
-#: cogs/music/lyrics.py:879
+#: cogs/music/lyrics.py:881
 msgid "-1s"
 msgstr "-1s"
 
-#: cogs/music/lyrics.py:887
+#: cogs/music/lyrics.py:889
 msgid "+1s"
 msgstr "+1s"
 
-#: cogs/music/lyrics.py:895
+#: cogs/music/lyrics.py:897
 msgid "+5s"
 msgstr "+5s"
 
-#: cogs/music/lyrics.py:906
+#: cogs/music/lyrics.py:908
 msgid "Stop"
 msgstr "Detener"
 
-#: cogs/music/music.py:604
+#: cogs/music/music.py:606
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "La cola está llena ({cap} pistas). Salta o quita algunas primero."
 
-#: cogs/music/music.py:620
+#: cogs/music/music.py:622
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " No se añadió {dropped} pista - la cola está llena con {cap}."
 msgstr[1] " No se añadieron {dropped} pistas - la cola está llena con {cap}."
 
-#: cogs/music/music.py:1051
+#: cogs/music/music.py:1053
 msgid "I'm not connected to a voice channel."
 msgstr "No estoy conectada a ningún canal de voz."
 
-#: cogs/music/music.py:1054 cogs/music/music.py:2575
-#: cogs/music/playlists_shared.py:400
+#: cogs/music/music.py:1056 cogs/music/music.py:2579
+#: cogs/music/playlists_shared.py:404
 msgid "You must be in my voice channel to do that."
 msgstr "Debes estar en mi canal de voz para hacer eso."
 
-#: cogs/music/music.py:1064 cogs/music/views.py:208
+#: cogs/music/music.py:1066 cogs/music/views.py:208
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "Solo el DJ ({dj}) o un moderador puede controlar la reproducción."
 
-#: cogs/music/music.py:1110
+#: cogs/music/music.py:1112
 msgid "I can only play public links - I can't reach that one."
 msgstr "Solo puedo reproducir enlaces publicos - a ese no puedo acceder."
 
-#: cogs/music/music.py:1802
+#: cogs/music/music.py:1804
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Hubo un problema al reproducir **{title}**, se omitirá."
 
-#: cogs/music/music.py:1821
+#: cogs/music/music.py:1823
 #, python-brace-format
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "{count} pista mas no se ha podido reproducir, la omito."
 msgstr[1] "{count} pistas mas no se han podido reproducir, las omito."
 
-#: cogs/music/music.py:2344
+#: cogs/music/music.py:2349
 #, python-brace-format
 msgid ""
 "Secondary music controls (the everyday ones - play, queue, skip, pause, resume, stop, volume, nowplaying - stay on their own):\n"
@@ -7524,59 +7545,54 @@ msgstr ""
 "- `{p}music filter <preset>` - aplicar un efecto de audio\n"
 "- `{p}music disconnect` - salir del canal de voz"
 
-#: cogs/music/music.py:2460
+#: cogs/music/music.py:2465
 msgid "Here is the player."
 msgstr "Aquí tienes el reproductor."
 
-#: cogs/music/music.py:2463 cogs/music/music.py:2582
+#: cogs/music/music.py:2468 cogs/music/music.py:2586
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "El reproductor ya está activo en {channel}."
 
-#: cogs/music/music.py:2537 cogs/music/music.py:2601 cogs/music/music.py:2876
-#: cogs/music/music.py:3748 cogs/music/music.py:3865
-#: cogs/music/playlists_shared.py:548 cogs/music/playlists_shared.py:568
-#: cogs/music/search.py:516 cogs/music/views.py:2377
+#: cogs/music/music.py:2542 cogs/music/music.py:2605 cogs/music/music.py:2880
+#: cogs/music/music.py:3750 cogs/music/music.py:3867
+#: cogs/music/playlists_shared.py:549 cogs/music/playlists_shared.py:569
+#: cogs/music/search.py:516 cogs/music/views.py:2397
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "La música no está disponible actualmente - no hay ningún nodo de Lavalink conectado."
 
-#: cogs/music/music.py:2547 cogs/music/music.py:2871 cogs/music/music.py:3765
-#: cogs/music/playlists_shared.py:407
+#: cogs/music/music.py:2552 cogs/music/music.py:2875 cogs/music/music.py:3767
+#: cogs/music/playlists_shared.py:411
 msgid "You must be in a voice channel first."
 msgstr "Primero debes estar en un canal de voz."
 
-#: cogs/music/music.py:2554 cogs/music/music.py:2890
-#: cogs/music/playlists_shared.py:414
-msgid "I was unable to join your voice channel. Please try again."
-msgstr "No pude unirme a tu canal de voz. Por favor, inténtalo de nuevo."
-
-#: cogs/music/music.py:2606 cogs/music/music.py:3871
+#: cogs/music/music.py:2610 cogs/music/music.py:3873
 msgid "Could not find any tracks for that query."
 msgstr "No se encontraron pistas para esa búsqueda."
 
-#: cogs/music/music.py:2630
+#: cogs/music/music.py:2634
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "Se añadió la playlist **{name}** a la cola ({count} pista)."
 msgstr[1] "Se añadió la playlist **{name}** a la cola ({count} pistas)."
 
-#: cogs/music/music.py:2646
+#: cogs/music/music.py:2650
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "He añadido **{title}** de `{author}` a la cola."
 
-#: cogs/music/music.py:2915 cogs/music/views.py:1102
+#: cogs/music/music.py:2915 cogs/music/views.py:1110
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "Solo el DJ ({dj}) puede cambiar de estación."
 
-#: cogs/music/music.py:2932 cogs/music/views.py:1122
+#: cogs/music/music.py:2932 cogs/music/views.py:1130
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "No encontré ninguna pista de {genre} por ahora."
 
-#: cogs/music/music.py:2941 cogs/music/views.py:1129
+#: cogs/music/music.py:2941 cogs/music/views.py:1137
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "Cambiado a la estación de {genre} ({count} pista(s))."
@@ -7586,317 +7602,325 @@ msgstr "Cambiado a la estación de {genre} ({count} pista(s))."
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "Iniciando una sesión de {genre} con {count} pista(s). ¡Disfruta!"
 
-#: cogs/music/music.py:2975
+#: cogs/music/music.py:2977
 msgid "The player is already paused."
 msgstr "El reproductor ya está en pausa."
 
-#: cogs/music/music.py:2980
+#: cogs/music/music.py:2982
 msgid "Paused the player."
 msgstr "He pausado el reproductor."
 
-#: cogs/music/music.py:2990
+#: cogs/music/music.py:2992
 msgid "The player is not paused."
 msgstr "El reproductor no está pausado."
 
-#: cogs/music/music.py:2995
+#: cogs/music/music.py:2997
 msgid "Resumed the player."
 msgstr "Reanudé el reproductor."
 
-#: cogs/music/music.py:3171 cogs/music/voteskip.py:375
+#: cogs/music/music.py:3173 cogs/music/voteskip.py:375
 msgid "There are no more tracks in the queue to skip to."
 msgstr "No quedan más pistas en la cola a las que saltar."
 
-#: cogs/music/music.py:3174
+#: cogs/music/music.py:3176
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Salté a **{title}** de `{author}`."
 
-#: cogs/music/music.py:3180
+#: cogs/music/music.py:3182
 msgid "Skipped. The queue is now empty."
 msgstr "Saltado. La cola está vacía ahora."
 
-#: cogs/music/music.py:3237 cogs/music/views.py:882
+#: cogs/music/music.py:3239 cogs/music/views.py:888
 msgid "There's no previous track to go back to."
 msgstr "No hay ninguna pista anterior a la que volver."
 
-#: cogs/music/music.py:3242 cogs/music/views.py:888
+#: cogs/music/music.py:3244 cogs/music/views.py:894
 msgid "I can't go back - the previous track is no longer available."
 msgstr "No puedo volver atrás - la pista anterior ya no está disponible."
 
-#: cogs/music/music.py:3246 cogs/music/views.py:893
+#: cogs/music/music.py:3248 cogs/music/views.py:899
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "Volví a **{title}** de `{author}`."
 
-#: cogs/music/music.py:3264 cogs/music/music.py:3559
+#: cogs/music/music.py:3266 cogs/music/music.py:3561
 msgid "There's nothing playing right now."
 msgstr "No hay nada reproduciéndose ahora mismo."
 
-#: cogs/music/music.py:3267
+#: cogs/music/music.py:3269
 msgid "I can't seek within a live stream."
 msgstr "No puedo saltar dentro de una transmisión en directo."
 
-#: cogs/music/music.py:3272
+#: cogs/music/music.py:3274
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "No pude leer esa posición. Prueba `1:23`, `90` o `+30`."
 
-#: cogs/music/music.py:3284
+#: cogs/music/music.py:3286
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "Salté a {position}."
 
-#: cogs/music/music.py:3296
+#: cogs/music/music.py:3298
 msgid "Stopped playback and cleared the queue."
 msgstr "Detuve la reproducción y vacié la cola."
 
-#: cogs/music/music.py:3309
+#: cogs/music/music.py:3311
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Volumen establecido en {volume}%."
 
-#: cogs/music/music.py:3319
+#: cogs/music/music.py:3321
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Añade algunas pistas más a la cola antes de mezclar."
 
-#: cogs/music/music.py:3322 cogs/music/views.py:992 cogs/music/views.py:1751
+#: cogs/music/music.py:3324 cogs/music/views.py:998 cogs/music/views.py:1769
 msgid "Shuffled the queue."
 msgstr "He mezclado la cola."
 
-#: cogs/music/music.py:3333 cogs/music/views.py:1768
+#: cogs/music/music.py:3335 cogs/music/views.py:1786
 msgid "The queue is already empty."
 msgstr "La cola ya está vacía."
 
-#: cogs/music/music.py:3343 cogs/music/views.py:1776
+#: cogs/music/music.py:3345 cogs/music/views.py:1794
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "Se quitaron {count} pista(s) de la cola."
 
-#: cogs/music/music.py:3364
+#: cogs/music/music.py:3366
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Modo de repetición configurado a `{mode}`."
 
-#: cogs/music/music.py:3399 cogs/music/views.py:1882
+#: cogs/music/music.py:3401 cogs/music/views.py:1900
 msgid "Nothing has played yet in this session."
 msgstr "Todavía no se ha reproducido nada en esta sesión."
 
-#: cogs/music/music.py:3413 cogs/music/views.py:423
+#: cogs/music/music.py:3415 cogs/music/views.py:423
 msgid "Nothing is playing right now."
 msgstr "No hay nada sonando ahora mismo."
 
-#: cogs/music/music.py:3430
+#: cogs/music/music.py:3432
 msgid "Disconnected from the voice channel."
 msgstr "Desconectada del canal de voz."
 
-#: cogs/music/music.py:3449
+#: cogs/music/music.py:3451
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: cogs/music/music.py:3453
+#: cogs/music/music.py:3455
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count} minuto"
 msgstr[1] "{count} minutos"
 
-#: cogs/music/music.py:3477
+#: cogs/music/music.py:3479
 msgid "That effect isn't available."
 msgstr "Ese efecto no está disponible."
 
-#: cogs/music/music.py:3486
+#: cogs/music/music.py:3488
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "Estás cambiando de efecto demasiado rápido. Inténtalo de nuevo en {delay}."
 
-#: cogs/music/music.py:3491
+#: cogs/music/music.py:3493
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "Muchos servidores están usando efectos ahora mismo - inténtalo de nuevo en un momento."
 
-#: cogs/music/music.py:3494
+#: cogs/music/music.py:3496
 msgid "Something went wrong applying that effect."
 msgstr "Algo salió mal al aplicar ese efecto."
 
-#: cogs/music/music.py:3503
+#: cogs/music/music.py:3505
 msgid "Effects cleared."
 msgstr "Efectos quitados."
 
-#: cogs/music/music.py:3504
+#: cogs/music/music.py:3506
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "Efecto ajustado a {emoji} {label}."
 
-#: cogs/music/music.py:3574
+#: cogs/music/music.py:3576
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "Has consultado demasiadas letras. Inténtalo de nuevo en {delay}."
 
-#: cogs/music/music.py:3585
+#: cogs/music/music.py:3587
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "Este servidor ha consultado demasiadas letras. Inténtalo de nuevo en {delay}."
 
-#: cogs/music/music.py:3599
+#: cogs/music/music.py:3601
 msgid "I couldn't find any lyrics for this track."
 msgstr "No encontré ninguna letra para esta pista."
 
-#: cogs/music/music.py:3707 cogs/music/views.py:2216
+#: cogs/music/music.py:3709 cogs/music/views.py:2236
 msgid "You have no saved favourites yet."
 msgstr "Todavía no tienes favoritos guardados."
 
-#: cogs/music/music.py:3710
+#: cogs/music/music.py:3712
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} aún no tiene favoritos guardados."
 
-#: cogs/music/music.py:3754
+#: cogs/music/music.py:3756
 msgid "You have no saved favourites to play."
 msgstr "No tienes favoritos guardados para reproducir."
 
-#: cogs/music/music.py:3780
+#: cogs/music/music.py:3782
 msgid "None of your favourites could be loaded right now."
 msgstr "Ninguno de tus favoritos pudo cargarse en este momento."
 
-#: cogs/music/music.py:3786 cogs/music/music.py:3836
+#: cogs/music/music.py:3788 cogs/music/music.py:3838
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " {deferred} favorito antiguo sigue esperando - vuelve a ejecutar el comando para añadirlo."
 msgstr[1] " {deferred} favoritos antiguos siguen esperando - vuelve a ejecutar el comando para añadirlos."
 
-#: cogs/music/music.py:3819
+#: cogs/music/music.py:3821
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "Se añadió {count} pista de tus favoritos a la cola."
 msgstr[1] "Se añadieron {count} pistas de tus favoritos a la cola."
 
-#: cogs/music/music.py:3827 cogs/music/playlists_shared.py:621
+#: cogs/music/music.py:3829 cogs/music/playlists_shared.py:622
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped} pista fue omitida - no se pudo cargar."
 msgstr[1] " {skipped} pistas fueron omitidas - no se pudieron cargar."
 
-#: cogs/music/music.py:3858
+#: cogs/music/music.py:3860
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "No hay nada reproduciéndose - dame el nombre o el enlace de una canción para guardarla."
 
-#: cogs/music/music.py:3877
+#: cogs/music/music.py:3879
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "Se añadió **{title}** de `{author}` a tus favoritos."
 
-#: cogs/music/music.py:3884 cogs/music/views.py:1036
+#: cogs/music/music.py:3886 cogs/music/views.py:1042
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "Tus favoritos están completos (máx. {max}). Elimina algunos primero."
 
-#: cogs/music/music.py:3890 cogs/music/views.py:1039
+#: cogs/music/music.py:3892 cogs/music/views.py:1045
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** ya está en tus favoritos."
 
-#: cogs/music/music.py:3908
+#: cogs/music/music.py:3910
 msgid "You have no saved favourites to remove."
 msgstr "No tienes favoritos guardados para eliminar."
 
-#: cogs/music/music.py:3912
+#: cogs/music/music.py:3914
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Elige un número entre 1 y {max}."
 
-#: cogs/music/music.py:3919 cogs/music/views.py:2447
+#: cogs/music/music.py:3921 cogs/music/views.py:2468
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "Se eliminó **{title}** de tus favoritos."
 
-#: cogs/music/playlists_shared.py:215
+#: cogs/music/player.py:180
+msgid "I was unable to join your voice channel. Please try again."
+msgstr "No pude unirme a tu canal de voz. Por favor, inténtalo de nuevo."
+
+#: cogs/music/player.py:190
+msgid "I am still starting up - try again in a moment."
+msgstr "Todavia estoy arrancando - intentalo de nuevo en un momento."
+
+#: cogs/music/playlists_shared.py:216
 #, python-brace-format
 msgid "### 🎵 Server Playlists - {guild}"
 msgstr "### 🎵 Playlists del servidor - {guild}"
 
-#: cogs/music/playlists_shared.py:224
+#: cogs/music/playlists_shared.py:225
 #, python-brace-format
 msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count} pista - {duration}"
 msgstr[1] "**{name}** - {count} pistas - {duration}"
 
-#: cogs/music/playlists_shared.py:232
+#: cogs/music/playlists_shared.py:233
 #, python-brace-format
 msgid "-# by {creator} - saved {date}"
 msgstr "-# por {creator} - guardada {date}"
 
-#: cogs/music/playlists_shared.py:449 cogs/music/playlists_shared.py:743
+#: cogs/music/playlists_shared.py:450 cogs/music/playlists_shared.py:744
 msgid "Give the playlist a name."
 msgstr "Dale un nombre a la playlist."
 
-#: cogs/music/playlists_shared.py:453 cogs/music/playlists_shared.py:747
+#: cogs/music/playlists_shared.py:454 cogs/music/playlists_shared.py:748
 #, python-brace-format
 msgid "Keep the playlist name under {max} characters."
 msgstr "El nombre de la playlist debe tener menos de {max} caracteres."
 
-#: cogs/music/playlists_shared.py:466 cogs/music/playlists_shared.py:474
+#: cogs/music/playlists_shared.py:467 cogs/music/playlists_shared.py:475
 msgid "Nothing is playing - start some music before saving a playlist."
 msgstr "No hay nada reproduciéndose - pon música antes de guardar una playlist."
 
-#: cogs/music/playlists_shared.py:480
+#: cogs/music/playlists_shared.py:481
 #, python-brace-format
 msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
 msgstr "La cola es demasiado larga - una playlist de servidor admite hasta {max} pistas. Recórtala e inténtalo de nuevo."
 
-#: cogs/music/playlists_shared.py:489 cogs/music/playlists_shared.py:515
+#: cogs/music/playlists_shared.py:490 cogs/music/playlists_shared.py:516
 #, python-brace-format
 msgid "This server already has the maximum of {max} playlists. Delete one first."
 msgstr "Este servidor ya tiene el máximo de {max} playlists. Elimina una primero."
 
-#: cogs/music/playlists_shared.py:506 cogs/music/playlists_shared.py:762
+#: cogs/music/playlists_shared.py:507 cogs/music/playlists_shared.py:763
 #, python-brace-format
 msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
 msgstr "Ya existe una playlist llamada **{name}** aquí. Elige otro nombre o elimínala primero."
 
-#: cogs/music/playlists_shared.py:526
+#: cogs/music/playlists_shared.py:527
 #, python-brace-format
 msgid "Saved **{name}** with {count} track ({duration})."
 msgid_plural "Saved **{name}** with {count} tracks ({duration})."
 msgstr[0] "**{name}** guardada con {count} pista ({duration})."
 msgstr[1] "**{name}** guardada con {count} pistas ({duration})."
 
-#: cogs/music/playlists_shared.py:555 cogs/music/playlists_shared.py:686
-#: cogs/music/playlists_shared.py:726
+#: cogs/music/playlists_shared.py:556 cogs/music/playlists_shared.py:687
+#: cogs/music/playlists_shared.py:727
 #, python-brace-format
 msgid "There's no server playlist called **{name}**."
 msgstr "No hay ninguna playlist de servidor llamada **{name}**."
 
-#: cogs/music/playlists_shared.py:575
+#: cogs/music/playlists_shared.py:576
 #, python-brace-format
 msgid "None of **{name}**'s tracks could be loaded right now."
 msgstr "Ninguna pista de **{name}** se pudo cargar ahora mismo."
 
-#: cogs/music/playlists_shared.py:615
+#: cogs/music/playlists_shared.py:616
 #, python-brace-format
 msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "{count} pista de **{name}** añadida a la cola."
 msgstr[1] "{count} pistas de **{name}** añadidas a la cola."
 
-#: cogs/music/playlists_shared.py:655
+#: cogs/music/playlists_shared.py:656
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
 msgstr "Este servidor aún no tiene playlists guardadas. Usa `/serverplaylist save` para crear una."
 
-#: cogs/music/playlists_shared.py:696 cogs/music/playlists_shared.py:736
+#: cogs/music/playlists_shared.py:697 cogs/music/playlists_shared.py:737
 msgid "Only the playlist's creator or a moderator can do that."
 msgstr "Solo quien creó la playlist o un moderador puede hacer eso."
 
-#: cogs/music/playlists_shared.py:701
+#: cogs/music/playlists_shared.py:702
 #, python-brace-format
 msgid "Deleted the server playlist **{name}**."
 msgstr "Playlist del servidor **{name}** eliminada."
 
-#: cogs/music/playlists_shared.py:773
+#: cogs/music/playlists_shared.py:774
 #, python-brace-format
 msgid "Renamed **{old}** to **{new}**."
 msgstr "**{old}** renombrada a **{new}**."
@@ -7937,7 +7961,7 @@ msgstr "No encontré nada para **{query}**."
 msgid "Pick the track you meant:"
 msgstr "Elige la pista que querías:"
 
-#: cogs/music/search.py:631 cogs/music/search.py:751
+#: cogs/music/search.py:631 cogs/music/search.py:757
 msgid "Choose one to play..."
 msgstr "Elige qué reproducir..."
 
@@ -7995,11 +8019,11 @@ msgstr "Openings de anime y J-pop"
 msgid "**LIVE**"
 msgstr "**EN VIVO**"
 
-#: cogs/music/views.py:169 cogs/music/views.py:246 cogs/music/views.py:1166
+#: cogs/music/views.py:169 cogs/music/views.py:246 cogs/music/views.py:1174
 msgid "The player is no longer active."
 msgstr "El reproductor ya no está activo."
 
-#: cogs/music/views.py:253 cogs/music/views.py:2506
+#: cogs/music/views.py:253 cogs/music/views.py:2529
 msgid "Give me a song name or URL to add."
 msgstr "Dame el nombre o la URL de una canción para añadirla."
 
@@ -8008,7 +8032,7 @@ msgstr "Dame el nombre o la URL de una canción para añadirla."
 msgid "Could not find anything for `{query}`."
 msgstr "No encontré nada para `{query}`."
 
-#: cogs/music/views.py:293 cogs/music/views.py:2043 cogs/music/views.py:2422
+#: cogs/music/views.py:293 cogs/music/views.py:2061 cogs/music/views.py:2442
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "Añadido a la cola: **{title}**."
@@ -8123,7 +8147,7 @@ msgstr "Vol +"
 msgid "Loop"
 msgstr "Bucle"
 
-#: cogs/music/views.py:597 cogs/music/views.py:1516
+#: cogs/music/views.py:597 cogs/music/views.py:1526
 msgid "Shuffle"
 msgstr "Aleatorio"
 
@@ -8155,139 +8179,139 @@ msgstr "Efectos"
 msgid "-# Use the buttons to control playback"
 msgstr "-# Usa los botones para controlar la reproducción"
 
-#: cogs/music/views.py:770 cogs/music/views.py:1563 cogs/music/views.py:1952
-#: cogs/music/views.py:2286
+#: cogs/music/views.py:772 cogs/music/views.py:1575 cogs/music/views.py:1970
+#: cogs/music/views.py:2306
 msgid "Something went wrong handling that action."
 msgstr "Algo salió mal al procesar esa acción."
 
-#: cogs/music/views.py:826
+#: cogs/music/views.py:832
 msgid "Resumed."
 msgstr "Reanudado."
 
-#: cogs/music/views.py:829
+#: cogs/music/views.py:835
 msgid "Paused."
 msgstr "Pausado."
 
-#: cogs/music/views.py:858 cogs/music/views.py:865
+#: cogs/music/views.py:864 cogs/music/views.py:871
 msgid "There is nothing left to skip to."
 msgstr "No queda nada a lo que saltar."
 
-#: cogs/music/views.py:862
+#: cogs/music/views.py:868
 msgid "Skipped."
 msgstr "Saltado."
 
-#: cogs/music/views.py:911 cogs/music/views.py:928
+#: cogs/music/views.py:917 cogs/music/views.py:934
 #, python-brace-format
 msgid "Volume set to {volume}%."
 msgstr "Volumen establecido en {volume}%."
 
-#: cogs/music/views.py:940 locales/command_strings.py:366
+#: cogs/music/views.py:946 locales/command_strings.py:366
 msgid "off"
 msgstr "desactivado"
 
-#: cogs/music/views.py:943 locales/command_strings.py:368
+#: cogs/music/views.py:949 locales/command_strings.py:368
 msgid "on"
 msgstr "activado"
 
-#: cogs/music/views.py:946
+#: cogs/music/views.py:952
 #, python-brace-format
 msgid "Queue loop turned {state}."
 msgstr "El bucle de la cola se puso en {state}."
 
-#: cogs/music/views.py:964
+#: cogs/music/views.py:970
 msgid "Autoplay is on. I'll keep the music going with recommendations when the queue runs out."
 msgstr "El autoplay está activado. Seguiré con la música gracias a recomendaciones cuando la cola se vacíe."
 
-#: cogs/music/views.py:969
+#: cogs/music/views.py:975
 msgid "Autoplay is off. Playback will stop once the queue is empty."
 msgstr "El autoplay está desactivado. La reproducción se detendrá cuando la cola esté vacía."
 
-#: cogs/music/views.py:982 cogs/music/views.py:1742
+#: cogs/music/views.py:988 cogs/music/views.py:1760
 msgid "Add a few more tracks before shuffling."
 msgstr "Añade algunas canciones más antes de mezclar."
 
-#: cogs/music/views.py:1026
+#: cogs/music/views.py:1032
 msgid "Nothing is playing to favourite right now."
 msgstr "No hay nada sonando para añadir a favoritos ahora mismo."
 
-#: cogs/music/views.py:1031
+#: cogs/music/views.py:1037
 #, python-brace-format
 msgid "Added **{title}** to your favourites."
 msgstr "Se añadió **{title}** a tus favoritos."
 
-#: cogs/music/views.py:1112 cogs/music/views.py:2576
+#: cogs/music/views.py:1120 cogs/music/views.py:2599
 msgid "That vibe isn't available right now."
 msgstr "Ese ambiente no está disponible por ahora."
 
-#: cogs/music/views.py:1151
+#: cogs/music/views.py:1159
 msgid "Pick an effect..."
 msgstr "Elige un efecto..."
 
-#: cogs/music/views.py:1232
+#: cogs/music/views.py:1240
 msgid "Pick a vibe..."
 msgstr "Elige un ambiente..."
 
-#: cogs/music/views.py:1256
+#: cogs/music/views.py:1264
 msgid "You are changing the station too fast - give it a moment."
 msgstr "Estás cambiando de estación demasiado rápido - espera un momento."
 
-#: cogs/music/views.py:1299 cogs/music/views.py:1818
+#: cogs/music/views.py:1307 cogs/music/views.py:1836
 #, python-brace-format
 msgid "by {author} - {duration}"
 msgstr "de {author} - {duration}"
 
-#: cogs/music/views.py:1307
+#: cogs/music/views.py:1315
 msgid "Manage a track..."
 msgstr "Gestiona una pista..."
 
-#: cogs/music/views.py:1354
+#: cogs/music/views.py:1362
 msgid "Play now"
 msgstr "Reproducir ahora"
 
-#: cogs/music/views.py:1362 cogs/music/views.py:2132
+#: cogs/music/views.py:1370 cogs/music/views.py:2150
 msgid "Remove"
 msgstr "Quitar"
 
-#: cogs/music/views.py:1438
+#: cogs/music/views.py:1448
 msgid "### 🎶 Queue"
 msgstr "### 🎶 Cola"
 
-#: cogs/music/views.py:1444
+#: cogs/music/views.py:1454
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}` `{duration}`"
 msgstr "**Reproduciendo:** {title} de `{author}` `{duration}`"
 
-#: cogs/music/views.py:1453
+#: cogs/music/views.py:1463
 msgid "**Now Playing:** Nothing right now."
 msgstr "**Reproduciendo:** Nada por ahora."
 
-#: cogs/music/views.py:1464
+#: cogs/music/views.py:1474
 msgid "The queue is empty. Add a track to keep the music going!"
 msgstr "La cola está vacía. ¡Añade una pista para que la música siga sonando!"
 
-#: cogs/music/views.py:1469 cogs/music/views.py:1888
+#: cogs/music/views.py:1479 cogs/music/views.py:1906
 #, python-brace-format
 msgid "{index}. {title} by {author} ({duration})"
 msgstr "{index}. {title} de {author} ({duration})"
 
-#: cogs/music/views.py:1480 cogs/music/views.py:1899 cogs/music/views.py:2248
+#: cogs/music/views.py:1490 cogs/music/views.py:1917 cogs/music/views.py:2268
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} track(s)"
 msgstr "-# Página {page}/{pages} - {count} pista(s)"
 
-#: cogs/music/views.py:1523
+#: cogs/music/views.py:1533
 msgid "Add track"
 msgstr "Añadir pista"
 
-#: cogs/music/views.py:1529
+#: cogs/music/views.py:1539
 msgid "Clear queue"
 msgstr "Vaciar cola"
 
-#: cogs/music/views.py:1613
+#: cogs/music/views.py:1629
 msgid "That track is no longer in the queue."
 msgstr "Esa pista ya no está en la cola."
 
-#: cogs/music/views.py:1638
+#: cogs/music/views.py:1654
 #, python-brace-format
 msgid ""
 "**{title}**\n"
@@ -8296,64 +8320,64 @@ msgstr ""
 "**{title}**\n"
 "Salta directamente a esta pista, o quítala de la cola."
 
-#: cogs/music/views.py:1691
+#: cogs/music/views.py:1707
 #, python-brace-format
 msgid "Jumped to **{title}**."
 msgstr "Salté a **{title}**."
 
-#: cogs/music/views.py:1720
+#: cogs/music/views.py:1737
 #, python-brace-format
 msgid "Removed **{title}** from the queue."
 msgstr "Quité **{title}** de la cola."
 
-#: cogs/music/views.py:1826
+#: cogs/music/views.py:1844
 msgid "Play it again..."
 msgstr "Reproducir de nuevo..."
 
-#: cogs/music/views.py:1873
+#: cogs/music/views.py:1891
 msgid "### 🕘 Recently played"
 msgstr "### 🕘 Reproducido recientemente"
 
-#: cogs/music/views.py:2013
+#: cogs/music/views.py:2031
 msgid "That track is no longer in the history."
 msgstr "Esa pista ya no está en el historial."
 
-#: cogs/music/views.py:2071 cogs/music/views.py:2226
+#: cogs/music/views.py:2089 cogs/music/views.py:2246
 msgid "Unknown artist"
 msgstr "Artista desconocido"
 
-#: cogs/music/views.py:2080
+#: cogs/music/views.py:2098
 #, python-brace-format
 msgid "by {author}"
 msgstr "de {author}"
 
-#: cogs/music/views.py:2085
+#: cogs/music/views.py:2103
 msgid "Manage a favourite..."
 msgstr "Gestionar un favorito..."
 
-#: cogs/music/views.py:2124
+#: cogs/music/views.py:2142
 msgid "Play"
 msgstr "Reproducir"
 
-#: cogs/music/views.py:2198
+#: cogs/music/views.py:2218
 msgid "### ⭐ Your favourites"
 msgstr "### ⭐ Tus favoritos"
 
-#: cogs/music/views.py:2202
+#: cogs/music/views.py:2222
 #, python-brace-format
 msgid "### ⭐ {name}'s favourites"
 msgstr "### ⭐ Favoritos de {name}"
 
-#: cogs/music/views.py:2241
+#: cogs/music/views.py:2261
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr "`{index}.` {label} por `{author}`"
 
-#: cogs/music/views.py:2315 cogs/music/views.py:2449
+#: cogs/music/views.py:2335 cogs/music/views.py:2470
 msgid "That favourite is no longer in your list."
 msgstr "Ese favorito ya no está en tu lista."
 
-#: cogs/music/views.py:2350
+#: cogs/music/views.py:2370
 #, python-brace-format
 msgid ""
 "**{title}**\n"
@@ -8362,63 +8386,63 @@ msgstr ""
 "**{title}**\n"
 "Añade esta pista a la cola, o quítala de tus favoritos."
 
-#: cogs/music/views.py:2397
+#: cogs/music/views.py:2417
 msgid "That favourite could not be loaded right now."
 msgstr "Ese favorito no se pudo cargar en este momento."
 
-#: cogs/music/views.py:2471
+#: cogs/music/views.py:2494
 msgid "Change station..."
 msgstr "Cambiar de estación..."
 
-#: cogs/music/views.py:2489
+#: cogs/music/views.py:2512
 msgid "Search for music"
 msgstr "Buscar música"
 
-#: cogs/music/views.py:2493
+#: cogs/music/views.py:2516
 msgid "Song or URL"
 msgstr "Canción o URL"
 
-#: cogs/music/views.py:2494
+#: cogs/music/views.py:2517
 msgid "A song name to search, or a full URL"
 msgstr "El nombre de una canción para buscar, o una URL completa"
 
-#: cogs/music/views.py:2514
+#: cogs/music/views.py:2537
 msgid "Something went wrong searching for that."
 msgstr "Algo salió mal al buscar eso."
 
-#: cogs/music/views.py:2524
+#: cogs/music/views.py:2547
 msgid "Search for music instead"
 msgstr "Buscar música en su lugar"
 
-#: cogs/music/views.py:2557
+#: cogs/music/views.py:2580
 msgid "## 🎧 Choose your vibe"
 msgstr "## 🎧 Elige tu ambiente"
 
-#: cogs/music/views.py:2560
+#: cogs/music/views.py:2583
 msgid "Pick a genre and I'll spin up a mix, or search for a track."
 msgstr "Elige un género y te preparo una mezcla, o busca una canción."
 
-#: cogs/music/views.py:2568
+#: cogs/music/views.py:2591
 msgid "-# Only you can use this menu."
 msgstr "-# Solo tú puedes usar este menú."
 
-#: cogs/music/views.py:2605
+#: cogs/music/views.py:2628
 msgid "## 👋 Welcome"
 msgstr "## 👋 Bienvenida"
 
-#: cogs/music/views.py:2608
+#: cogs/music/views.py:2631
 msgid "I'm all set to bring the music - let's get you into a room first."
 msgstr "Estoy lista para poner la música - pero primero necesito que entres a una sala."
 
-#: cogs/music/views.py:2613
+#: cogs/music/views.py:2636
 msgid "To get started, join a voice channel:"
 msgstr "Para empezar, entra a un canal de voz:"
 
-#: cogs/music/views.py:2619
+#: cogs/music/views.py:2642
 msgid "I couldn't find a voice channel here that you can join."
 msgstr "No encontré ningún canal de voz aquí al que puedas unirte."
 
-#: cogs/music/views.py:2624
+#: cogs/music/views.py:2647
 msgid "-# Once you join, this message will automatically update."
 msgstr "-# En cuanto entres, este mensaje se actualizará automáticamente."
 
@@ -8435,8 +8459,8 @@ msgid "Skipped by vote."
 msgstr "Saltada por votación."
 
 #: cogs/music/voteskip.py:130 cogs/music/voteskip.py:343
-#: cogs/music/voteskip.py:475 cogs/music/voteskip.py:513
-#: cogs/music/voteskip.py:519
+#: cogs/music/voteskip.py:479 cogs/music/voteskip.py:517
+#: cogs/music/voteskip.py:523
 msgid "This track already ended."
 msgstr "Esta pista ya terminó."
 
@@ -9609,7 +9633,7 @@ msgstr ""
 "**Nubes:** `{clouds}%`\n"
 "**Presión:** `{pressure}hPa`"
 
-#: cogs/utility/searchweb.py:75
+#: cogs/utility/searchweb.py:153
 #, python-brace-format
 msgid ""
 "Look something up with one of these:\n"
@@ -9628,87 +9652,91 @@ msgstr ""
 "- `{p}lookup apod` - la imagen astronomica del dia de la NASA\n"
 "- `{p}lookup weather <ciudad>` - el tiempo actual"
 
-#: cogs/utility/searchweb.py:98
+#: cogs/utility/searchweb.py:176
 msgid "That lookup isn't available right now."
 msgstr "Esa busqueda no esta disponible ahora mismo."
 
-#: cogs/utility/searchweb.py:125
+#: cogs/utility/searchweb.py:203
 msgid "Disambiguation"
 msgstr "Desambiguación"
 
-#: cogs/utility/searchweb.py:127
+#: cogs/utility/searchweb.py:205
 #, python-brace-format
 msgid "That term is ambiguous. Did you mean: {options}?"
 msgstr "Ese término es ambiguo. ¿Quisiste decir: {options}?"
 
-#: cogs/utility/searchweb.py:134
+#: cogs/utility/searchweb.py:212
 msgid "No page found."
 msgstr "No se encontró ninguna página."
 
-#: cogs/utility/searchweb.py:138
+#: cogs/utility/searchweb.py:218
+msgid "Wikipedia lookups are busy right now, try again in a moment."
+msgstr "Las busquedas de Wikipedia estan saturadas ahora mismo, intentalo de nuevo en un momento."
+
+#: cogs/utility/searchweb.py:223
 msgid "Something went wrong while searching Wikipedia."
 msgstr "Algo salió mal al buscar en Wikipedia."
 
-#: cogs/utility/searchweb.py:150
+#: cogs/utility/searchweb.py:235
 msgid "Provide an image URL or attach an image."
 msgstr "Proporciona una URL de imagen o adjunta una imagen."
 
-#: cogs/utility/searchweb.py:156
+#: cogs/utility/searchweb.py:241
 msgid "Reverse image search"
 msgstr "Búsqueda inversa de imágenes"
 
-#: cogs/utility/searchweb.py:157
+#: cogs/utility/searchweb.py:242
 #, python-brace-format
 msgid "[Click here to search for the source]({link})"
 msgstr "[Haz clic aquí para buscar la fuente]({link})"
 
-#: cogs/utility/searchweb.py:173
+#: cogs/utility/searchweb.py:258
 msgid "osu! is not configured."
 msgstr "osu! no está configurado."
 
-#: cogs/utility/searchweb.py:185
+#: cogs/utility/searchweb.py:270
 msgid "No osu! user found."
 msgstr "No se encontró ningún usuario de osu!."
 
-#: cogs/utility/searchweb.py:189
+#: cogs/utility/searchweb.py:274
 #, python-brace-format
 msgid "osu! stats for {username}"
 msgstr "Estadísticas de osu! de {username}"
 
-#: cogs/utility/searchweb.py:195
+#: cogs/utility/searchweb.py:280
 msgid "PP"
 msgstr "PP"
 
-#: cogs/utility/searchweb.py:196
+#: cogs/utility/searchweb.py:281
 msgid "Accuracy"
 msgstr "Precisión"
 
-#: cogs/utility/searchweb.py:198
+#: cogs/utility/searchweb.py:283
 msgid "Playcount"
 msgstr "Reproducciones"
 
-#: cogs/utility/searchweb.py:199
+#: cogs/utility/searchweb.py:284
 msgid "Country"
 msgstr "País"
 
-#: cogs/utility/searchweb.py:205
+#: cogs/utility/searchweb.py:290
 msgid "Something went wrong while fetching osu! data."
 msgstr "Algo salió mal al obtener datos de osu!."
 
-#: cogs/utility/searchweb.py:221
+#: cogs/utility/searchweb.py:306
 msgid "No such Minecraft account."
 msgstr "No existe esa cuenta de Minecraft."
 
-#: cogs/utility/searchweb.py:226
+#: cogs/utility/searchweb.py:311
 #, python-brace-format
 msgid "Minecraft account: {name}"
 msgstr "Cuenta de Minecraft: {name}"
 
-#: cogs/utility/searchweb.py:229
+#: cogs/utility/searchweb.py:314
 msgid "UUID"
 msgstr "UUID"
 
-#: cogs/utility/searchweb.py:238
+#: cogs/utility/searchweb.py:323
 msgid "Something went wrong while fetching Minecraft data."
 msgstr "Algo salió mal al obtener los datos de Minecraft."
 
