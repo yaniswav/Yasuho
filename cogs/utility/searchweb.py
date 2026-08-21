@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 import discord
 import requests
@@ -39,11 +41,87 @@ class _TimeoutRequests:
 wikipedia.wikipedia.requests = _TimeoutRequests(TIMEOUT.total)
 
 
+# ---------------------------------------------------------------------------
+# The one blocking call in this cog gets its own bounded pool
+# ---------------------------------------------------------------------------
+# The `wikipedia` package is built on requests, so a lookup is a BLOCKING call
+# and has to leave the event loop. It used to go to
+# ``run_in_executor(None, ...)`` - the loop's DEFAULT executor, which is
+# precisely the pool ``tools/rendering.py`` hands every Pillow render to once a
+# job has taken one of its two semaphore slots. On that pool a wiki lookup both
+# ESCAPED the bot-wide image ceiling (it takes a thread without ever holding a
+# slot) and could STALL it: a render that has legitimately won a slot still
+# queues behind whatever fills the default executor, and each wiki call can sit
+# in a thread for the full 15s HTTP timeout above.
+#
+# So: not ``run_image_job`` either. A 15s network wait must never occupy one of
+# only two image slots - that would trade the leak for a worse jam. A separate,
+# bounded pool of its own keeps the two workloads off each other's threads,
+# which is the whole point.
+#
+# TWO WORKERS. The pool is here to BOUND the blocking calls, not to
+# parallelise them: two concurrent lookups at 15s worst case is all the
+# exposure this cog needs, and every caller is already spaced by a 5s per-user
+# cooldown on both its surfaces.
+WIKI_WORKERS = 2
+
+# How long a lookup waits for one of those two workers before giving up.
+#
+# A ThreadPoolExecutor's queue is UNBOUNDED, so without this a crowd simply
+# joins a line nobody can leave - and each waiting caller sits inside
+# ``ctx.typing()``, which re-triggers the typing indicator over the API every
+# few seconds for as long as it waits. Bounding the QUEUE WAIT is what
+# addresses saturation (the same reasoning, and the same shape, as
+# tools/rendering.py's DEFAULT_ACQUIRE_TIMEOUT): if a worker is free the job
+# starts at once, and if none is within this window, that is a crowd worth
+# turning away with a short answer instead of a long silence. Deliberately
+# under the 15s call timeout, so a waiter gives up rather than stacking a full
+# lookup on top of another one.
+WIKI_ACQUIRE_TIMEOUT = 10.0
+
+
+class _WikiBusy(Exception):
+    """No wiki worker came free inside :data:`WIKI_ACQUIRE_TIMEOUT`."""
+
+
 class SearchWeb(commands.Cog):
     """Commands that search the web and external APIs."""
 
     def __init__(self, bot):
         self.bot = bot
+        self._wiki_pool = ThreadPoolExecutor(
+            max_workers=WIKI_WORKERS, thread_name_prefix="yasuho-wiki"
+        )
+        self._wiki_slots = asyncio.Semaphore(WIKI_WORKERS)
+
+    def cog_unload(self):
+        """Retire the pool on unload/reload so threads cannot pile up.
+
+        ``wait=False``: cog_unload runs ON the event loop, and waiting would
+        block every other task behind a lookup that may have up to 15s to go.
+        The threads finish the call they are on and the pool then retires
+        itself; a reload gets a fresh one.
+        """
+
+        self._wiki_pool.shutdown(wait=False)
+
+    async def _run_blocking(self, function):
+        """Run one blocking call on this cog's own bounded pool.
+
+        Raises :exc:`_WikiBusy` when both workers stayed busy for
+        :data:`WIKI_ACQUIRE_TIMEOUT`. The slot is released in a ``finally`` so
+        a raising lookup - a timeout, a DisambiguationError - can never leak
+        one and shrink the pool to nothing.
+        """
+
+        try:
+            await asyncio.wait_for(self._wiki_slots.acquire(), WIKI_ACQUIRE_TIMEOUT)
+        except asyncio.TimeoutError:
+            raise _WikiBusy from None
+        try:
+            return await self.bot.loop.run_in_executor(self._wiki_pool, function)
+        finally:
+            self._wiki_slots.release()
 
     # ------------------------------------------------------------------
     # /lookup - the one "look something up somewhere else" group.
@@ -111,7 +189,7 @@ class SearchWeb(commands.Cog):
                 return wikipedia.summary(query, sentences=5)
 
             try:
-                summary = await self.bot.loop.run_in_executor(None, _w)
+                summary = await self._run_blocking(_w)
                 embed = discord.Embed(
                     title=query,
                     description=summary,
@@ -132,6 +210,13 @@ class SearchWeb(commands.Cog):
 
             except wikipedia.exceptions.PageError:
                 await ctx.send(_("No page found."))
+
+            except _WikiBusy:
+                # A short, true answer beats a long silence, and beats the
+                # generic "something went wrong" below: nothing went wrong.
+                await ctx.send(
+                    _("Wikipedia lookups are busy right now, try again in a moment.")
+                )
 
             except Exception:
                 log.exception("failed to fetch wikipedia summary")

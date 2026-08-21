@@ -11,22 +11,71 @@ from pyfiglet import figlet_format
 
 from tools import interactions, rendering
 from tools.config_loader import config_loader
-from tools.formats import random_colour
+from tools.cooldowns import Cooldowns
+from tools.formats import public_echo, random_colour
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
 from tools.views import AuthorView
 
 log = logging.getLogger(__name__)
 
-regex = re.compile(
-    r"^(?:http|ftp)s?://"  # http:// or https://
-    r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain...
-    r"localhost|"  # localhost...
-    r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
-    r"(?::\d+)?"  # optional port
-    r"(?:/?|[/?]\S+)$",
+# ---------------------------------------------------------------------------
+# Link / invite detection for ?say
+# ---------------------------------------------------------------------------
+# BYTE-IDENTICAL to the two grounded patterns the AutoMod engine scans every
+# message with (cogs/moderation/automod.py: AutoMod.url_re, AutoMod.invite_re).
+# What is a link for automod is a link here, and nothing else is: a bare
+# "example.com" is not clickable in a Discord client, so it is not the
+# impersonation vector this filter exists for.
+#
+# COPIED, NOT IMPORTED, on purpose. Every cross-package import in this repo
+# reaches for a small leaf helper (cogs/system/events.py -> mute_perms,
+# profile's connectors -> cogs.anilist.helpers); these two are class attributes
+# of the moderation ENGINE cog, so importing them would drag that cog's whole
+# import chain - its DB layer, the Components V2 panel, the warn-escalation
+# ladder - behind a ?say, and would take ?say down the day that chain breaks.
+# tests/cogs/test_fun.py asserts the pattern SOURCES stay byte-identical with
+# automod's, so a divergence is a red test rather than a silent one.
+#
+# The pattern these replace was anchored ``^...$`` and consulted with
+# ``re.match``, i.e. it only ever fired when the WHOLE argument was one bare
+# URL. A single leading character ("hi ", ".", a space) defeated it and any
+# member could publish arbitrary links UNDER YASUHO'S NAME. Both are unanchored
+# and consulted with .search() below.
+LINK_RE = re.compile(r"https?://\S+|discord\.gg/\S+", re.IGNORECASE)
+INVITE_RE = re.compile(
+    r"(?:https?://)?(?:www\.)?"
+    r"(?:discord(?:\.gg|app\.com/invite|\.com/invite)|discord\.me|discord\.io)"
+    r"/[\w-]+",
     re.IGNORECASE,
 )
+
+
+def contains_link(text) -> bool:
+    """True when a link or a Discord invite appears ANYWHERE inside ``text``."""
+
+    return bool(LINK_RE.search(str(text)) or INVITE_RE.search(str(text)))
+
+
+# How long one member must let pass between two ?hug renders.
+#
+# A hug is ~1s of Pillow work holding one of only TWO bot-wide image slots
+# (tools/rendering.py), shared with rank cards, profile cards and serverstats
+# charts. The command's ``commands.cooldown(3, 90)`` bounds the member's
+# VOLUME but not the BURST: a rate of 3 lets three invocations clear prepare()
+# back to back, so all three renders start together, take both slots at once,
+# and every other image job in the bot gets nothing but the 5s acquire timeout.
+# This spacing closes exactly that, and nothing else - the volume budget above
+# is unchanged.
+#
+# 10 seconds is ~9x one render, so two hugs from the same member can never
+# overlap, while casual use is untouched: the 3-per-90s budget still lets
+# someone hug three different people inside 30 seconds.
+#
+# ``max_concurrency(1, user)`` would have been the one-decorator version, but
+# MaxConcurrencyReached matches no branch in cogs/system/errors.py and would
+# answer a routine throttle with the "report this to the bot owner" embed.
+HUG_SPACING = 10.0
 
 
 # Rock-Paper-Scissors: which emoji beats which (key beats value).
@@ -117,6 +166,9 @@ class Fun(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # Per-member spacing between two hug RENDERS. Self-pruning, so it can
+        # never grow past roughly twice the number of members still cooling.
+        self._hug_spacing = Cooldowns(HUG_SPACING)
 
     @property
     def hug_colour(self):
@@ -129,6 +181,16 @@ class Fun(commands.Cog):
         """Give someone a hug."""
         if not member:
             return await ctx.send(_("You can't hug the air..."))
+
+        # Check-and-set with NO await in between, so it is atomic against the
+        # member's own concurrent invocations: two ?hug messages arriving
+        # together cannot both find the key inactive. Claimed BEFORE the render
+        # and after the "hug the air" refusal, so a mistyped hug costs nothing.
+        if self._hug_spacing.is_active(ctx.author.id):
+            return await ctx.send(
+                _("One hug at a time please, give me a few seconds.")
+            )
+        self._hug_spacing.touch(ctx.author.id)
 
         hug_colour = self.hug_colour
         author_name = ctx.author.display_name
@@ -230,6 +292,44 @@ class Fun(commands.Cog):
                 log.exception("Failed to fetch fox image")
                 await ctx.send(_(':warning: **ERROR !**'), delete_after=3)
 
+    @staticmethod
+    async def _delete_invocation(ctx):
+        """Delete the ?say message ITSELF, never 'whatever is newest here'.
+
+        This used to be ``ctx.channel.purge(limit=1)``, which deletes the most
+        recent message in the channel at that instant - not necessarily this
+        command. Any member who posted between the invoke and the purge lost
+        their message instead, and the offending ?say survived. Deleting
+        ``ctx.message`` by id has no such race.
+
+        Both ways this can fail mean "nothing to do here": NotFound (a
+        moderator or automod already took it down - the "only if it still
+        exists" case) and Forbidden (no Manage Messages in this channel), and
+        both are HTTPException. The warning still goes out either way.
+        """
+
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            log.debug("could not delete the say invocation", exc_info=True)
+
+    async def _refuse_say(self, ctx, value):
+        """Take the offending invocation down and answer it with a warning.
+
+        ``value`` is already localised, already formatted and already defused
+        by the caller. ``AllowedMentions.none()`` is the other half of
+        :func:`tools.formats.public_echo`: the echo cannot forge markup, and
+        the send cannot ping. The two always travel together.
+        """
+
+        await self._delete_invocation(ctx)
+        embed = discord.Embed(
+            timestamp=discord.utils.utcnow(),
+            color=random_colour(),
+        )
+        embed.add_field(name=_(":warning: Warning!"), value=value, inline=True)
+        await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+
     @commands.command()
     @commands.guild_only()
     @commands.cooldown(1.0, 10.0, commands.BucketType.user)
@@ -239,42 +339,38 @@ class Fun(commands.Cog):
 
         try:
             if ctx.message.mention_everyone:
-                await ctx.channel.purge(limit=1)
-                embed = discord.Embed(
-                    timestamp=discord.utils.utcnow(),
-                    color=random_colour(),
-                )
-                embed.add_field(
-                    name=_(":warning: Warning!"),
-                    value=_("Don't mention everyone {author}\n Message : {message}").format(
-                        author=ctx.message.author.mention, message=message
+                # public_echo, not the raw text: the warning embed quotes the
+                # offending message back into a message YASUHO signs, so it is
+                # markup until it is made inert. Unescaped, a rejected
+                # "[free nitro](https://evil.example)" simply became a
+                # bot-authored clickable link inside the warning about it.
+                await self._refuse_say(
+                    ctx,
+                    _("Don't mention everyone {author}\n Message : {message}").format(
+                        author=ctx.author.mention, message=public_echo(message)
                     ),
-                    inline=True,
                 )
-                await ctx.send(embed=embed)
                 return
 
-            elif re.match(regex, args):
-                await ctx.channel.purge(limit=1)
-                embed = discord.Embed(
-                    timestamp=discord.utils.utcnow(),
-                    color=random_colour(),
-                )
-                embed.add_field(
-                    name=_(":warning: Warning!"),
-                    value=_("Please, don't send links {author}\n Message : {message}").format(
-                        author=ctx.message.author.mention, message=message
+            if contains_link(message):
+                await self._refuse_say(
+                    ctx,
+                    _("Please, don't send links {author}\n Message : {message}").format(
+                        author=ctx.author.mention, message=public_echo(message)
                     ),
-                    inline=True,
                 )
-                await ctx.send(embed=embed)
                 return
 
-            elif "stupid" in message:
+            if "stupid" in message:
                 await ctx.send(_("Yes, we know."))
+                return
 
-            else:
-                await ctx.send(message)
+            # The echo itself is deliberately verbatim - repeating the member's
+            # text IS the command - but it must not PING. ``mention_everyone``
+            # above is False for a member who lacks the permission, so without
+            # this an @everyone typed by anyone would have been rung out by the
+            # bot, which does have it.
+            await ctx.send(message, allowed_mentions=discord.AllowedMentions.none())
 
         except Exception:
             log.exception("Failed to process say command")
