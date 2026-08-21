@@ -28,6 +28,7 @@ from cogs.moderation.automod_panel import (
     AutoModPanel,
 )
 from tools import db, settings, warn_escalation
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.lru_cache import BoundedLRU
@@ -49,6 +50,15 @@ _SPAM_SWEEP_AT = 1000
 # Only a violation or an edit that got past the enabled gate ever inserts, so at
 # 1000+ guilds this holds the last few thousand INTERESTING messages, not traffic.
 _SCANNED_CAP = 2048
+
+# How long one member's violations are coalesced into a single record and a
+# single announcement. A member pasting 200 invites used to open 200 permanent
+# case rows and post 200 mod-log embeds: the table grew without bound and the
+# channel moderators actually read became unusable exactly when it mattered.
+# One entry per burst is all a moderator needs to act, and the map behind it
+# (tools.cooldowns) prunes itself, so this costs no unbounded state either.
+# NOTHING punitive hangs off this window - see AutoMod._handle_violation.
+_VIOLATION_LOG_WINDOW = 60
 
 
 class _SettingsCache(dict):
@@ -152,6 +162,9 @@ class AutoMod(commands.Cog):
         self._spam = {}
         self._settings = _SettingsCache()
         self._scanned = BoundedLRU(_SCANNED_CAP)
+        # (guild_id, member_id) -> last time this member's violation was
+        # RECORDED and ANNOUNCED. Never gates a deletion or a punishment.
+        self._violation_log = Cooldowns(_VIOLATION_LOG_WINDOW)
 
     # ------------------------------------------------------------------
     # Command group
@@ -444,7 +457,19 @@ class AutoMod(commands.Cog):
         await modactions.funnel_action(self.bot, guild, embed)
 
     async def _handle_violation(self, message, *, kind, notice, reason):
-        """Delete the message, apply the configured action, and log a case."""
+        """Delete the message, apply the configured action, and log a case.
+
+        WHAT IS THROTTLED AND WHAT IS NOT. A member can trip this hundreds of
+        times in seconds, so the RECORD and the ANNOUNCEMENT are coalesced to one
+        per member per ``_VIOLATION_LOG_WINDOW``: the case AutoMod opens on its
+        own, the mod-log post, and the short in-channel notice. Everything that
+        actually moderates runs on EVERY violation and is gated by nothing - the
+        message is always deleted, the timeout / kick is always applied, and a
+        warn is always recorded and always feeds the escalation counter (that
+        row is the punishment, not the paperwork). 200 invites therefore still
+        cost the spammer 200 deletions and 200 warns; they just stop costing the
+        server 200 permanent rows and 200 mod-log embeds.
+        """
 
         # Marked BEFORE the first await, so a second MESSAGE_UPDATE for this same
         # message cannot land a second warn/kick/timeout while this one is still
@@ -453,6 +478,13 @@ class AutoMod(commands.Cog):
 
         guild = message.guild
         member = message.author
+
+        # Checked and armed with no await in between, so two violations racing
+        # through this coroutine cannot both believe they are the first one.
+        announce = not self._violation_log.is_active((guild.id, member.id))
+        if announce:
+            self._violation_log.touch((guild.id, member.id))
+
         action = await settings.get_guild(
             self.bot.db_pool, guild.id, "automod_action", DEFAULT_ACTION
         )
@@ -502,6 +534,9 @@ class AutoMod(commands.Cog):
                 await modactions.apply_escalation_action(
                     self.bot, guild, member, rule
                 )
+
+        if not announce:
+            return
 
         try:
             await message.channel.send(notice, delete_after=5)

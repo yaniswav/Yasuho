@@ -15,6 +15,110 @@ log = logging.getLogger(__name__)
 
 STAR = "⭐"
 
+# How far a starred message may fall back BEFORE its starboard post is removed.
+# Posting at ``threshold`` and removing only below ``threshold - _UNSTAR_MARGIN``
+# means one member toggling their star on and off drives an EDIT each way
+# instead of a delete/send pair: the star post keeps its id, its permalink and
+# its own reactions, and the starboard channel stops flickering.
+_UNSTAR_MARGIN = 1
+
+
+def _keep_floor(threshold):
+    """The star count an EXISTING starboard post survives down to.
+
+    Never below 1: at threshold 1 there is no band to give away, and a message
+    nobody stars any more must always leave the starboard.
+    """
+    return max(1, threshold - _UNSTAR_MARGIN)
+
+
+def _star_count(message):
+    """How many stars ``message`` carries right now (0 if none)."""
+    for reaction in message.reactions:
+        if str(reaction.emoji) == STAR:
+            return reaction.count
+    return 0
+
+
+# ----------------------------------------------------------------------
+# THE REPUBLISH RULE: never widen a message's audience
+# ----------------------------------------------------------------------
+# The starboard copies somebody's message into ANOTHER channel, so it may only
+# ever show the starboard's audience something that audience could already read.
+# Without this gate, one star on a staff-only channel published the staff
+# conversation to the whole server. A message is republished only when:
+#
+#   * @everyone can view its source channel - the ordinary public case, one
+#     permission fold and nothing more; OR
+#   * every ROLE that can view the STARBOARD channel can also view the SOURCE
+#     channel. That second clause is what keeps the feature working in a
+#     members-only server where nothing at all is @everyone-visible: the
+#     starboard may never WIDEN an audience, but it is allowed to keep one.
+#
+# and never when:
+#
+#   * the source is a PRIVATE thread - invite-only whatever its parent allows;
+#   * the source is age-restricted while the starboard channel is not - that
+#     would hand the whole server what Discord gates behind an age check.
+#
+# Anything that cannot be evaluated (a partial channel, no guild, a lookup that
+# raises) answers NO. A starboard that quietly skips a message is a support
+# question; a starboard that publishes the staff channel is an incident.
+#
+# A NO is not only "do not publish": the caller also RETRACTS any post that is
+# already up for that message. The verdict is asked live, so it can flip long
+# after a post was made, and a gate that merely stopped publishing would strand
+# the old copy on a public board for good - unstarring it would hit the same
+# gate and stop before the removal. Retraction always moves in the private
+# direction, so an unevaluable channel losing its star post is the safe way to
+# be wrong.
+#
+# Per-MEMBER overwrites are deliberately out of scope: the audience is compared
+# role by role, which is how servers actually gate channels, and a lone member
+# grant on the starboard channel cannot make the source readable to anyone else.
+
+
+def _is_private_thread(channel):
+    check = getattr(channel, "is_private", None)
+    return bool(check()) if callable(check) else False
+
+
+def _is_age_restricted(channel):
+    check = getattr(channel, "is_nsfw", None)
+    return bool(check()) if callable(check) else False
+
+
+def _may_republish(src, star_ch):
+    """Whether ``src``'s content may be posted into ``star_ch``. See the rule above."""
+
+    guild = getattr(src, "guild", None)
+    everyone = getattr(guild, "default_role", None)
+    if src is None or star_ch is None or everyone is None:
+        return False
+
+    try:
+        if _is_private_thread(src):
+            return False
+        if _is_age_restricted(src) and not _is_age_restricted(star_ch):
+            return False
+        if src.permissions_for(everyone).view_channel:
+            return True
+
+        roles = tuple(getattr(guild, "roles", ()) or ())
+        audience = {
+            role.id for role in roles if star_ch.permissions_for(role).view_channel
+        }
+        if not audience:
+            # Nobody reaches the starboard through a role: unverifiable, refuse.
+            return False
+        readers = {
+            role.id for role in roles if src.permissions_for(role).view_channel
+        }
+        return audience <= readers
+    except Exception:
+        log.debug("Starboard visibility check failed", exc_info=True)
+        return False
+
 
 # ----------------------------------------------------------------------
 # Interactive configuration form (discord.ui)
@@ -327,7 +431,60 @@ class Starboard(commands.Cog):
         )
         await Paginator(embeds, author_id=ctx.author.id).start(ctx)
 
+    def _cached_message(self, message_id):
+        """The message out of discord.py's own cache, or ``None`` on a miss.
+
+        ``Client.cached_messages`` is the bot-wide 1000-entry deque; scanning it
+        NEWEST FIRST finds a message somebody just starred within the first few
+        entries. Its reaction counts are maintained by the gateway parser, and
+        that parser finishes its synchronous pass before the task it dispatched
+        for this listener gets to run - so the count read here already includes
+        the reaction that woke us.
+        """
+        cached = getattr(self.bot, "cached_messages", None)
+        if not cached:
+            return None
+        try:
+            for message in reversed(cached):
+                if message.id == message_id:
+                    return message
+        except TypeError:  # pragma: no cover - a stand-in with no __reversed__
+            return None
+        return None
+
     async def handle(self, payload):
+        """React to one star being added or removed.
+
+        REQUEST BUDGET, for R star reactions per second across the whole fleet
+        (every other emoji leaves on the first line, for free):
+
+        * source message: 0 REST on a cache hit - which is the normal case,
+          since a message being starred is a message people are looking at - and
+          exactly 1 ``fetch_message`` on a miss. It used to be 1 EVERY time.
+        * starboard post: 0 REST always. It is addressed by id through
+          ``get_partial_message``, so editing or deleting it no longer costs a
+          ``fetch_message`` first.
+        * the write itself: at most 1 REST (one edit, one send or one delete),
+          and 0 when the displayed count did not change - a re-delivered event
+          after a gateway resume, or a star from someone who already starred it.
+        * a reaction that neither reaches the threshold nor touches an existing
+          post: 0 REST at all.
+        * a reaction in a channel the audience gate refuses: 0 REST, plus one
+          indexed row read to see whether an old post has to be retracted.
+
+        THE TRADE that "0 when the displayed count did not change" buys: a
+        starboard post somebody DELETED BY HAND is no longer put back on the
+        next identical reaction, because nothing is fetched to notice it is
+        gone. It comes back as soon as the count moves (the edit 404s and the
+        post is re-sent, once). Restoring it sooner meant one fetch_message per
+        star, fleet-wide, forever.
+
+        So the ceiling is R REST calls per second instead of the old 2R..3R, the
+        common cases are free, and crossing back under the threshold edits the
+        post rather than deleting and re-sending it (see ``_UNSTAR_MARGIN``).
+        The listener itself stays O(1) per event: two cache dict lookups, one
+        bounded scan of the message deque, one row read.
+        """
         if str(payload.emoji) != STAR or payload.guild_id is None:
             return
 
@@ -348,69 +505,92 @@ class Starboard(commands.Cog):
         if src is None:
             return
 
-        try:
-            msg = await src.fetch_message(payload.message_id)
-        except Exception:
-            log.exception("Failed to fetch message %s", payload.message_id)
-            return
-
-        count = 0
-        for r in msg.reactions:
-            if str(r.emoji) == STAR:
-                count = r.count
-                break
-
         star_ch = guild.get_channel(channel_id)
         if star_ch is None:
             return
 
+        # The audience gate runs BEFORE the message is read, so starring a
+        # private channel costs no Discord request at all - and can never post
+        # one. The verdict can also FLIP after a post exists (the source channel
+        # is made private, or age-restricted, later on), and refusing to publish
+        # is only half the rule then: a copy of what is now a private
+        # conversation would sit on a public board with no way off it, since
+        # every later add and remove would stop here too. So a NO also retracts.
+        # That reads one row; it touches Discord only when there is really a
+        # post to take down.
+        if not _may_republish(src, star_ch):
+            async with self._message_lock(payload.message_id):
+                await self._retract(payload.message_id, star_ch)
+            return
+
+        msg = self._cached_message(payload.message_id)
+        if msg is None:
+            try:
+                msg = await src.fetch_message(payload.message_id)
+            except Exception:
+                log.exception("Failed to fetch message %s", payload.message_id)
+                return
+
         # Serialize per source message so two near-simultaneous star reactions
         # cannot both see "no entry yet" and each post a duplicate starboard
-        # message (which the ON CONFLICT below would then orphan).
+        # message (which the ON CONFLICT below would then orphan). The count is
+        # read INSIDE the lock: on a cached message it is live, so the waiter
+        # writes the count as of its turn rather than as of its arrival.
         async with self._message_lock(msg.id):
-            await self._sync_star(msg, guild, star_ch, channel_id, count, threshold)
+            await self._sync_star(
+                msg, guild, star_ch, channel_id, _star_count(msg), threshold
+            )
 
-    async def _sync_star(self, msg, guild, star_ch, channel_id, count, threshold):
-        entry = await self.bot.db_pool.fetchval(
-            "SELECT star_message_id FROM starboard_entries WHERE message_id = $1;",
-            msg.id,
+    def _star_embed(self, msg, count):
+        embed = discord.Embed(
+            description=msg.content,
+            colour=0xFFAC33,  # fixed star-gold so the colour doesn't change on every edit
+            timestamp=msg.created_at,
+        )
+        embed.set_author(
+            name=msg.author.display_name, icon_url=msg.author.display_avatar.url
+        )
+        embed.add_field(
+            name=_("Source"),
+            value=_("[Jump]({url})").format(url=msg.jump_url),
         )
 
-        if count >= threshold:
-            embed = discord.Embed(
-                description=msg.content,
-                colour=0xFFAC33,  # fixed star-gold so the colour doesn't change on every edit
-                timestamp=msg.created_at,
-            )
-            embed.set_author(
-                name=msg.author.display_name, icon_url=msg.author.display_avatar.url
-            )
-            embed.add_field(
-                name=_("Source"),
-                value=_("[Jump]({url})").format(url=msg.jump_url),
-            )
+        for attachment in msg.attachments:
+            if attachment.content_type and attachment.content_type.startswith(
+                "image/"
+            ):
+                embed.set_image(url=attachment.url)
+                break
 
-            for attachment in msg.attachments:
-                if attachment.content_type and attachment.content_type.startswith(
-                    "image/"
-                ):
-                    embed.set_image(url=attachment.url)
-                    break
+        embed.set_footer(text=f"{count} {STAR}")
+        return embed
 
-            embed.set_footer(text=f"{count} {STAR}")
+    async def _sync_star(self, msg, guild, star_ch, channel_id, count, threshold):
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT star_message_id, star_count FROM starboard_entries "
+            "WHERE message_id = $1;",
+            msg.id,
+        )
+        entry = row["star_message_id"] if row else None
+        stored = row["star_count"] if row else None
 
-            if entry:
+        # A post appears at the threshold and survives down to the floor, so a
+        # star toggled on and off around the threshold edits the post twice
+        # instead of deleting and re-sending it.
+        if count >= threshold or (
+            entry is not None and count >= _keep_floor(threshold)
+        ):
+            if entry is not None and stored == count:
+                # Nothing on screen would change: spend no request.
+                return
+
+            embed = self._star_embed(msg, count)
+
+            if entry is not None:
                 try:
-                    star_message = await star_ch.fetch_message(entry)
-                    await star_message.edit(embed=embed)
-                    await self.bot.db_pool.execute(
-                        "UPDATE starboard_entries SET star_count = $2, "
-                        "channel_id = $3 WHERE message_id = $1;",
-                        msg.id,
-                        count,
-                        channel_id,
-                    )
+                    await star_ch.get_partial_message(entry).edit(embed=embed)
                 except discord.NotFound:
+                    # Somebody deleted the star post: put it back, once.
                     star_message = await star_ch.send(embed=embed)
                     await self.bot.db_pool.execute(
                         "UPDATE starboard_entries SET star_message_id = $2, "
@@ -422,33 +602,65 @@ class Starboard(commands.Cog):
                     )
                 except Exception:
                     log.exception("Failed to edit star message %s", entry)
-            else:
-                star_message = await star_ch.send(embed=embed)
-                try:
-                    query = """
-                        INSERT INTO starboard_entries
-                        (message_id, guild_id, star_message_id, channel_id, star_count)
-                        VALUES ($1, $2, $3, $4, $5)
-                        ON CONFLICT (message_id) DO UPDATE
-                        SET star_message_id = $3, channel_id = $4, star_count = $5;
-                        """
+                else:
                     await self.bot.db_pool.execute(
-                        query, msg.id, guild.id, star_message.id, channel_id, count
+                        "UPDATE starboard_entries SET star_count = $2, "
+                        "channel_id = $3 WHERE message_id = $1;",
+                        msg.id,
+                        count,
+                        channel_id,
                     )
-                except Exception:
-                    log.exception("Failed to record entry, rolling back")
-                    await star_message.delete()
+                return
 
-        elif entry:
+            star_message = await star_ch.send(embed=embed)
             try:
-                star_message = await star_ch.fetch_message(entry)
-                await star_message.delete()
+                query = """
+                    INSERT INTO starboard_entries
+                    (message_id, guild_id, star_message_id, channel_id, star_count)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (message_id) DO UPDATE
+                    SET star_message_id = $3, channel_id = $4, star_count = $5;
+                    """
+                await self.bot.db_pool.execute(
+                    query, msg.id, guild.id, star_message.id, channel_id, count
+                )
             except Exception:
-                log.exception("Failed to delete star message %s", entry)
+                log.exception("Failed to record entry, rolling back")
+                await star_message.delete()
+            return
 
-            await self.bot.db_pool.execute(
-                "DELETE FROM starboard_entries WHERE message_id = $1;", msg.id
-            )
+        if entry is not None:
+            await self._drop_entry(star_ch, msg.id, entry)
+
+    async def _retract(self, message_id, star_ch):
+        """Take a starboard post down, if there is one. Costs one row read.
+
+        The audience-gate path: it has no message and no count, only the id that
+        was reacted to, so it asks the table whether anything was ever posted
+        for it. Nothing there (the ordinary case for a private channel) means no
+        Discord request at all.
+        """
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT star_message_id FROM starboard_entries WHERE message_id = $1;",
+            message_id,
+        )
+        entry = row["star_message_id"] if row else None
+        if entry is None:
+            return
+        await self._drop_entry(star_ch, message_id, entry)
+
+    async def _drop_entry(self, star_ch, message_id, entry):
+        """Delete the starboard post and forget the entry. One REST at most."""
+        try:
+            await star_ch.get_partial_message(entry).delete()
+        except discord.NotFound:
+            pass
+        except Exception:
+            log.exception("Failed to delete star message %s", entry)
+
+        await self.bot.db_pool.execute(
+            "DELETE FROM starboard_entries WHERE message_id = $1;", message_id
+        )
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
