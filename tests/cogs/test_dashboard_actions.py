@@ -19,6 +19,7 @@ there (it imports ``VerifyView`` LAZILY, so it never pulls in the 2.x-only
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import types
@@ -28,6 +29,12 @@ import pytest
 
 from cogs.system import dashboard_actions
 from tools import i18n, settings
+
+# The id the fake action rows carry in ``requested_by``: the authenticated
+# dashboard user who asked, and now the ACTOR whose rank gates the four
+# role-publishing kinds.
+ACTOR_ID = 4242
+
 
 # ---------------------------------------------------------------------------
 # Stateful fake pool: models the atomic claim + finish + reconcile UPDATEs.
@@ -57,6 +64,7 @@ class ActionsPool:
         stale=False,
         fresh_claim=False,
         user_id=None,
+        requested_by=ACTOR_ID,
     ):
         # ``fresh_claim`` models a 'running' row whose updated_at is recent (just
         # claimed by a live handler of this process); reconcile's age-guarded
@@ -68,9 +76,13 @@ class ActionsPool:
         # set, and the tests that exercise a rejected scope pass that pair
         # explicitly (a doubly/never scoped row is what the CHECK refuses, and is
         # asserted probe-side against a real Postgres).
+        # ``requested_by`` is the ACTOR column: the authenticated dashboard user
+        # who asked. It defaults to ACTOR_ID (a row the dashboard wrote normally)
+        # so only the tests that are ABOUT a missing actor have to say so.
         self.rows[action_id] = {
             "guild_id": guild_id,
             "user_id": user_id,
+            "requested_by": requested_by,
             "kind": kind,
             "payload": payload,
             "status": status,
@@ -98,6 +110,12 @@ class ActionsPool:
             }
             if "user_id" in query:
                 claimed["user_id"] = row["user_id"]
+            # Same discipline as user_id: the column is only visible to the
+            # dispatcher when the RETURNING actually lists it, so dropping it
+            # from the claim SQL turns every actor-gated action into a refusal
+            # instead of silently passing.
+            if "requested_by" in query:
+                claimed["requested_by"] = row["requested_by"]
             return claimed
         raise AssertionError("unexpected fetchrow: %r" % query)  # pragma: no cover
 
@@ -196,6 +214,29 @@ class FakeBot:
 
     def add_view(self, view, message_id=None):
         self.added_views.append((view, message_id))
+
+
+# ---------------------------------------------------------------------------
+# The dashboard ACTOR: the Member behind a row's ``requested_by``, resolved by
+# the dispatcher and handed to the four role-publishing executors.
+# ---------------------------------------------------------------------------
+
+class FakeActor:
+    """Stand-in for the actor Member: exactly what the configurer half reads.
+
+    ``modchecks.role_hierarchy_error_for`` asks three things and nothing else -
+    the actor's id (against ``guild.owner_id``), whether they are an
+    Administrator, and their top role - so the fake carries three attributes.
+    """
+
+    def __init__(self, top_role, user_id=ACTOR_ID, administrator=False):
+        self.id = user_id
+        self.top_role = top_role
+        self.guild_permissions = types.SimpleNamespace(administrator=administrator)
+
+
+def _actor_with(top_role, **kwargs):
+    return FakeActor(top_role, **kwargs)
 
 
 @pytest.fixture(autouse=True)
@@ -603,14 +644,36 @@ class FakeVoiceChannel:
 
 
 class FakeGuild:
-    def __init__(self, channels=None, has_me=True, preferred_locale="en"):
+    def __init__(
+        self,
+        channels=None,
+        has_me=True,
+        preferred_locale="en",
+        roles=None,
+        members=None,
+        owner_id=111,
+    ):
         self.id = 100
         self._channels = channels or {}
-        self.me = object() if has_me else None
+        self._roles = roles or {}
+        # The member CACHE, deliberately sparse: only what get_member answers.
+        self._members = dict(members or {})
+        # A real member object rather than a bare sentinel: when a verify_role IS
+        # configured the executor asks whether Yasuho can hand it out, which
+        # reads her top role. (_fake_me lives with the reaction-role fakes below;
+        # it is called here at instantiation time, not at import.)
+        self.me = _fake_me() if has_me else None
         self.preferred_locale = preferred_locale
+        self.owner_id = owner_id
 
     def get_channel(self, channel_id):
         return self._channels.get(channel_id)
+
+    def get_role(self, role_id):
+        return self._roles.get(role_id)
+
+    def get_member(self, user_id):
+        return self._members.get(user_id)
 
 
 class FakeVerifyView:
@@ -620,6 +683,17 @@ class FakeVerifyView:
 
     def __init__(self):
         FakeVerifyView.instances += 1
+
+
+def _verify_actor(top_position=900, **kwargs):
+    """The actor for a verify_button_post call.
+
+    Only consulted when a ``verify_role`` is configured (the button is a
+    self-grant of THAT role); ranked above everything by default so the tests
+    that are not about the gate are unaffected. FakeRole is defined further down
+    with the reaction-role fakes - resolved at call time, not at import.
+    """
+    return _actor_with(FakeRole(7_000, position=top_position), **kwargs)
 
 
 @pytest.fixture
@@ -638,7 +712,8 @@ async def test_verify_button_post_success(verify_env):
     bot = FakeBot(ActionsPool(), guilds={100: guild})
 
     result = await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555"}
+        bot, 100, {"channel_id": "555"},
+        _verify_actor(),
     )
 
     assert result == {
@@ -660,7 +735,8 @@ async def test_verify_button_post_uses_custom_message(verify_env):
     bot = FakeBot(ActionsPool(), guilds={100: guild})
 
     await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555", "message": "Welcome! Tap to verify."}
+        bot, 100, {"channel_id": "555", "message": "Welcome! Tap to verify."},
+        _verify_actor(),
     )
 
     _, kwargs = channel.sent[0]
@@ -670,7 +746,8 @@ async def test_verify_button_post_uses_custom_message(verify_env):
 async def test_verify_button_post_guild_unavailable(verify_env):
     bot = FakeBot(ActionsPool(), guilds={})  # bot is not in guild 100
     result = await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555"}
+        bot, 100, {"channel_id": "555"},
+        _verify_actor(),
     )
     assert result == {"ok": False, "error": "guild_unavailable"}
 
@@ -679,7 +756,8 @@ async def test_verify_button_post_channel_not_found(verify_env):
     guild = FakeGuild(channels={})  # channel 555 does not exist
     bot = FakeBot(ActionsPool(), guilds={100: guild})
     result = await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555"}
+        bot, 100, {"channel_id": "555"},
+        _verify_actor(),
     )
     assert result == {"ok": False, "error": "channel_not_found"}
 
@@ -688,7 +766,8 @@ async def test_verify_button_post_rejects_non_text_channel(verify_env):
     guild = FakeGuild(channels={555: FakeVoiceChannel(555)})
     bot = FakeBot(ActionsPool(), guilds={100: guild})
     result = await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555"}
+        bot, 100, {"channel_id": "555"},
+        _verify_actor(),
     )
     assert result == {"ok": False, "error": "not_text_channel"}
 
@@ -698,7 +777,8 @@ async def test_verify_button_post_missing_send_permission(verify_env):
     guild = FakeGuild(channels={555: channel})
     bot = FakeBot(ActionsPool(), guilds={100: guild})
     result = await dashboard_actions._exec_verify_button_post(
-        bot, 100, {"channel_id": "555"}
+        bot, 100, {"channel_id": "555"},
+        _verify_actor(),
     )
     assert result == {"ok": False, "error": "missing_send_permission"}
     assert channel.sent == []  # nothing posted
@@ -709,14 +789,20 @@ async def test_verify_button_post_bad_channel_id(verify_env, channel_id):
     guild = FakeGuild(channels={})
     bot = FakeBot(ActionsPool(), guilds={100: guild})
     payload = {} if channel_id is None else {"channel_id": channel_id}
-    result = await dashboard_actions._exec_verify_button_post(bot, 100, payload)
+    result = await dashboard_actions._exec_verify_button_post(bot, 100, payload, _verify_actor())
     assert result == {"ok": False, "error": "bad_channel_id"}
 
 
 async def test_verify_button_post_full_flow_via_handle_action(verify_env):
-    """End-to-end through the queue: claim -> verify executor -> done + result."""
+    """End-to-end through the queue: claim -> verify executor -> done + result.
+
+    The row carries the default ``requested_by`` and the actor is in the member
+    cache, so the dispatcher's actor gate resolves without a fetch.
+    """
     channel = FakeTextChannel(channel_id=555)
-    guild = FakeGuild(channels={555: channel})
+    guild = FakeGuild(
+        channels={555: channel}, members={ACTOR_ID: _verify_actor()}
+    )
     pool = ActionsPool()
     pool.add(1, guild_id=100, kind="verify_button_post", payload={"channel_id": "555"})
     bot = FakeBot(pool, guilds={100: guild})
@@ -820,6 +906,12 @@ class FakeRole:
             return self.position < other.position
         return self.id > other.id
 
+    def __ge__(self, other):
+        # The configurer half compares ``role >= actor.top_role``; on a total
+        # order that is exactly "not below". A role is >= itself (equal position,
+        # equal id -> __lt__ is False), like discord.Role.
+        return not self.__lt__(other)
+
 
 # Yasuho's own member object: only her top role matters to the guards. Its id is
 # deliberately LARGER than every role the tests compare against, because a bot's
@@ -831,17 +923,33 @@ def _fake_me(top_position=10):
 
 
 class FakeReactionGuild:
-    def __init__(self, channels=None, roles=None, has_me=True):
+    def __init__(self, channels=None, roles=None, has_me=True, members=None,
+                 owner_id=111):
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
+        self._members = dict(members or {})
         self.me = _fake_me() if has_me else None
+        self.owner_id = owner_id
+
+    def get_member(self, user_id):
+        return self._members.get(user_id)
 
     def get_channel_or_thread(self, channel_id):
         return self._channels.get(channel_id)
 
     def get_role(self, role_id):
         return self._roles.get(role_id)
+
+
+def _role_actor(top_position=900, **kwargs):
+    """The actor for the reaction-role and role-menu executors (shared FakeRole).
+
+    Default rank is far above every role these tests publish (and above Yasuho's
+    own top role at position 10), so the configurer half passes unless a test
+    deliberately lowers it.
+    """
+    return _actor_with(FakeRole(7_000, position=top_position), **kwargs)
 
 
 class FakeCog:
@@ -869,6 +977,7 @@ async def test_reaction_role_add_success():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
 
     # snowflakes come back as STRINGS (never JS numbers on the far side).
@@ -904,6 +1013,7 @@ async def test_reaction_role_add_strips_variation_selector():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": heart, "role_id": "888"},
+        _role_actor(),
     )
 
     assert result["emoji"] == stored
@@ -926,6 +1036,7 @@ async def test_reaction_role_add_works_without_cog_loaded():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
 
     assert result["ok"] is True
@@ -939,6 +1050,7 @@ async def test_reaction_role_add_guild_unavailable():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
     assert result == {"ok": False, "error": "guild_unavailable"}
     assert pool.executed == []
@@ -952,6 +1064,7 @@ async def test_reaction_role_add_channel_not_found():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
     assert result == {"ok": False, "error": "channel_not_found"}
     assert pool.executed == []
@@ -967,6 +1080,7 @@ async def test_reaction_role_add_message_not_found():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
     assert result == {"ok": False, "error": "message_not_found"}
     assert pool.executed == []
@@ -982,6 +1096,7 @@ async def test_reaction_role_add_bad_role():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
     assert result == {"ok": False, "error": "bad_role"}
     assert pool.executed == []
@@ -1015,6 +1130,7 @@ async def test_reaction_role_add_refuses_unassignable_role(role):
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
 
     assert result == {"ok": False, "error": "role_not_assignable"}
@@ -1038,6 +1154,7 @@ async def test_reaction_role_add_assignable_role_below_the_bot_still_works():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
 
     assert result["ok"] is True
@@ -1057,6 +1174,7 @@ async def test_reaction_role_add_without_me_is_unavailable():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
 
     assert result == {"ok": False, "error": "guild_unavailable"}
@@ -1073,6 +1191,7 @@ async def test_reaction_role_add_cant_add_reaction():
         bot,
         100,
         {"channel_id": "555", "message_id": "777", "emoji": "🎮", "role_id": "888"},
+        _role_actor(),
     )
     assert result == {"ok": False, "error": "cant_add_reaction"}
     # The reaction failed, so NOTHING was persisted or cached.
@@ -1088,7 +1207,7 @@ async def test_reaction_role_add_bad_channel_id(channel_id):
     payload = {"message_id": "777", "emoji": "🎮", "role_id": "888"}
     if channel_id is not None:
         payload["channel_id"] = channel_id
-    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload)
+    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload, _role_actor())
     assert result == {"ok": False, "error": "bad_channel_id"}
     assert pool.executed == []
 
@@ -1102,7 +1221,7 @@ async def test_reaction_role_add_rejects_empty_emoji(emoji):
     payload = {"channel_id": "555", "message_id": "777", "role_id": "888"}
     if emoji is not None:
         payload["emoji"] = emoji
-    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload)
+    result = await dashboard_actions._exec_reaction_role_add(bot, 100, payload, _role_actor())
     assert result == {"ok": False, "error": "bad_emoji"}
     assert pool.executed == []
 
@@ -1110,7 +1229,11 @@ async def test_reaction_role_add_rejects_empty_emoji(emoji):
 async def test_reaction_role_add_full_flow_via_handle_action():
     """End-to-end through the queue: claim -> add executor -> done + result + cache."""
     channel = FakeReactionChannel(555, message=FakeMessage(777))
-    guild = FakeReactionGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    guild = FakeReactionGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888)},
+        members={ACTOR_ID: _role_actor()},
+    )
     cog = FakeCog()
     pool = ActionsPool()
     pool.add(
@@ -1482,6 +1605,11 @@ class BRRole:
         return self.position >= other.position
 
 
+def _br_actor(top_position=900, **kwargs):
+    """The actor for the button-panel executor (BRRole ordering)."""
+    return _actor_with(BRRole(7000, "Staff", position=top_position), **kwargs)
+
+
 class BRMe:
     """Stand-in for guild.me: only needs a top_role to compare against."""
 
@@ -1490,11 +1618,17 @@ class BRMe:
 
 
 class BRGuild:
-    def __init__(self, channels=None, roles=None, has_me=True):
+    def __init__(self, channels=None, roles=None, has_me=True, members=None,
+                 owner_id=111):
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
+        self._members = dict(members or {})
         self.me = BRMe() if has_me else None
+        self.owner_id = owner_id
+
+    def get_member(self, user_id):
+        return self._members.get(user_id)
 
     def get_channel(self, channel_id):
         return self._channels.get(channel_id)
@@ -1622,6 +1756,7 @@ async def test_button_panel_post_success(button_env):
                 {"role_id": "999", "label": "Artist", "style": 3},
             ]
         ),
+        _br_actor(),
     )
 
     assert result == {
@@ -1663,6 +1798,7 @@ async def test_button_panel_post_dedupes_roles(button_env):
                 {"role_id": "888", "label": "Duplicate", "style": 4},
             ]
         ),
+        _br_actor(),
     )
 
     assert result["ok"] is True
@@ -1679,7 +1815,8 @@ async def test_button_panel_post_empty_label_falls_back_to_role_name(button_env)
     bot = _br_bot(pool, guild)
 
     await dashboard_actions._exec_button_panel_post(
-        bot, 100, _panel_payload(buttons=[{"role_id": "888", "style": 2}])
+        bot, 100, _panel_payload(buttons=[{"role_id": "888", "style": 2}]),
+        _br_actor(),
     )
 
     assert pool.inserted[0][4] == "Gamer"  # label defaulted to the role name
@@ -1695,6 +1832,7 @@ async def test_button_panel_post_coerces_bad_style_to_secondary(button_env):
         bot,
         100,
         _panel_payload(buttons=[{"role_id": "888", "label": "X", "style": 9}]),
+        _br_actor(),
     )
 
     assert pool.inserted[0][6] == 2  # style 9 (Link/premium/unknown) -> secondary
@@ -1710,7 +1848,7 @@ async def test_button_panel_post_bad_channel_id(button_env, channel_id):
         payload.pop("channel_id")
     else:
         payload["channel_id"] = channel_id
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload, _br_actor())
     assert result == {"ok": False, "error": "bad_channel_id"}
     assert pool.inserted == []
 
@@ -1718,7 +1856,7 @@ async def test_button_panel_post_bad_channel_id(button_env, channel_id):
 async def test_button_panel_post_guild_unavailable(button_env):
     pool = BRPool()
     bot = _br_bot(pool, guild=None)  # bot not in guild 100
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "guild_unavailable"}
     assert pool.inserted == []
 
@@ -1727,7 +1865,7 @@ async def test_button_panel_post_channel_not_found(button_env):
     guild = BRGuild(channels={}, roles={888: BRRole(888)})
     pool = BRPool()
     bot = _br_bot(pool, guild)
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "channel_not_found"}
     assert pool.inserted == []
 
@@ -1736,7 +1874,7 @@ async def test_button_panel_post_rejects_non_text_channel(button_env):
     guild = BRGuild(channels={555: FakeVoiceChannel(555)}, roles={888: BRRole(888)})
     pool = BRPool()
     bot = _br_bot(pool, guild)
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "not_text_channel"}
     assert pool.inserted == []
 
@@ -1746,7 +1884,7 @@ async def test_button_panel_post_missing_send_permission(button_env):
     guild = BRGuild(channels={555: channel}, roles={888: BRRole(888)})
     pool = BRPool()
     bot = _br_bot(pool, guild)
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "missing_send_permission"}
     assert channel.sent == []
     assert pool.inserted == []
@@ -1763,7 +1901,7 @@ async def test_button_panel_post_no_buttons(button_env, buttons):
         payload.pop("buttons")
     else:
         payload["buttons"] = buttons
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload, _br_actor())
     assert result == {"ok": False, "error": "no_buttons"}
     assert channel.sent == []
 
@@ -1776,7 +1914,7 @@ async def test_button_panel_post_too_many_buttons(button_env):
     payload = _panel_payload(
         buttons=[{"role_id": "888", "style": 2} for _ in range(26)]
     )
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload)
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, payload, _br_actor())
     assert result == {"ok": False, "error": "too_many_buttons"}
     assert channel.sent == []
 
@@ -1786,7 +1924,7 @@ async def test_button_panel_post_bad_role(button_env):
     guild = BRGuild(channels={555: channel}, roles={})  # role 888 absent
     pool = BRPool()
     bot = _br_bot(pool, guild)
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "bad_role"}
     assert channel.sent == []
     assert pool.inserted == []
@@ -1808,7 +1946,7 @@ async def test_button_panel_post_rejects_unassignable_role(button_env, role):
     guild = BRGuild(channels={555: channel}, roles={888: role})
     pool = BRPool()
     bot = _br_bot(pool, guild)
-    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload())
+    result = await dashboard_actions._exec_button_panel_post(bot, 100, _panel_payload(), _br_actor())
     assert result == {"ok": False, "error": "role_not_assignable"}
     assert channel.sent == []
     assert pool.inserted == []
@@ -1820,7 +1958,10 @@ async def test_button_panel_post_empty_embed(button_env):
     pool = BRPool()
     bot = _br_bot(pool, guild)
     result = await dashboard_actions._exec_button_panel_post(
-        bot, 100, _panel_payload(embed={})  # no visible content
+        bot,
+        100,
+        _panel_payload(embed={}),  # no visible content
+        _br_actor(),
     )
     assert result == {"ok": False, "error": "empty_embed"}
     # Nothing posted, persisted or registered for an empty embed.
@@ -1832,7 +1973,11 @@ async def test_button_panel_post_empty_embed(button_env):
 async def test_button_panel_post_full_flow_via_handle_action(button_env):
     """End-to-end through the queue: claim -> post executor -> done + result."""
     channel = FakeTextChannel(channel_id=555)
-    guild = BRGuild(channels={555: channel}, roles={888: BRRole(888, "Gamer")})
+    guild = BRGuild(
+        channels={555: channel},
+        roles={888: BRRole(888, "Gamer")},
+        members={ACTOR_ID: _br_actor()},
+    )
     pool = ButtonActionsPool()
     pool.add(1, guild_id=100, kind="button_panel_post", payload=_panel_payload())
     bot = FakeBot(pool, guilds={100: guild})
@@ -1961,10 +2106,13 @@ class FakeRMChannel:
 
 
 class RMGuild:
-    def __init__(self, channels=None, roles=None, has_me=True, preferred_locale="en"):
+    def __init__(self, channels=None, roles=None, has_me=True, preferred_locale="en",
+                 members=None, owner_id=111):
         self.id = 100
         self._channels = channels or {}
         self._roles = roles or {}
+        self._members = dict(members or {})
+        self.owner_id = owner_id
         # A real member object (not a bare sentinel): the option filter now asks
         # whether Yasuho could actually grant each picked role, which reads her
         # top role.
@@ -1979,6 +2127,9 @@ class RMGuild:
 
     def get_role(self, role_id):
         return self._roles.get(role_id)
+
+    def get_member(self, user_id):
+        return self._members.get(user_id)
 
 
 class FakeRMCog:
@@ -2084,6 +2235,7 @@ async def test_role_menu_post_success(rolemenu_env):
                 {"role_id": "999", "label": "Red", "temp_seconds": 3600},
             ],
         ),
+        _role_actor(),
     )
 
     assert result == {"ok": True, "message_id": "999888777666555444", "menu": True}
@@ -2125,7 +2277,8 @@ async def test_role_menu_post_defaults_exclusive_false_and_temp_zero(rolemenu_en
     bot = _rm_bot(pool, guild)
 
     await dashboard_actions._exec_role_menu_post(
-        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}])
+        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}]),
+        _role_actor(),
     )
 
     stored = json.loads(pool.inserted[0][3])
@@ -2151,6 +2304,7 @@ async def test_role_menu_post_filters_foreign_roles(rolemenu_env):
                 {"role_id": "999", "label": "Ghost"},
             ]
         ),
+        _role_actor(),
     )
 
     assert result["ok"] is True
@@ -2190,6 +2344,7 @@ async def test_role_menu_post_filters_roles_yasuho_cannot_grant(rolemenu_env):
                 {"role_id": "555", "label": "Admin"},
             ]
         ),
+        _role_actor(),
     )
 
     assert result["ok"] is True
@@ -2208,7 +2363,8 @@ async def test_role_menu_post_refuses_when_no_option_is_grantable(rolemenu_env):
     bot = _rm_bot(pool, guild)
 
     result = await dashboard_actions._exec_role_menu_post(
-        bot, 100, _menu_payload(options=[{"role_id": "777", "label": "Booster"}])
+        bot, 100, _menu_payload(options=[{"role_id": "777", "label": "Booster"}]),
+        _role_actor(),
     )
 
     assert result == {"ok": False, "error": "bad_role_all"}
@@ -2223,7 +2379,8 @@ async def test_role_menu_post_bad_role_all(rolemenu_env):
     bot = _rm_bot(pool, guild)
 
     result = await dashboard_actions._exec_role_menu_post(
-        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}])
+        bot, 100, _menu_payload(options=[{"role_id": "888", "label": "Blue"}]),
+        _role_actor(),
     )
 
     assert result == {"ok": False, "error": "bad_role_all"}
@@ -2242,7 +2399,7 @@ async def test_role_menu_post_no_options(rolemenu_env, options):
         payload["config"].pop("options")
     else:
         payload["config"]["options"] = options
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload)
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload, _role_actor())
     assert result == {"ok": False, "error": "no_options"}
     assert channel.sent == []
 
@@ -2253,7 +2410,7 @@ async def test_role_menu_post_too_many_menus(rolemenu_env):
     pool = RMPool(count=25)  # already at MAX_MENUS_PER_GUILD
     bot = _rm_bot(pool, guild)
 
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
 
     assert result == {"ok": False, "error": "too_many_menus"}
     assert channel.sent == []
@@ -2270,7 +2427,7 @@ async def test_role_menu_post_bad_channel_id(rolemenu_env, channel_id):
         payload.pop("channel_id")
     else:
         payload["channel_id"] = channel_id
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload)
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, payload, _role_actor())
     assert result == {"ok": False, "error": "bad_channel_id"}
     assert pool.inserted == []
 
@@ -2278,7 +2435,7 @@ async def test_role_menu_post_bad_channel_id(rolemenu_env, channel_id):
 async def test_role_menu_post_guild_unavailable(rolemenu_env):
     pool = RMPool()
     bot = _rm_bot(pool, guild=None)  # bot not in guild 100
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
     assert result == {"ok": False, "error": "guild_unavailable"}
     assert pool.inserted == []
 
@@ -2287,7 +2444,7 @@ async def test_role_menu_post_channel_not_found(rolemenu_env):
     guild = RMGuild(channels={}, roles={888: FakeRole(888)})
     pool = RMPool()
     bot = _rm_bot(pool, guild)
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
     assert result == {"ok": False, "error": "channel_not_found"}
     assert pool.inserted == []
 
@@ -2296,7 +2453,7 @@ async def test_role_menu_post_rejects_non_text_channel(rolemenu_env):
     guild = RMGuild(channels={555: FakeVoiceChannel(555)}, roles={888: FakeRole(888)})
     pool = RMPool()
     bot = _rm_bot(pool, guild)
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
     assert result == {"ok": False, "error": "not_text_channel"}
     assert pool.inserted == []
 
@@ -2306,7 +2463,7 @@ async def test_role_menu_post_missing_send_permission(rolemenu_env):
     guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
     pool = RMPool()
     bot = _rm_bot(pool, guild)
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
     assert result == {"ok": False, "error": "missing_send_permission"}
     assert channel.sent == []
     assert pool.inserted == []
@@ -2319,7 +2476,7 @@ async def test_role_menu_post_edit_failure_deletes_and_reports(rolemenu_env):
     pool = RMPool()
     bot = _rm_bot(pool, guild)
 
-    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload())
+    result = await dashboard_actions._exec_role_menu_post(bot, 100, _menu_payload(), _role_actor())
 
     assert result == {"ok": False, "error": "post_failed"}
     # The orphan (view-less) message is cleaned up; nothing persisted or registered.
@@ -2331,7 +2488,11 @@ async def test_role_menu_post_edit_failure_deletes_and_reports(rolemenu_env):
 async def test_role_menu_post_full_flow_via_handle_action(rolemenu_env):
     """End-to-end through the queue: claim -> post executor -> done + result."""
     channel = FakeRMChannel(555)
-    guild = RMGuild(channels={555: channel}, roles={888: FakeRole(888)})
+    guild = RMGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888)},
+        members={ACTOR_ID: _role_actor()},
+    )
     pool = RoleMenuActionsPool()
     pool.add(1, guild_id=100, kind="role_menu_post", payload=_menu_payload())
     bot = FakeBot(pool, guilds={100: guild})
@@ -3226,3 +3387,589 @@ async def test_the_reconnect_sweep_respects_the_in_flight_guard(monkeypatch):
 
     # The mark is released with the block, exactly as a real handler releases it.
     assert dashboard_actions._INFLIGHT_ACTIONS == {}
+
+
+# ---------------------------------------------------------------------------
+# THE ACTOR GATE
+#
+# The four kinds that publish a role a member can then obtain are dispatched
+# with the Member behind the row's ``requested_by`` and refuse to run unless
+# that person outranks the role. Everything here is about the two halves of
+# that: (1) the dispatcher resolves the actor and FAILS CLOSED - a sparse
+# member cache means a miss is UNKNOWN, never "absent" - and (2) the executors
+# ask ``modchecks.self_assignable_role_error`` on top of the bot-half check they
+# already asked, each failure keeping its own code.
+# ---------------------------------------------------------------------------
+
+
+class ActorGuild:
+    """A guild whose member cache is SPARSE, with the REST fetch counted.
+
+    ``cached`` is what ``get_member`` answers (the gateway cache Yasuho actually
+    has: chunk_guilds_at_startup is False, so it holds only members recently seen).
+    ``fetched`` is what the ONE allowed ``fetch_member`` round trip would return;
+    an id in neither raises ``NotFound`` (PROVEN absent), and ``fetch_error``
+    makes that round trip fail the way a 403/5xx/timeout does - the case where
+    membership stays UNKNOWN.
+    """
+
+    def __init__(self, cached=None, fetched=None, fetch_error=None, owner_id=111):
+        self.id = 100
+        self._cached = dict(cached or {})
+        self._fetched = dict(fetched or {})
+        self._fetch_error = fetch_error
+        self.owner_id = owner_id
+        self.cache_reads = []
+        self.fetches = []
+
+    def get_member(self, user_id):
+        self.cache_reads.append(user_id)
+        return self._cached.get(user_id)
+
+    async def fetch_member(self, user_id):
+        self.fetches.append(user_id)
+        if self._fetch_error is not None:
+            raise self._fetch_error
+        if user_id not in self._fetched:
+            raise discord.NotFound(
+                types.SimpleNamespace(status=404, reason="Not Found"), "Unknown Member"
+            )
+        return self._fetched[user_id]
+
+
+def _http_error(status=500):
+    return discord.HTTPException(
+        types.SimpleNamespace(status=status, reason="Server Error"), "boom"
+    )
+
+
+def _actor_kind(monkeypatch, handler=None, kind="test_actor_kind"):
+    """Register ``kind`` as an executor that TAKES AN ACTOR, and return the log.
+
+    The synthetic kind keeps these tests about the dispatcher rather than about
+    any one executor's payload validation; the real kinds are exercised further
+    down.
+    """
+    runs = []
+
+    async def _exec(bot, scope_id, payload, actor):
+        runs.append((scope_id, payload, actor))
+        return {"ok": True}
+
+    monkeypatch.setitem(dashboard_actions._EXECUTORS, kind, handler or _exec)
+    monkeypatch.setattr(
+        dashboard_actions,
+        "_ACTOR_KINDS",
+        dashboard_actions._ACTOR_KINDS | {kind},
+    )
+    return runs
+
+
+# --- the column has to come back from the claim at all ---------------------
+
+
+async def test_the_claim_returns_the_actor_column():
+    """No ``requested_by`` in the RETURNING = no actor = the gate cannot exist."""
+    captured = []
+
+    class _CapturePool:
+        async def fetchrow(self, query, *args):
+            captured.append(query)
+            return None
+
+    await dashboard_actions._claim(_CapturePool(), 1)
+
+    assert "RETURNING guild_id, user_id, kind, payload, requested_by" in captured[0]
+
+
+def test_actor_kinds_are_exactly_the_executors_that_take_an_actor():
+    """The registry and the signatures must agree, in BOTH directions.
+
+    A kind listed here whose executor takes three arguments would be called with
+    four (a TypeError swallowed as ``internal_error``); an executor that takes an
+    actor but is NOT listed would be called with three - and the role it
+    publishes would go out ungated.
+    """
+    takes_actor = {
+        kind
+        for kind, executor in dashboard_actions._EXECUTORS.items()
+        if len(inspect.signature(executor).parameters) >= 4
+    }
+    assert takes_actor == dashboard_actions._ACTOR_KINDS
+    assert dashboard_actions._ACTOR_KINDS == {
+        "verify_button_post",
+        "reaction_role_add",
+        "button_panel_post",
+        "role_menu_post",
+    }
+
+
+def test_actor_kinds_are_all_guild_scoped():
+    """The actor is resolved against ``bot.get_guild(scope_id)``, so an actor kind
+    that read a USER id as its scope would look a guild up by a user snowflake."""
+    assert not (dashboard_actions._ACTOR_KINDS & dashboard_actions._USER_KINDS)
+
+
+# --- resolution: the happy paths, and what they cost -----------------------
+
+
+async def test_an_actor_kind_is_dispatched_with_the_resolved_member(monkeypatch):
+    runs = _actor_kind(monkeypatch)
+    actor = _actor_with(FakeRole(7_000, position=900))
+    guild = ActorGuild(cached={ACTOR_ID: actor})
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={"x": 1})
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert runs == [(100, {"x": 1}, actor)]
+    # A cache HIT costs nothing: no REST round trip at all.
+    assert guild.fetches == []
+
+
+async def test_a_cache_miss_costs_exactly_one_fetch_member(monkeypatch):
+    """The sparse cache is resolved by ONE fetch, and the action then proceeds."""
+    runs = _actor_kind(monkeypatch)
+    actor = _actor_with(FakeRole(7_000, position=900))
+    guild = ActorGuild(fetched={ACTOR_ID: actor})  # not cached, but in the guild
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert runs and runs[0][2] is actor
+    assert guild.fetches == [ACTOR_ID]  # exactly one, never more
+
+
+async def test_a_non_actor_kind_is_still_dispatched_with_three_arguments(monkeypatch):
+    """Non-regression: nothing outside _ACTOR_KINDS changes shape or pays a lookup."""
+    seen = []
+
+    async def _exec(bot, scope_id, payload):
+        seen.append(scope_id)
+        return {"ok": True}
+
+    _register(monkeypatch, "test_kind", _exec)
+    guild = ActorGuild()
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_kind", payload={}, requested_by=None)
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "done"
+    assert seen == [100]
+    assert guild.cache_reads == [] and guild.fetches == []
+
+
+# --- FAIL CLOSED: every unresolved actor is a refusal, with its own code ----
+
+
+async def test_a_null_requested_by_is_refused_as_actor_missing(monkeypatch):
+    """The column is nullable, so this row shape is reachable - and it must NEVER
+    fall back to the bot-half-only check."""
+    runs = _actor_kind(monkeypatch)
+    guild = ActorGuild()
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={}, requested_by=None)
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_missing"}
+    assert runs == []  # the executor never ran
+    assert guild.fetches == []  # and nothing was looked up
+
+
+@pytest.mark.parametrize("value", [0, -1, True, "", "not-an-id", 1.5])
+async def test_an_unusable_requested_by_is_refused_as_actor_missing(monkeypatch, value):
+    runs = _actor_kind(monkeypatch)
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={}, requested_by=value)
+    bot = FakeBot(pool, guilds={100: ActorGuild()})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_missing"}
+    assert runs == []
+
+
+async def test_a_claim_without_the_column_is_refused_as_actor_missing(monkeypatch):
+    """A row shape with no ``requested_by`` at all (an older query mid-deploy)
+    reads as "no actor" and is refused, exactly like a bad scope - never raised
+    into the dispatcher."""
+
+    class LegacyClaimPool(ActionsPool):
+        async def fetchrow(self, query, *args):
+            claimed = await super().fetchrow(query, *args)
+            if claimed is not None:
+                claimed.pop("requested_by", None)
+            return claimed
+
+    runs = _actor_kind(monkeypatch)
+    pool = LegacyClaimPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: ActorGuild()})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_missing"}
+    assert runs == []
+
+
+async def test_a_departed_actor_is_refused_as_actor_left_guild(monkeypatch):
+    """PROVEN absent (404) is the one negative answer we trust - and it still
+    refuses: someone who left cannot publish a role here."""
+    runs = _actor_kind(monkeypatch)
+    guild = ActorGuild()  # neither cached nor fetchable -> NotFound
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_left_guild"}
+    assert runs == []
+    assert guild.fetches == [ACTOR_ID]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        _http_error(500),
+        _http_error(403),
+        RuntimeError("session is closed"),
+        asyncio.TimeoutError(),
+    ],
+)
+async def test_an_unverifiable_actor_is_refused_as_actor_unverified(monkeypatch, error):
+    """THE fail-closed case. The member cache is SPARSE (core.py sets
+    chunk_guilds_at_startup=False), so a miss means UNKNOWN; when the one fetch
+    that could settle it fails with anything other than a 404, the rank is
+    unverifiable and the publication MUST NOT proceed."""
+    runs = _actor_kind(monkeypatch)
+    guild = ActorGuild(fetch_error=error)
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_unverified"}
+    assert runs == []
+    assert guild.fetches == [ACTOR_ID]  # one attempt, then refuse - never a retry loop
+
+
+async def test_a_fetch_that_yields_nothing_is_refused_as_actor_unverified(monkeypatch):
+    """A fetch that returns None instead of raising is still not an answer."""
+
+    class _NoneFetchGuild(ActorGuild):
+        async def fetch_member(self, user_id):
+            self.fetches.append(user_id)
+            return None
+
+    runs = _actor_kind(monkeypatch)
+    guild = _NoneFetchGuild()
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: guild})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_unverified"}
+    assert runs == []
+
+
+async def test_a_get_member_that_raises_is_refused_not_run(monkeypatch):
+    """Even an unexpected explosion inside the resolution is a REFUSAL: the
+    dispatcher's catch-all maps it to ``actor_unverified``, never to a run."""
+
+    class _BoomGuild(ActorGuild):
+        def get_member(self, user_id):
+            raise RuntimeError("cache is on fire")
+
+    runs = _actor_kind(monkeypatch)
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={100: _BoomGuild()})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "actor_unverified"}
+    assert runs == []
+
+
+async def test_an_actor_kind_without_a_live_guild_is_refused(monkeypatch):
+    """No guild = no member to resolve; refused before the executor, with the
+    same code the executors themselves use for a missing guild."""
+    runs = _actor_kind(monkeypatch)
+    pool = ActionsPool()
+    pool.add(1, guild_id=100, kind="test_actor_kind", payload={})
+    bot = FakeBot(pool, guilds={})
+
+    assert await dashboard_actions.handle_action(bot, 1) == "failed"
+    assert pool.rows[1]["result"] == {"ok": False, "error": "guild_unavailable"}
+    assert runs == []
+
+
+# --- the executors: the configurer half, alongside the bot half ------------
+
+
+def _rr_env(role, actor):
+    """A reaction-role executor call environment: channel + message + role."""
+    channel = FakeReactionChannel(555, message=FakeMessage(777))
+    guild = FakeReactionGuild(
+        channels={555: channel}, roles={888: role}, members={ACTOR_ID: actor}
+    )
+    cog = FakeCog()
+    pool = RRPool()
+    return channel, guild, cog, pool, _rr_bot(pool, guild, cog)
+
+
+async def test_reaction_role_add_refuses_a_role_at_or_above_the_actor():
+    """A manage_guild user cannot publish, from the web app, a role /reactionrole
+    would refuse them in Discord."""
+    role = FakeRole(888, position=5)  # below the bot (10), above the actor (3)
+    actor = _role_actor(top_position=3)
+    channel, guild, cog, pool, bot = _rr_env(role, actor)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "\U0001F3AE", "role_id": "888"},
+        actor,
+    )
+
+    assert result == {"ok": False, "error": "role_above_actor"}
+    # Refused BEFORE any side effect: no reaction, no row, no cache entry.
+    assert channel.message.reactions == []
+    assert pool.executed == []
+    assert cog.cache == {}
+
+
+async def test_reaction_role_add_lets_an_administrator_publish_a_higher_role():
+    """Counter-test: the hierarchy half exempts an Administrator (and the owner),
+    exactly as it does in Discord - the gate is a rank check, not a blanket no."""
+    role = FakeRole(888, position=5)
+    actor = _role_actor(top_position=3, administrator=True)
+    channel, guild, cog, pool, bot = _rr_env(role, actor)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "\U0001F3AE", "role_id": "888"},
+        actor,
+    )
+
+    assert result["ok"] is True
+    assert cog.cache == {(777, "\U0001F3AE"): 888}
+
+
+async def test_reaction_role_add_keeps_the_bot_half_code_for_an_unassignable_role():
+    """The bot half is composed INSIDE self_assignable_role_error, so it would be
+    covered either way - but it is kept as its own call, checked FIRST, so the
+    dashboard still gets ``role_not_assignable`` (a role Yasuho can never hand
+    out) rather than ``role_above_actor`` (a rank problem). Actor is the guild
+    OWNER here, so the hierarchy half cannot be what refuses."""
+    role = FakeRole(888, position=5, managed=True)  # integration-owned
+    actor = _role_actor(top_position=1, user_id=111)  # 111 == guild.owner_id
+    channel, guild, cog, pool, bot = _rr_env(role, actor)
+
+    result = await dashboard_actions._exec_reaction_role_add(
+        bot,
+        100,
+        {"channel_id": "555", "message_id": "777", "emoji": "\U0001F3AE", "role_id": "888"},
+        actor,
+    )
+
+    assert result == {"ok": False, "error": "role_not_assignable"}
+    assert channel.message.reactions == []
+
+
+async def test_button_panel_post_refuses_a_role_at_or_above_the_actor(button_env):
+    channel = FakeTextChannel(channel_id=555)
+    actor = _br_actor(top_position=3)
+    guild = BRGuild(
+        channels={555: channel},
+        roles={888: BRRole(888, "Gamer", position=5)},
+        members={ACTOR_ID: actor},
+    )
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    result = await dashboard_actions._exec_button_panel_post(
+        bot, 100, _panel_payload(), actor
+    )
+
+    assert result == {"ok": False, "error": "role_above_actor"}
+    # Nothing posted, nothing persisted, no persistent view registered.
+    assert channel.sent == []
+    assert pool.inserted == []
+    assert bot.added_views == []
+
+
+async def test_button_panel_post_refuses_the_whole_panel_for_one_bad_button(button_env):
+    """One button out of rank refuses the panel; a partially published panel
+    would be a silent grant of exactly what was refused."""
+    channel = FakeTextChannel(channel_id=555)
+    actor = _br_actor(top_position=3)
+    guild = BRGuild(
+        channels={555: channel},
+        roles={
+            888: BRRole(888, "Gamer", position=1),  # fine
+            999: BRRole(999, "Staff", position=5),  # above the actor
+        },
+        members={ACTOR_ID: actor},
+    )
+    pool = BRPool()
+    bot = _br_bot(pool, guild)
+
+    result = await dashboard_actions._exec_button_panel_post(
+        bot,
+        100,
+        _panel_payload(
+            buttons=[{"role_id": "888", "label": "Gamer"}, {"role_id": "999"}]
+        ),
+        actor,
+    )
+
+    assert result == {"ok": False, "error": "role_above_actor"}
+    assert channel.sent == []
+    assert pool.inserted == []
+
+
+async def test_role_menu_post_refuses_when_an_option_is_above_the_actor(rolemenu_env):
+    """The bot half FILTERS an ungrantable option, but a role above the ACTOR is
+    a privilege they asked for: the whole menu is refused so they are told."""
+    channel = FakeRMChannel(555)
+    actor = _role_actor(top_position=3)
+    guild = RMGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888, position=1), 999: FakeRole(999, position=5)},
+        members={ACTOR_ID: actor},
+    )
+    pool = RMPool(count=0)
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot,
+        100,
+        _menu_payload(options=[{"role_id": "888"}, {"role_id": "999"}]),
+        actor,
+    )
+
+    assert result == {"ok": False, "error": "role_above_actor"}
+    assert channel.sent == []  # nothing posted...
+    assert pool.inserted == []  # ...and nothing persisted
+
+
+async def test_role_menu_post_ignores_the_actor_rank_of_a_filtered_option(rolemenu_env):
+    """Ordering: an option Yasuho cannot grant is DROPPED (as before), so it never
+    reaches the actor check - a menu is not refused over an option it would not
+    have published anyway."""
+    channel = FakeRMChannel(555)
+    actor = _role_actor(top_position=3)
+    guild = RMGuild(
+        channels={555: channel},
+        roles={
+            888: FakeRole(888, position=1),  # grantable and below the actor
+            999: FakeRole(999, position=50),  # above the BOT: filtered out
+        },
+        members={ACTOR_ID: actor},
+    )
+    pool = RMPool(count=0)
+    bot = _rm_bot(pool, guild)
+
+    result = await dashboard_actions._exec_role_menu_post(
+        bot,
+        100,
+        _menu_payload(options=[{"role_id": "888"}, {"role_id": "999"}]),
+        actor,
+    )
+
+    assert result["ok"] is True
+    stored = json.loads(pool.inserted[0][3])
+    assert [o["role_id"] for o in stored["options"]] == [888]
+
+
+class VerifySettingsPool(ActionsPool):
+    """ActionsPool whose guild_settings read answers a configured verify_role.
+
+    Returned as a JSON STRING, which is what asyncpg hands back for a JSONB
+    column when no codec is registered (tools.settings._load handles both).
+    """
+
+    def __init__(self, verify_role=None):
+        super().__init__()
+        self.verify_role = verify_role
+
+    async def fetchval(self, query, *args):
+        if "SELECT settings FROM guild_settings" in query:
+            if self.verify_role is None:
+                return None
+            return json.dumps({"verify_role": self.verify_role})
+        return await super().fetchval(query, *args)
+
+
+async def test_verify_button_post_refuses_a_verify_role_above_the_actor(verify_env):
+    """The Verify button is a one-click SELF-GRANT of the configured role, so
+    publishing it is publishing that role - /verify setup refuses the same case."""
+    channel = FakeTextChannel(channel_id=555)
+    actor = _verify_actor(top_position=3)
+    guild = FakeGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888, position=5)},
+        members={ACTOR_ID: actor},
+    )
+    bot = FakeBot(VerifySettingsPool(verify_role="888"), guilds={100: guild})
+
+    result = await dashboard_actions._exec_verify_button_post(
+        bot, 100, {"channel_id": "555"}, actor
+    )
+
+    assert result == {"ok": False, "error": "role_above_actor"}
+    assert channel.sent == []
+
+
+async def test_verify_button_post_refuses_a_verify_role_yasuho_cannot_grant(verify_env):
+    """Same two-code discipline as the other three kinds: the bot half first."""
+    channel = FakeTextChannel(channel_id=555)
+    actor = _verify_actor()
+    guild = FakeGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888, position=5, managed=True)},
+        members={ACTOR_ID: actor},
+    )
+    bot = FakeBot(VerifySettingsPool(verify_role="888"), guilds={100: guild})
+
+    result = await dashboard_actions._exec_verify_button_post(
+        bot, 100, {"channel_id": "555"}, actor
+    )
+
+    assert result == {"ok": False, "error": "role_not_assignable"}
+    assert channel.sent == []
+
+
+async def test_verify_button_post_accepts_a_verify_role_below_the_actor(verify_env):
+    channel = FakeTextChannel(channel_id=555)
+    actor = _verify_actor()
+    guild = FakeGuild(
+        channels={555: channel},
+        roles={888: FakeRole(888, position=5)},
+        members={ACTOR_ID: actor},
+    )
+    bot = FakeBot(VerifySettingsPool(verify_role="888"), guilds={100: guild})
+
+    result = await dashboard_actions._exec_verify_button_post(
+        bot, 100, {"channel_id": "555"}, actor
+    )
+
+    assert result["ok"] is True
+    assert len(channel.sent) == 1
+
+
+async def test_verify_button_post_still_posts_when_no_role_is_configured(verify_env):
+    """Non-regression on the documented order: the button may be posted first and
+    the role set after - there is nothing to gate yet."""
+    channel = FakeTextChannel(channel_id=555)
+    actor = _verify_actor(top_position=1)
+    guild = FakeGuild(channels={555: channel}, members={ACTOR_ID: actor})
+    bot = FakeBot(VerifySettingsPool(verify_role=None), guilds={100: guild})
+
+    result = await dashboard_actions._exec_verify_button_post(
+        bot, 100, {"channel_id": "555"}, actor
+    )
+
+    assert result["ok"] is True
+    assert len(channel.sent) == 1

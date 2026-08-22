@@ -162,6 +162,17 @@ def _cog(pool):
     return ReactionRoles(types.SimpleNamespace(db_pool=pool))
 
 
+def _actor(top_position=50):
+    """The dashboard ACTOR the executor now checks the published role against.
+
+    Ranked well above the roles published here (and above Yasuho's own top role
+    at position 10), so the configurer half passes and the CROSS-TENANT property
+    stays the subject of these tests. The gate itself is exercised in
+    tests/cogs/test_dashboard_actions.py.
+    """
+    return FakeMember(1234, top_position=top_position)
+
+
 # ---------------------------------------------------------------------------
 # 1. Statement shape
 # ---------------------------------------------------------------------------
@@ -203,6 +214,7 @@ async def test_dashboard_upsert_carries_guild_scoping():
             "role_id": str(ROLE_A),
             "emoji": EMOJI,
         },
+        _actor(),
     )
 
     assert result["ok"] is True
@@ -267,6 +279,7 @@ async def test_dashboard_executor_refuses_a_message_claimed_by_another_guild():
             "role_id": str(ROLE_B),
             "emoji": EMOJI,
         },
+        _actor(),
     )
 
     assert result == {"ok": False, "error": "message_claimed_elsewhere"}

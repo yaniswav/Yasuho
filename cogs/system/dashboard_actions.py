@@ -64,29 +64,103 @@ blip or an executor exception is caught, logged without secrets, and recorded as
 a ``failed`` result; a single bad action can never take down the listener, and a
 dropped listen connection is re-established with backoff.
 
-KNOWN GAP - NO CONFIGURER RANK ON GUILD-SCOPED ROLE WRITES
-----------------------------------------------------------
-Every executor here that publishes a role a member can obtain (the reaction-role
-mapping, the button-panel buttons, the role-menu options) asks
-``modchecks.bot_can_assign_role``: can Yasuho hand this role out at all? What no
-executor here can ask is the other half the cog-side commands now ask - can the
-person who configured this outrank the role they are publishing
-(``modchecks.self_assignable_role_error``) - because a guild-scoped action row
-carries no actor: ``user_id`` is NULL for every kind outside :data:`_USER_KINDS`,
-by the DB CHECK. So the dashboard's authorization stops at its own
-``requireManageGuild`` gate, and a manage_guild user who is not an administrator
-can publish, from the web app, a role that ``/buttonrole`` or ``/reactionrole``
-would refuse them in Discord. ``autorole`` is the same shape from the other
-direction: the web app writes ``role_id`` straight into guild settings and
-``dashboard_sync`` only refreshes the cache, so ``/autorole set``'s configurer
-guard is dashboard-bypassable too.
+CONFIGURER RANK ON THE ROLE-PUBLISHING KINDS (and the surfaces still not gatable)
+--------------------------------------------------------------------------------
+FOUR kinds publish a role a member can then obtain by clicking:
+``verify_button_post``, ``reaction_role_add``, ``button_panel_post`` and
+``role_menu_post``. Each of them now asks BOTH halves of the self-role question,
+the same pair ``/verify setup``, ``/reactionrole``, ``/buttonrole`` and
+``/rolemenu`` ask in Discord:
 
-Closing this needs the ACTOR threaded through the action row (a nullable
-``actor_id`` alongside the scope columns, written by the dashboard, resolved to
-a Member here and fed to ``self_assignable_role_error`` whenever it resolves) -
-a schema + web-app change, not something an executor can do on its own. Recorded
-here rather than fixed so the asymmetry is a known, findable limitation instead
-of a silent one.
+* can Yasuho hand this role out at all (``modchecks.bot_can_assign_role``) -
+  kept as its own call so its failure keeps its own code, ``role_not_assignable``;
+* does the person who asked for this from the web app OUTRANK the role they are
+  publishing (``modchecks.self_assignable_role_error``, which composes the
+  hierarchy half with the bot half). Refused as ``role_above_actor``.
+
+The ACTOR is the row's ``requested_by``: the dashboard writes the AUTHENTICATED
+SESSION USER there on every ``enqueueBotAction`` call. :func:`_claim` returns the
+column, :data:`_ACTOR_KINDS` says which kinds need it, and :func:`_handle_action`
+resolves it to a :class:`discord.Member` of the row's guild ONCE, before the
+executor is entered - the same discipline :func:`_scope_id` has: an executor of
+one of these kinds can never run without a resolved actor, so it has nothing to
+defend itself against.
+
+FAIL CLOSED, always. ``requested_by`` is nullable in the schema (it predates this
+gate as an audit column) and ``guild.get_member`` is a SPARSE cache here
+(``chunk_guilds_at_startup=False`` in core.py), so "I could not check" must never
+read as "go ahead". Three distinct refusal codes, so the dashboard can say
+something useful:
+
+* ``actor_missing`` - the row carries no usable ``requested_by``. NEVER falls back
+  to the bot-half-only check.
+* ``actor_left_guild`` - PROVEN absent: ``fetch_member`` returned 404.
+* ``actor_unverified`` - membership could not be established (a cache miss whose
+  one ``fetch_member`` hit a 403/5xx/timeout). Transient: the dashboard should
+  offer a retry.
+
+Cost: cache hit = free; cache miss = at most ONE
+``GET /guilds/{id}/members/{user}`` per action. These are operator-driven
+dashboard actions, not a hot path.
+
+ORDER MATTERS FOR THE CODES THE WEB APP RENDERS. On an actor kind the gate runs
+BEFORE the executor, so it also runs before the payload is validated: a
+malformed row now answers ``guild_unavailable`` / ``actor_*`` where it used to
+answer ``bad_channel_id`` / ``bad_role``, and it pays that one member fetch on a
+cache miss even though its payload was never going to be usable. Deliberate -
+the actor must be established before anything else looks at attacker-supplied
+fields - and bounded by the dashboard's own enqueue rate.
+
+``requested_by`` IS NOW SECURITY-BEARING - it was audit-only. It MUST keep coming
+from the authenticated session on the dashboard side and must NEVER be taken from
+a form field, a URL/query param or any other client-supplied value: whoever
+controls it controls which rank the publication is checked against. An "act on
+behalf of" feature would need its OWN column (an explicit ``on_behalf_of``),
+leaving ``requested_by`` the person who actually clicked.
+
+STILL NOT GATABLE BOT-SIDE - THE DASHBOARD IS THE ONLY DEFENCE. SIX role-bearing
+settings are written STRAIGHT INTO THE DATABASE by the Node process and never
+pass through this queue. They are every role Yasuho grants ON HER OWN from a
+stored setting, and the list is meant to be exhaustive - a new such setting
+belongs in it:
+
+* ``autorole`` - Discord guard ``/autorole set`` (``cogs/config/settings.py``);
+* ``verify_role`` - Discord guard ``/verify setup`` (``cogs/config/verification.py``);
+* the leveling role rewards - Discord guard ``/levelconfig rewards add`` (body in
+  ``cogs/community/leveling/level_rewards.py``, NOT a ``/levelrole`` command);
+* ``level_config.season_champion_role_id``, granted at every rollover by
+  ``Seasons._apply_champion_role`` - Discord guard on the ``/levelconfig``
+  seasons panel's champion-role select (``cogs/community/leveling/seasons_views.py``);
+* the twitch live role - Discord guard on the ``/twitch`` panel's Live-role select
+  (``cogs/config/twitch.py``);
+* the ``muterole`` row - NO Discord guard, because there is no Discord surface
+  for it AT ALL. See below.
+
+``dashboard_sync`` only invalidates a cache when any of them changes, so the bot
+never sees the write, has no actor and no before/after, and cannot refuse
+anything: for the first five, the ``modchecks.self_assignable_role_error`` guard
+the Discord surface carries is simply bypassed by writing the row directly.
+
+``muterole`` is WORSE than bypassable. There is no ``/muterole`` command: the row
+is only ever written by ``Moderation._ensure_mute_role``
+(``cogs/moderation/moderation.py``), which persists the id of a role Yasuho JUST
+CREATED herself, so no Discord surface has ever had to ask the self-grant
+question and there is no guard there to bypass. A dashboard write pointing that
+row at an arbitrary EXISTING role has no Discord counterpart at all - and the
+mute paths then apply that role to members.
+
+Do not "fix" any of this here: it has to be a rank check in the web app itself
+(or those writes have to be moved onto this queue as new kinds).
+
+``verify_button_post`` is gated on the verify role CONFIGURED AT POST TIME, which
+is the best this side can do - but read it as DEFENCE IN DEPTH, not as a closed
+path: whoever can enqueue the post can also move ``verify_role`` through the
+ungated DB-direct path above. Leave it unset (or point it low), post the button
+past the gate, then raise it: the button re-reads the setting at click time
+(``cogs/config/verification.py``) and hands out whatever it says. The post-time
+read is served from the ``tools.settings`` bounded LRU, so a write that is merely
+CONCURRENT can be missed too, with no ordering trick - the gate only sees it once
+the ``dashboard_sync`` notify has landed and invalidated the guild's blob.
 """
 
 from __future__ import annotations
@@ -107,6 +181,7 @@ from tools import autoroom, i18n, modchecks, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.snowflake import coerce_id
 
 log = logging.getLogger(__name__)
 
@@ -199,7 +274,10 @@ def _coerce_payload(raw):
 # ---------------------------------------------------------------------------
 # Executors: kind -> async handler(bot, scope_id, payload) -> result dict.
 # ``scope_id`` is the guild id for every kind except those in _USER_KINDS below,
-# which get the user id instead. Each RE-VALIDATES the payload against live state
+# which get the user id instead. The kinds listed in _ACTOR_KINDS take ONE more
+# argument, ``actor``: the resolved Member who asked for the action from the web
+# app, handed over already resolved (or the action is refused before the executor
+# is entered - see _handle_action). Each RE-VALIDATES the payload against live state
 # and returns a JSON-safe dict ``{"ok": bool, ...}``. A short ``error`` code on
 # failure - never a secret.
 #
@@ -271,7 +349,7 @@ def _role_menus_module():
     return rolemenus
 
 
-async def _exec_verify_button_post(bot, guild_id, payload):
+async def _exec_verify_button_post(bot, guild_id, payload, actor):
     """Post the persistent Verify button embed into a channel.
 
     Payload: ``{"channel_id": "<snowflake>", "message"?: "<custom text>"}``.
@@ -282,6 +360,20 @@ async def _exec_verify_button_post(bot, guild_id, payload):
     required to be configured: the button reads the role at click time and
     reports if it is unset, so posting the button first (then setting the role)
     is a valid order.
+
+    ``actor`` is the resolved Member who asked for this from the dashboard. The
+    button is a ONE-CLICK SELF-GRANT of whatever ``verify_role`` says, so when a
+    role IS configured it is checked exactly as ``/verify setup`` checks the role
+    it is given: Yasuho must be able to hand it out (``role_not_assignable``) and
+    the actor must outrank it (``role_above_actor``). When none is configured
+    there is nothing to publish yet, so the post stands.
+
+    DEFENCE IN DEPTH, NOT A CLOSED PATH. ``verify_role`` itself is written
+    DB-direct by the dashboard and never reaches this queue, so the same person
+    can post past this gate and raise the setting afterwards; the button re-reads
+    it at click time and grants it. The read here is also served from the
+    ``tools.settings`` LRU, so a concurrent write can be invisible until the
+    ``dashboard_sync`` notify lands. Module docstring, "still not gatable".
     """
     try:
         channel_id = int(payload.get("channel_id"))
@@ -303,6 +395,22 @@ async def _exec_verify_button_post(bot, guild_id, payload):
         return {"ok": False, "error": "guild_unavailable"}
     if not channel.permissions_for(me).send_messages:
         return {"ok": False, "error": "missing_send_permission"}
+
+    # The configurer gate, on the role this button will hand out. coerce_id
+    # because the dashboard writes snowflakes as STRINGS (the VerifyView button
+    # reads the same setting through the same coercion).
+    role_id = coerce_id(
+        await settings.get_guild(bot.db_pool, guild_id, "verify_role", None)
+    )
+    role = guild.get_role(role_id) if role_id else None
+    if role is not None:
+        if not modchecks.bot_can_assign_role(role, guild):
+            return {"ok": False, "error": "role_not_assignable"}
+        if modchecks.self_assignable_role_error(actor, guild, role):
+            # The helper's reason is a TRANSLATED human string for a Discord
+            # reply; the queue speaks codes only, so it is used as a boolean and
+            # the dashboard renders its own copy.
+            return {"ok": False, "error": "role_above_actor"}
 
     # Custom message is optional free text; bound it and never translate it. Only
     # the default copy is localised, to the guild's configured language.
@@ -331,7 +439,7 @@ async def _exec_verify_button_post(bot, guild_id, payload):
     }
 
 
-async def _exec_reaction_role_add(bot, guild_id, payload):
+async def _exec_reaction_role_add(bot, guild_id, payload, actor):
     """Add a reaction-role mapping: react on a live message and store the pair.
 
     Payload: ``{"channel_id", "message_id", "role_id"}`` (snowflake strings) plus
@@ -339,7 +447,9 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
     dashboard's manage-guild gate); EVERYTHING else is re-validated here against
     the live gateway and NEVER trusted: the guild must be present, the channel
     must exist in THIS guild, the role must be a real assignable role of it, and
-    the emoji must be non-empty. Only then do we fetch the message and add the
+    the emoji must be non-empty, and the ``actor`` (the resolved Member who asked
+    for this from the dashboard, see the module docstring) must outrank the role
+    they are publishing. Only then do we fetch the message and add the
     reaction (a failure there -- gone message, missing add-reactions permission,
     a bad emoji -- yields a short code, never a stack).
 
@@ -391,10 +501,17 @@ async def _exec_reaction_role_add(bot, guild_id, payload):
     # to a role Yasuho could never hand out: @everyone, an integration-managed
     # role, or one at/above her own top role. Checked BEFORE the reaction is
     # added so a refused mapping leaves no stray reaction on the message.
-    # Only the BOT half: see this module's "KNOWN GAP" note - a guild-scoped
-    # action row carries no actor, so the configurer half cannot be asked here.
     if not modchecks.bot_can_assign_role(role, guild):
         return {"ok": False, "error": "role_not_assignable"}
+    # ... and the CONFIGURER half, the one /reactionrole asks: the person who
+    # asked for this from the web app must outrank the role they are publishing.
+    # self_assignable_role_error composes both halves, so this call alone would
+    # cover the line above - the bot half is kept separate ON PURPOSE, checked
+    # FIRST, so the two failures keep two distinct codes for the dashboard (and
+    # so this one can only ever fire for the hierarchy half). Its return is a
+    # translated human string for a Discord reply; the queue speaks codes only.
+    if modchecks.self_assignable_role_error(actor, guild, role):
+        return {"ok": False, "error": "role_above_actor"}
 
     # Fetch first (a missing / inaccessible message is distinct from a reaction
     # that can't be added), then react. Both raise on failure and are mapped to a
@@ -505,7 +622,7 @@ async def _exec_reaction_role_remove(bot, guild_id, payload):
 _MAX_BUTTON_LABEL = 80
 
 
-async def _exec_button_panel_post(bot, guild_id, payload):
+async def _exec_button_panel_post(bot, guild_id, payload, actor):
     """Post an embed + self-assignable role buttons panel into a channel.
 
     Payload: ``{"channel_id", "embed": {<embed_creator blob>},
@@ -513,8 +630,10 @@ async def _exec_button_panel_post(bot, guild_id, payload):
     authoritative (the claimed row, written under the dashboard's manage-guild
     gate); EVERYTHING else is re-validated here against the live gateway and NEVER
     trusted: the guild must be present, the channel must exist in THIS guild, be a
-    text channel and be sendable, there must be 1..MAX_BUTTONS buttons, and each
-    role must be a real role of the guild. Style is coerced to a callable
+    text channel and be sendable, there must be 1..MAX_BUTTONS buttons, each role
+    must be a real role of the guild, and the ``actor`` (the resolved Member who
+    asked for this from the dashboard, see the module docstring) must outrank
+    every role the panel publishes. Style is coerced to a callable
     ButtonStyle (1/2/3/4, secondary fallback), the label is bounded to 80 (empty
     -> the role name), the emoji is optional, and role ids are DE-DUPLICATED (one
     button per role, mirroring the ``(message_id, role_id)`` primary key).
@@ -575,10 +694,14 @@ async def _exec_button_panel_post(bot, guild_id, payload):
         # Mirror the /buttonrole builder's assignability guard (BuilderView.
         # _can_assign) so a dashboard write can't persist a button for a
         # dead/dangerous role: @everyone, an integration-managed role, or one
-        # at/above our own top role. Only the BOT half - see this module's
-        # "KNOWN GAP" note for why the configurer half is unavailable here.
+        # at/above our own top role.
         if not modchecks.bot_can_assign_role(role, guild):
             return {"ok": False, "error": "role_not_assignable"}
+        # ... plus the CONFIGURER half /buttonrole asks (module docstring). Kept
+        # as a second call after the bot half so each failure keeps its own code;
+        # refused BEFORE anything is sent or persisted.
+        if modchecks.self_assignable_role_error(actor, guild, role):
+            return {"ok": False, "error": "role_above_actor"}
         if role_id in seen_roles:
             continue  # one button per role, mirroring the primary key
         seen_roles.add(role_id)
@@ -732,7 +855,7 @@ def _coerce_menu_options(raw):
     return role_menus.normalize_options(raw)
 
 
-async def _exec_role_menu_post(bot, guild_id, payload):
+async def _exec_role_menu_post(bot, guild_id, payload, actor):
     """Post a self-role select menu into a channel + persist + register its view.
 
     Payload: ``{"channel_id": "<snowflake>", "config": {<menu config>}}``.
@@ -743,7 +866,9 @@ async def _exec_role_menu_post(bot, guild_id, payload):
     MAX_MENUS_PER_GUILD, the option list (normalised through the SAME
     ``role_menus.normalize_options`` helper the cog uses) must be non-empty AND at
     least one kept option's role must be a real role of this guild (foreign/gone
-    roles are filtered out; an all-foreign list is rejected). Title/description are
+    roles are filtered out; an all-foreign list is rejected), and the ``actor``
+    (the resolved Member who asked for this from the dashboard, see the module
+    docstring) must outrank every role that survives that filter. Title/description are
     bounded, the colour is an optional valid 24-bit int and the placeholder is
     bounded.
 
@@ -809,13 +934,22 @@ async def _exec_role_menu_post(bot, guild_id, payload):
     # unassignable option would 403 on every pick with the failure swallowed at
     # the grant site, so the member just sees nothing happen. A crafted payload
     # naming only foreign/gone/unassignable roles is rejected wholesale rather
-    # than posting a menu that can do nothing. Only the BOT half - see this
-    # module's "KNOWN GAP" note for why the configurer half is unavailable here.
+    # than posting a menu that can do nothing.
+    #
+    # The CONFIGURER half (module docstring) is applied to the options that
+    # SURVIVE that filter, and REFUSES the whole action rather than dropping the
+    # offending option: a role above the actor is not a stale entry to clean up
+    # silently, it is a privilege the actor asked for and must be told about
+    # (/rolemenu refuses at the picker the same way). Nothing is posted or
+    # persisted before this loop.
     kept = []
     for o in options:
         role = guild.get_role(o["role_id"])
-        if role is not None and modchecks.bot_can_assign_role(role, guild):
-            kept.append(o)
+        if role is None or not modchecks.bot_can_assign_role(role, guild):
+            continue
+        if modchecks.self_assignable_role_error(actor, guild, role):
+            return {"ok": False, "error": "role_above_actor"}
+        kept.append(o)
     options = kept
     if not options:
         return {"ok": False, "error": "bad_role_all"}
@@ -1232,6 +1366,33 @@ _EXECUTORS = {
 # test suite asserts the two agree, so they cannot drift apart in practice.
 _USER_KINDS = frozenset({"mydata_export"})
 
+# The kinds that PUBLISH a role a member can then obtain by clicking, and are
+# therefore dispatched with a fourth argument: the ``actor``, the Member behind
+# the row's ``requested_by``, resolved once by :func:`_handle_action`. See the
+# module docstring for the whole contract (why requested_by is now
+# security-bearing, and the three refusal codes a failed resolution yields).
+#
+# Spelled out as a literal for the same reason :data:`_USER_KINDS` is: "this kind
+# carries a privilege decision" is a fact that must be reviewable in ONE place.
+# The test suite asserts it agrees EXACTLY with the executors whose signature
+# takes an actor, in both directions - registering an actor-taking executor
+# without listing it here would dispatch it with three arguments (a TypeError
+# swallowed as ``internal_error``), and listing a kind whose executor does not
+# take one would do the mirror image.
+#
+# All four are guild-scoped: the actor is resolved against the row's SCOPE id via
+# ``bot.get_guild``, so a kind in both this set and _USER_KINDS would look a guild
+# up by a user snowflake, find nothing and refuse - fail-closed, but nonsense, and
+# a test keeps the two sets disjoint.
+_ACTOR_KINDS = frozenset(
+    {
+        "verify_button_post",
+        "reaction_role_add",
+        "button_panel_post",
+        "role_menu_post",
+    }
+)
+
 
 # ---------------------------------------------------------------------------
 # Claim / finish / dispatch (pure-ish, testable without the listen connection).
@@ -1251,12 +1412,16 @@ async def _claim(pool, action_id):
     kind is entitled to read. Exactly one of them is non-NULL (the DB CHECK), so
     the other is only ever the answer to "was this row written for the scope its
     kind expects?".
+
+    ``requested_by`` comes back too: for the kinds in :data:`_ACTOR_KINDS` it is
+    the ACTOR whose rank gates the publication, so leaving it out of the RETURNING
+    is exactly how the gate would silently stop existing.
     """
     return await pool.fetchrow(
         "UPDATE dashboard_actions "
         "SET status = 'running', updated_at = now() "
         "WHERE id = $1 AND status = 'pending' "
-        "RETURNING guild_id, user_id, kind, payload",
+        "RETURNING guild_id, user_id, kind, payload, requested_by",
         action_id,
     )
 
@@ -1280,6 +1445,62 @@ def _scope_id(kind, claimed):
     except (KeyError, IndexError, TypeError):
         return None
     return value
+
+
+def _actor_id(claimed):
+    """Return the row's ``requested_by`` as a positive int, or ``None``.
+
+    Guarded exactly like :func:`_scope_id`: a row that does not carry the column
+    at all (an older query shape mid-deploy, a hand-rolled double) must read as
+    "no actor" - which the caller REFUSES - rather than raise in the dispatcher.
+    ``coerce_id`` is what rejects a NULL, a 0/negative id and a stray boolean.
+    """
+    try:
+        value = claimed["requested_by"]
+    except (KeyError, IndexError, TypeError):
+        return None
+    return coerce_id(value)
+
+
+async def _resolve_actor(guild, actor_id):
+    """Resolve ``actor_id`` to a Member of ``guild``. Returns ``(member, code)``.
+
+    Exactly one of the two is set: ``(member, None)`` on success, ``(None,
+    "<code>")`` on a refusal. The codes are the module docstring's contract with
+    the dashboard: ``actor_missing`` (no usable id on the row), ``actor_left_guild``
+    (PROVEN absent) and ``actor_unverified`` (could not be established).
+
+    THE SPARSE-CACHE RULE (tools/modchecks, at length): Yasuho runs with
+    ``chunk_guilds_at_startup=False``, so a ``get_member`` miss means UNKNOWN, not
+    absent - deciding on it would wave through exactly the staff member nobody has
+    spoken to recently. A miss therefore costs at most ONE
+    ``GET /guilds/{id}/members/{user}``, and only ``NotFound`` is a negative answer
+    we trust: Forbidden, 5xx, a timeout, a torn-down session, even a fetch that
+    somehow yields nothing all leave the rank UNVERIFIABLE and are REFUSED.
+    """
+    if actor_id is None:
+        return None, "actor_missing"
+
+    member = guild.get_member(actor_id)
+    if member is not None:
+        return member, None
+
+    try:
+        member = await guild.fetch_member(actor_id)
+    except discord.NotFound:
+        return None, "actor_left_guild"
+    except Exception:
+        log.warning(
+            "dashboard_actions: could not resolve actor %s in guild %s; refusing",
+            actor_id,
+            getattr(guild, "id", None),
+            exc_info=True,
+        )
+        return None, "actor_unverified"
+
+    if member is None:
+        return None, "actor_unverified"
+    return member, None
 
 
 async def _finish(pool, action_id, status, result):
@@ -1325,7 +1546,11 @@ async def handle_action(bot, action_id):
     The executor is handed the id of the scope ITS KIND declares (:func:`_scope_id`),
     so a guild kind is dispatched exactly as it always was and a user kind gets
     the row's ``user_id``; a row whose scope does not match its kind is refused
-    as ``bad_scope`` without the executor ever running.
+    as ``bad_scope`` without the executor ever running. A kind in
+    :data:`_ACTOR_KINDS` additionally gets the resolved ``requested_by`` Member as
+    a fourth argument, and is refused - again without ever running - when that
+    actor cannot be established (``actor_missing`` / ``actor_left_guild`` /
+    ``actor_unverified``).
 
     The whole call is marked in :data:`_INFLIGHT_ACTIONS` - from BEFORE the claim
     (the mark must already be up when a concurrent reconcile looks) until after
@@ -1366,8 +1591,35 @@ async def _handle_action(bot, action_id):
         await _finalise(pool, action_id, {"ok": False, "error": "bad_scope"})
         return "failed"
 
+    # The ACTOR gate, for the kinds that publish a role. Resolved HERE, before
+    # the executor is entered, for the same reason the scope is: an executor of
+    # such a kind must never have to defend itself against a missing or
+    # unverifiable actor. Every failure below is a REFUSAL with its own code -
+    # there is no path where a role publication runs on the bot half alone.
+    extra_args = ()
+    if kind in _ACTOR_KINDS:
+        guild = bot.get_guild(scope_id)
+        if guild is None:
+            # Same code the executors use for it: without the guild there is
+            # neither a member to resolve nor anything to publish into.
+            await _finalise(pool, action_id, {"ok": False, "error": "guild_unavailable"})
+            return "failed"
+        try:
+            actor, refusal = await _resolve_actor(guild, _actor_id(claimed))
+        except Exception:
+            # _resolve_actor swallows its own fetch failures; anything reaching
+            # here is unexpected, and unexpected still means UNVERIFIED.
+            log.exception(
+                "dashboard_actions: actor resolution raised for id=%s", action_id
+            )
+            actor, refusal = None, "actor_unverified"
+        if refusal is not None:
+            await _finalise(pool, action_id, {"ok": False, "error": refusal})
+            return "failed"
+        extra_args = (actor,)
+
     try:
-        result = await executor(bot, scope_id, payload)
+        result = await executor(bot, scope_id, payload, *extra_args)
     except Exception:
         # Never surface the exception text/stack to the dashboard - only a fixed
         # code. The full traceback is logged server-side.

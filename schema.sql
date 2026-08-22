@@ -1138,8 +1138,19 @@ CREATE TABLE IF NOT EXISTS applied_fixups (
 -- reconciles at boot so an action enqueued while it was restarting is not lost.
 -- ``kind`` selects the executor; ``payload`` is the (bot-revalidated, never
 -- trusted) arguments; ``result`` is the JSON outcome the dashboard polls to show
--- the user; ``requested_by`` is the Discord id of the user who asked (audit),
--- written under the dashboard's requireManageGuild gate.  cogs/system/dashboard_actions.py
+-- the user; ``requested_by`` is the Discord id of the user who asked - the
+-- AUTHENTICATED SESSION USER, written under the dashboard's requireManageGuild
+-- gate.  cogs/system/dashboard_actions.py
+--
+-- ``requested_by`` IS SECURITY-BEARING, not just audit: for the four kinds that
+-- publish a role a member can then obtain (verify_button_post,
+-- reaction_role_add, button_panel_post, role_menu_post) the bot resolves it to a
+-- Member and refuses the action unless that person outranks the role being
+-- published (cogs/system/dashboard_actions._ACTOR_KINDS). It must therefore never
+-- be taken from a form field or a URL param on the writer's side, and a NULL is
+-- a REFUSAL (``actor_missing``), never a downgrade to the bot-only check. The
+-- column stays nullable only because rows predating the gate exist; an "act on
+-- behalf of" feature would need its own separate column.
 --
 -- SCOPE: a row names EITHER a guild OR a user, never both and never neither -
 -- asserted by the dashboard_actions_scope_valid CHECK at the end of this file.
