@@ -12,7 +12,7 @@ from typing import Literal, Optional
 import discord
 from discord.ext import commands
 
-from tools import backup
+from tools import backup, role_audit
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -23,6 +23,11 @@ log = logging.getLogger(__name__)
 # Repo root: this file is cogs/system/admin.py, so three levels up.
 REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 BACKUPS_DIR = os.path.join(REPO_DIR, "backups")
+
+# Longest ?roleaudit report we inline in a code block; anything above goes out
+# as an attachment. Discord's message cap is 2000 characters and the fences plus
+# the newlines around them cost eight, so this leaves comfortable room.
+AUDIT_INLINE_LIMIT = 1900
 
 
 class UpdateSelect(discord.ui.Select):
@@ -460,6 +465,53 @@ class Admin(commands.Cog):
                 deleted=result.deleted,
                 integrity=integrity,
             )
+        )
+
+    @commands.command(hidden=True, name="roleaudit")
+    @commands.is_owner()
+    async def roleaudit(self, ctx):
+        """Find guilds where a role Yasuho grants HERSELF carries power.
+
+        Six settings name a role she hands out with no human in the loop
+        (muterole, autorole, verify_role, level rewards, the season champion
+        role, the Twitch Live role). The write paths that set them are gated
+        now - but a gate only judges a WRITE, and a guild configured before the
+        gate existed keeps its configuration. This is the only way to see those
+        guilds, and it needs the gateway: role permissions, role positions and
+        Yasuho's own top role live in the role/member cache, not in the DB.
+
+        PREFIX-ONLY on purpose. The global slash tree stands at 78 of Discord's
+        100 (tests/test_command_tree_capacity.py measures it), and the 101st
+        command makes a whole cog fail to load - an ops tool the owner runs by
+        hand must not spend one of the remaining slots.
+
+        Reads the database in bulk (five queries for the whole estate, never one
+        per guild) and resolves roles from the CACHE only: no REST, no member
+        chunking. A guild whose role cache cannot answer is reported UNKNOWN,
+        never as clean.
+
+        The report names guilds and roles, so it is never logged and never
+        stored - run it somewhere private.
+        """
+        async with ctx.typing():
+            result = await role_audit.run_audit(self.bot)
+            text = role_audit.render_report(result)
+
+        if len(text) <= AUDIT_INLINE_LIMIT:
+            return await ctx.send(
+                "```\n{0}\n```".format(text),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        # Too long to inline: hand it over as a plain-text attachment rather
+        # than paginating, so the whole sweep stays greppable in one piece.
+        await ctx.send(
+            _("Role grant audit: {lines} line(s), attached.").format(
+                lines=text.count("\n") + 1
+            ),
+            file=discord.File(
+                io.BytesIO(text.encode("utf-8")), filename="role-audit.txt"
+            ),
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
     def _resolve_ext(self, name):
