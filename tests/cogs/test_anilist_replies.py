@@ -211,24 +211,20 @@ def test_every_hub_payload_repost_goes_through_no_ping():
     assert source.count("followup.send(**no_ping(kwargs))") == 3
 
 
-def test_no_hub_followup_can_ping_including_the_view_only_one():
-    """The whole seam, not just the payload reposts.
+def _unguarded_followups(source):
+    """The DETECTOR for the hub sweep, isolated so it can be tested itself.
 
-    ``_HubListButton`` posts a ``CollectionView`` whose TextDisplays are built
-    from AniList media titles, and it sends ``view=`` only - no payload dict to
-    hand to ``no_ping``. A followup that names no ``allowed_mentions`` inherits
-    the client default (``users=True``), so that path could still ping. This
-    walks the module's AST: every ``followup.send`` must either carry an
-    explicit ``allowed_mentions`` or ride a ``no_ping(...)`` payload.
+    Returns ``(offenders, checked)``: every ``followup.send`` must either name
+    ``allowed_mentions`` outright or ride a ``no_ping(...)`` payload. ``checked``
+    exists because the sweep asserts an EMPTY offender list, and "none are
+    unguarded" and "I found none to look at" are the same green run otherwise.
     """
 
     import ast
 
-    from cogs.anilist import hub
-
-    tree = ast.parse(inspect.getsource(hub))
+    offenders = []
     checked = 0
-    for node in ast.walk(tree):
+    for node in ast.walk(ast.parse(source)):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
@@ -247,9 +243,48 @@ def test_no_hub_followup_can_ping_including_the_view_only_one():
             and kw.value.func.id == "no_ping"
             for kw in node.keywords
         )
-        assert explicit or wrapped, (
-            "hub followup.send at line %d can still ping" % node.lineno
-        )
+        if not (explicit or wrapped):
+            offenders.append(node.lineno)
+    return offenders, checked
+
+
+def test_the_followup_detector_reports_a_send_that_names_no_rule():
+    """The negative control. Without it, a detector that stopped detecting
+    would keep the sweep above green forever - it would not be saying "all
+    guarded", it would be saying "I see none", and those look identical.
+    """
+
+    assert _unguarded_followups("await interaction.followup.send(view=v)") == ([1], 1)
+
+
+def test_the_followup_detector_clears_both_accepted_spellings():
+    explicit = "await interaction.followup.send(view=v, allowed_mentions=NO_PINGS)"
+    wrapped = "await interaction.followup.send(**no_ping(kwargs))"
+    assert _unguarded_followups(explicit) == ([], 1)
+    assert _unguarded_followups(wrapped) == ([], 1)
+
+
+def test_the_followup_detector_ignores_an_unrelated_send():
+    """A plain ctx.send is a different seam with its own rule - the hook."""
+
+    assert _unguarded_followups("await ctx.send(x)") == ([], 0)
+
+
+def test_no_hub_followup_can_ping_including_the_view_only_one():
+    """The whole seam, not just the payload reposts.
+
+    ``_HubListButton`` posts a ``CollectionView`` whose TextDisplays are built
+    from AniList media titles, and it sends ``view=`` only - no payload dict to
+    hand to ``no_ping``. A followup that names no ``allowed_mentions`` inherits
+    the client default (``users=True``), so that path could still ping. This
+    walks the module's AST: every ``followup.send`` must either carry an
+    explicit ``allowed_mentions`` or ride a ``no_ping(...)`` payload.
+    """
+
+    from cogs.anilist import hub
+
+    offenders, checked = _unguarded_followups(inspect.getsource(hub))
+    assert offenders == []
     assert checked >= 4
 
 

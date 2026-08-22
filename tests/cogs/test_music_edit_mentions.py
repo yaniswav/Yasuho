@@ -180,21 +180,57 @@ async def test_the_synced_lyrics_final_edit_suppresses_mentions():
 # --- The package sweep ------------------------------------------------------
 
 
+EDIT_METHODS = ("edit", "edit_message", "edit_original_response")
+
+
+def _scan_source(source, name="<synthetic>"):
+    """The DETECTOR, isolated so it can be aimed at a source we control.
+
+    Returns ``(offenders, examined)``. ``examined`` is what makes a green run
+    mean something: an empty offender list is only good news if the detector
+    actually looked at some edits.
+    """
+
+    offenders = []
+    examined = 0
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            continue
+        if func.attr not in EDIT_METHODS:
+            continue
+        examined += 1
+        if not any(kw.arg == "allowed_mentions" for kw in node.keywords):
+            offenders.append("{0}:{1}".format(name, node.lineno))
+    return offenders, examined
+
+
+def _scanned_paths(root):
+    """Which files the sweep will read. Recursive, NOT a flat glob: this cog
+    gets split into subpackages as it grows (that is the house rule), and a
+    flat pattern would silently stop seeing the code that moved.
+
+    Split out from the sweep so a test can aim it at a tree it built itself -
+    asserting on the source text of this function would only pin the wording.
+    """
+
+    return sorted(root.rglob("*.py"))
+
+
 def _unsuppressed_edits():
+    """Sweep the package."""
+
     bad = []
-    for path in sorted(pathlib.Path("cogs/music").glob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if not isinstance(func, ast.Attribute):
-                continue
-            if func.attr not in ("edit", "edit_message", "edit_original_response"):
-                continue
-            if not any(kw.arg == "allowed_mentions" for kw in node.keywords):
-                bad.append("{0}:{1}".format(path.name, node.lineno))
-    return bad
+    total = 0
+    for path in _scanned_paths(pathlib.Path("cogs/music")):
+        offenders, examined = _scan_source(
+            path.read_text(encoding="utf-8"), path.name
+        )
+        bad.extend(offenders)
+        total += examined
+    return bad, total
 
 
 def test_no_edit_in_the_music_package_is_left_unsuppressed():
@@ -205,7 +241,10 @@ def test_no_edit_in_the_music_package_is_left_unsuppressed():
     is no legitimate unsuppressed edit here, and a new one is a regression.
     """
 
-    assert _unsuppressed_edits() == []
+    offenders, examined = _unsuppressed_edits()
+    assert offenders == []
+    # Anti-vacuity: the sweep is worthless if it found nothing to judge.
+    assert examined >= 20, examined
 
 
 @pytest.mark.parametrize(
@@ -216,3 +255,50 @@ def test_the_named_surfaces_still_exist(module, attribute):
     """Guards the sweep above from passing because a class was renamed away."""
 
     assert hasattr(module, attribute)
+
+
+# --- The negative control ---------------------------------------------------
+#
+# The sweep above asserts an EMPTY list. That is exactly the shape that goes on
+# passing forever once the detector stops detecting - it would not say "they are
+# all suppressed", it would say "I see none", and those read identically from a
+# green run. Every guard whose success condition is silence needs a case it MUST
+# report. This is that case.
+
+
+def test_the_detector_reports_an_edit_that_names_no_allowed_mentions():
+    offenders, examined = _scan_source("await msg.edit(content=x)")
+    assert offenders == ["<synthetic>:1"]
+    assert examined == 1
+
+
+def test_the_detector_clears_an_edit_that_does_name_them():
+    offenders, examined = _scan_source(
+        "await msg.edit(content=x, allowed_mentions=none)"
+    )
+    assert offenders == []
+    assert examined == 1
+
+
+@pytest.mark.parametrize("method", EDIT_METHODS)
+def test_every_edit_spelling_is_covered_by_the_detector(method):
+    """A new edit method added to the list must actually be scanned."""
+
+    offenders, _ = _scan_source("await obj.{0}(content=x)".format(method))
+    assert offenders == ["<synthetic>:1"]
+
+
+def test_the_sweep_reaches_a_file_nested_in_a_subpackage(tmp_path):
+    """Behavioural, not a grep on our own source.
+
+    The first version of this test asserted ``"rglob" in getsource(...)`` and
+    passed with a flat glob, because the DOCSTRING said "rglob". A guard that
+    reads its own prose proves nothing - build a tree and look.
+    """
+
+    (tmp_path / "flat.py").write_text("")
+    nested = tmp_path / "views" / "deep.py"
+    nested.parent.mkdir()
+    nested.write_text("")
+
+    assert nested in _scanned_paths(tmp_path)
