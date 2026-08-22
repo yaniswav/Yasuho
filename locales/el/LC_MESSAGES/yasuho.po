@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-21 16:24+0000\n"
+"POT-Creation-Date: 2026-08-22 17:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -4737,11 +4737,11 @@ msgid "Header"
 msgstr "Επικεφαλίδα"
 
 #: cogs/config/rolemenus.py:602 cogs/config/rolemenus.py:802
-#: cogs/system/dashboard_actions.py:861
+#: cogs/system/dashboard_actions.py:995
 msgid "Pick your roles"
 msgstr "Διάλεξε τους ρόλους σου"
 
-#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:866
+#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1000
 #: cogs/utility/info.py:156
 msgid "Roles"
 msgstr "Ρόλοι"
@@ -5620,11 +5620,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Χρησιμοποίησε το `/verify setup` για να ενεργοποιήσεις την επαλήθευση."
 
-#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:318
+#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:426
 msgid "Verification"
 msgstr "Επαλήθευση"
 
-#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:321
+#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:429
 msgid "Click the button below to verify and unlock the server."
 msgstr "Πάτησε το κουμπί παρακάτω για να επαληθευτείς και να ξεκλειδώσεις τον διακομιστή."
 
@@ -8482,75 +8482,75 @@ msgstr "Ο/Η {user} θέλει να παραλείψει το **{title}**."
 msgid "Vote expired."
 msgstr "Η ψηφοφορία έληξε."
 
-#: cogs/system/admin.py:37
+#: cogs/system/admin.py:42
 msgid "Cogs to reload"
 msgstr "Cogs για επαναφόρτωση"
 
-#: cogs/system/admin.py:67
+#: cogs/system/admin.py:72
 msgid "Nothing selected."
 msgstr "Δεν επιλέχθηκε τίποτα."
 
-#: cogs/system/admin.py:80
+#: cogs/system/admin.py:85
 #, python-brace-format
 msgid "Reloaded: {items}"
 msgstr "Επαναφορτώθηκαν: {items}"
 
-#: cogs/system/admin.py:84
+#: cogs/system/admin.py:89
 #, python-brace-format
 msgid "Failed: {items}"
 msgstr "Απέτυχαν: {items}"
 
-#: cogs/system/admin.py:87
+#: cogs/system/admin.py:92
 msgid "Nothing reloaded."
 msgstr "Δεν επαναφορτώθηκε τίποτα."
 
-#: cogs/system/admin.py:204
+#: cogs/system/admin.py:209
 msgid "Failed to write the command strings file."
 msgstr "Αποτυχία εγγραφής του αρχείου συμβολοσειρών εντολών."
 
-#: cogs/system/admin.py:206
+#: cogs/system/admin.py:211
 #, python-brace-format
 msgid "Wrote {count} command strings to locales/command_strings.py."
 msgstr "Έγραψα {count} συμβολοσειρές εντολών στο locales/command_strings.py."
 
-#: cogs/system/admin.py:234
+#: cogs/system/admin.py:239
 msgid "globally"
 msgstr "καθολικά"
 
-#: cogs/system/admin.py:234
+#: cogs/system/admin.py:239
 msgid "to the current guild."
 msgstr "στον τρέχοντα διακομιστή."
 
-#: cogs/system/admin.py:236
+#: cogs/system/admin.py:241
 #, python-brace-format
 msgid "Synced {count} commands {scope}"
 msgstr "Συγχρονίστηκαν {count} εντολές {scope}"
 
-#: cogs/system/admin.py:252
+#: cogs/system/admin.py:257
 #, python-brace-format
 msgid "Synced the tree to {done}/{total}."
 msgstr "Το δέντρο συγχρονίστηκε σε {done}/{total}."
 
-#: cogs/system/admin.py:325 cogs/system/admin.py:332
+#: cogs/system/admin.py:330 cogs/system/admin.py:337
 #, python-brace-format
 msgid "Reloaded {count} extensions, {fail} fail."
 msgstr "Επαναφορτώθηκαν {count} επεκτάσεις, {fail} αποτυχίες."
 
-#: cogs/system/admin.py:346 cogs/system/admin.py:353
+#: cogs/system/admin.py:351 cogs/system/admin.py:358
 #, python-brace-format
 msgid "Couldn't reload `{ext}`: {error}"
 msgstr "Δεν ήταν δυνατή η επαναφόρτωση του `{ext}`: {error}"
 
-#: cogs/system/admin.py:363
+#: cogs/system/admin.py:368
 #, python-brace-format
 msgid "Reloaded `{ext}`"
 msgstr "Επαναφορτώθηκε το `{ext}`"
 
-#: cogs/system/admin.py:380 cogs/system/admin.py:407
+#: cogs/system/admin.py:385 cogs/system/admin.py:412
 msgid "Error!"
 msgstr "Σφάλμα!"
 
-#: cogs/system/admin.py:381
+#: cogs/system/admin.py:386
 #, python-brace-format
 msgid ""
 "{ext} cannot be loaded! \n"
@@ -8559,7 +8559,7 @@ msgstr ""
 "Το {ext} δεν μπορεί να φορτωθεί! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:408
+#: cogs/system/admin.py:413
 #, python-brace-format
 msgid ""
 "{ext} cannot be unloaded! \n"
@@ -8568,25 +8568,30 @@ msgstr ""
 "Το {ext} δεν μπορεί να αποφορτωθεί! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:500
+#: cogs/system/admin.py:508
+#, python-brace-format
+msgid "Role grant audit: {lines} line(s), attached."
+msgstr "Έλεγχος ρόλων που απονέμονται: {lines} γραμμή(ές), σε συνημμένο."
+
+#: cogs/system/admin.py:552
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "Έγινε pull και επαναφόρτωση του `{ext}`."
 
-#: cogs/system/admin.py:504
+#: cogs/system/admin.py:556
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "Δεν ήταν δυνατή η επαναφόρτωση του `{ext}`: {error}"
 
-#: cogs/system/admin.py:539
+#: cogs/system/admin.py:591
 msgid "Update"
 msgstr "Ενημέρωση"
 
-#: cogs/system/admin.py:542
+#: cogs/system/admin.py:594
 msgid "Already up to date."
 msgstr "Ήδη ενημερωμένο."
 
-#: cogs/system/admin.py:544
+#: cogs/system/admin.py:596
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -8599,11 +8604,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:553
+#: cogs/system/admin.py:605
 msgid "Pulled"
 msgstr "Έγινε pull"
 
-#: cogs/system/admin.py:554
+#: cogs/system/admin.py:606
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -8616,19 +8621,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:557
+#: cogs/system/admin.py:609
 msgid "(no log)"
 msgstr "(χωρίς log)"
 
-#: cogs/system/admin.py:563
+#: cogs/system/admin.py:615
 msgid "Changed cogs"
 msgstr "Cogs που άλλαξαν"
 
-#: cogs/system/admin.py:569
+#: cogs/system/admin.py:621
 msgid "Restart needed (not hot-reloadable)"
 msgstr "Απαιτείται επανεκκίνηση (δεν γίνεται hot-reload)"
 
-#: cogs/system/admin.py:574
+#: cogs/system/admin.py:626
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Διάλεξε τα cogs για επαναφόρτωση παρακάτω ή επαναφόρτωσε τα πάντα."
 
@@ -11515,6 +11520,73 @@ msgstr "Αυτό το μενού δεν είναι για εσένα."
 #: tools/paginator.py:126
 msgid "Couldn't close the menu, please try again."
 msgstr "Δεν ήταν δυνατό το κλείσιμο του μενού, δοκίμασε ξανά."
+
+#: tools/role_audit.py:712
+#, python-brace-format
+msgid "{role} carries {permissions}"
+msgstr "Ο {role} φέρει {permissions}"
+
+#: tools/role_audit.py:717
+#, python-brace-format
+msgid "{role} is a mute role with a non-empty permission mask (value {value})"
+msgstr "Ο {role} είναι ρόλος σίγασης με μη κενή μάσκα δικαιωμάτων (τιμή {value})"
+
+#: tools/role_audit.py:720
+#, python-brace-format
+msgid "role {role} no longer exists"
+msgstr "ο ρόλος {role} δεν υπάρχει πλέον"
+
+#: tools/role_audit.py:723
+#, python-brace-format
+msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
+msgstr "δεν μπορώ να απονείμω τον {role} (πάνω από τον ανώτερο ρόλο μου, διαχειρίζεται από ενσωμάτωση ή @everyone)"
+
+#: tools/role_audit.py:728
+#, python-brace-format
+msgid "{role} cannot be judged: I am not in this guild's member cache"
+msgstr "δεν μπορώ να κρίνω τον {role}: δεν βρίσκομαι στη μνήμη μελών αυτού του διακομιστή"
+
+#: tools/role_audit.py:744
+msgid "Role grant audit - the roles Yasuho hands out on her own."
+msgstr "Έλεγχος ρόλων που απονέμονται - οι ρόλοι που μοιράζει η Yasuho μόνη της."
+
+#: tools/role_audit.py:748
+#, python-brace-format
+msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
+msgstr "ΑΤΕΛΕΣ: δεν ήταν δυνατή η ανάγνωση {surfaces}. Θεώρησε αυτή την αναφορά μερική."
+
+#: tools/role_audit.py:754
+#, python-brace-format
+msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
+msgstr "Σαρώθηκαν {guilds} διακομιστής(ές). Βρέθηκαν {found} ρυθμίση(εις) ρόλου, εξετάστηκαν {examined}."
+
+#: tools/role_audit.py:763
+#, python-brace-format
+msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
+msgstr "ΚΡΙΣΙΜΑ {critical} | ΠΡΟΕΙΔΟΠΟΙΗΣΕΙΣ {warning} | ΣΗΜΕΙΩΣΕΙΣ {notice}"
+
+#: tools/role_audit.py:773
+#, python-brace-format
+msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
+msgstr "ΑΓΝΩΣΤΟ: {guilds} διακομιστής(ές) δεν κρίθηκαν, {settings} ρύθμιση(εις) ΔΕΝ εξετάστηκαν."
+
+#: tools/role_audit.py:783
+#, python-brace-format
+msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
+msgstr "Παραλείφθηκαν {orphans} εγγραφή(ές) για διακομιστές όπου δεν βρίσκομαι. {malformed} μη αναγνώσιμο(α) αναγνωριστικό(ά) ρόλου."
+
+#: tools/role_audit.py:799
+msgid "Nothing flagged: every audited setting is safe to hand out."
+msgstr "Τίποτα προς επισήμανση: κάθε ρύθμιση που ελέγχθηκε είναι ασφαλής για απονομή."
+
+#: tools/role_audit.py:803
+msgid "Nothing flagged in what could be read - see the gaps above."
+msgstr "Τίποτα προς επισήμανση σε όσα διαβάστηκαν - δες τα κενά παραπάνω."
+
+#: tools/role_audit.py:824
+#, python-brace-format
+msgid "role cache unavailable, {count} setting(s) not examined"
+msgstr "η μνήμη ρόλων δεν είναι διαθέσιμη, {count} ρύθμιση(εις) δεν εξετάστηκαν"
 
 #: tools/views.py:23
 msgid "This prompt isn't for you."

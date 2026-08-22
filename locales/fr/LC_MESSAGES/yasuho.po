@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-21 16:24+0000\n"
+"POT-Creation-Date: 2026-08-22 17:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -4737,11 +4737,11 @@ msgid "Header"
 msgstr "En-tete"
 
 #: cogs/config/rolemenus.py:602 cogs/config/rolemenus.py:802
-#: cogs/system/dashboard_actions.py:861
+#: cogs/system/dashboard_actions.py:995
 msgid "Pick your roles"
 msgstr "Choisis tes roles"
 
-#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:866
+#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1000
 #: cogs/utility/info.py:156
 msgid "Roles"
 msgstr "Rôles"
@@ -5620,11 +5620,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Utilise `/verify setup` pour activer la vérification."
 
-#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:318
+#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:426
 msgid "Verification"
 msgstr "Vérification"
 
-#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:321
+#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:429
 msgid "Click the button below to verify and unlock the server."
 msgstr "Cliquez sur le bouton ci-dessous pour vérifier et déverrouiller le serveur."
 
@@ -8482,75 +8482,75 @@ msgstr "{user} veut passer **{title}**."
 msgid "Vote expired."
 msgstr "Vote expiré."
 
-#: cogs/system/admin.py:37
+#: cogs/system/admin.py:42
 msgid "Cogs to reload"
 msgstr "Cogs à recharger"
 
-#: cogs/system/admin.py:67
+#: cogs/system/admin.py:72
 msgid "Nothing selected."
 msgstr "Rien de sélectionné."
 
-#: cogs/system/admin.py:80
+#: cogs/system/admin.py:85
 #, python-brace-format
 msgid "Reloaded: {items}"
 msgstr "Rechargé : {items}"
 
-#: cogs/system/admin.py:84
+#: cogs/system/admin.py:89
 #, python-brace-format
 msgid "Failed: {items}"
 msgstr "Échoué : {items}"
 
-#: cogs/system/admin.py:87
+#: cogs/system/admin.py:92
 msgid "Nothing reloaded."
 msgstr "Rien n'a été rechargé."
 
-#: cogs/system/admin.py:204
+#: cogs/system/admin.py:209
 msgid "Failed to write the command strings file."
 msgstr "Echec de l'ecriture du fichier des chaines de commande."
 
-#: cogs/system/admin.py:206
+#: cogs/system/admin.py:211
 #, python-brace-format
 msgid "Wrote {count} command strings to locales/command_strings.py."
 msgstr "{count} chaines de commande ecrites dans locales/command_strings.py."
 
-#: cogs/system/admin.py:234
+#: cogs/system/admin.py:239
 msgid "globally"
 msgstr "globalement"
 
-#: cogs/system/admin.py:234
+#: cogs/system/admin.py:239
 msgid "to the current guild."
 msgstr "vers le serveur actuel."
 
-#: cogs/system/admin.py:236
+#: cogs/system/admin.py:241
 #, python-brace-format
 msgid "Synced {count} commands {scope}"
 msgstr "{count} commandes synchronisées {scope}"
 
-#: cogs/system/admin.py:252
+#: cogs/system/admin.py:257
 #, python-brace-format
 msgid "Synced the tree to {done}/{total}."
 msgstr "Arbre synchronisé à {done}/{total}."
 
-#: cogs/system/admin.py:325 cogs/system/admin.py:332
+#: cogs/system/admin.py:330 cogs/system/admin.py:337
 #, python-brace-format
 msgid "Reloaded {count} extensions, {fail} fail."
 msgstr "{count} extensions rechargées, {fail} échec."
 
-#: cogs/system/admin.py:346 cogs/system/admin.py:353
+#: cogs/system/admin.py:351 cogs/system/admin.py:358
 #, python-brace-format
 msgid "Couldn't reload `{ext}`: {error}"
 msgstr "Impossible de recharger `{ext}` : {error}"
 
-#: cogs/system/admin.py:363
+#: cogs/system/admin.py:368
 #, python-brace-format
 msgid "Reloaded `{ext}`"
 msgstr "`{ext}` rechargé"
 
-#: cogs/system/admin.py:380 cogs/system/admin.py:407
+#: cogs/system/admin.py:385 cogs/system/admin.py:412
 msgid "Error!"
 msgstr "Erreur !"
 
-#: cogs/system/admin.py:381
+#: cogs/system/admin.py:386
 #, python-brace-format
 msgid ""
 "{ext} cannot be loaded! \n"
@@ -8559,7 +8559,7 @@ msgstr ""
 "{ext} ne peut pas être chargé ! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:408
+#: cogs/system/admin.py:413
 #, python-brace-format
 msgid ""
 "{ext} cannot be unloaded! \n"
@@ -8568,25 +8568,30 @@ msgstr ""
 "{ext} ne peut pas être déchargé ! \n"
 "**[{error}]**"
 
-#: cogs/system/admin.py:500
+#: cogs/system/admin.py:508
+#, python-brace-format
+msgid "Role grant audit: {lines} line(s), attached."
+msgstr "Audit des roles attribues : {lines} ligne(s), en piece jointe."
+
+#: cogs/system/admin.py:552
 #, python-brace-format
 msgid "Pulled and reloaded `{ext}`."
 msgstr "`{ext}` récupéré et rechargé."
 
-#: cogs/system/admin.py:504
+#: cogs/system/admin.py:556
 #, python-brace-format
 msgid "Could not reload `{ext}`: {error}"
 msgstr "Impossible de recharger `{ext}` : {error}"
 
-#: cogs/system/admin.py:539
+#: cogs/system/admin.py:591
 msgid "Update"
 msgstr "Mise à jour"
 
-#: cogs/system/admin.py:542
+#: cogs/system/admin.py:594
 msgid "Already up to date."
 msgstr "Déjà à jour."
 
-#: cogs/system/admin.py:544
+#: cogs/system/admin.py:596
 #, python-brace-format
 msgid ""
 "Nothing pulled:\n"
@@ -8599,11 +8604,11 @@ msgstr ""
 "{output}\n"
 "```"
 
-#: cogs/system/admin.py:553
+#: cogs/system/admin.py:605
 msgid "Pulled"
 msgstr "Récupéré"
 
-#: cogs/system/admin.py:554
+#: cogs/system/admin.py:606
 #, python-brace-format
 msgid ""
 "`{before}` -> `{after}`\n"
@@ -8616,19 +8621,19 @@ msgstr ""
 "{log}\n"
 "```"
 
-#: cogs/system/admin.py:557
+#: cogs/system/admin.py:609
 msgid "(no log)"
 msgstr "(aucun journal)"
 
-#: cogs/system/admin.py:563
+#: cogs/system/admin.py:615
 msgid "Changed cogs"
 msgstr "Cogs modifiés"
 
-#: cogs/system/admin.py:569
+#: cogs/system/admin.py:621
 msgid "Restart needed (not hot-reloadable)"
 msgstr "Redémarrage nécessaire (rechargement à chaud impossible)"
 
-#: cogs/system/admin.py:574
+#: cogs/system/admin.py:626
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Choisissez les cogs à recharger ci-dessous, ou rechargez tout."
 
@@ -11515,6 +11520,73 @@ msgstr "Ce menu n'est pas pour vous."
 #: tools/paginator.py:126
 msgid "Couldn't close the menu, please try again."
 msgstr "Impossible de fermer le menu, veuillez réessayer."
+
+#: tools/role_audit.py:712
+#, python-brace-format
+msgid "{role} carries {permissions}"
+msgstr "{role} porte {permissions}"
+
+#: tools/role_audit.py:717
+#, python-brace-format
+msgid "{role} is a mute role with a non-empty permission mask (value {value})"
+msgstr "{role} est un role de sourdine dont le masque de permissions n'est pas vide (valeur {value})"
+
+#: tools/role_audit.py:720
+#, python-brace-format
+msgid "role {role} no longer exists"
+msgstr "le role {role} n'existe plus"
+
+#: tools/role_audit.py:723
+#, python-brace-format
+msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
+msgstr "je ne peux pas attribuer {role} (au-dessus de mon role le plus haut, gere par une integration, ou @everyone)"
+
+#: tools/role_audit.py:728
+#, python-brace-format
+msgid "{role} cannot be judged: I am not in this guild's member cache"
+msgstr "impossible de juger {role} : je ne suis pas dans le cache des membres de ce serveur"
+
+#: tools/role_audit.py:744
+msgid "Role grant audit - the roles Yasuho hands out on her own."
+msgstr "Audit des roles attribues - les roles que Yasuho distribue d'elle-meme."
+
+#: tools/role_audit.py:748
+#, python-brace-format
+msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
+msgstr "INCOMPLET : impossible de lire {surfaces}. Ce rapport est partiel."
+
+#: tools/role_audit.py:754
+#, python-brace-format
+msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
+msgstr "{guilds} serveur(s) balaye(s) ; {found} reglage(s) de role configure(s) trouve(s), {examined} examine(s)."
+
+#: tools/role_audit.py:763
+#, python-brace-format
+msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
+msgstr "CRITIQUE {critical} | ALERTE {warning} | INFO {notice}"
+
+#: tools/role_audit.py:773
+#, python-brace-format
+msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
+msgstr "INCONNU : {guilds} serveur(s) n'ont pas pu etre juges, {settings} reglage(s) NON examine(s)."
+
+#: tools/role_audit.py:783
+#, python-brace-format
+msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
+msgstr "{orphans} ligne(s) ignoree(s) pour des serveurs ou je ne suis pas ; {malformed} identifiant(s) de role illisible(s)."
+
+#: tools/role_audit.py:799
+msgid "Nothing flagged: every audited setting is safe to hand out."
+msgstr "Rien a signaler : chaque reglage audite peut etre distribue sans risque."
+
+#: tools/role_audit.py:803
+msgid "Nothing flagged in what could be read - see the gaps above."
+msgstr "Rien a signaler dans ce qui a pu etre lu - voir les manques ci-dessus."
+
+#: tools/role_audit.py:824
+#, python-brace-format
+msgid "role cache unavailable, {count} setting(s) not examined"
+msgstr "cache des roles indisponible, {count} reglage(s) non examine(s)"
 
 #: tools/views.py:23
 msgid "This prompt isn't for you."
