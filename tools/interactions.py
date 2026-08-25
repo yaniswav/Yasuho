@@ -118,3 +118,67 @@ async def refresh_in_place(interaction, message, *, embed, view) -> None:
             await message.edit(embed=embed, view=view)
         except discord.HTTPException:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Ephemeral flow marker
+# ---------------------------------------------------------------------------
+# Key under which a command records "every reply in this flow is private".
+#
+# discord.py keeps NO local trace of an ephemeral defer: InteractionResponse.defer
+# puts the flag in the outgoing payload and stores only `_response_type`
+# (discord.py 2.7, interactions.py), so nothing downstream can read the choice
+# back. That matters because a later sender may not be the command at all - the
+# global error reporter in cogs/system/errors.py answers a crashed command
+# without ever seeing its body, and `Context.send` defaults `ephemeral=False`.
+# Without a marker, a crash inside an ephemeral flow answers PUBLICLY on a
+# command whose every other reply is private.
+#
+# `Interaction.extras` is the dictionary discord.py documents for exactly this
+# ("can be used to store extraneous data for use by things like checks or before
+# invoke hooks"), and it dies with the interaction, so there is nothing to clean
+# up and nothing to leak into another invocation.
+EPHEMERAL_FLOW = "yasuho_ephemeral_flow"
+
+
+def _extras(ctx):
+    """The interaction's extras dict for this Context, or None on the prefix path."""
+
+    extras = getattr(getattr(ctx, "interaction", None), "extras", None)
+    return extras if isinstance(extras, dict) else None
+
+
+def mark_ephemeral(ctx) -> None:
+    """Record that this invocation's replies are ephemeral. Never raises.
+
+    A no-op on the prefix path (no interaction, nothing to remember) and on any
+    stand-in whose interaction has no ``extras`` mapping: a bookkeeping helper
+    must never be the thing that breaks a command.
+    """
+
+    extras = _extras(ctx)
+    if extras is not None:
+        extras[EPHEMERAL_FLOW] = True
+
+
+def prefers_ephemeral(ctx) -> bool:
+    """True when this invocation was marked as an ephemeral flow."""
+
+    extras = _extras(ctx)
+    return bool(extras is not None and extras.get(EPHEMERAL_FLOW))
+
+
+async def defer_ephemeral(ctx) -> None:
+    """``ctx.defer(ephemeral=True)`` that also RECORDS the privacy choice.
+
+    Use this instead of a bare ``await ctx.defer(ephemeral=True)`` whenever the
+    command's own replies are ephemeral, so that anything replying LATER on the
+    same interaction - the global error reporter above all - keeps the flow
+    private instead of dropping a public message into the channel.
+
+    Inert on the prefix path: ``Context.defer`` returns immediately when
+    ``ctx.interaction`` is None, and there is no interaction to mark.
+    """
+
+    await ctx.defer(ephemeral=True)
+    mark_ephemeral(ctx)
