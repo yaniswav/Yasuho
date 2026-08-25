@@ -1685,12 +1685,18 @@ class _BRAcquire:
 
 class BRPool:
     """Pool modelling the acquire()/transaction() persist path, the scoped
-    DELETE ... RETURNING of the delete executor and the scoped row SELECT of the
-    edit one.
+    DELETE ... RETURNING of the delete executor and the scoped ownership SELECT
+    of the edit one.
 
     ``inserted`` / ``deleted`` are the ONLY two ways this module writes
     ``button_roles``, so a test proving "the rows were left untouched" asserts
     both are empty.
+
+    ``panel_rows`` are the rows STORED for the panel. The edit executor no longer
+    reads their content - only whether any exist and which channel they name - so
+    the SELECT it issues is ``SELECT DISTINCT channel_id``, and this fake
+    collapses duplicates the way Postgres would. Returning the raw list instead
+    would let a two-button panel look like rows that disagree on the channel.
     """
 
     def __init__(self, delete_return=None, panel_rows=None):
@@ -1705,9 +1711,13 @@ class BRPool:
         return _BRAcquire(self)
 
     async def fetch(self, query, *args):
-        if "SELECT channel_id, role_id" in query:  # the edit executor's read
+        if "SELECT DISTINCT channel_id" in query:  # the edit executor's read
             self.select_calls.append((query, args))
-            return list(self._panel_rows)
+            channels = []
+            for row in self._panel_rows:
+                if row["channel_id"] not in channels:
+                    channels.append(row["channel_id"])
+            return [{"channel_id": channel_id} for channel_id in channels]
         assert "DELETE FROM button_roles" in query  # the delete executor
         self.delete_calls.append(args)
         return self._delete_return
@@ -2064,9 +2074,12 @@ async def test_button_panel_delete_bad_message_id(button_env, message_id):
 
 
 # ---------------------------------------------------------------------------
-# button_panel_edit executor: re-render an existing panel's COMPONENTS from its
-# stored rows, in place (same message id), re-validating every stored role at
-# RENDER time and refusing the whole edit if any of them fails.
+# button_panel_edit executor: re-render an existing panel's COMPONENTS in place
+# (same message id) from the PAYLOAD's buttons - the same ``buttons`` shape
+# button_panel_post takes - re-validating every role at publish time and refusing
+# the whole edit if any of them fails. The stored rows are still read,
+# guild-scoped, but ONLY to prove the message is a panel of this guild and to say
+# which channel it lives in; their content is never rendered.
 # ---------------------------------------------------------------------------
 
 
@@ -2102,7 +2115,13 @@ class BREditChannel(FakeTextChannel):
 
 
 def _panel_row(role_id, label="Gamer", emoji=None, style=1, channel_id=555):
-    """One stored ``button_roles`` row, in the shape the SELECT returns."""
+    """One STORED ``button_roles`` row, in the shape the SELECT returns.
+
+    The edit executor reads nothing here but "do any rows exist" and "which
+    channel", so the rest is the panel's OLD button set - the one the dashboard
+    has not replaced yet, because it writes only after our ok. These tests
+    deliberately keep it DIFFERENT from the payload.
+    """
     return {
         "channel_id": channel_id,
         "role_id": role_id,
@@ -2112,12 +2131,25 @@ def _panel_row(role_id, label="Gamer", emoji=None, style=1, channel_id=555):
     }
 
 
-def _edit_payload(message_id="777", channel_id="555"):
-    """The frozen payload: the message to re-render, and where it lives.
+def _edit_button(role_id="888", label="Gamers", emoji=None, style=1):
+    """One payload button, in the shape ``button_panel_post`` already accepts."""
+    button = {"role_id": role_id, "style": style}
+    if label is not None:
+        button["label"] = label
+    if emoji is not None:
+        button["emoji"] = emoji
+    return button
 
-    The BUTTONS are deliberately absent - they come from the stored rows.
+
+def _edit_payload(message_id="777", channel_id="555", buttons=None):
+    """The payload: which message to re-render, where it lives, and the BUTTONS.
+
+    The buttons are in the payload so the dashboard can write its rows AFTER our
+    ok instead of before enqueuing - one shape, produced on both sides.
     """
-    return {"message_id": message_id, "channel_id": channel_id}
+    payload = {"message_id": message_id, "channel_id": channel_id}
+    payload["buttons"] = [_edit_button()] if buttons is None else buttons
+    return payload
 
 
 def _edit_env(rows, roles, actor=None, message=None, channel=None):
@@ -2136,7 +2168,8 @@ def test_button_panel_edit_is_registered_and_actor_gated():
     """It PUBLISHES self-assignable roles, so it must take the resolved actor.
 
     Left out of _ACTOR_KINDS it would be the gate's back door: post a harmless
-    role past the check, rewrite the rows, then edit to republish unchecked.
+    role past the check, then edit the panel to republish a dangerous one
+    unchecked.
     """
     assert "button_panel_edit" in dashboard_actions._EXECUTORS
     assert "button_panel_edit" in dashboard_actions._ACTOR_KINDS
@@ -2144,15 +2177,20 @@ def test_button_panel_edit_is_registered_and_actor_gated():
 
 async def test_button_panel_edit_rerenders_the_components_in_place(button_env):
     channel, message, pool, actor, bot = _edit_env(
-        rows=[
-            _panel_row(888, "Gamers", "\U0001F3AE", 1),
-            _panel_row(999, "Artists", None, 3),
-        ],
+        rows=[_panel_row(888, "Old label")],  # the set the dashboard replaces
         roles={888: BRRole(888, "Gamer"), 999: BRRole(999, "Artist")},
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot,
+        100,
+        _edit_payload(
+            buttons=[
+                _edit_button("888", "Gamers", "\U0001F3AE", 1),
+                _edit_button("999", "Artists", None, 3),
+            ]
+        ),
+        actor,
     )
 
     assert result == {
@@ -2175,12 +2213,29 @@ async def test_button_panel_edit_rerenders_the_components_in_place(button_env):
     ]
 
 
+async def test_button_panel_edit_never_writes_button_roles(button_env):
+    """THE ORDERING THIS CONTRACT EXISTS FOR. The executor renders and answers;
+    the dashboard writes its rows AFTER the ok. So a successful edit must leave
+    ``button_roles`` untouched - if this executor wrote them, the writer would be
+    back to writing before knowing."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888, "Old label")], roles={888: BRRole(888, "Gamer")}
+    )
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot, 100, _edit_payload(), actor
+    )
+
+    assert result["ok"] is True
+    assert pool.inserted == [] and pool.deleted == []
+
+
 async def test_button_panel_edit_reregisters_the_persistent_view(button_env):
     """Without this the in-memory view would keep answering with the OLD button
     set until the next boot - the buttons on screen and the ones that work would
     be two different panels."""
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(888, "Gamers")], roles={888: BRRole(888, "Gamer")}
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
     )
 
     await dashboard_actions._exec_button_panel_edit(bot, 100, _edit_payload(), actor)
@@ -2191,41 +2246,115 @@ async def test_button_panel_edit_reregisters_the_persistent_view(button_env):
     assert view.rows == [(888, "Gamers", None, 1)]
 
 
-async def test_button_panel_edit_takes_the_buttons_from_the_rows_not_the_payload(
+async def test_button_panel_edit_takes_the_buttons_from_the_payload_not_the_rows(
     button_env,
 ):
-    """The payload carries no buttons at all; whatever the table says is what is
-    rendered, so the message and the rows cannot disagree."""
+    """THE CONTRACT FLIP. The stored rows still hold the panel's OLD button set
+    at this instant - the dashboard replaces them only after our ok - so reading
+    them would render the wrong panel. Every button comes from the payload."""
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(888, "Renamed", "\U0001F3A8", 4)],
-        roles={888: BRRole(888, "Gamer")},
+        rows=[_panel_row(888, "Stale", "\U0001F3AE", 4)],  # the old set, ignored
+        roles={888: BRRole(888, "Gamer"), 999: BRRole(999, "Artist")},
     )
 
-    payload = _edit_payload()
-    payload["buttons"] = [{"role_id": "999", "label": "Injected"}]
-    result = await dashboard_actions._exec_button_panel_edit(bot, 100, payload, actor)
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button("999", "Artists", None, 3)]),
+        actor,
+    )
 
     assert result["ok"] is True
-    assert message.edits[0]["view"].rows == [(888, "Renamed", "\U0001F3A8", 4)]
+    # Not the stored 888/"Stale": the panel the operator just asked for.
+    assert message.edits[0]["view"].rows == [(999, "Artists", None, 3)]
 
 
-async def test_button_panel_edit_normalises_the_stored_row_like_a_post(button_env):
-    """The dashboard writes those rows itself, so they are re-bounded exactly
-    like a payload: a NULL label falls back to the role name, an out-of-range
-    style to secondary, a blank emoji to None."""
+async def test_button_panel_edit_renders_the_payload_order(button_env):
+    """The buttons land in the order they were sent, like a post's. (Reading the
+    rows forced ``ORDER BY role_id`` - a deterministic order, but never the one
+    the operator arranged.)"""
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(888, label=None, emoji="   ", style=99)],
-        roles={888: BRRole(888, "Gamer")},
+        rows=[_panel_row(888)],
+        roles={888: BRRole(888, "Gamer"), 999: BRRole(999, "Artist")},
     )
 
-    await dashboard_actions._exec_button_panel_edit(bot, 100, _edit_payload(), actor)
+    await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(
+            buttons=[_edit_button("999", "Artists"), _edit_button("888", "Gamers")]
+        ),
+        actor,
+    )
+
+    assert [row[0] for row in message.edits[0]["view"].rows] == [999, 888]
+
+
+async def test_button_panel_edit_normalises_the_payload_button_like_a_post(button_env):
+    """Same ``_panel_button`` seam as the post executor, so one shape is bounded
+    one way: a missing label falls back to the role name, an out-of-range style
+    to secondary, a blank emoji to None."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+
+    await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button("888", label=None, emoji="   ", style=99)]),
+        actor,
+    )
 
     assert message.edits[0]["view"].rows == [(888, "Gamer", None, 2)]
 
 
+async def test_button_panel_edit_dedupes_a_role_named_twice(button_env):
+    """The stored key is ``(message_id, role_id)``, so the table can only ever
+    hold one row per role: rendering two buttons for one role would publish a
+    panel the dashboard cannot write back. First mention wins."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(
+            buttons=[_edit_button("888", "First"), _edit_button("888", "Second")]
+        ),
+        actor,
+    )
+
+    assert result["buttons"] == 1
+    assert message.edits[0]["view"].rows == [(888, "First", None, 1)]
+
+
+async def test_button_panel_edit_names_a_repeated_bad_role_once(button_env):
+    """Dedup runs BEFORE the gate, as on a post, so the answer for a repeat is
+    the answer already collected for its first mention - never the same id twice
+    in ``failures``."""
+    actor = _br_actor(top_position=3)
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)],
+        roles={888: BRRole(888, "Staff", position=5)},  # above the actor
+        actor=actor,
+    )
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button("888"), _edit_button("888")]),
+        actor,
+    )
+
+    assert result["failures"] == [{"role_id": "888", "reason": "role_above_actor"}]
+
+
 async def test_button_panel_edit_reads_the_rows_guild_scoped(button_env):
-    """The primary key carries no guild, so an unqualified read would let a
-    manage-guild user of guild B re-render guild A's panel by naming its id."""
+    """OWNERSHIP. The buttons no longer come from this read, but it is the only
+    proof the message is a panel OF THIS GUILD: the primary key carries no guild,
+    so an unqualified read would let a manage-guild user of guild B re-render
+    (and re-register) guild A's panel by naming its id."""
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
     )
@@ -2238,8 +2367,15 @@ async def test_button_panel_edit_reads_the_rows_guild_scoped(button_env):
 
 
 async def test_button_panel_edit_refuses_a_message_with_no_rows(button_env):
-    """No rows for that (message, guild) pair: another guild's panel, or none."""
-    channel, message, pool, actor, bot = _edit_env(rows=[], roles={})
+    """No rows for that (message, guild) pair: another guild's panel, or a
+    message that is no panel at all.
+
+    This is what keeps the kind narrow. Without the check it would edit ANY
+    message Yasuho ever authored in this guild - it calls ``message.edit`` on
+    whatever id it is handed - which is strictly wider than anything the
+    dashboard can do today.
+    """
+    channel, message, pool, actor, bot = _edit_env(rows=[], roles={888: BRRole(888)})
 
     result = await dashboard_actions._exec_button_panel_edit(
         bot, 100, _edit_payload(), actor
@@ -2254,7 +2390,7 @@ async def test_button_panel_edit_refuses_a_channel_that_is_not_the_stored_one(
     button_env,
 ):
     """A message cannot change channel, so a disagreement is a stale or crafted
-    request - never something to act on."""
+    request - never something to act on. Still derived from the STORED rows."""
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888, channel_id=555)], roles={888: BRRole(888, "Gamer")}
     )
@@ -2272,7 +2408,7 @@ async def test_button_panel_edit_refuses_rows_that_disagree_on_the_channel(
 ):
     """The PK is (message_id, role_id), so nothing forces one message's rows to
     agree on channel_id. Reading the first row would make the verdict depend on
-    which role id sorted first - a coin toss decides whether a crafted set is
+    which one came back first - a coin toss decides whether a crafted set is
     caught. A split set is refused outright, whichever channel was asked for."""
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888, channel_id=555), _panel_row(999, channel_id=42)],
@@ -2286,6 +2422,23 @@ async def test_button_panel_edit_refuses_rows_that_disagree_on_the_channel(
     assert result == {"ok": False, "error": "channel_mismatch"}
     assert message.edits == []
     assert channel.fetched == []
+
+
+async def test_button_panel_edit_accepts_a_panel_whose_rows_share_one_channel(
+    button_env,
+):
+    """The read is ``SELECT DISTINCT channel_id``: a five-button panel is five
+    stored rows naming ONE channel, which must not read as rows that disagree."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(rid, channel_id=555) for rid in (700, 800, 888, 900, 950)],
+        roles={888: BRRole(888, "Gamer")},
+    )
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot, 100, _edit_payload(), actor
+    )
+
+    assert result["ok"] is True
 
 
 @pytest.mark.parametrize("channel_id", [None, "abc", ""])
@@ -2322,29 +2475,109 @@ async def test_button_panel_edit_bad_message_id(button_env, message_id):
     assert pool.select_calls == []
 
 
-async def test_button_panel_edit_refuses_more_rows_than_discord_allows(button_env):
-    """The dashboard writes the rows, so 26 of them is a thing it can do - and a
-    26-button view would raise. Re-checked against the cog's own MAX_BUTTONS."""
-    roles = {rid: BRRole(rid, "Role%s" % rid) for rid in range(800, 826 + 1)}
+@pytest.mark.parametrize("buttons", [[], {}, "888"])
+async def test_button_panel_edit_refuses_an_unusable_button_list(button_env, buttons):
+    """An empty list is NOT "strip the panel" - that is ``button_panel_delete``,
+    which drops the rows too. Refused exactly like a post's, and refused BEFORE
+    the row lookup: the verdict comes purely from what the caller sent, so it
+    costs no DB round trip and says nothing about the message it named."""
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(rid) for rid in roles], roles=roles
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+    payload = _edit_payload(buttons=buttons)
+
+    result = await dashboard_actions._exec_button_panel_edit(bot, 100, payload, actor)
+
+    assert result == {"ok": False, "error": "no_buttons"}
+    assert pool.select_calls == []
+    assert message.edits == []
+
+
+async def test_button_panel_edit_names_an_old_contract_payload_as_such(button_env):
+    """THE ONE BREAKING CHANGE, ANSWERED AS ONE. This kind shipped taking only
+    ``{message_id, channel_id}`` and reading the buttons out of the table, and
+    that shape is already deployed. An enqueue still in it is refused - but with
+    its OWN code, not ``no_buttons``: an absent FIELD is a caller on the old
+    contract, an empty LIST is an operator who added no button, and telling a
+    stale dashboard to "add at least one button" would send it fixing the wrong
+    thing. Fail-closed all the same: nothing read, nothing edited, nothing
+    registered."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+    payload = _edit_payload()
+    del payload["buttons"]  # the pre-payload contract, verbatim
+
+    result = await dashboard_actions._exec_button_panel_edit(bot, 100, payload, actor)
+
+    assert result == {"ok": False, "error": "buttons_missing"}
+    assert pool.select_calls == []  # payload-only verdict, no DB round trip
+    assert message.edits == []
+    assert channel.fetched == []
+    assert bot.added_views == []
+
+
+@pytest.mark.parametrize(
+    "buttons",
+    [
+        ["888", None],  # nothing usable at all
+        [{"role_id": "888", "style": 1}, "999"],  # one good entry, one malformed
+    ],
+)
+async def test_button_panel_edit_refuses_an_entry_that_is_not_an_object(
+    button_env, buttons
+):
+    """A malformed entry REFUSES THE WHOLE EDIT rather than being skipped - the
+    one place this kind deliberately parts with the post one.
+
+    The post executor writes the rows itself, from what it rendered, so dropping
+    an entry leaves message and table agreeing. Here the DASHBOARD writes them,
+    from ITS OWN list, after our ok: rendering 4 of the 5 entries it sent would
+    hand it an ok to write 5 rows against, and the returned count says how many
+    went out, never WHICH. So it answers like any other unnameable role - bare
+    ``bad_role``, no id echoed back.
+    """
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot, 100, _edit_payload(buttons=buttons), actor
+    )
+
+    assert result == {"ok": False, "error": "bad_role"}
+    assert message.edits == []
+    assert channel.fetched == []
+    assert bot.added_views == []
+
+
+async def test_button_panel_edit_refuses_more_buttons_than_discord_allows(button_env):
+    """A view of 26 buttons would raise at construction. Re-checked against the
+    cog's own MAX_BUTTONS, on the PAYLOAD list now - the cap the post executor
+    applies, to the same field."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button(str(rid)) for rid in range(800, 826)]),
+        actor,
     )
 
     assert result == {"ok": False, "error": "too_many_buttons"}
+    assert pool.select_calls == []  # payload-only verdict, no DB round trip
     assert message.edits == []
 
 
 async def test_button_panel_edit_revalidates_a_role_that_moved_above_the_actor(
     button_env,
 ):
-    """THE RENDER-TIME CHECK. The row was written at another moment and nothing
-    re-reads it when a role changes (no on_guild_role_update listener), so the
-    gate is asked again here, against the state of NOW - otherwise this kind
-    would republish, unchecked, whatever the rows happen to say."""
+    """THE PUBLISH-TIME CHECK. An edit re-publishes every button it renders, and
+    ``ButtonRoleButton.callback`` grants straight off its custom_id with no rank
+    check - so this is the only gate the click path will ever see. A role that
+    was fine when the panel was posted can since have moved above the actor."""
     actor = _br_actor(top_position=3)
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888, "Staff")],
@@ -2353,7 +2586,7 @@ async def test_button_panel_edit_revalidates_a_role_that_moved_above_the_actor(
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot, 100, _edit_payload(buttons=[_edit_button("888", "Staff")]), actor
     )
 
     assert result == {
@@ -2371,7 +2604,7 @@ async def test_button_panel_edit_revalidates_a_role_that_moved_above_the_actor(
 async def test_button_panel_edit_revalidates_a_role_that_became_unassignable(
     button_env,
 ):
-    """Same re-read, other half: a role that has since become integration-managed
+    """Same gate, other half: a role that has since become integration-managed
     (a booster role, another bot's role) keeps the bot-half code."""
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888, "Booster")],
@@ -2379,7 +2612,7 @@ async def test_button_panel_edit_revalidates_a_role_that_became_unassignable(
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot, 100, _edit_payload(buttons=[_edit_button("888", "Booster")]), actor
     )
 
     assert result == {
@@ -2391,13 +2624,13 @@ async def test_button_panel_edit_revalidates_a_role_that_became_unassignable(
 
 
 async def test_button_panel_edit_refuses_the_whole_edit_for_one_bad_role(button_env):
-    """PARTIAL FAILURE REFUSES EVERYTHING. Rendering 4 of 5 buttons would leave
-    the table holding five while the message shows four - and the dashboard's
-    panel list reads the TABLE, so it would keep showing five with nothing
-    anywhere able to notice."""
+    """PARTIAL FAILURE REFUSES EVERYTHING. Rendering 4 of 5 buttons would publish
+    a panel nobody asked for and hand the dashboard an ok to write five rows
+    against - its panel list reads the TABLE, so it would show five buttons for a
+    message carrying four with nothing anywhere able to notice."""
     actor = _br_actor(top_position=3)
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(rid) for rid in (700, 800, 888, 900, 950)],
+        rows=[_panel_row(888)],
         roles={
             700: BRRole(700, "A", position=1),
             800: BRRole(800, "B", position=1),
@@ -2409,7 +2642,12 @@ async def test_button_panel_edit_refuses_the_whole_edit_for_one_bad_role(button_
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot,
+        100,
+        _edit_payload(
+            buttons=[_edit_button(str(rid)) for rid in (700, 800, 888, 900, 950)]
+        ),
+        actor,
     )
 
     assert result["ok"] is False
@@ -2424,7 +2662,7 @@ async def test_button_panel_edit_names_every_refused_role(button_env):
     fix them one failed action at a time."""
     actor = _br_actor(top_position=3)
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(rid) for rid in (700, 888, 950)],
+        rows=[_panel_row(888)],
         roles={
             700: BRRole(700, "Booster", managed=True),  # bot half
             888: BRRole(888, "Staff", position=5),  # actor half
@@ -2434,7 +2672,10 @@ async def test_button_panel_edit_names_every_refused_role(button_env):
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button(str(rid)) for rid in (700, 888, 950)]),
+        actor,
     )
 
     # Every id, each with ITS OWN reason - and the dominant code on top.
@@ -2449,22 +2690,46 @@ async def test_button_panel_edit_names_every_refused_role(button_env):
     assert message.edits == []
 
 
-async def test_button_panel_edit_refuses_a_role_that_no_longer_exists(button_env):
-    """A deleted role is not a gate refusal (there is nothing left to judge), so
-    it keeps the module's ``bad_role`` code - but it still names the id, and it
-    still refuses the WHOLE edit rather than dropping the button."""
+async def test_button_panel_edit_refuses_a_role_that_is_not_of_this_guild(button_env):
+    """A role that does not resolve is not a gate refusal (there is nothing left
+    to judge), so it keeps the module's ``bad_role`` code - but it still names the
+    id, and it still refuses the WHOLE edit rather than dropping that button."""
     channel, message, pool, actor, bot = _edit_env(
-        rows=[_panel_row(888), _panel_row(999)],
-        roles={888: BRRole(888, "Gamer")},  # 999 deleted since the row was written
+        rows=[_panel_row(888)],
+        roles={888: BRRole(888, "Gamer")},  # 999 deleted, or never this guild's
     )
 
     result = await dashboard_actions._exec_button_panel_edit(
-        bot, 100, _edit_payload(), actor
+        bot,
+        100,
+        _edit_payload(buttons=[_edit_button("888"), _edit_button("999")]),
+        actor,
     )
 
     assert result == {"ok": False, "error": "bad_role", "role_id": "999"}
     assert message.edits == []
     assert pool.inserted == [] and pool.deleted == []
+
+
+@pytest.mark.parametrize("role_id", [None, "abc", ""])
+async def test_button_panel_edit_bad_role_id_names_nothing(button_env, role_id):
+    """An unparsable id has nothing to name, and the payload's value is never
+    echoed back: bare ``bad_role``, exactly like a post's."""
+    channel, message, pool, actor, bot = _edit_env(
+        rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}
+    )
+    button = _edit_button()
+    if role_id is None:
+        del button["role_id"]
+    else:
+        button["role_id"] = role_id
+
+    result = await dashboard_actions._exec_button_panel_edit(
+        bot, 100, _edit_payload(buttons=[button]), actor
+    )
+
+    assert result == {"ok": False, "error": "bad_role"}
+    assert message.edits == []
 
 
 async def test_button_panel_edit_guild_unavailable(button_env):
@@ -2523,8 +2788,9 @@ async def test_button_panel_edit_message_gone(button_env):
 
 
 async def test_button_panel_edit_failed_edit_is_reported(button_env):
-    """The rows are untouched either way, so the panel is still exactly what the
-    table says it is - the edit simply did not land."""
+    """The dashboard has not written anything yet, so a failed edit leaves the
+    panel exactly as the table still describes it - the edit simply did not
+    land, and its ok never came."""
     message = BREditMessage(777, fail_edit=True)
     channel, message, pool, actor, bot = _edit_env(
         rows=[_panel_row(888)], roles={888: BRRole(888, "Gamer")}, message=message

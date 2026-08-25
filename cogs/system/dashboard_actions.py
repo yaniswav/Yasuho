@@ -104,20 +104,25 @@ Cost: cache hit = free; cache miss = at most ONE
 ``GET /guilds/{id}/members/{user}`` per action. These are operator-driven
 dashboard actions, not a hot path.
 
-THE GATE JUDGES A WRITE; ``button_panel_edit`` READS ROWS WRITTEN EARLIER, so it
-RE-VALIDATES EVERY ROLE AT RENDER TIME. The other four gate a role the action
-itself names - in its payload, or (``verify_button_post``) in a setting read in
-that same instant - so the check and the publication are one moment.
-``button_panel_edit`` takes its roles from the ``button_roles`` rows the
-dashboard wrote at ANOTHER moment, and NOTHING in this bot re-reads a stored role
-when that role changes (there is no ``on_guild_role_update`` listener anywhere in
-this bot - grep it). A role that passed the gate when its row was written can
-since have gained permissions, moved above the actor, or become
-integration-managed. Trusting "it was checked at write time" would therefore make
-the edit kind a BYPASS of the gate itself: publish a harmless role past it,
-rewrite the rows, trigger an edit that republishes them unchecked - front door
-guarded, window open. So the pair runs again, on every stored role, against the
-state of NOW.
+THE GATE RUNS AT PUBLISH TIME BECAUSE PUBLISH TIME IS THE ONLY GATE THERE IS.
+All five kinds name their roles in the payload (or, for ``verify_button_post``,
+in a setting read in that same instant), so check and publication are one moment
+- and that moment is the last one at which anybody asks the question.
+``ButtonRoleButton.callback`` (``cogs/config/buttonroles.py``) grants straight
+off its own ``br:<role_id>`` custom_id with NO rank check, and nothing in this
+bot re-examines a published role when that role later changes (there is no
+``on_guild_role_update`` listener anywhere here - grep it). So the pair below is
+load-bearing rather than belt-and-braces: skip it on ONE of the five and the
+click path grants whatever was published, forever.
+
+``button_panel_edit`` is held to exactly the same rule as ``button_panel_post``,
+against the state of NOW, on EVERY button of the payload - never "these roles
+were checked when the panel was first posted". A published panel outlives the
+check that let it be posted: a role that was harmless then can since have gained
+permissions, moved above the actor, or become integration-managed, and an edit
+re-publishes every button it renders, not only the ones that changed. Gating the
+post and trusting the edit would leave the front door guarded and the window
+open.
 
 NAMING THE OFFENDING ROLES (the ``failures`` list)
 --------------------------------------------------
@@ -147,9 +152,12 @@ The list only means something because the executors COLLECT: they check every
 role and refuse afterwards, instead of returning at the first bad one. A list
 with first-failure semantics could never hold more than one element - a shape
 that looks like it answers and does not. What is NOT collected is a structurally
-impossible role (``bad_role``: an unparsable id, or a stored role that no longer
-exists at all) - there is nothing to gate, so it refuses on the spot, keeping its
-own code; the edit kind returns the offending id alongside it as ``role_id``.
+impossible role (``bad_role``: an unparsable id, one that is not a role of this
+guild at all, or - on the edit kind - a button entry that is not even an object)
+- there is nothing to gate, so it refuses on the spot, keeping its own code; the
+edit kind adds the offending id as ``role_id`` whenever it had one to name (an id
+it could parse but not resolve), and omits the field when the payload carried no
+id at all - it echoes nothing back unparsed.
 ``role_menu_post`` can only ever report ``role_above_actor``: its bot half DROPS
 an ungrantable option rather than refusing (documented at the call site), so
 ``role_not_assignable`` is not one of its outcomes.
@@ -738,12 +746,11 @@ _MAX_BUTTON_LABEL = 80
 def _panel_button(role, label, emoji, style):
     """Normalise ONE panel button: bounded label, optional emoji, valid style.
 
-    Shared by the post executor (whose values come from the payload) and the
-    edit one (whose values come from the stored ``button_roles`` row), so a
-    dashboard-written row is bounded exactly like a dashboard-sent payload:
-    ``style`` coerced to a callable ButtonStyle int (1/2/3/4, secondary
-    fallback), an empty label falling back to the role name and bounded to 80,
-    a blank emoji dropped. Never raises.
+    Shared by the post and edit executors, which take their buttons from the
+    SAME payload shape, so one normalisation answers for both: ``style`` coerced
+    to a callable ButtonStyle int (1/2/3/4, secondary fallback), an empty label
+    falling back to the role name and bounded to 80, a blank emoji dropped.
+    Never raises.
     """
     try:
         style = int(style)
@@ -822,8 +829,8 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
     process (a restart of the bot re-registers them from the table in
     ``ButtonRoles.cog_load``). The rendered embed is NOT stored -- it lives in the
     posted message, so a panel's embed cannot be edited from the dashboard; its
-    BUTTONS can, through ``button_panel_edit`` below, which re-renders them from
-    the very rows this executor writes.
+    BUTTONS can, through ``button_panel_edit`` below, which takes the SAME
+    ``buttons`` shape this one does and re-renders them onto the same message.
     """
     try:
         channel_id = int(payload.get("channel_id"))
@@ -956,74 +963,118 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
 
 
 async def _exec_button_panel_edit(bot, guild_id, payload, actor):
-    """Re-render an EXISTING panel's BUTTONS in place, from its stored rows.
+    """Re-render an EXISTING panel's BUTTONS in place, from the payload.
 
-    Payload: ``{"message_id", "channel_id"}`` (snowflake strings). The buttons
-    are deliberately NOT in the payload: the dashboard writes the
-    ``button_roles`` rows itself, and this kind renders exactly what the table
-    holds for that message, so the Discord message and the table cannot disagree
-    about what the panel is.
+    Payload: ``{"message_id", "channel_id", "buttons": [{"role_id", "label"?,
+    "emoji"?, "style"}]}`` (snowflakes as strings). ``buttons`` is the SAME shape
+    ``button_panel_post`` accepts, normalised through the same ``_panel_button``:
+    ONE shape produced on both sides of the queue, never a second dialect for the
+    dashboard to build.
 
     WHY IT EXISTS: without it, fixing a typo in a label or adding a button means
     delete + re-post, which changes the message id - pinned links break and the
     panel jumps to the bottom of the channel. Editing in place keeps both.
+
+    WHY THE BUTTONS TRAVEL IN THE PAYLOAD - AN ORDERING DECISION, NOT A
+    CONVENIENCE. This kind first shipped reading the buttons back out of the
+    ``button_roles`` rows, which forced the dashboard to WRITE BEFORE KNOWING:
+    its write is synchronous, our verdict is asynchronous, so the rows had to be
+    in place before the action could even be enqueued. On EVERY refusal - a gate
+    failure, ``bad_role``, ``channel_mismatch``, ``too_many_buttons``,
+    ``edit_failed``, any ``actor_*`` - those rows were then left AHEAD of the
+    Discord message, and neither side could detect or reconcile the gap. Worse,
+    it outlived the fix a restart usually is: ``ButtonRoles.cog_load`` rebuilds
+    the persistent view from the TABLE at boot, so the rows ahead of the message
+    came back as buttons with no handler behind them.
+
+    Reading the table bought no safety in exchange. Every role is re-validated at
+    render anyway, with the same actor and the same two checks, so a role carried
+    in the payload passes through exactly the same gate as one read from a row -
+    the table was never a second opinion, only a second copy. All it bought was
+    the ordering constraint.
+
+    So the dashboard now writes only AFTER our ``ok``, and the divergence moves
+    off the ROUTINE path (any refusal at all) onto an EXCEPTIONAL one (its own
+    write failing after we already said yes). NEITHER SHAPE IS ATOMIC: this is a
+    distributed transaction across two systems with no shared commit, and no
+    payload contract can make it one. The asymmetry is the whole point, and the
+    RESIDUAL is real and belongs to the writer - after an ``ok`` whose write then
+    fails, the message carries buttons the table lacks, so ``cog_load`` rebuilds
+    that panel without them and those buttons answer nobody. The dashboard must
+    retry the write, or enqueue a corrective action; it must never leave a button
+    unbacked.
+
+    THE FLIP IS THE ONE BREAKING CHANGE IN THIS MODULE, and it answers as one.
+    Every other dashboard-facing change here has been additive; this one narrows
+    an ALREADY-DEPLOYED kind's payload, so an enqueue in the old
+    ``{message_id, channel_id}`` shape is now refused. It refuses fail-closed
+    (nothing read, nothing edited, nothing written), and with its OWN code:
+    ``buttons_missing`` for an absent field, ``no_buttons`` only for a field
+    that is there and unusable. An operator on a stale dashboard must not be
+    told "add at least one button" for a version mismatch. The contract
+    (``.claude/plans/dashboard-executors-contract-panel-edit.md``, section 1)
+    carries the same distinction, and has to reach the dashboard side BEFORE it
+    implements the old shape.
+
+    THE ROW LOOKUP STAYS - AS AN OWNERSHIP PROOF, AND NOTHING ELSE. Reading
+    ``button_roles`` for this message id, scoped to the AUTHORITATIVE guild, is
+    what proves the target is a panel OF THIS GUILD. Without it this kind would
+    degrade into "edit any message Yasuho ever authored in this guild" - it calls
+    ``message.edit`` on whatever id it is handed - which is strictly wider than
+    anything the dashboard can do today. So: no rows -> ``panel_not_found``, and
+    the stored ``channel_id`` still decides ``channel_mismatch``. What the lookup
+    NO LONGER decides: the buttons, their labels/emoji/styles, and their COUNT
+    (``MAX_BUTTONS`` now bounds the payload list, exactly as on a post). The rows
+    it finds still hold the panel's OLD button set at that instant - expected,
+    since the dashboard writes the new one after our ok - and that content is
+    read for nothing but those two verdicts.
 
     THE EMBED IS NOT TOUCHED. Nothing stores it (the post executor renders it
     into the message and keeps no copy), so this kind edits the COMPONENTS ONLY;
     the dashboard shows that as an honest note. ``msg.edit(view=...)`` leaves the
     message's embed exactly as it was.
 
-    BUTTON ORDER comes out as ``ORDER BY role_id``: ``button_roles`` has no
-    ordering column (its key is ``(message_id, role_id)``), so the payload order
-    a panel was POSTED with was never stored and cannot be restored. Ordering by
-    role id is at least deterministic - two edits of the same rows render the
-    same panel.
+    BUTTON ORDER is the payload's, like a post's - what the operator arranged is
+    what lands on the message. It is not durable, though: ``button_roles`` has no
+    ordering column (its key is ``(message_id, role_id)``), so the next time a
+    panel is rebuilt FROM THE TABLE - ``ButtonRoles.cog_load`` at boot - the order
+    is whatever the read returns. Roles are DE-DUPLICATED, first mention wins,
+    because that same key can only ever hold one row per role.
 
     ``guild_id`` is authoritative (the claimed row, written under the dashboard's
-    manage-guild gate) and EVERYTHING else is re-validated against live state:
-    the row SELECT is scoped to that guild (a message id belonging to another
-    server simply finds no rows -> ``panel_not_found``), the stored channel must
-    still exist and the message must still be fetchable, the row count is
-    re-checked against ``MAX_BUTTONS`` (the dashboard writes those rows, so 26 of
-    them is a thing it can do, and a 26-button view would raise), and the
+    manage-guild gate) and EVERYTHING else is re-validated against live state: the
     payload's ``channel_id`` must match the stored one (``channel_mismatch``: a
     message cannot change channel, so a disagreement means a stale or crafted
-    request, never something to act on).
+    request, never something to act on), the stored channel must still exist and
+    the message must still be fetchable. The three payload-only refusals
+    (``buttons_missing``, ``no_buttons``, ``too_many_buttons``) are answered
+    BEFORE the lookup: they need no DB round trip, and their verdict comes purely
+    from what the caller sent, so answering them first tells that caller nothing
+    about whether the message it named is a panel of this guild.
 
-    RE-VALIDATE EVERY ROLE AT RENDER TIME - the sharp half of this kind. The rows
-    were written at ANOTHER MOMENT and validated (if at all) against the state of
-    that moment; nothing re-reads them when a role changes (there is no
-    ``on_guild_role_update`` listener anywhere in the bot). A role that was fine
-    when the row was written can since have been given permissions, moved above
-    the actor, or become integration-managed. So the same pair every publishing
-    kind applies - ``_role_gate_failure``, bot half then configurer half - runs
-    here on EVERY role, against the state of NOW. Without it this kind would be a
-    clean BYPASS of the gate: publish a harmless role past it, rewrite the rows,
-    then trigger an edit that republishes them unchecked.
+    RE-VALIDATE EVERY ROLE AT RENDER TIME. An edit re-publishes every button it
+    renders, not only the ones that changed, so the pair every publishing kind
+    applies - ``_role_gate_failure``, bot half then configurer half - runs here on
+    EVERY role against the state of NOW. This is load-bearing, not
+    belt-and-braces: ``ButtonRoleButton.callback`` grants straight off its
+    custom_id with NO rank check and nothing re-examines a published role when it
+    changes (no ``on_guild_role_update`` listener anywhere in the bot), so publish
+    time is the only gate this path will ever have. Left ungated, the kind would
+    also be the gate's back door: post a harmless role past the check, then edit
+    the panel to republish a dangerous one unchecked.
 
-    PARTIAL FAILURE REFUSES THE WHOLE EDIT, leaving the message AND the rows
-    untouched. Rendering 4 of 5 buttons would leave ``button_roles`` holding five
-    while the message shows four - and since the dashboard's panel list reads the
-    TABLE, it would keep showing five buttons for a message carrying four with
-    nothing anywhere to notice the divergence. An ``ok`` on a partial publish is
-    not a wrong answer, it is an answer that PREVENTS knowing it is wrong. Every
-    refused role is named in ``failures`` (module docstring).
-
-    WHAT THIS EXECUTOR CANNOT KEEP IN STEP, and the caller's obligation. The
-    paragraph above is true of the EXECUTOR: it never renders a subset and never
-    touches the table. It is NOT true of the exchange as a whole, because this
-    kind's premise is that the dashboard writes the ``button_roles`` rows BEFORE
-    enqueuing the action. So on every refusal - a gate failure, ``bad_role``,
-    ``panel_not_found``, ``channel_mismatch``, ``too_many_buttons``,
-    ``edit_failed``, ``guild_unavailable``, any ``actor_*`` - the writer's rows
-    are left AHEAD of the message, which is the very divergence this design
-    exists to prevent, and nothing bot-side can detect or reconcile it. The
-    dashboard must therefore roll its write back, or re-drive the action until it
-    succeeds. It matters beyond the panel list: ``ButtonRoles.cog_load`` rebuilds
-    the persistent view from the TABLE at boot, so a button the message still
-    shows can come back without a handler. Not exploitable - every
-    ``ButtonRoleView`` is registered against a real ``message_id``, so no
-    ``br:*`` custom_id is ever globally addressable - but it is a dead button.
+    PARTIAL FAILURE REFUSES THE WHOLE EDIT: the message keeps its current
+    buttons, the rows are never touched (this executor never writes
+    ``button_roles`` at all), and no view is registered. Rendering 4 of 5 buttons
+    would publish a panel nobody asked for and hand the dashboard an ``ok`` to
+    write 5 rows against, so its panel list would show five buttons for a message
+    carrying four with nothing anywhere able to notice. An ``ok`` on a partial
+    publish is not a wrong answer, it is an answer that PREVENTS knowing it is
+    wrong. Every refused role is named in ``failures`` (module docstring). This
+    holds for a MALFORMED entry too, and that is where the edit kind parts with
+    the post one: an entry that is not an object is refused here rather than
+    skipped, because the writer that will act on our ``ok`` writes from its own
+    list, and a count alone would not tell it WHICH of its entries went out.
 
     REUSES the post executor's seams verbatim rather than growing a second
     renderer: ``_button_roles_module`` (``ButtonRoleView`` + ``MAX_BUTTONS``),
@@ -1052,60 +1103,114 @@ async def _exec_button_panel_edit(bot, guild_id, payload, actor):
         # per-role refusal that is really a missing cache.
         return {"ok": False, "error": "guild_unavailable"}
 
-    # Guild-scoped, exactly like the delete executor's DELETE: the primary key
-    # carries no guild, so an unqualified read would let a manage-guild user of
-    # guild B re-render (and re-register) guild A's panel by naming its id.
+    br = _button_roles_module()
+    max_buttons = getattr(br, "MAX_BUTTONS", 25)
+
+    # Payload-only verdicts, answered before the DB round trip (docstring): an
+    # unusable button list can never render, whatever message it names.
+    if "buttons" not in payload:
+        # THE FIELD IS ABSENT ENTIRELY, which is the shape this kind shipped
+        # with before the buttons moved into the payload. Told apart from an
+        # empty list on purpose: "you sent no button" is an operator mistake to
+        # be shown as one, while "you sent no BUTTONS FIELD" is a caller on the
+        # old contract, and answering both `no_buttons` would have an operator
+        # reading "add at least one button" for a version mismatch they cannot
+        # fix from the panel editor. Fail-closed either way - nothing is read,
+        # nothing is edited.
+        return {"ok": False, "error": "buttons_missing"}
+    raw_buttons = payload.get("buttons")
+    if not isinstance(raw_buttons, list) or not raw_buttons:
+        # An empty list is NOT "strip the panel": that is button_panel_delete's
+        # job, and it drops the rows too. Refused exactly like a post's.
+        return {"ok": False, "error": "no_buttons"}
+    if len(raw_buttons) > max_buttons:
+        return {"ok": False, "error": "too_many_buttons"}
+
+    # OWNERSHIP + EXISTENCE ONLY. Guild-scoped, exactly like the delete
+    # executor's DELETE: the primary key carries no guild, so an unqualified read
+    # would let a manage-guild user of guild B re-render (and re-register) guild
+    # A's panel by naming its id. The buttons no longer come from here, but this
+    # read still has to happen: it is the ONLY proof that the id names a panel of
+    # this guild rather than any message Yasuho ever authored in it, and it is
+    # where the stored channel comes from. DISTINCT because the row CONTENT is
+    # never read any more - only "does it exist" and "which channel".
     rows = await bot.db_pool.fetch(
-        "SELECT channel_id, role_id, label, emoji, style "
+        "SELECT DISTINCT channel_id "
         "FROM button_roles "
-        "WHERE message_id = $1 AND guild_id = $2 "
-        "ORDER BY role_id;",
+        "WHERE message_id = $1 AND guild_id = $2;",
         message_id,
         guild_id,
     )
     if not rows:
         return {"ok": False, "error": "panel_not_found"}
 
-    br = _button_roles_module()
-    max_buttons = getattr(br, "MAX_BUTTONS", 25)
-    if len(rows) > max_buttons:
-        return {"ok": False, "error": "too_many_buttons"}
-
     # The PK is (message_id, role_id), so nothing in the schema forces every row
     # of one message to agree on channel_id. Reading rows[0] would make the
-    # verdict depend on which role id sorted first, so a split set is refused
+    # verdict depend on which row came back first, so a split set is refused
     # outright rather than judged on a coin toss.
-    stored_channels = {row["channel_id"] for row in rows}
-    if len(stored_channels) != 1:
+    if len(rows) != 1:
         return {"ok": False, "error": "channel_mismatch"}
-    stored_channel_id = stored_channels.pop()
+    stored_channel_id = rows[0]["channel_id"]
     if channel_id != stored_channel_id:
         return {"ok": False, "error": "channel_mismatch"}
 
-    # Render-time re-validation of every stored role, and the whole-or-nothing
-    # rule: collect, never drop, never render a subset.
+    # Publish-time re-validation of every role, and the whole-or-nothing rule:
+    # collect, never drop, never render a subset. Dedup runs BEFORE the gate, as
+    # on a post, so a role named twice is gated once and named once.
+    seen_roles = set()
     buttons = []
     failures = []
-    for row in rows:
-        role = guild.get_role(row["role_id"])
+    for entry in raw_buttons:
+        if not isinstance(entry, dict):
+            # REFUSED, not skipped - and this is the one place the edit kind
+            # deliberately parts with the post one, which drops such an entry
+            # (line above ``_role_gate_failure`` in _exec_button_panel_post).
+            # The post executor writes the rows ITSELF, from what it rendered,
+            # so a dropped entry leaves message and table agreeing; here the
+            # WRITER writes them, from ITS OWN list, after our ok - so rendering
+            # 4 of the 5 entries it sent would hand it an ok to write 5 rows
+            # against, the exact divergence this kind exists to prevent. An
+            # entry that is not an object carries no id to name, so it answers
+            # like any other unnameable one: bare ``bad_role``.
+            return {"ok": False, "error": "bad_role"}
+        try:
+            role_id = int(entry.get("role_id"))
+        except (TypeError, ValueError):
+            # Nothing to name: the value was not an id, and it is never echoed
+            # back unparsed.
+            return {"ok": False, "error": "bad_role"}
+        role = guild.get_role(role_id)
         if role is None:
-            # Deleted since the row was written. Not a gate refusal (there is
-            # nothing left to judge), so it keeps the module's existing
-            # ``bad_role`` code rather than inventing a third ``failures``
-            # reason - but it still names the id, and it still refuses the WHOLE
-            # edit: dropping the button would leave the table holding a row the
-            # message no longer shows.
-            return {"ok": False, "error": "bad_role", "role_id": str(row["role_id"])}
+            # Not a role of this guild (deleted, or never one). Not a gate
+            # refusal - there is nothing left to judge - so it keeps the module's
+            # existing ``bad_role`` code rather than inventing a third
+            # ``failures`` reason, but it names the id, and it still refuses the
+            # WHOLE edit rather than rendering the panel minus that button.
+            return {"ok": False, "error": "bad_role", "role_id": str(role_id)}
+        if role_id in seen_roles:
+            continue  # one button per role, mirroring the primary key
+        seen_roles.add(role_id)
         reason = _role_gate_failure(actor, guild, role)
         if reason is not None:
-            failures.append(_role_failure(role.id, reason))
+            failures.append(_role_failure(role_id, reason))
             continue
-        buttons.append(_panel_button(role, row["label"], row["emoji"], row["style"]))
+        buttons.append(
+            _panel_button(
+                role, entry.get("label"), entry.get("emoji"), entry.get("style")
+            )
+        )
 
     if failures:
-        # Nothing edited, nothing written: the message keeps its current buttons
-        # and the rows keep their current content.
+        # Nothing edited, nothing written: the message keeps its current buttons,
+        # and this executor never writes button_roles at all.
         return _role_refusal(failures)
+
+    # No empty-set check here, unlike the post executor: nothing in the loop
+    # above can DROP an entry any more. A non-object refuses, an unusable id
+    # refuses, and every other entry either renders a button or lands in
+    # ``failures`` - the only ``continue`` left is a repeat of a role already
+    # answered for. A non-empty list with no failures therefore always leaves at
+    # least one button behind.
 
     # get_channel_or_thread, not get_channel: a panel can have been attached to a
     # message living in a thread (the /buttonrole attach flow), and this kind
