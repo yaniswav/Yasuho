@@ -807,18 +807,32 @@ class Welcome(commands.Cog):
         """Simulate a join for yourself to preview the welcome."""
 
         config = await self.get_config(ctx.guild.id)
-        content, embed = self._compose(config, ctx.author)
-        file = (
-            await self._render_card_file(ctx.author)
-            if config.get("card")
-            else None
-        )
-        kwargs = {"embed": embed}
-        if content:
-            kwargs["content"] = content
-        if file is not None:
-            kwargs["file"] = file
-        await ctx.send(**kwargs)
+
+        # SLOW WORK past this point when the card is on: _render_card_file
+        # downloads the avatar and hands a Pillow decode + encode to
+        # rendering.run_image_job, which runs in the executor BEHIND a shared
+        # image semaphore - so the wait is not just the render, it is the queue
+        # in front of it. Every other card surface in the bot already defers for
+        # exactly this (/rank, /rankcard, `levelconfig card background`); this
+        # preview was the one that did not. The defer is public because the
+        # answer is: this posts the greeting in the channel, as a real join
+        # would. On the PREFIX path ctx.defer() is a documented no-op, so
+        # ctx.typing() covers both - a real typing indicator there, an
+        # already-answered defer on the slash side.
+        await ctx.defer()
+        async with ctx.typing():
+            content, embed = self._compose(config, ctx.author)
+            file = (
+                await self._render_card_file(ctx.author)
+                if config.get("card")
+                else None
+            )
+            kwargs = {"embed": embed}
+            if content:
+                kwargs["content"] = content
+            if file is not None:
+                kwargs["file"] = file
+            await ctx.send(**kwargs)
 
     # -- join listener --------------------------------------------------
     @commands.Cog.listener()

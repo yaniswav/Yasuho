@@ -18,7 +18,7 @@ from .queries import (
     USER_STATS_QUERY,
     VIEWER_QUERY,
 )
-from tools import crypto, privacy
+from tools import crypto, interactions, privacy
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -290,6 +290,33 @@ class AccountMixin:
         if not self._login_available():
             return await ctx.send(_("AniList account linking is not configured."))
 
+        # ACKNOWLEDGE FIRST - this command LOST its interaction in production
+        # (404 10062 "Unknown interaction", 2026-08-25 03:23). The first thing
+        # it does is DM the invoker, and a DM is not one round trip but two:
+        # Discord has to open the DM channel (POST /users/@me/channels, its own
+        # heavily rate-limited route) before the message send even starts. Both
+        # ran before the only ctx.send in the body, so on a slow DM open the
+        # token was already dead by the time we answered and the user saw
+        # "The application did not respond" although the DM had gone out.
+        #
+        # EPHEMERAL on purpose, and it has to be: the two answers below are both
+        # ephemeral (the Forbidden fallback carries the OAuth link, which must
+        # not be public), and a PUBLIC defer followed by an ephemeral follow-up
+        # leaves Discord's "thinking" placeholder in the channel forever - the
+        # trap cogs/community/votes.py documents. Deferring ephemerally keeps
+        # the whole flow private, which is what an account link should be.
+        # On the PREFIX path this is a documented no-op (discord.py:
+        # Context.defer only acts when self.interaction is set) and `ephemeral`
+        # is likewise ignored by Context.send without an interaction, so a
+        # `?anilist login` behaves exactly as it did.
+        #
+        # Through `interactions.defer_ephemeral` rather than `ctx.defer` so the
+        # privacy choice is RECORDED on the interaction: discord.py keeps no
+        # trace of it, and the global error handler - which answers a crash in
+        # this command without ever seeing this body - would otherwise report
+        # publicly on a flow whose every reply is ephemeral.
+        await interactions.defer_ephemeral(ctx)
+
         instructions = self._login_instructions()
 
         view = LoginView(self, ctx.author.id)
@@ -300,7 +327,7 @@ class AccountMixin:
             view.message = await ctx.send(instructions, view=view, ephemeral=True)
             return
 
-        await ctx.send(_("Check your DMs."))
+        await ctx.send(_("Check your DMs."), ephemeral=ctx.interaction is not None)
 
     @anilist.command(name="code")
     @commands.cooldown(1, 10, commands.BucketType.user)
@@ -310,6 +337,26 @@ class AccountMixin:
 
         if not self._login_available():
             return await ctx.send(_("AniList account linking is not configured."))
+
+        # ACKNOWLEDGE FIRST, for two round trips that both run before the only
+        # answer this command has:
+        #
+        # 1. the PIN-hiding delete below. It is NOT prefix-only: ext.commands
+        #    fabricates a SYNTHETIC ctx.message for an application-command
+        #    Context (Context.from_interaction builds one carrying the
+        #    interaction id), so `ctx.message is not None` is true on the slash
+        #    path too and the delete really does go out as a REST call - one
+        #    that 404s, which costs the same wall clock as one that works.
+        # 2. _exchange_code, which is a live HTTPS call to anilist.co (the OAuth
+        #    token exchange, then the viewer query). That is a THIRD-PARTY API
+        #    with no latency we control - AniList has already given this bot one
+        #    slow-and-rate-limited episode - so it belongs behind an ack.
+        #
+        # Ephemeral to match both answers below (a PIN exchange is private, and
+        # they already send ephemeral on the slash path); a no-op on prefix.
+        # Marked as an ephemeral flow (see `anilist login` above) so a crash
+        # report stays private too - this command handles a PIN.
+        await interactions.defer_ephemeral(ctx)
 
         # Hide the PIN if it was posted in a guild text channel.
         if ctx.message is not None and ctx.guild is not None:

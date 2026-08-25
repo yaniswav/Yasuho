@@ -2033,6 +2033,16 @@ class LevelConfigUI(commands.Cog):
         """Give a member XP (adds to their current total)."""
         cog = await self._require(ctx, "LevelAdmin")
         if cog is not None:
+            # ACKNOWLEDGE FIRST. An XP edit is not a database write and done:
+            # crossing a level threshold routes through Leveling's reward and
+            # announce seams, which means a LOOP of member.add_roles (one REST
+            # call per reward role, see LevelRewards._apply_role_changes) and
+            # then an announce that, in DM mode, has to open a DM channel and
+            # send into it - the very two-round-trip DM shape that expired
+            # `/anilist login`'s token in production. All of it runs before the
+            # confirmation embed, so the answer waits on every one of them.
+            # Public, like that confirmation; a documented no-op on prefix.
+            await ctx.defer()
             await cog.cmd_give(ctx, member, amount)
 
     @levelconfig_xp.command(name="take")
@@ -2046,6 +2056,9 @@ class LevelConfigUI(commands.Cog):
         """Take XP from a member (floors at 0)."""
         cog = await self._require(ctx, "LevelAdmin")
         if cog is not None:
+            # Same reason as `xp give` above: a downward crossing reconciles
+            # reward roles, which is a loop of REST role edits before the answer.
+            await ctx.defer()
             await cog.cmd_take(ctx, member, amount)
 
     @levelconfig_xp.command(name="set")
@@ -2059,6 +2072,9 @@ class LevelConfigUI(commands.Cog):
         """Set a member's XP to an exact total."""
         cog = await self._require(ctx, "LevelAdmin")
         if cog is not None:
+            # Same reason as `xp give` above: a set can cross a threshold in
+            # either direction, so it pays the same reward + announce round trips.
+            await ctx.defer()
             await cog.cmd_set(ctx, member, amount)
 
     @levelconfig_xp.command(name="reset")

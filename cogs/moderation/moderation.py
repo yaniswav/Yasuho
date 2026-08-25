@@ -1144,6 +1144,18 @@ class Moderation(commands.Cog):
                 )
             )
 
+        # ACKNOWLEDGE FIRST. ``member`` is free text, so the SLASH path runs
+        # MemberConverter in the body, and on a cache miss that converter does
+        # not read the cache and give up - it asks the GATEWAY for the member
+        # (ConnectionState.query_members) and waits on the chunk reply under
+        # `asyncio.wait_for(..., timeout=30.0)`. A miss is the normal case here:
+        # core.py sets chunk_guilds_at_startup=False, so only people who have
+        # spoken are cached. Waiting up to thirty seconds inside a three-second
+        # window is not a tail risk, it is arithmetic - the token dies while the
+        # converter is still waiting, and the role change that follows lands
+        # with nobody left to tell. Public, like the answer below; a no-op on
+        # the prefix path, where the same converter simply blocks the command.
+        await ctx.defer()
         converter = MemberConverter()
         m = await converter.convert(ctx, member)
         await m.add_roles(role)
@@ -1205,6 +1217,10 @@ class Moderation(commands.Cog):
                 )
             )
 
+        # ACKNOWLEDGE FIRST - the same gateway-query converter as addrole (see
+        # the note there): an uncached name makes MemberConverter wait on a
+        # member chunk for up to thirty seconds, inside a three-second window.
+        await ctx.defer()
         converter = MemberConverter()
         m = await converter.convert(ctx, member)
         await m.remove_roles(role)
