@@ -66,11 +66,12 @@ dropped listen connection is re-established with backoff.
 
 CONFIGURER RANK ON THE ROLE-PUBLISHING KINDS (and the surfaces still not gatable)
 --------------------------------------------------------------------------------
-FOUR kinds publish a role a member can then obtain by clicking:
-``verify_button_post``, ``reaction_role_add``, ``button_panel_post`` and
-``role_menu_post``. Each of them now asks BOTH halves of the self-role question,
-the same pair ``/verify setup``, ``/reactionrole``, ``/buttonrole`` and
-``/rolemenu`` ask in Discord:
+FIVE kinds publish a role a member can then obtain by clicking:
+``verify_button_post``, ``reaction_role_add``, ``button_panel_post``,
+``button_panel_edit`` and ``role_menu_post``. Each of them now asks BOTH halves
+of the self-role question, the same pair ``/verify setup``, ``/reactionrole``,
+``/buttonrole`` and ``/rolemenu`` ask in Discord (both live in
+:func:`_role_gate_failure`, which every one of the five calls):
 
 * can Yasuho hand this role out at all (``modchecks.bot_can_assign_role``) -
   kept as its own call so its failure keeps its own code, ``role_not_assignable``;
@@ -102,6 +103,56 @@ something useful:
 Cost: cache hit = free; cache miss = at most ONE
 ``GET /guilds/{id}/members/{user}`` per action. These are operator-driven
 dashboard actions, not a hot path.
+
+THE GATE JUDGES A WRITE; ``button_panel_edit`` READS ROWS WRITTEN EARLIER, so it
+RE-VALIDATES EVERY ROLE AT RENDER TIME. The other four gate a role the action
+itself names - in its payload, or (``verify_button_post``) in a setting read in
+that same instant - so the check and the publication are one moment.
+``button_panel_edit`` takes its roles from the ``button_roles`` rows the
+dashboard wrote at ANOTHER moment, and NOTHING in this bot re-reads a stored role
+when that role changes (there is no ``on_guild_role_update`` listener anywhere in
+this bot - grep it). A role that passed the gate when its row was written can
+since have gained permissions, moved above the actor, or become
+integration-managed. Trusting "it was checked at write time" would therefore make
+the edit kind a BYPASS of the gate itself: publish a harmless role past it,
+rewrite the rows, trigger an edit that republishes them unchecked - front door
+guarded, window open. So the pair runs again, on every stored role, against the
+state of NOW.
+
+NAMING THE OFFENDING ROLES (the ``failures`` list)
+--------------------------------------------------
+A refusal about roles carries EVERY role it refuses over, so a 25-button panel or
+a 25-option menu does not leave the operator guessing which one::
+
+    {"ok": false, "error": "role_above_actor",
+     "failures": [{"role_id": "...", "reason": "role_above_actor"},
+                  {"role_id": "...", "reason": "role_not_assignable"}]}
+
+* ``error`` stays the DOMINANT single code, for any consumer reading one code.
+* ``failures`` is ALWAYS present and ALWAYS a list on a role refusal, even with
+  one element (``verify_button_post`` and ``reaction_role_add`` publish exactly
+  one role and still answer with a list) - ONE shape for the consumer.
+* each id carries ITS OWN ``reason``, never the group's: two roles of one panel
+  can fail for two different causes, and a shared code would make the dashboard
+  print a sentence that is false for one of them.
+* PRECEDENCE, deterministic and documented (:data:`_ROLE_FAILURE_PRECEDENCE`):
+  ``role_above_actor`` beats ``role_not_assignable``. It is a fact about the
+  ACTOR - their own rank, the person on the screen - where the other is a limit
+  of Yasuho's position, fixable by moving her role up. The header must not depend
+  on button order.
+* role ids are STRINGS, like every snowflake this module returns; the dashboard
+  resolves the names itself.
+
+The list only means something because the executors COLLECT: they check every
+role and refuse afterwards, instead of returning at the first bad one. A list
+with first-failure semantics could never hold more than one element - a shape
+that looks like it answers and does not. What is NOT collected is a structurally
+impossible role (``bad_role``: an unparsable id, or a stored role that no longer
+exists at all) - there is nothing to gate, so it refuses on the spot, keeping its
+own code; the edit kind returns the offending id alongside it as ``role_id``.
+``role_menu_post`` can only ever report ``role_above_actor``: its bot half DROPS
+an ungrantable option rather than refusing (documented at the call site), so
+``role_not_assignable`` is not one of its outcomes.
 
 ORDER MATTERS FOR THE CODES THE WEB APP RENDERS. On an actor kind the gate runs
 BEFORE the executor, so it also runs before the payload is validated: a
@@ -349,6 +400,71 @@ def _role_menus_module():
     return rolemenus
 
 
+# ---------------------------------------------------------------------------
+# The role gate every publishing kind applies, and the ``failures`` list it
+# reports. See the module docstring ("NAMING THE OFFENDING ROLES") for the
+# contract these three helpers implement.
+# ---------------------------------------------------------------------------
+
+# The dominant ``error`` codes a role refusal can carry, HIGHEST PRECEDENCE
+# FIRST. One panel can fail for BOTH reasons at once (a role above the actor
+# next to an integration-managed booster role), so which one becomes the single
+# ``error`` header must be a documented fact rather than a function of button
+# order: ``role_above_actor`` wins because it is a fact about the ACTOR - their
+# own rank, the person reading the dashboard - whereas ``role_not_assignable``
+# is a limit of Yasuho's own position, fixable by moving her role up.
+_ROLE_FAILURE_PRECEDENCE = ("role_above_actor", "role_not_assignable")
+
+
+def _role_gate_failure(actor, guild, role):
+    """The reason ``role`` may not be published, or ``None`` when it may.
+
+    The pair the self-role surfaces ask, in the order they all ask it: the BOT
+    half first (``bot_can_assign_role`` -> ``role_not_assignable``), then the
+    CONFIGURER half (``self_assignable_role_error`` -> ``role_above_actor``).
+    The second call composes both halves, so it would cover the first on its
+    own; keeping the bot half as its own FIRST call is what gives the two
+    failures two distinct codes - and what makes ``role_above_actor`` mean a
+    RANK problem and nothing else.
+    """
+    if not modchecks.bot_can_assign_role(role, guild):
+        return "role_not_assignable"
+    if modchecks.self_assignable_role_error(actor, guild, role):
+        # The helper's reason is a TRANSLATED human string for a Discord reply;
+        # the queue speaks codes only and the dashboard renders its own copy.
+        return "role_above_actor"
+    return None
+
+
+def _role_failure(role_id, reason):
+    """One ``failures`` entry: the role id as a STRING, carrying ITS OWN reason.
+
+    Never the group's reason: two roles of the same panel can fail for two
+    different causes, and a shared code would make the dashboard print a
+    sentence that is false for one of them. Ids are strings like every other
+    snowflake this module returns (JSON-safe); the dashboard resolves names.
+    """
+    return {"role_id": str(role_id), "reason": reason}
+
+
+def _role_refusal(failures):
+    """Build the refusal from EVERY collected failure: dominant code + the list.
+
+    ``{"ok": False, "error": <dominant>, "failures": [...]}``. ``error`` stays
+    the single machine-readable code for anything reading one code, chosen by
+    :data:`_ROLE_FAILURE_PRECEDENCE`; ``failures`` is always a list, even with a
+    single element, so the dashboard has ONE shape to handle.
+    """
+    reasons = [f["reason"] for f in failures]
+    for code in _ROLE_FAILURE_PRECEDENCE:
+        if code in reasons:
+            dominant = code
+            break
+    else:  # pragma: no cover - defensive: every caller passes a known reason
+        dominant = reasons[0] if reasons else _ROLE_FAILURE_PRECEDENCE[-1]
+    return {"ok": False, "error": dominant, "failures": list(failures)}
+
+
 async def _exec_verify_button_post(bot, guild_id, payload, actor):
     """Post the persistent Verify button embed into a channel.
 
@@ -404,13 +520,13 @@ async def _exec_verify_button_post(bot, guild_id, payload, actor):
     )
     role = guild.get_role(role_id) if role_id else None
     if role is not None:
-        if not modchecks.bot_can_assign_role(role, guild):
-            return {"ok": False, "error": "role_not_assignable"}
-        if modchecks.self_assignable_role_error(actor, guild, role):
-            # The helper's reason is a TRANSLATED human string for a Discord
-            # reply; the queue speaks codes only, so it is used as a boolean and
-            # the dashboard renders its own copy.
-            return {"ok": False, "error": "role_above_actor"}
+        reason = _role_gate_failure(actor, guild, role)
+        if reason is not None:
+            # ONE role can fail here, but it is reported in the same
+            # ``failures`` list shape as a 25-button panel: one shape for the
+            # dashboard to handle, never a special case for the single-role
+            # kinds (module docstring).
+            return _role_refusal([_role_failure(role.id, reason)])
 
     # Custom message is optional free text; bound it and never translate it. Only
     # the default copy is localised, to the guild's configured language.
@@ -496,22 +612,19 @@ async def _exec_reaction_role_add(bot, guild_id, payload, actor):
     role = guild.get_role(role_id)
     if role is None:
         return {"ok": False, "error": "bad_role"}
-    # Mirror the button-panel executor's assignability guard (and the /buttonrole
-    # builder's BuilderView._can_assign) so a dashboard write can't map an emoji
-    # to a role Yasuho could never hand out: @everyone, an integration-managed
-    # role, or one at/above her own top role. Checked BEFORE the reaction is
-    # added so a refused mapping leaves no stray reaction on the message.
-    if not modchecks.bot_can_assign_role(role, guild):
-        return {"ok": False, "error": "role_not_assignable"}
-    # ... and the CONFIGURER half, the one /reactionrole asks: the person who
-    # asked for this from the web app must outrank the role they are publishing.
-    # self_assignable_role_error composes both halves, so this call alone would
-    # cover the line above - the bot half is kept separate ON PURPOSE, checked
-    # FIRST, so the two failures keep two distinct codes for the dashboard (and
-    # so this one can only ever fire for the hierarchy half). Its return is a
-    # translated human string for a Discord reply; the queue speaks codes only.
-    if modchecks.self_assignable_role_error(actor, guild, role):
-        return {"ok": False, "error": "role_above_actor"}
+    # The publishing gate, both halves (_role_gate_failure): the BOT half mirrors
+    # the /buttonrole builder's BuilderView._can_assign, so a dashboard write
+    # can't map an emoji to a role Yasuho could never hand out (@everyone, an
+    # integration-managed role, one at/above her own top role), and the
+    # CONFIGURER half is the one /reactionrole asks - the person who asked for
+    # this from the web app must outrank the role they are publishing. Checked
+    # BEFORE the reaction is added, so a refused mapping leaves no stray reaction
+    # on the message. A mapping names exactly ONE role, so the ``failures`` list
+    # can only ever hold one entry here - it is still a list, because the
+    # dashboard has ONE shape to handle (module docstring).
+    reason = _role_gate_failure(actor, guild, role)
+    if reason is not None:
+        return _role_refusal([_role_failure(role_id, reason)])
 
     # Fetch first (a missing / inaccessible message is distinct from a reaction
     # that can't be added), then react. Both raise on failure and are mapped to a
@@ -622,6 +735,68 @@ async def _exec_reaction_role_remove(bot, guild_id, payload):
 _MAX_BUTTON_LABEL = 80
 
 
+def _panel_button(role, label, emoji, style):
+    """Normalise ONE panel button: bounded label, optional emoji, valid style.
+
+    Shared by the post executor (whose values come from the payload) and the
+    edit one (whose values come from the stored ``button_roles`` row), so a
+    dashboard-written row is bounded exactly like a dashboard-sent payload:
+    ``style`` coerced to a callable ButtonStyle int (1/2/3/4, secondary
+    fallback), an empty label falling back to the role name and bounded to 80,
+    a blank emoji dropped. Never raises.
+    """
+    try:
+        style = int(style)
+    except (TypeError, ValueError):
+        style = 2
+    if style not in (1, 2, 3, 4):
+        style = 2
+
+    if not isinstance(label, str) or not label.strip():
+        label = role.name
+    label = label[:_MAX_BUTTON_LABEL]
+
+    if not isinstance(emoji, str) or not emoji.strip():
+        emoji = None
+    else:
+        emoji = emoji.strip()
+
+    return {"role_id": role.id, "label": label, "emoji": emoji, "style": style}
+
+
+def _panel_rows(buttons):
+    """The (role_id, label, emoji, style) tuples ``ButtonRoleView`` expects."""
+    return [(b["role_id"], b["label"], b["emoji"], b["style"]) for b in buttons]
+
+
+def _register_panel_view(bot, br, rows, message_id):
+    """Re-register a panel's persistent view so its buttons survive a restart.
+
+    Of THIS process only: a restart of the bot rebuilds every panel's view from
+    the table in ``ButtonRoles.cog_load``. Shared by the post and edit
+    executors - an edit must re-register too, or the in-memory view would keep
+    answering with the OLD button set until the next boot. Best effort: a
+    failure here is logged, never fatal to an action whose message is already
+    live.
+
+    discord.py's view store is keyed on (message_id, custom_id) and
+    ``ButtonRoleButton`` spells its own ``br:<role_id>``, so re-registering
+    REPLACES the handler of every button that is still on the panel and leaves
+    behind the entry of one that was removed from it, until the next boot. That
+    entry answers a custom_id the message no longer carries; the cog's own
+    re-post/attach path leaves exactly the same one, and the grant behind it
+    still goes through Discord, which refuses a role Yasuho may not hand out
+    (``ButtonRoleButton.callback`` reports that 403 rather than granting).
+    """
+    try:
+        bot.add_view(br.ButtonRoleView(rows), message_id=message_id)
+    except Exception:
+        log.exception(
+            "dashboard_actions: failed to register button-role view for message %s",
+            message_id,
+        )
+
+
 async def _exec_button_panel_post(bot, guild_id, payload, actor):
     """Post an embed + self-assignable role buttons panel into a channel.
 
@@ -646,7 +821,9 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
     view via ``bot.add_view`` so the buttons keep working after a restart of THIS
     process (a restart of the bot re-registers them from the table in
     ``ButtonRoles.cog_load``). The rendered embed is NOT stored -- it lives in the
-    posted message, so a panel's embed cannot be edited from the dashboard.
+    posted message, so a panel's embed cannot be edited from the dashboard; its
+    BUTTONS can, through ``button_panel_edit`` below, which re-renders them from
+    the very rows this executor writes.
     """
     try:
         channel_id = int(payload.get("channel_id"))
@@ -679,7 +856,11 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
         return {"ok": False, "error": "too_many_buttons"}
 
     # Validate + normalise each button; dedup by role (the PK is (message, role)).
+    # The dedup runs BEFORE the gate so a role named twice is gated once and
+    # named once in ``failures`` - the answer for a repeat is the answer already
+    # collected for its first mention.
     seen_roles = set()
+    failures = []
     buttons = []
     for entry in raw_buttons:
         if not isinstance(entry, dict):
@@ -691,42 +872,33 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
         role = guild.get_role(role_id)
         if role is None:
             return {"ok": False, "error": "bad_role"}
-        # Mirror the /buttonrole builder's assignability guard (BuilderView.
-        # _can_assign) so a dashboard write can't persist a button for a
-        # dead/dangerous role: @everyone, an integration-managed role, or one
-        # at/above our own top role.
-        if not modchecks.bot_can_assign_role(role, guild):
-            return {"ok": False, "error": "role_not_assignable"}
-        # ... plus the CONFIGURER half /buttonrole asks (module docstring). Kept
-        # as a second call after the bot half so each failure keeps its own code;
-        # refused BEFORE anything is sent or persisted.
-        if modchecks.self_assignable_role_error(actor, guild, role):
-            return {"ok": False, "error": "role_above_actor"}
         if role_id in seen_roles:
             continue  # one button per role, mirroring the primary key
         seen_roles.add(role_id)
 
-        try:
-            style = int(entry.get("style"))
-        except (TypeError, ValueError):
-            style = 2
-        if style not in (1, 2, 3, 4):
-            style = 2
-
-        label = entry.get("label")
-        if not isinstance(label, str) or not label.strip():
-            label = role.name
-        label = label[:_MAX_BUTTON_LABEL]
-
-        emoji = entry.get("emoji")
-        if not isinstance(emoji, str) or not emoji.strip():
-            emoji = None
-        else:
-            emoji = emoji.strip()
+        # The publishing gate, both halves (_role_gate_failure): the BOT half
+        # mirrors the /buttonrole builder's own guard (BuilderView._can_assign)
+        # so a dashboard write can't persist a button for a dead/dangerous role,
+        # and the CONFIGURER half is the one /buttonrole asks (module docstring).
+        # COLLECTED, not returned: a 25-button panel must name EVERY role it
+        # refuses over, so the operator fixes them in one pass instead of
+        # discovering them one failed action at a time.
+        reason = _role_gate_failure(actor, guild, role)
+        if reason is not None:
+            failures.append(_role_failure(role_id, reason))
+            continue
 
         buttons.append(
-            {"role_id": role_id, "label": label, "emoji": emoji, "style": style}
+            _panel_button(
+                role, entry.get("label"), entry.get("emoji"), entry.get("style")
+            )
         )
+
+    # Refused BEFORE anything is sent or persisted - and BEFORE the empty check,
+    # so a panel whose every button is refused names its roles rather than
+    # answering the unhelpful "no_buttons".
+    if failures:
+        return _role_refusal(failures)
 
     if not buttons:
         return {"ok": False, "error": "no_buttons"}
@@ -741,7 +913,7 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
         return {"ok": False, "error": "empty_embed"}
 
     # rows shape matches ButtonRoleView.__init__: (role_id, label, emoji, style).
-    rows = [(b["role_id"], b["label"], b["emoji"], b["style"]) for b in buttons]
+    rows = _panel_rows(buttons)
     msg = await channel.send(embed=embed, view=br.ButtonRoleView(rows))
 
     # Persist message-authoritatively, exactly like BuilderView._persist: replace
@@ -774,18 +946,197 @@ async def _exec_button_panel_post(bot, guild_id, payload, actor):
 
     # Re-register the persistent view so the buttons survive a restart of THIS
     # process (the cog rebuilds it from the table on the bot's next boot).
-    try:
-        bot.add_view(br.ButtonRoleView(rows), message_id=msg.id)
-    except Exception:
-        log.exception(
-            "dashboard_actions: failed to register button-role view for message %s",
-            msg.id,
-        )
+    _register_panel_view(bot, br, rows, msg.id)
 
     return {
         "ok": True,
         "message_id": str(msg.id),
         "channel_id": str(channel.id),
+    }
+
+
+async def _exec_button_panel_edit(bot, guild_id, payload, actor):
+    """Re-render an EXISTING panel's BUTTONS in place, from its stored rows.
+
+    Payload: ``{"message_id", "channel_id"}`` (snowflake strings). The buttons
+    are deliberately NOT in the payload: the dashboard writes the
+    ``button_roles`` rows itself, and this kind renders exactly what the table
+    holds for that message, so the Discord message and the table cannot disagree
+    about what the panel is.
+
+    WHY IT EXISTS: without it, fixing a typo in a label or adding a button means
+    delete + re-post, which changes the message id - pinned links break and the
+    panel jumps to the bottom of the channel. Editing in place keeps both.
+
+    THE EMBED IS NOT TOUCHED. Nothing stores it (the post executor renders it
+    into the message and keeps no copy), so this kind edits the COMPONENTS ONLY;
+    the dashboard shows that as an honest note. ``msg.edit(view=...)`` leaves the
+    message's embed exactly as it was.
+
+    BUTTON ORDER comes out as ``ORDER BY role_id``: ``button_roles`` has no
+    ordering column (its key is ``(message_id, role_id)``), so the payload order
+    a panel was POSTED with was never stored and cannot be restored. Ordering by
+    role id is at least deterministic - two edits of the same rows render the
+    same panel.
+
+    ``guild_id`` is authoritative (the claimed row, written under the dashboard's
+    manage-guild gate) and EVERYTHING else is re-validated against live state:
+    the row SELECT is scoped to that guild (a message id belonging to another
+    server simply finds no rows -> ``panel_not_found``), the stored channel must
+    still exist and the message must still be fetchable, the row count is
+    re-checked against ``MAX_BUTTONS`` (the dashboard writes those rows, so 26 of
+    them is a thing it can do, and a 26-button view would raise), and the
+    payload's ``channel_id`` must match the stored one (``channel_mismatch``: a
+    message cannot change channel, so a disagreement means a stale or crafted
+    request, never something to act on).
+
+    RE-VALIDATE EVERY ROLE AT RENDER TIME - the sharp half of this kind. The rows
+    were written at ANOTHER MOMENT and validated (if at all) against the state of
+    that moment; nothing re-reads them when a role changes (there is no
+    ``on_guild_role_update`` listener anywhere in the bot). A role that was fine
+    when the row was written can since have been given permissions, moved above
+    the actor, or become integration-managed. So the same pair every publishing
+    kind applies - ``_role_gate_failure``, bot half then configurer half - runs
+    here on EVERY role, against the state of NOW. Without it this kind would be a
+    clean BYPASS of the gate: publish a harmless role past it, rewrite the rows,
+    then trigger an edit that republishes them unchecked.
+
+    PARTIAL FAILURE REFUSES THE WHOLE EDIT, leaving the message AND the rows
+    untouched. Rendering 4 of 5 buttons would leave ``button_roles`` holding five
+    while the message shows four - and since the dashboard's panel list reads the
+    TABLE, it would keep showing five buttons for a message carrying four with
+    nothing anywhere to notice the divergence. An ``ok`` on a partial publish is
+    not a wrong answer, it is an answer that PREVENTS knowing it is wrong. Every
+    refused role is named in ``failures`` (module docstring).
+
+    WHAT THIS EXECUTOR CANNOT KEEP IN STEP, and the caller's obligation. The
+    paragraph above is true of the EXECUTOR: it never renders a subset and never
+    touches the table. It is NOT true of the exchange as a whole, because this
+    kind's premise is that the dashboard writes the ``button_roles`` rows BEFORE
+    enqueuing the action. So on every refusal - a gate failure, ``bad_role``,
+    ``panel_not_found``, ``channel_mismatch``, ``too_many_buttons``,
+    ``edit_failed``, ``guild_unavailable``, any ``actor_*`` - the writer's rows
+    are left AHEAD of the message, which is the very divergence this design
+    exists to prevent, and nothing bot-side can detect or reconcile it. The
+    dashboard must therefore roll its write back, or re-drive the action until it
+    succeeds. It matters beyond the panel list: ``ButtonRoles.cog_load`` rebuilds
+    the persistent view from the TABLE at boot, so a button the message still
+    shows can come back without a handler. Not exploitable - every
+    ``ButtonRoleView`` is registered against a real ``message_id``, so no
+    ``br:*`` custom_id is ever globally addressable - but it is a dead button.
+
+    REUSES the post executor's seams verbatim rather than growing a second
+    renderer: ``_button_roles_module`` (``ButtonRoleView`` + ``MAX_BUTTONS``),
+    ``_panel_button`` for the per-button normalisation, ``_panel_rows`` for the
+    view's row tuples and ``_register_panel_view`` for the persistence-view
+    re-registration - which an edit needs as much as a post does, or the view
+    registered in memory would keep answering with the OLD button set until the
+    next boot.
+    """
+    try:
+        message_id = int(payload.get("message_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "message_not_found"}
+    try:
+        channel_id = int(payload.get("channel_id"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "bad_channel_id"}
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    me = guild.me
+    if me is None:
+        # Without her own member object the gate below cannot ask whether Yasuho
+        # can hand a role out, and "I could not check" must never render as a
+        # per-role refusal that is really a missing cache.
+        return {"ok": False, "error": "guild_unavailable"}
+
+    # Guild-scoped, exactly like the delete executor's DELETE: the primary key
+    # carries no guild, so an unqualified read would let a manage-guild user of
+    # guild B re-render (and re-register) guild A's panel by naming its id.
+    rows = await bot.db_pool.fetch(
+        "SELECT channel_id, role_id, label, emoji, style "
+        "FROM button_roles "
+        "WHERE message_id = $1 AND guild_id = $2 "
+        "ORDER BY role_id;",
+        message_id,
+        guild_id,
+    )
+    if not rows:
+        return {"ok": False, "error": "panel_not_found"}
+
+    br = _button_roles_module()
+    max_buttons = getattr(br, "MAX_BUTTONS", 25)
+    if len(rows) > max_buttons:
+        return {"ok": False, "error": "too_many_buttons"}
+
+    # The PK is (message_id, role_id), so nothing in the schema forces every row
+    # of one message to agree on channel_id. Reading rows[0] would make the
+    # verdict depend on which role id sorted first, so a split set is refused
+    # outright rather than judged on a coin toss.
+    stored_channels = {row["channel_id"] for row in rows}
+    if len(stored_channels) != 1:
+        return {"ok": False, "error": "channel_mismatch"}
+    stored_channel_id = stored_channels.pop()
+    if channel_id != stored_channel_id:
+        return {"ok": False, "error": "channel_mismatch"}
+
+    # Render-time re-validation of every stored role, and the whole-or-nothing
+    # rule: collect, never drop, never render a subset.
+    buttons = []
+    failures = []
+    for row in rows:
+        role = guild.get_role(row["role_id"])
+        if role is None:
+            # Deleted since the row was written. Not a gate refusal (there is
+            # nothing left to judge), so it keeps the module's existing
+            # ``bad_role`` code rather than inventing a third ``failures``
+            # reason - but it still names the id, and it still refuses the WHOLE
+            # edit: dropping the button would leave the table holding a row the
+            # message no longer shows.
+            return {"ok": False, "error": "bad_role", "role_id": str(row["role_id"])}
+        reason = _role_gate_failure(actor, guild, role)
+        if reason is not None:
+            failures.append(_role_failure(role.id, reason))
+            continue
+        buttons.append(_panel_button(role, row["label"], row["emoji"], row["style"]))
+
+    if failures:
+        # Nothing edited, nothing written: the message keeps its current buttons
+        # and the rows keep their current content.
+        return _role_refusal(failures)
+
+    # get_channel_or_thread, not get_channel: a panel can have been attached to a
+    # message living in a thread (the /buttonrole attach flow), and this kind
+    # only ever EDITS a message that is already there - it never sends one, so
+    # the post executor's text-channel + send-permission gates do not apply.
+    channel = guild.get_channel_or_thread(stored_channel_id)
+    if channel is None:
+        return {"ok": False, "error": "channel_not_found"}
+    try:
+        message = await channel.fetch_message(message_id)
+    except Exception:
+        return {"ok": False, "error": "message_not_found"}
+
+    view_rows = _panel_rows(buttons)
+    try:
+        await message.edit(view=br.ButtonRoleView(view_rows))
+    except Exception:
+        log.exception(
+            "dashboard_actions: failed to edit button-role panel %s", message_id
+        )
+        # The rows are untouched either way, so the panel is still exactly what
+        # the table says it is - the edit simply did not land.
+        return {"ok": False, "error": "edit_failed"}
+
+    _register_panel_view(bot, br, view_rows, message_id)
+
+    return {
+        "ok": True,
+        "message_id": str(message_id),
+        "channel_id": str(stored_channel_id),
+        "buttons": len(view_rows),
     }
 
 
@@ -942,14 +1293,27 @@ async def _exec_role_menu_post(bot, guild_id, payload, actor):
     # silently, it is a privilege the actor asked for and must be told about
     # (/rolemenu refuses at the picker the same way). Nothing is posted or
     # persisted before this loop.
+    #
+    # The two halves are spelled out here rather than taken from
+    # _role_gate_failure BECAUSE they answer differently on this kind: the bot
+    # half FILTERS (a stale option is dropped, as it always was) where the shared
+    # helper refuses. Only the actor half refuses here, so ``role_not_assignable``
+    # is not a code this kind can return - and every option above the actor is
+    # COLLECTED so a 25-option menu names them all in one answer.
     kept = []
+    failures = []
     for o in options:
         role = guild.get_role(o["role_id"])
         if role is None or not modchecks.bot_can_assign_role(role, guild):
             continue
         if modchecks.self_assignable_role_error(actor, guild, role):
-            return {"ok": False, "error": "role_above_actor"}
+            failures.append(_role_failure(o["role_id"], "role_above_actor"))
+            continue
         kept.append(o)
+    # Before the emptiness check: a menu whose every option is above the actor
+    # must name those roles, not answer ``bad_role_all``.
+    if failures:
+        return _role_refusal(failures)
     options = kept
     if not options:
         return {"ok": False, "error": "bad_role_all"}
@@ -1333,6 +1697,7 @@ _EXECUTORS = {
     "reaction_role_add": _exec_reaction_role_add,
     "reaction_role_remove": _exec_reaction_role_remove,
     "button_panel_post": _exec_button_panel_post,
+    "button_panel_edit": _exec_button_panel_edit,
     "button_panel_delete": _exec_button_panel_delete,
     "role_menu_post": _exec_role_menu_post,
     "role_menu_delete": _exec_role_menu_delete,
@@ -1380,7 +1745,7 @@ _USER_KINDS = frozenset({"mydata_export"})
 # swallowed as ``internal_error``), and listing a kind whose executor does not
 # take one would do the mirror image.
 #
-# All four are guild-scoped: the actor is resolved against the row's SCOPE id via
+# All five are guild-scoped: the actor is resolved against the row's SCOPE id via
 # ``bot.get_guild``, so a kind in both this set and _USER_KINDS would look a guild
 # up by a user snowflake, find nothing and refuse - fail-closed, but nonsense, and
 # a test keeps the two sets disjoint.
@@ -1389,6 +1754,10 @@ _ACTOR_KINDS = frozenset(
         "verify_button_post",
         "reaction_role_add",
         "button_panel_post",
+        # RE-publishes stored roles, so it is gated exactly like the post kind.
+        # Leaving it out would be the whole gate's back door: post a harmless
+        # role past the gate, rewrite the rows, edit to republish unchecked.
+        "button_panel_edit",
         "role_menu_post",
     }
 )

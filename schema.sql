@@ -1142,11 +1142,15 @@ CREATE TABLE IF NOT EXISTS applied_fixups (
 -- AUTHENTICATED SESSION USER, written under the dashboard's requireManageGuild
 -- gate.  cogs/system/dashboard_actions.py
 --
--- ``requested_by`` IS SECURITY-BEARING, not just audit: for the four kinds that
+-- ``requested_by`` IS SECURITY-BEARING, not just audit: for the five kinds that
 -- publish a role a member can then obtain (verify_button_post,
--- reaction_role_add, button_panel_post, role_menu_post) the bot resolves it to a
--- Member and refuses the action unless that person outranks the role being
--- published (cogs/system/dashboard_actions._ACTOR_KINDS). It must therefore never
+-- reaction_role_add, button_panel_post, button_panel_edit, role_menu_post) the
+-- bot resolves it to a Member and refuses the action unless that person outranks
+-- the role being published (cogs/system/dashboard_actions._ACTOR_KINDS).
+-- ``button_panel_edit`` re-renders a panel from the ``button_roles`` rows below,
+-- which were written at ANOTHER moment, so it re-runs that check on every stored
+-- role at RENDER time - a role can have moved since its row was written.
+-- It must therefore never
 -- be taken from a form field or a URL param on the writer's side, and a NULL is
 -- a REFUSAL (``actor_missing``), never a downgrade to the bot-only check. The
 -- column stays nullable only because rows predating the gate exist; an "act on
