@@ -25,6 +25,28 @@ def names(s):
     return set(NAME_RE.findall(s or ""))
 
 
+
+def _sized(forms, num_plurals):
+    """Fit a carried-over plural translation to what THIS locale actually has.
+
+    Japanese has no grammatical plural: its catalogue declares one form, and
+    gettext hands back index 0 whatever the count is. A translation stored with
+    two forms therefore rendered its SINGULAR for every n - "every week" for a
+    reminder repeating every three weeks - and `pybabel compile` said only
+    "msg has more translations than num_plurals", which is easy to read as noise.
+    So when the locale wants fewer forms, keep the LAST one: where two forms
+    differ it is the one carrying {count}, which stays true for every n.
+    """
+    forms = tuple(forms)
+    if len(forms) == num_plurals:
+        return forms
+    if len(forms) > num_plurals:
+        kept = [f for f in forms if f]
+        chosen = kept[-1] if len(set(kept)) > 1 else (kept[0] if kept else "")
+        return (chosen,) * num_plurals
+    return forms + ("",) * (num_plurals - len(forms))
+
+
 summary = []
 for path in sorted(glob.glob(os.path.join(WORK, "*.json"))):
     code = os.path.splitext(os.path.basename(path))[0]
@@ -41,6 +63,13 @@ for path in sorted(glob.glob(os.path.join(WORK, "*.json"))):
         cat = read_po(f)
     try:
         cat.locale = code
+        # Babel caches num_plurals on first read, and read_po() reads it off the
+        # .pot (two forms, the English default) BEFORE the locale is known. Drop
+        # the cache so the locale's own rule wins: without this every catalogue
+        # is built as if it had two plural forms, including Japanese, which has
+        # one - and gettext then serves index 0 for every count.
+        cat._num_plurals = None
+        cat._plural_expr = None
     except Exception:
         pass
 
@@ -62,8 +91,12 @@ for path in sorted(glob.glob(os.path.join(WORK, "*.json"))):
         total += 1
         if isinstance(msg.id, tuple):
             if msg.id in plurals:
-                msg.string = plurals[msg.id]
+                msg.string = _sized(plurals[msg.id], cat.num_plurals)
                 applied += 1
+            elif msg.string:
+                # Untranslated entries arrive from the .pot sized for TWO forms;
+                # a one-form locale must not keep the spare.
+                msg.string = _sized(msg.string, cat.num_plurals)
             continue
         t = trans.get(msg.id)
         if not t or not isinstance(t, str):

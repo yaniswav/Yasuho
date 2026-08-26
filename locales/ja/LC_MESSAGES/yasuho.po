@@ -8,12 +8,12 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-22 17:26+0000\n"
+"POT-Creation-Date: 2026-08-26 05:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
 "Language-Team: ja <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=0;\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -84,46 +84,46 @@ msgstr "AniListユーザーが見つかりませんでした。"
 msgid "Link your account first with `/anilist login`."
 msgstr "まず `/anilist login` でアカウントを連携してください。"
 
-#: cogs/anilist/account.py:272 cogs/anilist/account.py:620
+#: cogs/anilist/account.py:272 cogs/anilist/account.py:667
 #: cogs/anilist/feed.py:2234
 msgid "Could not resolve your AniList account."
 msgstr "あなたのAniListアカウントを特定できませんでした。"
 
-#: cogs/anilist/account.py:291 cogs/anilist/account.py:312
+#: cogs/anilist/account.py:291 cogs/anilist/account.py:339
 #: cogs/anilist/hub.py:236
 msgid "AniList account linking is not configured."
 msgstr "AniListアカウントの連携が設定されていません。"
 
-#: cogs/anilist/account.py:303
+#: cogs/anilist/account.py:330
 msgid "Check your DMs."
 msgstr "DMを確認してください。"
 
-#: cogs/anilist/account.py:324 cogs/anilist/login.py:54
+#: cogs/anilist/account.py:371 cogs/anilist/login.py:54
 msgid "That code did not work, try `/anilist login` again."
 msgstr "そのコードは無効でした。もう一度 `/anilist login` を試してください。"
 
-#: cogs/anilist/account.py:329 cogs/anilist/login.py:58
+#: cogs/anilist/account.py:376 cogs/anilist/login.py:58
 #, python-brace-format
 msgid "Connected as {name}!"
 msgstr "{name} として接続しました!"
 
-#: cogs/anilist/account.py:343
+#: cogs/anilist/account.py:390
 msgid "Your AniList account has been unlinked."
 msgstr "AniListアカウントの連携を解除しました。"
 
-#: cogs/anilist/account.py:368 cogs/anilist/account.py:650
+#: cogs/anilist/account.py:415 cogs/anilist/account.py:697
 msgid "Status must be one of: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
 msgstr "ステータスは次のいずれかにしてください: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating。"
 
-#: cogs/anilist/account.py:384
+#: cogs/anilist/account.py:431
 msgid "Score must be zero or a positive number."
 msgstr "スコアは0または正の数にしてください。"
 
-#: cogs/anilist/account.py:610
+#: cogs/anilist/account.py:657
 msgid "Provide a name or link your account with `/anilist login`."
 msgstr "名前を指定するか、`/anilist login` でアカウントを連携してください。"
 
-#: cogs/anilist/account.py:644
+#: cogs/anilist/account.py:691
 msgid "Media type must be `anime` or `manga`."
 msgstr "メディアタイプは `anime` または `manga` にしてください。"
 
@@ -453,13 +453,13 @@ msgstr "完了"
 msgid "Drop"
 msgstr "中止"
 
-#: cogs/anilist/collection.py:249 cogs/config/rooms_config.py:389
+#: cogs/anilist/collection.py:249 cogs/config/rooms_config.py:393
 msgid "Edit"
 msgstr "編集"
 
 #: cogs/anilist/collection.py:380 cogs/anilist/feed_views.py:1197
 #: cogs/anilist/hub.py:285 cogs/community/usersettings.py:447
-#: cogs/config/rooms_config.py:451 tools/views.py:22
+#: cogs/config/rooms_config.py:455 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
 
@@ -468,7 +468,6 @@ msgstr "このパネルはあなた用ではありません。"
 msgid "{count} entry"
 msgid_plural "{count} entries"
 msgstr[0] "{count}件のエントリ"
-msgstr[1] "{count}件のエントリ"
 
 #: cogs/anilist/collection.py:408
 #, python-brace-format
@@ -480,7 +479,6 @@ msgstr "あなたの{type}リスト"
 msgid "{count} adult title is hidden here - open this list in an age-restricted (NSFW) channel to see it."
 msgid_plural "{count} adult titles are hidden here - open this list in an age-restricted (NSFW) channel to see them."
 msgstr[0] "成人向けの作品が {count} 件非表示になっています。年齢制限付き (NSFW) チャンネルでこのリストを開くと表示されます。"
-msgstr[1] "成人向けの作品が {count} 件非表示になっています。年齢制限付き (NSFW) チャンネルでこのリストを開くと表示されます。"
 
 #: cogs/anilist/collection.py:438
 #, python-brace-format
@@ -789,7 +787,6 @@ msgstr "まだいません"
 msgid "{names} ({count} user hidden here, still followed)"
 msgid_plural "{names} ({count} users hidden here, still followed)"
 msgstr[0] "{names} ({count}人をここで非表示、フォローは継続中)"
-msgstr[1] "{names} ({count}人をここで非表示、フォローは継続中)"
 
 #: cogs/anilist/feed.py:2343
 msgid "no one"
@@ -849,14 +846,12 @@ msgstr "このアクティビティはAniList上に存在しません。"
 msgid "Liked - this activity now has {n} like."
 msgid_plural "Liked - this activity now has {n} likes."
 msgstr[0] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
-msgstr[1] "いいねしました - このアクティビティのいいね数は{n}件になりました。"
 
 #: cogs/anilist/feed_delivery.py:418
 #, python-brace-format
 msgid "Like removed - this activity now has {n} like."
 msgid_plural "Like removed - this activity now has {n} likes."
 msgstr[0] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
-msgstr[1] "いいねを取り消しました - このアクティビティのいいね数は{n}件になりました。"
 
 #: cogs/anilist/feed_delivery.py:442
 msgid "Set progress / score"
@@ -946,42 +941,36 @@ msgstr "を中止しました"
 msgid "{n} like"
 msgid_plural "{n} likes"
 msgstr[0] "{n}件のいいね"
-msgstr[1] "{n}件のいいね"
 
 #: cogs/anilist/feed_render.py:113
 #, python-brace-format
 msgid "{n} reply"
 msgid_plural "{n} replies"
 msgstr[0] "{n}件の返信"
-msgstr[1] "{n}件の返信"
 
 #: cogs/anilist/feed_render.py:130
 #, python-brace-format
 msgid "{n} anime update"
 msgid_plural "{n} anime updates"
 msgstr[0] "{n}件のアニメ更新"
-msgstr[1] "{n}件のアニメ更新"
 
 #: cogs/anilist/feed_render.py:133
 #, python-brace-format
 msgid "{n} manga update"
 msgid_plural "{n} manga updates"
 msgstr[0] "{n}件のマンガ更新"
-msgstr[1] "{n}件のマンガ更新"
 
 #: cogs/anilist/feed_render.py:136
 #, python-brace-format
 msgid "{n} post"
 msgid_plural "{n} posts"
 msgstr[0] "{n}件の投稿"
-msgstr[1] "{n}件の投稿"
 
 #: cogs/anilist/feed_render.py:139
 #, python-brace-format
 msgid "{n} update"
 msgid_plural "{n} updates"
 msgstr[0] "{n}件の更新"
-msgstr[1] "{n}件の更新"
 
 #: cogs/anilist/feed_render.py:176
 msgid "An AniList update could not be rendered."
@@ -1011,7 +1000,6 @@ msgstr "他のAniListアクティビティ"
 msgid "...and {count} more update"
 msgid_plural "...and {count} more updates"
 msgstr[0] "...他に{count}件の更新"
-msgstr[1] "...他に{count}件の更新"
 
 #: cogs/anilist/feed_render.py:342
 #, python-brace-format
@@ -1023,7 +1011,6 @@ msgstr "{user} - {summary}"
 msgid "+{count} other"
 msgid_plural "+{count} others"
 msgstr[0] "+{count}件"
-msgstr[1] "+{count}件"
 
 #: cogs/anilist/feed_views.py:135
 msgid "Posts"
@@ -1193,7 +1180,6 @@ msgstr "このフィードはまだ誰もフォローしていません。"
 msgid "{count} muted user out of {total} followed"
 msgid_plural "{count} muted users out of {total} followed"
 msgstr[0] "フォロー中{total}人のうち{count}人をミュート中"
-msgstr[1] "フォロー中{total}人のうち{count}人をミュート中"
 
 #: cogs/anilist/feed_views.py:929
 #, python-brace-format
@@ -1235,7 +1221,7 @@ msgid "Feed deleted."
 msgstr "フィードを削除しました。"
 
 #: cogs/anilist/feed_views.py:1017 cogs/moderation/moderation.py:1120
-#: cogs/moderation/moderation.py:1181 cogs/system/arg_completion.py:494
+#: cogs/moderation/moderation.py:1193 cogs/system/arg_completion.py:494
 msgid "Cancelled."
 msgstr "キャンセルしました。"
 
@@ -1665,7 +1651,6 @@ msgstr "**{title}** - エピソード{episode} - {when}"
 msgid "{count} episode"
 msgid_plural "{count} episodes"
 msgstr[0] "{count}話"
-msgstr[1] "{count}話"
 
 #: cogs/anilist/schedule.py:510
 msgid "There are more airings in this window than I can show at once."
@@ -1800,36 +1785,31 @@ msgstr "サーバーのデフォルト言語を **{lang}** に設定しました
 #, python-brace-format
 msgid "every week"
 msgid_plural "every {count} weeks"
-msgstr[0] "毎週"
-msgstr[1] "{count}週間ごと"
+msgstr[0] "{count}週間ごと"
 
 #: cogs/community/reminders.py:181
 #, python-brace-format
 msgid "every day"
 msgid_plural "every {count} days"
-msgstr[0] "毎日"
-msgstr[1] "{count}日ごと"
+msgstr[0] "{count}日ごと"
 
 #: cogs/community/reminders.py:183
 #, python-brace-format
 msgid "every hour"
 msgid_plural "every {count} hours"
-msgstr[0] "毎時"
-msgstr[1] "{count}時間ごと"
+msgstr[0] "{count}時間ごと"
 
 #: cogs/community/reminders.py:186
 #, python-brace-format
 msgid "every minute"
 msgid_plural "every {count} minutes"
-msgstr[0] "毎分"
-msgstr[1] "{count}分ごと"
+msgstr[0] "{count}分ごと"
 
 #: cogs/community/reminders.py:189
 #, python-brace-format
 msgid "every second"
 msgid_plural "every {count} seconds"
-msgstr[0] "毎秒"
-msgstr[1] "{count}秒ごと"
+msgstr[0] "{count}秒ごと"
 
 #: cogs/community/reminders.py:201
 msgid "I can only repeat a reminder once an hour at most. Try `hourly` or something longer like `2d`."
@@ -1959,7 +1939,6 @@ msgstr "前へ"
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "オフラインだったため、{count}回の実行が飛ばされました。"
-msgstr[1] "オフラインだったため、{count}回の実行が飛ばされました。"
 
 #: cogs/community/reminders.py:1139
 #, python-brace-format
@@ -2259,7 +2238,6 @@ msgstr "サーバー名と一致しません。何もリセットされません
 msgid "{count} member's XP"
 msgid_plural "{count} members' XP"
 msgstr[0] "{count}人のXP"
-msgstr[1] "{count}人のXP"
 
 #: cogs/community/leveling/level_admin.py:151
 #, python-brace-format
@@ -3031,7 +3009,6 @@ msgstr ""
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count}人"
-msgstr[1] "{count}人"
 
 #: cogs/community/leveling/leveling.py:232
 #, python-brace-format
@@ -3515,7 +3492,7 @@ msgstr "連携済み"
 msgid "This profile is too long to show in full."
 msgstr "このプロフィールは長すぎて全文を表示できません。"
 
-#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:211
 msgid "Public"
 msgstr "公開"
 
@@ -3523,7 +3500,7 @@ msgstr "公開"
 msgid "Server"
 msgstr "サーバー"
 
-#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:208
 msgid "Private"
 msgstr "非公開"
 
@@ -3671,7 +3648,6 @@ msgstr "Last.fmのユーザー名"
 msgid "{count} scrobble"
 msgid_plural "{count} scrobbles"
 msgstr[0] "{count}件のスクロブル"
-msgstr[1] "{count}件のスクロブル"
 
 #: cogs/community/profile/connectors/lastfm.py:367
 #, python-brace-format
@@ -4737,11 +4713,11 @@ msgid "Header"
 msgstr "ヘッダー"
 
 #: cogs/config/rolemenus.py:602 cogs/config/rolemenus.py:802
-#: cogs/system/dashboard_actions.py:995
+#: cogs/system/dashboard_actions.py:1464
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1000
+#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1469
 #: cogs/utility/info.py:156
 msgid "Roles"
 msgstr "ロール"
@@ -4768,75 +4744,85 @@ msgstr "{channel} にロールメニューを投稿しました。"
 msgid "This server already has the maximum of {n} role menus."
 msgstr "このサーバーはすでに最大 {n} 個のロールメニューに達しています。"
 
-#: cogs/config/rooms.py:465 cogs/config/rooms_config.py:485
+#: cogs/config/rooms.py:487 cogs/config/rooms_config.py:489
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "すでに最大 {max_hubs} 個のハブに達しています。"
 
-#: cogs/config/rooms.py:470
+#: cogs/config/rooms.py:494
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "このサーバーはDiscordのカテゴリ上限 {max} 個に達しています。"
 
-#: cogs/config/rooms.py:474
+#: cogs/config/rooms.py:500
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "このサーバーはDiscordの {budget} チャンネル上限に近すぎるため、これ以上ハブを追加できません。"
 
-#: cogs/config/rooms.py:485
+#: cogs/config/rooms.py:526
+msgid "Something went wrong while creating the hub's channels, and the empty category left behind could not be removed - please delete it by hand."
+msgstr "ハブのチャンネル作成中に問題が発生し、残った空のカテゴリーも削除できませんでした。手動で削除してください。"
+
+#: cogs/config/rooms.py:533
 msgid "Something went wrong while creating the hub's channels."
 msgstr "ハブのチャンネルの作成中に問題が発生しました。"
 
-#: cogs/config/rooms.py:496
+#: cogs/config/rooms.py:547
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "**{label}** ハブを作成しました。メンバーは今すぐ {channel} に参加できます。"
 
-#: cogs/config/rooms.py:507 cogs/config/rooms.py:523 cogs/config/rooms.py:565
-#: cogs/config/rooms_config.py:503
+#: cogs/config/rooms.py:558 cogs/config/rooms.py:629 cogs/config/rooms.py:717
+#: cogs/config/rooms_config.py:507
 msgid "That hub no longer exists."
 msgstr "そのハブはもう存在しません。"
 
-#: cogs/config/rooms.py:516
+#: cogs/config/rooms.py:567
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "**{label}** ハブを更新しました。"
 
-#: cogs/config/rooms.py:551
+#: cogs/config/rooms.py:693
+#, python-brace-format
+msgid "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove it by hand."
+msgid_plural "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove them by hand."
+msgstr[0] "ハブ **{label}** は設定から削除しましたが、そのチャンネルのうち {count} 件を削除できませんでした。手動で削除してください。"
+
+#: cogs/config/rooms.py:700
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "**{label}** ハブを削除しました。"
 
-#: cogs/config/rooms.py:579
+#: cogs/config/rooms.py:731
 msgid "category"
 msgstr "カテゴリ"
 
-#: cogs/config/rooms.py:585
+#: cogs/config/rooms.py:737
 msgid "join-to-create channel"
 msgstr "作成用チャンネル"
 
-#: cogs/config/rooms.py:590
+#: cogs/config/rooms.py:742
 msgid "Nothing was renamed - those channels are missing."
 msgstr "名前は変更されませんでした - それらのチャンネルが見つかりません。"
 
-#: cogs/config/rooms.py:591
+#: cogs/config/rooms.py:743
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "{targets} の名前を変更しました。"
 
-#: cogs/config/rooms.py:850
+#: cogs/config/rooms.py:1002
 msgid "There are no autoroom hubs set up in this server."
 msgstr "このサーバーには自動ルームハブが設定されていません。"
 
-#: cogs/config/rooms.py:854
+#: cogs/config/rooms.py:1006
 msgid "Autoroom hubs"
 msgstr "自動ルームハブ"
 
-#: cogs/config/rooms.py:858
+#: cogs/config/rooms.py:1010
 msgid "channel missing"
 msgstr "チャンネルなし"
 
-#: cogs/config/rooms.py:861
+#: cogs/config/rooms.py:1013
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -4857,64 +4843,64 @@ msgstr "ハブを削除..."
 msgid "Add an autoroom hub"
 msgstr "自動ルームハブを追加"
 
-#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:183
+#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:187
 msgid "Hub label"
 msgstr "ハブのラベル"
 
-#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:251
+#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:255
 msgid "Category name"
 msgstr "カテゴリ名"
 
-#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:257
+#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:261
 msgid "Join-to-create channel name"
 msgstr "作成用チャンネル名"
 
-#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:189
+#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:193
 #, python-brace-format
 msgid "Room name template ({user}, {count})"
 msgstr "ルーム名テンプレート ({user}, {count})"
 
-#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:213
+#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:217
 msgid "User limit (0 = unlimited)"
 msgstr "ユーザー数制限 (0 = 無制限)"
 
-#: cogs/config/rooms_config.py:178
+#: cogs/config/rooms_config.py:182
 msgid "Edit autoroom hub"
 msgstr "自動ルームハブを編集"
 
-#: cogs/config/rooms_config.py:196
+#: cogs/config/rooms_config.py:200
 msgid "Max rooms (1-50)"
 msgstr "最大ルーム数 (1-50)"
 
-#: cogs/config/rooms_config.py:218
+#: cogs/config/rooms_config.py:222
 msgid "Room privacy"
 msgstr "ルームのプライバシー"
 
-#: cogs/config/rooms_config.py:246
+#: cogs/config/rooms_config.py:250
 msgid "Rename hub channels"
 msgstr "ハブのチャンネル名を変更"
 
-#: cogs/config/rooms_config.py:293
+#: cogs/config/rooms_config.py:297
 msgid "Settings"
 msgstr "設定"
 
-#: cogs/config/rooms_config.py:301
+#: cogs/config/rooms_config.py:305
 msgid "Rename channels"
 msgstr "チャンネル名を変更"
 
-#: cogs/config/rooms_config.py:368
+#: cogs/config/rooms_config.py:372
 msgid "## Autoroom hubs"
 msgstr "## 自動ルームハブ"
 
-#: cogs/config/rooms_config.py:372
+#: cogs/config/rooms_config.py:376
 msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
 msgstr "参加で作成するボイスハブです。ハブに参加したメンバーは自分専用の一時ルームを取得し、空になると自動的に削除されます。"
 
-#: cogs/config/rooms_config.py:382
+#: cogs/config/rooms_config.py:386
 msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr "まだハブがありません。**Add hub** を使って最初のハブを作成してください。"
 
-#: cogs/config/rooms_config.py:396
+#: cogs/config/rooms_config.py:400
 #, python-brace-format
 msgid ""
 "**{label}**\n"
@@ -4923,25 +4909,25 @@ msgstr ""
 "**{label}**\n"
 "{summary}"
 
-#: cogs/config/rooms_config.py:409
+#: cogs/config/rooms_config.py:413
 msgid "Add hub"
 msgstr "ハブを追加"
 
-#: cogs/config/rooms_config.py:425
+#: cogs/config/rooms_config.py:429
 #, python-brace-format
 msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
 msgstr "-# {count}/{max_hubs} ハブ - ~{reserved} チャンネル予約 - {used}/{budget} チャンネル使用"
 
-#: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
+#: cogs/config/rooms_config.py:499 cogs/config/rooms_config.py:520
 msgid "Something went wrong opening that form."
 msgstr "そのフォームを開く際に問題が発生しました。"
 
-#: cogs/config/rooms_config.py:507
+#: cogs/config/rooms_config.py:511
 #, python-brace-format
 msgid "Manage the **{label}** hub:"
 msgstr "**{label}** ハブを管理:"
 
-#: cogs/config/rooms_config.py:528
+#: cogs/config/rooms_config.py:536
 msgid "Something went wrong removing that hub."
 msgstr "そのハブの削除中に問題が発生しました。"
 
@@ -5620,11 +5606,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "`/verify setup` で認証を有効にできます。"
 
-#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:426
+#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:550
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:429
+#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:553
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
@@ -5756,7 +5742,7 @@ msgstr "/welcome を使って完全なビルダーを開いてください。"
 msgid "Welcome messages have been turned off."
 msgstr "ウェルカムメッセージをオフにしました。"
 
-#: cogs/config/welcome.py:862
+#: cogs/config/welcome.py:876
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
@@ -5957,7 +5943,6 @@ msgstr "すでにチケットを開いています。少々お待ちください
 msgid "You already have {count} ticket open here. Close it before opening another."
 msgid_plural "You already have {count} tickets open here. Close one before opening another."
 msgstr[0] "すでにここで{count}件のチケットを開いています。新しく開く前に閉じてください。"
-msgstr[1] "すでにここで{count}件のチケットを開いています。新しく開く前に閉じてください。"
 
 #: cogs/config/tickets/open.py:295
 #, python-brace-format
@@ -6666,13 +6651,13 @@ msgstr "新しい理由"
 msgid "The reason can't be empty."
 msgstr "理由を空にすることはできません。"
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1269
-#: cogs/moderation/moderation.py:1342 cogs/moderation/moderation.py:1364
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1285
+#: cogs/moderation/moderation.py:1358 cogs/moderation/moderation.py:1380
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "このサーバーでケース #{number} が見つかりませんでした。"
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1370
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1386
 msgid "Updated by"
 msgstr "更新者"
 
@@ -6852,14 +6837,12 @@ msgstr "このサーバーにはまだミュートロールがありません。
 msgid "Mute role re-applied in {count} channel."
 msgid_plural "Mute role re-applied in {count} channels."
 msgstr[0] "{count} 件のチャンネルにミュートロールを再適用しました。"
-msgstr[1] "{count} 件のチャンネルにミュートロールを再適用しました。"
 
 #: cogs/moderation/moderation.py:934
 #, python-brace-format
 msgid "{count} channel refused the change - check my role position and permissions there."
 msgid_plural "{count} channels refused the change - check my role position and permissions there."
 msgstr[0] "{count} 件のチャンネルで変更が拒否されました。そこでの私のロールの位置と権限を確認してください。"
-msgstr[1] "{count} 件のチャンネルで変更が拒否されました。そこでの私のロールの位置と権限を確認してください。"
 
 #: cogs/moderation/moderation.py:989
 msgid "Mute role is not defined"
@@ -6914,70 +6897,70 @@ msgstr "このサーバーの **すべて** のメンバーに **{role}** ロー
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーに付与しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1151
+#: cogs/moderation/moderation.py:1163
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** に付与しました"
 
-#: cogs/moderation/moderation.py:1172
+#: cogs/moderation/moderation.py:1184
 msgid "Confirm mass role remove"
 msgstr "一括ロール削除の確認"
 
-#: cogs/moderation/moderation.py:1174
+#: cogs/moderation/moderation.py:1186
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーから **{role}** ロールを削除しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1203
+#: cogs/moderation/moderation.py:1215
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーから削除しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1212
+#: cogs/moderation/moderation.py:1228
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** から削除しました"
 
-#: cogs/moderation/moderation.py:1234 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1250 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "自分の最上位ロール以上のロールは管理できません。"
 
-#: cogs/moderation/moderation.py:1241
+#: cogs/moderation/moderation.py:1257
 msgid "You can't move a role to or above my highest role."
 msgstr "私の最上位ロール以上の位置にロールを移動することはできません。"
 
-#: cogs/moderation/moderation.py:1247
+#: cogs/moderation/moderation.py:1263
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1249 cogs/system/errors.py:340
+#: cogs/moderation/moderation.py:1265 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
-#: cogs/moderation/moderation.py:1251
+#: cogs/moderation/moderation.py:1267
 msgid "Failed to move role"
 msgstr "ロールの移動に失敗しました"
 
-#: cogs/moderation/moderation.py:1253
+#: cogs/moderation/moderation.py:1269
 msgid "Invalid argument"
 msgstr "無効な引数"
 
-#: cogs/moderation/moderation.py:1288
+#: cogs/moderation/moderation.py:1304
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "ケース履歴 - {guild}"
 
-#: cogs/moderation/moderation.py:1298
+#: cogs/moderation/moderation.py:1314
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "ケース履歴 - {member}"
 
-#: cogs/moderation/moderation.py:1301
+#: cogs/moderation/moderation.py:1317
 msgid "No cases on record."
 msgstr "記録されているケースはありません。"
 
-#: cogs/moderation/moderation.py:1308 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1324 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "理由なし"
 
@@ -7486,7 +7469,6 @@ msgstr "キューが満杯です ({cap}曲)。先にスキップするか削除�
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " {dropped}曲は追加されませんでした - キューは{cap}曲で満杯です。"
-msgstr[1] " {dropped}曲は追加されませんでした - キューは{cap}曲で満杯です。"
 
 #: cogs/music/music.py:1053
 msgid "I'm not connected to a voice channel."
@@ -7516,7 +7498,6 @@ msgstr "**{title}** の再生に問題が発生したため、スキップしま
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "さらに {count} 曲を再生できなかったため、スキップします。"
-msgstr[1] "さらに {count} 曲を再生できなかったため、スキップします。"
 
 #: cogs/music/music.py:2349
 #, python-brace-format
@@ -7575,7 +7556,6 @@ msgstr "そのクエリに該当するトラックが見つかりませんでし
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
-msgstr[1] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
 
 #: cogs/music/music.py:2650
 #, python-brace-format
@@ -7709,14 +7689,12 @@ msgstr "ボイスチャンネルから切断しました。"
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count}秒"
-msgstr[1] "{count}秒"
 
 #: cogs/music/music.py:3455
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count}分"
-msgstr[1] "{count}分"
 
 #: cogs/music/music.py:3479
 msgid "That effect isn't available."
@@ -7780,21 +7758,18 @@ msgstr "現在、お気に入りを1つも読み込めませんでした。"
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " 古いお気に入りが{deferred}件残っています。もう一度実行すると追加されます。"
-msgstr[1] " 古いお気に入りが{deferred}件残っています。もう一度実行すると追加されます。"
 
 #: cogs/music/music.py:3821
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "お気に入りから{count}曲をキューに追加しました。"
-msgstr[1] "お気に入りから{count}曲をキューに追加しました。"
 
 #: cogs/music/music.py:3829 cogs/music/playlists_shared.py:622
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped}曲は読み込めなかったためスキップされました。"
-msgstr[1] " {skipped}曲は読み込めなかったためスキップされました。"
 
 #: cogs/music/music.py:3860
 msgid "Nothing is playing - give me a song name or URL to save."
@@ -7847,7 +7822,6 @@ msgstr "### 🎵 サーバープレイリスト - {guild}"
 msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count}曲 - {duration}"
-msgstr[1] "**{name}** - {count}曲 - {duration}"
 
 #: cogs/music/playlists_shared.py:233
 #, python-brace-format
@@ -7887,7 +7861,6 @@ msgstr "**{name}** という名前のプレイリストはすでに存在しま�
 msgid "Saved **{name}** with {count} track ({duration})."
 msgid_plural "Saved **{name}** with {count} tracks ({duration})."
 msgstr[0] "**{name}** を {count}曲で保存しました ({duration})。"
-msgstr[1] "**{name}** を {count}曲で保存しました ({duration})。"
 
 #: cogs/music/playlists_shared.py:556 cogs/music/playlists_shared.py:687
 #: cogs/music/playlists_shared.py:727
@@ -7905,7 +7878,6 @@ msgstr "**{name}** の曲は今のところ1曲も読み込めませんでした
 msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "**{name}** から {count}曲をキューに追加しました。"
-msgstr[1] "**{name}** から {count}曲をキューに追加しました。"
 
 #: cogs/music/playlists_shared.py:656
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
@@ -7946,7 +7918,6 @@ msgstr "プレイリスト"
 msgid "{count} track"
 msgid_plural "{count} tracks"
 msgstr[0] "{count}曲"
-msgstr[1] "{count}曲"
 
 #: cogs/music/search.py:512
 msgid "Give me something to search for."
@@ -9069,16 +9040,16 @@ msgstr "5分後にタイムアウトします"
 msgid "Here is the personal-data export you requested from the dashboard."
 msgstr "ダッシュボードからリクエストされた個人データのエクスポートです。"
 
-#: cogs/system/errors.py:39
+#: cogs/system/errors.py:40
 #, python-brace-format
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ":information_source: コマンドの使い方: `{prefix}{command} {signature}`"
 
-#: cogs/system/errors.py:58
+#: cogs/system/errors.py:59
 msgid "**Seems like something went wrong while executing command:**"
 msgstr "**コマンドの実行中に問題が発生したようです:**"
 
-#: cogs/system/errors.py:60
+#: cogs/system/errors.py:61
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
@@ -9087,16 +9058,16 @@ msgstr ""
 ":question: 対処法: `このエラーIDをボットの所有者に報告してください`: `{error_id}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:195
+#: cogs/system/errors.py:510
 msgid "**Invalid command entered. Did you mean:**"
 msgstr "**無効なコマンドが入力されました。もしかして:**"
 
-#: cogs/system/errors.py:217
+#: cogs/system/errors.py:534
 msgid "**Seems like you're missing a required argument:**"
 msgstr "**必須の引数が不足しているようです:**"
 
-#: cogs/system/errors.py:218 cogs/system/errors.py:229
-#: cogs/system/errors.py:296 cogs/system/errors.py:327
+#: cogs/system/errors.py:535 cogs/system/errors.py:548
+#: cogs/system/errors.py:630 cogs/system/errors.py:670
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -9105,15 +9076,15 @@ msgstr ""
 ":warning: エラー: `{error}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:228
+#: cogs/system/errors.py:547
 msgid "**Seems like you gave me a bad argument:**"
 msgstr "**不正な引数が指定されたようです:**"
 
-#: cogs/system/errors.py:240
+#: cogs/system/errors.py:561
 msgid "**Seems like you are on cooldown:**"
 msgstr "**クールダウン中のようです:**"
 
-#: cogs/system/errors.py:241
+#: cogs/system/errors.py:562
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
@@ -9122,15 +9093,15 @@ msgstr ""
 ":hourglass: 残り時間: `{time}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:250
+#: cogs/system/errors.py:574
 msgid "I need more permissions!"
 msgstr "もっと権限が必要です!"
 
-#: cogs/system/errors.py:256
+#: cogs/system/errors.py:584
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr "**このコマンドはプライベートメッセージでは使用できないようです:**"
 
-#: cogs/system/errors.py:258
+#: cogs/system/errors.py:586
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
@@ -9138,11 +9109,11 @@ msgstr ""
 "私がいるサーバーに移動するか、あなたのサーバーに私を招待してください\n"
 "invite.yasuho.xyz"
 
-#: cogs/system/errors.py:271
+#: cogs/system/errors.py:601
 msgid "**Seems like you gave me too many arguments:**"
 msgstr "**引数が多すぎるようです:**"
 
-#: cogs/system/errors.py:273 cogs/system/errors.py:285
+#: cogs/system/errors.py:603 cogs/system/errors.py:617
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`\n"
@@ -9151,15 +9122,15 @@ msgstr ""
 ":question: 対処法: `{prefix}help を見て、もっと具体的に指定してみてください`\n"
 "{usage}"
 
-#: cogs/system/errors.py:283
+#: cogs/system/errors.py:615
 msgid "**Seems like you did something wrong:**"
 msgstr "**何か間違ったことをしたようです:**"
 
-#: cogs/system/errors.py:295
+#: cogs/system/errors.py:629
 msgid "**Seems like you are missing permissions:**"
 msgstr "**権限が不足しているようです:**"
 
-#: cogs/system/errors.py:326
+#: cogs/system/errors.py:669
 msgid "**Seems like I am missing permissions:**"
 msgstr "**私の権限が不足しているようです:**"
 
@@ -9226,7 +9197,6 @@ msgstr "このコマンドには {count} 個あります。/preferences で展�
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} 個のサブコマンド"
-msgstr[1] "{n} 個のサブコマンド"
 
 #: cogs/system/help.py:313
 msgid "Subcommands"
@@ -9241,7 +9211,6 @@ msgstr "カテゴリに移動..."
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} 個のコマンド"
-msgstr[1] "{n} 個のコマンド"
 
 #: cogs/system/help.py:472
 #, python-brace-format
@@ -9305,7 +9274,6 @@ msgstr "{categories} にわたる {commands} • メニューや矢印で探索�
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} 個のカテゴリー"
-msgstr[1] "{n} 個のカテゴリー"
 
 #: cogs/system/help.py:572
 #, python-brace-format

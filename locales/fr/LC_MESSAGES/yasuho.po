@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-22 17:26+0000\n"
+"POT-Creation-Date: 2026-08-26 05:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -84,46 +84,46 @@ msgstr "Aucun utilisateur AniList trouvé."
 msgid "Link your account first with `/anilist login`."
 msgstr "Liez d'abord votre compte avec `/anilist login`."
 
-#: cogs/anilist/account.py:272 cogs/anilist/account.py:620
+#: cogs/anilist/account.py:272 cogs/anilist/account.py:667
 #: cogs/anilist/feed.py:2234
 msgid "Could not resolve your AniList account."
 msgstr "Impossible de récupérer votre compte AniList."
 
-#: cogs/anilist/account.py:291 cogs/anilist/account.py:312
+#: cogs/anilist/account.py:291 cogs/anilist/account.py:339
 #: cogs/anilist/hub.py:236
 msgid "AniList account linking is not configured."
 msgstr "La liaison de compte AniList n'est pas configurée."
 
-#: cogs/anilist/account.py:303
+#: cogs/anilist/account.py:330
 msgid "Check your DMs."
 msgstr "Consultez vos messages privés."
 
-#: cogs/anilist/account.py:324 cogs/anilist/login.py:54
+#: cogs/anilist/account.py:371 cogs/anilist/login.py:54
 msgid "That code did not work, try `/anilist login` again."
 msgstr "Ce code n'a pas fonctionné, réessayez `/anilist login`."
 
-#: cogs/anilist/account.py:329 cogs/anilist/login.py:58
+#: cogs/anilist/account.py:376 cogs/anilist/login.py:58
 #, python-brace-format
 msgid "Connected as {name}!"
 msgstr "Connectée en tant que {name} !"
 
-#: cogs/anilist/account.py:343
+#: cogs/anilist/account.py:390
 msgid "Your AniList account has been unlinked."
 msgstr "Votre compte AniList a été dissocié."
 
-#: cogs/anilist/account.py:368 cogs/anilist/account.py:650
+#: cogs/anilist/account.py:415 cogs/anilist/account.py:697
 msgid "Status must be one of: Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
 msgstr "Le statut doit être l'un des suivants : Watching/Reading, Completed, Planning, Paused, Dropped, Repeating."
 
-#: cogs/anilist/account.py:384
+#: cogs/anilist/account.py:431
 msgid "Score must be zero or a positive number."
 msgstr "La note doit être zéro ou un nombre positif."
 
-#: cogs/anilist/account.py:610
+#: cogs/anilist/account.py:657
 msgid "Provide a name or link your account with `/anilist login`."
 msgstr "Indiquez un nom ou liez votre compte avec `/anilist login`."
 
-#: cogs/anilist/account.py:644
+#: cogs/anilist/account.py:691
 msgid "Media type must be `anime` or `manga`."
 msgstr "Le type de média doit être `anime` ou `manga`."
 
@@ -453,13 +453,13 @@ msgstr "Terminer"
 msgid "Drop"
 msgstr "Abandonner"
 
-#: cogs/anilist/collection.py:249 cogs/config/rooms_config.py:389
+#: cogs/anilist/collection.py:249 cogs/config/rooms_config.py:393
 msgid "Edit"
 msgstr "Modifier"
 
 #: cogs/anilist/collection.py:380 cogs/anilist/feed_views.py:1197
 #: cogs/anilist/hub.py:285 cogs/community/usersettings.py:447
-#: cogs/config/rooms_config.py:451 tools/views.py:22
+#: cogs/config/rooms_config.py:455 tools/views.py:22
 msgid "This panel isn't for you."
 msgstr "Ce panneau n'est pas pour vous."
 
@@ -1235,7 +1235,7 @@ msgid "Feed deleted."
 msgstr "Flux supprimé."
 
 #: cogs/anilist/feed_views.py:1017 cogs/moderation/moderation.py:1120
-#: cogs/moderation/moderation.py:1181 cogs/system/arg_completion.py:494
+#: cogs/moderation/moderation.py:1193 cogs/system/arg_completion.py:494
 msgid "Cancelled."
 msgstr "Annulé."
 
@@ -3515,7 +3515,7 @@ msgstr "Liée"
 msgid "This profile is too long to show in full."
 msgstr "Ce profil est trop long pour être affiché en entier."
 
-#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:207
+#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:211
 msgid "Public"
 msgstr "Public"
 
@@ -3523,7 +3523,7 @@ msgstr "Public"
 msgid "Server"
 msgstr "Serveur"
 
-#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:204
+#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:208
 msgid "Private"
 msgstr "Prive"
 
@@ -4737,11 +4737,11 @@ msgid "Header"
 msgstr "En-tete"
 
 #: cogs/config/rolemenus.py:602 cogs/config/rolemenus.py:802
-#: cogs/system/dashboard_actions.py:995
+#: cogs/system/dashboard_actions.py:1464
 msgid "Pick your roles"
 msgstr "Choisis tes roles"
 
-#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1000
+#: cogs/config/rolemenus.py:609 cogs/system/dashboard_actions.py:1469
 #: cogs/utility/info.py:156
 msgid "Roles"
 msgstr "Rôles"
@@ -4768,75 +4768,86 @@ msgstr "Menu de roles publie dans {channel}."
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Ce serveur a deja atteint le maximum de {n} menus de roles."
 
-#: cogs/config/rooms.py:465 cogs/config/rooms_config.py:485
+#: cogs/config/rooms.py:487 cogs/config/rooms_config.py:489
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "Tu as deja atteint le maximum de {max_hubs} hubs."
 
-#: cogs/config/rooms.py:470
+#: cogs/config/rooms.py:494
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "Ce serveur a atteint la limite Discord de {max} categories."
 
-#: cogs/config/rooms.py:474
+#: cogs/config/rooms.py:500
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "Ce serveur est trop proche de la limite Discord de {budget} salons pour ajouter un autre hub."
 
-#: cogs/config/rooms.py:485
+#: cogs/config/rooms.py:526
+msgid "Something went wrong while creating the hub's channels, and the empty category left behind could not be removed - please delete it by hand."
+msgstr "Quelque chose s'est mal passe pendant la creation des salons du hub, et la categorie vide laissee derriere n'a pas pu etre supprimee - merci de l'effacer a la main."
+
+#: cogs/config/rooms.py:533
 msgid "Something went wrong while creating the hub's channels."
 msgstr "Un probleme est survenu lors de la creation des salons du hub."
 
-#: cogs/config/rooms.py:496
+#: cogs/config/rooms.py:547
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "Hub **{label}** cree. Les membres peuvent rejoindre {channel} maintenant."
 
-#: cogs/config/rooms.py:507 cogs/config/rooms.py:523 cogs/config/rooms.py:565
-#: cogs/config/rooms_config.py:503
+#: cogs/config/rooms.py:558 cogs/config/rooms.py:629 cogs/config/rooms.py:717
+#: cogs/config/rooms_config.py:507
 msgid "That hub no longer exists."
 msgstr "Ce hub n'existe plus."
 
-#: cogs/config/rooms.py:516
+#: cogs/config/rooms.py:567
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "Hub **{label}** mis a jour."
 
-#: cogs/config/rooms.py:551
+#: cogs/config/rooms.py:693
+#, python-brace-format
+msgid "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove it by hand."
+msgid_plural "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove them by hand."
+msgstr[0] "Hub **{label}** retire des reglages, mais {count} de ses salons n'a pas pu etre supprime - merci de l'effacer a la main."
+msgstr[1] "Hub **{label}** retire des reglages, mais {count} de ses salons n'ont pas pu etre supprimes - merci de les effacer a la main."
+
+#: cogs/config/rooms.py:700
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "Hub **{label}** supprime."
 
-#: cogs/config/rooms.py:579
+#: cogs/config/rooms.py:731
 msgid "category"
 msgstr "categorie"
 
-#: cogs/config/rooms.py:585
+#: cogs/config/rooms.py:737
 msgid "join-to-create channel"
 msgstr "salon a rejoindre pour creer"
 
-#: cogs/config/rooms.py:590
+#: cogs/config/rooms.py:742
 msgid "Nothing was renamed - those channels are missing."
 msgstr "Rien n'a ete renomme - ces salons sont introuvables."
 
-#: cogs/config/rooms.py:591
+#: cogs/config/rooms.py:743
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "{targets} renomme(s)."
 
-#: cogs/config/rooms.py:850
+#: cogs/config/rooms.py:1002
 msgid "There are no autoroom hubs set up in this server."
 msgstr "Aucun hub de salons automatiques n'est configure sur ce serveur."
 
-#: cogs/config/rooms.py:854
+#: cogs/config/rooms.py:1006
 msgid "Autoroom hubs"
 msgstr "Hubs de salons automatiques"
 
-#: cogs/config/rooms.py:858
+#: cogs/config/rooms.py:1010
 msgid "channel missing"
 msgstr "salon introuvable"
 
-#: cogs/config/rooms.py:861
+#: cogs/config/rooms.py:1013
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -4857,64 +4868,64 @@ msgstr "Supprimer un hub..."
 msgid "Add an autoroom hub"
 msgstr "Ajouter un hub de salons automatiques"
 
-#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:183
+#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:187
 msgid "Hub label"
 msgstr "Nom du hub"
 
-#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:251
+#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:255
 msgid "Category name"
 msgstr "Nom de la categorie"
 
-#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:257
+#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:261
 msgid "Join-to-create channel name"
 msgstr "Nom du salon a rejoindre pour creer"
 
-#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:189
+#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:193
 #, python-brace-format
 msgid "Room name template ({user}, {count})"
 msgstr "Modele de nom de salon ({user}, {count})"
 
-#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:213
+#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:217
 msgid "User limit (0 = unlimited)"
 msgstr "Limite d'utilisateurs (0 = illimitee)"
 
-#: cogs/config/rooms_config.py:178
+#: cogs/config/rooms_config.py:182
 msgid "Edit autoroom hub"
 msgstr "Modifier le hub de salons automatiques"
 
-#: cogs/config/rooms_config.py:196
+#: cogs/config/rooms_config.py:200
 msgid "Max rooms (1-50)"
 msgstr "Salons max (1-50)"
 
-#: cogs/config/rooms_config.py:218
+#: cogs/config/rooms_config.py:222
 msgid "Room privacy"
 msgstr "Confidentialite du salon"
 
-#: cogs/config/rooms_config.py:246
+#: cogs/config/rooms_config.py:250
 msgid "Rename hub channels"
 msgstr "Renommer les salons du hub"
 
-#: cogs/config/rooms_config.py:293
+#: cogs/config/rooms_config.py:297
 msgid "Settings"
 msgstr "Parametres"
 
-#: cogs/config/rooms_config.py:301
+#: cogs/config/rooms_config.py:305
 msgid "Rename channels"
 msgstr "Renommer les salons"
 
-#: cogs/config/rooms_config.py:368
+#: cogs/config/rooms_config.py:372
 msgid "## Autoroom hubs"
 msgstr "## Hubs de salons automatiques"
 
-#: cogs/config/rooms_config.py:372
+#: cogs/config/rooms_config.py:376
 msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
 msgstr "Hubs vocaux a rejoindre pour creer. Les membres qui rejoignent un hub obtiennent leur propre salon temporaire, supprime des qu'il se vide."
 
-#: cogs/config/rooms_config.py:382
+#: cogs/config/rooms_config.py:386
 msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr "Aucun hub pour l'instant. Utilise **Ajouter un hub** pour creer le premier."
 
-#: cogs/config/rooms_config.py:396
+#: cogs/config/rooms_config.py:400
 #, python-brace-format
 msgid ""
 "**{label}**\n"
@@ -4923,25 +4934,25 @@ msgstr ""
 "**{label}**\n"
 "{summary}"
 
-#: cogs/config/rooms_config.py:409
+#: cogs/config/rooms_config.py:413
 msgid "Add hub"
 msgstr "Ajouter un hub"
 
-#: cogs/config/rooms_config.py:425
+#: cogs/config/rooms_config.py:429
 #, python-brace-format
 msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
 msgstr "-# {count}/{max_hubs} hubs - ~{reserved} salons reserves - {used}/{budget} salons utilises"
 
-#: cogs/config/rooms_config.py:495 cogs/config/rooms_config.py:516
+#: cogs/config/rooms_config.py:499 cogs/config/rooms_config.py:520
 msgid "Something went wrong opening that form."
 msgstr "Un probleme est survenu a l'ouverture de ce formulaire."
 
-#: cogs/config/rooms_config.py:507
+#: cogs/config/rooms_config.py:511
 #, python-brace-format
 msgid "Manage the **{label}** hub:"
 msgstr "Gerer le hub **{label}** :"
 
-#: cogs/config/rooms_config.py:528
+#: cogs/config/rooms_config.py:536
 msgid "Something went wrong removing that hub."
 msgstr "Un probleme est survenu lors de la suppression de ce hub."
 
@@ -5620,11 +5631,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Utilise `/verify setup` pour activer la vérification."
 
-#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:426
+#: cogs/config/verification.py:192 cogs/system/dashboard_actions.py:550
 msgid "Verification"
 msgstr "Vérification"
 
-#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:429
+#: cogs/config/verification.py:195 cogs/system/dashboard_actions.py:553
 msgid "Click the button below to verify and unlock the server."
 msgstr "Cliquez sur le bouton ci-dessous pour vérifier et déverrouiller le serveur."
 
@@ -5756,7 +5767,7 @@ msgstr "Utilisez /welcome pour ouvrir le créateur complet."
 msgid "Welcome messages have been turned off."
 msgstr "Les messages de bienvenue ont été désactivés."
 
-#: cogs/config/welcome.py:862
+#: cogs/config/welcome.py:876
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Bienvenue {member} !"
@@ -6666,13 +6677,13 @@ msgstr "Nouveau motif"
 msgid "The reason can't be empty."
 msgstr "Le motif ne peut pas etre vide."
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1269
-#: cogs/moderation/moderation.py:1342 cogs/moderation/moderation.py:1364
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1285
+#: cogs/moderation/moderation.py:1358 cogs/moderation/moderation.py:1380
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "Aucun cas n°{number} trouvé sur ce serveur."
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1370
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1386
 msgid "Updated by"
 msgstr "Mis à jour par"
 
@@ -6914,70 +6925,70 @@ msgstr "Ajouter le rôle **{role}** à **tous** les membres de ce serveur ? Cela
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** ajoute a {done} membre(s) ({failed} echec(s))."
 
-#: cogs/moderation/moderation.py:1151
+#: cogs/moderation/moderation.py:1163
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} le rôle **`{role}`** a été ajouté à **{member}**"
 
-#: cogs/moderation/moderation.py:1172
+#: cogs/moderation/moderation.py:1184
 msgid "Confirm mass role remove"
 msgstr "Confirmer le retrait de rôle en masse"
 
-#: cogs/moderation/moderation.py:1174
+#: cogs/moderation/moderation.py:1186
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "Retirer le rôle **{role}** à **tous** les membres de ce serveur ? Cela peut prendre un certain temps."
 
-#: cogs/moderation/moderation.py:1203
+#: cogs/moderation/moderation.py:1215
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** retire de {done} membre(s) ({failed} echec(s))."
 
-#: cogs/moderation/moderation.py:1212
+#: cogs/moderation/moderation.py:1228
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} le rôle **`{role}`** a été retiré à **{member}**"
 
-#: cogs/moderation/moderation.py:1234 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1250 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "Tu ne peux pas gérer un rôle égal ou supérieur à ton rôle le plus haut."
 
-#: cogs/moderation/moderation.py:1241
+#: cogs/moderation/moderation.py:1257
 msgid "You can't move a role to or above my highest role."
 msgstr "Tu ne peux pas déplacer un rôle au niveau ou au-dessus de mon rôle le plus haut."
 
-#: cogs/moderation/moderation.py:1247
+#: cogs/moderation/moderation.py:1263
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} déplacé."
 
-#: cogs/moderation/moderation.py:1249 cogs/system/errors.py:340
+#: cogs/moderation/moderation.py:1265 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "Vous n'avez pas la permission de faire cela"
 
-#: cogs/moderation/moderation.py:1251
+#: cogs/moderation/moderation.py:1267
 msgid "Failed to move role"
 msgstr "Échec du déplacement du rôle"
 
-#: cogs/moderation/moderation.py:1253
+#: cogs/moderation/moderation.py:1269
 msgid "Invalid argument"
 msgstr "Argument invalide"
 
-#: cogs/moderation/moderation.py:1288
+#: cogs/moderation/moderation.py:1304
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Historique des cas - {guild}"
 
-#: cogs/moderation/moderation.py:1298
+#: cogs/moderation/moderation.py:1314
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Historique des cas - {member}"
 
-#: cogs/moderation/moderation.py:1301
+#: cogs/moderation/moderation.py:1317
 msgid "No cases on record."
 msgstr "Aucun cas enregistré."
 
-#: cogs/moderation/moderation.py:1308 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1324 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "Aucune raison"
 
@@ -9069,16 +9080,16 @@ msgstr "expire après 5 min"
 msgid "Here is the personal-data export you requested from the dashboard."
 msgstr "Voici l'export de tes données personnelles demandé depuis le dashboard."
 
-#: cogs/system/errors.py:39
+#: cogs/system/errors.py:40
 #, python-brace-format
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ":information_source: Utilisation de la commande : `{prefix}{command} {signature}`"
 
-#: cogs/system/errors.py:58
+#: cogs/system/errors.py:59
 msgid "**Seems like something went wrong while executing command:**"
 msgstr "**Il semble qu'une erreur soit survenue lors de l'exécution de la commande :**"
 
-#: cogs/system/errors.py:60
+#: cogs/system/errors.py:61
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
@@ -9087,16 +9098,16 @@ msgstr ""
 ":question: Que faire : `Signale cet identifiant d'erreur au propriétaire du bot` : `{error_id}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:195
+#: cogs/system/errors.py:510
 msgid "**Invalid command entered. Did you mean:**"
 msgstr "**Commande invalide saisie. Vouliez-vous dire :**"
 
-#: cogs/system/errors.py:217
+#: cogs/system/errors.py:534
 msgid "**Seems like you're missing a required argument:**"
 msgstr "**Il semble qu'il vous manque un argument requis :**"
 
-#: cogs/system/errors.py:218 cogs/system/errors.py:229
-#: cogs/system/errors.py:296 cogs/system/errors.py:327
+#: cogs/system/errors.py:535 cogs/system/errors.py:548
+#: cogs/system/errors.py:630 cogs/system/errors.py:670
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -9105,15 +9116,15 @@ msgstr ""
 ":warning: Erreur : `{error}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:228
+#: cogs/system/errors.py:547
 msgid "**Seems like you gave me a bad argument:**"
 msgstr "**Il semble que vous m'ayez donné un mauvais argument :**"
 
-#: cogs/system/errors.py:240
+#: cogs/system/errors.py:561
 msgid "**Seems like you are on cooldown:**"
 msgstr "**Il semble que vous soyez en temps de recharge :**"
 
-#: cogs/system/errors.py:241
+#: cogs/system/errors.py:562
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
@@ -9122,15 +9133,15 @@ msgstr ""
 ":hourglass: Temps restant : `{time}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:250
+#: cogs/system/errors.py:574
 msgid "I need more permissions!"
 msgstr "J'ai besoin de plus de permissions !"
 
-#: cogs/system/errors.py:256
+#: cogs/system/errors.py:584
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr "**Il semble que vous ne puissiez pas utiliser cette commande en messages privés :**"
 
-#: cogs/system/errors.py:258
+#: cogs/system/errors.py:586
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
@@ -9138,11 +9149,11 @@ msgstr ""
 "Rendez-vous dans un serveur où je suis présent ou invitez-moi sur votre serveur\n"
 "invite.yasuho.xyz"
 
-#: cogs/system/errors.py:271
+#: cogs/system/errors.py:601
 msgid "**Seems like you gave me too many arguments:**"
 msgstr "**Il semble que vous m'ayez donné trop d'arguments :**"
 
-#: cogs/system/errors.py:273 cogs/system/errors.py:285
+#: cogs/system/errors.py:603 cogs/system/errors.py:617
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`\n"
@@ -9151,15 +9162,15 @@ msgstr ""
 ":question: Que faire : `consultez {prefix}help et essayez d'être plus précis`\n"
 "{usage}"
 
-#: cogs/system/errors.py:283
+#: cogs/system/errors.py:615
 msgid "**Seems like you did something wrong:**"
 msgstr "**Il semble que vous ayez fait quelque chose de travers :**"
 
-#: cogs/system/errors.py:295
+#: cogs/system/errors.py:629
 msgid "**Seems like you are missing permissions:**"
 msgstr "**Il semble qu'il vous manque des permissions :**"
 
-#: cogs/system/errors.py:326
+#: cogs/system/errors.py:669
 msgid "**Seems like I am missing permissions:**"
 msgstr "**Il semble qu'il me manque des permissions :**"
 
