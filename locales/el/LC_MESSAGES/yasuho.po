@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-26 05:21+0000\n"
+"POT-Creation-Date: 2026-08-26 18:30+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1739,7 +1739,7 @@ msgstr "Ιστορικό banner"
 msgid "global"
 msgstr "καθολικό"
 
-#: cogs/community/avatarhistory.py:52 locales/command_strings.py:378
+#: cogs/community/avatarhistory.py:52 locales/command_strings.py:416
 msgid "server"
 msgstr "διακομιστής"
 
@@ -8216,11 +8216,11 @@ msgstr "Παραλείφθηκε."
 msgid "Volume set to {volume}%."
 msgstr "Η ένταση ορίστηκε σε {volume}%."
 
-#: cogs/music/views.py:946 locales/command_strings.py:366
+#: cogs/music/views.py:946 locales/command_strings.py:404
 msgid "off"
 msgstr "ανενεργή"
 
-#: cogs/music/views.py:949 locales/command_strings.py:368
+#: cogs/music/views.py:949 locales/command_strings.py:406
 msgid "on"
 msgstr "ενεργή"
 
@@ -9849,1509 +9849,1661 @@ msgid "A custom message on the verify embed."
 msgstr "Ένα προσαρμοσμένο μήνυμα στο embed επαλήθευσης."
 
 #: locales/command_strings.py:14
+msgid "A custom message shown on the panel."
+msgstr "Ένα προσαρμοσμένο μήνυμα που εμφανίζεται στον πίνακα."
+
+#: locales/command_strings.py:15
+msgid "A followed AniList user to hide from this feed's channel."
+msgstr "Ένας χρήστης AniList που ακολουθείς και θα κρυφτεί στο κανάλι αυτής της ροής."
+
+#: locales/command_strings.py:16
+msgid "A hex colour like #5865F2 or #58F."
+msgstr "Ένα δεκαεξαδικό χρώμα όπως #5865F2 ή #58F."
+
+#: locales/command_strings.py:17
+msgid "A muted AniList user to show again in this feed's channel."
+msgstr "Ένας σιγασμένος χρήστης AniList που θα εμφανιστεί ξανά στο κανάλι αυτής της ροής."
+
+#: locales/command_strings.py:18
 msgid "A name for the new server playlist."
 msgstr "Ένα όνομα για τη νέα playlist του διακομιστή."
 
-#: locales/command_strings.py:15
+#: locales/command_strings.py:19
 msgid "A role that should earn no XP."
 msgstr "Ένας ρόλος που δεν πρέπει να κερδίζει XP."
 
-#: locales/command_strings.py:16
+#: locales/command_strings.py:20
 msgid "A role to boost (omit for a channel or server-wide boost)."
 msgstr "Ένας ρόλος για ενίσχυση (παράλειψέ το για ενίσχυση καναλιού ή ολόκληρου του διακομιστή)."
 
-#: locales/command_strings.py:17
+#: locales/command_strings.py:21
 msgid "A song name or URL to search for and play."
 msgstr "Ένα όνομα τραγουδιού ή URL για αναζήτηση και αναπαραγωγή."
 
-#: locales/command_strings.py:18
+#: locales/command_strings.py:22
 msgid "A song to search for and save (defaults to the current track)."
 msgstr "Ένα τραγούδι για αναζήτηση και αποθήκευση (προεπιλογή το τρέχον κομμάτι)."
 
-#: locales/command_strings.py:19
+#: locales/command_strings.py:23
 msgid "A timestamp (1:23 or 1:02:03), whole seconds (90), or a relative +30 / -15."
 msgstr "Μια χρονοσφραγίδα (1:23 ή 1:02:03), ακέραια δευτερόλεπτα (90), ή σχετική +30 / -15."
 
-#: locales/command_strings.py:20
+#: locales/command_strings.py:24
 msgid "Add a member to the live-alert watchlist (channel is an optional override)."
 msgstr "Πρόσθεσε ένα μέλος στη λίστα παρακολούθησης ειδοποιήσεων live (το κανάλι είναι προαιρετική παράκαμψη)."
 
-#: locales/command_strings.py:21
+#: locales/command_strings.py:25
 msgid "Add a user to the bot-wide blacklist."
 msgstr "Πρόσθεσε έναν χρήστη στη μαύρη λίστα ολόκληρου του bot."
 
-#: locales/command_strings.py:22
+#: locales/command_strings.py:26
 msgid "Admin XP tools: give, take, set, or reset a member's XP."
 msgstr "Εργαλεία διαχειριστή για XP: δώσε, αφαίρεσε, όρισε, ή επανάφερε το XP ενός μέλους."
 
-#: locales/command_strings.py:23
+#: locales/command_strings.py:27
+msgid "Allow or refuse members' personal /rankcard styles on this server."
+msgstr "Επίτρεψε ή απόρριψε τα προσωπικά στυλ /rankcard των μελών σε αυτόν τον διακομιστή."
+
+#: locales/command_strings.py:28
+msgid "An image (PNG, JPEG, or WebP; max 8 MB) for YOUR rank-card background."
+msgstr "Μια εικόνα (PNG, JPEG ή WebP, έως 8 MB) για ΤΟ δικό σου φόντο κάρτας βαθμού."
+
+#: locales/command_strings.py:29
 msgid "An image (PNG, JPEG, or WebP; max 8 MB) for the rank-card background."
 msgstr "Μια εικόνα (PNG, JPEG ή WebP· έως 8 MB) για το φόντο της κάρτας βαθμίδας."
 
-#: locales/command_strings.py:24
+#: locales/command_strings.py:30
 msgid "Apply an audio effect preset to the current playback (Off to clear)."
 msgstr "Εφάρμοσε ένα προκαθορισμένο εφέ ήχου στην τρέχουσα αναπαραγωγή (Off για εκκαθάριση)."
 
-#: locales/command_strings.py:25
+#: locales/command_strings.py:31
 msgid "Assign an auto-role to your guild."
 msgstr "Όρισε έναν αυτόματο ρόλο στον διακομιστή σου."
 
-#: locales/command_strings.py:26
+#: locales/command_strings.py:32
 msgid "Ban a member from the server."
 msgstr "Κάνε ban σε ένα μέλος από τον διακομιστή."
 
-#: locales/command_strings.py:27
+#: locales/command_strings.py:33
 msgid "Be the first to retype the given sentence as fast as you can."
 msgstr "Γίνε ο πρώτος που θα ξαναγράψει τη δοσμένη πρόταση όσο πιο γρήγορα μπορείς."
 
-#: locales/command_strings.py:28
+#: locales/command_strings.py:34
 msgid "Boost or reduce XP (0-5x). Give a channel/category OR a role, or"
 msgstr "Ενίσχυσε ή μείωσε το XP (0-5x). Δώσε ένα κανάλι/κατηγορία Ή έναν ρόλο, ή"
 
-#: locales/command_strings.py:29
+#: locales/command_strings.py:35
+msgid "Bot, server, member and latency info."
+msgstr "Πληροφορίες για το bot, τον διακομιστή, τα μέλη και την καθυστέρηση."
+
+#: locales/command_strings.py:36
 msgid "Browse anime from a season (defaults to the current season)."
 msgstr "Περιήγηση σε anime μιας σεζόν (προεπιλογή η τρέχουσα σεζόν)."
 
-#: locales/command_strings.py:30
+#: locales/command_strings.py:37
 msgid "Browse the anime trending on AniList right now."
 msgstr "Περιήγηση στα anime που είναι trending στο AniList αυτή τη στιγμή."
 
-#: locales/command_strings.py:31
+#: locales/command_strings.py:38
 msgid "Browse the most popular anime on AniList."
 msgstr "Περιήγηση στα πιο δημοφιλή anime στο AniList."
 
-#: locales/command_strings.py:32
+#: locales/command_strings.py:39
 msgid "Browse this server's leveling season podiums, most recent first."
 msgstr "Περιηγηθείτε στα βάθρα εποχών βαθμίδων αυτού του διακομιστή, με τα πιο πρόσφατα πρώτα."
 
-#: locales/command_strings.py:33
+#: locales/command_strings.py:40
 msgid "Browse tracks, albums, artists and playlists, and queue any of them."
 msgstr "Περιήγηση σε κομμάτια, άλμπουμ, καλλιτέχνες και playlists, και βάλε οποιοδήποτε στην ουρά."
 
-#: locales/command_strings.py:34
+#: locales/command_strings.py:41
+msgid "Browse what airs next, from your list or this channel's tracked titles."
+msgstr "Δες τι προβάλλεται στη συνέχεια, από τη λίστα σου ή τους τίτλους αυτού του καναλιού."
+
+#: locales/command_strings.py:42
 msgid "Build a Google reverse image search link for an image URL or attachment."
 msgstr "Δημιούργησε έναν σύνδεσμο αντίστροφης αναζήτησης εικόνας Google για ένα URL εικόνας ή συνημμένο."
 
-#: locales/command_strings.py:35
+#: locales/command_strings.py:43
 msgid "Choose whether your profile shares your Discord presence."
 msgstr "Επιλέξτε αν το προφίλ σας μοιράζεται την παρουσία σας στο Discord."
 
-#: locales/command_strings.py:36
+#: locales/command_strings.py:44
 msgid "Choose who can see one of your linked accounts."
 msgstr "Επιλέξτε ποιος μπορεί να δει έναν από τους συνδεδεμένους λογαριασμούς σας."
 
-#: locales/command_strings.py:37
+#: locales/command_strings.py:45
 msgid "Choose who can see one section of your profile."
 msgstr "Επιλέξτε ποιος μπορεί να δει μία ενότητα του προφίλ σας."
 
-#: locales/command_strings.py:38
+#: locales/command_strings.py:46
 msgid "Clear the upcoming queue while the current track keeps playing."
 msgstr "Άδειασε την επερχόμενη ουρά ενώ το τρέχον κομμάτι συνεχίζει να παίζει."
 
-#: locales/command_strings.py:39
+#: locales/command_strings.py:47
 msgid "Clear your entire profile, including who could see what."
 msgstr "Διαγράψτε ολόκληρο το προφίλ σας, συμπεριλαμβανομένου του ποιος μπορούσε να δει τι."
 
-#: locales/command_strings.py:40
+#: locales/command_strings.py:48
 msgid "Configure the season champion role and the season-rollover announce."
 msgstr "Ρυθμίστε τον ρόλο πρωταθλητή εποχής και την ανακοίνωση εναλλαγής εποχής."
 
-#: locales/command_strings.py:41
+#: locales/command_strings.py:49
+msgid "Configure the weekly server digest (post last week's stats)."
+msgstr "Ρύθμισε την εβδομαδιαία σύνοψη του διακομιστή (δημοσιεύει τα στατιστικά της περασμένης εβδομάδας)."
+
+#: locales/command_strings.py:50
 msgid "Configure this server's warn escalation rules (threshold -> action)."
 msgstr "Ρύθμισε τους κανόνες κλιμάκωσης warns αυτού του διακομιστή (όριο -> ενέργεια)."
 
-#: locales/command_strings.py:42
+#: locales/command_strings.py:51
 msgid "Create a Live streamer role and link it to the alert config."
 msgstr "Δημιούργησε έναν ρόλο Live streamer και σύνδεσέ τον με τη ρύθμιση ειδοποιήσεων."
 
-#: locales/command_strings.py:43
+#: locales/command_strings.py:52
 msgid "Create a native yes/no poll (runs for 24 hours)."
 msgstr "Δημιούργησε μια εγγενή δημοσκόπηση ναι/όχι (διαρκεί 24 ώρες)."
 
-#: locales/command_strings.py:44
+#: locales/command_strings.py:53
+msgid "Create a poll: a quick yes/no, or a multiple-choice one."
+msgstr "Δημιούργησε ψηφοφορία: ένα γρήγορο ναι/όχι, ή πολλαπλής επιλογής."
+
+#: locales/command_strings.py:54
 msgid "Create or re-enable an AniList feed on a channel (default: here)."
 msgstr "Δημιούργησε ή ενεργοποίησε ξανά μια ροή AniList σε ένα κανάλι (προεπιλογή εδώ)."
 
-#: locales/command_strings.py:45
+#: locales/command_strings.py:55
 msgid "Customise this server's rank-card background and accent colour."
 msgstr "Προσαρμόστε το φόντο και το χρώμα έμφασης της κάρτας βαθμίδας αυτού του διακομιστή."
 
-#: locales/command_strings.py:46
+#: locales/command_strings.py:56
+msgid "Customise your own /rank card: your background and accent colour."
+msgstr "Προσάρμοσε τη δική σου κάρτα /rank: φόντο και χρώμα τονισμού."
+
+#: locales/command_strings.py:57
 msgid "Delete a button-role panel by its message ID (strips the buttons)."
 msgstr "Διάγραψε έναν πίνακα button-role με βάση το ID του μηνύματός του (αφαιρεί τα κουμπιά)."
 
-#: locales/command_strings.py:47
+#: locales/command_strings.py:58
 msgid "Delete a feed and its follows (default: this channel)."
 msgstr "Διάγραψε μια ροή και τις παρακολουθήσεις της (προεπιλογή αυτό το κανάλι)."
 
-#: locales/command_strings.py:48
+#: locales/command_strings.py:59
 msgid "Delete a number of a member's recent messages."
 msgstr "Διάγραψε έναν αριθμό πρόσφατων μηνυμάτων ενός μέλους."
 
-#: locales/command_strings.py:49
+#: locales/command_strings.py:60
 msgid "Delete a number of recent messages in this channel."
 msgstr "Διάγραψε έναν αριθμό πρόσφατων μηνυμάτων σε αυτό το κανάλι."
 
-#: locales/command_strings.py:50
+#: locales/command_strings.py:61
 msgid "Delete a shared server playlist (its creator or a moderator only)."
 msgstr "Διάγραψε μια κοινόχρηστη playlist του διακομιστή (μόνο ο δημιουργός της ή ένας συντονιστής)."
 
-#: locales/command_strings.py:51
+#: locales/command_strings.py:62
 msgid "Delete the Live streamer role and unlink it from the config."
 msgstr "Διάγραψε τον ρόλο Live streamer και αποσύνδεσέ τον από τη ρύθμιση."
 
-#: locales/command_strings.py:52
+#: locales/command_strings.py:63
 msgid "Disable moderation logging for this guild."
 msgstr "Απενεργοποίησε την καταγραφή διαχείρισης για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:53
+#: locales/command_strings.py:64
 msgid "Disable the starboard and wipe its configuration for this guild."
 msgstr "Απενεργοποίησε το starboard και διάγραψε τη ρύθμισή του για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:54
+#: locales/command_strings.py:65
 msgid "Disable the welcome message for your guild."
 msgstr "Απενεργοποίησε το μήνυμα καλωσορίσματος για τον διακομιστή σου."
 
-#: locales/command_strings.py:55
+#: locales/command_strings.py:66
 msgid "Disconnect a member from their voice channel."
 msgstr "Αποσύνδεσε ένα μέλος από το φωνητικό κανάλι του."
 
-#: locales/command_strings.py:56
+#: locales/command_strings.py:67
 msgid "Disconnect the player from the voice channel."
 msgstr "Αποσύνδεσε τον player από το φωνητικό κανάλι."
 
-#: locales/command_strings.py:57
+#: locales/command_strings.py:68
 msgid "Edit a gaming ID through a guided form (radio picker + value)."
 msgstr "Επεξεργαστείτε ένα gaming ID μέσω μιας καθοδηγούμενης φόρμας (επιλογέας radio + τιμή)."
 
-#: locales/command_strings.py:58
+#: locales/command_strings.py:69
 msgid "Enable or disable the leveling system for this server."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το σύστημα επιπέδων για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:59
+#: locales/command_strings.py:70
 msgid "Export your Yasuho personal data without OAuth secrets."
 msgstr "Εξαγάγετε τα προσωπικά σας δεδομένα Yasuho χωρίς μυστικά OAuth."
 
-#: locales/command_strings.py:60
+#: locales/command_strings.py:71
 msgid "Export your personal data, or delete your profile or avatar history."
 msgstr "Εξαγάγετε τα προσωπικά σας δεδομένα ή διαγράψτε το προφίλ σας ή το ιστορικό avatar."
 
-#: locales/command_strings.py:61
+#: locales/command_strings.py:72
 msgid "Finish linking with the PIN code AniList gave you."
 msgstr "Ολοκλήρωσε τη σύνδεση με τον κωδικό PIN που σου έδωσε το AniList."
 
-#: locales/command_strings.py:62
+#: locales/command_strings.py:73
 msgid "Follow an AniList user in this server's feed."
 msgstr "Ακολούθησε έναν χρήστη AniList στη ροή αυτού του διακομιστή."
 
-#: locales/command_strings.py:63
+#: locales/command_strings.py:74
 msgid "Give a member XP (adds to their current total)."
 msgstr "Δώσε XP σε ένα μέλος (προστίθεται στο τρέχον σύνολό του)."
 
-#: locales/command_strings.py:64
+#: locales/command_strings.py:75
 msgid "Give a role to a member."
 msgstr "Δώσε έναν ρόλο σε ένα μέλος."
 
-#: locales/command_strings.py:65
+#: locales/command_strings.py:76
 msgid "Grant a role automatically when a member reaches a level."
 msgstr "Παραχώρησε αυτόματα έναν ρόλο όταν ένα μέλος φτάνει σε ένα επίπεδο."
 
-#: locales/command_strings.py:66
+#: locales/command_strings.py:77
 msgid "Guided update: pick the title by clicking, then edit a pre-filled form."
 msgstr "Καθοδηγούμενη ενημέρωση: επίλεξε τον τίτλο κάνοντας κλικ, μετά επεξεργάσου μια προσυμπληρωμένη φόρμα."
 
-#: locales/command_strings.py:67
+#: locales/command_strings.py:78
+msgid "Hide a followed AniList user's activity in this feed only."
+msgstr "Κρύψε τη δραστηριότητα ενός χρήστη AniList που ακολουθείς, μόνο σε αυτή τη ροή."
+
+#: locales/command_strings.py:79
 msgid "How long the ban lasts, e.g. 1d or 2h30m."
 msgstr "Πόσο διαρκεί το ban, π.χ. 1d ή 2h30m."
 
-#: locales/command_strings.py:68
+#: locales/command_strings.py:80
 msgid "How long the event runs, e.g. 2h (max 14 days)."
 msgstr "Πόσο διαρκεί η εκδήλωση, π.χ. 2h (μέγιστο 14 ημέρες)."
 
-#: locales/command_strings.py:69
+#: locales/command_strings.py:81
 msgid "How many members to show (max 25, default 5)."
 msgstr "Πόσα μέλη να εμφανιστούν (μέγιστο 25, προεπιλογή 5)."
 
-#: locales/command_strings.py:70
+#: locales/command_strings.py:82
 msgid "How many messages to delete (1 to 999)."
 msgstr "Πόσα μηνύματα να διαγραφούν (1 έως 999)."
 
-#: locales/command_strings.py:71
+#: locales/command_strings.py:83
 msgid "How many messages to show (max 25, default 10)."
 msgstr "Πόσα μηνύματα να εμφανιστούν (μέγιστο 25, προεπιλογή 10)."
 
-#: locales/command_strings.py:72
+#: locales/command_strings.py:84
 msgid "How many of the member's messages to delete (max 500)."
 msgstr "Πόσα μηνύματα του μέλους να διαγραφούν (μέγιστο 500)."
 
-#: locales/command_strings.py:73
+#: locales/command_strings.py:85
 msgid "How many stars a message needs (default 3)."
 msgstr "Πόσα αστέρια χρειάζεται ένα μήνυμα (προεπιλογή 3)."
 
-#: locales/command_strings.py:74
+#: locales/command_strings.py:86
 msgid "How many stars a message needs to reach the starboard."
 msgstr "Πόσα αστέρια χρειάζεται ένα μήνυμα για να φτάσει στο starboard."
 
-#: locales/command_strings.py:75
+#: locales/command_strings.py:87
 msgid "How many warns to remove (default 1)."
 msgstr "Πόσα warns να αφαιρεθούν (προεπιλογή 1)."
 
-#: locales/command_strings.py:76
+#: locales/command_strings.py:88
 msgid "How much XP to add (1 to 1000000)."
 msgstr "Πόσο XP να προστεθεί (1 έως 1000000)."
 
-#: locales/command_strings.py:77
+#: locales/command_strings.py:89
 msgid "How much XP to remove (1 to 1000000)."
 msgstr "Πόσο XP να αφαιρεθεί (1 έως 1000000)."
 
-#: locales/command_strings.py:78
+#: locales/command_strings.py:90
 msgid "Interactively browse and remove a member's warnings."
 msgstr "Περιήγηση και αφαίρεση των προειδοποιήσεων ενός μέλους διαδραστικά."
 
-#: locales/command_strings.py:79
+#: locales/command_strings.py:91
 msgid "Join or leave this server's AniList feed with your linked account."
 msgstr "Μπες ή φύγε από τη ροή AniList αυτού του διακομιστή με τον συνδεδεμένο λογαριασμό σου."
 
-#: locales/command_strings.py:80
+#: locales/command_strings.py:92
 msgid "Jump to a position in the current track."
 msgstr "Μετάβαση σε μια θέση στο τρέχον κομμάτι."
 
-#: locales/command_strings.py:81
+#: locales/command_strings.py:93
 msgid "Kick a member from the server."
 msgstr "Κάνε kick σε ένα μέλος από τον διακομιστή."
 
-#: locales/command_strings.py:82
+#: locales/command_strings.py:94
 msgid "Leave empty for the all-time leaderboard, or pick weekly/monthly."
 msgstr "Άφησέ το κενό για τον πίνακα κατάταξης όλων των εποχών, ή διάλεξε εβδομαδιαίο/μηνιαίο."
 
-#: locales/command_strings.py:83
+#: locales/command_strings.py:95
+msgid "Leave empty to clear both, or pick just the background or the accent."
+msgstr "Άφησέ το κενό για να καθαρίσεις και τα δύο, ή διάλεξε μόνο το φόντο ή τον τονισμό."
+
+#: locales/command_strings.py:96
 msgid "Link one of your external accounts to your profile."
 msgstr "Συνδέστε έναν από τους εξωτερικούς λογαριασμούς σας με το προφίλ σας."
 
-#: locales/command_strings.py:84
+#: locales/command_strings.py:97
 msgid "Link your AniList account and edit your lists."
 msgstr "Σύνδεσε τον λογαριασμό σου AniList και επεξεργάσου τις λίστες σου."
 
-#: locales/command_strings.py:85
+#: locales/command_strings.py:98
 msgid "List all reaction-role mappings for this guild."
 msgstr "Παρέθεσε όλες τις αντιστοιχίσεις reaction-role για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:86
+#: locales/command_strings.py:99
 msgid "List every blacklisted user."
 msgstr "Παρέθεσε κάθε χρήστη στη μαύρη λίστα."
 
-#: locales/command_strings.py:87
+#: locales/command_strings.py:100
 msgid "List every button-role panel set up in this guild."
 msgstr "Παρέθεσε κάθε πίνακα button-role που έχει ρυθμιστεί σε αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:88
+#: locales/command_strings.py:101
 msgid "List the available prefixes for your guild."
 msgstr "Παρέθεσε τα διαθέσιμα προθέματα για τον διακομιστή σου."
 
-#: locales/command_strings.py:89
+#: locales/command_strings.py:102
 msgid "List the configured autoroom hubs in this server."
 msgstr "Παρέθεσε τα ρυθμισμένα hub αυτόματων δωματίων σε αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:90
+#: locales/command_strings.py:103
 msgid "List the external accounts linked to your profile."
 msgstr "Παραθέστε τους εξωτερικούς λογαριασμούς που είναι συνδεδεμένοι με το προφίλ σας."
 
-#: locales/command_strings.py:91
+#: locales/command_strings.py:104
 msgid "List this server's feeds, their types and followed users."
 msgstr "Παρέθεσε τις ροές αυτού του διακομιστή, τους τύπους τους και τους χρήστες που ακολουθούνται."
 
-#: locales/command_strings.py:92
+#: locales/command_strings.py:105
+msgid "Look something up: Wikipedia, osu!, Minecraft, images, space, weather."
+msgstr "Αναζήτησε κάτι: Wikipedia, osu!, Minecraft, εικόνες, διάστημα, καιρός."
+
+#: locales/command_strings.py:106
 msgid "Look up a Minecraft account and render its skin."
 msgstr "Αναζήτησε έναν λογαριασμό Minecraft και απεικόνισε το skin του."
 
-#: locales/command_strings.py:93
+#: locales/command_strings.py:107
 msgid "Look up a character on AniList."
 msgstr "Αναζήτησε έναν χαρακτήρα στο AniList."
 
-#: locales/command_strings.py:94
+#: locales/command_strings.py:108
 msgid "Look up a manga on AniList."
 msgstr "Αναζήτησε ένα manga στο AniList."
 
-#: locales/command_strings.py:95
+#: locales/command_strings.py:109
 msgid "Look up an animation studio on AniList."
 msgstr "Αναζήτησε ένα στούντιο anime στο AniList."
 
-#: locales/command_strings.py:96
+#: locales/command_strings.py:110
 msgid "Look up an anime on AniList."
 msgstr "Αναζήτησε ένα anime στο AniList."
 
-#: locales/command_strings.py:97
+#: locales/command_strings.py:111
 msgid "Look up an osu! player's stats."
 msgstr "Αναζήτησε τα στατιστικά ενός παίκτη osu!."
 
-#: locales/command_strings.py:98
+#: locales/command_strings.py:112
 msgid "Manage XP boosts: global, per channel/category, or per role."
 msgstr "Διαχειρίσου τις ενισχύσεις XP: γενικές, ανά κανάλι/κατηγορία, ή ανά ρόλο."
 
-#: locales/command_strings.py:99
+#: locales/command_strings.py:113
 msgid "Manage XP earned for time spent in voice channels."
 msgstr "Διαχειρίσου το XP που κερδίζεται από τον χρόνο σε φωνητικά κανάλια."
 
-#: locales/command_strings.py:100
+#: locales/command_strings.py:114
 msgid "Manage channels/categories and roles that earn no XP."
 msgstr "Διαχειρίσου κανάλια/κατηγορίες και ρόλους που δεν κερδίζουν XP."
 
-#: locales/command_strings.py:101
+#: locales/command_strings.py:115
 msgid "Manage level-up role rewards."
 msgstr "Διαχειρίσου τις ανταμοιβές ρόλων από ανέβασμα επιπέδου."
 
-#: locales/command_strings.py:102
+#: locales/command_strings.py:116
 msgid "Manage reaction roles: add, remove, list."
 msgstr "Διαχειρίσου τους ρόλους αντίδρασης: προσθήκη, αφαίρεση, λίστα."
 
-#: locales/command_strings.py:103
+#: locales/command_strings.py:117
+msgid "Manage support tickets: set up the panel, configure it or turn it off."
+msgstr "Διαχειρίσου τα αιτήματα υποστήριξης: στήσε τον πίνακα, ρύθμισέ τον ή απενεργοποίησέ τον."
+
+#: locales/command_strings.py:118
 msgid "Manage the auto-role: set, remove, or view it."
 msgstr "Διαχειρίσου τον αυτόματο ρόλο: ορισμός, αφαίρεση, ή προβολή του."
 
-#: locales/command_strings.py:104
+#: locales/command_strings.py:119
 msgid "Manage the bot-wide blacklist: add, remove, list."
 msgstr "Διαχειρίσου τη μαύρη λίστα ολόκληρου του bot: προσθήκη, αφαίρεση, λίστα."
 
-#: locales/command_strings.py:105
+#: locales/command_strings.py:120
 msgid "Manage the command prefix: set or view it."
 msgstr "Διαχειρίσου το πρόθεμα εντολών: ορισμός ή προβολή του."
 
-#: locales/command_strings.py:106
+#: locales/command_strings.py:121
 msgid "Manage the starboard: set up, adjust, disable, or view the top messages."
 msgstr "Διαχειρίσου το starboard: ρύθμιση, προσαρμογή, απενεργοποίηση, ή προβολή των κορυφαίων μηνυμάτων."
 
-#: locales/command_strings.py:107
+#: locales/command_strings.py:122
 msgid "Manage the timed double-XP (or reduced-XP) event."
 msgstr "Διαχειρίσου τη χρονομετρημένη εκδήλωση διπλού XP (ή μειωμένου XP)."
 
-#: locales/command_strings.py:108
+#: locales/command_strings.py:123
 msgid "Manage the verification gate: set it up or disable it."
 msgstr "Διαχειρίσου την πύλη επαλήθευσης: ρύθμισέ την ή απενεργοποίησέ την."
 
-#: locales/command_strings.py:109
+#: locales/command_strings.py:124
 msgid "Manage where and how level-ups are announced."
 msgstr "Διαχειρίσου πού και πώς ανακοινώνονται τα ανεβάσματα επιπέδου."
 
-#: locales/command_strings.py:110
+#: locales/command_strings.py:125
 msgid "Manage your profile: view, set, edit, or clear."
 msgstr "Διαχειριστείτε το προφίλ σας: προβολή, ορισμός, επεξεργασία ή διαγραφή."
 
-#: locales/command_strings.py:111
+#: locales/command_strings.py:126
 msgid "Map an emoji on a message to a role."
 msgstr "Αντιστοίχισε ένα emoji σε ένα μήνυμα με έναν ρόλο."
 
-#: locales/command_strings.py:112
+#: locales/command_strings.py:127
 msgid "Move a member to a different voice channel."
 msgstr "Μετακίνησε ένα μέλος σε διαφορετικό φωνητικό κανάλι."
 
-#: locales/command_strings.py:113
+#: locales/command_strings.py:128
 msgid "Move a role to the given position in the hierarchy."
 msgstr "Μετακίνησε έναν ρόλο στη δοσμένη θέση της ιεραρχίας."
 
-#: locales/command_strings.py:114
+#: locales/command_strings.py:129
 msgid "Multiple-choice poll: quickpoll question | option 1 | option 2 ... (no args opens a form)."
 msgstr "Δημοσκόπηση πολλαπλών επιλογών: quickpoll ερώτηση | επιλογή 1 | επιλογή 2 ... (χωρίς ορίσματα ανοίγει μια φόρμα)."
 
-#: locales/command_strings.py:115
+#: locales/command_strings.py:130
 msgid "Mute a channel/category OR a role from earning XP (give exactly one)."
 msgstr "Κάνε mute ένα κανάλι/κατηγορία Ή έναν ρόλο από την απόκτηση XP (δώσε ακριβώς ένα)."
 
-#: locales/command_strings.py:116
+#: locales/command_strings.py:131
 msgid "Mute a member."
 msgstr "Κάνε mute σε ένα μέλος."
 
-#: locales/command_strings.py:117
+#: locales/command_strings.py:132
 msgid "One of: track, all, off."
 msgstr "Ένα από: track, all, off."
 
-#: locales/command_strings.py:118
+#: locales/command_strings.py:133
 msgid "Only show cases for this member (optional)."
 msgstr "Εμφάνισε υποθέσεις μόνο για αυτό το μέλος (προαιρετικό)."
 
-#: locales/command_strings.py:119
+#: locales/command_strings.py:134
 msgid "Open a graphical panel to manage your profile's visibility."
 msgstr "Ανοίξτε ένα γραφικό πάνελ για να διαχειριστείτε την ορατότητα του προφίλ σας."
 
-#: locales/command_strings.py:120
+#: locales/command_strings.py:135
 msgid "Open the AutoMod control panel, or manage a single filter."
 msgstr "Άνοιξε τον πίνακα ελέγχου AutoMod, ή διαχειρίσου ένα συγκεκριμένο φίλτρο."
 
-#: locales/command_strings.py:121
+#: locales/command_strings.py:136
 msgid "Open the Twitch live-alert builder."
 msgstr "Άνοιξε τον δημιουργό ειδοποιήσεων live Twitch."
 
-#: locales/command_strings.py:122
+#: locales/command_strings.py:137
 msgid "Open the announcement builder."
 msgstr "Άνοιξε τον δημιουργό ανακοινώσεων."
 
-#: locales/command_strings.py:123
+#: locales/command_strings.py:138
 msgid "Open the autoroom hub setup panel."
 msgstr "Άνοιξε το πάνελ ρύθμισης του hub αυτόματων δωματίων."
 
-#: locales/command_strings.py:124
+#: locales/command_strings.py:139
 msgid "Open the custom-commands builder."
 msgstr "Άνοιξε τον δημιουργό προσαρμοσμένων εντολών."
 
-#: locales/command_strings.py:125
+#: locales/command_strings.py:140
 msgid "Open the interactive AutoMod control panel."
 msgstr "Άνοιξε τον διαδραστικό πίνακα ελέγχου AutoMod."
 
-#: locales/command_strings.py:126
+#: locales/command_strings.py:141
 msgid "Open the interactive button-role builder."
 msgstr "Άνοιξε τον διαδραστικό δημιουργό button-role."
 
-#: locales/command_strings.py:127
+#: locales/command_strings.py:142
 msgid "Open the interactive rank-card panel for this server."
 msgstr "Ανοίξτε το διαδραστικό πάνελ κάρτας βαθμίδας για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:128
+#: locales/command_strings.py:143
 msgid "Open the interactive server-settings panel (also: setup)."
 msgstr "Άνοιξε τον διαδραστικό πίνακα ρυθμίσεων διακομιστή (επίσης: setup)."
 
-#: locales/command_strings.py:129
+#: locales/command_strings.py:144
 msgid "Open the moderation-log control panel."
 msgstr "Άνοιξε τον πίνακα ελέγχου καταγραφής διαχείρισης."
 
-#: locales/command_strings.py:130
+#: locales/command_strings.py:145
 msgid "Open the self-role menu builder."
 msgstr "Άνοιξε τον δημιουργό μενού αυτοανάθεσης ρόλων."
 
-#: locales/command_strings.py:131
+#: locales/command_strings.py:146
+msgid "Open the ticket settings panel (edit every option in place)."
+msgstr "Άνοιξε τον πίνακα ρυθμίσεων αιτημάτων (άλλαξε κάθε επιλογή επιτόπου)."
+
+#: locales/command_strings.py:147
 msgid "Open the welcome control panel."
 msgstr "Άνοιξε τον πίνακα ελέγχου καλωσορίσματος."
 
-#: locales/command_strings.py:132
+#: locales/command_strings.py:148
 msgid "Open this server's AniList feed control panel."
 msgstr "Άνοιξε τον πίνακα ελέγχου της ροής AniList αυτού του διακομιστή."
 
-#: locales/command_strings.py:133
+#: locales/command_strings.py:149
 msgid "Open your interactive list dashboard, filtered by status (CURRENT)."
 msgstr "Άνοιξε τον διαδραστικό πίνακα λίστας σου, φιλτραρισμένο ανά κατάσταση (CURRENT)."
 
-#: locales/command_strings.py:134
+#: locales/command_strings.py:150
 msgid "Open your personal preferences panel."
 msgstr "Άνοιξε τον πίνακα προσωπικών προτιμήσεών σου."
 
-#: locales/command_strings.py:135
+#: locales/command_strings.py:151
 msgid "Paginated moderation case history (optionally filtered to a member)."
 msgstr "Ιστορικό υποθέσεων διαχείρισης με σελιδοποίηση (προαιρετικά φιλτραρισμένο σε ένα μέλος)."
 
-#: locales/command_strings.py:136
+#: locales/command_strings.py:152
 msgid "Pause the current track."
 msgstr "Παύση του τρέχοντος κομματιού."
 
-#: locales/command_strings.py:137
+#: locales/command_strings.py:153
 msgid "Permanently delete your profile, gaming IDs and visibility choices."
 msgstr "Διαγράψτε οριστικά το προφίλ σας, τα gaming ID και τις επιλογές ορατότητας."
 
-#: locales/command_strings.py:138
+#: locales/command_strings.py:154
 msgid "Permanently delete your saved avatars and disable future tracking."
 msgstr "Διαγράψτε οριστικά τα αποθηκευμένα avatar σας και απενεργοποιήστε τη μελλοντική παρακολούθηση."
 
-#: locales/command_strings.py:139
+#: locales/command_strings.py:155
 msgid "Pick a level reward to remove from a list of every rule set up."
 msgstr "Διάλεξε μια ανταμοιβή επιπέδου για αφαίρεση από τη λίστα όλων των κανόνων που έχουν ρυθμιστεί."
 
-#: locales/command_strings.py:140
+#: locales/command_strings.py:156
 msgid "Pick a no-XP zone to remove from a list of every one configured."
 msgstr "Διάλεξε μια ζώνη χωρίς XP για αφαίρεση από τη λίστα όλων όσων έχουν ρυθμιστεί."
 
-#: locales/command_strings.py:141
+#: locales/command_strings.py:157
 msgid "Pick an XP boost to remove from a list of every one configured."
 msgstr "Διάλεξε μια ενίσχυση XP για αφαίρεση από τη λίστα όλων όσων έχουν ρυθμιστεί."
 
-#: locales/command_strings.py:142
+#: locales/command_strings.py:158
 msgid "Pick the language for the bot's replies to you."
 msgstr "Επιλέξτε τη γλώσσα στην οποία θα σας απαντάει το bot."
 
-#: locales/command_strings.py:143
+#: locales/command_strings.py:159
 msgid "Play a game of Tic-Tac-Toe against the bot. You are X."
 msgstr "Παίξε Τρίλιζα εναντίον του bot. Είσαι το X."
 
-#: locales/command_strings.py:144
+#: locales/command_strings.py:160
 msgid "Play a track or playlist, or add it to the queue."
 msgstr "Αναπαραγωγή ενός κομματιού ή λίστας αναπαραγωγής, ή προσθήκη του στην ουρά."
 
-#: locales/command_strings.py:145
+#: locales/command_strings.py:161
 msgid "Post a Verify button that grants a role (one click, one way)."
 msgstr "Δημοσίευσε ένα κουμπί Verify που παραχωρεί έναν ρόλο (ένα κλικ, χωρίς επιστροφή)."
 
-#: locales/command_strings.py:146
+#: locales/command_strings.py:162
+msgid "Post the ticket panel and turn support tickets on."
+msgstr "Δημοσίευσε τον πίνακα αιτημάτων και ενεργοποίησε την υποστήριξη."
+
+#: locales/command_strings.py:163
 msgid "Queue every track in a shared server playlist and start playing."
 msgstr "Βάλε στην ουρά κάθε κομμάτι μιας κοινόχρηστης playlist του διακομιστή και ξεκίνα την αναπαραγωγή."
 
-#: locales/command_strings.py:147
+#: locales/command_strings.py:164
 msgid "Queue every track in your favourites and start playing."
 msgstr "Προσθήκη όλων των αγαπημένων κομματιών σου στην ουρά και έναρξη αναπαραγωγής."
 
-#: locales/command_strings.py:148
+#: locales/command_strings.py:165
+msgid "Re-apply the mute role's channel permissions everywhere."
+msgstr "Εφάρμοσε ξανά παντού τα δικαιώματα καναλιού του ρόλου σίγασης."
+
+#: locales/command_strings.py:166
 msgid "Reloads a single extension, or all configured extensions."
 msgstr "Επαναφορτώνει μία επέκταση, ή όλες τις ρυθμισμένες επεκτάσεις."
 
-#: locales/command_strings.py:149
+#: locales/command_strings.py:167
 msgid "Reminds you of something after a certain amount of time."
 msgstr "Σου θυμίζει κάτι μετά από συγκεκριμένο χρονικό διάστημα."
 
-#: locales/command_strings.py:150
+#: locales/command_strings.py:168
 msgid "Remove a member from the live-alert watchlist."
 msgstr "Αφαίρεση ενός μέλους από τη λίστα παρακολούθησης ειδοποιήσεων ζωντανής μετάδοσης."
 
-#: locales/command_strings.py:151
+#: locales/command_strings.py:169
 msgid "Remove a role from a member."
 msgstr "Αφαίρεσε έναν ρόλο από ένα μέλος."
 
-#: locales/command_strings.py:152
+#: locales/command_strings.py:170
 msgid "Remove a user from the bot-wide blacklist."
 msgstr "Αφαίρεση ενός χρήστη από τη γενική μαύρη λίστα του bot."
 
-#: locales/command_strings.py:153
+#: locales/command_strings.py:171
 msgid "Remove a warn from a member."
 msgstr "Αφαίρεσε ένα warn από ένα μέλος."
 
-#: locales/command_strings.py:154
+#: locales/command_strings.py:172
 msgid "Remove an emoji-to-role mapping from a message."
 msgstr "Αφαίρεση μιας αντιστοίχισης emoji-ρόλου από ένα μήνυμα."
 
-#: locales/command_strings.py:155
+#: locales/command_strings.py:173
 msgid "Remove the auto-role from your guild."
 msgstr "Αφαίρεσε τον αυτόματο ρόλο από τον διακομιστή σου."
 
-#: locales/command_strings.py:156
+#: locales/command_strings.py:174
 msgid "Remove the favourite at the given position in your list."
 msgstr "Αφαίρεση του αγαπημένου στη δεδομένη θέση της λίστας σου."
 
-#: locales/command_strings.py:157
+#: locales/command_strings.py:175
+msgid "Remove your personal rank-card style and go back to the server's."
+msgstr "Αφαίρεσε το προσωπικό σου στυλ κάρτας και γύρνα σε αυτό του διακομιστή."
+
+#: locales/command_strings.py:176
 msgid "Rename a shared server playlist (its creator or a moderator only)."
 msgstr "Μετονόμασε μια κοινόχρηστη playlist του διακομιστή (μόνο ο δημιουργός της ή ένας συντονιστής)."
 
-#: locales/command_strings.py:158
+#: locales/command_strings.py:177
+msgid "Repeat it: hourly, daily, weekly, or a duration like 2d (min 1h, max 365d). Blank fires once."
+msgstr "Επανάλαβέ το: κάθε ώρα, κάθε μέρα, κάθε εβδομάδα, ή διάρκεια όπως 2d (ελάχιστο 1h, μέγιστο 365d). Κενό = μία φορά."
+
+#: locales/command_strings.py:178
 msgid "Replay the previous track and requeue the current one."
 msgstr "Ξαναπαίξε το προηγούμενο κομμάτι και βάλε ξανά στην ουρά το τρέχον."
 
-#: locales/command_strings.py:159
+#: locales/command_strings.py:179
 msgid "Reset EVERY member's XP for this server (double confirmation)."
 msgstr "Επανάφερε το XP ΚΑΘΕ μέλους για αυτόν τον διακομιστή (διπλή επιβεβαίωση)."
 
-#: locales/command_strings.py:160
+#: locales/command_strings.py:180
 msgid "Reset one member's XP to 0 (asks for confirmation first)."
 msgstr "Επανάφερε το XP ενός μέλους στο 0 (ζητά επιβεβαίωση πρώτα)."
 
-#: locales/command_strings.py:161
+#: locales/command_strings.py:181
 msgid "Resume the player if it is paused."
 msgstr "Συνέχιση της αναπαραγωγής αν είναι σε παύση."
 
-#: locales/command_strings.py:162
+#: locales/command_strings.py:182
+msgid "Role pinged inside every new ticket."
+msgstr "Ο ρόλος που ειδοποιείται μέσα σε κάθε νέο αίτημα."
+
+#: locales/command_strings.py:183
 msgid "Save the current track and queue as a shared server playlist."
 msgstr "Αποθήκευσε το τρέχον κομμάτι και την ουρά ως κοινόχρηστη playlist του διακομιστή."
 
-#: locales/command_strings.py:163
+#: locales/command_strings.py:184
 msgid "Save the current track, or a searched track, to your favourites."
 msgstr "Αποθήκευση του τρέχοντος κομματιού, ή ενός κομματιού από αναζήτηση, στα αγαπημένα σου."
 
-#: locales/command_strings.py:164
+#: locales/command_strings.py:185
 msgid "Score a title on your AniList list."
 msgstr "Βαθμολόγησε έναν τίτλο στη λίστα σου AniList."
 
-#: locales/command_strings.py:165
+#: locales/command_strings.py:186
 msgid "Search Wikipedia for a short summary of a topic."
 msgstr "Αναζήτηση στη Wikipedia για μια σύντομη περίληψη ενός θέματος."
 
-#: locales/command_strings.py:166
+#: locales/command_strings.py:187
+msgid "Secondary music controls: seek, loop, shuffle, lyrics, effects..."
+msgstr "Δευτερεύοντα χειριστήρια μουσικής: αναζήτηση, επανάληψη, ανακάτεμα, στίχοι, εφέ..."
+
+#: locales/command_strings.py:188
 msgid "See and manage the external accounts linked to your profile."
 msgstr "Δείτε και διαχειριστείτε τους εξωτερικούς λογαριασμούς που είναι συνδεδεμένοι με το προφίλ σας."
 
-#: locales/command_strings.py:167
+#: locales/command_strings.py:189
 #, python-brace-format
 msgid "Set a custom level-up message ({user} {level} {guild}), or reset it."
 msgstr "Όρισε ένα προσαρμοσμένο μήνυμα ανεβάσματος επιπέδου ({user} {level} {guild}), ή επανάφερέ το."
 
-#: locales/command_strings.py:168
+#: locales/command_strings.py:190
 msgid "Set a member's XP to an exact total."
 msgstr "Όρισε το XP ενός μέλους σε ένα ακριβές σύνολο."
 
-#: locales/command_strings.py:169
+#: locales/command_strings.py:191
 msgid "Set how level-ups are announced (off / channel / dm / fixed)."
 msgstr "Όρισε πώς ανακοινώνονται τα ανεβάσματα επιπέδου (off / channel / dm / fixed)."
 
-#: locales/command_strings.py:170
+#: locales/command_strings.py:192
 msgid "Set how much XP a member earns per eligible minute in voice (1-60)."
 msgstr "Όρισε πόσο XP κερδίζει ένα μέλος ανά επιλέξιμο λεπτό σε φωνητικό κανάλι (1-60)."
 
-#: locales/command_strings.py:171
+#: locales/command_strings.py:193
 msgid "Set one of your profile fields (bio, pronouns, accent or a gaming ID)."
 msgstr "Ορίστε ένα από τα πεδία του προφίλ σας (bio, pronouns, accent ή ένα gaming ID)."
 
-#: locales/command_strings.py:172
+#: locales/command_strings.py:194
+msgid "Set the accent colour of your rank card's progress bar."
+msgstr "Όρισε το χρώμα τονισμού στη μπάρα προόδου της κάρτας βαθμού σου."
+
+#: locales/command_strings.py:195
 msgid "Set the channel where moderation logs are sent."
 msgstr "Ορισμός του καναλιού όπου στέλνονται τα logs συντονισμού."
 
-#: locales/command_strings.py:173
+#: locales/command_strings.py:196
 msgid "Set the command prefix for your guild."
 msgstr "Όρισε το πρόθεμα εντολών για τον διακομιστή σου."
 
-#: locales/command_strings.py:174
+#: locales/command_strings.py:197
 msgid "Set the loop mode for the queue."
 msgstr "Ορισμός της λειτουργίας επανάληψης για την ουρά."
 
-#: locales/command_strings.py:175
+#: locales/command_strings.py:198
 msgid "Set the player volume (0-200)."
 msgstr "Ορισμός της έντασης ήχου του player (0-200)."
 
-#: locales/command_strings.py:176
+#: locales/command_strings.py:199
 msgid "Set the server's default language (used when a member has not picked one)."
 msgstr "Ορισμός της προεπιλεγμένης γλώσσας του server (χρησιμοποιείται όταν ένα μέλος δεν έχει επιλέξει μία)."
 
-#: locales/command_strings.py:177
+#: locales/command_strings.py:200
 msgid "Set the starboard channel and the star threshold."
 msgstr "Ορισμός του καναλιού starboard και του ορίου αστεριών."
 
-#: locales/command_strings.py:178
+#: locales/command_strings.py:201
 msgid "Set the status of a title on your list."
 msgstr "Όρισε την κατάσταση ενός τίτλου στη λίστα σου."
 
-#: locales/command_strings.py:179
+#: locales/command_strings.py:202
 msgid "Set the welcome channel and message (a simple fallback)."
 msgstr "Ορισμός του καναλιού και του μηνύματος καλωσορίσματος (ένα απλό εφεδρικό)."
 
-#: locales/command_strings.py:180
+#: locales/command_strings.py:203
 msgid "Set this server's rank-card background from an attached image."
 msgstr "Ορίστε το φόντο της κάρτας βαθμίδας αυτού του διακομιστή από μια επισυναπτόμενη εικόνα."
 
-#: locales/command_strings.py:181
+#: locales/command_strings.py:204
 msgid "Set whether members keep every earned reward, or only the latest."
 msgstr "Όρισε αν τα μέλη κρατούν κάθε ανταμοιβή που κερδίζουν, ή μόνο την πιο πρόσφατη."
 
-#: locales/command_strings.py:182
+#: locales/command_strings.py:205
 msgid "Set your AFK status, with an optional message."
 msgstr "Ορισμός της κατάστασης AFK σου, με προαιρετικό μήνυμα."
 
-#: locales/command_strings.py:183
+#: locales/command_strings.py:206
 msgid "Show AniList stats for a user (defaults to your linked account)."
 msgstr "Εμφάνισε τα στατιστικά AniList ενός χρήστη (προεπιλογή ο συνδεδεμένος λογαριασμός σου)."
 
-#: locales/command_strings.py:184
+#: locales/command_strings.py:207
 msgid "Show NASA's Astronomy Picture of the Day."
 msgstr "Εμφάνισε την Αστρονομική Εικόνα της Ημέρας της NASA."
 
-#: locales/command_strings.py:185
+#: locales/command_strings.py:208
 msgid "Show a collage of a user's avatar / server avatar / banner history."
 msgstr "Εμφάνιση ενός κολάζ με το ιστορικό avatar / avatar server / banner ενός χρήστη."
 
-#: locales/command_strings.py:186
+#: locales/command_strings.py:209
+msgid "Show a muted AniList user's activity in this feed again."
+msgstr "Εμφάνισε ξανά σε αυτή τη ροή τη δραστηριότητα ενός σιγασμένου χρήστη AniList."
+
+#: locales/command_strings.py:210
 msgid "Show a single moderation case by its number."
 msgstr "Εμφάνιση μιας μεμονωμένης υπόθεσης συντονισμού βάσει του αριθμού της."
 
-#: locales/command_strings.py:187
+#: locales/command_strings.py:211
 msgid "Show every XP boost configured for this server."
 msgstr "Εμφάνισε κάθε ενίσχυση XP που έχει ρυθμιστεί για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:188
+#: locales/command_strings.py:212
 msgid "Show every level reward configured for this server."
 msgstr "Εμφάνισε κάθε ανταμοιβή επιπέδου που έχει ρυθμιστεί για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:189
+#: locales/command_strings.py:213
 msgid "Show every member on the live-alert watchlist."
 msgstr "Εμφάνιση όλων των μελών στη λίστα παρακολούθησης ειδοποιήσεων ζωντανής μετάδοσης."
 
-#: locales/command_strings.py:190
+#: locales/command_strings.py:214
 msgid "Show every no-XP channel/category and role configured."
 msgstr "Εμφάνισε κάθε κανάλι/κατηγορία και ρόλο χωρίς XP που έχει ρυθμιστεί."
 
-#: locales/command_strings.py:191
+#: locales/command_strings.py:215
 msgid "Show how many warns a member currently has."
 msgstr "Εμφάνιση πόσες προειδοποιήσεις έχει αυτή τη στιγμή ένα μέλος."
 
-#: locales/command_strings.py:192
+#: locales/command_strings.py:216
 msgid "Show information about a member of the guild."
 msgstr "Εμφάνισε πληροφορίες για ένα μέλος του διακομιστή."
 
-#: locales/command_strings.py:193
+#: locales/command_strings.py:217
 msgid "Show information about the bot."
 msgstr "Εμφάνισε πληροφορίες για το bot."
 
-#: locales/command_strings.py:194
+#: locales/command_strings.py:218
 msgid "Show information about the current guild."
 msgstr "Εμφάνισε πληροφορίες για τον τρέχοντα διακομιστή."
 
-#: locales/command_strings.py:195
+#: locales/command_strings.py:219
 msgid "Show the auto-role for your guild."
 msgstr "Εμφάνισε τον αυτόματο ρόλο για τον διακομιστή σου."
 
-#: locales/command_strings.py:196
+#: locales/command_strings.py:220
 msgid "Show the avatar of a member."
 msgstr "Εμφάνισε το avatar ενός μέλους."
 
-#: locales/command_strings.py:197
+#: locales/command_strings.py:221
 msgid "Show the bot's websocket latency."
 msgstr "Εμφάνισε την καθυστέρηση websocket του bot."
 
-#: locales/command_strings.py:198
+#: locales/command_strings.py:222
 msgid "Show the current moderation-log configuration."
 msgstr "Εμφάνισε την τρέχουσα ρύθμιση καταγραφής διαχείρισης."
 
-#: locales/command_strings.py:199
+#: locales/command_strings.py:223
+msgid "Show the current ticket configuration."
+msgstr "Δείξε την τρέχουσα ρύθμιση των αιτημάτων."
+
+#: locales/command_strings.py:224
 msgid "Show the current verification configuration."
 msgstr "Εμφάνισε την τρέχουσα ρύθμιση επαλήθευσης."
 
-#: locales/command_strings.py:200
+#: locales/command_strings.py:225
 msgid "Show the current weather for a given city."
 msgstr "Εμφάνισε τον τρέχοντα καιρό για μια συγκεκριμένη πόλη."
 
-#: locales/command_strings.py:201
+#: locales/command_strings.py:226
 msgid "Show the current welcome configuration."
 msgstr "Εμφάνισε την τρέχουσα ρύθμιση καλωσορίσματος."
 
-#: locales/command_strings.py:202
+#: locales/command_strings.py:227
 msgid "Show the currently playing track and the next tracks in the queue."
 msgstr "Εμφάνιση του κομματιού που παίζει τώρα και των επόμενων κομματιών στην ουρά."
 
-#: locales/command_strings.py:203
+#: locales/command_strings.py:228
 msgid "Show the interactive now-playing controller."
 msgstr "Εμφάνιση του διαδραστικού χειριστηρίου αναπαραγωγής."
 
-#: locales/command_strings.py:204
+#: locales/command_strings.py:229
 msgid "Show the last deleted message in this channel."
 msgstr "Εμφάνιση του τελευταίου διαγραμμένου μηνύματος σε αυτό το κανάλι."
 
-#: locales/command_strings.py:205
+#: locales/command_strings.py:230
 msgid "Show the lyrics for the current track, with an optional live follow."
 msgstr "Εμφάνισε τους στίχους του τρέχοντος κομματιού, με προαιρετική ζωντανή παρακολούθηση."
 
-#: locales/command_strings.py:206
+#: locales/command_strings.py:231
 msgid "Show the most-starred messages in this guild."
 msgstr "Εμφάνιση των μηνυμάτων με τα περισσότερα αστέρια σε αυτό το guild."
 
-#: locales/command_strings.py:207
+#: locales/command_strings.py:232
 msgid "Show the newest members of the server."
 msgstr "Εμφάνισε τα νεότερα μέλη του διακομιστή."
 
-#: locales/command_strings.py:208
+#: locales/command_strings.py:233
 msgid "Show the ranked members of the guild (add weekly/monthly for a"
 msgstr "Εμφάνισε τα μέλη του διακομιστή με κατάταξη (πρόσθεσε weekly/monthly για μια"
 
-#: locales/command_strings.py:209
+#: locales/command_strings.py:234
 msgid "Show this server's activity and growth statistics."
 msgstr "Εμφανίστε τα στατιστικά δραστηριότητας και ανάπτυξης αυτού του διακομιστή."
 
-#: locales/command_strings.py:210
+#: locales/command_strings.py:235
 msgid "Show this server's shared playlists (the bare-group fallback)."
 msgstr "Εμφάνισε τις κοινόχρηστες playlists αυτού του διακομιστή (η εναλλακτική της γυμνής ομάδας)."
 
-#: locales/command_strings.py:211
+#: locales/command_strings.py:236
+msgid "Show what this session has already played, newest first."
+msgstr "Δείξε τι έχει ήδη παίξει αυτή η συνεδρία, από το πιο πρόσφατο."
+
+#: locales/command_strings.py:237
 msgid "Show your level and XP rank card, or another member's."
 msgstr "Εμφάνισε την κάρτα επιπέδου και κατάταξης XP σου, ή ενός άλλου μέλους."
 
-#: locales/command_strings.py:212
+#: locales/command_strings.py:238
+msgid "Show your personal rank-card style, and whether this server uses it."
+msgstr "Δείξε το προσωπικό σου στυλ κάρτας, και αν ο διακομιστής το χρησιμοποιεί."
+
+#: locales/command_strings.py:239
 msgid "Show your saved favourite tracks, or another member's."
 msgstr "Εμφάνιση των αποθηκευμένων αγαπημένων κομματιών σου, ή ενός άλλου μέλους."
 
-#: locales/command_strings.py:213
+#: locales/command_strings.py:240
 msgid "Shows and lets you cancel your pending reminders."
 msgstr "Εμφανίζει και σου επιτρέπει να ακυρώσεις τις εκκρεμείς υπενθυμίσεις σου."
 
-#: locales/command_strings.py:214
+#: locales/command_strings.py:241
+msgid "Shows your top.gg vote status and what voting gives you."
+msgstr "Δείχνει την κατάσταση της ψήφου σου στο top.gg και τι σου προσφέρει."
+
+#: locales/command_strings.py:242
 msgid "Shuffle the upcoming tracks in the queue."
 msgstr "Ανακάτεμα των επόμενων κομματιών στην ουρά."
 
-#: locales/command_strings.py:215
+#: locales/command_strings.py:243
 msgid "Simulate a join for yourself to preview the welcome."
 msgstr "Προσομοίωση μιας εισόδου για τον εαυτό σου ώστε να δεις μια προεπισκόπηση του καλωσορίσματος."
 
-#: locales/command_strings.py:216
+#: locales/command_strings.py:244
 msgid "Skip the current track and play the next one."
 msgstr "Παράλειψη του τρέχοντος κομματιού και αναπαραγωγή του επόμενου."
 
-#: locales/command_strings.py:217
+#: locales/command_strings.py:245
 msgid "Start a timed XP event - e.g. `/levelconfig event set 2 2h`"
 msgstr "Ξεκίνα μια χρονομετρημένη εκδήλωση XP - π.χ. `/levelconfig event set 2 2h`"
 
-#: locales/command_strings.py:218
+#: locales/command_strings.py:246
 msgid "Start linking your AniList account."
 msgstr "Ξεκίνησε τη σύνδεση του λογαριασμού σου AniList."
 
-#: locales/command_strings.py:219
+#: locales/command_strings.py:247
 msgid "Stop following an AniList user (by stored name, case-insensitive)."
 msgstr "Σταμάτα να ακολουθείς έναν χρήστη AniList (αποθηκευμένο όνομα, χωρίς διάκριση πεζών-κεφαλαίων)."
 
-#: locales/command_strings.py:220
+#: locales/command_strings.py:248
 msgid "Stop playback and clear the queue (stays connected)."
 msgstr "Διακοπή της αναπαραγωγής και εκκαθάριση της ουράς (παραμένει συνδεδεμένο)."
 
-#: locales/command_strings.py:221
+#: locales/command_strings.py:249
 msgid "Stop the active XP event (if any)."
 msgstr "Σταμάτησε την ενεργή εκδήλωση XP (αν υπάρχει)."
 
-#: locales/command_strings.py:222
+#: locales/command_strings.py:250
 msgid "Take XP from a member (floors at 0)."
 msgstr "Αφαίρεσε XP από ένα μέλος (δεν πέφτει κάτω από 0)."
 
-#: locales/command_strings.py:223
+#: locales/command_strings.py:251
 msgid "Temporarily bans a member for the given duration."
 msgstr "Απαγορεύει προσωρινά ένα μέλος για την δεδομένη διάρκεια."
 
-#: locales/command_strings.py:224
+#: locales/command_strings.py:252
 msgid "The 1-based position of the favourite to remove."
 msgstr "Η θέση (ξεκινώντας από το 1) του αγαπημένου προς αφαίρεση."
 
-#: locales/command_strings.py:225
+#: locales/command_strings.py:253
 msgid "The AniList username to follow."
 msgstr "Το όνομα χρήστη AniList για παρακολούθηση."
 
-#: locales/command_strings.py:226
+#: locales/command_strings.py:254
 msgid "The AniList username to look up (defaults to you)."
 msgstr "Το όνομα χρήστη AniList για αναζήτηση (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:227
+#: locales/command_strings.py:255
 msgid "The AniList username to stop following."
 msgstr "Το όνομα χρήστη AniList για διακοπή παρακολούθησης."
 
-#: locales/command_strings.py:228
+#: locales/command_strings.py:256
 msgid "The ID of the button-role panel message."
 msgstr "Το ID του μηνύματος του πίνακα button-role."
 
-#: locales/command_strings.py:229
+#: locales/command_strings.py:257
 msgid "The ID of the message to react to (blank opens a builder)."
 msgstr "Το ID του μηνύματος για αντίδραση (κενό ανοίγει έναν κατασκευαστή)."
 
-#: locales/command_strings.py:230
+#: locales/command_strings.py:258
 msgid "The Minecraft username to look up."
 msgstr "Το όνομα χρήστη Minecraft για αναζήτηση."
 
-#: locales/command_strings.py:231
+#: locales/command_strings.py:259
 msgid "The PIN code AniList showed you."
 msgstr "Ο κωδικός PIN που σου έδειξε το AniList."
 
-#: locales/command_strings.py:232
+#: locales/command_strings.py:260
 msgid "The XP multiplier (0-5x)."
 msgstr "Ο πολλαπλασιαστής XP (0-5x)."
 
-#: locales/command_strings.py:233
+#: locales/command_strings.py:261
 msgid "The XP multiplier for the event (e.g. 2 for double XP)."
 msgstr "Ο πολλαπλασιαστής XP για την εκδήλωση (π.χ. 2 για διπλό XP)."
 
-#: locales/command_strings.py:234
+#: locales/command_strings.py:262
 msgid "The anime or manga title to score."
 msgstr "Ο τίτλος anime ή manga για βαθμολόγηση."
 
-#: locales/command_strings.py:235
+#: locales/command_strings.py:263
 msgid "The anime or manga title to update."
 msgstr "Ο τίτλος anime ή manga για ενημέρωση."
 
-#: locales/command_strings.py:236
+#: locales/command_strings.py:264
 msgid "The anime title to look up."
 msgstr "Ο τίτλος anime για αναζήτηση."
 
-#: locales/command_strings.py:237
+#: locales/command_strings.py:265
 msgid "The audio effect to apply, or Off to clear."
 msgstr "Το εφέ ήχου για εφαρμογή, ή Off για εκκαθάριση."
 
-#: locales/command_strings.py:238
+#: locales/command_strings.py:266
 msgid "The case number to look up."
 msgstr "Ο αριθμός υπόθεσης για αναζήτηση."
 
-#: locales/command_strings.py:239
+#: locales/command_strings.py:267
 msgid "The case to update."
 msgstr "Η υπόθεση για ενημέρωση."
 
-#: locales/command_strings.py:240
+#: locales/command_strings.py:268
 msgid "The channel for the feed (defaults to here)."
 msgstr "Το κανάλι για τη ροή (προεπιλογή εδώ)."
 
-#: locales/command_strings.py:241
+#: locales/command_strings.py:269
 msgid "The channel to announce in (required for fixed mode)."
 msgstr "Το κανάλι στο οποίο θα γίνεται η ανακοίνωση (απαιτείται για τη λειτουργία fixed)."
 
-#: locales/command_strings.py:242
+#: locales/command_strings.py:270
 msgid "The channel to send moderation logs to."
 msgstr "Το κανάλι στο οποίο θα στέλνονται τα αρχεία καταγραφής διαχείρισης."
 
-#: locales/command_strings.py:243
+#: locales/command_strings.py:271
 msgid "The channel where starred messages are posted."
 msgstr "Το κανάλι όπου δημοσιεύονται τα μηνύματα με αστέρι."
 
-#: locales/command_strings.py:244
+#: locales/command_strings.py:272
 msgid "The character name to look up."
 msgstr "Το όνομα χαρακτήρα για αναζήτηση."
 
-#: locales/command_strings.py:245
+#: locales/command_strings.py:273
 msgid "The city to look up."
 msgstr "Η πόλη για αναζήτηση."
 
-#: locales/command_strings.py:246
+#: locales/command_strings.py:274
 msgid "The emoji members react with."
 msgstr "Το emoji με το οποίο αντιδρούν τα μέλη."
 
-#: locales/command_strings.py:247
+#: locales/command_strings.py:275
 msgid "The emoji to unmap."
 msgstr "Το emoji για κατάργηση αντιστοίχισης."
 
-#: locales/command_strings.py:248
+#: locales/command_strings.py:276
 msgid "The exact XP total to set (0 to 10000000)."
 msgstr "Το ακριβές σύνολο XP για ορισμό (0 έως 10000000)."
 
-#: locales/command_strings.py:249
+#: locales/command_strings.py:277
 msgid "The feed's channel (defaults to here)."
 msgstr "Το κανάλι της ροής (προεπιλογή εδώ)."
 
-#: locales/command_strings.py:250
+#: locales/command_strings.py:278
 msgid "The image URL (omit to use your attached image)."
 msgstr "Το URL της εικόνας (παράλειψέ το για να χρησιμοποιήσεις τη συνημμένη εικόνα σου)."
 
-#: locales/command_strings.py:251
+#: locales/command_strings.py:279
 msgid "The language code to set as the server default."
 msgstr "Ο κωδικός γλώσσας για ορισμό ως προεπιλογή διακομιστή."
 
-#: locales/command_strings.py:252
+#: locales/command_strings.py:280
 msgid "The level that grants the role."
 msgstr "Το επίπεδο που παραχωρεί τον ρόλο."
 
-#: locales/command_strings.py:253
+#: locales/command_strings.py:281
 msgid "The list status to open (defaults to CURRENT)."
 msgstr "Η κατάσταση λίστας για άνοιγμα (προεπιλογή CURRENT)."
 
-#: locales/command_strings.py:254
+#: locales/command_strings.py:282
 msgid "The manga title to look up."
 msgstr "Ο τίτλος manga για αναζήτηση."
 
-#: locales/command_strings.py:255
+#: locales/command_strings.py:283
 msgid "The member to ban."
 msgstr "Το μέλος για ban."
 
-#: locales/command_strings.py:256
+#: locales/command_strings.py:284
 msgid "The member to check."
 msgstr "Το μέλος για έλεγχο."
 
-#: locales/command_strings.py:257
+#: locales/command_strings.py:285
 msgid "The member to disconnect from voice."
 msgstr "Το μέλος για αποσύνδεση από το φωνητικό κανάλι."
 
-#: locales/command_strings.py:258
+#: locales/command_strings.py:286
 msgid "The member to give XP to."
 msgstr "Το μέλος στο οποίο θα δοθεί XP."
 
-#: locales/command_strings.py:259
+#: locales/command_strings.py:287
 msgid "The member to give the role to (or -all for everyone)."
 msgstr "Το μέλος στο οποίο θα δοθεί ο ρόλος (ή -all για όλους)."
 
-#: locales/command_strings.py:260
+#: locales/command_strings.py:288
 msgid "The member to kick."
 msgstr "Το μέλος για kick."
 
-#: locales/command_strings.py:261
+#: locales/command_strings.py:289
 msgid "The member to move."
 msgstr "Το μέλος για μετακίνηση."
 
-#: locales/command_strings.py:262
+#: locales/command_strings.py:290
 msgid "The member to mute."
 msgstr "Το μέλος για mute."
 
-#: locales/command_strings.py:263
+#: locales/command_strings.py:291
 msgid "The member to remove the role from (or -all for everyone)."
 msgstr "Το μέλος από το οποίο θα αφαιρεθεί ο ρόλος (ή -all για όλους)."
 
-#: locales/command_strings.py:264
+#: locales/command_strings.py:292
 msgid "The member to remove warns from."
 msgstr "Το μέλος από το οποίο θα αφαιρεθούν warns."
 
-#: locales/command_strings.py:265
+#: locales/command_strings.py:293
 msgid "The member to stop watching."
 msgstr "Το μέλος για διακοπή παρακολούθησης."
 
-#: locales/command_strings.py:266
+#: locales/command_strings.py:294
 msgid "The member to take XP from."
 msgstr "Το μέλος από το οποίο θα αφαιρεθεί XP."
 
-#: locales/command_strings.py:267
+#: locales/command_strings.py:295
 msgid "The member to unmute."
 msgstr "Το μέλος για unmute."
 
-#: locales/command_strings.py:268
+#: locales/command_strings.py:296
 msgid "The member to warn."
 msgstr "Το μέλος για προειδοποίηση."
 
-#: locales/command_strings.py:269
+#: locales/command_strings.py:297
 msgid "The member to watch for going live."
 msgstr "Το μέλος για παρακολούθηση όταν ξεκινά live."
 
-#: locales/command_strings.py:270
+#: locales/command_strings.py:298
 msgid "The member whose XP to reset to 0."
 msgstr "Το μέλος του οποίου το XP θα επαναφερθεί στο 0."
 
-#: locales/command_strings.py:271
+#: locales/command_strings.py:299
 msgid "The member whose XP to set."
 msgstr "Το μέλος του οποίου το XP θα οριστεί."
 
-#: locales/command_strings.py:272
+#: locales/command_strings.py:300
 msgid "The member whose messages to delete."
 msgstr "Το μέλος του οποίου τα μηνύματα θα διαγραφούν."
 
-#: locales/command_strings.py:273
+#: locales/command_strings.py:301
 #, python-brace-format
 msgid "The message template, using {user} {level} {guild} (blank resets it)."
 msgstr "Το πρότυπο μηνύματος, χρησιμοποιώντας {user} {level} {guild} (κενό το επαναφέρει)."
 
-#: locales/command_strings.py:274
+#: locales/command_strings.py:302
 #, python-brace-format
 msgid "The message text (supports {mention} {user} {server} {count} {membercount})."
 msgstr "Το κείμενο του μηνύματος (υποστηρίζει {mention} {user} {server} {count} {membercount})."
 
-#: locales/command_strings.py:275
+#: locales/command_strings.py:303
 msgid "The message the mapping is on."
 msgstr "Το μήνυμα στο οποίο βρίσκεται η αντιστοίχιση."
 
-#: locales/command_strings.py:276
+#: locales/command_strings.py:304
 msgid "The name of the voice channel to move them to."
 msgstr "Το όνομα του φωνητικού καναλιού στο οποίο θα μετακινηθούν."
 
-#: locales/command_strings.py:277
+#: locales/command_strings.py:305
 msgid "The new command prefix (max 10 characters)."
 msgstr "Το νέο πρόθεμα εντολών (μέγιστο 10 χαρακτήρες)."
 
-#: locales/command_strings.py:278
+#: locales/command_strings.py:306
 msgid "The new name for it."
 msgstr "Το νέο όνομα για αυτό."
 
-#: locales/command_strings.py:279
+#: locales/command_strings.py:307
 msgid "The new reason to record."
 msgstr "Ο νέος λόγος για καταγραφή."
 
-#: locales/command_strings.py:280
+#: locales/command_strings.py:308
 msgid "The one leveling admin group: enable, rewards, XP, no-XP zones,"
 msgstr "Η μία ομάδα διαχείρισης επιπέδων: ενεργοποίηση, ανταμοιβές, XP, ζώνες χωρίς XP,"
 
-#: locales/command_strings.py:281
+#: locales/command_strings.py:309
 msgid "The osu! username to look up."
 msgstr "Το όνομα χρήστη osu! για αναζήτηση."
 
-#: locales/command_strings.py:282
+#: locales/command_strings.py:310
 msgid "The playlist to rename."
 msgstr "Η playlist για μετονομασία."
 
-#: locales/command_strings.py:283
+#: locales/command_strings.py:311
 msgid "The position to move it to in the role hierarchy."
 msgstr "Η θέση στην οποία θα μετακινηθεί μέσα στην ιεραρχία ρόλων."
 
-#: locales/command_strings.py:284
+#: locales/command_strings.py:312
 msgid "The role granted on verification."
 msgstr "Ο ρόλος που παραχωρείται κατά την επαλήθευση."
 
-#: locales/command_strings.py:285
+#: locales/command_strings.py:313
 msgid "The role that emoji grants."
 msgstr "Ο ρόλος που παραχωρεί αυτό το emoji."
 
-#: locales/command_strings.py:286
+#: locales/command_strings.py:314
 msgid "The role to give."
 msgstr "Ο ρόλος για παραχώρηση."
 
-#: locales/command_strings.py:287
+#: locales/command_strings.py:315
 msgid "The role to grant new members automatically."
 msgstr "Ο ρόλος για αυτόματη παραχώρηση σε νέα μέλη."
 
-#: locales/command_strings.py:288
+#: locales/command_strings.py:316
 msgid "The role to grant."
 msgstr "Ο ρόλος για παραχώρηση."
 
-#: locales/command_strings.py:289
+#: locales/command_strings.py:317
 msgid "The role to move."
 msgstr "Ο ρόλος για μετακίνηση."
 
-#: locales/command_strings.py:290
+#: locales/command_strings.py:318
 msgid "The role to remove."
 msgstr "Ο ρόλος για αφαίρεση."
 
-#: locales/command_strings.py:291
+#: locales/command_strings.py:319
 msgid "The score to give it."
 msgstr "Η βαθμολογία για ανάθεση."
 
-#: locales/command_strings.py:292
+#: locales/command_strings.py:320
 msgid "The studio name to look up."
 msgstr "Το όνομα στούντιο για αναζήτηση."
 
-#: locales/command_strings.py:293
+#: locales/command_strings.py:321
 msgid "The text to translate."
 msgstr "Το κείμενο για μετάφραση."
 
-#: locales/command_strings.py:294
+#: locales/command_strings.py:322
 msgid "The topic to search for."
 msgstr "Το θέμα για αναζήτηση."
 
-#: locales/command_strings.py:295
+#: locales/command_strings.py:323
 msgid "The user to blacklist."
 msgstr "Ο χρήστης για προσθήκη στη μαύρη λίστα."
 
-#: locales/command_strings.py:296
+#: locales/command_strings.py:324
 msgid "The user to remove from the blacklist."
 msgstr "Ο χρήστης για αφαίρεση από τη μαύρη λίστα."
 
-#: locales/command_strings.py:297
+#: locales/command_strings.py:325
 msgid "The user to unban."
 msgstr "Ο χρήστης για unban."
 
-#: locales/command_strings.py:298
+#: locales/command_strings.py:326
 msgid "The value to store; leave it out to clear the field."
 msgstr "Η τιμή προς αποθήκευση· παραλείψτε την για να καθαρίσετε το πεδίο."
 
-#: locales/command_strings.py:299
+#: locales/command_strings.py:327
 msgid "The year to browse (defaults to the current year)."
 msgstr "Το έτος για περιήγηση (προεπιλογή το τρέχον έτος)."
 
-#: locales/command_strings.py:300
+#: locales/command_strings.py:328
 msgid "The yes/no question to ask."
 msgstr "Η ερώτηση ναι/όχι για να τεθεί."
 
-#: locales/command_strings.py:301
+#: locales/command_strings.py:329
 msgid "Toggle new-chapter DMs for titles on your Reading manga list."
 msgstr "Ενεργοποίησε/απενεργοποίησε τα DMs νέου κεφαλαίου για τίτλους στη λίστα manga Reading σου."
 
-#: locales/command_strings.py:302
+#: locales/command_strings.py:330
 msgid "Toggle new-episode DMs for titles on your Watching anime list."
 msgstr "Ενεργοποίησε/απενεργοποίησε τα DMs νέου επεισοδίου για τίτλους στη λίστα anime Watching σου."
 
-#: locales/command_strings.py:303
+#: locales/command_strings.py:331
 msgid "Translate text to English (auto-detect source language)."
 msgstr "Μετάφραση κειμένου στα Αγγλικά (αυτόματος εντοπισμός γλώσσας προέλευσης)."
 
-#: locales/command_strings.py:304
+#: locales/command_strings.py:332
 msgid "True to enable, False to disable."
 msgstr "True για ενεργοποίηση, False για απενεργοποίηση."
 
-#: locales/command_strings.py:305
+#: locales/command_strings.py:333
+msgid "True to let members use their own card style here, False to keep one look."
+msgstr "True για να χρησιμοποιούν τα μέλη το δικό τους στυλ εδώ, False για μία ενιαία εμφάνιση."
+
+#: locales/command_strings.py:334
 msgid "Turn Discord-invite filtering on or off for this server."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα προσκλήσεων Discord για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:306
+#: locales/command_strings.py:335
 msgid "Turn invite filtering on or off."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα προσκλήσεων."
 
-#: locales/command_strings.py:307
+#: locales/command_strings.py:336
 msgid "Turn link filtering on or off for this server."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα συνδέσμων για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:308
+#: locales/command_strings.py:337
 msgid "Turn link filtering on or off."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα συνδέσμων."
 
-#: locales/command_strings.py:309
+#: locales/command_strings.py:338
 msgid "Turn off verification (existing buttons will report it is off)."
 msgstr "Απενεργοποίησε την επαλήθευση (τα υπάρχοντα κουμπιά θα δηλώνουν ότι είναι απενεργοποιημένη)."
 
-#: locales/command_strings.py:310
+#: locales/command_strings.py:339
 msgid "Turn spam filtering on or off for this server."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα spam για αυτόν τον διακομιστή."
 
-#: locales/command_strings.py:311
+#: locales/command_strings.py:340
 msgid "Turn spam filtering on or off."
 msgstr "Ενεργοποίησε ή απενεργοποίησε το φιλτράρισμα spam."
 
-#: locales/command_strings.py:312
+#: locales/command_strings.py:341
+msgid "Turn the weekly digest off."
+msgstr "Απενεργοποίησε την εβδομαδιαία σύνοψη."
+
+#: locales/command_strings.py:342
+msgid "Turn the weekly digest on and choose where it is posted."
+msgstr "Ενεργοποίησε την εβδομαδιαία σύνοψη και διάλεξε πού δημοσιεύεται."
+
+#: locales/command_strings.py:343
+msgid "Turn tickets off (panels already posted will say so when clicked)."
+msgstr "Απενεργοποίησε τα αιτήματα (οι πίνακες που έχουν ήδη δημοσιευτεί θα το λένε στο πάτημα)."
+
+#: locales/command_strings.py:344
 msgid "Turn voice XP off."
 msgstr "Απενεργοποίησε το φωνητικό XP."
 
-#: locales/command_strings.py:313
+#: locales/command_strings.py:345
 msgid "Turn voice XP on: members earn XP for time in voice."
 msgstr "Ενεργοποίησε το φωνητικό XP: τα μέλη κερδίζουν XP για τον χρόνο σε φωνητικό κανάλι."
 
-#: locales/command_strings.py:314
+#: locales/command_strings.py:346
 msgid "Unban a user from the server."
 msgstr "Κάνε unban σε έναν χρήστη από τον διακομιστή."
 
-#: locales/command_strings.py:315
+#: locales/command_strings.py:347
 msgid "Unlink one of your external accounts and hide its section."
 msgstr "Αποσυνδέστε έναν από τους εξωτερικούς λογαριασμούς σας και αποκρύψτε την ενότητά του."
 
-#: locales/command_strings.py:316
+#: locales/command_strings.py:348
 msgid "Unlink your AniList account."
 msgstr "Αποσύνδεσε τον λογαριασμό σου AniList."
 
-#: locales/command_strings.py:317
+#: locales/command_strings.py:349
 msgid "Unmute a member."
 msgstr "Κάνε unmute σε ένα μέλος."
 
-#: locales/command_strings.py:318
+#: locales/command_strings.py:350
 msgid "Update the amount of stars needed to reach the starboard."
 msgstr "Ενημέρωση του αριθμού αστεριών που απαιτούνται για να φτάσει κάτι στο starboard."
 
-#: locales/command_strings.py:319
+#: locales/command_strings.py:351
 msgid "Update the reason recorded on an existing case."
 msgstr "Ενημέρωση του λόγου που έχει καταγραφεί σε μια υπάρχουσα υπόθεση."
 
-#: locales/command_strings.py:320
+#: locales/command_strings.py:352
+msgid "Use an image of your own as the background of your rank card."
+msgstr "Χρησιμοποίησε μια δική σου εικόνα ως φόντο της κάρτας βαθμού σου."
+
+#: locales/command_strings.py:353
 msgid "View a member's profile."
 msgstr "Δείτε το προφίλ ενός μέλους."
 
-#: locales/command_strings.py:321
+#: locales/command_strings.py:354
 msgid "Volume level between 0 and 200 (100 is default)."
 msgstr "Επίπεδο έντασης ήχου μεταξύ 0 και 200 (το 100 είναι η προεπιλογή)."
 
-#: locales/command_strings.py:322
+#: locales/command_strings.py:355
 msgid "WINTER, SPRING, SUMMER, or FALL (defaults to the current season)."
 msgstr "WINTER, SPRING, SUMMER, ή FALL (προεπιλογή η τρέχουσα σεζόν)."
 
-#: locales/command_strings.py:323
+#: locales/command_strings.py:356
 msgid "Warn a member (escalates per this server's warn rules)."
 msgstr "Κάνε warn σε ένα μέλος (κλιμακώνεται σύμφωνα με τους κανόνες warn αυτού του διακομιστή)."
 
-#: locales/command_strings.py:324
+#: locales/command_strings.py:357
 msgid "Watching/Reading, Completed, Planning, Paused, Dropped, or Repeating."
 msgstr "Watching/Reading, Completed, Planning, Paused, Dropped, ή Repeating."
 
-#: locales/command_strings.py:325
+#: locales/command_strings.py:358
 msgid "What to remind you about (and when, e.g. '10m buy milk'). Blank opens a form."
 msgstr "Τι θέλεις να σου θυμίσω (και πότε, π.χ. '10m buy milk'). Κενό ανοίγει μια φόρμα."
 
-#: locales/command_strings.py:326
+#: locales/command_strings.py:359
 msgid "What to search for - a song, album, artist or playlist."
 msgstr "Τι θέλεις να αναζητήσεις - ένα τραγούδι, άλμπουμ, καλλιτέχνη ή playlist."
 
-#: locales/command_strings.py:327
+#: locales/command_strings.py:360
+msgid "Where closed tickets are logged, transcript attached."
+msgstr "Πού καταγράφονται τα κλειστά αιτήματα, με συνημμένο το ιστορικό."
+
+#: locales/command_strings.py:361
+msgid "Where the ticket panel is posted (tickets become threads here)."
+msgstr "Πού δημοσιεύεται ο πίνακας αιτημάτων (τα αιτήματα γίνονται νήματα εδώ)."
+
+#: locales/command_strings.py:362
+msgid "Where the weekly digest is posted, once a week."
+msgstr "Πού δημοσιεύεται η εβδομαδιαία σύνοψη, μία φορά την εβδομάδα."
+
+#: locales/command_strings.py:363
 msgid "Where to post the Verify button (defaults to here)."
 msgstr "Πού θα δημοσιευτεί το κουμπί Verify (προεπιλογή εδώ)."
 
-#: locales/command_strings.py:328
+#: locales/command_strings.py:364
 msgid "Where to post the welcome message."
 msgstr "Πού θα δημοσιευτεί το μήνυμα καλωσορίσματος."
 
-#: locales/command_strings.py:329
+#: locales/command_strings.py:365
 msgid "Where to post their alert (defaults to the configured channel)."
 msgstr "Πού θα δημοσιευτεί η ειδοποίησή τους (προεπιλογή το ρυθμισμένο κανάλι)."
 
-#: locales/command_strings.py:330
+#: locales/command_strings.py:366
 msgid "Which connection to publish."
 msgstr "Ποια σύνδεση να δημοσιευτεί."
 
-#: locales/command_strings.py:331
+#: locales/command_strings.py:367
 msgid "Which part of your profile to publish."
 msgstr "Ποιο μέρος του προφίλ σας να δημοσιευτεί."
 
-#: locales/command_strings.py:332
+#: locales/command_strings.py:368
 msgid "Which server playlist to delete."
 msgstr "Ποια playlist του διακομιστή θα διαγραφεί."
 
-#: locales/command_strings.py:333
+#: locales/command_strings.py:369
 msgid "Which server playlist to queue."
 msgstr "Ποια playlist του διακομιστή θα μπει στην ουρά."
 
-#: locales/command_strings.py:334
+#: locales/command_strings.py:370
 msgid "Which service to link (anilist, steam, lastfm, osu, backloggd)."
 msgstr "Ποια υπηρεσία να συνδεθεί (anilist, steam, lastfm, osu, backloggd)."
 
-#: locales/command_strings.py:335
+#: locales/command_strings.py:371
 msgid "Which service to unlink (anilist, steam, lastfm, osu, backloggd)."
 msgstr "Ποια υπηρεσία να αποσυνδεθεί (anilist, steam, lastfm, osu, backloggd)."
 
-#: locales/command_strings.py:336
+#: locales/command_strings.py:372
 msgid "Whose avatar to show (defaults to you)."
 msgstr "Ποιανού το avatar να εμφανιστεί (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:337
+#: locales/command_strings.py:373
 msgid "Whose favourites to show (defaults to you)."
 msgstr "Ποιανού τα αγαπημένα να εμφανιστούν (προεπιλογή είσαι εσύ)."
 
-#: locales/command_strings.py:338
+#: locales/command_strings.py:374
 msgid "Whose history to show (defaults to you)."
 msgstr "Ποιανού το ιστορικό να εμφανιστεί (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:339
+#: locales/command_strings.py:375
 msgid "Whose info to show (defaults to you)."
 msgstr "Ποιανού τις πληροφορίες να εμφανιστούν (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:340
+#: locales/command_strings.py:376
 msgid "Whose profile to view (defaults to you)."
 msgstr "Ποιανού το προφίλ να προβληθεί (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:341
+#: locales/command_strings.py:377
 msgid "Whose rank to show (defaults to you)."
 msgstr "Ποιανού η κατάταξη να εμφανιστεί (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:342
+#: locales/command_strings.py:378
 msgid "Whose warnings to browse (defaults to you)."
 msgstr "Ποιανού τις προειδοποιήσεις να περιηγηθείς (προεπιλογή εσύ)."
 
-#: locales/command_strings.py:343
+#: locales/command_strings.py:379
 msgid "Why they're being banned."
 msgstr "Γιατί γίνεται ban."
 
-#: locales/command_strings.py:344
+#: locales/command_strings.py:380
 msgid "Why they're being kicked."
 msgstr "Γιατί γίνεται kick."
 
-#: locales/command_strings.py:345
+#: locales/command_strings.py:381
 msgid "Why they're being muted."
 msgstr "Γιατί γίνεται mute."
 
-#: locales/command_strings.py:346
+#: locales/command_strings.py:382
 msgid "Why they're being removed."
 msgstr "Γιατί αφαιρείται."
 
-#: locales/command_strings.py:347
+#: locales/command_strings.py:383
 msgid "Why they're being unbanned."
 msgstr "Γιατί γίνεται unban."
 
-#: locales/command_strings.py:348
+#: locales/command_strings.py:384
 msgid "Why they're being warned."
 msgstr "Γιατί γίνεται warn."
 
-#: locales/command_strings.py:349
+#: locales/command_strings.py:385
 msgid "Why you're away (shown to anyone who pings you)."
 msgstr "Γιατί λείπεις (εμφανίζεται σε όποιον σε κάνει ping)."
 
-#: locales/command_strings.py:350
+#: locales/command_strings.py:386
 msgid "XP earned per eligible minute in voice (1-60)."
 msgstr "XP που κερδίζεται ανά επιλέξιμο λεπτό σε φωνητικό κανάλι (1-60)."
 
-#: locales/command_strings.py:351
+#: locales/command_strings.py:387
 msgid "Your username or id on that service."
 msgstr "Το όνομα χρήστη ή το id σας σε αυτή την υπηρεσία."
 
-#: locales/command_strings.py:352
+#: locales/command_strings.py:388
 msgid "accent"
 msgstr "accent"
 
-#: locales/command_strings.py:353
+#: locales/command_strings.py:389
 msgid "all"
 msgstr "όλα"
 
-#: locales/command_strings.py:354
+#: locales/command_strings.py:390
 msgid "anilist"
 msgstr "anilist"
 
-#: locales/command_strings.py:355
+#: locales/command_strings.py:391
 msgid "anime or manga (defaults to anime)."
 msgstr "anime ή manga (προεπιλογή anime)."
 
-#: locales/command_strings.py:356
+#: locales/command_strings.py:392
+msgid "background"
+msgstr "φόντο"
+
+#: locales/command_strings.py:393
 msgid "backloggd"
 msgstr "backloggd"
 
-#: locales/command_strings.py:357
+#: locales/command_strings.py:394
 msgid "bio"
 msgstr "bio"
 
-#: locales/command_strings.py:358
+#: locales/command_strings.py:395
 msgid "bio, pronouns, accent, switch, 3ds, battletag, riot, or steam_id."
 msgstr "bio, pronouns, accent, switch, 3ds, battletag, riot, ή steam_id."
 
-#: locales/command_strings.py:359
+#: locales/command_strings.py:396
 msgid "channel"
 msgstr "κανάλι"
 
-#: locales/command_strings.py:360
+#: locales/command_strings.py:397
 msgid "custom_fields"
 msgstr "custom_fields"
 
-#: locales/command_strings.py:361
+#: locales/command_strings.py:398
 msgid "dm"
 msgstr "DM"
 
-#: locales/command_strings.py:362
+#: locales/command_strings.py:399
 msgid "fixed"
 msgstr "σταθερό"
 
-#: locales/command_strings.py:363
+#: locales/command_strings.py:400
 msgid "gaming_ids"
 msgstr "gaming_ids"
 
-#: locales/command_strings.py:364
+#: locales/command_strings.py:401
 msgid "lastfm"
 msgstr "lastfm"
 
-#: locales/command_strings.py:365
+#: locales/command_strings.py:402
+msgid "me for your Watching list, channel for this channel's tracked titles."
+msgstr "me για τη λίστα Παρακολουθώ, channel για τους τίτλους αυτού του καναλιού."
+
+#: locales/command_strings.py:403
 msgid "monthly"
 msgstr "μηνιαίο"
 
-#: locales/command_strings.py:367
+#: locales/command_strings.py:405
 msgid "off, channel, dm, or fixed."
 msgstr "off, channel, dm, or fixed."
 
-#: locales/command_strings.py:369
+#: locales/command_strings.py:407
 msgid "on to let your profile show the games you play, off to stop and forget them."
 msgstr "on για να επιτρέψετε στο προφίλ σας να εμφανίζει τα παιχνίδια που παίζετε, off για να σταματήσετε και να τα ξεχάσετε."
 
-#: locales/command_strings.py:370
+#: locales/command_strings.py:408
 msgid "on to let your profile show what you are listening to, off to stop."
 msgstr "on για να επιτρέψετε στο προφίλ σας να εμφανίζει τι ακούτε, off για να σταματήσετε."
 
-#: locales/command_strings.py:371
+#: locales/command_strings.py:409
 msgid "osu"
 msgstr "osu"
 
-#: locales/command_strings.py:372
+#: locales/command_strings.py:410
 msgid "private"
 msgstr "private"
 
-#: locales/command_strings.py:373
+#: locales/command_strings.py:411
 msgid "pronouns"
 msgstr "pronouns"
 
-#: locales/command_strings.py:374
+#: locales/command_strings.py:412
 msgid "public"
 msgstr "public"
 
-#: locales/command_strings.py:375
+#: locales/command_strings.py:413
 msgid "public, server or private."
 msgstr "public, server ή private."
 
-#: locales/command_strings.py:376
+#: locales/command_strings.py:414
 msgid "question | option 1 | option 2 ... (blank opens a form)."
 msgstr "question | option 1 | option 2 ... (κενό ανοίγει μια φόρμα)."
 
-#: locales/command_strings.py:377
+#: locales/command_strings.py:415
 msgid "replace"
 msgstr "αντικατάσταση"
 
-#: locales/command_strings.py:379
+#: locales/command_strings.py:417
 msgid "stack"
 msgstr "συσσώρευση"
 
-#: locales/command_strings.py:380
+#: locales/command_strings.py:418
 msgid "stack (keep every reward) or replace (latest only)."
 msgstr "stack (keep every reward) or replace (latest only)."
 
-#: locales/command_strings.py:381
+#: locales/command_strings.py:419
 msgid "steam"
 msgstr "steam"
 
-#: locales/command_strings.py:382
+#: locales/command_strings.py:420
 msgid "track"
 msgstr "κομμάτι"
 
-#: locales/command_strings.py:383
+#: locales/command_strings.py:421
 msgid "weekly"
 msgstr "εβδομαδιαίο"
 
-#: locales/command_strings.py:384
+#: locales/command_strings.py:422
 msgid "⚡ Nightcore"
 msgstr "⚡ Nightcore"
 
-#: locales/command_strings.py:385
+#: locales/command_strings.py:423
 msgid "⭕ Off"
 msgstr "⭕ Off"
 
-#: locales/command_strings.py:386
+#: locales/command_strings.py:424
 msgid "🌀 8D"
 msgstr "🌀 8D"
 
-#: locales/command_strings.py:387
+#: locales/command_strings.py:425
 msgid "🍃 Soft"
 msgstr "🍃 Soft"
 
-#: locales/command_strings.py:388
+#: locales/command_strings.py:426
 msgid "🎤 Karaoke"
 msgstr "🎤 Karaoke"
 
-#: locales/command_strings.py:389
+#: locales/command_strings.py:427
 msgid "🐢 Slowed"
 msgstr "🐢 Slowed"
 
-#: locales/command_strings.py:390
+#: locales/command_strings.py:428
 msgid "📢 Echo"
 msgstr "📢 Echo"
 
-#: locales/command_strings.py:391
+#: locales/command_strings.py:429
 msgid "📼 Vaporwave"
 msgstr "📼 Vaporwave"
 
-#: locales/command_strings.py:392
+#: locales/command_strings.py:430
 msgid "🥁 Bass Boost"
 msgstr "🥁 Bass Boost"
 
