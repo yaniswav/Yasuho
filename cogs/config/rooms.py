@@ -67,6 +67,8 @@ from tools.autoroom import (
     HUB_OVERHEAD_CHANNELS,
     MAX_CATEGORIES,
     MAX_HUBS,
+    HubCreation,
+    HubRemoval,
     can_add_hub,
     default_hub,
     normalize_hubs,
@@ -75,7 +77,7 @@ from tools.autoroom import (
     summarise_hub,
 )
 from tools.cooldowns import Cooldowns
-from tools.i18n import _
+from tools.i18n import _, ngettext
 
 log = logging.getLogger(__name__)
 
@@ -459,30 +461,77 @@ class TemporaryRooms(commands.Cog):
     # ------------------------------------------------------------------
 
     async def _add_hub(self, guild, *, label, category_name, hub_name, template, user_limit):
-        """Create the hub's category + trigger channel, then save the config."""
+        """Create the hub's category + trigger channel, then save the config.
+
+        Returns a :class:`tools.autoroom.HubCreation` on EVERY path (a refusal
+        included): ``.message`` is the translated sentence for the human, and
+        ``.orphan_category_id`` names the empty category left in the guild when
+        the rollback below could not remove it.
+
+        A hub is two channels, created in two round trips. When the second one
+        fails the first is rolled back, so a failed add normally leaves nothing
+        behind: without it the caller reads "something went wrong" while an
+        empty category it never asked for stays in the channel list. When the
+        rollback ITSELF fails, that is said out loud rather than papered over.
+
+        "Normally", because one case is not knowable from here: Discord may have
+        COMMITTED the voice channel and then failed to answer (a 5xx or a
+        timeout on the second call). The rollback then deletes the category -
+        which in Discord does not delete its children - and a stray
+        uncategorised voice channel survives that ``orphan_category_id=None``
+        cannot report, because from this side that call simply failed.
+        """
         hubs = await self._load_hubs(guild.id)
         if not can_add_hub(hubs):
-            return _("You already have the maximum of {max_hubs} hubs.").format(
-                max_hubs=MAX_HUBS
+            return HubCreation(
+                message=_("You already have the maximum of {max_hubs} hubs.").format(
+                    max_hubs=MAX_HUBS
+                )
             )
         if len(guild.categories) >= MAX_CATEGORIES:
-            return _(
-                "This server is at Discord's limit of {max} categories."
-            ).format(max=MAX_CATEGORIES)
+            return HubCreation(
+                message=_(
+                    "This server is at Discord's limit of {max} categories."
+                ).format(max=MAX_CATEGORIES)
+            )
         if len(guild.channels) + HUB_OVERHEAD_CHANNELS > GUILD_CHANNEL_BUDGET:
-            return _(
-                "This server is too close to Discord's {budget}-channel limit "
-                "to add another hub."
-            ).format(budget=GUILD_CHANNEL_BUDGET)
+            return HubCreation(
+                message=_(
+                    "This server is too close to Discord's {budget}-channel limit "
+                    "to add another hub."
+                ).format(budget=GUILD_CHANNEL_BUDGET)
+            )
 
+        category = None
         try:
             category = await guild.create_category(category_name[:100])
             hub_channel = await guild.create_voice_channel(
                 hub_name[:100], category=category
             )
-        except discord.HTTPException:
-            log.exception("Failed to create autoroom channels")
-            return _("Something went wrong while creating the hub's channels.")
+        except Exception:
+            # Deliberately broader than discord.HTTPException: these two calls
+            # go out over aiohttp, whose transport failures (ClientError,
+            # asyncio.TimeoutError) are NOT discord exceptions. Letting those
+            # through would orphan the category AND propagate - the exact defect
+            # this rollback exists to close, arriving by another exception class
+            # - so the caller would be told "internal error" with no mention of
+            # the empty category now sitting in the guild. CancelledError is a
+            # BaseException and still passes through untouched.
+            log.exception("Failed to create autoroom channels in guild %s", guild.id)
+            # ``category`` is still None when it was the category call that
+            # failed: there is nothing to undo then.
+            if category is not None and not await self._delete_hub_channel(category):
+                return HubCreation(
+                    message=_(
+                        "Something went wrong while creating the hub's channels, "
+                        "and the empty category left behind could not be removed "
+                        "- please delete it by hand."
+                    ),
+                    orphan_category_id=category.id,
+                )
+            return HubCreation(
+                message=_("Something went wrong while creating the hub's channels.")
+            )
 
         hub = default_hub(
             label=label,
@@ -493,8 +542,10 @@ class TemporaryRooms(commands.Cog):
         )
         hubs.append(hub)
         await self._save_hubs(guild.id, hubs)
-        return _("Created the **{label}** hub. Members can join {channel} now.").format(
-            label=hub["label"], channel=hub_channel.mention
+        return HubCreation(
+            message=_(
+                "Created the **{label}** hub. Members can join {channel} now."
+            ).format(label=hub["label"], channel=hub_channel.mention)
         )
 
     async def _edit_hub(
@@ -515,41 +566,142 @@ class TemporaryRooms(commands.Cog):
         await self._save_hubs(guild.id, hubs)
         return _("Updated the **{label}** hub.").format(label=hub["label"])
 
+    async def _delete_hub_channel(self, channel, *, log_traceback=True):
+        """Delete one channel of a hub; return True when it is gone.
+
+        The single place a hub's Discord teardown touches Discord, shared by
+        ``_remove_hub`` and by ``_add_hub``'s rollback so both classify a
+        refusal the same way.
+
+        ``NotFound`` counts as GONE: a 404 means the channel does not exist any
+        more, which is exactly the end state the caller wanted (it is also what
+        a re-delete of a channel still sitting in the local cache returns). A
+        refusal - ``Forbidden`` above all - is something the user can SEE in
+        their channel list, so it is reported to the caller (never swallowed
+        into a claim that the hub is gone) and logged at WARNING with the
+        channel id, not as debug noise.
+
+        ``log_traceback=False`` demotes that record to DEBUG for the caller that
+        will summarise the whole batch itself: a hub category holds up to
+        ``tools.autoroom.CATEGORY_CHILD_LIMIT`` (50) children, so one refused
+        teardown of a full hub would otherwise put ~51 warning-level tracebacks
+        in the file log for a single click. ``_remove_hub`` keeps the traceback
+        for the FIRST refusal and aggregates the rest into one line.
+
+        The catch is deliberately broader than ``discord.HTTPException``: the
+        delete goes out over aiohttp, and a transport failure there is not a
+        discord exception. It leaves the channel exactly as visible to the user
+        as a 403 does, so it is classified the same way instead of propagating.
+        """
+        try:
+            await channel.delete()
+        except discord.NotFound:
+            return True
+        except Exception:
+            log.log(
+                logging.WARNING if log_traceback else logging.DEBUG,
+                "Could not delete autoroom channel %s in guild %s",
+                channel.id,
+                getattr(getattr(channel, "guild", None), "id", None),
+                exc_info=True,
+            )
+            return False
+        return True
+
     async def _remove_hub(self, guild, hub_id):
-        """Delete a hub's category + trigger channel and drop its config."""
+        """Delete a hub's category + trigger channel and drop its config.
+
+        Returns a :class:`tools.autoroom.HubRemoval`. The Discord teardown stays
+        BEST-EFFORT and the config is dropped whatever Discord answers - a hub
+        stuck in the settings because a delete was refused would be worse - but
+        the answer now says which channels are really gone (``deleted``) and
+        which Discord refused and are still in the guild (``failed``), so
+        neither caller can report an unqualified success over a category the
+        user can still see.
+
+        The log side is bounded the same way: one traceback for the first
+        refusal, then a single aggregate WARNING naming every refused id, rather
+        than one traceback per channel of a category that can hold fifty.
+        """
         hubs = await self._load_hubs(guild.id)
         hub = next((h for h in hubs if h["id"] == hub_id), None)
         if hub is None:
-            return _("That hub no longer exists.")
+            return HubRemoval(message=_("That hub no longer exists."), removed=False)
 
-        # Delete the trigger channel, then the category and everything left in it
-        # (its live temp rooms). Best-effort: config removal must still proceed.
+        # The trigger channel first, then the category and everything left in it
+        # (its live temp rooms), then the category itself.
         category = guild.get_channel(hub["category_id"]) if hub.get("category_id") else None
         hub_channel = (
             guild.get_channel(hub["hub_channel_id"]) if hub.get("hub_channel_id") else None
         )
+        targets = []
         if hub_channel is not None:
-            try:
-                await hub_channel.delete()
-            except discord.HTTPException:
-                log.debug("Could not delete hub channel", exc_info=True)
+            targets.append(hub_channel)
         if isinstance(category, discord.CategoryChannel):
             for child in list(category.channels):
                 self._forget_room(child.id)
-                try:
-                    await child.delete()
-                except discord.HTTPException:
-                    log.debug("Could not delete hub category child", exc_info=True)
-            try:
-                await category.delete()
-            except discord.HTTPException:
-                log.debug("Could not delete hub category", exc_info=True)
+                targets.append(child)
+            targets.append(category)
+
+        deleted = []
+        failed = []
+        seen = set()
+        for channel in targets:
+            # The trigger channel is normally a CHILD of the hub's category, and
+            # a delete only leaves the local cache when the gateway says so - so
+            # the channel deleted a moment ago is still listed here. Attempting
+            # it twice would double-count it: a second 404 as another success,
+            # or a second refusal as two stuck channels.
+            if channel.id in seen:
+                continue
+            seen.add(channel.id)
+            # One traceback per teardown, not per channel: a full hub category
+            # holds up to tools.autoroom.CATEGORY_CHILD_LIMIT (50) children, so a
+            # guild that revoked manage_channels would put ~51 warning-level
+            # tracebacks in the file log for a single click. The FIRST refusal
+            # carries the traceback (the cause is the same for all of them -
+            # almost always one missing permission), the rest are summarised in
+            # one line below.
+            if await self._delete_hub_channel(channel, log_traceback=not failed):
+                deleted.append(channel.id)
+            else:
+                failed.append(channel.id)
+
+        if len(failed) > 1:
+            # Only past the first: a lone refusal is already fully described by
+            # its own WARNING above, and repeating it here would say the same
+            # thing twice.
+            log.warning(
+                "Could not delete %s autoroom channels %s of hub %s in guild %s",
+                len(failed),
+                failed,
+                hub_id,
+                guild.id,
+            )
 
         self._active.pop((guild.id, hub_id), None)
         remaining = [h for h in hubs if h["id"] != hub_id]
         await self._save_hubs(guild.id, remaining)
-        return _("Removed the **{label}** hub.").format(
-            label=hub.get("label") or DEFAULT_LABEL
+        label = hub.get("label") or DEFAULT_LABEL
+        if failed:
+            # BOTH forms carry {count}, never a hardcoded "1" in the singular.
+            # A catalog is free to map every n onto msgstr[0] (ja ships exactly
+            # that), so a singular that spells its own number would state "1"
+            # for three refused channels - a false count in the one sentence
+            # whose whole job is telling the truth about that count.
+            message = ngettext(
+                "Removed the **{label}** hub from the settings, but {count} of "
+                "its channels could not be deleted - please remove it by hand.",
+                "Removed the **{label}** hub from the settings, but {count} of "
+                "its channels could not be deleted - please remove them by hand.",
+                len(failed),
+            ).format(label=label, count=len(failed))
+        else:
+            message = _("Removed the **{label}** hub.").format(label=label)
+        return HubRemoval(
+            message=message,
+            deleted=tuple(deleted),
+            failed=tuple(failed),
         )
 
     async def _rename_hub_channels(self, guild, hub_id, *, category_name, hub_name):

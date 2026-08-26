@@ -28,7 +28,7 @@ import discord
 import pytest
 
 from cogs.system import dashboard_actions
-from tools import i18n, settings
+from tools import autoroom, i18n, settings
 
 # The id the fake action rows carry in ``requested_by``: the authenticated
 # dashboard user who asked, and now the ACTOR whose rank gates the four
@@ -3368,8 +3368,11 @@ def test_role_menu_executors_are_registered():
 # autoroom_hub_create / autoroom_hub_delete executors: validate the payload
 # server-side BEFORE touching the cog, then drive TemporaryRooms._add_hub /
 # ._remove_hub (which create/delete the REAL category + trigger channel and
-# re-index the cog). Success is detected STRUCTURALLY - both cog methods return
-# a translated human string on every path - by diffing the saved hub list.
+# re-index the cog). Both cog methods answer with a RECORD (HubCreation /
+# HubRemoval) whose ``.message`` is a translated human string on every path, so
+# create success is still detected STRUCTURALLY - by diffing the saved hub list,
+# never by reading the record - while delete reads the record's ``failed`` to
+# tell a clean removal from a config drop over channels Discord refused.
 # ---------------------------------------------------------------------------
 
 
@@ -3378,16 +3381,29 @@ class FakeRoomsCog:
 
     ``_load_hubs`` serves the guild's saved hubs (the before/after picture the
     create executor diffs), ``_add_hub`` records its exact kwargs and - unless
-    seeded to refuse - appends a hub and returns the "Created ..." message, just
+    seeded to refuse - appends a hub and returns the "Created ..." outcome, just
     as the real one does only after actually saving. ``_remove_hub`` records the
-    id, drops the hub and returns its own message. No Discord objects needed: the
+    id, drops the hub and returns its own outcome. No Discord objects needed: the
     real channel work happens inside the cog, which is not under test here.
+
+    Both methods answer with the REAL records (``tools.autoroom.HubCreation`` /
+    ``HubRemoval``), never a bare string: that is the seam this file pins, so a
+    cog that went back to answering with a sentence alone - and an executor that
+    started reporting an unqualified success again - fails here.
     """
 
     CREATED_HUB_ID = "newhub01"
     CREATED_CHANNEL_ID = 4242
 
-    def __init__(self, hubs=None, refuse_add=False):
+    def __init__(
+        self,
+        hubs=None,
+        refuse_add=False,
+        orphan_category_id=None,
+        removal_deleted=(444, 555),
+        removal_failed=(),
+        removal_removed=True,
+    ):
         self.hubs = list(hubs or [])
         self.loads = []
         self.add_calls = []
@@ -3397,6 +3413,13 @@ class FakeRoomsCog:
         # around the call or every dashboard message comes back in English.
         self.locales = []
         self._refuse_add = refuse_add
+        # Set on the refusal path only: the half-created hub whose leftover
+        # category the cog could not roll back either.
+        self._orphan_category_id = orphan_category_id
+        # What Discord let the cog delete, and what it refused.
+        self._removal_deleted = tuple(removal_deleted)
+        self._removal_failed = tuple(removal_failed)
+        self._removal_removed = removal_removed
 
     async def _load_hubs(self, guild_id):
         self.loads.append(guild_id)
@@ -3417,8 +3440,13 @@ class FakeRoomsCog:
             }
         )
         if self._refuse_add:
-            # A budget refusal: the real cog returns its message WITHOUT saving.
-            return "This server is at Discord's limit of 50 categories."
+            # A budget refusal (or a failed creation): the real cog returns its
+            # message WITHOUT saving, plus the leftover category it could not
+            # roll back, if any.
+            return autoroom.HubCreation(
+                message="This server is at Discord's limit of 50 categories.",
+                orphan_category_id=self._orphan_category_id,
+            )
         self.hubs.append(
             _ar_hub(
                 hub_id=self.CREATED_HUB_ID,
@@ -3426,16 +3454,30 @@ class FakeRoomsCog:
                 label=label,
             )
         )
-        return "Created the **%s** hub. Members can join <#%s> now." % (
-            label,
-            self.CREATED_CHANNEL_ID,
+        return autoroom.HubCreation(
+            message="Created the **%s** hub. Members can join <#%s> now."
+            % (label, self.CREATED_CHANNEL_ID)
         )
 
     async def _remove_hub(self, guild, hub_id):
         self.locales.append(i18n.current_locale.get())
         self.remove_calls.append((guild, hub_id))
+        if not self._removal_removed:
+            # The hub was already gone from the config when the cog re-read it.
+            return autoroom.HubRemoval(
+                message="That hub no longer exists.", removed=False
+            )
         self.hubs = [hub for hub in self.hubs if hub["id"] != hub_id]
-        return "Removed the **Ranked** hub."
+        if self._removal_failed:
+            return autoroom.HubRemoval(
+                message="Removed the **Ranked** hub from the settings, but %d of "
+                "its channels could not be deleted." % len(self._removal_failed),
+                deleted=self._removal_deleted,
+                failed=self._removal_failed,
+            )
+        return autoroom.HubRemoval(
+            message="Removed the **Ranked** hub.", deleted=self._removal_deleted
+        )
 
 
 class SlowRoomsCog(FakeRoomsCog):
@@ -3468,7 +3510,7 @@ class SlowRoomsCog(FakeRoomsCog):
             )
         )
         self.hubs = snapshot  # write-back from a possibly stale snapshot
-        return "Created the **%s** hub." % label
+        return autoroom.HubCreation(message="Created the **%s** hub." % label)
 
 
 class FakeRoomsPermissions:
@@ -3694,6 +3736,106 @@ async def test_autoroom_hub_delete_calls_remove_hub():
     assert cog.remove_calls == [(guild, "abc12345")]
 
 
+async def test_autoroom_hub_delete_reports_the_channels_discord_refused():
+    """A refused deletion is a QUALIFIED success, never an unqualified "done".
+
+    The cog drops the config whatever Discord answers (a hub stuck in the
+    settings behind a refused delete would be worse), so ok stays True - but the
+    result must let the web app say "config cleared, 2 channels still there"
+    instead of "Hub deleted" over a category the user can still see.
+    """
+    cog = FakeRoomsCog(
+        hubs=[_ar_hub(hub_id="abc12345")],
+        removal_deleted=(555,),
+        removal_failed=(444, 777),
+    )
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+
+    assert result["ok"] is True  # the durable half DID happen
+    assert "error" not in result  # a qualified success is not a refusal
+    assert result["failed"] == ["444", "777"]  # snowflakes as STRINGS
+    assert result["deleted"] == ["555"]
+    assert "could not be deleted" in result["message"]
+
+
+async def test_autoroom_hub_delete_reports_an_empty_failed_list_when_gone():
+    """The proof of "really gone": failed present and empty, not absent.
+
+    The dashboard tests ``failed``, so the key has to be there on the happy path
+    too - an absent key would read as falsy for the wrong reason.
+    """
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")], removal_deleted=(444, 555))
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+
+    assert result["ok"] is True
+    assert result["failed"] == []
+    assert result["deleted"] == ["444", "555"]
+    assert result["message"] == "Removed the **Ranked** hub."
+
+
+async def test_autoroom_hub_delete_hub_vanished_under_the_pre_check():
+    """The cog re-reads the hub list; the dashboard's Node process writes it too.
+
+    A hub removed between the executor's existence pre-check and the cog's own
+    read touched NOTHING, so it must not be reported as a deletion - and it
+    reuses the pre-check's code rather than inventing a second one.
+    """
+    cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")], removal_removed=False)
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_delete(
+        bot, 100, {"hub_id": "abc12345"}
+    )
+
+    assert result == {"ok": False, "error": "hub_not_found"}
+    assert len(cog.remove_calls) == 1  # it WAS attempted
+
+
+async def test_autoroom_hub_create_forwards_the_category_it_could_not_roll_back():
+    """Half-created + rollback refused: the leftover category is named.
+
+    Still a refusal (nothing was saved), but the dashboard must be able to tell
+    "your hub was not created" from "your hub was not created AND there is now
+    an empty category to delete".
+    """
+    cog = FakeRoomsCog(refuse_add=True, orphan_category_id=8811)
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result["ok"] is False
+    assert result["error"] == "create_failed"  # NOT promoted to a success
+    assert result["orphan_category_id"] == "8811"  # snowflake as a STRING
+
+
+async def test_autoroom_hub_create_omits_the_orphan_key_when_nothing_was_left():
+    """Rollback worked (or there was nothing to roll back): the key is ABSENT.
+
+    Its mere presence is the signal, so a clean failure must not carry it - a
+    null would have the dashboard offering to clean up a category that is not
+    there.
+    """
+    cog = FakeRoomsCog(refuse_add=True)
+    bot = _ar_bot(cog=cog)
+
+    result = await dashboard_actions._exec_autoroom_hub_create(
+        bot, 100, _hub_payload()
+    )
+
+    assert result["ok"] is False
+    assert "orphan_category_id" not in result
+
+
 async def test_autoroom_hub_delete_unknown_hub_is_not_found():
     cog = FakeRoomsCog(hubs=[_ar_hub(hub_id="abc12345")])
     bot = _ar_bot(cog=cog)
@@ -3750,6 +3892,9 @@ async def test_autoroom_hub_delete_full_flow_via_handle_action():
 
     assert status == "done"
     assert pool.rows[1]["result"]["ok"] is True
+    # The channel lists survive the JSON write-back to the queue row.
+    assert pool.rows[1]["result"]["deleted"] == ["444", "555"]
+    assert pool.rows[1]["result"]["failed"] == []
     assert len(cog.remove_calls) == 1
     assert cog.hubs == []
 

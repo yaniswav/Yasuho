@@ -1633,16 +1633,25 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
     The per-guild ``MAX_HUBS`` cap is enforced before anything is created, exactly
     as ``_exec_role_menu_post`` gates on ``MAX_MENUS_PER_GUILD``.
 
-    ``TemporaryRooms._add_hub`` returns a TRANSLATED human string on EVERY path
-    (created, refused by one of its budget checks, or "something went wrong while
-    creating the hub's channels"), so success is detected STRUCTURALLY rather than
-    by matching that text: only the created path appends the hub and saves, so
-    exactly one new hub id appears in the reloaded list. The cog's message is
-    passed back as ``message`` so the dashboard can show WHY a refusal happened
-    (which budget was hit) - it is bot-authored copy, never a stack or a secret,
-    and it is rendered under the guild's configured language (the cog translates
-    against the ambient locale, which a background task would otherwise leave at
-    the default).
+    ``TemporaryRooms._add_hub`` returns a ``tools.autoroom.HubCreation`` whose
+    ``message`` is a TRANSLATED human string on EVERY path (created, refused by
+    one of its budget checks, or "something went wrong while creating the hub's
+    channels"), so success is STILL detected structurally rather than from that
+    record: only the created path appends the hub and saves, so exactly one new
+    hub id appears in the reloaded list. The cog's message is passed back as
+    ``message`` so the dashboard can show WHY a refusal happened (which budget
+    was hit) - it is bot-authored copy, never a stack or a secret, and it is
+    rendered under the guild's configured language (the cog translates against
+    the ambient locale, which a background task would otherwise leave at the
+    default).
+
+    The one machine-readable thing that record adds is ``orphan_category_id``,
+    forwarded (as a STRING, like every snowflake here) on the ``create_failed``
+    result when the hub was half-created - category made, trigger channel
+    refused - AND the cog's rollback of that category was refused too. The key
+    is absent whenever nothing was left behind, so the dashboard can tell "your
+    hub was not created" from "your hub was not created and there is now an
+    empty category to delete". It never turns the refusal into a success.
 
     Because the whole thing is a read-modify-write of one JSONB blob it runs
     under the guild's ``_AUTOROOM_LOCKS`` entry, after dropping the settings LRU
@@ -1712,7 +1721,7 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
             return {"ok": False, "error": "too_many_hubs"}
 
         with i18n.locale(loc):
-            message = await cog._add_hub(
+            outcome = await cog._add_hub(
                 guild,
                 label=label,
                 category_name=category_name,
@@ -1728,7 +1737,14 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
     if not created:
         # Refused by a budget check (categories / channel count) or the channel
         # creation failed: nothing was saved, and the cog's message says which.
-        return {"ok": False, "error": "create_failed", "message": message}
+        failure = {"ok": False, "error": "create_failed", "message": outcome.message}
+        if outcome.orphan_category_id is not None:
+            # Half-created: the category exists, the trigger channel does not,
+            # and the cog's rollback of that category was refused too. The key is
+            # ABSENT whenever nothing was left behind, so its mere presence is
+            # the signal - the guild has an empty category a human must delete.
+            failure["orphan_category_id"] = str(outcome.orphan_category_id)
+        return failure
     # _add_hub APPENDS the new hub before saving, so the last previously-unseen
     # entry is the one THIS call created even if another writer slipped one in.
     hub = created[-1]
@@ -1736,7 +1752,7 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
         "ok": True,
         "hub_id": hub["id"],
         "hub_channel_id": str(hub["hub_channel_id"]),
-        "message": message,
+        "message": outcome.message,
     }
 
 
@@ -1754,12 +1770,25 @@ async def _exec_autoroom_hub_delete(bot, guild_id, payload):
 
     The existence pre-check is what turns the cog's translated "That hub no
     longer exists." into a short machine code, mirroring how the reaction/button
-    executors validate a role or channel before acting. The cog's message is
-    passed back for display (rendered under the guild's language), as in the
-    create executor - and, exactly as there, the whole load -> remove -> save
-    sequence runs under the guild's ``_AUTOROOM_LOCKS`` entry with the settings
-    LRU dropped first, so it can neither read a stale hub list nor lose a
-    concurrent action's write.
+    executors validate a role or channel before acting (and the cog's own
+    ``removed`` flag closes the same case once more, for a hub that vanished
+    between that pre-check and the cog's re-read). The cog's message is passed
+    back for display (rendered under the guild's language), as in the create
+    executor - and, exactly as there, the whole load -> remove -> save sequence
+    runs under the guild's ``_AUTOROOM_LOCKS`` entry with the settings LRU
+    dropped first, so it can neither read a stale hub list nor lose a concurrent
+    action's write.
+
+    The Discord teardown is BEST-EFFORT by design - the config row is dropped
+    whatever Discord answers, because a hub stuck in the settings behind a
+    refused delete would be worse - so a success here is a QUALIFIED one: the
+    result carries ``deleted`` and ``failed`` (channel ids, as strings) from the
+    cog's ``HubRemoval``. ``failed == []`` is the only thing that means "gone";
+    a non-empty ``failed`` means "config cleared, those channels are still in
+    the guild" and the banner must say so instead of "Hub deleted". It is NOT
+    reported as an error and must not be re-queued: replaying it would delete
+    nothing more (the hub is already out of the config, so the replay answers
+    ``hub_not_found``).
     """
     hub_id = payload.get("hub_id")
     if not isinstance(hub_id, str):
@@ -1792,9 +1821,26 @@ async def _exec_autoroom_hub_delete(bot, guild_id, payload):
             return {"ok": False, "error": "hub_not_found"}
 
         with i18n.locale(loc):
-            message = await cog._remove_hub(guild, hub_id)
+            outcome = await cog._remove_hub(guild, hub_id)
 
-    return {"ok": True, "hub_id": hub_id, "message": message}
+    if not outcome.removed:
+        # The hub vanished between the pre-check and the cog's own re-read (the
+        # dashboard's Node process writes this same blob from another process).
+        # Nothing was touched: report it with the SAME code the pre-check uses.
+        return {"ok": False, "error": "hub_not_found"}
+    # A refused deletion does NOT make this a failure: the config row IS gone,
+    # which is the durable half, and re-queuing the action would delete nothing
+    # more. It is a QUALIFIED success - "failed" empty is the only proof the hub
+    # is really gone, and a non-empty one lists the channels still in the guild
+    # so the web app can say "config cleared, N channels still there" instead of
+    # "Hub deleted". Ids are strings, like every other snowflake in a result.
+    return {
+        "ok": True,
+        "hub_id": hub_id,
+        "deleted": [str(channel_id) for channel_id in outcome.deleted],
+        "failed": [str(channel_id) for channel_id in outcome.failed],
+        "message": outcome.message,
+    }
 
 
 _EXECUTORS = {

@@ -153,7 +153,11 @@ class AddHubModal(LocaleModal):
     async def on_submit(self, interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
         limit_values = self.limit_select.values
-        message = await self.cog._add_hub(
+        # ``_add_hub`` answers with a HubCreation, never a bare string: its
+        # ``.message`` already says whether a half-created hub left an empty
+        # category behind, so this surface tells the same truth the dashboard
+        # reads out of the executor's result.
+        outcome = await self.cog._add_hub(
             interaction.guild,
             label=(self.label_input.value or "").strip() or DEFAULT_LABEL,
             category_name=(self.category_input.value or "").strip()
@@ -162,7 +166,7 @@ class AddHubModal(LocaleModal):
             template=(self.template_input.value or "").strip() or DEFAULT_TEMPLATE,
             user_limit=_parse_int(limit_values[0], 0) if limit_values else 0,
         )
-        await interaction.followup.send(message, ephemeral=True)
+        await interaction.followup.send(outcome.message, ephemeral=True)
         await self.panel._rerender()
 
 
@@ -519,8 +523,12 @@ class AutoroomPanel(discord.ui.LayoutView):
     async def _on_remove(self, interaction, hub_id):
         try:
             await interaction.response.defer(ephemeral=True, thinking=True)
-            message = await self.cog._remove_hub(interaction.guild, hub_id)
-            await interaction.followup.send(message, ephemeral=True)
+            # A HubRemoval, not a bare string. Its ``.message`` is the qualified
+            # one ("... but N of its channels could not be deleted") whenever
+            # Discord refused a delete, so this panel never claims a hub is gone
+            # over a category the user can still see in their channel list.
+            outcome = await self.cog._remove_hub(interaction.guild, hub_id)
+            await interaction.followup.send(outcome.message, ephemeral=True)
             await self._rerender()
         except Exception:
             log.exception("Autoroom remove-hub failed")

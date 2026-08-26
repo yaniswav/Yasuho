@@ -28,6 +28,7 @@ Hub dict shape::
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 
 from tools.snowflake import coerce_id
 
@@ -218,6 +219,63 @@ def channels_needed(hubs):
         max_rooms = DEFAULT_MAX_ROOMS if max_rooms is None else _clamp(max_rooms, 1, MAX_ROOMS)
         total += HUB_OVERHEAD_CHANNELS + max_rooms
     return total
+
+
+# --- What a hub create / remove actually did --------------------------------
+# ``TemporaryRooms._add_hub`` and ``._remove_hub`` each do TWO things at once:
+# they write the guild's config (durable) and they create/delete real Discord
+# channels (best-effort - Discord can refuse any single one of them). They used
+# to answer with a translated sentence and nothing else, so BOTH their callers -
+# the Discord panel and the dashboard executor - could only report an
+# unqualified "done" even when every deletion had been refused and the category
+# was still sitting in front of the user. These two records carry both halves:
+# the sentence a human reads, and the machine-readable truth of what Discord
+# actually did. They live here, with the rest of the pure hub vocabulary, so the
+# cog, the panel and cogs/system/dashboard_actions.py share one definition.
+
+
+@dataclass(frozen=True)
+class HubCreation:
+    """Outcome of ``TemporaryRooms._add_hub``.
+
+    ``message`` is the translated sentence to show. ``orphan_category_id`` is
+    set ONLY on the path where the category WAS created, the trigger channel was
+    not, and the rollback delete of that category ALSO failed: an empty category
+    nobody asked for is left in the guild and nothing will come back for it.
+    ``None`` means nothing was left behind (either the rollback worked or there
+    was never a category to roll back).
+
+    Deliberately NOT a success flag: whether a hub was really created is
+    established by the caller from the SAVED hub list, never from this record -
+    only the created path appends and saves, and the dashboard executor's
+    before/after diff is also what tells it WHICH hub it just created.
+    """
+
+    message: str
+    orphan_category_id: int | None = None
+
+
+@dataclass(frozen=True)
+class HubRemoval:
+    """Outcome of ``TemporaryRooms._remove_hub``: config drop + Discord truth.
+
+    ``removed`` is False only when the hub was already absent from the config,
+    in which case nothing at all was touched. ``deleted`` holds the ids of the
+    channels that ARE gone now - including any Discord answered 404 for, since
+    that is the same end state - and ``failed`` the ids Discord refused, which
+    are STILL visible in the guild.
+
+    An empty ``failed`` is the only proof that the hub is really gone. The
+    config is dropped either way, on purpose: a hub stuck in the settings
+    because Discord refused a delete would be worse than a leftover channel.
+    That makes a removal with a non-empty ``failed`` a QUALIFIED success, not a
+    failure - which is why there is no error code here to report.
+    """
+
+    message: str
+    removed: bool = True
+    deleted: tuple[int, ...] = ()
+    failed: tuple[int, ...] = ()
 
 
 def summarise_hub(hub):
