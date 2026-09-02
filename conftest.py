@@ -273,9 +273,15 @@ class FakeInteraction:
     Recorded lists: ``.sent`` (response.send_message), ``.edits``
     (response.edit_message), ``.defers`` (response.defer), ``.followups``
     (followup.send), ``.message_edits`` (message.edit).
+
+    ``.extras`` is a plain dict, like the real ``discord.Interaction.extras``,
+    which discord.py always initialises. ``tools.interactions`` stores the
+    ephemeral-flow marker there for component callbacks, which have no Context
+    to hang it off.
     """
 
     def __init__(self, done=False, user_id=1, guild_id=None, locale="en"):
+        self.extras = {}
         self.sent = []
         self.edits = []
         self.defers = []

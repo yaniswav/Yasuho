@@ -204,3 +204,94 @@ async def test_refresh_in_place_lets_non_http_exceptions_propagate(make_interact
         await interactions.refresh_in_place(
             itx, itx.message, embed=object(), view=object()
         )
+
+
+# ---------------------------------------------------------------------------
+# defer() and the ephemeral-flow marker
+# ---------------------------------------------------------------------------
+# `EPHEMERAL_FLOW` records "every reply in this flow is private" on the
+# interaction's own `extras`, because discord.py keeps no readable trace of an
+# ephemeral defer. It was written for the COMMAND path (a Context, whose
+# interaction hangs off `ctx.interaction`); a button, select or modal callback
+# is handed the raw Interaction and has no Context anywhere, so the reader has
+# to accept both shapes.
+
+
+async def test_defer_records_the_ephemeral_choice_on_the_interaction(make_interaction):
+    """An ephemeral defer marks the flow, the way defer_ephemeral does for a ctx."""
+
+    itx = make_interaction(done=False)
+
+    assert await interactions.defer(itx, ephemeral=True, thinking=True) is True
+    assert itx.defers == [((), {"ephemeral": True, "thinking": True})]
+    assert interactions.prefers_ephemeral(itx) is True
+
+
+async def test_a_public_defer_marks_nothing(make_interaction):
+    """The counter-test: the marker follows the CHOICE, not the defer."""
+
+    itx = make_interaction(done=False)
+
+    await interactions.defer(itx)
+
+    assert itx.defers == [((), {"ephemeral": False, "thinking": False})]
+    assert interactions.prefers_ephemeral(itx) is False
+
+
+async def test_a_failed_ephemeral_defer_marks_nothing(make_interaction):
+    """A defer that never landed must not claim a flow it did not open."""
+
+    itx = make_interaction(done=False)
+    itx.response.defer = _raiser(_http_exc())
+
+    assert await interactions.defer(itx, ephemeral=True, thinking=True) is False
+    assert interactions.prefers_ephemeral(itx) is False
+
+
+async def test_mark_ephemeral_accepts_a_raw_interaction(make_interaction):
+    """The component path: no Context, so the Interaction IS the target."""
+
+    itx = make_interaction(done=False)
+
+    assert interactions.prefers_ephemeral(itx) is False
+    interactions.mark_ephemeral(itx)
+    assert interactions.prefers_ephemeral(itx) is True
+
+
+def test_the_context_reading_still_wins_over_the_object_itself(make_context, make_interaction):
+    """A Context is still read through ``ctx.interaction``, not through itself.
+
+    Both readings have to land in the SAME dict, or a command would mark one
+    place and the error reporter would read another.
+    """
+
+    ctx = make_context()
+    ctx.interaction = make_interaction(done=False)
+
+    interactions.mark_ephemeral(ctx)
+
+    assert interactions.prefers_ephemeral(ctx) is True
+    assert interactions.prefers_ephemeral(ctx.interaction) is True
+    assert ctx.interaction.extras[interactions.EPHEMERAL_FLOW] is True
+
+
+def test_marking_a_prefix_context_is_still_a_noop(make_context):
+    """No interaction, no extras, nothing to remember - and nothing raised."""
+
+    ctx = make_context()
+    assert ctx.interaction is None
+
+    interactions.mark_ephemeral(ctx)
+
+    assert interactions.prefers_ephemeral(ctx) is False
+
+
+def test_marking_something_with_no_extras_is_a_noop():
+    """A bookkeeping helper must never be the thing that breaks a callback."""
+
+    class _Bare:
+        pass
+
+    bare = _Bare()
+    interactions.mark_ephemeral(bare)
+    assert interactions.prefers_ephemeral(bare) is False

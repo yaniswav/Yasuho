@@ -172,6 +172,18 @@ class _RoomRenameModal(LocaleModal):
         if not name:
             await interactions.reply(interaction, _("Give the room a name."))
             return
+        # ACKNOWLEDGE BEFORE THE RENAME. A channel NAME change is not an
+        # ordinary bounded PATCH: Discord caps name/topic edits at two per ten
+        # minutes per channel, and discord.py sleeps out the 429 inside the
+        # request. The third rename in a room therefore blocks for MINUTES on a
+        # three-second token. Ephemeral + thinking, to match the three
+        # ``interactions.reply``/``notify_failure`` answers below - all of them
+        # ephemeral, and all of them switching to ``followup.send`` on their own
+        # once the interaction is done. The two guards above stay in front of
+        # the defer so they still answer with a plain response.
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="room rename"
+        )
         try:
             await channel.edit(name=name[:100])
         except discord.HTTPException:

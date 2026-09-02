@@ -1,4 +1,4 @@
-"""Structural guard: no slash command may make Discord wait past its 3s window.
+"""Structural guard: nothing may make Discord wait past its 3s interaction window.
 
 WHY THIS GUARD EXISTS
 ---------------------
@@ -58,7 +58,67 @@ WHAT IT DELIBERATELY DOES NOT KNOW (the limits, stated)
 * A ``for``/``while`` ``else`` body is walked for its COST but its outcome is
   discarded: a ``break`` skips it, so an answer in there cannot be trusted to
   have run. It over-reports rather than under-reports.
+* ``gather`` costs its ARGUMENTS (:data:`PASSTHROUGH`), so a STARRED iterable -
+  ``asyncio.gather(*[m.add_roles(r) for r in roles])`` - hides its fan-out: the
+  ``Starred`` node has no attribute chain, reads as ``<expr>``, and the whole
+  gather comes back UNKNOWN rather than SLOW. Again a degrade to "unknown", not
+  to "safe". All four ``gather(*(...))`` sites in the tree are in music.py
+  (a progress-bar sweep, a snapshot persist, a cold restore and a favourites
+  resolve) and none of them is reached by a scanned callback: both scans report
+  zero gather unknowns.
+* A ``finally`` body is walked only when the ``try`` statement is still ALIVE
+  when it is reached. A body that returns WITHOUT answering therefore skips its
+  ``finally``, and a round trip put there is not reported. Walking it
+  unconditionally would be worse: the ``finally`` of a try whose body ANSWERED
+  runs after the clock stopped, and costing it would invent a wait that cannot
+  happen.
 * A prefix-only command cannot expire anything and is not scanned.
+
+THE TWO SURFACES
+----------------
+The same engine is pointed at two collectors, and only the collector differs:
+
+1. :func:`discover` - **commands**. Every slash-reachable callback: hybrid
+   commands, hybrid groups and their subcommands, app commands.
+2. :func:`discover_components` - **component callbacks**. Every ``callback`` /
+   ``on_submit`` / ``interaction_check`` / ``from_custom_id`` on a class
+   deriving from a discord.ui type, in ``cogs`` AND ``tools``.
+
+Components were out of scope until 2026-08-31 19:03, when
+``cogs/config/rolemenus.py::RoleMenuSelect.callback`` raised the same
+``404 (error code: 10062): Unknown interaction`` from a role-menu dropdown: a
+member ticked two options, each grant and each removal is its own REST call, and
+the ephemeral summary at the bottom arrived after the token was gone. They are
+the LARGER surface on this bot (226 callbacks against 232 commands) and the more
+exposed one, because a panel button is pressed far more often than the command
+that posted the panel.
+
+HOW A COMPONENT ANSWERS
+-----------------------
+This is the part that had to be got right, because a component answers nothing
+like a command and the near-misses are everywhere in the tree:
+
+* ANSWERS: ``interaction.response.send_message`` / ``.edit_message`` /
+  ``.defer`` / ``.send_modal``, and ``interaction.followup.send``. Also the
+  ``tools.interactions`` helpers built on them (``reply``, ``notify_failure``,
+  ``defer``, ``refresh_layout``, ``refresh_in_place``), recognised by walking
+  into them rather than by name.
+* DOES NOT ANSWER: ``self.message.edit`` / ``interaction.message.edit`` (the
+  panel's own message, over the ordinary channel route),
+  ``interaction.channel.send``, ``ctx.send``. Each is a round trip that leaves
+  the token unanswered and the clock running.
+
+Two idioms in this tree needed their own rules, both tested in both directions:
+
+* ``if not interaction.response.is_done(): await <answer>`` - the two arms are
+  "answering now" and "answered already", never "unanswered", so BOTH end
+  answered (:func:`responded_truth`).
+* ``try: await <answer> ... except HTTPException: await message.edit(...)`` - a
+  handler reachable only because the answer itself raised is the recovery, not a
+  wait in front of the answer.
+
+Without those two, roughly forty panel callbacks report a round trip that cannot
+happen, and the guard is noise instead of evidence.
 """
 
 import ast
@@ -134,6 +194,13 @@ FAST_METHODS = frozenset(
 
 # Awaits whose cost is the worst cost of their ARGUMENTS.
 PASSTHROUGH = frozenset({"gather", "wait_for", "shield", "as_completed"})
+
+# Bindings that are a ``commands.Context`` rather than a raw ``Interaction``.
+# Only a Context has the prefix/slash duality that :func:`slash_truth` reads;
+# ``interaction.message`` on a component callback is the message the component
+# is attached to, not a prefix/slash discriminator, so guarding on it must not
+# make a branch vanish. See :func:`slash_truth`.
+CONTEXT_BINDINGS = frozenset({"ctx", "context"})
 
 
 def dotted(node):
@@ -320,6 +387,16 @@ class Detector:
                 fn = self.index.functions.get(target, {}).get(attr)
                 if fn is not None:
                     return target, None, fn
+                # A RE-EXPORT: ``embed_creator.notify_failure`` is not defined in
+                # embed_creator, it is imported there from tools.interactions.
+                # One hop is enough for every re-export in this tree, and it is
+                # what makes the answer-helper rule below see that call shape.
+                hop = self.index.imports.get(target, {}).get(attr)
+                if hop:
+                    mod, _sep, name = hop.rpartition(".")
+                    fn = self.index.functions.get(mod, {}).get(name)
+                    if fn is not None:
+                        return mod, None, fn
             found = self.find_class(module, head[:-2] if head.endswith("()") else head)
             if found:
                 got = self.lookup_method(found[0], found[1], attr)
@@ -434,9 +511,15 @@ class Detector:
 
 
 def ctx_bindings(fn):
-    """The parameter names that ARE the interaction surface in this function."""
+    """The parameter names that ARE the interaction surface in this function.
 
-    args = [a.arg for a in fn.args.args]
+    ``posonlyargs`` are included because ``DynamicItem.from_custom_id`` is
+    declared positional-only (``cls, interaction, item, match, /``) - reading
+    ``fn.args.args`` alone returns nothing for it and the walker would then fall
+    back to the ``ctx`` default and see no interaction surface at all.
+    """
+
+    args = [a.arg for a in fn.args.posonlyargs] + [a.arg for a in fn.args.args]
     if args and args[0] in ("self", "cls"):
         args = args[1:]
     return {a for a in args if a in ("ctx", "context", "interaction", "itx")}
@@ -491,6 +574,40 @@ def slash_truth(test, ctxs):
     if name:
         parts = name.split(".")
         if len(parts) == 2 and parts[0] in ctxs and parts[1] in ("interaction", "message"):
+            return True
+    return None
+
+
+def responded_truth(test, ctxs):
+    """Does this branch run only when the interaction was ALREADY answered?
+
+    ``interaction.response.is_done()`` is the repo's standard fork between the
+    two states of one interaction: discord.py sets ``_response_type`` the moment
+    ``send_message`` / ``defer`` / ``edit_message`` / ``send_modal`` fires, and
+    reads it back here. So the two arms are not "maybe answered, maybe not" -
+    they are "answered already" and "answering now", and BOTH end answered.
+
+    Returns True when the branch body is the already-answered arm, False when it
+    is the not-yet arm, None when the test is not this fork.
+
+    Reading it is what keeps the guard usable on component callbacks: the
+    idiom ``if not interaction.response.is_done(): await
+    interaction.response.edit_message(...)`` followed by a ``message.edit``
+    fallback is written out in ``tools/interactions.py`` and copied into a dozen
+    panels. Merged blindly, the fallback edit reads as a round trip standing in
+    front of the answer, and roughly forty panel callbacks light up for a wait
+    that cannot happen.
+    """
+
+    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        inner = responded_truth(test.operand, ctxs)
+        return None if inner is None else (not inner)
+    name = dotted(test)
+    if not name:
+        return None
+    parts = name.split(".")
+    if len(parts) == 3 and parts[0] in ctxs and parts[1] == "response":
+        if parts[2] == "is_done()":
             return True
     return None
 
@@ -596,7 +713,21 @@ class Walker:
             out = self.exprs(st.test)
             if out != ALIVE:
                 return out
-            truth = slash_truth(st.test, self.ctxs)
+            done = responded_truth(st.test, self.ctxs)
+            if done is not None:
+                # One arm answers now, the other was answered before we got
+                # here; the "before" arm is ANSWERED without being walked,
+                # because nothing on it can burn a window that is already spent.
+                if done is True:
+                    return self._merge(
+                        ANSWERED, self.block(st.orelse) if st.orelse else ALIVE
+                    )
+                return self._merge(self.block(st.body), ANSWERED)
+            # Only a Context binding has a prefix/slash duality to read. On a
+            # component callback the binding is a raw Interaction, where
+            # ``.message`` is the component's own message and ``.interaction``
+            # does not exist - so no branch may be folded away there.
+            truth = slash_truth(st.test, self.ctxs & CONTEXT_BINDINGS)
             if truth is True:
                 return self.block(st.body)
             if truth is False:
@@ -606,7 +737,25 @@ class Walker:
                 self.block(st.orelse) if st.orelse else ALIVE,
             )
         if isinstance(st, ast.Try):
-            outs = [self.block(st.body)]
+            before = len(self.findings)
+            body_out = self.block(st.body)
+            # RECOVERY, not a pre-answer burn. When the body answered and NOTHING
+            # costly ran before that answer, the only way into an ``except`` is
+            # the answer call itself raising - and by then the request that
+            # decides the 3s window has already left. (10062: the token was
+            # already dead; 40060: it was already answered upstream; a 5xx or a
+            # timeout: the token may live, and the handler's ``message.edit`` is
+            # the repair.) Walking those handlers as if they preceded the answer
+            # is what turned the whole "answer in place, fall back to editing the
+            # stored message" idiom - tools.interactions.refresh_layout,
+            # arg_completion._rerender, ConfigPanel._rerender - into forty false
+            # positives. LIMIT: an exception raised by a NON-await statement
+            # before the answer also lands in the handler, and a round trip put
+            # there is not reported. Nothing in the tree does that, and the cost
+            # would be one bounded REST call on a path that never answers.
+            if body_out == ANSWERED and len(self.findings) == before:
+                return ANSWERED
+            outs = [body_out]
             for handler in st.handlers:
                 outs.append(self.block(handler.body))
             out = self._merge(*outs)
@@ -753,6 +902,110 @@ def discover(index):
 
 
 # ---------------------------------------------------------------------------
+# Component discovery
+# ---------------------------------------------------------------------------
+# The methods discord.py awaits on a LIVE interaction token when a member
+# touches a button, a select or a modal. All of them run under the same three
+# seconds a slash command gets, and none of them were in scope until
+# ``RoleMenuSelect.callback`` proved it in production (see the calibration
+# below).
+#
+# * ``callback`` - every Button / Select / DynamicItem.
+# * ``on_submit`` - every Modal.
+# * ``interaction_check`` - runs BEFORE the callback, on the same token, from
+#   the same ``View._scheduled_task``. It is IN SCOPE on purpose: a slow check
+#   spends the window before the callback has run a line, and half of them
+#   answer for themselves ("This panel isn't for you."), so its answers have to
+#   be understood too.
+# * ``from_custom_id`` - the DynamicItem factory. ``ViewStore.dispatch_dynamic``
+#   awaits it before it can even build the item, so it is the FIRST thing on the
+#   clock for a persistent button.
+#
+# Deliberately NOT in scope: ``on_timeout`` (no interaction exists) and
+# ``on_error`` (the interaction is whatever the failed callback left behind;
+# there is nothing to answer in time that the callback itself did not already
+# decide).
+COMPONENT_METHODS = ("callback", "on_submit", "interaction_check", "from_custom_id")
+
+UI_BASE = "discord.ui."
+
+
+def ui_component_classes(index, detector):
+    """Every class in the tree deriving - however deeply - from a discord.ui type.
+
+    Grounded on how this tree actually spells the base, not on one assumed
+    shape. Four spellings occur:
+
+    * ``discord.ui.Button`` / ``Select`` / ``ChannelSelect`` / ``RoleSelect`` /
+      ``UserSelect`` / ``View`` / ``LayoutView`` / ``Modal`` - the direct form,
+      and the only one imported (nothing does ``from discord.ui import ...``);
+    * ``discord.ui.DynamicItem[discord.ui.Button]`` - a SUBSCRIPT, which
+      :func:`dotted` renders as ``discord.ui.DynamicItem[]``;
+    * a repo base - ``LocaleModal``, ``AuthorView``, ``AuthorLayoutView`` from
+      tools/views.py - imported into the cog;
+    * a base of a base - ``_EmbedModal(LocaleModal)`` in tools/embed_creator.py.
+
+    The last two are why this is a fixed point over the whole index rather than
+    a prefix test on the base name: stopping at the literal ``discord.ui.``
+    spelling would drop the 34 modals that subclass ``LocaleModal``, and
+    ``LocaleModal`` is where the ephemeral panels live.
+    """
+
+    known = set()
+    every = [
+        (module, name, cdef)
+        for module, classes in index.classes.items()
+        for name, cdef in classes.items()
+    ]
+    changed = True
+    while changed:
+        changed = False
+        for module, name, cdef in every:
+            if (module, name) in known:
+                continue
+            for base in cdef.bases:
+                bname = dotted(base)
+                if not bname:
+                    continue
+                if bname.endswith("[]"):  # DynamicItem[...]
+                    bname = bname[:-2]
+                if bname.startswith(UI_BASE):
+                    known.add((module, name))
+                    changed = True
+                    break
+                found = detector.find_class(module, bname.split(".")[-1])
+                if found and (found[0], found[1].name) in known:
+                    known.add((module, name))
+                    changed = True
+                    break
+    return known
+
+
+def discover_components(index, detector):
+    """Every component callback in the tree, cogs AND tools.
+
+    Unlike :func:`discover`, this is not restricted to ``cogs.``: the shared
+    embed builder's modals and the ``AuthorView`` / ``Paginator`` checks live in
+    ``tools`` and run on a real token like any other.
+
+    Only ``async def`` is collected. A synchronous method of the same name
+    cannot await anything, so it cannot spend the window - and discord.py would
+    not await it either.
+    """
+
+    known = ui_component_classes(index, detector)
+    found = []
+    for module, classes in index.classes.items():
+        for name, cdef in classes.items():
+            if (module, name) not in known:
+                continue
+            for fn in cdef.body:
+                if isinstance(fn, ast.AsyncFunctionDef) and fn.name in COMPONENT_METHODS:
+                    found.append((module, cdef, fn))
+    return found
+
+
+# ---------------------------------------------------------------------------
 # The accepted list
 # ---------------------------------------------------------------------------
 # Commands that DO reach a round trip before answering and are deliberately left
@@ -855,6 +1108,119 @@ ACCEPTED = {
 }
 
 
+# Component callbacks that DO reach a round trip before answering and are
+# deliberately left that way. Same shape as ACCEPTED above - (reason, count) -
+# but here the count is ASSERTED (see
+# ``test_the_accepted_component_counts_are_the_measured_ones``), so a callback
+# that grows a second round trip breaks the test instead of hiding under an old
+# note.
+#
+# The count is the number of AWAITS the census flagged, not the number of round
+# trips one run performs: two arms of an if/else both count even though only one
+# of them ever runs. Where that matters the reason says so.
+#
+# The line drawn here is the one the production failure drew. A LOOP of REST
+# calls, or a call that leaves Discord (a third-party API), or a route with a
+# punitive rate limit, gets fixed. ONE bounded Discord REST call does not: a
+# defer is not free on a component, where it forces a visible thinking state and
+# a choice between ``defer()``, ``defer(ephemeral=True)`` and ``edit_message``
+# that every later answer in the callback then has to match.
+ACCEPTED_COMPONENTS = {
+    # -- one bounded Discord REST call, on a public member-facing button ------
+    "cogs.config.buttonroles:ButtonRoleButton.callback": (
+        "the two counted awaits are the two ARMS of one if/else - a press adds "
+        "OR removes, never both - so a run is ONE member-role PATCH before the "
+        "ephemeral answer. That bucket is per-guild and its 429s carry a "
+        "sub-second retry-after, unlike the role MENU next door, which loops "
+        "one call per role picked and is what actually blew the window on "
+        "2026-08-31. First to revisit if a 10062 ever names this file",
+        2,
+    ),
+    "cogs.config.verification:VerifyButton.callback": (
+        "one member.add_roles, reached only after four cache-only guards have "
+        "already answered and returned (not in a server / not set up / already "
+        "verified / role too high). The verify button is pressed once per "
+        "member per lifetime",
+        1,
+    ),
+    # -- one bounded REST call on an admin panel -----------------------------
+    "cogs.config.announcements:_SendButton.callback": (
+        "one channel.send posting the announcement. The label reads "
+        "'self._owner.send' because the cost table keys on the tail method "
+        "name and stops at 'send' without resolving - it is right by accident "
+        "here: AnnouncePanel.send really does channel.send the embed before "
+        "_finish answers",
+        1,
+    ),
+    "cogs.config.buttonroles:_PostButton.callback": (
+        "one channel.send to post the panel; the persist around it is local "
+        "Postgres. Same cost as the ACCEPTED ticket_setup / verify_setup "
+        "commands, on an admin builder pressed once per panel",
+        1,
+    ),
+    "cogs.config.buttonroles:AttachModal.on_submit": (
+        "channel.fetch_message then message.edit to hang the buttons on an "
+        "existing message - two bounded REST calls, the same pair already "
+        "ACCEPTED for the buttonrole_remove command",
+        1,
+    ),
+    "cogs.config.rolemenus:_PostButton.callback": (
+        "channel.send (no view, to learn the message id) then message.edit to "
+        "attach the select - two bounded REST calls, deliberately in that "
+        "order so the select's custom_id can carry the message id. A defer "
+        "cannot be spent here without losing the response.edit_message that "
+        "greys the builder out",
+        1,
+    ),
+    "cogs.community.leveling.level_admin:_ResetAllModal.on_submit": (
+        "one best-effort message.edit stripping the spent buttons off the "
+        "confirm panel, before the answer. Guarded by a type-the-server-name "
+        "modal, so it runs at most once per reset",
+        1,
+    ),
+    "cogs.config.starboard:StarboardSetModal.on_submit": (
+        "one best-effort message.edit refreshing the button panel, before the "
+        "ephemeral answer; the config write beside it is local Postgres",
+        1,
+    ),
+    # -- channel writes that are NOT the name/topic bucket -------------------
+    "cogs.config.rooms_panels:_SlotSelect.callback": (
+        "one channel.edit(user_limit=...). Unlike the room RENAME next door - "
+        "which was deferred this run because name/topic edits are capped at "
+        "two per ten minutes and discord.py sleeps out that 429 - user_limit "
+        "rides the ordinary channel-PATCH bucket. Deferring it would also mean "
+        "giving up the response.edit_message that closes the ephemeral picker",
+        1,
+    ),
+    "cogs.config.rooms_panels:_MemberActionSelect.callback": (
+        "two bounded REST calls at worst: kick = move_to(None) + "
+        "set_permissions, transfer = revoke + grant the owner overwrite. Both "
+        "are permission-overwrite PATCHes, not the name/topic bucket. The "
+        "answer is a response.edit_message that collapses the ephemeral "
+        "picker, which a defer would take away",
+        1,
+    ),
+    # -- KNOWN LIMIT: a modal cannot be deferred -----------------------------
+    "cogs.anilist.edit_forms:SeasonSelect.callback": (
+        "TWO AniList GraphQL calls (_viewer_entry, then _get_score_format on a "
+        "cache miss) before response.send_modal, to open the editor "
+        "pre-filled. This one is NOT accepted because it is cheap - AniList "
+        "leaves the box and times out in this very log - but because a modal "
+        "MUST be the first response to an interaction: send_modal after a "
+        "defer is rejected, so there is no defer that fixes it. Closing it "
+        "means opening the modal empty and back-filling, or bounding the "
+        "prefetch with a timeout and dropping the prefill when it blows - a UX "
+        "decision, not a hygiene fix, and out of scope for this lot. Stated "
+        "here so it is a limit and not a hole",
+        2,
+    ),
+    "cogs.anilist.edit_forms:OnListSelect.callback": (
+        "the same two AniList calls in front of the same send_modal, on the "
+        "on-list variant of the picker; the same reason applies unchanged",
+        2,
+    ),
+}
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -865,6 +1231,18 @@ def scan():
     return {
         f"{module}:{klass.name}.{fn.name}": detector.scan_callback(module, klass, fn)
         for module, klass, fn in discover(index)
+    }
+
+
+@pytest.fixture(scope="module")
+def component_scan():
+    """The same engine, pointed at the component surface instead of commands."""
+
+    index = Index().load()
+    detector = Detector(index)
+    return {
+        f"{module}:{klass.name}.{fn.name}": detector.scan_callback(module, klass, fn)
+        for module, klass, fn in discover_components(index, detector)
     }
 
 
@@ -1202,6 +1580,76 @@ async def cmd(self, ctx, pages):
     assert [label for _l, label, _d in walker.findings] == ["ctx.author.send"]
 
 
+def test_a_gathered_fan_out_is_costed_through_its_arguments():
+    """``gather`` is PASSTHROUGH: its cost is the worst cost of what it is given."""
+
+    walker = _snippet(
+        """
+async def cmd(self, ctx, a, b):
+    await asyncio.gather(ctx.guild.fetch_member(a), ctx.guild.fetch_member(b))
+    await ctx.send("done")
+"""
+    )
+    assert [label for _l, label, _d in walker.findings] == [
+        "asyncio.gather(...ctx.guild.fetch_member...)"
+    ]
+
+
+def test_a_gathered_fan_out_behind_a_STAR_degrades_to_unknown():
+    """A stated limit, pinned so it can only ever get better, never worse.
+
+    ``gather(*[...])`` hands the walker a ``Starred`` node with no attribute
+    chain to key the cost table on, so the round trips inside the comprehension
+    are invisible. What must hold is the DIRECTION of the failure: unknown, not
+    clean. If someone ever makes an unresolvable expression cheap, this goes red
+    instead of the guard going quietly blind.
+    """
+
+    walker = _snippet(
+        """
+async def cmd(self, ctx, ids):
+    await asyncio.gather(*[ctx.guild.fetch_member(i) for i in ids])
+    await ctx.send("done")
+"""
+    )
+    assert walker.findings == [], "the fan-out is not seen - that is the limit"
+    assert [label for _l, label in walker.unknowns] == ["asyncio.gather"]
+
+
+def test_a_finally_after_an_unanswered_return_is_a_stated_blind_spot():
+    """The other stated limit, pinned the same way.
+
+    ``finally`` is walked only while the try statement is still ALIVE, so a body
+    that returns without answering skips it. Walking it unconditionally would be
+    worse - the ``finally`` of a try whose body ANSWERED runs after the clock
+    already stopped - so the blind spot is deliberate. The counter-case below is
+    what must keep working.
+    """
+
+    walker = _snippet(
+        """
+async def cmd(self, ctx, ids):
+    try:
+        return
+    finally:
+        await ctx.author.send("bye")
+"""
+    )
+    assert walker.findings == [], "not reported, and that is the documented limit"
+
+    reachable = _snippet(
+        """
+async def cmd(self, ctx, ids):
+    try:
+        ids.pop()
+    finally:
+        await ctx.author.send("bye")
+    await ctx.send("done")
+"""
+    )
+    assert [label for _l, label, _d in reachable.findings] == ["ctx.author.send"]
+
+
 # ---------------------------------------------------------------------------
 # The guard itself
 # ---------------------------------------------------------------------------
@@ -1250,3 +1698,593 @@ def test_the_scan_actually_covered_the_command_tree(scan):
         "cogs.moderation.moderation:Moderation.addrole",
     ):
         assert name in scan, name
+
+
+# ---------------------------------------------------------------------------
+# Components: calibration on the ONE case we have production proof of
+# ---------------------------------------------------------------------------
+# The shape of cogs/config/rolemenus.py::RoleMenuSelect.callback as it was when
+# it raised 404 10062 on 2026-08-31 19:03. A member ticked two options in a
+# self-role dropdown; each grant and each removal is its own REST call, and the
+# ephemeral summary at the bottom found the token already dead.
+#
+# Every trap that defeats a cheap sweep is in here too: a guard clause that
+# answers and returns, the round trips buried in a for loop inside a try, and a
+# trailing response.send_message that a tree-order walk reads first.
+_ROLE_MENU_SELECT_BEFORE = '''
+class RoleMenuSelect(discord.ui.Select):
+    async def callback(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        guild = interaction.guild
+        member = interaction.user
+        if guild is None or not isinstance(member, discord.Member):
+            return await interaction.response.send_message(
+                "Roles can only be set inside a server.", ephemeral=True
+            )
+        for rid in to_add:
+            role = guild.get_role(rid)
+            if role is None:
+                continue
+            try:
+                await member.add_roles(role, reason="Self-role menu")
+                added.append(role)
+            except discord.HTTPException:
+                skipped.append(rid)
+        for rid in to_remove:
+            role = guild.get_role(rid)
+            try:
+                await member.remove_roles(role, reason="Self-role menu")
+            except discord.HTTPException:
+                pass
+        await interaction.response.send_message("done", ephemeral=True)
+'''
+
+
+def test_calibration_component_detector_flags_the_proven_case():
+    """The known positive: the pre-fix role-menu select, at both role calls.
+
+    This is the check that has to pass before ANY silence this scan produces is
+    worth reading. A collector widened to component callbacks that could not see
+    the one callback we hold a traceback for would be evidence of nothing.
+    """
+
+    walker = _snippet(
+        _ROLE_MENU_SELECT_BEFORE, func="callback", klass="RoleMenuSelect"
+    )
+
+    assert [(label, loop) for _line, label, loop in walker.findings] == [
+        ("member.add_roles", 1),
+        ("member.remove_roles", 1),
+    ], "both role calls, both reported as running inside a loop"
+
+    # ...and the guard clause's own answer did not prune the happy path: the
+    # walk reads the locale (unresolvable here, so UNKNOWN), the guard's reply,
+    # then both role calls, then the reply that actually 404'd.
+    assert [kind for _line, kind, _label in walker.trace] == [
+        UNKNOWN,
+        RESPONSE,
+        SLOW,
+        SLOW,
+        RESPONSE,
+    ], walker.trace
+
+
+def test_calibration_the_shipped_role_menu_select_is_clean(component_scan):
+    """...and the shipped callback, with its ephemeral defer, is not flagged."""
+
+    walker = component_scan["cogs.config.rolemenus:RoleMenuSelect.callback"]
+
+    assert walker.findings == []
+    kinds = [kind for _line, kind, _label in walker.trace]
+    assert RESPONSE in kinds, walker.trace
+    # the defer lands BEFORE the first role call, not after it
+    answered_at = kinds.index(RESPONSE)
+    assert SLOW not in kinds[:answered_at], walker.trace
+
+
+def test_the_component_collector_finds_the_role_menu_select():
+    """The collector, not just the walker: this callback must be COLLECTED.
+
+    ``RoleMenuSelect`` derives from ``discord.ui.Select`` and defines
+    ``callback``; if discovery ever stops seeing that shape, the calibration
+    above still passes on its inline snippet while the tree goes unscanned.
+    """
+
+    index = Index().load()
+    detector = Detector(index)
+    names = {
+        f"{module}:{klass.name}.{fn.name}"
+        for module, klass, fn in discover_components(index, detector)
+    }
+
+    assert "cogs.config.rolemenus:RoleMenuSelect.callback" in names
+
+
+# ---------------------------------------------------------------------------
+# Components: what counts as an ANSWER here
+# ---------------------------------------------------------------------------
+# A component callback does not answer the way a command does. There is no
+# ctx.send; there are five ways to stop the clock, and several things that look
+# like them and do not.
+def test_the_four_interaction_responses_answer():
+    """response.send_message / edit_message / defer / send_modal all answer."""
+
+    for call in (
+        "interaction.response.send_message('x')",
+        "interaction.response.edit_message(view=None)",
+        "interaction.response.defer()",
+        "interaction.response.send_modal(Modal())",
+    ):
+        walker = _snippet(
+            "async def callback(self, interaction):\n"
+            f"    await {call}\n"
+            "    await member.add_roles(role)\n",
+            func="callback",
+        )
+        assert walker.findings == [], call
+        assert walker.trace[0][1] == RESPONSE, call
+
+
+def test_a_followup_send_answers():
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    await interaction.followup.send("x", ephemeral=True)
+    await member.add_roles(role)
+""",
+        func="callback",
+    )
+    assert walker.findings == []
+
+
+def test_a_view_message_edit_is_not_an_interaction_response():
+    """The distinction the whole component scan rests on.
+
+    ``self.message.edit`` edits the message the view is attached to over the
+    ordinary channel REST route. It is a round trip that does NOT touch the
+    interaction token, so the three-second clock keeps running and the callback
+    is still on the hook to answer. Read as an answer, this scan would go blind
+    on every panel in the tree, because editing the panel in place is what a
+    panel button DOES.
+    """
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    await self.message.edit(view=None)
+    await interaction.response.send_message("done", ephemeral=True)
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == ["self.message.edit"]
+
+
+def test_an_interaction_message_edit_is_not_an_interaction_response_either():
+    """``interaction.message`` is the component's message, not its token.
+
+    Same route, same non-answer - and this spelling is the trap, because the
+    attribute chain starts with the interaction binding itself.
+    """
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    await interaction.message.edit(view=None)
+    await interaction.response.send_message("done", ephemeral=True)
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == ["interaction.message.edit"]
+
+
+def test_a_channel_send_is_not_an_interaction_response():
+    """Posting into the channel leaves the interaction unanswered."""
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    await interaction.channel.send("done")
+    await interaction.response.send_message("ok", ephemeral=True)
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == ["interaction.channel.send"]
+
+
+def test_the_is_done_fork_ends_the_walk():
+    """``if not interaction.response.is_done(): <answer>`` answers on BOTH arms.
+
+    discord.py sets ``_response_type`` the moment a response fires and reads it
+    back in ``is_done()``, so the two arms are "answering now" and "answered
+    already" - never "unanswered". This is the idiom written out in
+    tools/interactions.py (refresh_layout, refresh_in_place, reply) and copied
+    into a dozen panels; merged blindly, its ``message.edit`` fallback reads as a
+    round trip standing in front of the answer and lights up roughly forty
+    callbacks for a wait that cannot happen.
+    """
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(view=self)
+            return
+    except discord.HTTPException:
+        pass
+    if self.message is not None:
+        await self.message.edit(view=self)
+""",
+        func="callback",
+    )
+    assert walker.findings == []
+
+
+def test_a_message_edit_that_is_not_behind_the_fork_is_still_flagged():
+    """The counter-test: the rule is the FORK, not the words ``message.edit``."""
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    await self.message.edit(view=self)
+    if not interaction.response.is_done():
+        await interaction.response.edit_message(view=self)
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == ["self.message.edit"]
+
+
+def test_an_except_handler_after_an_answer_is_recovery_not_a_burn():
+    """A handler reachable only because the ANSWER raised cannot precede it."""
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    try:
+        await interaction.response.edit_message(view=self)
+        return
+    except discord.HTTPException:
+        pass
+    await self.message.edit(view=self)
+""",
+        func="callback",
+    )
+    assert walker.findings == []
+
+
+def test_a_round_trip_before_the_answer_in_the_same_try_is_still_reported():
+    """The counter-test: the recovery rule only fires on a CLEAN body.
+
+    Here the try body spends a round trip before it answers, so the handlers are
+    walked as usual: the body finding stands, AND the handler's own send is
+    costed, because that handler really can be reached before anything answered.
+    Without this the rule above would be a way to hide anything at all by
+    wrapping it in a try.
+    """
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    try:
+        await member.add_roles(role)
+        await interaction.response.send_message("done")
+    except discord.HTTPException:
+        await interaction.channel.send("failed")
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == [
+        "member.add_roles",
+        "interaction.channel.send",
+    ]
+
+
+def test_an_interaction_message_guard_does_not_delete_a_branch():
+    """``interaction.message`` is NOT a prefix/slash discriminator.
+
+    :func:`slash_truth` reads ``ctx.message`` / ``ctx.interaction`` on a Context
+    to tell a prefix invocation from a slash one. A component callback holds a
+    raw Interaction, where ``.message`` is just the message the button sits on -
+    so folding that branch away would silently delete real code. Pinned because
+    the failure is invisible: the walk simply reports less.
+    """
+
+    walker = _snippet(
+        """
+async def callback(self, interaction):
+    if interaction.message is None:
+        await member.add_roles(role)
+    await interaction.response.send_message("done")
+""",
+        func="callback",
+    )
+    assert [label for _l, label, _d in walker.findings] == ["member.add_roles"]
+
+
+# ---------------------------------------------------------------------------
+# The re-export hop: an answer helper reached through a module that only
+# IMPORTS it
+# ---------------------------------------------------------------------------
+# ``tools/embed_creator.py`` does ``from tools.interactions import
+# notify_failure  # noqa: F401  (re-exported for cogs)``, and thirteen callbacks
+# across the two surfaces answer by calling ``embed_creator.notify_failure``.
+# Without the one-hop follow in :meth:`Detector.resolve` that call resolves to
+# nothing, comes back UNKNOWN, and the path is never pruned.
+#
+# This is a SILENCING rule - RESPONSE prunes the path - so it needs a negative
+# control rather than a green assertion on its own. The two tests below run the
+# SAME callback against two indexes that differ only in whether the middle
+# module re-exports, so the "clean" verdict is attributable to the hop and to
+# nothing else.
+
+_RE_EXPORT_HELPERS = '''
+async def reply(interaction, message, *, ephemeral=True):
+    if interaction.response.is_done():
+        await interaction.followup.send(message, ephemeral=ephemeral)
+    else:
+        await interaction.response.send_message(message, ephemeral=ephemeral)
+
+
+async def notify_failure(interaction, message="Something went wrong."):
+    await reply(interaction, message, ephemeral=True)
+'''
+
+_RE_EXPORT_CALLER = '''
+from tools import embed_creator
+
+class Panel(discord.ui.View):
+    async def callback(self, interaction):
+        await embed_creator.notify_failure(interaction, "nope")
+        await interaction.channel.fetch_message(123)
+'''
+
+
+def _re_export_scan(*, re_exported):
+    index = Index()
+    index.add("tools.interactions", ast.parse(_RE_EXPORT_HELPERS))
+    index.add(
+        "tools.embed_creator",
+        ast.parse(
+            "from tools.interactions import notify_failure\n"
+            if re_exported
+            else "notify_failure = None\n"
+        ),
+    )
+    index.add("panel", ast.parse(_RE_EXPORT_CALLER))
+    detector = Detector(index)
+    cdef = index.classes["panel"]["Panel"]
+    fn = next(n for n in cdef.body if getattr(n, "name", None) == "callback")
+    return detector.scan_callback("panel", cdef, fn)
+
+
+def test_an_answer_reached_through_a_re_export_is_an_answer():
+    """``embed_creator.notify_failure`` is an IMPORT there, not a definition."""
+
+    walker = _re_export_scan(re_exported=True)
+
+    assert walker.trace[0][1] == RESPONSE, walker.trace
+    assert walker.findings == [], "the fetch behind the answer is not a wait"
+
+
+def test_without_the_re_export_the_same_call_is_only_UNKNOWN():
+    """The negative control, and the proof that the hop is what pruned the path.
+
+    Same callback, same helper, one difference: the middle module no longer
+    re-exports the name. The call is then unresolvable - and it degrades to
+    UNKNOWN, never to "safe", so the round trip behind it is still reported.
+    """
+
+    walker = _re_export_scan(re_exported=False)
+
+    assert [label for _l, label, _d in walker.findings] == [
+        "interaction.channel.fetch_message"
+    ]
+    assert [label for _l, label in walker.unknowns] == [
+        "embed_creator.notify_failure"
+    ]
+
+
+def test_the_shipped_tree_really_answers_through_that_re_export(component_scan):
+    """Not a hypothetical: this is a live callback that depends on the hop."""
+
+    walker = component_scan["cogs.config.starboard:StarboardSetModal.on_submit"]
+
+    assert any(
+        kind == RESPONSE and label.startswith("embed_creator.notify_failure")
+        for _line, kind, label in walker.trace
+    ), walker.trace
+
+
+# ---------------------------------------------------------------------------
+# Components: the collector's own rules
+# ---------------------------------------------------------------------------
+def test_a_modal_two_bases_deep_is_collected():
+    """``_EmbedModal(LocaleModal)`` over ``LocaleModal(discord.ui.Modal)``.
+
+    The reason discovery is a fixed point over the index instead of a prefix
+    test on the base name: 34 of the tree's modals never write ``discord.ui`` in
+    their own bases.
+    """
+
+    index = Index()
+    index.add(
+        "views",
+        ast.parse("import discord\nclass LocaleModal(discord.ui.Modal):\n    pass\n"),
+    )
+    index.add(
+        "cog",
+        ast.parse(
+            "from views import LocaleModal\n"
+            "class _EmbedModal(LocaleModal):\n"
+            "    pass\n"
+            "class TitleModal(_EmbedModal):\n"
+            "    async def on_submit(self, interaction):\n"
+            "        await interaction.response.send_message('x')\n"
+        ),
+    )
+    detector = Detector(index)
+
+    assert [
+        (module, klass.name, fn.name)
+        for module, klass, fn in discover_components(index, detector)
+    ] == [("cog", "TitleModal", "on_submit")]
+
+
+def test_a_dynamic_item_factory_is_collected_with_its_interaction():
+    """``DynamicItem[...]`` is a Subscript base and ``from_custom_id`` is
+    positional-only: two ways to fall out of the collector at once.
+
+    ``ViewStore.dispatch_dynamic`` awaits this factory before the item even
+    exists, so it is the first thing on a persistent button's clock.
+    """
+
+    index = Index()
+    index.add(
+        "cog",
+        ast.parse(
+            "import discord\n"
+            "class SeenButton(discord.ui.DynamicItem[discord.ui.Button]):\n"
+            "    @classmethod\n"
+            "    async def from_custom_id(cls, interaction, item, match, /):\n"
+            "        await interaction.client.session.get_json('x')\n"
+            "        return cls()\n"
+        ),
+    )
+    detector = Detector(index)
+    found = discover_components(index, detector)
+
+    assert [(k.name, f.name) for _m, k, f in found] == [
+        ("SeenButton", "from_custom_id")
+    ]
+    # posonlyargs: without them the binding set is empty and the walker would go
+    # looking for a "ctx" that is not there.
+    assert ctx_bindings(found[0][2]) == {"interaction"}
+    assert [label for _l, label, _d in detector.scan_callback(*found[0]).findings] == [
+        "interaction.client.session.get_json"
+    ]
+
+
+def test_a_synchronous_lookalike_is_not_collected():
+    """A plain ``def callback`` awaits nothing, so it cannot spend the window."""
+
+    index = Index()
+    index.add(
+        "cog",
+        ast.parse(
+            "import discord\n"
+            "class Button(discord.ui.Button):\n"
+            "    def callback(self):\n"
+            "        return None\n"
+        ),
+    )
+    assert discover_components(index, Detector(index)) == []
+
+
+def test_no_component_class_hides_inside_a_function_or_a_class():
+    """The collector reads TOP-LEVEL classes; prove nothing else exists.
+
+    ``Index`` only records classes declared at module level, so a component
+    class nested in a function or in another class would be skipped in silence.
+    Nothing in the tree does that today - this fails the moment something does,
+    instead of quietly scanning less.
+    """
+
+    index = Index().load()
+    hidden = []
+    for module, tree in index.modules.items():
+        top = set(index.classes.get(module, {}).values())
+        for klass in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+            if klass in top:
+                continue
+            for fn in klass.body:
+                if isinstance(fn, ast.AsyncFunctionDef) and fn.name in COMPONENT_METHODS:
+                    hidden.append(f"{module}:{klass.name}.{fn.name} (L{fn.lineno})")
+
+    assert not hidden, (
+        "these component callbacks live on a class the collector cannot see "
+        "(nested in a function or another class). Move the class to module "
+        "level, or teach Index to record nested classes:\n  "
+        + "\n  ".join(sorted(hidden))
+    )
+
+
+# ---------------------------------------------------------------------------
+# The component guard itself
+# ---------------------------------------------------------------------------
+def test_every_component_callback_answers_before_a_round_trip(component_scan):
+    """No button, select or modal may reach a round trip before answering."""
+
+    unexpected = {
+        name: [f"L{line} {label}" for line, label, _loop in sorted(w.findings)]
+        for name, w in component_scan.items()
+        if w.findings and name not in ACCEPTED_COMPONENTS
+    }
+
+    assert not unexpected, (
+        "these component callbacks can burn the 3s interaction window before "
+        "they answer - acknowledge first (interactions.defer(interaction, "
+        "ephemeral=..., thinking=...), matching what the callback answers with "
+        "afterwards) or add an entry to ACCEPTED_COMPONENTS with a written "
+        "reason:\n" + "\n".join(f"  {k}: {v}" for k, v in sorted(unexpected.items()))
+    )
+
+
+def test_the_accepted_component_list_has_no_stale_entries(component_scan):
+    """An entry whose callback got fixed must lose its entry, not keep it."""
+
+    stale = [
+        name
+        for name in ACCEPTED_COMPONENTS
+        if name not in component_scan or not component_scan[name].findings
+    ]
+
+    assert not stale, (
+        "these entries no longer describe anything - the callback now answers "
+        "first (or was renamed). Remove them:\n  " + "\n  ".join(sorted(stale))
+    )
+
+
+def test_the_accepted_component_counts_are_the_measured_ones(component_scan):
+    """The count in each entry is a MEASUREMENT, not a note.
+
+    A callback that grows a second round trip has to be re-read and re-argued,
+    not left sitting under a reason written for the cheaper version of itself.
+    """
+
+    drifted = {
+        name: (stated, len(component_scan[name].findings))
+        for name, (_reason, stated) in ACCEPTED_COMPONENTS.items()
+        if name in component_scan and len(component_scan[name].findings) != stated
+    }
+
+    assert not drifted, (
+        "the walker now measures a different cost than the entry claims "
+        "(stated, measured):\n" + "\n".join(f"  {k}: {v}" for k, v in sorted(drifted.items()))
+    )
+
+
+def test_the_component_scan_actually_covered_the_tree(component_scan):
+    """A collector that silently scanned nothing would pass every test above."""
+
+    assert len(component_scan) > 200, len(component_scan)
+
+    kinds = {name.rsplit(".", 1)[1] for name in component_scan}
+    assert kinds == set(COMPONENT_METHODS), kinds
+
+    # the shared bases in tools/ are in scope too, not only cogs/
+    assert any(name.startswith("tools.") for name in component_scan)
+
+    for name in (
+        # the proven case, and the two callbacks this run fixed
+        "cogs.config.rolemenus:RoleMenuSelect.callback",
+        "cogs.config.rooms_panels:_RoomRenameModal.on_submit",
+        # interaction_check: runs before the callback, on the same token
+        "tools.views:AuthorView.interaction_check",
+        "tools.paginator:Paginator.interaction_check",
+        # a modal reached only through LocaleModal
+        "tools.embed_creator:TitleModal.on_submit",
+        # a DynamicItem factory (Subscript base, positional-only args)
+        "cogs.anilist.airing:AiringSeenButton.from_custom_id",
+    ):
+        assert name in component_scan, name

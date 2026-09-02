@@ -53,6 +53,12 @@ async def defer(
 
     try:
         await interaction.response.defer(ephemeral=ephemeral, thinking=thinking)
+        if ephemeral:
+            # The caller declared this flow private, so record it the way
+            # `defer_ephemeral` does for the command path (see EPHEMERAL_FLOW
+            # below). discord.py keeps no readable trace of the choice, and a
+            # component callback has no Context for anything downstream to ask.
+            mark_ephemeral(interaction)
         return True
     except discord.HTTPException:
         log.warning("interactions.defer failed on %s", surface, exc_info=True)
@@ -141,30 +147,48 @@ async def refresh_in_place(interaction, message, *, embed, view) -> None:
 EPHEMERAL_FLOW = "yasuho_ephemeral_flow"
 
 
-def _extras(ctx):
-    """The interaction's extras dict for this Context, or None on the prefix path."""
+def _extras(target) -> dict | None:
+    """The extras dict of the interaction behind ``target``, or None.
 
-    extras = getattr(getattr(ctx, "interaction", None), "extras", None)
+    ``target`` is either shape that carries an interaction in this tree:
+
+    * a ``commands.Context`` - the command path, where the interaction hangs off
+      ``ctx.interaction`` and is None on a prefix invocation;
+    * a raw ``discord.Interaction`` - the component path, where a button, select
+      or modal callback is handed the interaction itself and there is no Context
+      anywhere in sight.
+
+    The Context lookup is tried FIRST and the object's own ``extras`` second, so
+    the widening cannot shadow the original reading. That ordering is safe
+    rather than lucky: ``commands.Context`` has no ``extras`` attribute of its
+    own in discord.py 2.7 (``Command.extras`` does, ``Context`` does not), so
+    the second lookup only ever fires for a real Interaction.
+    """
+
+    extras = getattr(getattr(target, "interaction", None), "extras", None)
+    if not isinstance(extras, dict):
+        extras = getattr(target, "extras", None)
     return extras if isinstance(extras, dict) else None
 
 
-def mark_ephemeral(ctx) -> None:
+def mark_ephemeral(target) -> None:
     """Record that this invocation's replies are ephemeral. Never raises.
 
-    A no-op on the prefix path (no interaction, nothing to remember) and on any
-    stand-in whose interaction has no ``extras`` mapping: a bookkeeping helper
-    must never be the thing that breaks a command.
+    Accepts a Context or an Interaction (see :func:`_extras`). A no-op on the
+    prefix path (no interaction, nothing to remember) and on any stand-in whose
+    interaction has no ``extras`` mapping: a bookkeeping helper must never be
+    the thing that breaks a command.
     """
 
-    extras = _extras(ctx)
+    extras = _extras(target)
     if extras is not None:
         extras[EPHEMERAL_FLOW] = True
 
 
-def prefers_ephemeral(ctx) -> bool:
+def prefers_ephemeral(target) -> bool:
     """True when this invocation was marked as an ephemeral flow."""
 
-    extras = _extras(ctx)
+    extras = _extras(target)
     return bool(extras is not None and extras.get(EPHEMERAL_FLOW))
 
 

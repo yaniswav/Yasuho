@@ -11,12 +11,16 @@ network or Lavalink.
 """
 
 import types
+from unittest import mock
 
+import discord
 import pytest
 from discord.ext import commands
 
 from cogs.anilist.account import AccountMixin
 from cogs.community.leveling.level_config_ui import LevelConfigUI
+from cogs.config.rolemenus import RoleMenuSelect
+from cogs.config.rooms_panels import _RoomRenameModal
 from cogs.config.welcome import Welcome
 from cogs.moderation import moderation
 from cogs.system import errors
@@ -495,3 +499,232 @@ async def test_xp_admin_does_not_defer_when_the_sibling_cog_is_missing(log):
     )
 
     assert log.names == ["send"]
+
+
+# ---------------------------------------------------------------------------
+# Component callbacks - the surface with no Context at all
+# ---------------------------------------------------------------------------
+# A button, select or modal callback is handed the raw Interaction, so it cannot
+# use ``ctx.defer()``; it goes through ``tools.interactions.defer``, which takes
+# TWO flags that the structural sweep in
+# tests/test_interaction_deadline_hygiene.py cannot judge. That sweep classifies
+# ``interactions.defer`` as "the interaction was answered" without reading its
+# kwargs, so it proves a defer EXISTS and nothing about whether it matches the
+# answer underneath it. Both flags are load-bearing:
+#
+# * ``ephemeral=False`` under an ephemeral follow-up strands Discord's public
+#   "thinking" placeholder in the channel forever - the trap already pinned for
+#   the command path by the anilist-login pair above.
+# * ``thinking=False`` on a component or modal interaction is a DIFFERENT
+#   response type: discord.py 2.7 sends DEFERRED_UPDATE_MESSAGE, which shows the
+#   member nothing at all while the slow work runs, and drops the ephemeral flag
+#   with it (``data = {'flags': 64}`` is built only under ``thinking and
+#   ephemeral``). The token survives; the feedback does not.
+#
+# So both are asserted here, by RUNNING the callbacks.
+
+
+class _ItxResponse:
+    def __init__(self, log, done=False):
+        self._log = log
+        self._done = done
+
+    def is_done(self):
+        return self._done
+
+    async def send_message(self, *args, **kwargs):
+        self._log.add("response.send_message", ephemeral=kwargs.get("ephemeral"))
+        self._done = True
+
+    async def defer(self, *, ephemeral=False, thinking=False):
+        self._log.add("defer", ephemeral=ephemeral, thinking=thinking)
+        self._done = True
+
+
+class _ItxFollowup:
+    def __init__(self, log):
+        self._log = log
+
+    async def send(self, *args, **kwargs):
+        self._log.add("followup.send", ephemeral=kwargs.get("ephemeral"))
+
+
+class _Itx:
+    """A raw ``discord.Interaction`` stand-in writing into the shared order log."""
+
+    def __init__(self, log, *, guild=None, user=None):
+        self.extras = {}  # the real attribute the ephemeral marker is stored on
+        self.locale = "en"
+        self.guild = guild
+        self.guild_id = getattr(guild, "id", None)
+        self.user = user
+        self.message = None
+        # apply_interaction_locale reads this and swallows anything it raises,
+        # so a stand-in with no bot behind it resolves to the default locale.
+        self.client = types.SimpleNamespace(get_cog=lambda _name: None)
+        self.response = _ItxResponse(log)
+        self.followup = _ItxFollowup(log)
+
+
+class _Role:
+    def __init__(self, role_id, position, managed=False):
+        self.id = role_id
+        self.position = position
+        self.managed = managed
+        self.mention = f"<@&{role_id}>"
+
+    def __ge__(self, other):
+        return self.position >= other.position
+
+
+def _fake_member(log, roles):
+    """A stand-in that passes ``isinstance(member, discord.Member)``.
+
+    The role-menu callback guards on that isinstance, so a SimpleNamespace would
+    silently take the "not in a server" arm and the test would prove nothing.
+    """
+
+    member = mock.MagicMock(spec=discord.Member)
+    member.id = 7
+    member.roles = roles
+
+    async def _add(role, **_kwargs):
+        log.add("add_roles", role_id=role.id)
+
+    async def _remove(role, **_kwargs):
+        log.add("remove_roles", role_id=role.id)
+
+    member.add_roles = _add
+    member.remove_roles = _remove
+    return member
+
+
+@pytest.fixture
+def role_menu(log):
+    """A two-role "any" menu where the member gains one role and loses another.
+
+    That is the production shape from 2026-08-31 19:03: one pick, TWO REST calls
+    in the loop, and the summary only after them.
+    """
+
+    colour = _Role(10, position=1)
+    ping = _Role(20, position=1)
+    bot_top = _Role(99, position=50)
+    by_id = {r.id: r for r in (colour, ping, bot_top)}
+    guild = types.SimpleNamespace(
+        id=42,
+        me=types.SimpleNamespace(top_role=bot_top),
+        get_role=by_id.get,
+    )
+    member = _fake_member(log, [ping])
+    return types.SimpleNamespace(
+        interaction=_Itx(log, guild=guild, user=member),
+        select=types.SimpleNamespace(
+            config={"options": [{"role_id": 10}, {"role_id": 20}], "exclusive": False},
+            values=["10"],
+        ),
+    )
+
+
+async def test_the_role_menu_defers_before_the_role_loop(log, role_menu):
+    await RoleMenuSelect.callback(role_menu.select, role_menu.interaction)
+
+    assert log.names == ["defer", "add_roles", "remove_roles", "followup.send"], log.names
+
+
+async def test_the_role_menu_defers_ephemerally_with_a_thinking_state(log, role_menu):
+    """The defer's two flags have to match the ephemeral summary below it."""
+
+    await RoleMenuSelect.callback(role_menu.select, role_menu.interaction)
+
+    assert log.kwargs_of("defer") == {"ephemeral": True, "thinking": True}
+    assert log.kwargs_of("followup.send")["ephemeral"] is True
+
+
+async def test_the_role_menu_guard_answers_without_deferring(log):
+    """Outside a server nothing slow follows, so the guard still answers plainly."""
+
+    interaction = _Itx(log, guild=None, user=None)
+    select = types.SimpleNamespace(config={}, values=[])
+
+    await RoleMenuSelect.callback(select, interaction)
+
+    assert log.names == ["response.send_message"], log.names
+    assert log.kwargs_of("response.send_message")["ephemeral"] is True
+
+
+def _rename_modal(log, channel):
+    """``_RoomRenameModal`` without discord.py's Modal machinery behind it."""
+
+    return types.SimpleNamespace(
+        _owner=types.SimpleNamespace(_channel=lambda: channel),
+        name_input=types.SimpleNamespace(value="  quiet corner  "),
+    )
+
+
+async def test_the_room_rename_defers_before_the_channel_edit(log):
+    class _Channel:
+        async def edit(self, **kwargs):
+            # Discord caps channel name edits at two per ten minutes and
+            # discord.py sleeps out the 429 inside the request: minutes, on a
+            # three-second token.
+            log.add("channel.edit", new_name=kwargs.get("name"))
+
+    interaction = _Itx(log)
+
+    await _RoomRenameModal.on_submit(_rename_modal(log, _Channel()), interaction)
+
+    assert log.names == ["defer", "channel.edit", "followup.send"], log.names
+    assert log.kwargs_of("channel.edit")["new_name"] == "quiet corner"
+
+
+async def test_the_room_rename_defers_ephemerally_with_a_thinking_state(log):
+    class _Channel:
+        async def edit(self, **kwargs):
+            log.add("channel.edit", new_name=kwargs.get("name"))
+
+    interaction = _Itx(log)
+
+    await _RoomRenameModal.on_submit(_rename_modal(log, _Channel()), interaction)
+
+    assert log.kwargs_of("defer") == {"ephemeral": True, "thinking": True}
+    assert log.kwargs_of("followup.send")["ephemeral"] is True
+
+
+async def test_the_room_rename_failure_stays_ephemeral_after_the_defer(log):
+    """The error answer has to clear the thinking state too, and stay private."""
+
+    class _Channel:
+        async def edit(self, **kwargs):
+            log.add("channel.edit", new_name=kwargs.get("name"))
+            raise discord.HTTPException(
+                types.SimpleNamespace(status=500, reason="nope"), "boom"
+            )
+
+    interaction = _Itx(log)
+
+    await _RoomRenameModal.on_submit(_rename_modal(log, _Channel()), interaction)
+
+    assert log.names == ["defer", "channel.edit", "followup.send"], log.names
+    assert log.kwargs_of("followup.send")["ephemeral"] is True
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+async def test_the_room_rename_guards_answer_without_deferring(log, value):
+    """A cache-only refusal is instant, so it must NOT gain a thinking state."""
+
+    modal = _rename_modal(log, object())
+    modal.name_input.value = value
+
+    await _RoomRenameModal.on_submit(modal, _Itx(log))
+
+    assert log.names == ["response.send_message"], log.names
+    assert "defer" not in log.names
+
+
+async def test_the_room_rename_guard_on_a_dead_room_answers_without_deferring(log):
+    modal = _rename_modal(log, None)
+
+    await _RoomRenameModal.on_submit(modal, _Itx(log))
+
+    assert log.names == ["response.send_message"], log.names

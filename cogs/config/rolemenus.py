@@ -112,6 +112,31 @@ class RoleMenuSelect(discord.ui.Select):
                 _("Roles can only be set inside a server."), ephemeral=True
             )
 
+        # ACKNOWLEDGE BEFORE THE ROLE LOOP. Every grant and every removal below
+        # is its own REST call, and an "any" menu lets a member tick every
+        # option at once, so the work is O(roles picked) round trips inside a
+        # three-second window. On 2026-08-31 19:03 that window ran out on a
+        # two-role pick and the summary at the bottom raised
+        # ``404 (error code: 10062): Unknown interaction`` - the roles were
+        # granted, the member saw "The application did not respond".
+        #
+        # Ephemeral + thinking, because the summary this callback sends at the
+        # end is ephemeral: on a component interaction ``thinking=False`` would
+        # acknowledge with a silent DEFERRED_UPDATE_MESSAGE and leave the member
+        # with no feedback at all while the loop runs, and a non-ephemeral defer
+        # would put a public "thinking" state in front of a private answer.
+        #
+        # What actually keeps the summary private is the hardcoded
+        # ``ephemeral=True`` on the followup at the bottom. ``interactions.defer``
+        # also records the choice on the interaction (EPHEMERAL_FLOW), but on the
+        # component path nothing reads it back yet: ``prefers_ephemeral`` has one
+        # caller, the global command error reporter, and it is handed a
+        # ``commands.Context``. The marker is groundwork for a component error
+        # path, not a guarantee anything here relies on.
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="role menu"
+        )
+
         menu_ids = [o["role_id"] for o in self.config.get("options", [])]
         selected = [int(v) for v in self.values if v.isdigit()]
         held = [r.id for r in member.roles]
@@ -179,7 +204,8 @@ class RoleMenuSelect(discord.ui.Select):
             )
         if not parts:
             parts.append(_("No changes."))
-        await interaction.response.send_message(
+        # followup, not response: the defer above already answered.
+        await interaction.followup.send(
             "\n".join(parts), ephemeral=True, allowed_mentions=none
         )
 
