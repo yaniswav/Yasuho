@@ -36,7 +36,10 @@ from cogs.community.serverstats import charts, rollups, views
 from cogs.community.serverstats import cog as serverstats_cog
 from tools import i18n
 
-TODAY = datetime.date(2026, 7, 28)
+# Anchored to the real date, not written down: a fixed TODAY silently drifts out
+# of the windows these cards are built for, and the suite starts failing on a day
+# nobody changed anything.
+TODAY = datetime.date.today()
 ONE_DAY = datetime.timedelta(days=1)
 
 # "argument not given", so a test can pass destination=None (an UNKNOWN

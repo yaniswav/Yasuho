@@ -45,7 +45,11 @@ FRIEND = 222
 STRANGER = 333
 
 UTC = datetime.timezone.utc
-NOW = datetime.datetime(2026, 7, 30, 12, 0, tzinfo=UTC)
+# Anchored to TODAY, not to a written-down date. A frozen NOW ages: the flush
+# test stamps an entry with it and then calls cog.flush(), which reads the REAL
+# clock, so once the gap passed PURGE_AFTER_DAYS the entry was purged instead of
+# merged and the test began failing on its own - 34 days after it was written.
+NOW = datetime.datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
 
 
 # ---------------------------------------------------------------------------
