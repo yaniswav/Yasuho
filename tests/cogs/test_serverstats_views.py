@@ -1022,6 +1022,14 @@ class _Ctx:
         return types.SimpleNamespace(id=1)
 
 
+# The retention rows have to land INSIDE the window the card builds from the
+# real clock, so the key is derived the same way the code derives it rather than
+# written down. A literal "W2026-31" passed for weeks and would have started
+# failing on 2026-09-21, the Monday the ISO week rolled out of the window -
+# found by running the suite 400 days ahead, not by reading it.
+_CURRENT_WEEK_KEY = rollups.week_keys(TODAY, 1)[0]
+
+
 def _make_answers(*, leveling=False):
     answers = {
         rollups.DATA_SINCE: TODAY - datetime.timedelta(days=30),
@@ -1040,11 +1048,13 @@ def _make_answers(*, leveling=False):
             }
         ],
         rollups.ACTIVITY_SERIES: [{"day": TODAY, "messages": 500}],
-        rollups.RETENTION_NET: [{"week_key": "W2026-31", "joins": 2, "leaves": 1}],
+        rollups.RETENTION_NET: [
+            {"week_key": _CURRENT_WEEK_KEY, "joins": 2, "leaves": 1}
+        ],
     }
     if leveling:
         answers[rollups.RETENTION_ACTIVITY] = [
-            {"week_key": "W2026-31", "active_members": 7}
+            {"week_key": _CURRENT_WEEK_KEY, "active_members": 7}
         ]
     return answers
 

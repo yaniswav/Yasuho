@@ -65,6 +65,16 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
+      - name: Run tests a year ahead
+        # The same suite with the clock moved forward, which is the only way to
+        # see a test that will break on a DATE rather than on a commit. Two did
+        # exactly that on 2026-08-29 and sat red for four days; a third was
+        # found this way, sixteen days before it would have fired. Cheap - it is
+        # the suite again, about 45 seconds.
+        env:
+          YASUHO_TIME_TRAVEL_DAYS: "400"
+        run: python -m pytest -q -p tests.timetravel
+
   audit:
     runs-on: ubuntu-latest
     steps:
