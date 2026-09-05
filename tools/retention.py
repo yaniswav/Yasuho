@@ -574,11 +574,36 @@ async def prune_stale_presence_aggregates(
 
 
 def invalidate_guild_caches(bot, guild_id):
-    """Remove known in-memory mirrors after a guild purge or departure."""
-    for attr in ("prefixes", "autoroles", "muteroles"):
-        cache = getattr(bot, attr, None)
-        if cache is not None:
-            cache.pop(guild_id, None)
+    """Remove known in-memory mirrors after a guild purge or departure.
+
+    WHAT IS AND IS NOT DROPPED HERE IS A DECISION PER CACHE, not a house style,
+    and the decisions are pinned as data in tests/test_cache_mirror_registry.py -
+    which resolves every attribute named below on its REAL owner (the production
+    cog object, or ``core.Yasuho`` itself for the bot's own maps) and runs this
+    function for real. Two things follow, and both are the point:
+
+    * renaming a cache on its cog turns that test red and names the attribute,
+      instead of quietly turning an invalidation into a no-op. This function
+      reaches in by direct attribute access rather than ``getattr(owner, name,
+      None)`` for the same reason - a rename here must raise, not be swallowed.
+      That holds for the bot's own maps as well as the cogs': a
+      ``getattr(bot, attr, None)`` loop there would swallow exactly the rename
+      this sentence promises will raise.
+    * a cache this function deliberately does NOT drop (``bot.blacklist``: user
+      ids, and a server leaving is no reason to un-blacklist anyone) is written
+      down there as a decision, so "absent" can never again be read as
+      "forgotten". That is exactly how ``Leveling._rank_cards`` was missed: it
+      reached the dashboard resync's list and never this one, so a purged guild
+      kept rendering the accent of the ``rank_cards`` row GUILD_DELETE_QUERIES
+      had just deleted, until its LRU entry happened to be evicted.
+
+    Does no I/O: it runs on the guild-purge worker and on every departure.
+    """
+    # bot.blacklist is deliberately absent: it is keyed by USER id, and a server
+    # leaving is not a reason to un-blacklist the people who were in it.
+    bot.prefixes.pop(guild_id, None)
+    bot.autoroles.pop(guild_id, None)
+    bot.muteroles.pop(guild_id, None)
     settings.invalidate_guild(guild_id)
 
     leveling = bot.get_cog("Leveling")
@@ -587,6 +612,12 @@ def invalidate_guild_caches(bot, guild_id):
         leveling._no_xp.discard(guild_id)
         leveling._multipliers.discard(guild_id)
         leveling._period_markers.discard(guild_id)
+        # The rank-card STYLE cache. rank_cards is in GUILD_DELETE_QUERIES, so
+        # leaving this entry keeps the accent (and the "this guild has a custom
+        # background" flag) of a row that no longer exists: a re-invite would
+        # render the purged style, and nothing re-reads it - the LRU is
+        # read-through only on a MISS.
+        leveling._rank_cards.discard(guild_id)
 
     automod = bot.get_cog("AutoMod")
     if automod is not None:

@@ -97,6 +97,19 @@ cooldown CLOCKS, not configuration - dropping them would hand every member a fre
 re-use) and Leveling's ``_period_markers`` (season rollover bookkeeping, not
 dashboard state, and cold-miss-safe by design).
 
+EVERY CACHE NAME BELOW IS PINNED, and so is every one of those omissions, by
+``tests/test_cache_mirror_registry.py``. That file is the only place where this
+module's list, ``tools/retention.invalidate_guild_caches``'s list and
+``cogs/system/events.py``'s rejoin refill are written down together, with what
+each does per cache. It matters here more than anywhere because THIS module is
+the duck-typed one: ``getattr(cog, "_settings", None)`` guarded by ``isinstance``
+/ ``callable`` means a cache renamed on its cog does not raise, does not log and
+does not fail anything - it silently stops being invalidated, and the guild
+serves pre-dashboard config until the next restart. The registry resolves every
+name on a REAL owner - the production cog objects, and ``core.Yasuho`` itself
+for the bot's own eager maps - and runs these steps for real, so a rename is a
+red test that names the attribute. Add a cache here, add its row there.
+
 The cog also writes the ``bot_heartbeat`` row every 30s over the MAIN pool, which
 is what lets the dashboard tell "the bot is down" from "the bot is up but its
 dashboard listener is down": the beat keeps landing while this dedicated listen

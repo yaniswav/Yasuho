@@ -31,13 +31,18 @@ import asyncio
 import logging
 import os
 import re
+import types
 
 import pytest
 
 import core
 
 from cogs.community.leveling.leveling import Leveling
+from cogs.config.customcommands import CustomCommands
 from cogs.config.rooms import TemporaryRooms
+from cogs.config.starboard import Starboard
+from cogs.moderation.automod import AutoMod
+from cogs.moderation.modlog import ModLog
 from cogs.system import dashboard_sync
 from tools import settings
 from tools.lru_cache import BoundedLRU
@@ -198,6 +203,42 @@ def _full_bot(pool):
         "TemporaryRooms": FakeRooms(bot),
     }
     return bot
+
+
+def test_the_stand_ins_carry_only_names_the_real_cogs_have():
+    """The stand-ins above cannot outlive a rename on the real cog.
+
+    Every assertion in this file reaches into a hand-written ``Fake*`` that
+    hard-codes a production attribute name. The resync reaches in duck-typed
+    (``getattr(cog, attr, None)``), so if the REAL cog renamed one of these, the
+    stand-in would still carry the old name, the resync would silently skip the
+    renamed cache in production, and every test here would stay green - the
+    stand-ins would be pinning a shape nothing has any more.
+
+    So each private name a stand-in defines is resolved on a REAL cog object
+    (all six ``__init__`` are pure: they only build containers). The reverse
+    direction - a real cog GAINING a cache no list drops - is
+    tests/test_cache_mirror_registry.py's completeness sweep.
+    """
+    real = types.SimpleNamespace(db_pool=None, eager_cache_lock=asyncio.Lock())
+    pairs = (
+        (FakeModLog(), ModLog(real)),
+        (FakeStarboard(), Starboard(real)),
+        (FakeAutoMod(), AutoMod(real)),
+        (FakeLeveling(real), Leveling(real)),
+        (FakeCustomCommands(), CustomCommands(real)),
+        (FakeRooms(real), TemporaryRooms(real)),
+    )
+
+    checked = 0
+    for stand_in, cog in pairs:
+        for attr in vars(stand_in):
+            if not attr.startswith("_") or attr.startswith("__"):
+                continue
+            assert hasattr(cog, attr), "{}.{}".format(type(cog).__name__, attr)
+            checked += 1
+
+    assert checked == 12  # a sweep that resolved nothing must not pass
 
 
 # ---------------------------------------------------------------------------
