@@ -3,6 +3,17 @@ name: CI
 on:
   push:
   pull_request:
+  # A daily run, because not every failure arrives with a commit. Two tests
+  # wrote a date down and handed it to code that reads the real clock; they
+  # passed for a month, then broke on 2026-08-29 when the gap crossed a
+  # thirty-day window. Nothing was pushed that week, so nothing ran, and the
+  # suite sat red until somebody happened to push something unrelated - who
+  # would then have read the failure as theirs. A scheduled run turns a
+  # calendar-triggered break into an alert on the day it happens.
+  # 05:17 rather than the top of the hour: GitHub delays cron jobs that pile
+  # onto :00, and this one is only useful if it actually runs.
+  schedule:
+    - cron: "17 5 * * *"
 
 jobs:
   lint:
