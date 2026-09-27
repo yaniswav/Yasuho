@@ -1287,6 +1287,39 @@ CREATE TABLE IF NOT EXISTS bot_heartbeat (
 );
 
 -- ============================================================
+-- Slash command tree sync bookkeeping (tools/tree_sync.py)
+-- ============================================================
+-- The fingerprint of the LAST SUCCESSFUL global application-command sync, so
+-- the bot can sync its own tree when - and only when - the payload changed.
+-- Twice in five weeks Discord advertised commands the running bot no longer
+-- matched (/trending -> CommandNotFound after a rename; /config ->
+-- CommandSignatureMismatch after its descriptions were translated) because the
+-- sync was a manual step nobody remembered.
+--
+-- ``payload_hash`` is SHA-256 of the canonicalised payload discord.py itself
+-- would POST, translator step included - a hash of anything smaller would be
+-- blind to exactly the localisation change that caused the /config incident.
+--
+-- Keyed by APPLICATION ID, which is the point of the table having a key at all:
+-- a dev bot and the prod bot pointed at one database have different application
+-- ids, so neither can convince the other that its tree is already registered. A
+-- singleton row (the bot_heartbeat shape above) would let precisely that happen.
+--
+-- Written ONLY after a sync call returns: a failed sync leaves the old hash in
+-- place so the next boot retries. ``command_count`` is diagnostics only.
+--
+-- No guild_id and no user_id, by construction: this is process state, not
+-- anybody's data, so neither the guild-purge guard (tests/tools/
+-- test_retention.py) nor the personal-export guard (tests/tools/test_privacy.py)
+-- applies - same reasoning as bot_heartbeat above.
+CREATE TABLE IF NOT EXISTS app_command_sync (
+    application_id BIGINT      PRIMARY KEY,
+    payload_hash   TEXT        NOT NULL,
+    command_count  INTEGER     NOT NULL DEFAULT 0,
+    synced_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
 -- Server statistics (aggregates only)
 -- ============================================================
 -- Owner: cogs/community/serverstats. Collected for every guild, with NO message

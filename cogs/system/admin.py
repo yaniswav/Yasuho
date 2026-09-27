@@ -12,7 +12,7 @@ from typing import Literal, Optional
 import discord
 from discord.ext import commands
 
-from tools import backup, role_audit
+from tools import backup, role_audit, tree_sync
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -222,7 +222,19 @@ class Admin(commands.Cog):
         guilds: commands.Greedy[discord.Object],
         spec: Optional[Literal["~", "*", "^"]] = None,
     ) -> None:
-        """Synchronizes the application command tree globally or to guilds."""
+        """Synchronizes the application command tree globally or to guilds.
+
+        The bot now syncs the GLOBAL tree by itself at startup whenever its
+        payload changed (tools/tree_sync.py), so this command is the manual
+        override rather than the routine step it used to be.
+
+        A global sync here records the payload hash, so a hand sync followed by
+        a restart does not make the next boot sync the very same tree again. The
+        guild-scoped variants (``~`` / ``*`` / ``^``) deliberately do NOT record
+        it: none of them changes the GLOBAL registration, and writing the global
+        hash from one of them would tell the next boot that a tree Discord has
+        never been given is already live.
+        """
         if not guilds:
             if spec == "~":
                 synced = await self.bot.tree.sync(guild=ctx.guild)
@@ -235,6 +247,9 @@ class Admin(commands.Cog):
                 synced = []
             else:
                 synced = await self.bot.tree.sync()
+                await tree_sync.record_global_sync(
+                    self.bot, synced_count=len(synced)
+                )
 
             scope = _("globally") if spec is None else _("to the current guild.")
             await ctx.send(

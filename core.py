@@ -10,7 +10,7 @@ import discord
 import sonolink
 from discord.ext import commands
 
-from tools import backup, fixups, i18n, music_state
+from tools import backup, fixups, i18n, music_state, tree_sync
 from tools.config_loader import config_loader
 from tools.http import TIMEOUT
 from tools.mobile_status import enable_mobile_status
@@ -31,12 +31,36 @@ _background_tasks: set[asyncio.Task] = set()
 
 
 def _module_has_setup(path):
-    """Cheap text check for a `setup` entry point, without importing the module."""
+    """Cheap text check for a `setup` entry point, without importing the module.
+
+    An UNREADABLE file answers True, not False. The check is only a cheap filter
+    on what to hand to `load_extension`; a file we cannot read is one we cannot
+    clear, and the two ways of being wrong are not symmetrical:
+
+    * answering False hides the module completely - it never reaches the load
+      loop, so `failed_extensions` stays empty, so `tools.tree_sync` sees a tree
+      it believes is COMPLETE and bulk-overwrites Discord with it, DELETING every
+      command that cog owns. Silent, in production.
+    * answering True at worst hands `load_extension` something with no `setup`.
+      That raises, `setup_hook` logs it and records the name, and the sync is
+      refused. Loud, and the previous registration stays live.
+
+    So an IO fault degrades towards the refusal. A syntax error needs none of
+    this: the check is textual, so a broken module still reads as an extension
+    and still fails at load time.
+    """
     try:
         with open(path, encoding="utf-8") as fp:
             return "def setup(" in fp.read()
     except OSError:
-        return False
+        log.warning(
+            "Could not read %s while discovering cogs; treating it as an "
+            "extension so the load failure is loud and the slash tree "
+            "auto-sync refuses a partial tree.",
+            path,
+            exc_info=True,
+        )
+        return True
 
 
 def discover_extensions():
@@ -54,7 +78,14 @@ def discover_extensions():
         dirs[:] = [d for d in dirs if d != "__pycache__"]
         rel = os.path.relpath(root, base_dir).replace(os.sep, ".")
         init_path = os.path.join(root, "__init__.py")
-        if root != cogs_dir and os.path.isfile(init_path) and _module_has_setup(init_path):
+        # lexists, not isfile: a dangling symlink (or anything else we cannot
+        # stat through) named __init__.py still MEANS "this folder is a
+        # package". isfile answers False there, which would silently downgrade
+        # the folder to a category and descend - and a package whose commands
+        # all come from its __init__ would then contribute nothing, with no
+        # load failure to show for it. _module_has_setup turns the unreadable
+        # case into a claim, which fails loudly at load time.
+        if root != cogs_dir and os.path.lexists(init_path) and _module_has_setup(init_path):
             found.append(rel)
             dirs[:] = []
             continue
@@ -251,12 +282,20 @@ class Yasuho(commands.Bot):
 
         await self.load_eager_caches()
 
+        # A cog that cannot attach is logged and skipped, never raised: one
+        # broken extension must not take the whole bot down. The names are kept
+        # because that tolerance has a consequence downstream - the command tree
+        # is then INCOMPLETE, and a global sync is a bulk OVERWRITE that would
+        # delete every command the missing cog owns. tree_sync refuses on a
+        # non-empty list; see tools/tree_sync.decide.
+        failed_extensions = []
         for extension in discover_extensions():
             try:
                 await self.load_extension(extension)
                 log.info("Loaded %s", extension)
             except Exception:
                 log.exception("Error while trying to load %s", extension)
+                failed_extensions.append(extension)
 
         log.info("Prefix count: %d", len(self.prefixes))
         log.info("i18n locales: %s", ", ".join(sorted(i18n.LOCALES)))
@@ -264,6 +303,25 @@ class Yasuho(commands.Bot):
         # Localize slash command descriptions/choices in the Discord command
         # picker (the response text is handled separately by tools/i18n.py).
         await self.tree.set_translator(YasuhoTranslator())
+
+        # Register the slash tree with Discord if - and only if - its payload
+        # changed since the last successful sync.
+        #
+        # WHY HERE, AND NOWHERE EARLIER. Three things must already be true when
+        # the payload is computed, and this is the first point at which all
+        # three are:
+        #   1. every extension has been through the loop above, so the tree is
+        #      whole (or we know exactly which cogs are missing from it);
+        #   2. the translator is installed, and it is PART OF THE PAYLOAD -
+        #      CommandTree.sync runs it to build description_localizations, so a
+        #      hash taken before this line would be blind to a translation-only
+        #      change, which is precisely what broke /config on 2026-09-13;
+        #   3. application_id is set - discord.py fills it in Client.login
+        #      (client.py:682) before it awaits setup_hook (client.py:693).
+        #
+        # It never raises and never blocks past its own timeout; the worst case
+        # is a WARNING and an unchanged stored hash, which the next boot retries.
+        await tree_sync.sync_if_changed(self, failed_extensions=failed_extensions)
 
         # Connect to Lavalink for music ONLY if it is configured. Skipping the
         # attempt avoids the startup delay and reconnect spam when there is no
