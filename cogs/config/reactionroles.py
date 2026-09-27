@@ -13,6 +13,11 @@ from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
 
+# The audit-log reason the removal path writes. Named once because the cached
+# and the uncached branch must produce the SAME audit entry - a moderator
+# reading the log must not be able to tell which one ran.
+REMOVE_REASON = "Reaction role removed"
+
 
 # ----------------------------------------------------------------------
 # Guided add: a modal (message ref + emoji + role picker) and, for the
@@ -395,6 +400,37 @@ class ReactionRoles(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
+        """Take the mapped role back off, in ONE REST call even uncached.
+
+        Discord does NOT send the member object on a reaction REMOVE (only on an
+        add), and this bot runs with ``chunk_guilds_at_startup=False``
+        (``core.py``), so the member cache is sparse BY DESIGN: on a busy guild
+        the reacting member is usually absent from it. The old body answered that
+        with ``guild.get_member(...) or await guild.fetch_member(...)`` and then
+        ``Member.remove_roles``, i.e. TWO REST calls - a GET to rebuild an object
+        whose only use was to carry an id into the very next request.
+
+        ``Member.remove_roles(role, reason=...)`` with the default
+        ``atomic=True`` is literally
+        ``state.http.remove_role(guild.id, member.id, role.id, reason=reason)``
+        (discord.py 2.7.1, member.py l.1188-1196) - no client-side hierarchy or
+        membership check, no cache read. So on a cache MISS the id-only call
+        below is byte-identical on the wire, minus the fetch.
+
+        The guards are the same ones, in a cheaper order:
+
+        * the mapping lookup still decides everything, first;
+        * ``guild.get_role`` still has to resolve the role - and now runs BEFORE
+          any REST call, so a mapping whose role was deleted costs zero requests
+          instead of a wasted member fetch;
+        * a member we DO have cached keeps going through ``Member.remove_roles``:
+          same one request, and the cached object stays the thing the library
+          maintains;
+        * ``discord.NotFound`` is swallowed rather than logged, because that is
+          precisely the case the old ``except discord.HTTPException`` handled
+          silently: the member (or the role) is gone, so there is nothing to
+          remove and nothing to report.
+        """
         if payload.guild_id is None:
             return
 
@@ -408,17 +444,26 @@ class ReactionRoles(commands.Cog):
         if guild is None:
             return
 
-        try:
-            member = guild.get_member(payload.user_id) or await guild.fetch_member(payload.user_id)
-        except discord.HTTPException:
-            member = None
         role = guild.get_role(rid)
+        if role is None:
+            return
 
-        if member and role:
+        member = guild.get_member(payload.user_id)
+        if member is not None:
             try:
-                await member.remove_roles(role, reason="Reaction role removed")
+                await member.remove_roles(role, reason=REMOVE_REASON)
             except Exception:
                 log.exception("Failed to remove role")
+            return
+
+        try:
+            await self.bot.http.remove_role(
+                guild.id, payload.user_id, role.id, reason=REMOVE_REASON
+            )
+        except discord.NotFound:
+            pass
+        except Exception:
+            log.exception("Failed to remove role")
 
 
 async def setup(bot):

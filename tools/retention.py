@@ -642,6 +642,15 @@ def invalidate_guild_caches(bot, guild_id):
     if starboard is not None:
         starboard._config.pop(guild_id, None)
 
+    twitch = bot.get_cog("Twitch")
+    if twitch is not None:
+        # "Can on_presence_update act in this guild?" - derived from the guild's
+        # twitch blob, which this purge is deleting along with the guild_settings
+        # row. A True left behind would survive a re-invite and keep the gate
+        # open on a guild whose config is gone; a False left behind would keep it
+        # shut on a guild that reconfigures. Read-through, so dropping is enough.
+        twitch._acts_in.pop(guild_id, None)
+
     custom_commands = bot.get_cog("CustomCommands")
     if custom_commands is not None:
         custom_commands._cache.pop(guild_id, None)

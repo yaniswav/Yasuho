@@ -521,6 +521,10 @@ class Twitch(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # guild_id -> bool: can on_presence_update DO anything in this guild?
+        # The presence gate, memoised once per guild. See _probe_acts_in for
+        # what the bool means and :meth:`on_presence_update` for why it exists.
+        self._acts_in = {}
 
     # -- config storage (single JSONB blob per guild) -------------------
     async def get_config(self, guild_id):
@@ -531,6 +535,11 @@ class Twitch(commands.Cog):
 
     async def save(self, guild_id, config):
         await settings.set_guild(self.bot.db_pool, guild_id, "twitch", config)
+        # The guild now HAS a twitch blob, so the presence gate must let it
+        # through from here on. Recorded rather than dropped: a save is the one
+        # write whose outcome the gate already knows, and dropping would make
+        # the next presence update in this guild re-read the blob for nothing.
+        self._acts_in[guild_id] = True
 
     # -- placeholder + embed building -----------------------------------
     def _apply(self, text, member, activity=None):
@@ -615,11 +624,98 @@ class Twitch(commands.Cog):
         except Exception:
             log.exception("Twitch role removal failed")
 
+    # -- the presence gate ----------------------------------------------
+    async def _probe_acts_in(self, guild):
+        """Decide ONCE per guild whether this listener can act here at all.
+
+        True iff something below could observably happen. There are exactly two
+        ways, and this is the full case analysis - the gate is only allowed to
+        be a superset, never a subset:
+
+        * the GO-LIVE branch needs ``config['enabled']`` to be truthy, and
+          ``_default_config`` ships ``enabled = False``, so it needs a stored
+          ``twitch`` blob. No blob, no alert - ever;
+        * the LIVE-ENDED branch needs :meth:`_resolve_role` to resolve. That is
+          ``config['role_id']`` (again a stored blob) OR the legacy fallback: a
+          role literally named :data:`LEGACY_ROLE_NAME`. So a guild with no blob
+          can still act, but only if that role EXISTS - which is why the scan
+          below is part of the verdict rather than an afterthought.
+
+        Gate False therefore means: ``get_config`` returns the untouched
+        defaults, ``_on_go_live`` returns at its ``enabled`` check, and
+        ``_remove_role`` returns at ``role is None``. Nothing observable, in
+        either branch - so skipping the whole body is a cost change and not a
+        behaviour one.
+
+        The blob read is the ordinary ``settings.get_guild``, i.e. free on the
+        shared guild LRU that locale / welcome / automod already keep warm, and
+        it happens at most once per guild per invalidation. The role scan is
+        O(roles) and only runs for a guild that has no blob at all.
+        """
+        blob = await settings.get_guild(
+            self.bot.db_pool, guild.id, "twitch", None
+        )
+        acts = blob is not None or (
+            discord.utils.get(guild.roles, name=LEGACY_ROLE_NAME) is not None
+        )
+        self._acts_in[guild.id] = acts
+        return acts
+
+    def _forget_acts_in(self, guild_id):
+        """Drop one guild's memoised gate verdict; it re-probes on demand."""
+
+        self._acts_in.pop(guild_id, None)
+
+    @commands.Cog.listener()
+    async def on_guild_role_create(self, role):
+        """A new role may BE the legacy Live role, which opens the gate."""
+
+        self._forget_acts_in(role.guild.id)
+
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role):
+        """...and deleting the last one closes it again."""
+
+        self._forget_acts_in(role.guild.id)
+
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before, after):
+        """A RENAME moves a role in or out of the legacy name; nothing else can.
+
+        Guarded on the name so the ordinary role edit (colour, permissions,
+        position - by far the common one) costs a single string comparison and
+        leaves the memo alone.
+        """
+        if before.name != after.name:
+            self._forget_acts_in(after.guild.id)
+
     # -- streaming listener ---------------------------------------------
     @commands.Cog.listener()
     async def on_presence_update(
         self, before: discord.Member, after: discord.Member
     ):
+        # THE GUILD GATE, FIRST AND SYNCHRONOUS. After on_message this is the
+        # most frequent event this bot receives: discord.py dispatches one
+        # presence update PER GUILD the member shares with the bot, for every
+        # status flip, every custom-status edit and every game start. The body
+        # below used to open with an any() over before.activities and a next()
+        # over after.activities - two generator frames per event, in every
+        # guild, before anything had asked whether the guild uses Twitch at all.
+        # One dict lookup answers that (cogs/community/profile/presence.py makes
+        # the same move with a set), and _probe_acts_in proves the verdict is a
+        # superset of "this listener could act here".
+        acts = self._acts_in.get(after.guild.id)
+        if acts is None:
+            try:
+                acts = await self._probe_acts_in(after.guild)
+            except Exception:
+                # Fail OPEN and do NOT memoise: a pool blip must cost a wasted
+                # scan, never a missed go-live.
+                log.exception("Twitch presence gate probe failed")
+                acts = True
+        if not acts:
+            return
+
         # Streaming/activity changes arrive on presence_update, NOT member_update
         # (which only fires for nick/roles/timeout). Reading before/after
         # activities here is what actually catches the go-live edge.

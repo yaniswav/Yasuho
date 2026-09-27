@@ -36,6 +36,34 @@ from tools.snowflake import coerce_ids
 
 log = logging.getLogger(__name__)
 
+# THE HOT-PATH PEEK INTO tools.settings.
+#
+# The antiinvite toggle does not live in the ``automod`` table: it is a key in
+# the guild's ``guild_settings`` JSONB blob, served from tools.settings' own
+# process-wide LRU. That LRU is already in memory on the hot path - the only
+# thing standing between ``on_message`` and it is that its reader is a
+# COROUTINE, so asking it cost an await (and a coroutine object) for every
+# message in every guild, including the overwhelming majority where all three
+# AutoMod features are off. :meth:`AutoMod._enabled_cached` reads the SAME
+# structure the coroutine would have read, synchronously.
+#
+# This is a deliberate reach into a module private, and it is a reach rather
+# than a mirror ON PURPOSE: a second copy of the flag would be a third cache to
+# invalidate, and ``settings.invalidate_guild`` already has a dozen callers
+# across the bot (dashboard_sync, dashboard_actions, retention, tickets,
+# serverstats). Reading the authoritative structure cannot go stale; a mirror
+# of it would, silently, the first time somebody added a thirteenth caller.
+#
+# Both names are resolved HERE, at import, so a rename inside tools.settings is
+# a loud failure when the extension loads (and in tests/test_import_smoke.py)
+# instead of an AttributeError raised inside a listener.
+_GUILD_BLOB_TABLE = settings._GUILD[0]
+_GUILD_BLOBS = settings._cache
+
+# Tells "no entry in the cache" apart from a seated ``None`` - which is a real,
+# meaningful value here (the negative cache for a guild with no automod row).
+_COLD = object()
+
 # Anti-spam sliding window: keep the last _SPAM_WINDOW seconds of a member's
 # message timestamps and trip when more than _SPAM_THRESHOLD land inside it.
 # _SPAM_SWEEP_AT bounds the tracking map: once it holds more keys than this, the
@@ -559,12 +587,47 @@ class AutoMod(commands.Cog):
             if ts and now - ts[-1] <= _SPAM_WINDOW
         }
 
+    def _enabled_cached(self, guild_id):
+        """The gate from WARM caches only: the triple, or None if either is cold.
+
+        SAME TWO STRUCTURES, SAME VERDICTS as :meth:`_enabled` - this just
+        refuses to build a coroutine to read a dict. Both halves of the gate are
+        already in memory in the common case:
+
+        * ``self._settings`` is this cog's own read-through cache of the
+          ``automod`` row (a seated ``None`` means "looked up, no row", which is
+          why the miss is told apart by :data:`_COLD` and not by falsiness);
+        * the ``antiinvite`` key rides tools.settings' guild LRU, peeked through
+          :data:`_GUILD_BLOBS` exactly the way ``settings._load`` would read it
+          on a hit (``key in cache`` then ``cache[key]``, same order, same LRU
+          bookkeeping).
+
+        Returning None on a cold half is what keeps this honest: the caller then
+        pays for the real :meth:`_enabled`, which reads through to Postgres and
+        seats both caches, and every later message in that guild is free. There
+        is no third cache and therefore nothing new to invalidate - see the
+        module header.
+        """
+        row = self._settings.get(guild_id, _COLD)
+        if row is _COLD:
+            return None
+        blob_key = (_GUILD_BLOB_TABLE, guild_id)
+        if blob_key not in _GUILD_BLOBS:
+            return None
+        blob = _GUILD_BLOBS[blob_key]
+        return (
+            bool(row["antilink"]) if row else False,
+            bool(row["antispam"]) if row else False,
+            bool(blob.get("antiinvite", False)),
+        )
+
     async def _enabled(self, guild_id):
         """The hot-path gate: ``(antilink, antispam, antiinvite)`` for a guild.
 
-        Both reads are in-process caches (the automod row cache and
-        tools.settings' bounded LRU), i.e. a dict lookup each on a warm cache -
-        which is why every listener may call this before doing anything else.
+        The COLD half of the gate. Callers on a hot listener try
+        :meth:`_enabled_cached` first and only fall back here, so this runs on a
+        guild's first scanned message (or right after an invalidation) and then
+        never again until something evicts a cache.
         """
         s = await self.get_settings(guild_id)
         antilink = bool(s["antilink"]) if s else False
@@ -625,14 +688,22 @@ class AutoMod(commands.Cog):
         if message.author.bot or message.guild is None:
             return
 
-        # The enabled gate comes FIRST, before any permission work. The two reads
-        # behind _enabled are in-process caches on the hot path, i.e. a dict
-        # lookup each, whereas Member.guild_permissions FOLDS every one of the
-        # author's role permission sets on every call. Computing that for every
-        # message in every guild - the overwhelming majority of which have
-        # automod off - bought nothing: a member with manage_messages is let
-        # through either way, so the order is pure cost, not behaviour.
-        antilink, antispam, antiinvite = await self._enabled(message.guild.id)
+        # The enabled gate comes FIRST, before any permission work, and in the
+        # common case it comes without an AWAIT. Member.guild_permissions FOLDS
+        # every one of the author's role permission sets on every call, so it
+        # stays behind the gate: a member with manage_messages is let through
+        # either way, which makes the order pure cost, not behaviour.
+        #
+        # Both halves of the gate are in-process caches, but both readers were
+        # coroutines, so an all-off guild paid two awaits per message anyway -
+        # while the three other on_message listeners in this bot (leveling, afk,
+        # serverstats) all decide on a synchronous dict before anything.
+        # _enabled_cached is that synchronous decision; None means a cache is
+        # cold and the real reader has to run, which happens once per guild.
+        gate = self._enabled_cached(message.guild.id)
+        if gate is None:
+            gate = await self._enabled(message.guild.id)
+        antilink, antispam, antiinvite = gate
 
         if not (antilink or antispam or antiinvite):
             return
@@ -708,7 +779,9 @@ class AutoMod(commands.Cog):
            edits, never when it attaches an embed or flips a flag, so an
            unfurl on an uncached message still costs nothing;
         3. only then the enabled gate, keeping the house rule that no permission
-           folding happens for a guild with automod off;
+           folding happens for a guild with automod off - and, like on_message,
+           taking it from :meth:`_enabled_cached` with no await whenever both of
+           its caches are warm;
         4. the permission fold, the scan claim, the exemption check, the scan.
 
         Spam is deliberately NOT re-evaluated here: the sliding window counts
@@ -728,7 +801,10 @@ class AutoMod(commands.Cog):
         elif getattr(after, "edited_timestamp", None) is None:
             return
 
-        antilink, _antispam, antiinvite = await self._enabled(after.guild.id)
+        gate = self._enabled_cached(after.guild.id)
+        if gate is None:
+            gate = await self._enabled(after.guild.id)
+        antilink, _antispam, antiinvite = gate
 
         # antispam alone does not open this gate: an edit is not a send.
         if not (antilink or antiinvite):

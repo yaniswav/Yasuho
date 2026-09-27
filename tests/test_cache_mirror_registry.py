@@ -62,6 +62,7 @@ from cogs.community.leveling.leveling import Leveling
 from cogs.config.customcommands import CustomCommands
 from cogs.config.rooms import TemporaryRooms
 from cogs.config.starboard import Starboard
+from cogs.config.twitch import Twitch
 from cogs.moderation.automod import AutoMod
 from cogs.moderation.modlog import ModLog
 from cogs.system import dashboard_sync, events
@@ -237,6 +238,23 @@ REGISTRY = (
         "(guild_id, user_id) -> recent message timestamps. A debounce window, "
         "not configuration: a reconnect says nothing about who is spamming, and "
         "clearing it fleet-wide would hand every member a fresh burst budget.",
+    ),
+    # -- Twitch -------------------------------------------------------------
+    _mirror(
+        "Twitch",
+        "_acts_in",
+        GUILD_MAP,
+        DROP,
+        EMPTY,
+        HEALS,
+        "The synchronous gate in front of on_presence_update: guild_id -> can "
+        "this listener act here at all, derived from the guild's twitch blob "
+        "plus the presence of the legacy Live role. Read-through (Twitch."
+        "_probe_acts_in re-derives on a miss), so EMPTY and DROP are both safe "
+        "and a rejoin needs no refill. The purge column is load-bearing: the "
+        "guild_settings row the verdict is derived from is deleted by the "
+        "purge, so a True left behind would keep the gate open for a guild "
+        "whose config is gone.",
     ),
     # -- Leveling -----------------------------------------------------------
     _mirror(
@@ -644,6 +662,7 @@ COG_CLASSES = {
     "ModLog": ModLog,
     "Starboard": Starboard,
     "AutoMod": AutoMod,
+    "Twitch": Twitch,
     "Leveling": Leveling,
     "CustomCommands": CustomCommands,
     "TemporaryRooms": TemporaryRooms,

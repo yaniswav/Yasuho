@@ -355,8 +355,23 @@ async def _invalidate_twitch(bot, gid):
     blob so the next go-live re-reads the authoritative config. NB: the watchlist
     (``twitch_alert`` table) is read straight from the DB on each go-live and is
     not cached, so the dashboard's watchlist writes need no invalidation.
+
+    SECOND STORE. The Twitch cog also memoises, per guild, whether
+    ``on_presence_update`` can act there AT ALL (``_acts_in``, the synchronous
+    gate in front of the bot's second-busiest listener). Its verdict is derived
+    from the presence of this very blob, so a dashboard write that CREATES a
+    twitch config for a guild the gate had already written off would otherwise
+    be inert until a restart - the alerts would stay silent with the dashboard
+    showing them enabled. Dropping the entry is enough: the cog re-probes on the
+    next presence update. No cog loaded / no dict => safe no-op.
     """
     settings.invalidate_guild(gid)
+    cog = bot.get_cog("Twitch")
+    if cog is None:
+        return
+    acts_in = getattr(cog, "_acts_in", None)
+    if isinstance(acts_in, dict):
+        acts_in.pop(gid, None)
 
 
 async def _invalidate_verify_role(bot, gid):
@@ -753,6 +768,24 @@ async def _resync_automod(bot):
         cache.clear()
 
 
+async def _resync_twitch(bot):
+    """Empty Twitch's ``_acts_in`` presence-gate memo (read-through by probe).
+
+    The memo answers "can on_presence_update act in this guild at all?" and is
+    derived from the guild's ``twitch`` blob plus the presence of the legacy
+    Live role. After a dropped NOTIFY we do not know which guilds gained a
+    config, and a stale ``False`` is a silently disabled feature, so the whole
+    map goes. Every entry re-probes on the next presence update in that guild -
+    against the settings LRU :func:`_resync_settings_cache` has already emptied.
+    """
+    cog = bot.get_cog("Twitch")
+    if cog is None:
+        return
+    acts_in = getattr(cog, "_acts_in", None)
+    if isinstance(acts_in, dict):
+        acts_in.clear()
+
+
 async def _resync_leveling(bot):
     """RELOAD ``_configs``; empty the three read-through leveling caches.
 
@@ -836,6 +869,7 @@ _RESYNC_STEPS = (
     ("modlog", _resync_modlog),
     ("starboard", _resync_starboard),
     ("automod", _resync_automod),
+    ("twitch", _resync_twitch),
     ("leveling", _resync_leveling),
     ("custom_commands", _resync_custom_commands),
     ("rooms", _resync_rooms),
