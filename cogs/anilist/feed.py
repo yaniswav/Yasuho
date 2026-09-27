@@ -49,6 +49,12 @@ from discord.ext import commands, tasks
 # runtime carry no marker; the rest are pure re-exports flagged for the linter.
 from . import feed_coalesce as afc
 from . import feed_policy as af
+from .breaker import (
+    CircuitOpen,
+    breaker_for,
+    errors_are_target_level,
+    guarded_request,
+)
 from .feed_delivery import (
     _ACTION_DEBOUNCE,  # noqa: F401
     _ADD_STATUS_WORDS,  # noqa: F401
@@ -464,6 +470,12 @@ class AniListFeed(NoPingReplies, commands.Cog):
         self.bot = bot
         # Unix timestamp before which the poller stays quiet (429 embargo).
         self._embargo_until = 0
+        # Bring the ONE shared AniList poller circuit breaker into existence at
+        # boot rather than at the first request, so the LOAD line can say
+        # breaker=closed from the start instead of going quiet until something
+        # happens. Idempotent - airing and chapters call the same function and
+        # get the same object (see cogs/anilist/breaker.py).
+        breaker_for(bot)
         self._poll_feeds.start()
 
     async def cog_load(self):
@@ -525,8 +537,27 @@ class AniListFeed(NoPingReplies, commands.Cog):
         # plus errors - that is a normal result the caller inspects. Only treat
         # errors with NO data payload as a hard fetch failure.
         if isinstance(data, dict) and data.get("errors") and not data.get("data"):
-            raise _FetchError("AniList GraphQL errors: " + str(data.get("errors"))[:200])
+            errors = data.get("errors")
+            raise _FetchError(
+                "AniList GraphQL errors: " + str(errors)[:200],
+                service_down=not errors_are_target_level(errors),
+            )
         return data
+
+    async def _poller_graphql(self, query, variables):
+        """:meth:`_graphql` for the POLLER, under the shared circuit breaker.
+
+        Only the poller goes through here. ``_graphql`` itself stays ungated
+        because the admin follow-lookup and title-search call it too, and those
+        are interactive: a person is waiting on them, they already fail one
+        request at a time, and they are bounded by the interactive throttle
+        instead (:mod:`cogs.anilist.throttle`). Silently refusing them for up to
+        an hour would turn an AniList outage into a bot that looks broken.
+        """
+
+        return await guarded_request(
+            self.bot, "feed", lambda: self._graphql(query, variables)
+        )
 
     async def _fetch_activities(self, user_ids, last_created):
         """Fetch new activities for ``user_ids`` since ``last_created``.
@@ -536,7 +567,10 @@ class AniListFeed(NoPingReplies, commands.Cog):
         so the boundary second is re-included (dedup then drops the already-seen
         ids client-side). Requests are spaced by ``REQUEST_SPACING`` so a large,
         backlogged install cannot burst past the rate limit mid-tick. May raise
-        :class:`_RateLimited` / :class:`_FetchError`.
+        :class:`_RateLimited` / :class:`_FetchError`, or
+        :class:`~cogs.anilist.breaker.CircuitOpen` when the shared breaker
+        tripped mid-tick (which is what stops the remaining chunks dead instead
+        of finishing the burst against a service that just failed).
 
         Returns ``(activities, safe_boundary)``. ``safe_boundary`` is ``None``
         when every chunk drained within the page cap; otherwise it is the
@@ -558,7 +592,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 if not first:
                     await asyncio.sleep(REQUEST_SPACING)
                 first = False
-                data = await self._graphql(
+                data = await self._poller_graphql(
                     ACTIVITY_QUERY,
                     {
                         "userIds": chunk,
@@ -723,6 +757,13 @@ class AniListFeed(NoPingReplies, commands.Cog):
         now = int(time.time())
         if now < self._embargo_until:
             return  # still under a 429 backoff
+        if breaker_for(self.bot).is_open():
+            # AniList is down for everybody (the shared breaker says so). Skip
+            # the whole tick BEFORE the database round trips, and say nothing:
+            # the opening WARNING and the LOAD line already carry the news, and
+            # one line per skipped tick is what made the September outage
+            # unreadable.
+            return
 
         # Coalescing-card maintenance. Drop rows whose live card is certainly
         # dead (untouched past AGE_CAP + PRUNE_GRACE) so the table stays ~1 row
@@ -769,6 +810,11 @@ class AniListFeed(NoPingReplies, commands.Cog):
             raw, safe_boundary = await self._fetch_activities(
                 sorted(followed_ids), last_created
             )
+        except CircuitOpen:
+            # The breaker tripped between the top-of-tick check and here (an
+            # earlier chunk failed). Cursors are untouched, so the unfetched
+            # tail rides a later tick exactly as it would after any failure.
+            return
         except _RateLimited as exc:
             self._embargo_until = now + exc.retry_after
             log.warning(

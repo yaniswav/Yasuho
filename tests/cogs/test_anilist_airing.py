@@ -13,6 +13,7 @@ cog module is enough; nothing in it runs at import time.
 """
 
 from math import ceil
+from types import SimpleNamespace
 
 from cogs.anilist import airing as ai
 from cogs.anilist.airing import (
@@ -234,9 +235,18 @@ def test_warmup_wheel_rotates_past_a_stuck_user_so_the_rest_load():
 
 
 def _airing_cog_no_loop():
-    """A bare AniListAiring with only the _refresh_lists state, no task loop/bot."""
+    """A bare AniListAiring with only the _refresh_lists state and no task loop.
+
+    It carries a bare object as ``bot`` because ``_refresh_lists`` asks the
+    shared AniList circuit breaker whether a failure is the SERVICE before
+    charging it to a user (see cogs/anilist/breaker.py). Nothing has ever failed
+    on this stand-in, so that breaker is closed and the dead-account escape
+    hatch below behaves exactly as it always did - which is what these tests are
+    about. The outage half of that fork is covered in test_anilist_breaker.py.
+    """
 
     cog = object.__new__(ai.AniListAiring)
+    cog.bot = SimpleNamespace()
     cog._list_cache = {}
     cog._list_fail_counts = {}
     cog._missing_wheel_after = None

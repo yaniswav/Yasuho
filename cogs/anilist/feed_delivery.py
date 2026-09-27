@@ -29,8 +29,20 @@ from tools.views import LocaleModal
 log = logging.getLogger(__name__)
 
 
+# ``service_down`` is the verdict the shared poller circuit breaker reads off a
+# raised error (:func:`cogs.anilist.breaker.guarded_request`). It is declared
+# HERE, on the types themselves, rather than sniffed from a message downstream:
+# a breaker that guesses from strings is a breaker that opens on the wrong thing.
+# Anything with no such attribute is inconclusive by default, so an exception
+# from our own parsing can never mute the pollers.
+
+
 class _RateLimited(Exception):
     """Raised on a 429 so the tick can set an embargo and bail cleanly."""
+
+    # A 429 means AniList ANSWERED - it is not down, it is busy - and its own
+    # Retry-After embargo already backs the poller off. Never the breaker's.
+    service_down = False
 
     def __init__(self, retry_after):
         super().__init__("AniList rate limited (retry after %ss)" % retry_after)
@@ -38,15 +50,33 @@ class _RateLimited(Exception):
 
 
 class _FetchError(Exception):
-    """Any non-429 network / HTTP / GraphQL failure while fetching."""
+    """Any non-429 network / HTTP / GraphQL failure while fetching.
+
+    ``service_down`` defaults to True because every unqualified raise of this
+    error is a transport or server-side failure (no JSON body, a timeout, a
+    reset connection). The ONE case that is not - a GraphQL error list that is
+    purely about the thing we asked for, e.g. a deleted AniList account - passes
+    ``service_down=False`` explicitly at its raise site, so one dead profile can
+    never convince the breaker that AniList is down for everybody.
+    """
+
+    def __init__(self, *args, service_down=True):
+        super().__init__(*args)
+        self.service_down = service_down
 
 
 class _AuthError(Exception):
     """A 401 on an authenticated call: the user's AniList link is invalid now."""
 
+    # About one user's token, not about the service.
+    service_down = False
+
 
 class _GoneError(Exception):
     """A 400/404 (or data-less GraphQL error): the target activity is gone."""
+
+    # About one activity, not about the service.
+    service_down = False
 
 
 def _parse_retry_after(value, default=60):

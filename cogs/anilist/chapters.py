@@ -62,6 +62,12 @@ from discord.ext import commands, tasks
 
 from .account import AccountMixin
 from .airing import _title_markup
+from .breaker import (
+    CircuitOpen,
+    breaker_for,
+    errors_are_target_level,
+    guarded_request,
+)
 from .feed import (
     REQUEST_SPACING,
     _authed_graphql,
@@ -850,6 +856,11 @@ class AniListChapters(NoPingReplies, commands.Cog):
         self._missing_wheel_after = None
         self._stale_wheel_after = None
         self._feed_wheel_after = None
+        # The ONE shared AniList poller circuit breaker, created at boot so the
+        # LOAD line reports it from the start. Same object as the feed's and the
+        # airing poller's - see cogs/anilist/breaker.py. It gates ONLY this cog's
+        # AniList calls; the MangaDex half of the tick keeps running.
+        breaker_for(bot)
         self._poll_chapters.start()
 
     async def cog_load(self):
@@ -871,7 +882,23 @@ class AniListChapters(NoPingReplies, commands.Cog):
     # AniList GraphQL plumbing (unauthenticated; one session per call)
     # ------------------------------------------------------------------
     async def _graphql(self, query, variables):
-        """POST an UNAUTHENTICATED GraphQL request to AniList.
+        """POST an unauthenticated AniList request, under the shared breaker.
+
+        Every AniList request this cog makes goes through here (the interactive
+        chapter commands live in :class:`ChaptersMixin` and use
+        ``AniListBase._graphql`` instead), so gating the method gates the
+        poller's AniList half - and ONLY that half. :meth:`_mangadex_get` is a
+        different service with its own availability and is deliberately not
+        gated: a manga reader still gets their chapters while AniList is down.
+        Adds :class:`~cogs.anilist.breaker.CircuitOpen` to what callers may see.
+        """
+
+        return await guarded_request(
+            self.bot, "chapters", lambda: self._graphql_raw(query, variables)
+        )
+
+    async def _graphql_raw(self, query, variables):
+        """The unguarded request itself.
 
         Returns the parsed JSON. Raises :class:`_RateLimited` on a 429 (with the
         Retry-After seconds) and :class:`_FetchError` on any other network/HTTP
@@ -904,7 +931,11 @@ class AniListChapters(NoPingReplies, commands.Cog):
             raise _FetchError(str(exc)) from exc
 
         if isinstance(data, dict) and data.get("errors") and not data.get("data"):
-            raise _FetchError("AniList GraphQL errors: " + str(data.get("errors"))[:200])
+            errors = data.get("errors")
+            raise _FetchError(
+                "AniList GraphQL errors: " + str(errors)[:200],
+                service_down=not errors_are_target_level(errors),
+            )
         return data
 
     # ------------------------------------------------------------------
@@ -1116,7 +1147,18 @@ class AniListChapters(NoPingReplies, commands.Cog):
         staggers the fetches. Requests are paced by :meth:`_space`. A single user's
         non-429 failure is skipped (retried later); a 429 propagates so the tick can
         set an embargo across the whole poll.
+
+        When the shared AniList breaker is open this returns AT ONCE, before the
+        round-robin wheels turn: spinning them over a refresh that cannot happen
+        would rotate past users for nothing. A breaker that trips part way
+        through the burst instead raises
+        :class:`~cogs.anilist.breaker.CircuitOpen` out of here (it is not a
+        ``_FetchError``, so the per-user handler below never swallows it) and
+        the tick carries on with MangaDex.
         """
+
+        if breaker_for(self.bot).is_open():
+            return
 
         missing = [aid for aid in anilist_user_ids if aid not in self._list_cache]
         stale = [
@@ -1413,6 +1455,14 @@ class AniListChapters(NoPingReplies, commands.Cog):
         now_mono = time.monotonic()
         try:
             await self._refresh_lists(tracked_users, now_mono)
+        except CircuitOpen:
+            # AniList tripped the shared breaker part way through the refresh.
+            # Do NOT abort the tick: this poller's payload comes from MangaDex,
+            # and AniList only says which manga are on whose list. The cached
+            # lists carry that perfectly well, so chapter alerts keep flowing
+            # for every already-known manga through an AniList outage; only a
+            # brand-new list entry waits. Silent, like every skipped tick.
+            pass
         except _RateLimited as exc:
             self._embargo_until = now + exc.retry_after
             log.warning(

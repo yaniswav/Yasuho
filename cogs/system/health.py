@@ -33,6 +33,13 @@ import logging
 
 from discord.ext import commands, tasks
 
+# NOTE: cogs.anilist.breaker is imported INSIDE _anilist_stats, not here. It is
+# a leaf module with no dependencies of its own, but `cogs.anilist` is a package
+# whose __init__ pulls in the whole AniList cog (20-odd modules), so a
+# module-scope import would make an import fault anywhere in AniList take THIS
+# cog down with it - and the LOAD line is the surface an operator reads to find
+# out that something is broken. The monitor must outlive the thing it monitors.
+
 log = logging.getLogger(__name__)
 
 # How often the load line ticks. Matches the other bot-internal tasks.loop
@@ -134,24 +141,50 @@ class Health(commands.Cog):
         return limiter.stats() if limiter is not None else None
 
     def _anilist_stats(self):
-        """Interactive AniList throttle counters, or None if unavailable.
+        """AniList pressure counters, or None when nothing AniList has loaded.
 
-        Folds :attr:`~cogs.anilist.throttle.AniListThrottle.throttled_count`
-        (lifetime interactive 429s) and the process-wide global window's
-        ``stats()['global']`` (hits/rejections against ``GLOBAL_LIMIT``) so an
-        operator watching the LOAD line can see "AniList is throttling us"
-        without grepping a separate log line.
+        Two independent subsystems land in one ``anilist=`` segment because an
+        operator reads them together:
+
+        * the INTERACTIVE throttle
+          (:attr:`~cogs.anilist.throttle.AniListThrottle.throttled_count`,
+          lifetime 429s, plus the process-wide window's hits/rejections against
+          ``GLOBAL_LIMIT``) - "AniList is throttling us";
+        * the POLLER circuit breaker (:mod:`cogs.anilist.breaker`) -
+          ``breaker=open`` is "AniList is DOWN and every poller is off the
+          network", the state that otherwise showed up only as a wall of
+          WARNINGs during the 2026-09 outage. ``breaker_opens`` and
+          ``breaker_skipped`` keep the trace after it heals, so an outage that
+          started and ended overnight is still legible in the morning.
+
+        Each half degrades on its own: the throttle lives on the ``AniList``
+        cog, the breaker on the bot, and either can be missing without taking
+        the other (or the line) down.
         """
+        stats = {}
         anilist = self.bot.get_cog("AniList")
         throttle = getattr(anilist, "_throttle", None)
-        if throttle is None:
-            return None
-        global_stats = throttle.stats()["global"]
-        return {
-            "throttled_429": throttle.throttled_count,
-            "global_hits": global_stats["hits"],
-            "global_rejections": global_stats["rejections"],
-        }
+        if throttle is not None:
+            global_stats = throttle.stats()["global"]
+            stats["throttled_429"] = throttle.throttled_count
+            stats["global_hits"] = global_stats["hits"]
+            stats["global_rejections"] = global_stats["rejections"]
+        # Imported here rather than at module scope: see the note at the top of
+        # this module - an AniList import fault must not also kill the LOAD
+        # line. And caught rather than raised, for the same reason the throttle
+        # above is read with getattr: a subsystem that is not there drops its
+        # own fields and leaves the rest of the line standing.
+        try:
+            from cogs.anilist.breaker import breaker_state
+        except Exception:
+            breaker_state = None
+
+        # Read-only: a monitor must never be the thing that creates the state it
+        # reports, so this is breaker_state (returns None) and not breaker_for.
+        breaker = None if breaker_state is None else breaker_state(self.bot)
+        if breaker is not None:
+            stats.update(breaker.health_fields())
+        return stats or None
 
     @tasks.loop(seconds=LOAD_LOG_INTERVAL)
     async def load_line(self):

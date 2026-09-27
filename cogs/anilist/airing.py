@@ -40,6 +40,12 @@ from discord.ext import commands, tasks
 
 from . import feed_policy as af
 from .account import AccountMixin
+from .breaker import (
+    CircuitOpen,
+    breaker_for,
+    errors_are_target_level,
+    guarded_request,
+)
 from .feed import (
     CARD_ACCENT,
     REQUEST_SPACING,
@@ -619,6 +625,10 @@ class AniListAiring(NoPingReplies, commands.Cog):
         # (a restart restarts the wheel, which is harmless); see tools.round_robin.
         self._missing_wheel_after = None
         self._stale_wheel_after = None
+        # The ONE shared AniList poller circuit breaker, created at boot so the
+        # LOAD line reports it from the start. Same object as the feed's and the
+        # chapters' - see cogs/anilist/breaker.py.
+        breaker_for(bot)
         self._poll_airing.start()
 
     async def cog_load(self):
@@ -640,7 +650,25 @@ class AniListAiring(NoPingReplies, commands.Cog):
     # GraphQL plumbing (unauthenticated; one session per call)
     # ------------------------------------------------------------------
     async def _graphql(self, query, variables):
-        """POST an UNAUTHENTICATED GraphQL request to AniList.
+        """POST an unauthenticated AniList request, under the shared breaker.
+
+        EVERY AniList request this cog makes goes through here, and this cog is
+        the poller (the interactive airing commands live in
+        :class:`AiringMixin` and use ``AniListBase._graphql`` instead), so
+        gating the method is gating the poller. Adds
+        :class:`~cogs.anilist.breaker.CircuitOpen` to what the caller may see:
+        the request was refused before the socket because AniList is down for
+        every poller. That error is NOT a ``_FetchError`` on purpose - see
+        :meth:`_refresh_lists`, whose per-user handler must not count a refusal
+        as that user's failure.
+        """
+
+        return await guarded_request(
+            self.bot, "airing", lambda: self._graphql_raw(query, variables)
+        )
+
+    async def _graphql_raw(self, query, variables):
+        """The unguarded request itself.
 
         Returns the parsed JSON. Raises :class:`_RateLimited` on a 429 (with the
         Retry-After seconds) and :class:`_FetchError` on any other network/HTTP
@@ -673,7 +701,11 @@ class AniListAiring(NoPingReplies, commands.Cog):
             raise _FetchError(str(exc)) from exc
 
         if isinstance(data, dict) and data.get("errors") and not data.get("data"):
-            raise _FetchError("AniList GraphQL errors: " + str(data.get("errors"))[:200])
+            errors = data.get("errors")
+            raise _FetchError(
+                "AniList GraphQL errors: " + str(errors)[:200],
+                service_down=not errors_are_target_level(errors),
+            )
         return data
 
     async def _space(self):
@@ -766,6 +798,13 @@ class AniListAiring(NoPingReplies, commands.Cog):
         global cursor for everyone forever; a later success re-caches the real list
         and clears the counter. A 429 propagates so the tick can set an embargo across
         the whole poll.
+
+        A :class:`~cogs.anilist.breaker.CircuitOpen` propagates too, and that is
+        load-bearing: it is NOT a ``_FetchError``, so the handler below never
+        sees it. A refused request teaches us nothing about that user, and
+        counting one against :data:`LIST_FAIL_THRESHOLD` would - three skipped
+        ticks into a service-wide outage - cache an EMPTY list for every tracked
+        user and release the global cursor over a union missing everybody.
         """
 
         missing = [aid for aid in anilist_user_ids if aid not in self._list_cache]
@@ -793,6 +832,19 @@ class AniListAiring(NoPingReplies, commands.Cog):
             try:
                 entries = await self._fetch_public_list(aid)
             except _FetchError as exc:
+                if breaker_for(self.bot).tripped:
+                    # AniList is DOWN, declared so by the shared breaker. This
+                    # failure is not evidence about this account, so it must not
+                    # count against the dead-account escape hatch below: a long
+                    # outage would otherwise reach LIST_FAIL_THRESHOLD for every
+                    # tracked user in turn, cache them all EMPTY, release the
+                    # warmup hold over a union missing everybody and skip their
+                    # airings for good once the service came back. A genuinely
+                    # dead or chronically slow profile never trips the breaker
+                    # (its failures sit between other users' successes, which
+                    # reset the run), so the hatch still works for what it is
+                    # for. Silent: the outage is already logged once.
+                    continue
                 fails = self._list_fail_counts.get(aid, 0) + 1
                 self._list_fail_counts[aid] = fails
                 if fails >= LIST_FAIL_THRESHOLD:
@@ -963,6 +1015,13 @@ class AniListAiring(NoPingReplies, commands.Cog):
         now = int(time.time())
         if now < self._embargo_until:
             return  # still under a 429 backoff
+        if breaker_for(self.bot).is_open():
+            # AniList is down for every poller (the shared breaker says so).
+            # Everything this tick does needs AniList, so skip it before the
+            # database round trips - and say nothing: the opening WARNING and
+            # the LOAD line carry the news, one line per skipped tick is what
+            # made the September outage unreadable.
+            return
 
         optins = await self._load_optins()
         channel_subs = await self._load_channel_subs()
@@ -990,6 +1049,11 @@ class AniListAiring(NoPingReplies, commands.Cog):
         tracked_users = {row["anilist_user_id"] for row in optins}
         try:
             await self._refresh_lists(tracked_users, now_mono)
+        except CircuitOpen:
+            # The breaker tripped part way through the refresh burst. Drop the
+            # rest of the tick in silence: the cursor is untouched (this returns
+            # before the schedules fetch), so nothing is skipped, only delayed.
+            return
         except _RateLimited as exc:
             self._embargo_until = now + exc.retry_after
             log.warning(
@@ -1051,6 +1115,8 @@ class AniListAiring(NoPingReplies, commands.Cog):
             aired, fetched_ats, capped = await self._fetch_schedules(
                 sorted(union), cursor, now
             )
+        except CircuitOpen:
+            return  # refused before the socket; the cursor is held, as always
         except _RateLimited as exc:
             self._embargo_until = now + exc.retry_after
             log.warning(
