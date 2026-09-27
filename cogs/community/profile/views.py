@@ -49,7 +49,7 @@ from .visibility import ViewerContext, resolve_visible_fields, visible_field_nam
 from tools import interactions
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorLayoutView, AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, AuthorView, LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -567,7 +567,7 @@ async def render_sections(container, sections, viewer, connections, budget):
         budget.add_items(lambda box, f=field: _linked_badge(box, f))
 
 
-class ProfileCard(discord.ui.LayoutView):
+class ProfileCard(LocaleLayoutView):
     """Public, read-only Components V2 profile card (``/profile view``).
 
     A plain :class:`~discord.ui.LayoutView`, not author-gated: there is

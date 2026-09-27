@@ -40,6 +40,7 @@ import discord
 
 from tools import interactions
 from tools.i18n import _
+from tools.views import LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ class _VoteButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class SkipVoteView(discord.ui.View):
+class SkipVoteView(LocaleView):
     """The vote message's view: one button, a 30 s timeout, no author gate.
 
     Multi-user by nature (any listener in the channel may vote), so it is a plain

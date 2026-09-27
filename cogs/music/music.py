@@ -43,7 +43,7 @@ from cogs.music.player import (
     youtube_seed_query,  # noqa: F401
 )
 from cogs.music.playlists_shared import ServerPlaylistMixin
-from tools import music_state, settings
+from tools import i18n, music_state, settings
 from tools.i18n import _, ngettext
 from tools.quotas import QuotaRegistry
 
@@ -1457,7 +1457,21 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # embed. Components V2 TextDisplay resolves mentions (unlike an
             # embed), so suppress pings or the DJ/requester would be notified
             # on every repost.
-            view = MusicController(self, player, track=track)
+            #
+            # Built inside the GUILD's locale, and MusicController pins whatever
+            # locale it is built in for the life of the panel (see
+            # tools.views.PinnedRenderLocale). This is a public message that a
+            # background tick, a track change and every listener's clicks all
+            # re-render in place: without the pin it would speak the language of
+            # whoever touched it last, and without this wrapper the background
+            # posters (track_start, cold restore) carry no locale at all and it
+            # would default to English in a French server. resolve_guild_locale
+            # never raises and is an LRU hit after warmup.
+            locale_code = await i18n.resolve_guild_locale(
+                self.bot, getattr(player, "guild", None)
+            )
+            with i18n.locale(locale_code):
+                view = MusicController(self, player, track=track)
             try:
                 message = await player.home.send(
                     view=view, allowed_mentions=discord.AllowedMentions.none()

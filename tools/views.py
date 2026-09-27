@@ -4,9 +4,55 @@ This module hosts the shared View building blocks that were previously
 copy-pasted across the cogs. Keeping a single canonical implementation means
 the author gating and timeout cleanup behave identically everywhere and only
 have to be fixed in one place.
+
+THE LOCALE RULE. A component click, a modal submit and a dynamic-item click all
+run in a task discord.py creates from the gateway coroutine, whose context has
+``i18n.current_locale`` at its DEFAULT ("en") - ``Yasuho.get_context`` only ever
+set it for command invocations. Any ``_()`` called from such a callback
+therefore answers in English unless something applied the clicker's locale
+first. The only hook discord.py runs before a callback is a check, so the apply
+lives in a check and NOWHERE else:
+
+* :class:`LocaleView` / :class:`LocaleLayoutView` - ``interaction_check``, which
+  discord.py calls after the item checks and before the callback.
+* :class:`LocaleModal` - ``interaction_check``, called before ``on_submit``.
+* :class:`LocaleDynamicItem` - the ITEM's ``interaction_check``; on a dynamic
+  item discord.py never consults the enclosing view's check, so a dynamic item
+  must carry its own.
+
+One shape has no base here because none exists in the tree: a check on an
+ordinary Button / Select / Container. Those run BEFORE the view's
+(``ui/view.py:591`` is ``item._run_checks`` and THEN
+``self.interaction_check``), so a spotless root does not help them - an item
+gate that renders text must call ``i18n.apply_interaction_locale`` itself.
+``tests/test_view_locale_hygiene.py`` scans for them too.
+
+Every dispatch root in cogs/ and tools/ derives from one of those four (usually
+through :class:`AuthorView` / :class:`AuthorLayoutView`), including the
+display-only cards: a card with no dispatchable component never has its check
+called, so the base costs it nothing and nobody has to re-decide "is this view
+interactive?" when they add the first button.
+
+A subclass that overrides ``interaction_check`` for a gate of its own SHOULD
+chain through ``super()`` - that is the house shape, and the only one that stays
+correct when a base changes. Be precise about what the guard actually enforces,
+though: ``tests/test_view_locale_hygiene.py`` is BEHAVIOURAL, not a grep for
+``super()``. It fails the build when a dispatch root's check leaves the locale
+on English, whatever the reason; a check that hand-rolls
+``i18n.apply_interaction_locale`` itself and never calls ``super()`` passes it
+(seven cog-level checks in the tree do exactly that today). So a missing
+``super()`` hop is NOT mechanically caught - only a missing locale is. If you
+drop the hop you also drop whatever gate the base was applying, and nothing
+here will tell you.
+
+THE RENDER RULE, the companion rule, lives on :class:`PinnedRenderLocale` below:
+the locale a check installs is the CLICKER's, which is right for what only the
+clicker reads and wrong for the body of a shared message.
 """
 
 from __future__ import annotations
+
+import typing
 
 import discord
 
@@ -26,7 +72,30 @@ _DENY_STRINGS = [
 ]
 
 
-class AuthorView(discord.ui.View):
+class LocaleView(discord.ui.View):
+    """A plain View whose callbacks run in the clicker's locale.
+
+    The single reason to exist: ``interaction_check`` resolves and installs the
+    interaction's locale, so every ``_()`` in the item callbacks below it
+    renders in the clicker's language instead of the gateway task's English
+    default. It adds no gate - it always returns ``True`` - so swapping
+    ``discord.ui.View`` for this base never changes who may click.
+
+    Subclasses with a gate of their own override ``interaction_check`` and chain
+    through ``super()``::
+
+        async def interaction_check(self, interaction):
+            if not await super().interaction_check(interaction):
+                return False
+            return await my_gate(interaction)
+    """
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
+
+class AuthorView(LocaleView):
     """A View that only its originating author may interact with.
 
     Subclasses add their own components (buttons, selects, modals) exactly as
@@ -63,9 +132,10 @@ class AuthorView(discord.ui.View):
         self._deny_message = deny_message
 
     async def interaction_check(self, interaction):
-        # Component callbacks run in their own task where get_context never set
-        # the locale; resolve it here so this check AND the callback localize.
-        await i18n.apply_interaction_locale(interaction)
+        # LocaleView resolves the clicker's locale first, so this check AND the
+        # callback below it localize.
+        if not await super().interaction_check(interaction):
+            return False
         if interaction.user.id != self.author_id:
             # Translate in the clicker's locale (the stored wording is a
             # registered N_ literal, see _DENY_STRINGS).
@@ -99,17 +169,33 @@ _DISABLEABLE = (
 )
 
 
-class AuthorLayoutView(discord.ui.LayoutView):
+class LocaleLayoutView(discord.ui.LayoutView):
+    """The Components V2 twin of :class:`LocaleView`.
+
+    ``LayoutView`` is a sibling of ``View`` in discord.py (both inherit the
+    private ``BaseView``), not a subclass, so the locale apply cannot simply be
+    inherited from :class:`LocaleView` and is reimplemented here against the one
+    shared ``i18n.apply_interaction_locale``. Adds no gate: it always returns
+    ``True``, so re-basing a layout onto it never changes who may click.
+    """
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return True
+
+
+class AuthorLayoutView(LocaleLayoutView):
     """A Components V2 LayoutView gated to its originating author.
 
     LayoutView cannot subclass :class:`AuthorView` (that is a plain
-    ``discord.ui.View``), so the author gate and locale resolution AuthorView
-    normally supplies are reimplemented here: :meth:`interaction_check` applies
-    the clicker's locale then rejects anyone but ``author_id`` (using the same
-    registered deny wording, see ``_DENY_STRINGS``), and :meth:`on_timeout`
-    disables every control and edits the bound ``message`` in place. Subclasses
-    assemble their own :class:`~discord.ui.Container` and set ``self.message`` so
-    the timeout cleanup has something to edit.
+    ``discord.ui.View``), so the author gate AuthorView normally supplies is
+    reimplemented here on top of :class:`LocaleLayoutView`:
+    :meth:`interaction_check` chains to the base for the clicker's locale then
+    rejects anyone but ``author_id`` (using the same registered deny wording,
+    see ``_DENY_STRINGS``), and :meth:`on_timeout` disables every control and
+    edits the bound ``message`` in place. Subclasses assemble their own
+    :class:`~discord.ui.Container` and set ``self.message`` so the timeout
+    cleanup has something to edit.
     """
 
     def __init__(self, author_id, *, timeout=180, deny_message="This panel isn't for you."):
@@ -119,9 +205,10 @@ class AuthorLayoutView(discord.ui.LayoutView):
         self._deny_message = deny_message
 
     async def interaction_check(self, interaction):
-        # Component callbacks run in their own task where get_context never set
-        # the locale; resolve it here so this check AND the callback localize.
-        await i18n.apply_interaction_locale(interaction)
+        # LocaleLayoutView resolves the clicker's locale first, so this check
+        # AND the callback below it localize.
+        if not await super().interaction_check(interaction):
+            return False
         if interaction.user.id != self.author_id:
             # Translate in the clicker's locale (the stored wording is a
             # registered N_ literal, see _DENY_STRINGS). Overridable per view so
@@ -182,3 +269,105 @@ class LocaleModal(discord.ui.Modal):
     async def interaction_check(self, interaction):
         await i18n.apply_interaction_locale(interaction)
         return True
+
+
+# A template that can never match a custom_id: the abstract base below has to
+# pass one (``DynamicItem.__init_subclass__`` requires it) but must never claim
+# a click of its own. ``(?!)`` is a negative lookahead on the empty string, so
+# it fails at position 0 for every input, the empty string included.
+_NEVER_MATCHES = r"(?!)"
+
+_ItemT = typing.TypeVar("_ItemT", bound=discord.ui.Item)
+
+
+class LocaleDynamicItem(discord.ui.DynamicItem[_ItemT], template=_NEVER_MATCHES):
+    """A DynamicItem whose callback runs in the clicker's resolved locale.
+
+    Dynamic items are the one dispatch path where the enclosing view's
+    ``interaction_check`` is NEVER consulted: ``ViewStore.schedule_dynamic_item_call``
+    awaits ``item.interaction_check(interaction)`` and then ``item.callback(...)``
+    (verified in the installed discord.py 2.7.1, ``ui/view.py``). So the apply
+    has to live on the item, and ``Item.interaction_check`` - which defaults to
+    returning ``True`` - is the only hook available before the callback.
+    Subclass it with the real template::
+
+        class SeenButton(LocaleDynamicItem[discord.ui.Button], template=r"..."):
+            ...
+
+    Adds no gate. ``DynamicItem.interaction_check`` is NOT a do-nothing default
+    like ``Item``'s: it delegates to the WRAPPED item's own check
+    (``return await self.item.interaction_check(interaction)``), so this
+    override applies the locale and then hands the decision straight back to
+    ``super()``. Replacing that delegation with a bare ``return True`` would
+    quietly drop a gate a wrapped item carried - none does today, which is
+    exactly why it would have gone unnoticed.
+    """
+
+    async def interaction_check(self, interaction):
+        await i18n.apply_interaction_locale(interaction)
+        return await super().interaction_check(interaction)
+
+
+class PinnedRenderLocale:
+    """Mixin: the BODY of this view's message always renders in ONE language.
+
+    THE RENDER RULE. The locale a check installs (see THE LOCALE RULE at the top
+    of this module) is the CLICKER's. That is exactly right for what only the
+    clicker reads - an ephemeral refusal, an ephemeral confirmation - and exactly
+    wrong for the body of a message several people and a background task all
+    re-render in place. A live now-playing panel is edited by whoever presses
+    Pause AND by the 60s progress tick AND by the track-change repost; a live
+    lyrics card is edited by its poller every few seconds. Let each of those
+    render in "whatever locale this particular caller happens to be in" and one
+    public message visibly alternates languages: ``### Now Playing`` becomes
+    ``### Lecture en cours`` when a French member clicks Pause, then flips back
+    on the next tick, because a poller carries no locale at all and falls to the
+    English default.
+
+    The fix is not "give the pollers a locale too" - that only narrows the
+    flip-flop to clicker-vs-guild. A message gets ONE language, decided once:
+    this mixin pins whatever locale is current at the FIRST build (i.e. the view's
+    construction) and forces every later build back into it, whoever triggered
+    it. A caller that wants a specific language for a surface it posts from a
+    context with no locale of its own - the controller's background poster - just
+    constructs the view inside ``i18n.locale(...)``; see
+    ``Music._send_controller``, which resolves the GUILD locale so a public panel
+    speaks the server's language rather than the English default.
+
+    Mixing it in: put it first in the bases, rename the layout builder from
+    ``_build`` to ``_compose``, and keep calling ``self._build(...)`` everywhere.
+    ``_build`` below is then the only door into a render, so a call site added
+    later cannot forget the pin::
+
+        class NowPlaying(PinnedRenderLocale, LocaleLayoutView):
+            def __init__(self, ...):
+                super().__init__(timeout=None)
+                ...
+                self._build()          # pins here
+
+            def _compose(self) -> None:
+                ...                    # runs in the pinned locale, always
+
+    Only for a message whose body OUTLIVES the render that produced it and can
+    be re-rendered by somebody else. An author-gated card (``AuthorView`` /
+    ``AuthorLayoutView``) already has exactly one possible clicker and needs
+    none of this; neither does an ephemeral card, which nobody else can see.
+    """
+
+    #: The pinned language, or None until the first build takes the pin.
+    _render_locale: typing.Optional[str] = None
+
+    def _compose(self, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+        """Assemble the layout. Implemented by the subclass; never called directly."""
+        raise NotImplementedError
+
+    def _build(self, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+        """Render the body in this message's pinned language.
+
+        The first call takes the pin from the current context, so a view built
+        inside ``i18n.locale(loc)`` renders in ``loc`` forever after.
+        """
+        if self._render_locale is None:
+            self._render_locale = i18n.current_locale.get()
+        with i18n.locale(self._render_locale):
+            return self._compose(*args, **kwargs)

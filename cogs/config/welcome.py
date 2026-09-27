@@ -9,7 +9,7 @@ from tools import embed_creator, interactions, rendering, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
-from tools.views import AuthorLayoutView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -521,7 +521,7 @@ class WelcomePanel(AuthorLayoutView):
 # ----------------------------------------------------------------------
 # Read-only status card
 # ----------------------------------------------------------------------
-class WelcomeStatusView(discord.ui.LayoutView):
+class WelcomeStatusView(LocaleLayoutView):
     """Single-page Components V2 card: the current welcome configuration for a
     guild (read-only, no controls)."""
 

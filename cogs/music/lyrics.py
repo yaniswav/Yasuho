@@ -55,6 +55,7 @@ import discord
 from . import safetext
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import LocaleLayoutView, PinnedRenderLocale
 
 if typing.TYPE_CHECKING:  # the cog type is only used in string annotations here
     from cogs.music.music import Music, Player
@@ -664,7 +665,7 @@ def _track_header(track: typing.Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-class StaticLyricsCard(discord.ui.LayoutView):
+class StaticLyricsCard(LocaleLayoutView):
     """The ephemeral ``/music lyrics`` card: the full lyrics, paginated, with controls.
 
     A single accent container in the music house style: a heading, the track,
@@ -804,7 +805,7 @@ class StaticLyricsCard(discord.ui.LayoutView):
 # ---------------------------------------------------------------------------
 
 
-class SyncedLyricsCard(discord.ui.LayoutView):
+class SyncedLyricsCard(PinnedRenderLocale, LocaleLayoutView):
     """The public live-lyrics message a session edits in place as the song plays.
 
     Owned by one :class:`SyncedLyricsSession`, rebuilt (not recreated) on every
@@ -812,6 +813,14 @@ class SyncedLyricsCard(discord.ui.LayoutView):
     session never churns view objects. Carries a Stop button (a room surface: any
     listener in the voice channel may stop it) until the session finalises, when
     the button is dropped and a closing note replaces it.
+
+    :class:`~tools.views.PinnedRenderLocale` is load-bearing here, more than
+    anywhere else in the bot: this public card is rebuilt by the session's
+    poller every few seconds (a task with no locale at all, so English) and also
+    from the Stop / calibration clicks (the clicker's locale). Pinning the
+    language at construction - the locale of whoever started the follow - is
+    what keeps the heading from flickering between "Live Lyrics" and
+    "Paroles en direct" while the song plays.
     """
 
     def __init__(self, session: "SyncedLyricsSession") -> None:
@@ -826,7 +835,7 @@ class SyncedLyricsCard(discord.ui.LayoutView):
         self._stopped = stopped
         self._build()
 
-    def _build(self) -> None:
+    def _compose(self) -> None:
         self.clear_items()
         container = discord.ui.Container(accent_colour=random_colour())
         container.add_item(discord.ui.TextDisplay(_("### 🎤 Live Lyrics")))

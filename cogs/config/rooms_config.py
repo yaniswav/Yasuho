@@ -27,7 +27,7 @@ from tools.autoroom import (
     summarise_hub,
 )
 from tools.i18n import _
-from tools.views import LocaleModal
+from tools.views import LocaleLayoutView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -278,7 +278,7 @@ class _RenameChannelsModal(LocaleModal):
         await self.panel._rerender()
 
 
-class _HubManageView(discord.ui.View):
+class _HubManageView(LocaleView):
     """Ephemeral chooser: edit a hub's settings or rename its channels.
 
     The panel's per-hub accessory opens this so both affordances stay tidy
@@ -346,7 +346,7 @@ class _HubManageView(discord.ui.View):
         )
 
 
-class AutoroomPanel(discord.ui.LayoutView):
+class AutoroomPanel(LocaleLayoutView):
     """Styled Components V2 panel for managing a guild's autoroom hubs.
 
     Follows the ``MusicController`` reference: a coloured Container lists each

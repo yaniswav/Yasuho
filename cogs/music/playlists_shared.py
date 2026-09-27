@@ -37,6 +37,7 @@ from cogs.music import safetext
 from cogs.music.player import VoiceConnectFailed, connect_player
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -200,7 +201,7 @@ def _like_prefix(term: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-class _PlaylistListCard(discord.ui.LayoutView):
+class _PlaylistListCard(LocaleLayoutView):
     """The guild's server playlists as one accent Container (read-only, public).
 
     A display-only Components V2 card in the music house style: a heading and one

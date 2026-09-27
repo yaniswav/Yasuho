@@ -20,6 +20,7 @@ from . import feed_policy as af
 from .feed_delivery import _media_title
 from .feed_views import CARD_ACCENT, FeedAddButton, FeedLikeButton, FeedReplyButton
 from tools.i18n import N_, _, ngettext
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +141,7 @@ def _user_summary(acts):
     return ", ".join(parts)
 
 
-class ActivityCard(discord.ui.LayoutView):
+class ActivityCard(LocaleLayoutView):
     """One AniList activity as a polished Components V2 card.
 
     A coloured :class:`~discord.ui.Container` (the media's cover accent, else
@@ -288,7 +289,7 @@ class ActivityCard(discord.ui.LayoutView):
         container.add_item(row)
 
 
-class ActivityDigest(discord.ui.LayoutView):
+class ActivityDigest(LocaleLayoutView):
     """The coalesced remainder of a busy tick as one compact Components V2 card.
 
     A single :data:`CARD_ACCENT` container: a heading ('...and N more updates')

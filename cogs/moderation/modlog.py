@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from tools import db, embed_creator, interactions, settings
 from tools.i18n import _
-from tools.views import AuthorLayoutView
+from tools.views import AuthorLayoutView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ class ModLogPanel(AuthorLayoutView):
         await _refresh_layout(interaction, self.message, new)
 
 
-class ModLogStatusView(discord.ui.LayoutView):
+class ModLogStatusView(LocaleLayoutView):
     """Single-page Components V2 card: the current mod-log configuration for a
     guild (read-only, no controls)."""
 

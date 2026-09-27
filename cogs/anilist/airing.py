@@ -69,6 +69,7 @@ from tools import i18n, interactions
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
+from tools.views import LocaleDynamicItem, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -386,7 +387,7 @@ async def _run_seen(interaction, media_id, episode):
 
 
 class AiringSeenButton(
-    discord.ui.DynamicItem[discord.ui.Button], template=SEEN_TEMPLATE
+    LocaleDynamicItem[discord.ui.Button], template=SEEN_TEMPLATE
 ):
     """Persistent Seen button that advances the clicker's progress to the aired episode.
 
@@ -417,7 +418,7 @@ class AiringSeenButton(
         await _run_seen(interaction, self.media_id, self.episode)
 
 
-class AiringCard(discord.ui.LayoutView):
+class AiringCard(LocaleLayoutView):
     """One just-aired episode as a compact Components V2 DM card.
 
     A cover-accented :class:`~discord.ui.Container` holds the aired-episode line

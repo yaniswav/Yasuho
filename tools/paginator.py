@@ -4,6 +4,7 @@ import logging
 
 import discord
 
+from . import i18n
 from .formats import random_colour
 from .i18n import _
 from .views import AuthorView
@@ -63,12 +64,21 @@ class Paginator(AuthorView):
         )
 
     async def interaction_check(self, interaction):
-        if self.author_id is not None and interaction.user.id != self.author_id:
-            await interaction.response.send_message(
-                _("This menu isn't for you."), ephemeral=True
-            )
-            return False
-        return True
+        """Author gate when one was given, public otherwise - locale either way.
+
+        The base's gate cannot simply be chained to in the public mode: with
+        ``author_id`` None it compares every clicker's id against None and
+        denies the whole room. So the public branch keeps its looser gate and
+        applies the locale itself, and the gated branch defers to
+        :class:`~tools.views.AuthorView` whole (same wording, same behaviour).
+        Without one of the two the page buttons answer in English: the callback
+        runs in a task discord.py spawned from the gateway, where the locale is
+        still the "en" default.
+        """
+        if self.author_id is None:
+            await i18n.apply_interaction_locale(interaction)
+            return True
+        return await super().interaction_check(interaction)
 
     async def start(self, ctx):
         """Send the first page. A single page is sent without navigation buttons."""

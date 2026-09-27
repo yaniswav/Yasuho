@@ -13,9 +13,10 @@ from .helpers import (
 from .queries import CHARACTER_QUERY, STUDIO_QUERY
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import LocaleLayoutView
 
 
-class CharacterCard(discord.ui.LayoutView):
+class CharacterCard(LocaleLayoutView):
     """A looked-up AniList character as a Components V2 card.
 
     Same family as :class:`~cogs.anilist.airing.AiringCard`: a
@@ -72,7 +73,7 @@ class CharacterCard(discord.ui.LayoutView):
         self.add_item(container)
 
 
-class StudioCard(discord.ui.LayoutView):
+class StudioCard(LocaleLayoutView):
     """A looked-up AniList animation studio as a Components V2 card.
 
     Same family as :class:`CharacterCard`: a random-accented

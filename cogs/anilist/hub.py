@@ -20,7 +20,7 @@ from .queries import VIEWER_QUERY
 from .replies import NO_PINGS, no_ping
 from tools import i18n, interactions
 from tools.i18n import N_, _
-from tools.views import LocaleModal
+from tools.views import LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -250,7 +250,7 @@ class _HubLinkButton(discord.ui.Button):
             await interactions.notify_failure(interaction)
 
 
-class AniListHub(discord.ui.LayoutView):
+class AniListHub(LocaleLayoutView):
     """The author-restricted /anilist discoverability hub (bare-group panel).
 
     A single Components V2 container (AniList blue) with three parts: a header

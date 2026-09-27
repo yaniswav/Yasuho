@@ -48,7 +48,7 @@ from tools import interactions, rendering
 from tools.cooldowns import Cooldowns
 from tools.formats import format_dt, random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorLayoutView, AuthorView, LocaleModal
+from tools.views import AuthorLayoutView, AuthorView, LocaleLayoutView, LocaleModal
 
 try:
     # The house duration converter (tools/time.py), reused elsewhere (reminders,
@@ -905,7 +905,7 @@ def _no_xp_lines(guild, rows):
     return channel_lines, role_lines
 
 
-class NoXpListView(discord.ui.LayoutView):
+class NoXpListView(LocaleLayoutView):
     """Single-page Components V2 card: every configured no-xp channel/category
     and role for this guild."""
 
@@ -953,7 +953,7 @@ class NoXpListView(discord.ui.LayoutView):
         self.add_item(container)
 
 
-class MultiplierListView(discord.ui.LayoutView):
+class MultiplierListView(LocaleLayoutView):
     """Single-page Components V2 card: every configured XP boost plus the
     active timed event, for this guild."""
 
@@ -1016,7 +1016,7 @@ class MultiplierListView(discord.ui.LayoutView):
         self.add_item(container)
 
 
-class LevelConfigOverviewView(discord.ui.LayoutView):
+class LevelConfigOverviewView(LocaleLayoutView):
     """Single-page Components V2 landing card: no-xp zones, announce settings,
     voice XP, XP boosts and the active timed event."""
 

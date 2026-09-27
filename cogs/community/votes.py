@@ -56,6 +56,7 @@ from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.quotas import SlidingWindowQuota
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -863,7 +864,7 @@ def _status_lines(row):
     )
 
 
-class VoteStatusView(discord.ui.LayoutView):
+class VoteStatusView(LocaleLayoutView):
     """Read-only Components V2 card: a member's own top.gg vote status.
 
     Mirrors the shape of ``cogs/config/welcome.py``'s ``WelcomeStatusView`` - a

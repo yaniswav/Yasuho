@@ -30,7 +30,7 @@ from tools import embed_creator, i18n, interactions, modchecks
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.paginator import Paginator, paginate_lines
-from tools.views import AuthorLayoutView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleLayoutView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ class ButtonRoleButton(discord.ui.Button):
             )
 
 
-class ButtonRoleView(discord.ui.View):
+class ButtonRoleView(LocaleView):
     """Persistent (timeout=None) view holding one button per self-assignable role."""
 
     def __init__(self, rows):
@@ -347,7 +347,7 @@ async def _refresh_layout(interaction, message, view):
 # ----------------------------------------------------------------------
 # Terminal (non-interactive) card shown after posting/attaching/cancelling
 # ----------------------------------------------------------------------
-class _DoneView(discord.ui.LayoutView):
+class _DoneView(LocaleLayoutView):
     """A one-shot card in the builder's house style, shown once the builder is done.
 
     Mirrors the AniList feed panel's ``_FeedNoticeView`` notice pattern: a single

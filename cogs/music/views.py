@@ -64,7 +64,13 @@ from tools.config_loader import config_loader
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorLayoutView, LocaleModal
+from tools.views import (
+    AuthorLayoutView,
+    LocaleLayoutView,
+    LocaleModal,
+    LocaleView,
+    PinnedRenderLocale,
+)
 
 if typing.TYPE_CHECKING:  # the cog type is used only in string annotations here
     from cogs.music.music import Music
@@ -322,11 +328,19 @@ class _ControllerButton(discord.ui.Button):
         await self._handler(interaction)
 
 
-class MusicController(discord.ui.LayoutView):
+class MusicController(PinnedRenderLocale, LocaleLayoutView):
     """Interactive now-playing controls as a Components V2 layout.
 
     A coloured container holds the track details and the playback buttons. The
     view is restricted to listeners currently in the player's voice channel.
+
+    :class:`~tools.views.PinnedRenderLocale` first in the bases, so the panel's
+    BODY keeps the language it was built in no matter who re-renders it: this one
+    public message is edited by every listener's clicks, by the 60s progress tick
+    and by the track-change repost, and those carry three different locales (the
+    clicker's, none, none). ``Music._send_controller`` builds it inside the guild
+    locale; the clicker's own locale still applies to the EPHEMERAL replies the
+    button callbacks send, which is the only text only they read.
     """
 
     def __init__(
@@ -395,7 +409,7 @@ class MusicController(discord.ui.LayoutView):
             self._accent_colour = random_colour()
         return self._accent_colour
 
-    def _build(self, *, keep_rendered_id: bool = False) -> None:
+    def _compose(self, *, keep_rendered_id: bool = False) -> None:
         """(Re)assemble the layout from the player's current state.
 
         ``keep_rendered_id`` leaves :attr:`_rendered_id` untouched. The progress
@@ -753,7 +767,15 @@ class MusicController(discord.ui.LayoutView):
                 child.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Only allow members currently in the player's voice channel."""
+        """Only allow members currently in the player's voice channel.
+
+        The ``super()`` hop is :class:`~tools.views.LocaleLayoutView`: it
+        installs the clicker's locale and always returns True, so the room gate
+        below is unchanged - but its refusal, and every ``_()`` in the button
+        callbacks it lets through, now render in that member's language.
+        """
+        if not await super().interaction_check(interaction):
+            return False
         return await _ensure_in_voice(self.player, interaction)
 
     async def on_timeout(self) -> None:
@@ -1183,7 +1205,7 @@ class _EffectsSelect(discord.ui.Select):
             await interactions.notify_failure(interaction)
 
 
-class EffectsView(discord.ui.View):
+class EffectsView(LocaleView):
     """Ephemeral one-select card for choosing an audio effect.
 
     Sent privately from the controller's Effects button, so it needs no author
@@ -1327,7 +1349,7 @@ class _QueueTrackSelect(discord.ui.Select):
             await interactions.notify_failure(interaction)
 
 
-class _QueueTrackActions(discord.ui.View):
+class _QueueTrackActions(LocaleView):
     """The ephemeral Jump / Remove panel for one picked queue entry.
 
     Deliberately a two-button panel instead of a yes/no confirm per action: the
@@ -1374,7 +1396,13 @@ class _QueueTrackActions(discord.ui.View):
         )
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Same room gate as the queue view itself, re-checked at action time."""
+        """Same room gate as the queue view itself, re-checked at action time.
+
+        ``super()`` is :class:`~tools.views.LocaleView`, which only installs the
+        clicker's locale and returns True, so the gate itself is untouched.
+        """
+        if not await super().interaction_check(interaction):
+            return False
         return await _ensure_in_voice(self._owner.player, interaction)
 
     async def _jump(self, interaction: discord.Interaction) -> None:
@@ -1400,7 +1428,7 @@ class _QueueTrackActions(discord.ui.View):
             log.exception("Failed to disable the queue track panel on timeout")
 
 
-class QueueView(discord.ui.LayoutView):
+class QueueView(PinnedRenderLocale, LocaleLayoutView):
     """The upcoming queue as a paginated Components V2 layout.
 
     A single accent :class:`~discord.ui.Container` in the controller's house
@@ -1421,6 +1449,13 @@ class QueueView(discord.ui.LayoutView):
     Every render re-reads ``player.queue.tracks`` live, so the view never shows
     stale state after an add or a clear, and the page index is re-clamped by
     :func:`queue_page` whenever the queue shrinks under the viewer.
+
+    :class:`~tools.views.PinnedRenderLocale`: ``?queue`` posts this PUBLICLY and
+    any listener may page it, so without the pin the one message would swap
+    language every time a member with a different locale pressed Next. The pin
+    is taken at construction, i.e. the poster's locale for the public card and
+    the clicker's for the ephemeral copy the controller's Queue button opens -
+    each correct for its own audience.
     """
 
     def __init__(self, cog: "Music", player: Player, *, timeout: float = 180) -> None:
@@ -1440,7 +1475,7 @@ class QueueView(discord.ui.LayoutView):
     ) -> _ControllerButton:
         return _ControllerButton(handler, **kwargs)
 
-    def _build(self) -> None:
+    def _compose(self) -> None:
         """(Re)assemble the layout from the player's live queue state."""
         self.clear_items()
         container = discord.ui.Container(accent_colour=random_colour())
@@ -1557,7 +1592,14 @@ class QueueView(discord.ui.LayoutView):
                 child.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Only allow members currently in the player's voice channel."""
+        """Only allow members currently in the player's voice channel.
+
+        ``super()`` is :class:`~tools.views.LocaleLayoutView`, which only
+        installs the clicker's locale and returns True, so the gate itself is
+        untouched.
+        """
+        if not await super().interaction_check(interaction):
+            return False
         return await _ensure_in_voice(self.player, interaction)
 
     async def on_timeout(self) -> None:
@@ -1858,7 +1900,7 @@ class _HistoryTrackSelect(discord.ui.Select):
             await interactions.notify_failure(interaction)
 
 
-class HistoryCard(discord.ui.LayoutView):
+class HistoryCard(PinnedRenderLocale, LocaleLayoutView):
     """What this session already played, newest first, as a Components V2 card.
 
     A read-only listing plus ONE offer per line: re-queue it. The card is a room
@@ -1874,6 +1916,9 @@ class HistoryCard(discord.ui.LayoutView):
     :func:`queue_page` for the same reason. The lane itself is hard-bounded
     (``HISTORY_MAX_ITEMS``), so this surface is bounded by construction - no
     query, no growth, one deque copy per render.
+
+    :class:`~tools.views.PinnedRenderLocale` for the same reason as the queue
+    view: ``?played`` posts it publicly and the whole room may page it.
     """
 
     def __init__(self, cog: "Music", player: Player, *, timeout: float = 180) -> None:
@@ -1884,7 +1929,7 @@ class HistoryCard(discord.ui.LayoutView):
         self.message: typing.Optional[discord.Message] = None
         self._build()
 
-    def _build(self) -> None:
+    def _compose(self) -> None:
         """(Re)assemble the layout from the player's live history lane."""
         self.clear_items()
         container = discord.ui.Container(accent_colour=random_colour())
@@ -1952,7 +1997,14 @@ class HistoryCard(discord.ui.LayoutView):
                 child.disabled = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Room surface: anyone currently in the player's voice channel."""
+        """Room surface: anyone currently in the player's voice channel.
+
+        ``super()`` is :class:`~tools.views.LocaleLayoutView`, which only
+        installs the clicker's locale and returns True, so the gate itself is
+        untouched.
+        """
+        if not await super().interaction_check(interaction):
+            return False
         return await _ensure_in_voice(self.player, interaction)
 
     async def on_timeout(self) -> None:
@@ -2118,7 +2170,7 @@ class _FavouriteSelect(discord.ui.Select):
             await interactions.notify_failure(interaction)
 
 
-class _FavouriteActions(discord.ui.View):
+class _FavouriteActions(LocaleView):
     """The ephemeral Play / Remove panel for one picked favourite.
 
     The queue browser's two-offer shape (:class:`_QueueTrackActions`), for the

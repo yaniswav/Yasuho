@@ -62,7 +62,7 @@ from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
-from tools.views import LocaleModal
+from tools.views import LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class TicketOpenButton(discord.ui.Button):
         await interaction.response.send_modal(TicketSubjectModal())
 
 
-class TicketPanelView(discord.ui.View):
+class TicketPanelView(LocaleView):
     """Persistent (timeout=None) wrapper around the single Open button."""
 
     def __init__(self):

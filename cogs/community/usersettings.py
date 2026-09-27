@@ -9,7 +9,7 @@ from tools import i18n, privacy, rendering, settings
 from tools import mangadex as md
 from tools.i18n import N_, _
 from tools.interactions import notify_failure
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -421,7 +421,7 @@ class ChoiceSelect(discord.ui.Select):
         await self._panel.choose(interaction, self.pref, self.values)
 
 
-class SettingsView(discord.ui.LayoutView):
+class SettingsView(LocaleLayoutView):
     """Author-restricted Components V2 panel of per-user preference toggles.
 
     Rendered as a Container holding one Section per boolean preference: a

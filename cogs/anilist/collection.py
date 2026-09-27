@@ -34,6 +34,7 @@ from .media_view import CompletePromptView
 from .queries import COLLECTION_QUERY, VIEWER_QUERY
 from tools import i18n, interactions
 from tools.i18n import _, ngettext
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -253,7 +254,7 @@ class _EditButton(discord.ui.Button):
         await self._owner._open_edit(interaction, self._media)
 
 
-class CollectionView(discord.ui.LayoutView):
+class CollectionView(LocaleLayoutView):
     """Author-restricted Components V2 dashboard over the invoker's own list.
 
     A single AniList-blue :class:`~discord.ui.Container`: a header (type + status

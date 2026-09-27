@@ -21,7 +21,7 @@ from tools.autoroom import (
     slot_value_label,
 )
 from tools.i18n import _
-from tools.views import LocaleModal
+from tools.views import LocaleLayoutView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ class _MemberActionSelect(discord.ui.Select):
         )
 
 
-class _RoomSubView(discord.ui.View):
+class _RoomSubView(LocaleView):
     """A short-lived ephemeral view hosting one sub-picker of a room action."""
 
     def __init__(self, item):
@@ -196,7 +196,7 @@ class _RoomRenameModal(LocaleModal):
         )
 
 
-class RoomControlView(discord.ui.LayoutView):
+class RoomControlView(LocaleLayoutView):
     """Per-room voicemaster panel: owner-gated, lives while the channel does.
 
     A Components V2 ``LayoutView`` (following ``MusicController``): a coloured

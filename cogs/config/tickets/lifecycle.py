@@ -125,7 +125,7 @@ from . import guild_config, storage, transcripts
 from tools import i18n, interactions
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleDynamicItem, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -192,7 +192,7 @@ CLOSE_FAILED = object()
 
 
 class TicketCloseButton(
-    discord.ui.DynamicItem[discord.ui.Button], template=CLOSE_TEMPLATE
+    LocaleDynamicItem[discord.ui.Button], template=CLOSE_TEMPLATE
 ):
     """Persistent Close button: opener or support, behind a confirm."""
 
@@ -217,7 +217,7 @@ class TicketCloseButton(
 
 
 class TicketClaimButton(
-    discord.ui.DynamicItem[discord.ui.Button], template=CLAIM_TEMPLATE
+    LocaleDynamicItem[discord.ui.Button], template=CLAIM_TEMPLATE
 ):
     """Persistent Claim button: support only, once, never by the opener."""
 
@@ -241,7 +241,7 @@ class TicketClaimButton(
         await _run_claim(interaction, self.thread_id)
 
 
-class TicketControlsView(discord.ui.View):
+class TicketControlsView(LocaleView):
     """The two buttons that ride the ticket's opening message.
 
     ``timeout=None`` because these outlive the process: the buttons dispatch

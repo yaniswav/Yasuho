@@ -91,6 +91,7 @@ from tools import mangadex as md
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
+from tools.views import LocaleDynamicItem, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -601,7 +602,7 @@ async def _run_read(interaction, media_id, chapter):
 
 
 class ChapterReadButton(
-    discord.ui.DynamicItem[discord.ui.Button], template=READ_TEMPLATE
+    LocaleDynamicItem[discord.ui.Button], template=READ_TEMPLATE
 ):
     """Persistent Read button that advances the clicker's progress to the chapter.
 
@@ -636,7 +637,7 @@ class ChapterReadButton(
         await _run_read(interaction, self.media_id, self.chapter)
 
 
-class ChapterCard(discord.ui.LayoutView):
+class ChapterCard(LocaleLayoutView):
     """One newly-released chapter as a compact Components V2 card.
 
     A cover-accented :class:`~discord.ui.Container` holds the release line (title

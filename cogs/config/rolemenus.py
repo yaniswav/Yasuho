@@ -22,7 +22,7 @@ from discord.ext import commands
 from tools import i18n, interactions, modchecks, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.views import AuthorLayoutView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ class RoleMenuSelect(discord.ui.Select):
         )
 
 
-class RoleMenuView(discord.ui.View):
+class RoleMenuView(LocaleView):
     """Persistent (timeout=None) view wrapping a single self-role dropdown."""
 
     def __init__(self, message_id, config):

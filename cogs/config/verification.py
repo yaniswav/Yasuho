@@ -19,6 +19,7 @@ from tools import i18n, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
+from tools.views import LocaleLayoutView, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class VerifyButton(discord.ui.Button):
         )
 
 
-class VerifyView(discord.ui.View):
+class VerifyView(LocaleView):
     """Persistent (timeout=None) wrapper around the single Verify button."""
 
     def __init__(self):
@@ -84,7 +85,7 @@ class VerifyView(discord.ui.View):
         self.add_item(VerifyButton())
 
 
-class VerifyStatusView(discord.ui.LayoutView):
+class VerifyStatusView(LocaleLayoutView):
     """Single-page Components V2 card: the current verification configuration
     for a guild (read-only, no controls)."""
 

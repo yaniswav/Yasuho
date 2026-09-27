@@ -38,7 +38,7 @@ from tools import modchecks
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class _RemoveRewardView(AuthorView):
 # ----------------------------------------------------------------------
 # CV2 "list" card, grouped by level
 # ----------------------------------------------------------------------
-class LevelRewardsListView(discord.ui.LayoutView):
+class LevelRewardsListView(LocaleLayoutView):
     """Single-page Components V2 card: rules grouped by level, plus the mode."""
 
     def __init__(self, guild, rules, mode, *, timeout=180):

@@ -5,11 +5,12 @@ from discord.ext import commands
 
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
 
-class UserInfoView(discord.ui.LayoutView):
+class UserInfoView(LocaleLayoutView):
     """Member profile rendered as a Components V2 layout.
 
     A coloured container holds a Section whose thumbnail accessory is the

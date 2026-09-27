@@ -8,6 +8,7 @@ from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ if not NASA_KEY or NASA_KEY.startswith("YOUR_"):
     NASA_KEY = "DEMO_KEY"
 
 
-class WeatherView(discord.ui.LayoutView):
+class WeatherView(LocaleLayoutView):
     """Current weather as a Components V2 layout.
 
     A coloured container pairs the OpenWeather condition icon (as a Section

@@ -16,7 +16,7 @@ from tools.i18n import _, ngettext
 from tools.interactions import notify_failure
 from tools.paginator import Paginator, paginate_lines
 from tools.time import ShortTime
-from tools.views import AuthorView, LocaleModal
+from tools.views import AuthorView, LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class ReasonEditModal(LocaleModal):
             )
 
 
-class NewUsersView(discord.ui.LayoutView):
+class NewUsersView(LocaleLayoutView):
     """Newest members rendered as a Components V2 layout.
 
     A single container holds one Section per member (their avatar as a Thumbnail

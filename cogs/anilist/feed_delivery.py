@@ -24,7 +24,7 @@ from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
 from tools.http import TIMEOUT, get_session
 from tools.i18n import N_, _, ngettext
-from tools.views import LocaleModal
+from tools.views import LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -452,7 +452,7 @@ async def _run_like(interaction, activity_id):
     await _feed_ephemeral(interaction, message)
 
 
-class _ConfigureEntryView(discord.ui.View):
+class _ConfigureEntryView(LocaleView):
     """One-button ephemeral follow-up to configure a freshly added entry.
 
     Attached to the "Added ... to your planning." confirmation, it turns a

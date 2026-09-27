@@ -21,6 +21,7 @@ from .queries import (
 from tools import crypto, interactions, privacy
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ def _autocomplete_label(media):
     return f"[{mtype}] {romaji} ({year})"
 
 
-class AniListProfileView(discord.ui.LayoutView):
+class AniListProfileView(LocaleLayoutView):
     """AniList profile rendered as a Components V2 layout.
 
     A coloured container pairs the user's avatar (as a Section thumbnail) with

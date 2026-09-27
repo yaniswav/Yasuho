@@ -6,7 +6,7 @@ from discord.ext import commands
 from tools import interactions, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _, ngettext
-from tools.views import AuthorLayoutView
+from tools.views import AuthorLayoutView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -315,7 +315,7 @@ def _group_blocks(help_command, group, expand):
     return blocks
 
 
-class _HelpCard(discord.ui.LayoutView):
+class _HelpCard(LocaleLayoutView):
     """A one-shot Components V2 card: a coloured Container of text blocks.
 
     Replaces the plain one-shot help embeds - command detail, the error notice,

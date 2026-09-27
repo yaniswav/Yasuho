@@ -20,6 +20,7 @@ from discord.ext import commands
 
 from tools import i18n, settings
 from tools.i18n import _
+from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ def _marker_is_recent(marker, *, now=None):
     return (now - posted) < REPOST_AFTER
 
 
-class OnboardingCardView(discord.ui.LayoutView):
+class OnboardingCardView(LocaleLayoutView):
     """Single-page Components V2 card: Yasuho's greeting (read-only, no controls).
 
     Five children in one container, far under the 40-child / 4000-character

@@ -19,7 +19,14 @@ from . import feed_policy as af
 from .feed_delivery import _run_add, _run_like, _run_reply
 from tools import i18n, interactions
 from tools.i18n import N_, _, ngettext
-from tools.views import _DISABLEABLE, AuthorLayoutView, AuthorView, LocaleModal
+from tools.views import (
+    _DISABLEABLE,
+    AuthorLayoutView,
+    AuthorView,
+    LocaleDynamicItem,
+    LocaleLayoutView,
+    LocaleModal,
+)
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +56,7 @@ REPLY_TEMPLATE = r"alf:reply:(?P<aid>\d+)"
 ADD_TEMPLATE = r"alf:add:(?P<mid>\d+)"
 
 
-class FeedLikeButton(discord.ui.DynamicItem[discord.ui.Button], template=LIKE_TEMPLATE):
+class FeedLikeButton(LocaleDynamicItem[discord.ui.Button], template=LIKE_TEMPLATE):
     """Persistent heart button that toggles the clicker's like on the activity."""
 
     def __init__(self, activity_id):
@@ -71,7 +78,7 @@ class FeedLikeButton(discord.ui.DynamicItem[discord.ui.Button], template=LIKE_TE
 
 
 class FeedReplyButton(
-    discord.ui.DynamicItem[discord.ui.Button], template=REPLY_TEMPLATE
+    LocaleDynamicItem[discord.ui.Button], template=REPLY_TEMPLATE
 ):
     """Persistent speech-bubble button that opens the reply modal for the clicker."""
 
@@ -93,7 +100,7 @@ class FeedReplyButton(
         await _run_reply(interaction, self.activity_id)
 
 
-class FeedAddButton(discord.ui.DynamicItem[discord.ui.Button], template=ADD_TEMPLATE):
+class FeedAddButton(LocaleDynamicItem[discord.ui.Button], template=ADD_TEMPLATE):
     """Persistent plus button that adds the media to the clicker's planning list.
 
     Keyed on the MEDIA id (not the activity id), so it only appears on list
@@ -1146,7 +1153,7 @@ async def _refresh_layout(interaction, message, view):
     )
 
 
-class AniListFeedPanel(discord.ui.LayoutView):
+class AniListFeedPanel(LocaleLayoutView):
     """Author-restricted AniList feed control panel (the panel entry point).
 
     A single Components V2 :class:`~discord.ui.Container` whose accent tracks the
@@ -1411,7 +1418,7 @@ class AniListFeedPanel(discord.ui.LayoutView):
             pass
 
 
-class _FeedNoticeView(discord.ui.LayoutView):
+class _FeedNoticeView(LocaleLayoutView):
     """A one-shot ANILIST_BLUE notice card in the feed panel's house style.
 
     Non-interactive replacement for the classic ``discord.Embed`` replies of the
@@ -1430,7 +1437,7 @@ class _FeedNoticeView(discord.ui.LayoutView):
         self.add_item(container)
 
 
-class _FeedListView(discord.ui.LayoutView):
+class _FeedListView(LocaleLayoutView):
     """The ``/anilistfeed list`` output as a Components V2 card.
 
     A ``###`` heading over one titled block per feed (channel label in bold, then

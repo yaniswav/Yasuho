@@ -62,12 +62,12 @@ from tools import i18n, interactions
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
-from tools.views import AuthorLayoutView, LocaleModal
+from tools.views import AuthorLayoutView, LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
 
 
-class TicketStatusView(discord.ui.LayoutView):
+class TicketStatusView(LocaleLayoutView):
     """Single-page Components V2 card: this guild's ticket configuration.
 
     Read-only, no controls - the same role ``VerifyStatusView`` plays for
