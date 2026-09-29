@@ -329,8 +329,13 @@ async def _resolve_skip_vote(cog, guild_id, track, loc):
 
     Delegates to the registry API (``SkipVotes.notify_track``) rather than
     touching a vote's internals, under ``loc`` - the guild's language, resolved
-    once by the caller - so the finalised message is not left in the default
-    locale. Never raises: a vote message that fails to finalise here still times
+    once by the caller - so nothing in this path is left in the default locale.
+    The vote MESSAGE no longer depends on that: a ``SkipVote`` pins the language
+    it was opened in and finalises in it whatever the caller is running in (see
+    ``cogs.music.voteskip.SkipVote``), which is what keeps one public message from
+    opening in French and closing in English. ``loc`` remains correct and is the
+    right thing to be inside for any other render this path grows.
+    Never raises: a vote message that fails to finalise here still times
     out on its own 30 s view timeout, and must never fail a skip that already
     happened.
     """

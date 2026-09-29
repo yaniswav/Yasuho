@@ -40,6 +40,7 @@ import dataclasses
 import logging
 from typing import Any, Callable
 
+from cogs.music import playerinfo
 from tools.i18n import N_
 
 log = logging.getLogger(__name__)
@@ -289,20 +290,6 @@ def can_control_playback(
 # ---------------------------------------------------------------------------
 
 
-def _guild_id_of(player: Any) -> int | None:
-    """Return the player's guild id, or None if it cannot be resolved.
-
-    ``player.guild`` can raise on an unbound player, so this normalises any
-    failure to None for the ceiling bookkeeping (a None id simply skips the
-    ceiling - the filter still applies).
-    """
-    try:
-        guild = getattr(player, "guild", None)
-    except Exception:
-        return None
-    return getattr(guild, "id", None)
-
-
 def _filters_from_spec(spec: dict[str, Any]) -> Any:
     """Build a sonolink ``Filters`` from a pure preset spec (lazy sonolink import).
 
@@ -371,7 +358,7 @@ async def apply_preset(player: Any, key: str, *, quotas: Any) -> str:
     if preset is None:
         return RESULT_UNKNOWN
 
-    guild_id = _guild_id_of(player)
+    guild_id = playerinfo.guild_id_of(player)
     ceiling = quotas.filtered_players
 
     if preset.key == OFF_KEY:

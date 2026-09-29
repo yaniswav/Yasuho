@@ -14,6 +14,9 @@ the ``cogs/music`` package:
   handler, and the pure playback / queue helper functions.
 * ``vibes.py`` - pure, side-effect-free domain logic (the genre catalog, mix
   detection, seek parsing, the bounded watch / played-track maps).
+* ``playerinfo.py`` - the package's lowest leaf (no imports of its own, so every
+  layer may use it): how to read a sonolink ``Player``'s guild without tripping
+  the property that raises on an unattached player.
 
 The UI classes reference the cog only through ``self.cog`` and string
 annotations, and take the engine's pure helpers by import, so this module
@@ -34,7 +37,7 @@ import discord
 import sonolink
 import sonolink.models
 
-from cogs.music import effects, safetext, vibes, voteskip
+from cogs.music import effects, playerinfo, safetext, vibes, voteskip
 from cogs.music.music import (
     MAX_FAVOURITES,
     Player,
@@ -59,7 +62,7 @@ from cogs.music.music import (
     station_select_options,
 )
 from cogs.music.search import truncate
-from tools import interactions
+from tools import i18n, interactions
 from tools.config_loader import config_loader
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
@@ -341,6 +344,13 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
     clicker's, none, none). ``Music._send_controller`` builds it inside the guild
     locale; the clicker's own locale still applies to the EPHEMERAL replies the
     button callbacks send, which is the only text only they read.
+
+    The one thing that DOES move the pin is a track change
+    (:meth:`_repin_to_guild_locale`, called only from
+    :meth:`_rerender_for_track`): this is an event surface, so its language is
+    the guild's, and an admin running ``/language`` has to reach a panel that is
+    never reposted. Between two tracks the pin holds, so no click and no tick can
+    reintroduce the flip-flop.
     """
 
     def __init__(
@@ -812,6 +822,33 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
         except discord.HTTPException:
             log.exception("Failed to refresh the controller view")
 
+    async def _repin_to_guild_locale(self) -> None:
+        """Re-read the guild's language and move the panel's pin onto it.
+
+        Called from :meth:`_rerender_for_track` and NOWHERE else. This panel is
+        an EVENT surface - a track starting posts it, not a person - so its
+        language is the guild's, and an admin running ``/language`` mid-session
+        changes what it should be saying. A track change is the one moment the
+        whole body is redrawn anyway, which makes it the natural (and only safe)
+        boundary to move the pin at: between two tracks the pin holds, so a click
+        and the 60s progress tick still render in one language and the flip-flop
+        :class:`~tools.views.PinnedRenderLocale` exists to kill cannot come back
+        through this door.
+
+        Best-effort and never raising: with no guild in hand, no bot, or an
+        uncached guild, it leaves the pin exactly where it was. Keeping the
+        language the message already speaks always beats
+        ``resolve_guild_locale``'s English fallback.
+        """
+        guild_id = playerinfo.guild_id_of(self.player)
+        bot = getattr(self.cog, "bot", None)
+        if guild_id is None or bot is None:
+            return
+        guild = bot.get_guild(guild_id)
+        if guild is None:
+            return
+        self._repin_render_locale(await i18n.resolve_guild_locale(bot, guild))
+
     async def _rerender_for_track(
         self, track: typing.Optional[sonolink.models.Playable]
     ) -> bool:
@@ -829,6 +866,7 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
         if self.message is None:
             return False
         self._track = track
+        await self._repin_to_guild_locale()
         self._build()
         try:
             await self.message.edit(
@@ -2663,6 +2701,13 @@ class JoinVoiceCard(AuthorLayoutView):
     :meth:`Music._fire_voice_watch`). It carries no interactive components - the
     author gate is inert - but it keeps AuthorLayoutView's timeout cleanup so the
     card retires gracefully once the join window (``WATCH_TTL``) elapses.
+
+    Carries :attr:`render_locale`, the language it was posted in, because the
+    message it owns outlives the command that sent it: the voice-state listener
+    that swaps it into a :class:`VibeCard` runs in a gateway task with no locale
+    at all, so without this the card would turn English under a French member the
+    instant they joined voice. The successor has to speak the language of the
+    message it replaces.
     """
 
     def __init__(
@@ -2673,6 +2718,10 @@ class JoinVoiceCard(AuthorLayoutView):
         timeout: float = vibes.WATCH_TTL,
     ) -> None:
         super().__init__(author_id, timeout=timeout)
+        # Taken from the sending context, which is a COMMAND - so this is the
+        # invoker's own language, exactly like every other reply they get.
+        # Music._fire_voice_watch reads it back to build the replacement card.
+        self.render_locale: typing.Optional[str] = i18n.current_locale.get()
         self._build(channels)
 
     def _build(self, channels: typing.Sequence[discord.VoiceChannel]) -> None:

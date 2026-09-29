@@ -371,3 +371,29 @@ class PinnedRenderLocale:
             self._render_locale = i18n.current_locale.get()
         with i18n.locale(self._render_locale):
             return self._compose(*args, **kwargs)
+
+    def _repin_render_locale(self, loc: typing.Optional[str]) -> None:
+        """Move the pin to ``loc``, for an EVENT surface at a message boundary.
+
+        The pin above is deliberately taken once and never re-taken, because the
+        whole point is that no later caller gets to impose its own language. That
+        is final for a COMMAND-created surface: it keeps the language of whoever
+        ran the command, for as long as the message lives.
+
+        An EVENT-created surface is different. Its language is not a person's, it
+        is the GUILD's (see ``Music._send_controller``), so an admin running
+        ``/language`` changes what it should be saying - and a panel that is only
+        ever re-rendered in place would otherwise keep the old language until a
+        repost that may never come. Such a surface calls this at a natural
+        boundary, and ONLY there: the controller re-pins when the track changes,
+        which is the moment its whole body is redrawn anyway.
+
+        NOT on a click and NOT on a background tick. Re-pinning from the current
+        context on every render is precisely the flip-flop this mixin exists to
+        prevent, so the caller passes a language it resolved from the GUILD, never
+        ``i18n.current_locale.get()``. A falsy ``loc`` (nothing could be resolved)
+        leaves the pin alone: keeping the language the message already speaks
+        always beats falling back to the English default.
+        """
+        if loc:
+            self._render_locale = loc

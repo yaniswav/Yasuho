@@ -32,6 +32,7 @@ discord.py's own.
 """
 
 import asyncio
+import contextlib
 import types
 
 import discord
@@ -39,10 +40,10 @@ import pytest
 
 # music first: views.py imports from it at module level, so importing views on
 # its own hits the package's documented circular-import order.
-from cogs.music import music, views  # noqa: F401
-from tools import i18n
+from cogs.music import music, vibes, views, voteskip  # noqa: F401
+from tools import i18n, settings
 from tools.paginator import Paginator, paginate_lines
-from tools.views import LocaleView
+from tools.views import LocaleLayoutView, LocaleView, PinnedRenderLocale
 
 CLICKER_ID = 707_070_707_070_707_070
 GUILD_ID = 606_060_606_060_606_060
@@ -752,21 +753,64 @@ class _Home:
         return _Message()
 
 
-async def _post_controller(preferred_locale, guild_id):
-    """Run the real ``Music._send_controller`` and hand back the posted view."""
+class _Bot:
+    """The two bot attributes the controller path uses.
+
+    ``get_guild`` is how ``_send_controller`` reaches the guild object: the
+    player's own ``guild`` property is unusable for that (see
+    :class:`_DetachedPlayer`), so the poster looks the guild up from the id it
+    already derived from the voice / home channels.
+    """
+
+    def __init__(self, guild):
+        self.db_pool = _SendPool()
+        self._guild = guild
+
+    def get_guild(self, guild_id):
+        return self._guild if guild_id == getattr(self._guild, "id", None) else None
+
+
+class _DetachedPlayer(_VoicePlayer):
+    """A player sonolink has not attached to a guild yet.
+
+    sonolink makes ``Player.guild`` a PROPERTY that raises ``RuntimeError`` -
+    NOT ``AttributeError`` - while its ``_guild`` is None (verified in the
+    installed ``sonolink/gateway/player/_base.py``). ``getattr(player, "guild",
+    None)`` only swallows ``AttributeError``, so it does not protect a caller
+    from this at all: the RuntimeError comes straight out of the getattr.
+
+    Nothing else about this player is unusual - it has a voice channel and a
+    home channel, so its guild IS reachable, just not through that property.
+    """
+
+    @property
+    def guild(self):
+        raise RuntimeError("Player is not yet attached to a guild.")
+
+
+async def _post_controller(preferred_locale, guild_id, *, detached=False):
+    """Run the real ``Music._send_controller``; return (sent, player, cog).
+
+    ``detached`` swaps in a player whose ``guild`` property raises, i.e. the
+    state sonolink leaves a player in before it is attached to a guild.
+    """
+    guild = types.SimpleNamespace(id=guild_id, preferred_locale=preferred_locale)
+    voice_channel = types.SimpleNamespace(name="General", id=99, guild=guild)
+    if detached:
+        player = _DetachedPlayer(voice_channel)
+        player.controller = None
+    else:
+        player = _ControllablePlayer(voice_channel, guild=guild)
+    player.home = _Home(guild)
+
     cog = music.Music.__new__(music.Music)
-    cog.bot = types.SimpleNamespace(db_pool=_SendPool())
+    cog.bot = _Bot(guild)
     cog._controllers = {}
     cog._controller_locks = {}
 
-    guild = types.SimpleNamespace(id=guild_id, preferred_locale=preferred_locale)
-    voice_channel = types.SimpleNamespace(name="General", id=99, guild=guild)
-    player = _ControllablePlayer(voice_channel, guild=guild)
-    player.home = _Home(guild)
-
     i18n.current_locale.set(i18n.DEFAULT_LOCALE)
     await cog._send_controller(player)
-    return player.home.sent
+    return player.home.sent, player, cog
 
 
 async def test_the_background_poster_builds_the_panel_in_the_guild_locale(spy):
@@ -777,7 +821,9 @@ async def test_the_background_poster_builds_the_panel_in_the_guild_locale(spy):
     locale. It therefore resolves the guild's own and builds inside it; the pin
     then holds that language for every later edit.
     """
-    sent = await _post_controller("fr", guild_id=515_151_515_151_515_151)
+    sent, _player, _cog = await _post_controller(
+        "fr", guild_id=515_151_515_151_515_151
+    )
 
     assert len(sent) == 1
     assert sent[0]["view"]._render_locale == "fr"
@@ -786,8 +832,538 @@ async def test_the_background_poster_builds_the_panel_in_the_guild_locale(spy):
 
 async def test_control_an_english_server_still_gets_an_english_panel(spy):
     """The other half of the control: the resolve is real, not a hard-coded "fr"."""
-    sent = await _post_controller("en-US", guild_id=525_252_525_252_525_252)
+    sent, _player, _cog = await _post_controller(
+        "en-US", guild_id=525_252_525_252_525_252
+    )
 
     assert len(sent) == 1
     assert sent[0]["view"]._render_locale == "en"
     assert _headings(spy) == ({"en"}, 1), spy
+
+
+# ---------------------------------------------------------------------------
+# ...and it reaches that guild WITHOUT touching player.guild
+# ---------------------------------------------------------------------------
+#
+# sonolink's Player.guild raises RuntimeError before the player is attached to a
+# guild, and getattr(player, "guild", None) does not catch a RuntimeError. The
+# locale resolve above therefore has to reuse the guild_id _send_controller
+# already derives from the voice / home channels - which the function does
+# deliberately, for this exact reason - and look the guild up from it.
+
+
+def test_the_detached_player_stand_in_really_raises_the_way_sonolink_does():
+    """The witness for the test below: the probe is calibrated, not merely quiet.
+
+    "The panel was posted" is only evidence if the player would genuinely have
+    broken the old line. So assert the raise, and assert that ``getattr`` does
+    NOT rescue it - if ``guild`` ever became a plain attribute or started raising
+    AttributeError, this fails and says the test below has stopped proving
+    anything.
+    """
+    player = _DetachedPlayer(types.SimpleNamespace(name="General", id=1))
+
+    with pytest.raises(RuntimeError):
+        player.guild
+    with pytest.raises(RuntimeError):
+        getattr(player, "guild", None)
+
+
+async def test_a_player_with_no_guild_attached_still_gets_its_panel_posted(spy):
+    """A track_start on a not-yet-attached player must still post a panel.
+
+    This is the whole failure: the poster used to read ``player.guild`` through a
+    ``getattr`` default that cannot catch a RuntimeError, so on this player the
+    resolve raised INSIDE the per-guild lock and the room got no now-playing
+    controller at all. The guild is reachable the whole time - it is on the voice
+    channel - which is why the panel below also comes out in French rather than
+    merely coming out.
+    """
+    sent, _player, _cog = await _post_controller(
+        "fr", guild_id=535_353_535_353_535_353, detached=True
+    )
+
+    assert len(sent) == 1
+    assert sent[0]["view"]._render_locale == "fr"
+    assert _headings(spy) == ({"fr"}, 1), spy
+
+
+# ---------------------------------------------------------------------------
+# A guild that changes its language mid-session
+# ---------------------------------------------------------------------------
+#
+# The controller is an EVENT surface, so its language IS the guild's. The pin
+# must therefore follow a /language change - but only at a message boundary, or
+# the flip-flop the pin exists to kill walks back in through the refresh door.
+# A track change is that boundary: the whole body is redrawn there anyway.
+
+
+class _PanelCog(_Cog):
+    """The Pause path's two cog methods, plus the bot the re-pin resolves through."""
+
+    def __init__(self, guild):
+        super().__init__()
+        self.bot = _Bot(guild)
+
+
+def _guild_panel(locale_code, guild_id, preferred_locale="en-US", *, detached=False):
+    """A real MusicController pinned to ``locale_code`` over a cog that has a bot.
+
+    The bot is what :meth:`MusicController._repin_to_guild_locale` resolves the
+    guild's language through, so this - unlike ``_pinned_controller`` above - is a
+    panel that can actually move its pin.
+
+    ``detached`` swaps in the player whose ``guild`` property raises, which is the
+    state a freshly reconnected player is in when the track_start rebind hands it
+    to ``_rerender_for_track``.
+    """
+    guild = types.SimpleNamespace(id=guild_id, preferred_locale=preferred_locale)
+    voice_channel = types.SimpleNamespace(name="General", id=1234, guild=guild)
+    if detached:
+        player = _DetachedPlayer(voice_channel)
+        player.controller = None
+    else:
+        player = _ControllablePlayer(voice_channel, guild=guild)
+    cog = _PanelCog(guild)
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    with i18n.locale(locale_code):
+        view = views.MusicController(cog, player)
+    view.message = _Message()
+    return view, player, cog
+
+
+async def _set_guild_language(cog, guild_id, locale_code):
+    """What ``/language`` does: write the guild's ``locale`` preference."""
+    await settings.set_guild(cog.bot.db_pool, guild_id, "locale", locale_code)
+
+
+async def test_a_language_change_reaches_the_panel_on_the_next_track(spy):
+    """An admin runs /language: the next track redraws the panel in the new one."""
+    guild_id = 545_454_545_454_545_454
+    view, _player, cog = _guild_panel("en", guild_id)
+    await _set_guild_language(cog, guild_id, "fr")
+    spy.clear()
+
+    # track_start: a gateway task with no locale of its own.
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    assert await view._rerender_for_track(_Track("Next Song")) is True
+
+    assert view._render_locale == "fr"
+    assert view.message.edits == 1
+    assert _headings(spy) == ({"fr"}, 1), spy
+
+
+async def test_control_without_the_repin_the_panel_keeps_the_stale_language(
+    spy, monkeypatch
+):
+    """Null the re-pin on the real class: the panel keeps saying the old language.
+
+    This is the shipped behaviour - the pin was taken once at the first render and
+    never re-taken - so the same /language change never reaches this message.
+    """
+
+    async def _no_repin(self):
+        return None
+
+    monkeypatch.setattr(views.MusicController, "_repin_to_guild_locale", _no_repin)
+
+    guild_id = 555_555_555_555_555_555
+    view, _player, cog = _guild_panel("en", guild_id)
+    await _set_guild_language(cog, guild_id, "fr")
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    assert await view._rerender_for_track(_Track("Next Song")) is True
+
+    assert view._render_locale == "en"
+    assert _headings(spy) == ({"en"}, 1), spy
+
+
+async def test_no_click_or_tick_between_two_tracks_moves_the_pin(spy):
+    """The anti-regression: the re-pin must be a track boundary, nothing else.
+
+    Same guild-language change as above, but this time only a French member's
+    click and the 60s progress tick touch the panel. Both must render the language
+    the message already speaks: a re-pin on either of those paths is the
+    two-languages-on-one-message defect coming back wearing a different hat.
+    """
+    guild_id = 565_656_565_656_565_656
+    view, player, cog = _guild_panel("en", guild_id)
+    await _set_guild_language(cog, guild_id, "fr")
+    spy.clear()
+
+    await click(view, _pause_button(view), _Interaction(_Listener(player.channel), "fr"))
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    player.position = 100_000
+    assert await view.refresh_progress() is True
+
+    assert view._render_locale == "en"
+    assert _headings(spy) == ({"en"}, 2), spy
+
+
+async def test_an_unresolvable_guild_leaves_the_pin_where_it_was(spy):
+    """A panel whose guild is not in cache keeps its language, not English.
+
+    ``resolve_guild_locale`` answers "en" for a None guild, so re-pinning from it
+    unconditionally would turn a French panel English on the next track in exactly
+    the situation where we know the least. The re-pin stands down instead.
+    """
+    guild_id = 575_757_575_757_575_757
+    view, _player, cog = _guild_panel("fr", guild_id)
+    cog.bot._guild = None  # the guild fell out of the bot's cache
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    assert await view._rerender_for_track(_Track("Next Song")) is True
+
+    assert view._render_locale == "fr"
+    assert _headings(spy) == ({"fr"}, 1), spy
+
+
+async def test_the_repin_still_works_on_a_player_with_no_guild_attached(spy):
+    """The witness for the re-pin's own guild lookup: it must not read player.guild.
+
+    The re-pin runs on the track_start path, where ``_send_controller`` has just
+    rebound the panel onto the player the event carried - and a player that came
+    back from a reconnect is exactly the one whose ``guild`` property raises
+    ``RuntimeError`` (see
+    :func:`test_the_detached_player_stand_in_really_raises_the_way_sonolink_does`,
+    which proves this stand-in raises the way sonolink does). There is no ``try``
+    anywhere between here and the track_start handler, so a guild lookup that read
+    that property would take the whole re-render down inside the per-guild
+    controller lock and the panel would silently stop following track changes -
+    the failure ``Music._send_controller`` was already fixed for, re-entering
+    through the re-pin door.
+
+    So this asserts BEHAVIOUR on that player, not the shape of the lookup: the
+    guild's French still arrives. It fails both ways the lookup can go wrong - a
+    raise (nothing is rendered at all) and a swallowed failure that gives up on
+    the guild (the pin stays English).
+    """
+    guild_id = 585_858_585_858_585_858
+    view, _player, cog = _guild_panel("en", guild_id, detached=True)
+    await _set_guild_language(cog, guild_id, "fr")
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    assert await view._rerender_for_track(_Track("Next Song")) is True
+
+    assert view._render_locale == "fr"
+    assert view.message.edits == 1
+    assert _headings(spy) == ({"fr"}, 1), spy
+
+
+# ---------------------------------------------------------------------------
+# The skip vote: one public message, four writers, one language
+# ---------------------------------------------------------------------------
+#
+# The vote message is written by the member who opened it (a command or a
+# controller click, so their language), by every later voter's click (theirs, on
+# the button's count label), by the 30 s view timeout and by the track_start
+# hook - and those last two carry no language at all. Unpinned, one message
+# opened in French, relabelled itself in English and closed in English.
+
+
+class _VoteCog:
+    """The one cog method a passing vote calls."""
+
+    def __init__(self, result=voteskip.SKIP_RESULT_ADVANCED):
+        self._result = result
+
+    async def _execute_skip(self, player):
+        return self._result, None
+
+
+def _skip_vote(locale_code, *, guild_id=1, humans=4, cog=None):
+    """A real SkipVote constructed - and therefore pinned - in ``locale_code``.
+
+    Returns ``(vote, registry, channel)``. Registered in a real
+    :class:`~cogs.music.voteskip.SkipVotes` so the registry-driven finalise paths
+    (``notify_track``, ``clear``) can be exercised as they really run.
+    """
+    track = _Track("Voted On")
+    voice_channel = types.SimpleNamespace(
+        name="General",
+        id=77,
+        members=[types.SimpleNamespace(bot=False, id=900 + n) for n in range(humans)],
+    )
+    player = types.SimpleNamespace(channel=voice_channel, current=track, home=None)
+    channel = _VoteChannel()
+    registry = voteskip.SkipVotes()
+    initiator = types.SimpleNamespace(id=901, mention="<@901>")
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    with i18n.locale(locale_code):
+        vote = voteskip.SkipVote(
+            cog=cog if cog is not None else _VoteCog(),
+            player=player,
+            channel=channel,
+            track=track,
+            initiator=initiator,
+            registry=registry,
+            guild_id=guild_id,
+        )
+    registry._put(guild_id, vote)
+    return vote, registry, channel
+
+
+class _VoteChannel:
+    """The text channel a vote posts into."""
+
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, **kwargs):
+        self.sent.append(kwargs)
+        return _Message()
+
+
+def _kill_the_pin(monkeypatch):
+    """Put the pre-fix render back on the real SkipVote: no pin at all.
+
+    Every render then happens in whatever language its caller is in, which is
+    exactly what the shipped code did - the wording was even translated at the
+    call site, in that caller's context.
+    """
+    monkeypatch.setattr(
+        voteskip.SkipVote, "_pinned", lambda self: contextlib.nullcontext()
+    )
+
+
+async def _run_a_vote(locale_code):
+    """Open a vote in ``locale_code``, then let the other three writers write.
+
+    The sequence a real vote sees: the starter opens it in their own language, a
+    second voter clicks (their language - English here), and 30 s later the view
+    timeout finalises it from a task with NO language.
+    """
+    vote, _registry, _channel = _skip_vote(locale_code)
+    with i18n.locale(locale_code):
+        await vote.start()
+    with i18n.locale("en"):
+        await vote.apply(voteskip.VOTE_COUNTED)
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await vote.expire()
+    return vote
+
+
+async def test_one_skip_vote_message_speaks_one_language_to_all_four_writers(spy):
+    """The MAJOR: open in French, an English vote, an expiry with no locale."""
+    vote = await _run_a_vote("fr")
+
+    assert vote.resolved
+    # Every render of this one message came out of the French catalogue...
+    assert {tag for tag, _msgid in spy} == {"fr"}, spy
+    # ...and all four really happened, so "only French" is not "nothing rendered".
+    assert ("fr", "{user} wants to skip **{title}**.") in spy, spy
+    assert [msgid for _tag, msgid in spy].count("Vote skip ({count}/{needed})") == 2, spy
+    assert ("fr", "Vote expired.") in spy, spy
+
+
+async def test_control_the_same_vote_shows_three_writers_in_two_languages(
+    spy, monkeypatch
+):
+    """Remove the pin from the real class and the shipped defect comes back."""
+    _kill_the_pin(monkeypatch)
+
+    await _run_a_vote("fr")
+
+    assert {tag for tag, _msgid in spy} == {"en", "fr"}, spy
+    # Opened in French...
+    assert ("fr", "{user} wants to skip **{title}**.") in spy, spy
+    # ...relabelled by an English voter, and closed in English.
+    assert ("en", "Vote skip ({count}/{needed})") in spy, spy
+    assert ("en", "Vote expired.") in spy, spy
+
+
+@pytest.mark.parametrize(
+    ("result", "msgid"),
+    [
+        (voteskip.SKIP_RESULT_ADVANCED, "Skipped by vote."),
+        (voteskip.SKIP_RESULT_NONE, "There are no more tracks in the queue to skip to."),
+    ],
+)
+async def test_a_passing_vote_announces_its_outcome_in_the_votes_language(
+    spy, result, msgid
+):
+    """Both closing lines of a vote that reached its threshold, from a click."""
+    vote, _registry, _channel = _skip_vote("fr", cog=_VoteCog(result))
+    with i18n.locale("fr"):
+        await vote.start()
+    spy.clear()
+
+    # The deciding click comes from an English member.
+    with i18n.locale("en"):
+        await vote.apply(voteskip.VOTE_PASSED)
+
+    assert ("fr", msgid) in spy, spy
+    assert {tag for tag, _msgid in spy} == {"fr"}, spy
+
+
+async def test_control_the_outcome_follows_the_deciding_clicker_without_the_pin(
+    spy, monkeypatch
+):
+    """The same deciding click writes English onto the French message, unpinned."""
+    _kill_the_pin(monkeypatch)
+
+    vote, _registry, _channel = _skip_vote("fr")
+    with i18n.locale("fr"):
+        await vote.start()
+    spy.clear()
+
+    with i18n.locale("en"):
+        await vote.apply(voteskip.VOTE_PASSED)
+
+    assert ("en", "Skipped by vote.") in spy, spy
+
+
+async def test_a_track_change_closes_the_vote_in_the_votes_own_language(spy):
+    """``notify_track`` runs from the track_start hook, which carries no locale."""
+    guild_id = 4242
+    vote, registry, _channel = _skip_vote("fr", guild_id=guild_id)
+    with i18n.locale("fr"):
+        await vote.start()
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await registry.notify_track(guild_id, "a-completely-different-track")
+
+    assert vote.resolved
+    assert ("fr", "This track already ended.") in spy, spy
+    assert {tag for tag, _msgid in spy} == {"fr"}, spy
+
+
+async def test_control_a_track_change_closes_it_in_english_without_the_pin(
+    spy, monkeypatch
+):
+    """Unpinned, the same hook writes English onto the French vote message."""
+    _kill_the_pin(monkeypatch)
+
+    guild_id = 4243
+    vote, registry, _channel = _skip_vote("fr", guild_id=guild_id)
+    with i18n.locale("fr"):
+        await vote.start()
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await registry.notify_track(guild_id, "a-completely-different-track")
+
+    assert ("en", "This track already ended.") in spy, spy
+
+
+# ---------------------------------------------------------------------------
+# The join card's successor speaks the language of the card it replaces
+# ---------------------------------------------------------------------------
+#
+# A bare /play outside voice posts the join card in the invoker's language. When
+# they join, a VOICE-STATE LISTENER - a gateway task with no locale at all -
+# edits that same message into the vibe card. Built there from scratch, the
+# member watched their own card turn English.
+
+
+def _armed_watch(locale_code, *, guild_id=6161, member_id=717_171):
+    """A real JoinVoiceCard posted in ``locale_code`` with its watch armed."""
+    cog = music.Music.__new__(music.Music)
+    cog._pending_watches = vibes.PendingVoiceWatches()
+    guild = types.SimpleNamespace(id=guild_id)
+    member = types.SimpleNamespace(id=member_id, guild=guild)
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    with i18n.locale(locale_code):
+        card = views.JoinVoiceCard(member_id, [])
+    card.message = _Message()
+    cog._pending_watches.add(guild_id, member_id, card)
+    return cog, member, card
+
+
+VIBE_HEADING = "## 🎧 Choose your vibe"
+
+
+async def test_the_swapped_in_vibe_card_keeps_the_members_own_language(spy):
+    """The join card was posted in French, so its successor is French too."""
+    cog, member, card = _armed_watch("fr")
+    spy.clear()
+
+    # The listener's own context: no locale, i.e. the English default.
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await cog._fire_voice_watch(member)
+
+    assert card.message.edits == 1
+    assert _headings(spy, VIBE_HEADING) == ({"fr"}, 1), spy
+
+
+async def test_control_an_english_join_card_swaps_into_an_english_vibe_card(spy):
+    """The other half: the language is read off the card, not hard-coded French."""
+    cog, member, card = _armed_watch("en")
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await cog._fire_voice_watch(member)
+
+    assert card.message.edits == 1
+    assert _headings(spy, VIBE_HEADING) == ({"en"}, 1), spy
+
+
+async def test_control_a_card_that_captured_no_locale_swaps_into_english(spy):
+    """The pre-fix card exactly: nothing captured, so the listener's English wins.
+
+    ``render_locale`` is the whole fix - the card carried no language before it -
+    so clearing it on a real French card reproduces the shipped defect.
+    """
+    cog, member, card = _armed_watch("fr")
+    card.render_locale = None
+    spy.clear()
+
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    await cog._fire_voice_watch(member)
+
+    assert card.message.edits == 1
+    assert _headings(spy, VIBE_HEADING) == ({"en"}, 1), spy
+
+
+# ---------------------------------------------------------------------------
+# The re-pin door itself
+# ---------------------------------------------------------------------------
+
+
+class _PinnedProbe(PinnedRenderLocale, LocaleLayoutView):
+    """The smallest real user of the mixin: one heading, pinned at construction."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+        self._build()
+
+    def _compose(self):
+        self.clear_items()
+        container = discord.ui.Container()
+        container.add_item(discord.ui.TextDisplay(i18n._("### 🎵 Now Playing")))
+        self.add_item(container)
+
+
+async def test_a_re_pin_with_no_language_leaves_the_message_where_it_was(spy):
+    """``_repin_render_locale`` refuses a falsy language, and accepts a real one.
+
+    ``MusicController._repin_to_guild_locale`` hands over whatever
+    ``resolve_guild_locale`` returned, and the whole point of re-pinning is to
+    keep a public message saying the right thing - so a caller that resolved
+    nothing must not be able to drag a French panel to the English default. The
+    second half is the control: the guard is "ignore nothing", not "ignore
+    everything".
+    """
+    i18n.current_locale.set(i18n.DEFAULT_LOCALE)
+    with i18n.locale("fr"):
+        probe = _PinnedProbe()
+    spy.clear()
+
+    probe._repin_render_locale(None)
+    probe._repin_render_locale("")
+    probe._build()
+
+    assert probe._render_locale == "fr"
+    assert _headings(spy) == ({"fr"}, 1), spy
+
+    probe._repin_render_locale("en")
+    probe._build()
+
+    assert probe._render_locale == "en"
+    assert _headings(spy) == ({"fr", "en"}, 2), spy

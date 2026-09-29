@@ -21,6 +21,8 @@ import asyncio
 import logging
 from typing import Any
 
+from cogs.music import playerinfo
+
 log = logging.getLogger(__name__)
 
 
@@ -95,7 +97,7 @@ async def apply_categories(
     except Exception:
         # Node not connected yet / no session id - nothing we can do.
         return False
-    guild_id = _guild_id_of(player)
+    guild_id = playerinfo.guild_id_of(player)
     if guild_id is None:
         return False
 
@@ -153,7 +155,7 @@ def log_ws_event(player: Any, data: dict[str, Any]) -> None:
     event_type = data.get("type")
     if event_type not in _WS_EVENT_TYPES:
         return
-    guild_id = _guild_id_of(player)
+    guild_id = playerinfo.guild_id_of(player)
     if event_type == "SegmentSkipped":
         segment = data.get("segment") or {}
         log.debug(
@@ -177,9 +179,3 @@ def _node_of(player: Any) -> Any:
         return player.node
     except Exception:
         return None
-
-
-def _guild_id_of(player: Any) -> int | None:
-    """Return the player's guild id, or None if it cannot be resolved."""
-    guild = getattr(player, "guild", None)
-    return getattr(guild, "id", None)

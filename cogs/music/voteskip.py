@@ -38,7 +38,8 @@ import typing
 
 import discord
 
-from tools import interactions
+from cogs.music import playerinfo
+from tools import i18n, interactions
 from tools.i18n import _
 from tools.views import LocaleView
 
@@ -72,6 +73,17 @@ VOTE_ENDED = "ended"  # the voted-on track had already changed; vote self-cancel
 SKIP_RESULT_NONE = "none"  # nothing to skip to; playback left untouched
 SKIP_RESULT_ADVANCED = "advanced"  # skipped onto a new track
 SKIP_RESULT_ENDED = "ended"  # skip emptied the queue; state was cleared
+
+# Why a vote's message stopped being live. These are keys, not sentences: the
+# wording is produced by :func:`_final_text` inside the vote's PINNED language
+# (see :class:`SkipVote`), never by the caller in whatever language it happens to
+# be running in. Two of the four callers - a view timeout and a track_start hook -
+# have no language at all, which is how the closing line used to come out English
+# under a French vote.
+FINAL_EXPIRED = "expired"  # nobody voted again before the 30 s window closed
+FINAL_TRACK_ENDED = "track_ended"  # the voted-on track is no longer playing
+FINAL_PASSED = "passed"  # the threshold was reached and the skip happened
+FINAL_NOTHING = "nothing"  # the threshold was reached but there was nothing to skip to
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +144,33 @@ def skip_ack(outcome: str) -> str:
     return _("You already voted to skip.")
 
 
+def _final_text(reason: str) -> str:
+    """The closing line for a finalised vote, from a :data:`FINAL_EXPIRED` key.
+
+    The twin of :func:`skip_ack`, and in-task for the same reason - except that
+    the task this one must render in is not the caller's but the VOTE's:
+    :meth:`SkipVote._write_final` calls it inside the pinned language, so the
+    message closes in the language it opened in. The strings deliberately reuse
+    the ack msgids so the vote speaks with one voice across surfaces.
+
+    All four keys match EXPLICITLY and an unrecognised one is logged: a mistyped
+    key would otherwise close a passed vote with "This track already ended.",
+    which is a wrong sentence on a public message and nothing anywhere would say
+    so. It still returns that line rather than raising - a finalise that throws
+    leaves a live Vote button on a dead vote, which is worse than one imprecise
+    sentence.
+    """
+    if reason == FINAL_EXPIRED:
+        return _("Vote expired.")
+    if reason == FINAL_PASSED:
+        return _("Skipped by vote.")
+    if reason == FINAL_NOTHING:
+        return _("There are no more tracks in the queue to skip to.")
+    if reason != FINAL_TRACK_ENDED:
+        log.warning("Unknown skip-vote finalise reason %r; closing as ended", reason)
+    return _("This track already ended.")
+
+
 def _vote_label(count: int, needed: int) -> str:
     """Render the vote button's live-count label (``Vote skip (1/3)``).
 
@@ -153,14 +192,6 @@ def _in_players_voice(player: typing.Any, member: typing.Any) -> bool:
         return False
     voice = getattr(member, "voice", None)
     return voice is not None and getattr(voice, "channel", None) == channel
-
-
-def _guild_id_of(player: typing.Any) -> typing.Optional[int]:
-    """Return the player's guild id, or None if it cannot be resolved."""
-    guild = getattr(player, "guild", None)
-    if guild is None:
-        guild = getattr(getattr(player, "channel", None), "guild", None)
-    return getattr(guild, "id", None)
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +279,22 @@ class SkipVote:
 
     All discord objects are created in :meth:`start`, so :meth:`record` and the
     decision maths stay loop-free and unit-testable without a running loop.
+
+    THE RENDER RULE (``tools.views.PinnedRenderLocale``) applies to this message,
+    which is public and is written by up to four different callers: the member who
+    opened the vote, every later voter's click (the count label), a view timeout
+    30 s later, and a track_start hook. Those carry three different languages -
+    the starter's, each clicker's, and none at all for the two background paths -
+    so one vote message used to open in French, relabel itself in Spanish and
+    close in English. The language is therefore PINNED here, at construction, to
+    whoever started the vote (a command invocation or a controller click, both of
+    which carry that person's locale), and :meth:`_pinned` forces every later
+    render back into it.
+
+    The pin lives on the vote and not on :class:`SkipVoteView` because three of
+    the four renders are the message CONTENT, which the view never produces -
+    ``PinnedRenderLocale`` pins a view's ``_build`` and would only have covered
+    the button label. This object owns the message, so it owns its language.
     """
 
     def __init__(
@@ -275,6 +322,10 @@ class SkipVote:
         self.message: typing.Optional[discord.Message] = None
         self._view: typing.Optional[SkipVoteView] = None
         self._resolved = False
+        # The pin. Construction is the one point every vote passes through while
+        # still inside the starter's context, so taking it here is what a call
+        # site added later cannot forget.
+        self._locale = i18n.current_locale.get()
 
     # -- state --------------------------------------------------------------
 
@@ -290,6 +341,17 @@ class SkipVote:
         """Votes needed right now, against the CURRENT human count in the channel."""
         members = getattr(getattr(self.player, "channel", None), "members", ())
         return required_votes(count_humans(members))
+
+    def _pinned(self) -> typing.ContextManager[None]:
+        """This vote's pinned language, as a context manager.
+
+        Every render of this message goes through it: the initial content and
+        button label, each count refresh and the closing line. One named seam so
+        the three render sites read identically - and so a test can null it out to
+        put the pre-fix "render in whatever language the caller is in" behaviour
+        back on the real class.
+        """
+        return i18n.locale(self._locale)
 
     def matches(self, track: typing.Any) -> bool:
         """True when ``track`` is still the track this vote was opened for."""
@@ -324,10 +386,15 @@ class SkipVote:
         degrades to an instant skip - a room with no postable channel should not
         be stuck unable to skip.
         """
-        self._view = SkipVoteView(self, timeout=self._timeout)
-        content = _("{user} wants to skip **{title}**.").format(
-            user=self._initiator_mention, title=self._track_title
-        )
+        # Both the content AND the button label (_VoteButton.__init__ renders it)
+        # under the pin. Here it is already the current language, since we are
+        # still in the starter's context - but rendering through the same seam as
+        # every later write is what makes the three sites provably identical.
+        with self._pinned():
+            self._view = SkipVoteView(self, timeout=self._timeout)
+            content = _("{user} wants to skip **{title}**.").format(
+                user=self._initiator_mention, title=self._track_title
+            )
         self.message = await self.channel.send(
             content=content,
             view=self._view,
@@ -341,24 +408,34 @@ class SkipVote:
         elif outcome == VOTE_PASSED:
             await self._resolve()
         elif outcome == VOTE_ENDED:
-            await self.cancel(_("This track already ended."))
+            await self.cancel(FINAL_TRACK_ENDED)
         # VOTE_ALREADY: nothing on screen changes.
 
     async def expire(self) -> None:
-        """View-timeout handler: finalise the message as expired."""
-        await self.cancel(_("Vote expired."))
+        """View-timeout handler: finalise the message as expired.
 
-    async def cancel(self, text: str) -> None:
-        """Finalise a still-live vote with ``text`` (idempotent).
+        Runs in discord.py's timeout task, which carries no language of its own -
+        the reason this takes a REASON KEY and lets :meth:`_write_final` do the
+        wording under the pin.
+        """
+        await self.cancel(FINAL_EXPIRED)
+
+    async def cancel(self, reason: str) -> None:
+        """Finalise a still-live vote with ``reason``'s wording (idempotent).
 
         The shared external-stop path: a track change, the on-track-start hook and
         the cog's teardown all land here. A no-op once the vote has resolved.
+
+        ``reason`` is one of the :data:`FINAL_EXPIRED` keys, NOT a sentence. Every
+        caller but one is a background path with no language, so a caller that
+        translated its own text wrote English into a French message; the key keeps
+        the wording where the pin is.
         """
         if self._resolved:
             return
         self._resolved = True
         self._registry._detach(self.guild_id)
-        await self._write_final(text)
+        await self._write_final(reason)
 
     async def _resolve(self) -> None:
         """The threshold was reached: perform the skip, then finalise the message.
@@ -372,17 +449,20 @@ class SkipVote:
         self._resolved = True
         self._registry._detach(self.guild_id)
         result, _track = await self.cog._execute_skip(self.player)
-        if result == SKIP_RESULT_NONE:
-            text = _("There are no more tracks in the queue to skip to.")
-        else:
-            text = _("Skipped by vote.")
-        await self._write_final(text)
+        reason = FINAL_NOTHING if result == SKIP_RESULT_NONE else FINAL_PASSED
+        await self._write_final(reason)
 
     async def _update_count(self) -> None:
-        """Edit the button's live count in place (view-only edit, no content churn)."""
+        """Edit the button's live count in place (view-only edit, no content churn).
+
+        Under the pin: this runs from a voter's click, so without it the button
+        would relabel itself in THAT voter's language on a message whose content
+        is in the starter's.
+        """
         if self._view is None or self.message is None:
             return
-        self._view.set_count(self.count(), self.required())
+        with self._pinned():
+            self._view.set_count(self.count(), self.required())
         try:
             await self.message.edit(
                 view=self._view, allowed_mentions=discord.AllowedMentions.none()
@@ -390,8 +470,15 @@ class SkipVote:
         except discord.HTTPException:
             log.exception("Failed to refresh skip-vote message for guild %s", self.guild_id)
 
-    async def _write_final(self, text: str) -> None:
-        """Disable the button and replace the message content with ``text``."""
+    async def _write_final(self, reason: str) -> None:
+        """Disable the button and replace the message content with ``reason``'s line.
+
+        The wording is produced HERE, under the pin, not by the caller: two of the
+        four finalise paths (the view timeout and the track_start hook) run in
+        background tasks with no language at all.
+        """
+        with self._pinned():
+            text = _final_text(reason)
         if self._view is not None:
             self._view.disable()
             self._view.stop()
@@ -460,7 +547,7 @@ class SkipVotes:
         could not run a vote (no guild, no postable channel, or the room shrank to
         instant-skip size) and the caller should skip instantly instead.
         """
-        guild_id = _guild_id_of(player)
+        guild_id = playerinfo.guild_id_of(player)
         if guild_id is None:
             return SKIP_INSTANT
         channel = getattr(player, "home", None) or fallback_channel
@@ -477,7 +564,7 @@ class SkipVotes:
             # A live vote for a track that has already changed (the track_start
             # hook has not fired yet): finalise it before opening a fresh one, so
             # its message never orphans with a still-active button.
-            await existing.cancel(_("This track already ended."))
+            await existing.cancel(FINAL_TRACK_ENDED)
 
         # No live vote for this guild's current track. Re-read the live human
         # count: if the room shrank since the cog's decision so a lone vote would
@@ -515,10 +602,10 @@ class SkipVotes:
         """
         vote = self._votes.get(guild_id)
         if vote is not None and not vote.resolved and vote.track_id != track_id:
-            await vote.cancel(_("This track already ended."))
+            await vote.cancel(FINAL_TRACK_ENDED)
 
     async def clear(self, guild_id: int) -> None:
         """Cancel and forget a guild's vote on player teardown (idempotent)."""
         vote = self._votes.pop(guild_id, None)
         if vote is not None and not vote.resolved:
-            await vote.cancel(_("This track already ended."))
+            await vote.cancel(FINAL_TRACK_ENDED)

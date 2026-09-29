@@ -52,7 +52,7 @@ import urllib.parse
 
 import discord
 
-from . import safetext
+from . import playerinfo, safetext
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import LocaleLayoutView, PinnedRenderLocale
@@ -528,15 +528,6 @@ def _node_of(player: typing.Any) -> typing.Any:
         return None
 
 
-def _guild_id_of(player: typing.Any) -> typing.Optional[int]:
-    """Return the player's guild id, or None if it cannot be resolved."""
-    try:
-        guild = getattr(player, "guild", None)
-    except Exception:
-        return None
-    return getattr(guild, "id", None)
-
-
 async def fetch_lyrics(
     player: typing.Any, *, skip_track_source: bool = False
 ) -> LyricsResult:
@@ -557,7 +548,7 @@ async def fetch_lyrics(
     node = _node_of(player)
     if node is None:
         return _NONE_RESULT
-    guild_id = _guild_id_of(player)
+    guild_id = playerinfo.guild_id_of(player)
     if guild_id is None:
         return _NONE_RESULT
 

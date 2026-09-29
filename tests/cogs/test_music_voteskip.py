@@ -15,7 +15,9 @@ Everything deterministic without a backend is covered here:
 * the exemption reuse - the vote path's "who skips instantly" is the P4 effects
   predicate (``effects.is_effect_exempt``: the DJ or a Manage-Server member), NOT
   a duplicated rule, and ``skip_mode`` honours it;
-* the surface strings - ``skip_ack`` mapping and the button label format.
+* the surface strings - ``skip_ack`` mapping, the ``_final_text`` reason-key
+  mapping (plus the warning an unrecognised key leaves behind) and the button
+  label format.
 
 Live-only (needs a running loop, a real Discord message and a connected node,
 so exercised on the server, not here): posting the public vote message
@@ -27,6 +29,7 @@ hook, and the routing seams on the cog (``_request_skip`` / ``_execute_skip``).
 so it imports identically under the stub and the real sonolink.
 """
 
+import logging
 import types
 
 from cogs.music import effects, voteskip
@@ -281,6 +284,41 @@ def test_skip_ack_maps_each_outcome():
     assert voteskip.skip_ack(voteskip.VOTE_PASSED) == "Skipped by vote."
     assert voteskip.skip_ack(voteskip.VOTE_ENDED) == "This track already ended."
     assert voteskip.skip_ack(voteskip.VOTE_ALREADY) == "You already voted to skip."
+
+
+def test_final_text_maps_each_reason_key():
+    assert voteskip._final_text(voteskip.FINAL_EXPIRED) == "Vote expired."
+    assert voteskip._final_text(voteskip.FINAL_PASSED) == "Skipped by vote."
+    assert (
+        voteskip._final_text(voteskip.FINAL_NOTHING)
+        == "There are no more tracks in the queue to skip to."
+    )
+    assert voteskip._final_text(voteskip.FINAL_TRACK_ENDED) == "This track already ended."
+
+
+def test_an_unknown_reason_key_still_closes_the_vote_but_says_so(caplog):
+    """A mistyped key must not go out silently as a wrong public sentence.
+
+    The four keys all match explicitly, so the fall-through is now only reachable
+    by a bug. It still returns a closing line - a finalise that raised would leave
+    a live Vote button on a dead vote - but it leaves a WARNING behind, which is
+    the only reason anyone would ever find it.
+    """
+    with caplog.at_level(logging.WARNING, logger=voteskip.log.name):
+        assert voteskip._final_text("not-a-reason") == "This track already ended."
+
+    assert any(
+        "not-a-reason" in record.getMessage() and record.levelno == logging.WARNING
+        for record in caplog.records
+    ), caplog.text
+
+
+def test_a_real_reason_key_logs_nothing(caplog):
+    """The control: the warning above is a bug detector, not constant noise."""
+    with caplog.at_level(logging.WARNING, logger=voteskip.log.name):
+        voteskip._final_text(voteskip.FINAL_TRACK_ENDED)
+
+    assert caplog.records == []
 
 
 def test_vote_label_renders_live_fraction():

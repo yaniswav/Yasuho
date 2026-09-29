@@ -17,6 +17,7 @@ from cogs.music import (
     failures,
     guild_config,
     lyrics,
+    playerinfo,
     safetext,
     sponsorblock,
     urlguard,
@@ -1373,11 +1374,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if track is None:
             return
 
-        guild_id = (
-            player.channel.guild.id
-            if player.channel is not None
-            else getattr(player.home, "guild", None) and player.home.guild.id
-        )
+        # Channel-derived, NEVER player.guild: see cogs.music.playerinfo for
+        # why that property is unusable here (it raises on an unattached player
+        # and getattr does not catch it). The guild object below is looked up
+        # from this id for the same reason.
+        guild_id = playerinfo.guild_id_of(player)
         if guild_id is None:
             return
 
@@ -1467,8 +1468,14 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # posters (track_start, cold restore) carry no locale at all and it
             # would default to English in a French server. resolve_guild_locale
             # never raises and is an LRU hit after warmup.
+            #
+            # The guild comes from the guild_id derived above (see
+            # cogs.music.playerinfo), NOT from player.guild: that property
+            # RAISES RuntimeError on a player with no guild attached yet and
+            # getattr cannot catch it, so reading it here would post no panel at
+            # all.
             locale_code = await i18n.resolve_guild_locale(
-                self.bot, getattr(player, "guild", None)
+                self.bot, self.bot.get_guild(guild_id)
             )
             with i18n.locale(locale_code):
                 view = MusicController(self, player, track=track)
@@ -1520,7 +1527,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         except Exception:
             log.exception("Failed to read autoplay preference for %s", member_id)
             pref = None
-        guild_id = getattr(getattr(player, "guild", None), "id", None)
+        guild_id = playerinfo.guild_id_of(player)
         guild_default = await guild_config.autoplay_default(
             self._settings_pool(), guild_id
         )
@@ -1540,7 +1547,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         failure is logged at debug and swallowed.
         """
         volume = await guild_config.default_volume(
-            self._settings_pool(), getattr(getattr(player, "guild", None), "id", None)
+            self._settings_pool(), playerinfo.guild_id_of(player)
         )
         if volume is None:
             return
@@ -1549,7 +1556,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         except Exception:
             log.debug(
                 "Could not apply the configured default volume for guild %s",
-                getattr(getattr(player, "guild", None), "id", None),
+                playerinfo.guild_id_of(player),
                 exc_info=True,
             )
 
@@ -1569,7 +1576,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await self._init_autoplay(player, member.id)
         await self._apply_default_volume(player)
         if await guild_config.sponsorblock_enabled(
-            self._settings_pool(), getattr(getattr(player, "guild", None), "id", None)
+            self._settings_pool(), playerinfo.guild_id_of(player)
         ):
             sponsorblock.schedule_apply(player)
 
@@ -1803,11 +1810,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         home = getattr(player, "home", None)
         if home is None:
             return
-        guild = getattr(player, "guild", None)
         # Keyed per guild (one player, one home channel per guild); id(player) is
         # only a defensive fallback for a player with no guild attached, which
         # keeps a burst from being mis-shared across guilds under a None key.
-        key = getattr(guild, "id", None) or id(player)
+        key = playerinfo.guild_id_of(player) or id(player)
         if not self.track_failures.record(key):
             # A burst is already open and its summary is armed: this failure is
             # now a number in that summary, and sending here is exactly the
@@ -2966,12 +2972,25 @@ class Music(ServerPlaylistMixin, commands.Cog):
             )
 
     async def _fire_voice_watch(self, member: discord.Member) -> None:
-        """Swap a member's open join card into the vibe card once they join voice."""
+        """Swap a member's open join card into the vibe card once they join voice.
+
+        The replacement speaks the SAME language as the card it replaces. We are
+        in a voice-state listener, a gateway task that carries no locale at all,
+        so building the vibe card here would render it in the English default and
+        a French member would watch their own card switch language. The join card
+        captured the invoker's locale when it was posted (see
+        ``JoinVoiceCard.render_locale``); reuse it rather than resolving anything
+        from scratch - this is one member's card, not a guild surface.
+        """
         view = self._pending_watches.pop(member.guild.id, member.id)
         if view is None:
             return
         try:
-            card = VibeCard(self, member.id)
+            locale_code = (
+                getattr(view, "render_locale", None) or i18n.current_locale.get()
+            )
+            with i18n.locale(locale_code):
+                card = VibeCard(self, member.id)
             await view.message.edit(
                 view=card, allowed_mentions=discord.AllowedMentions.none()
             )
@@ -3033,15 +3052,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """
         if self._has_manage_guild(actor):
             return True
-        # Identity, not truthiness: a duck-typed stand-in could be falsy without
-        # being absent, and falling through to the actor's guild would then read
-        # the wrong (or no) configuration.
-        guild = getattr(player, "guild", None)
-        if guild is None:
-            guild = getattr(actor, "guild", None)
-        role_id = await guild_config.dj_role_id(
-            self._settings_pool(), getattr(guild, "id", None)
-        )
+        # Identity, not truthiness: only "the player resolved to no guild at
+        # all" may fall through to the actor's own, so a present-but-falsy id
+        # can never drag this into reading the wrong (or no) configuration.
+        guild_id = playerinfo.guild_id_of(player)
+        if guild_id is None:
+            guild_id = getattr(getattr(actor, "guild", None), "id", None)
+        role_id = await guild_config.dj_role_id(self._settings_pool(), guild_id)
         return guild_config.member_has_role(actor, role_id)
 
     async def _privileged(
@@ -3130,7 +3147,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """
         if getattr(player, "current", None) is None:
             return voteskip.SKIP_INSTANT
-        guild_id = getattr(getattr(player, "guild", None), "id", None)
+        guild_id = playerinfo.guild_id_of(player)
         if not await guild_config.voteskip_enabled(self._settings_pool(), guild_id):
             return voteskip.SKIP_INSTANT
         channel = getattr(player, "channel", None)
@@ -3162,9 +3179,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return voteskip.SKIP_RESULT_NONE, None
         if track:
             return voteskip.SKIP_RESULT_ADVANCED, track
-        guild = getattr(player, "guild", None)
-        if guild is not None:
-            await self._clear(guild.id)
+        guild_id = playerinfo.guild_id_of(player)
+        if guild_id is not None:
+            await self._clear(guild_id)
         return voteskip.SKIP_RESULT_ENDED, None
 
     @commands.hybrid_command(name="skip", aliases=["next"])
