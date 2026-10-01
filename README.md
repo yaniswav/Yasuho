@@ -42,7 +42,7 @@ client language automatically. Translations use GNU gettext (one shared catalog
 compiled per locale), with English as the source and automatic fallback for
 anything not yet translated.
 
-Shipped languages: **English, French, Japanese, Greek**. Adding another is
+Shipped languages: **English, French, Japanese, Greek, Spanish**. Adding another is
 zero-code - translate a catalog and compile it (see the i18n notes in
 `tools/i18n.py` and `locales/build.py`). Slash command descriptions are localized
 too via an `app_commands.Translator` (`tools/translator.py`).

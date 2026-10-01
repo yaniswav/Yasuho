@@ -30,9 +30,10 @@ DB_USER="yasuho"
 PYTHON="${PYTHON:-$(command -v python3.13 || command -v python3.12 || command -v python3.11 || command -v python3 || true)}"
 [ -n "$PYTHON" ] || errx "No suitable Python found. Install python3.12+ (the music backend sonolink needs 3.12+)."
 info "Using interpreter: $PYTHON ($("$PYTHON" --version 2>&1))"
-# discord.py needs Python 3.8+; the music backend (sonolink) needs 3.12+.
-"$PYTHON" -c 'import sys; sys.exit(0 if (3, 8) <= sys.version_info[:2] < (3, 14) else 1)' \
-    || errx "Python 3.8-3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.13 ./setup.sh"
+# The music backend (sonolink) needs 3.12+, which is the real floor (see
+# ruff.toml); discord.py itself would tolerate older Pythons, but we don't.
+"$PYTHON" -c 'import sys; sys.exit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)' \
+    || errx "Python 3.12-3.13 required (found $("$PYTHON" --version 2>&1)). Try: PYTHON=python3.13 ./setup.sh"
 
 if [ ! -d .venv ]; then
     info "Creating virtualenv (.venv)..."
@@ -42,6 +43,15 @@ VENV_PY="./.venv/bin/python"
 
 info "Installing dependencies (this can take a minute)..."
 "$VENV_PY" -m pip install -q -U pip || warn "pip self-upgrade failed, continuing."
+# The lock first (the exact, audited pins), then requirements.txt as a safety
+# net: if the lock is ever stale or misses a new dependency, this still brings
+# the venv inside requirements.txt's bounds, so a forgotten lock regeneration
+# can never break a fresh install.
+# The lock is resolved for CPython 3.13 on Linux; on another interpreter it can
+# fail (it pins audioop-lts, which has no 3.12 build), and requirements.txt
+# alone is then the install source.
+"$VENV_PY" -m pip install -q -r requirements.lock \
+    || warn "requirements.lock could not be applied here - installing from requirements.txt only."
 "$VENV_PY" -m pip install -q -r requirements.txt || errx "Dependency install failed."
 
 # ---- 2. config/*.ini: restore from backup, else scaffold from templates --

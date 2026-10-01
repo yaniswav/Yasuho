@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -100,3 +103,21 @@ jobs:
         # fix version (requirements.lock shows the fully-resolved tree), or, only
         # with a written justification, add `--ignore-vuln <ID>` to this step.
         run: pip-audit --progress-spinner off
+
+      - name: Audit the lock itself for known vulnerabilities
+        # This daily cron re-audits exactly what production actually installs
+        # (run.sh/setup.sh install requirements.lock first - see its header).
+        # The step above audits requirements.txt's ~= ranges, which can look
+        # clean while the PINNED version inside them is stale: pip never
+        # upgrades an already-satisfied package, so a fix released inside a
+        # range (e.g. aiohttp 3.14.2/3.14.3 fixing 3.14.1, still inside
+        # ~=3.14.1) never reaches a long-running production venv on its own.
+        # If this fails, the fix is to regenerate requirements.lock (procedure
+        # in its own header, also in tools/gen_lock.py), not just to bump
+        # requirements.txt.
+        # --no-deps --disable-pip: the lock is already fully resolved, so audit
+        # its exact pins without installing anything. That keeps this step
+        # independent of the runner's Python - the lock is resolved for the
+        # production interpreter (3.13) and pins packages, like audioop-lts,
+        # that have no 3.12 build.
+        run: pip-audit --progress-spinner off --no-deps --disable-pip -r requirements.lock

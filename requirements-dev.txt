@@ -1,6 +1,8 @@
 # Test-only dependencies (not needed to run the bot).
 # Install with: python -m pip install -r requirements-dev.txt
-pytest
-pytest-asyncio
-pytest-cov
-freezegun
+pytest~=9.1.1
+pytest-asyncio~=1.4.0
+pytest-cov~=7.1.0
+freezegun~=1.5.5
+# Needed by tools/gen_lock.py (Requirement parsing) and tests/test_requirements_lock.py.
+packaging~=26.3

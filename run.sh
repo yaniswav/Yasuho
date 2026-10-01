@@ -8,12 +8,20 @@
 # never clobber local changes or your gitignored config (bot.ini / tokens.ini).
 # Toggle it with the AUTO_UPDATE variable below, or per-run: AUTO_UPDATE=0 ./run.sh
 #
+# Dependency sync: right after self_update, on every loop iteration, the venv is
+# brought up to date with requirements.lock + requirements.txt - whatever code
+# ended up checked out, however it got there (fast-forward above, a manual pull,
+# a fresh clone). A fingerprint of both files is compared against a stamp inside
+# the venv, so a venv already in sync costs zero pip calls, even on a tight
+# crash-restart loop. Toggle it with SYNC_DEPS, or per-run: SYNC_DEPS=0 ./run.sh
+#
 # Secrets live in files this script touches: keep everything owner-only.
 umask 077
 
 cd "$(dirname "$0")"
 
 AUTO_UPDATE="${AUTO_UPDATE:-1}"
+SYNC_DEPS="${SYNC_DEPS:-1}"
 
 if [ -x ./.venv/bin/python ]; then
     PY=./.venv/bin/python
@@ -98,17 +106,54 @@ self_update() {
     fi
 
     echo "[run] Update available - fast-forwarding..."
-    local req_before req_after
-    req_before="$(git rev-parse 'HEAD:requirements.txt' 2>/dev/null)"
     if git merge --ff-only --quiet '@{u}'; then
-        req_after="$(git rev-parse 'HEAD:requirements.txt' 2>/dev/null)"
-        if [ "$req_before" != "$req_after" ]; then
-            echo "[run] requirements.txt changed - installing dependencies..."
-            "$PY" -m pip install -q -r requirements.txt || echo "[run] Dependency install failed - continuing."
-        fi
         echo "[run] Updated to $(git rev-parse --short HEAD)."
     else
         echo "[run] Fast-forward failed - starting with the local version."
+    fi
+}
+
+# Dependency sync: keep the venv aligned with requirements.lock + requirements.txt.
+# Runs on every loop iteration (not just after a self_update fast-forward) so it
+# also covers a manual `git pull`, a fresh clone, or the very first start after
+# this check shipped - whatever got the current code onto disk. A fingerprint of
+# both files (vs. a stamp left inside the venv) makes a venv already in sync cost
+# zero pip calls, which matters on a tight crash-restart loop.
+sync_deps() {
+    [ "$SYNC_DEPS" = "1" ] || return 0
+    # Only a real venv gets this treatment; the system-python fallback keeps
+    # today's behaviour (no pip calls at all) - we don't want to touch a Python
+    # install we don't own.
+    [ -x ./.venv/bin/python ] || return 0
+
+    local stamp fingerprint current
+    stamp=".venv/.yasuho-deps-stamp"
+    fingerprint="$(sha256sum requirements.lock requirements.txt 2>/dev/null | sha256sum | awk '{print $1}')"
+    current="$(cat "$stamp" 2>/dev/null)"
+
+    if [ -n "$fingerprint" ] && [ "$fingerprint" = "$current" ]; then
+        return 0
+    fi
+
+    echo "[run] Dependencies changed - syncing the venv..."
+    # Install the lock first (the exact, audited pins), then requirements.txt as
+    # a safety net: if the lock is ever stale or misses a new dependency, this
+    # still brings the venv inside requirements.txt's bounds, so a forgotten
+    # lock regeneration can never crashloop the bot.
+    # pip's own upgrade never gates the sync: an old pip still installs fine.
+    "$PY" -m pip install -q -U pip || echo "[run] pip self-upgrade failed - continuing."
+    local lock_ok=1
+    "$PY" -m pip install -q -r requirements.lock || lock_ok=0
+    if "$PY" -m pip install -q -r requirements.txt && [ "$lock_ok" = "1" ]; then
+        echo "$fingerprint" > "$stamp"
+        echo "[run] Dependencies synced."
+    elif [ "$lock_ok" = "0" ]; then
+        # No stamp: the next start retries. The lock is resolved for CPython
+        # 3.13 on Linux, so on another interpreter it can never apply and only
+        # requirements.txt's resolution is used.
+        echo "[run] Could not apply requirements.lock - running on requirements.txt's resolution (retrying next start)."
+    else
+        echo "[run] Dependency sync failed - continuing with the installed set."
     fi
 }
 
@@ -121,6 +166,7 @@ while true; do
     restore_config
     backup_config
     self_update
+    sync_deps
     echo "Starting the bot..."
     "$PY" core.py
     EXIT_CODE=$?

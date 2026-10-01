@@ -53,15 +53,31 @@ HEADER = """\
 #   record; the security floors that motivated this file are Pillow >= 12.3.0
 #   and PyNaCl >= 1.6.2.
 #
-# What this is NOT:
-#   The install source. run.sh and setup.sh install from requirements.txt (the
-#   human-maintained ~= pins), NOT from this lock - so the lock never affects
-#   the auto-update path and a stale lock can never crashloop a restart. Dev and
-#   CI-only tooling (pytest, pytest-asyncio, pytest-cov, ruff, pip-audit) is
-#   deliberately excluded: it is not part of the deployed bot.
+# How it is used:
+#   It is the install source. run.sh and setup.sh install THIS file first (the
+#   exact, audited pins), then requirements.txt second as a safety net: a stale
+#   or incomplete lock can never crashloop the bot, because that second pass
+#   brings the venv back inside requirements.txt's bounds regardless.
+#   Two checks keep it honest: CI audits this file's pins every day (ci.yml,
+#   audit job) - a new advisory against a pinned version turns CI red, and the
+#   fix is to regenerate this file; tests/test_requirements_lock.py fails when a
+#   pin falls outside requirements.txt's bounds or a runtime root is missing.
+#   Before this, a pip install of requirements.txt never upgraded an
+#   already-satisfied package, so a fix released inside a ~= range (aiohttp
+#   3.14.2/3.14.3 against an installed 3.14.1) never reached production.
+#   Dev and CI-only tooling (pytest, pytest-asyncio, pytest-cov, ruff,
+#   pip-audit) is deliberately excluded: it is not part of the deployed bot.
 #
-# How to regenerate (after any requirements.txt bump), from the project venv:
-#   ./.venv/bin/python tools/gen_lock.py > requirements.lock
+# How to regenerate (after any requirements.txt bump, or a new advisory against
+# a pinned version), from a THROWAWAY venv freshly resolved from
+# requirements.txt - NEVER from the long-lived production venv, which would
+# just re-pin whatever happens to be installed there, vulnerable versions
+# included (this file reads the INSTALLED versions of its interpreter, it does
+# not re-resolve anything):
+#   python3.13 -m venv /tmp/lockvenv
+#   /tmp/lockvenv/bin/pip install -U pip
+#   /tmp/lockvenv/bin/pip install -r requirements.txt packaging
+#   /tmp/lockvenv/bin/python tools/gen_lock.py > requirements.lock
 #
 # Resolved for: CPython 3.13 on Linux x86_64.\
 """
