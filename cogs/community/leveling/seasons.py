@@ -66,7 +66,7 @@ from discord.ext import commands
 
 from . import engine as leveling
 from . import seasons_views
-from tools import i18n
+from tools import i18n, role_audit
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
 
@@ -618,6 +618,10 @@ class Seasons(commands.Cog):
             return None
         if any(r.id == role.id for r in getattr(winner, "roles", ())):
             return role  # already wearing it (a back-to-back win)
+        if role_audit.refuse_dangerous_role(
+            role, surface=role_audit.SURFACE_SEASON_CHAMPION, guild_id=guild.id
+        ):
+            return None
         try:
             await winner.add_roles(role, reason=_REASON_GRANT)
         except discord.HTTPException:

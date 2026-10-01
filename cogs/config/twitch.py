@@ -5,7 +5,7 @@ import typing
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, interactions, modchecks, settings
+from tools import embed_creator, interactions, modchecks, role_audit, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.paginator import Paginator, paginate_lines
@@ -611,7 +611,15 @@ class Twitch(commands.Cog):
     async def _assign_role(self, member, config):
         try:
             role = self._resolve_role(member.guild, config)
-            if role is not None and role not in member.roles:
+            if (
+                role is not None
+                and role not in member.roles
+                and not role_audit.refuse_dangerous_role(
+                    role,
+                    surface=role_audit.SURFACE_TWITCH_LIVE,
+                    guild_id=member.guild.id,
+                )
+            ):
                 await member.add_roles(role, reason="Twitch live alert")
         except Exception:
             log.exception("Twitch role assign failed")

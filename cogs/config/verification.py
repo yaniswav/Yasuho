@@ -15,7 +15,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from tools import i18n, modchecks, settings
+from tools import i18n, modchecks, role_audit, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -61,6 +61,13 @@ class VerifyButton(discord.ui.Button):
                 _("You are already verified."), ephemeral=True
             )
         if role >= guild.me.top_role or role.managed:
+            return await interaction.response.send_message(
+                _("I can't assign that role - it may be above my highest role."),
+                ephemeral=True,
+            )
+        if role_audit.refuse_dangerous_role(
+            role, surface=role_audit.SURFACE_VERIFY, guild_id=guild.id
+        ):
             return await interaction.response.send_message(
                 _("I can't assign that role - it may be above my highest role."),
                 ephemeral=True,

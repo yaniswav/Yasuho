@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands, tasks
 
 from cogs.moderation import mute_perms
-from tools import retention
+from tools import retention, role_audit
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -152,7 +152,9 @@ class Events(commands.Cog):
         role_id = self.bot.autoroles.get(guild_id)
         if role_id:
             role = member.guild.get_role(role_id)
-            if role:
+            if role and not role_audit.refuse_dangerous_role(
+                role, surface=role_audit.SURFACE_AUTOROLE, guild_id=guild_id
+            ):
                 try:
                     await member.add_roles(role)
                 except discord.HTTPException:
@@ -169,6 +171,10 @@ class Events(commands.Cog):
             return
         mute_role = member.guild.get_role(mute_role_id)
         if mute_role is None:
+            return
+        if role_audit.refuse_dangerous_role(
+            mute_role, surface=role_audit.SURFACE_MUTEROLE, guild_id=guild_id
+        ):
             return
 
         muted = await pool.fetchval(

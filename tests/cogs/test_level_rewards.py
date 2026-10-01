@@ -24,12 +24,15 @@ from cogs.community.leveling.level_rewards import LevelRewards
 
 
 class _FakeRole:
-    def __init__(self, role_id, position=1, managed=False, default=False):
+    def __init__(
+        self, role_id, position=1, managed=False, default=False, permissions=None
+    ):
         self.id = role_id
         self.position = position
         self.managed = managed
         self._default = default
         self.mention = f"<@&{role_id}>"
+        self.permissions = permissions or discord.Permissions.none()
 
     def is_default(self):
         return self._default
@@ -211,6 +214,47 @@ async def test_role_above_bot_top_role_is_skipped_not_granted(fake_pool):
 
     assert granted == []
     assert member.added == []
+
+
+# ---------------------------------------------------------------------------
+# Defence in depth: a reward role carrying a dangerous permission is never
+# granted, whether it is new (stack) or replacing an old tier.
+# ---------------------------------------------------------------------------
+async def test_dangerous_reward_role_is_skipped_not_granted(fake_pool):
+    dangerous = _FakeRole(
+        20, position=5, permissions=discord.Permissions(manage_guild=True)
+    )
+    guild = _FakeGuild(1, roles=[dangerous], bot_top_position=100)
+    member = _FakeMember(2)
+
+    fake_pool.fetch_return = _rows((5, 20))
+    fake_pool.fetchval_return = "stack"
+
+    cog = LevelRewards(_make_bot(fake_pool))
+    granted = await cog.grant_for_levelup(guild, member, 4, 5)
+
+    assert granted == []
+    assert member.added == []
+
+
+async def test_dangerous_replace_still_removes_the_old_tier():
+    """Removal must keep working even when the incoming tier is refused."""
+    old_role = _FakeRole(10, position=3)
+    dangerous_new = _FakeRole(
+        20, position=5, permissions=discord.Permissions(manage_guild=True)
+    )
+    guild = _FakeGuild(1, roles=[old_role, dangerous_new])
+    member = _FakeMember(2, roles=[old_role])
+
+    cog = LevelRewards(types.SimpleNamespace(db_pool=None))
+    added, removed = await cog._apply_role_changes(
+        guild, member, to_add=[20], to_remove=[10]
+    )
+
+    assert added == []
+    assert removed == [old_role]
+    assert member.added == []
+    assert member.removed == [old_role]
 
 
 async def test_managed_role_is_skipped(fake_pool):

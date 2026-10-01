@@ -330,6 +330,58 @@ def dangerous_permissions(permission_value):
     return tuple(name for name in DANGEROUS_PERMISSIONS if getattr(perms, name))
 
 
+# ---------------------------------------------------------------------------
+# Defence in depth - refuse to APPLY a dangerous role, at the moment Yasuho
+# would hand it to a member.
+# ---------------------------------------------------------------------------
+# ``?roleaudit`` above catches a guild already misconfigured; this is the
+# second layer, for the gap between a bad write and the next sweep (and for
+# the one surface - muterole - that has no write-time guard at all, see
+# cogs/system/dashboard_actions.py). It must stay cheap enough to run on
+# every member join: one bitfield test, zero I/O.
+#
+# Bounded FIFO de-dupe so a busy guild logs ROLE-REFUSED once per
+# (guild, role, surface), not once per join/level-up/click. 4096 keys is far
+# more than any single bot process will see distinct (guild, role, surface)
+# triples for before a restart clears it - this is a log-noise guard, not a
+# security boundary, so losing an old entry and logging one extra line is
+# harmless.
+_REFUSAL_LOG_CAP = 4096
+_refusal_logged = {}
+
+
+def refuse_dangerous_role(role, *, surface, guild_id):
+    """True when ``role`` must NOT be applied to a member - defence in depth.
+
+    Pure-cheap: a bitfield test against ``role.permissions``, no I/O, safe to
+    call from a member-join listener. Logs one greppable ``ROLE-REFUSED``
+    WARNING the first time a given (guild, role, surface) triple is refused,
+    then stays silent for that triple (see the de-dupe note above) so a raid
+    or a busy guild cannot flood the log.
+
+    Callers gate only the GRANT: removing a role must always keep working, so
+    nothing here is ever consulted on a ``remove_roles`` path.
+    """
+    permission_value = int(getattr(getattr(role, "permissions", None), "value", 0) or 0)
+    flags = dangerous_permissions(permission_value)
+    if not flags:
+        return False
+
+    key = (guild_id, int(role.id), surface)
+    if key not in _refusal_logged:
+        if len(_refusal_logged) >= _REFUSAL_LOG_CAP:
+            _refusal_logged.pop(next(iter(_refusal_logged)))
+        _refusal_logged[key] = True
+        log.warning(
+            "ROLE-REFUSED surface=%s guild=%s role=%s flags=%s",
+            surface,
+            guild_id,
+            role.id,
+            ",".join(flags),
+        )
+    return True
+
+
 def role_is_below(facts, bot_top):
     """Whether ``facts`` sits strictly below ``bot_top`` in the hierarchy.
 

@@ -34,7 +34,7 @@ import discord
 from discord.ext import commands
 
 from . import reward_rules as level_rewards
-from tools import modchecks
+from tools import modchecks, role_audit
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import bot_can_assign_role as _assignable
@@ -300,6 +300,10 @@ class LevelRewards(commands.Cog):
                     role_id,
                     guild.id,
                 )
+                continue
+            if role_audit.refuse_dangerous_role(
+                role, surface=role_audit.SURFACE_LEVEL_REWARD, guild_id=guild.id
+            ):
                 continue
             try:
                 await member.add_roles(role, reason="Level reward")

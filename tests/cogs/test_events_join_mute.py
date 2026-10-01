@@ -13,6 +13,8 @@ lines above it. These tests pin the skip AND the re-mute it must not break.
 
 import types
 
+import discord
+
 from cogs.system import events
 
 
@@ -126,4 +128,38 @@ async def test_the_autorole_still_lands_when_the_mute_path_short_circuits():
     await _cog(pool, autoroles={42: 5}).on_member_join(member)
 
     assert [applied for applied, _reason in member.added_roles] == [autorole]
+    assert pool.fetchvals == []
+
+
+# ---------------------------------------------------------------------------
+# Defence in depth: a dashboard-pointed role carrying a dangerous permission
+# must never be applied, by either join-time path.
+# ---------------------------------------------------------------------------
+class _DangerousRole:
+    def __init__(self, role_id):
+        self.id = role_id
+        self.permissions = discord.Permissions(manage_guild=True)
+
+
+async def test_dangerous_autorole_is_never_applied():
+    role = _DangerousRole(5)
+    pool = _Pool(muted_member_id=None)
+    guild = _Guild(42, roles={5: role})
+    member = _Member(guild)
+
+    await _cog(pool, autoroles={42: 5}).on_member_join(member)
+
+    assert member.added_roles == []
+
+
+async def test_dangerous_mute_role_is_never_re_applied_on_rejoin():
+    role = _DangerousRole(99)
+    pool = _Pool(muted_member_id=7)
+    guild = _Guild(42, roles={99: role})
+    member = _Member(guild)
+
+    await _cog(pool, muteroles={42: 99}).on_member_join(member)
+
+    assert member.added_roles == []
+    # The refusal is cheap and checked before the DB read.
     assert pool.fetchvals == []

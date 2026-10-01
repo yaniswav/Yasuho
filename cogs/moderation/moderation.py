@@ -9,7 +9,7 @@ from cogs.moderation.warns import (  # noqa: F401  (WarningsView re-exported for
     WarningsView,
     Warns,
 )
-from tools import db, modchecks
+from tools import db, modchecks, role_audit
 from tools.config_loader import config_loader
 from tools.formats import public_echo, random_colour
 from tools.i18n import _, ngettext
@@ -992,6 +992,18 @@ class Moderation(commands.Cog):
                 await ctx.send(content=_("Mute role created!"), delete_after=5)
             else:
                 mutedrole = discord.utils.get(ctx.guild.roles, id=role_id)
+
+            if mutedrole is not None and role_audit.refuse_dangerous_role(
+                mutedrole, surface=role_audit.SURFACE_MUTEROLE, guild_id=ctx.guild.id
+            ):
+                return await ctx.send(
+                    _(
+                        "The configured mute role carries dangerous "
+                        "permissions, so I won't apply it. Point the mute "
+                        "role setting at a role with no permissions instead."
+                    ),
+                    delete_after=15,
+                )
 
             await user.add_roles(
                 mutedrole, reason=f"""Muted By: {ctx.author} for: {reason} """

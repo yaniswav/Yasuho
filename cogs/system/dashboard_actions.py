@@ -222,6 +222,17 @@ mute paths then apply that role to members.
 Do not "fix" any of this here: it has to be a rank check in the web app itself
 (or those writes have to be moved onto this queue as new kinds).
 
+As defence in depth, every site that APPLIES one of the six stored roles to a
+member now refuses a role whose permissions carry a dangerous flag
+(``tools.role_audit.refuse_dangerous_role``, next to the ``?roleaudit``
+detector it shares a flag list with) - autorole on join, the re-mute on
+rejoin, ``?mute``, the level-reward grant, the season-champion rollover and
+the Twitch live role all check it right before their ``add_roles`` call. That
+narrows the WINDOW a bad dashboard write is live for (closed at the next
+apply, not just the next ``?roleaudit`` sweep) but it is still only a second
+layer: a rank check in the web app above is the real fix, this is what catches
+a write that slips past it or predates it.
+
 ``verify_button_post`` is gated on the verify role CONFIGURED AT POST TIME, which
 is the best this side can do - but read it as DEFENCE IN DEPTH, not as a closed
 path: whoever can enqueue the post can also move ``verify_role`` through the

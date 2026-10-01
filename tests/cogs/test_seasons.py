@@ -45,13 +45,22 @@ from tools import i18n
 
 
 class _FakeRole:
-    def __init__(self, role_id, position=5, managed=False, default=False, members=()):
+    def __init__(
+        self,
+        role_id,
+        position=5,
+        managed=False,
+        default=False,
+        members=(),
+        permissions=None,
+    ):
         self.id = role_id
         self.position = position
         self.managed = managed
         self._default = default
         self.mention = f"<@&{role_id}>"
         self.members = list(members)
+        self.permissions = permissions or discord.Permissions.none()
 
     def is_default(self):
         return self._default
@@ -604,6 +613,31 @@ async def test_champion_role_replaces_the_previous_holder(fake_pool):
 
     assert [r.id for r, _reason in previous.removed] == [50]
     assert [r.id for r, _reason in winner.added] == [50]
+
+
+async def test_dangerous_champion_role_is_not_granted_but_previous_still_strips(
+    fake_pool,
+):
+    """Defence in depth: the new champion role is refused, but the outgoing
+    champion still loses it - removal must keep working regardless."""
+    previous = _FakeMember(99)
+    winner = _FakeMember(11)
+    role = _FakeRole(
+        50, members=[previous], permissions=discord.Permissions(ban_members=True)
+    )
+    previous.roles.append(role)
+    guild = _FakeGuild(1, roles=[role], members=[previous, winner])
+    _arrange(
+        fake_pool,
+        podium=_podium_rows((1, 11, 900)),
+        config=_config_row(season_champion_role_id=50),
+    )
+    cog = Seasons(_make_bot(fake_pool))
+
+    await cog.ensure_season_snapshot(guild, now=_JULY)
+
+    assert [r.id for r, _reason in previous.removed] == [50]
+    assert winner.added == []
 
 
 async def test_champion_role_is_skipped_when_unset(fake_pool):
