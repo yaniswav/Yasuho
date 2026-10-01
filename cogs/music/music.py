@@ -2124,13 +2124,49 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Resume players left behind by a restart, exactly once.
 
         ``on_ready`` can fire repeatedly on reconnects, so a flag keeps this to a
-        single run. It waits for a Lavalink node (decoding the stored tracks needs
-        one) and must never crash startup, hence the broad guard.
+        single run. The node usually connects in the background now (see
+        core.py's ``_supervise_lavalink``), well after this fires - the real
+        trigger for the common case is ``on_sonolink_node_ready`` below; this
+        listener only covers the node happening to already be connected by the
+        time discord.py's own READY lands (both call the same one-shot guard).
+        """
+        await self._maybe_restore()
+
+    @commands.Cog.listener()
+    async def on_sonolink_node_ready(self, event) -> None:
+        """Node connect (first connect or a reconnect) - persist + maybe restore.
+
+        This fires once per successful connect, including every reconnect, so
+        it is the only reliably-ordered trigger for the restore now that the
+        node connects on its own background schedule instead of inline in
+        ``setup_hook``: ``on_ready`` above may well have already happened by
+        the time this does. ``_maybe_restore`` is shared and one-shot, so
+        whichever of the two fires second is a no-op.
+        """
+        # save_session already swallows and logs its own DB errors (diagnostics
+        # only - nothing reads this back yet), so a hiccup here never blocks
+        # the restore below.
+        await music_state.save_session(
+            self.bot.db_pool, music_state.MUSIC_NODE_ID, event.session_id
+        )
+        await self._maybe_restore()
+
+    async def _maybe_restore(self) -> None:
+        """Run the one-shot startup restore from whichever trigger fires first.
+
+        Both ``on_ready`` and ``on_sonolink_node_ready`` call this. The flag is
+        set BEFORE the first ``await`` below, so if both fire on the same event
+        loop tick (no ``await`` happens between the flag check and the set),
+        only one of them can pass the guard and start the restore - the other
+        sees ``_restored`` already True.
         """
         if self._restored:
             return
+        if not self.bot.is_ready():
+            # Too early: wait for discord.py's own READY as well.
+            return
         if not self._nodes_connected():
-            # Try again on the next on_ready, once the node has connected.
+            # Try again on the next trigger, once a node has connected.
             return
         self._restored = True
         try:
