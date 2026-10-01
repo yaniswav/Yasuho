@@ -86,6 +86,28 @@ class AvatarHistoryView(AuthorView):
         )
 
     async def _show(self, interaction, kind):
+        # AUDIENCE FIRST, before even the throttle: the command's own
+        # ``_is_member_here`` gate only ran once, when the card was first
+        # sent, and this view lives for up to 180s after that - long enough
+        # for the target (or the requester) to leave the shared server in the
+        # meantime. Re-check on every click so a page is never rendered for
+        # someone who has lost standing to see it. Own-history clicks need no
+        # server at all, exactly like the command.
+        if self.member.id != self.ctx.author.id:
+            here = await self.cog._is_member_here(self.ctx, self.member)
+            if here is None:
+                return await interaction.response.send_message(
+                    _("I could not check that right now - try again in a moment."),
+                    ephemeral=True,
+                )
+            if not here:
+                return await interaction.response.send_message(
+                    _(
+                        "I only show someone else's history in a server you "
+                        "share with them - ask again there."
+                    ),
+                    ephemeral=True,
+                )
         # THROTTLE FIRST, before anything expensive is started. A click is not
         # a cheap redraw: it can run an uncached fetch_user (the banner tab) and
         # always repaints a collage through the bot-wide image semaphore, which

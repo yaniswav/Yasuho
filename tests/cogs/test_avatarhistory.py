@@ -251,8 +251,12 @@ async def test_the_banner_button_still_captures_lazily(monkeypatch):
     async def _build_payload(member, kind, guild_id):
         return "embed", None
 
+    async def _is_member_here(ctx, user):
+        return True
+
     cog.capture_banner = _capture
     cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
 
     member = types.SimpleNamespace(id=77)
     ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=5), guild=None)
@@ -288,8 +292,12 @@ async def test_the_global_history_view_never_captures_a_banner():
         rendered.append(kind)
         return "embed", None
 
+    async def _is_member_here(ctx, user):
+        return True
+
     cog.capture_banner = _capture
     cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
 
     ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=5), guild=None)
     view = avatarhistory.AvatarHistoryView(cog, ctx, types.SimpleNamespace(id=77))
@@ -483,8 +491,12 @@ def _view_with_recorder():
     async def _capture(member):
         return None
 
+    async def _is_member_here(ctx, user):
+        return True
+
     cog.build_payload = _build_payload
     cog.capture_banner = _capture
+    cog._is_member_here = _is_member_here
     ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=5), guild=None)
     view = avatarhistory.AvatarHistoryView(cog, ctx, types.SimpleNamespace(id=77))
 
@@ -531,6 +543,120 @@ async def test_another_member_is_not_throttled_by_someone_elses_click():
     await view._show(_interaction(user_id=6), "banner")
 
     assert rendered == ["global", "banner"]
+
+
+# ---------------------------------------------------------------------------
+# Button re-check: the audience gate that only ran once, at command time, must
+# also hold for every click across the view's 180s lifetime.
+# ---------------------------------------------------------------------------
+
+
+def _audience_view(cog, requester_id=5, target_id=77, guild=None):
+    ctx = types.SimpleNamespace(
+        author=types.SimpleNamespace(id=requester_id), guild=guild
+    )
+    view = avatarhistory.AvatarHistoryView(
+        cog, ctx, types.SimpleNamespace(id=target_id)
+    )
+
+    class _Message:
+        async def edit(self, **kwargs):
+            pass
+
+    view.message = _Message()
+    return view
+
+
+async def test_click_is_refused_once_the_target_no_longer_shares_a_guild():
+    """THE LEAK: the command's _is_member_here gate ran once, when the card
+    was first sent; for up to 180s after the target leaves, every button on
+    the still-open card kept paging their history with no re-check at all."""
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    rendered = []
+
+    async def _build_payload(member, kind, guild_id):
+        rendered.append(kind)
+        return "embed", None
+
+    async def _is_member_here(ctx, user):
+        return False  # the target just left
+
+    cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
+    view = _audience_view(cog)
+
+    interaction = _interaction()
+    await view._show(interaction, "guild")
+
+    assert rendered == []
+    assert interaction.sent and interaction.sent[0][1].get("ephemeral") is True
+    assert "share with them" in interaction.sent[0][0]
+
+
+async def test_click_still_renders_while_the_target_still_shares_a_guild():
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    rendered = []
+
+    async def _build_payload(member, kind, guild_id):
+        rendered.append(kind)
+        return "embed", None
+
+    async def _is_member_here(ctx, user):
+        return True
+
+    cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
+    view = _audience_view(cog)
+
+    await view._show(_interaction(), "guild")
+
+    assert rendered == ["guild"]
+
+
+async def test_own_history_click_needs_no_audience_check_at_all():
+    """Requester == target: the command skips the check entirely, and so must
+    the button - ``_is_member_here`` must not even be called."""
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    rendered = []
+
+    async def _build_payload(member, kind, guild_id):
+        rendered.append(kind)
+        return "embed", None
+
+    async def _is_member_here(ctx, user):
+        raise AssertionError("own history must never be gated")
+
+    cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
+    view = _audience_view(cog, requester_id=5, target_id=5)
+
+    await view._show(_interaction(user_id=5), "global")
+
+    assert rendered == ["global"]
+
+
+async def test_click_fails_closed_when_membership_cannot_be_confirmed():
+    """A network blip answering the audience check must refuse, not render -
+    the same fail-closed rule the command itself follows."""
+    cog = object.__new__(avatarhistory.AvatarHistory)
+    rendered = []
+
+    async def _build_payload(member, kind, guild_id):
+        rendered.append(kind)
+        return "embed", None
+
+    async def _is_member_here(ctx, user):
+        return None
+
+    cog.build_payload = _build_payload
+    cog._is_member_here = _is_member_here
+    view = _audience_view(cog)
+
+    interaction = _interaction()
+    await view._show(interaction, "guild")
+
+    assert rendered == []
+    assert "try again" in interaction.sent[0][0]
 
 
 def test_both_doors_into_a_render_are_rationed_at_the_same_rate():

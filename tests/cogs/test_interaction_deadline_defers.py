@@ -549,15 +549,20 @@ class _ItxFollowup:
         self._log.add("followup.send", ephemeral=kwargs.get("ephemeral"))
 
 
+_SENTINEL = object()
+
+
 class _Itx:
     """A raw ``discord.Interaction`` stand-in writing into the shared order log."""
 
-    def __init__(self, log, *, guild=None, user=None):
+    def __init__(self, log, *, guild=None, user=_SENTINEL):
         self.extras = {}  # the real attribute the ephemeral marker is stored on
         self.locale = "en"
         self.guild = guild
         self.guild_id = getattr(guild, "id", None)
-        self.user = user
+        # Default to a real clicker id (most callers don't care who clicked),
+        # but still accept an explicit ``user=None`` for the few tests that do.
+        self.user = types.SimpleNamespace(id=1) if user is _SENTINEL else user
         self.message = None
         # apply_interaction_locale reads this and swallows anything it raises,
         # so a stand-in with no bot behind it resolves to the default locale.
@@ -653,11 +658,14 @@ async def test_the_role_menu_guard_answers_without_deferring(log):
     assert log.kwargs_of("response.send_message")["ephemeral"] is True
 
 
-def _rename_modal(log, channel):
+def _rename_modal(log, channel, *, still_owner=True):
     """``_RoomRenameModal`` without discord.py's Modal machinery behind it."""
 
     return types.SimpleNamespace(
-        _owner=types.SimpleNamespace(_channel=lambda: channel),
+        _owner=types.SimpleNamespace(
+            _channel=lambda: channel,
+            _still_owner=lambda user_id: still_owner,
+        ),
         name_input=types.SimpleNamespace(value="  quiet corner  "),
     )
 

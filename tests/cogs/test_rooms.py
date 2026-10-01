@@ -1,5 +1,14 @@
 """Construction smoke test for the autoroom control components.
 
+This file also covers the room-control ownership re-check: the ephemeral
+sub-pickers (``_SlotSelect``, ``_MemberActionSelect`` via
+``_handle_member_action``) and the rename modal (``_RoomRenameModal``) outlive
+the moment ``RoomControlView.interaction_check`` let them open - up to 60s for
+a sub-picker, the full 15-minute interaction token for a modal. A claim or
+transfer can move ownership elsewhere in that window; every action they can
+still trigger must re-resolve ``self.cog._owner_of(channel_id)`` before doing
+anything, the same source of truth the root view's own gate uses.
+
 Regression guard for a production crash: the per-room control sub-components set
 a reference to their owning view in __init__. It was named ``self.parent``, but
 ``discord.ui.Item.parent`` is a READ-ONLY property in Components V2, so building
@@ -15,6 +24,7 @@ per-guild writers that mutate it from three other modules.
 """
 
 import asyncio
+import types
 
 import pytest
 
@@ -259,3 +269,244 @@ async def test_two_overlapping_rebuilds_do_not_discard_the_newer_read():
 
     assert cog.bot.db_pool.fetches == 2
     assert set(cog._hub_index[100]) == {2222}
+
+
+# ---------------------------------------------------------------------------
+# Ownership re-check at ACTION time (stale ephemeral sub-pickers / modal).
+# ---------------------------------------------------------------------------
+
+OWNER_A = 111
+NEW_OWNER_B = 222
+TARGET_MEMBER = 333
+
+
+class _FakeChannel:
+    """A voice channel stand-in recording every side-effecting call."""
+
+    def __init__(self, name="room"):
+        self.name = name
+        self.edited = []
+        self.permissions_set = []
+        self._overwrites = {}
+        self.guild = types.SimpleNamespace(get_member=self._get_member)
+
+    async def _move_to(self, _channel):
+        return None
+
+    def _get_member(self, uid):
+        member = types.SimpleNamespace(id=uid, display_name=f"member-{uid}")
+        member.move_to = self._move_to
+        return member
+
+    async def edit(self, **kwargs):
+        self.edited.append(kwargs)
+
+    async def set_permissions(self, target, overwrite=None):
+        self.permissions_set.append((target, overwrite))
+
+    def overwrites_for(self, target):
+        return self._overwrites.get(target.id, types.SimpleNamespace(connect=None))
+
+
+class _FakeRoomsCog:
+    """Stand-in for ``TemporaryRooms``: a configurable live owner, and a
+    recorder for the one write that actually moves ownership."""
+
+    def __init__(self, owner_id):
+        self.owner_id = owner_id
+        self.transfers = []
+        self.bot = types.SimpleNamespace(get_channel=lambda cid: None)
+
+    def _owner_of(self, channel_id):
+        return self.owner_id
+
+    async def _transfer_room(self, channel, member):
+        self.transfers.append((channel, member.id))
+
+
+class _FakeResponse:
+    """Stand-in for ``interaction.response``: records edit/send calls and
+    tracks ``is_done`` the way ``tools.interactions.reply`` depends on."""
+
+    def __init__(self):
+        self.edited = []
+        self.sent = []
+        self._done = False
+
+    def is_done(self):
+        return self._done
+
+    async def defer(self, **kwargs):
+        self._done = True
+
+    async def edit_message(self, **kwargs):
+        self._done = True
+        self.edited.append(kwargs)
+
+    async def send_message(self, *args, **kwargs):
+        self._done = True
+        self.sent.append((args, kwargs))
+
+
+class _FakeFollowup:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, *args, **kwargs):
+        self.sent.append((args, kwargs))
+
+
+class _FakeInteraction:
+    def __init__(self, user_id):
+        self.user = types.SimpleNamespace(id=user_id)
+        self.response = _FakeResponse()
+        self.followup = _FakeFollowup()
+
+
+def _control_view(cog, channel):
+    """A ``RoomControlView`` wired to a fake cog/channel, skipping the real
+    ``__init__`` (which would build the live Components V2 layout)."""
+    view = rooms.RoomControlView.__new__(rooms.RoomControlView)
+    view.cog = cog
+    view.channel_id = 999
+    view.message = None
+    view._channel = lambda: channel
+    return view
+
+
+def _refused(interaction):
+    """True when the interaction only got an ephemeral refusal, nothing else."""
+    if interaction.response.edited:
+        return "room owner" in interaction.response.edited[0].get("content", "")
+    if interaction.response.sent:
+        return "room owner" in interaction.response.sent[0][0][0]
+    if interaction.followup.sent:
+        return "room owner" in interaction.followup.sent[0][0][0]
+    return False
+
+
+# -- _SlotSelect -------------------------------------------------------------
+
+
+async def test_slot_select_refuses_when_ownership_changed_mid_pick():
+    """A picked by A; B claims the room before A submits the slot value."""
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)  # B is the live owner now
+    view = _control_view(cog, channel)
+    select = rooms._SlotSelect(view)
+    select._values = ["5"]
+    interaction = _FakeInteraction(OWNER_A)
+
+    await select.callback(interaction)
+
+    assert channel.edited == []
+    assert _refused(interaction)
+
+
+async def test_slot_select_still_works_for_the_still_current_owner():
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=OWNER_A)
+    view = _control_view(cog, channel)
+    select = rooms._SlotSelect(view)
+    select._values = ["5"]
+    interaction = _FakeInteraction(OWNER_A)
+
+    await select.callback(interaction)
+
+    assert channel.edited == [{"user_limit": 5}]
+
+
+# -- _handle_member_action (kick / unblacklist / transfer) ------------------
+
+
+async def test_transfer_is_refused_when_ownership_changed_mid_pick():
+    """THE LEAK: A opens Transfer, leaves, B claims the room, A submits."""
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)
+    view = _control_view(cog, channel)
+    interaction = _FakeInteraction(OWNER_A)
+
+    await view._handle_member_action(interaction, rooms._ACTION_TRANSFER, TARGET_MEMBER)
+
+    assert cog.transfers == []
+    assert _refused(interaction)
+
+
+async def test_transfer_still_works_for_the_still_current_owner():
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=OWNER_A)
+    view = _control_view(cog, channel)
+    interaction = _FakeInteraction(OWNER_A)
+
+    await view._handle_member_action(interaction, rooms._ACTION_TRANSFER, TARGET_MEMBER)
+
+    assert cog.transfers == [(channel, TARGET_MEMBER)]
+
+
+async def test_kick_and_blacklist_is_refused_when_ownership_changed_mid_pick():
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)
+    view = _control_view(cog, channel)
+    interaction = _FakeInteraction(OWNER_A)
+
+    await view._handle_member_action(interaction, rooms._ACTION_KICK, TARGET_MEMBER)
+
+    assert channel.permissions_set == []
+    assert _refused(interaction)
+
+
+async def test_kick_and_blacklist_still_works_for_the_still_current_owner():
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=OWNER_A)
+    view = _control_view(cog, channel)
+    interaction = _FakeInteraction(OWNER_A)
+
+    await view._handle_member_action(interaction, rooms._ACTION_KICK, TARGET_MEMBER)
+
+    assert len(channel.permissions_set) == 1
+
+
+async def test_unblacklist_is_refused_when_ownership_changed_mid_pick():
+    channel = _FakeChannel()
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)
+    view = _control_view(cog, channel)
+    interaction = _FakeInteraction(OWNER_A)
+
+    await view._handle_member_action(interaction, rooms._ACTION_UNBLACKLIST, TARGET_MEMBER)
+
+    assert channel.permissions_set == []
+    assert _refused(interaction)
+
+
+# -- _RoomRenameModal ---------------------------------------------------------
+
+
+async def test_rename_modal_refuses_when_ownership_changed_mid_fill():
+    """A opens Rename, leaves, B claims the room, A submits the modal - whose
+    interaction token outlives the 60s sub-picker window entirely (15 min)."""
+    channel = _FakeChannel(name="old-name")
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)
+    view = _control_view(cog, channel)
+    modal = rooms._RoomRenameModal(view, channel.name)
+    modal.name_input._value = "new-name"
+    interaction = _FakeInteraction(OWNER_A)
+
+    await modal.on_submit(interaction)
+
+    assert channel.edited == []
+    assert _refused(interaction)
+
+
+async def test_rename_modal_still_works_for_the_still_current_owner():
+    channel = _FakeChannel(name="old-name")
+    cog = _FakeRoomsCog(owner_id=OWNER_A)
+    view = _control_view(cog, channel)
+    modal = rooms._RoomRenameModal(view, channel.name)
+    modal.name_input._value = "new-name"
+    interaction = _FakeInteraction(OWNER_A)
+
+    await modal.on_submit(interaction)
+
+    assert channel.edited == [{"name": "new-name"}]
+
+

@@ -91,6 +91,15 @@ class _SlotSelect(discord.ui.Select):
 
     async def callback(self, interaction):
         await i18n.apply_interaction_locale(interaction)
+        # Re-check ownership at ACTION time, not just when the picker was
+        # opened: this ephemeral view outlives the click that opened it (up to
+        # 60s), long enough for a claim/transfer to hand the room to someone
+        # else while it is still on screen.
+        if not self._owner._still_owner(interaction.user.id):
+            await interaction.response.edit_message(
+                content=_("Only the room owner can use these controls."), view=None
+            )
+            return
         channel = self._owner._channel()
         if channel is None:
             await interaction.response.edit_message(
@@ -164,6 +173,14 @@ class _RoomRenameModal(LocaleModal):
         self.add_item(self.name_input)
 
     async def on_submit(self, interaction):
+        # The modal's interaction token lives for 15 minutes with no view
+        # timeout of its own - plenty of time for a claim/transfer to have
+        # moved ownership elsewhere since the modal was opened.
+        if not self._owner._still_owner(interaction.user.id):
+            await interactions.reply(
+                interaction, _("Only the room owner can use these controls.")
+            )
+            return
         channel = self._owner._channel()
         if channel is None:
             await interactions.reply(interaction, _("This room no longer exists."))
@@ -222,6 +239,20 @@ class RoomControlView(LocaleLayoutView):
         if isinstance(channel, discord.VoiceChannel):
             return channel
         return None
+
+    def _still_owner(self, user_id):
+        """True when ``user_id`` still holds the live ownership of the room.
+
+        ``interaction_check`` only gates OPENING an ephemeral sub-picker or the
+        rename modal; those stay alive well past that moment (a sub-picker's
+        own 60s timeout, a modal's full 15-minute interaction token), long
+        enough for a claim or transfer to hand the room to someone else while
+        it is still on screen. Every action those components can trigger -
+        including ``_handle_member_action``, reached through the member
+        picker - re-checks here, against the same source of truth the root
+        view's own gate uses, before doing anything.
+        """
+        return self.cog._owner_of(self.channel_id) == user_id
 
     def _is_locked(self):
         """True when @everyone is denied Connect on the live channel."""
@@ -577,6 +608,14 @@ class RoomControlView(LocaleLayoutView):
         await self._rerender()
 
     async def _handle_member_action(self, interaction, action, member_id):
+        # Re-check ownership at ACTION time: the member picker that reaches
+        # this is an ephemeral view with its own 60s timeout, long enough for
+        # a claim/transfer to have moved ownership elsewhere since it opened.
+        if not self._still_owner(interaction.user.id):
+            await interaction.response.edit_message(
+                content=_("Only the room owner can use these controls."), view=None
+            )
+            return
         channel = self._channel()
         if channel is None:
             await interaction.response.edit_message(
