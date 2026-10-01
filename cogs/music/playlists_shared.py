@@ -609,7 +609,9 @@ class ServerPlaylistMixin:
         # Loading a playlist is an explicit choice: it ends any radio session.
         player.radio_genre = None
         if player.current is None:
-            await player.play(player.queue.get())
+            # Owner decision: starting playback from idle (a user action) must
+            # never inherit a stale paused flag. See resume_after_track_change.
+            await player.play(player.queue.get(), paused=False)
         await self._snapshot(player)
 
         count = len(usable)

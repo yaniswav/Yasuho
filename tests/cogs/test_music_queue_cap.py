@@ -109,6 +109,7 @@ class _Player(sonolink.Player):
         self.radio_genre = "lofi"
         self.played_ids = []
         self.played = []
+        self.play_kwargs = []
 
     @property
     def queue(self):
@@ -118,8 +119,9 @@ class _Player(sonolink.Player):
     def current(self):
         return self._current
 
-    async def play(self, track):
+    async def play(self, track, **kwargs):
         self.played.append(track)
+        self.play_kwargs.append(kwargs)
         self._current = track
 
 
@@ -850,6 +852,9 @@ async def test_a_zap_is_never_blocked_by_a_full_queue():
     assert len(queued) == 8
     assert player.radio_genre == "lofi"
     assert player.played  # the new station actually started
+    # Owner decision (lot S2-1): a zap (replace=True, a user action) must never
+    # inherit a stale paused flag.
+    assert player.play_kwargs == [{"paused": False}]
 
 
 async def test_radio_refill_skips_a_full_queue_silently_and_without_searching():

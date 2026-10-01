@@ -89,9 +89,11 @@ class _Player:
         self.channel = types.SimpleNamespace(name="General")
         self.radio_genre = "lofi"
         self.played = []
+        self.play_kwargs = []
 
-    async def play(self, track):
+    async def play(self, track, **kwargs):
         self.played.append(track)
+        self.play_kwargs.append(kwargs)
         self.current = track
 
 
@@ -309,6 +311,9 @@ async def test_requeue_starts_playback_on_an_idle_player(make_interaction):
     await card._requeue(_interaction(make_interaction), 0, picked)
 
     assert [t.title for t in player.played] == ["Played"]
+    # Owner decision (lot S2-1): a user-initiated play from idle must never
+    # inherit a stale paused flag.
+    assert player.play_kwargs == [{"paused": False}]
 
 
 async def test_requeue_does_not_re_render_the_card(make_interaction):

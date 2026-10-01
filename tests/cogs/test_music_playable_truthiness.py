@@ -95,6 +95,7 @@ class _Player(sonolink.Player):
         self.dj = None
         self.radio_genre = None
         self.played = []
+        self.play_kwargs = []
         self.controller = None
         # resume_after_track_change reads the real Player.paused property,
         # which reads this backing attribute.
@@ -108,8 +109,9 @@ class _Player(sonolink.Player):
     def current(self):
         return self._current
 
-    async def play(self, track):
+    async def play(self, track, **kwargs):
         self.played.append(track)
+        self.play_kwargs.append(kwargs)
         self._current = track
 
     async def skip(self):
@@ -223,6 +225,9 @@ async def test_play_query_none_current_still_starts_playback():
 
     assert player.played == [player.current]
     assert player.current.title == "New"
+    # Owner decision (lot S2-1): a user-initiated play from idle must never
+    # inherit a stale paused flag.
+    assert player.play_kwargs == [{"paused": False}]
 
 
 # ---------------------------------------------------------------------------

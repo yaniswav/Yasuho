@@ -112,7 +112,7 @@ class _Player(sonolink.Player):
     def current(self):
         return self._current
 
-    async def play(self, track):
+    async def play(self, track, **kwargs):
         self._current = track
 
 

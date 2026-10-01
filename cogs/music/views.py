@@ -296,7 +296,9 @@ class AddSongModal(LocaleModal, title="Add a song"):
             # select disappears on the rerender below.
             player.radio_genre = None
             if player.current is None:
-                await player.play(player.queue.get())
+                # Owner decision: starting playback from idle (a user action) must
+                # never inherit a stale paused flag. See resume_after_track_change.
+                await player.play(player.queue.get(), paused=False)
             await self.cog._snapshot(player)
 
             await interaction.response.send_message(
@@ -929,10 +931,13 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
                     _("There is nothing left to skip to."), ephemeral=True
                 )
                 return
+            # Captured BEFORE skip(): see resume_after_track_change's docstring
+            # for why reading player.paused AFTER the call is a lost race.
+            was_paused = self.player.paused
             await self.player.skip()
             # Owner decision: a skip (user action) must leave playback going,
             # even if the player was paused.
-            await resume_after_track_change(self.player)
+            await resume_after_track_change(self.player, was_paused)
             await interaction.response.send_message(_("Skipped."), ephemeral=True)
         except sonolink.QueueEmpty:
             await interaction.response.send_message(
@@ -2153,7 +2158,9 @@ class HistoryCard(PinnedRenderLocale, LocaleLayoutView):
             # the add-track modal does.
             self.player.radio_genre = None
             if self.player.current is None:
-                await self.player.play(self.player.queue.get())
+                # Owner decision: starting playback from idle (a user action) must
+                # never inherit a stale paused flag. See resume_after_track_change.
+                await self.player.play(self.player.queue.get(), paused=False)
             await self.cog._snapshot(self.player)
             # The history lane itself did not change, so the listing above is
             # still accurate - no re-render, no edit spent on a click that only
@@ -2536,7 +2543,9 @@ class FavouritesCard(AuthorLayoutView):
             # An explicit pick ends any radio session, as every other add does.
             player.radio_genre = None
             if player.current is None:
-                await player.play(player.queue.get())
+                # Owner decision: starting playback from idle (a user action) must
+                # never inherit a stale paused flag. See resume_after_track_change.
+                await player.play(player.queue.get(), paused=False)
             await self.cog._snapshot(player)
 
             await interaction.edit_original_response(

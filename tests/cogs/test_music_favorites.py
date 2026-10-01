@@ -104,9 +104,11 @@ class _Player:
         self.home = None
         self.radio_genre = "lofi"
         self.played = []
+        self.play_kwargs = []
 
-    async def play(self, track):
+    async def play(self, track, **kwargs):
         self.played.append(track)
+        self.play_kwargs.append(kwargs)
         self.current = track
 
 
@@ -738,6 +740,9 @@ async def test_play_starts_playback_on_an_idle_player(fake_pool, make_interactio
     await card._play_one(_interaction(make_interaction, user_id=7), rows[0])
 
     assert [t.title for t in player.played] == ["A"]
+    # Owner decision (lot S2-1): a user-initiated play from idle must never
+    # inherit a stale paused flag.
+    assert player.play_kwargs == [{"paused": False}]
 
 
 async def test_play_refuses_when_no_node_is_connected(fake_pool, make_interaction):
@@ -931,6 +936,7 @@ async def test_playlist_play_still_resolves_when_the_bot_is_already_connected(
 
     assert len(resolved) == 1
     assert player.played  # it actually started
+    assert player.play_kwargs == [{"paused": False}]
 
 
 async def test_playlist_play_states_the_deferred_rest_even_when_the_batch_failed(

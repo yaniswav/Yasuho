@@ -29,6 +29,16 @@ BACKUPS_DIR = os.path.join(REPO_DIR, "backups")
 # the newlines around them cost eight, so this leaves comfortable room.
 AUDIT_INLINE_LIMIT = 1900
 
+# Non-.py files at the repo root whose change the ?update classifier must treat
+# as restart-required (same bucket as a core/tools .py change): a hot-reload
+# only re-executes cog modules, so a changed dependency pin or launcher script
+# never reaches the running process until the next run.sh start, and a
+# hot-reloaded cog could otherwise end up relying on a package version that is
+# not actually installed yet.
+RESTART_REQUIRED_NON_PY_FILES = frozenset(
+    {"requirements.txt", "requirements.lock", "run.sh"}
+)
+
 
 class UpdateSelect(discord.ui.Select):
     """Pick which (changed) cogs to reload; all are pre-selected by default."""
@@ -592,6 +602,14 @@ class Admin(commands.Cog):
         cogs, restart = [], []
         for f in changed:
             if not f.endswith(".py"):
+                # A dependency pin or the launcher script changes what code a
+                # hot-reload would run ON (a newer cog importing a package the
+                # running process never installed, or new run.sh behaviour the
+                # live process never picked up), so these count as restart-
+                # required exactly like a core/tools .py change does, even
+                # though reload_extension can't touch them either way.
+                if f in RESTART_REQUIRED_NON_PY_FILES:
+                    restart.append(f)
                 continue
             mod = f[:-3].replace("/", ".")
             ext = next(

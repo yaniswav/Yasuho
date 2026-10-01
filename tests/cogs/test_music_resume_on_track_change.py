@@ -10,8 +10,9 @@ self._player._paused``), so without this fix the new track lands paused on
 Lavalink while the controller still reads "Playing" (nothing follows a click
 that looked like it should start something).
 
-This pins the single helper, ``cogs.music.music.resume_after_track_change``, and
-every path that must call it (or pass ``paused=False`` to a direct ``play()``):
+This pins the single helper, ``cogs.music.music.resume_after_track_change``,
+and every path that must call it (or pass ``paused=False`` to a direct
+``play()``):
 
 * ``Music._execute_skip`` - the shared engine behind ``/skip``, a resolved vote
   (``voteskip.SkipVote._resolve``) and the dashboard's ``_exec_music_skip``.
@@ -25,10 +26,30 @@ every path that must call it (or pass ``paused=False`` to a direct ``play()``):
 
 A non-paused player must see NO spurious pause/resume call on any of these
 paths (unchanged behaviour).
+
+Lot S2-1 review fix (2026-09): ``resume_after_track_change`` now takes the
+paused flag EXPLICITLY (``was_paused``), captured by every caller BEFORE it
+calls ``skip()``/``previous()``, rather than re-reading ``player.paused``
+after the fact. On sonolink 1.2.1, ``TrackStartEvent`` resets
+``player._paused`` to ``False`` the instant the gateway event for the NEW
+track is processed (``EventsHandler._dispatch_event``), and that reset can
+land before this coroutine resumes from the ``await skip()``/``await
+previous()`` call sitting right above it - both are scheduled on the same
+event loop, so it's a genuine race, not a hypothetical one. Reading the flag
+after the call is a LOST race: it silently reverts the whole fix one event
+later. The ``*_trackstart_race_before_helper_runs`` tests below simulate
+exactly that ordering and must still see a resume.
+
+This file also pins: the resume failing (a disconnect race) is logged and
+swallowed, never raised past the caller; and a successful resume re-renders
+the guild's live controller exactly once, so the panel cannot keep reading
+"Paused" over a room that is, in fact, playing again.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import types
 
 import pytest
@@ -62,13 +83,43 @@ class FakeQueue:
         return self.tracks.pop(index)
 
 
+class FakeController:
+    """Stands in for MusicController - only the ``_rerender`` seam matters."""
+
+    def __init__(self, *, raises=False):
+        self.rerender_calls = 0
+        self.raises = raises
+
+    async def _rerender(self):
+        self.rerender_calls += 1
+        if self.raises:
+            raise RuntimeError("boom")
+
+
 class FakePlayer:
     """Records every sonolink call; mirrors how real skip()/previous()/play()
     resend the CURRENT paused flag unless told otherwise - so paused stays
     whatever it was unless our code (or an explicit paused= kwarg) changes it.
+
+    ``trackstart_race`` mimics sonolink 1.2.1's TrackStartEvent handler
+    resetting ``_paused`` to False the moment the new track's start event is
+    processed - which, on the real gateway, can land before the caller's
+    ``await skip()``/``await previous()`` returns to it. Here it is applied
+    INSIDE ``skip()``/``previous()``, before they return, so any code that
+    reads ``player.paused`` AFTER the call (instead of capturing it before)
+    would observe the already-reset value.
     """
 
-    def __init__(self, *, paused, next_track=None, queue=None):
+    def __init__(
+        self,
+        *,
+        paused,
+        next_track=None,
+        queue=None,
+        trackstart_race=False,
+        resume_raises=None,
+        controller=None,
+    ):
         self.paused = paused
         self._next_track = (
             next_track if next_track is not None else FakeTrack()
@@ -78,13 +129,20 @@ class FakePlayer:
         self.guild = types.SimpleNamespace(id=1)
         self.autoplay = sonolink.AutoPlayMode.DISABLED
         self.calls = []
+        self._trackstart_race = trackstart_race
+        self._resume_raises = resume_raises
+        self.controller = controller
 
     async def skip(self):
         self.calls.append(("skip",))
+        if self._trackstart_race:
+            self.paused = False
         return self._next_track
 
     async def previous(self):
         self.calls.append(("previous",))
+        if self._trackstart_race:
+            self.paused = False
         return self._next_track
 
     async def play(self, track, **kwargs):
@@ -99,6 +157,8 @@ class FakePlayer:
 
     async def resume(self):
         self.calls.append(("resume",))
+        if self._resume_raises is not None:
+            raise self._resume_raises
         self.paused = False
 
 
@@ -127,17 +187,91 @@ class FakeSkipCog:
 @pytest.mark.asyncio
 async def test_resume_after_track_change_resumes_a_paused_player():
     player = FakePlayer(paused=True)
-    await music.resume_after_track_change(player)
+    await music.resume_after_track_change(player, True)
     assert player.paused is False
     assert player.calls == [("resume",)]
 
 
 @pytest.mark.asyncio
-async def test_resume_after_track_change_is_a_no_op_when_already_playing():
+async def test_resume_after_track_change_is_a_no_op_when_was_paused_is_false():
     player = FakePlayer(paused=False)
-    await music.resume_after_track_change(player)
+    await music.resume_after_track_change(player, False)
     assert player.paused is False
     assert player.calls == []
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_trusts_was_paused_over_the_live_flag():
+    """``player.paused`` already reads False (as it would after a lost
+    TrackStart race), but ``was_paused=True`` was captured before the race -
+    the helper must still resume, since on 1.2.1 the live flag can lie."""
+    player = FakePlayer(paused=False)
+    await music.resume_after_track_change(player, True)
+    assert ("resume",) in player.calls
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_rerenders_the_controller_once():
+    controller = FakeController()
+    player = FakePlayer(paused=True, controller=controller)
+    await music.resume_after_track_change(player, True)
+    assert controller.rerender_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_no_resume_no_rerender():
+    controller = FakeController()
+    player = FakePlayer(paused=False, controller=controller)
+    await music.resume_after_track_change(player, False)
+    assert controller.rerender_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_with_no_controller_bound_is_fine():
+    player = FakePlayer(paused=True, controller=None)
+    await music.resume_after_track_change(player, True)  # must not raise
+    assert player.paused is False
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_swallows_a_disconnect_race():
+    """resume() raising (the voice session tearing down mid-command) must
+    never propagate past the helper - the skip/back it follows already
+    succeeded."""
+    controller = FakeController()
+    player = FakePlayer(
+        paused=True, controller=controller, resume_raises=AssertionError("boom")
+    )
+    await music.resume_after_track_change(player, True)  # must not raise
+    # The resume failed, so there is nothing new to show - no rerender spent.
+    assert controller.rerender_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_swallows_an_http_exception(caplog):
+    error_payload = json.dumps(
+        {
+            "timestamp": 0,
+            "status": 404,
+            "error": "Not Found",
+            "path": "/sessions/x/players/1",
+            "message": "gone",
+        }
+    ).encode("utf-8")
+    player = FakePlayer(
+        paused=True, resume_raises=sonolink.HTTPException(error_payload)
+    )
+    with caplog.at_level(logging.WARNING):
+        await music.resume_after_track_change(player, True)  # must not raise
+    assert any("resume_after_track_change" in rec.message for rec in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_resume_after_track_change_a_controller_rerender_failure_is_swallowed():
+    controller = FakeController(raises=True)
+    player = FakePlayer(paused=True, controller=controller)
+    await music.resume_after_track_change(player, True)  # must not raise
+    assert controller.rerender_calls == 1  # it was called (and raised), but caught
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +315,19 @@ async def test_execute_skip_with_nowhere_to_land_never_touches_pause_state():
     assert player.paused is True
 
 
+@pytest.mark.asyncio
+async def test_execute_skip_trackstart_race_before_the_helper_runs_still_resumes():
+    """The gateway's TrackStartEvent resets player.paused to False DURING
+    skip() (simulating it landing before the helper runs). _execute_skip
+    captures was_paused BEFORE calling skip(), so the resume must still
+    happen."""
+    player = FakePlayer(paused=True, trackstart_race=True)
+    result, track = await music.Music._execute_skip(None, player)
+    assert result == music.voteskip.SKIP_RESULT_ADVANCED
+    assert track is player._next_track
+    assert ("resume",) in player.calls
+
+
 # ---------------------------------------------------------------------------
 # Music._play_previous - /music previous and the controller's Back button
 # ---------------------------------------------------------------------------
@@ -217,6 +364,15 @@ async def test_play_previous_with_no_history_never_touches_pause_state():
     assert player.calls == []
     assert player.paused is True
     assert cog.snapshots == []
+
+
+@pytest.mark.asyncio
+async def test_play_previous_trackstart_race_before_the_helper_runs_still_resumes():
+    player = FakePlayer(paused=True, trackstart_race=True)
+    cog = FakeCog()
+    track = await music.Music._play_previous(cog, player)
+    assert track is player._next_track
+    assert ("resume",) in player.calls
 
 
 # ---------------------------------------------------------------------------
@@ -257,9 +413,41 @@ async def test_controller_skip_on_a_playing_player_does_not_touch_pause_state(
     assert ("pause",) not in player.calls
 
 
+@pytest.mark.asyncio
+async def test_controller_skip_trackstart_race_before_the_helper_runs_still_resumes(
+    make_interaction,
+):
+    player = FakePlayer(paused=True, trackstart_race=True)
+    self = types.SimpleNamespace(cog=FakeSkipCog(), player=player)
+    interaction = make_interaction()
+    interaction.channel = object()
+
+    await views.MusicController._skip(self, interaction)
+
+    assert ("resume",) in player.calls
+
+
+@pytest.mark.asyncio
+async def test_controller_skip_rerenders_the_controller_itself_after_a_resume(
+    make_interaction,
+):
+    """The controller view IS the player's bound controller here (the real
+    wiring: Music._send_controller sets player.controller to this same
+    view) - a resume must re-render it exactly once."""
+    controller = FakeController()
+    player = FakePlayer(paused=True, controller=controller)
+    self = types.SimpleNamespace(cog=FakeSkipCog(), player=player)
+    interaction = make_interaction()
+    interaction.channel = object()
+
+    await views.MusicController._skip(self, interaction)
+
+    assert controller.rerender_calls == 1
+
+
 # ---------------------------------------------------------------------------
-# Negative control: with resume_after_track_change made a no-op, the two
-# shared-engine tests above must fail - proving they are not vacuously true.
+# Negative controls: with resume_after_track_change made a no-op, every
+# "still resumes" test above must fail - proving they are not vacuously true.
 # ---------------------------------------------------------------------------
 
 
@@ -267,7 +455,7 @@ async def test_controller_skip_on_a_playing_player_does_not_touch_pause_state(
 async def test_negative_control_execute_skip_without_the_helper_stays_paused(
     monkeypatch,
 ):
-    async def _noop(player):
+    async def _noop(player, was_paused):
         return None
 
     monkeypatch.setattr(music, "resume_after_track_change", _noop)
@@ -283,7 +471,7 @@ async def test_negative_control_execute_skip_without_the_helper_stays_paused(
 async def test_negative_control_play_previous_without_the_helper_stays_paused(
     monkeypatch,
 ):
-    async def _noop(player):
+    async def _noop(player, was_paused):
         return None
 
     monkeypatch.setattr(music, "resume_after_track_change", _noop)
@@ -291,3 +479,29 @@ async def test_negative_control_play_previous_without_the_helper_stays_paused(
     cog = FakeCog()
     await music.Music._play_previous(cog, player)
     assert player.paused is True
+
+
+@pytest.mark.asyncio
+async def test_negative_control_trackstart_race_reading_paused_after_the_call_fails():
+    """Reproduces the review-flagged bug directly: a helper that reads
+    ``player.paused`` AFTER skip() (instead of taking a ``was_paused``
+    captured before it) loses the TrackStart race and never resumes."""
+
+    async def _buggy_resume_after_track_change(player):
+        if player.paused:
+            await player.resume()
+
+    player = FakePlayer(paused=True, trackstart_race=True)
+    # Reproduce _execute_skip's body with the OLD (buggy) call shape: read
+    # player.paused only after skip() returns.
+    track = await player.skip()
+    assert track is not None
+    await _buggy_resume_after_track_change(player)
+    # The bug: skip()'s simulated TrackStart already reset paused to False
+    # before we got here, so the buggy helper (dis)qualifies it as "not
+    # paused" and never calls resume() - Lavalink stays paused.
+    assert ("resume",) not in player.calls
+    assert player.paused is False  # looks "playing" to the controller...
+    # ...while Lavalink was never told to resume. This is exactly the
+    # regression resume_after_track_change(player, was_paused) (capturing
+    # was_paused BEFORE skip()) fixes.

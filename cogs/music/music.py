@@ -409,7 +409,7 @@ def can_go_previous(player):
     return bool(getattr(player.queue, "history", None))
 
 
-async def resume_after_track_change(player: Player) -> None:
+async def resume_after_track_change(player: Player, was_paused: bool) -> None:
     """Resume a paused player right after a USER action started another track.
 
     sonolink's ``skip()`` and ``previous()`` both call ``play()`` internally with
@@ -417,27 +417,79 @@ async def resume_after_track_change(player: Player) -> None:
     ``player._paused`` already was (see sonolink's ``PlaybackHandler.play``:
     ``paused = paused if paused is not None else self._player._paused``). So a
     skip or a step-back taken while the player is paused lands the NEW track on
-    Lavalink still paused - nothing plays - while the controller's own
-    ``player.paused`` flag (unchanged by the call) still reads True, so the panel
-    correctly shows "Paused" but the room hears nothing follow a click that
-    looked like it should start something.
+    Lavalink still paused - nothing plays.
 
-    This is the one owner-approved fix for that: skip (the controller's Skip
-    button, ``/skip``, a resolved vote, the dashboard's skip executor) and Back
-    (the controller's Back button, ``/music previous``) all call this right
-    after sonolink's own call returns a track, and it resumes IF AND ONLY IF the
-    player is (still) paused - a no-op otherwise, so nothing changes for a
-    player that was already playing. Callers that invoke ``player.play()``
-    directly (the queue manager's jump-to-track) instead pass ``paused=False``
-    to that call, which is simpler and achieves the same thing in one request.
+    ``was_paused`` MUST be read by the caller BEFORE calling ``skip()`` /
+    ``previous()`` - never re-derived from ``player.paused`` after the fact.
+    sonolink 1.2.1's own ``TrackStartEvent`` handler resets ``player._paused`` to
+    ``False`` the moment Lavalink's event for the new track arrives (see
+    ``EventsHandler._dispatch_event``), and that event can land on the gateway
+    and get processed BEFORE this coroutine resumes from the ``await skip()`` /
+    ``await previous()`` call above it - both run on the same event loop, so
+    whichever callback is scheduled first wins the race. Reading
+    ``player.paused`` here, after the call, would then find it already False
+    and wrongly conclude "nothing to resume", leaving Lavalink paused with the
+    controller now showing "Playing" over silence - the exact bug this helper
+    exists to close, reopened one await later. Capturing the flag up front
+    removes the race entirely: it cannot be invalidated by an event the capture
+    happened strictly before.
+
+    This is the one owner-approved fix for the paused-carries-over bug: skip
+    (the controller's Skip button, ``/skip``, a resolved vote, the dashboard's
+    skip executor) and Back (the controller's Back button, ``/music previous``)
+    all call this right after sonolink's own call returns a track, and it
+    resumes IF ``was_paused`` is True - unconditionally calling ``player.resume()``
+    even if ``player.paused`` now (already) reads False, since on 1.2.1 that
+    live flag can no longer be trusted by this point and ``resume()`` is a
+    harmless no-op-on-Lavalink's-side when the player is already playing (it
+    only ever sends ``paused=False``). A no-op when ``was_paused`` is False, so
+    nothing changes for a player that was already playing. Callers that invoke
+    ``player.play()`` directly (the queue manager's jump-to-track) instead pass
+    ``paused=False`` to that call, which is simpler and achieves the same thing
+    in one request.
+
+    Never raises: a disconnect race between the skip/previous above and the
+    ``resume()`` here (the voice session tearing down mid-command) is logged
+    and swallowed rather than failing a track change that already succeeded.
+
+    After a resume actually happens, the guild's live controller (if any) is
+    re-rendered once so it cannot keep showing "Paused" over a room that is, in
+    fact, playing again - the next natural re-render (the 60 s idle tick, or
+    the following track_start) would otherwise be the only thing to fix it.
 
     Deliberately NOT called from automatic transitions that are not a user
     action - a natural track end or an autoplay-filled queue keep whatever
     paused state the user chose (and in practice never run while paused, since
     sonolink only advances / autoplays a track that is actively playing).
     """
-    if player.paused:
+    if not was_paused:
+        return
+    try:
         await player.resume()
+    except (AssertionError, sonolink.HTTPException) as exc:
+        # AssertionError: sonolink's pause()/resume() assert the node still has
+        # a resume session (``assert node._resume_session is not None``), which
+        # is cleared on disconnect - the exact "voice session went away between
+        # the skip and the resume" race this guard exists for.
+        # sonolink.HTTPException: the REST PATCH to Lavalink can fail the same
+        # way for the same reason once the session is gone.
+        log.warning(
+            "resume_after_track_change: resume() failed for guild %s after a "
+            "track change (likely a disconnect race) - %s",
+            playerinfo.guild_id_of(player),
+            exc,
+        )
+        return
+    controller = getattr(player, "controller", None)
+    if controller is None:
+        return
+    try:
+        await controller._rerender()
+    except Exception:
+        log.exception(
+            "resume_after_track_change: controller re-render failed for guild %s",
+            playerinfo.guild_id_of(player),
+        )
 
 
 def _set_autoplay(player, enabled):
@@ -2756,7 +2808,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # one and the controller drops its station select on the next rerender.
         player.radio_genre = None
         if player.current is None:
-            await player.play(player.queue.get())
+            # Owner decision: starting playback from idle (a user action) must
+            # never inherit a stale paused flag. See resume_after_track_change.
+            await player.play(player.queue.get(), paused=False)
         await self._snapshot(player)
 
     async def _search_genre_tracks(self, genre, seen_ids):
@@ -2844,7 +2898,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
             player.queue.put(track)
         player.radio_genre = genre.key
         if replace or player.current is None:
-            await player.play(player.queue.get())
+            # Owner decision: starting playback from idle (a user action) must
+            # never inherit a stale paused flag. See resume_after_track_change.
+            await player.play(player.queue.get(), paused=False)
         await self._snapshot(player)
         return tier, tracks
 
@@ -3252,6 +3308,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """
         if not can_skip(player):
             return voteskip.SKIP_RESULT_NONE, None
+        # Captured BEFORE skip(): see resume_after_track_change's docstring for
+        # why reading player.paused AFTER the call is a lost race on 1.2.1.
+        was_paused = player.paused
         try:
             track = await player.skip()
         except sonolink.QueueEmpty:
@@ -3259,7 +3318,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if track is not None:
             # Owner decision: a skip (user action) must leave playback going,
             # even if the player was paused. See resume_after_track_change.
-            await resume_after_track_change(player)
+            await resume_after_track_change(player, was_paused)
             return voteskip.SKIP_RESULT_ADVANCED, track
         guild_id = playerinfo.guild_id_of(player)
         if guild_id is not None:
@@ -3327,6 +3386,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         candidate = player.queue.history[-1]
         if not getattr(candidate, "encoded", None):
             return None
+        # Captured BEFORE previous(): see resume_after_track_change's docstring
+        # for why reading player.paused AFTER the call is a lost race on 1.2.1.
+        was_paused = player.paused
         try:
             track = await player.previous()
         except sonolink.HistoryEmpty:
@@ -3337,7 +3399,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return None
         # Owner decision: stepping back (user action) must leave playback going,
         # even if the player was paused. See resume_after_track_change.
-        await resume_after_track_change(player)
+        await resume_after_track_change(player, was_paused)
         await self._snapshot(player)
         return track
 
@@ -3929,7 +3991,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Playing favourites is an explicit choice: it ends any radio session.
         player.radio_genre = None
         if player.current is None:
-            await player.play(player.queue.get())
+            # Owner decision: starting playback from idle (a user action) must
+            # never inherit a stale paused flag. See resume_after_track_change.
+            await player.play(player.queue.get(), paused=False)
         await self._snapshot(player)
 
         count = len(tracks)
