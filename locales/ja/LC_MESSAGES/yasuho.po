@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 11:11+0000\n"
+"POT-Creation-Date: 2026-10-01 11:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1261,7 +1261,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
-#: cogs/config/twitch.py:424 cogs/config/verification.py:108
+#: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
 msgid "Enabled"
@@ -1269,7 +1269,7 @@ msgstr "有効"
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:426 cogs/config/verification.py:110
+#: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
@@ -2433,7 +2433,7 @@ msgstr "サーバー全体: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:113
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:116
 msgid "(deleted)"
 msgstr "(削除済み)"
 
@@ -3996,7 +3996,7 @@ msgstr "メニューで埋め込みを作成し、チャンネル (と、任意�
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
-#: cogs/config/twitch.py:420 cogs/config/verification.py:115
+#: cogs/config/twitch.py:420 cogs/config/verification.py:118
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
@@ -4028,7 +4028,7 @@ msgid "Pick a target channel first."
 msgstr "まず対象チャンネルを選んでください。"
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:194
+#: cogs/config/rolemenus.py:668 cogs/config/verification.py:197
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "{channel} にメッセージを送信できません。"
@@ -5584,26 +5584,30 @@ msgstr "ここでは認証が設定されていません。"
 msgid "You are already verified."
 msgstr "すでに認証済みです。"
 
-#: cogs/config/verification.py:65 cogs/config/verification.py:72
+#: cogs/config/verification.py:65
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "そのロールを付与できません - 私の最上位ロールより上にある可能性があります。"
 
+#: cogs/config/verification.py:73
+msgid "I can't give you that role: it carries permissions I won't hand out automatically. Please tell a server admin."
+msgstr "そのロールは付与できません。自動では付与しない権限が含まれています。サーバーの管理者にお知らせください。"
+
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
 #: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:80
+#: cogs/config/tickets/open.py:343 cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "問題が発生しました。もう一度お試しください。"
 
-#: cogs/config/verification.py:83
+#: cogs/config/verification.py:86
 msgid "You are verified. Welcome!"
 msgstr "認証が完了しました。ようこそ!"
 
-#: cogs/config/verification.py:120
+#: cogs/config/verification.py:123
 #, python-brace-format
 msgid "Verification | {guild}"
 msgstr "認証 | {guild}"
 
-#: cogs/config/verification.py:126
+#: cogs/config/verification.py:129
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -5612,24 +5616,24 @@ msgstr ""
 "**状態:** {status}\n"
 "**付与ロール:** {role}"
 
-#: cogs/config/verification.py:135
+#: cogs/config/verification.py:138
 msgid "Use `/verify setup` to turn on verification."
 msgstr "`/verify setup` で認証を有効にできます。"
 
-#: cogs/config/verification.py:200 cogs/system/dashboard_actions.py:572
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:572
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:575
+#: cogs/config/verification.py:206 cogs/system/dashboard_actions.py:575
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
-#: cogs/config/verification.py:209
+#: cogs/config/verification.py:212
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr "認証が設定されています - クリックすると {channel} で {role} が付与されます。"
 
-#: cogs/config/verification.py:220
+#: cogs/config/verification.py:223
 msgid "Verification disabled."
 msgstr "認証を無効にしました。"
 
@@ -11669,69 +11673,69 @@ msgstr "表示するものがありません。"
 msgid "Couldn't close the menu, please try again."
 msgstr "メニューを閉じられませんでした。もう一度お試しください。"
 
-#: tools/role_audit.py:764
+#: tools/role_audit.py:768
 #, python-brace-format
 msgid "{role} carries {permissions}"
 msgstr "{role} は {permissions} を持っています"
 
-#: tools/role_audit.py:769
+#: tools/role_audit.py:773
 #, python-brace-format
 msgid "{role} is a mute role with a non-empty permission mask (value {value})"
 msgstr "{role} はミュートロールですが、権限が空ではありません (値 {value})"
 
-#: tools/role_audit.py:772
+#: tools/role_audit.py:776
 #, python-brace-format
 msgid "role {role} no longer exists"
 msgstr "ロール {role} はもう存在しません"
 
-#: tools/role_audit.py:775
+#: tools/role_audit.py:779
 #, python-brace-format
 msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
 msgstr "{role} は私には付与できません (私の最上位ロールより上、連携管理、または @everyone)"
 
-#: tools/role_audit.py:780
+#: tools/role_audit.py:784
 #, python-brace-format
 msgid "{role} cannot be judged: I am not in this guild's member cache"
 msgstr "{role} を判定できません: このサーバーのメンバーキャッシュに私がいません"
 
-#: tools/role_audit.py:796
+#: tools/role_audit.py:800
 msgid "Role grant audit - the roles Yasuho hands out on her own."
 msgstr "ロール付与の監査 - Yasuho が自動で配るロール。"
 
-#: tools/role_audit.py:800
+#: tools/role_audit.py:804
 #, python-brace-format
 msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
 msgstr "不完全: {surfaces} を読めませんでした。このレポートは一部です。"
 
-#: tools/role_audit.py:806
+#: tools/role_audit.py:810
 #, python-brace-format
 msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
 msgstr "{guilds} 件のサーバーを走査し、設定済みのロール設定を {found} 件検出、{examined} 件を確認しました。"
 
-#: tools/role_audit.py:815
+#: tools/role_audit.py:819
 #, python-brace-format
 msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
 msgstr "重大 {critical} | 警告 {warning} | 情報 {notice}"
 
-#: tools/role_audit.py:825
+#: tools/role_audit.py:829
 #, python-brace-format
 msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
 msgstr "不明: {guilds} 件のサーバーを判定できず、{settings} 件の設定を確認していません。"
 
-#: tools/role_audit.py:835
+#: tools/role_audit.py:839
 #, python-brace-format
 msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
 msgstr "参加していないサーバーの {orphans} 行を省略しました。読み取れないロール ID が {malformed} 件あります。"
 
-#: tools/role_audit.py:851
+#: tools/role_audit.py:855
 msgid "Nothing flagged: every audited setting is safe to hand out."
 msgstr "問題は見つかりませんでした: 監査したすべての設定は安全に付与できます。"
 
-#: tools/role_audit.py:855
+#: tools/role_audit.py:859
 msgid "Nothing flagged in what could be read - see the gaps above."
 msgstr "読み取れた範囲では問題はありません - 上記の未確認箇所を参照してください。"
 
-#: tools/role_audit.py:876
+#: tools/role_audit.py:880
 #, python-brace-format
 msgid "role cache unavailable, {count} setting(s) not examined"
 msgstr "ロールキャッシュを利用できないため、{count} 件の設定を確認していません"

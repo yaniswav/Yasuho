@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 11:11+0000\n"
+"POT-Creation-Date: 2026-10-01 11:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1275,7 +1275,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
-#: cogs/config/twitch.py:424 cogs/config/verification.py:108
+#: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
 msgid "Enabled"
@@ -1283,7 +1283,7 @@ msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:426 cogs/config/verification.py:110
+#: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
@@ -2455,7 +2455,7 @@ msgstr "Όλος ο διακομιστής: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:113
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:116
 msgid "(deleted)"
 msgstr "(διαγράφηκε)"
 
@@ -4020,7 +4020,7 @@ msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κ
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
-#: cogs/config/twitch.py:420 cogs/config/verification.py:115
+#: cogs/config/twitch.py:420 cogs/config/verification.py:118
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
@@ -4052,7 +4052,7 @@ msgid "Pick a target channel first."
 msgstr "Διάλεξε πρώτα ένα κανάλι προορισμού."
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:194
+#: cogs/config/rolemenus.py:668 cogs/config/verification.py:197
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "Δεν μπορώ να στείλω μηνύματα στο {channel}."
@@ -5609,26 +5609,30 @@ msgstr "Η επαλήθευση δεν έχει ρυθμιστεί εδώ."
 msgid "You are already verified."
 msgstr "Είσαι ήδη επαληθευμένος/η."
 
-#: cogs/config/verification.py:65 cogs/config/verification.py:72
+#: cogs/config/verification.py:65
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "Δεν μπορώ να αναθέσω αυτόν τον ρόλο - ίσως είναι πάνω από τον υψηλότερο ρόλο μου."
 
+#: cogs/config/verification.py:73
+msgid "I can't give you that role: it carries permissions I won't hand out automatically. Please tell a server admin."
+msgstr "Δεν μπορώ να σου δώσω αυτόν τον ρόλο: έχει δικαιώματα που δεν δίνω αυτόματα. Ενημέρωσε έναν διαχειριστή του διακομιστή."
+
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
 #: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:80
+#: cogs/config/tickets/open.py:343 cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "Κάτι πήγε στραβά, δοκίμασε ξανά."
 
-#: cogs/config/verification.py:83
+#: cogs/config/verification.py:86
 msgid "You are verified. Welcome!"
 msgstr "Είσαι επαληθευμένος/η. Καλώς ήρθες!"
 
-#: cogs/config/verification.py:120
+#: cogs/config/verification.py:123
 #, python-brace-format
 msgid "Verification | {guild}"
 msgstr "Επαλήθευση | {guild}"
 
-#: cogs/config/verification.py:126
+#: cogs/config/verification.py:129
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -5637,24 +5641,24 @@ msgstr ""
 "**Κατάσταση:** {status}\n"
 "**Ρόλος που δίνεται:** {role}"
 
-#: cogs/config/verification.py:135
+#: cogs/config/verification.py:138
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Χρησιμοποίησε το `/verify setup` για να ενεργοποιήσεις την επαλήθευση."
 
-#: cogs/config/verification.py:200 cogs/system/dashboard_actions.py:572
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:572
 msgid "Verification"
 msgstr "Επαλήθευση"
 
-#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:575
+#: cogs/config/verification.py:206 cogs/system/dashboard_actions.py:575
 msgid "Click the button below to verify and unlock the server."
 msgstr "Πάτησε το κουμπί παρακάτω για να επαληθευτείς και να ξεκλειδώσεις τον διακομιστή."
 
-#: cogs/config/verification.py:209
+#: cogs/config/verification.py:212
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr "Η επαλήθευση έχει ρυθμιστεί - το κλικ παραχωρεί τον ρόλο {role} στο {channel}."
 
-#: cogs/config/verification.py:220
+#: cogs/config/verification.py:223
 msgid "Verification disabled."
 msgstr "Η επαλήθευση απενεργοποιήθηκε."
 
@@ -11712,69 +11716,69 @@ msgstr "Δεν υπάρχει τίποτα για εμφάνιση."
 msgid "Couldn't close the menu, please try again."
 msgstr "Δεν ήταν δυνατό το κλείσιμο του μενού, δοκίμασε ξανά."
 
-#: tools/role_audit.py:764
+#: tools/role_audit.py:768
 #, python-brace-format
 msgid "{role} carries {permissions}"
 msgstr "Ο {role} φέρει {permissions}"
 
-#: tools/role_audit.py:769
+#: tools/role_audit.py:773
 #, python-brace-format
 msgid "{role} is a mute role with a non-empty permission mask (value {value})"
 msgstr "Ο {role} είναι ρόλος σίγασης με μη κενή μάσκα δικαιωμάτων (τιμή {value})"
 
-#: tools/role_audit.py:772
+#: tools/role_audit.py:776
 #, python-brace-format
 msgid "role {role} no longer exists"
 msgstr "ο ρόλος {role} δεν υπάρχει πλέον"
 
-#: tools/role_audit.py:775
+#: tools/role_audit.py:779
 #, python-brace-format
 msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
 msgstr "δεν μπορώ να απονείμω τον {role} (πάνω από τον ανώτερο ρόλο μου, διαχειρίζεται από ενσωμάτωση ή @everyone)"
 
-#: tools/role_audit.py:780
+#: tools/role_audit.py:784
 #, python-brace-format
 msgid "{role} cannot be judged: I am not in this guild's member cache"
 msgstr "δεν μπορώ να κρίνω τον {role}: δεν βρίσκομαι στη μνήμη μελών αυτού του διακομιστή"
 
-#: tools/role_audit.py:796
+#: tools/role_audit.py:800
 msgid "Role grant audit - the roles Yasuho hands out on her own."
 msgstr "Έλεγχος ρόλων που απονέμονται - οι ρόλοι που μοιράζει η Yasuho μόνη της."
 
-#: tools/role_audit.py:800
+#: tools/role_audit.py:804
 #, python-brace-format
 msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
 msgstr "ΑΤΕΛΕΣ: δεν ήταν δυνατή η ανάγνωση {surfaces}. Θεώρησε αυτή την αναφορά μερική."
 
-#: tools/role_audit.py:806
+#: tools/role_audit.py:810
 #, python-brace-format
 msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
 msgstr "Σαρώθηκαν {guilds} διακομιστής(ές). Βρέθηκαν {found} ρυθμίση(εις) ρόλου, εξετάστηκαν {examined}."
 
-#: tools/role_audit.py:815
+#: tools/role_audit.py:819
 #, python-brace-format
 msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
 msgstr "ΚΡΙΣΙΜΑ {critical} | ΠΡΟΕΙΔΟΠΟΙΗΣΕΙΣ {warning} | ΣΗΜΕΙΩΣΕΙΣ {notice}"
 
-#: tools/role_audit.py:825
+#: tools/role_audit.py:829
 #, python-brace-format
 msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
 msgstr "ΑΓΝΩΣΤΟ: {guilds} διακομιστής(ές) δεν κρίθηκαν, {settings} ρύθμιση(εις) ΔΕΝ εξετάστηκαν."
 
-#: tools/role_audit.py:835
+#: tools/role_audit.py:839
 #, python-brace-format
 msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
 msgstr "Παραλείφθηκαν {orphans} εγγραφή(ές) για διακομιστές όπου δεν βρίσκομαι. {malformed} μη αναγνώσιμο(α) αναγνωριστικό(ά) ρόλου."
 
-#: tools/role_audit.py:851
+#: tools/role_audit.py:855
 msgid "Nothing flagged: every audited setting is safe to hand out."
 msgstr "Τίποτα προς επισήμανση: κάθε ρύθμιση που ελέγχθηκε είναι ασφαλής για απονομή."
 
-#: tools/role_audit.py:855
+#: tools/role_audit.py:859
 msgid "Nothing flagged in what could be read - see the gaps above."
 msgstr "Τίποτα προς επισήμανση σε όσα διαβάστηκαν - δες τα κενά παραπάνω."
 
-#: tools/role_audit.py:876
+#: tools/role_audit.py:880
 #, python-brace-format
 msgid "role cache unavailable, {count} setting(s) not examined"
 msgstr "η μνήμη ρόλων δεν είναι διαθέσιμη, {count} ρύθμιση(εις) δεν εξετάστηκαν"
