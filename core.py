@@ -79,18 +79,34 @@ LAVALINK_NODE_RETRIES = 3
 # for LAVALINK_STUCK_AFTER to clean up next.
 LAVALINK_START_TIMEOUT = 60.0
 
-# How long a node may sit CONNECTING before _supervise_lavalink treats it as
-# stuck (the escape case above: connect()/reconnect() set NodeStatus.CONNECTING
-# before attempt_connect runs, and nothing resets it when attempt_connect's
-# exception escapes uncaught) and force-closes it so the next start() can
-# begin fresh. The supervisor never checks while it is itself awaiting
-# start(), so the only LEGIT CONNECTING it can observe is a runtime reconnect
-# burst running in sonolink's keep-alive task: LAVALINK_NODE_RETRIES fast
-# attempts plus ~3.5s of sleeps against a loopback Lavalink. 30s clears that
-# by a wide margin, and resetting a burst that somehow ran longer is harmless
-# (it is restarted, not abandoned). It also sets the retry cadence while
-# Lavalink refuses connections: about this value plus LAVALINK_BACKOFF_START.
+# How long a node may sit CONNECTING, WITHOUT a live watcher, before
+# _supervise_lavalink treats it as stuck (the escape case above:
+# connect()/reconnect() set NodeStatus.CONNECTING before attempt_connect runs,
+# and nothing resets it when attempt_connect's exception escapes uncaught) and
+# force-closes it so the next start() can begin fresh. "Without a live
+# watcher" is the point: a CONNECTING node WITH one (sonolink genuinely
+# retrying - see the live-watcher check in _supervise_lavalink) is left alone
+# past this and bounded by LAVALINK_WEDGED_AFTER instead. The supervisor never
+# checks while it is itself awaiting start(), so a dead-watcher CONNECTING
+# this catches is always the escape case, never a legit burst. It also sets
+# the retry cadence while Lavalink refuses connections: about this value plus
+# LAVALINK_BACKOFF_START.
 LAVALINK_STUCK_AFTER = 30.0
+
+# Hard ceiling for a CONNECTING node that DOES have a live watcher (a runtime
+# reconnect burst actually running inside sonolink's keep-alive task, or a
+# websocket that opened and is waiting on Lavalink's "ready" op - see the
+# live-watcher check in _supervise_lavalink). Such a node is making progress
+# sonolink itself is responsible for, so LAVALINK_STUCK_AFTER does not apply;
+# but it cannot run forever either, because ONE sonolink websocket attempt
+# (AioWebsocketManager.connect -> session.ws_connect, network/_aiohttp.py) has
+# no per-call timeout of its own, so it inherits aiohttp's ClientSession
+# default, aiohttp.client.DEFAULT_TIMEOUT = ClientTimeout(total=300) (the
+# session is created with no explicit timeout in AioHTTPManager.setup, same
+# file) - a genuinely hanging TCP peer could in theory hold one attempt that
+# long. This mirrors that ceiling so a wedged live watcher is still force-
+# closed and retried, just far later than the dead-watcher case above.
+LAVALINK_WEDGED_AFTER = 300.0
 
 
 def _module_has_setup(path):
@@ -500,25 +516,69 @@ class Yasuho(commands.Bot):
         and escapes straight through connect()/reconnect(), past Client.start()
         (which only wraps the call in a bare `except Exception` and continues -
         gateway/client/__init__.py), leaving the node stuck CONNECTING forever
-        with no loop running. So CONNECTING is tracked with a timer
-        (``connecting_since``, the loop's own monotonic clock so no wall-clock
-        drift matters): past LAVALINK_STUCK_AFTER, this force-closes the node
-        (resetting it to DISCONNECTED, _keep_alive cleared) so the NEXT
-        iteration's start() can begin a fresh connect - connect() would
-        otherwise refuse with "already connected; ignoring" while _keep_alive
-        is set (it is set the moment a real attempt starts, by connect_ws).
+        with no loop running.
 
-        A DISCONNECTED node is also defensively stripped of a stale
-        ``_keep_alive`` before every retry: a runtime reconnect() that
-        EXHAUSTS its (finite, see LAVALINK_NODE_RETRIES) retries through the
-        handled WebSocketError path - not the escape above - ends in
-        attempt_connect's exhausted branch, which sets DISCONNECTED but never
-        touches _keep_alive (only node.close() does, and close() refuses to run
-        on an already-DISCONNECTED node). Left alone, that stale reference would
-        make every future connect() silently no-op ("ignoring") forever, with
-        no exception and no log louder than that one sonolink WARNING - a node
-        that looks like it is being retried (this supervisor keeps calling
-        start()) but never actually is.
+        But not every CONNECTING node is that escape - a runtime reconnect
+        burst genuinely in progress is ALSO CONNECTING the whole time it
+        retries (reconnect() sets the status once, before attempt_connect's
+        loop runs). The two are told apart by whether ``_keep_alive`` is a
+        LIVE task: ``connect_ws`` (gateway/node/_websocket.py) sets
+        ``node._keep_alive`` to the keep-alive task right after a successful
+        websocket handshake, and a reconnect burst runs *inside* that same
+        task (``_handle_disconnect`` calls ``self.node.reconnect()`` directly,
+        same file) - so while the burst runs, ``_keep_alive`` is that task,
+        and it is not done. The escape case leaves it in one of two states
+        instead: ``None`` (the very first connect attempt - connect_ws's
+        ``ClientConnectorError`` happens before ``_keep_alive`` is ever
+        assigned, since connect() isn't running inside any keep-alive task to
+        begin with), or a DONE task (a runtime reconnect whose burst itself
+        dies on the escape - the same ``ClientConnectorError`` now escapes
+        ``reconnect()``, ``_handle_disconnect()`` and ``keep_alive_coro()`` in
+        turn, ending that task with an exception, while ``_connection.py``'s
+        ``except NodeError`` (1.2.1) / bare call (1.2.0) never catches a
+        ``ClientConnectorError`` to reset the status it left at CONNECTING).
+        Verified by reading both sonolink releases this bot runs: 1.2.0
+        (gateway/node/_connection.py:44-101, _websocket.py:69-90) and 1.2.1
+        (same paths, :44-108 / :69-90) - identical on every point above; 1.2.1
+        only adds a ``try/except NodeError`` around ``attempt_connect()`` that
+        a plain ``aiohttp.ClientConnectorError`` never triggers (it is not a
+        ``NodeError``), so the escape is unchanged.
+
+        So CONNECTING is tracked with a timer (``connecting_since``, the
+        loop's own monotonic clock so no wall-clock drift matters) AND the
+        live-watcher check above, each poll: without a live watcher, past
+        LAVALINK_STUCK_AFTER is the escape, exactly as before. WITH one,
+        sonolink is doing real work on its own schedule - a reconnect burst,
+        or a websocket that opened and is waiting on Lavalink's "ready" op -
+        and is left alone past LAVALINK_STUCK_AFTER, but not forever: past the
+        higher LAVALINK_WEDGED_AFTER ceiling it is force-closed too (see that
+        constant for why - the aiohttp session timeout bounding one connect
+        attempt). Either way, closing force-resets the node to DISCONNECTED
+        with ``_keep_alive`` cleared, so the NEXT iteration's start() can
+        begin a fresh connect - connect() would otherwise refuse with
+        "already connected; ignoring" while ``_keep_alive`` is set.
+
+        A DISCONNECTED node needs the same live-watcher read before this
+        supervisor touches it, for a different reason: the exhausted-retries
+        branch (attempt_connect, handled WebSocketError path - not the escape
+        above) sets ``node._status = NodeStatus.DISCONNECTED`` synchronously,
+        then the SAME keep-alive task still has to dispatch "node_close" and
+        run ``node.cleanup()`` before the task itself finishes - so there is a
+        real window where this supervisor can observe DISCONNECTED while
+        ``_keep_alive`` is still a live (not done) task. Touching it in that
+        window - clearing it, or calling start(), which would itself be a
+        no-op while ``_keep_alive is not None`` but races the task's own
+        cleanup regardless - is skipped: this iteration just sleeps
+        LAVALINK_BACKOFF_START and rechecks. Only once that task is DONE is
+        the stale ``_keep_alive`` reference cleared (neither ``reconnect()``
+        nor attempt_connect's exhausted branch ever clears it themselves -
+        only ``close()`` does, and ``close()`` refuses to run on an
+        already-DISCONNECTED node) and ``start()`` called. Left uncleared
+        forever, that stale reference would make every future connect()
+        silently no-op ("ignoring") forever, with no exception and no log
+        louder than that one sonolink WARNING - a node that looks like it is
+        being retried (this supervisor keeps calling start()) but never
+        actually is.
 
         ``sl_client.start()`` is bounded with LAVALINK_START_TIMEOUT so this
         loop can never block on it, the same escape case above but during the
@@ -548,36 +608,60 @@ class Yasuho(commands.Bot):
                     now = asyncio.get_running_loop().time()
                     if connecting_since is None:
                         connecting_since = now
-                    elif now - connecting_since > LAVALINK_STUCK_AFTER:
-                        # One WARNING per OUTAGE, not per reset: while Lavalink
-                        # keeps refusing, every retry ends stuck again, and a
-                        # line per cycle would just be noise.
-                        if not outage:
-                            log.warning(
-                                "Lavalink node %r has been stuck CONNECTING "
-                                "for over %ds (no loop watching it - likely a "
-                                "refused connection that escaped sonolink's "
-                                "own retry handling); resetting it and "
-                                "retrying in the background until it answers.",
-                                node_id,
-                                int(LAVALINK_STUCK_AFTER),
-                            )
-                            outage = True
-                        else:
-                            log.debug("Resetting stuck Lavalink node %r again.", node_id)
-                        try:
-                            await node.close()
-                        except RuntimeError:
-                            # Already DISCONNECTED by the time we got here
-                            # (e.g. it resolved on its own in between) - fine,
-                            # the next iteration retries normally.
-                            pass
-                        except Exception:
-                            log.exception(
-                                "Failed to reset stuck Lavalink node %r",
-                                node_id,
-                            )
-                        connecting_since = None
+                    else:
+                        # Recomputed every pass: a live burst can die between
+                        # one poll and the next, which should make this node
+                        # eligible for the short STUCK_AFTER reset right away
+                        # rather than waiting out the rest of WEDGED_AFTER.
+                        ka = getattr(node, "_keep_alive", None)
+                        live = ka is not None and not ka.done()
+                        threshold = (
+                            LAVALINK_WEDGED_AFTER if live else LAVALINK_STUCK_AFTER
+                        )
+                        if now - connecting_since > threshold:
+                            # One WARNING per OUTAGE, not per reset: while
+                            # Lavalink keeps refusing, every retry ends stuck
+                            # again, and a line per cycle would just be noise.
+                            if not outage:
+                                if live:
+                                    log.warning(
+                                        "Lavalink node %r has been CONNECTING "
+                                        "(sonolink still actively retrying) "
+                                        "for over %ds - past the aiohttp "
+                                        "session timeout a single attempt can "
+                                        "take; resetting it and retrying in "
+                                        "the background until it answers.",
+                                        node_id,
+                                        int(LAVALINK_WEDGED_AFTER),
+                                    )
+                                else:
+                                    log.warning(
+                                        "Lavalink node %r has been stuck "
+                                        "CONNECTING for over %ds (no loop "
+                                        "watching it - likely a refused "
+                                        "connection that escaped sonolink's "
+                                        "own retry handling); resetting it "
+                                        "and retrying in the background until "
+                                        "it answers.",
+                                        node_id,
+                                        int(LAVALINK_STUCK_AFTER),
+                                    )
+                                outage = True
+                            else:
+                                log.debug("Resetting stuck Lavalink node %r again.", node_id)
+                            try:
+                                await node.close()
+                            except RuntimeError:
+                                # Already DISCONNECTED by the time we got here
+                                # (e.g. it resolved on its own in between) -
+                                # fine, the next iteration retries normally.
+                                pass
+                            except Exception:
+                                log.exception(
+                                    "Failed to reset stuck Lavalink node %r",
+                                    node_id,
+                                )
+                            connecting_since = None
                     await asyncio.sleep(LAVALINK_BACKOFF_START)
                     continue
 
@@ -585,12 +669,26 @@ class Yasuho(commands.Bot):
                 # CONNECTING, so any earlier streak is over.
                 connecting_since = None
 
-                if node is not None and getattr(node, "_keep_alive", None) is not None:
-                    # Stale reference from an exhausted runtime reconnect - see
-                    # the docstring above. Clearing it is safe here precisely
-                    # because node.close() is NOT an option: status is already
-                    # DISCONNECTED, and close() raises RuntimeError on that.
-                    node._keep_alive = None
+                if node is not None:
+                    ka = getattr(node, "_keep_alive", None)
+                    if ka is not None:
+                        if ka.done():
+                            # Stale reference from an exhausted runtime
+                            # reconnect - see the docstring above. Clearing it
+                            # is safe here precisely because node.close() is
+                            # NOT an option: status is already DISCONNECTED,
+                            # and close() raises RuntimeError on that.
+                            node._keep_alive = None
+                        else:
+                            # The exhausted branch runs INSIDE this same task -
+                            # it may still be dispatching "node_close" / running
+                            # cleanup() after setting DISCONNECTED but before
+                            # actually finishing. Leave it alone and recheck;
+                            # start() would be a no-op anyway while
+                            # _keep_alive is not None, and clearing it here
+                            # would race that task's own cleanup.
+                            await asyncio.sleep(LAVALINK_BACKOFF_START)
+                            continue
 
                 try:
                     await asyncio.wait_for(
@@ -627,6 +725,9 @@ class Yasuho(commands.Bot):
                 raise
             except Exception:
                 log.exception("Lavalink supervisor iteration failed; continuing")
+                # Never let a bug in one iteration become a zero-await hot
+                # loop (e.g. get_node() itself raising every single pass).
+                await asyncio.sleep(LAVALINK_BACKOFF_START)
 
     async def close(self) -> None:
         try:
@@ -636,6 +737,20 @@ class Yasuho(commands.Bot):
         finally:
             if self._lavalink_task is not None:
                 self._lavalink_task.cancel()
+                # Wait for the supervisor to actually unwind before anything
+                # below touches the same sonolink Node it was polling - a bare
+                # cancel() only schedules that, it does not wait for it, so
+                # without this await the supervisor could still be mid-iteration
+                # (e.g. awaiting node.close()) when sl_client.close() runs right
+                # after it below.
+                try:
+                    await self._lavalink_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    log.exception(
+                        "Lavalink supervisor raised while shutting down"
+                    )
             try:
                 await self.sl_client.close()
             except Exception:

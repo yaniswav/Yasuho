@@ -118,6 +118,8 @@ class FakeNode:
             raise self.close_raises
         self.is_connected = False
         self.is_connecting = False
+        # Mirrors the real ConnectionManager.close() (_connection.py), which
+        # clears _keep_alive unconditionally.
         self._keep_alive = None
 
 
@@ -189,14 +191,20 @@ class _StopSupervisor(BaseException):
     """
 
 
-class _FakeTask:
-    """Records ``cancel()`` without needing a real asyncio.Task."""
+class _FakeKeepAliveTask:
+    """Stands in for the asyncio.Task sonolink stores as ``node._keep_alive``.
 
-    def __init__(self):
-        self.cancelled = False
+    The supervisor's live-watcher check only ever calls ``.done()`` on it, so
+    that is all this needs to provide - ``done=True`` is the escape case (a
+    reconnect burst that died, or an exhausted-retries cleanup still
+    finishing), ``done=False`` is a burst genuinely still running.
+    """
 
-    def cancel(self):
-        self.cancelled = True
+    def __init__(self, done):
+        self._done = done
+
+    def done(self):
+        return self._done
 
 
 class _FakeSession:
@@ -621,11 +629,17 @@ async def test_supervisor_clears_a_stale_keep_alive_before_retrying(monkeypatch)
     without this reset, a mid-session reconnect that outlasts its retries
     would leave the node DISCONNECTED FOREVER, silently (start() just returns
     having skipped the node, no exception, no WARNING of ours).
+
+    The stale task is DONE here (the exhausted-retries cleanup inside it has
+    actually finished) - this is the "safe to clear" half of the live-watcher
+    check in the DISCONNECTED branch; see
+    ``test_disconnected_with_a_live_keep_alive_is_left_alone_this_pass`` for
+    the other half.
     """
     bot = core.Yasuho.__new__(core.Yasuho)
     client = FakeSonolinkClient()
     node = client.create_node(id=music_state.MUSIC_NODE_ID, uri="x", password="y")
-    node._keep_alive = object()  # stale: a finished task's leftover reference
+    node._keep_alive = _FakeKeepAliveTask(done=True)  # stale: a finished task
 
     bot.sl_client = client
 
@@ -641,25 +655,167 @@ async def test_supervisor_clears_a_stale_keep_alive_before_retrying(monkeypatch)
     assert client.start_calls == 1, "clearing it must not skip retrying"
 
 
+async def test_disconnected_with_a_live_keep_alive_is_left_alone_this_pass(
+    monkeypatch,
+):
+    """The race the DISCONNECTED branch must not step on: the exhausted-retries
+    branch runs INSIDE the keep-alive task (sets DISCONNECTED, then still has
+    to dispatch "node_close" and run cleanup() before the task itself ends) -
+    so the supervisor can observe DISCONNECTED while that same task is still
+    live. Must neither clear ``_keep_alive`` nor call start() this pass.
+    """
+    bot = core.Yasuho.__new__(core.Yasuho)
+    client = FakeSonolinkClient()
+    node = client.create_node(id=music_state.MUSIC_NODE_ID, uri="x", password="y")
+    live_task = _FakeKeepAliveTask(done=False)
+    node._keep_alive = live_task
+
+    bot.sl_client = client
+
+    async def fake_sleep(seconds):
+        raise _StopSupervisor()
+
+    monkeypatch.setattr(core, "asyncio", _AsyncioProxy(asyncio, fake_sleep))
+
+    with pytest.raises(_StopSupervisor):
+        await bot._supervise_lavalink()
+
+    assert node._keep_alive is live_task, "a live task must not be cleared"
+    assert client.start_calls == 0, "start() must not race the task's cleanup"
+
+
+async def test_connecting_with_a_live_watcher_is_not_reset_at_stuck_after(
+    monkeypatch,
+):
+    """A genuine reconnect burst (``_keep_alive`` set to a NOT-done task) must
+    survive well past LAVALINK_STUCK_AFTER - that threshold now only applies
+    to a CONNECTING node WITHOUT a live watcher (the escape case).
+    """
+    monkeypatch.setattr(core, "LAVALINK_STUCK_AFTER", 0.0)
+
+    bot = core.Yasuho.__new__(core.Yasuho)
+    client = FakeSonolinkClient()
+    node = client.create_node(id=music_state.MUSIC_NODE_ID, uri="x", password="y")
+    node.is_connecting = True
+    node._keep_alive = _FakeKeepAliveTask(done=False)
+    bot.sl_client = client
+
+    calls = {"n": 0}
+
+    async def fake_sleep(seconds):
+        calls["n"] += 1
+        if calls["n"] >= 5:
+            raise _StopSupervisor()
+
+    monkeypatch.setattr(core, "asyncio", _AsyncioProxy(asyncio, fake_sleep))
+
+    with pytest.raises(_StopSupervisor):
+        await bot._supervise_lavalink()
+
+    assert node.close_calls == 0, "a live watcher must not be reset at 30s"
+    assert client.start_calls == 0
+
+
+async def test_connecting_with_a_live_watcher_is_reset_past_wedged_after(
+    monkeypatch, caplog
+):
+    """The hard ceiling: even a live watcher cannot CONNECT forever. Past
+    LAVALINK_WEDGED_AFTER it is force-closed the same way as the dead-watcher
+    escape, with its own WARNING message but the same once-per-outage count.
+    """
+    monkeypatch.setattr(core, "LAVALINK_STUCK_AFTER", 0.0)
+    monkeypatch.setattr(core, "LAVALINK_WEDGED_AFTER", 0.0)
+
+    bot = core.Yasuho.__new__(core.Yasuho)
+    client = FakeSonolinkClient()
+    node = client.create_node(id=music_state.MUSIC_NODE_ID, uri="x", password="y")
+    node.is_connecting = True
+    node._keep_alive = _FakeKeepAliveTask(done=False)
+    bot.sl_client = client
+
+    calls = {"n": 0}
+
+    async def fake_sleep(seconds):
+        calls["n"] += 1
+        if calls["n"] >= 3:
+            raise _StopSupervisor()
+
+    monkeypatch.setattr(core, "asyncio", _AsyncioProxy(asyncio, fake_sleep))
+
+    with caplog.at_level(logging.WARNING, logger=core.log.name):
+        with pytest.raises(_StopSupervisor):
+            await bot._supervise_lavalink()
+
+    assert node.close_calls == 1, "a wedged live watcher must still be reset"
+    assert client.start_calls == 1
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1, "exactly one WARNING per outage"
+
+
+async def test_connecting_with_a_done_watcher_is_reset_past_stuck_after(
+    monkeypatch,
+):
+    """A reconnect burst whose task already DIED (the second escape shape -
+    ``_keep_alive`` set but ``done()`` True) must be treated exactly like no
+    watcher at all: reset on the short LAVALINK_STUCK_AFTER timer, not the
+    much longer LAVALINK_WEDGED_AFTER one.
+    """
+    monkeypatch.setattr(core, "LAVALINK_STUCK_AFTER", 0.0)
+
+    bot = core.Yasuho.__new__(core.Yasuho)
+    client = FakeSonolinkClient()
+    node = client.create_node(id=music_state.MUSIC_NODE_ID, uri="x", password="y")
+    node.is_connecting = True
+    node._keep_alive = _FakeKeepAliveTask(done=True)
+    bot.sl_client = client
+
+    calls = {"n": 0}
+
+    async def fake_sleep(seconds):
+        calls["n"] += 1
+        if calls["n"] >= 3:
+            raise _StopSupervisor()
+
+    monkeypatch.setattr(core, "asyncio", _AsyncioProxy(asyncio, fake_sleep))
+
+    with pytest.raises(_StopSupervisor):
+        await bot._supervise_lavalink()
+
+    assert node.close_calls == 1, "a done watcher is no watcher at all"
+    assert client.start_calls == 1
+
+
 async def test_supervisor_survives_an_unexpected_exception_and_keeps_looping(
     monkeypatch,
 ):
-    """An iteration bug must log and continue, not kill the whole supervisor."""
+    """An iteration bug must log and continue, not kill the whole supervisor.
+
+    Also the except-branch sleep: the iteration that raises must be followed
+    by a sleep call (LAVALINK_BACKOFF_START) BEFORE the next get_node() - a
+    bug that fires every single pass (as this one does, forever) must never
+    turn into a zero-await hot loop.
+    """
     bot = core.Yasuho.__new__(core.Yasuho)
     client = FakeSonolinkClient()
     bot.sl_client = client
 
     calls = {"n": 0}
+    order = []
 
     def _boom(node_id):
         calls["n"] += 1
+        order.append("get_node")
         if calls["n"] == 1:
             raise RuntimeError("boom")
         raise _StopSupervisor()
 
     monkeypatch.setattr(client, "get_node", _boom)
 
+    sleeps = []
+
     async def fake_sleep(seconds):
+        sleeps.append(seconds)
+        order.append("sleep")
         return None
 
     monkeypatch.setattr(core, "asyncio", _AsyncioProxy(asyncio, fake_sleep))
@@ -668,6 +824,10 @@ async def test_supervisor_survives_an_unexpected_exception_and_keeps_looping(
         await bot._supervise_lavalink()
 
     assert calls["n"] == 2, "one broken iteration, then the loop ran again"
+    assert sleeps == [core.LAVALINK_BACKOFF_START], (
+        "the raising iteration must sleep before the next get_node"
+    )
+    assert order == ["get_node", "sleep", "get_node"]
 
 
 async def test_supervisor_cancellation_propagates(monkeypatch):
@@ -699,16 +859,42 @@ async def test_close_cancels_the_supervisor_and_closes_the_lavalink_client(
     monkeypatch.setattr(commands.Bot, "close", _fake_super_close)
 
     bot = core.Yasuho.__new__(core.Yasuho)
-    task = _FakeTask()
+
+    order = []
+
+    async def _fake_supervisor():
+        # A REAL asyncio task, not a fake that only flips a flag: close()
+        # must actually AWAIT it unwinding (not just call cancel() and move
+        # on), so this records when its own CancelledError handling ran.
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            order.append("supervisor_unwound")
+            raise
+
+    task = asyncio.ensure_future(_fake_supervisor())
+    await asyncio.sleep(0)  # let it start awaiting the Event before close()
     bot._lavalink_task = task
+
     client = FakeSonolinkClient()
+    real_close = client.close
+
+    async def _tracked_close():
+        order.append("sl_client_closed")
+        await real_close()
+
+    client.close = _tracked_close
     bot.sl_client = client
     session = _FakeSession()
     bot.http_session = session
 
     await bot.close()
 
-    assert task.cancelled is True
+    assert task.cancelled()
+    assert order == ["supervisor_unwound", "sl_client_closed"], (
+        "close() must await the cancelled supervisor fully unwinding BEFORE "
+        "sl_client.close() touches the same Node"
+    )
     assert client.close_calls == 1
     assert session.close_calls == 1
 

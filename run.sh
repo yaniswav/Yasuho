@@ -15,13 +15,44 @@
 # the venv, so a venv already in sync costs zero pip calls, even on a tight
 # crash-restart loop. Toggle it with SYNC_DEPS, or per-run: SYNC_DEPS=0 ./run.sh
 #
+# Self-restart: self_update can fast-forward THIS FILE onto disk, but bash has
+# already parsed the whole while-loop below into memory by the time it runs -
+# a running process never picks up a newer run.sh on its own. So right after
+# self_update, every loop iteration also compares a fingerprint of run.sh
+# itself against the one taken at launch, and re-execs onto the (possibly new)
+# file on disk when they differ. NOTE: a run.sh from BEFORE this check shipped
+# has none of this logic, so the very first update past this change still
+# needs one manual restart to pick it up - every one after that is automatic.
+#
 # Secrets live in files this script touches: keep everything owner-only.
 umask 077
+
+# Resolve an absolute path to this script BEFORE the cd below can move the
+# working directory out from under a relative $0. $0 only keeps resolving
+# correctly after that cd when its dirname is "." - a bare "run.sh", or
+# "./run.sh" (the invocation this project's docs use) - because then the cd
+# is a no-op. Any relative $0 with a REAL directory component (e.g.
+# "bots/Yasuho/run.sh", or "../run.sh") breaks the moment the cd changes pwd:
+# the same relative string would then be resolved against the NEW pwd and
+# point somewhere else entirely (or nowhere). An absolute $0 is unaffected
+# either way. Anchoring it here, while pwd is still the one $0 was written
+# against, makes it correct in every case.
+case "$0" in
+    /*) SELF="$0" ;;
+    *) SELF="$(pwd)/$0" ;;
+esac
 
 cd "$(dirname "$0")"
 
 AUTO_UPDATE="${AUTO_UPDATE:-1}"
 SYNC_DEPS="${SYNC_DEPS:-1}"
+
+# Fingerprint of run.sh's own content at launch - see the self-restart note
+# above. An empty fingerprint (sha256sum missing, or $SELF unreadable) must
+# never be treated as "changed": the comparison below only fires when BOTH
+# sides are non-empty, so a tool that can't fingerprint at all simply disables
+# the self-restart rather than re-execing on every single loop iteration.
+SELF_FINGERPRINT_AT_LAUNCH="$(sha256sum "$SELF" 2>/dev/null | awk '{print $1}')"
 
 if [ -x ./.venv/bin/python ]; then
     PY=./.venv/bin/python
@@ -128,10 +159,18 @@ sync_deps() {
 
     local stamp fingerprint current
     stamp=".venv/.yasuho-deps-stamp"
-    fingerprint="$(sha256sum requirements.lock requirements.txt 2>/dev/null | sha256sum | awk '{print $1}')"
-    current="$(cat "$stamp" 2>/dev/null)"
+    fingerprint="$(sha256sum requirements.lock requirements.txt 2>/dev/null | sha256sum 2>/dev/null | awk '{print $1}')"
 
-    if [ -n "$fingerprint" ] && [ "$fingerprint" = "$current" ]; then
+    if [ -z "$fingerprint" ]; then
+        # sha256sum missing, or failing on both files (e.g. neither exists) -
+        # an empty fingerprint must never be treated as "drifted": that would
+        # resync (full pip installs) on EVERY single start instead of once.
+        echo "[run] Could not fingerprint requirements.lock/requirements.txt - skipping dependency sync this start."
+        return 0
+    fi
+
+    current="$(cat "$stamp" 2>/dev/null)"
+    if [ "$fingerprint" = "$current" ]; then
         return 0
     fi
 
@@ -145,8 +184,14 @@ sync_deps() {
     local lock_ok=1
     "$PY" -m pip install -q -r requirements.lock || lock_ok=0
     if "$PY" -m pip install -q -r requirements.txt && [ "$lock_ok" = "1" ]; then
-        echo "$fingerprint" > "$stamp"
-        echo "[run] Dependencies synced."
+        if echo "$fingerprint" > "$stamp" 2>/dev/null; then
+            echo "[run] Dependencies synced."
+        else
+            # The install itself worked - only the stamp write failed (e.g. a
+            # read-only venv) - so say so distinctly, and let the next start
+            # retry (no stamp was written, so it will look like drift again).
+            echo "[run] Dependencies installed, but the stamp could not be written - will re-sync next start."
+        fi
     elif [ "$lock_ok" = "0" ]; then
         # No stamp: the next start retries. The lock is resolved for CPython
         # 3.13 on Linux, so on another interpreter it can never apply and only
@@ -166,6 +211,22 @@ while true; do
     restore_config
     backup_config
     self_update
+
+    # If self_update just fast-forwarded run.sh itself, THIS process is still
+    # running the OLD parse of the while-loop - bash parsed it once, at
+    # startup, and never re-reads a script file mid-execution. Re-exec onto
+    # the current content so the new loop body (and everything in it, e.g. a
+    # future sync_deps change) actually takes effect; only once, since the
+    # NEW process repeats this same check against ITS OWN launch fingerprint
+    # next time around, and only when both sides fingerprinted successfully
+    # (an empty value on either side means "cannot tell" - never "changed").
+    self_fingerprint_now="$(sha256sum "$SELF" 2>/dev/null | awk '{print $1}')"
+    if [ -n "$SELF_FINGERPRINT_AT_LAUNCH" ] && [ -n "$self_fingerprint_now" ] \
+        && [ "$self_fingerprint_now" != "$SELF_FINGERPRINT_AT_LAUNCH" ]; then
+        echo "[run] run.sh itself was updated - restarting the script..."
+        exec bash "$SELF" "$@"
+    fi
+
     sync_deps
     echo "Starting the bot..."
     "$PY" core.py
