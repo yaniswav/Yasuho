@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 08:36+0000\n"
+"POT-Creation-Date: 2026-10-01 10:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1072,7 +1072,7 @@ msgstr "追跡する正確なタイトルを選んでください:"
 #: cogs/anilist/feed_views.py:397 cogs/anilist/feed_views.py:641
 #: cogs/anilist/feed_views.py:919 cogs/anilist/feed_views.py:1271
 #: cogs/anilist/feed_views.py:1361 cogs/anilist/hub.py:333
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:229
+#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:242
 msgid "Only you can use these controls."
 msgstr "これらの操作はあなただけが使用できます。"
 
@@ -1095,7 +1095,7 @@ msgstr "追跡を解除するタイトルを選択..."
 
 #: cogs/anilist/feed_views.py:531 cogs/anilist/feed_views.py:788
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:583
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:601
 #: cogs/music/views.py:1596 cogs/music/views.py:2026 cogs/music/views.py:2388
 msgid "Next"
 msgstr "次へ"
@@ -1203,7 +1203,7 @@ msgstr "削除"
 #: cogs/anilist/feed_views.py:990 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:327
-#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:278
+#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -1220,8 +1220,8 @@ msgstr "{channel} のAniListフィードとフォロー中のユーザーがす�
 msgid "Feed deleted."
 msgstr "フィードを削除しました。"
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1120
-#: cogs/moderation/moderation.py:1193 cogs/system/arg_completion.py:494
+#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1132
+#: cogs/moderation/moderation.py:1205 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr "キャンセルしました。"
 
@@ -1263,7 +1263,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
 #: cogs/config/twitch.py:424 cogs/config/verification.py:101
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:262
+#: cogs/moderation/modlog.py:275
 msgid "Enabled"
 msgstr "有効"
 
@@ -1271,7 +1271,7 @@ msgstr "有効"
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
 #: cogs/config/twitch.py:426 cogs/config/verification.py:103
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:264
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
 msgstr "無効"
 
@@ -1287,8 +1287,8 @@ msgstr "このサーバーへのAniListアクティビティの反映方法を�
 #: cogs/anilist/feed_views.py:1294 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:603 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:764
-#: cogs/moderation/modlog.py:562 cogs/moderation/modlog.py:663
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/moderation/modlog.py:575 cogs/moderation/modlog.py:690
 msgid "Channel"
 msgstr "チャンネル"
 
@@ -1781,176 +1781,176 @@ msgstr "不明な言語です。利用可能: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "サーバーのデフォルト言語を **{lang}** に設定しました。"
 
-#: cogs/community/reminders.py:179
+#: cogs/community/reminders.py:197
 #, python-brace-format
 msgid "every week"
 msgid_plural "every {count} weeks"
 msgstr[0] "{count}週間ごと"
 
-#: cogs/community/reminders.py:181
+#: cogs/community/reminders.py:199
 #, python-brace-format
 msgid "every day"
 msgid_plural "every {count} days"
 msgstr[0] "{count}日ごと"
 
-#: cogs/community/reminders.py:183
+#: cogs/community/reminders.py:201
 #, python-brace-format
 msgid "every hour"
 msgid_plural "every {count} hours"
 msgstr[0] "{count}時間ごと"
 
-#: cogs/community/reminders.py:186
+#: cogs/community/reminders.py:204
 #, python-brace-format
 msgid "every minute"
 msgid_plural "every {count} minutes"
 msgstr[0] "{count}分ごと"
 
-#: cogs/community/reminders.py:189
+#: cogs/community/reminders.py:207
 #, python-brace-format
 msgid "every second"
 msgid_plural "every {count} seconds"
 msgstr[0] "{count}秒ごと"
 
-#: cogs/community/reminders.py:201
+#: cogs/community/reminders.py:219
 msgid "I can only repeat a reminder once an hour at most. Try `hourly` or something longer like `2d`."
 msgstr "リマインダーの繰り返しは最短でも1時間おきまでです。`hourly` か、`2d` のようにもっと長い間隔を試してください。"
 
-#: cogs/community/reminders.py:205
+#: cogs/community/reminders.py:223
 msgid "I can only repeat a reminder for up to a year - try `365d` or less."
 msgstr "リマインダーの繰り返しは最長でも1年までです。`365d` 以下で試してください。"
 
-#: cogs/community/reminders.py:207
+#: cogs/community/reminders.py:225
 msgid "I couldn't understand that repeat interval. Try `hourly`, `daily`, `weekly`, or a duration like `2d` or `12h`."
 msgstr "その繰り返し間隔を理解できませんでした。`hourly`、`daily`、`weekly`、または `2d` や `12h` のような期間を試してください。"
 
-#: cogs/community/reminders.py:215
+#: cogs/community/reminders.py:233
 #, python-brace-format
 msgid "You already have {count} repeating reminders - cancel one with `/reminders` before adding another."
 msgstr "すでに {count} 件の繰り返しリマインダーがあります - 新しく追加する前に `/reminders` で1つキャンセルしてください。"
 
-#: cogs/community/reminders.py:229
+#: cogs/community/reminders.py:247
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "了解しました。{when} にリマインドします: {message}"
 
-#: cogs/community/reminders.py:232
+#: cogs/community/reminders.py:250
 #, python-brace-format
 msgid "Okay, reminding you {when} and then {interval}: {message}"
 msgstr "了解しました、{when} と、その後は {interval} ごとにお知らせします: {message}"
 
-#: cogs/community/reminders.py:258 cogs/community/reminders.py:398
+#: cogs/community/reminders.py:276 cogs/community/reminders.py:416
 msgid "Set a reminder"
 msgstr "リマインダーを設定"
 
-#: cogs/community/reminders.py:268 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:286 cogs/config/announcements.py:154
 msgid "When"
 msgstr "いつ"
 
-#: cogs/community/reminders.py:269
+#: cogs/community/reminders.py:287
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "例: 10m、明日18時、または <t:...> タグ"
 
-#: cogs/community/reminders.py:277 cogs/config/reactionroles.py:226
+#: cogs/community/reminders.py:295 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:458 cogs/config/welcome.py:766
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr "メッセージ"
 
-#: cogs/community/reminders.py:278
+#: cogs/community/reminders.py:296
 msgid "What should I remind you about?"
 msgstr "何をリマインドしましょうか?"
 
-#: cogs/community/reminders.py:289
+#: cogs/community/reminders.py:307
 msgid "Repeat (optional)"
 msgstr "繰り返し (任意)"
 
-#: cogs/community/reminders.py:290
+#: cogs/community/reminders.py:308
 msgid "hourly, daily, weekly, or e.g. 2d - blank for once"
 msgstr "hourly、daily、weekly、または 2d のような指定 - 1回だけなら空欄"
 
-#: cogs/community/reminders.py:327
+#: cogs/community/reminders.py:345
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "その時間を理解できませんでした。`10m`、`tomorrow at 6pm`、`in 3 days` のように入力してみてください。"
 
-#: cogs/community/reminders.py:337 cogs/community/reminders.py:1355
+#: cogs/community/reminders.py:355 cogs/community/reminders.py:1434
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "その時間は過去です。未来の時刻を指定してください。"
 
-#: cogs/community/reminders.py:347 cogs/community/reminders.py:1375
+#: cogs/community/reminders.py:365 cogs/community/reminders.py:1454
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
-#: cogs/community/reminders.py:449 cogs/community/reminders.py:509
+#: cogs/community/reminders.py:467 cogs/community/reminders.py:527
 #: cogs/utility/extras.py:37
 msgid "(no text)"
 msgstr "(テキストなし)"
 
-#: cogs/community/reminders.py:455
+#: cogs/community/reminders.py:473
 #, python-brace-format
 msgid "in {when}"
 msgstr "{when}後"
 
-#: cogs/community/reminders.py:461
+#: cogs/community/reminders.py:479
 msgid "Cancel a reminder..."
 msgstr "リマインダーをキャンセル..."
 
-#: cogs/community/reminders.py:463
+#: cogs/community/reminders.py:481
 msgid "(nothing to cancel)"
 msgstr "(キャンセルするものはありません)"
 
-#: cogs/community/reminders.py:510
+#: cogs/community/reminders.py:528
 #, python-brace-format
 msgid "{when} - {text}"
 msgstr "{when} - {text}"
 
-#: cogs/community/reminders.py:516
+#: cogs/community/reminders.py:534
 #, python-brace-format
 msgid "in <#{channel}>"
 msgstr "<#{channel}> にて"
 
-#: cogs/community/reminders.py:538
+#: cogs/community/reminders.py:556
 msgid "Your reminders"
 msgstr "あなたのリマインダー"
 
-#: cogs/community/reminders.py:545
+#: cogs/community/reminders.py:563
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "リマインダーはありません。`/remind` で追加できます。"
 
-#: cogs/community/reminders.py:560
+#: cogs/community/reminders.py:578
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count}件保留中"
 
-#: cogs/community/reminders.py:564
+#: cogs/community/reminders.py:582
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# ページ {page}/{pages} - {count}件保留中"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:576
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:594
 #: cogs/music/views.py:1589 cogs/music/views.py:2019 cogs/music/views.py:2381
 msgid "Prev"
 msgstr "前へ"
 
-#: cogs/community/reminders.py:1126
+#: cogs/community/reminders.py:1205
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "オフラインだったため、{count}回の実行が飛ばされました。"
 
-#: cogs/community/reminders.py:1139
+#: cogs/community/reminders.py:1218
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "{interval} ごとに繰り返し - 次回 {when}"
 
-#: cogs/community/reminders.py:1235
+#: cogs/community/reminders.py:1314
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>、{when}: {message}"
 
-#: cogs/community/reminders.py:1341
+#: cogs/community/reminders.py:1420
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
@@ -2262,34 +2262,43 @@ msgid "{member} now has **{xp} XP** (was {old_xp})."
 msgstr "{member} のXPは **{xp} XP** になりました (以前: {old_xp})。"
 
 #: cogs/community/leveling/level_admin.py:272
+msgid "Clamped"
+msgstr "上限適用"
+
+#: cogs/community/leveling/level_admin.py:274
+#, python-brace-format
+msgid "The total was capped at the {max} XP ceiling."
+msgstr "合計は上限の {max} XP に制限されました。"
+
+#: cogs/community/leveling/level_admin.py:280
 msgid "Level up"
 msgstr "レベルアップ"
 
-#: cogs/community/leveling/level_admin.py:273
-#: cogs/community/leveling/level_admin.py:280
+#: cogs/community/leveling/level_admin.py:281
+#: cogs/community/leveling/level_admin.py:288
 #, python-brace-format
 msgid "Level {old} -> **{new}**"
 msgstr "レベル {old} -> **{new}**"
 
-#: cogs/community/leveling/level_admin.py:279
+#: cogs/community/leveling/level_admin.py:287
 msgid "Level down"
 msgstr "レベルダウン"
 
-#: cogs/community/leveling/level_admin.py:286
+#: cogs/community/leveling/level_admin.py:294
 #: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:282
 msgid "Level"
 msgstr "レベル"
 
-#: cogs/community/leveling/level_admin.py:287
+#: cogs/community/leveling/level_admin.py:295
 #, python-brace-format
 msgid "**{level}** (unchanged)"
 msgstr "**{level}** (変更なし)"
 
-#: cogs/community/leveling/level_admin.py:377
+#: cogs/community/leveling/level_admin.py:390
 msgid "Admin XP tools"
 msgstr "XP管理ツール"
 
-#: cogs/community/leveling/level_admin.py:379
+#: cogs/community/leveling/level_admin.py:392
 msgid ""
 "- `/levelconfig xp give <member> <amount>` - add XP\n"
 "- `/levelconfig xp take <member> <amount>` - remove XP\n"
@@ -2303,31 +2312,31 @@ msgstr ""
 "- `/levelconfig xp reset <メンバー>` - 1人をリセット (確認あり)\n"
 "- `/levelconfig xp resetall` - サーバー全体をリセット (二重確認)"
 
-#: cogs/community/leveling/level_admin.py:394
 #: cogs/community/leveling/level_admin.py:407
+#: cogs/community/leveling/level_admin.py:420
 #, python-brace-format
 msgid "The amount must be between {min} and {max}."
 msgstr "量は {min} から {max} の間にしてください。"
 
-#: cogs/community/leveling/level_admin.py:420
+#: cogs/community/leveling/level_admin.py:433
 #, python-brace-format
 msgid "The XP total must be between {min} and {max}."
 msgstr "XPの合計は {min} から {max} の間にしてください。"
 
-#: cogs/community/leveling/level_admin.py:430
+#: cogs/community/leveling/level_admin.py:443
 msgid "Reset this member's XP?"
 msgstr "このメンバーのXPをリセットしますか？"
 
-#: cogs/community/leveling/level_admin.py:432
+#: cogs/community/leveling/level_admin.py:445
 #, python-brace-format
 msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
 msgstr "{member} のXPを **0** に戻し、ランキングから外します。元に戻せません。"
 
-#: cogs/community/leveling/level_admin.py:447
+#: cogs/community/leveling/level_admin.py:460
 msgid "Reset ALL XP in this server?"
 msgstr "このサーバーの全XPをリセットしますか？"
 
-#: cogs/community/leveling/level_admin.py:449
+#: cogs/community/leveling/level_admin.py:462
 #, python-brace-format
 msgid ""
 "This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
@@ -3989,7 +3998,7 @@ msgstr "メニューで埋め込みを作成し、チャンネル (と、任意�
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
 #: cogs/config/twitch.py:420 cogs/config/verification.py:108
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
-#: cogs/moderation/modlog.py:260
+#: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
 msgstr "*未設定。*"
 
@@ -4713,11 +4722,11 @@ msgid "Header"
 msgstr "ヘッダー"
 
 #: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1464
+#: cogs/system/dashboard_actions.py:1478
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1469
+#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1483
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr "ロール"
@@ -5607,11 +5616,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "`/verify setup` で認証を有効にできます。"
 
-#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:550
+#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:561
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:553
+#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:564
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
@@ -5726,24 +5735,24 @@ msgstr "ウェルカム | {guild}"
 msgid "Use `/welcome` to open the full builder."
 msgstr "`/welcome` でフルビルダーを開けます。"
 
-#: cogs/config/welcome.py:678
+#: cogs/config/welcome.py:694
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "ようこそ {mention}!"
 
-#: cogs/config/welcome.py:763 cogs/config/welcome.py:783
+#: cogs/config/welcome.py:779 cogs/config/welcome.py:799
 msgid "Welcome message"
 msgstr "ウェルカムメッセージ"
 
-#: cogs/config/welcome.py:770
+#: cogs/config/welcome.py:786
 msgid "Use /welcome to open the full builder."
 msgstr "/welcome を使って完全なビルダーを開いてください。"
 
-#: cogs/config/welcome.py:786
+#: cogs/config/welcome.py:802
 msgid "Welcome messages have been turned off."
 msgstr "ウェルカムメッセージをオフにしました。"
 
-#: cogs/config/welcome.py:876
+#: cogs/config/welcome.py:892
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
@@ -6175,35 +6184,35 @@ msgstr "スレッドの管理"
 msgid "Read Message History"
 msgstr "メッセージ履歴を読む"
 
-#: cogs/fun/fun.py:100 cogs/fun/games.py:75
+#: cogs/fun/fun.py:121 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
 msgstr "その手で問題が発生しました。"
 
-#: cogs/fun/fun.py:114
+#: cogs/fun/fun.py:135
 msgid "Rock"
 msgstr "グー"
 
-#: cogs/fun/fun.py:115
+#: cogs/fun/fun.py:136
 msgid "Paper"
 msgstr "パー"
 
-#: cogs/fun/fun.py:116
+#: cogs/fun/fun.py:137
 msgid "Scissors"
 msgstr "チョキ"
 
-#: cogs/fun/fun.py:127
+#: cogs/fun/fun.py:148
 msgid "Draw"
 msgstr "引き分け"
 
-#: cogs/fun/fun.py:130
+#: cogs/fun/fun.py:151
 msgid "You won"
 msgstr "あなたの勝ち"
 
-#: cogs/fun/fun.py:130
+#: cogs/fun/fun.py:151
 msgid "You lost"
 msgstr "あなたの負け"
 
-#: cogs/fun/fun.py:134
+#: cogs/fun/fun.py:155
 #, python-brace-format
 msgid ""
 "I choose {bot_choice}\n"
@@ -6216,39 +6225,39 @@ msgstr ""
 "\n"
 "結果 : `{result}`"
 
-#: cogs/fun/fun.py:140 cogs/fun/fun.py:155 cogs/fun/fun.py:576
+#: cogs/fun/fun.py:161 cogs/fun/fun.py:176 cogs/fun/fun.py:597
 msgid "RPS Game"
 msgstr "じゃんけんゲーム"
 
-#: cogs/fun/fun.py:143
+#: cogs/fun/fun.py:164
 msgid "Thanks for playing!"
 msgstr "プレイしてくれてありがとう!"
 
-#: cogs/fun/fun.py:156
+#: cogs/fun/fun.py:177
 msgid "Game timed out! Please try again."
 msgstr "ゲームがタイムアウトしました! もう一度お試しください。"
 
-#: cogs/fun/fun.py:183
+#: cogs/fun/fun.py:204
 msgid "You can't hug the air..."
 msgstr "空気をハグすることはできません..."
 
-#: cogs/fun/fun.py:191
+#: cogs/fun/fun.py:212
 msgid "One hug at a time please, give me a few seconds."
 msgstr "ハグは一度にひとつだけです。数秒待ってください。"
 
-#: cogs/fun/fun.py:238
+#: cogs/fun/fun.py:259
 msgid "Sorry, I couldn't make the hug image."
 msgstr "申し訳ありませんが、ハグ画像を作成できませんでした。"
 
-#: cogs/fun/fun.py:258 cogs/fun/fun.py:275 cogs/fun/fun.py:293
+#: cogs/fun/fun.py:279 cogs/fun/fun.py:296 cogs/fun/fun.py:314
 msgid ":warning: **ERROR !**"
 msgstr ":warning: **エラー!**"
 
-#: cogs/fun/fun.py:330
+#: cogs/fun/fun.py:351
 msgid ":warning: Warning!"
 msgstr ":warning: 警告!"
 
-#: cogs/fun/fun.py:349
+#: cogs/fun/fun.py:370
 #, python-brace-format
 msgid ""
 "Don't mention everyone {author}\n"
@@ -6257,7 +6266,7 @@ msgstr ""
 "全員にメンションしないでください {author}\n"
 " メッセージ: {message}"
 
-#: cogs/fun/fun.py:358
+#: cogs/fun/fun.py:379
 #, python-brace-format
 msgid ""
 "Please, don't send links {author}\n"
@@ -6266,94 +6275,94 @@ msgstr ""
 "リンクを送らないでください {author}\n"
 " メッセージ: {message}"
 
-#: cogs/fun/fun.py:365
+#: cogs/fun/fun.py:386
 msgid "Yes, we know."
 msgstr "はい、知っています。"
 
-#: cogs/fun/fun.py:387
+#: cogs/fun/fun.py:408
 msgid "That doesn't look like an emoji I can enlarge."
 msgstr "それは拡大できる絵文字には見えません。"
 
-#: cogs/fun/fun.py:403
+#: cogs/fun/fun.py:424
 msgid "**Download link**"
 msgstr "**ダウンロードリンク**"
 
-#: cogs/fun/fun.py:404
+#: cogs/fun/fun.py:425
 #, python-brace-format
 msgid "**[➡️ URL]({url})**"
 msgstr "**[➡️ URL]({url})**"
 
-#: cogs/fun/fun.py:408 cogs/fun/fun.py:466
+#: cogs/fun/fun.py:429 cogs/fun/fun.py:487
 #, python-brace-format
 msgid "Requested by: {user}"
 msgstr "リクエスト者: {user}"
 
-#: cogs/fun/fun.py:427
+#: cogs/fun/fun.py:448
 msgid "*Message too long.*"
 msgstr "*メッセージが長すぎます。*"
 
-#: cogs/fun/fun.py:436
+#: cogs/fun/fun.py:457
 msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
 msgstr "**アスキーアートに変換するテキストを入力してください。例: ``<prefix> ascii stuff``**"
 
-#: cogs/fun/fun.py:447
+#: cogs/fun/fun.py:468
 msgid "Ask me a question..."
 msgstr "質問をしてください..."
 
-#: cogs/fun/fun.py:464
+#: cogs/fun/fun.py:485
 msgid "Reversed:"
 msgstr "逆さま:"
 
-#: cogs/fun/fun.py:484
+#: cogs/fun/fun.py:505
 #, python-brace-format
 msgid "I'd rate {thing} a **{num}.{deci}/ 100**"
 msgstr "{thing} を **{num}.{deci}/ 100** と評価します"
 
-#: cogs/fun/fun.py:499
+#: cogs/fun/fun.py:520
 #, python-brace-format
 msgid "**{user}** is **1000%** hot :heart_eyes: :lips:"
 msgstr "**{user}** は **1000%** ホットです :heart_eyes: :lips:"
 
-#: cogs/fun/fun.py:508
+#: cogs/fun/fun.py:529
 #, python-brace-format
 msgid "{user} is hot like a pineapple :pineapple:"
 msgstr "{user} はパイナップルのようにホットです :pineapple:"
 
-#: cogs/fun/fun.py:524
+#: cogs/fun/fun.py:545
 #, python-brace-format
 msgid "**{user}** is **{hot:.2f}%** hot {emoji}"
 msgstr "**{user}** は **{hot:.2f}%** ホットです {emoji}"
 
-#: cogs/fun/fun.py:541
+#: cogs/fun/fun.py:562
 #, python-brace-format
 msgid "{member} is **0%** gay 👑"
 msgstr "{member} は **0%** ゲイです 👑"
 
-#: cogs/fun/fun.py:545
+#: cogs/fun/fun.py:566
 #, python-brace-format
 msgid "{member} is **{y}.{rand}%** gay {emj}"
 msgstr "{member} は **{y}.{rand}%** ゲイです {emj}"
 
-#: cogs/fun/fun.py:562
+#: cogs/fun/fun.py:583
 #, python-brace-format
 msgid "{slot} All matching, you won! 🎉"
 msgstr "{slot} 全部一致、勝ちです! 🎉"
 
-#: cogs/fun/fun.py:564
+#: cogs/fun/fun.py:585
 #, python-brace-format
 msgid "{slot} 2 in a row, you won! 🎉"
 msgstr "{slot} 2つ連続、勝ちです! 🎉"
 
-#: cogs/fun/fun.py:566
+#: cogs/fun/fun.py:587
 #, python-brace-format
 msgid "{slot} No match, you lost 😢"
 msgstr "{slot} 一致なし、負けです 😢"
 
-#: cogs/fun/fun.py:577
+#: cogs/fun/fun.py:598
 msgid "Pick your move below: Rock, Paper or Scissors!"
 msgstr "下から手を選んでください: グー、パー、チョキ!"
 
-#: cogs/fun/fun.py:579
+#: cogs/fun/fun.py:600
 msgid "I'm waiting for you!"
 msgstr "あなたを待っています!"
 
@@ -6652,13 +6661,13 @@ msgstr "新しい理由"
 msgid "The reason can't be empty."
 msgstr "理由を空にすることはできません。"
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1285
-#: cogs/moderation/moderation.py:1358 cogs/moderation/moderation.py:1380
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1297
+#: cogs/moderation/moderation.py:1370 cogs/moderation/moderation.py:1392
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "このサーバーでケース #{number} が見つかりませんでした。"
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1386
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1398
 msgid "Updated by"
 msgstr "更新者"
 
@@ -6829,7 +6838,7 @@ msgstr "無効な数です。最大は500です。"
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} **{deleted}/{num}** 件のメッセージを削除しました。"
 
-#: cogs/moderation/moderation.py:917
+#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1069
 msgid "This server has no mute role yet - I create one the first time you use `mute`."
 msgstr "このサーバーにはまだミュートロールがありません。`mute` を初めて使ったときに作成します。"
 
@@ -6875,136 +6884,136 @@ msgstr "ミュートに失敗しました"
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: {user} をミュートできませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1086
+#: cogs/moderation/moderation.py:1098
 msgid "Unmute failed"
 msgstr "ミュート解除に失敗しました"
 
-#: cogs/moderation/moderation.py:1089
+#: cogs/moderation/moderation.py:1101
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: {user} のミュートを解除できませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1111
+#: cogs/moderation/moderation.py:1123
 msgid "Confirm mass role add"
 msgstr "一括ロール付与の確認"
 
-#: cogs/moderation/moderation.py:1113
+#: cogs/moderation/moderation.py:1125
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーに **{role}** ロールを付与しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1142
+#: cogs/moderation/moderation.py:1154
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーに付与しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1163
+#: cogs/moderation/moderation.py:1175
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** に付与しました"
 
-#: cogs/moderation/moderation.py:1184
+#: cogs/moderation/moderation.py:1196
 msgid "Confirm mass role remove"
 msgstr "一括ロール削除の確認"
 
-#: cogs/moderation/moderation.py:1186
+#: cogs/moderation/moderation.py:1198
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーから **{role}** ロールを削除しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1215
+#: cogs/moderation/moderation.py:1227
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーから削除しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1228
+#: cogs/moderation/moderation.py:1240
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** から削除しました"
 
-#: cogs/moderation/moderation.py:1250 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1262 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "自分の最上位ロール以上のロールは管理できません。"
 
-#: cogs/moderation/moderation.py:1257
+#: cogs/moderation/moderation.py:1269
 msgid "You can't move a role to or above my highest role."
 msgstr "私の最上位ロール以上の位置にロールを移動することはできません。"
 
-#: cogs/moderation/moderation.py:1263
+#: cogs/moderation/moderation.py:1275
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1265 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1277 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
-#: cogs/moderation/moderation.py:1267
+#: cogs/moderation/moderation.py:1279
 msgid "Failed to move role"
 msgstr "ロールの移動に失敗しました"
 
-#: cogs/moderation/moderation.py:1269
+#: cogs/moderation/moderation.py:1281
 msgid "Invalid argument"
 msgstr "無効な引数"
 
-#: cogs/moderation/moderation.py:1304
+#: cogs/moderation/moderation.py:1316
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "ケース履歴 - {guild}"
 
-#: cogs/moderation/moderation.py:1314
+#: cogs/moderation/moderation.py:1326
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "ケース履歴 - {member}"
 
-#: cogs/moderation/moderation.py:1317
+#: cogs/moderation/moderation.py:1329
 msgid "No cases on record."
 msgstr "記録されているケースはありません。"
 
-#: cogs/moderation/moderation.py:1324 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1336 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "理由なし"
 
-#: cogs/moderation/modlog.py:71 cogs/moderation/modlog.py:573
-#: cogs/moderation/modlog.py:675
+#: cogs/moderation/modlog.py:84 cogs/moderation/modlog.py:586
+#: cogs/moderation/modlog.py:702
 #, python-brace-format
 msgid "ID: {id}"
 msgstr "ID: {id}"
 
-#: cogs/moderation/modlog.py:85
+#: cogs/moderation/modlog.py:98
 msgid "Select the log channel..."
 msgstr "ログチャンネルを選択..."
 
-#: cogs/moderation/modlog.py:116
+#: cogs/moderation/modlog.py:129
 msgid "Choose which events to log..."
 msgstr "ログに記録するイベントを選択..."
 
-#: cogs/moderation/modlog.py:196
+#: cogs/moderation/modlog.py:209
 msgid "*Not set - logging is off.*"
 msgstr "*未設定 - ログは無効です。*"
 
-#: cogs/moderation/modlog.py:205
+#: cogs/moderation/modlog.py:218
 msgid "Mod-log settings"
 msgstr "モッドログ設定"
 
-#: cogs/moderation/modlog.py:207
+#: cogs/moderation/modlog.py:220
 msgid "Choose where server events are logged and which events to record. Changes apply instantly."
 msgstr "サーバーイベントをどこに記録するか、どのイベントを記録するかを選んでください。変更は即座に適用されます。"
 
-#: cogs/moderation/modlog.py:215
+#: cogs/moderation/modlog.py:228
 msgid "Log channel"
 msgstr "ログチャンネル"
 
-#: cogs/moderation/modlog.py:220 cogs/moderation/modlog.py:288
+#: cogs/moderation/modlog.py:233 cogs/moderation/modlog.py:301
 msgid "Events"
 msgstr "イベント"
 
-#: cogs/moderation/modlog.py:274
+#: cogs/moderation/modlog.py:287
 #, python-brace-format
 msgid "Mod-log | {guild}"
 msgstr "モデレーションログ | {guild}"
 
-#: cogs/moderation/modlog.py:280
+#: cogs/moderation/modlog.py:293
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7013,67 +7022,67 @@ msgstr ""
 "**状態:** {status}\n"
 "**ログチャンネル:** {channel}"
 
-#: cogs/moderation/modlog.py:295
+#: cogs/moderation/modlog.py:308
 msgid "Use `/modlog set` to choose a log channel."
 msgstr "`/modlog set` でログチャンネルを選択できます。"
 
-#: cogs/moderation/modlog.py:398 cogs/moderation/modlog.py:414
+#: cogs/moderation/modlog.py:411 cogs/moderation/modlog.py:427
 msgid "Mod log"
 msgstr "モッドログ"
 
-#: cogs/moderation/modlog.py:399
+#: cogs/moderation/modlog.py:412
 #, python-brace-format
 msgid "Mod-log channel set to {channel}."
 msgstr "モッドログチャンネルを {channel} に設定しました。"
 
-#: cogs/moderation/modlog.py:415
+#: cogs/moderation/modlog.py:428
 msgid "Mod-log has been disabled for this guild."
 msgstr "このサーバーのモッドログを無効にしました。"
 
-#: cogs/moderation/modlog.py:525
+#: cogs/moderation/modlog.py:538
 msgid "Account created"
 msgstr "アカウント作成日"
 
-#: cogs/moderation/modlog.py:554
+#: cogs/moderation/modlog.py:567
 msgid "Message Deleted"
 msgstr "メッセージ削除"
 
-#: cogs/moderation/modlog.py:560 cogs/moderation/modlog.py:661
+#: cogs/moderation/modlog.py:573 cogs/moderation/modlog.py:688
 msgid "Author"
 msgstr "投稿者"
 
-#: cogs/moderation/modlog.py:564
+#: cogs/moderation/modlog.py:577
 msgid "Content"
 msgstr "内容"
 
-#: cogs/moderation/modlog.py:569 cogs/moderation/modlog.py:671
+#: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
 #: cogs/utility/extras.py:46
 msgid "Jump"
 msgstr "ジャンプ"
 
-#: cogs/moderation/modlog.py:570
+#: cogs/moderation/modlog.py:583
 #, python-brace-format
 msgid "[Go to location]({url})"
 msgstr "[場所へ移動]({url})"
 
-#: cogs/moderation/modlog.py:651
+#: cogs/moderation/modlog.py:678
 msgid "*Not in the bot's cache - previous content unknown.*"
 msgstr "*ボットのキャッシュにありません - 以前の内容は不明です。*"
 
-#: cogs/moderation/modlog.py:655
+#: cogs/moderation/modlog.py:682
 msgid "Message Edited"
 msgstr "メッセージ編集"
 
-#: cogs/moderation/modlog.py:664 tests/cogs/test_modlog.py:229
-#: tests/cogs/test_modlog.py:271
+#: cogs/moderation/modlog.py:691 tests/cogs/test_modlog.py:245
+#: tests/cogs/test_modlog.py:287
 msgid "Before"
 msgstr "編集前"
 
-#: cogs/moderation/modlog.py:666 tests/cogs/test_modlog.py:230
+#: cogs/moderation/modlog.py:693 tests/cogs/test_modlog.py:246
 msgid "After"
 msgstr "編集後"
 
-#: cogs/moderation/modlog.py:672
+#: cogs/moderation/modlog.py:699
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[メッセージへ移動]({url})"
@@ -8612,45 +8621,45 @@ msgstr "再起動が必要です (ホットリロード不可)"
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "下でリロードするコグを選ぶか、すべてをリロードしてください。"
 
-#: cogs/system/arg_completion.py:273
+#: cogs/system/arg_completion.py:281
 msgid "Fill in"
 msgstr "入力する"
 
-#: cogs/system/arg_completion.py:276
+#: cogs/system/arg_completion.py:284
 msgid "Enter details"
 msgstr "詳細を入力"
 
-#: cogs/system/arg_completion.py:277
+#: cogs/system/arg_completion.py:285
 msgid "Run"
 msgstr "実行"
 
-#: cogs/system/arg_completion.py:321
+#: cogs/system/arg_completion.py:354
 msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
 msgstr "メニューから選び、残りは **Enter details** で入力してから、**Run** を押してください。"
 
-#: cogs/system/arg_completion.py:323
+#: cogs/system/arg_completion.py:356
 msgid "Pick from the menus, then press **Run**."
 msgstr "メニューから選んでから、**Run** を押してください。"
 
-#: cogs/system/arg_completion.py:324
+#: cogs/system/arg_completion.py:357
 msgid "Press **Fill in** to type the details."
 msgstr "**Fill in** を押して詳細を入力してください。"
 
-#: cogs/system/arg_completion.py:331 cogs/system/arg_completion.py:574
+#: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
 #: cogs/utility/info.py:47 cogs/utility/utility.py:329
 msgid "Yes"
 msgstr "はい"
 
-#: cogs/system/arg_completion.py:331 cogs/system/arg_completion.py:575
+#: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
 #: cogs/utility/info.py:47 cogs/utility/utility.py:330
 msgid "No"
 msgstr "いいえ"
 
-#: cogs/system/arg_completion.py:336
+#: cogs/system/arg_completion.py:369
 msgid "Let's finish that command"
 msgstr "コマンドを完成させましょう"
 
-#: cogs/system/arg_completion.py:338
+#: cogs/system/arg_completion.py:371
 #, python-brace-format
 msgid ""
 "`{command}` needs a little more info.\n"
@@ -8659,47 +8668,52 @@ msgstr ""
 "`{command}` にはもう少し情報が必要です。\n"
 "{instructions}"
 
-#: cogs/system/arg_completion.py:347
+#: cogs/system/arg_completion.py:380
 #, python-brace-format
 msgid "Set: {preview}"
 msgstr "設定済み: {preview}"
 
-#: cogs/system/arg_completion.py:349
+#: cogs/system/arg_completion.py:382
 msgid "Required"
 msgstr "必須"
 
-#: cogs/system/arg_completion.py:351
+#: cogs/system/arg_completion.py:384
 msgid "Optional - you can skip this"
 msgstr "任意 - これはスキップできます"
 
-#: cogs/system/arg_completion.py:353
+#: cogs/system/arg_completion.py:386
 msgid "Only you can use this - it times out in 3 minutes."
 msgstr "これはあなただけが使用できます - 3分でタイムアウトします。"
 
-#: cogs/system/arg_completion.py:363 cogs/system/arg_completion.py:405
+#: cogs/system/arg_completion.py:396 cogs/system/arg_completion.py:438
 msgid "This prompt is no longer active. Please run the command again."
 msgstr "このプロンプトはもうアクティブではありません。もう一度コマンドを実行してください。"
 
-#: cogs/system/arg_completion.py:389
+#: cogs/system/arg_completion.py:422
 msgid "Something went wrong with that prompt."
 msgstr "そのプロンプトで問題が発生しました。"
 
-#: cogs/system/arg_completion.py:428
+#: cogs/system/arg_completion.py:472
+#, python-brace-format
+msgid "That value for **{field}** ends with a backslash, which I can't type back safely here. Please run `{prefix}{command}` yourself with that value."
+msgstr "**{field}** の値がバックスラッシュで終わっているため、ここでは安全に入力し直せません。その値で `{prefix}{command}` をご自身で実行してください。"
+
+#: cogs/system/arg_completion.py:482
 #, python-brace-format
 msgid "Running `{command}`..."
 msgstr "`{command}` を実行中..."
 
-#: cogs/system/arg_completion.py:509
+#: cogs/system/arg_completion.py:563
 msgid "This prompt timed out."
 msgstr "このプロンプトはタイムアウトしました。"
 
-#: cogs/system/arg_completion.py:520 cogs/system/arg_completion.py:535
-#: cogs/system/arg_completion.py:553 cogs/system/arg_completion.py:569
+#: cogs/system/arg_completion.py:574 cogs/system/arg_completion.py:589
+#: cogs/system/arg_completion.py:607 cogs/system/arg_completion.py:623
 #, python-brace-format
 msgid "Choose {name}"
 msgstr "{name} を選択"
 
-#: cogs/system/arg_completion.py:636
+#: cogs/system/arg_completion.py:690
 #, python-brace-format
 msgid "Complete {command}"
 msgstr "{command} を完成"

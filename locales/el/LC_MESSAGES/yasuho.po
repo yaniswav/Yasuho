@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 08:36+0000\n"
+"POT-Creation-Date: 2026-10-01 10:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1085,7 +1085,7 @@ msgstr "Διάλεξε τον ακριβή τίτλο για παρακολού�
 #: cogs/anilist/feed_views.py:397 cogs/anilist/feed_views.py:641
 #: cogs/anilist/feed_views.py:919 cogs/anilist/feed_views.py:1271
 #: cogs/anilist/feed_views.py:1361 cogs/anilist/hub.py:333
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:229
+#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:242
 msgid "Only you can use these controls."
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
@@ -1108,7 +1108,7 @@ msgstr "Διακοπή παρακολούθησης τίτλου..."
 
 #: cogs/anilist/feed_views.py:531 cogs/anilist/feed_views.py:788
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:583
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:601
 #: cogs/music/views.py:1596 cogs/music/views.py:2026 cogs/music/views.py:2388
 msgid "Next"
 msgstr "Επόμ."
@@ -1217,7 +1217,7 @@ msgstr "Διαγραφή"
 #: cogs/anilist/feed_views.py:990 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:327
-#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:278
+#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "Ακύρωση"
 
@@ -1234,8 +1234,8 @@ msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο 
 msgid "Feed deleted."
 msgstr "Η ροή διαγράφηκε."
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1120
-#: cogs/moderation/moderation.py:1193 cogs/system/arg_completion.py:494
+#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1132
+#: cogs/moderation/moderation.py:1205 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr "Ακυρώθηκε."
 
@@ -1277,7 +1277,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
 #: cogs/config/twitch.py:424 cogs/config/verification.py:101
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:262
+#: cogs/moderation/modlog.py:275
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
@@ -1285,7 +1285,7 @@ msgstr "Ενεργοποιημένο"
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
 #: cogs/config/twitch.py:426 cogs/config/verification.py:103
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:785 cogs/moderation/modlog.py:264
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
@@ -1301,8 +1301,8 @@ msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικα
 #: cogs/anilist/feed_views.py:1294 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:603 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:764
-#: cogs/moderation/modlog.py:562 cogs/moderation/modlog.py:663
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/moderation/modlog.py:575 cogs/moderation/modlog.py:690
 msgid "Channel"
 msgstr "Κανάλι"
 
@@ -1796,182 +1796,182 @@ msgstr "Άγνωστη γλώσσα. Διαθέσιμες: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Η προεπιλεγμένη γλώσσα του διακομιστή ορίστηκε σε **{lang}**."
 
-#: cogs/community/reminders.py:179
+#: cogs/community/reminders.py:197
 #, python-brace-format
 msgid "every week"
 msgid_plural "every {count} weeks"
 msgstr[0] "κάθε εβδομάδα"
 msgstr[1] "κάθε {count} εβδομάδες"
 
-#: cogs/community/reminders.py:181
+#: cogs/community/reminders.py:199
 #, python-brace-format
 msgid "every day"
 msgid_plural "every {count} days"
 msgstr[0] "κάθε μέρα"
 msgstr[1] "κάθε {count} ημέρες"
 
-#: cogs/community/reminders.py:183
+#: cogs/community/reminders.py:201
 #, python-brace-format
 msgid "every hour"
 msgid_plural "every {count} hours"
 msgstr[0] "κάθε ώρα"
 msgstr[1] "κάθε {count} ώρες"
 
-#: cogs/community/reminders.py:186
+#: cogs/community/reminders.py:204
 #, python-brace-format
 msgid "every minute"
 msgid_plural "every {count} minutes"
 msgstr[0] "κάθε λεπτό"
 msgstr[1] "κάθε {count} λεπτά"
 
-#: cogs/community/reminders.py:189
+#: cogs/community/reminders.py:207
 #, python-brace-format
 msgid "every second"
 msgid_plural "every {count} seconds"
 msgstr[0] "κάθε δευτερόλεπτο"
 msgstr[1] "κάθε {count} δευτερόλεπτα"
 
-#: cogs/community/reminders.py:201
+#: cogs/community/reminders.py:219
 msgid "I can only repeat a reminder once an hour at most. Try `hourly` or something longer like `2d`."
 msgstr "Μπορώ να επαναλάβω μια υπενθύμιση το πολύ μία φορά την ώρα. Δοκίμασε `hourly` ή κάτι μεγαλύτερο όπως `2d`."
 
-#: cogs/community/reminders.py:205
+#: cogs/community/reminders.py:223
 msgid "I can only repeat a reminder for up to a year - try `365d` or less."
 msgstr "Μπορώ να επαναλάβω μια υπενθύμιση για έως ένα έτος - δοκίμασε `365d` ή λιγότερο."
 
-#: cogs/community/reminders.py:207
+#: cogs/community/reminders.py:225
 msgid "I couldn't understand that repeat interval. Try `hourly`, `daily`, `weekly`, or a duration like `2d` or `12h`."
 msgstr "Δεν κατάλαβα αυτό το διάστημα επανάληψης. Δοκίμασε `hourly`, `daily`, `weekly`, ή μια διάρκεια όπως `2d` ή `12h`."
 
-#: cogs/community/reminders.py:215
+#: cogs/community/reminders.py:233
 #, python-brace-format
 msgid "You already have {count} repeating reminders - cancel one with `/reminders` before adding another."
 msgstr "Έχεις ήδη {count} επαναλαμβανόμενες υπενθυμίσεις - ακύρωσε μία με `/reminders` πριν προσθέσεις άλλη."
 
-#: cogs/community/reminders.py:229
+#: cogs/community/reminders.py:247
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "Εντάξει, θα σου υπενθυμίσω {when}: {message}"
 
-#: cogs/community/reminders.py:232
+#: cogs/community/reminders.py:250
 #, python-brace-format
 msgid "Okay, reminding you {when} and then {interval}: {message}"
 msgstr "Εντάξει, θα σου υπενθυμίσω {when} και μετά {interval}: {message}"
 
-#: cogs/community/reminders.py:258 cogs/community/reminders.py:398
+#: cogs/community/reminders.py:276 cogs/community/reminders.py:416
 msgid "Set a reminder"
 msgstr "Όρισε υπενθύμιση"
 
-#: cogs/community/reminders.py:268 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:286 cogs/config/announcements.py:154
 msgid "When"
 msgstr "Πότε"
 
-#: cogs/community/reminders.py:269
+#: cogs/community/reminders.py:287
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "π.χ. 10m, αύριο στις 18:00, ή μια ετικέτα <t:...>"
 
-#: cogs/community/reminders.py:277 cogs/config/reactionroles.py:226
+#: cogs/community/reminders.py:295 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:458 cogs/config/welcome.py:766
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr "Μήνυμα"
 
-#: cogs/community/reminders.py:278
+#: cogs/community/reminders.py:296
 msgid "What should I remind you about?"
 msgstr "Για τι να σου υπενθυμίσω;"
 
-#: cogs/community/reminders.py:289
+#: cogs/community/reminders.py:307
 msgid "Repeat (optional)"
 msgstr "Επανάληψη (προαιρετικό)"
 
-#: cogs/community/reminders.py:290
+#: cogs/community/reminders.py:308
 msgid "hourly, daily, weekly, or e.g. 2d - blank for once"
 msgstr "hourly, daily, weekly, ή π.χ. 2d - κενό για μία φορά"
 
-#: cogs/community/reminders.py:327
+#: cogs/community/reminders.py:345
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `10m`, `tomorrow at 6pm` ή `in 3 days`."
 
-#: cogs/community/reminders.py:337 cogs/community/reminders.py:1355
+#: cogs/community/reminders.py:355 cogs/community/reminders.py:1434
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Αυτός ο χρόνος είναι στο παρελθόν. Δώσε μου μια στιγμή στο μέλλον."
 
-#: cogs/community/reminders.py:347 cogs/community/reminders.py:1375
+#: cogs/community/reminders.py:365 cogs/community/reminders.py:1454
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Έχεις ήδη {count} εκκρεμείς υπενθυμίσεις - περίμενε να ενεργοποιηθούν κάποιες πριν προσθέσεις κι άλλες."
 
-#: cogs/community/reminders.py:449 cogs/community/reminders.py:509
+#: cogs/community/reminders.py:467 cogs/community/reminders.py:527
 #: cogs/utility/extras.py:37
 msgid "(no text)"
 msgstr "(χωρίς κείμενο)"
 
-#: cogs/community/reminders.py:455
+#: cogs/community/reminders.py:473
 #, python-brace-format
 msgid "in {when}"
 msgstr "σε {when}"
 
-#: cogs/community/reminders.py:461
+#: cogs/community/reminders.py:479
 msgid "Cancel a reminder..."
 msgstr "Ακύρωση υπενθύμισης..."
 
-#: cogs/community/reminders.py:463
+#: cogs/community/reminders.py:481
 msgid "(nothing to cancel)"
 msgstr "(τίποτα για ακύρωση)"
 
-#: cogs/community/reminders.py:510
+#: cogs/community/reminders.py:528
 #, python-brace-format
 msgid "{when} - {text}"
 msgstr "{when} - {text}"
 
-#: cogs/community/reminders.py:516
+#: cogs/community/reminders.py:534
 #, python-brace-format
 msgid "in <#{channel}>"
 msgstr "στο <#{channel}>"
 
-#: cogs/community/reminders.py:538
+#: cogs/community/reminders.py:556
 msgid "Your reminders"
 msgstr "Οι υπενθυμίσεις σου"
 
-#: cogs/community/reminders.py:545
+#: cogs/community/reminders.py:563
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "Δεν έχεις υπενθυμίσεις. Χρησιμοποίησε το `/remind` για να προσθέσεις μία."
 
-#: cogs/community/reminders.py:560
+#: cogs/community/reminders.py:578
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count} σε εκκρεμότητα"
 
-#: cogs/community/reminders.py:564
+#: cogs/community/reminders.py:582
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:576
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:594
 #: cogs/music/views.py:1589 cogs/music/views.py:2019 cogs/music/views.py:2381
 msgid "Prev"
 msgstr "Προηγ."
 
-#: cogs/community/reminders.py:1126
+#: cogs/community/reminders.py:1205
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "Ήμουν εκτός σύνδεσης, οπότε χάθηκε {count} επανάληψη."
 msgstr[1] "Ήμουν εκτός σύνδεσης, οπότε χάθηκαν {count} επαναλήψεις."
 
-#: cogs/community/reminders.py:1139
+#: cogs/community/reminders.py:1218
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "Επαναλαμβάνεται {interval} - επόμενη {when}"
 
-#: cogs/community/reminders.py:1235
+#: cogs/community/reminders.py:1314
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>, {when}: {message}"
 
-#: cogs/community/reminders.py:1341
+#: cogs/community/reminders.py:1420
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 
@@ -2284,34 +2284,43 @@ msgid "{member} now has **{xp} XP** (was {old_xp})."
 msgstr "Ο/Η {member} έχει τώρα **{xp} XP** (πριν: {old_xp})."
 
 #: cogs/community/leveling/level_admin.py:272
+msgid "Clamped"
+msgstr "Περιορίστηκε"
+
+#: cogs/community/leveling/level_admin.py:274
+#, python-brace-format
+msgid "The total was capped at the {max} XP ceiling."
+msgstr "Το σύνολο περιορίστηκε στο ανώτατο όριο των {max} XP."
+
+#: cogs/community/leveling/level_admin.py:280
 msgid "Level up"
 msgstr "Άνοδος επιπέδου"
 
-#: cogs/community/leveling/level_admin.py:273
-#: cogs/community/leveling/level_admin.py:280
+#: cogs/community/leveling/level_admin.py:281
+#: cogs/community/leveling/level_admin.py:288
 #, python-brace-format
 msgid "Level {old} -> **{new}**"
 msgstr "Επίπεδο {old} -> **{new}**"
 
-#: cogs/community/leveling/level_admin.py:279
+#: cogs/community/leveling/level_admin.py:287
 msgid "Level down"
 msgstr "Πτώση επιπέδου"
 
-#: cogs/community/leveling/level_admin.py:286
+#: cogs/community/leveling/level_admin.py:294
 #: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:282
 msgid "Level"
 msgstr "Επίπεδο"
 
-#: cogs/community/leveling/level_admin.py:287
+#: cogs/community/leveling/level_admin.py:295
 #, python-brace-format
 msgid "**{level}** (unchanged)"
 msgstr "**{level}** (αμετάβλητο)"
 
-#: cogs/community/leveling/level_admin.py:377
+#: cogs/community/leveling/level_admin.py:390
 msgid "Admin XP tools"
 msgstr "Εργαλεία XP διαχειριστή"
 
-#: cogs/community/leveling/level_admin.py:379
+#: cogs/community/leveling/level_admin.py:392
 msgid ""
 "- `/levelconfig xp give <member> <amount>` - add XP\n"
 "- `/levelconfig xp take <member> <amount>` - remove XP\n"
@@ -2325,31 +2334,31 @@ msgstr ""
 "- `/levelconfig xp reset <μέλος>` - μηδενισμός ενός μέλους (επιβεβαίωση)\n"
 "- `/levelconfig xp resetall` - μηδενισμός όλου του διακομιστή (διπλή επιβεβαίωση)"
 
-#: cogs/community/leveling/level_admin.py:394
 #: cogs/community/leveling/level_admin.py:407
+#: cogs/community/leveling/level_admin.py:420
 #, python-brace-format
 msgid "The amount must be between {min} and {max}."
 msgstr "Το ποσό πρέπει να είναι μεταξύ {min} και {max}."
 
-#: cogs/community/leveling/level_admin.py:420
+#: cogs/community/leveling/level_admin.py:433
 #, python-brace-format
 msgid "The XP total must be between {min} and {max}."
 msgstr "Το σύνολο XP πρέπει να είναι μεταξύ {min} και {max}."
 
-#: cogs/community/leveling/level_admin.py:430
+#: cogs/community/leveling/level_admin.py:443
 msgid "Reset this member's XP?"
 msgstr "Μηδενισμός του XP αυτού του μέλους;"
 
-#: cogs/community/leveling/level_admin.py:432
+#: cogs/community/leveling/level_admin.py:445
 #, python-brace-format
 msgid "This resets {member}'s XP to **0** and removes them from the leaderboard. This can't be undone."
 msgstr "Το XP του/της {member} επιστρέφει στο **0** και αφαιρείται από την κατάταξη. Δεν αναιρείται."
 
-#: cogs/community/leveling/level_admin.py:447
+#: cogs/community/leveling/level_admin.py:460
 msgid "Reset ALL XP in this server?"
 msgstr "Μηδενισμός ΟΛΟΥ του XP σε αυτόν τον διακομιστή;"
 
-#: cogs/community/leveling/level_admin.py:449
+#: cogs/community/leveling/level_admin.py:462
 #, python-brace-format
 msgid ""
 "This wipes **every** member's XP and every weekly/monthly leaderboard for **{guild}**. This can't be undone.\n"
@@ -4013,7 +4022,7 @@ msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κ
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
 #: cogs/config/twitch.py:420 cogs/config/verification.py:108
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
-#: cogs/moderation/modlog.py:260
+#: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
 msgstr "*Δεν έχει οριστεί.*"
 
@@ -4737,11 +4746,11 @@ msgid "Header"
 msgstr "Επικεφαλίδα"
 
 #: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1464
+#: cogs/system/dashboard_actions.py:1478
 msgid "Pick your roles"
 msgstr "Διάλεξε τους ρόλους σου"
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1469
+#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1483
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr "Ρόλοι"
@@ -5632,11 +5641,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Χρησιμοποίησε το `/verify setup` για να ενεργοποιήσεις την επαλήθευση."
 
-#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:550
+#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:561
 msgid "Verification"
 msgstr "Επαλήθευση"
 
-#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:553
+#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:564
 msgid "Click the button below to verify and unlock the server."
 msgstr "Πάτησε το κουμπί παρακάτω για να επαληθευτείς και να ξεκλειδώσεις τον διακομιστή."
 
@@ -5751,24 +5760,24 @@ msgstr "Καλωσόρισμα | {guild}"
 msgid "Use `/welcome` to open the full builder."
 msgstr "Χρησιμοποίησε το `/welcome` για να ανοίξεις τον πλήρη επεξεργαστή."
 
-#: cogs/config/welcome.py:678
+#: cogs/config/welcome.py:694
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "Καλώς ήρθες {mention}!"
 
-#: cogs/config/welcome.py:763 cogs/config/welcome.py:783
+#: cogs/config/welcome.py:779 cogs/config/welcome.py:799
 msgid "Welcome message"
 msgstr "Μήνυμα καλωσορίσματος"
 
-#: cogs/config/welcome.py:770
+#: cogs/config/welcome.py:786
 msgid "Use /welcome to open the full builder."
 msgstr "Χρησιμοποίησε /welcome για να ανοίξεις τον πλήρη δημιουργό."
 
-#: cogs/config/welcome.py:786
+#: cogs/config/welcome.py:802
 msgid "Welcome messages have been turned off."
 msgstr "Τα μηνύματα καλωσορίσματος απενεργοποιήθηκαν."
 
-#: cogs/config/welcome.py:876
+#: cogs/config/welcome.py:892
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Καλώς ήρθες {member}!"
@@ -6201,35 +6210,35 @@ msgstr "Διαχείριση Νημάτων"
 msgid "Read Message History"
 msgstr "Ανάγνωση Ιστορικού Μηνυμάτων"
 
-#: cogs/fun/fun.py:100 cogs/fun/games.py:75
+#: cogs/fun/fun.py:121 cogs/fun/games.py:75
 msgid "Something went wrong with that move."
 msgstr "Κάτι πήγε στραβά με αυτή την κίνηση."
 
-#: cogs/fun/fun.py:114
+#: cogs/fun/fun.py:135
 msgid "Rock"
 msgstr "Πέτρα"
 
-#: cogs/fun/fun.py:115
+#: cogs/fun/fun.py:136
 msgid "Paper"
 msgstr "Χαρτί"
 
-#: cogs/fun/fun.py:116
+#: cogs/fun/fun.py:137
 msgid "Scissors"
 msgstr "Ψαλίδι"
 
-#: cogs/fun/fun.py:127
+#: cogs/fun/fun.py:148
 msgid "Draw"
 msgstr "Ισοπαλία"
 
-#: cogs/fun/fun.py:130
+#: cogs/fun/fun.py:151
 msgid "You won"
 msgstr "Κέρδισες"
 
-#: cogs/fun/fun.py:130
+#: cogs/fun/fun.py:151
 msgid "You lost"
 msgstr "Έχασες"
 
-#: cogs/fun/fun.py:134
+#: cogs/fun/fun.py:155
 #, python-brace-format
 msgid ""
 "I choose {bot_choice}\n"
@@ -6242,39 +6251,39 @@ msgstr ""
 "\n"
 "Αποτέλεσμα : `{result}`"
 
-#: cogs/fun/fun.py:140 cogs/fun/fun.py:155 cogs/fun/fun.py:576
+#: cogs/fun/fun.py:161 cogs/fun/fun.py:176 cogs/fun/fun.py:597
 msgid "RPS Game"
 msgstr "Παιχνίδι Πέτρα-Ψαλίδι-Χαρτί"
 
-#: cogs/fun/fun.py:143
+#: cogs/fun/fun.py:164
 msgid "Thanks for playing!"
 msgstr "Ευχαριστώ που έπαιξες!"
 
-#: cogs/fun/fun.py:156
+#: cogs/fun/fun.py:177
 msgid "Game timed out! Please try again."
 msgstr "Το παιχνίδι έληξε! Δοκίμασε ξανά."
 
-#: cogs/fun/fun.py:183
+#: cogs/fun/fun.py:204
 msgid "You can't hug the air..."
 msgstr "Δεν μπορείς να αγκαλιάσεις τον αέρα..."
 
-#: cogs/fun/fun.py:191
+#: cogs/fun/fun.py:212
 msgid "One hug at a time please, give me a few seconds."
 msgstr "Μία αγκαλιά τη φορά, δώσε μου λίγα δευτερόλεπτα."
 
-#: cogs/fun/fun.py:238
+#: cogs/fun/fun.py:259
 msgid "Sorry, I couldn't make the hug image."
 msgstr "Συγγνώμη, δεν μπόρεσα να φτιάξω την εικόνα αγκαλιάς."
 
-#: cogs/fun/fun.py:258 cogs/fun/fun.py:275 cogs/fun/fun.py:293
+#: cogs/fun/fun.py:279 cogs/fun/fun.py:296 cogs/fun/fun.py:314
 msgid ":warning: **ERROR !**"
 msgstr ":warning: **ΣΦΑΛΜΑ !**"
 
-#: cogs/fun/fun.py:330
+#: cogs/fun/fun.py:351
 msgid ":warning: Warning!"
 msgstr ":warning: Προειδοποίηση!"
 
-#: cogs/fun/fun.py:349
+#: cogs/fun/fun.py:370
 #, python-brace-format
 msgid ""
 "Don't mention everyone {author}\n"
@@ -6283,7 +6292,7 @@ msgstr ""
 "Μην κάνεις mention everyone {author}\n"
 " Μήνυμα : {message}"
 
-#: cogs/fun/fun.py:358
+#: cogs/fun/fun.py:379
 #, python-brace-format
 msgid ""
 "Please, don't send links {author}\n"
@@ -6292,94 +6301,94 @@ msgstr ""
 "Σε παρακαλώ, μη στέλνεις συνδέσμους {author}\n"
 " Μήνυμα : {message}"
 
-#: cogs/fun/fun.py:365
+#: cogs/fun/fun.py:386
 msgid "Yes, we know."
 msgstr "Ναι, το ξέρουμε."
 
-#: cogs/fun/fun.py:387
+#: cogs/fun/fun.py:408
 msgid "That doesn't look like an emoji I can enlarge."
 msgstr "Αυτό δεν μοιάζει με emoji που μπορώ να μεγεθύνω."
 
-#: cogs/fun/fun.py:403
+#: cogs/fun/fun.py:424
 msgid "**Download link**"
 msgstr "**Σύνδεσμος λήψης**"
 
-#: cogs/fun/fun.py:404
+#: cogs/fun/fun.py:425
 #, python-brace-format
 msgid "**[➡️ URL]({url})**"
 msgstr "**[➡️ URL]({url})**"
 
-#: cogs/fun/fun.py:408 cogs/fun/fun.py:466
+#: cogs/fun/fun.py:429 cogs/fun/fun.py:487
 #, python-brace-format
 msgid "Requested by: {user}"
 msgstr "Ζητήθηκε από: {user}"
 
-#: cogs/fun/fun.py:427
+#: cogs/fun/fun.py:448
 msgid "*Message too long.*"
 msgstr "*Το μήνυμα είναι πολύ μεγάλο.*"
 
-#: cogs/fun/fun.py:436
+#: cogs/fun/fun.py:457
 msgid "**Please input text to convert to ascii art. Ex: ``<prefix> ascii stuff``**"
 msgstr "**Πληκτρολόγησε κείμενο για μετατροπή σε ascii art. Π.χ.: ``<prefix> ascii stuff``**"
 
-#: cogs/fun/fun.py:447
+#: cogs/fun/fun.py:468
 msgid "Ask me a question..."
 msgstr "Κάνε μου μια ερώτηση..."
 
-#: cogs/fun/fun.py:464
+#: cogs/fun/fun.py:485
 msgid "Reversed:"
 msgstr "Αντεστραμμένο:"
 
-#: cogs/fun/fun.py:484
+#: cogs/fun/fun.py:505
 #, python-brace-format
 msgid "I'd rate {thing} a **{num}.{deci}/ 100**"
 msgstr "Θα βαθμολογούσα το {thing} με **{num}.{deci}/ 100**"
 
-#: cogs/fun/fun.py:499
+#: cogs/fun/fun.py:520
 #, python-brace-format
 msgid "**{user}** is **1000%** hot :heart_eyes: :lips:"
 msgstr "Ο/Η **{user}** είναι **1000%** καυτός/ή :heart_eyes: :lips:"
 
-#: cogs/fun/fun.py:508
+#: cogs/fun/fun.py:529
 #, python-brace-format
 msgid "{user} is hot like a pineapple :pineapple:"
 msgstr "Ο/Η {user} είναι καυτός/ή σαν ανανάς :pineapple:"
 
-#: cogs/fun/fun.py:524
+#: cogs/fun/fun.py:545
 #, python-brace-format
 msgid "**{user}** is **{hot:.2f}%** hot {emoji}"
 msgstr "Ο/Η **{user}** είναι **{hot:.2f}%** καυτός/ή {emoji}"
 
-#: cogs/fun/fun.py:541
+#: cogs/fun/fun.py:562
 #, python-brace-format
 msgid "{member} is **0%** gay 👑"
 msgstr "Ο/Η {member} είναι **0%** gay 👑"
 
-#: cogs/fun/fun.py:545
+#: cogs/fun/fun.py:566
 #, python-brace-format
 msgid "{member} is **{y}.{rand}%** gay {emj}"
 msgstr "Ο/Η {member} είναι **{y}.{rand}%** gay {emj}"
 
-#: cogs/fun/fun.py:562
+#: cogs/fun/fun.py:583
 #, python-brace-format
 msgid "{slot} All matching, you won! 🎉"
 msgstr "{slot} Όλα ταιριάζουν, κέρδισες! 🎉"
 
-#: cogs/fun/fun.py:564
+#: cogs/fun/fun.py:585
 #, python-brace-format
 msgid "{slot} 2 in a row, you won! 🎉"
 msgstr "{slot} 2 στη σειρά, κέρδισες! 🎉"
 
-#: cogs/fun/fun.py:566
+#: cogs/fun/fun.py:587
 #, python-brace-format
 msgid "{slot} No match, you lost 😢"
 msgstr "{slot} Καμία αντιστοιχία, έχασες 😢"
 
-#: cogs/fun/fun.py:577
+#: cogs/fun/fun.py:598
 msgid "Pick your move below: Rock, Paper or Scissors!"
 msgstr "Διάλεξε την κίνησή σου παρακάτω: Πέτρα, Χαρτί ή Ψαλίδι!"
 
-#: cogs/fun/fun.py:579
+#: cogs/fun/fun.py:600
 msgid "I'm waiting for you!"
 msgstr "Σε περιμένω!"
 
@@ -6678,13 +6687,13 @@ msgstr "Νέος λόγος"
 msgid "The reason can't be empty."
 msgstr "Ο λόγος δεν μπορεί να είναι κενός."
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1285
-#: cogs/moderation/moderation.py:1358 cogs/moderation/moderation.py:1380
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1297
+#: cogs/moderation/moderation.py:1370 cogs/moderation/moderation.py:1392
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "Δεν βρέθηκε υπόθεση #{number} σε αυτόν τον διακομιστή."
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1386
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1398
 msgid "Updated by"
 msgstr "Ενημερώθηκε από"
 
@@ -6855,7 +6864,7 @@ msgstr "Μη έγκυρη ποσότητα. Το μέγιστο είναι 500."
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Διαγράφηκαν **{deleted}/{num}** πιθανά μηνύματα για εσένα."
 
-#: cogs/moderation/moderation.py:917
+#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1069
 msgid "This server has no mute role yet - I create one the first time you use `mute`."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμη ρόλο σίγασης - τον δημιουργώ την πρώτη φορά που θα χρησιμοποιήσεις το `mute`."
 
@@ -6903,136 +6912,136 @@ msgstr "Η σίγαση απέτυχε"
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η σίγαση του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1086
+#: cogs/moderation/moderation.py:1098
 msgid "Unmute failed"
 msgstr "Η κατάργηση σίγασης απέτυχε"
 
-#: cogs/moderation/moderation.py:1089
+#: cogs/moderation/moderation.py:1101
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: Δεν ήταν δυνατή η κατάργηση σίγασης του/της {user}, δοκίμασε ξανά."
 
-#: cogs/moderation/moderation.py:1111
+#: cogs/moderation/moderation.py:1123
 msgid "Confirm mass role add"
 msgstr "Επιβεβαίωση μαζικής προσθήκης ρόλου"
 
-#: cogs/moderation/moderation.py:1113
+#: cogs/moderation/moderation.py:1125
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "Προσθήκη του ρόλου **{role}** σε **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1142
+#: cogs/moderation/moderation.py:1154
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "Προστέθηκε το **{role}** σε {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1163
+#: cogs/moderation/moderation.py:1175
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** προστέθηκε στον/στην **{member}**"
 
-#: cogs/moderation/moderation.py:1184
+#: cogs/moderation/moderation.py:1196
 msgid "Confirm mass role remove"
 msgstr "Επιβεβαίωση μαζικής αφαίρεσης ρόλου"
 
-#: cogs/moderation/moderation.py:1186
+#: cogs/moderation/moderation.py:1198
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "Αφαίρεση του ρόλου **{role}** από **όλα** τα μέλη αυτού του διακομιστή; Αυτό μπορεί να πάρει λίγη ώρα."
 
-#: cogs/moderation/moderation.py:1215
+#: cogs/moderation/moderation.py:1227
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "Αφαιρέθηκε το **{role}** από {done} μέλος/η ({failed} απέτυχαν)."
 
-#: cogs/moderation/moderation.py:1228
+#: cogs/moderation/moderation.py:1240
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} Ο ρόλος **`{role}`** αφαιρέθηκε από τον/την **{member}**"
 
-#: cogs/moderation/moderation.py:1250 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1262 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "Δεν μπορείς να διαχειριστείς έναν ρόλο ίσο ή ανώτερο από τον υψηλότερο ρόλο σου."
 
-#: cogs/moderation/moderation.py:1257
+#: cogs/moderation/moderation.py:1269
 msgid "You can't move a role to or above my highest role."
 msgstr "Δεν μπορείς να μετακινήσεις έναν ρόλο στο ίδιο ή πάνω από τον υψηλότερο ρόλο μου."
 
-#: cogs/moderation/moderation.py:1263
+#: cogs/moderation/moderation.py:1275
 #, python-brace-format
 msgid "{role} moved."
 msgstr "Ο ρόλος {role} μετακινήθηκε."
 
-#: cogs/moderation/moderation.py:1265 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1277 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
 
-#: cogs/moderation/moderation.py:1267
+#: cogs/moderation/moderation.py:1279
 msgid "Failed to move role"
 msgstr "Αποτυχία μετακίνησης ρόλου"
 
-#: cogs/moderation/moderation.py:1269
+#: cogs/moderation/moderation.py:1281
 msgid "Invalid argument"
 msgstr "Μη έγκυρο όρισμα"
 
-#: cogs/moderation/moderation.py:1304
+#: cogs/moderation/moderation.py:1316
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Ιστορικό υποθέσεων - {guild}"
 
-#: cogs/moderation/moderation.py:1314
+#: cogs/moderation/moderation.py:1326
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Ιστορικό υποθέσεων - {member}"
 
-#: cogs/moderation/moderation.py:1317
+#: cogs/moderation/moderation.py:1329
 msgid "No cases on record."
 msgstr "Δεν υπάρχουν καταγεγραμμένες υποθέσεις."
 
-#: cogs/moderation/moderation.py:1324 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1336 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "Χωρίς λόγο"
 
-#: cogs/moderation/modlog.py:71 cogs/moderation/modlog.py:573
-#: cogs/moderation/modlog.py:675
+#: cogs/moderation/modlog.py:84 cogs/moderation/modlog.py:586
+#: cogs/moderation/modlog.py:702
 #, python-brace-format
 msgid "ID: {id}"
 msgstr "ID: {id}"
 
-#: cogs/moderation/modlog.py:85
+#: cogs/moderation/modlog.py:98
 msgid "Select the log channel..."
 msgstr "Επίλεξε το κανάλι καταγραφής..."
 
-#: cogs/moderation/modlog.py:116
+#: cogs/moderation/modlog.py:129
 msgid "Choose which events to log..."
 msgstr "Διάλεξε ποια συμβάντα θα καταγράφονται..."
 
-#: cogs/moderation/modlog.py:196
+#: cogs/moderation/modlog.py:209
 msgid "*Not set - logging is off.*"
 msgstr "*Δεν έχει οριστεί - η καταγραφή είναι ανενεργή.*"
 
-#: cogs/moderation/modlog.py:205
+#: cogs/moderation/modlog.py:218
 msgid "Mod-log settings"
 msgstr "Ρυθμίσεις mod-log"
 
-#: cogs/moderation/modlog.py:207
+#: cogs/moderation/modlog.py:220
 msgid "Choose where server events are logged and which events to record. Changes apply instantly."
 msgstr "Διάλεξε πού καταγράφονται τα συμβάντα του διακομιστή και ποια συμβάντα θα καταγράφονται. Οι αλλαγές εφαρμόζονται αμέσως."
 
-#: cogs/moderation/modlog.py:215
+#: cogs/moderation/modlog.py:228
 msgid "Log channel"
 msgstr "Κανάλι καταγραφής"
 
-#: cogs/moderation/modlog.py:220 cogs/moderation/modlog.py:288
+#: cogs/moderation/modlog.py:233 cogs/moderation/modlog.py:301
 msgid "Events"
 msgstr "Συμβάντα"
 
-#: cogs/moderation/modlog.py:274
+#: cogs/moderation/modlog.py:287
 #, python-brace-format
 msgid "Mod-log | {guild}"
 msgstr "Αρχείο συντονισμού | {guild}"
 
-#: cogs/moderation/modlog.py:280
+#: cogs/moderation/modlog.py:293
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7041,67 +7050,67 @@ msgstr ""
 "**Κατάσταση:** {status}\n"
 "**Κανάλι καταγραφής:** {channel}"
 
-#: cogs/moderation/modlog.py:295
+#: cogs/moderation/modlog.py:308
 msgid "Use `/modlog set` to choose a log channel."
 msgstr "Χρησιμοποίησε το `/modlog set` για να επιλέξεις κανάλι καταγραφής."
 
-#: cogs/moderation/modlog.py:398 cogs/moderation/modlog.py:414
+#: cogs/moderation/modlog.py:411 cogs/moderation/modlog.py:427
 msgid "Mod log"
 msgstr "Mod log"
 
-#: cogs/moderation/modlog.py:399
+#: cogs/moderation/modlog.py:412
 #, python-brace-format
 msgid "Mod-log channel set to {channel}."
 msgstr "Το κανάλι mod-log ορίστηκε σε {channel}."
 
-#: cogs/moderation/modlog.py:415
+#: cogs/moderation/modlog.py:428
 msgid "Mod-log has been disabled for this guild."
 msgstr "Το mod-log απενεργοποιήθηκε για αυτόν τον διακομιστή."
 
-#: cogs/moderation/modlog.py:525
+#: cogs/moderation/modlog.py:538
 msgid "Account created"
 msgstr "Ο λογαριασμός δημιουργήθηκε"
 
-#: cogs/moderation/modlog.py:554
+#: cogs/moderation/modlog.py:567
 msgid "Message Deleted"
 msgstr "Το μήνυμα διαγράφηκε"
 
-#: cogs/moderation/modlog.py:560 cogs/moderation/modlog.py:661
+#: cogs/moderation/modlog.py:573 cogs/moderation/modlog.py:688
 msgid "Author"
 msgstr "Συγγραφέας"
 
-#: cogs/moderation/modlog.py:564
+#: cogs/moderation/modlog.py:577
 msgid "Content"
 msgstr "Περιεχόμενο"
 
-#: cogs/moderation/modlog.py:569 cogs/moderation/modlog.py:671
+#: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
 #: cogs/utility/extras.py:46
 msgid "Jump"
 msgstr "Μετάβαση"
 
-#: cogs/moderation/modlog.py:570
+#: cogs/moderation/modlog.py:583
 #, python-brace-format
 msgid "[Go to location]({url})"
 msgstr "[Μετάβαση στην τοποθεσία]({url})"
 
-#: cogs/moderation/modlog.py:651
+#: cogs/moderation/modlog.py:678
 msgid "*Not in the bot's cache - previous content unknown.*"
 msgstr "*Δεν βρίσκεται στην προσωρινή μνήμη του bot - το προηγούμενο περιεχόμενο είναι άγνωστο.*"
 
-#: cogs/moderation/modlog.py:655
+#: cogs/moderation/modlog.py:682
 msgid "Message Edited"
 msgstr "Το μήνυμα επεξεργάστηκε"
 
-#: cogs/moderation/modlog.py:664 tests/cogs/test_modlog.py:229
-#: tests/cogs/test_modlog.py:271
+#: cogs/moderation/modlog.py:691 tests/cogs/test_modlog.py:245
+#: tests/cogs/test_modlog.py:287
 msgid "Before"
 msgstr "Πριν"
 
-#: cogs/moderation/modlog.py:666 tests/cogs/test_modlog.py:230
+#: cogs/moderation/modlog.py:693 tests/cogs/test_modlog.py:246
 msgid "After"
 msgstr "Μετά"
 
-#: cogs/moderation/modlog.py:672
+#: cogs/moderation/modlog.py:699
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Μετάβαση στο μήνυμα]({url})"
@@ -8652,45 +8661,45 @@ msgstr "Απαιτείται επανεκκίνηση (δεν γίνεται hot
 msgid "Pick the cogs to reload below, or reload everything."
 msgstr "Διάλεξε τα cogs για επαναφόρτωση παρακάτω ή επαναφόρτωσε τα πάντα."
 
-#: cogs/system/arg_completion.py:273
+#: cogs/system/arg_completion.py:281
 msgid "Fill in"
 msgstr "Συμπλήρωσε"
 
-#: cogs/system/arg_completion.py:276
+#: cogs/system/arg_completion.py:284
 msgid "Enter details"
 msgstr "Εισαγωγή στοιχείων"
 
-#: cogs/system/arg_completion.py:277
+#: cogs/system/arg_completion.py:285
 msgid "Run"
 msgstr "Εκτέλεση"
 
-#: cogs/system/arg_completion.py:321
+#: cogs/system/arg_completion.py:354
 msgid "Pick from the menus, use **Enter details** for the rest, then press **Run**."
 msgstr "Διάλεξε από τα μενού, χρησιμοποίησε το **Enter details** για τα υπόλοιπα και μετά πάτησε **Run**."
 
-#: cogs/system/arg_completion.py:323
+#: cogs/system/arg_completion.py:356
 msgid "Pick from the menus, then press **Run**."
 msgstr "Διάλεξε από τα μενού και μετά πάτησε **Run**."
 
-#: cogs/system/arg_completion.py:324
+#: cogs/system/arg_completion.py:357
 msgid "Press **Fill in** to type the details."
 msgstr "Πάτησε **Fill in** για να πληκτρολογήσεις τα στοιχεία."
 
-#: cogs/system/arg_completion.py:331 cogs/system/arg_completion.py:574
+#: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
 #: cogs/utility/info.py:47 cogs/utility/utility.py:329
 msgid "Yes"
 msgstr "Ναι"
 
-#: cogs/system/arg_completion.py:331 cogs/system/arg_completion.py:575
+#: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
 #: cogs/utility/info.py:47 cogs/utility/utility.py:330
 msgid "No"
 msgstr "Όχι"
 
-#: cogs/system/arg_completion.py:336
+#: cogs/system/arg_completion.py:369
 msgid "Let's finish that command"
 msgstr "Ας ολοκληρώσουμε αυτή την εντολή"
 
-#: cogs/system/arg_completion.py:338
+#: cogs/system/arg_completion.py:371
 #, python-brace-format
 msgid ""
 "`{command}` needs a little more info.\n"
@@ -8699,47 +8708,52 @@ msgstr ""
 "Η `{command}` χρειάζεται λίγες ακόμη πληροφορίες.\n"
 "{instructions}"
 
-#: cogs/system/arg_completion.py:347
+#: cogs/system/arg_completion.py:380
 #, python-brace-format
 msgid "Set: {preview}"
 msgstr "Ορίστηκε: {preview}"
 
-#: cogs/system/arg_completion.py:349
+#: cogs/system/arg_completion.py:382
 msgid "Required"
 msgstr "Απαιτείται"
 
-#: cogs/system/arg_completion.py:351
+#: cogs/system/arg_completion.py:384
 msgid "Optional - you can skip this"
 msgstr "Προαιρετικό - μπορείς να το παραλείψεις"
 
-#: cogs/system/arg_completion.py:353
+#: cogs/system/arg_completion.py:386
 msgid "Only you can use this - it times out in 3 minutes."
 msgstr "Μόνο εσύ μπορείς να το χρησιμοποιήσεις - λήγει σε 3 λεπτά."
 
-#: cogs/system/arg_completion.py:363 cogs/system/arg_completion.py:405
+#: cogs/system/arg_completion.py:396 cogs/system/arg_completion.py:438
 msgid "This prompt is no longer active. Please run the command again."
 msgstr "Αυτή η προτροπή δεν είναι πλέον ενεργή. Τρέξε ξανά την εντολή."
 
-#: cogs/system/arg_completion.py:389
+#: cogs/system/arg_completion.py:422
 msgid "Something went wrong with that prompt."
 msgstr "Κάτι πήγε στραβά με αυτή την προτροπή."
 
-#: cogs/system/arg_completion.py:428
+#: cogs/system/arg_completion.py:472
+#, python-brace-format
+msgid "That value for **{field}** ends with a backslash, which I can't type back safely here. Please run `{prefix}{command}` yourself with that value."
+msgstr "Η τιμή για το **{field}** τελειώνει με ανάποδη κάθετο, οπότε δεν μπορώ να την πληκτρολογήσω ξανά με ασφάλεια εδώ. Εκτέλεσε εσύ το `{prefix}{command}` με αυτή την τιμή."
+
+#: cogs/system/arg_completion.py:482
 #, python-brace-format
 msgid "Running `{command}`..."
 msgstr "Εκτέλεση της `{command}`..."
 
-#: cogs/system/arg_completion.py:509
+#: cogs/system/arg_completion.py:563
 msgid "This prompt timed out."
 msgstr "Αυτή η προτροπή έληξε."
 
-#: cogs/system/arg_completion.py:520 cogs/system/arg_completion.py:535
-#: cogs/system/arg_completion.py:553 cogs/system/arg_completion.py:569
+#: cogs/system/arg_completion.py:574 cogs/system/arg_completion.py:589
+#: cogs/system/arg_completion.py:607 cogs/system/arg_completion.py:623
 #, python-brace-format
 msgid "Choose {name}"
 msgstr "Διάλεξε {name}"
 
-#: cogs/system/arg_completion.py:636
+#: cogs/system/arg_completion.py:690
 #, python-brace-format
 msgid "Complete {command}"
 msgstr "Ολοκλήρωσε την {command}"
