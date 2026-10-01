@@ -9,7 +9,9 @@ import types
 
 import discord
 
+from cogs.moderation import modlog
 from cogs.moderation.modlog import EVENT_KEYS, ModLog, ModLogStatusView
+from tools.i18n import _
 
 
 # ---------------------------------------------------------------------------
@@ -126,3 +128,233 @@ async def test_modlog_status_command_is_pure_read(fake_pool):
     await cog.modlog_status.callback(cog, ctx)
     execs = [c for c in fake_pool.calls if c[0] == "execute"]
     assert execs == []
+
+
+# ---------------------------------------------------------------------------
+# on_raw_message_edit (the cache-independence fix)
+#
+# Model: tests/cogs/test_automod_edit_scan.py's cache-miss cases, against the
+# bit of ``RawMessageUpdateEvent`` this listener actually reads: ``.message``
+# (the full, post-edit Message, built for EVERY MESSAGE_UPDATE since
+# discord.py 2.5) and ``.cached_message`` (the pre-edit copy, ``None`` once
+# the message has aged out of the 1000-entry bot-wide cache).
+# ---------------------------------------------------------------------------
+class _EditPayload:
+    def __init__(self, after, cached=None):
+        self.message = after
+        self.cached_message = cached
+        self.message_id = after.id
+
+
+class _EditAuthor:
+    def __init__(self, uid=7, bot=False):
+        self.id = uid
+        self.bot = bot
+        self.mention = f"<@{uid}>"
+        self.display_avatar = types.SimpleNamespace(url="http://avatar.test")
+
+    def __str__(self):
+        return f"user#{self.id}"
+
+
+class _EditChannel:
+    def __init__(self, cid=99):
+        self.id = cid
+        self.mention = f"<#{cid}>"
+        self.sent = []
+
+    async def send(self, *args, **kwargs):
+        self.sent.append(kwargs.get("embed"))
+
+
+class _EditGuild:
+    """A guild whose ``get_channel`` only ever resolves its OWN configured id -
+    exactly what ``ModLog.get_log_channel`` relies on."""
+
+    def __init__(self, gid=50, channel=None):
+        self.id = gid
+        self._channel = channel
+
+    def get_channel(self, cid):
+        if self._channel is not None and cid == self._channel.id:
+            return self._channel
+        return None
+
+
+class _EditMessage:
+    def __init__(self, author, content, *, guild, channel, edited=None, message_id=1):
+        self.id = message_id
+        self.author = author
+        self.content = content
+        self.guild = guild
+        self.channel = channel
+        self.edited_timestamp = edited
+        gid = guild.id if guild is not None else "@me"
+        self.jump_url = f"https://discord.com/channels/{gid}/{channel.id}/{message_id}"
+
+
+def _edit_cog(monkeypatch, *, channel_id=None, events=None):
+    """A ModLog with the log-channel cache pre-warmed and settings answered
+    from memory, counting how many times each is consulted."""
+
+    bot = types.SimpleNamespace(db_pool=object())
+    cog = ModLog(bot)
+    cog._channels[50] = channel_id
+    cog.settings_reads = 0
+
+    async def _get_guild(_pool, _guild_id, _key, default=None):
+        cog.settings_reads += 1
+        return events
+
+    monkeypatch.setattr(modlog.settings, "get_guild", _get_guild)
+    return cog
+
+
+async def test_uncached_edit_posts_with_a_placeholder_before(monkeypatch):
+    """THE regression: no cached_message, but a real author edit (edited_timestamp
+    set) - must still be logged, with an honest 'unknown' Before."""
+
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor()
+    after = _EditMessage(
+        author, "new content", guild=guild, channel=channel, edited=object()
+    )
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    assert len(channel.sent) == 1
+    embed = channel.sent[0]
+    before_field = next(f for f in embed.fields if f.name == _("Before"))
+    after_field = next(f for f in embed.fields if f.name == _("After"))
+    assert "cache" in before_field.value
+    assert after_field.value == "new content"
+
+
+async def test_a_later_update_of_the_same_edit_is_not_logged_twice(monkeypatch):
+    """A link preview attached AFTER an author edit arrives as another
+    MESSAGE_UPDATE that still carries the edit's edited_timestamp. Uncached,
+    nothing else tells it apart from a new edit: it must not post again. A
+    genuinely new edit (new timestamp) still does."""
+
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor()
+    first_edit = object()
+    after = _EditMessage(author, "see https://example.com", guild=guild, channel=channel, edited=first_edit)
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+    assert len(channel.sent) == 1
+
+    again = _EditMessage(author, "see https://example.org", guild=guild, channel=channel, edited=object())
+    await cog.on_raw_message_edit(_EditPayload(again, cached=None))
+    assert len(channel.sent) == 2
+
+
+async def test_cached_edit_shows_the_real_before_content(monkeypatch):
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor()
+    before = _EditMessage(author, "old content", guild=guild, channel=channel)
+    after = _EditMessage(
+        author, "new content", guild=guild, channel=channel, edited=object()
+    )
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=before))
+
+    assert len(channel.sent) == 1
+    embed = channel.sent[0]
+    before_field = next(f for f in embed.fields if f.name == _("Before"))
+    assert before_field.value == "old content"
+
+
+async def test_uncached_unfurl_posts_nothing_and_never_looks_up_the_channel(
+    monkeypatch, fake_pool
+):
+    """A MESSAGE_UPDATE Discord fires on its own (a link unfurl) carries no
+    ``cached_message`` and leaves ``edited_timestamp`` untouched - the free,
+    synchronous gate must stop it before the first await."""
+
+    bot = types.SimpleNamespace(db_pool=fake_pool)
+    cog = ModLog(bot)  # _channels is cold: any lookup would hit fake_pool
+    guild = _EditGuild()
+    author = _EditAuthor()
+    after = _EditMessage(author, "look https://example.com", guild=guild, channel=_EditChannel(), edited=None)
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    assert fake_pool.calls == []  # get_log_channel's DB read never ran
+
+
+async def test_cached_edit_with_unchanged_content_posts_nothing(monkeypatch):
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor()
+    before = _EditMessage(author, "same", guild=guild, channel=channel)
+    after = _EditMessage(author, "same", guild=guild, channel=channel, edited=object())
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=before))
+
+    assert channel.sent == []
+
+
+async def test_bot_author_edit_posts_nothing(monkeypatch):
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor(bot=True)
+    after = _EditMessage(author, "new", guild=guild, channel=channel, edited=object())
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    assert channel.sent == []
+
+
+async def test_dm_edit_posts_nothing():
+    cog = ModLog(types.SimpleNamespace(db_pool=object()))
+    author = _EditAuthor()
+    after = _EditMessage(
+        author, "new", guild=None, channel=_EditChannel(), edited=object()
+    )
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+    # no guild means nothing to log, and no attribute on a None guild blows up
+
+
+async def test_guild_without_a_log_channel_never_consults_enabled(monkeypatch):
+    """Gate ordering: the cheap channel check runs BEFORE the settings read."""
+
+    cog = _edit_cog(monkeypatch, channel_id=None, events=None)
+    guild = _EditGuild(channel=None)  # configured id is None -> no log channel
+    author = _EditAuthor()
+    after = _EditMessage(author, "new", guild=guild, channel=_EditChannel(), edited=object())
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    assert cog.settings_reads == 0
+
+
+async def test_event_disabled_posts_nothing(monkeypatch):
+    channel = _EditChannel()
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=["join"])
+    guild = _EditGuild(channel=channel)
+    author = _EditAuthor()
+    after = _EditMessage(author, "new", guild=guild, channel=channel, edited=object())
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    assert channel.sent == []
+    assert cog.settings_reads == 1
+
+
+def test_the_listener_is_the_raw_one():
+    """Pinned by name: a cached ``on_message_edit`` would silently shrink
+    coverage back to whatever discord.py still happens to remember."""
+
+    assert hasattr(ModLog, "on_raw_message_edit")
+    assert not hasattr(ModLog, "on_message_edit")

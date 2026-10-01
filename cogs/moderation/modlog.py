@@ -6,9 +6,18 @@ from discord.ext import commands
 
 from tools import db, embed_creator, interactions, settings
 from tools.i18n import _
+from tools.lru_cache import BoundedLRU
 from tools.views import AuthorLayoutView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
+
+# message_id -> edited_timestamp of the last edit the mod-log posted. A message
+# keeps its edited_timestamp after an author edit, so a LATER MESSAGE_UPDATE on
+# it (Discord attaching a link preview, a flag change) still carries one - and,
+# for a message no longer in the cache, nothing else tells it apart from a new
+# edit. Same timestamp = same edit, never logged twice. Bot-wide and bounded:
+# only guilds with a mod-log channel and the event on ever write here.
+EDIT_DEDUP_CAPACITY = 4096
 
 # Per-event embed colour (replaces the old random_colour() so the log reads at
 # a glance: greens for "good", reds for bans, oranges/blurple for messages).
@@ -302,6 +311,7 @@ class ModLog(commands.Cog):
         # guild_id -> channel_id | None (negative-cached: None means "looked up,
         # not configured", so unconfigured guilds never re-query).
         self._channels = {}
+        self._logged_edits = BoundedLRU(EDIT_DEDUP_CAPACITY)
 
     def suppress(self, guild_id, user_id, kind):
         """Mark a bot-initiated action so its listener skips the duplicate embed.
@@ -519,6 +529,21 @@ class ModLog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+        """Log a deletion - CACHED messages only, deliberately not the raw event.
+
+        Unlike the edit listener below, this one is not moved to
+        ``on_raw_message_delete``. A raw delete payload carries only IDs: no
+        author, no content. Without an author this cog cannot even run its
+        "skip bot messages" guard, so every bot-initiated cleanup in a guild
+        (ticket transcripts, panel refreshes, moderation's own case embeds
+        being replaced, automod's own deletions) would flood the log channel
+        the moment the deleted message was not already in
+        ``Client.cached_messages``. Without content there is nothing to show
+        in the embed either. Covering the uncached case would need a
+        dedicated bounded cache of recent message (author, content) - a
+        separate feature, not a one-listener fix like the edit side got.
+        """
+
         if message.author.bot or message.guild is None or not message.content:
             return
 
@@ -549,33 +574,94 @@ class ModLog(commands.Cog):
         await self.post_action(message.guild, embed)
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
-        if (
-            before.author.bot
-            or before.guild is None
-            or before.content == after.content
-        ):
+    async def on_raw_message_edit(self, payload):
+        """Log an edit - the RAW event, not ``on_message_edit``.
+
+        WHY RAW. discord.py dispatches ``message_edit`` only when the edited
+        message is still in ``ConnectionState``'s message cache
+        (``parse_message_update``), and this bot never passes
+        ``max_messages``, so that cache is the default 1000 entries BOT-WIDE
+        across roughly 185 guilds. It turns over in seconds to minutes of
+        traffic, so most edits were never logged - silently, with no error
+        and no sign anything was missing - and a moderator reading the log
+        had no way to know it was incomplete. ``raw_message_edit`` fires on
+        EVERY MESSAGE_UPDATE, cached or not, and since discord.py 2.5
+        ``payload.message`` is a fully built :class:`discord.Message`, so
+        nothing has to be fetched to log it.
+
+        ORDERING (this is a hot listener - every link-preview unfurl Discord
+        attaches to ANY message, in ANY guild, on its own, also fires
+        MESSAGE_UPDATE here, seconds after the fact):
+
+        1. bot/DM guard, free;
+        2. the content-changed gate, free and SYNCHRONOUS, before any
+           ``await``. With the message cached it is the exact comparison the
+           old listener made (``payload.cached_message.content``). Without
+           it, an unfurl is told apart from a real edit by
+           ``edited_timestamp``: Discord sets that only when the AUTHOR
+           edits, never when it attaches an embed or flips a flag - so an
+           uncached unfurl, which we now see for every guild on every embed
+           Discord attaches, costs nothing beyond this check;
+        3. only then the per-guild gates, cheapest first: the log-channel
+           lookup (a dict cache, including a negative ``None`` entry after
+           the first DB read, so a guild with no mod-log costs one dict hit
+           per edit once warm) before ``_enabled`` (a settings read behind
+           its own cache). A guild with no configured channel therefore never
+           even asks whether the event is enabled.
+
+        The embed shows the cached "before" content when the message was
+        still in the cache, or a placeholder when it was not - which, at the
+        scale this project designs for, is most of the time. That is the
+        trade going raw makes: coverage of every edit, at the cost of not
+        always knowing what the message used to say.
+        """
+
+        after = getattr(payload, "message", None)
+        if after is None or after.author.bot or after.guild is None:
             return
 
-        if not before.content and not after.content:
+        before = getattr(payload, "cached_message", None)
+        if before is not None:
+            if before.content == after.content:
+                return
+            if not before.content and not after.content:
+                return
+        elif getattr(after, "edited_timestamp", None) is None:
             return
 
-        if not await self._enabled(before.guild.id, "message_edit"):
+        channel = await self.get_log_channel(after.guild)
+        if channel is None:
             return
+
+        if not await self._enabled(after.guild.id, "message_edit"):
+            return
+
+        # Check and record with no await in between, so two updates for the
+        # same edit arriving together cannot both get through.
+        edited_at = getattr(after, "edited_timestamp", None)
+        if edited_at is not None:
+            if self._logged_edits.get(after.id) == edited_at:
+                return
+            self._logged_edits[after.id] = edited_at
+
+        if before is not None:
+            before_value = before.content[:512] or "​"
+        else:
+            before_value = _(
+                "*Not in the bot's cache - previous content unknown.*"
+            )
 
         embed = discord.Embed(
             title=_("Message Edited"),
             colour=EVENT_COLOURS["message_edit"],
             timestamp=discord.utils.utcnow(),
         )
-        embed.set_thumbnail(url=before.author.display_avatar.url)
+        embed.set_thumbnail(url=after.author.display_avatar.url)
         embed.add_field(
-            name=_("Author"), value=f"{before.author.mention} ({before.author})"
+            name=_("Author"), value=f"{after.author.mention} ({after.author})"
         )
-        embed.add_field(name=_("Channel"), value=before.channel.mention)
-        embed.add_field(
-            name=_("Before"), value=(before.content[:512] or "​"), inline=False
-        )
+        embed.add_field(name=_("Channel"), value=after.channel.mention)
+        embed.add_field(name=_("Before"), value=before_value, inline=False)
         embed.add_field(
             name=_("After"), value=(after.content[:512] or "​"), inline=False
         )
@@ -586,8 +672,8 @@ class ModLog(commands.Cog):
                 value=_("[Go to message]({url})").format(url=jump),
                 inline=False,
             )
-        embed.set_footer(text=_("ID: {id}").format(id=before.author.id))
-        await self.post_action(before.guild, embed)
+        embed.set_footer(text=_("ID: {id}").format(id=after.author.id))
+        await self.post_action(after.guild, embed)
 
 
 async def setup(bot):

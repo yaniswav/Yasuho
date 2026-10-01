@@ -404,6 +404,11 @@ NOT_MIRRORED = {
         "BoundedLRU of message ids already scanned, to keep an edit from "
         "re-punishing. Message-keyed and self-bounding."
     ),
+    ("ModLog", "_logged_edits"): (
+        "BoundedLRU of message_id -> edited_timestamp of edits already posted, "
+        "so a later update of the same edit is not logged twice. Message-keyed "
+        "and self-bounding like AutoMod._scanned; holds no content."
+    ),
     ("Starboard", "_locks"): (
         "message_id -> [asyncio.Lock, waiters], popped when the last waiter "
         "leaves. Not guild-keyed and not state."
