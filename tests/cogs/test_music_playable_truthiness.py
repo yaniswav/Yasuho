@@ -96,6 +96,9 @@ class _Player(sonolink.Player):
         self.radio_genre = None
         self.played = []
         self.controller = None
+        # resume_after_track_change reads the real Player.paused property,
+        # which reads this backing attribute.
+        self._paused = False
 
     @property
     def queue(self):

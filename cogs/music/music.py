@@ -409,6 +409,37 @@ def can_go_previous(player):
     return bool(getattr(player.queue, "history", None))
 
 
+async def resume_after_track_change(player: Player) -> None:
+    """Resume a paused player right after a USER action started another track.
+
+    sonolink's ``skip()`` and ``previous()`` both call ``play()`` internally with
+    no explicit ``paused=`` argument, and ``play()`` then resends whatever
+    ``player._paused`` already was (see sonolink's ``PlaybackHandler.play``:
+    ``paused = paused if paused is not None else self._player._paused``). So a
+    skip or a step-back taken while the player is paused lands the NEW track on
+    Lavalink still paused - nothing plays - while the controller's own
+    ``player.paused`` flag (unchanged by the call) still reads True, so the panel
+    correctly shows "Paused" but the room hears nothing follow a click that
+    looked like it should start something.
+
+    This is the one owner-approved fix for that: skip (the controller's Skip
+    button, ``/skip``, a resolved vote, the dashboard's skip executor) and Back
+    (the controller's Back button, ``/music previous``) all call this right
+    after sonolink's own call returns a track, and it resumes IF AND ONLY IF the
+    player is (still) paused - a no-op otherwise, so nothing changes for a
+    player that was already playing. Callers that invoke ``player.play()``
+    directly (the queue manager's jump-to-track) instead pass ``paused=False``
+    to that call, which is simpler and achieves the same thing in one request.
+
+    Deliberately NOT called from automatic transitions that are not a user
+    action - a natural track end or an autoplay-filled queue keep whatever
+    paused state the user chose (and in practice never run while paused, since
+    sonolink only advances / autoplays a track that is actively playing).
+    """
+    if player.paused:
+        await player.resume()
+
+
 def _set_autoplay(player, enabled):
     """Arm (ENABLED) or disarm (DISABLED) sonolink's native autoplay for a session.
 
@@ -728,6 +759,14 @@ def remove_queue_index(
     track = queued_track_at(queue, index, expected)
     if track is None:
         return None
+    # sonolink >= 1.3.0 exposes a public, index-faithful remove (Queue.remove_at:
+    # same semantics as the del below - no promotion to current_track, no
+    # history push). Prefer it; fall back to the private deque access for
+    # sonolink 1.2.x, still installed in production until the next restart
+    # picks up the 1.4.0 lock. Drop the fallback once 1.4+ is everywhere.
+    remove_at = getattr(queue, "remove_at", None)
+    if remove_at is not None:
+        return remove_at(index)
     del queue._items[index]
     return track
 
@@ -3218,6 +3257,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         except sonolink.QueueEmpty:
             return voteskip.SKIP_RESULT_NONE, None
         if track is not None:
+            # Owner decision: a skip (user action) must leave playback going,
+            # even if the player was paused. See resume_after_track_change.
+            await resume_after_track_change(player)
             return voteskip.SKIP_RESULT_ADVANCED, track
         guild_id = playerinfo.guild_id_of(player)
         if guild_id is not None:
@@ -3293,6 +3335,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # on skip's QueueEmpty catch so a future refactor cannot silence the
             # room by surprise.
             return None
+        # Owner decision: stepping back (user action) must leave playback going,
+        # even if the player was paused. See resume_after_track_change.
+        await resume_after_track_change(player)
         await self._snapshot(player)
         return track
 

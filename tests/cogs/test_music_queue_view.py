@@ -101,17 +101,20 @@ class _Queue:
 
 
 class _Player:
-    def __init__(self, tracks=(), current=None, dj=None):
+    def __init__(self, tracks=(), current=None, dj=None, paused=False):
         self.queue = _Queue(tracks)
         self.current = current
         self.channel = types.SimpleNamespace(name="General")
         self.dj = dj
         self.played = []
+        self.paused = paused
 
-    async def play(self, track):
+    async def play(self, track, *, paused=None, **kwargs):
         self.played.append(track)
         self.queue.current_track = track
         self.current = track
+        if paused is not None:
+            self.paused = paused
 
 
 class _Cog:
@@ -268,6 +271,28 @@ def test_remove_queue_index_leaves_the_current_track_and_autoplay_lane_alone():
     assert [t.title for t in queue.autoplay_tracks] == ["Staged"]
 
 
+def test_remove_queue_index_prefers_the_public_remove_at_when_present():
+    # sonolink >= 1.3.0's public Queue.remove_at - used in preference to the
+    # private deque access, once a queue offers it.
+    queue = _Queue(_tracks("A", "B", "C"))
+    calls = []
+    real_items = queue._items
+
+    def remove_at(index):
+        calls.append(index)
+        track = real_items[index]
+        del real_items[index]
+        return track
+
+    queue.remove_at = remove_at
+
+    removed = music.remove_queue_index(queue, 1)
+
+    assert removed.title == "B"
+    assert calls == [1]
+    assert [t.title for t in queue.tracks] == ["A", "C"]
+
+
 # ---------------------------------------------------------------------------
 # Render: the manage select and the Shuffle button
 # ---------------------------------------------------------------------------
@@ -418,6 +443,35 @@ async def test_jump_with_duplicates_takes_the_picked_copy(make_interaction):
     assert player.played == [second]
     assert [t.title for t in player.queue.tracks] == ["A", "X", "B"]
     assert player.queue.tracks[1] is first
+
+
+async def test_jump_resumes_a_paused_player(make_interaction):
+    # Owner decision: jumping to a track (a user action) must leave playback
+    # going, even if the player was paused - the direct play() call passes
+    # paused=False itself.
+    player = _Player(_tracks("A", "B", "C"), current=_Track("Playing"), paused=True)
+    player.queue.current_track = player.current
+    view = _view(player)
+    picked = player.queue.tracks[1]
+
+    moved = await view._jump(make_interaction(), 1, picked)
+
+    assert moved is True
+    assert player.paused is False
+
+
+async def test_jump_on_a_playing_player_does_not_touch_the_paused_flag(
+    make_interaction,
+):
+    player = _Player(_tracks("A", "B", "C"), current=_Track("Playing"), paused=False)
+    player.queue.current_track = player.current
+    view = _view(player)
+    picked = player.queue.tracks[1]
+
+    moved = await view._jump(make_interaction(), 1, picked)
+
+    assert moved is True
+    assert player.paused is False
 
 
 async def test_jump_is_dj_gated_and_changes_nothing(make_interaction):

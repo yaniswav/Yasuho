@@ -68,7 +68,7 @@ python-Levenshtein==0.27.5
 RapidFuzz==3.14.6
 requests==2.34.2
 six==1.17.0
-sonolink==1.2.1
+sonolink==1.4.0
 soupsieve==2.10
 topggpy==1.4.0
 typing_extensions==4.16.0

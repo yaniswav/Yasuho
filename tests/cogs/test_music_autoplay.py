@@ -229,6 +229,9 @@ class _FakePreviousPlayer:
         self.queue = types.SimpleNamespace(history=list(history))
         self.previous_calls = 0
         self.now_playing = types.SimpleNamespace(title="P", author="art", encoded="P")
+        # resume_after_track_change reads this after a successful previous();
+        # this fake player is never paused, so it is a no-op here.
+        self.paused = False
 
     async def previous(self):
         self.previous_calls += 1
@@ -420,3 +423,128 @@ def test_autoplay_handler_pins_sonolink_internals():
     assert "{identifier}" in str(settings.provider)
     assert "youtube.com" in str(settings.provider).lower()
     assert isinstance(settings.max_seeds, int)
+
+
+# ---------------------------------------------------------------------------
+# _fill_from_seed: the resolved-YouTube-seed path (a non-YouTube current
+# track, e.g. Spotify) must not re-queue the same recommendations every cycle.
+# Skipped under the stub sonolink (no real handler internals to subclass).
+# ---------------------------------------------------------------------------
+
+
+class _FakeTrack:
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+
+class _FakeSearchResult:
+    """Mimics sonolink's search_track return shape: a plain track list."""
+
+    def __init__(self, tracks):
+        self._tracks = list(tracks)
+
+    def is_error(self):
+        return False
+
+    def is_empty(self):
+        return False
+
+    @property
+    def result(self):
+        return list(self._tracks)
+
+
+class _FakeNode:
+    def __init__(self, tracks):
+        self._tracks = tracks
+        self.queries = []
+
+    async def search_track(self, query, source=None):
+        self.queries.append(query)
+        return _FakeSearchResult(self._tracks)
+
+
+class _FakeAutoplayQueue:
+    def __init__(self):
+        self.put_autoplay_calls = []
+
+    def put_autoplay(self, tracks):
+        self.put_autoplay_calls.append(list(tracks))
+
+
+class _FakeAutoplayPlayer:
+    def __init__(self, node):
+        self.node = node
+        self.queue = _FakeAutoplayQueue()
+        self.play_calls = []
+
+    async def play(self, track):
+        self.play_calls.append(track)
+
+
+def _make_youtube_seed_handler(node):
+    autoplay_mod = pytest.importorskip(
+        "sonolink.gateway.player.handlers._autoplay"
+    )
+    from sonolink.models.settings import AutoPlaySettings
+
+    handler_cls = music._YouTubeSeedAutoPlayHandler
+    handler = object.__new__(handler_cls)
+    handler._player = _FakeAutoplayPlayer(node)
+    handler._seeds = set()
+    handler._settings = AutoPlaySettings.default()
+    assert autoplay_mod.AutoPlayHandler is not None  # keep the import load-bearing
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_fill_from_seed_does_not_requeue_the_same_recommendations():
+    # The discovery search keeps returning the SAME three candidate tracks on
+    # every cycle (as a recommendation API naturally would for a stable seed).
+    tracks = [_FakeTrack("a"), _FakeTrack("b"), _FakeTrack("c")]
+    node = _FakeNode(tracks)
+    handler = _make_youtube_seed_handler(node)
+
+    first = await handler._fill_from_seed("resolved_yt_id")
+    assert first is not None
+    assert first.identifier == "a"
+    assert handler._player.play_calls == [first]
+
+    # Second cycle, same resolved seed, identical search result: the tracks
+    # discovered last cycle must now be filtered out (added to _seeds), so
+    # nothing new plays or gets queued again.
+    second = await handler._fill_from_seed("resolved_yt_id")
+    assert second is None
+    assert handler._player.play_calls == [first]
+
+
+@pytest.mark.asyncio
+async def test_fill_from_seed_negative_control_without_seed_update():
+    # Sanity check on the test itself: with the seed-bookkeeping removed (the
+    # pre-fix behaviour), the same recommendations DO come back on the second
+    # cycle - proving the assertions above are not vacuously true.
+    tracks = [_FakeTrack("a"), _FakeTrack("b"), _FakeTrack("c")]
+    node = _FakeNode(tracks)
+    handler = _make_youtube_seed_handler(node)
+
+    async def _fill_from_seed_without_update(identifier):
+        if len(handler._seeds) > handler._settings.max_seeds:
+            handler._seeds.clear()
+        handler._seeds.add(identifier)
+        query = str(handler._settings.provider).format(identifier=identifier)
+        search = await handler._player.node.search_track(query)
+        from cogs.music.player import _normalize_result_tracks
+
+        discovery = [
+            t for t in _normalize_result_tracks(search) if t.identifier not in handler._seeds
+        ]
+        if not discovery:
+            return None
+        return await handler._apply_discovery(discovery)
+
+    first = await _fill_from_seed_without_update("resolved_yt_id")
+    assert first is not None
+    second = await _fill_from_seed_without_update("resolved_yt_id")
+    # Without the fix, the same recommendations come back every cycle.
+    assert second is not None
+    assert second.identifier == "a"

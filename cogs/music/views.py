@@ -59,6 +59,7 @@ from cogs.music.music import (
     queued_track_at,
     queued_track_count,
     remove_queue_index,
+    resume_after_track_change,
     station_select_options,
 )
 from cogs.music.search import truncate
@@ -929,6 +930,9 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
                 )
                 return
             await self.player.skip()
+            # Owner decision: a skip (user action) must leave playback going,
+            # even if the player was paused.
+            await resume_after_track_change(self.player)
             await interaction.response.send_message(_("Skipped."), ephemeral=True)
         except sonolink.QueueEmpty:
             await interaction.response.send_message(
@@ -1783,7 +1787,10 @@ class QueueView(PinnedRenderLocale, LocaleLayoutView):
             # Lavalink ends the outgoing track with REPLACED, whose can_start_next
             # is False, so nothing auto-advances and autoplay never fires behind us.
             chosen = self.player.queue.pop_at(index)
-            await self.player.play(chosen)
+            # Owner decision: jumping to a track (user action) must leave
+            # playback going, even if the player was paused - pass paused=False
+            # directly since we are the ones calling play() here.
+            await self.player.play(chosen, paused=False)
             # The queue AND the current track changed: persist before the UI, the
             # same order _play_previous keeps.
             await self.cog._snapshot(self.player)

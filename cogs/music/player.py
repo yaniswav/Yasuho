@@ -388,6 +388,12 @@ if _SonoAutoPlayHandler is not None:
                 ]
                 if not discovery:
                     return None
+                # Mirror sonolink 1.4.0's own handler (_autoplay.py): remember the
+                # discovered identifiers so the same recommendations are not
+                # re-queued every cycle. Without this, filtering against
+                # self._seeds above is a no-op across cycles, since nothing ever
+                # grows the set.
+                self._seeds.update(track.identifier for track in discovery)
                 return await self._apply_discovery(discovery)
             except Exception:
                 log.exception("AutoPlay: Radio discovery failed for resolved seed")
