@@ -345,33 +345,62 @@ _NEVER_MATCHES = r"(?!)"
 _ItemT = typing.TypeVar("_ItemT", bound=discord.ui.Item)
 
 
-def _wrap_dynamic_item_callback(callback):
-    """Wrap a dynamic item's ``callback`` so a crash is logged and reported.
+def _wrap_dynamic_item_hook(hook, *, kind, fallback):
+    """Wrap one of a dynamic item's own hooks (``callback`` or
+    ``interaction_check``) so a crash is logged and reported instead of
+    vanishing into ``ViewStore.schedule_dynamic_item_call``'s own bare
+    try/except (confirmed in the installed discord.py 2.7.1, ``ui/view.py``):
 
-    See :meth:`LocaleDynamicItem.__init_subclass__` for WHY this exists instead
-    of an ``on_error`` override: the library gives dynamic items no such hook.
-    The wrapper never re-raises - ``ViewStore.schedule_dynamic_item_call``'s own
-    try/except is still there behind it, but by construction has nothing left
-    to catch.
+        try:
+            allow = await item.interaction_check(interaction)
+        except Exception:
+            allow = False
+        ...
+        try:
+            await item.callback(interaction)
+        except Exception:
+            _log.exception('Ignoring exception in dynamic item callback for %r', item)
+
+    Neither branch logs an id or tells the clicker anything, and the
+    ``interaction_check`` branch does not even reach the log line - a raising
+    check is invisible by construction. ``fallback`` is what the wrapper
+    returns in place of re-raising: ``None`` for ``callback`` (its return
+    value is never read) and ``False`` for ``interaction_check`` (deny - the
+    same fail-closed result the library's own swallow already produces, just
+    reported instead of silent). See :meth:`LocaleDynamicItem.__init_subclass__`
+    for why this wraps the method at class-definition time rather than
+    overriding ``on_error``: the library calls no such hook for a dynamic item
+    at all.
     """
 
-    async def _reporting_callback(self, interaction):
+    async def _reporting_hook(self, interaction):
         try:
-            return await callback(self, interaction)
+            return await hook(self, interaction)
         except Exception as error:
             where = (
-                f"{type(self).__name__} dynamic_item "
+                f"{type(self).__name__} dynamic_item {kind} "
                 f"custom_id={getattr(self, 'custom_id', None)}"
             )
             await interactions.report_component_error(interaction, error, where=where)
+            return fallback
 
-    _reporting_callback.__name__ = getattr(callback, "__name__", "callback")
-    _reporting_callback.__qualname__ = getattr(
-        callback, "__qualname__", _reporting_callback.__name__
+    _reporting_hook.__name__ = getattr(hook, "__name__", kind)
+    _reporting_hook.__qualname__ = getattr(
+        hook, "__qualname__", _reporting_hook.__name__
     )
-    _reporting_callback.__doc__ = callback.__doc__
-    _reporting_callback.__wrapped__ = callback
-    return _reporting_callback
+    _reporting_hook.__doc__ = hook.__doc__
+    _reporting_hook.__wrapped__ = hook
+    return _reporting_hook
+
+
+def _wrap_dynamic_item_callback(callback):
+    """``callback`` never re-raises - nothing in it is awaited for a result."""
+    return _wrap_dynamic_item_hook(callback, kind="callback", fallback=None)
+
+
+def _wrap_dynamic_item_interaction_check(check):
+    """``interaction_check`` returns ``False`` (deny) in place of raising."""
+    return _wrap_dynamic_item_hook(check, kind="interaction_check", fallback=False)
 
 
 class LocaleDynamicItem(discord.ui.DynamicItem[_ItemT], template=_NEVER_MATCHES):
@@ -402,30 +431,41 @@ class LocaleDynamicItem(discord.ui.DynamicItem[_ItemT], template=_NEVER_MATCHES)
         return await super().interaction_check(interaction)
 
     def __init_subclass__(cls, **kwargs) -> None:
-        """Wrap a subclass's own ``callback`` so a crash is reported. See THE ERROR RULE.
+        """Wrap a subclass's own ``callback`` AND ``interaction_check`` so a
+        crash in either is reported. See THE ERROR RULE.
 
         discord.py NEVER calls ``on_error`` for a dynamic item - confirmed two
         ways in the installed 2.7.1 source: ``Item.interaction_check``'s own
         docstring says so outright ("For :class:`~discord.ui.DynamicItem` this
         does not call the ``on_error`` handler", ``ui/item.py``), and
-        ``ViewStore.schedule_dynamic_item_call`` (``ui/view.py``) calls
-        ``await item.callback(interaction)`` inside ITS OWN try/except that only
-        ``_log.exception``s - there is no hook anywhere on that path for a
-        subclass to override. So instead of an ``on_error`` that would never
-        run, the subclass's ``callback`` itself is wrapped once, here, at
-        class-definition time, with the identical try/except/report body every
-        other base gets through ``on_error``.
+        ``ViewStore.schedule_dynamic_item_call`` (``ui/view.py``) calls both
+        ``item.interaction_check(interaction)`` and ``item.callback(interaction)``
+        each inside its OWN bare try/except (``allow = False`` for the check,
+        a bare ``_log.exception`` for the callback) - there is no hook
+        anywhere on that path for a subclass to override, and the check's own
+        swallow does not even log. So instead of an ``on_error`` that would
+        never run, BOTH of the subclass's own hooks are wrapped once, here, at
+        class-definition time, with the identical try/except/report body
+        every other base gets through ``on_error`` (see
+        :func:`_wrap_dynamic_item_hook`).
 
-        Only wraps a ``callback`` the subclass defines ITSELF (``cls.__dict__``,
-        not one it inherited): a further subclass that adds no new ``callback``
-        already got one wrapped at its parent's definition, so re-wrapping would
-        be pointless double indirection, not a second report (the wrapper never
-        re-raises, so there is nothing left for an outer wrap to catch).
+        Only wraps a hook the subclass defines ITSELF (``cls.__dict__``, not
+        one it inherited): a further subclass that adds no new ``callback`` /
+        ``interaction_check`` already got one wrapped at its parent's
+        definition, so re-wrapping would be pointless double indirection, not
+        a second report (the wrapper never re-raises, so there is nothing left
+        for an outer wrap to catch). A subclass with no ``interaction_check``
+        of its own keeps inheriting THIS class's (:meth:`interaction_check`
+        above, itself never wrapped - only a real gate a subclass adds can
+        raise something worth reporting).
         """
         super().__init_subclass__(**kwargs)
         own_callback = cls.__dict__.get("callback")
         if own_callback is not None:
             cls.callback = _wrap_dynamic_item_callback(own_callback)
+        own_check = cls.__dict__.get("interaction_check")
+        if own_check is not None:
+            cls.interaction_check = _wrap_dynamic_item_interaction_check(own_check)
 
 
 class PinnedRenderLocale:

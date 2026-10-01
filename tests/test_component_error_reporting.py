@@ -23,20 +23,27 @@ with the SAME id, and never raises - even if the notify itself fails.
 :class:`LocaleDynamicItem` is different: discord.py NEVER calls ``on_error`` for
 a dynamic item (``ui/item.py``'s ``Item.interaction_check`` docstring says so
 outright, and ``ViewStore.schedule_dynamic_item_call`` in ``ui/view.py`` proves
-it - it calls ``item.callback(interaction)`` inside its OWN try/except that only
-``_log.exception``s, with no hook anywhere on that path). There is no ``on_error``
-to add, so ``LocaleDynamicItem.__init_subclass__`` wraps the SUBCLASS's own
-``callback`` instead, at class-definition time, with the identical
-try/except/report body.
+it two ways - ``item.callback(interaction)`` inside its OWN try/except that only
+``_log.exception``s, AND ``allow = await item.interaction_check(interaction)``
+inside a SEPARATE bare try/except that does not even log, just silently denies
+- with no hook anywhere on either path). There is no ``on_error`` to add, so
+``LocaleDynamicItem.__init_subclass__`` wraps BOTH of the subclass's own hooks
+instead, at class-definition time, with the identical try/except/report body
+(one shared helper, :func:`tools.views._wrap_dynamic_item_hook`): ``callback``
+never re-raises, and a raising ``interaction_check`` reports then returns
+``False`` (deny) instead of propagating - the same fail-closed result the
+library's own silent swallow already produced, just no longer invisible.
 
 STRUCTURE OF THIS FILE.
 
 1. Pin the discord.py facts the fix is built on (signatures, and the "no
-   on_error for DynamicItem" contract) - so a discord.py upgrade that changes
-   either fails loudly here instead of silently.
-2. Behavioural: for each of the four bases, a raising callback/on_submit
-   produces exactly one ERROR log record and exactly one ephemeral reply,
-   carrying the SAME id - parametrized over the already-responded fork too
+   on_error for DynamicItem" contract, for both the callback AND the
+   interaction_check try/except) - so a discord.py upgrade that changes either
+   fails loudly here instead of silently.
+2. Behavioural: for each of the four bases (the fourth split into its two
+   wrapped hooks), a raising callback/on_submit/interaction_check produces
+   exactly one ERROR log record and exactly one ephemeral reply, carrying the
+   SAME id - parametrized over the already-responded fork too
    (``response.is_done()`` True routes through ``followup.send`` instead of
    ``response.send_message``, but it is still exactly one reply).
 3. ``report_component_error`` never raises, even when the notify itself blows up.
@@ -44,12 +51,16 @@ STRUCTURE OF THIS FILE.
    deriving from a Locale* base that defines its OWN ``on_error`` must call the
    shared helper, or be named in a documented exemption dict - empty today),
    with synthetic negative controls proving the detector actually flags a
-   bypass. A parallel guard for dynamic items checks every subclass's
-   ``callback`` really got wrapped.
-5. THE MANDATORY negative control: copy ``tools/views.py`` aside (never ``git
-   checkout``/``stash``), strip the fix from ``LocaleView``, reload the module,
-   show the same assertion section 2 relies on now FAILS, then copy the
-   original back and reload again.
+   bypass. A parallel pair of guards for dynamic items checks every
+   subclass's OWN ``callback`` and OWN ``interaction_check`` each really got
+   wrapped - and that a subclass with no ``interaction_check`` of its own
+   is left alone.
+5. THE MANDATORY negative controls: copy ``tools/views.py`` aside (never
+   ``git checkout``/``stash``), strip ONE fix at a time - ``LocaleView``'s
+   on_error mixin, then separately the ``interaction_check`` wrap line in
+   ``LocaleDynamicItem.__init_subclass__`` - load the mutated source under a
+   throwaway module name, show the matching assertion above now FAILS, then
+   copy the original back.
 
 Nothing here touches the network, a database, Discord or Lavalink.
 """
@@ -205,11 +216,43 @@ def _dynamic_item_callback_trigger():
     return lambda interaction: item.callback(interaction)
 
 
+def _dynamic_item_interaction_check_trigger():
+    """A LocaleDynamicItem subclass whose own ``interaction_check`` raises.
+
+    Calls ``item.interaction_check(interaction)`` directly - exactly what
+    ``ViewStore.schedule_dynamic_item_call`` does (see section 1, the
+    ``try: allow = await item.interaction_check(interaction) except Exception:
+    allow = False`` branch, which swallows silently and logs nothing) - so
+    this exercises the real wrapper installed by ``__init_subclass__``, not a
+    stand-in.
+    """
+
+    class CrashCheckButton(
+        views.LocaleDynamicItem[discord.ui.Button],
+        template=r"zz_test_crash_check:(?P<n>\d+)",
+    ):
+        @classmethod
+        async def from_custom_id(cls, interaction, item, match):  # pragma: no cover
+            return cls(item)
+
+        async def interaction_check(self, interaction):
+            raise KeyError("check boom")
+
+        async def callback(self, interaction):  # pragma: no cover
+            pass
+
+    item = CrashCheckButton(
+        discord.ui.Button(custom_id="zz_test_crash_check:1", label="go")
+    )
+    return lambda interaction: item.interaction_check(interaction)
+
+
 _TRIGGER_BUILDERS = {
     "LocaleView": _view_on_error_trigger,
     "LocaleLayoutView": _layout_view_on_error_trigger,
     "LocaleModal": _modal_on_error_trigger,
-    "LocaleDynamicItem": _dynamic_item_callback_trigger,
+    "LocaleDynamicItem.callback": _dynamic_item_callback_trigger,
+    "LocaleDynamicItem.interaction_check": _dynamic_item_interaction_check_trigger,
 }
 
 
@@ -552,6 +595,117 @@ def test_synthetic_dynamic_item_callback_is_wrapped():
         gc.collect()
 
 
+def test_every_dynamic_item_subclass_in_codebase_has_a_wrapped_interaction_check():
+    """Parallel guard, symmetric with the callback one above: every
+    ``LocaleDynamicItem`` subclass that defines its OWN ``interaction_check``
+    must have gone through ``__init_subclass__``'s wrap. A subclass that
+    defines no ``interaction_check`` of its own correctly inherits
+    ``LocaleDynamicItem.interaction_check`` itself - never wrapped, since it
+    cannot raise anything a subclass introduced - and is skipped."""
+
+    skipped = []
+    for modname in _iter_target_modules():
+        try:
+            importlib.import_module(modname)
+        except ImportError as exc:
+            skipped.append((modname, str(exc)))
+
+    target = {
+        cls
+        for cls in _all_subclasses(views.LocaleDynamicItem)
+        if cls.__module__.startswith(("cogs", "tools"))
+    }
+    assert target, (
+        "no LocaleDynamicItem subclasses were discovered under cogs/ or tools/ - "
+        "this scan would be vacuous. Skipped imports: " + repr(skipped)
+    )
+
+    unwrapped = sorted(
+        f"{cls.__module__}.{cls.__qualname__}"
+        for cls in target
+        if "interaction_check" in cls.__dict__
+        and not hasattr(cls.__dict__["interaction_check"], "__wrapped__")
+    )
+    assert unwrapped == [], (
+        "dynamic items whose own interaction_check bypasses the "
+        "error-reporting wrap:\n  " + "\n  ".join(unwrapped)
+    )
+
+
+async def test_synthetic_dynamic_item_interaction_check_is_wrapped_and_denies_on_raise(
+    make_interaction, caplog
+):
+    """The wrap guard is not vacuous: a fresh subclass's raising
+    ``interaction_check`` really gets wrapped, reports exactly once, and
+    returns ``False`` (deny) instead of propagating - the behaviour
+    ``ViewStore.schedule_dynamic_item_call`` would otherwise swallow with no
+    log and no reply at all (see section 1)."""
+
+    class CheckProbe(
+        views.LocaleDynamicItem[discord.ui.Button],
+        template=r"zz_test_check_probe:(?P<n>\d+)",
+    ):
+        @classmethod
+        async def from_custom_id(cls, interaction, item, match):  # pragma: no cover
+            return cls(item)
+
+        async def interaction_check(self, interaction):
+            raise RuntimeError("check boom")
+
+        async def callback(self, interaction):  # pragma: no cover
+            pass
+
+    try:
+        assert hasattr(CheckProbe.__dict__["interaction_check"], "__wrapped__")
+
+        item = CheckProbe(
+            discord.ui.Button(custom_id="zz_test_check_probe:1", label="go")
+        )
+        interaction = make_interaction(done=False)
+        with caplog.at_level(logging.ERROR, logger=interactions.log.name):
+            result = await item.interaction_check(interaction)
+
+        assert result is False  # deny, never a raise reaching the caller
+        errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1, f"expected exactly one ERROR record, got {errors!r}"
+        log_id = _extract_log_id(errors[0])
+        assert len(interaction.sent) == 1
+        args, kwargs = interaction.sent[0]
+        assert kwargs.get("ephemeral") is True
+        assert _extract_message_id(args[0]) == log_id
+    finally:
+        del CheckProbe
+        gc.collect()
+
+
+def test_dynamic_item_subclass_with_no_own_interaction_check_is_untouched():
+    """A subclass that adds a ``callback`` but no ``interaction_check`` of its
+    own must NOT gain one in its own ``__dict__`` - it keeps inheriting
+    ``LocaleDynamicItem.interaction_check`` unwrapped, exactly as before this
+    fix."""
+
+    class NoCheckProbe(
+        views.LocaleDynamicItem[discord.ui.Button],
+        template=r"zz_test_nocheck_probe:(?P<n>\d+)",
+    ):
+        @classmethod
+        async def from_custom_id(cls, interaction, item, match):  # pragma: no cover
+            return cls(item)
+
+        async def callback(self, interaction):  # pragma: no cover
+            pass
+
+    try:
+        assert "interaction_check" not in NoCheckProbe.__dict__
+        assert (
+            NoCheckProbe.interaction_check
+            is views.LocaleDynamicItem.__dict__["interaction_check"]
+        )
+    finally:
+        del NoCheckProbe
+        gc.collect()
+
+
 # ---------------------------------------------------------------------------
 # (5) MANDATORY negative control: remove the fix on disk, prove the test fails
 # ---------------------------------------------------------------------------
@@ -647,4 +801,91 @@ async def test_negative_control_stripping_locale_view_on_error_breaks_the_report
         assert views._ReportsComponentErrors in views.LocaleView.__mro__
         assert "report_component_error" in inspect.getsource(
             views._ReportsComponentErrors.on_error
+        )
+
+
+async def test_negative_control_removing_the_interaction_check_wrap_breaks_the_report(
+    make_interaction, tmp_path
+):
+    """Same mechanism as the negative control above, aimed at Fix 2: strip the
+    ``interaction_check`` wrap line from ``__init_subclass__`` and prove a
+    raising subclass ``interaction_check`` goes back to silently propagating
+    (exactly what ``ViewStore.schedule_dynamic_item_call``'s own bare
+    ``except Exception: allow = False`` would then swallow with no log and no
+    reply at all)."""
+
+    views_path = pathlib.Path(views.__file__)
+    backup_path = tmp_path / "views.py.orig"
+    shutil.copy(views_path, backup_path)
+
+    marker = (
+        "        own_check = cls.__dict__.get(\"interaction_check\")\n"
+        "        if own_check is not None:\n"
+        "            cls.interaction_check = _wrap_dynamic_item_interaction_check(own_check)\n"
+    )
+    original = views_path.read_text()
+    try:
+        assert marker in original, (
+            "the interaction_check wrap lines changed shape - update this "
+            "negative control's marker to match"
+        )
+        broken = original.replace(marker, "", 1)
+        assert broken != original
+        views_path.write_text(broken)
+
+        broken_module = _load_module_from_file(
+            "_negative_control_tools_views_check", views_path
+        )
+
+        class CrashCheckButton(
+            broken_module.LocaleDynamicItem[discord.ui.Button],
+            template=r"zz_test_negctrl_check:(?P<n>\d+)",
+        ):
+            @classmethod
+            async def from_custom_id(cls, interaction, item, match):  # pragma: no cover
+                return cls(item)
+
+            async def interaction_check(self, interaction):
+                raise RuntimeError("check boom")
+
+            async def callback(self, interaction):  # pragma: no cover
+                pass
+
+        # Sanity: the wrap really did not run on the broken module.
+        assert not hasattr(
+            CrashCheckButton.__dict__["interaction_check"], "__wrapped__"
+        )
+
+        item = CrashCheckButton(
+            discord.ui.Button(custom_id="zz_test_negctrl_check:1", label="go")
+        )
+        interaction = make_interaction(done=False)
+
+        # With the wrap stripped, the raise propagates straight out - the
+        # real test (test_synthetic_dynamic_item_interaction_check_is_wrapped_
+        # and_denies_on_raise) asserts a clean ``False`` return with one
+        # report and one reply; with the fix removed there must be a bare
+        # raise instead, which IS the regression this fix closes.
+        raised = False
+        try:
+            await item.interaction_check(interaction)
+        except RuntimeError:
+            raised = True
+
+        assert raised, (
+            "the broken LocaleDynamicItem still denied cleanly instead of "
+            "raising - the wrap removal did not take effect, so this "
+            "negative control proves nothing"
+        )
+        assert interaction.sent == [] and interaction.followups == []
+
+        del CrashCheckButton, item, broken_module
+        gc.collect()
+    finally:
+        shutil.copy(backup_path, views_path)
+        assert views_path.read_text() == original, (
+            "failed to restore tools/views.py to its original content"
+        )
+        assert "_wrap_dynamic_item_interaction_check" in inspect.getsource(
+            views.LocaleDynamicItem.__init_subclass__
         )

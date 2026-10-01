@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 
 import discord
@@ -18,6 +19,18 @@ log = logging.getLogger(__name__)
 # edit. Same timestamp = same edit, never logged twice. Bot-wide and bounded:
 # only guilds with a mod-log channel and the event on ever write here.
 EDIT_DEDUP_CAPACITY = 4096
+
+# How long, after the stamped edited_timestamp, an UNCACHED message's
+# MESSAGE_UPDATE is still trusted as reporting that same edit. An author's own
+# edit fires its MESSAGE_UPDATE within seconds of the edit; a LATER
+# MESSAGE_UPDATE on the same message (a pin/unpin, a moderator suppressing its
+# embeds, a link preview Discord attaches on its own well after the fact, or
+# the guild only just enabling the mod-log after an old edit) still carries
+# that same, now-stale edited_timestamp - Discord never clears it - and must
+# not be logged as a fresh edit. The cached path needs no such gate: it
+# compares actual content, so a content-free update (a pin) is already caught
+# there regardless of how old the timestamp is.
+EDIT_FRESHNESS = datetime.timedelta(seconds=60)
 
 # Per-event embed colour (replaces the old random_colour() so the log reads at
 # a glance: greens for "good", reds for bans, oranges/blurple for messages).
@@ -601,7 +614,12 @@ class ModLog(commands.Cog):
            ``edited_timestamp``: Discord sets that only when the AUTHOR
            edits, never when it attaches an embed or flips a flag - so an
            uncached unfurl, which we now see for every guild on every embed
-           Discord attaches, costs nothing beyond this check;
+           Discord attaches, costs nothing beyond this check. For an
+           uncached message that DOES carry an ``edited_timestamp``, the same
+           synchronous step also rejects one that is not FRESH (see
+           ``EDIT_FRESHNESS``): that field is never cleared, so a pin, an
+           embed suppression or a late unfurl on a message edited long ago
+           would otherwise read as a brand-new edit;
         3. only then the per-guild gates, cheapest first: the log-channel
            lookup (a dict cache, including a negative ``None`` entry after
            the first DB read, so a guild with no mod-log costs one dict hit
@@ -626,8 +644,17 @@ class ModLog(commands.Cog):
                 return
             if not before.content and not after.content:
                 return
-        elif getattr(after, "edited_timestamp", None) is None:
-            return
+        else:
+            edited_at = getattr(after, "edited_timestamp", None)
+            if edited_at is None:
+                return
+            # Freshness gate (synchronous, before any await - see
+            # EDIT_FRESHNESS above): an uncached message's edited_timestamp
+            # never clears, so without this a pin, an embed suppression or a
+            # late link-preview unfurl on a message edited long ago would be
+            # logged as a brand-new "Message Edited".
+            if discord.utils.utcnow() - edited_at > EDIT_FRESHNESS:
+                return
 
         channel = await self.get_log_channel(after.guild)
         if channel is None:

@@ -21,26 +21,59 @@ root stayed ungated (an ephemeral sub-picker legitimately needs no author lock
 of its own - it is reached only through an already-gated flow), but every
 actionable callback downstream re-reads entitlement FRESH from the live request,
 never from a value captured when the picker was opened
-(``cogs/config/rooms_panels.py:98`` and ``:179`` call ``self._owner._still_owner
-(interaction.user.id)``; the rename modal's ``on_submit`` does the same at
-``:21``). That is exactly the CALLBACK_CHECKS / re-checked-GATED_FLOW_MODAL shape
-this file's categories are built to recognise and tell apart from the bug shape
-(a stored id trusted without re-reading it).
+(``cogs/config/rooms_panels.py:98`` calls ``self._owner._still_owner
+(interaction.user.id)`` inline for the slot select; the member-action select
+delegates to ``_handle_member_action``, which does the same at ``:614``; the
+rename modal's ``on_submit`` does the same at ``:179``). That is exactly the
+CALLBACK_CHECKS / re-checked-GATED_FLOW_MODAL shape this file's categories are
+built to recognise and tell apart from the bug shape (a stored id trusted
+without re-reading it).
 
 THE CENSUS. :func:`ungated_dispatch_roots` is the detector: given a set of real
 classes, it reports every one whose own MRO installs no access gate - neither a
 derivation from :class:`~tools.views.AuthorView` / ``AuthorLayoutView`` (whose
 ``interaction_check`` IS the gate) nor ANY repo-defined ancestor's own
-``interaction_check`` (other than the four locale-only bases below, which only
-resolve the clicker's locale and gate nothing - see ``tools/views.py``'s module
-docstring). It runs on the real, imported classes, so inheritance, aliasing,
-mixins and generics resolve exactly as Python itself resolves them for dispatch -
-more reliable than a textual AST walk would be for the same question. Library
+``interaction_check`` that is a REAL gate. Two things never count as a gate:
+the four locale-only bases below (which only resolve the clicker's locale and
+gate nothing - see ``tools/views.py``'s module docstring), and - since this
+audit - a repo class's OWN ``interaction_check`` written in that exact
+locale-only SHAPE inline rather than inherited from one of those four bases
+(:func:`_is_non_restrictive_check`; this closed a real blind spot, see below).
+It runs on the real, imported classes, so inheritance, aliasing, mixins and
+generics resolve exactly as Python itself resolves them for dispatch - more
+reliable than a textual AST walk would be for the question of WHO may act;
+the AST walk :func:`_is_non_restrictive_check` does is deliberately narrow -
+answering only "does this one override's body add a restriction", never
+"is this class gated" - so that reliability argument still holds. Library
 bases (``discord.ui.View`` and friends) are deliberately excluded from the
 ancestor walk: they always carry their own permissive ``interaction_check``
 default, which must never count as a gate or every root would be "gated" by
 discord.py itself and the detector would report nothing, always, including on
 the real bug.
+
+THE BLIND SPOT THIS AUDIT CLOSED. The detector originally treated ANY
+repo-defined ``interaction_check`` override as a gate, full stop - so
+``cogs/config/rooms_config.py``'s ``_HubManageView`` (whose own check is
+exactly ``await i18n.apply_interaction_locale(interaction); return True``,
+the same locale-only shape as the four bases, just written inline instead of
+inherited) read as "gated" and never reached the audit below at all; worse,
+the two modals it opens (``EditHubModal``, ``_RenameChannelsModal``) were
+mis-cited as "opened only from AutoroomPanel" even though both call sites
+(rooms_config.py:317 and :339) are inside ``_HubManageView``, not
+``AutoroomPanel`` itself. :func:`_is_non_restrictive_check` fixes the
+detector (see its own docstring for the exact recognised shapes, proven on
+synthetic classes below); ``_HubManageView`` is now classified
+GATED_FLOW_EPHEMERAL (see that category and its own entry), and both modal
+entries now cite ``_HubManageView`` at the correct lines. The audit also
+re-checked every OTHER "opened only from X (file:line)" citation in
+:data:`CLASSIFIED` against the real source by grepping each cited line:
+``feed_delivery.py:642`` (one line past the real ``send_modal`` call for
+``_ReplyModal``) and ``rooms_panels.py:21``/``:179`` (the rename modal's
+re-check is actually at ``:179``, and the member-action select's own
+citation pointed at that SAME line, which is really inside the rename modal,
+not ``_MemberActionSelect`` - its real re-check is in ``_handle_member_action``
+at ``:614``) were wrong and are fixed; every other citation checked out
+against the real file.
 
 THE AUDIT. Every class the detector reports is looked up in :data:`CLASSIFIED`
 (module.Class -> (CATEGORY, reason)) or, for anything that could not be
@@ -56,12 +89,20 @@ adjudicated by the orchestrator, not silenced here). Categories:
   on could move to someone ELSE before submit (a FINDING, unless re-checked) or
   can only be revoked from the opener (an accepted residual - the room bug's own
   shape, now closed by the re-check above).
+* GATED_FLOW_EPHEMERAL - an ephemeral view only its gated opener can ever see
+  (Discord delivers an ephemeral response only to the interaction's own user,
+  so nobody else can click it regardless of this view's own check). The
+  reason names what entitlement let the opener see it and whether that
+  entitlement could move to someone ELSE while this view is still open (a
+  FINDING for the orchestrator, unless re-checked downstream) or can only be
+  revoked (an accepted residual, same as GATED_FLOW_MODAL's).
 * DISPLAY_ONLY - no actionable component (text/media only, or only link
   buttons); a persistent-item child does not count, because dispatch never
   consults the enclosing root's check for one (the dynamic item is scanned, and
   classified, on its own).
 
-Audited 2026-09-30 against this worktree: 91 ungated roots (87 real classes plus
+Audited 2026-09-30, re-audited 2026-10-01 for the ``_is_non_restrictive_check``
+blind spot above, against this worktree: 92 ungated roots (88 real classes plus
 the four locale-only bases themselves, which install no gate by design and are
 classified :data:`DISPLAY_ONLY` or ``GATED_FLOW_MODAL`` below for the same
 reason their own real subclasses are - they carry no action of their own).
@@ -70,17 +111,21 @@ Zero findings: every one of the shapes the task brief names as typical
 action on movable ownership with no action-time re-check; a modal reachable
 from an ungated view performing a privileged write; a dynamic item trusting a
 custom_id-encoded identity) was checked against the real callback bodies and
-none were found. The two closest calls are noted in-line where they occur
-(``AddSongModal``, ``_VibeSearchModal``): a submit that does not re-check
-same-voice / same-author, accepted because the entitlement there can only LAPSE
-(leaving voice, a timeout elsewhere), never move to a different person, and the
-action is a cooperative, reversible room action every other eligible clicker
-could equally take.
+none were found, ``_HubManageView`` included (see THE BLIND SPOT above: its
+entitlement cannot move to someone else, only be revoked). The two closest
+calls are noted in-line where they occur (``AddSongModal``, ``_VibeSearchModal``):
+a submit that does not re-check same-voice / same-author, accepted because the
+entitlement there can only LAPSE (leaving voice, a timeout elsewhere), never
+move to a different person, and the action is a cooperative, reversible room
+action every other eligible clicker could equally take.
 """
 
+import ast
 import gc
 import importlib
+import inspect
 import pathlib
+import textwrap
 
 import discord
 from discord import ui
@@ -90,6 +135,91 @@ from discord import ui
 # ---------------------------------------------------------------------------
 
 
+def _is_locale_apply_call(call) -> bool:
+    """True for a call shaped like ``i18n.apply_interaction_locale(...)``."""
+    return isinstance(call, ast.Call) and (
+        isinstance(call.func, ast.Attribute)
+        and call.func.attr == "apply_interaction_locale"
+    )
+
+
+def _is_super_check_call(call) -> bool:
+    """True for a call shaped like ``super().interaction_check(...)``."""
+    return (
+        isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "interaction_check"
+        and isinstance(call.func.value, ast.Call)
+        and isinstance(call.func.value.func, ast.Name)
+        and call.func.value.func.id == "super"
+    )
+
+
+def _is_non_restrictive_check(func) -> bool:
+    """AST-only: does ``func``'s OWN body add any restriction of its own?
+
+    Mirrors ``tools/views.py``'s locale-only bases (``LocaleView.interaction_check``
+    is exactly ``await i18n.apply_interaction_locale(interaction); return True``)
+    so a repo class that writes the SAME shape inline - rather than inheriting
+    it, e.g. ``cogs/config/rooms_config.py``'s ``_HubManageView`` - is told
+    apart from a class that writes a real gate. A non-restrictive body, after
+    stripping a leading docstring, is:
+
+    * zero or more bare statements, each EITHER
+      ``await i18n.apply_interaction_locale(...)`` OR
+      ``await super().interaction_check(...)`` (locale install / passthrough,
+      the return value discarded), followed by
+    * a tail statement that is EITHER ``return True`` OR
+      ``return await super().interaction_check(...)`` (a pure tail
+      delegation - whatever super decides is not a restriction THIS level
+      adds; :func:`ungated_dispatch_roots` visits super separately in the
+      same MRO walk, so a real gate further up is still found there).
+
+    Anything else - a stored boolean, an ``if``, comparing
+    ``interaction.user.id``, extra logic after the super call, a bare
+    ``return`` with no value, ``return False`` - is a REAL gate: this is
+    deliberately a body-shape check, not a dataflow one, and errs toward
+    "real gate" for anything it does not recognise outright.
+    """
+    try:
+        src = textwrap.dedent(inspect.getsource(func))
+        tree = ast.parse(src)
+    except (OSError, TypeError, SyntaxError):
+        return False
+
+    fn_def = tree.body[0] if tree.body else None
+    if not isinstance(fn_def, (ast.AsyncFunctionDef, ast.FunctionDef)):
+        return False
+
+    body = fn_def.body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]  # drop the docstring, it is not a restriction
+    if not body:
+        return False
+
+    *lead, tail = body
+    for stmt in lead:
+        if not isinstance(stmt, ast.Expr) or not isinstance(stmt.value, ast.Await):
+            return False
+        call = stmt.value.value
+        if not (_is_locale_apply_call(call) or _is_super_check_call(call)):
+            return False
+
+    if not isinstance(tail, ast.Return):
+        return False
+    value = tail.value
+    if isinstance(value, ast.Constant) and value.value is True:
+        return True
+    if isinstance(value, ast.Await) and _is_super_check_call(value.value):
+        return True
+    return False
+
+
 def ungated_dispatch_roots(classes, *, locale_only_bases, repo_packages):
     """The subset of ``classes`` whose own MRO installs no access gate.
 
@@ -97,8 +227,14 @@ def ungated_dispatch_roots(classes, *, locale_only_bases, repo_packages):
     ``locale_only_bases`` (whose ``interaction_check`` only resolves the
     clicker's locale and gates nothing, see ``tools/views.py``) - is itself
     defined in one of ``repo_packages`` (so a lirbary default never counts,
-    see below) AND defines ``interaction_check`` in its OWN ``__dict__`` (an
-    override, not an inherited default). Everything else is ungated.
+    see below), defines ``interaction_check`` in its OWN ``__dict__`` (an
+    override, not an inherited default), AND that override is not itself
+    :func:`_is_non_restrictive_check` - the same "installs the locale, gates
+    nothing" shape the four ``locale_only_bases`` have, just written inline on
+    a repo class instead of inherited from one (see that function's docstring
+    for the exact shapes recognised, and why a non-restrictive override does
+    not stop the MRO walk: whatever it delegates to is still checked).
+    Everything else is ungated.
 
     ``repo_packages`` bounds what "defines a gate" can even mean: every one of
     the four discord.py dispatch roots (``View``, ``LayoutView``, ``Modal``,
@@ -119,6 +255,8 @@ def ungated_dispatch_roots(classes, *, locale_only_bases, repo_packages):
             if ancestor.__module__.split(".")[0] not in repo_packages:
                 continue
             if "interaction_check" in ancestor.__dict__:
+                if _is_non_restrictive_check(ancestor.__dict__["interaction_check"]):
+                    continue  # locale-only passthrough written inline; not a gate
                 gated = True
                 break
         if not gated:
@@ -183,6 +321,90 @@ def test_negative_control_reports_the_right_two_and_clears_the_third():
             _FakeGatedBase,
             _CaseB_SubclassOfAGatedBase,
             _CaseC_OnlyInheritsTheLocaleCheck,
+        )
+        gc.collect()
+
+
+def test_negative_control_recognises_a_non_restrictive_own_override():
+    """The EditHubModal/_HubManageView defect this fix closes, isolated: a
+    class's OWN ``interaction_check`` (not inherited from any
+    ``locale_only_bases`` - this test passes an empty set, so the only thing
+    that can keep these out of the result is :func:`_is_non_restrictive_check`
+    itself) that only installs the locale and returns ``True`` is NOT a gate
+    and must be reported ungated; one with a real conditional ``False`` path
+    is a gate and must not be.
+
+    Uses the real ``tools.i18n.apply_interaction_locale`` so the call shape
+    matches production exactly, rather than a same-named stand-in that would
+    only prove the AST check matches ITS OWN fixture.
+    """
+    from tools import i18n
+
+    class _CaseD_OwnLocaleOnlyCheck(discord.ui.View):
+        """Own check, no locale_only_bases involved: must be reported."""
+
+        async def interaction_check(self, interaction):
+            await i18n.apply_interaction_locale(interaction)
+            return True
+
+    class _CaseE_OwnRealGate(discord.ui.View):
+        """Own check with a real conditional False path: must not be."""
+
+        async def interaction_check(self, interaction):
+            if interaction.user.id != 999:
+                return False
+            return True
+
+    try:
+        result = ungated_dispatch_roots(
+            [_CaseD_OwnLocaleOnlyCheck, _CaseE_OwnRealGate],
+            locale_only_bases=set(),
+            repo_packages=(__name__.split(".")[0],),
+        )
+        assert result == {_CaseD_OwnLocaleOnlyCheck}
+    finally:
+        del _CaseD_OwnLocaleOnlyCheck, _CaseE_OwnRealGate
+        gc.collect()
+
+
+def test_negative_control_tail_delegation_defers_to_the_super_it_chains_to():
+    """``return await super().interaction_check(interaction)`` with no logic
+    of its own is non-restrictive AT THAT LEVEL - but the MRO walk still
+    visits whatever it delegates to, so a real gate further up is still
+    found. Chaining onto a non-restrictive super stays ungated; chaining onto
+    a real gate does not."""
+
+    class _PermissiveSuper(discord.ui.View):
+        async def interaction_check(self, interaction):
+            return True
+
+    class _CaseF_TailDelegatesToPermissiveSuper(_PermissiveSuper):
+        async def interaction_check(self, interaction):
+            return await super().interaction_check(interaction)
+
+    class _StrictSuper(discord.ui.View):
+        async def interaction_check(self, interaction):
+            if interaction.user.id != 999:
+                return False
+            return True
+
+    class _CaseG_TailDelegatesToARealGate(_StrictSuper):
+        async def interaction_check(self, interaction):
+            return await super().interaction_check(interaction)
+
+    try:
+        result = ungated_dispatch_roots(
+            [_CaseF_TailDelegatesToPermissiveSuper, _CaseG_TailDelegatesToARealGate],
+            locale_only_bases=set(),
+            repo_packages=(__name__.split(".")[0],),
+        )
+        assert result == {_CaseF_TailDelegatesToPermissiveSuper}
+    finally:
+        del (
+            _PermissiveSuper,
+            _CaseF_TailDelegatesToPermissiveSuper,
+            _StrictSuper,
+            _CaseG_TailDelegatesToARealGate,
         )
         gc.collect()
 
@@ -318,7 +540,13 @@ def test_the_scan_actually_covered_the_tree():
 # (4) The audit: every ungated class, classified
 # ---------------------------------------------------------------------------
 
-_VALID_CATEGORIES = {"PUBLIC", "CALLBACK_CHECKS", "GATED_FLOW_MODAL", "DISPLAY_ONLY"}
+_VALID_CATEGORIES = {
+    "PUBLIC",
+    "CALLBACK_CHECKS",
+    "GATED_FLOW_MODAL",
+    "GATED_FLOW_EPHEMERAL",
+    "DISPLAY_ONLY",
+}
 
 #: ``"module.Class" -> (CATEGORY, "why")``. Every class the scan reports must be
 #: a key here or in :data:`PENDING`; see the module docstring for what each
@@ -340,7 +568,7 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
     ),
     "cogs.anilist.airing.AiringSeenButton": (
         "PUBLIC",
-        "callback (airing.py:247-248) calls _run_seen, which resolves the "
+        "callback (airing.py:417-418) calls _run_seen, which resolves the "
         "CLICKER's own AniList token (airing.py:296, interaction.user) and "
         "only ever advances that same user's progress; media_id/episode "
         "riding in the custom_id are public content ids, not another user's "
@@ -377,7 +605,7 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
     ),
     "cogs.anilist.feed_delivery._ReplyModal": (
         "GATED_FLOW_MODAL",
-        "Opened only from _run_reply (feed_delivery.py:642, after a debounce "
+        "Opened only from _run_reply (feed_delivery.py:641, after a debounce "
         "and a token pre-check); on_submit re-resolves the SUBMITTER's own "
         "token fresh (_resolve_token(interaction)) and posts the reply as "
         "that same user, so there is no other user's entitlement involved.",
@@ -593,19 +821,38 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
     ),
     "cogs.config.rooms_config.EditHubModal": (
         "GATED_FLOW_MODAL",
-        "Opened only from AutoroomPanel (rooms_config.py:317); same residual "
-        "as AddHubModal.",
+        "Opened only from _HubManageView._on_settings (rooms_config.py:317) "
+        "- see that class's own GATED_FLOW_EPHEMERAL entry for why it needs "
+        "no gate: it is itself only ever shown, ephemeral, to AutoroomPanel's "
+        "already-gated author. Same accepted revocation-only residual as "
+        "AddHubModal.",
     ),
     "cogs.config.rooms_config._RenameChannelsModal": (
         "GATED_FLOW_MODAL",
-        "Opened only from AutoroomPanel (rooms_config.py:339); same residual "
-        "as AddHubModal.",
+        "Opened only from _HubManageView._on_rename (rooms_config.py:339) - "
+        "same reach and residual as EditHubModal above.",
+    ),
+    "cogs.config.rooms_config._HubManageView": (
+        "GATED_FLOW_EPHEMERAL",
+        "Sent only as an ephemeral followup to AutoroomPanel's author "
+        "(rooms_config.py:514, ephemeral=True, from _on_edit which "
+        "AutoroomPanel's own interaction_check already gated - "
+        "rooms_config.py:449-458) - no one else can ever see or click it, so "
+        "its own interaction_check only installs the locale (rooms_config.py:"
+        "311-313). The entitlement is 'being this AutoroomPanel's author', "
+        "which cannot move to someone ELSE the way the room-panel bug's "
+        "ownership could (it is not a claimable/transferable resource, just "
+        "whoever ran /autorooms); it can only be REVOKED (manage_guild taken "
+        "away between opening this view and submitting EditHubModal/"
+        "_RenameChannelsModal) - the same accepted residual every other "
+        "admin-panel modal in this file carries, not a transfer, so not a "
+        "FINDING.",
     ),
     "cogs.config.rooms_panels._RoomRenameModal": (
         "GATED_FLOW_MODAL",
         "THE FIXED BUG CLASS. Opened from an ephemeral _RoomSubView wrapping "
         "a rename-launching control with no gate of its own; on_submit "
-        "re-reads entitlement FRESH at rooms_panels.py:21 "
+        "re-reads entitlement FRESH at rooms_panels.py:179 "
         "(self._owner._still_owner(interaction.user.id)) rather than trusting "
         "a value captured at open time - exactly closing the gap the "
         "original bug left open (the entitlement, room ownership, CAN move "
@@ -615,8 +862,10 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "CALLBACK_CHECKS",
         "Generic one-item ephemeral wrapper with no gate of its own; both "
         "items it is ever built with re-check live ownership themselves: "
-        "_SlotSelect.callback at rooms_panels.py:98 and "
-        "_MemberActionSelect.callback at rooms_panels.py:179, each calling "
+        "_SlotSelect.callback re-checks inline at rooms_panels.py:98, and "
+        "_MemberActionSelect.callback (rooms_panels.py:146) delegates to "
+        "self._owner._handle_member_action (rooms_panels.py:148), which "
+        "itself re-checks FRESH at rooms_panels.py:614 - each calling "
         "self._owner._still_owner(interaction.user.id) before acting. "
         "Confirmed exhaustively: rooms_panels.py:436,512,532,555 are the only "
         "four call sites that construct it, and all four wrap one of those "
@@ -898,7 +1147,7 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
 PENDING: dict[str, tuple[str, str]] = {}
 
 
-def test_every_classified_category_is_one_of_the_four():
+def test_every_classified_category_is_a_valid_one():
     for key, (category, _reason) in CLASSIFIED.items():
         assert category in _VALID_CATEGORIES, (key, category)
     for key, (category, _reason) in PENDING.items():
