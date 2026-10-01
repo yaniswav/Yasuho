@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 10:07+0000\n"
+"POT-Creation-Date: 2026-10-01 11:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1234,8 +1234,8 @@ msgstr "Esto elimina permanentemente el feed de AniList en {channel} y a todos a
 msgid "Feed deleted."
 msgstr "Feed eliminado."
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1132
-#: cogs/moderation/moderation.py:1205 cogs/system/arg_completion.py:548
+#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1144
+#: cogs/moderation/moderation.py:1217 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr "Cancelado."
 
@@ -1275,7 +1275,7 @@ msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
-#: cogs/config/twitch.py:424 cogs/config/verification.py:101
+#: cogs/config/twitch.py:424 cogs/config/verification.py:108
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
 msgid "Enabled"
@@ -1283,7 +1283,7 @@ msgstr "Activado"
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:426 cogs/config/verification.py:103
+#: cogs/config/twitch.py:426 cogs/config/verification.py:110
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
@@ -2455,7 +2455,7 @@ msgstr "Todo el servidor: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:106
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:113
 msgid "(deleted)"
 msgstr "(eliminado)"
 
@@ -2955,55 +2955,55 @@ msgstr "Aún no hay recompensas de nivel. Usa `/levelconfig rewards add` para cr
 msgid "**Level {level}** -> {roles}"
 msgstr "**Nivel {level}** -> {roles}"
 
-#: cogs/community/leveling/level_rewards.py:390
+#: cogs/community/leveling/level_rewards.py:394
 msgid "That role isn't from this server."
 msgstr "Ese rol no es de este servidor."
 
-#: cogs/community/leveling/level_rewards.py:393
+#: cogs/community/leveling/level_rewards.py:397
 msgid "You can't use @everyone as a level reward."
 msgstr "No puedes usar @everyone como recompensa de nivel."
 
-#: cogs/community/leveling/level_rewards.py:410
+#: cogs/community/leveling/level_rewards.py:414
 msgid "The level must be 1 or higher."
 msgstr "El nivel debe ser 1 o superior."
 
-#: cogs/community/leveling/level_rewards.py:423
-#: cogs/community/leveling/level_rewards.py:464
+#: cogs/community/leveling/level_rewards.py:427
+#: cogs/community/leveling/level_rewards.py:468
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr "Este servidor ya tiene el máximo de {max} recompensas de nivel."
 
-#: cogs/community/leveling/level_rewards.py:456
+#: cogs/community/leveling/level_rewards.py:460
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr "{role} ya es una recompensa del nivel {level}."
 
-#: cogs/community/leveling/level_rewards.py:474
+#: cogs/community/leveling/level_rewards.py:478
 msgid "Level reward added"
 msgstr "Recompensa de nivel añadida"
 
-#: cogs/community/leveling/level_rewards.py:476
+#: cogs/community/leveling/level_rewards.py:480
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "Recompensa añadida: alcanza el nivel **{level}** para recibir {role}."
 
-#: cogs/community/leveling/level_rewards.py:488
+#: cogs/community/leveling/level_rewards.py:492
 msgid "This server has no level rewards configured yet."
 msgstr "Este servidor aún no tiene recompensas de nivel."
 
-#: cogs/community/leveling/level_rewards.py:493
+#: cogs/community/leveling/level_rewards.py:497
 msgid "Pick a reward rule to remove:"
 msgstr "Elige una regla a eliminar:"
 
-#: cogs/community/leveling/level_rewards.py:529
+#: cogs/community/leveling/level_rewards.py:533
 msgid "Members now keep only the roles from the highest level reward they've reached."
 msgstr "Los miembros ahora solo conservan los roles del nivel más alto alcanzado."
 
-#: cogs/community/leveling/level_rewards.py:534
+#: cogs/community/leveling/level_rewards.py:538
 msgid "Members now keep every level reward role they've ever earned."
 msgstr "Los miembros ahora conservan todos los roles de recompensa que hayan ganado."
 
-#: cogs/community/leveling/level_rewards.py:538
+#: cogs/community/leveling/level_rewards.py:542
 msgid "Reward mode updated"
 msgstr "Modo de recompensa actualizado"
 
@@ -3199,22 +3199,22 @@ msgstr "Tu estilo personal de tarjeta de rango ha desaparecido - tus tarjetas /r
 msgid "Rank card cleared"
 msgstr "Tarjeta de rango borrada"
 
-#: cogs/community/leveling/seasons.py:685
+#: cogs/community/leveling/seasons.py:689
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr "**¡La temporada {month} ha terminado!** Este es el podio final:"
 
-#: cogs/community/leveling/seasons.py:691
+#: cogs/community/leveling/seasons.py:695
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr "{medal} {user} - {xp} XP"
 
-#: cogs/community/leveling/seasons.py:699
+#: cogs/community/leveling/seasons.py:703
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr "{user} es el nuevo campeón de la temporada y recibe {role}."
 
-#: cogs/community/leveling/seasons.py:774
+#: cogs/community/leveling/seasons.py:778
 msgid "No leveling season has closed here yet - check back next month."
 msgstr "Aún no se ha cerrado ninguna temporada de niveles aquí - vuelve el mes que viene."
 
@@ -4020,7 +4020,7 @@ msgstr "Compón el embed con el menú, elige un canal (y opcionalmente un rol a 
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
-#: cogs/config/twitch.py:420 cogs/config/verification.py:108
+#: cogs/config/twitch.py:420 cogs/config/verification.py:115
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
@@ -4052,7 +4052,7 @@ msgid "Pick a target channel first."
 msgstr "Elige primero un canal de destino."
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:187
+#: cogs/config/rolemenus.py:668 cogs/config/verification.py:194
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "No puedo enviar mensajes en {channel}."
@@ -4746,11 +4746,11 @@ msgid "Header"
 msgstr "Encabezado"
 
 #: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1478
+#: cogs/system/dashboard_actions.py:1489
 msgid "Pick your roles"
 msgstr "Elige tus roles"
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1483
+#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1494
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr "Roles"
@@ -5528,72 +5528,72 @@ msgstr "¡{mention} está ahora en directo! {url}"
 msgid "Nothing to preview yet - add a message or some embed content."
 msgstr "Todavía no hay nada que previsualizar - añade un mensaje o contenido para el embed."
 
-#: cogs/config/twitch.py:834
+#: cogs/config/twitch.py:842
 msgid "Could not add that member to the watchlist."
 msgstr "No pude añadir a ese miembro a la lista de seguimiento."
 
-#: cogs/config/twitch.py:838
+#: cogs/config/twitch.py:846
 msgid "the configured alert channel"
 msgstr "el canal de alertas configurado"
 
-#: cogs/config/twitch.py:840 cogs/config/twitch.py:865
-#: cogs/config/twitch.py:892
+#: cogs/config/twitch.py:848 cogs/config/twitch.py:873
+#: cogs/config/twitch.py:900
 msgid "Twitch watchlist"
 msgstr "Lista de seguimiento de Twitch"
 
-#: cogs/config/twitch.py:841
+#: cogs/config/twitch.py:849
 msgid "Now watching"
 msgstr "Viendo ahora"
 
-#: cogs/config/twitch.py:842
+#: cogs/config/twitch.py:850
 msgid "Alerts in"
 msgstr "Alertas en"
 
-#: cogs/config/twitch.py:843
+#: cogs/config/twitch.py:851
 msgid "Use /twitch to open the builder."
 msgstr "Usa /twitch para abrir el creador."
 
-#: cogs/config/twitch.py:863
+#: cogs/config/twitch.py:871
 msgid "Could not remove that member."
 msgstr "No se pudo eliminar a ese miembro."
 
-#: cogs/config/twitch.py:866
+#: cogs/config/twitch.py:874
 msgid "Removed"
 msgstr "Eliminado"
 
-#: cogs/config/twitch.py:883
+#: cogs/config/twitch.py:891
 msgid "Could not load the watchlist."
 msgstr "No pude cargar la lista de seguimiento."
 
-#: cogs/config/twitch.py:888
+#: cogs/config/twitch.py:896
 msgid "default alert channel"
 msgstr "canal de alertas predeterminado"
 
-#: cogs/config/twitch.py:911
+#: cogs/config/twitch.py:919
 msgid "Your guild already has a Live streamer role - it is now linked."
 msgstr "Tu servidor ya tiene un rol de streamer en directo - ahora está vinculado."
 
-#: cogs/config/twitch.py:922
+#: cogs/config/twitch.py:930
 msgid "Could not create the Live streamer role."
 msgstr "No pude crear el rol de streamer en directo."
 
-#: cogs/config/twitch.py:930
+#: cogs/config/twitch.py:938
 msgid "Live streamer role created and linked. Move it to your preferred position in the role list."
 msgstr "Rol de streamer en directo creado y vinculado. Muévelo a la posición que prefieras en la lista de roles."
 
-#: cogs/config/twitch.py:945
+#: cogs/config/twitch.py:953
 msgid "No Live streamer role is set up."
 msgstr "No hay ningún rol de streamer en directo configurado."
 
-#: cogs/config/twitch.py:963
+#: cogs/config/twitch.py:971
 msgid "To just unlink it without deleting it, open `/twitch` and clear the Live role select."
 msgstr "Para solo desvincularlo sin eliminarlo, abre `/twitch` y vacia el selector del rol En directo."
 
-#: cogs/config/twitch.py:972
+#: cogs/config/twitch.py:980
 msgid "Could not delete the Live streamer role."
 msgstr "No se pudo eliminar el rol de streamer en directo."
 
-#: cogs/config/twitch.py:978
+#: cogs/config/twitch.py:986
 msgid "Live streamer role removed."
 msgstr "Rol de streamer en directo eliminado."
 
@@ -5609,26 +5609,26 @@ msgstr "La verificación no está configurada aquí."
 msgid "You are already verified."
 msgstr "Ya estás verificado/a."
 
-#: cogs/config/verification.py:65
+#: cogs/config/verification.py:65 cogs/config/verification.py:72
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "No puedo asignar ese rol - puede que esté por encima de mi rol más alto."
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
 #: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:73
+#: cogs/config/tickets/open.py:343 cogs/config/verification.py:80
 msgid "Something went wrong, please try again."
 msgstr "Algo salió mal, inténtalo de nuevo."
 
-#: cogs/config/verification.py:76
+#: cogs/config/verification.py:83
 msgid "You are verified. Welcome!"
 msgstr "Estás verificado/a. ¡Bienvenido/a!"
 
-#: cogs/config/verification.py:113
+#: cogs/config/verification.py:120
 #, python-brace-format
 msgid "Verification | {guild}"
 msgstr "Verificación | {guild}"
 
-#: cogs/config/verification.py:119
+#: cogs/config/verification.py:126
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -5637,24 +5637,24 @@ msgstr ""
 "**Estado:** {status}\n"
 "**Rol otorgado:** {role}"
 
-#: cogs/config/verification.py:128
+#: cogs/config/verification.py:135
 msgid "Use `/verify setup` to turn on verification."
 msgstr "Usa `/verify setup` para activar la verificación."
 
-#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:561
+#: cogs/config/verification.py:200 cogs/system/dashboard_actions.py:572
 msgid "Verification"
 msgstr "Verificación"
 
-#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:564
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:575
 msgid "Click the button below to verify and unlock the server."
 msgstr "Haz clic en el botón de abajo para verificarte y desbloquear el servidor."
 
-#: cogs/config/verification.py:202
+#: cogs/config/verification.py:209
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr "La verificación está configurada - al hacer clic se concede el rol {role} en {channel}."
 
-#: cogs/config/verification.py:213
+#: cogs/config/verification.py:220
 msgid "Verification disabled."
 msgstr "Verificación desactivada."
 
@@ -6687,13 +6687,13 @@ msgstr "Nuevo motivo"
 msgid "The reason can't be empty."
 msgstr "El motivo no puede estar vacío."
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1297
-#: cogs/moderation/moderation.py:1370 cogs/moderation/moderation.py:1392
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1309
+#: cogs/moderation/moderation.py:1382 cogs/moderation/moderation.py:1404
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "No se encontró el caso #{number} en este servidor."
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1398
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1410
 msgid "Updated by"
 msgstr "Actualizado por"
 
@@ -6864,7 +6864,7 @@ msgstr "Cantidad no válida. El máximo es 500."
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} Eliminé **{deleted}/{num}** mensajes posibles para ti."
 
-#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1069
+#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1081
 msgid "This server has no mute role yet - I create one the first time you use `mute`."
 msgstr "Este servidor aun no tiene rol de silencio - lo creo la primera vez que uses `mute`."
 
@@ -6894,111 +6894,115 @@ msgstr "Creando rol..."
 msgid "Mute role created!"
 msgstr "¡Rol de silencio creado!"
 
-#: cogs/moderation/moderation.py:1030
+#: cogs/moderation/moderation.py:1001
+msgid "The configured mute role carries dangerous permissions, so I won't apply it. Point the mute role setting at a role with no permissions instead."
+msgstr "El rol de silencio configurado tiene permisos peligrosos, así que no lo aplicaré. Elige en su lugar un rol sin ningún permiso como rol de silencio."
+
+#: cogs/moderation/moderation.py:1042
 msgid "Already Muted"
 msgstr "Ya silenciado"
 
-#: cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:1044
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: ¡{user} ya está silenciado!"
 
-#: cogs/moderation/moderation.py:1042
+#: cogs/moderation/moderation.py:1054
 msgid "Mute failed"
 msgstr "Error al silenciar"
 
-#: cogs/moderation/moderation.py:1045
+#: cogs/moderation/moderation.py:1057
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: No se pudo silenciar a {user}, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:1098
+#: cogs/moderation/moderation.py:1110
 msgid "Unmute failed"
 msgstr "Error al quitar el silencio"
 
-#: cogs/moderation/moderation.py:1101
+#: cogs/moderation/moderation.py:1113
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: No se pudo quitar el silencio a {user}, inténtalo de nuevo."
 
-#: cogs/moderation/moderation.py:1123
+#: cogs/moderation/moderation.py:1135
 msgid "Confirm mass role add"
 msgstr "Confirmar adición masiva de rol"
 
-#: cogs/moderation/moderation.py:1125
+#: cogs/moderation/moderation.py:1137
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "¿Añadir el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
 
-#: cogs/moderation/moderation.py:1154
+#: cogs/moderation/moderation.py:1166
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** añadido a {done} miembro(s) ({failed} fallidos)."
 
-#: cogs/moderation/moderation.py:1175
+#: cogs/moderation/moderation.py:1187
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} Se ha añadido el rol **`{role}`** a **{member}**"
 
-#: cogs/moderation/moderation.py:1196
+#: cogs/moderation/moderation.py:1208
 msgid "Confirm mass role remove"
 msgstr "Confirmar eliminación masiva de roles"
 
-#: cogs/moderation/moderation.py:1198
+#: cogs/moderation/moderation.py:1210
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "¿Quitar el rol **{role}** a **todos** los miembros de este servidor? Esto puede tardar un rato."
 
-#: cogs/moderation/moderation.py:1227
+#: cogs/moderation/moderation.py:1239
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** eliminado de {done} miembro(s) ({failed} fallidos)."
 
-#: cogs/moderation/moderation.py:1240
+#: cogs/moderation/moderation.py:1252
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "Se ha eliminado el rol {emoji} **`{role}`** a **{member}**"
 
-#: cogs/moderation/moderation.py:1262 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1274 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "No puedes gestionar un rol igual o superior a tu rol más alto."
 
-#: cogs/moderation/moderation.py:1269
+#: cogs/moderation/moderation.py:1281
 msgid "You can't move a role to or above my highest role."
 msgstr "No puedes mover un rol al nivel o por encima de mi rol más alto."
 
-#: cogs/moderation/moderation.py:1275
+#: cogs/moderation/moderation.py:1287
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} movido."
 
-#: cogs/moderation/moderation.py:1277 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "No tienes permiso para hacer eso"
 
-#: cogs/moderation/moderation.py:1279
+#: cogs/moderation/moderation.py:1291
 msgid "Failed to move role"
 msgstr "No se pudo mover el rol"
 
-#: cogs/moderation/moderation.py:1281
+#: cogs/moderation/moderation.py:1293
 msgid "Invalid argument"
 msgstr "Argumento no válido"
 
-#: cogs/moderation/moderation.py:1316
+#: cogs/moderation/moderation.py:1328
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "Historial de casos - {guild}"
 
-#: cogs/moderation/moderation.py:1326
+#: cogs/moderation/moderation.py:1338
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "Historial de casos - {member}"
 
-#: cogs/moderation/moderation.py:1329
+#: cogs/moderation/moderation.py:1341
 msgid "No cases on record."
 msgstr "No hay casos registrados."
 
-#: cogs/moderation/moderation.py:1336 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1348 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "Sin motivo"
 
@@ -11708,69 +11712,69 @@ msgstr "Nada que mostrar."
 msgid "Couldn't close the menu, please try again."
 msgstr "No pude cerrar el menú, inténtalo de nuevo."
 
-#: tools/role_audit.py:712
+#: tools/role_audit.py:764
 #, python-brace-format
 msgid "{role} carries {permissions}"
 msgstr "{role} lleva {permissions}"
 
-#: tools/role_audit.py:717
+#: tools/role_audit.py:769
 #, python-brace-format
 msgid "{role} is a mute role with a non-empty permission mask (value {value})"
 msgstr "{role} es un rol de silencio con una mascara de permisos no vacia (valor {value})"
 
-#: tools/role_audit.py:720
+#: tools/role_audit.py:772
 #, python-brace-format
 msgid "role {role} no longer exists"
 msgstr "el rol {role} ya no existe"
 
-#: tools/role_audit.py:723
+#: tools/role_audit.py:775
 #, python-brace-format
 msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
 msgstr "no puedo otorgar {role} (por encima de mi rol mas alto, gestionado por una integracion o @everyone)"
 
-#: tools/role_audit.py:728
+#: tools/role_audit.py:780
 #, python-brace-format
 msgid "{role} cannot be judged: I am not in this guild's member cache"
 msgstr "no puedo evaluar {role}: no estoy en la cache de miembros de este servidor"
 
-#: tools/role_audit.py:744
+#: tools/role_audit.py:796
 msgid "Role grant audit - the roles Yasuho hands out on her own."
 msgstr "Auditoria de roles otorgados - los roles que Yasuho reparte por su cuenta."
 
-#: tools/role_audit.py:748
+#: tools/role_audit.py:800
 #, python-brace-format
 msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
 msgstr "INCOMPLETO: no se pudo leer {surfaces}. Considera este informe parcial."
 
-#: tools/role_audit.py:754
+#: tools/role_audit.py:806
 #, python-brace-format
 msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
 msgstr "{guilds} servidor(es) recorrido(s); {found} ajuste(s) de rol configurado(s), {examined} examinado(s)."
 
-#: tools/role_audit.py:763
+#: tools/role_audit.py:815
 #, python-brace-format
 msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
 msgstr "CRITICO {critical} | AVISO {warning} | NOTA {notice}"
 
-#: tools/role_audit.py:773
+#: tools/role_audit.py:825
 #, python-brace-format
 msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
 msgstr "DESCONOCIDO: {guilds} servidor(es) no se pudieron evaluar, {settings} ajuste(s) NO examinado(s)."
 
-#: tools/role_audit.py:783
+#: tools/role_audit.py:835
 #, python-brace-format
 msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
 msgstr "{orphans} fila(s) omitida(s) de servidores en los que no estoy; {malformed} id(s) de rol ilegible(s)."
 
-#: tools/role_audit.py:799
+#: tools/role_audit.py:851
 msgid "Nothing flagged: every audited setting is safe to hand out."
 msgstr "Nada que senalar: todos los ajustes auditados se pueden repartir sin riesgo."
 
-#: tools/role_audit.py:803
+#: tools/role_audit.py:855
 msgid "Nothing flagged in what could be read - see the gaps above."
 msgstr "Nada que senalar en lo que se pudo leer - mira los huecos de arriba."
 
-#: tools/role_audit.py:824
+#: tools/role_audit.py:876
 #, python-brace-format
 msgid "role cache unavailable, {count} setting(s) not examined"
 msgstr "cache de roles no disponible, {count} ajuste(s) sin examinar"

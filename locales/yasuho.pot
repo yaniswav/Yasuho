@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 10:07+0000\n"
+"POT-Creation-Date: 2026-10-01 11:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1261,8 +1261,8 @@ msgstr ""
 msgid "Feed deleted."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1132
-#: cogs/moderation/moderation.py:1205 cogs/system/arg_completion.py:548
+#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1144
+#: cogs/moderation/moderation.py:1217 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr ""
 
@@ -1304,7 +1304,7 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
-#: cogs/config/twitch.py:424 cogs/config/verification.py:101
+#: cogs/config/twitch.py:424 cogs/config/verification.py:108
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
 msgid "Enabled"
@@ -1312,7 +1312,7 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:426 cogs/config/verification.py:103
+#: cogs/config/twitch.py:426 cogs/config/verification.py:110
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
@@ -2531,7 +2531,7 @@ msgstr ""
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:106
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:113
 msgid "(deleted)"
 msgstr ""
 
@@ -3037,57 +3037,57 @@ msgstr ""
 msgid "**Level {level}** -> {roles}"
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:390
+#: cogs/community/leveling/level_rewards.py:394
 msgid "That role isn't from this server."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:393
+#: cogs/community/leveling/level_rewards.py:397
 msgid "You can't use @everyone as a level reward."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:410
+#: cogs/community/leveling/level_rewards.py:414
 msgid "The level must be 1 or higher."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:423
-#: cogs/community/leveling/level_rewards.py:464
+#: cogs/community/leveling/level_rewards.py:427
+#: cogs/community/leveling/level_rewards.py:468
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:456
+#: cogs/community/leveling/level_rewards.py:460
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:474
+#: cogs/community/leveling/level_rewards.py:478
 msgid "Level reward added"
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:476
+#: cogs/community/leveling/level_rewards.py:480
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:488
+#: cogs/community/leveling/level_rewards.py:492
 msgid "This server has no level rewards configured yet."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:493
+#: cogs/community/leveling/level_rewards.py:497
 msgid "Pick a reward rule to remove:"
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:529
+#: cogs/community/leveling/level_rewards.py:533
 msgid ""
 "Members now keep only the roles from the highest level reward they've "
 "reached."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:534
+#: cogs/community/leveling/level_rewards.py:538
 msgid "Members now keep every level reward role they've ever earned."
 msgstr ""
 
-#: cogs/community/leveling/level_rewards.py:538
+#: cogs/community/leveling/level_rewards.py:542
 msgid "Reward mode updated"
 msgstr ""
 
@@ -3291,22 +3291,22 @@ msgstr ""
 msgid "Rank card cleared"
 msgstr ""
 
-#: cogs/community/leveling/seasons.py:685
+#: cogs/community/leveling/seasons.py:689
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr ""
 
-#: cogs/community/leveling/seasons.py:691
+#: cogs/community/leveling/seasons.py:695
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr ""
 
-#: cogs/community/leveling/seasons.py:699
+#: cogs/community/leveling/seasons.py:703
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr ""
 
-#: cogs/community/leveling/seasons.py:774
+#: cogs/community/leveling/seasons.py:778
 msgid "No leveling season has closed here yet - check back next month."
 msgstr ""
 
@@ -4139,7 +4139,7 @@ msgstr ""
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
-#: cogs/config/twitch.py:420 cogs/config/verification.py:108
+#: cogs/config/twitch.py:420 cogs/config/verification.py:115
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
@@ -4171,7 +4171,7 @@ msgid "Pick a target channel first."
 msgstr ""
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:187
+#: cogs/config/rolemenus.py:668 cogs/config/verification.py:194
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr ""
@@ -4886,11 +4886,11 @@ msgid "Header"
 msgstr ""
 
 #: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1478
+#: cogs/system/dashboard_actions.py:1489
 msgid "Pick your roles"
 msgstr ""
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1483
+#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1494
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr ""
@@ -5687,76 +5687,76 @@ msgstr ""
 msgid "Nothing to preview yet - add a message or some embed content."
 msgstr ""
 
-#: cogs/config/twitch.py:834
+#: cogs/config/twitch.py:842
 msgid "Could not add that member to the watchlist."
 msgstr ""
 
-#: cogs/config/twitch.py:838
+#: cogs/config/twitch.py:846
 msgid "the configured alert channel"
 msgstr ""
 
-#: cogs/config/twitch.py:840 cogs/config/twitch.py:865
-#: cogs/config/twitch.py:892
+#: cogs/config/twitch.py:848 cogs/config/twitch.py:873
+#: cogs/config/twitch.py:900
 msgid "Twitch watchlist"
 msgstr ""
 
-#: cogs/config/twitch.py:841
+#: cogs/config/twitch.py:849
 msgid "Now watching"
 msgstr ""
 
-#: cogs/config/twitch.py:842
+#: cogs/config/twitch.py:850
 msgid "Alerts in"
 msgstr ""
 
-#: cogs/config/twitch.py:843
+#: cogs/config/twitch.py:851
 msgid "Use /twitch to open the builder."
 msgstr ""
 
-#: cogs/config/twitch.py:863
+#: cogs/config/twitch.py:871
 msgid "Could not remove that member."
 msgstr ""
 
-#: cogs/config/twitch.py:866
+#: cogs/config/twitch.py:874
 msgid "Removed"
 msgstr ""
 
-#: cogs/config/twitch.py:883
+#: cogs/config/twitch.py:891
 msgid "Could not load the watchlist."
 msgstr ""
 
-#: cogs/config/twitch.py:888
+#: cogs/config/twitch.py:896
 msgid "default alert channel"
 msgstr ""
 
-#: cogs/config/twitch.py:911
+#: cogs/config/twitch.py:919
 msgid "Your guild already has a Live streamer role - it is now linked."
 msgstr ""
 
-#: cogs/config/twitch.py:922
+#: cogs/config/twitch.py:930
 msgid "Could not create the Live streamer role."
 msgstr ""
 
-#: cogs/config/twitch.py:930
+#: cogs/config/twitch.py:938
 msgid ""
 "Live streamer role created and linked. Move it to your preferred position"
 " in the role list."
 msgstr ""
 
-#: cogs/config/twitch.py:945
+#: cogs/config/twitch.py:953
 msgid "No Live streamer role is set up."
 msgstr ""
 
-#: cogs/config/twitch.py:963
+#: cogs/config/twitch.py:971
 msgid ""
 "To just unlink it without deleting it, open `/twitch` and clear the Live "
 "role select."
 msgstr ""
 
-#: cogs/config/twitch.py:972
+#: cogs/config/twitch.py:980
 msgid "Could not delete the Live streamer role."
 msgstr ""
 
-#: cogs/config/twitch.py:978
+#: cogs/config/twitch.py:986
 msgid "Live streamer role removed."
 msgstr ""
 
@@ -5772,50 +5772,50 @@ msgstr ""
 msgid "You are already verified."
 msgstr ""
 
-#: cogs/config/verification.py:65
+#: cogs/config/verification.py:65 cogs/config/verification.py:72
 msgid "I can't assign that role - it may be above my highest role."
 msgstr ""
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
 #: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:73
+#: cogs/config/tickets/open.py:343 cogs/config/verification.py:80
 msgid "Something went wrong, please try again."
 msgstr ""
 
-#: cogs/config/verification.py:76
+#: cogs/config/verification.py:83
 msgid "You are verified. Welcome!"
 msgstr ""
 
-#: cogs/config/verification.py:113
+#: cogs/config/verification.py:120
 #, python-brace-format
 msgid "Verification | {guild}"
 msgstr ""
 
-#: cogs/config/verification.py:119
+#: cogs/config/verification.py:126
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
 "**Role granted:** {role}"
 msgstr ""
 
-#: cogs/config/verification.py:128
+#: cogs/config/verification.py:135
 msgid "Use `/verify setup` to turn on verification."
 msgstr ""
 
-#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:561
+#: cogs/config/verification.py:200 cogs/system/dashboard_actions.py:572
 msgid "Verification"
 msgstr ""
 
-#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:564
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:575
 msgid "Click the button below to verify and unlock the server."
 msgstr ""
 
-#: cogs/config/verification.py:202
+#: cogs/config/verification.py:209
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr ""
 
-#: cogs/config/verification.py:213
+#: cogs/config/verification.py:220
 msgid "Verification disabled."
 msgstr ""
 
@@ -6869,13 +6869,13 @@ msgstr ""
 msgid "The reason can't be empty."
 msgstr ""
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1297
-#: cogs/moderation/moderation.py:1370 cogs/moderation/moderation.py:1392
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1309
+#: cogs/moderation/moderation.py:1382 cogs/moderation/moderation.py:1404
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr ""
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1398
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1410
 msgid "Updated by"
 msgstr ""
 
@@ -7041,7 +7041,7 @@ msgstr ""
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr ""
 
-#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1069
+#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1081
 msgid ""
 "This server has no mute role yet - I create one the first time you use "
 "`mute`."
@@ -7077,115 +7077,121 @@ msgstr ""
 msgid "Mute role created!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1030
+#: cogs/moderation/moderation.py:1001
+msgid ""
+"The configured mute role carries dangerous permissions, so I won't apply "
+"it. Point the mute role setting at a role with no permissions instead."
+msgstr ""
+
+#: cogs/moderation/moderation.py:1042
 msgid "Already Muted"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:1044
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1042
+#: cogs/moderation/moderation.py:1054
 msgid "Mute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1045
+#: cogs/moderation/moderation.py:1057
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1098
+#: cogs/moderation/moderation.py:1110
 msgid "Unmute failed"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1101
+#: cogs/moderation/moderation.py:1113
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1123
+#: cogs/moderation/moderation.py:1135
 msgid "Confirm mass role add"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1125
+#: cogs/moderation/moderation.py:1137
 #, python-brace-format
 msgid ""
 "Add the **{role}** role to **all** members of this server? This can take "
 "a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1154
+#: cogs/moderation/moderation.py:1166
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1175
+#: cogs/moderation/moderation.py:1187
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1196
+#: cogs/moderation/moderation.py:1208
 msgid "Confirm mass role remove"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1198
+#: cogs/moderation/moderation.py:1210
 #, python-brace-format
 msgid ""
 "Remove the **{role}** role from **all** members of this server? This can "
 "take a while."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1227
+#: cogs/moderation/moderation.py:1239
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1240
+#: cogs/moderation/moderation.py:1252
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1262 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1274 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1269
+#: cogs/moderation/moderation.py:1281
 msgid "You can't move a role to or above my highest role."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1275
+#: cogs/moderation/moderation.py:1287
 #, python-brace-format
 msgid "{role} moved."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1277 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1279
+#: cogs/moderation/moderation.py:1291
 msgid "Failed to move role"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1281
+#: cogs/moderation/moderation.py:1293
 msgid "Invalid argument"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1316
+#: cogs/moderation/moderation.py:1328
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1326
+#: cogs/moderation/moderation.py:1338
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr ""
 
-#: cogs/moderation/moderation.py:1329
+#: cogs/moderation/moderation.py:1341
 msgid "No cases on record."
 msgstr ""
 
-#: cogs/moderation/moderation.py:1336 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1348 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr ""
 
@@ -11901,77 +11907,77 @@ msgstr ""
 msgid "Couldn't close the menu, please try again."
 msgstr ""
 
-#: tools/role_audit.py:712
+#: tools/role_audit.py:764
 #, python-brace-format
 msgid "{role} carries {permissions}"
 msgstr ""
 
-#: tools/role_audit.py:717
+#: tools/role_audit.py:769
 #, python-brace-format
 msgid "{role} is a mute role with a non-empty permission mask (value {value})"
 msgstr ""
 
-#: tools/role_audit.py:720
+#: tools/role_audit.py:772
 #, python-brace-format
 msgid "role {role} no longer exists"
 msgstr ""
 
-#: tools/role_audit.py:723
+#: tools/role_audit.py:775
 #, python-brace-format
 msgid ""
 "{role} cannot be granted by me (above my top role, integration-managed, "
 "or @everyone)"
 msgstr ""
 
-#: tools/role_audit.py:728
+#: tools/role_audit.py:780
 #, python-brace-format
 msgid "{role} cannot be judged: I am not in this guild's member cache"
 msgstr ""
 
-#: tools/role_audit.py:744
+#: tools/role_audit.py:796
 msgid "Role grant audit - the roles Yasuho hands out on her own."
 msgstr ""
 
-#: tools/role_audit.py:748
+#: tools/role_audit.py:800
 #, python-brace-format
 msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
 msgstr ""
 
-#: tools/role_audit.py:754
+#: tools/role_audit.py:806
 #, python-brace-format
 msgid ""
 "Swept {guilds} guild(s); found {found} configured role setting(s), "
 "examined {examined}."
 msgstr ""
 
-#: tools/role_audit.py:763
+#: tools/role_audit.py:815
 #, python-brace-format
 msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
 msgstr ""
 
-#: tools/role_audit.py:773
+#: tools/role_audit.py:825
 #, python-brace-format
 msgid ""
 "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT"
 " examined."
 msgstr ""
 
-#: tools/role_audit.py:783
+#: tools/role_audit.py:835
 #, python-brace-format
 msgid ""
 "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable "
 "role id(s)."
 msgstr ""
 
-#: tools/role_audit.py:799
+#: tools/role_audit.py:851
 msgid "Nothing flagged: every audited setting is safe to hand out."
 msgstr ""
 
-#: tools/role_audit.py:803
+#: tools/role_audit.py:855
 msgid "Nothing flagged in what could be read - see the gaps above."
 msgstr ""
 
-#: tools/role_audit.py:824
+#: tools/role_audit.py:876
 #, python-brace-format
 msgid "role cache unavailable, {count} setting(s) not examined"
 msgstr ""

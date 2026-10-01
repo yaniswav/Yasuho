@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 10:07+0000\n"
+"POT-Creation-Date: 2026-10-01 11:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1220,8 +1220,8 @@ msgstr "{channel} のAniListフィードとフォロー中のユーザーがす�
 msgid "Feed deleted."
 msgstr "フィードを削除しました。"
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1132
-#: cogs/moderation/moderation.py:1205 cogs/system/arg_completion.py:548
+#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1144
+#: cogs/moderation/moderation.py:1217 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr "キャンセルしました。"
 
@@ -1261,7 +1261,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
-#: cogs/config/twitch.py:424 cogs/config/verification.py:101
+#: cogs/config/twitch.py:424 cogs/config/verification.py:108
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
 msgid "Enabled"
@@ -1269,7 +1269,7 @@ msgstr "有効"
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:426 cogs/config/verification.py:103
+#: cogs/config/twitch.py:426 cogs/config/verification.py:110
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
 msgid "Disabled"
@@ -2433,7 +2433,7 @@ msgstr "サーバー全体: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:106
+#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:113
 msgid "(deleted)"
 msgstr "(削除済み)"
 
@@ -2933,55 +2933,55 @@ msgstr "レベル報酬はまだ設定されていません。`/levelconfig rewa
 msgid "**Level {level}** -> {roles}"
 msgstr "**レベル {level}** -> {roles}"
 
-#: cogs/community/leveling/level_rewards.py:390
+#: cogs/community/leveling/level_rewards.py:394
 msgid "That role isn't from this server."
 msgstr "そのロールはこのサーバーのものではありません。"
 
-#: cogs/community/leveling/level_rewards.py:393
+#: cogs/community/leveling/level_rewards.py:397
 msgid "You can't use @everyone as a level reward."
 msgstr "@everyone はレベル報酬に使用できません。"
 
-#: cogs/community/leveling/level_rewards.py:410
+#: cogs/community/leveling/level_rewards.py:414
 msgid "The level must be 1 or higher."
 msgstr "レベルは 1 以上にしてください。"
 
-#: cogs/community/leveling/level_rewards.py:423
-#: cogs/community/leveling/level_rewards.py:464
+#: cogs/community/leveling/level_rewards.py:427
+#: cogs/community/leveling/level_rewards.py:468
 #, python-brace-format
 msgid "This server already has the maximum of {max} level rewards."
 msgstr "このサーバーはすでに上限の {max} 件のレベル報酬があります。"
 
-#: cogs/community/leveling/level_rewards.py:456
+#: cogs/community/leveling/level_rewards.py:460
 #, python-brace-format
 msgid "{role} is already a level {level} reward."
 msgstr "{role} はすでにレベル {level} の報酬です。"
 
-#: cogs/community/leveling/level_rewards.py:474
+#: cogs/community/leveling/level_rewards.py:478
 msgid "Level reward added"
 msgstr "レベル報酬を追加しました"
 
-#: cogs/community/leveling/level_rewards.py:476
+#: cogs/community/leveling/level_rewards.py:480
 #, python-brace-format
 msgid "Added a level reward: reach level **{level}** to receive {role}."
 msgstr "レベル報酬を追加しました。レベル **{level}** に到達すると {role} を獲得できます。"
 
-#: cogs/community/leveling/level_rewards.py:488
+#: cogs/community/leveling/level_rewards.py:492
 msgid "This server has no level rewards configured yet."
 msgstr "このサーバーにはまだレベル報酬がありません。"
 
-#: cogs/community/leveling/level_rewards.py:493
+#: cogs/community/leveling/level_rewards.py:497
 msgid "Pick a reward rule to remove:"
 msgstr "削除する報酬ルールを選択:"
 
-#: cogs/community/leveling/level_rewards.py:529
+#: cogs/community/leveling/level_rewards.py:533
 msgid "Members now keep only the roles from the highest level reward they've reached."
 msgstr "メンバーは到達した最高レベルの報酬ロールのみ保持するようになりました。"
 
-#: cogs/community/leveling/level_rewards.py:534
+#: cogs/community/leveling/level_rewards.py:538
 msgid "Members now keep every level reward role they've ever earned."
 msgstr "メンバーは獲得したすべての報酬ロールを保持するようになりました。"
 
-#: cogs/community/leveling/level_rewards.py:538
+#: cogs/community/leveling/level_rewards.py:542
 msgid "Reward mode updated"
 msgstr "報酬モードを更新しました"
 
@@ -3176,22 +3176,22 @@ msgstr "あなたの個人的なランクカードスタイルは削除されま
 msgid "Rank card cleared"
 msgstr "ランクカードをクリアしました"
 
-#: cogs/community/leveling/seasons.py:685
+#: cogs/community/leveling/seasons.py:689
 #, python-brace-format
 msgid "**Season {month} is over!** Here is the final podium:"
 msgstr "**シーズン{month}が終了しました！**最終順位はこちらです:"
 
-#: cogs/community/leveling/seasons.py:691
+#: cogs/community/leveling/seasons.py:695
 #, python-brace-format
 msgid "{medal} {user} - {xp} XP"
 msgstr "{medal} {user} - {xp} XP"
 
-#: cogs/community/leveling/seasons.py:699
+#: cogs/community/leveling/seasons.py:703
 #, python-brace-format
 msgid "{user} is the new season champion and receives {role}."
 msgstr "{user}さんが新しいシーズンチャンピオンとなり、{role}を獲得しました。"
 
-#: cogs/community/leveling/seasons.py:774
+#: cogs/community/leveling/seasons.py:778
 msgid "No leveling season has closed here yet - check back next month."
 msgstr "ここでは、まだレベリングシーズンが終了していません - 来月また確認してください。"
 
@@ -3996,7 +3996,7 @@ msgstr "メニューで埋め込みを作成し、チャンネル (と、任意�
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
-#: cogs/config/twitch.py:420 cogs/config/verification.py:108
+#: cogs/config/twitch.py:420 cogs/config/verification.py:115
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
 msgid "*Not set.*"
@@ -4028,7 +4028,7 @@ msgid "Pick a target channel first."
 msgstr "まず対象チャンネルを選んでください。"
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:187
+#: cogs/config/rolemenus.py:668 cogs/config/verification.py:194
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "{channel} にメッセージを送信できません。"
@@ -4722,11 +4722,11 @@ msgid "Header"
 msgstr "ヘッダー"
 
 #: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1478
+#: cogs/system/dashboard_actions.py:1489
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1483
+#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1494
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr "ロール"
@@ -5503,72 +5503,72 @@ msgstr "{mention} が配信中です! {url}"
 msgid "Nothing to preview yet - add a message or some embed content."
 msgstr "まだプレビューする内容がありません - メッセージまたは埋め込みのコンテンツを追加してください。"
 
-#: cogs/config/twitch.py:834
+#: cogs/config/twitch.py:842
 msgid "Could not add that member to the watchlist."
 msgstr "そのメンバーを監視リストに追加できませんでした。"
 
-#: cogs/config/twitch.py:838
+#: cogs/config/twitch.py:846
 msgid "the configured alert channel"
 msgstr "設定されたアラートチャンネル"
 
-#: cogs/config/twitch.py:840 cogs/config/twitch.py:865
-#: cogs/config/twitch.py:892
+#: cogs/config/twitch.py:848 cogs/config/twitch.py:873
+#: cogs/config/twitch.py:900
 msgid "Twitch watchlist"
 msgstr "Twitch監視リスト"
 
-#: cogs/config/twitch.py:841
+#: cogs/config/twitch.py:849
 msgid "Now watching"
 msgstr "現在監視中"
 
-#: cogs/config/twitch.py:842
+#: cogs/config/twitch.py:850
 msgid "Alerts in"
 msgstr "アラート送信先"
 
-#: cogs/config/twitch.py:843
+#: cogs/config/twitch.py:851
 msgid "Use /twitch to open the builder."
 msgstr "/twitch を使ってビルダーを開いてください。"
 
-#: cogs/config/twitch.py:863
+#: cogs/config/twitch.py:871
 msgid "Could not remove that member."
 msgstr "そのメンバーを削除できませんでした。"
 
-#: cogs/config/twitch.py:866
+#: cogs/config/twitch.py:874
 msgid "Removed"
 msgstr "削除しました"
 
-#: cogs/config/twitch.py:883
+#: cogs/config/twitch.py:891
 msgid "Could not load the watchlist."
 msgstr "監視リストを読み込めませんでした。"
 
-#: cogs/config/twitch.py:888
+#: cogs/config/twitch.py:896
 msgid "default alert channel"
 msgstr "デフォルトのアラートチャンネル"
 
-#: cogs/config/twitch.py:911
+#: cogs/config/twitch.py:919
 msgid "Your guild already has a Live streamer role - it is now linked."
 msgstr "あなたのサーバーにはすでにLive配信者ロールがあります - 連携しました。"
 
-#: cogs/config/twitch.py:922
+#: cogs/config/twitch.py:930
 msgid "Could not create the Live streamer role."
 msgstr "Live配信者ロールを作成できませんでした。"
 
-#: cogs/config/twitch.py:930
+#: cogs/config/twitch.py:938
 msgid "Live streamer role created and linked. Move it to your preferred position in the role list."
 msgstr "Live配信者ロールを作成して連携しました。ロールリストでお好みの位置に移動してください。"
 
-#: cogs/config/twitch.py:945
+#: cogs/config/twitch.py:953
 msgid "No Live streamer role is set up."
 msgstr "Live配信者ロールが設定されていません。"
 
-#: cogs/config/twitch.py:963
+#: cogs/config/twitch.py:971
 msgid "To just unlink it without deleting it, open `/twitch` and clear the Live role select."
 msgstr "削除せずに解除だけしたい場合は、`/twitch` を開いてLiveロールの選択を空にしてください。"
 
-#: cogs/config/twitch.py:972
+#: cogs/config/twitch.py:980
 msgid "Could not delete the Live streamer role."
 msgstr "Live配信者ロールを削除できませんでした。"
 
-#: cogs/config/twitch.py:978
+#: cogs/config/twitch.py:986
 msgid "Live streamer role removed."
 msgstr "Live配信者ロールを削除しました。"
 
@@ -5584,26 +5584,26 @@ msgstr "ここでは認証が設定されていません。"
 msgid "You are already verified."
 msgstr "すでに認証済みです。"
 
-#: cogs/config/verification.py:65
+#: cogs/config/verification.py:65 cogs/config/verification.py:72
 msgid "I can't assign that role - it may be above my highest role."
 msgstr "そのロールを付与できません - 私の最上位ロールより上にある可能性があります。"
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
 #: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:73
+#: cogs/config/tickets/open.py:343 cogs/config/verification.py:80
 msgid "Something went wrong, please try again."
 msgstr "問題が発生しました。もう一度お試しください。"
 
-#: cogs/config/verification.py:76
+#: cogs/config/verification.py:83
 msgid "You are verified. Welcome!"
 msgstr "認証が完了しました。ようこそ!"
 
-#: cogs/config/verification.py:113
+#: cogs/config/verification.py:120
 #, python-brace-format
 msgid "Verification | {guild}"
 msgstr "認証 | {guild}"
 
-#: cogs/config/verification.py:119
+#: cogs/config/verification.py:126
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -5612,24 +5612,24 @@ msgstr ""
 "**状態:** {status}\n"
 "**付与ロール:** {role}"
 
-#: cogs/config/verification.py:128
+#: cogs/config/verification.py:135
 msgid "Use `/verify setup` to turn on verification."
 msgstr "`/verify setup` で認証を有効にできます。"
 
-#: cogs/config/verification.py:193 cogs/system/dashboard_actions.py:561
+#: cogs/config/verification.py:200 cogs/system/dashboard_actions.py:572
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:196 cogs/system/dashboard_actions.py:564
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:575
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
-#: cogs/config/verification.py:202
+#: cogs/config/verification.py:209
 #, python-brace-format
 msgid "Verification is set up - clicking grants {role} in {channel}."
 msgstr "認証が設定されています - クリックすると {channel} で {role} が付与されます。"
 
-#: cogs/config/verification.py:213
+#: cogs/config/verification.py:220
 msgid "Verification disabled."
 msgstr "認証を無効にしました。"
 
@@ -6661,13 +6661,13 @@ msgstr "新しい理由"
 msgid "The reason can't be empty."
 msgstr "理由を空にすることはできません。"
 
-#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1297
-#: cogs/moderation/moderation.py:1370 cogs/moderation/moderation.py:1392
+#: cogs/moderation/moderation.py:132 cogs/moderation/moderation.py:1309
+#: cogs/moderation/moderation.py:1382 cogs/moderation/moderation.py:1404
 #, python-brace-format
 msgid "No case #{number} found in this server."
 msgstr "このサーバーでケース #{number} が見つかりませんでした。"
 
-#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1398
+#: cogs/moderation/moderation.py:139 cogs/moderation/moderation.py:1410
 msgid "Updated by"
 msgstr "更新者"
 
@@ -6838,7 +6838,7 @@ msgstr "無効な数です。最大は500です。"
 msgid "{emoji} Deleted **{deleted}/{num}** possible messages for you."
 msgstr "{emoji} **{deleted}/{num}** 件のメッセージを削除しました。"
 
-#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1069
+#: cogs/moderation/moderation.py:917 cogs/moderation/moderation.py:1081
 msgid "This server has no mute role yet - I create one the first time you use `mute`."
 msgstr "このサーバーにはまだミュートロールがありません。`mute` を初めて使ったときに作成します。"
 
@@ -6866,111 +6866,115 @@ msgstr "ロールを作成中..."
 msgid "Mute role created!"
 msgstr "ミュートロールを作成しました!"
 
-#: cogs/moderation/moderation.py:1030
+#: cogs/moderation/moderation.py:1001
+msgid "The configured mute role carries dangerous permissions, so I won't apply it. Point the mute role setting at a role with no permissions instead."
+msgstr "設定されたミュートロールには危険な権限が含まれているため、適用しません。代わりに、権限のないロールをミュートロールに設定してください。"
+
+#: cogs/moderation/moderation.py:1042
 msgid "Already Muted"
 msgstr "すでにミュート済み"
 
-#: cogs/moderation/moderation.py:1032
+#: cogs/moderation/moderation.py:1044
 #, python-brace-format
 msgid ":red_circle: {user} is already muted!"
 msgstr ":red_circle: {user} はすでにミュートされています!"
 
-#: cogs/moderation/moderation.py:1042
+#: cogs/moderation/moderation.py:1054
 msgid "Mute failed"
 msgstr "ミュートに失敗しました"
 
-#: cogs/moderation/moderation.py:1045
+#: cogs/moderation/moderation.py:1057
 #, python-brace-format
 msgid ":red_circle: Could not mute {user}, please try again."
 msgstr ":red_circle: {user} をミュートできませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1098
+#: cogs/moderation/moderation.py:1110
 msgid "Unmute failed"
 msgstr "ミュート解除に失敗しました"
 
-#: cogs/moderation/moderation.py:1101
+#: cogs/moderation/moderation.py:1113
 #, python-brace-format
 msgid ":red_circle: Could not unmute {user}, please try again."
 msgstr ":red_circle: {user} のミュートを解除できませんでした。もう一度お試しください。"
 
-#: cogs/moderation/moderation.py:1123
+#: cogs/moderation/moderation.py:1135
 msgid "Confirm mass role add"
 msgstr "一括ロール付与の確認"
 
-#: cogs/moderation/moderation.py:1125
+#: cogs/moderation/moderation.py:1137
 #, python-brace-format
 msgid "Add the **{role}** role to **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーに **{role}** ロールを付与しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1154
+#: cogs/moderation/moderation.py:1166
 #, python-brace-format
 msgid "Added **{role}** to {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーに付与しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1175
+#: cogs/moderation/moderation.py:1187
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been added to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** に付与しました"
 
-#: cogs/moderation/moderation.py:1196
+#: cogs/moderation/moderation.py:1208
 msgid "Confirm mass role remove"
 msgstr "一括ロール削除の確認"
 
-#: cogs/moderation/moderation.py:1198
+#: cogs/moderation/moderation.py:1210
 #, python-brace-format
 msgid "Remove the **{role}** role from **all** members of this server? This can take a while."
 msgstr "このサーバーの **すべて** のメンバーから **{role}** ロールを削除しますか? 時間がかかる場合があります。"
 
-#: cogs/moderation/moderation.py:1227
+#: cogs/moderation/moderation.py:1239
 #, python-brace-format
 msgid "Removed **{role}** from {done} member(s) ({failed} failed)."
 msgstr "**{role}** を {done} 人のメンバーから削除しました ({failed} 件失敗)。"
 
-#: cogs/moderation/moderation.py:1240
+#: cogs/moderation/moderation.py:1252
 #, python-brace-format
 msgid "{emoji} **`{role}`** role has been removed to **{member}**"
 msgstr "{emoji} **`{role}`** ロールを **{member}** から削除しました"
 
-#: cogs/moderation/moderation.py:1262 tools/modchecks.py:214
+#: cogs/moderation/moderation.py:1274 tools/modchecks.py:214
 msgid "You can't manage a role that is equal to or above your highest role."
 msgstr "自分の最上位ロール以上のロールは管理できません。"
 
-#: cogs/moderation/moderation.py:1269
+#: cogs/moderation/moderation.py:1281
 msgid "You can't move a role to or above my highest role."
 msgstr "私の最上位ロール以上の位置にロールを移動することはできません。"
 
-#: cogs/moderation/moderation.py:1275
+#: cogs/moderation/moderation.py:1287
 #, python-brace-format
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1277 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
-#: cogs/moderation/moderation.py:1279
+#: cogs/moderation/moderation.py:1291
 msgid "Failed to move role"
 msgstr "ロールの移動に失敗しました"
 
-#: cogs/moderation/moderation.py:1281
+#: cogs/moderation/moderation.py:1293
 msgid "Invalid argument"
 msgstr "無効な引数"
 
-#: cogs/moderation/moderation.py:1316
+#: cogs/moderation/moderation.py:1328
 #, python-brace-format
 msgid "Case history - {guild}"
 msgstr "ケース履歴 - {guild}"
 
-#: cogs/moderation/moderation.py:1326
+#: cogs/moderation/moderation.py:1338
 #, python-brace-format
 msgid "Case history - {member}"
 msgstr "ケース履歴 - {member}"
 
-#: cogs/moderation/moderation.py:1329
+#: cogs/moderation/moderation.py:1341
 msgid "No cases on record."
 msgstr "記録されているケースはありません。"
 
-#: cogs/moderation/moderation.py:1336 cogs/moderation/warns.py:134
+#: cogs/moderation/moderation.py:1348 cogs/moderation/warns.py:134
 msgid "No reason"
 msgstr "理由なし"
 
@@ -11665,69 +11669,69 @@ msgstr "表示するものがありません。"
 msgid "Couldn't close the menu, please try again."
 msgstr "メニューを閉じられませんでした。もう一度お試しください。"
 
-#: tools/role_audit.py:712
+#: tools/role_audit.py:764
 #, python-brace-format
 msgid "{role} carries {permissions}"
 msgstr "{role} は {permissions} を持っています"
 
-#: tools/role_audit.py:717
+#: tools/role_audit.py:769
 #, python-brace-format
 msgid "{role} is a mute role with a non-empty permission mask (value {value})"
 msgstr "{role} はミュートロールですが、権限が空ではありません (値 {value})"
 
-#: tools/role_audit.py:720
+#: tools/role_audit.py:772
 #, python-brace-format
 msgid "role {role} no longer exists"
 msgstr "ロール {role} はもう存在しません"
 
-#: tools/role_audit.py:723
+#: tools/role_audit.py:775
 #, python-brace-format
 msgid "{role} cannot be granted by me (above my top role, integration-managed, or @everyone)"
 msgstr "{role} は私には付与できません (私の最上位ロールより上、連携管理、または @everyone)"
 
-#: tools/role_audit.py:728
+#: tools/role_audit.py:780
 #, python-brace-format
 msgid "{role} cannot be judged: I am not in this guild's member cache"
 msgstr "{role} を判定できません: このサーバーのメンバーキャッシュに私がいません"
 
-#: tools/role_audit.py:744
+#: tools/role_audit.py:796
 msgid "Role grant audit - the roles Yasuho hands out on her own."
 msgstr "ロール付与の監査 - Yasuho が自動で配るロール。"
 
-#: tools/role_audit.py:748
+#: tools/role_audit.py:800
 #, python-brace-format
 msgid "INCOMPLETE: could not read {surfaces}. Treat this report as partial."
 msgstr "不完全: {surfaces} を読めませんでした。このレポートは一部です。"
 
-#: tools/role_audit.py:754
+#: tools/role_audit.py:806
 #, python-brace-format
 msgid "Swept {guilds} guild(s); found {found} configured role setting(s), examined {examined}."
 msgstr "{guilds} 件のサーバーを走査し、設定済みのロール設定を {found} 件検出、{examined} 件を確認しました。"
 
-#: tools/role_audit.py:763
+#: tools/role_audit.py:815
 #, python-brace-format
 msgid "CRITICAL {critical} | WARNING {warning} | NOTICE {notice}"
 msgstr "重大 {critical} | 警告 {warning} | 情報 {notice}"
 
-#: tools/role_audit.py:773
+#: tools/role_audit.py:825
 #, python-brace-format
 msgid "UNKNOWN: {guilds} guild(s) could not be judged, {settings} setting(s) NOT examined."
 msgstr "不明: {guilds} 件のサーバーを判定できず、{settings} 件の設定を確認していません。"
 
-#: tools/role_audit.py:783
+#: tools/role_audit.py:835
 #, python-brace-format
 msgid "Skipped {orphans} row(s) for guilds I am not in; {malformed} unreadable role id(s)."
 msgstr "参加していないサーバーの {orphans} 行を省略しました。読み取れないロール ID が {malformed} 件あります。"
 
-#: tools/role_audit.py:799
+#: tools/role_audit.py:851
 msgid "Nothing flagged: every audited setting is safe to hand out."
 msgstr "問題は見つかりませんでした: 監査したすべての設定は安全に付与できます。"
 
-#: tools/role_audit.py:803
+#: tools/role_audit.py:855
 msgid "Nothing flagged in what could be read - see the gaps above."
 msgstr "読み取れた範囲では問題はありません - 上記の未確認箇所を参照してください。"
 
-#: tools/role_audit.py:824
+#: tools/role_audit.py:876
 #, python-brace-format
 msgid "role cache unavailable, {count} setting(s) not examined"
 msgstr "ロールキャッシュを利用できないため、{count} 件の設定を確認していません"
