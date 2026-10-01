@@ -74,6 +74,24 @@ DURABLE_TIMER_EVENTS = frozenset({"tempban"})
 # so a permanently Forbidden action cannot retry for eternity.
 MAX_TIMER_ATTEMPTS = 12
 
+# dispatch_timers is the only background worker in the bot started as a bare
+# create_task with no done callback to notice if it dies. Its own while loop
+# already catches every plain Exception and keeps going (see dispatch_timers),
+# so in practice the task only ends via cancellation or the bot closing - but
+# that is an invariant of today's code, not a law of physics, so the done
+# callback below is a backstop: if the task EVER ends with an exception that
+# escaped the loop, it is logged loudly and the dispatcher is restarted rather
+# than silently leaving reminders (and tempban unbans) stopped for the rest of
+# the process life. The backoff is exponential starting here...
+DISPATCH_RESTART_BACKOFF_INITIAL = 5
+# ...capped here, so a crash loop (e.g. a permanently broken DB pool) cannot
+# spin the event loop with restarts more often than once every 5 minutes.
+DISPATCH_RESTART_BACKOFF_MAX = 300
+# A dispatcher that stayed up at least this long before dying is treated as
+# having recovered: the NEXT crash starts the backoff over at the initial
+# delay instead of inheriting however far an earlier crash loop had climbed.
+DISPATCH_RESTART_HEALTHY_SECONDS = 300
+
 
 def _author_mention_only(author_id):
     """The single-entry ``users=`` list a reminder delivery may ping.
@@ -630,13 +648,74 @@ class Reminder(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.bot.reminder = self
         self._have_data = asyncio.Event()
-        self._task = self.bot.loop.create_task(self.dispatch_timers())
+        self._task = None
+        self._restart_task = None
+        self._dispatch_backoff = DISPATCH_RESTART_BACKOFF_INITIAL
+        self._dispatch_started_at = None
+
+    async def cog_load(self):
+        # The seam (``bot.reminder``, read by tools/time.py and several other
+        # cogs via get_cog("Reminder")) and the dispatch task both start here,
+        # not in __init__: if add_cog fails partway (another cog's cog_load
+        # raises, etc.) nothing of this cog's background state should exist -
+        # an orphan task with no cog to cancel it, and a seam pointing at a
+        # half-added cog, are exactly the failure mode __init__-time startup
+        # risked.
+        self.bot.reminder = self
+        self._start_dispatch_task()
 
     def cog_unload(self):
-        self._task.cancel()
-        self.bot.reminder = None
+        if self._task is not None:
+            self._task.cancel()
+        if self._restart_task is not None:
+            self._restart_task.cancel()
+        # Only clear the seam if it is still ours: a cog reload can run a new
+        # instance's cog_load before the old instance's cog_unload, and the
+        # old instance must not clobber the new one's seam on its way out.
+        if self.bot.reminder is self:
+            self.bot.reminder = None
+
+    def _start_dispatch_task(self):
+        """(Re)launch the dispatch loop and arm its crash-restart callback."""
+        self._dispatch_started_at = self.bot.loop.time()
+        self._task = self.bot.loop.create_task(self.dispatch_timers())
+        self._task.add_done_callback(self._on_dispatch_done)
+
+    def _on_dispatch_done(self, task):
+        """Restart the dispatcher if it died, with a bounded backoff.
+
+        A cancelled task (cog_unload, or a reload tearing this instance down)
+        must NOT restart - that is a deliberate shutdown, not a crash. A task
+        that simply returned (``bot.is_closed()`` went True) needs no restart
+        either. Only an exception that escaped dispatch_timers' own loop -
+        which should never happen, see the module-level comment - triggers
+        the backoff-and-restart path.
+        """
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        ran_for = self.bot.loop.time() - self._dispatch_started_at
+        if ran_for >= DISPATCH_RESTART_HEALTHY_SECONDS:
+            self._dispatch_backoff = DISPATCH_RESTART_BACKOFF_INITIAL
+        delay = self._dispatch_backoff
+        self._dispatch_backoff = min(
+            self._dispatch_backoff * 2, DISPATCH_RESTART_BACKOFF_MAX
+        )
+        log.exception(
+            "Reminder dispatch task crashed after running %.0fs; restarting "
+            "in %ss",
+            ran_for,
+            delay,
+            exc_info=exc,
+        )
+        self._restart_task = self.bot.loop.create_task(self._restart_dispatch(delay))
+
+    async def _restart_dispatch(self, delay):
+        await asyncio.sleep(delay)
+        self._start_dispatch_task()
 
     async def get_tzinfo(self, user_id):
         return datetime.timezone.utc

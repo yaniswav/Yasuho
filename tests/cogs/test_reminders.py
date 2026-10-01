@@ -18,6 +18,7 @@ import types
 
 import discord
 
+from cogs.community import reminders as reminders_mod
 from cogs.community import reminders_store as rem
 from cogs.community.reminders import Reminder, RemindersCard, timer_retry_delay
 
@@ -549,3 +550,228 @@ async def test_tempban_fetches_uncached_guild_before_unban(fake_pool):
     )
 
     assert guild.unbanned == [(456, "Temp-ban expired")]
+
+
+# ---------------------------------------------------------------------------
+# Dispatch task lifecycle: cog_load/cog_unload seam + crash-restart
+#
+# The task that runs dispatch_timers forever is started in cog_load (not
+# __init__) and torn down in cog_unload; if it ever dies with an exception
+# (dispatch_timers' own loop already catches everything it can, so this is a
+# backstop - see the module-level comment above DISPATCH_RESTART_BACKOFF_*),
+# a done callback logs it and restarts it with a bounded exponential backoff.
+# ---------------------------------------------------------------------------
+
+
+def _loop_bot(fake_pool):
+    """A bot stand-in with a REAL event loop, for tests that drive real tasks.
+
+    Unlike ``_make_reminder_bot`` (whose fake ``create_task`` closes the coro
+    immediately so no background loop ever runs), these tests need actual
+    asyncio scheduling: a crashing task, a done callback, and a restart task.
+    """
+    return types.SimpleNamespace(db_pool=fake_pool, loop=asyncio.get_event_loop())
+
+
+def _patch_fast_sleep(monkeypatch):
+    """Replace reminders.asyncio.sleep with one that records the delay asked
+    for but only actually waits one real event-loop tick, so a test can see
+    the whole restart-backoff dance without any real waiting.
+    """
+    real_sleep = asyncio.sleep
+    calls = []
+
+    async def fake_sleep(delay):
+        calls.append(delay)
+        await real_sleep(0)
+
+    monkeypatch.setattr(reminders_mod.asyncio, "sleep", fake_sleep)
+    return calls
+
+
+async def test_cog_load_sets_the_seam_and_starts_the_dispatch_task(fake_pool):
+    bot = _loop_bot(fake_pool)
+    cog = Reminder(bot)
+    assert not hasattr(bot, "reminder")
+    assert cog._task is None
+
+    cog.dispatch_timers = lambda: asyncio.Event().wait()  # never finishes
+    await cog.cog_load()
+
+    assert bot.reminder is cog
+    assert cog._task is not None
+    assert not cog._task.done()
+
+    cog.cog_unload()
+    try:
+        await cog._task
+    except asyncio.CancelledError:
+        pass
+
+
+async def test_cog_unload_clears_the_seam_only_if_still_its_own(fake_pool):
+    bot = _loop_bot(fake_pool)
+    cog = Reminder(bot)
+    cog.dispatch_timers = lambda: asyncio.Event().wait()
+    await cog.cog_load()
+
+    # Simulate a reload: a second instance already took the seam over.
+    other = types.SimpleNamespace()
+    bot.reminder = other
+    cog.cog_unload()
+    assert bot.reminder is other  # the old instance must not clobber it
+
+    try:
+        await cog._task
+    except asyncio.CancelledError:
+        pass
+
+
+async def test_dispatch_crash_is_logged_and_restarted_with_backoff(
+    fake_pool, monkeypatch, caplog
+):
+    sleep_calls = _patch_fast_sleep(monkeypatch)
+    bot = _loop_bot(fake_pool)
+    cog = Reminder(bot)
+
+    runs = []
+    second_run_started = asyncio.Event()
+
+    async def fake_dispatch():
+        runs.append(1)
+        if len(runs) == 1:
+            raise RuntimeError("boom")
+        second_run_started.set()
+        await asyncio.Event().wait()  # the "healthy" second run just stays up
+
+    cog.dispatch_timers = fake_dispatch
+
+    with caplog.at_level("ERROR"):
+        await cog.cog_load()
+        await asyncio.wait_for(second_run_started.wait(), timeout=2)
+
+    assert len(runs) == 2  # it crashed once and ran a second time
+    assert sleep_calls == [reminders_mod.DISPATCH_RESTART_BACKOFF_INITIAL]
+    assert "crashed" in caplog.text.lower()
+
+    cog.cog_unload()
+    try:
+        await cog._task
+    except asyncio.CancelledError:
+        pass
+
+
+async def test_dispatch_backoff_doubles_on_a_second_crash(fake_pool, monkeypatch):
+    sleep_calls = _patch_fast_sleep(monkeypatch)
+    bot = _loop_bot(fake_pool)
+    cog = Reminder(bot)
+
+    runs = []
+    done = asyncio.Event()
+
+    async def fake_dispatch():
+        runs.append(1)
+        if len(runs) <= 2:
+            raise RuntimeError("boom again")
+        done.set()
+        await asyncio.Event().wait()
+
+    cog.dispatch_timers = fake_dispatch
+
+    await cog.cog_load()
+    await asyncio.wait_for(done.wait(), timeout=2)
+
+    assert len(runs) == 3
+    assert sleep_calls == [
+        reminders_mod.DISPATCH_RESTART_BACKOFF_INITIAL,
+        reminders_mod.DISPATCH_RESTART_BACKOFF_INITIAL * 2,
+    ]
+
+    cog.cog_unload()
+    try:
+        await cog._task
+    except asyncio.CancelledError:
+        pass
+
+
+async def test_cog_unload_cancellation_does_not_restart(fake_pool, monkeypatch):
+    sleep_calls = _patch_fast_sleep(monkeypatch)
+    bot = _loop_bot(fake_pool)
+    cog = Reminder(bot)
+
+    async def fake_dispatch():
+        await asyncio.Event().wait()  # hangs until cancelled
+
+    cog.dispatch_timers = fake_dispatch
+
+    await cog.cog_load()
+    await asyncio.sleep(0)
+    task = cog._task
+    cog.cog_unload()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    # Give the done callback a chance to (not) fire a restart.
+    await asyncio.sleep(0)
+
+    assert bot.reminder is None
+    assert cog._restart_task is None
+    # No backoff delay was ever scheduled (the test's own ticks also go
+    # through the patched sleep, hence checking for the backoff VALUE rather
+    # than an empty list).
+    assert reminders_mod.DISPATCH_RESTART_BACKOFF_INITIAL not in sleep_calls
+
+
+# ---------------------------------------------------------------------------
+# Hot-loop check: a lost claim must still AWAIT the DB each iteration, never
+# spin. If dispatch_timers ever regressed into a path that loops without
+# awaiting anything, this test would hang (and the gate's own "watch for
+# hangs" instruction would catch it) rather than fail cleanly.
+# ---------------------------------------------------------------------------
+
+
+async def test_dispatch_loop_awaits_the_db_even_when_every_claim_is_lost():
+    row = _due_row("reminder")
+    claims = []
+
+    class _AlwaysDueLostClaimPool:
+        async def fetchrow(self, query, *args):
+            # A real DB call always suspends on real IO; a fake that returned
+            # synchronously would let a non-awaiting loop spin forever without
+            # ever giving this test's own ticks a chance to run (which is
+            # exactly the bug this test exists to catch, just one layer up),
+            # so this stand-in yields once per call like the real one does.
+            await asyncio.sleep(0)
+            stripped = query.lstrip()
+            if stripped.startswith("SELECT"):
+                return row  # synthetic: always "due", to stress the loop
+            claims.append((query, args))
+            return None  # every claim attempt loses
+
+        async def execute(self, query, *args):
+            return "DELETE 0"
+
+    pool = _AlwaysDueLostClaimPool()
+    bot = _RaceBot(pool)
+    cog = Reminder(bot)
+    cog.call_timer = lambda r: None
+
+    task = asyncio.ensure_future(cog.dispatch_timers())
+    try:
+        await asyncio.wait_for(_spin_n_ticks(50), timeout=2)
+    finally:
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=2)
+        except asyncio.CancelledError:
+            pass
+
+    # Each iteration awaited the DB for its own claim attempt: many distinct
+    # claims were recorded, not a single tight non-yielding loop.
+    assert len(claims) > 5
+
+
+async def _spin_n_ticks(n):
+    for _ in range(n):
+        await asyncio.sleep(0)

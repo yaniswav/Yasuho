@@ -173,6 +173,29 @@ _KEY_BYTES = 48
 # before we pay for a decrypt.
 _MIN_ENCRYPTED_BYTES = 512
 
+# Bounds on how long we will wait for a backup subprocess before treating it as
+# hung and killing it. Without a bound, a pg_dump blocked on a lock, or a gpg
+# stuck on a full disk or starved entropy pool, would await forever - and
+# the maintenance cog's tick runs its whole data life-cycle (guild purges,
+# avatar retention, export slots, presence pruning, the dashboard journal)
+# through the SAME event loop, so one stuck backup would stall all of it.
+#
+# DUMP_TIMEOUT_SECONDS bounds work whose size scales with the WHOLE database:
+# pg_dump and its encryptor (run_backup, piped together) and the decrypt stage
+# of verify_backup (it reads an entire dump end to end - the same order of
+# work as encrypting it). 30 minutes is generous headroom for the data sizes
+# this bot produces today while still catching a genuinely stuck process
+# within the length of one maintenance tick, not within "the rest of the
+# process life".
+DUMP_TIMEOUT_SECONDS = 30 * 60
+
+# VERIFY_LIST_TIMEOUT_SECONDS bounds `pg_restore --list`, which parses only the
+# custom-format header and table of contents - no data pages, no database
+# connection - so it finishes in a couple of seconds even for a large archive.
+# A few minutes is generous headroom while still catching a process that is
+# truly stuck (e.g. blocked on a slow or stale filesystem).
+VERIFY_LIST_TIMEOUT_SECONDS = 5 * 60
+
 
 class BackupKeyError(RuntimeError):
     """The backup passphrase file is missing, empty or unusable."""
@@ -616,6 +639,30 @@ def _check_size_floor(path: str) -> VerifyResult:
     return VerifyResult(ok=True)
 
 
+async def _kill_and_wait(*procs) -> None:
+    """Kill every given (non-None) process and await its exit. Best-effort.
+
+    Used on a timeout: cancelling an ``await`` on the Python side (what
+    ``asyncio.wait_for`` does) never touches the real OS process, so without
+    this the child keeps running as a zombie-in-waiting with nobody left to
+    reap it.
+    """
+    for proc in procs:
+        if proc is None:
+            continue
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+    for proc in procs:
+        if proc is None:
+            continue
+        try:
+            await proc.wait()
+        except Exception:
+            pass
+
+
 async def _pg_restore_list(path: str) -> VerifyResult:
     """Run ``pg_restore --list`` on a PLAINTEXT archive. No restore, no database."""
     try:
@@ -626,9 +673,20 @@ async def _pg_restore_list(path: str) -> VerifyResult:
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
-        _, stderr = await proc.communicate()
     except Exception as exc:  # spawn failure (pg_restore missing, etc.)
         return VerifyResult(ok=False, error=f"pg_restore did not start: {exc}")
+    try:
+        _, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=VERIFY_LIST_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        await _kill_and_wait(proc)
+        error = (
+            f"pg_restore --list exceeded {VERIFY_LIST_TIMEOUT_SECONDS}s and "
+            "was killed"
+        )
+        log.error("BACKUP-VERIFY-TIMEOUT: %s (path=%s)", error, path)
+        return VerifyResult(ok=False, error=error)
     return _map_verify_result(proc.returncode, stderr)
 
 
@@ -691,9 +749,20 @@ async def verify_backup(path: str, *, key_path: str | None = None) -> VerifyResu
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await proc.communicate()
         except Exception as exc:  # spawn failure
             return VerifyResult(ok=False, error=f"{enc.binary} did not start: {exc}")
+        try:
+            _, stderr = await asyncio.wait_for(
+                proc.communicate(), timeout=DUMP_TIMEOUT_SECONDS
+            )
+        except asyncio.TimeoutError:
+            await _kill_and_wait(proc)
+            error = (
+                f"{enc.binary} --decrypt exceeded {DUMP_TIMEOUT_SECONDS}s "
+                "and was killed"
+            )
+            log.error("BACKUP-VERIFY-TIMEOUT: %s (path=%s)", error, path)
+            return VerifyResult(ok=False, error=error)
         decrypted = _map_decrypt_result(enc.binary, proc.returncode, stderr)
         if not decrypted.ok:
             return decrypted
@@ -823,10 +892,22 @@ async def run_backup(
         return BackupResult(ok=False, error=f"backup pipeline did not start: {exc}")
 
     # Drain both stderr pipes concurrently: waiting on one at a time would
-    # deadlock if the other filled its pipe buffer.
-    (_, dump_err), (_, enc_err) = await asyncio.gather(
-        dump_proc.communicate(), enc_proc.communicate()
-    )
+    # deadlock if the other filled its pipe buffer. Bounded so a dump stuck on
+    # a lock, or an encryptor stuck on disk/entropy, cannot hang this forever -
+    # see DUMP_TIMEOUT_SECONDS.
+    try:
+        (_, dump_err), (_, enc_err) = await asyncio.wait_for(
+            asyncio.gather(dump_proc.communicate(), enc_proc.communicate()),
+            timeout=DUMP_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        # Kill BOTH ends of the dump|encrypt pipe: either one could be the
+        # one actually stuck, and leaving the other running serves nobody.
+        await _kill_and_wait(dump_proc, enc_proc)
+        _safe_unlink(part_path)
+        error = f"backup pipeline exceeded {DUMP_TIMEOUT_SECONDS}s and was killed"
+        log.error("BACKUP-TIMEOUT: %s", error)
+        return BackupResult(ok=False, error=error)
 
     # FAILURE ATTRIBUTION. pg_dump normally goes first: if the dump itself
     # failed, the encryptor's complaint is just fallout. SIGPIPE is the one

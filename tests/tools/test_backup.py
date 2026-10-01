@@ -7,6 +7,7 @@ and argv shapes, passphrase-file handling, and - critically - that neither the
 parsed DSN nor any argv ever reveals a secret.
 """
 
+import asyncio
 import os
 import shutil
 import signal
@@ -942,3 +943,113 @@ def test_gpg_decrypt_fails_with_the_wrong_key(tmp_path):
         capture_output=True,
     )
     assert done.returncode != 0
+
+
+# ---------------------------------------------------------------------------
+# Subprocess timeouts: a hung child must be killed, cleaned up, and reported
+# as a failure - never awaited forever.
+# ---------------------------------------------------------------------------
+
+
+class _HangingFakeProc:
+    """A subprocess stand-in that never finishes on its own.
+
+    Models a REAL stuck child (blocked on a lock, a full disk, starved
+    entropy): ``communicate``/``wait`` hang until something kills it.
+    ``kill()`` is what a real SIGKILL would do - the process then actually
+    exits, so this flips the same internal flag ``communicate``/``wait`` are
+    waiting on, rather than completing them itself.
+    """
+
+    def __init__(self):
+        self.killed = False
+        self.returncode = None
+        self._dead = asyncio.Event()
+
+    async def communicate(self):
+        await self._dead.wait()
+        return b"", b""
+
+    async def wait(self):
+        await self._dead.wait()
+        return self.returncode
+
+    def kill(self):
+        self.killed = True
+        self.returncode = -9
+        self._dead.set()
+
+
+async def test_pg_restore_list_times_out_kills_and_reports_failure(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(backup, "VERIFY_LIST_TIMEOUT_SECONDS", 0.01)
+    proc = _HangingFakeProc()
+
+    async def fake_exec(*args, **kwargs):
+        return proc
+
+    monkeypatch.setattr(backup.asyncio, "create_subprocess_exec", fake_exec)
+
+    result = await backup._pg_restore_list(str(tmp_path / "x.dump"))
+
+    assert result.ok is False
+    assert "exceeded" in result.error
+    assert proc.killed is True
+
+
+async def test_verify_backup_decrypt_timeout_kills_and_cleans_up(
+    tmp_path, monkeypatch
+):
+    key = tmp_path / "backup.key"
+    backup.ensure_key(str(key))
+    dump = tmp_path / _dump("20260701-120000")
+    dump.write_bytes(b"x" * backup._MIN_ENCRYPTED_BYTES)
+
+    monkeypatch.setattr(backup, "DUMP_TIMEOUT_SECONDS", 0.01)
+    proc = _HangingFakeProc()
+
+    async def fake_exec(*args, **kwargs):
+        return proc
+
+    monkeypatch.setattr(backup.asyncio, "create_subprocess_exec", fake_exec)
+
+    before = set(os.listdir(tmp_path))
+    result = await backup.verify_backup(str(dump), key_path=str(key))
+    after = set(os.listdir(tmp_path))
+
+    assert result.ok is False
+    assert "exceeded" in result.error
+    assert proc.killed is True
+    # No decrypted temp file left behind (same cleanup as every other
+    # verify_backup failure path - the ``finally: _safe_unlink`` is unchanged).
+    assert after - {dump.name, key.name} == before - {dump.name, key.name}
+
+
+async def test_run_backup_pipeline_timeout_kills_both_ends_and_cleans_up(
+    tmp_path, monkeypatch, caplog
+):
+    key = tmp_path / "backup.key"
+    backup.ensure_key(str(key))
+    backups = tmp_path / "backups"
+    monkeypatch.setattr(backup, "resolve_encryptor", lambda: backup.GpgEncryptor())
+    monkeypatch.setattr(backup, "DUMP_TIMEOUT_SECONDS", 0.01)
+
+    dump_proc = _HangingFakeProc()
+    enc_proc = _HangingFakeProc()
+    _fake_pipeline(monkeypatch, dump_proc, enc_proc)
+
+    with caplog.at_level("ERROR"):
+        result = await backup.run_backup(
+            "postgresql://u:p@localhost/db", str(backups), key_path=str(key)
+        )
+
+    assert result.ok is False
+    assert "exceeded" in result.error
+    assert "BACKUP-TIMEOUT" in caplog.text
+    # BOTH ends of the dump|encrypt pipe were killed, not just one.
+    assert dump_proc.killed is True
+    assert enc_proc.killed is True
+    # No half-written .part (or anything else) left behind for rotation to
+    # ever mistake for a real backup.
+    assert not backups.exists() or list(backups.iterdir()) == []
