@@ -1199,6 +1199,20 @@ CREATE INDEX IF NOT EXISTS dashboard_actions_guild_idx ON dashboard_actions (gui
 -- reconciliation sweeps by status across every scope.
 CREATE INDEX IF NOT EXISTS dashboard_actions_user_idx
     ON dashboard_actions (user_id, status) WHERE user_id IS NOT NULL;
+-- applied_at: written ONLY by the dashboard, in the same transaction as its own
+-- button_roles write after a successful button_panel_edit, to mark that edit as
+-- already reflected on its side (its catch-up used to replay the latest edit on
+-- every /roles load and overwrite a re-attach done from Discord since). The bot
+-- never reads or writes it: its UPDATEs name only status/result/updated_at, so
+-- finishing or reaping a row can never reset it.
+ALTER TABLE dashboard_actions ADD COLUMN IF NOT EXISTS applied_at TIMESTAMPTZ;
+-- The dashboard's "latest successful action of this kind for this guild" read
+-- (WHERE guild_id, kind, status = 'done' ORDER BY updated_at DESC, id DESC).
+-- Terminal rows are kept for the guild's whole life, so without it that read
+-- scans the guild's full history. PARTIAL on 'done' because nothing reads the
+-- other statuses this way; the bot stamps updated_at on every status change.
+CREATE INDEX IF NOT EXISTS dashboard_actions_guild_kind_idx
+    ON dashboard_actions (guild_id, kind, updated_at DESC) WHERE status = 'done';
 
 -- ============================================================
 -- Dashboard configuration journal (written by the dashboard, never by the bot)
