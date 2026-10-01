@@ -2545,7 +2545,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
         gets the auto-updating join prompt.
         """
         player = ctx.voice_client
-        if isinstance(player, sonolink.Player) and player.current:
+        # A Playable is never tested by truthiness: sonolink's Playable defines
+        # __len__ (the track length in ms) and no __bool__, so a zero-length
+        # track - documented in views.py and produced by the cold-restore race -
+        # is FALSY even while it is genuinely playing. Always compare to None.
+        if isinstance(player, sonolink.Player) and player.current is not None:
             await self._repost_controller(ctx, player)
             return
 
@@ -2712,7 +2716,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # An explicit query ends radio mode: a station session becomes a normal
         # one and the controller drops its station select on the next rerender.
         player.radio_genre = None
-        if not player.current:
+        if player.current is None:
             await player.play(player.queue.get())
         await self._snapshot(player)
 
@@ -2800,7 +2804,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             track.extras.radio = True
             player.queue.put(track)
         player.radio_genre = genre.key
-        if replace or not player.current:
+        if replace or player.current is None:
             await player.play(player.queue.get())
         await self._snapshot(player)
         return tier, tracks
@@ -3213,7 +3217,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             track = await player.skip()
         except sonolink.QueueEmpty:
             return voteskip.SKIP_RESULT_NONE, None
-        if track:
+        if track is not None:
             return voteskip.SKIP_RESULT_ADVANCED, track
         guild_id = playerinfo.guild_id_of(player)
         if guild_id is not None:
@@ -3478,7 +3482,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     async def nowplaying(self, ctx: commands.Context) -> None:
         """Show the interactive now-playing controller."""
         player = ctx.voice_client
-        if not isinstance(player, sonolink.Player) or not player.current:
+        if not isinstance(player, sonolink.Player) or player.current is None:
             await ctx.send(_("Nothing is playing right now."))
             return
         # Same shared body as a bare /play: re-post here, but only MOVE the live
@@ -3879,7 +3883,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         # Playing favourites is an explicit choice: it ends any radio session.
         player.radio_genre = None
-        if not player.current:
+        if player.current is None:
             await player.play(player.queue.get())
         await self._snapshot(player)
 
@@ -3922,7 +3926,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Save the current track, or a searched track, to your favourites."""
         if not query or not query.strip():
             player = ctx.voice_client
-            if not isinstance(player, sonolink.Player) or not player.current:
+            if not isinstance(player, sonolink.Player) or player.current is None:
                 await ctx.send(
                     _("Nothing is playing - give me a song name or URL to save.")
                 )

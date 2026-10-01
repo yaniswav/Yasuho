@@ -20,6 +20,17 @@ produces is silent (an exception inside a listener or a per-guild lock, and the
 room simply never gets its panel), so the copies that were wrong stayed wrong.
 One helper, one shape, and a "make these consistent" pass can no longer
 reintroduce the raise.
+
+A second sonolink pitfall, unrelated but equally silent: ``Playable`` (in
+``sonolink/models/track.py``) defines ``__len__`` - the track length in
+milliseconds - and no ``__bool__``. Python falls back from ``__bool__`` to
+``__len__``, so ``bool(player.current)`` is really ``player.current.length
+!= 0``: a genuinely playing track whose length is 0 (a stream mid-probe, or
+the partially built track from the cold-restore race - see views.py's
+"length-less tracks") is FALSY. Code that asks "is something playing?" with
+``if player.current:`` or ``if not player.current:`` gets that case wrong.
+Always compare to ``None`` instead: ``player.current is None`` /
+``player.current is not None``.
 """
 
 from __future__ import annotations

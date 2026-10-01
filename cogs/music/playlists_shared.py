@@ -608,7 +608,7 @@ class ServerPlaylistMixin:
 
         # Loading a playlist is an explicit choice: it ends any radio session.
         player.radio_genre = None
-        if not player.current:
+        if player.current is None:
             await player.play(player.queue.get())
         await self._snapshot(player)
 

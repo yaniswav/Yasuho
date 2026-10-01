@@ -294,7 +294,7 @@ class AddSongModal(LocaleModal, title="Add a song"):
             # An explicit add turns a radio session into a normal one: the station
             # select disappears on the rerender below.
             player.radio_genre = None
-            if not player.current:
+            if player.current is None:
                 await player.play(player.queue.get())
             await self.cog._snapshot(player)
 
@@ -436,7 +436,11 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
         # player.current wins once sonolink has set it; self._track only covers
         # the brief window during a cold restore / track change where the
         # websocket track_start beat play()'s REST update and current is None.
-        track = self.player.current or self._track
+        # Compared to None, never by truthiness: a zero-length Playable is
+        # falsy (sonolink's __len__, no __bool__), so `or` would wrongly fall
+        # through to the stale self._track while a real zero-length track plays.
+        current = self.player.current
+        track = current if current is not None else self._track
         # Record what this render actually shows so _send_controller can tell a
         # same-track re-fire from a genuine change without consulting the live
         # player.current (which advances ahead of the track_start event).
@@ -2141,7 +2145,7 @@ class HistoryCard(PinnedRenderLocale, LocaleLayoutView):
             # An explicit add turns a radio session into a normal one, exactly as
             # the add-track modal does.
             self.player.radio_genre = None
-            if not self.player.current:
+            if self.player.current is None:
                 await self.player.play(self.player.queue.get())
             await self.cog._snapshot(self.player)
             # The history lane itself did not change, so the listing above is
@@ -2524,7 +2528,7 @@ class FavouritesCard(AuthorLayoutView):
             player.queue.put(track)
             # An explicit pick ends any radio session, as every other add does.
             player.radio_genre = None
-            if not player.current:
+            if player.current is None:
                 await player.play(player.queue.get())
             await self.cog._snapshot(player)
 

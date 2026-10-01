@@ -304,10 +304,19 @@ if _SonoAutoPlayHandler is not None:
         __slots__ = ()
 
         async def _fill_auto_queue(self):
-            reference = self._player.current or (
-                self._player.queue.history[-1]
-                if self._player.queue.history
-                else None
+            # Compared to None, never by truthiness: sonolink's Playable has
+            # no __bool__ and falls back to __len__ (the track length), so a
+            # zero-length current track would be falsy here and wrongly lose
+            # to the history fallback.
+            current = self._player.current
+            reference = (
+                current
+                if current is not None
+                else (
+                    self._player.queue.history[-1]
+                    if self._player.queue.history
+                    else None
+                )
             )
             if not seed_needs_youtube_resolution(
                 reference, self._settings.provider
