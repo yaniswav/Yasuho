@@ -77,7 +77,15 @@ of the self-role question, the same pair ``/verify setup``, ``/reactionrole``,
   kept as its own call so its failure keeps its own code, ``role_not_assignable``;
 * does the person who asked for this from the web app OUTRANK the role they are
   publishing (``modchecks.self_assignable_role_error``, which composes the
-  hierarchy half with the bot half). Refused as ``role_above_actor``.
+  hierarchy half with the bot half). Refused as ``role_above_actor``. This is
+  rank, not strictly position: ``role_hierarchy_error_for`` exempts the guild
+  owner AND anyone with the ``administrator`` permission from the position
+  comparison outright. That is deliberate, not a gap - it is the exact same
+  exemption ``/verify setup``, ``/reactionrole``, ``/buttonrole`` and
+  ``/rolemenu`` already give a configurer in Discord itself (an admin can
+  already grant or hand out any role by hand, position be damned), so holding
+  this dashboard path to a stricter rule than the live Discord commands it
+  mirrors would refuse nothing an admin could not just do another way.
 
 The ACTOR is the row's ``requested_by``: the dashboard writes the AUTHENTICATED
 SESSION USER there on every ``enqueueBotAction`` call. :func:`_claim` returns the
@@ -110,10 +118,13 @@ in a setting read in that same instant), so check and publication are one moment
 - and that moment is the last one at which anybody asks the question.
 ``ButtonRoleButton.callback`` (``cogs/config/buttonroles.py``) grants straight
 off its own ``br:<role_id>`` custom_id with NO rank check, and nothing in this
-bot re-examines a published role when that role later changes (there is no
-``on_guild_role_update`` listener anywhere here - grep it). So the pair below is
-load-bearing rather than belt-and-braces: skip it on ONE of the five and the
-click path grants whatever was published, forever.
+bot re-examines a published role's RANK SAFETY when that role later changes
+permissions or position. ``cogs/config/twitch.py`` does carry an
+``on_guild_role_update`` listener (grep it), but it only reacts to a RENAME and
+only to invalidate its own presence-gate memo - a different concern entirely,
+with no rank check in it. So the pair below is load-bearing rather than
+belt-and-braces: skip it on ONE of the five and the click path grants whatever
+was published, forever.
 
 ``button_panel_edit`` is held to exactly the same rule as ``button_panel_post``,
 against the state of NOW, on EVERY button of the payload - never "these roles
@@ -1057,11 +1068,14 @@ async def _exec_button_panel_edit(bot, guild_id, payload, actor):
     applies - ``_role_gate_failure``, bot half then configurer half - runs here on
     EVERY role against the state of NOW. This is load-bearing, not
     belt-and-braces: ``ButtonRoleButton.callback`` grants straight off its
-    custom_id with NO rank check and nothing re-examines a published role when it
-    changes (no ``on_guild_role_update`` listener anywhere in the bot), so publish
-    time is the only gate this path will ever have. Left ungated, the kind would
-    also be the gate's back door: post a harmless role past the check, then edit
-    the panel to republish a dangerous one unchecked.
+    custom_id with NO rank check, and nothing re-examines a published role's
+    RANK SAFETY when it changes. ``cogs/config/twitch.py`` does have an
+    ``on_guild_role_update`` listener, but it only reacts to a rename and only
+    invalidates its own presence-gate memo - no rank check, a different
+    concern - so publish time is still the only gate this path will ever have.
+    Left ungated, the kind would also be the gate's back door: post a harmless
+    role past the check, then edit the panel to republish a dangerous one
+    unchecked.
 
     PARTIAL FAILURE REFUSES THE WHOLE EDIT: the message keeps its current
     buttons, the rows are never touched (this executor never writes

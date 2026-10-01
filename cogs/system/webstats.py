@@ -50,8 +50,14 @@ def build_webhook_app(password, dispatch, limiter):
         auth = request.headers.get("Authorization", "")
         # Constant-time compare so the response time can't leak how many leading
         # bytes of the secret matched; reject outright when no password is set so
-        # an empty Authorization header can never authenticate.
-        if not password or not hmac.compare_digest(auth, password):
+        # an empty Authorization header can never authenticate. Compare as
+        # bytes, not str: hmac.compare_digest raises TypeError on two strings
+        # when either contains a non-ASCII character, which the middleware's
+        # catch-all turns into a silent 400 - the vote is never credited and
+        # nothing but a debug line says why.
+        if not password or not hmac.compare_digest(
+            auth.encode("utf-8"), password.encode("utf-8")
+        ):
             return web.Response(status=401, text="Unauthorized")
         data = await request.json()
         dispatch("dbl_vote", BotVoteData(**data))

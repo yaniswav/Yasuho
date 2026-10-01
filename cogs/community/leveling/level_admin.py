@@ -259,7 +259,7 @@ class LevelAdmin(commands.Cog):
                 "Admin XP reward/announce routing failed for %s", member.id
             )
 
-    def _change_embed(self, member, old_xp, new_xp):
+    def _change_embed(self, member, old_xp, new_xp, *, clamped=False):
         """A confirmation embed showing the XP delta and any level movement."""
         old_level = leveling.level_for_xp(old_xp)
         new_level = leveling.level_for_xp(new_xp)
@@ -267,6 +267,14 @@ class LevelAdmin(commands.Cog):
         embed.description = _(
             "{member} now has **{xp} XP** (was {old_xp})."
         ).format(member=member.mention, xp=new_xp, old_xp=old_xp)
+        if clamped:
+            embed.add_field(
+                name=_("Clamped"),
+                value=_(
+                    "The total was capped at the {max} XP ceiling."
+                ).format(max=level_admin.MAX_SET_XP),
+                inline=False,
+            )
         if new_level > old_level:
             embed.add_field(
                 name=_("Level up"),
@@ -292,10 +300,15 @@ class LevelAdmin(commands.Cog):
         """Shared body for give/take/set: mutate, route, and confirm."""
         old_xp = await self._current_xp(ctx.guild.id, member.id)
         new_xp = level_admin.resolve_new_xp(action, old_xp, amount)
+        # Only `give` can be clamped (`take` floors at 0 but never hits the
+        # ceiling going down; `set` is already validated into range before
+        # this runs) - detected by comparing against the unclamped sum rather
+        # than duplicating the cap value's meaning here.
+        clamped = action == level_admin.GIVE and new_xp < old_xp + amount
         await self._write_xp(ctx.guild.id, member.id, new_xp)
         await self._route_change(ctx, member, old_xp, new_xp)
         await ctx.send(
-            embed=self._change_embed(member, old_xp, new_xp),
+            embed=self._change_embed(member, old_xp, new_xp, clamped=clamped),
             allowed_mentions=discord.AllowedMentions.none(),
         )
 

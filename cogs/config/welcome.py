@@ -601,6 +601,16 @@ class Welcome(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # Guilds already confirmed to have no legacy ``welcome`` row, so the
+        # lookup below is never repeated for them - same shape as the
+        # TemporaryRooms hub index (cogs/config/rooms.py) and the Twitch
+        # presence gate (cogs/config/twitch.py): an absent/negative outcome is
+        # cached in memory rather than re-probed. Without this, a guild that
+        # never had a legacy row pays that fetchrow on every single member
+        # join, forever, since no blob ever gets saved to make it terminal.
+        # Process-local and re-probed once per restart, which is fine: a
+        # legacy table is migration-only and nothing still writes to it.
+        self._no_legacy_row = set()
 
     # -- config storage (single JSONB blob per guild) -------------------
     async def get_config(self, guild_id):
@@ -611,8 +621,12 @@ class Welcome(commands.Cog):
         if blob is not None:
             return _merge_defaults(blob)
 
-        # No blob yet: seed it from the legacy ``welcome`` table if present.
+        # No blob yet: seed it from the legacy ``welcome`` table if present,
+        # unless we already confirmed this guild has no legacy row.
         config = _default_config()
+        if guild_id in self._no_legacy_row:
+            return config
+
         try:
             row = await pool.fetchrow(
                 "SELECT channel_id, message FROM welcome WHERE guild_id = $1;",
@@ -628,6 +642,8 @@ class Welcome(commands.Cog):
             if row["message"]:
                 config["embed"]["description"] = row["message"]
             await self.save(guild_id, config)
+        else:
+            self._no_legacy_row.add(guild_id)
         return config
 
     async def save(self, guild_id, config):

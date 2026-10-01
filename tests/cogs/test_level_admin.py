@@ -149,6 +149,24 @@ async def test_set_writes_the_exact_total(fake_pool):
     assert lv.calls[0]["old_xp"] == 5000 and lv.calls[0]["new_xp"] == 0
 
 
+async def test_give_clamps_total_to_max_set_xp_and_notes_it(fake_pool):
+    from cogs.community.leveling import admin_rules as la
+
+    fake_pool.fetchval_return = la.MAX_SET_XP - 10
+    lv = _FakeLevelingCog()
+    cog = LevelAdmin(_make_bot(fake_pool, lv))
+    ctx = _FakeCtx(guild=_FakeGuild(1))
+    member = _FakeMember(2)
+
+    await cog.cmd_give(ctx, member, 1_000_000)  # would overflow the ceiling
+
+    writes = _level_writes(fake_pool)
+    assert writes[0][2] == (1, 2, la.MAX_SET_XP)  # clamped, not overflowed
+    assert lv.calls[0]["new_xp"] == la.MAX_SET_XP
+    embed = ctx.sends[0][1]["embed"]
+    assert any(field.name == "Clamped" for field in embed.fields)
+
+
 async def test_give_out_of_range_amount_is_refused_before_any_db(fake_pool):
     cog = LevelAdmin(_make_bot(fake_pool, _FakeLevelingCog()))
     ctx = _FakeCtx()

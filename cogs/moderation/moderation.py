@@ -1057,10 +1057,22 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, user: discord.Member):
         """Unmute a member."""
 
-        role = await self._get_mute_role_id(ctx.guild.id)
+        role_id = await self._get_mute_role_id(ctx.guild.id)
+        mutedrole = (
+            discord.utils.get(ctx.guild.roles, id=role_id)
+            if role_id is not None
+            else None
+        )
+        if mutedrole is None:
+            return await ctx.send(
+                _(
+                    "This server has no mute role yet - I create one the first "
+                    "time you use `mute`."
+                ),
+                delete_after=15,
+            )
 
         try:
-            mutedrole = discord.utils.get(ctx.guild.roles, id=role)
             await user.remove_roles(mutedrole, reason=f"""Unmuted by {ctx.author}""")
 
             query = (

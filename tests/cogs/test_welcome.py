@@ -149,6 +149,59 @@ class _FakeJoiningMember:
         self.guild = types.SimpleNamespace(member_count=42)
 
 
+async def test_get_config_caches_no_legacy_row_so_it_queries_at_most_once(
+    monkeypatch, fake_pool
+):
+    """A guild that never had a legacy ``welcome`` row must not pay that
+    fetchrow on every single call to get_config (one per member join,
+    forever) - the "no legacy row" outcome must become terminal, same as a
+    found-and-migrated row already is.
+    """
+
+    async def _no_blob(pool, guild_id, key, default=None):
+        return default
+
+    monkeypatch.setattr(welcome_module.settings, "get_guild", _no_blob)
+    fake_pool.fetchrow_return = None  # no legacy row for this guild
+
+    cog = _make_cog(fake_pool)
+
+    await cog.get_config(1)
+    await cog.get_config(1)
+
+    legacy_queries = [
+        c for c in fake_pool.calls
+        if c[0] == "fetchrow" and "FROM welcome WHERE guild_id" in c[1]
+    ]
+    assert len(legacy_queries) <= 1
+
+
+async def test_get_config_still_migrates_a_real_legacy_row(monkeypatch, fake_pool):
+    """Unchanged behaviour for a guild that DOES have a legacy row."""
+
+    async def _no_blob(pool, guild_id, key, default=None):
+        return default
+
+    monkeypatch.setattr(welcome_module.settings, "get_guild", _no_blob)
+    fake_pool.fetchrow_return = {"channel_id": 123, "message": "Hi!"}
+
+    saved = {}
+
+    async def _fake_save(guild_id, config):
+        saved["guild_id"] = guild_id
+        saved["config"] = config
+
+    cog = _make_cog(fake_pool)
+    monkeypatch.setattr(cog, "save", _fake_save)
+
+    config = await cog.get_config(1)
+
+    assert config["channel_id"] == 123
+    assert config["enabled"] is True
+    assert config["embed"]["description"] == "Hi!"
+    assert saved["guild_id"] == 1
+
+
 async def test_render_welcome_card_routes_through_run_image_job(monkeypatch):
     calls = []
 

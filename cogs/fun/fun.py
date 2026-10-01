@@ -57,6 +57,27 @@ def contains_link(text) -> bool:
     return bool(LINK_RE.search(str(text)) or INVITE_RE.search(str(text)))
 
 
+# Twemoji (jsdelivr "jdecked/twemoji") file naming for ?bigmoji.
+#
+# Twemoji's own parser (twemoji.js: `text.indexOf(ZWJ) < 0 ? text.replace(
+# UFE0Fg, '') : text`) only ever strips the variation selector U+FE0F, and
+# ONLY when the emoji has no ZWJ (U+200D) anywhere in it; a sequence that
+# does contain a ZWJ is used exactly as-is, FE0F included. There is no
+# separate keycap rule: a keycap like "#" + FE0F + 20E3 has no ZWJ, so it
+# falls under the same strip-FE0F case as any other single emoji and comes
+# out as "23-20e3", matching the file Twemoji actually ships.
+ZERO_WIDTH_JOINER = "‍"
+VARIATION_SELECTOR_16 = "️"
+
+
+def twemoji_codepoints(emoji: str) -> str:
+    """Return the Twemoji asset basename (sans extension) for ``emoji``."""
+
+    if ZERO_WIDTH_JOINER not in emoji:
+        emoji = emoji.replace(VARIATION_SELECTOR_16, "")
+    return "-".join(format(ord(char), "x") for char in emoji)
+
+
 # How long one member must let pass between two ?hug renders.
 #
 # A hug is ~1s of Pillow work holding one of only TWO bot-wide image slots
@@ -392,7 +413,7 @@ class Fun(commands.Cog):
         else:
             # For other emojis, we use Twemoji (the maxcdn host is long dead;
             # jsdelivr serves the maintained fork's assets).
-            emoji_code = "".join(format(ord(char), "x") for char in emoji)
+            emoji_code = twemoji_codepoints(emoji)
             url = (
                 "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/"
                 f"{emoji_code}.png"

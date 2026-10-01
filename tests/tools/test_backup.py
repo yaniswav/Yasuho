@@ -12,7 +12,7 @@ import os
 import shutil
 import signal
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -96,6 +96,26 @@ def test_backup_filename_defaults_to_the_encrypted_suffix():
 def test_backup_filename_honours_the_openssl_suffix():
     name = backup.backup_filename(datetime(2026, 1, 2, 3, 4, 5), backup.OPENSSL_SUFFIX)
     assert name == "yasuho-20260102-030405.dump.enc"
+
+
+def test_backup_filename_same_for_aware_utc_as_naive():
+    # datetime.now(timezone.utc) (the non-deprecated replacement for
+    # datetime.utcnow()) must format to the EXACT same string as the naive
+    # equivalent - callers rely on that for chronological sorting.
+    naive = datetime(2026, 1, 2, 3, 4, 5)
+    aware = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    assert backup.backup_filename(naive) == backup.backup_filename(aware)
+
+
+def test_create_dump_timestamp_uses_no_deprecated_utcnow():
+    # Regression guard: tools/backup.py must not reintroduce the deprecated,
+    # warning-emitting datetime.utcnow() call as actual code (a mention in a
+    # comment explaining the history is fine).
+    import inspect
+
+    for lineno, line in enumerate(inspect.getsource(backup).splitlines(), 1):
+        code = line.split("#", 1)[0]
+        assert "datetime.utcnow()" not in code, f"line {lineno}: {line!r}"
 
 
 @pytest.mark.parametrize(

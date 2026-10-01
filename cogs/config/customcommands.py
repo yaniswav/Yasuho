@@ -779,7 +779,20 @@ class CustomCommands(commands.Cog):
             else:
                 content = substitute(response.get("content") or "")
                 if content:
-                    await message.channel.send(content[: cc.MAX_TEXT_LENGTH])
+                    # The text is admin-written and stored, but ANY member can
+                    # trigger it - the client default allowed_mentions (users
+                    # and roles both True) would let that stored text ping
+                    # whoever it names. Only the member who typed the trigger
+                    # may be pinged by their own invocation.
+                    await message.channel.send(
+                        content[: cc.MAX_TEXT_LENGTH],
+                        allowed_mentions=discord.AllowedMentions(
+                            everyone=False,
+                            roles=False,
+                            users=[message.author],
+                            replied_user=False,
+                        ),
+                    )
         except discord.HTTPException:
             log.exception("Custom command send failed")
             return

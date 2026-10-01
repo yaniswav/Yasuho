@@ -48,6 +48,14 @@ def _remember(message_id: int) -> None:
     _inflight.add(message_id)
 
 
+class _UnrepresentableValue(Exception):
+    """A collected value cannot be re-encoded as a safe command-line token."""
+
+    def __init__(self, field):
+        super().__init__(field.name)
+        self.field = field
+
+
 class _Field:
     """One command parameter we may need to collect interactively."""
 
@@ -300,10 +308,35 @@ class _CompletionView(AuthorView):
         if not text:
             return ""
         if any(ch.isspace() for ch in text) or '"' in text:
-            return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+            # discord.ext.commands.view.StringView's get_quoted_word only
+            # unescapes a backslash when it is immediately followed by the
+            # closing quote character; any other backslash (including a run
+            # of several) passes through completely literally. So escaping
+            # ONLY the quote character - never doubling backslashes - is
+            # what makes render then parse the identity: a backslash that
+            # already sits right before a quote in the original value gets
+            # exactly one backslash inserted ahead of that quote, and the
+            # view's "drop one backslash, keep the quote" rule removes
+            # exactly that one back out again, however many backslashes
+            # came before it.
+            #
+            # The one case this cannot represent is a value ending in a
+            # backslash: that trailing backslash would sit right before OUR
+            # closing quote, and the view would consume the closing quote as
+            # an escaped character instead of ending the string, leaving it
+            # looking for a closing quote that is never found. Refuse rather
+            # than hand back a token that corrupts or breaks re-parsing.
+            if text.endswith("\\"):
+                raise _UnrepresentableValue(field)
+            return '"' + text.replace('"', '\\"') + '"'
         return text
 
     def _reconstruct(self) -> str:
+        """Rebuild the command line, or raise :class:`_UnrepresentableValue`.
+
+        Lets the caller fail the completion loudly instead of re-invoking a
+        command line a value has silently corrupted.
+        """
         parts = [f"{self.prefix}{self.command.qualified_name}"]
         for field in self.fields:
             if field.name not in self.provided:
@@ -424,7 +457,28 @@ class _CompletionView(AuthorView):
         self.finished = True
         for child in self.children:
             child.disabled = True
-        content = self._reconstruct()
+        try:
+            content = self._reconstruct()
+        except _UnrepresentableValue as exc:
+            self.stop()
+            log.info(
+                "arg completion: %s for %s cannot be re-encoded safely",
+                exc.field.name,
+                self.command.qualified_name,
+            )
+            await interactions.notify_failure(
+                interaction,
+                _(
+                    "That value for **{field}** ends with a backslash, which "
+                    "I can't type back safely here. Please run `{prefix}"
+                    "{command}` yourself with that value."
+                ).format(
+                    field=exc.field.name,
+                    prefix=self.prefix,
+                    command=self.command.qualified_name,
+                ),
+            )
+            return
         running = _("Running `{command}`...").format(
             command=f"{self.prefix}{self.command.qualified_name}"
         )

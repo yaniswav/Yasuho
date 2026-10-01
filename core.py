@@ -227,10 +227,25 @@ class Yasuho(commands.Bot):
         self.blacklist = set()
         self.autoroles = {}
         self.muteroles = {}
-        # Serialises the two ways those four maps change: the whole-map reload
-        # below and the per-id refreshes cogs/system/dashboard_sync.py performs
-        # on a NOTIFY. Without it a notify that lands mid-reload writes into the
-        # dict the reload is about to REPLACE, and the write is silently lost.
+        # Serialises the whole-map reload below against every PER-ID writer
+        # that takes it deliberately: cogs/system/dashboard_sync.py's NOTIFY
+        # invalidators, cogs/config/settings.py's prefix/autorole commands,
+        # cogs/moderation/blacklist.py and cogs/moderation/moderation.py's
+        # mute-role writes. Without it a write that lands mid-reload goes into
+        # the dict the reload is about to REPLACE, and is silently lost.
+        #
+        # Two other in-place writers of these same maps do NOT take this lock:
+        # tools/retention.invalidate_guild_caches (pops a departed/purged
+        # guild's entries) and cogs/system/events.py's on_guild_join (restores
+        # them on a rejoin inside the grace period). Both are rare, far apart
+        # in time from a reload in practice, and not provably race-free against
+        # one - if a reload's fetch is in flight at the same instant, its
+        # wholesale rebind can still re-admit or re-drop an entry out from
+        # under them. What makes that tolerable rather than a real bug: a
+        # purge/rejoin is a guild-membership edge case, not a hot path, and a
+        # mismatch here self-heals on the NEXT eager reload or dashboard
+        # resync - unlike the per-id writers above, which must never lose an
+        # admin's explicit, one-shot write.
         self.eager_cache_lock = asyncio.Lock()
         # Set by the Reminder cog on load; defaulted here so the tools.time
         # converters can read bot.reminder even if that cog fails to load.

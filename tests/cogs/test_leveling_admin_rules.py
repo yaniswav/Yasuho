@@ -87,6 +87,21 @@ def test_give_from_zero():
     assert la.resolve_new_xp(la.GIVE, 0, 25) == 25
 
 
+def test_give_is_clamped_to_max_set_xp():
+    # /xp set documents MAX_SET_XP as a hard ceiling; give must not be a back
+    # door around it when the cumulative total would otherwise exceed it.
+    assert (
+        la.resolve_new_xp(la.GIVE, la.MAX_SET_XP - 10, 1_000_000)
+        == la.MAX_SET_XP
+    )
+    assert la.resolve_new_xp(la.GIVE, la.MAX_SET_XP, 1) == la.MAX_SET_XP
+
+
+def test_give_under_the_ceiling_is_not_clamped():
+    assert la.resolve_new_xp(la.GIVE, 100, 50) == 150
+    assert la.resolve_new_xp(la.GIVE, la.MAX_SET_XP - 100, 50) == la.MAX_SET_XP - 50
+
+
 def test_unknown_action_is_a_no_op():
     assert la.resolve_new_xp("bogus", 77, 5) == 77
 

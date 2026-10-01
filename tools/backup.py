@@ -136,7 +136,7 @@ import shutil
 import signal
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote, urlsplit
 
 log = logging.getLogger(__name__)
@@ -404,8 +404,8 @@ def backup_filename(now: datetime, suffix: str = GPG_SUFFIX) -> str:
     """Return the dump filename for ``now`` (naive/aware both fine, read as-is).
 
     Format: ``yasuho-YYYYMMDD-HHMMSS<suffix>``, where the suffix names the tool
-    that encrypted it. The caller decides the timezone; core.py and the command
-    both pass ``datetime.utcnow()`` so filenames sort chronologically as plain
+    that encrypted it. The caller decides the timezone; the real caller passes
+    ``datetime.now(timezone.utc)`` so filenames sort chronologically as plain
     strings (the suffix is constant within a host, so it never perturbs order).
     """
     return f"{_PREFIX}{now.strftime(_TS_FORMAT)}{suffix}"
@@ -838,7 +838,10 @@ async def run_backup(
     except OSError as exc:
         return BackupResult(ok=False, error=f"cannot create backups dir: {exc}")
 
-    now = datetime.utcnow()
+    # datetime.now(timezone.utc) is the non-deprecated equivalent of
+    # datetime.utcnow(): backup_filename formats only the Y/M/D/H/M/S fields,
+    # which are identical either way, so the filename string is unchanged.
+    now = datetime.now(timezone.utc)
     final_name = backup_filename(now, enc.suffix)
     final_path = os.path.join(backups_dir, final_name)
     part_path = os.path.join(backups_dir, final_name + _PART_SUFFIX)

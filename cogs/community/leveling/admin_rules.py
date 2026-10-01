@@ -74,7 +74,10 @@ def resolve_new_xp(action, current_xp, amount):
     unchanged (a defensive no-op; the cog only ever passes a known one).
     """
     if action == GIVE:
-        return current_xp + amount
+        # /xp set documents MAX_SET_XP as a hard ceiling on a member's total;
+        # give must not be a back door around it, so the cumulative result is
+        # clamped to the same ceiling rather than left to grow unbounded.
+        return min(MAX_SET_XP, current_xp + amount)
     if action == TAKE:
         return max(0, current_xp - amount)
     if action == SET:

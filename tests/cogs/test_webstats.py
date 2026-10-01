@@ -177,6 +177,39 @@ async def test_malformed_json_on_authed_path_is_terse_400():
         await client.close()
 
 
+async def test_non_ascii_password_accepts_correct_header_and_rejects_wrong():
+    # hmac.compare_digest raises TypeError on two str objects when either one
+    # contains a non-ASCII character. The middleware's catch-all used to turn
+    # that into a silent 400 - the vote never credited, with nothing but a
+    # debug line saying why. Comparing as bytes must accept the right header,
+    # reject a wrong one, and never raise either way.
+    non_ascii_secret = "s3cret-mot-de-passe-éé"
+    limiter = FixedWindowRateLimiter(limit=100, window=60.0, capacity=64)
+    dispatched = []
+    app = build_webhook_app(
+        non_ascii_secret, lambda *a: dispatched.append(a), limiter
+    )
+    client = await _client(app)
+    try:
+        resp = await client.post(
+            "/dblwebhook",
+            json={"type": "test", "user": "123"},
+            headers={"Authorization": non_ascii_secret},
+        )
+        assert resp.status == 200
+        assert len(dispatched) == 1
+
+        resp = await client.post(
+            "/dblwebhook",
+            json={"type": "test"},
+            headers={"Authorization": "wrong"},
+        )
+        assert resp.status == 401
+        assert len(dispatched) == 1
+    finally:
+        await client.close()
+
+
 def test_module_constants_are_sane():
     # Guard the hardening bounds against accidental drift.
     assert webstats.MAX_BODY_BYTES == 64 * 1024
