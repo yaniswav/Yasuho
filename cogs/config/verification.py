@@ -69,7 +69,10 @@ class VerifyButton(discord.ui.Button):
             role, surface=role_audit.SURFACE_VERIFY, guild_id=guild.id
         ):
             return await interaction.response.send_message(
-                _("I can't assign that role - it may be above my highest role."),
+                _(
+                    "I can't give you that role: it carries permissions I "
+                    "won't hand out automatically. Please tell a server admin."
+                ),
                 ephemeral=True,
             )
         try:

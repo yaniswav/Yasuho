@@ -362,7 +362,11 @@ def refuse_dangerous_role(role, *, surface, guild_id):
     Callers gate only the GRANT: removing a role must always keep working, so
     nothing here is ever consulted on a ``remove_roles`` path.
     """
-    permission_value = int(getattr(getattr(role, "permissions", None), "value", 0) or 0)
+    raw_value = getattr(getattr(role, "permissions", None), "value", 0) or 0
+    try:
+        permission_value = int(raw_value)
+    except (TypeError, ValueError):
+        permission_value = 0
     flags = dangerous_permissions(permission_value)
     if not flags:
         return False

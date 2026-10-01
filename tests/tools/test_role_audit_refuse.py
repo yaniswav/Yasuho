@@ -90,3 +90,17 @@ def test_send_messages_only_is_not_dangerous(caplog):
             role, surface=role_audit.SURFACE_TWITCH_LIVE, guild_id=6
         )
     assert refused is False
+
+
+def test_non_int_permission_value_never_raises_and_is_not_dangerous(caplog):
+    """A bare Mock (or any object whose ``.permissions.value`` is not
+    int-like) must be treated as harmless, not crash the join/grant path."""
+    role = types.SimpleNamespace(
+        id=6, permissions=types.SimpleNamespace(value=object())
+    )
+    with caplog.at_level(logging.WARNING):
+        refused = role_audit.refuse_dangerous_role(
+            role, surface=role_audit.SURFACE_AUTOROLE, guild_id=7
+        )
+    assert refused is False
+    assert not [r for r in caplog.records if "ROLE-REFUSED" in r.getMessage()]

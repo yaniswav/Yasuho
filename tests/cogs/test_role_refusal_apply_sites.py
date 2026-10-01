@@ -106,6 +106,10 @@ async def test_verify_button_refuses_a_dangerous_role(monkeypatch, make_interact
     await verification_module.VerifyButton().callback(interaction)
 
     assert member.added == []
+    assert interaction.sent
+    args, kwargs = interaction.sent[-1]
+    text = (args[0] if args else kwargs.get("content", ""))
+    assert "carries permissions" in text
 
 
 @pytest.mark.asyncio
