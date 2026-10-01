@@ -13,8 +13,12 @@ here, so existing ``embed_creator.notify_failure`` call sites keep working.
 from __future__ import annotations
 
 import logging
+import secrets
 
 import discord
+
+from tools import i18n
+from tools.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +39,71 @@ async def notify_failure(interaction, message: str = "Something went wrong.") ->
     """Best-effort ephemeral error reply that respects the response state."""
 
     await reply(interaction, message, ephemeral=True)
+
+
+async def report_component_error(interaction, error: Exception, *, where: str) -> str:
+    """Log a component/modal/dynamic-item crash and tell the user once. NEVER raises.
+
+    This is the ``on_error`` body shared by :class:`tools.views.LocaleView`,
+    :class:`tools.views.LocaleLayoutView`, :class:`tools.views.LocaleModal` and
+    (via a callback wrapper, since discord.py never calls ``on_error`` for a
+    dynamic item - see ``ui/item.py``'s ``interaction_check`` docstring)
+    :class:`tools.views.LocaleDynamicItem`. One body, so the behaviour - the id
+    scheme, what gets logged, how the user is told - cannot drift between the
+    four dispatch shapes the way four copy-pasted ``on_error`` methods would.
+
+    ``where`` is a short, already-built description of the failing view/modal/
+    item (class name plus its custom_id/label when available) - built by the
+    caller, which knows its own shape, so this module stays ignorant of
+    discord.ui.Item internals.
+
+    Mirrors ``cogs/system/errors.py``'s ``CommandInvokeError`` branch: an
+    8-hex-character id (``secrets.token_hex(4)``), logged at ERROR with
+    ``exc_info`` BEFORE any reply is attempted, so the id survives in the log
+    even when every attempt to tell the user fails (an expired token, a
+    response already sent down a race). The log line and the user-facing
+    message always carry the SAME id, so a user report ("it just said
+    something went wrong, id ...") is traceable to the exact traceback.
+
+    Never raises: this runs FROM an ``on_error`` handler (or its dynamic-item
+    equivalent), and an error reporter that itself throws would be swallowed by
+    discord.py as "Ignoring exception in view/modal" with no trace of the
+    original failure. Every step after the log line is wrapped.
+    """
+    error_id = secrets.token_hex(4)
+    log.error("Component error [error_id=%s] in %s", error_id, where, exc_info=error)
+
+    try:
+        # Defensive: by the time on_error runs, the clicker's locale is almost
+        # always already installed (LocaleView/LocaleModal/LocaleDynamicItem
+        # all apply it in interaction_check, which runs before the callback
+        # that just raised). The one gap is an item-level check raising BEFORE
+        # ours runs (ui/view.py:591 short-circuits on `and`), so re-applying
+        # here costs nothing and closes it.
+        await i18n.apply_interaction_locale(interaction)
+    except Exception:
+        log.debug("report_component_error: locale apply failed", exc_info=True)
+
+    try:
+        await notify_failure(
+            interaction,
+            _(
+                "Something went wrong handling that. If this keeps happening, "
+                "report this id to the bot owner: `{error_id}`"
+            ).format(error_id=error_id),
+        )
+    except Exception:
+        # notify_failure already swallows discord.HTTPException internally; this
+        # catches whatever else can come out of a dying interaction (an expired
+        # token, discord.InteractionResponded from a race). Logged, not raised:
+        # this function must never become a second crash on top of the first.
+        log.warning(
+            "report_component_error [error_id=%s]: could not notify the user",
+            error_id,
+            exc_info=True,
+        )
+
+    return error_id
 
 
 async def defer(

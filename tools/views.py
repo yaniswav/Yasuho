@@ -48,6 +48,18 @@ here will tell you.
 THE RENDER RULE, the companion rule, lives on :class:`PinnedRenderLocale` below:
 the locale a check installs is the CLICKER's, which is right for what only the
 clicker reads and wrong for the body of a shared message.
+
+THE ERROR RULE. discord.py's default ``View.on_error`` / ``LayoutView.on_error``
+/ ``Modal.on_error`` only log "Ignoring exception in view/modal ..." - the user
+is left on Discord's own "This interaction failed", with no id to report and no
+way for anyone to find the traceback it came from. Every base below (and
+:class:`LocaleDynamicItem`, which has no ``on_error`` to override at all - see
+its docstring) routes a callback crash through
+:func:`tools.interactions.report_component_error`: one ``secrets.token_hex(4)``
+id logged at ERROR with the traceback, then the SAME id told to the user in an
+ephemeral reply that respects whatever ``response.is_done()`` already is. This
+is the component-dispatch twin of ``cogs/system/errors.py``'s command-side
+``_safe_send`` ladder, and deliberately reuses its id scheme.
 """
 
 from __future__ import annotations
@@ -56,7 +68,7 @@ import typing
 
 import discord
 
-from tools import i18n
+from tools import i18n, interactions
 from tools.i18n import N_, _
 
 # Deny wordings used as AuthorView.deny_message across the cogs. They are stored
@@ -72,7 +84,41 @@ _DENY_STRINGS = [
 ]
 
 
-class LocaleView(discord.ui.View):
+def _item_repr(item) -> str:
+    """Short id for a failing component: label/custom_id, else just the class.
+
+    Used only to build the ``where`` string for
+    :func:`tools.interactions.report_component_error`'s log line - never shown
+    to the user, so there is no translation concern here. ``label`` and
+    ``custom_id`` are the two attributes that actually distinguish one button
+    from another in a log; most of the house's items have both, a few
+    (selects) only the second.
+    """
+    if item is None:
+        return "?"
+    label = getattr(item, "label", None)
+    custom_id = getattr(item, "custom_id", None)
+    bits = [str(bit) for bit in (label, custom_id) if bit]
+    return " ".join(bits) if bits else type(item).__name__
+
+
+class _ReportsComponentErrors:
+    """Shared ``on_error`` body for :class:`LocaleView` and :class:`LocaleLayoutView`.
+
+    Both bases they front for - ``discord.ui.View`` and ``discord.ui.LayoutView``
+    - are siblings that inherit this exact ``on_error(self, interaction, error,
+    item)`` signature from the private ``BaseView`` (discord.py 2.7.1,
+    ``ui/view.py``), so one body correctly serves both: a plain mixin ahead of
+    either in the MRO overrides the framework default without duplicating
+    anything. See THE ERROR RULE at the top of this module.
+    """
+
+    async def on_error(self, interaction, error, item):
+        where = f"{type(self).__name__} item={_item_repr(item)}"
+        await interactions.report_component_error(interaction, error, where=where)
+
+
+class LocaleView(_ReportsComponentErrors, discord.ui.View):
     """A plain View whose callbacks run in the clicker's locale.
 
     The single reason to exist: ``interaction_check`` resolves and installs the
@@ -88,6 +134,11 @@ class LocaleView(discord.ui.View):
             if not await super().interaction_check(interaction):
                 return False
             return await my_gate(interaction)
+
+    A callback or ``interaction_check`` that raises is caught by discord.py and
+    handed to ``on_error`` (see :class:`_ReportsComponentErrors`): the user gets
+    one ephemeral reply with an error id instead of Discord's bare "This
+    interaction failed", and the id is in the log next to the traceback.
     """
 
     async def interaction_check(self, interaction):
@@ -169,7 +220,7 @@ _DISABLEABLE = (
 )
 
 
-class LocaleLayoutView(discord.ui.LayoutView):
+class LocaleLayoutView(_ReportsComponentErrors, discord.ui.LayoutView):
     """The Components V2 twin of :class:`LocaleView`.
 
     ``LayoutView`` is a sibling of ``View`` in discord.py (both inherit the
@@ -177,6 +228,10 @@ class LocaleLayoutView(discord.ui.LayoutView):
     inherited from :class:`LocaleView` and is reimplemented here against the one
     shared ``i18n.apply_interaction_locale``. Adds no gate: it always returns
     ``True``, so re-basing a layout onto it never changes who may click.
+
+    ``on_error`` is inherited from :class:`_ReportsComponentErrors` - the
+    signature is identical to :class:`LocaleView`'s (both come from ``BaseView``)
+    so the same mixin body serves this sibling too.
     """
 
     async def interaction_check(self, interaction):
@@ -264,11 +319,21 @@ class LocaleModal(discord.ui.Modal):
 
     Subclasses that need their own ``interaction_check`` should call
     ``super().interaction_check(interaction)`` to keep the locale resolution.
+
+    A raising ``on_submit`` (or ``interaction_check``) is routed through
+    :func:`tools.interactions.report_component_error` the same way as the View
+    bases above - see THE ERROR RULE at the top of this module. ``Modal.on_error``
+    carries no ``item`` argument (discord.py 2.7.1, ``ui/modal.py``), so the
+    description falls back to the modal's own ``custom_id``.
     """
 
     async def interaction_check(self, interaction):
         await i18n.apply_interaction_locale(interaction)
         return True
+
+    async def on_error(self, interaction, error):
+        where = f"{type(self).__name__} modal custom_id={getattr(self, 'custom_id', None)}"
+        await interactions.report_component_error(interaction, error, where=where)
 
 
 # A template that can never match a custom_id: the abstract base below has to
@@ -278,6 +343,35 @@ class LocaleModal(discord.ui.Modal):
 _NEVER_MATCHES = r"(?!)"
 
 _ItemT = typing.TypeVar("_ItemT", bound=discord.ui.Item)
+
+
+def _wrap_dynamic_item_callback(callback):
+    """Wrap a dynamic item's ``callback`` so a crash is logged and reported.
+
+    See :meth:`LocaleDynamicItem.__init_subclass__` for WHY this exists instead
+    of an ``on_error`` override: the library gives dynamic items no such hook.
+    The wrapper never re-raises - ``ViewStore.schedule_dynamic_item_call``'s own
+    try/except is still there behind it, but by construction has nothing left
+    to catch.
+    """
+
+    async def _reporting_callback(self, interaction):
+        try:
+            return await callback(self, interaction)
+        except Exception as error:
+            where = (
+                f"{type(self).__name__} dynamic_item "
+                f"custom_id={getattr(self, 'custom_id', None)}"
+            )
+            await interactions.report_component_error(interaction, error, where=where)
+
+    _reporting_callback.__name__ = getattr(callback, "__name__", "callback")
+    _reporting_callback.__qualname__ = getattr(
+        callback, "__qualname__", _reporting_callback.__name__
+    )
+    _reporting_callback.__doc__ = callback.__doc__
+    _reporting_callback.__wrapped__ = callback
+    return _reporting_callback
 
 
 class LocaleDynamicItem(discord.ui.DynamicItem[_ItemT], template=_NEVER_MATCHES):
@@ -306,6 +400,32 @@ class LocaleDynamicItem(discord.ui.DynamicItem[_ItemT], template=_NEVER_MATCHES)
     async def interaction_check(self, interaction):
         await i18n.apply_interaction_locale(interaction)
         return await super().interaction_check(interaction)
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        """Wrap a subclass's own ``callback`` so a crash is reported. See THE ERROR RULE.
+
+        discord.py NEVER calls ``on_error`` for a dynamic item - confirmed two
+        ways in the installed 2.7.1 source: ``Item.interaction_check``'s own
+        docstring says so outright ("For :class:`~discord.ui.DynamicItem` this
+        does not call the ``on_error`` handler", ``ui/item.py``), and
+        ``ViewStore.schedule_dynamic_item_call`` (``ui/view.py``) calls
+        ``await item.callback(interaction)`` inside ITS OWN try/except that only
+        ``_log.exception``s - there is no hook anywhere on that path for a
+        subclass to override. So instead of an ``on_error`` that would never
+        run, the subclass's ``callback`` itself is wrapped once, here, at
+        class-definition time, with the identical try/except/report body every
+        other base gets through ``on_error``.
+
+        Only wraps a ``callback`` the subclass defines ITSELF (``cls.__dict__``,
+        not one it inherited): a further subclass that adds no new ``callback``
+        already got one wrapped at its parent's definition, so re-wrapping would
+        be pointless double indirection, not a second report (the wrapper never
+        re-raises, so there is nothing left for an outer wrap to catch).
+        """
+        super().__init_subclass__(**kwargs)
+        own_callback = cls.__dict__.get("callback")
+        if own_callback is not None:
+            cls.callback = _wrap_dynamic_item_callback(own_callback)
 
 
 class PinnedRenderLocale:
