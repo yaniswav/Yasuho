@@ -85,6 +85,9 @@ secrets) - copy them from the `*.template.ini` files and fill in:
   `0.0.0.0`). Set it to `127.0.0.1` once a reverse proxy (e.g. Apache with
   mod_proxy_http) terminates HTTPS and forwards to it locally, so the port
   is no longer reachable from the internet in plain HTTP.
+- `tokens.ini` -> optional `[WebsiteTokens] topGGWebhookSecret` for top.gg's
+  v1 webhooks (the `whs_...` secret its dashboard's Webhooks section shows);
+  the older `topGGPassword` (static `Authorization` header) still works too.
 
 ## Built With
 

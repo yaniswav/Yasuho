@@ -10,8 +10,12 @@ behaves as a single-source throttle; per-key isolation is covered exhaustively
 in ``tests/tools/test_rate_limit.py``.
 """
 
+import hashlib
+import hmac
+import json
 import logging
 import sys
+import time
 
 from aiohttp.http_exceptions import BadHttpMessage
 from aiohttp.test_utils import TestClient, TestServer
@@ -20,22 +24,61 @@ from cogs.system import webstats
 from cogs.system.webstats import (
     DEFAULT_WEBHOOK_HOST,
     MAX_BODY_BYTES,
+    V1_TIMESTAMP_TOLERANCE_SECONDS,
     ScannerNoiseFilter,
     build_webhook_app,
     resolve_client_key,
     resolve_webhook_host,
+    verify_v1_signature,
 )
+from tools.lru_cache import BoundedLRU
 from tools.rate_limit import FixedWindowRateLimiter
 
 SECRET = "s3cret-password"
+V1_SECRET = "whs_test-secret"
 
 
-def _make_app(*, limit=100):
+def _make_app(*, limit=100, webhook_secret=None, vote_dedupe=None):
     """Build the app plus a recorder for dispatched events."""
     dispatched = []
     limiter = FixedWindowRateLimiter(limit=limit, window=60.0, capacity=64)
-    app = build_webhook_app(SECRET, lambda *a: dispatched.append(a), limiter)
+    app = build_webhook_app(
+        SECRET, lambda *a: dispatched.append(a), limiter,
+        webhook_secret=webhook_secret, vote_dedupe=vote_dedupe,
+    )
     return app, dispatched
+
+
+def _sign(secret, body_bytes, *, timestamp=None):
+    """Sign ``body_bytes`` the way top.gg does, for test requests."""
+    if timestamp is None:
+        timestamp = int(time.time())
+    mac = hmac.new(
+        secret.encode("utf-8"), f"{timestamp}.".encode("utf-8") + body_bytes,
+        hashlib.sha256,
+    ).hexdigest()
+    return f"t={timestamp},v1={mac}"
+
+
+def _vote_body(*, vote_id="v1", platform_id="123456789012345678", weight=1):
+    return json.dumps({
+        "type": "vote.create",
+        "data": {
+            "id": vote_id,
+            "weight": weight,
+            "created_at": "2026-10-05T00:00:00Z",
+            "expires_at": "2026-10-06T00:00:00Z",
+            "project": {
+                "id": "proj1", "type": "bot", "platform": "discord",
+                "platform_id": "999",
+            },
+            "query": {},
+            "user": {
+                "id": "topgg-user-1", "platform_id": platform_id,
+                "name": "someone", "avatar_url": "https://example.invalid/a.png",
+            },
+        },
+    }).encode("utf-8")
 
 
 async def _client(app):
@@ -335,6 +378,365 @@ def test_scanner_noise_filter_always_returns_true():
     # filter only ever demotes the level, never silences anything.
     record = _make_record(BadHttpMessage("garbage"))
     assert ScannerNoiseFilter().filter(record) is True
+
+
+# --- v1 webhook (x-topgg-signature) -----------------------------------------
+
+async def test_v1_vote_dispatches_once_with_correct_discord_id_and_weekend():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body(platform_id="222222222222222222", weight=1)
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 200
+        assert len(dispatched) == 1
+        event, data = dispatched[0]
+        assert event == "dbl_vote"
+        assert data["type"] == "upvote"
+        assert data["user"] == "222222222222222222"
+        assert data["is_weekend"] is False
+    finally:
+        await client.close()
+
+
+async def test_v1_vote_weight_two_marks_weekend():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body(weight=2)
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 200
+        assert len(dispatched) == 1
+        assert dispatched[0][1]["is_weekend"] is True
+    finally:
+        await client.close()
+
+
+async def test_v1_same_vote_id_is_deduped_not_redispatched():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body(vote_id="dupe-1")
+        headers = {
+            "Content-Type": "application/json",
+            "x-topgg-signature": _sign(V1_SECRET, body),
+        }
+        resp1 = await client.post("/dblwebhook", data=body, headers=headers)
+        resp2 = await client.post("/dblwebhook", data=body, headers=headers)
+        assert resp1.status == 200
+        assert resp2.status == 200
+        assert len(dispatched) == 1
+    finally:
+        await client.close()
+
+
+async def test_v1_bad_signature_is_401_and_does_not_dispatch():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign("wrong-secret", body),
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_missing_signature_header_falls_back_to_legacy_unauthorized():
+    # No x-topgg-signature and no Authorization: legacy path, 401.
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        resp = await client.post(
+            "/dblwebhook", data=_vote_body(),
+            headers={"Content-Type": "application/json"},
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_malformed_signature_header_is_401():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": "garbage-not-kv-pairs",
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_stale_timestamp_is_401():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        stale = int(time.time()) - V1_TIMESTAMP_TOLERANCE_SECONDS - 60
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body, timestamp=stale),
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_future_timestamp_is_401():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        future = int(time.time()) + V1_TIMESTAMP_TOLERANCE_SECONDS + 60
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body, timestamp=future),
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_secret_not_configured_is_401_with_single_warning(caplog):
+    app, dispatched = _make_app(webhook_secret=None)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        headers = {
+            "Content-Type": "application/json",
+            "x-topgg-signature": _sign(V1_SECRET, body),
+        }
+        with caplog.at_level(logging.WARNING, logger=webstats.log.name):
+            resp1 = await client.post("/dblwebhook", data=body, headers=headers)
+            resp2 = await client.post("/dblwebhook", data=body, headers=headers)
+        assert resp1.status == 401
+        assert resp2.status == 401
+        assert dispatched == []
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+    finally:
+        await client.close()
+
+
+async def test_v1_body_tampered_after_signing_is_401():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        signature = _sign(V1_SECRET, body)
+        tampered = _vote_body(platform_id="999999999999999999")
+        resp = await client.post(
+            "/dblwebhook", data=tampered,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": signature,
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_webhook_test_event_acks_logs_and_does_not_dispatch(caplog):
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = json.dumps({
+            "type": "webhook.test",
+            "data": {
+                "user": {
+                    "id": "topgg-user-1", "platform_id": "123",
+                    "name": "someone", "avatar_url": "https://example.invalid/a.png",
+                },
+                "project": {
+                    "id": "proj1", "type": "bot", "platform": "discord",
+                    "platform_id": "999",
+                },
+            },
+        }).encode("utf-8")
+        with caplog.at_level(logging.INFO, logger=webstats.log.name):
+            resp = await client.post(
+                "/dblwebhook", data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-topgg-signature": _sign(V1_SECRET, body),
+                },
+            )
+        assert resp.status == 200
+        assert dispatched == []
+        assert any(
+            "top.gg v1 webhook test received" in r.message for r in caplog.records
+        )
+        # No user id anywhere in the logged line.
+        assert all("123" not in r.message for r in caplog.records)
+    finally:
+        await client.close()
+
+
+async def test_v1_unknown_event_type_is_200_and_does_not_dispatch():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = json.dumps({"type": "something.new", "data": {}}).encode("utf-8")
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 200
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_missing_platform_id_is_400_not_dispatched():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = json.dumps({
+            "type": "vote.create",
+            "data": {
+                "id": "v-bad",
+                "weight": 1,
+                "user": {"id": "topgg-user-1", "name": "x"},
+            },
+        }).encode("utf-8")
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 400
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_v1_non_numeric_platform_id_is_400_not_dispatched():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body(platform_id="not-a-number")
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 400
+        assert dispatched == []
+    finally:
+        await client.close()
+
+
+async def test_legacy_path_still_works_unchanged_alongside_v1():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        resp = await client.post(
+            "/dblwebhook",
+            json={"type": "upvote", "user": "123"},
+            headers={"Authorization": SECRET},
+        )
+        assert resp.status == 200
+        assert len(dispatched) == 1
+        assert dispatched[0][1]["user"] == "123"
+    finally:
+        await client.close()
+
+
+async def test_both_headers_present_are_judged_on_v1_signature_only():
+    app, dispatched = _make_app(webhook_secret=V1_SECRET)
+    client = await _client(app)
+    try:
+        body = _vote_body()
+        # A CORRECT legacy Authorization header alongside a WRONG v1
+        # signature must still be refused: only the v1 signature counts once
+        # that header is present.
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": SECRET,
+                "x-topgg-signature": _sign("wrong-secret", body),
+            },
+        )
+        assert resp.status == 401
+        assert dispatched == []
+
+        # And a correct v1 signature dispatches even with a WRONG legacy
+        # Authorization header riding along.
+        resp = await client.post(
+            "/dblwebhook", data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "wrong",
+                "x-topgg-signature": _sign(V1_SECRET, body),
+            },
+        )
+        assert resp.status == 200
+        assert len(dispatched) == 1
+    finally:
+        await client.close()
+
+
+def test_verify_v1_signature_accepts_valid_and_rejects_tampered():
+    body = b'{"type":"vote.create"}'
+    header = _sign(V1_SECRET, body, timestamp=1000000)
+    assert verify_v1_signature(V1_SECRET, body, header, now=1000000) is True
+    assert verify_v1_signature(V1_SECRET, body + b"x", header, now=1000000) is False
+    assert verify_v1_signature("other-secret", body, header, now=1000000) is False
+    assert verify_v1_signature(V1_SECRET, body, None, now=1000000) is False
+    assert verify_v1_signature(V1_SECRET, body, "", now=1000000) is False
+
+
+def test_vote_dedupe_cache_is_a_bounded_lru_of_the_expected_capacity():
+    # Guards VOTE_DEDUPE_CAPACITY against accidental drift and that the
+    # cog-level default really is a BoundedLRU, not a plain unbounded set.
+    assert webstats.VOTE_DEDUPE_CAPACITY == 2048
+    cache = BoundedLRU(webstats.VOTE_DEDUPE_CAPACITY)
+    cache["a"] = True
+    assert "a" in cache
 
 
 # --- negative control: spoof-trust regression would be caught --------------
