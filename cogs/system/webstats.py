@@ -1,12 +1,14 @@
 import hmac
+import ipaddress
 import logging
 
 import topgg
 from aiohttp import web
+from aiohttp.http_exceptions import HttpProcessingError
 from discord.ext import commands
 from topgg.types import BotVoteData
 
-from tools.config_loader import config_loader
+from tools.config_loader import ConfigLoader, config_loader
 from tools.rate_limit import FixedWindowRateLimiter
 
 log = logging.getLogger(__name__)
@@ -23,8 +25,20 @@ TOP_GG_PASSWORD = config_loader.get('WebsiteTokens', 'topGGPassword', fallback=N
 # log noise. The successful vote path stays byte-for-byte identical to the
 # stock topgg WebhookManager (same auth compare, same dispatched event, same
 # 200/401 bodies) - we only replace the transport to add the guards.
+#
+# [Webhook] host (bot.ini, optional): the local address the vote webhook
+# binds. Defaults to "0.0.0.0" (today's behaviour: reachable from the
+# internet). Once the host's Apache reverse-proxies POST
+# /yasuho/dblwebhook to 127.0.0.1:55000 over HTTPS, set:
+#   [Webhook]
+#   host = 127.0.0.1
+# to close port 55000 to the internet. The value is validated as an IP
+# literal (ipaddress); an absent key or an invalid one both fall back to
+# "0.0.0.0", the invalid case also logging a WARNING so a typo is never
+# silent.
 WEBHOOK_ROUTE = "/dblwebhook"
 WEBHOOK_PORT = 55000
+DEFAULT_WEBHOOK_HOST = "0.0.0.0"
 # Real top.gg vote payloads are a few hundred bytes; 64 KiB is generous
 # headroom while capping how much any single request can make us buffer.
 MAX_BODY_BYTES = 64 * 1024
@@ -35,6 +49,115 @@ RATE_WINDOW = 60.0  # seconds
 # Distinct source IPs tracked at once. LRU eviction keeps memory flat under a
 # spoofed-source flood: at most this many small entries, ever.
 RATE_CAPACITY = 4096
+
+
+def resolve_webhook_host(raw):
+    """Validate a ``[Webhook] host`` value read from bot.ini.
+
+    ``raw`` is the value ``config_loader.get(..., fallback=None)`` returned:
+    ``None`` when the key is absent (today's behaviour is preserved, so an
+    existing deployment with no ``[Webhook]`` section keeps binding
+    ``0.0.0.0`` unchanged). A present value may be quoted like other string
+    config values, so it is unquoted the same way :meth:`ConfigLoader.getstr`
+    does before being checked. Anything that is not a literal IP address
+    (ipaddress.ip_address) is rejected with a WARNING rather than handed to
+    ``TCPSite``, which would otherwise try to resolve it as a hostname at
+    bind time and fail far from the config mistake that caused it.
+    """
+    if raw is None:
+        return DEFAULT_WEBHOOK_HOST
+    value = ConfigLoader._unquote(raw)
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        log.warning(
+            "invalid [Webhook] host %r in bot.ini; falling back to %s",
+            value, DEFAULT_WEBHOOK_HOST,
+        )
+        return DEFAULT_WEBHOOK_HOST
+    return value
+
+
+WEBHOOK_HOST = resolve_webhook_host(config_loader.get("Webhook", "host", fallback=None))
+
+
+def _is_loopback(ip_str):
+    try:
+        return ipaddress.ip_address(ip_str).is_loopback
+    except ValueError:
+        return False
+
+
+def resolve_client_key(remote, forwarded_for):
+    """Resolve the rate-limiter key for one webhook request.
+
+    ``remote`` is ``request.remote`` (the TCP peer); ``forwarded_for`` is the
+    raw ``X-Forwarded-For`` header value, or ``None``.
+
+    Once the webhook binds 127.0.0.1 behind Apache (see ``WEBHOOK_HOST``
+    above), every request's TCP peer is Apache itself, so keying the limiter
+    on ``remote`` would collapse every real client into one shared bucket - a
+    flood routed through the proxy could exhaust it and block genuine top.gg
+    votes along with it. Apache's mod_proxy_http APPENDS the address it saw
+    to X-Forwarded-For, after whatever the client already sent in that
+    header. With exactly one proxy hop in front of us, the RIGHT-most entry
+    is therefore the one Apache wrote itself; anything to its left came from
+    the client and is free to forge (taking the left-most entry would let a
+    flood rotate invented addresses and get a fresh bucket for each). We
+    only ever read that header when ``remote`` is itself a loopback address:
+    a direct internet client has no proxy in between and controls the whole
+    header. A missing or non-IP-literal entry, or a non-loopback peer, all
+    fall back to ``remote`` unchanged - today's behaviour.
+    """
+    if not _is_loopback(remote):
+        return remote
+    if not forwarded_for:
+        return remote
+    candidate = forwarded_for.split(",")[-1].strip()
+    try:
+        ipaddress.ip_address(candidate)
+    except ValueError:
+        return remote
+    return candidate
+
+
+class ScannerNoiseFilter(logging.Filter):
+    """Demote aiohttp's ERROR "Error handling request" line for malformed
+    traffic down to INFO, on our dedicated webhook server logger only.
+
+    aiohttp's RequestHandler.handle_error logs every exception it catches
+    while parsing a request at ERROR via ``logger.exception`` (one case -
+    the very first request on a connection being garbage - is already
+    logged at DEBUG upstream, but any malformed request after that, or a
+    malformed body, still logs at ERROR). On a port that internet scanners
+    probe with non-HTTP or truncated traffic, that means a steady trickle of
+    ERROR-level tracebacks (BadHttpMessage and its HttpProcessingError
+    siblings) that carry no actionable signal - the connection is simply
+    dropped either way.
+
+    This filter only demotes records whose ``exc_info`` is one of those
+    aiohttp parsing exceptions; any other exception (a real bug in our own
+    handler, surfaced the same way) is untouched and keeps logging at ERROR.
+    It is attached to a dedicated logger name (passed to AppRunner below),
+    never to the shared "aiohttp.server" logger, so it cannot affect any
+    other aiohttp server that might run in this process.
+    """
+
+    def filter(self, record):
+        if record.levelno >= logging.ERROR and record.exc_info:
+            exc = record.exc_info[1]
+            if isinstance(exc, HttpProcessingError):
+                record.levelno = logging.INFO
+                record.levelname = logging.getLevelName(logging.INFO)
+        return True
+
+
+# Dedicated logger name (not the shared "aiohttp.server") so the filter below
+# only ever touches records from our own webhook server; passed to AppRunner
+# as the supported ``logger=`` hook (aiohttp's RequestHandler accepts it and
+# uses it for exactly the "Error handling request" line this filter targets).
+_webhook_server_logger = logging.getLogger("aiohttp.server.yasuho_webhook")
+_webhook_server_logger.addFilter(ScannerNoiseFilter())
 
 
 def build_webhook_app(password, dispatch, limiter):
@@ -65,7 +188,8 @@ def build_webhook_app(password, dispatch, limiter):
 
     @web.middleware
     async def _harden(request, handler):
-        ip = request.remote or "?"
+        remote = request.remote or "?"
+        ip = resolve_client_key(remote, request.headers.get("X-Forwarded-For"))
 
         # 1. Reject an oversized declared body before touching the handler. The
         #    app-level client_max_size below is the real enforcement (it also
@@ -138,11 +262,15 @@ class Webstats(commands.Cog):
         # access_log=None silences per-request logging wholesale, so scanner
         # traffic can never flood the logs; our own one-line-per-offender
         # rate-limit warning is the only webhook log noise that remains.
-        runner = web.AppRunner(app, access_log=None)
+        # logger=_webhook_server_logger routes aiohttp's own "Error handling
+        # request" lines through ScannerNoiseFilter (defined above) instead
+        # of the shared "aiohttp.server" logger.
+        runner = web.AppRunner(app, access_log=None, logger=_webhook_server_logger)
         await runner.setup()
         self._runner = runner
-        site = web.TCPSite(runner, "0.0.0.0", WEBHOOK_PORT)
+        site = web.TCPSite(runner, WEBHOOK_HOST, WEBHOOK_PORT)
         await site.start()
+        log.info("top.gg vote webhook listening on %s:%d", WEBHOOK_HOST, WEBHOOK_PORT)
 
     async def cog_unload(self):
         # Close each independently so one failure doesn't block the other, and unload never raises

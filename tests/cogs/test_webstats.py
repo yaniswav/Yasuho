@@ -10,10 +10,21 @@ behaves as a single-source throttle; per-key isolation is covered exhaustively
 in ``tests/tools/test_rate_limit.py``.
 """
 
+import logging
+import sys
+
+from aiohttp.http_exceptions import BadHttpMessage
 from aiohttp.test_utils import TestClient, TestServer
 
 from cogs.system import webstats
-from cogs.system.webstats import MAX_BODY_BYTES, build_webhook_app
+from cogs.system.webstats import (
+    DEFAULT_WEBHOOK_HOST,
+    MAX_BODY_BYTES,
+    ScannerNoiseFilter,
+    build_webhook_app,
+    resolve_client_key,
+    resolve_webhook_host,
+)
 from tools.rate_limit import FixedWindowRateLimiter
 
 SECRET = "s3cret-password"
@@ -218,3 +229,118 @@ def test_module_constants_are_sane():
     assert webstats.RATE_CAPACITY >= 1
     assert webstats.WEBHOOK_PORT == 55000
     assert webstats.WEBHOOK_ROUTE == "/dblwebhook"
+
+
+# --- resolve_webhook_host (W1: [Webhook] host) -------------------------------
+
+def test_webhook_host_defaults_to_0000_when_key_absent():
+    assert resolve_webhook_host(None) == "0.0.0.0" == DEFAULT_WEBHOOK_HOST
+
+
+def test_webhook_host_accepts_configured_loopback():
+    assert resolve_webhook_host("127.0.0.1") == "127.0.0.1"
+
+
+def test_webhook_host_accepts_quoted_value():
+    # bot.ini string values may be quoted; ConfigLoader._unquote strips one
+    # matching pair before validation, same as every other string key.
+    assert resolve_webhook_host('"127.0.0.1"') == "127.0.0.1"
+
+
+def test_webhook_host_falls_back_and_warns_on_invalid_value(caplog):
+    with caplog.at_level(logging.WARNING, logger=webstats.log.name):
+        host = resolve_webhook_host("not-an-ip")
+    assert host == DEFAULT_WEBHOOK_HOST
+    assert any("invalid" in r.message.lower() for r in caplog.records)
+
+
+def test_webhook_host_falls_back_silently_only_when_absent(caplog):
+    with caplog.at_level(logging.WARNING, logger=webstats.log.name):
+        host = resolve_webhook_host(None)
+    assert host == DEFAULT_WEBHOOK_HOST
+    assert caplog.records == []
+
+
+# --- resolve_client_key (W1: rate-limiter key behind the proxy) -------------
+
+def test_client_key_loopback_peer_with_xff_uses_the_entry_apache_appended():
+    key = resolve_client_key("127.0.0.1", "203.0.113.5")
+    assert key == "203.0.113.5"
+
+
+def test_client_key_ignores_a_client_supplied_xff_prefix():
+    """A client may send its own X-Forwarded-For; Apache appends the address
+    it really saw AFTER it. Keying on the left would let a flood rotate forged
+    addresses and dodge the limiter: only the right-most entry counts."""
+    key = resolve_client_key("127.0.0.1", "1.2.3.4, 203.0.113.5")
+    assert key == "203.0.113.5"
+
+
+def test_client_key_loopback_peer_with_ipv6_loopback_xff():
+    key = resolve_client_key("::1", "203.0.113.5")
+    assert key == "203.0.113.5"
+
+
+def test_client_key_loopback_peer_without_xff_falls_back_to_remote():
+    assert resolve_client_key("127.0.0.1", None) == "127.0.0.1"
+
+
+def test_client_key_non_loopback_peer_ignores_spoofed_xff():
+    # A direct internet client controls its own X-Forwarded-For; trusting it
+    # would let it pin its flood onto an arbitrary victim IP.
+    key = resolve_client_key("198.51.100.9", "203.0.113.5")
+    assert key == "198.51.100.9"
+
+
+def test_client_key_loopback_peer_with_invalid_xff_falls_back_to_remote():
+    key = resolve_client_key("127.0.0.1", "not-an-ip")
+    assert key == "127.0.0.1"
+
+
+def test_client_key_loopback_peer_with_empty_xff_falls_back_to_remote():
+    assert resolve_client_key("127.0.0.1", "") == "127.0.0.1"
+
+
+# --- ScannerNoiseFilter (W1: scanner noise) ----------------------------------
+
+def _make_record(exc_info, level=logging.ERROR):
+    try:
+        raise exc_info
+    except Exception:
+        record = logging.LogRecord(
+            name="aiohttp.server.yasuho_webhook", level=level, pathname=__file__,
+            lineno=1, msg="Error handling request from %s", args=("1.2.3.4",),
+            exc_info=sys.exc_info(),
+        )
+    return record
+
+
+def test_scanner_noise_filter_demotes_bad_http_message():
+    record = _make_record(BadHttpMessage("garbage"))
+    assert record.levelno == logging.ERROR
+    ScannerNoiseFilter().filter(record)
+    assert record.levelno == logging.INFO
+    assert record.levelname == "INFO"
+
+
+def test_scanner_noise_filter_leaves_generic_exception_at_error():
+    record = _make_record(ValueError("a real bug in our own handler"))
+    ScannerNoiseFilter().filter(record)
+    assert record.levelno == logging.ERROR
+    assert record.levelname == "ERROR"
+
+
+def test_scanner_noise_filter_always_returns_true():
+    # A logging.Filter returning False would drop the record entirely; this
+    # filter only ever demotes the level, never silences anything.
+    record = _make_record(BadHttpMessage("garbage"))
+    assert ScannerNoiseFilter().filter(record) is True
+
+
+# --- negative control: spoof-trust regression would be caught --------------
+#
+# This is a diff-of-the-fix control, not a standing test: it is run manually
+# against a deliberately broken copy of webstats.py (XFF trusted from ANY
+# peer, not just loopback) to prove test_client_key_non_loopback_peer_
+# ignores_spoofed_xff actually fails without the loopback guard. See the
+# task report for the transcript; left here as documentation only.

@@ -81,6 +81,10 @@ secrets) - copy them from the `*.template.ini` files and fill in:
   there is no extension list to maintain.
 - `tokens.ini` -> optional feature keys: AniList (`clientId` / `clientSecret`),
   Genius lyrics, OpenWeather, NASA, top.gg...
+- `bot.ini` -> optional `[Webhook] host` for the top.gg vote webhook (default
+  `0.0.0.0`). Set it to `127.0.0.1` once a reverse proxy (e.g. Apache with
+  mod_proxy_http) terminates HTTPS and forwards to it locally, so the port
+  is no longer reachable from the internet in plain HTTP.
 
 ## Built With
 
