@@ -434,7 +434,14 @@ def build_webhook_app(password, dispatch, limiter, webhook_secret=None, vote_ded
     @web.middleware
     async def _harden(request, handler):
         remote = request.remote or "?"
-        ip = resolve_client_key(remote, request.headers.get("X-Forwarded-For"))
+        ip = resolve_client_key(
+            remote,
+            # getall, not get: should the header ever arrive as several lines
+            # (a client's own plus Apache's), .get would return only the
+            # client's first one. Joined, the right-most entry is still the
+            # one Apache appended.
+            ",".join(request.headers.getall("X-Forwarded-For", [])) or None,
+        )
 
         # 1. Reject an oversized declared body before touching the handler. The
         #    app-level client_max_size below is the real enforcement (it also

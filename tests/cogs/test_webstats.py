@@ -746,3 +746,28 @@ def test_vote_dedupe_cache_is_a_bounded_lru_of_the_expected_capacity():
 # peer, not just loopback) to prove test_client_key_non_loopback_peer_
 # ignores_spoofed_xff actually fails without the loopback guard. See the
 # task report for the transcript; left here as documentation only.
+
+
+async def test_limiter_key_reads_every_x_forwarded_for_line():
+    """If the header arrives as two lines - the client's own first, Apache's
+    appended one second - the key must be Apache's entry, not the client's."""
+    from multidict import CIMultiDict
+
+    seen = []
+
+    class _Limiter:
+        def check(self, ip):
+            seen.append(ip)
+            return True, False
+
+    app = build_webhook_app("pw", lambda *a, **k: None, _Limiter())
+    client = await _client(app)
+    try:
+        headers = CIMultiDict()
+        headers.add("X-Forwarded-For", "9.9.9.9, 8.8.8.8")
+        headers.add("X-Forwarded-For", "203.0.113.5")
+        headers.add("Authorization", "wrong")
+        await client.post("/dblwebhook", data=b"{}", headers=headers)
+        assert seen == ["203.0.113.5"]
+    finally:
+        await client.close()
