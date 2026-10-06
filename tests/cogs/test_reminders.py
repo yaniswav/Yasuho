@@ -21,6 +21,14 @@ import discord
 from cogs.community import reminders as reminders_mod
 from cogs.community import reminders_store as rem
 from cogs.community.reminders import Reminder, RemindersCard, timer_retry_delay
+from tools import premium
+
+# The absolute safety ceiling list_pending_reminders bounds its fetch by
+# (M4c fix, item A: .claude/plans/monetisation/4-plan-retenu.md) - a Pack
+# Confort user's pending reminders are NEVER archived (one-shots drain on
+# their own), so every one of them up to this ceiling must stay visible and
+# cancellable, not just the free REMINDER_LIST_CAP's 25.
+PENDING_CEILING = premium.USER_CEILINGS["max_pending_reminders"]
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -224,7 +232,11 @@ async def test_list_scopes_query_to_author_and_reminder_type(fake_pool):
     assert "extra->>'author_id' = $1" in query
     assert "ORDER BY expires" in query
     assert args[0] == "555"  # author id compared as text (matches jsonb ->>)
-    assert args[1] == rem.REMINDER_LIST_CAP + 1  # +1 to detect the overflow
+    # Bounded by the absolute safety ceiling, not the free REMINDER_LIST_CAP
+    # (item A fix): a Pack Confort user's up-to-60 pending reminders must all
+    # be fetched, never archived, so the overflow-detection +1 rides the
+    # ceiling that bounds every effective cap, not the free constant.
+    assert args[1] == PENDING_CEILING + 1
 
 
 async def test_list_parses_both_str_and_dict_extra(fake_pool):
@@ -258,14 +270,38 @@ async def test_list_flags_overflow_and_slices_to_cap(fake_pool):
             "expires": _future(i),
             "extra": {"author_id": 1, "channel_id": 1, "message": "x"},
         }
-        for i in range(rem.REMINDER_LIST_CAP + 1)
+        for i in range(PENDING_CEILING + 1)
     ]
     cog = _make_cog(fake_pool)
 
     reminders_list, capped = await cog.list_pending_reminders(1)
 
     assert capped is True
-    assert len(reminders_list) == rem.REMINDER_LIST_CAP
+    assert len(reminders_list) == PENDING_CEILING
+
+
+async def test_list_shows_every_pending_reminder_past_the_free_cap(fake_pool):
+    """Item A regression: a user with MORE than the free REMINDER_LIST_CAP
+    (25) pending - e.g. a Pack Confort member using their up-to-60 ceiling -
+    must see and be able to cancel EVERY one of them, not just the 25
+    soonest. Before this fix, list_pending_reminders silently truncated to
+    REMINDER_LIST_CAP regardless of how many the user actually had pending."""
+    assert rem.REMINDER_LIST_CAP < 40 <= PENDING_CEILING
+    fake_pool.fetch_return = [
+        {
+            "id": i,
+            "expires": _future(i),
+            "extra": {"author_id": 1, "channel_id": 1, "message": "x"},
+        }
+        for i in range(40)
+    ]
+    cog = _make_cog(fake_pool)
+
+    reminders_list, capped = await cog.list_pending_reminders(1)
+
+    assert capped is False
+    assert len(reminders_list) == 40
+    assert [r["id"] for r in reminders_list] == list(range(40))
 
 
 # ---------------------------------------------------------------------------

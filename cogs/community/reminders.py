@@ -862,19 +862,38 @@ class Reminder(commands.Cog):
         """This user's pending reminders, soonest first, bounded and parsed.
 
         Scoped to ``event = 'reminder'`` AND this author (never a tempban or any
-        other timer event). Fetches one row past :data:`REMINDER_LIST_CAP` so the
-        caller can tell "exactly the cap" from "more than the cap" and render the
-        overflow as ``25+`` without ever loading an unbounded result set. Returns
-        ``(reminders, capped)`` where each reminder is a plain dict
+        other timer event).
+
+        Bounded by the ABSOLUTE safety ceiling
+        (``premium.USER_CEILINGS["max_pending_reminders"]``), not by the free
+        :data:`REMINDER_LIST_CAP` (M4c, .claude/plans/monetisation/4-plan-retenu.md):
+        a Pack Confort user can have up to :data:`tools.premium.USER_PREMIUM`'s 60
+        pending, and a one-shot is NEVER archived (see MAX_PENDING_REMINDERS's own
+        "OWNER DECISION" comment), so every one of them must stay visible and
+        cancellable here regardless of today's effective cap - the same
+        "fetch bounded by the ceiling, not the current cap" shape
+        ``Music._fetch_favourites`` already uses. Fetches one row past that
+        ceiling so the caller can still tell "exactly the ceiling" from "more
+        than the ceiling" and render the overflow rather than silently dropping
+        rows - a defensive case :meth:`create_reminder_timer`'s own guard should
+        make unreachable (it never lets a user's pending count exceed their
+        effective cap, itself clamped to this same ceiling), kept as a backstop
+        rather than an unbounded fetch. Returns ``(reminders, capped)`` where
+        each reminder is a plain dict
         (``id``/``expires``/``channel_id``/``message``/``event``) and ``capped``
-        is True when the user has more pending than the cap.
+        is True when the user has more pending than the ceiling.
+
+        A FREE user (<=25 pending) sees byte-identical rows and ``capped`` to
+        before this fix: the ceiling is well above 25, so nothing here changes
+        for them.
         """
+        list_cap = premium.USER_CEILINGS["max_pending_reminders"]
         rows = await self.bot.db_pool.fetch(
             "SELECT id, expires, extra FROM timers "
             "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
             "ORDER BY expires ASC LIMIT $2",
             str(user_id),
-            reminders_tool.REMINDER_LIST_CAP + 1,
+            list_cap + 1,
         )
         parsed = []
         recurring_seen = False
@@ -910,8 +929,8 @@ class Reminder(commands.Cog):
                 reminder["archived"] = False
         # Defensive type scoping on top of the SQL filter, then apply the cap.
         parsed = reminders_tool.filter_reminders(parsed)
-        capped = len(parsed) > reminders_tool.REMINDER_LIST_CAP
-        return parsed[: reminders_tool.REMINDER_LIST_CAP], capped
+        capped = len(parsed) > list_cap
+        return parsed[:list_cap], capped
 
     async def cancel_reminder(self, reminder_id, user_id):
         """Delete one of ``user_id``'s own reminders; return True if it existed.
