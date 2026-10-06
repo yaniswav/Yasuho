@@ -1563,6 +1563,81 @@ ALTER TABLE tickets ADD COLUMN IF NOT EXISTS claimed_by BIGINT;
 CREATE INDEX IF NOT EXISTS tickets_open_sweep_idx ON tickets (id) WHERE status = 'open';
 
 -- ============================================================
+-- Premium entitlements (Discord Premium Apps projection)
+-- ============================================================
+-- A local PROJECTION of Discord's own entitlement ledger (the ENTITLEMENT_*
+-- gateway events and the REST List Entitlements endpoint) - Discord is the
+-- single source of truth, never this table. It holds no payment data: no
+-- card, no amount, no invoice - only "this SKU is granted to this guild or
+-- user, from when, until when, last confirmed when". It is reconstructible
+-- at any time by a resync against Discord's API (M3b), which is also why a
+-- guild's rows are safe to delete on guild purge and a user's rows safe to
+-- delete on profile deletion (tools/retention.py, tools/privacy.py): the
+-- next resync restores whatever is still actually granted. See
+-- tools/premium.py (owner module) for the ACTIVE rule and the resolver built
+-- on top of this table.
+--
+-- SCOPE: a row names EITHER a guild (a Yasuho+ guild subscription) OR a user
+-- (a Pack Confort durable purchase), never both and never neither - the same
+-- shape dashboard_actions uses for its own two scopes, but tightened with a
+-- CHECK that also ties the populated id to scope_type, so the two columns
+-- can never tell two different stories about the same row.
+--
+-- entitlement_type mirrors discord.EntitlementType (purchase=1,
+-- premium_subscription=2, developer_gift=3, test_mode_purchase=4,
+-- free_purchase=5, user_gift=6, premium_purchase=7,
+-- application_subscription=8) as a plain SMALLINT rather than a DB-side
+-- enum, so a type Discord adds later is stored rather than rejected.
+--
+-- deleted/consumed mirror discord.Entitlement.deleted/.consumed verbatim.
+-- starts_at/ends_at are NULL for test-mode entitlements (never expire until
+-- deleted), exactly like the Discord object they project.
+--
+-- last_synced_at is stamped to now() on EVERY write (tools/premium.
+-- upsert_entitlement, .mark_deleted) - it means "the last time Discord
+-- confirmed this row's state to us", not "when we happened to touch the
+-- row". tools/premium.is_active reads it to grant a short technical grace
+-- after ends_at ONLY when nothing has reconfirmed the end since: a missed
+-- renewal event never downgrades a subscriber instantly, but a resync that
+-- re-reads the same ended entitlement ends the grace immediately.
+--
+-- This is a brand-new table (CREATE TABLE IF NOT EXISTS, no row can
+-- pre-exist it), so its CHECK constraints are declared inline and apply
+-- from the very first row - unlike the NOT VALID pattern below, which exists
+-- specifically for constraints retrofitted onto tables that may already
+-- hold data.
+CREATE TABLE IF NOT EXISTS premium_entitlements (
+    entitlement_id   BIGINT      PRIMARY KEY,
+    sku_id           BIGINT      NOT NULL,
+    scope_type       TEXT        NOT NULL,
+    guild_id         BIGINT,
+    user_id          BIGINT,
+    entitlement_type SMALLINT,
+    deleted          BOOLEAN     NOT NULL DEFAULT FALSE,
+    consumed         BOOLEAN     NOT NULL DEFAULT FALSE,
+    starts_at        TIMESTAMPTZ,
+    ends_at          TIMESTAMPTZ,
+    last_synced_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT premium_entitlements_scope_type_valid
+        CHECK (scope_type IN ('guild', 'user')),
+    CONSTRAINT premium_entitlements_scope_matches_ids CHECK (
+        (scope_type = 'guild' AND guild_id IS NOT NULL AND user_id IS NULL)
+        OR
+        (scope_type = 'user' AND user_id IS NOT NULL AND guild_id IS NULL)
+    )
+);
+-- Lookup by guild: the boot/resync load (tools/premium.EntitlementCache.load)
+-- and the eventual /premium status read. PARTIAL because user-scoped rows
+-- carry guild_id NULL and would otherwise fill the index with dead entries -
+-- the same shape dashboard_actions_guild_idx/_user_idx use above for the
+-- same two-scope reason.
+CREATE INDEX IF NOT EXISTS premium_entitlements_guild_idx
+    ON premium_entitlements (guild_id) WHERE guild_id IS NOT NULL;
+-- The user-scoped twin, for the same reader and the same reason.
+CREATE INDEX IF NOT EXISTS premium_entitlements_user_idx
+    ON premium_entitlements (user_id) WHERE user_id IS NOT NULL;
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new

@@ -189,6 +189,17 @@ GUILD_DELETE_QUERIES = (
         "WHERE extra->>'guild_id' = ($1::bigint)::text "
         "AND event <> 'reminder'",
     ),
+    (
+        # The Yasuho+ entitlement projection (tools/premium.py). Reconstructible
+        # from Discord by a resync, so deleting a departed guild's rows loses
+        # nothing durable: if the guild is still actually subscribed when (if)
+        # it rejoins, the next resync restores the row. guild_id is NULLABLE
+        # (a user-scoped Pack Confort row carries it NULL), so this can never
+        # collaterally delete a member's own entitlement - same shape as the
+        # dashboard_actions carve-out just above.
+        "premium_entitlements",
+        "DELETE FROM premium_entitlements WHERE guild_id = $1",
+    ),
 )
 
 STORED_GUILD_IDS_QUERY = """
@@ -231,6 +242,7 @@ UNION SELECT guild_id FROM dashboard_audit
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION SELECT guild_id FROM serverstats_digest_state
+UNION SELECT guild_id FROM premium_entitlements WHERE guild_id IS NOT NULL
 UNION
 SELECT (extra->>'guild_id')::bigint FROM timers
 WHERE extra->>'guild_id' ~ '^[0-9]+$'

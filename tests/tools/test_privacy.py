@@ -505,7 +505,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 11
+    assert data["export_version"] == privacy.EXPORT_VERSION == 12
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -1100,7 +1100,7 @@ async def test_the_export_carries_the_actors_own_journal_entries_only():
     pool = _AuditPool()
     data, _avatars = await privacy.collect_user_export(pool, 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 11
+    assert data["export_version"] == privacy.EXPORT_VERSION == 12
     assert data["dashboard_audit"] == [
         {
             "guild_id": 7,

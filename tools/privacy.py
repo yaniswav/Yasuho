@@ -75,7 +75,14 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # Guild-scoped (guild_id NOT NULL), so it dies with the guild like `cases` and
 # appears on no user erasure list - a departing admin does not get to erase the
 # server's audit trail. The bot never writes this table; the dashboard does.
-EXPORT_VERSION = 11
+# v12 added `premium_entitlements`: this user's OWN Pack Confort rows (sku,
+# entitlement type, deleted/consumed, the validity window, when it was last
+# confirmed with Discord) - WHERE user_id, never WHERE guild_id, so a Yasuho+
+# row (which belongs to a guild, not to any one member) never appears here.
+# It is a PROJECTION of Discord's own ledger (tools/premium.py), so it is on
+# the user erasure list too: deleting the local copy loses nothing, a resync
+# restores it if the entitlement is still actually granted.
+EXPORT_VERSION = 12
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -137,6 +144,21 @@ ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 #     every guild with reason "Blacklisted" and DMed why), so the fact is theirs
 #     to read, and the structural guard in tests/tools/test_privacy.py holds
 #     every user-keyed table to that rule with no exemption spent here.
+#
+# A THIRD is exported but deliberately not on either list YET, for a different
+# reason than the two above: `premium_entitlements` (tools/premium.py) is a
+# user's own Pack Confort rows, and deleting it costs them nothing to forget
+# in principle (it is a PROJECTION of Discord's own ledger - the next resync
+# would just restore it while the entitlement is still actually granted, same
+# as a guild's rows on guild purge). The structural guard that would otherwise
+# require this
+# (`tests/tools/test_privacy.py::test_the_confirmation_names_everything_it_
+# destroys`) demands that anything added to the WIDE list also be NAMED in the
+# ``?mydata deleteprofile`` confirmation screen and its result message - a
+# user-facing string, which this foundations-only lot (M3a) deliberately does
+# not add (no /premium command, no UI yet). Wiring the erasure path belongs
+# with that UI, in M3b/M3c, together with the string the guard will then
+# demand.
 USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # The top.gg vote ledger. Not "profile" data in the fields-and-visibility
     # sense, but it is a per-user record of a behaviour ("this person votes for
@@ -521,6 +543,17 @@ async def collect_user_export(pool, user_id):
         "ORDER BY changed_at, id",
         user_id,
     )
+    # This user's OWN Pack Confort rows (tools/premium.py): which SKU, Discord's
+    # entitlement type, deleted/consumed, the validity window, and when it was
+    # last confirmed with Discord. WHERE user_id only - a Yasuho+ row belongs to
+    # a GUILD (an admin's purchase on behalf of everyone there), not to any one
+    # member, and carries user_id NULL, so the predicate cannot reach it.
+    premium_entitlements = await pool.fetch(
+        "SELECT sku_id, entitlement_type, deleted, consumed, starts_at, "
+        "ends_at, last_synced_at FROM premium_entitlements "
+        "WHERE user_id = $1 ORDER BY entitlement_id",
+        user_id,
+    )
 
     if social_profile is not None:
         social_profile = dict(social_profile)
@@ -585,6 +618,7 @@ async def collect_user_export(pool, user_id):
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),
+        "premium_entitlements": _records(premium_entitlements),
     }
     return data, avatar_rows
 
