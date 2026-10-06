@@ -75,17 +75,21 @@ def drop_adult(media, allow_adult):
     ]
 
 
-def sub_cap_exceeded(current_count, already_subscribed):
+def sub_cap_exceeded(current_count, already_subscribed, limit=MAX_SUBS_PER_FEED):
     """True when adding a NEW title subscription would exceed the per-feed cap.
 
     ``current_count`` is how many titles the feed already subscribes to;
     ``already_subscribed`` is whether the title being added is one of them. An
     already-subscribed title re-confirms harmlessly (it only refreshes the cached
     display title, adds no row), so it is never blocked - only a genuinely new
-    title at or past :data:`MAX_SUBS_PER_FEED` is rejected. Pure and total.
+    title at or past ``limit`` is rejected. ``limit`` defaults to
+    :data:`MAX_SUBS_PER_FEED` (the FREE value) for callers that pass none; a
+    guild's caller passes its CURRENT EFFECTIVE ``max_subs_per_feed`` instead
+    (M4a-2, .claude/plans/monetisation/4-plan-retenu.md - see
+    tools.premium.GuildLimits). Pure and total.
     """
 
-    return not already_subscribed and current_count >= MAX_SUBS_PER_FEED
+    return not already_subscribed and current_count >= limit
 
 # Activity types a feed may post. AniList's private ``MESSAGE`` type (profile
 # wall posts / direct messages) is deliberately excluded: those are not public

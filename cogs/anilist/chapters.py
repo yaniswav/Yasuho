@@ -83,7 +83,7 @@ from .feed import (
     _RateLimited,
     _resolve_token,
 )
-from .helpers import API_URL
+from .helpers import API_URL, filter_active_channel_subs
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
 from tools import i18n, interactions, settings
@@ -1235,7 +1235,8 @@ class AniListChapters(NoPingReplies, commands.Cog):
         return out
 
     async def _load_channel_subs(self):
-        """Explicit MANGA title subscriptions of every enabled feed (with cached title).
+        """Explicit MANGA title subscriptions of every enabled, non-archived
+        feed (with cached title).
 
         The channel fan-out is driven ONLY by these rows now
         (``anilist_channel_subs``): a feed posts a subscribed manga's new chapters
@@ -1243,15 +1244,23 @@ class AniListChapters(NoPingReplies, commands.Cog):
         follows. The cached ``title`` seeds the MangaDex mapping search for a
         subscribed manga no opted-in user reads. A disabled feed is excluded (its
         channel must stay quiet).
+
+        M4a-2: see :func:`cogs.anilist.helpers.filter_active_channel_subs` -
+        an archived FEED (over its guild's max_feeds_per_guild) or an
+        archived SUBSCRIPTION (over max_subs_per_feed within an active feed)
+        is dropped here, before ``media_id`` ever joins the per-tick union,
+        exactly mirroring airing.py's own treatment.
         """
 
-        return await self.bot.db_pool.fetch(
-            "SELECT s.guild_id, s.channel_id, s.media_id, s.title "
+        rows = await self.bot.db_pool.fetch(
+            "SELECT s.guild_id, s.channel_id, s.media_id, s.title, s.created_at, "
+            "       fe.created_at AS feed_created_at "
             "FROM anilist_channel_subs s "
             "JOIN anilist_feeds fe "
             "  ON fe.guild_id = s.guild_id AND fe.channel_id = s.channel_id "
             "WHERE fe.enabled = TRUE AND s.media_type = 'MANGA';"
         )
+        return filter_active_channel_subs(self.bot, rows)
 
     async def _load_mappings(self, media_ids):
         """Return ``{anilist_media_id: {mangadex_id, status, retry_due, checked_at}}``.

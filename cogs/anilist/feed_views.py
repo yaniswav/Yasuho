@@ -19,6 +19,7 @@ from . import feed_policy as af
 from .feed_delivery import _run_add, _run_like, _run_reply
 from tools import i18n, interactions
 from tools.i18n import N_, _, ngettext
+from tools.premium_archive import classify as classify_archival
 from tools.views import (
     _DISABLEABLE,
     AuthorLayoutView,
@@ -468,7 +469,7 @@ class _TrackTitleButton(discord.ui.Button):
                     _(
                         "This feed already tracks the maximum of {max} titles. "
                         "Remove one first."
-                    ).format(max=af.MAX_SUBS_PER_FEED),
+                    ).format(max=self._manager.max_subs),
                 )
             await interaction.response.send_modal(_TrackTitleModal(self._manager))
         except Exception:
@@ -575,6 +576,18 @@ class _SubsManagerView(AuthorLayoutView):
         self.channel_id = channel_id
         self.subs = list(subs)
         self.note = note
+        # The EFFECTIVE cap (M4a-2): the free value unless this guild has
+        # Yasuho+ - tools.premium.GuildLimits.max_subs_per_feed. Archival is
+        # classified from these SAME rows (already fetched by the caller), no
+        # extra query.
+        self.max_subs = cog._guild_limits(guild.id).max_subs_per_feed
+        self._archival = classify_archival(
+            (
+                {"id": row["media_id"], "created_at": row["created_at"]}
+                for row in self.subs
+            ),
+            self.max_subs,
+        )
         page_count = max(1, (len(self.subs) + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
         self.page = max(0, min(page, page_count - 1))
         self._page_count = page_count
@@ -582,7 +595,7 @@ class _SubsManagerView(AuthorLayoutView):
 
     @property
     def at_cap(self):
-        return len(self.subs) >= af.MAX_SUBS_PER_FEED
+        return len(self.subs) >= self.max_subs
 
     def _build(self):
         container = discord.ui.Container(accent_colour=ANILIST_BLUE)
@@ -599,7 +612,7 @@ class _SubsManagerView(AuthorLayoutView):
                 "New episodes (anime) and chapters (manga) of these titles are "
                 "posted in {channel}, independently of any DM alerts. Up to {max} "
                 "titles per feed."
-            ).format(channel=label, max=af.MAX_SUBS_PER_FEED)
+            ).format(channel=label, max=self.max_subs)
         )
         container.add_item(discord.ui.TextDisplay("\n\n".join(header_parts)))
 
@@ -607,12 +620,18 @@ class _SubsManagerView(AuthorLayoutView):
         for row in self.subs:
             kind = _("Anime") if row["media_type"] == "ANIME" else _("Manga")
             title = row["title"] or str(row["media_id"])
-            lines.append("- [{kind}] {title}".format(kind=kind, title=title))
+            line = "- [{kind}] {title}".format(kind=kind, title=title)
+            if not self._archival.is_active(row["media_id"]):
+                # Archived (M4a-2): over today's effective cap - stays listed
+                # and removable, but is never delivered. See the module
+                # docstring in feed.py.
+                line += " " + _("(archived)")
+            lines.append(line)
         listing = "\n".join(lines) if lines else _("No titles tracked yet.")
         if len(listing) > 3500:
             listing = listing[:3500].rstrip() + "\n..."
         tracking = "-# " + _("Tracking {count}/{max}").format(
-            count=len(self.subs), max=af.MAX_SUBS_PER_FEED
+            count=len(self.subs), max=self.max_subs
         )
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(listing + "\n\n" + tracking))
@@ -842,6 +861,18 @@ class _MuteManagerView(AuthorLayoutView):
         self.follows = list(follows)
         self.muted_ids = set(muted_ids)
         self.note = note
+        # Follow archival (M4a-2), classified from these SAME rows (already
+        # fetched by the caller) against the guild's CURRENT effective
+        # max_follows_per_feed - just for the "(archived)" marker below; muting
+        # one changes nothing about whether it is archived.
+        max_follows = cog._guild_limits(guild.id).max_follows_per_feed
+        self._archival = classify_archival(
+            (
+                {"id": row["anilist_user_id"], "created_at": row["added_at"]}
+                for row in self.follows
+            ),
+            max_follows,
+        )
         page_count = max(
             1, (len(self.follows) + self.PAGE_SIZE - 1) // self.PAGE_SIZE
         )
@@ -881,6 +912,11 @@ class _MuteManagerView(AuthorLayoutView):
             user_id = row["anilist_user_id"]
             name = row["anilist_username"] or str(user_id)
             mark = _("muted here") if user_id in self.muted_ids else _("posted")
+            if not self._archival.is_active(user_id):
+                # Archived (M4a-2): over the feed's effective follow cap -
+                # nothing of theirs is fetched or delivered either way, muted
+                # or not. Still listed and still removable.
+                mark += " " + _("(archived)")
             lines.append("- {name} - {mark}".format(name=name, mark=mark))
         listing = "\n".join(lines) if lines else _("This feed follows no one yet.")
         if len(listing) > 3500:
@@ -1094,11 +1130,12 @@ class _AddFollowButton(discord.ui.Button):
 
     async def callback(self, interaction):
         try:
-            if len(self._owner.follows) >= af.MAX_FOLLOWS_PER_FEED:
+            max_follows = self._owner.limits.max_follows_per_feed
+            if len(self._owner.follows) >= max_follows:
                 return await interactions.reply(
                     interaction,
                     _("This feed already follows the maximum of {max} users.").format(
-                        max=af.MAX_FOLLOWS_PER_FEED
+                        max=max_follows
                     ),
                 )
             await interaction.response.send_modal(AddFollowModal(self._owner))
@@ -1193,6 +1230,17 @@ class AniListFeedPanel(LocaleLayoutView):
         self.follows = list(follows)
         self.subs_count = subs_count
         self.mutes_count = mutes_count
+        # The EFFECTIVE limits (M4a-2): FREE unless this guild has Yasuho+ -
+        # tools.premium.GuildLimits. Feed archival is classified from these
+        # SAME feed rows (already fetched by the caller), no extra query.
+        self.limits = cog._guild_limits(guild.id)
+        self.archival = classify_archival(
+            (
+                {"id": feed["channel_id"], "created_at": feed["created_at"]}
+                for feed in self.feeds
+            ),
+            self.limits.max_feeds_per_guild,
+        )
         self._build()
 
     async def interaction_check(self, interaction):
@@ -1238,7 +1286,12 @@ class AniListFeedPanel(LocaleLayoutView):
         """A plain-text label, for use in select option labels (no markdown)."""
 
         channel = self.guild.get_channel_or_thread(channel_id)
-        return ("#" + channel.name) if channel is not None else str(channel_id)
+        label = ("#" + channel.name) if channel is not None else str(channel_id)
+        if not self.archival.is_active(channel_id):
+            # Archived (M4a-2): over this guild's current feed limit - still
+            # listed and switchable to (e.g. to delete it), just not polled.
+            label += " " + _("(archived)")
+        return label
 
     def _build(self):
         """(Re)assemble the layout from the current feed/follow state."""
@@ -1262,7 +1315,7 @@ class AniListFeedPanel(LocaleLayoutView):
                     + _(
                         "This server has no AniList feed yet. Pick a channel "
                         "below to create one (up to {max} per server)."
-                    ).format(max=af.MAX_FEEDS_PER_GUILD)
+                    ).format(max=self.limits.max_feeds_per_guild)
                 )
             )
             container.add_item(discord.ui.ActionRow(_FeedChannelSelect(self)))
@@ -1284,6 +1337,10 @@ class AniListFeedPanel(LocaleLayoutView):
             status = _("{status} ({count} recent failures)").format(
                 status=status, count=feed["fail_count"]
             )
+        if not self.archival.is_active(feed["channel_id"]):
+            # Archived (M4a-2): over this guild's current feed limit - not
+            # polled, nothing delivered. Still listed (here) and deletable.
+            status += " " + _("(archived)")
         header_lines = [
             "### " + _("AniList activity feed"),
             _(

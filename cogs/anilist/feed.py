@@ -25,6 +25,48 @@ Rendering lives behind two methods - ``_render_activity`` / ``_render_digest`` -
 which return ``channel.send`` kwargs. They now build polished Components V2
 layouts (:class:`ActivityCard` / :class:`ActivityDigest`); the poller, cursor
 and commands never touch rendering.
+
+PREMIUM LIMITS AND LAZY ARCHIVAL (M4a-2,
+.claude/plans/monetisation/4-plan-retenu.md). ``feed_policy.MAX_FEEDS_PER_GUILD``/
+``MAX_FOLLOWS_PER_FEED``/``MAX_SUBS_PER_FEED`` stay the FREE defaults (the
+drift test in tests/tools/test_premium.py ties them to
+``tools.premium.FREE_MAX_*``); every COMMAND and the poller itself instead
+read the guild's EFFECTIVE caps through :meth:`AniListFeed._guild_limits`
+(:func:`cogs.anilist.helpers.resolve_guild_limits` - FREE on a missing or
+raising ``bot.premium``, never a crash). When a guild's stored rows outgrow
+its current effective cap - Yasuho+ lapsed, was refunded, or never applied -
+nothing is deleted: the excess is ARCHIVED, computed fresh on every read by
+:func:`tools.premium_archive.classify` from the resource's own creation order
+(no stored flag, no sweep). Three independent scopes, all per guild/per feed:
+
+* a FEED beyond ``max_feeds_per_guild`` (:meth:`_feed_archival`) is not
+  polled and nothing is ever delivered to it - :meth:`_load_feeds` drops it
+  before the poller even sees it;
+* a FOLLOW beyond ``max_follows_per_feed`` *within an active feed*
+  (:meth:`_feed_follow_archival`) has its activity neither fetched nor
+  delivered - :meth:`_load_follows` only ever returns the active ones, which
+  is also what keeps the AniList request budget (the per-tick followed-id
+  union) from growing with a cap it would otherwise have no reason to
+  respect;
+* a SUBSCRIBED TITLE beyond ``max_subs_per_feed`` (:meth:`_feed_sub_archival`)
+  is likewise never delivered.
+
+MUTES ARE THE EXCEPTION, ON PURPOSE: a mute is protective (archiving one
+would mean MORE posts, the opposite of every other archival rule here), so
+every stored mute stays fully effective regardless of the feed's follow
+count - only adding a NEW one is refused at/over the current
+``max_follows_per_feed`` (see :meth:`_add_mute`). :meth:`_load_mutes` is
+therefore untouched by this lot.
+
+REACTIVATION FLOODS NOTHING. There is no per-follow or per-sub cursor
+anywhere in this package - the activity poller's cursor is the single GLOBAL
+``createdAt_greater`` mark above, and the airing/chapter pollers' cursors are
+likewise global (or, for chapters, per-manga and shared across every guild
+subscribed to it). A follow or subscription that comes back from being
+archived is therefore already indistinguishable from a brand new one: the
+very next tick simply resumes asking AniList for activity newer than a
+cursor that kept advancing all along, so there is no stored backlog to flood
+regardless of how long the resource spent archived.
 """
 
 from __future__ import annotations
@@ -112,13 +154,14 @@ from .feed_views import (
     _refresh_layout,  # noqa: F401
     _SubsManagerView,
 )
-from .helpers import API_URL, channel_allows_adult
+from .helpers import API_URL, channel_allows_adult, resolve_guild_limits
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
 from tools import i18n
 from tools.db import affected_rows
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _, ngettext
+from tools.premium_archive import classify as classify_archival
 
 log = logging.getLogger(__name__)
 
@@ -633,20 +676,94 @@ class AniListFeed(NoPingReplies, commands.Cog):
     # ------------------------------------------------------------------
     # Database access
     # ------------------------------------------------------------------
+    def _guild_limits(self, guild_id):
+        """Effective per-guild premium limits - see :func:`resolve_guild_limits`."""
+
+        return resolve_guild_limits(self.bot, guild_id)
+
     async def _load_feeds(self):
-        return await self.bot.db_pool.fetch(
-            "SELECT guild_id, channel_id, types, fail_count "
-            "FROM anilist_feeds WHERE enabled = TRUE;"
+        """Every ENABLED feed, minus any ARCHIVED one (M4a-2).
+
+        A feed is archived when its guild holds more feeds than its CURRENT
+        effective ``max_feeds_per_guild`` - computed fresh every tick from
+        ALL of the guild's feed rows (enabled or not, exactly like
+        :meth:`_create_feed`'s own count: a disabled feed still occupies a
+        slot) in creation order, oldest first. An archived feed must never
+        reach :meth:`_dispatch`: it is not polled and nothing is ever
+        delivered to it. One query, then an O(total feed rows) grouping in
+        Python - bounded fleet-wide by
+        ``tools.premium.GUILD_CEILINGS["max_feeds_per_guild"]`` per guild, so
+        this stays cheap at 1000+ guilds.
+        """
+
+        rows = await self.bot.db_pool.fetch(
+            "SELECT guild_id, channel_id, types, fail_count, enabled, created_at "
+            "FROM anilist_feeds;"
         )
+        if not rows:
+            return []
+        by_guild = {}
+        for row in rows:
+            by_guild.setdefault(row["guild_id"], []).append(row)
+        active = set()
+        for guild_id, guild_rows in by_guild.items():
+            max_feeds = self._guild_limits(guild_id).max_feeds_per_guild
+            resources = [
+                {"id": row["channel_id"], "created_at": row["created_at"]}
+                for row in guild_rows
+            ]
+            archival = classify_archival(resources, max_feeds)
+            active.update((guild_id, cid) for cid in archival.active_ids)
+        return [
+            row
+            for row in rows
+            if row["enabled"] and (row["guild_id"], row["channel_id"]) in active
+        ]
 
     async def _load_follows(self):
-        return await self.bot.db_pool.fetch(
-            "SELECT f.guild_id, f.channel_id, f.anilist_user_id "
+        """Every follow of every ENABLED feed, minus any ARCHIVED one (M4a-2).
+
+        A follow is archived when its OWN feed holds more follows than the
+        guild's current effective ``max_follows_per_feed``, oldest-first
+        within that feed. Classified per feed (not per guild - each feed has
+        its own follow set), still a single query plus an
+        O(total follow rows) grouping. Feed-LEVEL archival (the whole feed
+        over its guild's feed-count cap) is handled by the caller
+        (:meth:`_tick`, which already holds the feed set :meth:`_load_feeds`
+        filtered and intersects it against these rows) rather than here, so
+        this method keeps answering correctly when a caller/test hands it a
+        fixed feed set of its own.
+
+        Dropping an archived follow here is also what keeps the per-tick
+        AniList request budget bounded as ``max_follows_per_feed`` rises for
+        Yasuho+: it never reaches the followed-id union :meth:`_tick` builds,
+        so it costs nothing beyond its own stored row.
+        """
+
+        rows = await self.bot.db_pool.fetch(
+            "SELECT f.guild_id, f.channel_id, f.anilist_user_id, f.added_at "
             "FROM anilist_follows f "
             "JOIN anilist_feeds fe "
             "  ON fe.guild_id = f.guild_id AND fe.channel_id = f.channel_id "
             "WHERE fe.enabled = TRUE;"
         )
+        if not rows:
+            return rows
+        by_feed = {}
+        for row in rows:
+            by_feed.setdefault((row["guild_id"], row["channel_id"]), []).append(row)
+        kept = []
+        for (guild_id, _channel_id), feed_rows in by_feed.items():
+            max_follows = self._guild_limits(guild_id).max_follows_per_feed
+            resources = [
+                {"id": row["anilist_user_id"], "created_at": row["added_at"]}
+                for row in feed_rows
+            ]
+            archival = classify_archival(resources, max_follows)
+            kept.extend(
+                row for row in feed_rows if archival.is_active(row["anilist_user_id"])
+            )
+        return kept
 
     async def _load_mutes(self):
         """Every per-channel mute of every ENABLED feed, in one query per tick.
@@ -776,11 +893,22 @@ class AniListFeed(NoPingReplies, commands.Cog):
         if not feeds:
             return
 
+        # M4a-2: _load_feeds already dropped any feed ARCHIVED over its
+        # guild's max_feeds_per_guild. Intersecting _load_follows' rows
+        # against this set is what keeps an archived feed's followed users
+        # out of the fetch union below too (on top of _load_follows' own
+        # per-follow archival) - done here, not inside _load_follows itself,
+        # so that method keeps answering correctly for a caller/test that
+        # hands it a fixed feed set rather than the real _load_feeds.
+        active_feed_keys = {(feed["guild_id"], feed["channel_id"]) for feed in feeds}
+
         follow_rows = await self._load_follows()
         follows_by_channel = {}
         followed_ids = set()
         for row in follow_rows:
             key = (row["guild_id"], row["channel_id"])
+            if key not in active_feed_keys:
+                continue
             follows_by_channel.setdefault(key, set()).add(row["anilist_user_id"])
             followed_ids.add(row["anilist_user_id"])
         if not followed_ids:
@@ -1235,18 +1363,55 @@ class AniListFeed(NoPingReplies, commands.Cog):
     # ------------------------------------------------------------------
     async def _feeds_for_guild(self, guild_id):
         return await self.bot.db_pool.fetch(
-            "SELECT channel_id, types, self_add, enabled, fail_count "
+            "SELECT channel_id, types, self_add, enabled, fail_count, created_at "
             "FROM anilist_feeds WHERE guild_id = $1 ORDER BY created_at;",
             guild_id,
         )
 
+    async def _feed_archival(self, guild_id, feeds=None, max_feeds=None):
+        """Classify every feed of ``guild_id`` against its CURRENT effective
+        ``max_feeds_per_guild`` (M4a-2). ``feeds`` lets a caller that already
+        ran :meth:`_feeds_for_guild` hand those same rows back in rather than
+        pay a second query; ``max_feeds`` likewise reuses an already-resolved
+        limit. Feeds are keyed by ``channel_id`` (unique within a guild).
+        """
+
+        if feeds is None:
+            feeds = await self._feeds_for_guild(guild_id)
+        if max_feeds is None:
+            max_feeds = self._guild_limits(guild_id).max_feeds_per_guild
+        resources = [
+            {"id": feed["channel_id"], "created_at": feed["created_at"]}
+            for feed in feeds
+        ]
+        return classify_archival(resources, max_feeds)
+
     async def _follows_for_feed(self, guild_id, channel_id):
         return await self.bot.db_pool.fetch(
-            "SELECT anilist_user_id, anilist_username FROM anilist_follows "
+            "SELECT anilist_user_id, anilist_username, added_at FROM anilist_follows "
             "WHERE guild_id = $1 AND channel_id = $2 ORDER BY anilist_username;",
             guild_id,
             channel_id,
         )
+
+    async def _feed_follow_archival(
+        self, guild_id, channel_id, follows=None, max_follows=None
+    ):
+        """Classify a feed's follows against the guild's CURRENT effective
+        ``max_follows_per_feed`` (M4a-2). Mirrors :meth:`_feed_archival`:
+        ``follows``/``max_follows`` let a caller reuse what it already
+        fetched/resolved. Follows are keyed by ``anilist_user_id``.
+        """
+
+        if follows is None:
+            follows = await self._follows_for_feed(guild_id, channel_id)
+        if max_follows is None:
+            max_follows = self._guild_limits(guild_id).max_follows_per_feed
+        resources = [
+            {"id": follow["anilist_user_id"], "created_at": follow["added_at"]}
+            for follow in follows
+        ]
+        return classify_archival(resources, max_follows)
 
     async def _create_feed(self, guild_id, channel_id):
         """Create a feed on ``channel_id``. Returns an error string, else None."""
@@ -1260,14 +1425,17 @@ class AniListFeed(NoPingReplies, commands.Cog):
             return _("{channel} is already an AniList feed.").format(
                 channel=f"<#{channel_id}>"
             )
+        # The EFFECTIVE cap (M4a-2): the free value unless this guild has
+        # Yasuho+ - tools.premium.GuildLimits.max_feeds_per_guild.
+        max_feeds = self._guild_limits(guild_id).max_feeds_per_guild
         count = await self.bot.db_pool.fetchval(
             "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;", guild_id
         )
-        if count >= af.MAX_FEEDS_PER_GUILD:
+        if count >= max_feeds:
             return _(
                 "This server already has the maximum of {max} feeds. Delete "
                 "one first."
-            ).format(max=af.MAX_FEEDS_PER_GUILD)
+            ).format(max=max_feeds)
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
             guild_id,
@@ -1386,12 +1554,30 @@ class AniListFeed(NoPingReplies, commands.Cog):
         """Every tracked-release subscription of a feed, ordered for the panel."""
 
         return await self.bot.db_pool.fetch(
-            "SELECT media_id, media_type, title FROM anilist_channel_subs "
+            "SELECT media_id, media_type, title, created_at "
+            "FROM anilist_channel_subs "
             "WHERE guild_id = $1 AND channel_id = $2 "
             "ORDER BY media_type, lower(title), media_id;",
             guild_id,
             channel_id,
         )
+
+    async def _feed_sub_archival(self, guild_id, channel_id, subs=None, max_subs=None):
+        """Classify a feed's tracked-release subscriptions against the guild's
+        CURRENT effective ``max_subs_per_feed`` (M4a-2). Mirrors
+        :meth:`_feed_archival`/:meth:`_feed_follow_archival`: ``subs``/
+        ``max_subs`` let a caller reuse what it already fetched/resolved.
+        Subscriptions are keyed by ``media_id``.
+        """
+
+        if subs is None:
+            subs = await self._channel_subs_for_feed(guild_id, channel_id)
+        if max_subs is None:
+            max_subs = self._guild_limits(guild_id).max_subs_per_feed
+        resources = [
+            {"id": sub["media_id"], "created_at": sub["created_at"]} for sub in subs
+        ]
+        return classify_archival(resources, max_subs)
 
     async def _channel_sub_count(self, guild_id, channel_id):
         return await self.bot.db_pool.fetchval(
@@ -1408,9 +1594,10 @@ class AniListFeed(NoPingReplies, commands.Cog):
 
         Returns an error string when the media type is unusable, no usable
         display title survived (romaji/english both empty, which would store a
-        silent no-op), or the feed is already at
-        :data:`af.MAX_SUBS_PER_FEED` with this title not yet tracked;
-        else ``None`` after the upsert (which refreshes the cached title). Never
+        silent no-op), or the feed is already at the guild's CURRENT effective
+        ``max_subs_per_feed`` (M4a-2 - the FREE value is
+        :data:`af.MAX_SUBS_PER_FEED`) with this title not yet tracked; else
+        ``None`` after the upsert (which refreshes the cached title). Never
         touches a token.
         """
 
@@ -1431,13 +1618,16 @@ class AniListFeed(NoPingReplies, commands.Cog):
             channel_id,
             media_id,
         )
+        max_subs = self._guild_limits(guild_id).max_subs_per_feed
         if af.sub_cap_exceeded(
-            await self._channel_sub_count(guild_id, channel_id), bool(already)
+            await self._channel_sub_count(guild_id, channel_id),
+            bool(already),
+            max_subs,
         ):
             return _(
                 "This feed already tracks the maximum of {max} titles. Remove "
                 "one first."
-            ).format(max=af.MAX_SUBS_PER_FEED)
+            ).format(max=max_subs)
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_channel_subs "
             "(guild_id, channel_id, media_id, media_type, title, added_by) "
@@ -1705,16 +1895,18 @@ class AniListFeed(NoPingReplies, commands.Cog):
     async def _add_follow(self, guild_id, channel_id, user_id, name, added_by):
         """Insert/refresh a follow, enforcing the per-feed cap.
 
-        Returns an error string when the feed is already at
-        :data:`af.MAX_FOLLOWS_PER_FEED`, else None.
+        Returns an error string when the feed is already at the guild's
+        CURRENT effective ``max_follows_per_feed`` (M4a-2 - the FREE value is
+        :data:`af.MAX_FOLLOWS_PER_FEED`), else None.
         """
 
         if not await self._follow_exists(guild_id, channel_id, user_id):
+            max_follows = self._guild_limits(guild_id).max_follows_per_feed
             count = await self._follow_count(guild_id, channel_id)
-            if count >= af.MAX_FOLLOWS_PER_FEED:
+            if count >= max_follows:
                 return _(
                     "This feed already follows the maximum of {max} users."
-                ).format(max=af.MAX_FOLLOWS_PER_FEED)
+                ).format(max=max_follows)
         await self._insert_follow(guild_id, channel_id, user_id, name, added_by)
         return None
 
@@ -1821,11 +2013,17 @@ class AniListFeed(NoPingReplies, commands.Cog):
     async def _add_mute(self, guild_id, channel_id, user_id, name):
         """Insert/refresh a mute, enforcing the per-feed cap.
 
-        The cap is :data:`af.MAX_FOLLOWS_PER_FEED`: a feed can at most mute
-        everyone it follows, so the mute table can never outgrow the follow
-        table it qualifies. Re-muting an already-muted user only refreshes the
-        cached name (no new row), so it is never blocked. Returns an error
-        string when the cap is reached, else None.
+        The cap is the guild's CURRENT effective ``max_follows_per_feed``
+        (M4a-2 - the FREE value is :data:`af.MAX_FOLLOWS_PER_FEED`): a feed
+        can at most mute everyone it follows, so the mute table can never
+        outgrow the follow table it qualifies. Re-muting an already-muted
+        user only refreshes the cached name (no new row), so it is never
+        blocked. Returns an error string when the cap is reached, else None.
+
+        MUTES ARE NEVER ARCHIVED (see the module docstring): a mute is
+        protective, so every stored one stays fully effective however far
+        over the cap the feed's follow count later climbs (a downgrade never
+        touches this table) - this cap only ever refuses adding a NEW one.
         """
 
         already = await self.bot.db_pool.fetchval(
@@ -1836,11 +2034,12 @@ class AniListFeed(NoPingReplies, commands.Cog):
             user_id,
         )
         if not already:
+            max_follows = self._guild_limits(guild_id).max_follows_per_feed
             count = await self._mute_count(guild_id, channel_id)
-            if count >= af.MAX_FOLLOWS_PER_FEED:
+            if count >= max_follows:
                 return _(
                     "This feed already mutes the maximum of {max} users."
-                ).format(max=af.MAX_FOLLOWS_PER_FEED)
+                ).format(max=max_follows)
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_feed_mutes "
             "(guild_id, channel_id, anilist_user_id, anilist_username) "
@@ -1965,16 +2164,19 @@ class AniListFeed(NoPingReplies, commands.Cog):
         )
 
         if row is None:
+            # The EFFECTIVE cap (M4a-2): the free value unless this guild has
+            # Yasuho+ - tools.premium.GuildLimits.max_feeds_per_guild.
+            max_feeds = self._guild_limits(ctx.guild.id).max_feeds_per_guild
             count = await self.bot.db_pool.fetchval(
                 "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;",
                 ctx.guild.id,
             )
-            if count >= af.MAX_FEEDS_PER_GUILD:
+            if count >= max_feeds:
                 return await ctx.send(
                     _(
                         "This server already has the maximum of {max} feeds. "
                         "Remove one with `/anilistfeed remove` first."
-                    ).format(max=af.MAX_FEEDS_PER_GUILD)
+                    ).format(max=max_feeds)
                 )
             await self.bot.db_pool.execute(
                 "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
@@ -2298,8 +2500,9 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 )
             )
 
+        max_follows = self._guild_limits(ctx.guild.id).max_follows_per_feed
         count = await self._follow_count(ctx.guild.id, channel_id)
-        if count >= af.MAX_FOLLOWS_PER_FEED:
+        if count >= max_follows:
             return await ctx.send(
                 _("This feed is full right now - ask a moderator to make room.")
             )
@@ -2359,11 +2562,18 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 row["anilist_username"]
             )
 
+        # Feed-level archival (M4a-2): an archived feed - over the guild's
+        # current max_feeds_per_guild - is marked below, not hidden: it is
+        # still listed and still deletable, just not polled or edited.
+        archival = await self._feed_archival(ctx.guild.id, feeds=feeds)
+
         blocks = []
         for feed in feeds:
             cid = feed["channel_id"]
             channel = ctx.guild.get_channel_or_thread(cid)
             label = ("#" + channel.name) if channel is not None else str(cid)
+            if not archival.is_active(cid):
+                label += " " + _("(archived)")
 
             types = ", ".join(feed["types"] or ()) or _("none")
             status = _("enabled") if feed["enabled"] else _("disabled")

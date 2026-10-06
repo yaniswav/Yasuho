@@ -1,11 +1,108 @@
 import datetime
+import logging
 import re
 
+from tools import premium as _premium
 from tools.formats import random_colour
+from tools.premium_archive import classify as _classify_archival
+
+log = logging.getLogger(__name__)
 
 API_URL = "https://graphql.anilist.co"
 TOKEN_URL = "https://anilist.co/api/v2/oauth/token"
 REDIRECT_URI = "https://anilist.co/api/v2/oauth/pin"
+
+
+def resolve_guild_limits(bot, guild_id):
+    """Effective per-guild premium limits for ``guild_id`` - FREE on any
+    failure, never premium, never a crash (M4a-2,
+    .claude/plans/monetisation/4-plan-retenu.md).
+
+    Shared by every AniList poller/command that reads a per-guild cap
+    (feed.py's feeds/follows/subs, airing.py's and chapters.py's channel-sub
+    archival): a missing ``bot.premium`` (every test double bot in this
+    package has none) or the resolver itself raising both degrade to
+    :data:`tools.premium.GUILD_FREE`, exactly like
+    ``cogs.music.player._resolve_history_max_items`` does for the same
+    resolver. Synchronous and O(1) (a dict lookup under
+    :class:`tools.premium.EntitlementCache`) on purpose: the activity poller
+    calls this once per guild per tick and must never pay a DB/API round
+    trip for it.
+    """
+
+    resolver = getattr(bot, "premium", None)
+    if resolver is None:
+        return _premium.GUILD_FREE
+    try:
+        return resolver.for_guild(guild_id)
+    except Exception:
+        log.exception(
+            "AniList: premium resolver failed; using FREE limits for guild %s",
+            guild_id,
+        )
+        return _premium.GUILD_FREE
+
+
+def filter_active_channel_subs(bot, rows):
+    """Drop every ARCHIVED row from a channel-sub query's result (M4a-2).
+
+    Shared by ``airing.py``'s and ``chapters.py``'s ``_load_channel_subs``,
+    whose ``anilist_channel_subs`` JOIN ``anilist_feeds`` (``fe.enabled =
+    TRUE``) already excludes a disabled feed; this excludes two more things,
+    purely in Python, with zero extra queries - ``rows`` must already carry
+    ``guild_id``, ``channel_id``, ``media_id``, ``created_at`` (the sub's own)
+    and ``feed_created_at`` (its feed's), and every other column rides along
+    untouched (chapters.py's ``title`` included):
+
+    * the FEED itself ARCHIVED - over its guild's current effective
+      ``max_feeds_per_guild`` - gets nothing delivered to it at all, exactly
+      like the activity poller (:meth:`cogs.anilist.feed.AniListFeed._load_feeds`);
+    * within a feed that stays active, a SUBSCRIPTION beyond the guild's
+      effective ``max_subs_per_feed`` is archived on its own (oldest-first
+      within that feed).
+
+    Both archival passes are plain :func:`tools.premium_archive.classify`
+    calls, grouped by guild (feeds) then by feed (subs) - the same shape as
+    the activity feed's own archival, see its module docstring.
+    """
+
+    if not rows:
+        return rows
+
+    by_guild_feeds = {}
+    seen_feeds = set()
+    for row in rows:
+        key = (row["guild_id"], row["channel_id"])
+        if key in seen_feeds:
+            continue
+        seen_feeds.add(key)
+        by_guild_feeds.setdefault(row["guild_id"], []).append(
+            {"id": row["channel_id"], "created_at": row["feed_created_at"]}
+        )
+    active_feeds = set()
+    for guild_id, resources in by_guild_feeds.items():
+        max_feeds = resolve_guild_limits(bot, guild_id).max_feeds_per_guild
+        archival = _classify_archival(resources, max_feeds)
+        active_feeds.update((guild_id, cid) for cid in archival.active_ids)
+    rows = [
+        row for row in rows if (row["guild_id"], row["channel_id"]) in active_feeds
+    ]
+    if not rows:
+        return rows
+
+    by_feed_subs = {}
+    for row in rows:
+        by_feed_subs.setdefault((row["guild_id"], row["channel_id"]), []).append(row)
+    kept = []
+    for (guild_id, _channel_id), feed_rows in by_feed_subs.items():
+        max_subs = resolve_guild_limits(bot, guild_id).max_subs_per_feed
+        resources = [
+            {"id": row["media_id"], "created_at": row["created_at"]}
+            for row in feed_rows
+        ]
+        archival = _classify_archival(resources, max_subs)
+        kept.extend(row for row in feed_rows if archival.is_active(row["media_id"]))
+    return kept
 
 VALID_STATUSES = {
     "CURRENT",

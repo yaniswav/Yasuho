@@ -62,7 +62,7 @@ from .feed import (
     _RateLimited,
     _resolve_token,
 )
-from .helpers import API_URL
+from .helpers import API_URL, filter_active_channel_subs
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
 from tools import i18n, interactions
@@ -950,21 +950,32 @@ class AniListAiring(NoPingReplies, commands.Cog):
         )
 
     async def _load_channel_subs(self):
-        """Explicit ANIME title subscriptions of every enabled feed.
+        """Explicit ANIME title subscriptions of every enabled, non-archived feed.
 
         The channel fan-out is driven ONLY by these rows now
         (``anilist_channel_subs``): a feed posts a subscribed title's new episodes
         in its channel, independently of the DM opt-ins and of who the feed
         follows. A disabled feed is excluded (its channel must stay quiet).
+
+        M4a-2: two more exclusions, both lazily computed (never stored, never
+        swept - see cogs.anilist.feed's module docstring). A feed itself
+        ARCHIVED (its guild holds more feeds than its current effective
+        ``max_feeds_per_guild``) gets nothing delivered to it at all, exactly
+        like the activity poller; within a feed that stays active, a
+        subscription beyond the guild's effective ``max_subs_per_feed`` is
+        archived too. Both drop out of ``union`` upstream in :meth:`_tick`
+        (never fetched, not just never delivered), via these same rows.
         """
 
-        return await self.bot.db_pool.fetch(
-            "SELECT s.guild_id, s.channel_id, s.media_id "
+        rows = await self.bot.db_pool.fetch(
+            "SELECT s.guild_id, s.channel_id, s.media_id, s.created_at, "
+            "       fe.created_at AS feed_created_at "
             "FROM anilist_channel_subs s "
             "JOIN anilist_feeds fe "
             "  ON fe.guild_id = s.guild_id AND fe.channel_id = s.channel_id "
             "WHERE fe.enabled = TRUE AND s.media_type = 'ANIME';"
         )
+        return filter_active_channel_subs(self.bot, rows)
 
     async def _load_cursor(self):
         row = await self.bot.db_pool.fetchrow(
