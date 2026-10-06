@@ -200,6 +200,17 @@ GUILD_DELETE_QUERIES = (
         "premium_entitlements",
         "DELETE FROM premium_entitlements WHERE guild_id = $1",
     ),
+    (
+        # Owner grants (tools/premium.py). Unlike premium_entitlements this is
+        # NOT a reconstructible projection - it is the owner's own audit trail
+        # of who was gifted what - but a departed guild's GUILD-scoped rows
+        # (a gifted Yasuho+ subscription) still die with it, same as every
+        # other guild record: guild_id is NULLABLE (a user-scoped Pack Confort
+        # grant carries it NULL), so this can never collaterally delete a
+        # member's own grant, same carve-out as premium_entitlements above.
+        "premium_grants",
+        "DELETE FROM premium_grants WHERE guild_id = $1",
+    ),
 )
 
 STORED_GUILD_IDS_QUERY = """
@@ -243,6 +254,7 @@ UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION SELECT guild_id FROM serverstats_digest_state
 UNION SELECT guild_id FROM premium_entitlements WHERE guild_id IS NOT NULL
+UNION SELECT guild_id FROM premium_grants WHERE guild_id IS NOT NULL
 UNION
 SELECT (extra->>'guild_id')::bigint FROM timers
 WHERE extra->>'guild_id' ~ '^[0-9]+$'
@@ -617,6 +629,15 @@ def invalidate_guild_caches(bot, guild_id):
     bot.autoroles.pop(guild_id, None)
     bot.muteroles.pop(guild_id, None)
     settings.invalidate_guild(guild_id)
+
+    # The premium resolver's GUILD-scoped halves (tools/premium.py). Both
+    # premium_entitlements and premium_grants just had this guild's rows
+    # deleted above, so the cache entry is exactly as stale. The USER-scoped
+    # halves (_user_skus/_user_grants) are deliberately absent here, same call
+    # as bot.blacklist: they are keyed by member id, and a server leaving the
+    # bot is not a reason to take away a MEMBER's own Pack Confort.
+    bot.premium._guild_skus.pop(guild_id, None)
+    bot.premium._guild_grants.pop(guild_id, None)
 
     leveling = bot.get_cog("Leveling")
     if leveling is not None:

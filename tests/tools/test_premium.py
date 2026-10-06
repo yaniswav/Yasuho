@@ -13,6 +13,8 @@ import datetime
 import logging
 import types
 
+import pytest
+
 from tools import premium
 from tools.config_loader import ConfigLoader
 
@@ -341,11 +343,10 @@ def test_cache_resolves_premium_for_an_active_guild_subscription(monkeypatch):
     cache = premium.EntitlementCache()
     cache.load_rows(
         [_row(sku_id=111, scope_type="guild", guild_id=42, user_id=None)],
-        now=NOW,
     )
-    assert cache.for_guild(42) == premium.GUILD_PREMIUM
-    assert cache.for_guild(43) == premium.GUILD_FREE
-    assert cache.is_guild_premium(42) is True
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_PREMIUM
+    assert cache.for_guild(43, now=NOW) == premium.GUILD_FREE
+    assert cache.is_guild_premium(42, now=NOW) is True
 
 
 def test_cache_resolves_premium_for_an_active_user_purchase(monkeypatch):
@@ -354,11 +355,10 @@ def test_cache_resolves_premium_for_an_active_user_purchase(monkeypatch):
     cache = premium.EntitlementCache()
     cache.load_rows(
         [_row(sku_id=222, scope_type="user", guild_id=None, user_id=7)],
-        now=NOW,
     )
-    assert cache.for_user(7) == premium.USER_PREMIUM
-    assert cache.for_user(8) == premium.USER_FREE
-    assert cache.has_comfort_pack(7) is True
+    assert cache.for_user(7, now=NOW) == premium.USER_PREMIUM
+    assert cache.for_user(8, now=NOW) == premium.USER_FREE
+    assert cache.has_comfort_pack(7, now=NOW) is True
 
 
 def test_cache_drops_an_inactive_row_at_load_time(monkeypatch):
@@ -374,9 +374,11 @@ def test_cache_drops_an_inactive_row_at_load_time(monkeypatch):
                 deleted=True,
             )
         ],
-        now=NOW,
     )
-    assert cache.for_guild(42) == premium.GUILD_FREE
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_FREE
+    # A deleted row is dropped entirely, not merely inactive - it leaves no
+    # trace in the map at all (the merge below would otherwise still hold it).
+    assert cache._guild_skus == {}
 
 
 def test_cache_ignores_a_different_sku_than_the_configured_one(monkeypatch):
@@ -386,9 +388,8 @@ def test_cache_ignores_a_different_sku_than_the_configured_one(monkeypatch):
     cache = premium.EntitlementCache()
     cache.load_rows(
         [_row(sku_id=999, scope_type="guild", guild_id=42, user_id=None)],
-        now=NOW,
     )
-    assert cache.for_guild(42) == premium.GUILD_FREE
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_FREE
 
 
 async def test_cache_load_reads_only_non_deleted_rows_from_the_store(fake_pool, monkeypatch):
@@ -406,8 +407,143 @@ async def test_cache_load_reads_only_non_deleted_rows_from_the_store(fake_pool, 
     ]
     cache = premium.EntitlementCache()
     await cache.load(fake_pool)
-    assert cache.for_guild(42) == premium.GUILD_PREMIUM
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_PREMIUM
     assert "WHERE deleted = FALSE" in fake_pool.calls[0][1]
+
+
+# ---------------------------------------------------------------------------
+# Live expiry, no reload - the M3a+ regression this lot fixes
+# ---------------------------------------------------------------------------
+#
+# The bug: an earlier version of EntitlementCache.load_rows/load_grant_rows
+# called is_active()/is_grant_active() ONCE at load time and kept only a bare
+# sku-id/product SET - no ends_at, no expires_at. is_guild_premium/
+# has_comfort_pack then did nothing but a set-membership test, so an entry
+# that was active at the moment of the last load() stayed "premium" forever,
+# regardless of how far into the future `now` moved, until the next reload
+# (boot, or M3b's periodic reconciliation). A 30-day gift outlived its own
+# expiry for as long as the bot kept running. These tests load a row that IS
+# active at load time and then move `now` PAST its end with no second load()
+# call at all - the fix is this clock injection resolving FREE without any
+# reload, not a different row.
+
+
+def test_an_entitlement_active_at_load_time_expires_with_no_reload(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    ends_at = NOW + datetime.timedelta(days=30)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [
+            _row(
+                sku_id=111,
+                scope_type="guild",
+                guild_id=42,
+                user_id=None,
+                ends_at=ends_at,
+                last_synced_at=NOW,
+            )
+        ],
+    )
+    # Still well inside the paid period: active.
+    assert cache.is_guild_premium(42, now=NOW) is True
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_PREMIUM
+    # Long past ends_at AND past the 48h grace, same cache object, no load()
+    # call in between: must resolve FREE.
+    later = ends_at + premium.GRACE + datetime.timedelta(days=1)
+    assert cache.is_guild_premium(42, now=later) is False
+    assert cache.for_guild(42, now=later) == premium.GUILD_FREE
+
+
+def test_an_entitlement_still_grants_the_48h_grace_with_no_reload(monkeypatch):
+    """The same live-clock re-evaluation must still honour the grace, not
+    just the hard cutoff - a missed renewal webhook must not downgrade a
+    subscriber the instant ends_at passes."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    ends_at = NOW + datetime.timedelta(days=30)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [
+            _row(
+                sku_id=111,
+                scope_type="guild",
+                guild_id=42,
+                user_id=None,
+                ends_at=ends_at,
+                # last_synced_at predates ends_at: nothing has reconfirmed
+                # the end, so the grace applies.
+                last_synced_at=NOW,
+            )
+        ],
+    )
+    just_after_end = ends_at + datetime.timedelta(hours=1)
+    assert cache.is_guild_premium(42, now=just_after_end) is True
+    well_past_grace = ends_at + premium.GRACE + datetime.timedelta(minutes=1)
+    assert cache.is_guild_premium(42, now=well_past_grace) is False
+
+
+def test_a_user_purchase_active_at_load_time_expires_with_no_reload(monkeypatch):
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", 222)
+    ends_at = NOW + datetime.timedelta(days=7)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [
+            _row(
+                sku_id=222,
+                scope_type="user",
+                guild_id=None,
+                user_id=7,
+                ends_at=ends_at,
+                last_synced_at=NOW,
+            )
+        ],
+    )
+    assert cache.has_comfort_pack(7, now=NOW) is True
+    later = ends_at + premium.GRACE + datetime.timedelta(days=1)
+    assert cache.has_comfort_pack(7, now=later) is False
+    assert cache.for_user(7, now=later) == premium.USER_FREE
+
+
+def test_a_grant_active_at_load_time_expires_with_no_reload(monkeypatch):
+    """Same bug, same fix, for the owner-grant half of the merge: a grant's
+    own expires_at must still end it with no further write or reload."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    expires_at = GRANT_NOW + datetime.timedelta(days=30)
+    cache = premium.EntitlementCache()
+    cache.load_grant_rows(
+        [
+            _grant(
+                product="yasuho_plus",
+                scope_type="guild",
+                guild_id=111,
+                expires_at=expires_at,
+            )
+        ],
+    )
+    assert cache.is_guild_premium(111, now=GRANT_NOW) is True
+    # A grant has NO grace (is_grant_active's own rule) - one minute past
+    # expiry is already inactive, with the same cache object, no reload.
+    assert (
+        cache.is_guild_premium(111, now=expires_at + datetime.timedelta(minutes=1))
+        is False
+    )
+
+
+# --- Negative control (mandatory, this lot): revert to load-time evaluation ---
+#
+# Verified by hand during this review: tools/premium.py was copied aside,
+# EntitlementCache.load_rows/load_grant_rows were edited back to their
+# original shape (call is_active()/is_grant_active() once inside the loop and
+# keep only a bare sku-id/product set, dropping ends_at/expires_at entirely),
+# and is_guild_premium/has_comfort_pack were reverted to a plain set-
+# membership test with no `now` parameter at all. Both
+# test_an_entitlement_active_at_load_time_expires_with_no_reload and
+# test_a_grant_active_at_load_time_expires_with_no_reload then failed
+# (AssertionError on the post-expiry assertion: the reverted cache still
+# answered True), which is exactly the historical bug this lot fixes - a
+# stale verdict frozen at load time, immune to the clock. The file was
+# restored immediately after by copying the original back (never git
+# stash/checkout/reset, per this review's rules), and the full suite was
+# re-run green before continuing.
 
 
 # ---------------------------------------------------------------------------
@@ -510,3 +646,290 @@ async def test_load_active_selects_only_non_deleted_rows(fake_pool):
     _method, query, _args = fake_pool.calls[0]
     assert "FROM premium_entitlements" in query
     assert "WHERE deleted = FALSE" in query
+
+
+# ---------------------------------------------------------------------------
+# Owner grants - product/scope coherence
+# ---------------------------------------------------------------------------
+
+
+def test_validate_grant_scope_accepts_the_matching_pair():
+    premium.validate_grant_scope("yasuho_plus", "guild")
+    premium.validate_grant_scope("comfort_pack", "user")
+
+
+def test_validate_grant_scope_rejects_the_crossed_pair():
+    with pytest.raises(ValueError):
+        premium.validate_grant_scope("yasuho_plus", "user")
+    with pytest.raises(ValueError):
+        premium.validate_grant_scope("comfort_pack", "guild")
+
+
+def test_validate_grant_scope_rejects_an_unknown_product():
+    with pytest.raises(ValueError):
+        premium.validate_grant_scope("theme_pack", "guild")
+
+
+async def test_create_grant_refuses_a_crossed_pair_before_touching_the_pool(
+    fake_pool,
+):
+    with pytest.raises(ValueError):
+        await premium.create_grant(
+            fake_pool,
+            product="yasuho_plus",
+            scope_type="user",
+            user_id=1,
+            granted_by=1,
+        )
+    assert fake_pool.calls == []  # the pool was never touched
+
+
+async def test_create_grant_refuses_a_guild_grant_missing_its_guild_id(fake_pool):
+    with pytest.raises(ValueError):
+        await premium.create_grant(
+            fake_pool, product="yasuho_plus", scope_type="guild", granted_by=1
+        )
+
+
+async def test_create_grant_inserts_with_returning_id(fake_pool):
+    fake_pool.fetchrow_return = {"id": 42}
+    grant_id = await premium.create_grant(
+        fake_pool,
+        product="yasuho_plus",
+        scope_type="guild",
+        guild_id=111,
+        reason="friend's server",
+        granted_by=1,
+        expires_at=None,
+    )
+    assert grant_id == 42
+    _method, query, args = fake_pool.calls[0]
+    assert "INSERT INTO premium_grants" in query
+    assert "RETURNING id" in query
+    assert args == ("yasuho_plus", "guild", 111, None, "friend's server", 1, None)
+
+
+# ---------------------------------------------------------------------------
+# Owner grants - is_grant_active (no grace, unlike is_active)
+# ---------------------------------------------------------------------------
+
+GRANT_NOW = datetime.datetime(2026, 10, 6, 12, 0, 0, tzinfo=UTC)
+
+
+def _grant(**overrides):
+    row = {"revoked_at": None, "expires_at": None}
+    row.update(overrides)
+    return row
+
+
+def test_grant_with_no_expiry_or_revocation_is_active():
+    assert premium.is_grant_active(_grant(), now=GRANT_NOW) is True
+
+
+def test_revoked_grant_is_never_active_even_before_its_expiry():
+    row = _grant(
+        revoked_at=GRANT_NOW - datetime.timedelta(minutes=1),
+        expires_at=GRANT_NOW + datetime.timedelta(days=30),
+    )
+    assert premium.is_grant_active(row, now=GRANT_NOW) is False
+
+
+def test_future_expiry_is_active():
+    row = _grant(expires_at=GRANT_NOW + datetime.timedelta(days=1))
+    assert premium.is_grant_active(row, now=GRANT_NOW) is True
+
+
+def test_past_expiry_is_inactive_with_no_grace():
+    """Unlike is_active's 48h grace for a missed Discord webhook, a grant has
+    none: it is ours to end, so a minute past expiry is already inactive."""
+    row = _grant(expires_at=GRANT_NOW - datetime.timedelta(minutes=1))
+    assert premium.is_grant_active(row, now=GRANT_NOW) is False
+
+
+# --- Negative control: the revoked_at check must gate is_grant_active ------
+#
+# Verified by hand: editing is_grant_active() to drop the
+# ``revoked_at is not None`` early return (checking only the expiry) turns
+# test_revoked_grant_is_never_active_even_before_its_expiry red, because a
+# revoked-but-not-yet-expired grant then reads as active. Restored
+# immediately after with the file copied aside and back.
+
+
+# ---------------------------------------------------------------------------
+# EntitlementCache - the merge: entitlement OR grant, either is enough
+# ---------------------------------------------------------------------------
+
+
+def test_grant_alone_with_no_sku_configured_grants_premium(monkeypatch):
+    """THE M3a+ headline requirement: the owner can gift before any SKU
+    exists at all."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+    cache = premium.EntitlementCache()
+    cache.load_grant_rows(
+        [_grant(product="yasuho_plus", scope_type="guild", guild_id=111)],
+    )
+    assert cache.is_guild_premium(111, now=GRANT_NOW) is True
+    assert cache.for_guild(111, now=GRANT_NOW) == premium.GUILD_PREMIUM
+
+
+def test_entitlement_alone_still_grants_premium_with_no_grant_on_record(
+    monkeypatch,
+):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [_row(sku_id=111, scope_type="guild", guild_id=42, user_id=None)],
+    )
+    assert cache.is_guild_premium(42, now=NOW) is True
+
+
+def test_both_entitlement_and_grant_still_resolve_premium_once(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [_row(sku_id=111, scope_type="guild", guild_id=42, user_id=None)],
+    )
+    cache.load_grant_rows(
+        [_grant(product="yasuho_plus", scope_type="guild", guild_id=42)],
+    )
+    assert cache.is_guild_premium(42, now=NOW) is True
+
+
+def test_neither_entitlement_nor_grant_resolves_free(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    cache = premium.EntitlementCache()
+    assert cache.is_guild_premium(42, now=NOW) is False
+    assert cache.for_guild(42, now=NOW) == premium.GUILD_FREE
+
+
+def test_comfort_pack_grant_alone_with_no_sku_configured(monkeypatch):
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+    cache = premium.EntitlementCache()
+    cache.load_grant_rows(
+        [_grant(product="comfort_pack", scope_type="user", user_id=7)],
+    )
+    assert cache.has_comfort_pack(7, now=GRANT_NOW) is True
+    assert cache.for_user(7, now=GRANT_NOW) == premium.USER_PREMIUM
+
+
+def test_a_revoked_grant_does_not_grant_premium(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    cache = premium.EntitlementCache()
+    cache.load_grant_rows(
+        [
+            _grant(
+                product="yasuho_plus",
+                scope_type="guild",
+                guild_id=111,
+                revoked_at=GRANT_NOW - datetime.timedelta(days=1),
+            )
+        ],
+    )
+    assert cache.is_guild_premium(111, now=GRANT_NOW) is False
+    # Revoked rows are dropped entirely at load time, same as a deleted
+    # entitlement - no trace left in the map.
+    assert cache._guild_grants == {}
+
+
+async def test_cache_load_reads_both_entitlements_and_grants(fake_pool, monkeypatch):
+    """EntitlementCache.load() populates all four maps from the two tables."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+
+    class _TwoTablePool:
+        def __init__(self):
+            self.calls = []
+
+        async def fetch(self, query, *args):
+            self.calls.append(query)
+            if "FROM premium_entitlements" in query:
+                return []
+            if "FROM premium_grants" in query:
+                return [
+                    {
+                        "id": 1,
+                        "product": "yasuho_plus",
+                        "scope_type": "guild",
+                        "guild_id": 111,
+                        "user_id": None,
+                        "revoked_at": None,
+                        "expires_at": None,
+                    }
+                ]
+            raise AssertionError(f"unexpected query: {query}")
+
+    pool = _TwoTablePool()
+    cache = premium.EntitlementCache()
+    await cache.load(pool)
+
+    assert cache.is_guild_premium(111) is True
+    assert any("FROM premium_entitlements" in q for q in pool.calls)
+    assert any("FROM premium_grants" in q for q in pool.calls)
+
+
+# ---------------------------------------------------------------------------
+# EntitlementCache.refresh_grant_scope - the single-scope re-read
+# ---------------------------------------------------------------------------
+
+
+async def test_refresh_grant_scope_populates_an_active_guild_grant(fake_pool):
+    fake_pool.fetch_return = [{"id": 9, "product": "yasuho_plus", "expires_at": None}]
+    cache = premium.EntitlementCache()
+
+    await cache.refresh_grant_scope(fake_pool, "guild", guild_id=111)
+
+    assert cache._guild_grants == {
+        111: [premium._GrantSnapshot(grant_id=9, product="yasuho_plus", expires_at=None)]
+    }
+    _method, query, args = fake_pool.calls[0]
+    assert "guild_id = " in query
+    assert 111 in args
+
+
+async def test_refresh_grant_scope_pops_the_scope_when_nothing_is_active(fake_pool):
+    fake_pool.fetch_return = []
+    cache = premium.EntitlementCache()
+    cache._guild_grants[111] = [
+        premium._GrantSnapshot(grant_id=9, product="yasuho_plus", expires_at=None)
+    ]
+
+    await cache.refresh_grant_scope(fake_pool, "guild", guild_id=111)
+
+    assert cache._guild_grants == {}
+
+
+async def test_refresh_grant_scope_populates_an_active_user_grant(fake_pool):
+    fake_pool.fetch_return = [{"id": 3, "product": "comfort_pack", "expires_at": None}]
+    cache = premium.EntitlementCache()
+
+    await cache.refresh_grant_scope(fake_pool, "user", user_id=7)
+
+    assert cache._user_grants == {
+        7: [premium._GrantSnapshot(grant_id=3, product="comfort_pack", expires_at=None)]
+    }
+
+
+async def test_refresh_grant_scope_carries_the_expiry_so_it_still_ends_itself(
+    fake_pool,
+):
+    """refresh_grant_scope's snapshot is not exempt from the live-expiry fix:
+    a grant refreshed into the cache with a future expires_at must still
+    turn itself off once `now` passes it, with no further write."""
+    expires_at = GRANT_NOW + datetime.timedelta(days=1)
+    fake_pool.fetch_return = [
+        {"id": 9, "product": "yasuho_plus", "expires_at": expires_at}
+    ]
+    cache = premium.EntitlementCache()
+    await cache.refresh_grant_scope(fake_pool, "guild", guild_id=111)
+
+    assert cache.is_guild_premium(111, now=GRANT_NOW) is True
+    assert (
+        cache.is_guild_premium(111, now=expires_at + datetime.timedelta(minutes=1))
+        is False
+    )
+
+
+async def test_refresh_grant_scope_rejects_an_unknown_scope_type():
+    cache = premium.EntitlementCache()
+    with pytest.raises(ValueError):
+        await cache.refresh_grant_scope(object(), "guild_or_user", guild_id=1)

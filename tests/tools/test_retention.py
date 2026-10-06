@@ -286,6 +286,12 @@ def test_invalidate_guild_caches_clears_primary_bot_maps(monkeypatch):
         prefixes={1: "!", 2: "?"},
         autoroles={1: 10, 2: 20},
         muteroles={1: 11, 2: 21},
+        premium=types.SimpleNamespace(
+            _guild_skus={1: {111}, 2: {111}},
+            _guild_grants={1: {"yasuho_plus"}, 2: {"yasuho_plus"}},
+            _user_skus={1: {222}},
+            _user_grants={1: {"comfort_pack"}},
+        ),
         get_cog=lambda _name: None,
     )
     invalidated = []
@@ -298,6 +304,12 @@ def test_invalidate_guild_caches_clears_primary_bot_maps(monkeypatch):
     assert bot.prefixes == {2: "?"}
     assert bot.autoroles == {2: 20}
     assert bot.muteroles == {2: 21}
+    assert bot.premium._guild_skus == {2: {111}}
+    assert bot.premium._guild_grants == {2: {"yasuho_plus"}}
+    # USER-scoped halves are untouched: guild id 1 is not a user id, and this
+    # purge must never reach a member's own Pack Confort.
+    assert bot.premium._user_skus == {1: {222}}
+    assert bot.premium._user_grants == {1: {"comfort_pack"}}
     assert invalidated == [1]
 
 
@@ -333,6 +345,20 @@ def test_the_dashboard_journal_dies_with_its_guild():
     )
     assert (
         "SELECT guild_id FROM dashboard_audit" in retention.STORED_GUILD_IDS_QUERY
+    )
+
+
+def test_the_guild_purge_leaves_user_scoped_grants_alone():
+    """Same carve-out as the dashboard_actions test above, for premium_grants.
+
+    A user-scoped Pack Confort grant carries guild_id NULL, so the guild-keyed
+    DELETE can never match it; only a GUILD-scoped Yasuho+ grant dies here.
+    """
+    query = dict(retention.GUILD_DELETE_QUERIES)["premium_grants"]
+    assert query == "DELETE FROM premium_grants WHERE guild_id = $1"
+    assert (
+        "SELECT guild_id FROM premium_grants WHERE guild_id IS NOT NULL"
+        in retention.STORED_GUILD_IDS_QUERY
     )
 
 

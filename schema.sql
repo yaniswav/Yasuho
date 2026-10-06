@@ -1637,6 +1637,60 @@ CREATE INDEX IF NOT EXISTS premium_entitlements_guild_idx
 CREATE INDEX IF NOT EXISTS premium_entitlements_user_idx
     ON premium_entitlements (user_id) WHERE user_id IS NOT NULL;
 
+-- Owner-managed gifts (tools/premium.py: create_grant/revoke_grant). THIS IS
+-- NOT A PROJECTION - unlike premium_entitlements above, nothing resyncs these
+-- rows from Discord, because Discord is not involved: its own entitlement
+-- API only creates TEST entitlements (client.create_entitlement), meant for
+-- development, and must never be used to hand out a real benefit. A gift
+-- from the bot owner (a friend's server, a user) is therefore OUR OWN record,
+-- and this table is its audit trail - who granted what, to whom, when, until
+-- when, and who revoked it. A grant is never deleted, only revoked
+-- (revoked_at/revoked_by set): tools/privacy.py exports a user's own grants
+-- but does not erase them on request, the same decision premium_entitlements
+-- earned in a568c94 for a different reason - there it is because a resync
+-- would restore it anyway; here it is because the record of what the owner
+-- did is not the recipient's to erase.
+--
+-- product/scope_type coherence mirrors the commercial catalog in
+-- tools/premium.py (PRODUCT_SCOPE): a 'yasuho_plus' grant is a guild
+-- subscription, a 'comfort_pack' grant is a user purchase - the two can never
+-- be crossed, in the database or in validate_grant_scope's Python-side check.
+CREATE TABLE IF NOT EXISTS premium_grants (
+    id          BIGSERIAL   PRIMARY KEY,
+    product     TEXT        NOT NULL,
+    scope_type  TEXT        NOT NULL,
+    guild_id    BIGINT,
+    user_id     BIGINT,
+    reason      TEXT,
+    granted_by  BIGINT      NOT NULL,
+    granted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ,
+    revoked_at  TIMESTAMPTZ,
+    revoked_by  BIGINT,
+    CONSTRAINT premium_grants_product_valid
+        CHECK (product IN ('yasuho_plus', 'comfort_pack')),
+    CONSTRAINT premium_grants_scope_type_valid
+        CHECK (scope_type IN ('guild', 'user')),
+    CONSTRAINT premium_grants_scope_matches_ids CHECK (
+        (scope_type = 'guild' AND guild_id IS NOT NULL AND user_id IS NULL)
+        OR
+        (scope_type = 'user' AND user_id IS NOT NULL AND guild_id IS NULL)
+    ),
+    CONSTRAINT premium_grants_product_scope_valid CHECK (
+        (product = 'yasuho_plus' AND scope_type = 'guild')
+        OR
+        (product = 'comfort_pack' AND scope_type = 'user')
+    )
+);
+-- Lookup by guild: the boot load (tools/premium.EntitlementCache.load) and
+-- the eventual ?premium check/list reads. PARTIAL for the same two-scope
+-- reason as premium_entitlements above.
+CREATE INDEX IF NOT EXISTS premium_grants_guild_idx
+    ON premium_grants (guild_id) WHERE guild_id IS NOT NULL;
+-- The user-scoped twin, for the same reader and the same reason.
+CREATE INDEX IF NOT EXISTS premium_grants_user_idx
+    ON premium_grants (user_id) WHERE user_id IS NOT NULL;
+
 -- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================

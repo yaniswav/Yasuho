@@ -83,6 +83,7 @@ GUILD_MAP = "guild-keyed mapping"  # {guild_id: value}, dict or BoundedLRU
 GUILD_TUPLE_MAP = "guild-first tuple-keyed mapping"  # {(guild_id, ...): value}
 GUILD_TUPLE_SET = "guild-first tuple-keyed set"  # {(guild_id, ...)}
 USER_SET = "user-keyed set"  # {user_id}
+USER_MAP = "user-keyed mapping"  # {user_id: value}, the user-scoped twin of GUILD_MAP
 
 # WHAT A CONSUMER DOES. The first three are observable outcomes of a run; KEEP
 # is the written-down omission and demands a reason like every other row.
@@ -362,6 +363,71 @@ REGISTRY = (
         "re-derives from settings. Dropping it would leave every hub dead until "
         "a restart, so both the reconnect and the rejoin rebuild it.",
     ),
+    # -- the bot's premium resolver (tools/premium.EntitlementCache) --------
+    # Attached to core.Yasuho as bot.premium in M3a+ (previously built but
+    # never wired onto the bot). Its attribute names carry a dot
+    # ("premium._guild_skus") because the cache encapsulates its four maps
+    # inside one object rather than hanging them straight off the bot like
+    # prefixes/autoroles/muteroles/blacklist - structure()/absent_attributes()
+    # below resolve a dotted path with a small helper for exactly this row.
+    _mirror(
+        BOT,
+        "premium._guild_skus",
+        GUILD_MAP,
+        DROP,
+        KEEP,
+        HEALS,
+        "GUILD-scoped active Discord SKU ids. A guild purge deletes this "
+        "guild's premium_entitlements rows (retention.GUILD_DELETE_QUERIES), "
+        "so the cache entry is just as stale and is dropped with them. A "
+        "dashboard reconnect has no reason to touch it - the dashboard cannot "
+        "write a Discord entitlement or sync one (that is Discord's own "
+        "ledger, M3b's resync) - so resync_all never calls into this cache at "
+        "all. A rejoin needs no refill either: is_guild_premium/for_guild "
+        "read this map with no read-through, and an absent entry correctly "
+        "means FREE for a guild whose entitlements were just deleted.",
+    ),
+    _mirror(
+        BOT,
+        "premium._user_skus",
+        USER_MAP,
+        KEEP,
+        KEEP,
+        HEALS,
+        "USER-scoped active Discord SKU ids (Pack Confort), the same shape as "
+        "bot.blacklist: a guild leaving is not a reason to take away a "
+        "MEMBER's own durable purchase, and the ids here are user ids, not "
+        "guild ids, so the guild-keyed purge cannot reach them anyway. A "
+        "dashboard reconnect cannot touch it for the same reason as the guild "
+        "map above; a rejoin needs no refill for the same read-through reason.",
+    ),
+    _mirror(
+        BOT,
+        "premium._guild_grants",
+        GUILD_MAP,
+        DROP,
+        KEEP,
+        HEALS,
+        "GUILD-scoped active OWNER GRANTS (tools/premium.py: ?premium grant "
+        "server). A guild purge deletes this guild's premium_grants rows "
+        "(retention.GUILD_DELETE_QUERIES) alongside its entitlements, so this "
+        "entry is dropped with them for the identical reason as "
+        "premium._guild_skus above. The dashboard cannot write a grant either "
+        "- only the owner's ?premium commands can - so resync has nothing to "
+        "do here, and a rejoin needs no refill (no read-through, no miss to "
+        "heal: FREE is correct once the row is gone).",
+    ),
+    _mirror(
+        BOT,
+        "premium._user_grants",
+        USER_MAP,
+        KEEP,
+        KEEP,
+        HEALS,
+        "USER-scoped active OWNER GRANTS (?premium grant user). Same call as "
+        "premium._user_skus: keyed by user id, so a guild purge must not "
+        "reach it, and the dashboard cannot write one either way.",
+    ),
 )
 
 
@@ -442,17 +508,45 @@ NOT_MIRRORED = {
 # ---------------------------------------------------------------------------
 
 
+def _split_path(attr):
+    """A registry ``attr`` as its dotted components ("premium._guild_skus" ->
+    ``["premium", "_guild_skus"]``; a plain name is a one-element list)."""
+    return attr.split(".")
+
+
+def _resolve_path(obj, attr):
+    """Walk a (possibly dotted) attribute path from ``obj``. Raises on a
+    missing hop, exactly like a bare ``getattr`` does for a plain name - the
+    direct-access rename guard the module docstring promises."""
+    for part in _split_path(attr):
+        obj = getattr(obj, part)
+    return obj
+
+
+def _has_path(obj, attr):
+    """Whether every hop of a (possibly dotted) attribute path resolves."""
+    for part in _split_path(attr):
+        if not hasattr(obj, part):
+            return False
+        obj = getattr(obj, part)
+    return True
+
+
 def absent_attributes(entries, resolve):
     """Registry rows whose attribute is missing on the object ``resolve`` returns.
 
     ``resolve(owner)`` yields the live object that is supposed to carry the
     mirror. A row naming an attribute that object does not have is precisely the
-    rename the duck-typed ``getattr`` swallows in production.
+    rename the duck-typed ``getattr`` swallows in production. ``entry.attr`` may
+    be a dotted path (e.g. ``"premium._guild_skus"``, for a cache that
+    encapsulates its maps inside one object rather than hanging them straight
+    off ``owner``) - :func:`_has_path` walks it the same way :func:`_resolve_path`
+    does, so a rename anywhere along the path is reported the same way.
     """
     missing = []
     for entry in entries:
         target = resolve(entry.owner)
-        if target is None or not hasattr(target, entry.attr):
+        if target is None or not _has_path(target, entry.attr):
             missing.append(entry.name)
     return missing
 
@@ -627,6 +721,14 @@ class MirrorBot:
         self.autoroles = {}
         self.muteroles = {}
         self.eager_cache_lock = asyncio.Lock()
+        # Not one of the four eager maps (no load_eager_caches entry needed):
+        # the premium resolver's own four maps, stood in here as a plain
+        # namespace so retention.invalidate_guild_caches's direct attribute
+        # access (bot.premium._guild_skus.pop(...)) has something real to
+        # reach into, exactly like the four dicts above.
+        self.premium = types.SimpleNamespace(
+            _guild_skus={}, _user_skus={}, _guild_grants={}, _user_grants={}
+        )
         self._cogs = cogs
 
     def get_cog(self, name):
@@ -711,7 +813,7 @@ class Bench:
         return self._real_bot
 
     def structure(self, entry):
-        return getattr(self.owner(entry.owner), entry.attr)
+        return _resolve_path(self.owner(entry.owner), entry.attr)
 
     def seed(self):
         """Put the seed under TARGET/NEIGHBOUR in every registered structure."""
@@ -722,13 +824,13 @@ class Bench:
 
     @staticmethod
     def _scopes(entry):
-        if entry.key is USER_SET:
+        if entry.key in (USER_SET, USER_MAP):
             return (TARGET_USER, NEIGHBOUR_USER, FRESH_USER)
         return (TARGET, NEIGHBOUR, FRESH)
 
     @staticmethod
     def _seed_one(cache, key, scope):
-        if key is GUILD_MAP:
+        if key is GUILD_MAP or key is USER_MAP:
             cache[scope] = SEED
         elif key is GUILD_TUPLE_MAP:
             cache[(scope, "seed")] = SEED
@@ -741,7 +843,7 @@ class Bench:
 
     @staticmethod
     def _holds_seed(cache, key, scope):
-        if key is GUILD_MAP:
+        if key is GUILD_MAP or key is USER_MAP:
             return cache.get(scope) is SEED
         if key is GUILD_TUPLE_MAP:
             return cache.get((scope, "seed")) is SEED
@@ -1051,6 +1153,10 @@ def test_a_deliberate_omission_is_pinned_in_both_directions():
         "ModLog._recent_bans",
         "ModLog._suppressed",
         "bot.blacklist",
+        "bot.premium._guild_skus",
+        "bot.premium._user_skus",
+        "bot.premium._guild_grants",
+        "bot.premium._user_grants",
     }
     for entry in REGISTRY:
         if entry.on_resync is KEEP or entry.on_purge is KEEP:
@@ -1177,8 +1283,15 @@ def test_the_framework_baseline_hides_the_library_and_only_the_library():
     assert "all_commands" in baseline  # the library really does own that one
     assert "all_commands" not in swept  # ...and the baseline hides it
     # Named from the registry rather than re-listed, so this control does not
-    # become a fourth place to edit when a bot map is added or renamed.
-    assert swept >= {entry.attr for entry in REGISTRY if entry.owner == BOT}
+    # become a fourth place to edit when a bot map is added or renamed. Dotted
+    # rows (the premium cache's four maps) are excluded on purpose: they live
+    # INSIDE bot.premium, an EntitlementCache instance rather than a bare
+    # dict/set/BoundedLRU, so the flat sweep below - which only ever looks at
+    # vars(bot) - structurally cannot see them, and is not supposed to; they
+    # are a registered row by hand, not a completeness-swept one.
+    assert swept >= {
+        entry.attr for entry in REGISTRY if entry.owner == BOT and "." not in entry.attr
+    }
     assert len(swept) >= 4
 
 
@@ -1203,7 +1316,13 @@ def test_the_registry_names_each_structure_once():
 
 def test_every_decision_uses_a_known_value():
     for entry in REGISTRY:
-        assert entry.key in (GUILD_MAP, GUILD_TUPLE_MAP, GUILD_TUPLE_SET, USER_SET)
+        assert entry.key in (
+            GUILD_MAP,
+            GUILD_TUPLE_MAP,
+            GUILD_TUPLE_SET,
+            USER_SET,
+            USER_MAP,
+        )
         assert entry.on_purge in (DROP, EMPTY, RELOAD, KEEP)
         assert entry.on_resync in (DROP, EMPTY, RELOAD, KEEP)
         assert entry.on_join in (REBUILD, HEALS)

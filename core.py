@@ -10,7 +10,7 @@ import discord
 import sonolink
 from discord.ext import commands
 
-from tools import backup, fixups, i18n, music_state, tree_sync
+from tools import backup, fixups, i18n, music_state, premium, tree_sync
 from tools.config_loader import config_loader
 from tools.http import TIMEOUT
 from tools.mobile_status import enable_mobile_status
@@ -250,6 +250,17 @@ class Yasuho(commands.Bot):
         # Set by the Reminder cog on load; defaulted here so the tools.time
         # converters can read bot.reminder even if that cog fails to load.
         self.reminder = None
+        # Yasuho+/Pack Confort resolver (tools/premium.py). Built empty here -
+        # which already means FREE for everyone, today's behaviour - and
+        # filled in setup_hook by _load_premium_cache. Not one of the FOUR
+        # eager maps above (prefixes/blacklist/autoroles/muteroles): those are
+        # read-ABSENCE-IS-MEANING dicts rebuilt under eager_cache_lock against
+        # per-id writers; this is a single object with its own four internal
+        # maps (see EntitlementCache) and, in this lot (M3a+), nothing but the
+        # boot load and the owner's ?premium commands ever writes to it, so
+        # there is no concurrent writer for a lock to serialise against yet -
+        # M3b's gateway handlers and periodic reconciliation will need one.
+        self.premium = premium.EntitlementCache()
 
     async def get_context(self, *args, **kwargs):
         """Set the per-invocation i18n locale before a command runs.
@@ -348,6 +359,25 @@ class Yasuho(commands.Bot):
             self.autoroles = dict(autoroles)
             self.muteroles = dict(muteroles)
 
+    async def _load_premium_cache(self) -> None:
+        """Load entitlements + owner grants into ``self.premium``; never fatal.
+
+        ``self.premium`` was already built empty in ``__init__`` - which
+        resolves FREE for everyone - so a failure here is caught and logged
+        rather than left to crash the boot: a premium lookup going wrong must
+        degrade to "nobody is premium", the fail-closed direction for a
+        COMMERCIAL benefit (nobody is undercharged by a bug; worst case a real
+        subscriber or grant recipient is served the free tier until the next
+        restart or periodic reconciliation, M3b, catches up).
+        """
+        try:
+            await self.premium.load(self.db_pool)
+        except Exception:
+            log.exception(
+                "Failed to load premium entitlements/grants; "
+                "defaulting everyone to the free tier"
+            )
+
     async def setup_hook(self) -> None:
         # schema.sql is THE schema source of truth and is applied on every boot.
         # It is idempotent (CREATE ... IF NOT EXISTS, additive ALTER ... IF NOT
@@ -378,6 +408,7 @@ class Yasuho(commands.Bot):
         self.http_session = aiohttp.ClientSession(timeout=TIMEOUT)
 
         await self.load_eager_caches()
+        await self._load_premium_cache()
 
         # A cog that cannot attach is logged and skipped, never raised: one
         # broken extension must not take the whole bot down. The names are kept

@@ -82,7 +82,18 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # It is a PROJECTION of Discord's own ledger (tools/premium.py), so it is on
 # the user erasure list too: deleting the local copy loses nothing, a resync
 # restores it if the entitlement is still actually granted.
-EXPORT_VERSION = 12
+# v13 added `premium_grants`: this user's OWN owner-gifted Pack Confort rows
+# (product, reason, who granted it and when, the validity window, who revoked
+# it and when) - WHERE user_id, same carve-out as premium_entitlements: a
+# gifted Yasuho+ row belongs to a GUILD and carries user_id NULL, so it never
+# appears here. UNLIKE premium_entitlements this is NOT a projection of
+# anything - it is the owner's own audit trail of a gift that Discord never
+# saw - and that is exactly why it is on NO user erasure list, narrow or wide:
+# deleting it would erase the record of what the owner did, not just what the
+# user holds. It ships here, exported but never erasable, the same posture
+# `blbot`/`dashboard_audit` already hold for the same reason (the record
+# belongs to whoever wrote it, not to its subject).
+EXPORT_VERSION = 13
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -554,6 +565,20 @@ async def collect_user_export(pool, user_id):
         "WHERE user_id = $1 ORDER BY entitlement_id",
         user_id,
     )
+    # This user's OWN owner-gifted rows (tools/premium.py): which product, the
+    # reason text, who granted it and when, the validity window, and who
+    # revoked it and when (both NULL for a still-active or permanent grant).
+    # WHERE user_id only - a gifted Yasuho+ row belongs to a GUILD, not to any
+    # one member, and carries user_id NULL. `granted_by`/`revoked_by` are the
+    # OWNER's id, not this user's - stated anyway, since the user is entitled
+    # to know who acted on their own account, same as `moderation_cases_as_
+    # target` states the acting moderator's id.
+    premium_grants = await pool.fetch(
+        "SELECT product, reason, granted_by, granted_at, expires_at, "
+        "revoked_at, revoked_by FROM premium_grants "
+        "WHERE user_id = $1 ORDER BY id",
+        user_id,
+    )
 
     if social_profile is not None:
         social_profile = dict(social_profile)
@@ -619,6 +644,7 @@ async def collect_user_export(pool, user_id):
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),
         "premium_entitlements": _records(premium_entitlements),
+        "premium_grants": _records(premium_grants),
     }
     return data, avatar_rows
 

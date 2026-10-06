@@ -505,7 +505,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 12
+    assert data["export_version"] == privacy.EXPORT_VERSION == 13
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -731,6 +731,68 @@ async def test_the_export_carries_the_monthly_season_podiums():
     # This user's placements, never the rest of the podium: the other two names
     # on that month belong to them, not to the requester.
     assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_carries_the_users_own_premium_grants():
+    """The owner's audit trail, from this user's side: WHERE user_id only."""
+
+    class _GrantPool(_ExportPool):
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            if "FROM premium_grants" in query:
+                return [
+                    {
+                        "product": "comfort_pack",
+                        "reason": "birthday gift",
+                        "granted_by": 1,
+                        "granted_at": datetime.datetime(
+                            2026, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        "expires_at": None,
+                        "revoked_at": None,
+                        "revoked_by": None,
+                    }
+                ]
+            return []
+
+    pool = _GrantPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["premium_grants"] == [
+        {
+            "product": "comfort_pack",
+            "reason": "birthday gift",
+            "granted_by": 1,
+            "granted_at": datetime.datetime(
+                2026, 1, 1, tzinfo=datetime.timezone.utc
+            ),
+            "expires_at": None,
+            "revoked_at": None,
+            "revoked_by": None,
+        }
+    ]
+    query = next(q for q in pool.queries if "FROM premium_grants" in q)
+    assert "WHERE user_id = $1" in query
+
+
+def test_premium_grants_are_exported_and_reachable_by_no_erasure_path():
+    """The same posture blbot/dashboard_audit hold: this is the OWNER's record
+    of a gift, not the recipient's profile data, so no user erasure path - the
+    narrow one or the wide one - may ever delete from it."""
+    narrow = {table for table, _query in privacy.PROFILE_DELETE_QUERIES}
+    wide = {table for table, _query in privacy.USER_DELETE_QUERIES}
+    assert "premium_grants" not in narrow
+    assert "premium_grants" not in wide
+
+    source = inspect.getsource(privacy.collect_user_export)
+    assert "FROM premium_grants" in source
+
+    deleters = set()
+    for path in _repo_python_files():
+        source = open(path, encoding="utf-8").read()
+        if re.search(r"DELETE FROM\s+premium_grants\s+WHERE\s+user_id", source):
+            deleters.add(os.path.relpath(path, _REPO_ROOT).replace(os.sep, "/"))
+    assert deleters == set()
 
 
 async def test_the_export_states_the_bot_wide_blacklist_as_a_fact():
@@ -1100,7 +1162,7 @@ async def test_the_export_carries_the_actors_own_journal_entries_only():
     pool = _AuditPool()
     data, _avatars = await privacy.collect_user_export(pool, 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 12
+    assert data["export_version"] == privacy.EXPORT_VERSION == 13
     assert data["dashboard_audit"] == [
         {
             "guild_id": 7,

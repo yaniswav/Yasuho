@@ -26,11 +26,24 @@ why tools/retention.py purges a departed guild's rows and tools/privacy.py
 exports/erases a user's rows: a resync restores whatever is still genuinely
 granted, so nothing is lost by deleting the local copy.
 
-NO SKU CONFIGURED = NOBODY IS PREMIUM. If ``[Premium] yasuho_plus_sku`` /
-``comfort_pack_sku`` are absent (or invalid) in bot.ini,
-:func:`EntitlementCache.is_guild_premium` / ``.has_comfort_pack`` always
-return False and every resolver call returns the FREE tier - today's
-behaviour, preserved as the default on every fresh checkout.
+NO SKU CONFIGURED = NOBODY IS PREMIUM, UNLESS THE OWNER GIFTED IT. If
+``[Premium] yasuho_plus_sku`` / ``comfort_pack_sku`` are absent (or invalid)
+in bot.ini, :func:`EntitlementCache.is_guild_premium` / ``.has_comfort_pack``
+never see a Discord-sourced grant - but an OWNER GRANT (``premium_grants``,
+below) still counts. That is deliberate: the owner can gift a friend's
+server or a user before any SKU exists, which is exactly the lot M3a+ adds.
+
+OWNER GRANTS (M3a+). ``premium_grants`` is a second, INDEPENDENT source of
+the same benefit, written only by the bot owner's ``?premium`` commands
+(cogs/system/premium.py) - never by Discord, never by a resync. It is our
+own audit trail (who granted what, to whom, when, until when, who revoked
+it), not a projection of anything: Discord's test-entitlement API
+(``create_entitlement``) is for development only and must not be used to
+gift a real benefit, so a gift lives here instead. :func:`is_grant_active`
+is the ONE place that rule is written (no grace: it is ours to end, not a
+missed webhook to forgive). :class:`EntitlementCache` merges both sources -
+``is_guild_premium``/``has_comfort_pack`` are true if EITHER an active
+Discord entitlement (for the configured SKU) OR an active grant says so.
 
 WHY THE FREE CONSTANTS ARE RESTATED HERE RATHER THAN IMPORTED. Every FREE
 value below except ``FREE_MAX_HUBS`` mirrors a constant that lives in a cog
@@ -92,6 +105,39 @@ def _read_sku_id(option, *, loader=None):
 YASUHO_PLUS_SKU = _read_sku_id("yasuho_plus_sku")
 # User durable-purchase SKU ("Pack Confort"). See USER_PREMIUM below.
 COMFORT_PACK_SKU = _read_sku_id("comfort_pack_sku")
+
+
+# ---------------------------------------------------------------------------
+# Owner grant products - the two products ?premium can gift, independent of
+# whether their SKU is configured. The scope each one commercially belongs to
+# is fixed by the catalog above (Yasuho+ is a guild subscription, Pack Confort
+# a user purchase) and is enforced by PRODUCT_SCOPE / validate_grant_scope
+# below, not left to the caller to get right.
+# ---------------------------------------------------------------------------
+PRODUCT_YASUHO_PLUS = "yasuho_plus"
+PRODUCT_COMFORT_PACK = "comfort_pack"
+PRODUCTS = (PRODUCT_YASUHO_PLUS, PRODUCT_COMFORT_PACK)
+PRODUCT_SCOPE = {
+    PRODUCT_YASUHO_PLUS: "guild",
+    PRODUCT_COMFORT_PACK: "user",
+}
+
+
+def validate_grant_scope(product, scope_type):
+    """Raise ``ValueError`` unless ``scope_type`` is the one ``product`` sells as.
+
+    The same rule schema.sql's ``premium_grants_product_scope_valid`` CHECK
+    enforces at the database level - this is the Python-side half, so a bad
+    call fails with a readable message before it ever reaches a query, and a
+    unit test can exercise the rule without a pool.
+    """
+    if product not in PRODUCT_SCOPE:
+        raise ValueError(f"unknown premium grant product: {product!r}")
+    expected = PRODUCT_SCOPE[product]
+    if scope_type != expected:
+        raise ValueError(
+            f"{product!r} is a {expected}-scoped product, not {scope_type!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -439,86 +485,433 @@ async def load_active(pool):
 
 
 # ---------------------------------------------------------------------------
+# Owner grants - ``premium_grants`` (schema.sql). OUR OWN audit trail, never
+# Discord's: no entitlement_id, no sku_id, no resync. See the module
+# docstring's "OWNER GRANTS" paragraph for why this exists alongside the
+# projection above rather than inside it.
+# ---------------------------------------------------------------------------
+
+
+def is_grant_active(grant, *, now=None):
+    """Whether ``grant`` currently grants its benefit.
+
+    Deliberately NOT :func:`is_active`'s rule: a grant is ours to end, so
+    there is no 48h technical grace for "we have not re-synced yet" - that
+    grace exists only because Discord's webhook delivery can be missed. A
+    grant is active exactly when it has not been revoked and (it has no
+    expiry, or that expiry has not passed yet).
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    if _get(grant, "revoked_at") is not None:
+        return False
+    expires_at = _get(grant, "expires_at")
+    if expires_at is None:
+        return True
+    return now < expires_at
+
+
+_CREATE_GRANT = """
+INSERT INTO premium_grants
+    (product, scope_type, guild_id, user_id, reason, granted_by, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id
+"""
+
+
+async def create_grant(
+    pool,
+    *,
+    product,
+    scope_type,
+    granted_by,
+    guild_id=None,
+    user_id=None,
+    reason=None,
+    expires_at=None,
+):
+    """Insert one owner grant and return its new id.
+
+    Raises ``ValueError`` (via :func:`validate_grant_scope`) before touching
+    the database if ``product``/``scope_type`` disagree with the catalog, or
+    if the scope's own id is missing - the same shape schema.sql's
+    ``premium_grants_scope_matches_ids`` CHECK enforces, surfaced early with a
+    readable message instead of a constraint-violation traceback.
+    """
+    validate_grant_scope(product, scope_type)
+    if scope_type == "guild":
+        if guild_id is None:
+            raise ValueError("a guild-scoped grant needs a guild_id")
+        user_id = None
+    else:
+        if user_id is None:
+            raise ValueError("a user-scoped grant needs a user_id")
+        guild_id = None
+    row = await pool.fetchrow(
+        _CREATE_GRANT,
+        product,
+        scope_type,
+        guild_id,
+        user_id,
+        reason,
+        int(granted_by),
+        expires_at,
+    )
+    return _get(row, "id")
+
+
+async def revoke_grant(pool, grant_id, *, revoked_by):
+    """Mark one grant revoked. Never deletes the row - it is the audit trail.
+
+    A no-op (returns ``False``) on an already-revoked or non-existent id: the
+    ``revoked_at IS NULL`` guard means a second revoke cannot overwrite who
+    revoked it, or when, with a later call's values.
+    """
+    status = await pool.execute(
+        "UPDATE premium_grants SET revoked_at = now(), revoked_by = $2 "
+        "WHERE id = $1 AND revoked_at IS NULL",
+        int(grant_id),
+        int(revoked_by),
+    )
+    return affected_rows(status) > 0
+
+
+def _grant_filter(*, scope_type=None, guild_id=None, user_id=None, active_only=True):
+    """Build the WHERE clause + args shared by :func:`list_grants` callers."""
+    clauses = []
+    args = []
+    if scope_type is not None:
+        args.append(scope_type)
+        clauses.append(f"scope_type = ${len(args)}")
+    if guild_id is not None:
+        args.append(int(guild_id))
+        clauses.append(f"guild_id = ${len(args)}")
+    if user_id is not None:
+        args.append(int(user_id))
+        clauses.append(f"user_id = ${len(args)}")
+    if active_only:
+        clauses.append(
+            "revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now())"
+        )
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
+    return where, args
+
+
+async def list_grants(
+    pool, *, scope_type=None, guild_id=None, user_id=None, active_only=True
+):
+    """List grants, active-only by default, newest first.
+
+    Filters are AND-combined: pass ``guild_id``/``user_id`` to see one scope's
+    grants, or neither for every grant on record (``?premium list`` with no
+    argument). ``active_only=False`` is the audit view (``?premium list ...``
+    is always active-only in M3a+; a future admin surface can widen it).
+    """
+    where, args = _grant_filter(
+        scope_type=scope_type,
+        guild_id=guild_id,
+        user_id=user_id,
+        active_only=active_only,
+    )
+    return await pool.fetch(
+        "SELECT id, product, scope_type, guild_id, user_id, reason, "
+        "granted_by, granted_at, expires_at, revoked_at, revoked_by "
+        f"FROM premium_grants{where} ORDER BY granted_at DESC",
+        *args,
+    )
+
+
+async def load_active_grants(pool):
+    """Every non-revoked grant row, for :meth:`EntitlementCache.load`.
+
+    "Non-revoked" only, same split as :func:`load_active`: the expiry half of
+    :func:`is_grant_active` is applied in Python at cache-build time.
+    """
+    return await pool.fetch(
+        "SELECT id, product, scope_type, guild_id, user_id, reason, "
+        "granted_by, granted_at, expires_at, revoked_at, revoked_by "
+        "FROM premium_grants WHERE revoked_at IS NULL"
+    )
+
+
+# ---------------------------------------------------------------------------
 # In-memory cache + resolver
 # ---------------------------------------------------------------------------
 
 
-class EntitlementCache:
-    """O(1) guild_id/user_id -> active SKU set, and the limits resolver on top.
+@dataclasses.dataclass(frozen=True)
+class _EntitlementSnapshot:
+    """The minimal ``premium_entitlements`` fields :func:`is_active` needs.
 
-    M3a scope: this class provides ``load()`` and the read API only. WIRING an
-    instance onto the bot (core.py setup_hook, the boot resync, the periodic
-    reconciliation, the ENTITLEMENT_* gateway handlers) is M3b - the same split
-    the module docstring states. :data:`premium_limits` below is a ready
-    module-level instance so callers (and M3b's wiring) have one to reach for
-    without constructing their own.
+    Kept as data, NOT pre-collapsed into a boolean, so the ACTIVE rule is
+    evaluated at LOOKUP time against the current clock rather than once at
+    load time - see :class:`EntitlementCache`'s docstring for why that
+    distinction is the whole point. ``deleted`` is never carried here: both
+    :func:`load_active` (the query) and :meth:`EntitlementCache.load_rows`
+    (defensively, for a caller that hands rows straight in) already drop a
+    deleted row before it reaches this snapshot, so it is always ``False``
+    and :func:`_get`'s default for the missing attribute is exactly that.
+    """
+
+    entitlement_id: int
+    sku_id: int
+    ends_at: datetime.datetime | None
+    last_synced_at: datetime.datetime | None
+
+
+@dataclasses.dataclass(frozen=True)
+class _GrantSnapshot:
+    """The minimal ``premium_grants`` fields :func:`is_grant_active` needs.
+
+    Same reasoning as :class:`_EntitlementSnapshot`: ``expires_at`` is kept
+    as data so a grant's own expiry is re-checked at lookup time. ``revoked_at``
+    is never carried here for the same reason ``deleted`` is absent above -
+    every row that reaches this snapshot (:func:`load_active_grants`'s query,
+    or :meth:`EntitlementCache.load_grant_rows`'s own defensive filter) is
+    already known not-revoked.
+    """
+
+    grant_id: int
+    product: str
+    expires_at: datetime.datetime | None
+
+
+class EntitlementCache:
+    """O(1)-per-scope guild_id/user_id -> active benefit, and the limits
+    resolver on top.
+
+    Merges TWO independent sources, per the module docstring's "OWNER GRANTS"
+    paragraph: Discord entitlements (``_guild_skus``/``_user_skus``, keyed by
+    guild/user id, require a configured SKU) and owner grants
+    (``_guild_grants``/``_user_grants``, keyed the same way, work with no SKU
+    configured at all). ``is_guild_premium``/``has_comfort_pack`` are true if
+    EITHER source says so.
+
+    LIVE EXPIRY, NOT A SNAPSHOT TAKEN AT LOAD TIME. Each map holds a short
+    list of :class:`_EntitlementSnapshot`/:class:`_GrantSnapshot` per id - the
+    row's own ``ends_at``/``expires_at`` and (for entitlements) the
+    ``last_synced_at`` the 48h grace needs - rather than a precomputed
+    boolean or a bare sku/product set. ``is_guild_premium``/``has_comfort_pack``
+    re-run :func:`is_active`/:func:`is_grant_active` against ``now`` on every
+    call, so a benefit that was active at the last :meth:`load` correctly
+    stops resolving premium the instant its own ``ends_at``/``expires_at``
+    (plus grace, for an entitlement) passes - WITHOUT waiting for the next
+    reload. An earlier version of this cache filtered by :func:`is_active` at
+    LOAD time and kept only the bare id, which silently froze that one-time
+    verdict until the next boot: a 30-day gift still read as premium on day
+    45 if the bot had not restarted since. See
+    tests/tools/test_premium.py's "live expiry, no reload" section for the
+    regression test, and its negative control.
+
+    M3a wired ``load()``/the read API only; M3a+ (this lot) attaches an
+    instance to the bot (core.py ``setup_hook``) and adds the grants half. The
+    periodic reconciliation and the ENTITLEMENT_* gateway handlers remain M3b.
+    :data:`premium_limits` below is a ready module-level instance for any
+    caller that does not want to construct its own.
 
     SCALE STORY (1000+ guilds). Each active guild/user entry is one dict key
-    (an int) mapping to a small set of ints (today at most one SKU per scope,
-    since the catalog sells exactly one guild subscription and one user
-    purchase) - a few dozen bytes per premium scope, not per guild: a free
-    guild or user occupies no entry at all (``.get(id, ())`` on a miss is the
-    whole cost). At 1000+ guilds with every one of them premium that is still
-    only on the order of tens of kilobytes, and the realistic case (a minority
-    paying) is smaller still. ``for_guild``/``for_user`` do a bare dict lookup
-    and a set membership test - no await, no lock, no query - so the hot paths
-    named in the M3a brief (playlist/favourite/reminder/ticket/menu/hub caps)
-    pay nothing beyond what they already pay to read today's module-level
-    constant.
+    (an int) mapping to a short list (today at most one SKU/product per
+    scope, since the catalog sells exactly one guild subscription and one
+    user purchase, so one small frozen dataclass instance) - a few dozen
+    bytes per premium scope, not per guild: a free guild or user occupies no
+    entry in ANY of the four maps (every lookup below is a plain
+    ``.get(id, ())`` on a miss). At 1000+ guilds with every one of them
+    premium that is still only on the order of tens of kilobytes, doubled at
+    most by adding the grants maps, and the realistic case (a minority
+    paying, and owner grants smaller still) is far lighter.
+    ``for_guild``/``for_user`` do a handful of dict lookups, a short list scan
+    and a handful of datetime comparisons - no await, no lock, no query - so
+    the hot paths named in the M3a brief (playlist/favourite/reminder/ticket/
+    menu/hub caps) pay nothing beyond what they already pay to read today's
+    module-level constant.
     """
 
     def __init__(self):
         self._guild_skus = {}
         self._user_skus = {}
+        self._guild_grants = {}
+        self._user_grants = {}
 
-    def load_rows(self, rows, *, now=None):
-        """Rebuild both maps from DB rows (or test doubles), applying is_active."""
-        now = now or datetime.datetime.now(datetime.timezone.utc)
+    def load_rows(self, rows):
+        """Rebuild the two ENTITLEMENT maps from DB rows.
+
+        Every non-deleted row is kept as a :class:`_EntitlementSnapshot` -
+        NOT filtered down to "active right now", on purpose: filtering here
+        would bake today's verdict into the map exactly like the bug this
+        class's docstring describes, just with the filter moved one line up.
+        A row's own ``deleted`` IS still checked (defensively - the
+        :func:`load_active` query this normally runs behind already excludes
+        it), because a deleted entitlement must never resolve active at any
+        future ``now``, however it got here.
+        """
         guild_skus = {}
         user_skus = {}
         for row in rows:
-            if not is_active(row, now=now):
+            if _get(row, "deleted", False):
                 continue
             sku_id = _get(row, "sku_id")
             if sku_id is None:
                 continue
-            sku_id = int(sku_id)
+            snapshot = _EntitlementSnapshot(
+                entitlement_id=_get(row, "entitlement_id"),
+                sku_id=int(sku_id),
+                ends_at=_get(row, "ends_at"),
+                last_synced_at=_get(row, "last_synced_at"),
+            )
             scope_type = _get(row, "scope_type")
             if scope_type == "guild":
                 guild_id = _get(row, "guild_id")
                 if guild_id is None:
                     continue
-                guild_skus.setdefault(int(guild_id), set()).add(sku_id)
+                guild_skus.setdefault(int(guild_id), []).append(snapshot)
             elif scope_type == "user":
                 user_id = _get(row, "user_id")
                 if user_id is None:
                     continue
-                user_skus.setdefault(int(user_id), set()).add(sku_id)
+                user_skus.setdefault(int(user_id), []).append(snapshot)
         self._guild_skus = guild_skus
         self._user_skus = user_skus
 
+    def load_grant_rows(self, rows):
+        """Rebuild the two GRANT maps from DB rows.
+
+        Same "keep the data, not a verdict" posture as :meth:`load_rows`:
+        every non-revoked row becomes a :class:`_GrantSnapshot`, and its own
+        ``expires_at`` is re-checked at lookup time rather than once here.
+        """
+        guild_grants = {}
+        user_grants = {}
+        for row in rows:
+            if _get(row, "revoked_at") is not None:
+                continue
+            product = _get(row, "product")
+            if product is None:
+                continue
+            snapshot = _GrantSnapshot(
+                grant_id=_get(row, "id"),
+                product=product,
+                expires_at=_get(row, "expires_at"),
+            )
+            scope_type = _get(row, "scope_type")
+            if scope_type == "guild":
+                guild_id = _get(row, "guild_id")
+                if guild_id is None:
+                    continue
+                guild_grants.setdefault(int(guild_id), []).append(snapshot)
+            elif scope_type == "user":
+                user_id = _get(row, "user_id")
+                if user_id is None:
+                    continue
+                user_grants.setdefault(int(user_id), []).append(snapshot)
+        self._guild_grants = guild_grants
+        self._user_grants = user_grants
+
     async def load(self, pool):
-        """Reload both maps from the database (boot; M3b also calls this on resync)."""
-        rows = await load_active(pool)
-        self.load_rows(rows)
+        """Reload all four maps from the database (boot; M3b also calls this
+        on resync). A caller that wants FREE-on-failure wraps this itself
+        (see core.py setup_hook) - this method raises straight through, so a
+        partial reload can never be mistaken for a successful empty one."""
+        entitlement_rows = await load_active(pool)
+        grant_rows = await load_active_grants(pool)
+        self.load_rows(entitlement_rows)
+        self.load_grant_rows(grant_rows)
 
-    def is_guild_premium(self, guild_id):
-        if YASUHO_PLUS_SKU is None:
-            return False
-        return YASUHO_PLUS_SKU in self._guild_skus.get(int(guild_id), ())
+    def is_guild_premium(self, guild_id, *, now=None):
+        """Whether guild ``guild_id`` currently has Yasuho+, evaluated against
+        ``now`` (defaults to the real current time, like :func:`is_active`'s
+        own default) - a fresh verdict on every call, never a cached one."""
+        guild_id = int(guild_id)
+        if YASUHO_PLUS_SKU is not None:
+            for snapshot in self._guild_skus.get(guild_id, ()):
+                if snapshot.sku_id == YASUHO_PLUS_SKU and is_active(
+                    snapshot, now=now
+                ):
+                    return True
+        for snapshot in self._guild_grants.get(guild_id, ()):
+            if snapshot.product == PRODUCT_YASUHO_PLUS and is_grant_active(
+                snapshot, now=now
+            ):
+                return True
+        return False
 
-    def has_comfort_pack(self, user_id):
-        if COMFORT_PACK_SKU is None:
-            return False
-        return COMFORT_PACK_SKU in self._user_skus.get(int(user_id), ())
+    def has_comfort_pack(self, user_id, *, now=None):
+        """Whether user ``user_id`` currently has the Pack Confort - same
+        fresh-verdict-per-call posture as :meth:`is_guild_premium`."""
+        user_id = int(user_id)
+        if COMFORT_PACK_SKU is not None:
+            for snapshot in self._user_skus.get(user_id, ()):
+                if snapshot.sku_id == COMFORT_PACK_SKU and is_active(
+                    snapshot, now=now
+                ):
+                    return True
+        for snapshot in self._user_grants.get(user_id, ()):
+            if snapshot.product == PRODUCT_COMFORT_PACK and is_grant_active(
+                snapshot, now=now
+            ):
+                return True
+        return False
 
-    def for_guild(self, guild_id):
+    def for_guild(self, guild_id, *, now=None):
         """The effective GuildLimits for this guild: GUILD_PREMIUM or GUILD_FREE."""
-        return GUILD_PREMIUM if self.is_guild_premium(guild_id) else GUILD_FREE
+        return (
+            GUILD_PREMIUM if self.is_guild_premium(guild_id, now=now) else GUILD_FREE
+        )
 
-    def for_user(self, user_id):
+    def for_user(self, user_id, *, now=None):
         """The effective UserLimits for this user: USER_PREMIUM or USER_FREE."""
-        return USER_PREMIUM if self.has_comfort_pack(user_id) else USER_FREE
+        return USER_PREMIUM if self.has_comfort_pack(user_id, now=now) else USER_FREE
+
+    async def refresh_grant_scope(self, pool, scope_type, *, guild_id=None, user_id=None):
+        """Re-read ONE scope's active grants from the database and update the
+        matching map in place.
+
+        Used by ``?premium grant``/``?premium revoke`` (cogs/system/premium.py)
+        AFTER their write has already committed, never before - a re-read
+        rather than an in-place add/discard, so a grant/revoke and a
+        concurrent full :meth:`load` can never disagree about what is in the
+        database for this one scope, and a double-grant or an already-revoked
+        grant resolves itself from the same source of truth instead of having
+        its own special case here. An empty result pops the scope entirely
+        (same "absence is the free answer" rule :meth:`load_grant_rows`
+        already follows), rather than leaving a stale non-empty entry behind.
+        ``list_grants(..., active_only=True)`` filters by expiry AT QUERY
+        TIME, same as every other read here - the snapshots this stores are
+        still re-checked against ``now`` on every future lookup, so a grant
+        that expires later with no further write still turns itself off.
+        """
+        if scope_type == "guild":
+            rows = await list_grants(
+                pool, scope_type="guild", guild_id=guild_id, active_only=True
+            )
+            snapshots = [
+                _GrantSnapshot(
+                    grant_id=_get(row, "id"),
+                    product=_get(row, "product"),
+                    expires_at=_get(row, "expires_at"),
+                )
+                for row in rows
+            ]
+            if snapshots:
+                self._guild_grants[int(guild_id)] = snapshots
+            else:
+                self._guild_grants.pop(int(guild_id), None)
+        elif scope_type == "user":
+            rows = await list_grants(
+                pool, scope_type="user", user_id=user_id, active_only=True
+            )
+            snapshots = [
+                _GrantSnapshot(
+                    grant_id=_get(row, "id"),
+                    product=_get(row, "product"),
+                    expires_at=_get(row, "expires_at"),
+                )
+                for row in rows
+            ]
+            if snapshots:
+                self._user_grants[int(user_id)] = snapshots
+            else:
+                self._user_grants.pop(int(user_id), None)
+        else:
+            raise ValueError(f"unknown scope_type: {scope_type!r}")
 
 
 # Ready-to-use default instance. M3b decides final ownership/wiring (likely
