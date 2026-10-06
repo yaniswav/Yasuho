@@ -99,7 +99,15 @@ CATEGORIES = [
         "🧰",
         "Tools & Info",
         N_("Server info, polls, translations and handy utilities."),
-        ["Info", "Meta", "Utility", "Extras", "SearchWeb", "ServerStats"],
+        [
+            "Info",
+            "Meta",
+            "Utility",
+            "Extras",
+            "SearchWeb",
+            "ServerStats",
+            "PremiumInfo",
+        ],
     ),
     (
         "🛡️",

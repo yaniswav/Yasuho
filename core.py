@@ -258,7 +258,7 @@ class Yasuho(commands.Bot):
         # per-id writers; this is a single object with its own four internal
         # maps (see EntitlementCache) AND, since M3b, its own internal lock
         # (EntitlementCache.__init__'s ``_lock``) rather than this bot's
-        # eager_cache_lock - the boot load, the owner's ?premium commands,
+        # eager_cache_lock - the boot load, the owner's ?premiumadmin commands,
         # the ENTITLEMENT_* gateway handlers and the periodic reconciliation
         # loop (cogs/system/premium.py) all write to it now, and that lock is
         # what serialises them against each other.

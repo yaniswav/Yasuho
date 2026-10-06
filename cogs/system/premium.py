@@ -1,9 +1,10 @@
-"""``?premium`` owner controls, the ENTITLEMENT_* gateway handlers and the
-periodic reconciliation loop.
+"""``?premiumadmin`` owner controls, the ENTITLEMENT_* gateway handlers and
+the periodic reconciliation loop.
 
 M3a+ of the monetisation plan (.claude/plans/monetisation/4-plan-retenu.md)
-added the owner-only ``?premium`` surface: the owner asked, in as many
-words, to be able to grant premium to a friend's server or to a user
+added the owner-only ``?premiumadmin`` surface (named ``?premium`` at the
+time - see the M3c paragraph below for why it moved): the owner asked, in as
+many words, to be able to grant premium to a friend's server or to a user
 themself - before any store is open and whether or not a SKU is ever
 configured. It writes ``premium_grants`` (tools/premium.py) and then the
 bot's live cache, in that order, so a grant or a revoke is never visible in
@@ -28,7 +29,48 @@ needing a restart:
   (:meth:`tools.premium.EntitlementCache.load`) on a complete pass. See
   :meth:`Premium._reconcile_once`.
 
-Prefix-only by design for the ``?premium`` command group, with no
+M3c (this lot) adds three things on top:
+
+* ``?premiumadmin testbuy server|user`` / ``?premiumadmin testclear`` - the
+  owner's own end-to-end round trip through Discord's TEST-entitlement
+  surface (``Client.create_entitlement`` / ``Entitlement.delete``), still
+  owner-only and still prefix-only. Deliberately neither writes
+  ``premium_entitlements`` itself: ``create_entitlement`` fires the exact
+  same ``ENTITLEMENT_CREATE`` gateway event a real purchase would, so the M3b
+  listeners above do the actual write - these two commands only ever ask
+  Discord to create or delete a test entitlement, which is what makes them a
+  genuine test of the WHOLE purchase -> event -> cache -> ``/premium``
+  status path rather than a shortcut around it. See
+  :meth:`Premium.premium_testbuy_server`/:meth:`premium_testbuy_user`/
+  :meth:`premium_testclear`.
+* a "PREMIUM-" prefixed INFO line for every premium state change (an
+  ENTITLEMENT_* event landing, a complete reconciliation pass, an owner
+  grant/revoke/testbuy/testclear) - one greppable technical audit trail, no
+  payment data, no more personal data than the ids already named above. See
+  :meth:`Premium._handle_entitlement_event` (now logging which of the three
+  events it was), the end of :meth:`Premium._reconcile_once`, and the end of
+  each grant/revoke/testbuy/testclear command below.
+* the owner-only group itself is RENAMED from ``?premium`` to
+  ``?premiumadmin`` (every leaf below: grant, revoke, list, check, testbuy,
+  testclear), freeing the ``premium`` token for the public entry point - see
+  the next paragraph. This is purely a rename: the gate shape (
+  ``@commands.is_owner()`` on every leaf, ``cog_check`` on top) and every
+  leaf's behaviour are unchanged.
+
+The public, no-gate entry point this lot also adds - ``/premium`` (a hybrid
+command, so ``?premium`` works too) - lives in its own cog,
+cogs/system/premium_panel.py, precisely so it is never subject to this cog's
+owner-only ``cog_check``. It could not be named that before this lot's own
+rename above: the token was already this group's, and a hybrid or app
+command sharing it would have collided in
+tests/test_command_tree_hygiene.py's ROOT namespace (verified directly
+against that guard - it conflates every prefix-root AND app-command-root
+name into one bucket, a real non-issue for two separate Discord registries
+but exactly the guard's job to catch for anything else). Renaming THIS
+group out of the way, rather than carving out an exemption in that guard,
+keeps the guard's promise intact for every other command.
+
+Prefix-only by design for the ``?premiumadmin`` command group, with no
 app_command anywhere: an owner-only control surface has no business in the
 public slash picker, and a hybrid command's subcommands would need their
 OWN checks on both invocation paths (see
@@ -56,7 +98,7 @@ log = logging.getLogger(__name__)
 
 NO_MENTIONS = discord.AllowedMentions.none()
 
-# The two scope keywords ?premium list/check accept, mapped to
+# The two scope keywords ?premiumadmin list/check accept, mapped to
 # tools.premium's scope_type strings.
 _SCOPE_TYPE = {"server": "guild", "user": "user"}
 
@@ -107,7 +149,7 @@ def _embed(title):
 # is rejected by the API (discord.HTTPException on send), not by
 # discord.Embed itself at construction time. `reason` is free text the owner
 # types (bounded only by a Discord message's own ~2000-char limit) and
-# `?premium list`/`?premium check` otherwise join an unbounded NUMBER of rows
+# `?premiumadmin list`/`?premiumadmin check` otherwise join an unbounded NUMBER of rows
 # into one string, so either a long reason or enough active rows can cross
 # either budget on their own. Both constants below leave headroom under the
 # real ceiling rather than target it exactly.
@@ -126,7 +168,7 @@ def _clip_reason(reason):
 def _join_within_budget(lines, budget):
     """Join ``lines`` with newlines, stopping before the result would cross
     ``budget`` characters and naming how many were left out instead - the
-    same "+N more" shape ``?premium list``'s row-count cap already uses, so
+    same "+N more" shape ``?premiumadmin list``'s row-count cap already uses, so
     an overlong field value never reaches discord.py's HTTP call at all."""
     kept = []
     total = 0
@@ -155,7 +197,7 @@ class Premium(commands.Cog):
         # their tasks.loop directly in __init__): tests/cogs/test_premium.py
         # constructs ``Premium(bot)`` directly against a plain stand-in bot
         # (no ``wait_until_ready``, no ``entitlements``) for every one of its
-        # ?premium command tests, never through ``bot.add_cog`` - starting a
+        # ?premiumadmin command tests, never through ``bot.add_cog`` - starting a
         # task eagerly in __init__ would have tried to use attributes that
         # stand-in does not have the moment ANY of those tests constructs the
         # cog. ``cog_load`` is the hook discord.py itself awaits from
@@ -175,7 +217,7 @@ class Premium(commands.Cog):
 
     # -- group ---------------------------------------------------------
 
-    @commands.group(name="premium", hidden=True, invoke_without_command=True)
+    @commands.group(name="premiumadmin", hidden=True, invoke_without_command=True)
     @commands.is_owner()
     async def premium_group(self, ctx):
         await ctx.send_help(ctx.command)
@@ -190,7 +232,7 @@ class Premium(commands.Cog):
     @premium_grant.command(name="server")
     @commands.is_owner()
     async def premium_grant_server(self, ctx, guild_id: int, *, rest: str = ""):
-        """Gift Yasuho+ to a server: ?premium grant server <guild_id> [duration] [reason...]
+        """Gift Yasuho+ to a server: ?premiumadmin grant server <guild_id> [duration] [reason...]
 
         DELIBERATELY allows a guild_id the bot is not currently a member of
         (no ``self.bot.get_guild`` check): the plan's own "gift a friend's
@@ -223,6 +265,14 @@ class Premium(commands.Cog):
         await self.bot.premium.refresh_grant_scope(
             self.bot.db_pool, "guild", guild_id=guild_id
         )
+        log.info(
+            "PREMIUM-GRANT product=%s scope=guild scope_id=%s grant_id=%s "
+            "by=%s",
+            premium.PRODUCT_YASUHO_PLUS,
+            guild_id,
+            grant_id,
+            ctx.author.id,
+        )
         until = format_dt(expires_at) if expires_at else _("permanent")
         await ctx.send(
             _(
@@ -235,7 +285,7 @@ class Premium(commands.Cog):
     @premium_grant.command(name="user")
     @commands.is_owner()
     async def premium_grant_user(self, ctx, user_id: int, *, rest: str = ""):
-        """Gift the Pack Confort to a user: ?premium grant user <user_id> [duration] [reason...]"""
+        """Gift the Pack Confort to a user: ?premiumadmin grant user <user_id> [duration] [reason...]"""
         if user_id <= 0:
             await ctx.send(
                 _("User id must be a positive number, not `{value}`.").format(
@@ -257,6 +307,14 @@ class Premium(commands.Cog):
         await self.bot.premium.refresh_grant_scope(
             self.bot.db_pool, "user", user_id=user_id
         )
+        log.info(
+            "PREMIUM-GRANT product=%s scope=user scope_id=%s grant_id=%s "
+            "by=%s",
+            premium.PRODUCT_COMFORT_PACK,
+            user_id,
+            grant_id,
+            ctx.author.id,
+        )
         until = format_dt(expires_at) if expires_at else _("permanent")
         await ctx.send(
             _(
@@ -271,7 +329,7 @@ class Premium(commands.Cog):
     @premium_group.command(name="revoke")
     @commands.is_owner()
     async def premium_revoke(self, ctx, grant_id: int):
-        """Revoke one grant by id: ?premium revoke <grant_id>"""
+        """Revoke one grant by id: ?premiumadmin revoke <grant_id>"""
         # Looked up BEFORE the revoke, by its own id only - one row, not a
         # filtered list - purely to learn which scope's cache entry needs a
         # refresh after a successful revoke; the revoke itself does not need
@@ -293,15 +351,25 @@ class Premium(commands.Cog):
                 allowed_mentions=NO_MENTIONS,
             )
             return
+        scope_label, scope_id = None, None
         if row is not None:
             if row["scope_type"] == "guild":
+                scope_label, scope_id = "guild", row["guild_id"]
                 await self.bot.premium.refresh_grant_scope(
                     self.bot.db_pool, "guild", guild_id=row["guild_id"]
                 )
             else:
+                scope_label, scope_id = "user", row["user_id"]
                 await self.bot.premium.refresh_grant_scope(
                     self.bot.db_pool, "user", user_id=row["user_id"]
                 )
+        log.info(
+            "PREMIUM-REVOKE grant_id=%s scope=%s scope_id=%s by=%s",
+            grant_id,
+            scope_label,
+            scope_id,
+            ctx.author.id,
+        )
         await ctx.send(
             _("Revoked grant #{grant_id}.").format(grant_id=grant_id),
             allowed_mentions=NO_MENTIONS,
@@ -312,7 +380,7 @@ class Premium(commands.Cog):
     @premium_group.command(name="list")
     @commands.is_owner()
     async def premium_list(self, ctx, scope: str = None, target_id: int = None):
-        """List active grants: ?premium list [server|user <id>]"""
+        """List active grants: ?premiumadmin list [server|user <id>]"""
         if scope is not None and scope not in _SCOPE_TYPE:
             await ctx.send(
                 _("Scope must be `server` or `user`, not `{scope}`.").format(
@@ -365,7 +433,7 @@ class Premium(commands.Cog):
     @premium_group.command(name="check")
     @commands.is_owner()
     async def premium_check(self, ctx, scope: str, target_id: int):
-        """Show effective premium status and why: ?premium check server|user <id>"""
+        """Show effective premium status and why: ?premiumadmin check server|user <id>"""
         if scope not in _SCOPE_TYPE:
             await ctx.send(
                 _("Scope must be `server` or `user`, not `{scope}`.").format(
@@ -443,6 +511,193 @@ class Premium(commands.Cog):
 
         await ctx.send(embed=embed, allowed_mentions=NO_MENTIONS)
 
+    # -- test purchases (M3c) -------------------------------------------
+    #
+    # Deliberately write NOTHING to premium_entitlements themselves.
+    # Client.create_entitlement fires the exact same ENTITLEMENT_CREATE
+    # gateway event a real purchase would (and Entitlement.delete the exact
+    # same ENTITLEMENT_DELETE a refund/revoke would), so the M3b listeners
+    # above do the actual write - these commands only ever ask Discord to
+    # create/delete a TEST entitlement, which is what makes them a genuine
+    # end-to-end test of purchase -> event -> cache -> /premium status
+    # rather than a shortcut that skips the parts worth testing.
+
+    @premium_group.group(name="testbuy", invoke_without_command=True)
+    @commands.is_owner()
+    async def premium_testbuy(self, ctx):
+        await ctx.send_help(ctx.command)
+
+    async def _find_new_test_entitlement(self, sku_id, *, guild_id=None, user_id=None):
+        """Best-effort id of the entitlement :meth:`Client.create_entitlement`
+        just made, for the confirmation message's ``?premiumadmin testclear`` hint.
+
+        ``create_entitlement`` itself returns nothing - Discord's own API
+        gives back no body for it - so this re-lists Discord's own
+        entitlements for the exact sku+scope just created and returns the
+        highest id (newest) TEST entitlement found, or ``None`` if the
+        listing does not show it yet (eventual consistency on Discord's
+        side; the gateway event lands and is handled regardless - the caller
+        falls back to pointing the owner at ``?premiumadmin check``).
+        """
+        kwargs = {
+            "skus": [discord.Object(id=sku_id)],
+            "exclude_deleted": False,
+            "limit": 5,
+        }
+        if guild_id is not None:
+            kwargs["guild"] = discord.Object(id=guild_id)
+        if user_id is not None:
+            kwargs["user"] = discord.Object(id=user_id)
+        best_id = None
+        async for entitlement in self.bot.entitlements(**kwargs):
+            if entitlement.type != discord.EntitlementType.test_mode_purchase:
+                continue
+            if best_id is None or entitlement.id > best_id:
+                best_id = entitlement.id
+        return best_id
+
+    @premium_testbuy.command(name="server")
+    @commands.is_owner()
+    async def premium_testbuy_server(self, ctx, guild_id: int):
+        """Create a TEST Yasuho+ entitlement for a server: ?premiumadmin testbuy server <guild_id>"""
+        sku_id = premium.YASUHO_PLUS_SKU
+        if sku_id is None:
+            await ctx.send(
+                _(
+                    "No `yasuho_plus_sku` is configured in `[Premium]` yet - "
+                    "there is nothing to test-buy."
+                ),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        await self.bot.create_entitlement(
+            discord.Object(id=sku_id),
+            discord.Object(id=guild_id),
+            discord.EntitlementOwnerType.guild,
+        )
+        log.info(
+            "PREMIUM-TESTBUY sku=%s scope=guild scope_id=%s by=%s",
+            sku_id,
+            guild_id,
+            ctx.author.id,
+        )
+        entitlement_id = await self._find_new_test_entitlement(
+            sku_id, guild_id=guild_id
+        )
+        if entitlement_id is None:
+            await ctx.send(
+                _(
+                    "Created a TEST **Yasuho+** entitlement for server "
+                    "`{guild_id}`. Its id was not visible yet when I checked "
+                    "- use `?premiumadmin check server {guild_id}` in a moment."
+                ).format(guild_id=guild_id),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        await ctx.send(
+            _(
+                "Created TEST entitlement #{entitlement_id} (**Yasuho+**) "
+                "for server `{guild_id}`. Clear it later with `?premiumadmin "
+                "testclear {entitlement_id}`."
+            ).format(entitlement_id=entitlement_id, guild_id=guild_id),
+            allowed_mentions=NO_MENTIONS,
+        )
+
+    @premium_testbuy.command(name="user")
+    @commands.is_owner()
+    async def premium_testbuy_user(self, ctx, user_id: int):
+        """Create a TEST Pack Confort entitlement for a user: ?premiumadmin testbuy user <user_id>"""
+        sku_id = premium.COMFORT_PACK_SKU
+        if sku_id is None:
+            await ctx.send(
+                _(
+                    "No `comfort_pack_sku` is configured in `[Premium]` yet "
+                    "- there is nothing to test-buy."
+                ),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        await self.bot.create_entitlement(
+            discord.Object(id=sku_id),
+            discord.Object(id=user_id),
+            discord.EntitlementOwnerType.user,
+        )
+        log.info(
+            "PREMIUM-TESTBUY sku=%s scope=user scope_id=%s by=%s",
+            sku_id,
+            user_id,
+            ctx.author.id,
+        )
+        entitlement_id = await self._find_new_test_entitlement(
+            sku_id, user_id=user_id
+        )
+        if entitlement_id is None:
+            await ctx.send(
+                _(
+                    "Created a TEST **Pack Confort** entitlement for user "
+                    "`{user_id}`. Its id was not visible yet when I checked "
+                    "- use `?premiumadmin check user {user_id}` in a moment."
+                ).format(user_id=user_id),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        await ctx.send(
+            _(
+                "Created TEST entitlement #{entitlement_id} (**Pack "
+                "Confort**) for user `{user_id}`. Clear it later with "
+                "`?premiumadmin testclear {entitlement_id}`."
+            ).format(entitlement_id=entitlement_id, user_id=user_id),
+            allowed_mentions=NO_MENTIONS,
+        )
+
+    @premium_group.command(name="testclear")
+    @commands.is_owner()
+    async def premium_testclear(self, ctx, entitlement_id: int):
+        """Delete a TEST entitlement by id: ?premiumadmin testclear <entitlement_id>"""
+        try:
+            entitlement = await self.bot.fetch_entitlement(entitlement_id)
+        except discord.NotFound:
+            await ctx.send(
+                _("No entitlement #{entitlement_id} exists.").format(
+                    entitlement_id=entitlement_id
+                ),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        except discord.HTTPException:
+            await ctx.send(
+                _(
+                    "Could not fetch entitlement #{entitlement_id} from "
+                    "Discord."
+                ).format(entitlement_id=entitlement_id),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        if entitlement.type != discord.EntitlementType.test_mode_purchase:
+            await ctx.send(
+                _(
+                    "Entitlement #{entitlement_id} is not a TEST entitlement "
+                    "(type `{type}`) - refusing to delete a real purchase."
+                ).format(
+                    entitlement_id=entitlement_id, type=entitlement.type.name
+                ),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
+        await entitlement.delete()
+        log.info(
+            "PREMIUM-TESTCLEAR entitlement=%s by=%s",
+            entitlement_id,
+            ctx.author.id,
+        )
+        await ctx.send(
+            _(
+                "Deleted TEST entitlement #{entitlement_id}. The matching "
+                "ENTITLEMENT_DELETE event will clear it from the cache."
+            ).format(entitlement_id=entitlement_id),
+            allowed_mentions=NO_MENTIONS,
+        )
+
     # -- ENTITLEMENT_* gateway handlers (M3b) ---------------------------
     #
     # Real-time path for a purchase/renewal/cancellation/refund. The
@@ -470,7 +725,7 @@ class Premium(commands.Cog):
             return True
         return int(entitlement_application_id) != int(application_id)
 
-    async def _handle_entitlement_event(self, entitlement, *, force_deleted):
+    async def _handle_entitlement_event(self, entitlement, *, force_deleted, kind):
         """Shared body of all three ``on_entitlement_*`` listeners below.
 
         Writes first (:func:`tools.premium.upsert_entitlement_event`), the
@@ -485,6 +740,10 @@ class Premium(commands.Cog):
         the next reconciliation pass (at most RECONCILE_INTERVAL_HOURS away)
         reloads the whole cache regardless, so this self-heals without
         needing its own retry here.
+
+        ``kind`` is ``"create"``/``"update"``/``"delete"`` - purely for the
+        PREMIUM-EVENT audit line below (M3c); it changes no behaviour, which
+        is still driven entirely by ``force_deleted`` and the payload itself.
         """
         entitlement_id = getattr(entitlement, "id", "?")
         if self._foreign_application(entitlement):
@@ -506,6 +765,17 @@ class Premium(commands.Cog):
                 entitlement_id,
             )
             return
+        # The durable write above is the actual state change; log it as such
+        # regardless of whether the cache refresh below (a purely in-memory,
+        # self-healing step) succeeds.
+        log.info(
+            "PREMIUM-EVENT %s entitlement=%s sku=%s scope=%s scope_id=%s",
+            kind,
+            row["entitlement_id"],
+            row["sku_id"],
+            row["scope_type"],
+            row["guild_id"] if row["scope_type"] == "guild" else row["user_id"],
+        )
         try:
             if row["scope_type"] == "guild":
                 await self.bot.premium.refresh_entitlement_scope(
@@ -524,7 +794,9 @@ class Premium(commands.Cog):
 
     @commands.Cog.listener()
     async def on_entitlement_create(self, entitlement):
-        await self._handle_entitlement_event(entitlement, force_deleted=False)
+        await self._handle_entitlement_event(
+            entitlement, force_deleted=False, kind="create"
+        )
 
     @commands.Cog.listener()
     async def on_entitlement_update(self, entitlement):
@@ -535,7 +807,9 @@ class Premium(commands.Cog):
         # needed here: upsert_entitlement_event already OR-preserves
         # whatever ``deleted`` value the payload carries forever once it is
         # True, so trusting this event's own field is exactly correct.
-        await self._handle_entitlement_event(entitlement, force_deleted=False)
+        await self._handle_entitlement_event(
+            entitlement, force_deleted=False, kind="update"
+        )
 
     @commands.Cog.listener()
     async def on_entitlement_delete(self, entitlement):
@@ -546,7 +820,9 @@ class Premium(commands.Cog):
         # delivery) rather than finding nothing to update and losing the
         # delete - see upsert_entitlement_event's own docstring for why this
         # is deliberately NOT just tools.premium.mark_deleted.
-        await self._handle_entitlement_event(entitlement, force_deleted=True)
+        await self._handle_entitlement_event(
+            entitlement, force_deleted=True, kind="delete"
+        )
 
     # -- periodic reconciliation (M3b) ----------------------------------
 
@@ -629,7 +905,7 @@ class Premium(commands.Cog):
             )
             return
         log.info(
-            "premium: reconciliation complete (seen=%s upserted=%s missing=%s)",
+            "PREMIUM-RECONCILE seen=%s upserted=%s missing=%s",
             result["seen"],
             result["upserted"],
             result["missing"],

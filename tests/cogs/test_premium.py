@@ -1,9 +1,9 @@
-"""``?premium``: the owner-only hand-gifting surface (cogs/system/premium.py).
+"""``?premiumadmin``: the owner-only hand-gifting surface (cogs/system/premium.py).
 
 Prefix-only, no app_command - see the cog's own module docstring for why. These
 tests cover, in order:
 
-1. THE OWNER GATE. Every leaf command (``?premium`` itself and every
+1. THE OWNER GATE. Every leaf command (``?premiumadmin`` itself and every
    subcommand ``walk_commands()`` finds) carries its own ``@commands.is_owner()``
    check, run for real against a fake ``bot.is_owner``. This is the structural
    guard tests/test_hybrid_gating_hygiene.py argues for in prose, applied here
@@ -68,7 +68,7 @@ def _cog(pool, *, owner_id=1):
 
 
 def _all_commands(cog):
-    """``?premium`` itself, plus every subcommand at every depth."""
+    """``?premiumadmin`` itself, plus every subcommand at every depth."""
     group = cog.premium_group
     return [group, *group.walk_commands()]
 
@@ -479,7 +479,7 @@ async def test_list_never_sends_a_description_past_discords_limit(
 # loop. These need a richer bot stand-in than _bot()/_cog() above (an
 # ``application_id``, an ``entitlements()`` async iterator, a
 # ``wait_until_ready``) - kept separate rather than widening _bot() itself,
-# so every pre-existing ?premium command test above stays exactly as
+# so every pre-existing ?premiumadmin command test above stays exactly as
 # untouched by this lot as test_cache_mirror_registry.py's own rule insists
 # a rename/widening like this should have to justify itself for.
 # ---------------------------------------------------------------------------
@@ -862,7 +862,7 @@ async def test_cog_load_starts_the_reconciliation_task(fake_pool):
 
 def test_cog_unload_before_cog_load_is_a_safe_no_op(fake_pool):
     """Direct construction (every test above, and the whole pre-existing
-    ?premium suite) never calls cog_load - cog_unload must still be a no-op
+    ?premiumadmin suite) never calls cog_load - cog_unload must still be a no-op
     rather than raise, since discord.py calls it on extension teardown
     regardless of whether cog_load's task was ever started."""
     cog, _bot = _m3b_cog(fake_pool)

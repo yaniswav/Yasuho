@@ -408,12 +408,12 @@ REGISTRY = (
         DROP,
         KEEP,
         HEALS,
-        "GUILD-scoped active OWNER GRANTS (tools/premium.py: ?premium grant "
+        "GUILD-scoped active OWNER GRANTS (tools/premium.py: ?premiumadmin grant "
         "server). A guild purge deletes this guild's premium_grants rows "
         "(retention.GUILD_DELETE_QUERIES) alongside its entitlements, so this "
         "entry is dropped with them for the identical reason as "
         "premium._guild_skus above. The dashboard cannot write a grant either "
-        "- only the owner's ?premium commands can - so resync has nothing to "
+        "- only the owner's ?premiumadmin commands can - so resync has nothing to "
         "do here, and a rejoin needs no refill (no read-through, no miss to "
         "heal: FREE is correct once the row is gone).",
     ),
@@ -424,7 +424,7 @@ REGISTRY = (
         KEEP,
         KEEP,
         HEALS,
-        "USER-scoped active OWNER GRANTS (?premium grant user). Same call as "
+        "USER-scoped active OWNER GRANTS (?premiumadmin grant user). Same call as "
         "premium._user_skus: keyed by user id, so a guild purge must not "
         "reach it, and the dashboard cannot write one either way.",
     ),

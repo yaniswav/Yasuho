@@ -69,7 +69,7 @@ below) still counts. That is deliberate: the owner can gift a friend's
 server or a user before any SKU exists, which is exactly the lot M3a+ adds.
 
 OWNER GRANTS (M3a+). ``premium_grants`` is a second, INDEPENDENT source of
-the same benefit, written only by the bot owner's ``?premium`` commands
+the same benefit, written only by the bot owner's ``?premiumadmin`` commands
 (cogs/system/premium.py) - never by Discord, never by a resync. It is our
 own audit trail (who granted what, to whom, when, until when, who revoked
 it), not a projection of anything: Discord's test-entitlement API
@@ -144,7 +144,7 @@ COMFORT_PACK_SKU = _read_sku_id("comfort_pack_sku")
 
 
 # ---------------------------------------------------------------------------
-# Owner grant products - the two products ?premium can gift, independent of
+# Owner grant products - the two products ?premiumadmin can gift, independent of
 # whether their SKU is configured. The scope each one commercially belongs to
 # is fixed by the catalog above (Yasuho+ is a guild subscription, Pack Confort
 # a user purchase) and is enforced by PRODUCT_SCOPE / validate_grant_scope
@@ -947,8 +947,8 @@ async def list_grants(
     """List grants, active-only by default, newest first.
 
     Filters are AND-combined: pass ``guild_id``/``user_id`` to see one scope's
-    grants, or neither for every grant on record (``?premium list`` with no
-    argument). ``active_only=False`` is the audit view (``?premium list ...``
+    grants, or neither for every grant on record (``?premiumadmin list`` with no
+    argument). ``active_only=False`` is the audit view (``?premiumadmin list ...``
     is always active-only in M3a+; a future admin surface can widen it).
     """
     where, args = _grant_filter(
@@ -976,6 +976,67 @@ async def load_active_grants(pool):
         "granted_by, granted_at, expires_at, revoked_at, revoked_by "
         "FROM premium_grants WHERE revoked_at IS NULL"
     )
+
+
+# ---------------------------------------------------------------------------
+# Status detail - M3c. EntitlementCache.is_guild_premium/has_comfort_pack
+# collapse "why" into a bare bool; cogs/system/premium_panel.py's /premium
+# needs to SAY why (a Discord purchase vs an owner gift) and, for a purchase,
+# until when - the same thing ``?premiumadmin check`` already shows in an embed,
+# but as plain data a caller can format for itself.
+# ---------------------------------------------------------------------------
+
+
+async def guild_status(pool, guild_id, *, now=None):
+    """Yasuho+ status detail for one guild.
+
+    Returns ``{"active": bool, "source": "purchase"|"gift"|None, "ends_at":
+    datetime|None}``. Mirrors :meth:`EntitlementCache.is_guild_premium`'s own
+    precedence - a configured-SKU Discord entitlement is checked before an
+    owner grant - so the two can never disagree about WHETHER a guild is
+    premium, only this one also says why. ``ends_at`` is the entitlement's
+    ``ends_at`` for a purchase, or the grant's ``expires_at`` for a gift;
+    either is ``None`` for "no end date" (a test-mode entitlement, or a
+    permanent grant).
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    if YASUHO_PLUS_SKU is not None:
+        for row in await load_active_for_guild(pool, guild_id):
+            if int(_get(row, "sku_id")) == YASUHO_PLUS_SKU and is_active(row, now=now):
+                return {
+                    "active": True,
+                    "source": "purchase",
+                    "ends_at": _get(row, "ends_at"),
+                }
+    for grant in await list_grants(pool, scope_type="guild", guild_id=guild_id):
+        if _get(grant, "product") == PRODUCT_YASUHO_PLUS:
+            return {
+                "active": True,
+                "source": "gift",
+                "ends_at": _get(grant, "expires_at"),
+            }
+    return {"active": False, "source": None, "ends_at": None}
+
+
+async def user_status(pool, user_id, *, now=None):
+    """The Pack Confort twin of :func:`guild_status`."""
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    if COMFORT_PACK_SKU is not None:
+        for row in await load_active_for_user(pool, user_id):
+            if int(_get(row, "sku_id")) == COMFORT_PACK_SKU and is_active(row, now=now):
+                return {
+                    "active": True,
+                    "source": "purchase",
+                    "ends_at": _get(row, "ends_at"),
+                }
+    for grant in await list_grants(pool, scope_type="user", user_id=user_id):
+        if _get(grant, "product") == PRODUCT_COMFORT_PACK:
+            return {
+                "active": True,
+                "source": "gift",
+                "ends_at": _get(grant, "expires_at"),
+            }
+    return {"active": False, "source": None, "ends_at": None}
 
 
 # ---------------------------------------------------------------------------
@@ -1053,7 +1114,7 @@ class EntitlementCache:
     handlers' counterpart to :meth:`refresh_grant_scope` - and, with it, this
     cache's own ``_lock``: M3a+ had no concurrent writer worth serialising
     against, but M3b's gateway handlers, its periodic reconciliation loop
-    (:func:`reconcile`) and the owner's ``?premium`` commands can now all
+    (:func:`reconcile`) and the owner's ``?premiumadmin`` commands can now all
     write here at once. ``_lock`` is held across each writer's fetch-then-
     rebind (:meth:`load`) or fetch-then-mutate-one-entry
     (:meth:`refresh_entitlement_scope`/:meth:`refresh_grant_scope`), the same
@@ -1242,7 +1303,7 @@ class EntitlementCache:
         """Re-read ONE scope's active grants from the database and update the
         matching map in place.
 
-        Used by ``?premium grant``/``?premium revoke`` (cogs/system/premium.py)
+        Used by ``?premiumadmin grant``/``?premiumadmin revoke`` (cogs/system/premium.py)
         AFTER their write has already committed, never before - a re-read
         rather than an in-place add/discard, so a grant/revoke and a
         concurrent full :meth:`load` can never disagree about what is in the
