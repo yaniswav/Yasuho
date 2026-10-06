@@ -229,6 +229,39 @@ async def test_on_raw_message_delete_discards_from_the_guild_scoped_cache(fake_p
     assert 42 not in cog._menu_ids
 
 
+async def test_on_raw_bulk_message_delete_discards_every_menu_in_the_batch(fake_pool):
+    # Regression: discord.py fires on_raw_bulk_message_delete (not a run of
+    # individual on_raw_message_delete calls) for a purge. Without this
+    # listener a menu caught in a bulk delete stayed "live" in the cache
+    # forever, corrupting is_menu_archived's count for every other menu of
+    # the same guild.
+    cog = RoleMenus(_bot(fake_pool))
+    cog._menu_ids = {41, 42, 43}
+    cog._guild_menus[10] = {41, 42, 43}
+    payload = types.SimpleNamespace(message_ids={42, 43, 999}, guild_id=10)
+
+    await cog.on_raw_bulk_message_delete(payload)
+
+    assert cog._guild_menus[10] == {41}
+    assert cog._menu_ids == {41}
+    [(method, query, args)] = fake_pool.calls
+    assert method == "execute"
+    assert sorted(args[0]) == [42, 43]
+
+
+async def test_on_raw_bulk_message_delete_is_a_no_op_with_no_known_menus(fake_pool):
+    cog = RoleMenus(_bot(fake_pool))
+    cog._menu_ids = {41}
+    cog._guild_menus[10] = {41}
+    payload = types.SimpleNamespace(message_ids={777, 888}, guild_id=10)
+
+    await cog.on_raw_bulk_message_delete(payload)
+
+    assert cog._guild_menus[10] == {41}
+    assert cog._menu_ids == {41}
+    assert fake_pool.calls == []
+
+
 # ---------------------------------------------------------------------------
 # RoleMenuSelect.callback: archived -> grant refused, removal still allowed
 # ---------------------------------------------------------------------------

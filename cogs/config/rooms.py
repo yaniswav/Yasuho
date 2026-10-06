@@ -282,7 +282,11 @@ class TemporaryRooms(commands.Cog):
                 if "autorooms" not in data:
                     continue
                 configured.add(int(row["guild_id"]))
-                mapping = _hub_mapping(normalize_hubs(data.get("autorooms")))
+                mapping = _hub_mapping(
+                    normalize_hubs(
+                        data.get("autorooms"), max_hubs=premium.GUILD_CEILINGS["max_hubs"]
+                    )
+                )
                 if mapping:
                     index[int(row["guild_id"])] = mapping
 
@@ -475,13 +479,27 @@ class TemporaryRooms(commands.Cog):
             self._hub_index.pop(guild_id, None)
 
     async def _load_hubs(self, guild_id):
-        """Return the guild's normalised hub list from settings."""
+        """Return the guild's normalised hub list from settings.
+
+        ``normalize_hubs`` is capped at the ABSOLUTE safety ceiling
+        (``tools.premium.GUILD_CEILINGS["max_hubs"]``), not the FREE value -
+        the FREE-vs-premium distinction is ``can_add_hub``'s/``classify_hubs``'s
+        job (creation gate and archival), not this read's. Capping at the FREE
+        value here would silently drop a Yasuho+ guild's 6th+ hub on every
+        load (M4a-3).
+        """
         blob = await settings.get_guild(self.bot.db_pool, guild_id, "autorooms", [])
-        return normalize_hubs(blob)
+        return normalize_hubs(blob, max_hubs=premium.GUILD_CEILINGS["max_hubs"])
 
     async def _save_hubs(self, guild_id, hubs):
-        """Persist ``hubs`` to settings and refresh the in-memory index."""
-        hubs = normalize_hubs(hubs)
+        """Persist ``hubs`` to settings and refresh the in-memory index.
+
+        Same ABSOLUTE-ceiling reasoning as ``_load_hubs`` - normalizing at the
+        FREE cap here would silently drop (not archive) a Yasuho+ guild's
+        6th+ hub the moment it is saved, even though its Discord channels
+        were already created (M4a-3).
+        """
+        hubs = normalize_hubs(hubs, max_hubs=premium.GUILD_CEILINGS["max_hubs"])
         await settings.set_guild(self.bot.db_pool, guild_id, "autorooms", hubs)
         self._index_guild(guild_id, hubs)
         return hubs

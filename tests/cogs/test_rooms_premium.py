@@ -285,3 +285,44 @@ async def test_an_unindexed_hub_channel_is_a_plain_no_op():
     await cog.on_voice_state_update(_member(guild), None, _voice_state(1002))
 
     cog._create_room.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# _load_hubs / _save_hubs round-trip through the REAL normalize_hubs (not the
+# stubbed seam the fixture above uses) - this is the regression coverage for
+# the bug those stubs cannot see: normalize_hubs used to clamp to the FREE
+# MAX_HUBS (5) regardless of the caller, so a Yasuho+ guild's 6th+ hub was
+# silently dropped on every save and load even though its Discord channels
+# already existed.
+# ---------------------------------------------------------------------------
+
+
+def _real_cog(premium_resolver=None):
+    """A TemporaryRooms using the REAL _load_hubs/_save_hubs, backed by an
+    in-memory stand-in for tools.settings.get_guild/set_guild."""
+    cog = rooms.TemporaryRooms.__new__(rooms.TemporaryRooms)
+    cog._hub_index = {}
+    cog.bot = types.SimpleNamespace(db_pool=object(), premium=premium_resolver)
+    return cog
+
+
+async def test_save_then_load_keeps_more_than_five_hubs_for_a_premium_guild():
+    store = {}
+
+    async def fake_get_guild(pool, guild_id, key, default=None):
+        return store.get((guild_id, key), default)
+
+    async def fake_set_guild(pool, guild_id, key, value):
+        store[(guild_id, key)] = value
+
+    cog = _real_cog(premium_resolver=_Resolver(premium.GUILD_PREMIUM))
+    hubs = [_hub(f"h{i}", 1000 + i) for i in range(7)]  # 7 > FREE MAX_HUBS (5)
+
+    with mock.patch.object(rooms.settings, "get_guild", fake_get_guild), \
+            mock.patch.object(rooms.settings, "set_guild", fake_set_guild):
+        saved = await cog._save_hubs(GUILD_ID, hubs)
+        assert len(saved) == 7  # not silently truncated to 5 on save
+
+        loaded = await cog._load_hubs(GUILD_ID)
+        assert len(loaded) == 7  # not silently truncated to 5 on the next load
+        assert [h["id"] for h in loaded] == [f"h{i}" for i in range(7)]

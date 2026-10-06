@@ -181,13 +181,25 @@ def _normalize_one(entry):
     }
 
 
-def normalize_hubs(blob):
-    """Return a clean list of at most ``MAX_HUBS`` valid hub dicts from ``blob``.
+def normalize_hubs(blob, max_hubs=MAX_HUBS):
+    """Return a clean list of at most ``max_hubs`` valid hub dicts from ``blob``.
 
     ``blob`` is whatever came back from settings (ideally a list). Non-list
     input yields an empty list; malformed entries are dropped; limits are
-    clamped. Only the first ``MAX_HUBS`` survivors are kept so a corrupted
-    store can never balloon past the policy cap.
+    clamped. Only the first ``max_hubs`` survivors are kept so a corrupted
+    store can never balloon past that ceiling.
+
+    ``max_hubs`` defaults to the FREE value (:data:`MAX_HUBS`) for callers
+    (and tests) that do not pass one. A caller storing hubs for a guild that
+    may have Yasuho+ MUST pass the absolute safety ceiling
+    (``tools.premium.GUILD_CEILINGS["max_hubs"]``) here instead - this
+    function is a SAFETY floor against a corrupted store, not the per-tier
+    cap (that is ``can_add_hub``'s job, checked before a hub is appended).
+    Passing the FREE value unconditionally would silently drop a Yasuho+
+    guild's 6th+ hub on every load AND every save (losing the config row for
+    channels that already exist in Discord) - this is not a caller this
+    module can second-guess from here, which is why the cap is a parameter
+    and not hardcoded.
     """
     if not isinstance(blob, list):
         return []
@@ -196,7 +208,7 @@ def normalize_hubs(blob):
         hub = _normalize_one(entry)
         if hub is not None:
             hubs.append(hub)
-        if len(hubs) >= MAX_HUBS:
+        if len(hubs) >= max_hubs:
             break
     return hubs
 

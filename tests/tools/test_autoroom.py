@@ -261,6 +261,29 @@ def test_normalize_overflow_truncated_to_max_hubs():
     assert [h["hub_channel_id"] for h in hubs] == [1, 2, 3, 4, 5]
 
 
+def test_normalize_hubs_respects_an_explicit_higher_ceiling():
+    # M4a-3 regression: a Yasuho+ guild's _load_hubs/_save_hubs pass the
+    # ABSOLUTE safety ceiling (tools.premium.GUILD_CEILINGS["max_hubs"], not
+    # restated here to keep this module free of a tools.premium import -
+    # this test just proves normalize_hubs itself honours a caller-chosen
+    # ceiling above MAX_HUBS). Before this, normalize_hubs always clamped to
+    # the FREE MAX_HUBS (5) regardless of the caller's own cap, silently
+    # dropping a Yasuho+ guild's 6th+ hub on every save and load even though
+    # its Discord channels already existed.
+    raw = [{"hub_channel_id": i} for i in range(1, 8)]
+    hubs = autoroom.normalize_hubs(raw, max_hubs=20)
+    assert len(hubs) == 7
+    assert [h["hub_channel_id"] for h in hubs] == [1, 2, 3, 4, 5, 6, 7]
+
+
+def test_normalize_hubs_default_ceiling_is_still_free_max_hubs():
+    # The default parameter must stay MAX_HUBS - every caller that does not
+    # know about tiers (and every existing test above) relies on this.
+    raw = [{"hub_channel_id": i} for i in range(1, 8)]
+    hubs = autoroom.normalize_hubs(raw)
+    assert len(hubs) == autoroom.MAX_HUBS
+
+
 def test_normalize_overflow_counts_only_valid_entries():
     # malformed entries interleaved must not consume a slot
     raw = [

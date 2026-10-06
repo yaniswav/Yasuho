@@ -844,6 +844,32 @@ class RoleMenus(commands.Cog):
             log.exception("Failed to delete role menu %s", payload.message_id)
 
     @commands.Cog.listener()
+    async def on_raw_bulk_message_delete(self, payload):
+        # discord.py fires THIS event - never a run of individual
+        # on_raw_message_delete calls - for a purge/bulk delete, so a menu
+        # message caught in one would otherwise never leave ``_menu_ids``,
+        # ``_guild_menus`` or its DB row. That phantom entry does not just
+        # linger harmlessly: ``is_menu_archived`` (M4a-3) sorts
+        # ``_guild_menus[guild_id]`` to classify every OTHER live menu's
+        # archival status, so a stale id can wrongly push a genuinely live
+        # menu into "archived" (a member loses a self-role grant for no
+        # reason the admin can see) or wrongly keep an actually-archived one
+        # a slot "younger" than it should be.
+        ids = payload.message_ids & self._menu_ids
+        if not ids:
+            return
+        self._menu_ids.difference_update(ids)
+        if payload.guild_id is not None:
+            self._guild_menus[payload.guild_id].difference_update(ids)
+        try:
+            await self.bot.db_pool.execute(
+                "DELETE FROM role_menus WHERE message_id = ANY($1::bigint[])",
+                list(ids),
+            )
+        except Exception:
+            log.exception("Failed to delete role menus %s", ids)
+
+    @commands.Cog.listener()
     async def on_temprole_timer_complete(self, extra):
         """Remove a temporary self-role when its timer fires (dispatched by the
         Reminder cog's generic timer handling)."""
