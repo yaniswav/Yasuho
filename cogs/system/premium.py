@@ -1,37 +1,76 @@
-"""Owner-only ``?premium`` controls: gift Yasuho+/Pack Confort by hand.
+"""``?premium`` owner controls, the ENTITLEMENT_* gateway handlers and the
+periodic reconciliation loop.
 
-M3a+ of the monetisation plan (.claude/plans/monetisation/4-plan-retenu.md).
-The owner asked, in as many words, to be able to grant premium to a friend's
-server or to a user themself - before any store is open and whether or not a
-SKU is ever configured. This is that surface: it writes ``premium_grants``
-(tools/premium.py) and then the bot's live cache, in that order, so a grant
-or a revoke is never visible in memory before it is durable.
+M3a+ of the monetisation plan (.claude/plans/monetisation/4-plan-retenu.md)
+added the owner-only ``?premium`` surface: the owner asked, in as many
+words, to be able to grant premium to a friend's server or to a user
+themself - before any store is open and whether or not a SKU is ever
+configured. It writes ``premium_grants`` (tools/premium.py) and then the
+bot's live cache, in that order, so a grant or a revoke is never visible in
+memory before it is durable.
 
-Prefix-only by design, with no app_command anywhere: an owner-only control
-surface has no business in the public slash picker, and a hybrid command's
-subcommands would need their OWN checks on both invocation paths (see
+M3b (this lot) adds what keeps the OTHER half of the projection -
+``premium_entitlements``, Discord's own SKU purchases - honest without ever
+needing a restart:
+
+* three gateway listeners (``on_entitlement_create/update/delete``) that
+  write every event into ``premium_entitlements``
+  (:func:`tools.premium.upsert_entitlement_event`) and then refresh only
+  that one guild/user's slice of ``bot.premium``
+  (:meth:`tools.premium.EntitlementCache.refresh_entitlement_scope`) - see
+  :meth:`Premium._handle_entitlement_event` for the shared body and the
+  module docstring of tools/premium.py's "EVENT ORDERING" section for the
+  ordering guarantee;
+* a periodic reconciliation loop (:attr:`Premium.reconcile_entitlements`)
+  that lists every entitlement Discord has on record for this application
+  and makes ``premium_entitlements`` match it exactly -
+  :func:`tools.premium.reconcile` - then reloads the whole cache
+  (:meth:`tools.premium.EntitlementCache.load`) on a complete pass. See
+  :meth:`Premium._reconcile_once`.
+
+Prefix-only by design for the ``?premium`` command group, with no
+app_command anywhere: an owner-only control surface has no business in the
+public slash picker, and a hybrid command's subcommands would need their
+OWN checks on both invocation paths (see
 tests/test_hybrid_gating_hygiene.py's docstring for why a group's check does
 not protect them) for no benefit here. ``@commands.is_owner()`` on every
 leaf is the real gate - ``cog_check`` is a second, cog-wide layer on top, the
 same belt-and-suspenders cogs/system/admin.py and cogs/system/retention.py
-already use.
+already use. The gateway listeners and the reconciliation loop need no such
+gate - nothing about them is a user-invoked command.
 """
 
 from __future__ import annotations
 
+import logging
+
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from tools import premium
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
 from tools.time import ShortTime
 
+log = logging.getLogger(__name__)
+
 NO_MENTIONS = discord.AllowedMentions.none()
 
 # The two scope keywords ?premium list/check accept, mapped to
 # tools.premium's scope_type strings.
 _SCOPE_TYPE = {"server": "guild", "user": "user"}
+
+# How often the periodic reconciliation (self.reconcile_entitlements) lists
+# Discord's own entitlement ledger and resyncs premium_entitlements against
+# it. The gateway listeners are the real-time path; this is the safety net
+# for whatever they missed (a gateway reconnect window, a dropped event) -
+# see tools.premium.reconcile's own docstring for the fail-safe algorithm.
+# 6h is comfortably inside the 48h GRACE window tools.premium.is_active
+# already grants a confirmed-but-not-yet-resynced subscription end, so a
+# missed event is caught and corrected well before that grace would matter,
+# while staying far below any rate-limit concern for a handful of REST pages
+# every few hours (see the lot's report for the full scale story).
+RECONCILE_INTERVAL_HOURS = 6
 
 
 def _parse_duration_and_reason(rest):
@@ -102,10 +141,32 @@ def _join_within_budget(lines, budget):
 
 
 class Premium(commands.Cog):
-    """Owner-only gifting of Yasuho+ / Pack Confort, outside any store."""
+    """Owner-only gifting of Yasuho+ / Pack Confort, the ENTITLEMENT_* gateway
+    handlers, and the periodic reconciliation loop against Discord's own
+    entitlement ledger."""
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def cog_load(self):
+        # Starting the task HERE rather than in __init__ is deliberate, and
+        # is why this cog's own task-starting convention differs from
+        # cogs/system/retention.py's and cogs/anilist/airing.py's (both start
+        # their tasks.loop directly in __init__): tests/cogs/test_premium.py
+        # constructs ``Premium(bot)`` directly against a plain stand-in bot
+        # (no ``wait_until_ready``, no ``entitlements``) for every one of its
+        # ?premium command tests, never through ``bot.add_cog`` - starting a
+        # task eagerly in __init__ would have tried to use attributes that
+        # stand-in does not have the moment ANY of those tests constructs the
+        # cog. ``cog_load`` is the hook discord.py itself awaits from
+        # ``add_cog`` (see discord/ext/commands/cog.py), and only from there -
+        # so direct construction in a test stays exactly as inert as it was
+        # before this lot, while production (core.py's real ``add_cog`` call)
+        # starts the loop exactly once, right after the cog attaches.
+        self.reconcile_entitlements.start()
+
+    def cog_unload(self):
+        self.reconcile_entitlements.cancel()
 
     async def cog_check(self, ctx):
         # Second layer on top of @commands.is_owner() on every leaf below -
@@ -381,6 +442,209 @@ class Premium(commands.Cog):
             embed.add_field(name=_("Why"), value=_("Nothing active."), inline=False)
 
         await ctx.send(embed=embed, allowed_mentions=NO_MENTIONS)
+
+    # -- ENTITLEMENT_* gateway handlers (M3b) ---------------------------
+    #
+    # Real-time path for a purchase/renewal/cancellation/refund. The
+    # periodic reconciliation loop below is the safety net for whatever one
+    # of these misses (a gateway reconnect window, a dropped delivery) - the
+    # two are independent and either alone keeps the projection eventually
+    # correct.
+
+    def _foreign_application(self, entitlement):
+        """True if ``entitlement`` names a DIFFERENT application than ours,
+        or if either id is unknown (fail-safe: never process what we cannot
+        positively attribute to our own application).
+
+        Defence in depth, not the primary guard: Discord's own gateway only
+        ever dispatches entitlement events for OUR application in the first
+        place, so this should never actually fire in production - but a row
+        that somehow named someone else's application must never be written
+        into our own projection, and must never make a later reconciliation
+        pass mark one of OUR rows deleted on its account (see
+        tools.premium.reconcile's own "foreign application" paragraph).
+        """
+        application_id = getattr(self.bot, "application_id", None)
+        entitlement_application_id = getattr(entitlement, "application_id", None)
+        if application_id is None or entitlement_application_id is None:
+            return True
+        return int(entitlement_application_id) != int(application_id)
+
+    async def _handle_entitlement_event(self, entitlement, *, force_deleted):
+        """Shared body of all three ``on_entitlement_*`` listeners below.
+
+        Writes first (:func:`tools.premium.upsert_entitlement_event`), the
+        matching ONE-scope cache refresh only after that write actually
+        succeeds - never the other way, and never skipped on failure by
+        accident: a DB error here is caught, logged, and returns, leaving
+        ``bot.premium`` exactly as it was (stale in the direction the next
+        gateway event or the next reconciliation pass corrects, never wrong
+        in the dangerous direction of granting something that was never
+        written down). A cache-refresh failure AFTER a successful write is
+        caught and logged separately - the row is durable either way, and
+        the next reconciliation pass (at most RECONCILE_INTERVAL_HOURS away)
+        reloads the whole cache regardless, so this self-heals without
+        needing its own retry here.
+        """
+        entitlement_id = getattr(entitlement, "id", "?")
+        if self._foreign_application(entitlement):
+            log.debug(
+                "premium: ignoring entitlement %s for a different/unknown "
+                "application",
+                entitlement_id,
+            )
+            return
+        try:
+            row = await premium.upsert_entitlement_event(
+                self.bot.db_pool, entitlement, force_deleted=force_deleted
+            )
+        except Exception:
+            log.exception(
+                "premium: failed to persist entitlement %s; cache left "
+                "untouched (will self-heal on the next event or "
+                "reconciliation pass)",
+                entitlement_id,
+            )
+            return
+        try:
+            if row["scope_type"] == "guild":
+                await self.bot.premium.refresh_entitlement_scope(
+                    self.bot.db_pool, "guild", guild_id=row["guild_id"]
+                )
+            else:
+                await self.bot.premium.refresh_entitlement_scope(
+                    self.bot.db_pool, "user", user_id=row["user_id"]
+                )
+        except Exception:
+            log.exception(
+                "premium: entitlement %s stored but its cache refresh "
+                "failed; will self-heal on the next reconciliation pass",
+                row["entitlement_id"],
+            )
+
+    @commands.Cog.listener()
+    async def on_entitlement_create(self, entitlement):
+        await self._handle_entitlement_event(entitlement, force_deleted=False)
+
+    @commands.Cog.listener()
+    async def on_entitlement_update(self, entitlement):
+        # A refund or an ended, non-renewing subscription arrives THROUGH
+        # THIS event, not a dedicated one - Discord reports both as an
+        # entitlement update (often with ``deleted: true``) per the plan's
+        # own "a refund follows the expiry path" rule. No extra branch is
+        # needed here: upsert_entitlement_event already OR-preserves
+        # whatever ``deleted`` value the payload carries forever once it is
+        # True, so trusting this event's own field is exactly correct.
+        await self._handle_entitlement_event(entitlement, force_deleted=False)
+
+    @commands.Cog.listener()
+    async def on_entitlement_delete(self, entitlement):
+        # force_deleted=True: the payload's own `deleted` field is not
+        # trusted here - receiving THIS event at all is the signal, and this
+        # also makes the write INSERT an already-deleted row if the delete
+        # happens to arrive before its own create (out-of-order gateway
+        # delivery) rather than finding nothing to update and losing the
+        # delete - see upsert_entitlement_event's own docstring for why this
+        # is deliberately NOT just tools.premium.mark_deleted.
+        await self._handle_entitlement_event(entitlement, force_deleted=True)
+
+    # -- periodic reconciliation (M3b) ----------------------------------
+
+    def _configured_skus(self):
+        """``discord.Object`` wrappers for whichever of the two catalog SKUs
+        is configured, for ``bot.entitlements(skus=...)`` below. Narrowing
+        to our own catalog (rather than leaving ``skus`` unset, which would
+        list EVERY entitlement for the application) keeps each reconciliation
+        pass's REST traffic proportional to what we actually sell, not to
+        whatever else might exist on the application - see the lot's report
+        for the full scale story. Returns ``None`` (meaning "no filter",
+        discord.py's own default) only in the dev/test posture where NEITHER
+        SKU is configured yet, since an empty list and ``None`` are not the
+        same thing to that endpoint.
+        """
+        sku_ids = [
+            sku_id
+            for sku_id in (premium.YASUHO_PLUS_SKU, premium.COMFORT_PACK_SKU)
+            if sku_id is not None
+        ]
+        if not sku_ids:
+            return None
+        return [discord.Object(id=sku_id) for sku_id in sku_ids]
+
+    async def _reconcile_once(self):
+        """One reconciliation pass: list, diff, (maybe) reload the cache.
+
+        Exposed as its own method, separate from the ``tasks.loop`` wrapper
+        below, so a test can drive exactly one pass with a fake bot and no
+        scheduler - the same split cogs/anilist/airing.py's
+        ``_poll_airing``/``_tick`` already uses.
+        """
+        application_id = getattr(self.bot, "application_id", None)
+        if application_id is None:
+            log.warning(
+                "premium: reconciliation skipped, application_id not set yet"
+            )
+            return
+        entitlements = self.bot.entitlements(
+            limit=None,
+            skus=self._configured_skus(),
+            exclude_ended=False,
+            exclude_deleted=True,
+        )
+        result = await premium.reconcile(
+            self.bot.db_pool, entitlements, application_id=application_id
+        )
+        if result is None:
+            # The fail-safe path already logged inside tools.premium.reconcile.
+            # NOTHING was marked deleted, and premium_entitlements was left
+            # exactly as it stood - so the cache reload below MUST NOT run:
+            # it would just re-read the same (unharmed) rows, but running it
+            # on principle here would blur the line between "a pass that
+            # changed nothing because there was nothing to change" and "a
+            # pass that was aborted", which is exactly the distinction this
+            # fail-safe exists to preserve.
+            return
+        try:
+            await self.bot.premium.load(self.bot.db_pool)
+        except Exception:
+            log.exception(
+                "premium: reconciliation completed but the cache reload "
+                "failed; the database is correct, bot.premium will catch up "
+                "on the next pass or event"
+            )
+            return
+        log.info(
+            "premium: reconciliation complete (seen=%s upserted=%s missing=%s)",
+            result["seen"],
+            result["upserted"],
+            result["missing"],
+        )
+
+    @tasks.loop(hours=RECONCILE_INTERVAL_HOURS)
+    async def reconcile_entitlements(self):
+        # Fully wrapped: an unexpected error must never kill the loop - same
+        # posture as cogs/anilist/airing.py's _poll_airing.
+        try:
+            await self._reconcile_once()
+        except Exception:
+            log.exception("premium: reconciliation tick failed")
+
+    @reconcile_entitlements.before_loop
+    async def _before_reconcile(self):
+        # The FIRST tick (only) waits here; every later tick already runs
+        # against a ready bot by construction (the loop only reaches its
+        # next iteration after this coroutine - and then the previous
+        # tick's body - have returned). This is also why reconciliation runs
+        # "once after ready, then periodically" without a separate one-shot
+        # call: the loop's own first iteration IS that first post-ready run.
+        await self.bot.wait_until_ready()
+
+    @reconcile_entitlements.error
+    async def _reconcile_error(self, error):
+        log.exception(
+            "premium: reconciliation loop crashed; restarting", exc_info=error
+        )
+        self.reconcile_entitlements.restart()
 
 
 async def setup(bot):

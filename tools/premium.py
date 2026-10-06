@@ -1,9 +1,18 @@
 """Premium offer catalog, entitlement projection and the capability resolver.
 
-M3a of the monetisation plan (.claude/plans/monetisation/4-plan-retenu.md):
-foundations only. No cog behaviour changes here, no gateway events, no
-/premium command, nothing wired onto the bot yet - that is M3b/M3c. This
-module provides the pieces those lots will assemble:
+M3a laid the foundations (.claude/plans/monetisation/4-plan-retenu.md):
+catalog, the ACTIVE rule, the store helpers, the resolver. M3a+ wired
+owner-gifted grants and the boot load (cogs/system/premium.py, core.py).
+M3b (this lot) adds the two things that keep the projection honest without
+ever needing a restart: the ENTITLEMENT_* gateway event handlers and a
+periodic reconciliation against Discord's own complete listing - see
+:func:`upsert_entitlement_event`, :func:`reconcile` and
+:meth:`EntitlementCache.refresh_entitlement_scope` below, and
+cogs/system/premium.py for where the three gateway listeners and the
+reconciliation loop are wired onto the bot. The public ``/premium``
+purchase surface (test purchases, the audit journal) is still M3c.
+
+This module provides:
 
 * the commercial offer catalog (:class:`GuildLimits`, :class:`UserLimits`,
   :data:`GUILD_FREE`/:data:`GUILD_PREMIUM`/:data:`USER_FREE`/
@@ -12,19 +21,45 @@ module provides the pieces those lots will assemble:
   granting its benefit" rule is written;
 * the store helpers (:func:`upsert_entitlement`, :func:`mark_deleted`,
   :func:`load_active`) that keep ``premium_entitlements`` (schema.sql) in
-  sync with Discord's own ledger;
+  sync with Discord's own ledger, plus the ORDER-SAFE event-write path
+  (:func:`upsert_entitlement_event`) and the fail-safe full resync
+  (:func:`reconcile`) M3b adds on top of them;
 * :class:`EntitlementCache` and the module-level :data:`premium_limits`
   instance, a synchronous O(1) resolver hot paths call directly:
   ``premium_limits.for_guild(guild_id)`` / ``.for_user(user_id)``.
 
 DISCORD IS THE AUTHORITY. ``premium_entitlements`` is a PROJECTION,
 reconstructible at any time by a resync against Discord's REST/gateway
-entitlement surface (M3b). It holds no payment data: no card, no amount, no
-invoice - only which SKU is granted to which guild or user, from when, until
-when, and when that was last confirmed. That reconstructibility is exactly
-why tools/retention.py purges a departed guild's rows and tools/privacy.py
+entitlement surface (:func:`reconcile`, driven by cogs/system/premium.py's
+periodic loop). It holds no payment data: no card, no amount, no invoice -
+only which SKU is granted to which guild or user, from when, until when,
+and when that was last confirmed. That reconstructibility is exactly why
+tools/retention.py purges a departed guild's rows and tools/privacy.py
 exports/erases a user's rows: a resync restores whatever is still genuinely
 granted, so nothing is lost by deleting the local copy.
+
+EVENT ORDERING (M3b). The three ENTITLEMENT_* gateway events can arrive
+duplicated, or out of the order they logically happened in (a gateway
+reconnect can replay or drop deliveries). Two rules keep every ordering
+converging on the same state:
+
+  1. every field OTHER than ``deleted`` is last-write-wins from whichever
+     event arrives last - acceptable because the periodic reconciliation
+     (:func:`reconcile`) is the backstop that corrects any transient
+     staleness within one cycle, and no commercial decision reads a field
+     other than ``deleted``/``ends_at`` (already covered by rule 2 and the
+     GRACE window in :func:`is_active`);
+  2. ``deleted`` can only ever go FALSE -> TRUE through a gateway event,
+     never the other way: :func:`upsert_entitlement_event` ORs the
+     incoming value with whatever is already stored
+     (``premium_entitlements.deleted OR EXCLUDED.deleted``), so a late,
+     stale create/update for an entitlement that a delete (or a refund
+     reported as an update with ``deleted=True`` - "a refund follows the
+     expiry path") already marked deleted can never clear it back. The
+     ONLY thing allowed to clear ``deleted`` back to ``FALSE`` is
+     :func:`reconcile`'s COMPLETE listing explicitly showing the row alive
+     again - a full resync is trusted to correct a wrongly-ordered or
+     buggy event; a single event never is.
 
 NO SKU CONFIGURED = NOBODY IS PREMIUM, UNLESS THE OWNER GIFTED IT. If
 ``[Premium] yasuho_plus_sku`` / ``comfort_pack_sku`` are absent (or invalid)
@@ -61,6 +96,7 @@ tools, no cycle), so it is imported directly instead of retyped.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import datetime
 import logging
@@ -442,10 +478,93 @@ async def upsert_entitlement(pool, entitlement):
     can read. ``last_synced_at`` is always stamped to now() by the query
     itself (never taken from the caller), since it means "the last time we
     confirmed this with Discord", not "the last time this row was touched".
+
+    THE RECONCILIATION VARIANT (M3b). ``deleted`` here is assigned
+    unconditionally from ``entitlement`` - unlike :func:`upsert_entitlement_event`
+    below, this one can clear a previously-stored ``deleted = TRUE`` back to
+    ``FALSE``. That is deliberate and safe ONLY because its one caller,
+    :func:`reconcile`, only ever calls this for a row a COMPLETE Discord
+    listing just returned as alive (``exclude_deleted=True``), so ``deleted``
+    arrives as ``False`` in practice - a full resync is the one thing trusted
+    to correct a wrongly-ordered or buggy event (see the module docstring's
+    "EVENT ORDERING" section). A single gateway event must never call this
+    function directly; it calls :func:`upsert_entitlement_event` instead.
     """
     row = _coerce_entitlement(entitlement)
     await pool.execute(
         _UPSERT_ENTITLEMENT,
+        row["entitlement_id"],
+        row["sku_id"],
+        row["scope_type"],
+        row["guild_id"],
+        row["user_id"],
+        row["entitlement_type"],
+        row["deleted"],
+        row["consumed"],
+        row["starts_at"],
+        row["ends_at"],
+    )
+    return row
+
+
+_UPSERT_ENTITLEMENT_EVENT = """
+INSERT INTO premium_entitlements
+    (entitlement_id, sku_id, scope_type, guild_id, user_id,
+     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+ON CONFLICT (entitlement_id) DO UPDATE SET
+    sku_id = EXCLUDED.sku_id,
+    scope_type = EXCLUDED.scope_type,
+    guild_id = EXCLUDED.guild_id,
+    user_id = EXCLUDED.user_id,
+    entitlement_type = EXCLUDED.entitlement_type,
+    deleted = premium_entitlements.deleted OR EXCLUDED.deleted,
+    consumed = EXCLUDED.consumed,
+    starts_at = EXCLUDED.starts_at,
+    ends_at = EXCLUDED.ends_at,
+    last_synced_at = now()
+"""
+
+
+async def upsert_entitlement_event(pool, entitlement, *, force_deleted=False):
+    """Idempotent, ORDER-SAFE write for a single ENTITLEMENT_* gateway event.
+
+    Same row shape as :func:`upsert_entitlement`, and the same one-statement
+    INSERT ... ON CONFLICT shape, but ``deleted`` is OR-ed with whatever is
+    already stored (``premium_entitlements.deleted OR EXCLUDED.deleted``)
+    rather than assigned outright. That one difference is what makes the
+    three gateway events converge to the same state regardless of delivery
+    order or duplication:
+
+      * two duplicate events (same id, same payload) are a no-op either way;
+      * an UPDATE delivered before its own CREATE for the same id still
+        converges once the CREATE lands (whichever arrives first INSERTs
+        the row, the second just updates the other fields);
+      * once ANY event has set ``deleted = TRUE`` on a row (including a
+        refund reported as an UPDATE with ``deleted: true`` - "a refund
+        follows the expiry path"), a LATER-arriving but OLDER/stale
+        CREATE or UPDATE for that same id - one that still carries
+        ``deleted: false`` - can never clear it back: TRUE OR anything is
+        TRUE. Only :func:`reconcile` is trusted to clear it.
+
+    ``force_deleted=True`` is the ``on_entitlement_delete`` handler's own
+    case (cogs/system/premium.py), and is why this is NOT simply
+    :func:`mark_deleted` called from the listener: ``mark_deleted`` is
+    UPDATE-only and does nothing when the row does not exist yet, which
+    would LOSE a delete that the gateway happened to deliver before the
+    matching create (out-of-order delivery is exactly what this function
+    exists to survive). ``force_deleted=True`` ignores whatever the
+    payload's own ``deleted`` field says (not trusted here - receiving the
+    DELETE event at all is the signal) and sets ``deleted = True`` on the
+    row this call writes, INSERTing it already-deleted if it does not exist
+    yet; the OR in the SQL above then still protects that TRUE from a later
+    stale create/update for the same id, exactly like every other case.
+    """
+    row = _coerce_entitlement(entitlement)
+    if force_deleted:
+        row["deleted"] = True
+    await pool.execute(
+        _UPSERT_ENTITLEMENT_EVENT,
         row["entitlement_id"],
         row["sku_id"],
         row["scope_type"],
@@ -482,6 +601,122 @@ async def load_active(pool):
         "entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at "
         "FROM premium_entitlements WHERE deleted = FALSE"
     )
+
+
+async def load_active_for_guild(pool, guild_id):
+    """Active entitlement rows for ONE guild, for
+    :meth:`EntitlementCache.refresh_entitlement_scope`. Same column set and
+    same "non-deleted only" split as :func:`load_active`, narrowed to a
+    single scope so a gateway event never pays for a whole-table reload."""
+    return await pool.fetch(
+        "SELECT entitlement_id, sku_id, ends_at, last_synced_at "
+        "FROM premium_entitlements WHERE guild_id = $1 AND deleted = FALSE",
+        int(guild_id),
+    )
+
+
+async def load_active_for_user(pool, user_id):
+    """The user-scoped twin of :func:`load_active_for_guild`."""
+    return await pool.fetch(
+        "SELECT entitlement_id, sku_id, ends_at, last_synced_at "
+        "FROM premium_entitlements WHERE user_id = $1 AND deleted = FALSE",
+        int(user_id),
+    )
+
+
+async def load_active_entitlement_ids(pool):
+    """Every non-deleted ``entitlement_id`` on record, as a ``set[int]``.
+
+    The diff base :func:`reconcile` subtracts a complete Discord listing
+    from: whatever id is in this set but was NOT seen in that listing is an
+    entitlement a complete snapshot no longer reports, and is marked deleted.
+    """
+    rows = await pool.fetch(
+        "SELECT entitlement_id FROM premium_entitlements WHERE deleted = FALSE"
+    )
+    return {int(_get(row, "entitlement_id")) for row in rows}
+
+
+async def reconcile(pool, entitlements, *, application_id):
+    """Resync ``premium_entitlements`` against a COMPLETE Discord listing.
+
+    ``entitlements`` is an async iterable of discord.Entitlement-like
+    objects (or any test double :func:`upsert_entitlement` already accepts) -
+    in production, ``bot.entitlements(skus=..., exclude_deleted=True,
+    limit=None)`` (cogs/system/premium.py), which discord.py itself paginates
+    page-by-page under the hood. This function stays discord.py-free (duck-
+    typed, the same posture as the rest of this module - see :func:`_get`),
+    so it is unit-testable with a plain async generator and no real Client.
+
+    THE ALGORITHM:
+      1. consume ``entitlements`` fully, upserting (:func:`upsert_entitlement`
+         - the reconciliation/clobbering variant, see its own docstring)
+         every row whose ``application_id`` matches ours, and remembering
+         every id seen;
+      2. once the iterable is FULLY consumed with no error, read every
+         currently-stored non-deleted id (:func:`load_active_entitlement_ids`)
+         and mark deleted (:func:`mark_deleted`) whichever of THOSE ids was
+         not in the seen set - an entitlement a complete listing no longer
+         reports is, by definition, gone.
+
+    FAIL-SAFE BY CONSTRUCTION. Step 2 - the only DESTRUCTIVE part of a
+    reconciliation pass - runs ONLY if step 1 finished without raising. If
+    ``entitlements`` raises partway through (a Discord outage, a timeout, a
+    rate-limit error, a dropped connection mid-page), this function logs the
+    failure and returns ``None`` immediately: NOTHING is marked deleted, and
+    the rows already upserted during the partial pass are kept as they stand
+    (harmless - an upsert only ever makes a row MORE current, never less, so
+    a partial pass can improve the local projection but this function never
+    lets one DOWNGRADE it). A Discord outage must never read as "everyone's
+    subscription ended" - see the plan's own "panne Discord" rule.
+
+    Rows naming a different ``application_id`` are skipped entirely - not
+    upserted, not counted as seen. Discord's own REST/gateway filtering
+    already scopes a listing to our application, so this is defence in
+    depth, not the primary guard; it matters because a row like that must
+    never make this function mark one of OUR OWN entitlements deleted on
+    its account either.
+
+    Returns ``{"seen": ..., "upserted": ..., "missing": ...}`` on a complete
+    pass, or ``None`` when the pass was aborted - so a caller
+    (cogs/system/premium.py's periodic loop) can tell the two outcomes apart
+    without parsing logs, and in particular knows NOT to reload
+    :class:`EntitlementCache` from the database after an aborted pass (that
+    reload is a plain re-read of whatever is in Postgres right now, which is
+    exactly why it must only happen after a pass that left Postgres alone).
+    """
+    seen_ids = set()
+    upserted = 0
+    try:
+        async for entitlement in entitlements:
+            entitlement_application_id = _get(entitlement, "application_id")
+            if (
+                entitlement_application_id is not None
+                and int(entitlement_application_id) != int(application_id)
+            ):
+                continue
+            row = await upsert_entitlement(pool, entitlement)
+            seen_ids.add(row["entitlement_id"])
+            upserted += 1
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        log.exception(
+            "Premium reconciliation: listing failed or was interrupted; "
+            "leaving premium_entitlements untouched (marking nothing deleted)"
+        )
+        return None
+
+    stored_ids = await load_active_entitlement_ids(pool)
+    missing_ids = stored_ids - seen_ids
+    for entitlement_id in missing_ids:
+        await mark_deleted(pool, entitlement_id)
+
+    return {
+        "seen": len(seen_ids),
+        "upserted": upserted,
+        "missing": len(missing_ids),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -702,11 +937,23 @@ class EntitlementCache:
     tests/tools/test_premium.py's "live expiry, no reload" section for the
     regression test, and its negative control.
 
-    M3a wired ``load()``/the read API only; M3a+ (this lot) attaches an
-    instance to the bot (core.py ``setup_hook``) and adds the grants half. The
-    periodic reconciliation and the ENTITLEMENT_* gateway handlers remain M3b.
-    :data:`premium_limits` below is a ready module-level instance for any
-    caller that does not want to construct its own.
+    M3a wired ``load()``/the read API only; M3a+ attached an instance to the
+    bot (core.py ``setup_hook``) and added the grants half. M3b (this lot)
+    adds :meth:`refresh_entitlement_scope` - the ENTITLEMENT_* gateway
+    handlers' counterpart to :meth:`refresh_grant_scope` - and, with it, this
+    cache's own ``_lock``: M3a+ had no concurrent writer worth serialising
+    against, but M3b's gateway handlers, its periodic reconciliation loop
+    (:func:`reconcile`) and the owner's ``?premium`` commands can now all
+    write here at once. ``_lock`` is held across each writer's fetch-then-
+    rebind (:meth:`load`) or fetch-then-mutate-one-entry
+    (:meth:`refresh_entitlement_scope`/:meth:`refresh_grant_scope`), the same
+    "fetch and rebind never interleave with another writer's" shape
+    core.py's ``eager_cache_lock`` documents for the bot's other hot caches -
+    this cache just carries its own lock rather than sharing that one, since
+    it is a single self-contained object rather than one of the four bare
+    dicts hanging directly off the bot. :data:`premium_limits` below is a
+    ready module-level instance for any caller that does not want to
+    construct its own.
 
     SCALE STORY (1000+ guilds). Each active guild/user entry is one dict key
     (an int) mapping to a short list (today at most one SKU/product per
@@ -730,6 +977,16 @@ class EntitlementCache:
         self._user_skus = {}
         self._guild_grants = {}
         self._user_grants = {}
+        # Serialises every WRITER below (load/refresh_entitlement_scope/
+        # refresh_grant_scope) against each other - see the class docstring's
+        # "M3b" paragraph. The read side (is_guild_premium/has_comfort_pack/
+        # for_guild/for_user) deliberately takes no lock: they are plain
+        # dict reads with no await, exactly the hot-path cost the SCALE
+        # STORY above promises, and a reader racing a writer's in-place
+        # rebind only ever sees the old map or the new one (Python dict/list
+        # assignment is already atomic from one coroutine's point of view
+        # with no awaits in between), never a half-built one.
+        self._lock = asyncio.Lock()
 
     def load_rows(self, rows):
         """Rebuild the two ENTITLEMENT maps from DB rows.
@@ -806,14 +1063,25 @@ class EntitlementCache:
         self._user_grants = user_grants
 
     async def load(self, pool):
-        """Reload all four maps from the database (boot; M3b also calls this
-        on resync). A caller that wants FREE-on-failure wraps this itself
-        (see core.py setup_hook) - this method raises straight through, so a
-        partial reload can never be mistaken for a successful empty one."""
-        entitlement_rows = await load_active(pool)
-        grant_rows = await load_active_grants(pool)
-        self.load_rows(entitlement_rows)
-        self.load_grant_rows(grant_rows)
+        """Reload all four maps from the database (boot, and the periodic
+        reconciliation loop in cogs/system/premium.py after a complete,
+        successful listing). A caller that wants FREE-on-failure wraps this
+        itself (see core.py setup_hook) - this method raises straight
+        through, so a partial reload can never be mistaken for a successful
+        empty one.
+
+        Fetch AND rebind happen under ``self._lock`` (see __init__), so a
+        concurrent :meth:`refresh_entitlement_scope`/:meth:`refresh_grant_scope`
+        either completes entirely before this reload's fetch starts, or
+        lands entirely after this reload's rebind - never interleaved, which
+        is what stops a per-scope write from landing in the dict this reload
+        is about to discard.
+        """
+        async with self._lock:
+            entitlement_rows = await load_active(pool)
+            grant_rows = await load_active_grants(pool)
+            self.load_rows(entitlement_rows)
+            self.load_grant_rows(grant_rows)
 
     def is_guild_premium(self, guild_id, *, now=None):
         """Whether guild ``guild_id`` currently has Yasuho+, evaluated against
@@ -877,44 +1145,102 @@ class EntitlementCache:
         TIME, same as every other read here - the snapshots this stores are
         still re-checked against ``now`` on every future lookup, so a grant
         that expires later with no further write still turns itself off.
+
+        Fetch AND mutate happen under ``self._lock`` (see __init__ and
+        :meth:`load`'s docstring for why).
         """
-        if scope_type == "guild":
-            rows = await list_grants(
-                pool, scope_type="guild", guild_id=guild_id, active_only=True
-            )
-            snapshots = [
-                _GrantSnapshot(
-                    grant_id=_get(row, "id"),
-                    product=_get(row, "product"),
-                    expires_at=_get(row, "expires_at"),
-                )
-                for row in rows
-            ]
-            if snapshots:
-                self._guild_grants[int(guild_id)] = snapshots
-            else:
-                self._guild_grants.pop(int(guild_id), None)
-        elif scope_type == "user":
-            rows = await list_grants(
-                pool, scope_type="user", user_id=user_id, active_only=True
-            )
-            snapshots = [
-                _GrantSnapshot(
-                    grant_id=_get(row, "id"),
-                    product=_get(row, "product"),
-                    expires_at=_get(row, "expires_at"),
-                )
-                for row in rows
-            ]
-            if snapshots:
-                self._user_grants[int(user_id)] = snapshots
-            else:
-                self._user_grants.pop(int(user_id), None)
-        else:
+        if scope_type not in ("guild", "user"):
             raise ValueError(f"unknown scope_type: {scope_type!r}")
+        async with self._lock:
+            if scope_type == "guild":
+                rows = await list_grants(
+                    pool, scope_type="guild", guild_id=guild_id, active_only=True
+                )
+                snapshots = [
+                    _GrantSnapshot(
+                        grant_id=_get(row, "id"),
+                        product=_get(row, "product"),
+                        expires_at=_get(row, "expires_at"),
+                    )
+                    for row in rows
+                ]
+                if snapshots:
+                    self._guild_grants[int(guild_id)] = snapshots
+                else:
+                    self._guild_grants.pop(int(guild_id), None)
+            else:
+                rows = await list_grants(
+                    pool, scope_type="user", user_id=user_id, active_only=True
+                )
+                snapshots = [
+                    _GrantSnapshot(
+                        grant_id=_get(row, "id"),
+                        product=_get(row, "product"),
+                        expires_at=_get(row, "expires_at"),
+                    )
+                    for row in rows
+                ]
+                if snapshots:
+                    self._user_grants[int(user_id)] = snapshots
+                else:
+                    self._user_grants.pop(int(user_id), None)
+
+    async def refresh_entitlement_scope(
+        self, pool, scope_type, *, guild_id=None, user_id=None
+    ):
+        """Re-read ONE scope's active Discord entitlements from the database
+        and update the matching map in place - the ENTITLEMENT_* gateway
+        handlers' (cogs/system/premium.py) counterpart to
+        :meth:`refresh_grant_scope`, called AFTER
+        :func:`upsert_entitlement_event` has already committed, never
+        before, for the exact same "cache only ever follows a successful
+        write" reason. An empty result pops the scope entirely, same
+        "absence is the free answer" rule as every loader in this module.
+        ``now``-based expiry (the 48h GRACE window included) is still
+        re-checked at every future lookup, not baked in here - see the
+        class docstring's "LIVE EXPIRY" paragraph.
+
+        Fetch AND mutate happen under ``self._lock`` (see __init__ and
+        :meth:`load`'s docstring for why).
+        """
+        if scope_type not in ("guild", "user"):
+            raise ValueError(f"unknown scope_type: {scope_type!r}")
+        async with self._lock:
+            if scope_type == "guild":
+                rows = await load_active_for_guild(pool, guild_id)
+                snapshots = [
+                    _EntitlementSnapshot(
+                        entitlement_id=_get(row, "entitlement_id"),
+                        sku_id=int(_get(row, "sku_id")),
+                        ends_at=_get(row, "ends_at"),
+                        last_synced_at=_get(row, "last_synced_at"),
+                    )
+                    for row in rows
+                ]
+                if snapshots:
+                    self._guild_skus[int(guild_id)] = snapshots
+                else:
+                    self._guild_skus.pop(int(guild_id), None)
+            else:
+                rows = await load_active_for_user(pool, user_id)
+                snapshots = [
+                    _EntitlementSnapshot(
+                        entitlement_id=_get(row, "entitlement_id"),
+                        sku_id=int(_get(row, "sku_id")),
+                        ends_at=_get(row, "ends_at"),
+                        last_synced_at=_get(row, "last_synced_at"),
+                    )
+                    for row in rows
+                ]
+                if snapshots:
+                    self._user_skus[int(user_id)] = snapshots
+                else:
+                    self._user_skus.pop(int(user_id), None)
 
 
-# Ready-to-use default instance. M3b decides final ownership/wiring (likely
-# ``bot.premium`` built from this same class, parallel to ``bot.prefixes``);
-# until then this is the one callers reach for.
+# Ready-to-use default instance for a caller with no bot handy (a script, a
+# test). Production code reaches for ``bot.premium`` instead (set in
+# core.py's ``Yasuho.__init__``) - the gateway handlers and the periodic
+# reconciliation loop added in M3b (cogs/system/premium.py) read and write
+# that bot-owned instance, never this module-level one.
 premium_limits = EntitlementCache()

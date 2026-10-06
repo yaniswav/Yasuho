@@ -8,6 +8,7 @@ objects :func:`tools.premium._get` is written to accept.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import datetime
 import logging
@@ -933,3 +934,485 @@ async def test_refresh_grant_scope_rejects_an_unknown_scope_type():
     cache = premium.EntitlementCache()
     with pytest.raises(ValueError):
         await cache.refresh_grant_scope(object(), "guild_or_user", guild_id=1)
+
+
+# ---------------------------------------------------------------------------
+# M3b: upsert_entitlement_event / reconcile / refresh_entitlement_scope
+#
+# A plain FakePool (query-string + args recording only) cannot prove an
+# ORDERING claim - "a late create cannot undo a delete" is a statement about
+# what ends up STORED after a SEQUENCE of calls, not about any one query's
+# text. _FakeEntitlementTable below is a small, faithful in-memory
+# simulation of the premium_entitlements table that actually APPLIES the
+# same SQL semantics upsert_entitlement/upsert_entitlement_event/
+# mark_deleted/the loaders rely on (including the ON CONFLICT ... OR
+# EXCLUDED.deleted clause), so a test can assert on resulting STATE across a
+# sequence of events - exactly the thing being claimed. It recognises only
+# the handful of queries tools.premium actually issues; anything else raises
+# instead of silently returning nothing (the "every result needs a positive
+# control, every silence needs to be impossible by construction" rule).
+# ---------------------------------------------------------------------------
+
+
+class _FakeEntitlementTable:
+    def __init__(self):
+        self.rows = {}  # entitlement_id -> dict of columns
+        self.calls = []
+
+    @staticmethod
+    def _columns(args):
+        (
+            entitlement_id,
+            sku_id,
+            scope_type,
+            guild_id,
+            user_id,
+            entitlement_type,
+            deleted,
+            consumed,
+            starts_at,
+            ends_at,
+        ) = args
+        return {
+            "entitlement_id": entitlement_id,
+            "sku_id": sku_id,
+            "scope_type": scope_type,
+            "guild_id": guild_id,
+            "user_id": user_id,
+            "entitlement_type": entitlement_type,
+            "deleted": deleted,
+            "consumed": consumed,
+            "starts_at": starts_at,
+            "ends_at": ends_at,
+            "last_synced_at": NOW,  # stands in for the query's own now()
+        }
+
+    async def execute(self, query, *args):
+        self.calls.append(("execute", query, args))
+        if "ON CONFLICT (entitlement_id) DO UPDATE" in query:
+            row = self._columns(args)
+            if "premium_entitlements.deleted OR EXCLUDED.deleted" in query:
+                existing = self.rows.get(row["entitlement_id"])
+                if existing is not None:
+                    row["deleted"] = existing["deleted"] or row["deleted"]
+            self.rows[row["entitlement_id"]] = row
+            return "INSERT 0 1"
+        if "SET deleted = TRUE" in query:
+            entitlement_id = args[0]
+            if entitlement_id not in self.rows:
+                return "UPDATE 0"
+            self.rows[entitlement_id]["deleted"] = True
+            self.rows[entitlement_id]["last_synced_at"] = NOW
+            return "UPDATE 1"
+        raise AssertionError(f"unexpected query: {query}")
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        if "SELECT entitlement_id FROM premium_entitlements" in query:
+            return [
+                {"entitlement_id": rid}
+                for rid, row in self.rows.items()
+                if not row["deleted"]
+            ]
+        if "WHERE guild_id = $1 AND deleted = FALSE" in query:
+            (guild_id,) = args
+            return [
+                row
+                for row in self.rows.values()
+                if row["guild_id"] == guild_id and not row["deleted"]
+            ]
+        if "WHERE user_id = $1 AND deleted = FALSE" in query:
+            (user_id,) = args
+            return [
+                row
+                for row in self.rows.values()
+                if row["user_id"] == user_id and not row["deleted"]
+            ]
+        if "FROM premium_entitlements WHERE deleted = FALSE" in query:
+            return list(self.rows.values())
+        raise AssertionError(f"unexpected query: {query}")
+
+
+async def _stream(items, *, fail_after=None):
+    """An async generator standing in for ``bot.entitlements(...)``: yields
+    ``items`` in order, raising partway through when ``fail_after`` is set -
+    simulating a Discord outage mid-listing."""
+    for index, item in enumerate(items):
+        if fail_after is not None and index == fail_after:
+            raise RuntimeError("discord outage mid-listing")
+        yield item
+
+
+# ---------------------------------------------------------------------------
+# upsert_entitlement_event: the ORDER-SAFE write path
+# ---------------------------------------------------------------------------
+
+
+async def test_event_upsert_sql_ors_deleted_against_the_stored_value():
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(table, _entitlement())
+
+    _method, query, args = table.calls[0]
+    assert "INSERT INTO premium_entitlements" in query
+    assert "premium_entitlements.deleted OR EXCLUDED.deleted" in query
+    assert "last_synced_at = now()" in query
+    assert args == (555, 111, "guild", 42, None, 2, False, False, NOW, NOW + datetime.timedelta(days=30))
+
+
+async def test_event_upsert_duplicate_event_is_idempotent():
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(table, _entitlement())
+    await premium.upsert_entitlement_event(table, _entitlement())
+
+    assert len(table.rows) == 1
+    assert table.rows[555]["deleted"] is False
+
+
+async def test_event_upsert_update_before_its_create_still_converges():
+    """An UPDATE for an entitlement_id with no row yet (reordered delivery)
+    inserts it; the CREATE that logically came first then lands on top -
+    final state matches the fields either carried (both non-deleted), same
+    as if they had arrived in the "right" order."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(
+        table, _entitlement(ends_at=NOW + datetime.timedelta(days=60))
+    )  # "update" arrives first
+    await premium.upsert_entitlement_event(
+        table, _entitlement(ends_at=NOW + datetime.timedelta(days=30))
+    )  # "create" arrives second
+
+    assert table.rows[555]["deleted"] is False
+    assert table.rows[555]["ends_at"] == NOW + datetime.timedelta(days=30)
+
+
+async def test_event_upsert_delete_before_its_create_stays_deleted():
+    """THE ordering guarantee: on_entitlement_delete (force_deleted=True)
+    arriving BEFORE the entitlement's own create, followed by that late,
+    stale create (deleted=False) - must converge to deleted, not revert."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(
+        table, _entitlement(), force_deleted=True
+    )  # delete arrives first; no row existed yet
+    assert table.rows[555]["deleted"] is True  # inserted already-deleted
+
+    await premium.upsert_entitlement_event(
+        table, _entitlement(deleted=False)
+    )  # the late, stale create
+
+    assert table.rows[555]["deleted"] is True  # NOT undone
+
+
+async def test_event_upsert_duplicate_delete_is_a_no_op():
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(table, _entitlement(), force_deleted=True)
+    await premium.upsert_entitlement_event(table, _entitlement(), force_deleted=True)
+
+    assert table.rows[555]["deleted"] is True
+
+
+async def test_event_upsert_refund_reported_as_update_stays_deleted():
+    """Plan rule: 'a refund follows the expiry path' - Discord reports it as
+    an entitlement UPDATE with deleted=True, not a dedicated event. A later,
+    stale create/update for the same id must not revive it."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(table, _entitlement(deleted=False))
+    assert table.rows[555]["deleted"] is False
+
+    await premium.upsert_entitlement_event(table, _entitlement(deleted=True))  # the refund
+    assert table.rows[555]["deleted"] is True
+
+    await premium.upsert_entitlement_event(table, _entitlement(deleted=False))  # late, stale
+    assert table.rows[555]["deleted"] is True
+
+
+async def test_negative_control_b_the_clobbering_upsert_would_undo_a_delete():
+    """NEGATIVE CONTROL for the two tests above: if the event path called
+    :func:`premium.upsert_entitlement` (the reconciliation/clobbering
+    variant) instead of :func:`premium.upsert_entitlement_event`, the exact
+    same "delete, then a late stale create" sequence WOULD incorrectly
+    revive the entitlement - proving this fixture actually detects the bug
+    the ordering tests above guard against, and that the fix is the OR in
+    upsert_entitlement_event's SQL, not something the fake table assumes for
+    free."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement(table, _entitlement(deleted=True))
+    assert table.rows[555]["deleted"] is True
+
+    await premium.upsert_entitlement(table, _entitlement(deleted=False))  # late, stale
+    assert table.rows[555]["deleted"] is False  # undone - the bug this fixture catches
+
+
+# ---------------------------------------------------------------------------
+# load_active_for_guild / load_active_for_user / load_active_entitlement_ids
+# ---------------------------------------------------------------------------
+
+
+async def test_load_active_for_guild_filters_by_guild_and_excludes_deleted(fake_pool):
+    fake_pool.fetch_return = []
+    await premium.load_active_for_guild(fake_pool, 111)
+
+    _method, query, args = fake_pool.calls[0]
+    assert "guild_id = $1" in query
+    assert "deleted = FALSE" in query
+    assert args == (111,)
+
+
+async def test_load_active_for_user_filters_by_user_and_excludes_deleted(fake_pool):
+    fake_pool.fetch_return = []
+    await premium.load_active_for_user(fake_pool, 7)
+
+    _method, query, args = fake_pool.calls[0]
+    assert "user_id = $1" in query
+    assert "deleted = FALSE" in query
+    assert args == (7,)
+
+
+async def test_load_active_entitlement_ids_returns_a_set_of_ints(fake_pool):
+    fake_pool.fetch_return = [{"entitlement_id": 1}, {"entitlement_id": 2}]
+    ids = await premium.load_active_entitlement_ids(fake_pool)
+    assert ids == {1, 2}
+
+
+# ---------------------------------------------------------------------------
+# reconcile: the fail-safe full resync
+# ---------------------------------------------------------------------------
+
+APP_ID = 999
+
+
+def _remote(**overrides):
+    row = dict(
+        id=1,
+        sku_id=111,
+        guild_id=42,
+        user_id=None,
+        type=2,
+        deleted=False,
+        consumed=False,
+        starts_at=NOW,
+        ends_at=NOW + datetime.timedelta(days=30),
+        application_id=APP_ID,
+    )
+    row.update(overrides)
+    return types.SimpleNamespace(**row)
+
+
+async def test_reconcile_upserts_every_row_the_listing_returns():
+    table = _FakeEntitlementTable()
+    items = [_remote(id=1), _remote(id=2, guild_id=43)]
+
+    result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
+
+    assert result == {"seen": 2, "upserted": 2, "missing": 0}
+    assert set(table.rows) == {1, 2}
+
+
+async def test_reconcile_marks_a_row_missing_from_a_complete_listing_as_deleted():
+    table = _FakeEntitlementTable()
+    # Pre-existing state: two active rows, as if a previous pass had seen them.
+    await premium.upsert_entitlement(table, _remote(id=1))
+    await premium.upsert_entitlement(table, _remote(id=2, guild_id=43))
+
+    # This COMPLETE listing only reports id=1 - id=2 is gone from Discord.
+    result = await premium.reconcile(table, _stream([_remote(id=1)]), application_id=APP_ID)
+
+    assert result == {"seen": 1, "upserted": 1, "missing": 1}
+    assert table.rows[1]["deleted"] is False
+    assert table.rows[2]["deleted"] is True
+
+
+async def test_reconcile_ignores_rows_of_a_different_application():
+    table = _FakeEntitlementTable()
+    items = [_remote(id=1, application_id=APP_ID), _remote(id=2, application_id=APP_ID + 1)]
+
+    result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
+
+    assert result == {"seen": 1, "upserted": 1, "missing": 0}
+    assert set(table.rows) == {1}  # the foreign row was never written
+
+
+async def test_reconcile_handles_a_large_multi_page_stream_without_truncation():
+    """Stands in for REST pagination (discord.py's own async iterator pages
+    internally): a stream far bigger than one page's worth of rows must be
+    consumed to its end with no row lost or double counted."""
+    table = _FakeEntitlementTable()
+    items = [_remote(id=i, guild_id=1000 + i) for i in range(1, 251)]  # 250 "rows"
+
+    result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
+
+    assert result == {"seen": 250, "upserted": 250, "missing": 0}
+    assert len(table.rows) == 250
+
+
+async def test_reconcile_a_failed_listing_marks_nothing_deleted():
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement(table, _remote(id=1))
+    await premium.upsert_entitlement(table, _remote(id=2, guild_id=43))
+
+    items = [_remote(id=3, guild_id=44), _remote(id=4, guild_id=45)]
+    result = await premium.reconcile(
+        table, _stream(items, fail_after=1), application_id=APP_ID
+    )
+
+    assert result is None
+    # Nothing marked deleted - not the pre-existing rows the failed listing
+    # never got to re-confirm, and not even id=3 which WAS upserted during
+    # the partial pass before the failure (an upsert only ever makes a row
+    # more current, never less, so it is kept; only the DESTRUCTIVE
+    # "mark missing" step is skipped).
+    assert table.rows[1]["deleted"] is False
+    assert table.rows[2]["deleted"] is False
+    assert table.rows[3]["deleted"] is False
+    assert 4 not in table.rows  # never reached
+
+
+async def test_negative_control_a_marking_missing_without_the_guard_would_downgrade_everyone():
+    """NEGATIVE CONTROL for the outage test above: if reconcile ran its
+    "mark every stored id the listing did not see as deleted" step WITHOUT
+    first checking the listing completed, a Discord outage (an EMPTY/failed
+    partial listing) would mark every pre-existing row deleted - exactly
+    the "a Discord outage must never read as everyone's subscription ended"
+    failure this fixture must be able to catch. This reproduces that
+    unguarded step directly (not reconcile() - the real function is
+    asserted NOT to do this, above) to prove the fixture is sensitive to it."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement(table, _remote(id=1))
+    await premium.upsert_entitlement(table, _remote(id=2, guild_id=43))
+
+    # The unguarded shape: a listing that failed, but "mark missing" runs
+    # anyway using whatever was seen before the failure (nothing).
+    seen_ids = set()
+    stored_ids = await premium.load_active_entitlement_ids(table)
+    for entitlement_id in stored_ids - seen_ids:
+        await premium.mark_deleted(table, entitlement_id)
+
+    assert table.rows[1]["deleted"] is True  # wrongly downgraded
+    assert table.rows[2]["deleted"] is True  # wrongly downgraded
+
+
+# ---------------------------------------------------------------------------
+# EntitlementCache.refresh_entitlement_scope
+# ---------------------------------------------------------------------------
+
+
+async def test_refresh_entitlement_scope_populates_an_active_guild_entitlement(fake_pool):
+    fake_pool.fetch_return = [
+        {"entitlement_id": 1, "sku_id": premium.YASUHO_PLUS_SKU or 111, "ends_at": None, "last_synced_at": NOW}
+    ]
+    cache = premium.EntitlementCache()
+
+    await cache.refresh_entitlement_scope(fake_pool, "guild", guild_id=111)
+
+    assert 111 in cache._guild_skus
+    assert cache._guild_skus[111][0].entitlement_id == 1
+    _method, query, args = fake_pool.calls[0]
+    assert "guild_id = $1" in query
+    assert args == (111,)
+
+
+async def test_refresh_entitlement_scope_pops_the_scope_when_nothing_is_active(fake_pool):
+    fake_pool.fetch_return = []
+    cache = premium.EntitlementCache()
+    cache._guild_skus[111] = [
+        premium._EntitlementSnapshot(
+            entitlement_id=1, sku_id=111, ends_at=None, last_synced_at=NOW
+        )
+    ]
+
+    await cache.refresh_entitlement_scope(fake_pool, "guild", guild_id=111)
+
+    assert cache._guild_skus == {}
+
+
+async def test_refresh_entitlement_scope_populates_an_active_user_entitlement(fake_pool):
+    fake_pool.fetch_return = [
+        {"entitlement_id": 2, "sku_id": 222, "ends_at": None, "last_synced_at": NOW}
+    ]
+    cache = premium.EntitlementCache()
+
+    await cache.refresh_entitlement_scope(fake_pool, "user", user_id=7)
+
+    assert 7 in cache._user_skus
+    assert cache._user_skus[7][0].sku_id == 222
+
+
+async def test_refresh_entitlement_scope_rejects_an_unknown_scope_type():
+    cache = premium.EntitlementCache()
+    with pytest.raises(ValueError):
+        await cache.refresh_entitlement_scope(object(), "guild_or_user", guild_id=1)
+
+
+# ---------------------------------------------------------------------------
+# EntitlementCache._lock: load()/refresh_entitlement_scope()/
+# refresh_grant_scope() serialise against each other
+# ---------------------------------------------------------------------------
+
+
+async def test_load_holds_the_lock_across_its_fetch():
+    """While load()'s fetch is in flight, the lock must be held - proving a
+    concurrent refresh cannot interleave its own fetch-then-mutate between
+    this fetch and this reload's rebind (see the class docstring)."""
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    class _SlowPool:
+        def __init__(self):
+            self.calls = 0
+
+        async def fetch(self, query, *args):
+            self.calls += 1
+            started.set()
+            await release.wait()
+            return []
+
+    pool = _SlowPool()
+    cache = premium.EntitlementCache()
+    task = asyncio.ensure_future(cache.load(pool))
+
+    await started.wait()
+    assert cache._lock.locked() is True
+
+    release.set()
+    await task
+    assert cache._lock.locked() is False
+
+
+async def test_refresh_entitlement_scope_and_refresh_grant_scope_share_the_lock():
+    """The two refresh methods take the SAME lock instance - a concurrent
+    entitlement-scope refresh and grant-scope refresh on the same cache must
+    not run their fetch-then-mutate halves interleaved either."""
+    cache = premium.EntitlementCache()
+    assert cache._lock is cache._lock  # sanity: one lock per cache instance
+
+    gate = asyncio.Event()
+
+    class _GatedPool:
+        async def fetch(self, query, *args):
+            await gate.wait()
+            return []
+
+    pool = _GatedPool()
+    task = asyncio.ensure_future(
+        cache.refresh_entitlement_scope(pool, "guild", guild_id=111)
+    )
+    await asyncio.sleep(0)
+    assert cache._lock.locked() is True
+
+    # A concurrent grant-scope refresh on an UNGATED pool must wait for the
+    # lock rather than running its own fetch+mutate in between.
+    fast_pool = types.SimpleNamespace()
+
+    async def _fetch(query, *args):
+        return []
+
+    fast_pool.fetch = _fetch
+    second = asyncio.ensure_future(
+        cache.refresh_grant_scope(fast_pool, "guild", guild_id=222)
+    )
+    await asyncio.sleep(0)
+    assert not second.done()  # blocked on the same lock
+
+    gate.set()
+    await task
+    await second
+    assert cache._lock.locked() is False

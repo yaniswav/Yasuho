@@ -256,10 +256,12 @@ class Yasuho(commands.Bot):
         # eager maps above (prefixes/blacklist/autoroles/muteroles): those are
         # read-ABSENCE-IS-MEANING dicts rebuilt under eager_cache_lock against
         # per-id writers; this is a single object with its own four internal
-        # maps (see EntitlementCache) and, in this lot (M3a+), nothing but the
-        # boot load and the owner's ?premium commands ever writes to it, so
-        # there is no concurrent writer for a lock to serialise against yet -
-        # M3b's gateway handlers and periodic reconciliation will need one.
+        # maps (see EntitlementCache) AND, since M3b, its own internal lock
+        # (EntitlementCache.__init__'s ``_lock``) rather than this bot's
+        # eager_cache_lock - the boot load, the owner's ?premium commands,
+        # the ENTITLEMENT_* gateway handlers and the periodic reconciliation
+        # loop (cogs/system/premium.py) all write to it now, and that lock is
+        # what serialises them against each other.
         self.premium = premium.EntitlementCache()
 
     async def get_context(self, *args, **kwargs):
@@ -368,7 +370,8 @@ class Yasuho(commands.Bot):
         degrade to "nobody is premium", the fail-closed direction for a
         COMMERCIAL benefit (nobody is undercharged by a bug; worst case a real
         subscriber or grant recipient is served the free tier until the next
-        restart or periodic reconciliation, M3b, catches up).
+        restart or the periodic reconciliation loop (cogs/system/premium.py)
+        catches up).
         """
         try:
             await self.premium.load(self.db_pool)

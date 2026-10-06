@@ -18,6 +18,18 @@ tests cover, in order:
 No Discord, no network: ``make_context`` (a plain ``commands.Context`` stand-
 in) and ``fake_pool`` (an in-memory asyncpg pool stand-in) are both from
 conftest.py.
+
+5. M3b: the three ``on_entitlement_*`` gateway listeners
+   (:meth:`Premium._handle_entitlement_event` and its three thin wrappers) -
+   application filtering, write-then-refresh ordering, a failed write never
+   touching the cache.
+6. M3b: the periodic reconciliation loop
+   (:meth:`Premium._reconcile_once`/:meth:`Premium._configured_skus`) and its
+   ``@tasks.loop`` error handler - all driven directly (no real scheduler,
+   same posture as tests/cogs/test_anilist_airing.py's ``_tick``-level
+   tests), since ``cog_load`` (where the loop actually starts in production)
+   is never invoked by ``_cog()`` below - see ``Premium.cog_load``'s own
+   docstring for why that split exists.
 """
 
 from __future__ import annotations
@@ -460,3 +472,351 @@ async def test_list_never_sends_a_description_past_discords_limit(
 
     embed = ctx.sends[0][1]["embed"]
     assert len(embed.description) <= 4096
+
+
+# ---------------------------------------------------------------------------
+# M3b: the ENTITLEMENT_* gateway listeners and the periodic reconciliation
+# loop. These need a richer bot stand-in than _bot()/_cog() above (an
+# ``application_id``, an ``entitlements()`` async iterator, a
+# ``wait_until_ready``) - kept separate rather than widening _bot() itself,
+# so every pre-existing ?premium command test above stays exactly as
+# untouched by this lot as test_cache_mirror_registry.py's own rule insists
+# a rename/widening like this should have to justify itself for.
+# ---------------------------------------------------------------------------
+
+APPLICATION_ID = 999
+
+
+def _remote_entitlement(**overrides):
+    row = dict(
+        id=555,
+        sku_id=111,
+        guild_id=42,
+        user_id=None,
+        type=2,
+        deleted=False,
+        consumed=False,
+        starts_at=None,
+        ends_at=None,
+        application_id=APPLICATION_ID,
+    )
+    row.update(overrides)
+    return types.SimpleNamespace(**row)
+
+
+def _m3b_bot(pool, *, application_id=APPLICATION_ID, stream_factory=None, owner_id=1):
+    async def is_owner(user):
+        return user.id == owner_id
+
+    async def _empty_stream():
+        for _ in ():
+            yield _
+
+    def entitlements(**kwargs):
+        return stream_factory(**kwargs) if stream_factory is not None else _empty_stream()
+
+    async def wait_until_ready():
+        return None
+
+    return types.SimpleNamespace(
+        db_pool=pool,
+        is_owner=is_owner,
+        premium=premium.EntitlementCache(),
+        application_id=application_id,
+        entitlements=entitlements,
+        wait_until_ready=wait_until_ready,
+    )
+
+
+def _m3b_cog(pool, **kwargs):
+    bot = _m3b_bot(pool, **kwargs)
+    return premium_cog.Premium(bot), bot
+
+
+# -- on_entitlement_create/update/delete ------------------------------------
+
+
+async def test_on_entitlement_create_writes_then_refreshes_the_guild_scope(fake_pool):
+    fake_pool.fetch_return = [
+        {"entitlement_id": 555, "sku_id": 111, "ends_at": None, "last_synced_at": None}
+    ]
+    cog, bot = _m3b_cog(fake_pool)
+
+    await cog.on_entitlement_create(_remote_entitlement())
+
+    insert = next(c for c in fake_pool.calls if c[0] == "execute")
+    assert "premium_entitlements.deleted OR EXCLUDED.deleted" in insert[1]
+    assert insert[2][0] == 555  # entitlement_id
+    assert insert[2][6] is False  # deleted
+    assert 42 in bot.premium._guild_skus
+    assert bot.premium._guild_skus[42][0].entitlement_id == 555
+
+
+async def test_on_entitlement_update_refreshes_the_user_scope(fake_pool):
+    fake_pool.fetch_return = [
+        {"entitlement_id": 2, "sku_id": 222, "ends_at": None, "last_synced_at": None}
+    ]
+    cog, bot = _m3b_cog(fake_pool)
+
+    await cog.on_entitlement_update(
+        _remote_entitlement(id=2, sku_id=222, guild_id=None, user_id=7)
+    )
+
+    assert 7 in bot.premium._user_skus
+
+
+async def test_on_entitlement_delete_force_deletes_and_drops_the_scope(fake_pool):
+    fake_pool.fetch_return = []  # nothing active left for this guild
+    cog, bot = _m3b_cog(fake_pool)
+    bot.premium._guild_skus[42] = [
+        premium._EntitlementSnapshot(
+            entitlement_id=555, sku_id=111, ends_at=None, last_synced_at=None
+        )
+    ]
+
+    await cog.on_entitlement_delete(_remote_entitlement())
+
+    insert = next(c for c in fake_pool.calls if c[0] == "execute")
+    assert insert[2][6] is True  # deleted, forced True regardless of payload
+    assert bot.premium._guild_skus == {}  # the scope was popped, not left stale
+
+
+async def test_on_entitlement_delete_before_its_create_still_ends_up_deleted(fake_pool):
+    """The out-of-order case end to end through the listeners themselves
+    (tests/tools/test_premium.py covers the store function in isolation) -
+    on_entitlement_delete arriving first, with no row existing yet, then the
+    late create for the same id."""
+    fake_pool.fetch_return = []
+    cog, bot = _m3b_cog(fake_pool)
+
+    await cog.on_entitlement_delete(_remote_entitlement())
+    await cog.on_entitlement_create(_remote_entitlement(deleted=False))
+
+    inserts = [c for c in fake_pool.calls if c[0] == "execute"]
+    assert len(inserts) == 2
+    # Both writes went through the OR-preserving query; the cache ends up
+    # with nothing active for the guild either way (the DB row stays
+    # deleted - see the tools-level test for the stored value itself).
+    assert bot.premium._guild_skus == {}
+
+
+async def test_a_foreign_application_entitlement_is_ignored_entirely(fake_pool):
+    cog, bot = _m3b_cog(fake_pool)
+    bot.premium._guild_skus[42] = [
+        premium._EntitlementSnapshot(
+            entitlement_id=1, sku_id=111, ends_at=None, last_synced_at=None
+        )
+    ]
+
+    await cog.on_entitlement_create(
+        _remote_entitlement(application_id=APPLICATION_ID + 1)
+    )
+
+    assert fake_pool.calls == []  # never written
+    # the pre-existing cache entry is untouched (no refresh ran either)
+    assert bot.premium._guild_skus == {
+        42: [
+            premium._EntitlementSnapshot(
+                entitlement_id=1, sku_id=111, ends_at=None, last_synced_at=None
+            )
+        ]
+    }
+
+
+async def test_an_entitlement_with_no_application_id_known_is_ignored(fake_pool):
+    """Fail-safe direction: an unknown application_id on EITHER side (ours or
+    the entitlement's) is treated as foreign, never as "assume it's ours"."""
+    cog, bot = _m3b_cog(fake_pool, application_id=None)
+
+    await cog.on_entitlement_create(_remote_entitlement())
+
+    assert fake_pool.calls == []
+
+
+async def test_a_failed_entitlement_write_never_touches_the_cache(fake_pool, monkeypatch):
+    """The same ordering the M3a+ grant commands already guarantee: DB
+    write first, cache refresh only on success."""
+
+    async def _boom(*_args, **_kwargs):
+        raise RuntimeError("db is down")
+
+    monkeypatch.setattr(premium_cog.premium, "upsert_entitlement_event", _boom)
+    cog, bot = _m3b_cog(fake_pool)
+    refreshed = []
+
+    async def _spy(*_args, **_kwargs):
+        refreshed.append(True)
+
+    bot.premium.refresh_entitlement_scope = _spy
+
+    await cog.on_entitlement_create(_remote_entitlement())  # must not raise
+
+    assert refreshed == []
+
+
+async def test_a_failed_cache_refresh_after_a_successful_write_is_logged_not_raised(
+    fake_pool, caplog
+):
+    """The write is durable either way; only the in-memory refresh failed -
+    this must be caught and logged, never propagated out of the listener."""
+
+    async def _boom(*_args, **_kwargs):
+        raise RuntimeError("cache refresh exploded")
+
+    cog, bot = _m3b_cog(fake_pool)
+    bot.premium.refresh_entitlement_scope = _boom
+
+    with caplog.at_level("ERROR", logger=premium_cog.log.name):
+        await cog.on_entitlement_create(_remote_entitlement())  # must not raise
+
+    assert any(c[0] == "execute" for c in fake_pool.calls)  # the write DID happen
+    assert any("cache refresh failed" in r.message for r in caplog.records)
+
+
+# -- periodic reconciliation -------------------------------------------------
+
+
+async def test_configured_skus_returns_none_when_neither_sku_is_set(monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium_cog.premium, "COMFORT_PACK_SKU", None)
+    cog, _bot = _m3b_cog(object())
+    assert cog._configured_skus() is None
+
+
+async def test_configured_skus_wraps_whichever_sku_is_set(monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium_cog.premium, "COMFORT_PACK_SKU", 222)
+    cog, _bot = _m3b_cog(object())
+    skus = cog._configured_skus()
+    assert {sku.id for sku in skus} == {111, 222}
+
+
+async def test_reconcile_once_skips_entirely_without_an_application_id(fake_pool):
+    cog, bot = _m3b_cog(fake_pool, application_id=None)
+    called = []
+    bot.entitlements = lambda **kwargs: called.append(kwargs) or _never_called()
+
+    async def _never_called():
+        for _ in ():
+            yield _
+
+    await cog._reconcile_once()
+
+    assert called == []
+    assert fake_pool.calls == []
+
+
+async def test_reconcile_once_complete_pass_reloads_the_cache(fake_pool, monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium_cog.premium, "COMFORT_PACK_SKU", None)
+
+    class _Table:
+        def __init__(self):
+            self.rows = {}
+            self.calls = []
+
+        async def execute(self, query, *args):
+            self.calls.append(("execute", query, args))
+            self.rows[args[0]] = {
+                "entitlement_id": args[0],
+                "sku_id": args[1],
+                "scope_type": args[2],
+                "guild_id": args[3],
+                "user_id": args[4],
+                "deleted": args[6],
+                "ends_at": args[9],
+                "last_synced_at": None,
+            }
+            return "INSERT 0 1"
+
+        async def fetch(self, query, *args):
+            self.calls.append(("fetch", query, args))
+            if "SELECT entitlement_id FROM premium_entitlements" in query:
+                return [{"entitlement_id": rid} for rid in self.rows]
+            if "FROM premium_entitlements WHERE deleted = FALSE" in query:
+                return list(self.rows.values())
+            if "FROM premium_grants" in query:
+                return []
+            raise AssertionError(f"unexpected query: {query}")
+
+    table = _Table()
+
+    async def _stream(**kwargs):
+        yield _remote_entitlement()
+
+    cog, bot = _m3b_cog(table, stream_factory=_stream)
+
+    await cog._reconcile_once()
+
+    assert 555 in table.rows
+    assert bot.premium.is_guild_premium(42) is True  # the cache was reloaded
+
+
+async def test_reconcile_once_aborted_pass_never_reloads_the_cache(monkeypatch):
+    async def _stream(**kwargs):
+        yield _remote_entitlement()
+        raise RuntimeError("discord outage")
+
+    class _Table:
+        def __init__(self):
+            self.calls = []
+
+        async def execute(self, query, *args):
+            self.calls.append(("execute", query, args))
+            return "INSERT 0 1"
+
+        async def fetch(self, *args, **kwargs):
+            raise AssertionError("must not be reached after an aborted pass")
+
+    cog, bot = _m3b_cog(_Table(), stream_factory=_stream)
+    loaded = []
+    bot.premium.load = lambda *_a, **_kw: loaded.append(True)
+
+    await cog._reconcile_once()  # must not raise
+
+    assert loaded == []
+
+
+async def test_reconcile_entitlements_loop_tick_never_raises_on_failure(monkeypatch):
+    """The tasks.loop wrapper swallows whatever _reconcile_once raises - same
+    posture as cogs/anilist/airing.py's _poll_airing/_tick split."""
+    cog, _bot = _m3b_cog(object())
+
+    async def _boom():
+        raise RuntimeError("unexpected")
+
+    cog._reconcile_once = _boom
+
+    await cog.reconcile_entitlements.coro(cog)  # must not raise
+
+
+async def test_reconcile_error_handler_restarts_the_loop():
+    cog, _bot = _m3b_cog(object())
+    restarted = []
+    cog.reconcile_entitlements.restart = lambda: restarted.append(True)
+
+    await cog._reconcile_error(RuntimeError("loop crashed"))
+
+    assert restarted == [True]
+
+
+# -- cog_load / cog_unload wiring -------------------------------------------
+
+
+async def test_cog_load_starts_the_reconciliation_task(fake_pool):
+    cog, bot = _m3b_cog(fake_pool)
+    assert cog.reconcile_entitlements.is_running() is False
+
+    await cog.cog_load()
+
+    assert cog.reconcile_entitlements.is_running() is True
+    cog.cog_unload()
+
+
+def test_cog_unload_before_cog_load_is_a_safe_no_op(fake_pool):
+    """Direct construction (every test above, and the whole pre-existing
+    ?premium suite) never calls cog_load - cog_unload must still be a no-op
+    rather than raise, since discord.py calls it on extension teardown
+    regardless of whether cog_load's task was ever started."""
+    cog, _bot = _m3b_cog(fake_pool)
+    cog.cog_unload()  # must not raise
