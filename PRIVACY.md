@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: August 10, 2026_
+_Last updated: October 6, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -91,17 +91,23 @@ vote streak and your lifetime vote count, which is what lets a vote grant a
 temporary XP bonus. Nothing else about the vote is stored, and we never poll
 top.gg to find out who has voted.
 
-**Content you ask us to keep**: reminder texts, music favorites and playlists.
-Kept until you delete them.
+**Content you ask us to keep**: reminder texts, music favorites and playlists,
+kept until you delete them; and your AFK status message, deleted as soon as you
+are back.
 
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
 
 ## What we do NOT do
 
-- We do not store message content. Messages are processed in memory (prefix
+- We do not store your conversations. Messages are processed in memory (prefix
   commands, automod filtering, custom command triggers, mini-games) and
-  discarded.
+  discarded. The only text we keep is text explicitly given to a command for
+  that purpose, all listed above: reminder texts, AFK status messages,
+  moderation case reasons, and custom command replies written by server
+  managers. A deleted message is held in memory for at most 15 minutes so
+  moderators can use the snipe command, and is never written to disk. Our logs
+  never contain message text.
 - We do not use any data to train machine learning or AI models.
 - We do not sell or share data with third parties. External services are only
   contacted to render a feature you asked for, and only with what that feature
@@ -122,9 +128,10 @@ ID, no server ID.
 ## Where data lives
 
 All data is stored in a private PostgreSQL database on a server operated by the
-bot owner, with access limited to the bot process and its operator. Database
-backups are encrypted at rest; OAuth tokens are additionally encrypted at the
-application level. Backups are kept for disaster recovery and are subject to
+bot owner, with access limited to the bot process and its operator. The
+database itself is not encrypted at rest (the server's disk is not encrypted);
+database backups are encrypted (GPG), and OAuth tokens are additionally
+encrypted at the application level. Backups are kept for disaster recovery and are subject to
 the same deletion schedule on restore.
 
 ## Retention
