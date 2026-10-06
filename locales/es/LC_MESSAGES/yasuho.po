@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 22:18+0000\n"
+"POT-Creation-Date: 2026-10-06 23:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -453,13 +453,13 @@ msgstr "Completar"
 msgid "Drop"
 msgstr "Abandonar"
 
-#: cogs/anilist/collection.py:250 cogs/config/rooms_config.py:393
+#: cogs/anilist/collection.py:250 cogs/config/rooms_config.py:399
 msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1204
 #: cogs/anilist/hub.py:285 cogs/community/usersettings.py:447
-#: cogs/config/rooms_config.py:455 tools/views.py:80
+#: cogs/config/rooms_config.py:464 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
 
@@ -594,7 +594,7 @@ msgstr "No hay títulos coincidentes de ese tipo."
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
 #: cogs/community/serverstats/views.py:627 cogs/config/announcements.py:298
-#: cogs/config/rolemenus.py:649 cogs/config/welcome.py:109
+#: cogs/config/rolemenus.py:713 cogs/config/welcome.py:109
 #: cogs/config/welcome.py:264 cogs/config/welcome.py:518
 #: cogs/system/botstats.py:1358
 msgid "Something went wrong."
@@ -1274,7 +1274,7 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo para crear uno (hasta {max} por servidor)."
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:487
+#: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:498
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
 #: cogs/moderation/modlog.py:275
@@ -1282,7 +1282,7 @@ msgid "Enabled"
 msgstr "Activado"
 
 #: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:489
+#: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:500
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
 #: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
@@ -1299,7 +1299,7 @@ msgid "Configure how AniList activity is mirrored into this server. Every change
 msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
 
 #: cogs/anilist/feed_views.py:1294 cogs/config/announcements.py:268
-#: cogs/config/rolemenus.py:603 cogs/config/starboard.py:284
+#: cogs/config/rolemenus.py:667 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:560 cogs/config/welcome.py:780
 #: cogs/moderation/modlog.py:575 cogs/moderation/modlog.py:690
@@ -2560,7 +2560,7 @@ msgstr "Estilos de tarjeta de los miembros"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:718
-#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:600
+#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:612
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Solo tú puedes usar estos controles"
@@ -2569,7 +2569,7 @@ msgstr "Solo tú puedes usar estos controles"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:720
-#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:602
+#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:614
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expira después de 3 min"
@@ -3524,7 +3524,7 @@ msgstr "Vinculada"
 msgid "This profile is too long to show in full."
 msgstr "Este perfil es demasiado largo para mostrarse completo."
 
-#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:211
+#: cogs/community/profile/views.py:730 cogs/config/rooms_config.py:210
 msgid "Public"
 msgstr "Pública"
 
@@ -3532,7 +3532,7 @@ msgstr "Pública"
 msgid "Server"
 msgstr "Servidor"
 
-#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:208
+#: cogs/community/profile/views.py:732 cogs/config/rooms_config.py:207
 msgid "Private"
 msgstr "Privada"
 
@@ -3734,8 +3734,8 @@ msgstr "Posee {count} juegos"
 msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
 msgstr "Necesitas tu mismo estos permisos en {channel} para programar alli un resumen semanal: {permissions}."
 
-#: cogs/community/serverstats/cog.py:738 cogs/config/tickets/panel.py:667
-#: cogs/config/tickets/panel.py:804
+#: cogs/community/serverstats/cog.py:738 cogs/config/tickets/panel.py:684
+#: cogs/config/tickets/panel.py:828
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Primero necesito estos permisos en {channel}: {permissions}."
@@ -4019,7 +4019,7 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "Compón el embed con el menú, elige un canal (y opcionalmente un rol a mencionar) y luego pulsa **Enviar**. La vista previa solo la ves tú."
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:596 cogs/config/tickets/panel.py:156
+#: cogs/config/rolemenus.py:660 cogs/config/tickets/panel.py:156
 #: cogs/config/twitch.py:420 cogs/config/verification.py:118
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
 #: cogs/moderation/modlog.py:273
@@ -4052,7 +4052,7 @@ msgid "Pick a target channel first."
 msgstr "Elige primero un canal de destino."
 
 #: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
-#: cogs/config/rolemenus.py:668 cogs/config/verification.py:197
+#: cogs/config/rolemenus.py:732 cogs/config/verification.py:197
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "No puedo enviar mensajes en {channel}."
@@ -4121,7 +4121,7 @@ msgstr "Botón para añadir rol"
 msgid "Button label"
 msgstr "Etiqueta del botón"
 
-#: cogs/config/buttonroles.py:258 cogs/config/rolemenus.py:268
+#: cogs/config/buttonroles.py:258 cogs/config/rolemenus.py:332
 msgid "Emoji (optional)"
 msgstr "Emoji (opcional)"
 
@@ -4343,7 +4343,7 @@ msgstr "Segundos personalizados"
 msgid "Cooldown seconds (optional)"
 msgstr "Segundos de espera (opcional)"
 
-#: cogs/config/customcommands.py:113 cogs/config/rolemenus.py:303
+#: cogs/config/customcommands.py:113 cogs/config/rolemenus.py:367
 msgid "Pick one, or type a custom value below to override."
 msgstr "Elige una, o escribe abajo un valor personalizado para sobrescribirla."
 
@@ -4576,287 +4576,296 @@ msgstr "No se han configurado roles por reacción para este servidor."
 msgid "Message `{mid}` - {emoji} -> <@&{role}>"
 msgstr "Mensaje `{mid}` - {emoji} -> <@&{role}>"
 
-#: cogs/config/rolemenus.py:38
+#: cogs/config/rolemenus.py:81
 msgid "1 hour"
 msgstr "1 hora"
 
-#: cogs/config/rolemenus.py:39
+#: cogs/config/rolemenus.py:82
 msgid "12 hours"
 msgstr "12 horas"
 
-#: cogs/config/rolemenus.py:40
+#: cogs/config/rolemenus.py:83
 msgid "1 day"
 msgstr "1 día"
 
-#: cogs/config/rolemenus.py:41
+#: cogs/config/rolemenus.py:84
 msgid "7 days"
 msgstr "7 días"
 
-#: cogs/config/rolemenus.py:42
+#: cogs/config/rolemenus.py:85
 msgid "Permanent"
 msgstr "Permanente"
 
-#: cogs/config/rolemenus.py:112
+#: cogs/config/rolemenus.py:156
 msgid "Roles can only be set inside a server."
 msgstr "Los roles solo se pueden configurar dentro de un servidor."
 
-#: cogs/config/rolemenus.py:193
+#: cogs/config/rolemenus.py:249
 #, python-brace-format
 msgid "Added: {roles}"
 msgstr "Añadidos: {roles}"
 
-#: cogs/config/rolemenus.py:197
+#: cogs/config/rolemenus.py:253
 #, python-brace-format
 msgid "Removed: {roles}"
 msgstr "Eliminados: {roles}"
 
-#: cogs/config/rolemenus.py:203
+#: cogs/config/rolemenus.py:259
 msgid "I couldn't manage those roles - they may be above my highest role."
 msgstr "No pude gestionar esos roles - puede que estén por encima de mi rol más alto."
 
-#: cogs/config/rolemenus.py:206
+#: cogs/config/rolemenus.py:264
+msgid "This menu is archived - this server is over its current role menu limit, so no new role can be granted from it. See /premium for options."
+msgstr "Este menú está archivado - este servidor supera su límite actual de menús de roles, así que ya no se pueden obtener roles nuevos con él. Mira /premium para ver las opciones."
+
+#: cogs/config/rolemenus.py:270
 msgid "No changes."
 msgstr "Sin cambios."
 
-#: cogs/config/rolemenus.py:228
+#: cogs/config/rolemenus.py:292
 msgid "Menu header"
 msgstr "Encabezado del menú"
 
-#: cogs/config/rolemenus.py:231 tools/embed_creator.py:411
+#: cogs/config/rolemenus.py:295 tools/embed_creator.py:411
 msgid "Title"
 msgstr "Título"
 
-#: cogs/config/rolemenus.py:237 tools/embed_creator.py:435
+#: cogs/config/rolemenus.py:301 tools/embed_creator.py:435
 msgid "Description"
 msgstr "Descripción"
 
-#: cogs/config/rolemenus.py:260
+#: cogs/config/rolemenus.py:324
 msgid "Role option"
 msgstr "Opción de rol"
 
-#: cogs/config/rolemenus.py:272
+#: cogs/config/rolemenus.py:336
 msgid "A single emoji, or leave blank"
 msgstr "Un solo emoji, o deja en blanco"
 
-#: cogs/config/rolemenus.py:275
+#: cogs/config/rolemenus.py:339
 msgid "Short description (optional)"
 msgstr "Descripción breve (opcional)"
 
-#: cogs/config/rolemenus.py:291
+#: cogs/config/rolemenus.py:355
 msgid "Custom duration"
 msgstr "Duración personalizada"
 
-#: cogs/config/rolemenus.py:292
+#: cogs/config/rolemenus.py:356
 msgid "e.g. 2h, 30m, 1d"
 msgstr "p. ej. 2h, 30m, 1d"
 
-#: cogs/config/rolemenus.py:301
+#: cogs/config/rolemenus.py:365
 msgid "Temporary? (optional)"
 msgstr "¿Temporal? (opcional)"
 
-#: cogs/config/rolemenus.py:313
+#: cogs/config/rolemenus.py:377
 msgid "That emoji isn't valid. Use a single emoji, or leave it blank."
 msgstr "Ese emoji no es válido. Usa un solo emoji, o déjalo en blanco."
 
-#: cogs/config/rolemenus.py:348
+#: cogs/config/rolemenus.py:412
 #, python-brace-format
 msgid "temporary {dur}"
 msgstr "temporal {dur}"
 
-#: cogs/config/rolemenus.py:355
+#: cogs/config/rolemenus.py:419
 msgid "no emoji/description yet"
 msgstr "aún sin emoji ni descripción"
 
-#: cogs/config/rolemenus.py:359
+#: cogs/config/rolemenus.py:423
 msgid "Customize a role (emoji + description)..."
 msgstr "Personaliza un rol (emoji + descripción)..."
 
-#: cogs/config/rolemenus.py:360
+#: cogs/config/rolemenus.py:424
 msgid "(pick roles first)"
 msgstr "(elige primero los roles)"
 
-#: cogs/config/rolemenus.py:386
+#: cogs/config/rolemenus.py:450
 msgid "Pick the roles to offer..."
 msgstr "Elige los roles a ofrecer..."
 
-#: cogs/config/rolemenus.py:435
+#: cogs/config/rolemenus.py:499
 #, python-brace-format
 msgid "Left out {roles}: a self-assignable role must sit below both your highest role and mine, and can't be managed by an integration."
 msgstr "Se omitió {roles}: un rol autoasignable debe estar por debajo de tu rol más alto y del mío, y no puede estar gestionado por una integración."
 
-#: cogs/config/rolemenus.py:455
+#: cogs/config/rolemenus.py:519
 msgid "Members can pick any"
 msgstr "Los miembros pueden elegir cualquiera"
 
-#: cogs/config/rolemenus.py:461
+#: cogs/config/rolemenus.py:525
 msgid "Members pick exactly one"
 msgstr "Los miembros eligen exactamente uno"
 
-#: cogs/config/rolemenus.py:467
+#: cogs/config/rolemenus.py:531
 msgid "Selection rule..."
 msgstr "Regla de selección..."
 
-#: cogs/config/rolemenus.py:489
+#: cogs/config/rolemenus.py:553
 msgid "Channel to post the menu in..."
 msgstr "Canal donde publicar el menú..."
 
-#: cogs/config/rolemenus.py:507
+#: cogs/config/rolemenus.py:571
 msgid "Edit header"
 msgstr "Editar encabezado"
 
-#: cogs/config/rolemenus.py:516
+#: cogs/config/rolemenus.py:580
 msgid "Post menu"
 msgstr "Publicar menú"
 
-#: cogs/config/rolemenus.py:571
+#: cogs/config/rolemenus.py:635
 msgid "Role menu builder"
 msgstr "Creador de menú de roles"
 
-#: cogs/config/rolemenus.py:573
+#: cogs/config/rolemenus.py:637
 msgid "Pick the roles to offer, choose the rule, set a channel, then **Post menu**. Members set their roles from a single dropdown."
 msgstr "Elige los roles a ofrecer, selecciona la regla, define un canal y luego pulsa **Publicar menú**. Los miembros ajustan sus roles desde un único desplegable."
 
-#: cogs/config/rolemenus.py:581
+#: cogs/config/rolemenus.py:645
 msgid "*None yet.*"
 msgstr "*Ninguno todavía.*"
 
-#: cogs/config/rolemenus.py:586
+#: cogs/config/rolemenus.py:650
 #, python-brace-format
 msgid "Roles ({count})"
 msgstr "Roles ({count})"
 
-#: cogs/config/rolemenus.py:593
+#: cogs/config/rolemenus.py:657
 msgid "Pick exactly one"
 msgstr "Elige exactamente uno"
 
-#: cogs/config/rolemenus.py:593
+#: cogs/config/rolemenus.py:657
 msgid "Pick any"
 msgstr "Elige cualquiera"
 
-#: cogs/config/rolemenus.py:601
+#: cogs/config/rolemenus.py:665
 msgid "Rule"
 msgstr "Regla"
 
-#: cogs/config/rolemenus.py:609
+#: cogs/config/rolemenus.py:673
 msgid "*default*"
 msgstr "*predeterminado*"
 
-#: cogs/config/rolemenus.py:611
+#: cogs/config/rolemenus.py:675
 msgid "Header"
 msgstr "Encabezado"
 
-#: cogs/config/rolemenus.py:628 cogs/config/rolemenus.py:828
-#: cogs/system/dashboard_actions.py:1489
+#: cogs/config/rolemenus.py:692 cogs/config/rolemenus.py:963
+#: cogs/system/dashboard_actions.py:1493
 msgid "Pick your roles"
 msgstr "Elige tus roles"
 
-#: cogs/config/rolemenus.py:635 cogs/system/dashboard_actions.py:1494
+#: cogs/config/rolemenus.py:699 cogs/system/dashboard_actions.py:1498
 #: cogs/utility/info.py:157
 msgid "Roles"
 msgstr "Roles"
 
-#: cogs/config/rolemenus.py:658
+#: cogs/config/rolemenus.py:722
 msgid "Pick at least one role first."
 msgstr "Elige primero al menos un rol."
 
-#: cogs/config/rolemenus.py:664
+#: cogs/config/rolemenus.py:728
 msgid "Pick a channel to post the menu in first."
 msgstr "Elige primero un canal donde publicar el menú."
 
-#: cogs/config/rolemenus.py:689
+#: cogs/config/rolemenus.py:753
 msgid "Posting failed, please try again."
 msgstr "La publicación falló, inténtalo de nuevo."
 
-#: cogs/config/rolemenus.py:701
+#: cogs/config/rolemenus.py:765
 #, python-brace-format
 msgid "Posted the role menu in {channel}."
 msgstr "Menú de roles publicado en {channel}."
 
-#: cogs/config/rolemenus.py:823
+#: cogs/config/rolemenus.py:958
 #, python-brace-format
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Este servidor ya tiene el máximo de {n} menús de roles."
 
-#: cogs/config/rooms.py:487 cogs/config/rooms_config.py:489
+#: cogs/config/rooms.py:562 cogs/config/rooms_config.py:501
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "Ya tienes el máximo de {max_hubs} hubs."
 
-#: cogs/config/rooms.py:494
+#: cogs/config/rooms.py:569
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "Este servidor ha alcanzado el límite de Discord de {max} categorías."
 
-#: cogs/config/rooms.py:500
+#: cogs/config/rooms.py:575
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "Este servidor está demasiado cerca del límite de {budget} canales de Discord para añadir otro hub."
 
-#: cogs/config/rooms.py:526
+#: cogs/config/rooms.py:601
 msgid "Something went wrong while creating the hub's channels, and the empty category left behind could not be removed - please delete it by hand."
 msgstr "Algo ha salido mal al crear los canales del hub, y la categoria vacia que ha quedado no se ha podido eliminar - borrala a mano, por favor."
 
-#: cogs/config/rooms.py:533
+#: cogs/config/rooms.py:608
 msgid "Something went wrong while creating the hub's channels."
 msgstr "Algo salió mal al crear los canales del hub."
 
-#: cogs/config/rooms.py:547
+#: cogs/config/rooms.py:622
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "Hub **{label}** creado. Los miembros ya pueden unirse a {channel}."
 
-#: cogs/config/rooms.py:558 cogs/config/rooms.py:629 cogs/config/rooms.py:717
-#: cogs/config/rooms_config.py:507
+#: cogs/config/rooms.py:633 cogs/config/rooms.py:704 cogs/config/rooms.py:792
+#: cogs/config/rooms_config.py:519
 msgid "That hub no longer exists."
 msgstr "Ese hub ya no existe."
 
-#: cogs/config/rooms.py:567
+#: cogs/config/rooms.py:642
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "Hub **{label}** actualizado."
 
-#: cogs/config/rooms.py:693
+#: cogs/config/rooms.py:768
 #, python-brace-format
 msgid "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove it by hand."
 msgid_plural "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove them by hand."
 msgstr[0] "Hub **{label}** retirado de los ajustes, pero {count} de sus canales no se ha podido eliminar - borralo a mano, por favor."
 msgstr[1] "Hub **{label}** retirado de los ajustes, pero {count} de sus canales no se han podido eliminar - borralos a mano, por favor."
 
-#: cogs/config/rooms.py:700
+#: cogs/config/rooms.py:775
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "Hub **{label}** eliminado."
 
-#: cogs/config/rooms.py:731
+#: cogs/config/rooms.py:806
 msgid "category"
 msgstr "categoría"
 
-#: cogs/config/rooms.py:737
+#: cogs/config/rooms.py:812
 msgid "join-to-create channel"
 msgstr "canal de unirse para crear"
 
-#: cogs/config/rooms.py:742
+#: cogs/config/rooms.py:817
 msgid "Nothing was renamed - those channels are missing."
 msgstr "No se renombró nada - esos canales no existen."
 
-#: cogs/config/rooms.py:743
+#: cogs/config/rooms.py:818
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "Se renombró {targets}."
 
-#: cogs/config/rooms.py:1002
+#: cogs/config/rooms.py:1097
 msgid "There are no autoroom hubs set up in this server."
 msgstr "No hay hubs de autosalas configurados en este servidor."
 
-#: cogs/config/rooms.py:1006
+#: cogs/config/rooms.py:1106
 msgid "Autoroom hubs"
 msgstr "Hubs de autosalas"
 
-#: cogs/config/rooms.py:1010
+#: cogs/config/rooms.py:1110
 msgid "channel missing"
 msgstr "canal ausente"
 
-#: cogs/config/rooms.py:1013
+#: cogs/config/rooms.py:1115 cogs/config/rooms_config.py:405
+#: cogs/music/playlists_shared.py:312
+msgid "(archived)"
+msgstr "(archivada)"
+
+#: cogs/config/rooms.py:1118
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -4865,76 +4874,76 @@ msgstr ""
 "{location}\n"
 "{summary}"
 
-#: cogs/config/rooms_config.py:72 cogs/config/rooms_panels.py:86
+#: cogs/config/rooms_config.py:71 cogs/config/rooms_panels.py:86
 msgid "User limit..."
 msgstr "Límite de usuarios..."
 
-#: cogs/config/rooms_config.py:92
+#: cogs/config/rooms_config.py:91
 msgid "Remove a hub..."
 msgstr "Eliminar un hub..."
 
-#: cogs/config/rooms_config.py:112
+#: cogs/config/rooms_config.py:111
 msgid "Add an autoroom hub"
 msgstr "Añadir un hub de autosalas"
 
-#: cogs/config/rooms_config.py:116 cogs/config/rooms_config.py:187
+#: cogs/config/rooms_config.py:115 cogs/config/rooms_config.py:186
 msgid "Hub label"
 msgstr "Etiqueta del hub"
 
-#: cogs/config/rooms_config.py:122 cogs/config/rooms_config.py:255
+#: cogs/config/rooms_config.py:121 cogs/config/rooms_config.py:254
 msgid "Category name"
 msgstr "Nombre de la categoría"
 
-#: cogs/config/rooms_config.py:128 cogs/config/rooms_config.py:261
+#: cogs/config/rooms_config.py:127 cogs/config/rooms_config.py:260
 msgid "Join-to-create channel name"
 msgstr "Nombre del canal de unirse para crear"
 
-#: cogs/config/rooms_config.py:134 cogs/config/rooms_config.py:193
+#: cogs/config/rooms_config.py:133 cogs/config/rooms_config.py:192
 #, python-brace-format
 msgid "Room name template ({user}, {count})"
 msgstr "Plantilla de nombre de sala ({user}, {count})"
 
-#: cogs/config/rooms_config.py:149 cogs/config/rooms_config.py:217
+#: cogs/config/rooms_config.py:148 cogs/config/rooms_config.py:216
 msgid "User limit (0 = unlimited)"
 msgstr "Límite de usuarios (0 = ilimitado)"
 
-#: cogs/config/rooms_config.py:182
+#: cogs/config/rooms_config.py:181
 msgid "Edit autoroom hub"
 msgstr "Editar hub de autosalas"
 
-#: cogs/config/rooms_config.py:200
+#: cogs/config/rooms_config.py:199
 msgid "Max rooms (1-50)"
 msgstr "Máximo de salas (1-50)"
 
-#: cogs/config/rooms_config.py:222
+#: cogs/config/rooms_config.py:221
 msgid "Room privacy"
 msgstr "Privacidad de la sala"
 
-#: cogs/config/rooms_config.py:250
+#: cogs/config/rooms_config.py:249
 msgid "Rename hub channels"
 msgstr "Renombrar canales del hub"
 
-#: cogs/config/rooms_config.py:297
+#: cogs/config/rooms_config.py:296
 msgid "Settings"
 msgstr "Ajustes"
 
-#: cogs/config/rooms_config.py:305
+#: cogs/config/rooms_config.py:304
 msgid "Rename channels"
 msgstr "Renombrar canales"
 
-#: cogs/config/rooms_config.py:372
+#: cogs/config/rooms_config.py:375
 msgid "## Autoroom hubs"
 msgstr "## Hubs de autosalas"
 
-#: cogs/config/rooms_config.py:376
+#: cogs/config/rooms_config.py:379
 msgid "Join-to-create voice hubs. Members who join a hub get their own temp room, cleaned up when it empties."
 msgstr "Hubs de voz de unirse para crear. Los miembros que se unen a un hub obtienen su propia sala temporal, que se elimina cuando queda vacía."
 
-#: cogs/config/rooms_config.py:386
+#: cogs/config/rooms_config.py:389
 msgid "No hubs yet. Use **Add hub** to create your first one."
 msgstr "Aún no hay hubs. Usa **Añadir hub** para crear el primero."
 
-#: cogs/config/rooms_config.py:400
+#: cogs/config/rooms_config.py:409
 #, python-brace-format
 msgid ""
 "**{label}**\n"
@@ -4943,25 +4952,25 @@ msgstr ""
 "**{label}**\n"
 "{summary}"
 
-#: cogs/config/rooms_config.py:413
+#: cogs/config/rooms_config.py:422
 msgid "Add hub"
 msgstr "Añadir hub"
 
-#: cogs/config/rooms_config.py:429
+#: cogs/config/rooms_config.py:438
 #, python-brace-format
 msgid "-# {count}/{max_hubs} hubs - ~{reserved} channels reserved - {used}/{budget} channels used"
 msgstr "-# {count}/{max_hubs} hubs - ~{reserved} canales reservados - {used}/{budget} canales usados"
 
-#: cogs/config/rooms_config.py:499 cogs/config/rooms_config.py:520
+#: cogs/config/rooms_config.py:511 cogs/config/rooms_config.py:532
 msgid "Something went wrong opening that form."
 msgstr "Algo salió mal al abrir ese formulario."
 
-#: cogs/config/rooms_config.py:511
+#: cogs/config/rooms_config.py:523
 #, python-brace-format
 msgid "Manage the **{label}** hub:"
 msgstr "Gestionar el hub **{label}**:"
 
-#: cogs/config/rooms_config.py:536
+#: cogs/config/rooms_config.py:548
 msgid "Something went wrong removing that hub."
 msgstr "Algo salió mal al eliminar ese hub."
 
@@ -5618,8 +5627,8 @@ msgid "I can't give you that role: it carries permissions I won't hand out autom
 msgstr "No puedo darte ese rol: tiene permisos que no otorgo automáticamente. Avisa a un administrador del servidor."
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
-#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:211
-#: cogs/config/tickets/open.py:343 cogs/config/verification.py:83
+#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:219
+#: cogs/config/tickets/open.py:359 cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "Algo salió mal, inténtalo de nuevo."
 
@@ -5800,7 +5809,7 @@ msgid "The ticket stays open."
 msgstr "El ticket sigue abierto."
 
 #: cogs/config/tickets/lifecycle.py:358 cogs/config/tickets/lifecycle.py:453
-#: cogs/config/tickets/open.py:177 cogs/config/tickets/open.py:252
+#: cogs/config/tickets/open.py:177 cogs/config/tickets/open.py:260
 msgid "Tickets only work inside a server."
 msgstr "Los tickets solo funcionan dentro de un servidor."
 
@@ -5965,54 +5974,54 @@ msgstr "¿En qué necesitas ayuda?"
 msgid "A short summary - staff will read it first."
 msgstr "Un resumen breve - el equipo lo leerá primero."
 
-#: cogs/config/tickets/open.py:186 cogs/config/tickets/open.py:261
+#: cogs/config/tickets/open.py:186 cogs/config/tickets/open.py:269
 msgid "You cannot use this."
 msgstr "No puedes usar esto."
 
-#: cogs/config/tickets/open.py:193 cogs/config/tickets/open.py:279
+#: cogs/config/tickets/open.py:193 cogs/config/tickets/open.py:287
 msgid "Tickets are not set up here."
 msgstr "Los tickets no están configurados aquí."
 
-#: cogs/config/tickets/open.py:218 cogs/config/tickets/open.py:303
+#: cogs/config/tickets/open.py:226 cogs/config/tickets/open.py:311
 msgid "I am already opening a ticket for you - one moment."
 msgstr "Ya estoy abriendo un ticket para ti - un momento."
 
-#: cogs/config/tickets/open.py:235
+#: cogs/config/tickets/open.py:243
 #, python-brace-format
 msgid "You already have {count} ticket open here. Close it before opening another."
 msgid_plural "You already have {count} tickets open here. Close one before opening another."
 msgstr[0] "Ya tienes {count} ticket abierto aquí. Ciérralo antes de abrir otro."
 msgstr[1] "Ya tienes {count} tickets abiertos aquí. Cierra uno antes de abrir otro."
 
-#: cogs/config/tickets/open.py:295
+#: cogs/config/tickets/open.py:303
 #, python-brace-format
 msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
 msgstr "Me faltan permisos en {channel} ({permissions}), así que no puedo abrir un ticket. Por favor, avisa a un administrador del servidor."
 
-#: cogs/config/tickets/open.py:334
+#: cogs/config/tickets/open.py:350
 msgid "I could not create the ticket, please try again."
 msgstr "No pude crear el ticket, por favor inténtalo de nuevo."
 
-#: cogs/config/tickets/open.py:372
+#: cogs/config/tickets/open.py:388
 #, python-brace-format
 msgid "Ticket #{number} opened: {thread}"
 msgstr "Ticket #{number} abierto: {thread}"
 
-#: cogs/config/tickets/open.py:397
+#: cogs/config/tickets/open.py:413
 #, python-brace-format
 msgid "Ticket #{number}"
 msgstr "Ticket #{number}"
 
-#: cogs/config/tickets/open.py:398
+#: cogs/config/tickets/open.py:414
 msgid "*No subject given.*"
 msgstr "*No se indicó ningún asunto.*"
 
-#: cogs/config/tickets/open.py:402
+#: cogs/config/tickets/open.py:418
 #, python-brace-format
 msgid "Opened by {user}"
 msgstr "Abierto por {user}"
 
-#: cogs/config/tickets/open.py:445
+#: cogs/config/tickets/open.py:461
 #, python-brace-format
 msgid "Ticket #{number} - use the buttons below to claim or close it."
 msgstr "Ticket #{number} - usa los botones de abajo para reclamarlo o cerrarlo."
@@ -6039,7 +6048,7 @@ msgstr ""
 "**Tickets abiertos por miembro:** {cap}\n"
 "**Ventana de inactividad:** {hours}h"
 
-#: cogs/config/tickets/panel.py:125 cogs/config/tickets/panel.py:919
+#: cogs/config/tickets/panel.py:125 cogs/config/tickets/panel.py:943
 #, python-brace-format
 msgid "Closed tickets are logged in {channel}, transcript attached."
 msgstr "Los tickets cerrados se registran en {channel}, con la transcripción adjunta."
@@ -6069,55 +6078,55 @@ msgstr "Canal de registro: tickets cerrados + transcripciones..."
 msgid "Clears the setting and follows the bot default."
 msgstr "Borra el ajuste y sigue el valor predeterminado del bot."
 
-#: cogs/config/tickets/panel.py:312
+#: cogs/config/tickets/panel.py:318
 #, python-brace-format
 msgid "Default ({count})"
 msgstr "Predeterminado ({count})"
 
-#: cogs/config/tickets/panel.py:323
+#: cogs/config/tickets/panel.py:327
 #, python-brace-format
 msgid "{count} at a time"
 msgstr "{count} a la vez"
 
-#: cogs/config/tickets/panel.py:329
+#: cogs/config/tickets/panel.py:333
 msgid "Open tickets per member..."
 msgstr "Tickets abiertos por miembro..."
 
-#: cogs/config/tickets/panel.py:348
+#: cogs/config/tickets/panel.py:352
 #, python-brace-format
 msgid "Default ({hours}h)"
 msgstr "Predeterminado ({hours}h)"
 
-#: cogs/config/tickets/panel.py:357 cogs/config/tickets/panel.py:498
+#: cogs/config/tickets/panel.py:361 cogs/config/tickets/panel.py:509
 #, python-brace-format
 msgid "{hours}h"
 msgstr "{hours}h"
 
-#: cogs/config/tickets/panel.py:363
+#: cogs/config/tickets/panel.py:367
 msgid "Close a ticket after this much silence..."
 msgstr "Cerrar un ticket tras este tiempo de silencio..."
 
-#: cogs/config/tickets/panel.py:379
+#: cogs/config/tickets/panel.py:383
 msgid "Panel message"
 msgstr "Mensaje del panel"
 
-#: cogs/config/tickets/panel.py:382
+#: cogs/config/tickets/panel.py:386
 msgid "Shown above the ticket button"
 msgstr "Se muestra encima del botón de ticket"
 
-#: cogs/config/tickets/panel.py:387
+#: cogs/config/tickets/panel.py:391
 msgid "Leave empty to use the default wording."
 msgstr "Déjalo vacío para usar el texto predeterminado."
 
-#: cogs/config/tickets/panel.py:398
+#: cogs/config/tickets/panel.py:402
 msgid "Edit panel message"
 msgstr "Editar mensaje del panel"
 
-#: cogs/config/tickets/panel.py:409
+#: cogs/config/tickets/panel.py:413
 msgid "Reset message"
 msgstr "Restablecer mensaje"
 
-#: cogs/config/tickets/panel.py:478
+#: cogs/config/tickets/panel.py:489
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -6136,65 +6145,65 @@ msgstr ""
 "**Ventana de inactividad:** {hours}\n"
 "**Mensaje del panel:** {message}"
 
-#: cogs/config/tickets/panel.py:502
+#: cogs/config/tickets/panel.py:513
 msgid "*Default wording.*"
 msgstr "*Texto predeterminado.*"
 
-#: cogs/config/tickets/panel.py:510
+#: cogs/config/tickets/panel.py:521
 #, python-brace-format
 msgid "{value} (default)"
 msgstr "{value} (predeterminado)"
 
-#: cogs/config/tickets/panel.py:520
+#: cogs/config/tickets/panel.py:531
 #, python-brace-format
 msgid "Support tickets - {guild}"
 msgstr "Tickets de soporte - {guild}"
 
-#: cogs/config/tickets/panel.py:523
+#: cogs/config/tickets/panel.py:534
 msgid "Every setting below is optional: clear a picker, or choose Default, and Yasuho goes back to her own default for it."
 msgstr "Cada ajuste de abajo es opcional: borra un selector, o elige Predeterminado, y Yasuho vuelve a su propio valor predeterminado para ese ajuste."
 
-#: cogs/config/tickets/panel.py:585
+#: cogs/config/tickets/panel.py:597
 msgid "Changing the panel channel here does not post a panel there - run `/ticket setup` for that."
 msgstr "Cambiar el canal del panel aquí no publica un panel allí - usa `/ticket setup` para eso."
 
-#: cogs/config/tickets/panel.py:589
+#: cogs/config/tickets/panel.py:601
 msgid "A closed ticket is logged with the full transcript of its thread; with no log channel, no transcript is kept at all."
 msgstr "Un ticket cerrado se registra con la transcripción completa de su hilo; sin un canal de registro, no se guarda ninguna transcripción."
 
-#: cogs/config/tickets/panel.py:632
+#: cogs/config/tickets/panel.py:644
 msgid "Something went wrong saving that setting."
 msgstr "Algo salió mal al guardar ese ajuste."
 
-#: cogs/config/tickets/panel.py:860
+#: cogs/config/tickets/panel.py:884
 msgid "Support tickets"
 msgstr "Tickets de soporte"
 
-#: cogs/config/tickets/panel.py:864
+#: cogs/config/tickets/panel.py:888
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "¿Necesitas una mano? Haz clic abajo y abriré un hilo privado para ti y el equipo de soporte."
 
-#: cogs/config/tickets/panel.py:876
+#: cogs/config/tickets/panel.py:900
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "No pude publicar el panel en {channel}."
 
-#: cogs/config/tickets/panel.py:882
+#: cogs/config/tickets/panel.py:906
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "Los tickets están activados - el panel está publicado en {channel}. {jump}"
 
-#: cogs/config/tickets/panel.py:912
+#: cogs/config/tickets/panel.py:936
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "Rol de soporte: {role} | Canal de registro: {log} | setup solo cambia las opciones que indiques."
 
-#: cogs/config/tickets/panel.py:934
+#: cogs/config/tickets/panel.py:958
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "Aviso: a {role} le faltan {permissions} en {channel}. Un ticket es un hilo privado, así que el equipo solo puede verlo con Gestionar hilos en el canal - sin eso, los mencionarán en tickets que no podrán abrir."
 
-#: cogs/config/tickets/panel.py:986
+#: cogs/config/tickets/panel.py:1010
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "Los tickets están desactivados. Los hilos que ya están abiertos permanecen donde están, y el botón del panel indicará que los tickets no están configurados."
 
@@ -7882,10 +7891,6 @@ msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count} pista - {duration}"
 msgstr[1] "**{name}** - {count} pistas - {duration}"
-
-#: cogs/music/playlists_shared.py:312
-msgid "(archived)"
-msgstr "(archivada)"
 
 #: cogs/music/playlists_shared.py:313
 #, python-brace-format
