@@ -102,3 +102,8 @@ secrets) - copy them from the `*.template.ini` files and fill in:
 * **yaniswav** - _Development and Hosting_ - [yaniswav](https://github.com/yaniswav)
 
 [![Yasuho on top.gg](https://top.gg/api/widget/498580306773934081.svg)](https://top.gg/bot/498580306773934081)
+
+## Legal
+
+- [Terms of Service](TERMS.md)
+- [Privacy Policy](PRIVACY.md)
