@@ -30,6 +30,7 @@ import sonolink.models
 
 from cogs.music import music, views
 from cogs.music import playlists_shared as ps
+from tools import premium
 
 CAP = music.MAX_QUEUE_TRACKS
 
@@ -166,7 +167,14 @@ class _SLClient:
 def _cog(sl_client=None, player=None):
     """A Music cog with no ``__init__`` side effects (it starts a task loop)."""
     cog = music.Music.__new__(music.Music)
-    cog.bot = types.SimpleNamespace(sl_client=sl_client or _SLClient(), db_pool=None)
+    cog.bot = types.SimpleNamespace(
+        sl_client=sl_client or _SLClient(),
+        db_pool=None,
+        # M4a-1: serverplaylist_play reads the effective caps from
+        # bot.premium - these cap tests are not about premium, so FREE is
+        # exactly today's behaviour.
+        premium=types.SimpleNamespace(for_guild=lambda guild_id: premium.GUILD_FREE),
+    )
     cog.snapshots = 0
     cog._nodes_available = lambda: True
 
@@ -550,10 +558,19 @@ def _shared_cog(player, stored):
         return list(stored)
 
     async def fetch(_guild_id, _norm):
-        return {"name": "Road Trip", "tracks": ["enc"] * len(stored)}
+        return {
+            "name": "Road Trip",
+            "tracks": ["enc"] * len(stored),
+            "track_count": len(stored),
+        }
+
+    async def archival(_guild_id, _max_guild_playlists):
+        # Not what this file's tests are about: every playlist is active.
+        return types.SimpleNamespace(is_active=lambda _norm: True)
 
     cog.bot.sl_client = types.SimpleNamespace(decode_tracks=decode_tracks)
     cog._fetch_guild_playlist = fetch
+    cog._guild_playlist_archival = archival
     return cog
 
 

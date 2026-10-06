@@ -46,7 +46,65 @@ SEARCH_SOURCE = TrackSourceType.YOUTUBE
 
 # Per-player history cap (sonolink defaults to unbounded): enough for
 # Back-stepping, autoplay seeding and LOOP_ALL restore, hard-bounded memory.
+# This is the FREE value (M4a-1, .claude/plans/monetisation/4-plan-retenu.md) -
+# tests/tools/test_premium.py's drift guard asserts premium.FREE_HISTORY_MAX_ITEMS
+# equals this constant, so it must stay a plain restatement of today's default,
+# never the effective (possibly premium) cap. The effective cap a given player
+# actually gets is resolved by :func:`_resolve_history_max_items` below.
 HISTORY_MAX_ITEMS = 100
+
+
+def _resolve_history_max_items(args: typing.Tuple[typing.Any, ...]) -> int:
+    """The effective per-player history cap for the guild a fresh connect is
+    for, or :data:`HISTORY_MAX_ITEMS` (the free value) when it cannot be
+    resolved.
+
+    READ ONCE, AT CONNECT TIME. ``discord.py``'s class-pass connect form
+    (``channel.connect(cls=Player)``, this module's ``connect_player`` - the
+    ONE seam every session is born at) instantiates ``Player(client,
+    channel)`` positionally (confirmed against the installed sonolink's
+    ``DpyPlayer.__init__`` - see its own docstring's "class-pass" paragraph),
+    so ``args`` is ``(client, channel)`` on every real connect. ``client`` is
+    the running bot itself (the same object ``core.py``'s ``Yasuho.__init__``
+    sets ``self.premium`` on), and ``channel.guild.id`` is the guild this
+    player is about to serve - both read BEFORE ``super().__init__`` runs, so
+    the cap is baked into the ``HistorySettings`` that construction needs.
+
+    An IN-FLIGHT player keeps whatever cap it was born with for its whole
+    session: sonolink's history is a fixed-``maxlen`` deque sized once at
+    construction (``HistorySettings``), not a live setting this module
+    re-reads later. A guild that upgrades or downgrades mid-session only sees
+    the new cap the NEXT time a player is created for it (the next
+    ``/play``, after an idle disconnect or a restart) - simpler than
+    resizing a live deque, and safe: the history is a convenience (Back,
+    autoplay seeding, LOOP_ALL restore), never a billed quantity, so a
+    session riding out its old cap for a while costs nothing.
+
+    Every miss degrades to :data:`HISTORY_MAX_ITEMS`, never raises: the
+    instance-pass connect form (a pre-built ``Player(...)`` handed to
+    ``connect()``, unused anywhere in this repo today - see ``DpyPlayer``'s
+    own docstring for the distinction) has no client/channel at ``__init__``
+    time at all; a bot with no ``premium`` attribute (a test double, a
+    script) or a channel with no resolvable guild id are the same "nothing
+    to resolve" case. A voice connect must never fail because the premium
+    resolver had a bad day - the free cap is always a safe fallback, exactly
+    like every other premium lookup in this codebase.
+    """
+    if len(args) < 2:
+        return HISTORY_MAX_ITEMS
+    client, channel = args[0], args[1]
+    resolver = getattr(client, "premium", None)
+    guild = getattr(channel, "guild", None)
+    guild_id = getattr(guild, "id", None)
+    if resolver is None or guild_id is None:
+        return HISTORY_MAX_ITEMS
+    try:
+        return resolver.for_guild(guild_id).history_max_items
+    except Exception:
+        log.exception(
+            "Failed to resolve the premium history cap; using the free default"
+        )
+        return HISTORY_MAX_ITEMS
 
 
 class Player(sonolink.Player):
@@ -69,7 +127,7 @@ class Player(sonolink.Player):
             )
             if history_cls is not None:
                 kwargs["history_settings"] = history_cls(
-                    enabled=True, max_items=HISTORY_MAX_ITEMS
+                    enabled=True, max_items=_resolve_history_max_items(args)
                 )
         super().__init__(*args, **kwargs)
         self.dj: typing.Optional[discord.Member] = None

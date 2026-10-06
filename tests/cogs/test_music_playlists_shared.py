@@ -106,6 +106,76 @@ def test_guild_cap_reached_at_cap_true():
 
 
 # ---------------------------------------------------------------------------
+# cap decisions with an explicit (premium) limit - M4a-1
+# ---------------------------------------------------------------------------
+
+
+def test_track_cap_error_default_is_the_free_value():
+    assert ps.track_cap_error(ps.MAX_PLAYLIST_TRACKS + 1) == "too_many"
+    assert ps.track_cap_error(ps.MAX_PLAYLIST_TRACKS + 1, ps.MAX_PLAYLIST_TRACKS) == (
+        "too_many"
+    )
+
+
+def test_track_cap_error_premium_limit_allows_more():
+    # Over the FREE cap but under a Yasuho+ cap: not refused.
+    assert ps.track_cap_error(ps.MAX_PLAYLIST_TRACKS + 1, max_tracks=500) is None
+
+
+def test_track_cap_error_premium_limit_still_refuses_past_itself():
+    assert ps.track_cap_error(501, max_tracks=500) == "too_many"
+
+
+def test_guild_cap_reached_default_is_the_free_value():
+    assert ps.guild_cap_reached(ps.MAX_GUILD_PLAYLISTS) is True
+
+
+def test_guild_cap_reached_premium_limit_allows_more():
+    assert ps.guild_cap_reached(ps.MAX_GUILD_PLAYLISTS, max_guild=75) is False
+
+
+def test_guild_cap_reached_premium_limit_still_refuses_past_itself():
+    assert ps.guild_cap_reached(75, max_guild=75) is True
+
+
+# ---------------------------------------------------------------------------
+# playlist_is_archived - M4a-1
+# ---------------------------------------------------------------------------
+
+
+def test_playlist_is_archived_active_and_within_track_cap_is_not_archived():
+    assert ps.playlist_is_archived(
+        track_count=50, max_playlist_tracks=200, active_by_count=True
+    ) is False
+
+
+def test_playlist_is_archived_excluded_by_count_cap():
+    assert ps.playlist_is_archived(
+        track_count=50, max_playlist_tracks=200, active_by_count=False
+    ) is True
+
+
+def test_playlist_is_archived_over_its_own_track_cap():
+    # Active by count, but its own track_count alone exceeds the current
+    # per-playlist cap (saved at a higher tier, guild has since dropped).
+    assert ps.playlist_is_archived(
+        track_count=600, max_playlist_tracks=500, active_by_count=True
+    ) is True
+
+
+def test_playlist_is_archived_at_track_cap_exactly_is_ok():
+    assert ps.playlist_is_archived(
+        track_count=500, max_playlist_tracks=500, active_by_count=True
+    ) is False
+
+
+def test_playlist_is_archived_both_reasons_still_archived():
+    assert ps.playlist_is_archived(
+        track_count=600, max_playlist_tracks=500, active_by_count=False
+    ) is True
+
+
+# ---------------------------------------------------------------------------
 # save snapshot shape
 # ---------------------------------------------------------------------------
 

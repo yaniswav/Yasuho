@@ -15,13 +15,42 @@ so this module adds a feature, not a second copy of the engine.
 
 Scale: the ``guild_playlists`` table is hard-bounded per guild -
 :data:`MAX_GUILD_PLAYLISTS` playlists, each at most :data:`MAX_PLAYLIST_TRACKS`
-encoded tracks - and every cap is enforced in code (an INSERT cap guard mirroring
-``add_favourite``, plus a pre-save track-count refusal), so a guild's rows and
-its stored-blob footprint cannot grow without bound. Autocomplete is one indexed
-prefix scan (LIMIT 25) per keystroke over the ``(guild_id, name_norm)`` primary
-key; list is one indexed query (LIMIT 25); play decodes the stored blobs in a
-single bulk Lavalink round trip (bounded at the track cap). Save/play/list are
-explicit user actions on no background loop, so they need no quota.
+encoded tracks (the FREE values - see "PREMIUM CAPS" below) - and every cap is
+enforced in code (an INSERT cap guard mirroring ``add_favourite``, plus a
+pre-save track-count refusal), so a guild's rows and its stored-blob footprint
+cannot grow without bound. Autocomplete is one indexed prefix scan (LIMIT 25,
+Discord's own hard choices cap - :data:`AUTOCOMPLETE_LIMIT`) per keystroke over
+the ``(guild_id, name_norm)`` primary key; the list card and the archival
+classification each read every row up to the ABSOLUTE safety ceiling (so an
+archived excess is never hidden by a query bound sized for the ordinary case);
+play decodes the stored blobs in a single bulk Lavalink round trip (bounded at
+the per-playlist track cap). Save/play/list are explicit user actions on no
+background loop, so they need no quota.
+
+PREMIUM CAPS (M4a-1, .claude/plans/monetisation/4-plan-retenu.md).
+:data:`MAX_GUILD_PLAYLISTS`/:data:`MAX_PLAYLIST_TRACKS` stay exactly what they
+were - the FREE values :mod:`tools.premium` restates and
+tests/tools/test_premium.py's drift guard checks against. Every COMMAND below
+instead reads the EFFECTIVE caps from ``bot.premium.for_guild(guild_id)``
+(:class:`tools.premium.GuildLimits`'s ``max_guild_playlists``/
+``max_playlist_tracks``), so a Yasuho+ guild saves more and bigger playlists
+without this module's own constants ever drifting from the free catalog entry.
+When that effective cap drops below what a guild already has on record - a
+subscription lapsed, was refunded, or was revoked - nothing is deleted or
+truncated: the excess is ARCHIVED (:mod:`tools.premium_archive`'s lazy,
+computed-at-use-time rule). An archived playlist stays listed (marked as
+such), can still be deleted, but cannot be loaded (``/serverplaylist play``)
+or edited (``/serverplaylist rename``) until the cap rises again or it is
+deleted. Two independent ways a playlist ends up archived:
+
+* the guild holds MORE playlists than ``max_guild_playlists`` allows - the
+  oldest excess (by ``created_at``, ties broken by ``name_norm`` - see
+  :func:`tools.premium_archive.classify`) is archived, exactly as many as it
+  takes to bring the guild back under its current cap;
+* the playlist's OWN ``track_count`` exceeds the current
+  ``max_playlist_tracks`` - it was saved at a higher tier and the guild has
+  since dropped to one with a smaller per-playlist cap. This one is checked
+  per-row, independent of the guild's count-cap classification.
 """
 
 from __future__ import annotations
@@ -35,17 +64,30 @@ from discord.ext import commands
 
 from cogs.music import safetext
 from cogs.music.player import VoiceConnectFailed, connect_player
+from tools import premium
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
+from tools.premium_archive import ArchivalResult
+from tools.premium_archive import classify as classify_archival
 from tools.views import LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
-# Hard per-guild caps. 25 named playlists per guild; 200 encoded tracks each.
-# Enforced in code (the INSERT cap guard and the pre-save track-count refusal),
-# so the table and its stored-blob footprint stay bounded.
+# FREE per-guild caps (M4a-1: see the module docstring's "PREMIUM CAPS" section
+# for how a Yasuho+ guild gets a higher EFFECTIVE cap without these changing).
+# 25 named playlists per guild; 200 encoded tracks each. Enforced in code (the
+# INSERT cap guard and the pre-save track-count refusal, both now parameterised
+# on the caller's effective cap rather than these constants directly), so the
+# table and its stored-blob footprint stay bounded.
 MAX_GUILD_PLAYLISTS = 25
 MAX_PLAYLIST_TRACKS = 200
+
+# Discord's own hard cap on autocomplete choices - fixed by the platform, not
+# by our commercial tiers. Deliberately its OWN constant rather than reusing
+# MAX_GUILD_PLAYLISTS (today both happen to be 25): a Yasuho+ guild's effective
+# cap is 75, and autocomplete must still never ask Discord for more than 25
+# choices regardless of how many playlists (active or archived) a guild holds.
+AUTOCOMPLETE_LIMIT = 25
 
 # Longest playlist name we accept (characters, after whitespace cleanup). Well
 # under Discord's 100-char autocomplete-choice limit so a name always renders.
@@ -117,22 +159,52 @@ def name_error(display: str) -> typing.Optional[str]:
     return None
 
 
-def track_cap_error(count: int) -> typing.Optional[str]:
+def track_cap_error(
+    count: int, max_tracks: int = MAX_PLAYLIST_TRACKS
+) -> typing.Optional[str]:
     """Return a reason code when a save's track count is unusable, else ``None``.
 
-    Codes: ``"empty"`` (nothing to save), ``"too_many"`` (over
-    :data:`MAX_PLAYLIST_TRACKS`). Pure decision helper.
+    Codes: ``"empty"`` (nothing to save), ``"too_many"`` (over ``max_tracks``).
+    Pure decision helper. ``max_tracks`` defaults to the FREE value
+    (:data:`MAX_PLAYLIST_TRACKS`) so existing callers/tests keep today's
+    behaviour unchanged; a command passes the caller's EFFECTIVE cap
+    (``bot.premium.for_guild(guild_id).max_playlist_tracks``) explicitly.
     """
     if count <= 0:
         return "empty"
-    if count > MAX_PLAYLIST_TRACKS:
+    if count > max_tracks:
         return "too_many"
     return None
 
 
-def guild_cap_reached(existing_count: int) -> bool:
-    """True when a guild already holds the maximum number of playlists."""
-    return existing_count >= MAX_GUILD_PLAYLISTS
+def guild_cap_reached(
+    existing_count: int, max_guild: int = MAX_GUILD_PLAYLISTS
+) -> bool:
+    """True when a guild already holds ``max_guild`` playlists (or more).
+
+    ``max_guild`` defaults to the FREE value (:data:`MAX_GUILD_PLAYLISTS`) for
+    the same reason :func:`track_cap_error`'s default does; a command passes
+    the caller's effective ``max_guild_playlists`` explicitly.
+    """
+    return existing_count >= max_guild
+
+
+def playlist_is_archived(
+    track_count: int, max_playlist_tracks: int, active_by_count: bool
+) -> bool:
+    """True when a playlist is ARCHIVED under the guild's CURRENT premium tier.
+
+    Two independent reasons (see the module docstring's "PREMIUM CAPS"
+    section): ``active_by_count`` is False (this playlist lost its slot under
+    the guild's count cap - the caller already ran
+    :func:`tools.premium_archive.classify` over every playlist in the guild
+    and is handing in ITS verdict for this one row), or ``track_count``
+    alone exceeds ``max_playlist_tracks`` (saved at a higher tier, the guild
+    has since dropped to a smaller per-playlist cap). Either is enough on its
+    own; this function never needs to know WHICH one applies - the caller's
+    refusal message is the same either way ("archived").
+    """
+    return (not active_by_count) or track_count > max_playlist_tracks
 
 
 def snapshot_tracks(player: typing.Any) -> typing.Tuple[typing.List[str], int]:
@@ -231,6 +303,13 @@ class _PlaylistListCard(LocaleLayoutView):
                 count=count,
                 duration=row["duration"],
             )
+            if row.get("archived"):
+                # Marked, not hushed - stays listed (deletable, exportable if an
+                # export ever exists) but not loadable/editable. No /premium
+                # pointer here: that one-line nudge belongs on the REFUSAL a
+                # member hits trying to load/rename it, not on every passive
+                # listing (the plan's own "jamais de ... pub hors contexte").
+                head += " " + _("(archived)")
             meta = _("-# by {creator} - saved {date}").format(
                 creator=f"<@{row['creator_id']}>",
                 date=f"<t:{row['created_ts']}:D>",
@@ -265,13 +344,17 @@ class ServerPlaylistMixin:
         creator_id: int,
         tracks: typing.Sequence[str],
         total_ms: int,
+        max_guild_playlists: int = MAX_GUILD_PLAYLISTS,
     ) -> str:
         """Insert a new playlist, guarding the per-guild cap in the statement.
 
         Returns ``"saved"`` on a new row, ``"exists"`` if the name is already
         taken (case-insensitively), or ``"full"`` when the guild is at the cap.
         The INSERT only fires while under the cap and skips on a name conflict, so
-        growth stays bounded - mirrors ``Music.add_favourite``.
+        growth stays bounded - mirrors ``Music.add_favourite``. ``max_guild_playlists``
+        defaults to the FREE value for callers (and tests) that do not pass one; the
+        command itself always passes the caller's EFFECTIVE cap
+        (``bot.premium.for_guild(guild_id).max_guild_playlists``).
         """
         status = await self.bot.db_pool.execute(
             """
@@ -288,7 +371,7 @@ class ServerPlaylistMixin:
             list(tracks),
             len(tracks),
             int(total_ms),
-            MAX_GUILD_PLAYLISTS,
+            int(max_guild_playlists),
         )
         if status.rsplit(" ", 1)[-1] == "1":
             return "saved"
@@ -314,18 +397,56 @@ class ServerPlaylistMixin:
         )
 
     async def _list_guild_playlists(self, guild_id: int) -> typing.List[typing.Mapping]:
-        """Every playlist in a guild, newest first (bounded by the cap)."""
+        """Every playlist in a guild, newest first.
+
+        Bounded by the ABSOLUTE safety ceiling
+        (``premium.GUILD_CEILINGS["max_guild_playlists"]``), not by the
+        guild's current effective cap: an archived excess (M4a-1) must stay
+        visible on the list even when it is over today's cap, so this query
+        can never stop short of returning it. ``name_norm`` rides along so
+        the caller can classify every row's archived status without a second
+        query.
+        """
         return await self.bot.db_pool.fetch(
             """
-            SELECT name, creator_id, track_count, total_ms, created_at
+            SELECT name, name_norm, creator_id, track_count, total_ms, created_at
             FROM guild_playlists
             WHERE guild_id = $1
             ORDER BY created_at DESC
             LIMIT $2
             """,
             guild_id,
-            MAX_GUILD_PLAYLISTS,
+            premium.GUILD_CEILINGS["max_guild_playlists"],
         )
+
+    async def _guild_playlist_archival(
+        self, guild_id: int, max_guild_playlists: int
+    ) -> ArchivalResult:
+        """Classify every playlist this guild holds against its count cap.
+
+        Fetches ``(name_norm, created_at)`` for every row (bounded by the
+        ABSOLUTE safety ceiling, same reasoning as :meth:`_list_guild_playlists`)
+        and hands them to :func:`tools.premium_archive.classify` keyed by
+        ``name_norm`` - the natural key every play/delete/rename lookup
+        already uses, so a caller holding a normalised name can check
+        ``result.is_active(norm)`` with no further lookup. No ``kept`` flag is
+        set on any row today (that admin choice is a FUTURE lot per the
+        plan); every row classifies purely by creation order.
+        """
+        rows = await self.bot.db_pool.fetch(
+            """
+            SELECT name_norm, created_at
+            FROM guild_playlists
+            WHERE guild_id = $1
+            LIMIT $2
+            """,
+            guild_id,
+            premium.GUILD_CEILINGS["max_guild_playlists"],
+        )
+        resources = [
+            {"id": row["name_norm"], "created_at": row["created_at"]} for row in rows
+        ]
+        return classify_archival(resources, max_guild_playlists)
 
     async def _autocomplete_playlists(
         self, guild_id: int, prefix_norm: str
@@ -333,7 +454,10 @@ class ServerPlaylistMixin:
         """Names matching a normalised prefix, cheap and bounded (LIMIT 25).
 
         One indexed prefix scan over the ``(guild_id, name_norm)`` primary key -
-        the per-keystroke cost of the play autocomplete.
+        the per-keystroke cost of the play autocomplete. The bound is
+        :data:`AUTOCOMPLETE_LIMIT` - Discord's own hard cap on autocomplete
+        choices, independent of the guild's commercial playlist cap (which
+        can be well over 25 for a Yasuho+ guild).
         """
         return await self.bot.db_pool.fetch(
             """
@@ -345,7 +469,7 @@ class ServerPlaylistMixin:
             """,
             guild_id,
             _like_prefix(prefix_norm),
-            MAX_GUILD_PLAYLISTS,
+            AUTOCOMPLETE_LIMIT,
         )
 
     async def _delete_guild_playlist(self, guild_id: int, norm: str) -> bool:
@@ -387,7 +511,9 @@ class ServerPlaylistMixin:
         Reusing an EXISTING session takes the same-voice gate, for the same reason
         ``_play_query`` does: adding to a live queue is an act on the room that is
         listening. This path is the one that hurts most if it is left open - a
-        server playlist is up to 200 tracks at a time - and it is reached from
+        server playlist is up to the guild's effective track cap at a time
+        (the FREE value is 200; a Yasuho+ guild's is higher - see
+        ``tools.premium.GuildLimits.max_playlist_tracks``) - and it is reached from
         ``/serverplaylist play`` and the favourites card alike. Starting a fresh
         session stays open (the connect below already requires the caller to be
         in a voice channel).
@@ -469,8 +595,12 @@ class ServerPlaylistMixin:
             )
             return
 
+        # Effective caps (M4a-1): the free values unless this guild has Yasuho+ -
+        # see tools.premium.GuildLimits.max_guild_playlists/max_playlist_tracks.
+        limits = self.bot.premium.for_guild(ctx.guild.id)
+
         tracks, total_ms = snapshot_tracks(player)
-        cap = track_cap_error(len(tracks))
+        cap = track_cap_error(len(tracks), limits.max_playlist_tracks)
         if cap == "empty":
             await ctx.send(
                 _("Nothing is playing - start some music before saving a playlist.")
@@ -481,16 +611,18 @@ class ServerPlaylistMixin:
                 _(
                     "The queue is too long to save - a server playlist holds up "
                     "to {max} tracks. Trim it and try again."
-                ).format(max=MAX_PLAYLIST_TRACKS)
+                ).format(max=limits.max_playlist_tracks)
             )
             return
 
-        if guild_cap_reached(await self._guild_playlist_count(ctx.guild.id)):
+        if guild_cap_reached(
+            await self._guild_playlist_count(ctx.guild.id), limits.max_guild_playlists
+        ):
             await ctx.send(
                 _(
                     "This server already has the maximum of {max} playlists. "
                     "Delete one first."
-                ).format(max=MAX_GUILD_PLAYLISTS)
+                ).format(max=limits.max_guild_playlists)
             )
             return
 
@@ -501,6 +633,7 @@ class ServerPlaylistMixin:
             ctx.author.id,
             tracks,
             total_ms,
+            limits.max_guild_playlists,
         )
         if result == "exists":
             await ctx.send(
@@ -516,7 +649,7 @@ class ServerPlaylistMixin:
                 _(
                     "This server already has the maximum of {max} playlists. "
                     "Delete one first."
-                ).format(max=MAX_GUILD_PLAYLISTS)
+                ).format(max=limits.max_guild_playlists)
             )
             return
 
@@ -551,12 +684,37 @@ class ServerPlaylistMixin:
             )
             return
 
-        row = await self._fetch_guild_playlist(ctx.guild.id, normalize_name(name))
+        norm = normalize_name(name)
+        row = await self._fetch_guild_playlist(ctx.guild.id, norm)
         if row is None:
             await ctx.send(
                 _("There's no server playlist called **{name}**.").format(
                     name=echo_name(name)
                 ),
+                allowed_mentions=NO_PINGS,
+            )
+            return
+
+        # Archived (M4a-1): over today's effective cap, either by count or by
+        # this playlist's own track_count - refused before the decode round
+        # trip is even spent. Delete still works (serverplaylist_delete below
+        # carries no such check). Not sent ephemeral: ``ctx.defer()`` above
+        # already committed this interaction to a PUBLIC response before the
+        # row was even fetched, and a followup cannot retroactively turn
+        # ephemeral - matches every other early refusal in this command.
+        limits = self.bot.premium.for_guild(ctx.guild.id)
+        archival = await self._guild_playlist_archival(
+            ctx.guild.id, limits.max_guild_playlists
+        )
+        if playlist_is_archived(
+            row["track_count"], limits.max_playlist_tracks, archival.is_active(norm)
+        ):
+            await ctx.send(
+                _(
+                    "**{name}** is archived - this server is over its current "
+                    "playlist limit. It can be deleted, but not loaded. See "
+                    "/premium for options."
+                ).format(name=echo_name(row["name"])),
                 allowed_mentions=NO_PINGS,
             )
             return
@@ -588,7 +746,8 @@ class ServerPlaylistMixin:
         # The per-guild queue cap decides here, at the enqueue seam - imported
         # lazily like ``format_clock`` above, because music.py imports THIS module
         # at load time, so a module-level import back would be a cycle. One bulk
-        # decode is a single round trip (bounded by MAX_PLAYLIST_TRACKS), so there
+        # decode is a single round trip (bounded by the guild's effective
+        # max_playlist_tracks), so there
         # is nothing expensive to spare with an earlier refusal: queue the head
         # that fits and state the tail in the message below.
         from cogs.music.music import (
@@ -662,6 +821,16 @@ class ServerPlaylistMixin:
             )
             return
 
+        # Archived marking (M4a-1): classified from these SAME rows (every
+        # playlist in the guild, already fetched) - no second query.
+        limits = self.bot.premium.for_guild(ctx.guild.id)
+        archival = classify_archival(
+            (
+                {"id": row["name_norm"], "created_at": row["created_at"]}
+                for row in rows
+            ),
+            limits.max_guild_playlists,
+        )
         prepared = [
             {
                 "name": row["name"],
@@ -669,6 +838,11 @@ class ServerPlaylistMixin:
                 "duration": format_clock(int(row["total_ms"] or 0)),
                 "creator_id": row["creator_id"],
                 "created_ts": int(row["created_at"].timestamp()),
+                "archived": playlist_is_archived(
+                    row["track_count"],
+                    limits.max_playlist_tracks,
+                    archival.is_active(row["name_norm"]),
+                ),
             }
             for row in rows
         ]
@@ -724,7 +898,8 @@ class ServerPlaylistMixin:
         self, ctx: commands.Context, old: str, *, new: str
     ) -> None:
         """Rename a shared server playlist (its creator or a moderator only)."""
-        row = await self._fetch_guild_playlist(ctx.guild.id, normalize_name(old))
+        old_norm = normalize_name(old)
+        row = await self._fetch_guild_playlist(ctx.guild.id, old_norm)
         if row is None:
             await ctx.send(
                 _("There's no server playlist called **{name}**.").format(
@@ -741,6 +916,27 @@ class ServerPlaylistMixin:
             )
             return
 
+        # Archived (M4a-1): renaming is an edit, refused the same way loading
+        # one is - see serverplaylist_play's own archived check. This command
+        # never defers, so the refusal CAN be ephemeral on the slash surface.
+        limits = self.bot.premium.for_guild(ctx.guild.id)
+        archival = await self._guild_playlist_archival(
+            ctx.guild.id, limits.max_guild_playlists
+        )
+        if playlist_is_archived(
+            row["track_count"], limits.max_playlist_tracks, archival.is_active(old_norm)
+        ):
+            await ctx.send(
+                _(
+                    "**{name}** is archived - this server is over its current "
+                    "playlist limit. It can be deleted, but not renamed. See "
+                    "/premium for options."
+                ).format(name=echo_name(row["name"])),
+                ephemeral=ctx.interaction is not None,
+                allowed_mentions=NO_PINGS,
+            )
+            return
+
         new_display = clean_name(new)
         problem = name_error(new_display)
         if problem == "empty":
@@ -754,7 +950,6 @@ class ServerPlaylistMixin:
             )
             return
 
-        old_norm = normalize_name(old)
         new_norm = normalize_name(new_display)
         # A different playlist already owns the new name? Refuse. (A case-only
         # rename keeps the same norm and is allowed - it just updates display.)
