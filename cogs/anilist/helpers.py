@@ -20,27 +20,12 @@ def resolve_guild_limits(bot, guild_id):
 
     Shared by every AniList poller/command that reads a per-guild cap
     (feed.py's feeds/follows/subs, airing.py's and chapters.py's channel-sub
-    archival): a missing ``bot.premium`` (every test double bot in this
-    package has none) or the resolver itself raising both degrade to
-    :data:`tools.premium.GUILD_FREE`, exactly like
-    ``cogs.music.player._resolve_history_max_items`` does for the same
-    resolver. Synchronous and O(1) (a dict lookup under
-    :class:`tools.premium.EntitlementCache`) on purpose: the activity poller
-    calls this once per guild per tick and must never pay a DB/API round
-    trip for it.
+    archival). A thin alias of :func:`tools.premium.resolve_guild_limits`, the
+    one defensive lookup every feature uses: synchronous and I/O-free, so the
+    activity poller can call it once per guild per tick.
     """
 
-    resolver = getattr(bot, "premium", None)
-    if resolver is None:
-        return _premium.GUILD_FREE
-    try:
-        return resolver.for_guild(guild_id)
-    except Exception:
-        log.exception(
-            "AniList: premium resolver failed; using FREE limits for guild %s",
-            guild_id,
-        )
-        return _premium.GUILD_FREE
+    return _premium.resolve_guild_limits(bot, guild_id)
 
 
 def filter_active_channel_subs(bot, rows):
