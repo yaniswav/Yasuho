@@ -39,13 +39,13 @@ import sonolink.models
 
 from cogs.music import effects, playerinfo, safetext, vibes, voteskip
 from cogs.music.music import (
-    MAX_FAVOURITES,
     Player,
     _autoplay_on,
     _first_track,
     _set_autoplay,
     can_go_previous,
     can_skip,
+    classify_favourites,
     effect_select_options,
     format_clock,
     format_duration,
@@ -63,7 +63,7 @@ from cogs.music.music import (
     station_select_options,
 )
 from cogs.music.search import truncate
-from tools import i18n, interactions
+from tools import i18n, interactions, premium
 from tools.config_loader import config_loader
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
@@ -1111,9 +1111,12 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
                     title=track.title
                 )
             elif result == "full":
+                max_favourites = premium.resolve_user_limits(
+                    self.cog.bot, interaction.user.id
+                ).max_favourites
                 message = _(
                     "Your favourites are full (max {max}). Remove some first."
-                ).format(max=MAX_FAVOURITES)
+                ).format(max=max_favourites)
             else:
                 message = _("**{title}** is already in your favourites.").format(
                     title=track.title
@@ -2293,9 +2296,20 @@ class FavouritesCard(AuthorLayoutView):
     read-only listing, because their saved tracks are theirs to manage.
 
     The rows are fetched once and held for the card's lifetime (one query per
-    ``/playlist``, not one per page flip - the list is hard-capped at
-    ``MAX_FAVOURITES``, so it is a bounded, cheap thing to hold). A removal drops
-    its row locally and re-renders, the reminders-card shape.
+    ``/playlist``, not one per page flip - the list is bounded at the
+    ABSOLUTE safety ceiling, ``premium.USER_CEILINGS["max_favourites"]``, so
+    it is a bounded, cheap thing to hold - see ``Music._fetch_favourites``). A
+    removal drops its row locally and re-renders, the reminders-card shape.
+
+    ARCHIVED (M4c, .claude/plans/monetisation/4-plan-retenu.md). Over the
+    OWNER's current effective cap (a Pack Confort refund/revocation), the
+    oldest excess stays listed - marked "(archived)" - and removable, but
+    cannot be played. :meth:`_archived_ids` recomputes the verdict from
+    ``self.rows`` on every call (no caching): it is pure/synchronous (no
+    second query - :func:`cogs.music.music.classify_favourites`) and the
+    owner's entitlement can change for the whole lifetime of a card that sits
+    on screen for up to 180s, so a cached verdict taken once at ``__init__``
+    could go stale.
     """
 
     def __init__(
@@ -2318,6 +2332,21 @@ class FavouritesCard(AuthorLayoutView):
     def is_own_list(self) -> bool:
         """True when the viewer is looking at their own favourites."""
         return getattr(self.owner, "id", None) == self.author_id
+
+    def _archived_ids(self) -> typing.FrozenSet[typing.Any]:
+        """This card's currently-archived favourite identifiers (see class docstring).
+
+        ``getattr(self.cog, "bot", None)`` rather than ``self.cog.bot``
+        directly: a test double (or any other cog-shaped object with no
+        ``bot`` of its own) must degrade to FREE through
+        :func:`tools.premium.resolve_user_limits`'s own guard, the same as a
+        real cog whose ``bot.premium`` is missing or raises - never crash
+        rendering a card over a resolver that is not there.
+        """
+        owner_id = getattr(self.owner, "id", None)
+        bot = getattr(self.cog, "bot", None)
+        max_favourites = premium.resolve_user_limits(bot, owner_id).max_favourites
+        return classify_favourites(self.rows, max_favourites).archived_ids
 
     def _build(self) -> None:
         self.clear_items()
@@ -2346,6 +2375,7 @@ class FavouritesCard(AuthorLayoutView):
             self.add_item(container)
             return
 
+        archived_ids = self._archived_ids()
         page_rows = self.rows[start:end]
         lines = []
         for index, row in enumerate(page_rows, start=start + 1):
@@ -2365,11 +2395,18 @@ class FavouritesCard(AuthorLayoutView):
                 if uri
                 else safetext.public_echo(title, limit=60)
             )
-            lines.append(
-                _("`{index}.` {label} by `{author}`").format(
-                    index=index, label=label, author=author
-                )
+            line = _("`{index}.` {label} by `{author}`").format(
+                index=index, label=label, author=author
             )
+            if row["identifier"] in archived_ids:
+                # Marked, not hushed - same "(archived)" wording the shared
+                # server playlists / role menus / voice hubs cards use
+                # (M4a-1/M4a-3): stays listed (removable, exportable) but not
+                # playable. No /premium pointer here: that one-line nudge
+                # belongs on the REFUSAL a member hits trying to play it
+                # (_play_one below), not on every passive listing.
+                line += " " + _("(archived)")
+            lines.append(line)
         container.add_item(discord.ui.TextDisplay("\n".join(lines)))
         container.add_item(
             discord.ui.TextDisplay(
@@ -2499,6 +2536,22 @@ class FavouritesCard(AuthorLayoutView):
             # A type-6 defer keeps the panel on screen while the node is asked,
             # and lets the connect seam post its refusals as followups.
             await interaction.response.defer()
+
+            # Archived (M4c): refused before the resolve is even spent, the
+            # same "cheapest gate first" shape as every refusal below. Fresh
+            # verdict on every call (see the card's own _archived_ids), not a
+            # cached one from when the card was built.
+            if row["identifier"] in self._archived_ids():
+                await interaction.followup.send(
+                    _(
+                        "That favourite is archived - you are over your "
+                        "current favourites limit. It can be removed, but "
+                        "not played. See /premium for options."
+                    ),
+                    ephemeral=True,
+                )
+                return False
+
             if not self.cog._nodes_available():
                 await interaction.followup.send(
                     _(

@@ -25,6 +25,7 @@ import pytest
 from cogs.community import reminders_store as rem
 from cogs.community.reminders import (
     _RECURRING_LOCK_CLASS,
+    MAX_PENDING_REMINDERS,
     MAX_RECURRING_REMINDERS,
     Reminder,
     ReminderChannelGone,
@@ -504,6 +505,14 @@ class _DispatchPool:
 
     async def fetch(self, query, *args):
         self._record("fetch", query, args)
+        if "repeat_seconds' IS NOT NULL" in query:
+            # The archival classification query (M4c): a faithful fake would
+            # return THIS due row among the author's recurring rows (it
+            # satisfies the very predicates this query filters on) - a bare
+            # ``[]`` would make every due recurring reminder classify as
+            # archived (absent from its own author's active set), which is
+            # not what a real database would ever answer.
+            return [{"id": self.row["id"], "created": self.row["created"]}]
         return []
 
     def acquire(self):
@@ -523,7 +532,7 @@ class _DispatchPool:
 
 
 class _DispatchBot:
-    def __init__(self, pool):
+    def __init__(self, pool, *, max_recurring_reminders=None):
         self.db_pool = pool
         self.loop = types.SimpleNamespace(
             create_task=lambda coro: (
@@ -533,6 +542,17 @@ class _DispatchBot:
         )
         self._closed = False
         self.dispatched = []
+        # None (the default): no .premium attribute at all, so
+        # tools.premium.resolve_user_limits degrades to USER_FREE - the FREE
+        # recurring cap (5) every dispatcher test here was already written
+        # against. A test that needs the ARCHIVED path (M4c) passes an
+        # explicit integer instead.
+        if max_recurring_reminders is not None:
+            self.premium = types.SimpleNamespace(
+                for_user=lambda _user_id: types.SimpleNamespace(
+                    max_recurring_reminders=max_recurring_reminders
+                )
+            )
 
     async def wait_until_ready(self):
         return None
@@ -572,9 +592,11 @@ def _recurring_extra(seconds=DAY, occurrence=1, **overrides):
     return extra
 
 
-async def _run_one_dispatch(row, *, claim_won=True, delivery_error=None):
+async def _run_one_dispatch(
+    row, *, claim_won=True, delivery_error=None, max_recurring_reminders=None
+):
     pool = _DispatchPool(row, claim_won=claim_won)
-    bot = _DispatchBot(pool)
+    bot = _DispatchBot(pool, max_recurring_reminders=max_recurring_reminders)
     cog = Reminder(bot)
     delivered = []
     statements_at_delivery = []
@@ -659,6 +681,85 @@ async def test_a_live_recurring_delivery_never_unwinds_the_series():
 
     assert len(result.pool.inserts) == 1
     assert _unwinds(result.pool) == []
+
+
+# ---------------------------------------------------------------------------
+# M4c: archived recurring reminders (over the author's effective cap) -
+# skipped without delivering, no hot loop, resume with no backlog burst
+# (.claude/plans/monetisation/4-plan-retenu.md)
+# ---------------------------------------------------------------------------
+
+
+async def test_archived_recurring_reminder_is_rescheduled_without_delivering():
+    """Over the effective cap (0): the series is NOT delivered, but it IS
+    rescheduled - the fast-forward reuse that stops the dispatcher hot-looping
+    on it (see test_archived_recurring_reminder_resumes_in_the_future below)."""
+    result = await _run_one_dispatch(
+        _due_row(extra=_recurring_extra()), max_recurring_reminders=0
+    )
+
+    assert result.delivered == []
+    assert len(result.pool.inserts) == 1  # still moved to its next occurrence
+    assert _unwinds(result.pool) == []  # not ended - just skipped once
+
+
+async def test_archived_recurring_reminder_resumes_in_the_future():
+    """NO HOT LOOP: the rescheduled occurrence must land in the future, so the
+    dispatcher's next ``get_active_timer`` no longer re-picks this row as the
+    earliest due timer on every wakeup."""
+    due = _due_row(extra=_recurring_extra(seconds=HOUR))
+    result = await _run_one_dispatch(due, max_recurring_reminders=0)
+
+    (_method, _query, args, _in_tx) = result.pool.inserts[0]
+    next_expires = args[1]  # INSERT INTO timers(event, expires, created, extra)
+    assert next_expires > datetime.datetime.now(UTC)
+
+
+async def test_archived_recurring_reminder_at_the_effective_cap_still_delivers():
+    """One fewer than the cap: a Pack Confort user's 15-cap series must still
+    fire exactly like the FREE-cap tests above - the gate is the EFFECTIVE
+    cap, not the free constant."""
+    result = await _run_one_dispatch(
+        _due_row(extra=_recurring_extra()), max_recurring_reminders=1
+    )
+
+    assert len(result.delivered) == 1
+
+
+# --- Negative control: without the archived gate, it delivers anyway ------
+#
+# Actually run during this lot: temporarily hard-coding
+# ``_recurring_due_row_is_archived`` to always ``return False`` made
+# test_archived_recurring_reminder_is_rescheduled_without_delivering FAIL
+# (``result.delivered`` held the reminder instead of staying empty) - proving
+# the gate in ``_deliver_at_most_once`` is load-bearing, not a decoration.
+# Restored immediately by editing the file back (no git stash/checkout/
+# reset), ``git diff`` confirmed cogs/community/reminders.py matched its
+# pre-break state, and the full suite was re-run green.
+
+
+async def test_a_one_shot_reminder_is_never_subject_to_the_recurring_archival_gate():
+    """OWNER DECISION: a pending one-shot drains on its own schedule and is
+    never archived - the dispatcher must not even consult the recurring cap
+    for it, whatever that cap is."""
+    result = await _run_one_dispatch(_due_row(), max_recurring_reminders=0)
+
+    assert len(result.delivered) == 1  # delivered normally, cap irrelevant
+
+
+async def test_cancel_reminder_works_on_an_archived_recurring_series(fake_pool):
+    """Still cancellable (M4c): cancel_reminder never consults the premium
+    resolver or the archival classification at all - the plain author+type
+    scoped DELETE it always was, which is exactly why an archived series can
+    always be cancelled."""
+    fake_pool.fetchrow_return = {"id": 9}
+    cog = _make_cog(fake_pool)
+
+    result = await cog.cancel_reminder(9, 777)
+
+    assert result is True
+    # No premium/archival query ran - cancel's cost is unchanged by M4c.
+    assert all(c[0] != "fetch" for c in fake_pool.calls)
 
 
 async def test_an_ordinary_delivery_failure_still_leaves_the_series_alone():
@@ -992,15 +1093,21 @@ async def test_a_deleted_channel_is_reported_as_such_not_swallowed():
 
 
 async def test_list_surfaces_the_recurrence_for_the_card(fake_pool):
+    # The generic fake_pool answers every .fetch() with the same rows (it does
+    # not parse the query), so these also stand in for the M4c archival
+    # query's answer - hence the "created" column neither the list query nor
+    # (for the one-shot row) that classification ever actually reads.
     fake_pool.fetch_return = [
         {
             "id": 1,
             "expires": _at(),
+            "created": _at(),
             "extra": {"author_id": 1, "channel_id": 9, "message": "a"},
         },
         {
             "id": 2,
             "expires": _at(hours=1),
+            "created": _at(),
             "extra": json.dumps(
                 {
                     "author_id": 1,
@@ -1017,6 +1124,7 @@ async def test_list_surfaces_the_recurrence_for_the_card(fake_pool):
 
     assert reminders_list[0]["repeat_seconds"] is None
     assert reminders_list[1]["repeat_seconds"] == DAY
+    assert reminders_list[1]["archived"] is False  # within the FREE cap of 5
 
 
 def _card_lines(view):
@@ -1048,6 +1156,24 @@ def test_card_marks_a_recurring_reminder_with_glyph_and_interval():
     assert rem.REPEAT_GLYPH in body
     assert "every 2 days" in body
     assert "in <#9>" in body  # the channel note is still there
+
+
+def test_card_marks_an_archived_recurring_reminder_m4c():
+    """Still listed (M4c) - archival marks, it never hides."""
+    view = RemindersCard(
+        None, 1, [_listed(repeat_seconds=DAY, archived=True)], False
+    )
+    body = _card_lines(view)
+    assert "(archived)" in body
+    assert rem.REPEAT_GLYPH in body  # the interval is still shown alongside it
+
+
+def test_card_never_marks_a_one_shot_reminder_as_archived():
+    """OWNER DECISION: a one-shot is never archived - there is nothing to mark,
+    whatever ``archived`` happens to carry on the dict."""
+    view = RemindersCard(None, 1, [_listed(repeat_seconds=None, archived=True)], False)
+    body = _card_lines(view)
+    assert "(archived)" not in body
 
 
 def test_card_line_for_a_one_shot_is_byte_identical_to_before():
@@ -1086,6 +1212,11 @@ class _ModalCog:
         self._pending = pending
         self._limit_reached = limit_reached
         self.limit_checks = 0
+        # No .premium attribute: tools.premium.resolve_user_limits degrades
+        # to USER_FREE for a bot shaped like this, matching the FREE values
+        # (MAX_PENDING_REMINDERS/MAX_RECURRING_REMINDERS) every test here was
+        # already written against.
+        self.bot = types.SimpleNamespace()
 
     async def get_tzinfo(self, _user_id):
         return UTC
@@ -1174,6 +1305,71 @@ async def test_modal_enforces_the_recurring_cap(make_interaction):
     assert str(MAX_RECURRING_REMINDERS) in interaction.sent[0][0][0]
 
 
+# ---------------------------------------------------------------------------
+# M4c: the Pack Confort effective caps at CREATION time (modal surface)
+# ---------------------------------------------------------------------------
+
+
+def _pack_confort_bot(*, max_pending=60, max_recurring=15):
+    """A bot whose ``.premium`` resolves every user to Pack Confort-shaped caps."""
+    return types.SimpleNamespace(
+        premium=types.SimpleNamespace(
+            for_user=lambda _user_id: types.SimpleNamespace(
+                max_pending_reminders=max_pending,
+                max_recurring_reminders=max_recurring,
+            )
+        )
+    )
+
+
+async def test_modal_pending_refusal_states_the_pack_confort_cap_not_free(
+    make_interaction,
+):
+    cog = _ModalCog(pending=60)
+    cog.bot = _pack_confort_bot(max_pending=60)
+    interaction = _interaction(make_interaction)
+
+    await _modal(cog, "").on_submit(interaction)
+
+    assert cog.created == []
+    assert "60" in interaction.sent[0][0][0]
+    assert str(MAX_PENDING_REMINDERS) not in interaction.sent[0][0][0]
+
+
+async def test_modal_recurring_refusal_states_the_pack_confort_cap_not_free(
+    make_interaction,
+):
+    cog = _ModalCog(limit_reached=True)
+    cog.bot = _pack_confort_bot(max_recurring=15)
+    interaction = _interaction(make_interaction)
+
+    await _modal(cog, "weekly").on_submit(interaction)
+
+    assert cog.created == []
+    message = interaction.sent[0][0][0]
+    assert "15" in message
+    assert "have {0} repeating".format(MAX_RECURRING_REMINDERS) not in message
+
+
+async def test_modal_pending_refusal_is_free_when_bot_premium_raises(
+    make_interaction,
+):
+    """bot.premium missing/raising -> FREE (byte-identical to no entitlement)."""
+
+    class _Boom:
+        def for_user(self, _user_id):
+            raise RuntimeError("boom")
+
+    cog = _ModalCog(pending=MAX_PENDING_REMINDERS)
+    cog.bot = types.SimpleNamespace(premium=_Boom())
+    interaction = _interaction(make_interaction)
+
+    await _modal(cog, "").on_submit(interaction)
+
+    assert cog.created == []
+    assert str(MAX_PENDING_REMINDERS) in interaction.sent[0][0][0]
+
+
 def test_modal_prefills_the_repeat_picked_on_the_slash_command():
     cog = _ModalCog()
     modal = _modal(cog, "", prefill="daily")
@@ -1198,10 +1394,27 @@ class _CommandCtx:
         self.author = types.SimpleNamespace(id=5)
         self.guild = types.SimpleNamespace(id=3)
         self.channel = types.SimpleNamespace(id=9)
+        self.message = types.SimpleNamespace(created_at=datetime.datetime.now(UTC))
         self.interaction = interaction
 
     async def send(self, *args, **kwargs):
         self.sends.append(args[0] if args else kwargs.get("content"))
+
+
+async def test_remind_pending_refusal_states_the_pack_confort_cap_not_free(
+    fake_pool,
+):
+    """M4c: the /remind command surface, not just the modal, reads the
+    effective cap."""
+    fake_pool.fetchval_return = 60
+    cog = _make_cog(fake_pool)
+    cog.bot.premium = _pack_confort_bot(max_pending=60).premium
+    ctx = _CommandCtx()
+    future = datetime.datetime.now(UTC) + datetime.timedelta(minutes=10)
+
+    await cog.remind.callback(cog, ctx, future)
+
+    assert ctx.sends == ["You already have 60 reminders pending - wait for some to fire before adding more."]
 
 
 async def test_remind_rejects_a_bad_repeat_before_parsing_anything(fake_pool):

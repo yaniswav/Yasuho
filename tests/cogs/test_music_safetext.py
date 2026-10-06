@@ -18,6 +18,7 @@ Two reachable holes, both closed by :mod:`cogs.music.safetext`:
 Everything here is pure or driven on fakes - no Discord, no node, no database.
 """
 
+import datetime
 import re
 import types
 
@@ -380,7 +381,16 @@ def test_every_serverplaylist_name_echo_passes_allowed_mentions():
 
 def _favourites_text(title, uri):
     owner = types.SimpleNamespace(id=1, display_name="Someone")
-    rows = [{"title": title, "author": "Artist", "uri": uri, "encoded": "x"}]
+    rows = [
+        {
+            "identifier": "x",
+            "title": title,
+            "author": "Artist",
+            "uri": uri,
+            "encoded": "x",
+            "added_at": datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
+        }
+    ]
     card = views.FavouritesCard(types.SimpleNamespace(), 1, owner, rows)
     return _rendered_text(card)
 

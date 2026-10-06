@@ -34,12 +34,19 @@ alike.
 """
 
 import asyncio
+import datetime
 import types
 
 import discord
 import pytest
 
 from cogs.music import music, views
+
+# A fixed reference instant for rows that do not care about their own
+# ordering (every pre-M4c test here) - only archival-specific tests below
+# pass explicit, distinct ``added_at`` values.
+_EPOCH = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+_LATER = _EPOCH + datetime.timedelta(days=1)
 
 # ---------------------------------------------------------------------------
 # Fakes
@@ -142,7 +149,10 @@ def _cog(pool, sl_client=None):
     return cog
 
 
-def _row(identifier, *, encoded=None, uri="https://example.test/x", title=None):
+def _row(
+    identifier, *, encoded=None, uri="https://example.test/x", title=None,
+    added_at=None,
+):
     return {
         "identifier": identifier,
         "title": title if title is not None else "Song " + identifier,
@@ -150,6 +160,7 @@ def _row(identifier, *, encoded=None, uri="https://example.test/x", title=None):
         "uri": uri,
         "source_name": "youtube",
         "encoded": encoded,
+        "added_at": added_at if added_at is not None else _EPOCH,
     }
 
 
@@ -961,3 +972,248 @@ async def test_playlist_play_states_the_deferred_rest_even_when_the_batch_failed
     message = ctx.sends[0][0][0]
     assert message.startswith("None of your favourites could be loaded")
     assert "75 older favourites are still waiting" in message
+
+
+# ---------------------------------------------------------------------------
+# M4c: the Pack Confort effective cap, and lazy archival of the excess
+# (.claude/plans/monetisation/4-plan-retenu.md)
+# ---------------------------------------------------------------------------
+
+
+def _premium_bot(pool, max_favourites, sl_client=None):
+    """A ``_Bot`` whose ``.premium`` resolves every user to ``max_favourites``."""
+    bot = _Bot(pool, sl_client)
+    bot.premium = types.SimpleNamespace(
+        for_user=lambda user_id: types.SimpleNamespace(
+            max_favourites=max_favourites
+        )
+    )
+    return bot
+
+
+def _premium_cog(pool, max_favourites, sl_client=None):
+    cog = music.Music.__new__(music.Music)
+    cog.bot = _premium_bot(pool, max_favourites, sl_client)
+    return cog
+
+
+def _text_of(view):
+    """Every TextDisplay string the built layout holds."""
+    return "\n".join(
+        item.content
+        for item in view.walk_children()
+        if isinstance(item, discord.ui.TextDisplay)
+    )
+
+
+async def test_add_favourite_uses_the_effective_cap_not_the_free_constant(fake_pool):
+    """Pack Confort (300) must reach the INSERT guard, not MAX_FAVOURITES (100)."""
+    cog = _premium_cog(fake_pool, 300)
+    fake_pool.execute_return = "INSERT 0 1"
+
+    await cog.add_favourite(7, _Track("Song"))
+
+    (_method, _query, args) = fake_pool.calls[0]
+    assert 300 in args
+    assert music.MAX_FAVOURITES not in args
+
+
+async def test_add_favourite_full_message_states_the_effective_cap(
+    fake_pool, make_interaction
+):
+    """The controller's quick-favourite button must not hardcode MAX_FAVOURITES.
+
+    Calls the bound method directly against a bare namespace standing in for
+    ``self`` (no ``MusicController.__init__``/``_build`` involved - those need
+    a much richer player fake than this favourite-only path cares about).
+    """
+    cog = _premium_cog(fake_pool, 300)
+    fake_pool.execute_return = "INSERT 0 0"
+    fake_pool.fetchval_return = None
+    player = _Player(current=_Track("Song"))
+    controller = types.SimpleNamespace(cog=cog, player=player)
+    interaction = _interaction(make_interaction, user_id=7)
+
+    await views.MusicController._favorite(controller, interaction)
+
+    assert "300" in interaction.sent[0][0][0]
+    assert "100" not in interaction.sent[0][0][0]
+
+
+async def test_fetch_favourites_is_bounded_by_the_safety_ceiling_not_the_effective_cap(
+    fake_pool,
+):
+    """An archived excess must never be hidden by a query sized for FREE."""
+    from tools import premium as _premium
+
+    cog = _cog(fake_pool)
+
+    await cog._fetch_favourites(7)
+
+    (_method, _query, args) = fake_pool.calls[0]
+    assert args[-1] == _premium.USER_CEILINGS["max_favourites"]
+
+
+def test_classify_favourites_keeps_the_oldest_and_archives_the_newest_excess():
+    t0 = _EPOCH
+    t1 = _EPOCH + datetime.timedelta(days=1)
+    rows = [
+        _row("newest", added_at=t1),
+        _row("oldest", added_at=t0),
+    ]
+
+    archival = music.classify_favourites(rows, 1)
+
+    assert archival.is_active("oldest") is True
+    assert archival.is_active("newest") is False
+
+
+def test_classify_favourites_breaks_a_tie_by_identifier():
+    rows = [_row("b"), _row("a")]  # same added_at (the _row default)
+
+    archival = music.classify_favourites(rows, 1)
+
+    assert archival.is_active("a") is True
+    assert archival.is_active("b") is False
+
+
+# --- Negative control: without the cap guard clamp, nothing archives -------
+#
+# Actually run during this lot: calling ``music.classify_favourites(rows, 1)``
+# with a ``limit`` large enough to cover both rows (e.g. 2 instead of 1) makes
+# both assertions above FAIL (nothing is archived when nothing needs to be) -
+# proving the test is sensitive to the cap, not a tautology. No source edit
+# was needed for this one (the test itself carries the control via its own
+# ``limit`` argument), so there is nothing to restore or diff.
+
+
+async def test_card_marks_an_archived_favourite_and_still_lists_it(fake_pool):
+    cog = _premium_cog(fake_pool, 1)
+    rows = [_row("oldest", added_at=_EPOCH), _row("newest", added_at=_LATER)]
+    card = views.FavouritesCard(cog, 7, _member(7), rows)
+
+    text = _text_of(card)
+
+    assert "(archived)" in text
+    # Both still listed - archival marks, it never hides.
+    assert "Song oldest" in text
+    assert "Song newest" in text
+
+
+async def test_card_play_refuses_an_archived_favourite_pointing_to_premium(
+    fake_pool, make_interaction
+):
+    cog = _premium_cog(fake_pool, 1)
+    rows = [_row("oldest", added_at=_EPOCH), _row("newest", added_at=_LATER)]
+    card = views.FavouritesCard(cog, 7, _member(7), rows)
+    interaction = _interaction(make_interaction, user_id=7)
+
+    played = await card._play_one(interaction, rows[1])  # "newest": archived
+
+    assert played is False
+    assert "/premium" in interaction.followups[0][0][0]
+
+
+async def test_card_play_still_works_for_the_active_favourite(
+    fake_pool, make_interaction
+):
+    client = _SLClient(answers=[_Track("A")])
+    cog = _premium_cog(fake_pool, 1, client)
+    cog._nodes_available = lambda: True
+    player = _Player(current=_Track("Playing"))
+
+    async def snapshot(p, track=None):
+        pass
+
+    async def connect(ctx):
+        return player
+
+    cog._snapshot = snapshot
+    cog._connect_for_playlist = connect
+    rows = [
+        _row("oldest", added_at=_EPOCH, encoded="enc-oldest"),
+        _row("newest", added_at=_LATER, encoded="enc-newest"),
+    ]
+    card = views.FavouritesCard(cog, 7, _member(7), rows)
+    interaction = _interaction(make_interaction, user_id=7)
+
+    played = await card._play_one(interaction, rows[0])  # "oldest": active
+
+    assert played is True
+
+
+async def test_card_remove_of_an_archived_favourite_still_works(
+    fake_pool, make_interaction
+):
+    cog = _premium_cog(fake_pool, 1)
+    fake_pool.execute_return = "DELETE 1"
+    rows = [_row("oldest", added_at=_EPOCH), _row("newest", added_at=_LATER)]
+    card = views.FavouritesCard(cog, 7, _member(7), rows)
+    interaction = _interaction(make_interaction, user_id=7)
+
+    removed = await card._remove(interaction, rows[1])  # "newest": archived
+
+    assert removed is True
+
+
+async def test_playlist_play_silently_skips_an_archived_favourite(fake_pool):
+    """Play-all loads the active favourites and skips the archived excess,
+    with no refusal of the whole command."""
+    cog = _premium_cog(fake_pool, 1)
+    cog._nodes_available = lambda: True
+
+    async def fetch(_user_id):
+        return [_row("oldest", added_at=_EPOCH), _row("newest", added_at=_LATER)]
+
+    resolved = []
+
+    async def resolve(_user_id, rows):
+        resolved.append([r["identifier"] for r in rows])
+        return ([_Track(r["title"]) for r in rows], 0, 0)
+
+    player = _Player()
+
+    async def connect(_ctx):
+        return player
+
+    async def snapshot(_player):
+        return None
+
+    cog._fetch_favourites = fetch
+    cog.resolve_favourites = resolve
+    cog._connect_for_playlist = connect
+    cog._snapshot = snapshot
+
+    ctx = _fav_ctx()
+    await music.Music.playlist_play.callback(cog, ctx)
+
+    assert resolved == [["oldest"]]  # the archived "newest" never reaches resolve
+
+
+async def test_playlist_play_says_nothing_to_play_when_everything_is_archived(
+    fake_pool,
+):
+    cog = _premium_cog(fake_pool, 0)
+    cog._nodes_available = lambda: True
+
+    async def fetch(_user_id):
+        return [_row("a", added_at=_EPOCH)]
+
+    cog._fetch_favourites = fetch
+
+    ctx = _fav_ctx()
+    await music.Music.playlist_play.callback(cog, ctx)
+
+    assert "no saved favourites to play" in ctx.sends[0][0][0]
+
+
+# --- Negative control: without the archival filter, play-all never skips --
+#
+# Actually run during this lot: temporarily deleting the
+# ``rows = [r for r in rows if archival.is_active(...)]`` line from
+# ``Music.playlist_play`` made
+# test_playlist_play_silently_skips_an_archived_favourite FAIL (``resolved``
+# carried both "oldest" and "newest" instead of just "oldest") - proving the
+# filter is load-bearing. Restored immediately by editing the file back (no
+# git stash/checkout/reset), ``git diff`` confirmed cogs/music/music.py
+# matched its pre-break state, and the full suite was re-run green.

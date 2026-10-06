@@ -262,6 +262,16 @@ class _DispatchPool:
         self._record(query, args)
         return self.NEXT_ID
 
+    async def fetch(self, query, *args):
+        self._record(query, args)
+        if "repeat_seconds' IS NOT NULL" in query:
+            # The M4c archival classification query: a faithful fake returns
+            # THIS due row among the author's recurring rows (it satisfies
+            # the very predicates this query filters on) - never empty,
+            # which would wrongly classify every due series as archived.
+            return [{"id": self.row["id"], "created": self.row["created"]}]
+        return []
+
     def acquire(self):
         return _TxContext(self, is_transaction=False)
 

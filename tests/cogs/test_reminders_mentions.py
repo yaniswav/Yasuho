@@ -261,6 +261,9 @@ def _modal(body):
         get_tzinfo=_get_tzinfo,
         _pending_reminder_count=_pending_count,
         create_reminder_timer=_create,
+        # No .premium attribute: tools.premium.resolve_user_limits degrades
+        # to USER_FREE for a bot shaped like this.
+        bot=types.SimpleNamespace(),
     )
     modal = RemindModal(cog, CHANNEL_ID, AUTHOR_ID)
     modal.when_input._test_value = "10m"

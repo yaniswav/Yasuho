@@ -1449,3 +1449,29 @@ def resolve_guild_limits(bot, guild_id):
             "Failed to resolve the premium guild limits; using the free default"
         )
         return GUILD_FREE
+
+
+def resolve_user_limits(bot, user_id):
+    """The effective :class:`UserLimits` for ``user_id``, resolved defensively.
+
+    The user-scoped twin of :func:`resolve_guild_limits` (M4c: Pack Confort) -
+    same guard, mirrored exactly: a ``bot`` with no ``premium`` attribute, a
+    ``user_id`` that cannot be read, or :meth:`EntitlementCache.for_user`
+    itself raising, all degrade to :data:`USER_FREE` rather than raising or -
+    worse - resolving premium by accident.
+
+    Safe to call on every favourite add/list/play and every reminder
+    create/list/dispatch: :meth:`EntitlementCache.for_user` does no I/O (see
+    that class's own "SCALE STORY" paragraph), so this adds no await and no
+    query to any of those hot paths.
+    """
+    resolver = getattr(bot, "premium", None)
+    if resolver is None or user_id is None:
+        return USER_FREE
+    try:
+        return resolver.for_user(user_id)
+    except Exception:
+        log.exception(
+            "Failed to resolve the premium user limits; using the free default"
+        )
+        return USER_FREE

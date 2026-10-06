@@ -44,8 +44,10 @@ from cogs.music.player import (
     youtube_seed_query,  # noqa: F401
 )
 from cogs.music.playlists_shared import ServerPlaylistMixin
-from tools import i18n, music_state, settings
+from tools import i18n, music_state, premium, settings
 from tools.i18n import _, ngettext
+from tools.premium_archive import ArchivalResult
+from tools.premium_archive import classify as classify_archival
 from tools.quotas import QuotaRegistry
 
 log = logging.getLogger(__name__)
@@ -98,6 +100,22 @@ SNAPSHOT_CONCURRENCY = 5
 MAX_QUEUE_TRACKS = 500
 
 # Cap a user's saved favourites so the table cannot grow without bound.
+#
+# PREMIUM CAP (M4c, .claude/plans/monetisation/4-plan-retenu.md). This stays
+# the FREE value - tools.premium restates it (FREE_MAX_FAVOURITES) and
+# tests/tools/test_premium.py's drift guard checks the two against each
+# other. Every call site below instead reads the EFFECTIVE cap from
+# ``tools.premium.resolve_user_limits(bot, user_id).max_favourites`` (Pack
+# Confort raises it; a missing/raising resolver degrades to this FREE value -
+# see that function's own docstring), so a Pack Confort owner saves more
+# favourites without this constant ever drifting from the free catalog entry.
+# When that effective cap drops below what a user already has on record - the
+# pack was refunded or revoked - nothing is deleted: the excess is ARCHIVED
+# (:mod:`tools.premium_archive`'s lazy, computed-at-use-time rule, oldest
+# ``added_at`` first, ties by ``identifier``). An archived favourite stays
+# listed (marked "(archived)"), can still be removed, but cannot be played
+# (alone, or as part of ``/playlist play``'s play-all, which silently skips
+# it) until the cap rises again or it is removed.
 MAX_FAVOURITES = 100
 
 # How many LEGACY favourites (rows saved before the `encoded` column existed, so
@@ -928,6 +946,26 @@ def pair_decoded_favourites(
     return pairs, max(len(rows) - len(pairs), 0)
 
 
+def classify_favourites(
+    rows: typing.Sequence[typing.Any], max_favourites: int
+) -> ArchivalResult:
+    """Classify favourite rows (from :meth:`Music._fetch_favourites`) against a cap.
+
+    Pure and synchronous - no second query (M4c,
+    .claude/plans/monetisation/4-plan-retenu.md). Keyed by ``identifier`` (the
+    natural key every play/remove lookup already uses - the same shape
+    :func:`cogs.music.playlists_shared.ServerPlaylistMixin._guild_playlist_archival`
+    uses for ``name_norm``), ordered oldest ``added_at`` first, ties broken by
+    ``identifier``. No ``kept`` flag is set on any row today (that admin choice
+    is a FUTURE lot per the plan); every row classifies purely by creation
+    order.
+    """
+    resources = [
+        {"id": row["identifier"], "created_at": row["added_at"]} for row in rows
+    ]
+    return classify_archival(resources, max_favourites)
+
+
 def joinable_voice_channels(
     guild: discord.Guild,
     member: discord.Member,
@@ -1241,8 +1279,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Store a track in a user's favourites, deduped on the track identifier.
 
         Returns "added" on a new row, "exists" if it was already saved, or
-        "full" when the user is at the MAX_FAVOURITES cap and a new track was
-        refused. The INSERT only fires while under the cap, so growth is bounded.
+        "full" when the user is at their EFFECTIVE favourites cap
+        (:func:`tools.premium.resolve_user_limits` - the FREE
+        :data:`MAX_FAVOURITES` unless this user has Pack Confort) and a new
+        track was refused. The INSERT only fires while under that cap, so
+        growth is bounded.
 
         The track's ``encoded`` blob is stored alongside the metadata so
         ``/playlist play`` can rebuild the whole list in one bulk decode instead
@@ -1255,6 +1296,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         method would answer "added" for a track that was already saved. The
         backfill belongs to the load path, which knows it is backfilling.
         """
+        max_favourites = premium.resolve_user_limits(self.bot, user_id).max_favourites
         query = """
             INSERT INTO music_favorites
                 (user_id, identifier, title, author, uri, source_name, encoded)
@@ -1271,7 +1313,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             track.uri,
             track.source_name,
             getattr(track, "encoded", None),
-            MAX_FAVOURITES,
+            max_favourites,
         )
         # asyncpg returns a status string like "INSERT 0 1" (or "... 0" on a
         # conflict OR when the cap guard skipped the insert).
@@ -1285,15 +1327,27 @@ class Music(ServerPlaylistMixin, commands.Cog):
         return "exists" if exists else "full"
 
     async def _fetch_favourites(self, user_id: int) -> list:
-        """Return a user's favourites, newest first (bounded by the cap)."""
+        """Return a user's favourites, newest first.
+
+        Bounded by the ABSOLUTE safety ceiling
+        (``premium.USER_CEILINGS["max_favourites"]``), not by the user's
+        current effective cap (M4c): an archived excess must stay visible to
+        every caller (the card, play-all, the position-addressed remove) even
+        when it is over today's cap, so this query can never stop short of
+        returning it. ``added_at`` rides along so a caller can classify every
+        row's archived status (:func:`classify_favourites`) with no second
+        query.
+        """
         query = """
-            SELECT identifier, title, author, uri, source_name, encoded
+            SELECT identifier, title, author, uri, source_name, encoded, added_at
             FROM music_favorites
             WHERE user_id = $1
             ORDER BY added_at DESC
             LIMIT $2
         """
-        return await self.bot.db_pool.fetch(query, user_id, MAX_FAVOURITES)
+        return await self.bot.db_pool.fetch(
+            query, user_id, premium.USER_CEILINGS["max_favourites"]
+        )
 
     async def delete_favourite(self, user_id: int, identifier: str) -> bool:
         """Drop one favourite by its identifier. True when a row was deleted.
@@ -3930,6 +3984,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
 
         rows = await self._fetch_favourites(ctx.author.id)
+        # Archived (M4c): over today's effective cap, this guild member has
+        # lost Pack Confort since saving the excess. Play-all silently skips
+        # them (removal/export still see every row - only this load path
+        # drops them) rather than refusing the whole command for the active
+        # majority; a single archived pick still gets its own explicit
+        # refusal (FavouritesCard._play_one).
+        limits = premium.resolve_user_limits(self.bot, ctx.author.id)
+        archival = classify_favourites(rows, limits.max_favourites)
+        rows = [r for r in rows if archival.is_active(r["identifier"])]
         if not rows:
             await ctx.send(_("You have no saved favourites to play."))
             return
@@ -4062,9 +4125,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 )
             )
         elif result == "full":
+            max_favourites = premium.resolve_user_limits(
+                self.bot, ctx.author.id
+            ).max_favourites
             await ctx.send(
                 _("Your favourites are full (max {max}). Remove some first.").format(
-                    max=MAX_FAVOURITES
+                    max=max_favourites
                 )
             )
         else:

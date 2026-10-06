@@ -9,8 +9,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from . import reminders_store as reminders_tool
+from tools import premium
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
+from tools.premium_archive import classify as classify_archival
 from tools.time import (
     FutureTime,
     ShortTime,
@@ -27,12 +29,38 @@ log = logging.getLogger(__name__)
 DEFAULT_REMINDER_MESSAGE = "something"
 
 # Cap pending reminders per user so nobody can flood the timers table.
+#
+# PREMIUM CAP (M4c, .claude/plans/monetisation/4-plan-retenu.md). This stays
+# the FREE value - tools.premium restates it (FREE_MAX_PENDING_REMINDERS) and
+# tests/tools/test_premium.py's drift guard checks the two against each
+# other. Both creation surfaces (RemindModal.on_submit, Reminder.remind) read
+# the EFFECTIVE cap from ``tools.premium.resolve_user_limits(bot,
+# user_id).max_pending_reminders`` instead (Pack Confort raises it; a
+# missing/raising resolver degrades to this FREE value).
+#
+# OWNER DECISION: pending ONE-SHOT reminders are NEVER archived. Unlike a
+# favourite or a recurring series, a one-shot is finite - it fires exactly
+# once and its row is gone - so after a refund/revocation it still fires
+# normally; a lowered cap only refuses NEW ones while the user is over it
+# (the existing guard below, re-checked against the effective cap). There is
+# nothing to list as "(archived)" and nothing a dispatcher could skip: the
+# excess simply drains itself on its own schedule.
 MAX_PENDING_REMINDERS = 25
 
 # Cap RECURRING reminders per user, bot-wide. A recurring reminder is the only
 # kind that re-inserts itself, so it is the only kind whose row count does not
 # drain on its own: five of them at the 1h floor is 120 rows/day of churn per
 # user, which is the ceiling we are willing to underwrite at 1000+ guilds.
+#
+# PREMIUM CAP (M4c): same restatement/drift-guard shape as
+# MAX_PENDING_REMINDERS above (FREE_MAX_RECURRING_REMINDERS), effective cap
+# from ``tools.premium.resolve_user_limits(...).max_recurring_reminders``.
+# UNLIKE a one-shot, a recurring series never drains itself - it re-inserts
+# its own next occurrence forever - so a series over the effective cap is
+# ARCHIVED (see :meth:`Reminder._recurring_archival`): it is skipped by the
+# dispatcher (no delivery) but kept moving to its next scheduled occurrence
+# (no hot loop, no backlog burst on reinstatement - see dispatch_timers),
+# stays listed with a marker, stays cancellable, stays exported.
 MAX_RECURRING_REMINDERS = 5
 
 # The recurring cap's count, shared by the pre-flight read and the guarded
@@ -41,6 +69,21 @@ RECURRING_COUNT_QUERY = (
     "SELECT COUNT(*) FROM timers "
     "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
     "AND extra->>'repeat_seconds' IS NOT NULL"
+)
+
+# The rows (id + creation order), rather than a bare count, this user's
+# recurring reminders need for archival classification
+# (:meth:`Reminder._recurring_archival`). Same index and predicates as
+# RECURRING_COUNT_QUERY above (``timers_reminder_author_idx (event,
+# (extra->>'author_id'), expires)``), bounded by the ABSOLUTE safety ceiling
+# (``premium.USER_CEILINGS["max_recurring_reminders"]``) rather than the
+# user's current effective cap, so an archived excess is never hidden from
+# the classification that is deciding its own fate.
+RECURRING_ROWS_QUERY = (
+    "SELECT id, created FROM timers "
+    "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
+    "AND extra->>'repeat_seconds' IS NOT NULL "
+    "LIMIT $2"
 )
 
 # Advisory-lock class id for the recurring cap (see create_reminder_timer).
@@ -227,12 +270,18 @@ def repeat_problem_message(problem):
     )
 
 
-def recurring_limit_message():
-    """The refusal shown when a member is already at the recurring cap."""
+def recurring_limit_message(max_recurring_reminders=MAX_RECURRING_REMINDERS):
+    """The refusal shown when a member is already at the recurring cap.
+
+    ``max_recurring_reminders`` defaults to the FREE value for callers (and
+    tests) that do not pass one; both surfaces that call this (the modal and
+    the command) always pass the caller's EFFECTIVE cap
+    (``tools.premium.resolve_user_limits(bot, user_id).max_recurring_reminders``).
+    """
     return _(
         "You already have {count} repeating reminders - cancel one with "
         "`/reminders` before adding another."
-    ).format(count=MAX_RECURRING_REMINDERS)
+    ).format(count=max_recurring_reminders)
 
 
 def reminder_confirmation(dt, message, repeat_seconds):
@@ -356,15 +405,19 @@ class RemindModal(LocaleModal):
                 ephemeral=True,
             )
 
+        # Effective caps (M4c): the free values unless this user has Pack
+        # Confort - see tools.premium.UserLimits.max_pending_reminders/
+        # max_recurring_reminders.
+        limits = premium.resolve_user_limits(self.cog.bot, self.author_id)
         if (
             await self.cog._pending_reminder_count(self.author_id)
-            >= MAX_PENDING_REMINDERS
+            >= limits.max_pending_reminders
         ):
             return await interaction.response.send_message(
                 _(
                     "You already have {count} reminders pending - wait for some "
                     "to fire before adding more."
-                ).format(count=MAX_PENDING_REMINDERS),
+                ).format(count=limits.max_pending_reminders),
                 ephemeral=True,
             )
 
@@ -381,7 +434,8 @@ class RemindModal(LocaleModal):
         )
         if created is None:
             return await interaction.response.send_message(
-                recurring_limit_message(), ephemeral=True
+                recurring_limit_message(limits.max_recurring_reminders),
+                ephemeral=True,
             )
 
         await interaction.response.send_message(
@@ -534,12 +588,18 @@ class RemindersCard(AuthorLayoutView):
                 _("in <#{channel}>").format(channel=r["channel_id"])
             )
         if r.get("repeat_seconds"):
-            notes.append(
-                "{glyph} {interval}".format(
-                    glyph=reminders_tool.REPEAT_GLYPH,
-                    interval=format_interval(r["repeat_seconds"]),
-                )
+            interval_note = "{glyph} {interval}".format(
+                glyph=reminders_tool.REPEAT_GLYPH,
+                interval=format_interval(r["repeat_seconds"]),
             )
+            if r.get("archived"):
+                # Marked, not hushed - same "(archived)" wording the
+                # favourites / shared server playlists / role menus / voice
+                # hubs cards all use (M4a-1/M4a-3/M4c): the series stays
+                # listed and cancellable while it sits over its author's
+                # effective recurring cap, it just does not fire.
+                interval_note += " " + _("(archived)")
+            notes.append(interval_note)
         if notes:
             return line + "\n-# " + " - ".join(notes)
         return line
@@ -750,12 +810,53 @@ class Reminder(commands.Cog):
         executor = connection if connection is not None else self.bot.db_pool
         return await executor.fetchval(RECURRING_COUNT_QUERY, str(user_id)) or 0
 
-    async def _recurring_limit_reached(self, user_id, connection=None):
-        """True when this user cannot add another recurring reminder."""
+    async def _recurring_limit_reached(
+        self, user_id, connection=None, *, max_recurring_reminders=MAX_RECURRING_REMINDERS
+    ):
+        """True when this user cannot add another recurring reminder.
+
+        ``max_recurring_reminders`` defaults to the FREE value for callers
+        (and tests) that do not pass one; :meth:`create_reminder_timer`
+        always passes the caller's EFFECTIVE cap.
+        """
         return (
             await self._pending_recurring_count(user_id, connection)
-            >= MAX_RECURRING_REMINDERS
+            >= max_recurring_reminders
         )
+
+    async def _recurring_archival(self, user_id, connection=None):
+        """Classify this user's recurring reminders for archival (M4c).
+
+        ONE query, bounded and cheap: at most
+        ``premium.USER_CEILINGS["max_recurring_reminders"]`` rows for this ONE
+        user, over the same ``timers_reminder_author_idx (event,
+        (extra->>'author_id'), expires)`` the pending-count guard already
+        rides (see :meth:`_pending_recurring_count`'s own cost note). Called
+        once per DUE recurring reminder by the dispatcher - never once per
+        tick, never once per user per tick (see :meth:`_deliver_at_most_once`)
+        - and once per ``/reminders`` list render (only when the user has at
+        least one recurring row at all).
+
+        Pure classification handed to :func:`tools.premium_archive.classify`,
+        keyed by the timer row's own ``id`` (the surrogate key every
+        cancel/dispatch lookup already uses), ordered oldest ``created``
+        first. Since a series re-inserts a FRESH row (a new id, a fresh
+        ``created``) every time it fires, "oldest" here means "least
+        recently fired", not "oldest series" - an accepted, documented
+        consequence of this being a LAZY, computed-at-use-time verdict with
+        no stored flag (:mod:`tools.premium_archive`'s own module docstring):
+        there is nothing to keep consistent across a reschedule because
+        nothing is ever written down.
+        """
+        executor = connection if connection is not None else self.bot.db_pool
+        rows = await executor.fetch(
+            RECURRING_ROWS_QUERY,
+            str(user_id),
+            premium.USER_CEILINGS["max_recurring_reminders"],
+        )
+        resources = [{"id": row["id"], "created_at": row["created"]} for row in rows]
+        limits = premium.resolve_user_limits(self.bot, user_id)
+        return classify_archival(resources, limits.max_recurring_reminders)
 
     async def list_pending_reminders(self, user_id):
         """This user's pending reminders, soonest first, bounded and parsed.
@@ -776,8 +877,12 @@ class Reminder(commands.Cog):
             reminders_tool.REMINDER_LIST_CAP + 1,
         )
         parsed = []
+        recurring_seen = False
         for row in rows:
             extra = reminders_tool.parse_extra(row["extra"])
+            repeat_seconds = reminders_tool.recurrence_seconds(extra)
+            if repeat_seconds is not None:
+                recurring_seen = True
             parsed.append(
                 {
                     "id": row["id"],
@@ -786,9 +891,23 @@ class Reminder(commands.Cog):
                     "message": extra.get("message") or "",
                     "event": "reminder",
                     # None for a one-shot; the card only marks a line when set.
-                    "repeat_seconds": reminders_tool.recurrence_seconds(extra),
+                    "repeat_seconds": repeat_seconds,
                 }
             )
+        # Archived marking (M4c): only paid for when at least one row is
+        # recurring at all - a user with only one-shot reminders (never
+        # archived - see MAX_PENDING_REMINDERS's own "OWNER DECISION" comment)
+        # never pays this extra query.
+        if recurring_seen:
+            archival = await self._recurring_archival(user_id)
+            for reminder in parsed:
+                reminder["archived"] = (
+                    reminder["repeat_seconds"] is not None
+                    and not archival.is_active(reminder["id"])
+                )
+        else:
+            for reminder in parsed:
+                reminder["archived"] = False
         # Defensive type scoping on top of the SQL filter, then apply the cap.
         parsed = reminders_tool.filter_reminders(parsed)
         capped = len(parsed) > reminders_tool.REMINDER_LIST_CAP
@@ -856,6 +975,14 @@ class Reminder(commands.Cog):
             return await self.create_timer(when, "reminder", **extra)
 
         user_id = extra["author_id"]
+        # Effective cap (M4c): the free value unless this user has Pack
+        # Confort - see tools.premium.UserLimits.max_recurring_reminders.
+        # Resolved OUTSIDE the lock/transaction below: it is a synchronous,
+        # I/O-free dict lookup (EntitlementCache.for_user), so there is
+        # nothing to hold the advisory lock any longer for.
+        max_recurring_reminders = premium.resolve_user_limits(
+            self.bot, user_id
+        ).max_recurring_reminders
         async with self.bot.db_pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
@@ -863,7 +990,9 @@ class Reminder(commands.Cog):
                     _RECURRING_LOCK_CLASS,
                     user_id % _INT4_FOLD,
                 )
-                if await self._recurring_limit_reached(user_id, conn):
+                if await self._recurring_limit_reached(
+                    user_id, conn, max_recurring_reminders=max_recurring_reminders
+                ):
                     return None
                 row = await conn.fetchrow(
                     "INSERT INTO timers(event, expires, created, extra) "
@@ -930,6 +1059,58 @@ class Reminder(commands.Cog):
                 log.exception("Error while dispatching timers")
                 await asyncio.sleep(5)
 
+    async def _recurring_due_row_is_archived(self, row):
+        """True when the DUE recurring reminder ``row`` is over its author's cap.
+
+        ONE query (:meth:`_recurring_archival`), paid only for a row the
+        dispatcher is ABOUT to deliver - never once per tick, never once per
+        user per tick: :meth:`dispatch_timers` only ever holds a single
+        candidate row (the globally-earliest due timer,
+        ``get_active_timer``'s ``ORDER BY expires LIMIT 1``), so this runs at
+        most once per ACTUAL occurrence of ONE recurring series, i.e. at the
+        series' own interval (once an hour for an hourly reminder), not once
+        per dispatcher wakeup.
+        """
+        author_id = reminders_tool.parse_extra(row["extra"]).get("author_id")
+        if author_id is None:
+            return False
+        archival = await self._recurring_archival(author_id)
+        return not archival.is_active(row["id"])
+
+    async def _deliver_archived_recurring(self, row, repeat_seconds):
+        """Skip ONE occurrence of an archived recurring series without firing it.
+
+        NO HOT LOOP (M4c). Reuses :meth:`_claim_and_reschedule` VERBATIM - the
+        same fast-forward logic every recurring reminder already uses to move
+        itself to its next FUTURE occurrence - but never calls
+        :meth:`call_timer`. That is the whole mechanism: the row's own
+        ``expires`` always advances to a time that is still in the future
+        relative to "now" (:func:`cogs.community.reminders_store.next_occurrence`
+        jumps straight to the correct future slot even after a long gap, no
+        iteration), so the NEXT time ``get_active_timer`` runs its ``ORDER BY
+        expires LIMIT 1``, this series is no longer the earliest due row and
+        the dispatcher sleeps again instead of spinning on it. The series is
+        touched once per its own scheduled occurrence while archived (e.g.
+        once an hour for an hourly reminder) - never delivered, but never
+        re-selected on every dispatcher wakeup either.
+
+        RESUMES WITH NO BACKLOG BURST when re-entitled: the series' ``expires``
+        was kept moving forward the whole time it sat archived, so the very
+        next occurrence after reinstatement delivers normally through
+        :meth:`_deliver_at_most_once`'s ordinary path - there is no missed
+        window to catch up on, because nothing was ever skipped AHEAD of
+        schedule, only AT each of its own due times.
+        """
+        claimed, _next_id = await self._claim_and_reschedule(row, repeat_seconds)
+        if claimed is None:
+            # A cancel (or another worker) already took it - nothing to skip.
+            return
+        log.info(
+            "Archived recurring reminder %s rescheduled without delivering "
+            "(author over their effective recurring cap)",
+            claimed["id"],
+        )
+
     async def _deliver_at_most_once(self, row):
         """Fire reminders / generic dispatched events with at-most-once safety.
 
@@ -944,6 +1125,14 @@ class Reminder(commands.Cog):
         Every other row - every non-``reminder`` event, and every reminder
         without a valid ``repeat_seconds`` - takes the untouched single-statement
         path below.
+
+        ARCHIVED RECURRING REMINDERS (M4c) are the one exception to "claim
+        then deliver": a series over its author's effective recurring cap
+        (Pack Confort refunded/revoked) is rescheduled to its next FUTURE
+        occurrence through the exact same :meth:`_claim_and_reschedule` fast-
+        forward logic every recurring reminder already uses, but
+        :meth:`call_timer` is never invoked - see :meth:`_deliver_archived_recurring`
+        for why this is what stops it from hot-looping the dispatcher.
         """
         repeat_seconds = None
         next_id = None
@@ -951,6 +1140,11 @@ class Reminder(commands.Cog):
             repeat_seconds = reminders_tool.recurrence_seconds(
                 reminders_tool.parse_extra(row["extra"])
             )
+        if repeat_seconds is not None and await self._recurring_due_row_is_archived(
+            row
+        ):
+            await self._deliver_archived_recurring(row, repeat_seconds)
+            return
         if repeat_seconds is not None:
             claimed, next_id = await self._claim_and_reschedule(row, repeat_seconds)
         else:
@@ -1448,12 +1642,17 @@ class Reminder(commands.Cog):
             dt = result.dt
             message = result.arg
 
-        if await self._pending_reminder_count(ctx.author.id) >= MAX_PENDING_REMINDERS:
+        # Effective caps (M4c): see RemindModal.on_submit's own comment.
+        limits = premium.resolve_user_limits(self.bot, ctx.author.id)
+        if (
+            await self._pending_reminder_count(ctx.author.id)
+            >= limits.max_pending_reminders
+        ):
             return await ctx.send(
                 _(
                     "You already have {count} reminders pending - wait for some "
                     "to fire before adding more."
-                ).format(count=MAX_PENDING_REMINDERS)
+                ).format(count=limits.max_pending_reminders)
             )
 
         # Same as the modal: the recurring cap lives inside the insert, so it
@@ -1467,7 +1666,7 @@ class Reminder(commands.Cog):
             message=message,
         )
         if created is None:
-            return await ctx.send(recurring_limit_message())
+            return await ctx.send(recurring_limit_message(limits.max_recurring_reminders))
 
         await ctx.send(reminder_confirmation(dt, message, repeat_seconds))
 

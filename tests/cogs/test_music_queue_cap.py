@@ -23,6 +23,7 @@ What is pinned here:
 Everything runs on fakes (no node, no database, no gateway).
 """
 
+import datetime
 import types
 
 import sonolink
@@ -33,6 +34,10 @@ from cogs.music import playlists_shared as ps
 from tools import premium
 
 CAP = music.MAX_QUEUE_TRACKS
+
+# A fixed reference instant for favourite rows that do not care about their
+# own creation order (every test here is about the QUEUE cap, not archival).
+_EPOCH = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +471,7 @@ def _fav_cog(player, tracks, *, skipped=0, deferred=0):
     cog.resolved = []
 
     async def fetch(_user_id):
-        return [{"identifier": "a"}]
+        return [{"identifier": "a", "added_at": _EPOCH}]
 
     async def resolve(*args, **_kwargs):
         cog.resolved.append(args)
@@ -744,6 +749,7 @@ def _fav_row(identifier="a"):
         "uri": "https://example.test/x",
         "source_name": "youtube",
         "encoded": "enc-" + identifier,
+        "added_at": _EPOCH,
     }
 
 

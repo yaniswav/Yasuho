@@ -1643,3 +1643,57 @@ def test_resolve_guild_limits_resolves_premium_for_a_premium_guild(monkeypatch):
 # AttributeError instead of resolving FREE - proving the guard is load-bearing,
 # not a decoration. Restored immediately after by editing the file back (no
 # git stash/checkout/reset), and the full suite was re-run green.
+
+
+# ---------------------------------------------------------------------------
+# resolve_user_limits (M4c): the user-scoped twin of resolve_guild_limits -
+# same guard, mirrored exactly - shared by the favourites add/list/play paths
+# and the reminders creation/listing/dispatch paths.
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_user_limits_with_no_premium_attribute_is_free():
+    """A bot with no ``premium`` attribute (a test double, a script, or a cog
+    running before setup_hook attaches one) must resolve FREE, never raise."""
+    bot = types.SimpleNamespace()
+    assert premium.resolve_user_limits(bot, 42) is premium.USER_FREE
+
+
+def test_resolve_user_limits_with_none_user_id_is_free():
+    bot = types.SimpleNamespace(premium=premium.EntitlementCache())
+    assert premium.resolve_user_limits(bot, None) is premium.USER_FREE
+
+
+def test_resolve_user_limits_when_for_user_raises_is_free(caplog):
+    class _Boom:
+        def for_user(self, user_id):
+            raise RuntimeError("boom")
+
+    bot = types.SimpleNamespace(premium=_Boom())
+    with caplog.at_level(logging.ERROR, logger="tools.premium"):
+        result = premium.resolve_user_limits(bot, 42)
+    assert result is premium.USER_FREE
+    assert any("Failed to resolve" in r.message for r in caplog.records)
+
+
+def test_resolve_user_limits_resolves_premium_for_a_pack_confort_user(monkeypatch):
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", 222)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [_row(sku_id=222, scope_type="user", guild_id=None, user_id=42)],
+    )
+    bot = types.SimpleNamespace(premium=cache)
+    assert premium.resolve_user_limits(bot, 42) == premium.USER_PREMIUM
+
+
+# --- Negative control: without the getattr guard, a missing attribute raises -
+#
+# Actually run during this lot (not just asserted by comment): temporarily
+# replacing resolve_user_limits's body with a direct
+# ``return bot.premium.for_user(user_id)`` (no ``getattr(bot, "premium", None)``
+# guard) made test_resolve_user_limits_with_no_premium_attribute_is_free FAIL
+# with ``AttributeError: 'types.SimpleNamespace' object has no attribute
+# 'premium'`` - proving the guard is load-bearing, not a decoration. The edit
+# was then reverted by hand (no git stash/checkout/reset) and ``git diff``
+# confirmed tools/premium.py matched its pre-break state before the full
+# suite was re-run green.
