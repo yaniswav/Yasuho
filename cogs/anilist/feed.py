@@ -1386,6 +1386,44 @@ class AniListFeed(NoPingReplies, commands.Cog):
         ]
         return classify_archival(resources, max_feeds)
 
+    async def _refuse_if_feed_archived(self, guild_id, channel_id):
+        """The standard refusal message when ``channel_id``'s feed is itself
+        ARCHIVED over its guild's effective ``max_feeds_per_guild`` (M4a-2),
+        else ``None``.
+
+        AN ARCHIVED FEED IS NON-MODIFIABLE (the plan's own rule - see this
+        module's docstring): this is the ONE check every entry point that adds
+        to or reconfigures a feed calls FIRST - follows (:meth:`_add_follow`,
+        and ``/anilistfeed me`` joining), mutes (:meth:`_add_mute`), tracked
+        titles (:meth:`_add_channel_sub`), its activity types
+        (:meth:`_set_types`), its self-add flag (:meth:`_toggle_self_add`),
+        its enabled/disabled state (:meth:`_set_enabled`, EITHER direction -
+        toggling it now would leave a change waiting to take effect the
+        moment the cap rises again) and moving it to another channel
+        (:meth:`_move_feed`). REMOVAL is never
+        gated by this - unfollow/unmute/untrack and deleting the feed itself
+        all keep working on an archived feed, exactly as the plan promises
+        ("suppression toujours permise"); none of those callers call this
+        helper.
+
+        One extra read per call: :meth:`_feed_archival`'s own
+        :meth:`_feeds_for_guild` query, bounded by
+        ``tools.premium.GUILD_CEILINGS["max_feeds_per_guild"]`` (12) rows per
+        guild and served by the ``anilist_feeds`` primary key's ``guild_id``
+        prefix. Cheap, and only ever paid by an admin-triggered interactive
+        mutation - never by the poller's hot path, which has its own
+        archival pass already (:meth:`_load_feeds`).
+        """
+
+        archival = await self._feed_archival(guild_id)
+        if archival.is_active(channel_id):
+            return None
+        return _(
+            "This feed is archived - this server is over its current feed "
+            "limit. It can be deleted, but not edited. See /premium for "
+            "options."
+        )
+
     async def _follows_for_feed(self, guild_id, channel_id):
         return await self.bot.db_pool.fetch(
             "SELECT anilist_user_id, anilist_username, added_at FROM anilist_follows "
@@ -1468,6 +1506,15 @@ class AniListFeed(NoPingReplies, commands.Cog):
 
         if old_channel_id == new_channel_id:
             return None
+        # M4a-2: moving IS modifying the feed - an archived one (over the
+        # guild's current max_feeds_per_guild) stays put until it is deleted
+        # or the cap rises again. Checked before the "already a feed"
+        # lookup below, cheapest-first.
+        archived_error = await self._refuse_if_feed_archived(
+            guild_id, old_channel_id
+        )
+        if archived_error:
+            return archived_error
         exists = await self.bot.db_pool.fetchval(
             "SELECT 1 FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
             guild_id,
@@ -1530,6 +1577,13 @@ class AniListFeed(NoPingReplies, commands.Cog):
         return None
 
     async def _set_types(self, guild_id, channel_id, types):
+        """Set a feed's activity types. Returns an error string when the
+        feed is ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
+        ``None`` after the update."""
+
+        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if error:
+            return error
         ordered = sorted(types, key=af.ALLOWED_TYPES.index)
         await self.bot.db_pool.execute(
             "UPDATE anilist_feeds SET types = $3::text[] "
@@ -1538,14 +1592,23 @@ class AniListFeed(NoPingReplies, commands.Cog):
             channel_id,
             ordered,
         )
+        return None
 
     async def _toggle_self_add(self, guild_id, channel_id):
+        """Flip a feed's self-add flag. Returns an error string when the
+        feed is ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
+        ``None`` after the update."""
+
+        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if error:
+            return error
         await self.bot.db_pool.execute(
             "UPDATE anilist_feeds SET self_add = NOT self_add "
             "WHERE guild_id = $1 AND channel_id = $2;",
             guild_id,
             channel_id,
         )
+        return None
 
     # ------------------------------------------------------------------
     # Tracked-releases subscriptions (the per-feed explicit-title circuit)
@@ -1611,6 +1674,12 @@ class AniListFeed(NoPingReplies, commands.Cog):
             # title), and the panel has nothing to render. Reject it rather than
             # store a silent no-op the admin was told is tracked.
             return _("I couldn't read that title - try searching again.")
+        # M4a-2: a title cannot be tracked on an ARCHIVED feed (checked after
+        # the input validation above, so a bad title/type is still reported
+        # as such rather than masked by the archived message).
+        archived_error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if archived_error:
+            return archived_error
         already = await self.bot.db_pool.fetchval(
             "SELECT 1 FROM anilist_channel_subs "
             "WHERE guild_id = $1 AND channel_id = $2 AND media_id = $3;",
@@ -1755,6 +1824,21 @@ class AniListFeed(NoPingReplies, commands.Cog):
         return view
 
     async def _set_enabled(self, guild_id, channel_id, enabled):
+        """Enable or disable a feed. Returns an error string when the feed is
+        ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
+        ``None`` after the update.
+
+        Gated like every other edit, in EITHER direction: an archived feed
+        is frozen, not just "frozen while enabled" - toggling it now would
+        otherwise leave a state change (enabled flipped, fail_count reset)
+        waiting to take effect the moment the cap rises again, which is
+        exactly the leakage the plan's "non-modifiable" rule exists to
+        prevent.
+        """
+
+        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if error:
+            return error
         await self.bot.db_pool.execute(
             "UPDATE anilist_feeds SET enabled = $3, "
             "fail_count = CASE WHEN $3 THEN 0 ELSE fail_count END "
@@ -1763,6 +1847,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
             channel_id,
             enabled,
         )
+        return None
 
     async def _delete_feed_rows(self, guild_id, channel_id):
         """Delete a feed and its follows, mutes and subscriptions in one transaction.
@@ -1895,11 +1980,15 @@ class AniListFeed(NoPingReplies, commands.Cog):
     async def _add_follow(self, guild_id, channel_id, user_id, name, added_by):
         """Insert/refresh a follow, enforcing the per-feed cap.
 
-        Returns an error string when the feed is already at the guild's
-        CURRENT effective ``max_follows_per_feed`` (M4a-2 - the FREE value is
+        Returns an error string when the FEED itself is ARCHIVED (M4a-2 -
+        see :meth:`_refuse_if_feed_archived`) or already at the guild's
+        CURRENT effective ``max_follows_per_feed`` (the FREE value is
         :data:`af.MAX_FOLLOWS_PER_FEED`), else None.
         """
 
+        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if error:
+            return error
         if not await self._follow_exists(guild_id, channel_id, user_id):
             max_follows = self._guild_limits(guild_id).max_follows_per_feed
             count = await self._follow_count(guild_id, channel_id)
@@ -2018,14 +2107,23 @@ class AniListFeed(NoPingReplies, commands.Cog):
         can at most mute everyone it follows, so the mute table can never
         outgrow the follow table it qualifies. Re-muting an already-muted
         user only refreshes the cached name (no new row), so it is never
-        blocked. Returns an error string when the cap is reached, else None.
+        blocked by the cap. Returns an error string when the FEED itself is
+        ARCHIVED (see :meth:`_refuse_if_feed_archived`) or the cap is
+        reached, else None.
 
-        MUTES ARE NEVER ARCHIVED (see the module docstring): a mute is
+        A STORED MUTE IS NEVER ARCHIVED (see the module docstring): a mute is
         protective, so every stored one stays fully effective however far
         over the cap the feed's follow count later climbs (a downgrade never
-        touches this table) - this cap only ever refuses adding a NEW one.
+        touches this table). That is a different thing from the FEED it
+        belongs to being archived: an archived feed delivers nothing to
+        anyone muted or not, and this method refuses adding (or refreshing)
+        a mute on one exactly like it refuses a new follow or subscription,
+        per the plan's "archived = non-modifiable" rule.
         """
 
+        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        if error:
+            return error
         already = await self.bot.db_pool.fetchval(
             "SELECT 1 FROM anilist_feed_mutes "
             "WHERE guild_id = $1 AND channel_id = $2 AND anilist_user_id = $3;",
@@ -2188,12 +2286,11 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 "`/anilistfeed follow`."
             ).format(channel=target.mention)
         elif not row["enabled"]:
-            await self.bot.db_pool.execute(
-                "UPDATE anilist_feeds SET enabled = TRUE, fail_count = 0 "
-                "WHERE guild_id = $1 AND channel_id = $2;",
-                ctx.guild.id,
-                target.id,
-            )
+            # M4a-2: re-enabling is an edit too, refused the same way the
+            # panel's Enable/Disable button is (_set_enabled).
+            error = await self._set_enabled(ctx.guild.id, target.id, True)
+            if error:
+                return await ctx.send(error)
             message = _("AniList feed re-enabled in {channel}.").format(
                 channel=target.mention
             )
@@ -2499,6 +2596,16 @@ class AniListFeed(NoPingReplies, commands.Cog):
                     channel=channel_id
                 )
             )
+
+        # M4a-2: joining is adding a follow, refused on an ARCHIVED feed
+        # exactly like a moderator's own `/anilistfeed follow` - but only
+        # reached here, AFTER both leave branches above, so leaving an
+        # archived feed always keeps working.
+        archived_error = await self._refuse_if_feed_archived(
+            ctx.guild.id, channel_id
+        )
+        if archived_error:
+            return await ctx.send(archived_error)
 
         max_follows = self._guild_limits(ctx.guild.id).max_follows_per_feed
         count = await self._follow_count(ctx.guild.id, channel_id)

@@ -320,6 +320,9 @@ async def test_a_linked_member_still_joins_on_one_viewer_call():
 
     pool = _Pool(
         rows={"SELECT self_add": {"self_add": True}},
+        # _refuse_if_feed_archived (M4a-2) reads this before the join insert -
+        # one non-archived feed on CHANNEL so the join path is reached at all.
+        fetches={"FROM anilist_feeds": [{"channel_id": CHANNEL, "created_at": 0}]},
         values={"SELECT COUNT(*) FROM anilist_follows": 0},
     )
     anilist = _FakeAniList(status="ok")

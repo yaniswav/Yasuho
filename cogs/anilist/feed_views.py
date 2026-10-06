@@ -254,9 +254,11 @@ class _TypeToggleButton(discord.ui.Button):
                 types.discard(self.type_key)
             else:
                 types.add(self.type_key)
-            await self._owner.cog._set_types(
+            error = await self._owner.cog._set_types(
                 self._owner.guild.id, self._owner.selected_channel_id, types
             )
+            if error:
+                return await interactions.reply(interaction, error)
             await self._owner.reload_and_refresh(interaction)
         except Exception:
             log.exception("AniList feed panel type toggle failed")
@@ -280,9 +282,11 @@ class _SelfAddToggleButton(discord.ui.Button):
 
     async def callback(self, interaction):
         try:
-            await self._owner.cog._toggle_self_add(
+            error = await self._owner.cog._toggle_self_add(
                 self._owner.guild.id, self._owner.selected_channel_id
             )
+            if error:
+                return await interactions.reply(interaction, error)
             await self._owner.reload_and_refresh(interaction)
         except Exception:
             log.exception("AniList feed panel self-add toggle failed")
@@ -1005,9 +1009,11 @@ class _EnableButton(discord.ui.Button):
     async def callback(self, interaction):
         try:
             enabled = bool(self._owner.selected_feed["enabled"])
-            await self._owner.cog._set_enabled(
+            error = await self._owner.cog._set_enabled(
                 self._owner.guild.id, self._owner.selected_channel_id, not enabled
             )
+            if error:
+                return await interactions.reply(interaction, error)
             await self._owner.reload_and_refresh(interaction)
         except Exception:
             log.exception("AniList feed panel enable toggle failed")

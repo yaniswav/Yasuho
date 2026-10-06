@@ -31,6 +31,7 @@ from cogs.anilist import feed_policy as af
 from cogs.anilist import helpers as anilist_helpers
 from cogs.anilist.feed import AniListFeed
 from tools import premium
+from tools.i18n import _
 
 GUILD = 1
 
@@ -39,6 +40,13 @@ def _dt(seconds):
     return datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc) + (
         datetime.timedelta(seconds=seconds)
     )
+
+
+# _refuse_if_feed_archived (M4a-2) reads _feeds_for_guild's "FROM anilist_feeds"
+# query before every add-type mutation; every such test below stubs it with a
+# single non-archived feed on channel 100 (the channel these tests exercise),
+# so it reads as active rather than as "no feeds at all" -> archived.
+_ONE_ACTIVE_FEED = [{"channel_id": 100, "created_at": _dt(0)}]
 
 
 # --- Fakes -------------------------------------------------------------------
@@ -236,6 +244,7 @@ async def test_create_feed_accepted_just_under_the_premium_cap():
 
 async def test_add_follow_refused_shows_the_premium_number():
     pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
         fetchval_results=[
             ("SELECT 1 FROM anilist_follows", None),
             (
@@ -254,6 +263,7 @@ async def test_add_follow_refused_shows_the_premium_number():
 
 async def test_add_mute_refused_shows_the_premium_number():
     pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
         fetchval_results=[
             ("SELECT 1 FROM anilist_feed_mutes", None),
             (
@@ -272,6 +282,7 @@ async def test_add_mute_refused_shows_the_premium_number():
 
 async def test_add_channel_sub_refused_shows_the_premium_number():
     pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
         fetchval_results=[
             ("SELECT 1 FROM anilist_channel_subs", None),
             (
@@ -297,7 +308,10 @@ async def test_add_follow_never_touches_the_global_cursor():
     the global createdAt cursor already advanced past old activity on its
     own, independently of this row's history."""
 
-    pool = _FakePool(fetchval_results=[("SELECT 1 FROM anilist_follows", None)])
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
+        fetchval_results=[("SELECT 1 FROM anilist_follows", None)],
+    )
     cog = _cog(pool)
 
     await cog._add_follow(GUILD, 100, 7, "reader", 9)
@@ -590,6 +604,7 @@ async def test_load_mutes_is_untouched_by_archival_even_over_the_follow_cap():
 
 async def test_add_mute_accepted_just_under_the_premium_cap():
     pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
         fetchval_results=[
             ("SELECT 1 FROM anilist_feed_mutes", None),
             (
@@ -637,6 +652,171 @@ async def test_remove_channel_sub_works_regardless_of_premium_or_archival():
 
     statements = [sql for sql, _args in pool.executes]
     assert any("DELETE FROM anilist_channel_subs" in sql for sql in statements)
+
+
+# ---------------------------------------------------------------------------
+# Item A: an ARCHIVED feed is non-modifiable (adds/edits refused; removal and
+# deletion are never gated by this - see _refuse_if_feed_archived).
+# ---------------------------------------------------------------------------
+
+# Three feeds, FREE max_feeds_per_guild (2, no bot.premium): 300 and 200 are
+# the two oldest and stay ACTIVE, 100 is the newest and is the one ARCHIVED -
+# exactly the fixture every test below exercises against channel 100.
+_ARCHIVED_FEED_SET = [
+    {"channel_id": 100, "created_at": _dt(300)},
+    {"channel_id": 200, "created_at": _dt(200)},
+    {"channel_id": 300, "created_at": _dt(100)},
+]
+
+
+def test_the_archived_feed_fixture_is_actually_archived():
+    """Guards every test below: if this ever stopped being true, every
+    "refused" assertion past it would be trivially (and wrongly) green."""
+
+    assert af.MAX_FEEDS_PER_GUILD == 2
+    resources = [
+        {"id": f["channel_id"], "created_at": f["created_at"]}
+        for f in _ARCHIVED_FEED_SET
+    ]
+    archival = feed_mod.classify_archival(resources, af.MAX_FEEDS_PER_GUILD)
+    assert archival.is_active(300) and archival.is_active(200)
+    assert archival.is_archived(100)
+
+
+async def test_add_follow_refused_on_an_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._add_follow(GUILD, 100, 7, "reader", 9)
+
+    assert error is not None
+    assert "archived" in error
+    assert "/premium" in error
+    assert pool.executes == []  # nothing stored on an archived feed
+
+
+async def test_add_mute_refused_on_an_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._add_mute(GUILD, 100, 7, "reader")
+
+    assert error is not None
+    assert "archived" in error
+    assert pool.executes == []
+
+
+async def test_add_channel_sub_refused_on_an_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._add_channel_sub(GUILD, 100, 55, "ANIME", "Frieren", 9)
+
+    assert error is not None
+    assert "archived" in error
+    assert pool.executes == []
+
+
+async def test_move_feed_refused_when_the_source_feed_is_archived():
+    """Moving IS modifying - an archived feed stays put until it is deleted
+    or the cap rises again."""
+
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._move_feed(GUILD, 100, 999)
+
+    assert error is not None
+    assert "archived" in error
+    assert pool.executes == []  # no insert/update/delete of anything
+
+
+async def test_set_types_refused_on_an_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._set_types(GUILD, 100, {"TEXT"})
+
+    assert error is not None
+    assert "archived" in error
+    assert pool.executes == []
+
+
+async def test_toggle_self_add_refused_on_an_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._toggle_self_add(GUILD, 100)
+
+    assert error is not None
+    assert "archived" in error
+    assert pool.executes == []
+
+
+async def test_set_enabled_refused_on_an_archived_feed_in_either_direction():
+    """Gated both ways: toggling an archived feed's enabled flag would leave
+    a state change waiting to take effect once the cap rises again."""
+
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error_enable = await cog._set_enabled(GUILD, 100, True)
+    error_disable = await cog._set_enabled(GUILD, 100, False)
+
+    assert error_enable is not None and "archived" in error_enable
+    assert error_disable is not None and "archived" in error_disable
+    assert pool.executes == []
+
+
+async def test_set_enabled_still_works_on_a_non_archived_feed():
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    assert await cog._set_enabled(GUILD, 200, True) is None
+    assert any("UPDATE anilist_feeds" in sql for sql, _a in pool.executes)
+
+
+async def test_add_follow_and_add_mute_still_work_on_a_non_archived_feed():
+    """Negative control for the four tests above: the SAME fixture's active
+    channels (200/300) are not refused, so the check is discriminating, not
+    blanket-blocking every call."""
+
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)],
+        fetchval_results=[("SELECT 1 FROM anilist_follows", None)],
+    )
+    cog = _cog(pool)
+
+    assert await cog._add_follow(GUILD, 200, 7, "reader", 9) is None
+    assert any("INSERT INTO anilist_follows" in sql for sql, _a in pool.executes)
+
+
+async def test_removal_and_delete_still_work_on_an_archived_feed():
+    """Item A's explicit carve-out: unfollow/unmute/untrack-a-title and
+    deleting the feed itself are never gated by the archived check, so they
+    keep working on channel 100 even though it is archived in this fixture."""
+
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    await cog._remove_channel_sub(GUILD, 100, 55)
+    await cog._delete_feed_rows(GUILD, 100)
+
+    statements = [sql for sql, _args in pool.executes]
+    assert any("DELETE FROM anilist_channel_subs" in sql for sql in statements)
+    assert any("DELETE FROM anilist_feeds" in sql for sql in statements)
+
+
+async def test_add_channel_sub_bad_input_is_reported_before_the_archived_check():
+    """The pre-existing input-validation refusal (bad title/type) must not be
+    masked by the archived message, even on a channel that IS archived."""
+
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    error = await cog._add_channel_sub(GUILD, 100, None, "MANGA", "Berserk", 9)
+
+    assert error == _("I couldn't read that title - try searching again.")
 
 
 # ---------------------------------------------------------------------------

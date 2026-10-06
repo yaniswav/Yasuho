@@ -184,6 +184,23 @@ def _feed_row(channel_id, guild_id=GUILD):
     }
 
 
+# The exact select-list of _feeds_for_guild's query (cogs/anilist/feed.py),
+# used as the _FakePool dict key below: _refuse_if_feed_archived (M4a-2)
+# reads this to classify a feed's archival status before every add-type
+# mutation these tests exercise, so each one must stub it with the feed
+# channel it is testing - otherwise an unstubbed fetch answers [] (no feeds
+# at all) and that channel reads as ARCHIVED, which is not what any of these
+# tests are about.
+_FEEDS_FETCH_KEY = "channel_id, types, self_add, enabled, fail_count, created_at"
+
+
+def _active_feed_rows(*channel_ids):
+    """One non-archived feed row per id (FREE max_feeds_per_guild=2 here, so
+    a handful of distinct ids all stay comfortably active)."""
+
+    return [{"channel_id": cid, "created_at": i} for i, cid in enumerate(channel_ids)]
+
+
 def _text_activity(activity_id, user_id=MUTED_USER):
     """A TEXT activity: never coalescible, so delivery is one plain send."""
 
@@ -534,6 +551,7 @@ async def test_load_mutes_reads_only_enabled_feeds_and_touches_no_cursor():
 async def test_a_new_mute_is_blocked_at_the_follow_cap():
     # The cap is the follow cap: a feed can at most mute everyone it follows.
     pool = _FakePool(
+        rows={_FEEDS_FETCH_KEY: _active_feed_rows(100)},
         values={
             "SELECT 1 FROM anilist_feed_mutes": None,  # not muted yet
             "COUNT(*) FROM anilist_feed_mutes": af.MAX_FOLLOWS_PER_FEED,
@@ -550,6 +568,7 @@ async def test_a_new_mute_is_blocked_at_the_follow_cap():
 
 async def test_a_new_mute_is_accepted_just_under_the_cap():
     pool = _FakePool(
+        rows={_FEEDS_FETCH_KEY: _active_feed_rows(100)},
         values={
             "SELECT 1 FROM anilist_feed_mutes": None,
             "COUNT(*) FROM anilist_feed_mutes": af.MAX_FOLLOWS_PER_FEED - 1,
@@ -568,6 +587,7 @@ async def test_re_muting_an_already_muted_user_is_never_blocked():
     be rejected at the cap - and it must not even cost the COUNT query."""
 
     pool = _FakePool(
+        rows={_FEEDS_FETCH_KEY: _active_feed_rows(100)},
         values={
             "SELECT 1 FROM anilist_feed_mutes": 1,  # already muted
             "COUNT(*) FROM anilist_feed_mutes": af.MAX_FOLLOWS_PER_FEED,
@@ -625,7 +645,8 @@ async def test_moving_a_feed_carries_its_mutes_to_the_new_channel():
                 "self_add": True,
                 "enabled": True,
                 "fail_count": 0,
-            }
+            },
+            _FEEDS_FETCH_KEY: _active_feed_rows(100),
         }
     )
     cog = _cog(pool=pool)
@@ -657,7 +678,8 @@ async def test_moving_a_feed_inserts_before_it_moves_and_deletes_last():
                 "self_add": True,
                 "enabled": True,
                 "fail_count": 0,
-            }
+            },
+            _FEEDS_FETCH_KEY: _active_feed_rows(100),
         }
     )
     cog = _cog(pool=pool)
@@ -851,7 +873,10 @@ async def test_re_joining_while_muted_says_so_instead_of_going_quiet():
     """
 
     pool = _FakePool(
-        rows={"SELECT self_add": {"self_add": True}},
+        rows={
+            "SELECT self_add": {"self_add": True},
+            _FEEDS_FETCH_KEY: _active_feed_rows(100),
+        },
         values={"SELECT 1 FROM anilist_feed_mutes": 1},  # not followed, still muted
     )
     cog = _cog(pool=pool)
@@ -866,7 +891,12 @@ async def test_re_joining_while_muted_says_so_instead_of_going_quiet():
 
 
 async def test_re_joining_unmuted_says_only_that_it_joined():
-    pool = _FakePool(rows={"SELECT self_add": {"self_add": True}})
+    pool = _FakePool(
+        rows={
+            "SELECT self_add": {"self_add": True},
+            _FEEDS_FETCH_KEY: _active_feed_rows(100),
+        }
+    )
     cog = _cog(pool=pool)
     ctx = _MeCtx()
 
