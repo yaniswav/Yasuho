@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 23:06+0000\n"
+"POT-Creation-Date: 2026-10-06 23:57+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -775,8 +775,9 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 
 #: cogs/anilist/feed.py:2683 cogs/anilist/feed_views.py:632
 #: cogs/anilist/feed_views.py:923 cogs/anilist/feed_views.py:1299
-#: cogs/anilist/feed_views.py:1349 cogs/config/rooms.py:1115
-#: cogs/config/rooms_config.py:405 cogs/music/playlists_shared.py:312
+#: cogs/anilist/feed_views.py:1349 cogs/community/reminders.py:601
+#: cogs/config/rooms.py:1115 cogs/config/rooms_config.py:405
+#: cogs/music/playlists_shared.py:312 cogs/music/views.py:2408
 msgid "(archived)"
 msgstr "(αρχειοθετημένη)"
 
@@ -838,8 +839,8 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
 
 #: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:329
-#: cogs/music/music.py:4103 cogs/music/search.py:342 cogs/music/views.py:2196
-#: cogs/music/views.py:2352 cogs/music/views.py:2479 cogs/music/views.py:2576
+#: cogs/music/music.py:4169 cogs/music/search.py:342 cogs/music/views.py:2199
+#: cogs/music/views.py:2382 cogs/music/views.py:2516 cogs/music/views.py:2629
 msgid "Unknown title"
 msgstr "Άγνωστος τίτλος"
 
@@ -1120,8 +1121,8 @@ msgstr "Διακοπή παρακολούθησης τίτλου..."
 
 #: cogs/anilist/feed_views.py:536 cogs/anilist/feed_views.py:811
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:601
-#: cogs/music/views.py:1605 cogs/music/views.py:2038 cogs/music/views.py:2402
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:661
+#: cogs/music/views.py:1608 cogs/music/views.py:2041 cogs/music/views.py:2439
 msgid "Next"
 msgstr "Επόμ."
 
@@ -1808,182 +1809,182 @@ msgstr "Άγνωστη γλώσσα. Διαθέσιμες: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Η προεπιλεγμένη γλώσσα του διακομιστή ορίστηκε σε **{lang}**."
 
-#: cogs/community/reminders.py:197
+#: cogs/community/reminders.py:240
 #, python-brace-format
 msgid "every week"
 msgid_plural "every {count} weeks"
 msgstr[0] "κάθε εβδομάδα"
 msgstr[1] "κάθε {count} εβδομάδες"
 
-#: cogs/community/reminders.py:199
+#: cogs/community/reminders.py:242
 #, python-brace-format
 msgid "every day"
 msgid_plural "every {count} days"
 msgstr[0] "κάθε μέρα"
 msgstr[1] "κάθε {count} ημέρες"
 
-#: cogs/community/reminders.py:201
+#: cogs/community/reminders.py:244
 #, python-brace-format
 msgid "every hour"
 msgid_plural "every {count} hours"
 msgstr[0] "κάθε ώρα"
 msgstr[1] "κάθε {count} ώρες"
 
-#: cogs/community/reminders.py:204
+#: cogs/community/reminders.py:247
 #, python-brace-format
 msgid "every minute"
 msgid_plural "every {count} minutes"
 msgstr[0] "κάθε λεπτό"
 msgstr[1] "κάθε {count} λεπτά"
 
-#: cogs/community/reminders.py:207
+#: cogs/community/reminders.py:250
 #, python-brace-format
 msgid "every second"
 msgid_plural "every {count} seconds"
 msgstr[0] "κάθε δευτερόλεπτο"
 msgstr[1] "κάθε {count} δευτερόλεπτα"
 
-#: cogs/community/reminders.py:219
+#: cogs/community/reminders.py:262
 msgid "I can only repeat a reminder once an hour at most. Try `hourly` or something longer like `2d`."
 msgstr "Μπορώ να επαναλάβω μια υπενθύμιση το πολύ μία φορά την ώρα. Δοκίμασε `hourly` ή κάτι μεγαλύτερο όπως `2d`."
 
-#: cogs/community/reminders.py:223
+#: cogs/community/reminders.py:266
 msgid "I can only repeat a reminder for up to a year - try `365d` or less."
 msgstr "Μπορώ να επαναλάβω μια υπενθύμιση για έως ένα έτος - δοκίμασε `365d` ή λιγότερο."
 
-#: cogs/community/reminders.py:225
+#: cogs/community/reminders.py:268
 msgid "I couldn't understand that repeat interval. Try `hourly`, `daily`, `weekly`, or a duration like `2d` or `12h`."
 msgstr "Δεν κατάλαβα αυτό το διάστημα επανάληψης. Δοκίμασε `hourly`, `daily`, `weekly`, ή μια διάρκεια όπως `2d` ή `12h`."
 
-#: cogs/community/reminders.py:233
+#: cogs/community/reminders.py:282
 #, python-brace-format
 msgid "You already have {count} repeating reminders - cancel one with `/reminders` before adding another."
 msgstr "Έχεις ήδη {count} επαναλαμβανόμενες υπενθυμίσεις - ακύρωσε μία με `/reminders` πριν προσθέσεις άλλη."
 
-#: cogs/community/reminders.py:247
+#: cogs/community/reminders.py:296
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "Εντάξει, θα σου υπενθυμίσω {when}: {message}"
 
-#: cogs/community/reminders.py:250
+#: cogs/community/reminders.py:299
 #, python-brace-format
 msgid "Okay, reminding you {when} and then {interval}: {message}"
 msgstr "Εντάξει, θα σου υπενθυμίσω {when} και μετά {interval}: {message}"
 
-#: cogs/community/reminders.py:276 cogs/community/reminders.py:416
+#: cogs/community/reminders.py:325 cogs/community/reminders.py:470
 msgid "Set a reminder"
 msgstr "Όρισε υπενθύμιση"
 
-#: cogs/community/reminders.py:286 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:335 cogs/config/announcements.py:154
 msgid "When"
 msgstr "Πότε"
 
-#: cogs/community/reminders.py:287
+#: cogs/community/reminders.py:336
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "π.χ. 10m, αύριο στις 18:00, ή μια ετικέτα <t:...>"
 
-#: cogs/community/reminders.py:295 cogs/config/reactionroles.py:226
+#: cogs/community/reminders.py:344 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
 #: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr "Μήνυμα"
 
-#: cogs/community/reminders.py:296
+#: cogs/community/reminders.py:345
 msgid "What should I remind you about?"
 msgstr "Για τι να σου υπενθυμίσω;"
 
-#: cogs/community/reminders.py:307
+#: cogs/community/reminders.py:356
 msgid "Repeat (optional)"
 msgstr "Επανάληψη (προαιρετικό)"
 
-#: cogs/community/reminders.py:308
+#: cogs/community/reminders.py:357
 msgid "hourly, daily, weekly, or e.g. 2d - blank for once"
 msgstr "hourly, daily, weekly, ή π.χ. 2d - κενό για μία φορά"
 
-#: cogs/community/reminders.py:345
+#: cogs/community/reminders.py:394
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `10m`, `tomorrow at 6pm` ή `in 3 days`."
 
-#: cogs/community/reminders.py:355 cogs/community/reminders.py:1434
+#: cogs/community/reminders.py:404 cogs/community/reminders.py:1647
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Αυτός ο χρόνος είναι στο παρελθόν. Δώσε μου μια στιγμή στο μέλλον."
 
-#: cogs/community/reminders.py:365 cogs/community/reminders.py:1454
+#: cogs/community/reminders.py:418 cogs/community/reminders.py:1672
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Έχεις ήδη {count} εκκρεμείς υπενθυμίσεις - περίμενε να ενεργοποιηθούν κάποιες πριν προσθέσεις κι άλλες."
 
-#: cogs/community/reminders.py:467 cogs/community/reminders.py:527
+#: cogs/community/reminders.py:521 cogs/community/reminders.py:581
 #: cogs/utility/extras.py:37
 msgid "(no text)"
 msgstr "(χωρίς κείμενο)"
 
-#: cogs/community/reminders.py:473
+#: cogs/community/reminders.py:527
 #, python-brace-format
 msgid "in {when}"
 msgstr "σε {when}"
 
-#: cogs/community/reminders.py:479
+#: cogs/community/reminders.py:533
 msgid "Cancel a reminder..."
 msgstr "Ακύρωση υπενθύμισης..."
 
-#: cogs/community/reminders.py:481
+#: cogs/community/reminders.py:535
 msgid "(nothing to cancel)"
 msgstr "(τίποτα για ακύρωση)"
 
-#: cogs/community/reminders.py:528
+#: cogs/community/reminders.py:582
 #, python-brace-format
 msgid "{when} - {text}"
 msgstr "{when} - {text}"
 
-#: cogs/community/reminders.py:534
+#: cogs/community/reminders.py:588
 #, python-brace-format
 msgid "in <#{channel}>"
 msgstr "στο <#{channel}>"
 
-#: cogs/community/reminders.py:556
+#: cogs/community/reminders.py:616
 msgid "Your reminders"
 msgstr "Οι υπενθυμίσεις σου"
 
-#: cogs/community/reminders.py:563
+#: cogs/community/reminders.py:623
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "Δεν έχεις υπενθυμίσεις. Χρησιμοποίησε το `/remind` για να προσθέσεις μία."
 
-#: cogs/community/reminders.py:578
+#: cogs/community/reminders.py:638
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count} σε εκκρεμότητα"
 
-#: cogs/community/reminders.py:582
+#: cogs/community/reminders.py:642
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:594
-#: cogs/music/views.py:1598 cogs/music/views.py:2031 cogs/music/views.py:2395
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:654
+#: cogs/music/views.py:1601 cogs/music/views.py:2034 cogs/music/views.py:2432
 msgid "Prev"
 msgstr "Προηγ."
 
-#: cogs/community/reminders.py:1205
+#: cogs/community/reminders.py:1418
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "Ήμουν εκτός σύνδεσης, οπότε χάθηκε {count} επανάληψη."
 msgstr[1] "Ήμουν εκτός σύνδεσης, οπότε χάθηκαν {count} επαναλήψεις."
 
-#: cogs/community/reminders.py:1218
+#: cogs/community/reminders.py:1431
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "Επαναλαμβάνεται {interval} - επόμενη {when}"
 
-#: cogs/community/reminders.py:1314
+#: cogs/community/reminders.py:1527
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>, {when}: {message}"
 
-#: cogs/community/reminders.py:1420
+#: cogs/community/reminders.py:1633
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 
@@ -7526,49 +7527,49 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "Διακοπή"
 
-#: cogs/music/music.py:690
+#: cogs/music/music.py:708
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "Η ουρά είναι γεμάτη ({cap} κομμάτια). Παράλειψε ή αφαίρεσε μερικά πρώτα."
 
-#: cogs/music/music.py:706
+#: cogs/music/music.py:724
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " {dropped} κομμάτι δεν προστέθηκε - η ουρά είναι γεμάτη στα {cap}."
 msgstr[1] " {dropped} κομμάτια δεν προστέθηκαν - η ουρά είναι γεμάτη στα {cap}."
 
-#: cogs/music/music.py:1145
+#: cogs/music/music.py:1183
 msgid "I'm not connected to a voice channel."
 msgstr "Δεν είμαι συνδεδεμένος σε φωνητικό κανάλι."
 
-#: cogs/music/music.py:1148 cogs/music/music.py:2730
+#: cogs/music/music.py:1186 cogs/music/music.py:2784
 #: cogs/music/playlists_shared.py:531
 msgid "You must be in my voice channel to do that."
 msgstr "Πρέπει να είσαι στο φωνητικό μου κανάλι για να το κάνεις αυτό."
 
-#: cogs/music/music.py:1158 cogs/music/views.py:218
+#: cogs/music/music.py:1196 cogs/music/views.py:218
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "Μόνο ο DJ ({dj}) ή ένας συντονιστής μπορεί να ελέγξει την αναπαραγωγή."
 
-#: cogs/music/music.py:1204
+#: cogs/music/music.py:1242
 msgid "I can only play public links - I can't reach that one."
 msgstr "Μπορώ να παίξω μόνο δημόσιους συνδέσμους - σε αυτόν δεν έχω πρόσβαση."
 
-#: cogs/music/music.py:1915
+#: cogs/music/music.py:1969
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Υπήρξε πρόβλημα στην αναπαραγωγή του **{title}**, παραλείπεται."
 
-#: cogs/music/music.py:1934
+#: cogs/music/music.py:1988
 #, python-brace-format
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "{count} ακόμη κομμάτι δεν μπόρεσε να παιχτεί, το παραλείπω."
 msgstr[1] "{count} ακόμη κομμάτια δεν μπόρεσαν να παιχτούν, τα παραλείπω."
 
-#: cogs/music/music.py:2496
+#: cogs/music/music.py:2550
 #, python-brace-format
 msgid ""
 "Secondary music controls (the everyday ones - play, queue, skip, pause, resume, stop, volume, nowplaying - stay on their own):\n"
@@ -7595,286 +7596,286 @@ msgstr ""
 "- `{p}music filter <preset>` - εφαρμογη ηχητικου εφε\n"
 "- `{p}music disconnect` - αποχωρηση απο το φωνητικο καναλι"
 
-#: cogs/music/music.py:2612
+#: cogs/music/music.py:2666
 msgid "Here is the player."
 msgstr "Ορίστε ο player."
 
-#: cogs/music/music.py:2615 cogs/music/music.py:2737
+#: cogs/music/music.py:2669 cogs/music/music.py:2791
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "Ο player είναι ήδη ενεργός στο {channel}."
 
-#: cogs/music/music.py:2693 cogs/music/music.py:2756 cogs/music/music.py:3035
-#: cogs/music/music.py:3928 cogs/music/music.py:4047
+#: cogs/music/music.py:2747 cogs/music/music.py:2810 cogs/music/music.py:3089
+#: cogs/music/music.py:3982 cogs/music/music.py:4110
 #: cogs/music/playlists_shared.py:683 cogs/music/playlists_shared.py:728
-#: cogs/music/search.py:516 cogs/music/views.py:2505
+#: cogs/music/search.py:516 cogs/music/views.py:2558
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "Η μουσική δεν είναι διαθέσιμη αυτή τη στιγμή - κανένας κόμβος Lavalink δεν είναι συνδεδεμένος."
 
-#: cogs/music/music.py:2703 cogs/music/music.py:3030 cogs/music/music.py:3945
+#: cogs/music/music.py:2757 cogs/music/music.py:3084 cogs/music/music.py:4008
 #: cogs/music/playlists_shared.py:538
 msgid "You must be in a voice channel first."
 msgstr "Πρέπει πρώτα να είσαι σε ένα φωνητικό κανάλι."
 
-#: cogs/music/music.py:2761 cogs/music/music.py:4053
+#: cogs/music/music.py:2815 cogs/music/music.py:4116
 msgid "Could not find any tracks for that query."
 msgstr "Δεν βρέθηκαν κομμάτια για αυτό το ερώτημα."
 
-#: cogs/music/music.py:2785
+#: cogs/music/music.py:2839
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτι)."
 msgstr[1] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτια)."
 
-#: cogs/music/music.py:2801
+#: cogs/music/music.py:2855
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "Το **{title}** από `{author}` προστέθηκε στην ουρά."
 
-#: cogs/music/music.py:3070 cogs/music/views.py:1183
+#: cogs/music/music.py:3124 cogs/music/views.py:1186
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "Μόνο ο DJ ({dj}) μπορεί να αλλάξει σταθμό."
 
-#: cogs/music/music.py:3087 cogs/music/views.py:1203
+#: cogs/music/music.py:3141 cogs/music/views.py:1206
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "Δεν βρήκα κανένα κομμάτι {genre} αυτή τη στιγμή."
 
-#: cogs/music/music.py:3096 cogs/music/views.py:1210
+#: cogs/music/music.py:3150 cogs/music/views.py:1213
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "Άλλαξα στον σταθμό {genre} ({count} κομμάτι(α))."
 
-#: cogs/music/music.py:3103
+#: cogs/music/music.py:3157
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "Ξεκινάει μια συνεδρία {genre} με {count} κομμάτι/α. Καλή διασκέδαση!"
 
-#: cogs/music/music.py:3145
+#: cogs/music/music.py:3199
 msgid "The player is already paused."
 msgstr "Ο player είναι ήδη σε παύση."
 
-#: cogs/music/music.py:3150
+#: cogs/music/music.py:3204
 msgid "Paused the player."
 msgstr "Ο player τέθηκε σε παύση."
 
-#: cogs/music/music.py:3160
+#: cogs/music/music.py:3214
 msgid "The player is not paused."
 msgstr "Ο player δεν είναι σε παύση."
 
-#: cogs/music/music.py:3165
+#: cogs/music/music.py:3219
 msgid "Resumed the player."
 msgstr "Ο player συνεχίστηκε."
 
-#: cogs/music/music.py:3345 cogs/music/voteskip.py:168
+#: cogs/music/music.py:3399 cogs/music/voteskip.py:168
 msgid "There are no more tracks in the queue to skip to."
 msgstr "Δεν υπάρχουν άλλα κομμάτια στην ουρά για παράλειψη."
 
-#: cogs/music/music.py:3348
+#: cogs/music/music.py:3402
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Παράλειψη στο **{title}** από `{author}`."
 
-#: cogs/music/music.py:3354
+#: cogs/music/music.py:3408
 msgid "Skipped. The queue is now empty."
 msgstr "Παραλείφθηκε. Η ουρά είναι πλέον κενή."
 
-#: cogs/music/music.py:3417 cogs/music/views.py:961
+#: cogs/music/music.py:3471 cogs/music/views.py:961
 msgid "There's no previous track to go back to."
 msgstr "Δεν υπάρχει προηγούμενο κομμάτι για να επιστρέψω."
 
-#: cogs/music/music.py:3422 cogs/music/views.py:967
+#: cogs/music/music.py:3476 cogs/music/views.py:967
 msgid "I can't go back - the previous track is no longer available."
 msgstr "Δεν μπορώ να γυρίσω πίσω - το προηγούμενο κομμάτι δεν είναι πια διαθέσιμο."
 
-#: cogs/music/music.py:3426 cogs/music/views.py:972
+#: cogs/music/music.py:3480 cogs/music/views.py:972
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "Επέστρεψα στο **{title}** από `{author}`."
 
-#: cogs/music/music.py:3444 cogs/music/music.py:3739
+#: cogs/music/music.py:3498 cogs/music/music.py:3793
 msgid "There's nothing playing right now."
 msgstr "Δεν παίζει τίποτα αυτή τη στιγμή."
 
-#: cogs/music/music.py:3447
+#: cogs/music/music.py:3501
 msgid "I can't seek within a live stream."
 msgstr "Δεν μπορώ να μετακινηθώ μέσα σε ζωντανή ροή."
 
-#: cogs/music/music.py:3452
+#: cogs/music/music.py:3506
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "Δεν κατάλαβα αυτή τη θέση. Δοκίμασε `1:23`, `90` ή `+30`."
 
-#: cogs/music/music.py:3464
+#: cogs/music/music.py:3518
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "Μεταπήδησα στο {position}."
 
-#: cogs/music/music.py:3476
+#: cogs/music/music.py:3530
 msgid "Stopped playback and cleared the queue."
 msgstr "Η αναπαραγωγή σταμάτησε και η ουρά εκκαθαρίστηκε."
 
-#: cogs/music/music.py:3489
+#: cogs/music/music.py:3543
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Η ένταση ορίστηκε σε {volume}%."
 
-#: cogs/music/music.py:3499
+#: cogs/music/music.py:3553
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Πρόσθεσε μερικά ακόμη κομμάτια στην ουρά πριν το ανακάτεμα."
 
-#: cogs/music/music.py:3502 cogs/music/views.py:1071 cogs/music/views.py:1865
+#: cogs/music/music.py:3556 cogs/music/views.py:1071 cogs/music/views.py:1868
 msgid "Shuffled the queue."
 msgstr "Η ουρά ανακατεύτηκε."
 
-#: cogs/music/music.py:3513 cogs/music/views.py:1882
+#: cogs/music/music.py:3567 cogs/music/views.py:1885
 msgid "The queue is already empty."
 msgstr "Η ουρά είναι ήδη άδεια."
 
-#: cogs/music/music.py:3523 cogs/music/views.py:1890
+#: cogs/music/music.py:3577 cogs/music/views.py:1893
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "Αφαίρεσα {count} κομμάτι(α) από την ουρά."
 
-#: cogs/music/music.py:3544
+#: cogs/music/music.py:3598
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Η λειτουργία επανάληψης ορίστηκε σε `{mode}`."
 
-#: cogs/music/music.py:3579 cogs/music/views.py:1999
+#: cogs/music/music.py:3633 cogs/music/views.py:2002
 msgid "Nothing has played yet in this session."
 msgstr "Δεν έχει παίξει τίποτα ακόμα σε αυτή τη συνεδρία."
 
-#: cogs/music/music.py:3593 cogs/music/views.py:454
+#: cogs/music/music.py:3647 cogs/music/views.py:454
 msgid "Nothing is playing right now."
 msgstr "Δεν παίζει τίποτα αυτή τη στιγμή."
 
-#: cogs/music/music.py:3610
+#: cogs/music/music.py:3664
 msgid "Disconnected from the voice channel."
 msgstr "Αποσυνδέθηκε από το φωνητικό κανάλι."
 
-#: cogs/music/music.py:3629
+#: cogs/music/music.py:3683
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} δευτερόλεπτο"
 msgstr[1] "{count} δευτερόλεπτα"
 
-#: cogs/music/music.py:3633
+#: cogs/music/music.py:3687
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count} λεπτό"
 msgstr[1] "{count} λεπτά"
 
-#: cogs/music/music.py:3657
+#: cogs/music/music.py:3711
 msgid "That effect isn't available."
 msgstr "Αυτό το εφέ δεν είναι διαθέσιμο."
 
-#: cogs/music/music.py:3666
+#: cogs/music/music.py:3720
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "Αλλάζεις εφέ πολύ γρήγορα. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:3671
+#: cogs/music/music.py:3725
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "Πολλοί διακομιστές χρησιμοποιούν εφέ αυτή τη στιγμή - δοκίμασε ξανά σε λίγο."
 
-#: cogs/music/music.py:3674
+#: cogs/music/music.py:3728
 msgid "Something went wrong applying that effect."
 msgstr "Κάτι πήγε στραβά κατά την εφαρμογή του εφέ."
 
-#: cogs/music/music.py:3683
+#: cogs/music/music.py:3737
 msgid "Effects cleared."
 msgstr "Τα εφέ αφαιρέθηκαν."
 
-#: cogs/music/music.py:3684
+#: cogs/music/music.py:3738
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "Το εφέ ορίστηκε σε {emoji} {label}."
 
-#: cogs/music/music.py:3754
+#: cogs/music/music.py:3808
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "Αναζήτησες στίχους πάρα πολλές φορές. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:3765
+#: cogs/music/music.py:3819
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "Αυτός ο διακομιστής αναζήτησε πάρα πολλούς στίχους. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:3779
+#: cogs/music/music.py:3833
 msgid "I couldn't find any lyrics for this track."
 msgstr "Δεν βρήκα στίχους για αυτό το κομμάτι."
 
-#: cogs/music/music.py:3887 cogs/music/views.py:2344
+#: cogs/music/music.py:3941 cogs/music/views.py:2373
 msgid "You have no saved favourites yet."
 msgstr "Δεν έχεις ακόμη αποθηκευμένα αγαπημένα."
 
-#: cogs/music/music.py:3890
+#: cogs/music/music.py:3944
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "Ο/Η {name} δεν έχει ακόμη αποθηκευμένα αγαπημένα."
 
-#: cogs/music/music.py:3934
+#: cogs/music/music.py:3997
 msgid "You have no saved favourites to play."
 msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αναπαραγωγή."
 
-#: cogs/music/music.py:3960
+#: cogs/music/music.py:4023
 msgid "None of your favourites could be loaded right now."
 msgstr "Κανένα από τα αγαπημένα σου δεν μπόρεσε να φορτωθεί αυτή τη στιγμή."
 
-#: cogs/music/music.py:3966 cogs/music/music.py:4018
+#: cogs/music/music.py:4029 cogs/music/music.py:4081
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " {deferred} παλιό αγαπημένο περιμένει ακόμα - τρέξε ξανά την εντολή για να το προσθέσεις."
 msgstr[1] " {deferred} παλιά αγαπημένα περιμένουν ακόμα - τρέξε ξανά την εντολή για να τα προσθέσεις."
 
-#: cogs/music/music.py:4001
+#: cogs/music/music.py:4064
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "Προστέθηκε {count} κομμάτι από τα αγαπημένα σου στην ουρά."
 msgstr[1] "Προστέθηκαν {count} κομμάτια από τα αγαπημένα σου στην ουρά."
 
-#: cogs/music/music.py:4009 cogs/music/playlists_shared.py:784
+#: cogs/music/music.py:4072 cogs/music/playlists_shared.py:784
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped} κομμάτι παραλείφθηκε - δεν μπόρεσε να φορτωθεί."
 msgstr[1] " {skipped} κομμάτια παραλείφθηκαν - δεν μπόρεσαν να φορτωθούν."
 
-#: cogs/music/music.py:4040
+#: cogs/music/music.py:4103
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "Δεν παίζει τίποτα - δώσε μου ένα όνομα τραγουδιού ή URL για αποθήκευση."
 
-#: cogs/music/music.py:4059
+#: cogs/music/music.py:4122
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "Το **{title}** από `{author}` προστέθηκε στα αγαπημένα σου."
 
-#: cogs/music/music.py:4066 cogs/music/views.py:1115
+#: cogs/music/music.py:4132 cogs/music/views.py:1118
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "Τα αγαπημένα σου είναι γεμάτα (μέγιστο {max}). Αφαίρεσε μερικά πρώτα."
 
-#: cogs/music/music.py:4072 cogs/music/views.py:1118
+#: cogs/music/music.py:4138 cogs/music/views.py:1121
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "Το **{title}** είναι ήδη στα αγαπημένα σου."
 
-#: cogs/music/music.py:4090
+#: cogs/music/music.py:4156
 msgid "You have no saved favourites to remove."
 msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αφαίρεση."
 
-#: cogs/music/music.py:4094
+#: cogs/music/music.py:4160
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Διάλεξε έναν αριθμό μεταξύ 1 και {max}."
 
-#: cogs/music/music.py:4101 cogs/music/views.py:2578
+#: cogs/music/music.py:4167 cogs/music/views.py:2631
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "Το **{title}** αφαιρέθηκε από τα αγαπημένα σου."
@@ -8079,11 +8080,11 @@ msgstr "Anime openings και J-pop"
 msgid "**LIVE**"
 msgstr "**ΖΩΝΤΑΝΑ**"
 
-#: cogs/music/views.py:179 cogs/music/views.py:256 cogs/music/views.py:1247
+#: cogs/music/views.py:179 cogs/music/views.py:256 cogs/music/views.py:1250
 msgid "The player is no longer active."
 msgstr "Ο player δεν είναι πλέον ενεργός."
 
-#: cogs/music/views.py:263 cogs/music/views.py:2639
+#: cogs/music/views.py:263 cogs/music/views.py:2692
 msgid "Give me a song name or URL to add."
 msgstr "Δώσε μου ένα όνομα τραγουδιού ή URL για προσθήκη."
 
@@ -8092,7 +8093,7 @@ msgstr "Δώσε μου ένα όνομα τραγουδιού ή URL για π�
 msgid "Could not find anything for `{query}`."
 msgstr "Δεν βρέθηκε τίποτα για `{query}`."
 
-#: cogs/music/views.py:305 cogs/music/views.py:2169 cogs/music/views.py:2552
+#: cogs/music/views.py:305 cogs/music/views.py:2172 cogs/music/views.py:2605
 #, python-brace-format
 msgid "Queued **{title}**."
 msgstr "Προστέθηκε στην ουρά το **{title}**."
@@ -8207,7 +8208,7 @@ msgstr "Έντ. +"
 msgid "Loop"
 msgstr "Επανάληψη"
 
-#: cogs/music/views.py:628 cogs/music/views.py:1612
+#: cogs/music/views.py:628 cogs/music/views.py:1615
 msgid "Shuffle"
 msgstr "Ανακάτεμα"
 
@@ -8239,8 +8240,8 @@ msgstr "Εφέ"
 msgid "-# Use the buttons to control playback"
 msgstr "-# Χρησιμοποίησε τα κουμπιά για να ελέγξεις την αναπαραγωγή"
 
-#: cogs/music/views.py:811 cogs/music/views.py:1668 cogs/music/views.py:2076
-#: cogs/music/views.py:2414
+#: cogs/music/views.py:811 cogs/music/views.py:1671 cogs/music/views.py:2079
+#: cogs/music/views.py:2451
 msgid "Something went wrong handling that action."
 msgstr "Κάτι πήγε στραβά κατά τον χειρισμό αυτής της ενέργειας."
 
@@ -8286,7 +8287,7 @@ msgstr "Το autoplay είναι ενεργό. Θα συνεχίσω τη μου
 msgid "Autoplay is off. Playback will stop once the queue is empty."
 msgstr "Το autoplay είναι απενεργοποιημένο. Η αναπαραγωγή θα σταματήσει μόλις αδειάσει η ουρά."
 
-#: cogs/music/views.py:1061 cogs/music/views.py:1856
+#: cogs/music/views.py:1061 cogs/music/views.py:1859
 msgid "Add a few more tracks before shuffling."
 msgstr "Πρόσθεσε μερικά ακόμη κομμάτια πριν το ανακάτεμα."
 
@@ -8299,79 +8300,79 @@ msgstr "Δεν παίζει τίποτα για να προστεθεί στα �
 msgid "Added **{title}** to your favourites."
 msgstr "Το **{title}** προστέθηκε στα αγαπημένα σου."
 
-#: cogs/music/views.py:1193 cogs/music/views.py:2709
+#: cogs/music/views.py:1196 cogs/music/views.py:2762
 msgid "That vibe isn't available right now."
 msgstr "Αυτό το mood δεν είναι διαθέσιμο αυτή τη στιγμή."
 
-#: cogs/music/views.py:1232
+#: cogs/music/views.py:1235
 msgid "Pick an effect..."
 msgstr "Διάλεξε ένα εφέ..."
 
-#: cogs/music/views.py:1313
+#: cogs/music/views.py:1316
 msgid "Pick a vibe..."
 msgstr "Διάλεξε ένα mood..."
 
-#: cogs/music/views.py:1337
+#: cogs/music/views.py:1340
 msgid "You are changing the station too fast - give it a moment."
 msgstr "Αλλάζεις σταθμό πολύ γρήγορα - περίμενε λίγο."
 
-#: cogs/music/views.py:1380 cogs/music/views.py:1932
+#: cogs/music/views.py:1383 cogs/music/views.py:1935
 #, python-brace-format
 msgid "by {author} - {duration}"
 msgstr "από {author} - {duration}"
 
-#: cogs/music/views.py:1388
+#: cogs/music/views.py:1391
 msgid "Manage a track..."
 msgstr "Διαχείριση κομματιού..."
 
-#: cogs/music/views.py:1435
+#: cogs/music/views.py:1438
 msgid "Play now"
 msgstr "Αναπαραγωγή τώρα"
 
-#: cogs/music/views.py:1443 cogs/music/views.py:2258
+#: cogs/music/views.py:1446 cogs/music/views.py:2261
 msgid "Remove"
 msgstr "Αφαίρεση"
 
-#: cogs/music/views.py:1534
+#: cogs/music/views.py:1537
 msgid "### 🎶 Queue"
 msgstr "### 🎶 Ουρά"
 
-#: cogs/music/views.py:1540
+#: cogs/music/views.py:1543
 #, python-brace-format
 msgid "**Now Playing:** {title} by `{author}` `{duration}`"
 msgstr "**Παίζει τώρα:** {title} από `{author}` `{duration}`"
 
-#: cogs/music/views.py:1549
+#: cogs/music/views.py:1552
 msgid "**Now Playing:** Nothing right now."
 msgstr "**Παίζει τώρα:** Τίποτα αυτή τη στιγμή."
 
-#: cogs/music/views.py:1560
+#: cogs/music/views.py:1563
 msgid "The queue is empty. Add a track to keep the music going!"
 msgstr "Η ουρά είναι άδεια. Πρόσθεσε ένα κομμάτι για να συνεχιστεί η μουσική!"
 
-#: cogs/music/views.py:1565 cogs/music/views.py:2005
+#: cogs/music/views.py:1568 cogs/music/views.py:2008
 #, python-brace-format
 msgid "{index}. {title} by {author} ({duration})"
 msgstr "{index}. {title} από {author} ({duration})"
 
-#: cogs/music/views.py:1576 cogs/music/views.py:2016 cogs/music/views.py:2376
+#: cogs/music/views.py:1579 cogs/music/views.py:2019 cogs/music/views.py:2413
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} track(s)"
 msgstr "-# Σελίδα {page}/{pages} - {count} κομμάτι(α)"
 
-#: cogs/music/views.py:1619
+#: cogs/music/views.py:1622
 msgid "Add track"
 msgstr "Προσθήκη κομματιού"
 
-#: cogs/music/views.py:1625
+#: cogs/music/views.py:1628
 msgid "Clear queue"
 msgstr "Άδειασμα ουράς"
 
-#: cogs/music/views.py:1722
+#: cogs/music/views.py:1725
 msgid "That track is no longer in the queue."
 msgstr "Αυτό το κομμάτι δεν είναι πια στην ουρά."
 
-#: cogs/music/views.py:1747
+#: cogs/music/views.py:1750
 #, python-brace-format
 msgid ""
 "**{title}**\n"
@@ -8380,64 +8381,64 @@ msgstr ""
 "**{title}**\n"
 "Μετάβαση απευθείας σε αυτό το κομμάτι, ή αφαίρεσέ το από την ουρά."
 
-#: cogs/music/views.py:1803
+#: cogs/music/views.py:1806
 #, python-brace-format
 msgid "Jumped to **{title}**."
 msgstr "Μετέβην στο **{title}**."
 
-#: cogs/music/views.py:1833
+#: cogs/music/views.py:1836
 #, python-brace-format
 msgid "Removed **{title}** from the queue."
 msgstr "Το **{title}** αφαιρέθηκε από την ουρά."
 
-#: cogs/music/views.py:1940
+#: cogs/music/views.py:1943
 msgid "Play it again..."
 msgstr "Παίξε το ξανά..."
 
-#: cogs/music/views.py:1990
+#: cogs/music/views.py:1993
 msgid "### 🕘 Recently played"
 msgstr "### 🕘 Πρόσφατα παιγμένα"
 
-#: cogs/music/views.py:2137
+#: cogs/music/views.py:2140
 msgid "That track is no longer in the history."
 msgstr "Αυτό το κομμάτι δεν είναι πια στο ιστορικό."
 
-#: cogs/music/views.py:2197 cogs/music/views.py:2354
+#: cogs/music/views.py:2200 cogs/music/views.py:2384
 msgid "Unknown artist"
 msgstr "Άγνωστος καλλιτέχνης"
 
-#: cogs/music/views.py:2206
+#: cogs/music/views.py:2209
 #, python-brace-format
 msgid "by {author}"
 msgstr "από {author}"
 
-#: cogs/music/views.py:2211
+#: cogs/music/views.py:2214
 msgid "Manage a favourite..."
 msgstr "Διαχείριση αγαπημένου..."
 
-#: cogs/music/views.py:2250
+#: cogs/music/views.py:2253
 msgid "Play"
 msgstr "Αναπαραγωγή"
 
-#: cogs/music/views.py:2326
+#: cogs/music/views.py:2355
 msgid "### ⭐ Your favourites"
 msgstr "### ⭐ Τα αγαπημένα σου"
 
-#: cogs/music/views.py:2330
+#: cogs/music/views.py:2359
 #, python-brace-format
 msgid "### ⭐ {name}'s favourites"
 msgstr "### ⭐ Τα αγαπημένα του/της {name}"
 
-#: cogs/music/views.py:2369
+#: cogs/music/views.py:2398
 #, python-brace-format
 msgid "`{index}.` {label} by `{author}`"
 msgstr "`{index}.` {label} από `{author}`"
 
-#: cogs/music/views.py:2443 cogs/music/views.py:2580
+#: cogs/music/views.py:2480 cogs/music/views.py:2633
 msgid "That favourite is no longer in your list."
 msgstr "Αυτό το αγαπημένο δεν είναι πια στη λίστα σου."
 
-#: cogs/music/views.py:2478
+#: cogs/music/views.py:2515
 #, python-brace-format
 msgid ""
 "**{title}**\n"
@@ -8446,63 +8447,67 @@ msgstr ""
 "**{title}**\n"
 "Πρόσθεσε αυτό το κομμάτι στην ουρά, ή αφαίρεσέ το από τα αγαπημένα σου."
 
-#: cogs/music/views.py:2525
+#: cogs/music/views.py:2547
+msgid "That favourite is archived - you are over your current favourites limit. It can be removed, but not played. See /premium for options."
+msgstr "Αυτό το αγαπημένο είναι αρχειοθετημένο - ξεπερνάς το τρέχον όριο αγαπημένων σου. Μπορείς να το αφαιρέσεις, αλλά όχι να το αναπαράγεις. Δες το /premium για επιλογές."
+
+#: cogs/music/views.py:2578
 msgid "That favourite could not be loaded right now."
 msgstr "Δεν ήταν δυνατή η φόρτωση αυτού του αγαπημένου αυτή τη στιγμή."
 
-#: cogs/music/views.py:2604
+#: cogs/music/views.py:2657
 msgid "Change station..."
 msgstr "Αλλαγή σταθμού..."
 
-#: cogs/music/views.py:2622
+#: cogs/music/views.py:2675
 msgid "Search for music"
 msgstr "Αναζήτηση μουσικής"
 
-#: cogs/music/views.py:2626
+#: cogs/music/views.py:2679
 msgid "Song or URL"
 msgstr "Τραγούδι ή URL"
 
-#: cogs/music/views.py:2627
+#: cogs/music/views.py:2680
 msgid "A song name to search, or a full URL"
 msgstr "Ένα όνομα τραγουδιού για αναζήτηση, ή ένα πλήρες URL"
 
-#: cogs/music/views.py:2647
+#: cogs/music/views.py:2700
 msgid "Something went wrong searching for that."
 msgstr "Κάτι πήγε στραβά κατά την αναζήτηση."
 
-#: cogs/music/views.py:2657
+#: cogs/music/views.py:2710
 msgid "Search for music instead"
 msgstr "Αναζήτηση μουσικής αντ' αυτού"
 
-#: cogs/music/views.py:2690
+#: cogs/music/views.py:2743
 msgid "## 🎧 Choose your vibe"
 msgstr "## 🎧 Διάλεξε το mood σου"
 
-#: cogs/music/views.py:2693
+#: cogs/music/views.py:2746
 msgid "Pick a genre and I'll spin up a mix, or search for a track."
 msgstr "Διάλεξε ένα είδος και θα σου ετοιμάσω ένα mix, ή αναζήτησε ένα κομμάτι."
 
-#: cogs/music/views.py:2701
+#: cogs/music/views.py:2754
 msgid "-# Only you can use this menu."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτό το μενού."
 
-#: cogs/music/views.py:2749
+#: cogs/music/views.py:2802
 msgid "## 👋 Welcome"
 msgstr "## 👋 Καλωσόρισμα"
 
-#: cogs/music/views.py:2752
+#: cogs/music/views.py:2805
 msgid "I'm all set to bring the music - let's get you into a room first."
 msgstr "Είμαι έτοιμη να βάλω μουσική - αλλά πρώτα πρέπει να μπεις σε ένα κανάλι."
 
-#: cogs/music/views.py:2757
+#: cogs/music/views.py:2810
 msgid "To get started, join a voice channel:"
 msgstr "Για να ξεκινήσεις, μπες σε ένα φωνητικό κανάλι:"
 
-#: cogs/music/views.py:2763
+#: cogs/music/views.py:2816
 msgid "I couldn't find a voice channel here that you can join."
 msgstr "Δεν βρήκα κανένα φωνητικό κανάλι εδώ που να μπορείς να μπεις."
 
-#: cogs/music/views.py:2768
+#: cogs/music/views.py:2821
 msgid "-# Once you join, this message will automatically update."
 msgstr "-# Μόλις μπεις, αυτό το μήνυμα θα ενημερωθεί αυτόματα."
 
