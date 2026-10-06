@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 20:12+0000\n"
+"POT-Creation-Date: 2026-10-06 21:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1394,7 +1394,7 @@ msgstr "コードフォームを開けませんでした。"
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:505 cogs/utility/info.py:35 cogs/utility/info.py:147
+#: cogs/system/help.py:513 cogs/utility/info.py:35 cogs/utility/info.py:147
 msgid "Unknown"
 msgstr "不明"
 
@@ -9188,62 +9188,62 @@ msgstr "プロフィール、リマインダー、AFK、個人設定。"
 msgid "Server info, polls, translations and handy utilities."
 msgstr "サーバー情報、投票、翻訳、便利なユーティリティ。"
 
-#: cogs/system/help.py:107
+#: cogs/system/help.py:115
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "キック、BAN、警告、自動モデレーション、モデレーションログ。"
 
-#: cogs/system/help.py:113
+#: cogs/system/help.py:121
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "ウェルカムメッセージ、スターボード、カスタムコマンドなど。"
 
-#: cogs/system/help.py:128
+#: cogs/system/help.py:136
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "リアクションロール、ロールメニュー、ボタンロール、認証。"
 
-#: cogs/system/help.py:136
+#: cogs/system/help.py:144
 msgid "Anything not yet sorted into a category."
 msgstr "まだカテゴリに分類されていないもの。"
 
-#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
-#: cogs/system/help.py:778
+#: cogs/system/help.py:246 cogs/system/help.py:293 cogs/system/help.py:306
+#: cogs/system/help.py:786
 msgid "No description provided."
 msgstr "説明はありません。"
 
-#: cogs/system/help.py:290 cogs/system/help.py:782
+#: cogs/system/help.py:298 cogs/system/help.py:790
 msgid "Aliases"
 msgstr "エイリアス"
 
-#: cogs/system/help.py:303
+#: cogs/system/help.py:311
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} <subcommand>` を使ってください。"
 
-#: cogs/system/help.py:308
+#: cogs/system/help.py:316
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} 個のサブコマンド"
 
-#: cogs/system/help.py:313
+#: cogs/system/help.py:321
 msgid "Subcommands"
 msgstr "サブコマンド"
 
-#: cogs/system/help.py:342
+#: cogs/system/help.py:350
 msgid "Jump to a category..."
 msgstr "カテゴリに移動..."
 
-#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
+#: cogs/system/help.py:419 cogs/system/help.py:548 cogs/system/help.py:567
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} 個のコマンド"
 
-#: cogs/system/help.py:472
+#: cogs/system/help.py:480
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • ヘルプ"
 
-#: cogs/system/help.py:474
+#: cogs/system/help.py:482
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9254,19 +9254,19 @@ msgstr ""
 "\n"
 "メニューでカテゴリに移動したり、矢印で閲覧したり、特定のコマンドは `{prefix}help <command>` で確認してください。"
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Enabled ✅"
 msgstr "有効 ✅"
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Disabled ❌"
 msgstr "無効 ❌"
 
-#: cogs/system/help.py:508
+#: cogs/system/help.py:516
 msgid "🏠 Server"
 msgstr "🏠 サーバー"
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9277,65 +9277,65 @@ msgstr ""
 "メンバー: **{members}**\n"
 "レベリング: {leveling}"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:531
 msgid "🏠 Direct Messages"
 msgstr "🏠 ダイレクトメッセージ"
 
-#: cogs/system/help.py:525
+#: cogs/system/help.py:533
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "デフォルトのプレフィックス: `{prefix}`"
 
-#: cogs/system/help.py:551
+#: cogs/system/help.py:559
 msgid "📚 Categories"
 msgstr "📚 カテゴリ"
 
-#: cogs/system/help.py:557
+#: cogs/system/help.py:565
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{categories} にわたる {commands} • メニューや矢印で探索してください"
 
-#: cogs/system/help.py:563
+#: cogs/system/help.py:571
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} 個のカテゴリー"
 
-#: cogs/system/help.py:572
+#: cogs/system/help.py:580
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "カテゴリ {current}/{total} • 詳細は {prefix}help <command>"
 
-#: cogs/system/help.py:578
+#: cogs/system/help.py:586
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...他にもコマンドがあります。`{prefix}help <command>` を使って確認してください。"
 
-#: cogs/system/help.py:595
+#: cogs/system/help.py:603
 msgid "No commands available."
 msgstr "利用可能なコマンドがありません。"
 
-#: cogs/system/help.py:660
+#: cogs/system/help.py:668
 msgid "Something went wrong opening the help menu."
 msgstr "ヘルプメニューを開く際に問題が発生しました。"
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Collapse subcommands"
 msgstr "サブコマンドを折りたたむ"
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Expand subcommands"
 msgstr "サブコマンドを展開する"
 
-#: cogs/system/help.py:746
+#: cogs/system/help.py:754
 msgid "Something went wrong updating that preference."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/system/help.py:762 cogs/system/help.py:802
+#: cogs/system/help.py:770 cogs/system/help.py:810
 msgid "Help"
 msgstr "ヘルプ"
 
-#: cogs/system/help.py:764
+#: cogs/system/help.py:772
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "コマンドの詳細は `{prefix}help <command>` を使ってください。"
@@ -9385,110 +9385,291 @@ msgstr "`/help` を使うとすべてのコマンドを一覧できます。"
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "`/language` を使って、このサーバーで私が話す言語を選べます。"
 
-#: cogs/system/premium.py:98 cogs/system/premium.py:298
+#: cogs/system/premium.py:179 cogs/system/premium.py:427
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "ほか {count} 件は表示されていません。"
 
-#: cogs/system/premium.py:146
+#: cogs/system/premium.py:249
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "サーバー ID は正の数である必要があります（`{value}` は無効です）。"
 
-#: cogs/system/premium.py:165 cogs/system/premium.py:199
-#: cogs/system/premium.py:279 cogs/system/premium.py:358
-#: cogs/system/premium.py:368
+#: cogs/system/premium.py:276 cogs/system/premium.py:318
+#: cogs/system/premium.py:408 cogs/system/premium.py:487
+#: cogs/system/premium.py:497
 msgid "permanent"
 msgstr "無期限"
 
-#: cogs/system/premium.py:168
+#: cogs/system/premium.py:279
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "サーバー `{guild_id}` に **Yasuho+** を付与しました（付与 #{grant_id}、{until}）。"
 
-#: cogs/system/premium.py:180
+#: cogs/system/premium.py:291
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "ユーザー ID は正の数である必要があります（`{value}` は無効です）。"
 
-#: cogs/system/premium.py:202
+#: cogs/system/premium.py:321
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "ユーザー `{user_id}` に **Pack Confort** を付与しました（付与 #{grant_id}、{until}）。"
 
-#: cogs/system/premium.py:229
+#: cogs/system/premium.py:348
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "有効な付与 #{grant_id} は見つかりません（取り消し済み、期限切れ、または存在しません）。"
 
-#: cogs/system/premium.py:245
+#: cogs/system/premium.py:374
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "付与 #{grant_id} を取り消しました。"
 
-#: cogs/system/premium.py:257 cogs/system/premium.py:310
+#: cogs/system/premium.py:386 cogs/system/premium.py:439
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "範囲は `server` または `user` で指定してください（`{scope}` は無効です）。"
 
-#: cogs/system/premium.py:271
+#: cogs/system/premium.py:400
 msgid "Active premium grants"
 msgstr "有効なプレミアム付与"
 
-#: cogs/system/premium.py:273
+#: cogs/system/premium.py:402
 msgid "No active grant matches."
 msgstr "該当する有効な付与はありません。"
 
-#: cogs/system/premium.py:281
+#: cogs/system/premium.py:410
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "#{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:317
+#: cogs/system/premium.py:446
 msgid "Premium status"
 msgstr "プレミアムの状態"
 
-#: cogs/system/premium.py:351
+#: cogs/system/premium.py:480
 msgid "Effective"
 msgstr "適用中"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Premium"
 msgstr "プレミアム"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Free"
 msgstr "無料"
 
-#: cogs/system/premium.py:359
+#: cogs/system/premium.py:488
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Discord の購入権利、{until}"
 
-#: cogs/system/premium.py:361
+#: cogs/system/premium.py:490
 msgid "Entitlement"
 msgstr "購入権利"
 
-#: cogs/system/premium.py:369
+#: cogs/system/premium.py:498
 msgid "(no reason given)"
 msgstr "（理由なし）"
 
-#: cogs/system/premium.py:371
+#: cogs/system/premium.py:500
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "#{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:376
+#: cogs/system/premium.py:505
 msgid "Owner grant(s)"
 msgstr "オーナーによる付与"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Why"
 msgstr "理由"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Nothing active."
 msgstr "有効なものはありません。"
+
+#: cogs/system/premium.py:567
+msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "`[Premium]` に `yasuho_plus_sku` がまだ設定されていないため、テスト購入できるものはありません。"
+
+#: cogs/system/premium.py:590
+#, python-brace-format
+msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
+msgstr "サーバー `{guild_id}` にテスト用の **Yasuho+** 権利を作成しました。ID はまだ確認できません。少し後に `?premiumadmin check server {guild_id}` を使ってください。"
+
+#: cogs/system/premium.py:599
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "サーバー `{guild_id}` にテスト権利 #{entitlement_id}（**Yasuho+**）を作成しました。後で `?premiumadmin testclear {entitlement_id}` で削除してください。"
+
+#: cogs/system/premium.py:614
+msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "`[Premium]` に `comfort_pack_sku` がまだ設定されていないため、テスト購入できるものはありません。"
+
+#: cogs/system/premium.py:637
+#, python-brace-format
+msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
+msgstr "ユーザー `{user_id}` にテスト用の **Pack Confort** 権利を作成しました。ID はまだ確認できません。少し後に `?premiumadmin check user {user_id}` を使ってください。"
+
+#: cogs/system/premium.py:646
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "ユーザー `{user_id}` にテスト権利 #{entitlement_id}（**Pack Confort**）を作成しました。後で `?premiumadmin testclear {entitlement_id}` で削除してください。"
+
+#: cogs/system/premium.py:661
+#, python-brace-format
+msgid "No entitlement #{entitlement_id} exists."
+msgstr "権利 #{entitlement_id} は存在しません。"
+
+#: cogs/system/premium.py:670
+#, python-brace-format
+msgid "Could not fetch entitlement #{entitlement_id} from Discord."
+msgstr "Discord から権利 #{entitlement_id} を取得できませんでした。"
+
+#: cogs/system/premium.py:679
+#, python-brace-format
+msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
+msgstr "権利 #{entitlement_id} はテスト権利ではありません（種類 `{type}`）。実際の購入は削除しません。"
+
+#: cogs/system/premium.py:695
+#, python-brace-format
+msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
+msgstr "テスト権利 #{entitlement_id} を削除しました。対応する ENTITLEMENT_DELETE イベントでキャッシュから消えます。"
+
+#: cogs/system/premium_panel.py:80
+msgid "yes"
+msgstr "あり"
+
+#: cogs/system/premium_panel.py:80
+msgid "no"
+msgstr "なし"
+
+#: cogs/system/premium_panel.py:103
+msgid "## Yasuho+"
+msgstr "## Yasuho+"
+
+#: cogs/system/premium_panel.py:105
+msgid "A paid upgrade for a whole server. Nothing free is removed - here is what Yasuho+ adds:"
+msgstr "サーバー全体向けの有料アップグレードです。無料の機能は何も減りません。Yasuho+ で追加されるもの:"
+
+#: cogs/system/premium_panel.py:109
+#, python-brace-format
+msgid "**24/7 music** - Free: {free} | Yasuho+: {plus}"
+msgstr "**24時間音楽** - 無料: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:113 tests/cogs/test_premium_panel.py:164
+#: tests/cogs/test_premium_panel.py:173
+#, python-brace-format
+msgid "**Server playlists** - Free: {free_count} x {free_tracks} tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
+msgstr "**サーバーのプレイリスト** - 無料: {free_count} 個 x {free_tracks} 曲 | Yasuho+: {plus_count} 個 x {plus_tracks} 曲"
+
+#: cogs/system/premium_panel.py:122
+#, python-brace-format
+msgid "**Previous history** - Free: {free} tracks | Yasuho+: {plus} tracks"
+msgstr "**「前へ」の履歴** - 無料: {free} 曲 | Yasuho+: {plus} 曲"
+
+#: cogs/system/premium_panel.py:128
+#, python-brace-format
+msgid "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} accounts and {free_titles} titles per feed | Yasuho+: {plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} titles per feed"
+msgstr "**AniList フィード** - 無料: {free_feeds} フィード、各フィードに {free_accounts} アカウントと {free_titles} 作品 | Yasuho+: {plus_feeds} フィード、各フィードに {plus_accounts} アカウントと {plus_titles} 作品"
+
+#: cogs/system/premium_panel.py:141
+#, python-brace-format
+msgid "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
+msgstr "**サーバー統計** - 無料: {free} 日 | Yasuho+: {plus} 日"
+
+#: cogs/system/premium_panel.py:146
+#, python-brace-format
+msgid "**Role menus** - Free: {free} | Yasuho+: {plus}"
+msgstr "**ロールメニュー** - 無料: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:149
+#, python-brace-format
+msgid "**Auto voice hubs** - Free: {free} | Yasuho+: {plus}"
+msgstr "**自動ボイスハブ** - 無料: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:153
+#, python-brace-format
+msgid "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
+msgstr "**メンバーごとの未解決チケット** - 無料: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:158
+#, python-brace-format
+msgid "**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Yasuho+ バッジ** - 無料: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:163
+msgid "## Pack Confort"
+msgstr "## Pack Confort"
+
+#: cogs/system/premium_panel.py:165
+msgid "A one-time purchase for you personally. No subscription, no expiry while the service and your account exist."
+msgstr "あなた個人向けの買い切りです。サブスクリプションではなく、サービスとアカウントがある限り期限はありません。"
+
+#: cogs/system/premium_panel.py:170
+#, python-brace-format
+msgid "**Favourites** - Free: {free} | Pack Confort: {plus}"
+msgstr "**お気に入り** - 無料: {free} | Pack Confort: {plus}"
+
+#: cogs/system/premium_panel.py:174
+#, python-brace-format
+msgid "**Reminders** - Free: {free} ({free_recurring} recurring) | Pack Confort: {plus} ({plus_recurring} recurring)"
+msgstr "**リマインダー** - 無料: {free}（繰り返し {free_recurring}） | Pack Confort: {plus}（繰り返し {plus_recurring}）"
+
+#: cogs/system/premium_panel.py:188
+msgid "Nothing free becomes paid, nothing is deleted when a perk ends, and purchases are handled by Discord."
+msgstr "無料のものが有料になることはなく、特典が終わっても何も削除されません。購入は Discord が処理します。"
+
+#: cogs/system/premium_panel.py:194
+msgid "purchased"
+msgstr "購入"
+
+#: cogs/system/premium_panel.py:194
+msgid "gifted"
+msgstr "プレゼント"
+
+#: cogs/system/premium_panel.py:200
+msgid "This server does not have **Yasuho+**."
+msgstr "このサーバーには **Yasuho+** がありません。"
+
+#: cogs/system/premium_panel.py:204
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), active until {until}."
+msgstr "このサーバーには **Yasuho+**（{source}）があり、{until} まで有効です。"
+
+#: cogs/system/premium_panel.py:206
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), with no end date."
+msgstr "このサーバーには **Yasuho+**（{source}）があり、期限はありません。"
+
+#: cogs/system/premium_panel.py:214
+msgid "You do not have the **Pack Confort**."
+msgstr "**Pack Confort** はお持ちではありません。"
+
+#: cogs/system/premium_panel.py:218
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), active until {until}."
+msgstr "**Pack Confort**（{source}）をお持ちです。{until} まで有効です。"
+
+#: cogs/system/premium_panel.py:221
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), with no end date."
+msgstr "**Pack Confort**（{source}）をお持ちです。期限はありません。"
+
+#: cogs/system/premium_panel.py:226
+msgid "Premium is not on sale yet."
+msgstr "プレミアムはまだ販売していません。"
+
+#: cogs/system/premium_panel.py:230
+#, python-brace-format
+msgid "A server admin can manage this with `/{command}`."
+msgstr "サーバーの管理者が `/{command}` で管理できます。"
+
+#: cogs/system/premium_panel.py:284
+msgid "Terms"
+msgstr "利用規約"
 
 #: cogs/utility/extras.py:30
 msgid "I can only quote messages from this server."

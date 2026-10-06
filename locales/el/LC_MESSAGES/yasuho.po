@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 20:12+0000\n"
+"POT-Creation-Date: 2026-10-06 21:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1408,7 +1408,7 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κ�
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:505 cogs/utility/info.py:35 cogs/utility/info.py:147
+#: cogs/system/help.py:513 cogs/utility/info.py:35 cogs/utility/info.py:147
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -9228,64 +9228,64 @@ msgstr "Το προφίλ σου, υπενθυμίσεις, AFK και προσ�
 msgid "Server info, polls, translations and handy utilities."
 msgstr "Πληροφορίες διακομιστή, ψηφοφορίες, μεταφράσεις και χρήσιμα εργαλεία."
 
-#: cogs/system/help.py:107
+#: cogs/system/help.py:115
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία καταγραφής."
 
-#: cogs/system/help.py:113
+#: cogs/system/help.py:121
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:128
+#: cogs/system/help.py:136
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:136
+#: cogs/system/help.py:144
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
-#: cogs/system/help.py:778
+#: cogs/system/help.py:246 cogs/system/help.py:293 cogs/system/help.py:306
+#: cogs/system/help.py:786
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:290 cogs/system/help.py:782
+#: cogs/system/help.py:298 cogs/system/help.py:790
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:303
+#: cogs/system/help.py:311
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:308
+#: cogs/system/help.py:316
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:313
+#: cogs/system/help.py:321
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:342
+#: cogs/system/help.py:350
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
+#: cogs/system/help.py:419 cogs/system/help.py:548 cogs/system/help.py:567
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:472
+#: cogs/system/help.py:480
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:474
+#: cogs/system/help.py:482
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9296,19 +9296,19 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Enabled ✅"
 msgstr "Ενεργοποιημένο ✅"
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Disabled ❌"
 msgstr "Απενεργοποιημένο ❌"
 
-#: cogs/system/help.py:508
+#: cogs/system/help.py:516
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9319,66 +9319,66 @@ msgstr ""
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:531
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:525
+#: cogs/system/help.py:533
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:551
+#: cogs/system/help.py:559
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:557
+#: cogs/system/help.py:565
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:563
+#: cogs/system/help.py:571
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:572
+#: cogs/system/help.py:580
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:578
+#: cogs/system/help.py:586
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:595
+#: cogs/system/help.py:603
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:660
+#: cogs/system/help.py:668
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:746
+#: cogs/system/help.py:754
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:762 cogs/system/help.py:802
+#: cogs/system/help.py:770 cogs/system/help.py:810
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:764
+#: cogs/system/help.py:772
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."
@@ -9428,110 +9428,291 @@ msgstr "Χρησιμοποίησε `/help` για να δεις όλες τις 
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Χρησιμοποίησε `/language` για να επιλέξεις τη γλώσσα που μιλάω σε αυτόν τον server."
 
-#: cogs/system/premium.py:98 cogs/system/premium.py:298
+#: cogs/system/premium.py:179 cogs/system/premium.py:427
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} ακόμη δεν εμφανίζονται."
 
-#: cogs/system/premium.py:146
+#: cogs/system/premium.py:249
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "Το id του διακομιστή πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:165 cogs/system/premium.py:199
-#: cogs/system/premium.py:279 cogs/system/premium.py:358
-#: cogs/system/premium.py:368
+#: cogs/system/premium.py:276 cogs/system/premium.py:318
+#: cogs/system/premium.py:408 cogs/system/premium.py:487
+#: cogs/system/premium.py:497
 msgid "permanent"
 msgstr "μόνιμο"
 
-#: cogs/system/premium.py:168
+#: cogs/system/premium.py:279
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Yasuho+** στον διακομιστή `{guild_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:180
+#: cogs/system/premium.py:291
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "Το id του χρήστη πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:202
+#: cogs/system/premium.py:321
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Pack Confort** στον χρήστη `{user_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:229
+#: cogs/system/premium.py:348
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "Δεν βρέθηκε ενεργή παραχώρηση #{grant_id} (έχει ήδη ανακληθεί, έχει λήξει ή δεν υπήρξε ποτέ)."
 
-#: cogs/system/premium.py:245
+#: cogs/system/premium.py:374
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Η παραχώρηση #{grant_id} ανακλήθηκε."
 
-#: cogs/system/premium.py:257 cogs/system/premium.py:310
+#: cogs/system/premium.py:386 cogs/system/premium.py:439
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "Το εύρος πρέπει να είναι `server` ή `user`, όχι `{scope}`."
 
-#: cogs/system/premium.py:271
+#: cogs/system/premium.py:400
 msgid "Active premium grants"
 msgstr "Ενεργές παραχωρήσεις premium"
 
-#: cogs/system/premium.py:273
+#: cogs/system/premium.py:402
 msgid "No active grant matches."
 msgstr "Καμία ενεργή παραχώρηση δεν ταιριάζει."
 
-#: cogs/system/premium.py:281
+#: cogs/system/premium.py:410
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "#{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:317
+#: cogs/system/premium.py:446
 msgid "Premium status"
 msgstr "Κατάσταση premium"
 
-#: cogs/system/premium.py:351
+#: cogs/system/premium.py:480
 msgid "Effective"
 msgstr "Ισχύον"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Free"
 msgstr "Δωρεάν"
 
-#: cogs/system/premium.py:359
+#: cogs/system/premium.py:488
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Δικαίωμα αγοράς Discord, {until}"
 
-#: cogs/system/premium.py:361
+#: cogs/system/premium.py:490
 msgid "Entitlement"
 msgstr "Δικαίωμα αγοράς"
 
-#: cogs/system/premium.py:369
+#: cogs/system/premium.py:498
 msgid "(no reason given)"
 msgstr "(δεν δόθηκε λόγος)"
 
-#: cogs/system/premium.py:371
+#: cogs/system/premium.py:500
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "#{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:376
+#: cogs/system/premium.py:505
 msgid "Owner grant(s)"
 msgstr "Παραχώρηση(-εις) του ιδιοκτήτη"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Why"
 msgstr "Γιατί"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Nothing active."
 msgstr "Τίποτα ενεργό."
+
+#: cogs/system/premium.py:567
+msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "Δεν έχει οριστεί ακόμη `yasuho_plus_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
+
+#: cogs/system/premium.py:590
+#, python-brace-format
+msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
+msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Yasuho+** για τον διακομιστή `{guild_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check server {guild_id}` σε λίγο."
+
+#: cogs/system/premium.py:599
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Yasuho+**) για τον διακομιστή `{guild_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
+
+#: cogs/system/premium.py:614
+msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "Δεν έχει οριστεί ακόμη `comfort_pack_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
+
+#: cogs/system/premium.py:637
+#, python-brace-format
+msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
+msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Pack Confort** για τον χρήστη `{user_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check user {user_id}` σε λίγο."
+
+#: cogs/system/premium.py:646
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Pack Confort**) για τον χρήστη `{user_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
+
+#: cogs/system/premium.py:661
+#, python-brace-format
+msgid "No entitlement #{entitlement_id} exists."
+msgstr "Δεν υπάρχει δικαίωμα #{entitlement_id}."
+
+#: cogs/system/premium.py:670
+#, python-brace-format
+msgid "Could not fetch entitlement #{entitlement_id} from Discord."
+msgstr "Δεν ήταν δυνατή η λήψη του δικαιώματος #{entitlement_id} από το Discord."
+
+#: cogs/system/premium.py:679
+#, python-brace-format
+msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
+msgstr "Το δικαίωμα #{entitlement_id} δεν είναι ΔΟΚΙΜΑΣΤΙΚΟ (τύπος `{type}`) - αρνούμαι να διαγράψω πραγματική αγορά."
+
+#: cogs/system/premium.py:695
+#, python-brace-format
+msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
+msgstr "Το ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} διαγράφηκε. Το αντίστοιχο συμβάν ENTITLEMENT_DELETE θα το αφαιρέσει από την προσωρινή μνήμη."
+
+#: cogs/system/premium_panel.py:80
+msgid "yes"
+msgstr "ναι"
+
+#: cogs/system/premium_panel.py:80
+msgid "no"
+msgstr "όχι"
+
+#: cogs/system/premium_panel.py:103
+msgid "## Yasuho+"
+msgstr "## Yasuho+"
+
+#: cogs/system/premium_panel.py:105
+msgid "A paid upgrade for a whole server. Nothing free is removed - here is what Yasuho+ adds:"
+msgstr "Μια επί πληρωμή αναβάθμιση για ολόκληρο τον διακομιστή. Τίποτα δωρεάν δεν αφαιρείται - να τι προσθέτει το Yasuho+:"
+
+#: cogs/system/premium_panel.py:109
+#, python-brace-format
+msgid "**24/7 music** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Μουσική 24/7** - Δωρεάν: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:113 tests/cogs/test_premium_panel.py:164
+#: tests/cogs/test_premium_panel.py:173
+#, python-brace-format
+msgid "**Server playlists** - Free: {free_count} x {free_tracks} tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
+msgstr "**Λίστες διακομιστή** - Δωρεάν: {free_count} x {free_tracks} κομμάτια | Yasuho+: {plus_count} x {plus_tracks} κομμάτια"
+
+#: cogs/system/premium_panel.py:122
+#, python-brace-format
+msgid "**Previous history** - Free: {free} tracks | Yasuho+: {plus} tracks"
+msgstr "**Ιστορικό «Προηγούμενο»** - Δωρεάν: {free} κομμάτια | Yasuho+: {plus} κομμάτια"
+
+#: cogs/system/premium_panel.py:128
+#, python-brace-format
+msgid "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} accounts and {free_titles} titles per feed | Yasuho+: {plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} titles per feed"
+msgstr "**Ροές AniList** - Δωρεάν: {free_feeds} ροές, {free_accounts} λογαριασμοί και {free_titles} τίτλοι ανά ροή | Yasuho+: {plus_feeds} ροές, {plus_accounts} λογαριασμοί και {plus_titles} τίτλοι ανά ροή"
+
+#: cogs/system/premium_panel.py:141
+#, python-brace-format
+msgid "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
+msgstr "**Στατιστικά διακομιστή** - Δωρεάν: {free} ημέρες | Yasuho+: {plus} ημέρες"
+
+#: cogs/system/premium_panel.py:146
+#, python-brace-format
+msgid "**Role menus** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Μενού ρόλων** - Δωρεάν: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:149
+#, python-brace-format
+msgid "**Auto voice hubs** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Αυτόματοι κόμβοι φωνής** - Δωρεάν: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:153
+#, python-brace-format
+msgid "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Ανοιχτά tickets ανά μέλος** - Δωρεάν: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:158
+#, python-brace-format
+msgid "**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Σήμα Yasuho+** - Δωρεάν: {free} | Yasuho+: {plus}"
+
+#: cogs/system/premium_panel.py:163
+msgid "## Pack Confort"
+msgstr "## Pack Confort"
+
+#: cogs/system/premium_panel.py:165
+msgid "A one-time purchase for you personally. No subscription, no expiry while the service and your account exist."
+msgstr "Μια εφάπαξ αγορά μόνο για σένα. Χωρίς συνδρομή, χωρίς λήξη όσο υπάρχουν η υπηρεσία και ο λογαριασμός σου."
+
+#: cogs/system/premium_panel.py:170
+#, python-brace-format
+msgid "**Favourites** - Free: {free} | Pack Confort: {plus}"
+msgstr "**Αγαπημένα** - Δωρεάν: {free} | Pack Confort: {plus}"
+
+#: cogs/system/premium_panel.py:174
+#, python-brace-format
+msgid "**Reminders** - Free: {free} ({free_recurring} recurring) | Pack Confort: {plus} ({plus_recurring} recurring)"
+msgstr "**Υπενθυμίσεις** - Δωρεάν: {free} ({free_recurring} επαναλαμβανόμενες) | Pack Confort: {plus} ({plus_recurring} επαναλαμβανόμενες)"
+
+#: cogs/system/premium_panel.py:188
+msgid "Nothing free becomes paid, nothing is deleted when a perk ends, and purchases are handled by Discord."
+msgstr "Τίποτα δωρεάν δεν γίνεται επί πληρωμή, τίποτα δεν διαγράφεται όταν λήγει ένα προνόμιο, και τις αγορές τις διαχειρίζεται το Discord."
+
+#: cogs/system/premium_panel.py:194
+msgid "purchased"
+msgstr "αγορά"
+
+#: cogs/system/premium_panel.py:194
+msgid "gifted"
+msgstr "δώρο"
+
+#: cogs/system/premium_panel.py:200
+msgid "This server does not have **Yasuho+**."
+msgstr "Αυτός ο διακομιστής δεν έχει **Yasuho+**."
+
+#: cogs/system/premium_panel.py:204
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), active until {until}."
+msgstr "Αυτός ο διακομιστής έχει **Yasuho+** ({source}), ενεργό έως {until}."
+
+#: cogs/system/premium_panel.py:206
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), with no end date."
+msgstr "Αυτός ο διακομιστής έχει **Yasuho+** ({source}), χωρίς ημερομηνία λήξης."
+
+#: cogs/system/premium_panel.py:214
+msgid "You do not have the **Pack Confort**."
+msgstr "Δεν έχεις το **Pack Confort**."
+
+#: cogs/system/premium_panel.py:218
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), active until {until}."
+msgstr "Έχεις το **Pack Confort** ({source}), ενεργό έως {until}."
+
+#: cogs/system/premium_panel.py:221
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), with no end date."
+msgstr "Έχεις το **Pack Confort** ({source}), χωρίς ημερομηνία λήξης."
+
+#: cogs/system/premium_panel.py:226
+msgid "Premium is not on sale yet."
+msgstr "Το premium δεν πωλείται ακόμη."
+
+#: cogs/system/premium_panel.py:230
+#, python-brace-format
+msgid "A server admin can manage this with `/{command}`."
+msgstr "Ένας διαχειριστής του διακομιστή μπορεί να το διαχειριστεί με `/{command}`."
+
+#: cogs/system/premium_panel.py:284
+msgid "Terms"
+msgstr "Όροι"
 
 #: cogs/utility/extras.py:30
 msgid "I can only quote messages from this server."

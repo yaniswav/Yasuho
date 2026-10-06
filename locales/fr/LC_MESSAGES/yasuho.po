@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 20:12+0000\n"
+"POT-Creation-Date: 2026-10-06 21:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -1408,7 +1408,7 @@ msgstr "Impossible d'ouvrir le formulaire de code."
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:505 cogs/utility/info.py:35 cogs/utility/info.py:147
+#: cogs/system/help.py:513 cogs/utility/info.py:35 cogs/utility/info.py:147
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -9228,64 +9228,64 @@ msgstr "Ton profil, tes rappels, ton AFK et tes préférences personnelles."
 msgid "Server info, polls, translations and handy utilities."
 msgstr "Infos serveur, sondages, traductions et utilitaires pratiques."
 
-#: cogs/system/help.py:107
+#: cogs/system/help.py:115
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "Expulsions, bannissements, avertissements, automod et logs de modération."
 
-#: cogs/system/help.py:113
+#: cogs/system/help.py:121
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Messages de bienvenue, starboard, commandes personnalisées et plus."
 
-#: cogs/system/help.py:128
+#: cogs/system/help.py:136
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Rôles par réaction, menus de rôles, rôles par bouton et vérification."
 
-#: cogs/system/help.py:136
+#: cogs/system/help.py:144
 msgid "Anything not yet sorted into a category."
 msgstr "Tout ce qui n'est pas encore classé dans une catégorie."
 
-#: cogs/system/help.py:238 cogs/system/help.py:285 cogs/system/help.py:298
-#: cogs/system/help.py:778
+#: cogs/system/help.py:246 cogs/system/help.py:293 cogs/system/help.py:306
+#: cogs/system/help.py:786
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:290 cogs/system/help.py:782
+#: cogs/system/help.py:298 cogs/system/help.py:790
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:303
+#: cogs/system/help.py:311
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /preferences, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:308
+#: cogs/system/help.py:316
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} sous-commande"
 msgstr[1] "{n} sous-commandes"
 
-#: cogs/system/help.py:313
+#: cogs/system/help.py:321
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:342
+#: cogs/system/help.py:350
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:411 cogs/system/help.py:540 cogs/system/help.py:559
+#: cogs/system/help.py:419 cogs/system/help.py:548 cogs/system/help.py:567
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:472
+#: cogs/system/help.py:480
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:474
+#: cogs/system/help.py:482
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9296,19 +9296,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:500
+#: cogs/system/help.py:508
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:508
+#: cogs/system/help.py:516
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9319,66 +9319,66 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:531
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:525
+#: cogs/system/help.py:533
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:551
+#: cogs/system/help.py:559
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:557
+#: cogs/system/help.py:565
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:563
+#: cogs/system/help.py:571
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:572
+#: cogs/system/help.py:580
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:578
+#: cogs/system/help.py:586
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:595
+#: cogs/system/help.py:603
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:660
+#: cogs/system/help.py:668
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:729
+#: cogs/system/help.py:737
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:746
+#: cogs/system/help.py:754
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:762 cogs/system/help.py:802
+#: cogs/system/help.py:770 cogs/system/help.py:810
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:764
+#: cogs/system/help.py:772
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."
@@ -9428,110 +9428,291 @@ msgstr "Utilisez `/help` pour parcourir toutes les commandes."
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Utilisez `/language` pour choisir la langue que je parle sur ce serveur."
 
-#: cogs/system/premium.py:98 cogs/system/premium.py:298
+#: cogs/system/premium.py:179 cogs/system/premium.py:427
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} de plus non affichés."
 
-#: cogs/system/premium.py:146
+#: cogs/system/premium.py:249
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "L'identifiant du serveur doit être un nombre positif, pas `{value}`."
 
-#: cogs/system/premium.py:165 cogs/system/premium.py:199
-#: cogs/system/premium.py:279 cogs/system/premium.py:358
-#: cogs/system/premium.py:368
+#: cogs/system/premium.py:276 cogs/system/premium.py:318
+#: cogs/system/premium.py:408 cogs/system/premium.py:487
+#: cogs/system/premium.py:497
 msgid "permanent"
 msgstr "permanent"
 
-#: cogs/system/premium.py:168
+#: cogs/system/premium.py:279
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "**Yasuho+** attribué au serveur `{guild_id}` (attribution n°{grant_id}, {until})."
 
-#: cogs/system/premium.py:180
+#: cogs/system/premium.py:291
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "L'identifiant de l'utilisateur doit être un nombre positif, pas `{value}`."
 
-#: cogs/system/premium.py:202
+#: cogs/system/premium.py:321
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "**Pack Confort** attribué à l'utilisateur `{user_id}` (attribution n°{grant_id}, {until})."
 
-#: cogs/system/premium.py:229
+#: cogs/system/premium.py:348
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "Aucune attribution active n°{grant_id} (déjà révoquée, expirée, ou inexistante)."
 
-#: cogs/system/premium.py:245
+#: cogs/system/premium.py:374
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Attribution n°{grant_id} révoquée."
 
-#: cogs/system/premium.py:257 cogs/system/premium.py:310
+#: cogs/system/premium.py:386 cogs/system/premium.py:439
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "La portée doit être `server` ou `user`, pas `{scope}`."
 
-#: cogs/system/premium.py:271
+#: cogs/system/premium.py:400
 msgid "Active premium grants"
 msgstr "Attributions premium actives"
 
-#: cogs/system/premium.py:273
+#: cogs/system/premium.py:402
 msgid "No active grant matches."
 msgstr "Aucune attribution active ne correspond."
 
-#: cogs/system/premium.py:281
+#: cogs/system/premium.py:410
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "n°{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:317
+#: cogs/system/premium.py:446
 msgid "Premium status"
 msgstr "Statut premium"
 
-#: cogs/system/premium.py:351
+#: cogs/system/premium.py:480
 msgid "Effective"
 msgstr "Effectif"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:352
+#: cogs/system/premium.py:481
 msgid "Free"
 msgstr "Gratuit"
 
-#: cogs/system/premium.py:359
+#: cogs/system/premium.py:488
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Droit d'achat Discord, {until}"
 
-#: cogs/system/premium.py:361
+#: cogs/system/premium.py:490
 msgid "Entitlement"
 msgstr "Droit d'achat"
 
-#: cogs/system/premium.py:369
+#: cogs/system/premium.py:498
 msgid "(no reason given)"
 msgstr "(aucune raison donnée)"
 
-#: cogs/system/premium.py:371
+#: cogs/system/premium.py:500
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "n°{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:376
+#: cogs/system/premium.py:505
 msgid "Owner grant(s)"
 msgstr "Attribution(s) du propriétaire"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Why"
 msgstr "Pourquoi"
 
-#: cogs/system/premium.py:381
+#: cogs/system/premium.py:510
 msgid "Nothing active."
 msgstr "Rien d'actif."
+
+#: cogs/system/premium.py:567
+msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "Aucun `yasuho_plus_sku` n'est configuré dans `[Premium]` - rien à acheter en test."
+
+#: cogs/system/premium.py:590
+#, python-brace-format
+msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
+msgstr "Droit de TEST **Yasuho+** créé pour le serveur `{guild_id}`. Son identifiant n'était pas encore visible - utilise `?premiumadmin check server {guild_id}` dans un instant."
+
+#: cogs/system/premium.py:599
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "Droit de TEST n°{entitlement_id} (**Yasuho+**) créé pour le serveur `{guild_id}`. Supprime-le plus tard avec `?premiumadmin testclear {entitlement_id}`."
+
+#: cogs/system/premium.py:614
+msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
+msgstr "Aucun `comfort_pack_sku` n'est configuré dans `[Premium]` - rien à acheter en test."
+
+#: cogs/system/premium.py:637
+#, python-brace-format
+msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
+msgstr "Droit de TEST **Pack Confort** créé pour l'utilisateur `{user_id}`. Son identifiant n'était pas encore visible - utilise `?premiumadmin check user {user_id}` dans un instant."
+
+#: cogs/system/premium.py:646
+#, python-brace-format
+msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
+msgstr "Droit de TEST n°{entitlement_id} (**Pack Confort**) créé pour l'utilisateur `{user_id}`. Supprime-le plus tard avec `?premiumadmin testclear {entitlement_id}`."
+
+#: cogs/system/premium.py:661
+#, python-brace-format
+msgid "No entitlement #{entitlement_id} exists."
+msgstr "Aucun droit n°{entitlement_id} n'existe."
+
+#: cogs/system/premium.py:670
+#, python-brace-format
+msgid "Could not fetch entitlement #{entitlement_id} from Discord."
+msgstr "Impossible de récupérer le droit n°{entitlement_id} auprès de Discord."
+
+#: cogs/system/premium.py:679
+#, python-brace-format
+msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
+msgstr "Le droit n°{entitlement_id} n'est pas un droit de TEST (type `{type}`) - je refuse de supprimer un vrai achat."
+
+#: cogs/system/premium.py:695
+#, python-brace-format
+msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
+msgstr "Droit de TEST n°{entitlement_id} supprimé. L'événement ENTITLEMENT_DELETE correspondant le retirera du cache."
+
+#: cogs/system/premium_panel.py:80
+msgid "yes"
+msgstr "oui"
+
+#: cogs/system/premium_panel.py:80
+msgid "no"
+msgstr "non"
+
+#: cogs/system/premium_panel.py:103
+msgid "## Yasuho+"
+msgstr "## Yasuho+"
+
+#: cogs/system/premium_panel.py:105
+msgid "A paid upgrade for a whole server. Nothing free is removed - here is what Yasuho+ adds:"
+msgstr "Une option payante pour tout un serveur. Rien de gratuit n'est retiré - voici ce que Yasuho+ ajoute :"
+
+#: cogs/system/premium_panel.py:109
+#, python-brace-format
+msgid "**24/7 music** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Musique 24/7** - Gratuit : {free} | Yasuho+ : {plus}"
+
+#: cogs/system/premium_panel.py:113 tests/cogs/test_premium_panel.py:164
+#: tests/cogs/test_premium_panel.py:173
+#, python-brace-format
+msgid "**Server playlists** - Free: {free_count} x {free_tracks} tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
+msgstr "**Playlists du serveur** - Gratuit : {free_count} x {free_tracks} morceaux | Yasuho+ : {plus_count} x {plus_tracks} morceaux"
+
+#: cogs/system/premium_panel.py:122
+#, python-brace-format
+msgid "**Previous history** - Free: {free} tracks | Yasuho+: {plus} tracks"
+msgstr "**Historique « Précédent »** - Gratuit : {free} morceaux | Yasuho+ : {plus} morceaux"
+
+#: cogs/system/premium_panel.py:128
+#, python-brace-format
+msgid "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} accounts and {free_titles} titles per feed | Yasuho+: {plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} titles per feed"
+msgstr "**Fils AniList** - Gratuit : {free_feeds} fils, {free_accounts} comptes et {free_titles} titres par fil | Yasuho+ : {plus_feeds} fils, {plus_accounts} comptes et {plus_titles} titres par fil"
+
+#: cogs/system/premium_panel.py:141
+#, python-brace-format
+msgid "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
+msgstr "**Stats du serveur** - Gratuit : {free} jours | Yasuho+ : {plus} jours"
+
+#: cogs/system/premium_panel.py:146
+#, python-brace-format
+msgid "**Role menus** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Menus de rôles** - Gratuit : {free} | Yasuho+ : {plus}"
+
+#: cogs/system/premium_panel.py:149
+#, python-brace-format
+msgid "**Auto voice hubs** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Hubs vocaux auto** - Gratuit : {free} | Yasuho+ : {plus}"
+
+#: cogs/system/premium_panel.py:153
+#, python-brace-format
+msgid "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Tickets ouverts par membre** - Gratuit : {free} | Yasuho+ : {plus}"
+
+#: cogs/system/premium_panel.py:158
+#, python-brace-format
+msgid "**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}"
+msgstr "**Badge Yasuho+** - Gratuit : {free} | Yasuho+ : {plus}"
+
+#: cogs/system/premium_panel.py:163
+msgid "## Pack Confort"
+msgstr "## Pack Confort"
+
+#: cogs/system/premium_panel.py:165
+msgid "A one-time purchase for you personally. No subscription, no expiry while the service and your account exist."
+msgstr "Un achat unique, rien que pour toi. Pas d'abonnement, pas d'expiration tant que le service et ton compte existent."
+
+#: cogs/system/premium_panel.py:170
+#, python-brace-format
+msgid "**Favourites** - Free: {free} | Pack Confort: {plus}"
+msgstr "**Favoris** - Gratuit : {free} | Pack Confort : {plus}"
+
+#: cogs/system/premium_panel.py:174
+#, python-brace-format
+msgid "**Reminders** - Free: {free} ({free_recurring} recurring) | Pack Confort: {plus} ({plus_recurring} recurring)"
+msgstr "**Rappels** - Gratuit : {free} ({free_recurring} récurrents) | Pack Confort : {plus} ({plus_recurring} récurrents)"
+
+#: cogs/system/premium_panel.py:188
+msgid "Nothing free becomes paid, nothing is deleted when a perk ends, and purchases are handled by Discord."
+msgstr "Rien de gratuit ne devient payant, rien n'est supprimé quand un avantage prend fin, et les achats sont gérés par Discord."
+
+#: cogs/system/premium_panel.py:194
+msgid "purchased"
+msgstr "acheté"
+
+#: cogs/system/premium_panel.py:194
+msgid "gifted"
+msgstr "offert"
+
+#: cogs/system/premium_panel.py:200
+msgid "This server does not have **Yasuho+**."
+msgstr "Ce serveur n'a pas **Yasuho+**."
+
+#: cogs/system/premium_panel.py:204
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), active until {until}."
+msgstr "Ce serveur a **Yasuho+** ({source}), actif jusqu'au {until}."
+
+#: cogs/system/premium_panel.py:206
+#, python-brace-format
+msgid "This server has **Yasuho+** ({source}), with no end date."
+msgstr "Ce serveur a **Yasuho+** ({source}), sans date de fin."
+
+#: cogs/system/premium_panel.py:214
+msgid "You do not have the **Pack Confort**."
+msgstr "Tu n'as pas le **Pack Confort**."
+
+#: cogs/system/premium_panel.py:218
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), active until {until}."
+msgstr "Tu as le **Pack Confort** ({source}), actif jusqu'au {until}."
+
+#: cogs/system/premium_panel.py:221
+#, python-brace-format
+msgid "You have the **Pack Confort** ({source}), with no end date."
+msgstr "Tu as le **Pack Confort** ({source}), sans date de fin."
+
+#: cogs/system/premium_panel.py:226
+msgid "Premium is not on sale yet."
+msgstr "Le premium n'est pas encore en vente."
+
+#: cogs/system/premium_panel.py:230
+#, python-brace-format
+msgid "A server admin can manage this with `/{command}`."
+msgstr "Un admin du serveur peut gérer ça avec `/{command}`."
+
+#: cogs/system/premium_panel.py:284
+msgid "Terms"
+msgstr "CGU"
 
 #: cogs/utility/extras.py:30
 msgid "I can only quote messages from this server."
