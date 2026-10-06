@@ -58,7 +58,7 @@ import logging
 import discord
 
 from . import guild_config, lifecycle, preflight, storage
-from tools import i18n, interactions
+from tools import i18n, interactions, premium
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -202,7 +202,15 @@ class TicketOpenButton(discord.ui.Button):
         # Courtesy pre-check: refuse a capped member before making them type a
         # subject. NOT the guard - that is the INSERT in storage.open_ticket,
         # which is what two simultaneous clicks actually run into.
-        cap = await guild_config.max_open_per_user(pool, guild.id)
+        #
+        # EFFECTIVE ceiling (M4a-3): FREE unless this guild has Yasuho+ - see
+        # tools.premium.resolve_guild_limits and guild_config.max_open_per_user's
+        # own docstring for what "ceiling" means here (it bounds the admin's
+        # own setting, it does not bypass it).
+        ceiling = premium.resolve_guild_limits(
+            interaction.client, guild.id
+        ).max_tickets_open_per_user
+        cap = await guild_config.max_open_per_user(pool, guild.id, ceiling=ceiling)
         try:
             already = await storage.count_open_for_user(pool, guild.id, member.id)
         except Exception:
@@ -311,7 +319,15 @@ async def _create_ticket(interaction, subject):
 
 async def _open_thread(interaction, guild, member, channel, subject, pool):
     """Create the thread, take the row, and compensate if the row is refused."""
-    cap = await guild_config.max_open_per_user(pool, guild.id)
+    # Re-resolved here rather than carried from the click, like every other
+    # configuration value in this flow (the modal may have been open for
+    # minutes) - same EFFECTIVE-ceiling reasoning as the courtesy pre-check
+    # above, and the SAME value :func:`storage.open_ticket`'s guarded INSERT
+    # below actually enforces.
+    ceiling = premium.resolve_guild_limits(
+        interaction.client, guild.id
+    ).max_tickets_open_per_user
+    cap = await guild_config.max_open_per_user(pool, guild.id, ceiling=ceiling)
     # The guild's inactivity window IS the thread's auto-archive duration: that
     # is what makes the setting real. Discord then enforces it for free, the
     # archive it fires is what lifecycle.py turns into a close, and no ticket

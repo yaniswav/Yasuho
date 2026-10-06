@@ -1591,3 +1591,55 @@ async def test_refresh_entitlement_scope_and_refresh_grant_scope_share_the_lock(
     await task
     await second
     assert cache._lock.locked() is False
+
+
+# ---------------------------------------------------------------------------
+# resolve_guild_limits (M4a-3): the defensive resolver every hot-path caller
+# (role-menu component callback, autoroom voice listener, ticket open button)
+# shares, instead of each re-implementing the same getattr/try/except guard.
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_guild_limits_with_no_premium_attribute_is_free():
+    """A bot with no ``premium`` attribute (a test double, a script, or a cog
+    running before setup_hook attaches one) must resolve FREE, never raise."""
+    bot = types.SimpleNamespace()
+    assert premium.resolve_guild_limits(bot, 42) is premium.GUILD_FREE
+
+
+def test_resolve_guild_limits_with_none_guild_id_is_free():
+    bot = types.SimpleNamespace(premium=premium.EntitlementCache())
+    assert premium.resolve_guild_limits(bot, None) is premium.GUILD_FREE
+
+
+def test_resolve_guild_limits_when_for_guild_raises_is_free(caplog):
+    class _Boom:
+        def for_guild(self, guild_id):
+            raise RuntimeError("boom")
+
+    bot = types.SimpleNamespace(premium=_Boom())
+    with caplog.at_level(logging.ERROR, logger="tools.premium"):
+        result = premium.resolve_guild_limits(bot, 42)
+    assert result is premium.GUILD_FREE
+    assert any("Failed to resolve" in r.message for r in caplog.records)
+
+
+def test_resolve_guild_limits_resolves_premium_for_a_premium_guild(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    cache = premium.EntitlementCache()
+    cache.load_rows(
+        [_row(sku_id=111, scope_type="guild", guild_id=42, user_id=None)],
+    )
+    bot = types.SimpleNamespace(premium=cache)
+    assert premium.resolve_guild_limits(bot, 42) == premium.GUILD_PREMIUM
+
+
+# --- Negative control: without the getattr guard, a missing attribute raises -
+#
+# Verified by hand during this lot: calling ``bot.premium.for_guild(guild_id)``
+# directly (no ``getattr(bot, "premium", None)`` guard) against the plain
+# ``types.SimpleNamespace()`` used in
+# test_resolve_guild_limits_with_no_premium_attribute_is_free raises
+# AttributeError instead of resolving FREE - proving the guard is load-bearing,
+# not a decoration. Restored immediately after by editing the file back (no
+# git stash/checkout/reset), and the full suite was re-run green.

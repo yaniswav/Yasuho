@@ -201,9 +201,17 @@ def normalize_hubs(blob):
     return hubs
 
 
-def can_add_hub(hubs):
-    """True while the guild is below the ``MAX_HUBS`` cap."""
-    return len(hubs) < MAX_HUBS
+def can_add_hub(hubs, max_hubs=MAX_HUBS):
+    """True while the guild is below ``max_hubs`` (the FREE cap by default).
+
+    ``max_hubs`` defaults to the FREE value (:data:`MAX_HUBS`) for callers
+    (and tests) that do not pass one; a caller with a bot handle passes the
+    EFFECTIVE cap instead (``tools.premium.resolve_guild_limits(bot,
+    guild_id).max_hubs`` - M4a-3: .claude/plans/monetisation/4-plan-retenu.md),
+    the same "FREE default, premium overrides it explicitly" shape
+    ``cogs.music.playlists_shared.guild_cap_reached`` already uses.
+    """
+    return len(hubs) < max_hubs
 
 
 def channels_needed(hubs):

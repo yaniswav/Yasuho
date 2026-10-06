@@ -19,7 +19,6 @@ from tools.autoroom import (
     DEFAULT_LABEL,
     DEFAULT_TEMPLATE,
     GUILD_CHANNEL_BUDGET,
-    MAX_HUBS,
     SLOT_VALUES,
     can_add_hub,
     channels_needed,
@@ -362,6 +361,10 @@ class AutoroomPanel(LocaleLayoutView):
         self.guild_id = guild_id
         self.hubs = hubs
         self.used_channels = used_channels
+        # EFFECTIVE cap (M4a-3: FREE unless this guild has Yasuho+), resolved
+        # fresh on every (re)build so a subscription change while the panel is
+        # open is reflected on the next click - see tools.premium.resolve_guild_limits.
+        self.max_hubs = cog.effective_max_hubs(guild_id)
         self.message = None
         self._build()
 
@@ -387,6 +390,9 @@ class AutoroomPanel(LocaleLayoutView):
                 )
             )
         else:
+            # Archived marking (M4a-3): classified from this SAME ordered
+            # list - no extra query. See TemporaryRooms.classify_hubs.
+            archival = self.cog.classify_hubs(self.hubs, self.max_hubs)
             for hub in self.hubs:
                 edit_button = _PanelButton(
                     self._make_edit_handler(hub["id"]),
@@ -394,11 +400,14 @@ class AutoroomPanel(LocaleLayoutView):
                     style=discord.ButtonStyle.secondary,
                     emoji="⚙️",
                 )
+                label = hub.get("label") or DEFAULT_LABEL
+                if archival.is_archived(hub["id"]):
+                    label += " " + _("(archived)")
                 container.add_item(
                     discord.ui.Section(
                         discord.ui.TextDisplay(
                             _("**{label}**\n{summary}").format(
-                                label=hub.get("label") or DEFAULT_LABEL,
+                                label=label,
                                 summary=summarise_hub(hub),
                             )
                         ),
@@ -413,7 +422,7 @@ class AutoroomPanel(LocaleLayoutView):
             label=_("Add hub"),
             style=discord.ButtonStyle.success,
             emoji="➕",
-            disabled=not can_add_hub(self.hubs),
+            disabled=not can_add_hub(self.hubs, self.max_hubs),
         )
         container.add_item(discord.ui.ActionRow(add_button))
 
@@ -430,7 +439,7 @@ class AutoroomPanel(LocaleLayoutView):
                     "{used}/{budget} channels used"
                 ).format(
                     count=len(self.hubs),
-                    max_hubs=MAX_HUBS,
+                    max_hubs=self.max_hubs,
                     reserved=reserved,
                     used=self.used_channels,
                     budget=GUILD_CHANNEL_BUDGET,
@@ -474,6 +483,9 @@ class AutoroomPanel(LocaleLayoutView):
         guild = self.cog.bot.get_guild(self.guild_id)
         self.used_channels = len(guild.channels) if guild is not None else 0
         self.hubs = await self.cog._load_hubs(self.guild_id)
+        # Re-resolved (not just re-used): a subscription can lapse or renew
+        # while this panel sits open.
+        self.max_hubs = self.cog.effective_max_hubs(self.guild_id)
         self._build()
         try:
             await self.message.edit(
@@ -484,10 +496,10 @@ class AutoroomPanel(LocaleLayoutView):
 
     async def _on_add(self, interaction):
         try:
-            if not can_add_hub(self.hubs):
+            if not can_add_hub(self.hubs, self.max_hubs):
                 await interaction.response.send_message(
                     _("You already have the maximum of {max_hubs} hubs.").format(
-                        max_hubs=MAX_HUBS
+                        max_hubs=self.max_hubs
                     ),
                     ephemeral=True,
                 )

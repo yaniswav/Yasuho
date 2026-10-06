@@ -7,6 +7,45 @@ are backed by the ``role_menus`` table and re-registered as persistent views on
 startup, so they keep working across restarts. Role changes are hierarchy-safe:
 Yasuho never touches a role above her own or a managed role.
 
+PREMIUM CAPS (M4a-3, .claude/plans/monetisation/4-plan-retenu.md).
+:data:`MAX_MENUS_PER_GUILD` stays exactly the FREE value (restated in
+``tools.premium.FREE_MAX_MENUS_PER_GUILD``, checked by
+tests/tools/test_premium.py's drift guard). ``/rolemenu`` and the dashboard's
+``role_menu_post`` executor (cogs/system/dashboard_actions.py) both read the
+EFFECTIVE max instead, from ``tools.premium.resolve_guild_limits(bot,
+guild_id).max_menus_per_guild``, so a Yasuho+ guild can post more menus
+without this constant drifting from the free catalog entry.
+
+ARCHIVAL, AND THE CHOICE BEHIND IT. When a downgrade leaves a guild over its
+current effective cap, the oldest excess menus are ARCHIVED
+(:mod:`tools.premium_archive`'s lazy, computed-at-use-time rule - no stored
+flag, no sweep). An archived menu's row is never deleted and its persistent
+view keeps dispatching (nothing here can "disable" a component once posted),
+so this cog makes the one call it CAN make at the one seam it owns: when a
+member picks roles on an archived menu, granting is refused (an ephemeral
+note points to /premium) but REMOVING a role they already hold through that
+menu is always allowed. That asymmetry is deliberate and protective - a role
+a member already has must never become impossible to shed just because the
+server's tier changed; it is only NEW grants that a downgrade can withhold.
+Deletion (``on_raw_message_delete``, the dashboard's ``role_menu_delete``)
+carries no cap check either way, matching ``cogs.music.playlists_shared``'s
+"still deletable" rule. There is no separate "edit a posted menu" surface
+today, so there is nothing else here to block.
+
+The classification needs this guild's OTHER live menus, in creation order,
+on every component click - and must do so with NO extra DB query (a select
+click is a hot path). ``_guild_menus`` is an in-memory ``{guild_id:
+{message_id, ...}}`` cache, guild-scoped on purpose (reaction roles once
+leaked a cache across guilds this same way - see memory/
+"audit-securite-par-cog-2026-08"), populated at ``cog_load`` and kept in sync
+by every writer (``store_menu``, ``on_raw_message_delete``, and the
+dashboard's post/delete executors). Message ids are Discord snowflakes -
+strictly increasing with creation time - so sorting a guild's message ids
+is exactly creation order with no ``created_at`` column read needed; classify
+the result against the sorted work (<= ``tools.premium.GUILD_CEILINGS
+["max_menus_per_guild"]`` = 100 ids per guild) and this costs a short
+in-memory sort, zero I/O.
+
 Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the
 fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
@@ -15,17 +54,21 @@ import datetime
 import json
 import logging
 import re
+from collections import defaultdict
 
 import discord
 from discord.ext import commands
 
-from tools import i18n, interactions, modchecks, role_menus
+from tools import i18n, interactions, modchecks, premium, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
+from tools.premium_archive import classify as classify_archival
 from tools.views import AuthorLayoutView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
+# FREE per-guild cap (M4a-3: see the module docstring's "PREMIUM CAPS" section
+# for how a Yasuho+ guild gets a higher EFFECTIVE cap without this changing).
 MAX_MENUS_PER_GUILD = 25
 
 _CUSTOM_EMOJI = re.compile(r"^<a?:\w{2,32}:\d+>$")
@@ -82,6 +125,7 @@ class RoleMenuSelect(discord.ui.Select):
     """The public self-role dropdown; custom_id is unique per menu message."""
 
     def __init__(self, message_id, config):
+        self.message_id = message_id
         self.config = config
         options = []
         for opt in config.get("options", [])[:role_menus.MAX_OPTIONS]:
@@ -144,6 +188,18 @@ class RoleMenuSelect(discord.ui.Select):
             selected, held, menu_ids, exclusive=bool(self.config.get("exclusive"))
         )
 
+        # Archived (M4a-3): this menu is past the guild's CURRENT effective
+        # menu cap (a downgrade left it over the limit). Grants are refused -
+        # removals stay allowed, never trapping a role someone already holds.
+        # See the module docstring's "ARCHIVAL" section for why only this one
+        # asymmetric check lives here (no edit surface exists to block, and
+        # deletion carries no cap check either way).
+        blocked = False
+        cog = interaction.client.get_cog("RoleMenus")
+        if to_add and cog is not None and cog.is_menu_archived(guild.id, self.message_id):
+            blocked = True
+            to_add = set()
+
         bot_top = guild.me.top_role
         added, removed, skipped = [], [], []
         for rid in to_add:
@@ -201,6 +257,14 @@ class RoleMenuSelect(discord.ui.Select):
         if skipped and not added and not removed:
             parts.append(
                 _("I couldn't manage those roles - they may be above my highest role.")
+            )
+        if blocked:
+            parts.append(
+                _(
+                    "This menu is archived - this server is over its current "
+                    "role menu limit, so no new role can be granted from it. "
+                    "See /premium for options."
+                )
             )
         if not parts:
             parts.append(_("No changes."))
@@ -714,13 +778,19 @@ class RoleMenus(commands.Cog):
         # message ids of live menus, so on_raw_message_delete can prune the row
         # without a DB hit on every unrelated deletion.
         self._menu_ids = set()
+        # {guild_id: {message_id, ...}} - GUILD-SCOPED on purpose (see the
+        # module docstring's "ARCHIVAL" section: a past reaction-role cache
+        # leaked across guilds this exact way). This is what lets a component
+        # click classify archival with zero extra DB query - see
+        # is_menu_archived below.
+        self._guild_menus = defaultdict(set)
 
     async def cog_load(self):
         # Re-register every stored menu as a persistent view so it survives a
         # restart, exactly like the button-role cog does for its panels.
         try:
             rows = await self.bot.db_pool.fetch(
-                "SELECT message_id, config FROM role_menus"
+                "SELECT message_id, guild_id, config FROM role_menus"
             )
         except Exception:
             log.exception("Failed to load role menus")
@@ -745,6 +815,12 @@ class RoleMenus(commands.Cog):
                     message_id=row["message_id"],
                 )
                 self._menu_ids.add(row["message_id"])
+                try:
+                    guild_id = row["guild_id"]
+                except (KeyError, IndexError):
+                    guild_id = None
+                if guild_id is not None:
+                    self._guild_menus[int(guild_id)].add(int(row["message_id"]))
             except Exception:
                 log.exception(
                     "Failed to register role menu for message %s", row["message_id"]
@@ -758,6 +834,8 @@ class RoleMenus(commands.Cog):
         if payload.message_id not in self._menu_ids:
             return
         self._menu_ids.discard(payload.message_id)
+        if payload.guild_id is not None:
+            self._guild_menus[payload.guild_id].discard(payload.message_id)
         try:
             await self.bot.db_pool.execute(
                 "DELETE FROM role_menus WHERE message_id = $1", payload.message_id
@@ -803,6 +881,7 @@ class RoleMenus(commands.Cog):
             json.dumps(config),
         )
         self._menu_ids.add(message_id)
+        self._guild_menus[guild_id].add(message_id)
 
     async def _menu_count(self, guild_id):
         return (
@@ -812,16 +891,46 @@ class RoleMenus(commands.Cog):
             or 0
         )
 
+    def effective_max_menus(self, guild_id):
+        """This guild's EFFECTIVE role-menu cap (FREE unless it has Yasuho+).
+
+        See the module docstring's "PREMIUM CAPS" section. Resolved
+        defensively (:func:`tools.premium.resolve_guild_limits`): a missing or
+        raising ``bot.premium`` degrades to the FREE value, never to premium.
+        """
+        return premium.resolve_guild_limits(self.bot, guild_id).max_menus_per_guild
+
+    def is_menu_archived(self, guild_id, message_id):
+        """True when ``message_id`` is an ARCHIVED menu of ``guild_id``.
+
+        Classified from ``_guild_menus[guild_id]`` - the in-memory, guild-
+        scoped cache this cog keeps in sync (cog_load, store_menu,
+        on_raw_message_delete, and the dashboard's post/delete executors) -
+        against the guild's current effective cap. NO database read: message
+        ids are Discord snowflakes (strictly increasing with creation time),
+        so sorting them IS creation order, used here as both the ``id`` and
+        the comparable ``created_at`` :func:`tools.premium_archive.classify`
+        wants. A ``message_id`` this cache does not know about (a caller bug,
+        or a race with a delete) reads as "not archived" - fail OPEN on this
+        one check only, since the alternative is blocking a grant this cog
+        can no longer prove is even still a live menu.
+        """
+        max_menus = self.effective_max_menus(guild_id)
+        ids = sorted(self._guild_menus.get(guild_id, ()))
+        resources = [{"id": mid, "created_at": mid} for mid in ids]
+        return classify_archival(resources, max_menus).is_archived(message_id)
+
     @commands.hybrid_command(name="rolemenu", aliases=["selfroles", "rolemenus"])
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     @commands.bot_has_permissions(manage_roles=True)
     async def rolemenu(self, ctx):
         """Open the self-role menu builder."""
-        if await self._menu_count(ctx.guild.id) >= MAX_MENUS_PER_GUILD:
+        max_menus = self.effective_max_menus(ctx.guild.id)
+        if await self._menu_count(ctx.guild.id) >= max_menus:
             return await ctx.send(
                 _("This server already has the maximum of {n} role menus.").format(
-                    n=MAX_MENUS_PER_GUILD
+                    n=max_menus
                 )
             )
         draft = {

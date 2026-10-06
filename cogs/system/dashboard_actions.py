@@ -258,7 +258,7 @@ from discord.ext import commands
 
 from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
 from cogs.system.dashboard_user_actions import EXECUTORS as _USER_EXECUTORS
-from tools import autoroom, i18n, modchecks, role_menus, settings
+from tools import autoroom, i18n, modchecks, premium, role_menus, settings
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
@@ -1389,7 +1389,11 @@ async def _exec_role_menu_post(bot, guild_id, payload, actor):
         return {"ok": False, "error": "missing_send_permission"}
 
     rm = _role_menus_module()
-    max_menus = getattr(rm, "MAX_MENUS_PER_GUILD", 25)
+    # EFFECTIVE cap (M4a-3: FREE unless this guild has Yasuho+), resolved the
+    # same defensive way the cog's own /rolemenu command does - see
+    # tools.premium.resolve_guild_limits. ``rm.MAX_MENUS_PER_GUILD`` (the FREE
+    # value) is what tests/tools/test_premium.py's drift guard still checks.
+    max_menus = premium.resolve_guild_limits(bot, guild_id).max_menus_per_guild
 
     # Enforce the per-guild cap BEFORE posting, counting this guild's live menus
     # (mirrors the cog's _menu_count gate on the /rolemenu builder).
@@ -1530,9 +1534,14 @@ async def _exec_role_menu_post(bot, guild_id, payload, actor):
             message.id,
         )
     # Keep the cog's live id set in sync so deleting the message prunes the row.
+    # Also feeds the guild-scoped ``_guild_menus`` cache (M4a-3 archival
+    # classification - see RoleMenus.is_menu_archived) so a menu posted from
+    # the dashboard is classified exactly like one posted from /rolemenu.
     cog = bot.get_cog("RoleMenus")
     if cog is not None and hasattr(cog, "_menu_ids"):
         cog._menu_ids.add(message.id)
+        if hasattr(cog, "_guild_menus"):
+            cog._guild_menus[guild_id].add(message.id)
 
     return {"ok": True, "message_id": str(message.id), "menu": True}
 
@@ -1572,6 +1581,11 @@ async def _exec_role_menu_delete(bot, guild_id, payload):
         cog = bot.get_cog("RoleMenus")
         if cog is not None and hasattr(cog, "_menu_ids"):
             cog._menu_ids.discard(message_id)
+            if hasattr(cog, "_guild_menus"):
+                # Guarded by the SAME guild-scoped DELETE match as above - this
+                # IS guild-keyed, so this one could safely run on a miss, but
+                # kept conditional for symmetry with _menu_ids right above it.
+                cog._guild_menus[guild_id].discard(message_id)
 
         # Best-effort: strip the select off the message. Never let a hiccup here
         # fail the delete (the row is already gone).
@@ -1742,7 +1756,10 @@ async def _exec_autoroom_hub_create(bot, guild_id, payload):
 
         # The before-picture doubles as the cap gate and as the success diff below.
         before = {hub["id"] for hub in await cog._load_hubs(guild_id)}
-        if len(before) >= autoroom.MAX_HUBS:
+        # EFFECTIVE cap (M4a-3: FREE unless this guild has Yasuho+) - the same
+        # resolver the cog's own TemporaryRooms.effective_max_hubs uses.
+        max_hubs = premium.resolve_guild_limits(bot, guild_id).max_hubs
+        if len(before) >= max_hubs:
             return {"ok": False, "error": "too_many_hubs"}
 
         with i18n.locale(loc):

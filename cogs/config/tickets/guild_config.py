@@ -262,12 +262,26 @@ async def log_channel_id(pool: typing.Any, guild_id: typing.Any):
     return coerce_id(await _read(pool, guild_id, KEY_LOG_CHANNEL))
 
 
-async def max_open_per_user(pool: typing.Any, guild_id: typing.Any) -> int:
-    """How many tickets one member may have open at once (clamped 1..5)."""
+async def max_open_per_user(
+    pool: typing.Any, guild_id: typing.Any, *, ceiling: int = MAX_OPEN_PER_USER
+) -> int:
+    """How many tickets one member may have open at once (clamped 1..``ceiling``).
+
+    ``ceiling`` defaults to :data:`MAX_OPEN_PER_USER`, the FREE hard ceiling,
+    for callers (and tests) that do not pass one. A caller with a bot handle
+    passes the guild's EFFECTIVE ceiling instead - ``tools.premium.
+    resolve_guild_limits(bot, guild_id).max_tickets_open_per_user`` (M4a-3:
+    .claude/plans/monetisation/4-plan-retenu.md) - which Yasuho+ raises to 10.
+    This is the admin-configurable HARD CEILING an admin's own
+    ``tickets_max_open_per_user`` setting is clamped into, not a value that
+    bumps itself on upgrade: a guild that never configured anything keeps
+    :data:`DEFAULT_MAX_OPEN_PER_USER` regardless of tier, exactly as it does
+    today for the free ceiling.
+    """
     return coerce_count(
         await _read(pool, guild_id, KEY_MAX_OPEN_PER_USER),
         minimum=MIN_OPEN_PER_USER,
-        maximum=MAX_OPEN_PER_USER,
+        maximum=ceiling,
         default=DEFAULT_MAX_OPEN_PER_USER,
     )
 
@@ -337,12 +351,14 @@ async def read_raw(pool: typing.Any, guild_id: typing.Any):
         return None
 
 
-def resolve(raw: typing.Any) -> dict:
+def resolve(raw: typing.Any, *, ceiling: int = MAX_OPEN_PER_USER) -> dict:
     """Coerce a :func:`read_raw` map into the values the bot acts on. Pure.
 
     Accepts ``None`` (a failed read) and anything without the keys, and answers
     with the bot defaults - the same degradation the per-key readers apply, so a
-    surface built on this behaves exactly like one built on them.
+    surface built on this behaves exactly like one built on them. ``ceiling``
+    is the same EFFECTIVE hard ceiling :func:`max_open_per_user` takes (M4a-3);
+    it defaults to the FREE value so every existing caller is unaffected.
     """
     if not isinstance(raw, dict):
         raw = {}
@@ -353,7 +369,7 @@ def resolve(raw: typing.Any) -> dict:
         "max_open": coerce_count(
             raw.get(KEY_MAX_OPEN_PER_USER),
             minimum=MIN_OPEN_PER_USER,
-            maximum=MAX_OPEN_PER_USER,
+            maximum=ceiling,
             default=DEFAULT_MAX_OPEN_PER_USER,
         ),
         "inactivity_hours": snap_inactivity_hours(

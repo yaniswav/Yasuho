@@ -11,6 +11,36 @@ under the ``autorooms`` key as a list of hub dicts. All shaping/validation is
 delegated to the pure ``tools/autoroom.py`` helpers; this cog only performs the
 Discord and DB side effects. On first load, any rows from the legacy
 ``auto_room`` table are migrated into default hubs and then ignored.
+
+PREMIUM CAPS (M4a-3, .claude/plans/monetisation/4-plan-retenu.md). The FREE cap
+stays exactly :data:`tools.autoroom.MAX_HUBS` (5) - every CREATE path below
+instead reads the EFFECTIVE ``max_hubs`` from
+``tools.premium.resolve_guild_limits(self.bot, guild_id).max_hubs``, so a
+Yasuho+ guild gets more hubs without that constant ever drifting from the
+free catalog entry (tests/tools/test_premium.py's drift guard). When the
+effective cap drops below a guild's hub count - a subscription lapsed, was
+refunded or was revoked - nothing is deleted: the excess hubs are ARCHIVED
+(:mod:`tools.premium_archive`'s lazy, computed-at-use-time rule). An archived
+hub stays listed (marked as such) and fully deletable, but spawns NO new room
+when a member joins its trigger channel - SILENTLY, on purpose: "no message
+spam" is the plan's own wording, and the member joining an archived hub sees
+exactly what they would see if the hub did not exist (they simply stay in the
+trigger channel). Rooms it already spawned before the downgrade are untouched
+and still clean up normally; the GLOBAL per-hub room budget
+(``max_rooms``/:data:`tools.autoroom.MAX_ROOMS`) is unrelated to this cap and
+never changes with it.
+
+The classification needs the guild's hubs in CREATION order. Rather than add
+a stored ``created_at`` nobody needs for anything else, this reuses the hub
+list's own append order (``_add_hub`` appends; ``_remove_hub`` filters, which
+preserves the order of whatever remains) as the comparable "created_at"
+:func:`tools.premium_archive.classify` wants - a hub's ordinal position in
+that order. ``_hub_index[guild_id]`` (a ``{hub_channel_id: hub}`` dict built
+by :func:`_hub_mapping` from that same list, and Python dicts preserve
+insertion order) is exactly that order with NO extra DB read: the voice
+listener already holds it on every join, so classifying costs one short
+in-memory sort bounded by ``tools.premium.GUILD_CEILINGS["max_hubs"]`` (20)
+and zero I/O - safe to run on every join-to-create event.
 """
 
 from __future__ import annotations
@@ -59,14 +89,13 @@ from .rooms_panels import (
     _RoomSubView,  # noqa: F401
     _SlotSelect,  # noqa: F401
 )
-from tools import settings
+from tools import premium, settings
 from tools.autoroom import (
     CREATE_COOLDOWN_SECONDS,
     DEFAULT_LABEL,
     GUILD_CHANNEL_BUDGET,
     HUB_OVERHEAD_CHANNELS,
     MAX_CATEGORIES,
-    MAX_HUBS,
     HubCreation,
     HubRemoval,
     can_add_hub,
@@ -78,6 +107,7 @@ from tools.autoroom import (
 )
 from tools.cooldowns import Cooldowns
 from tools.i18n import _, ngettext
+from tools.premium_archive import classify as classify_archival
 
 log = logging.getLogger(__name__)
 
@@ -456,6 +486,32 @@ class TemporaryRooms(commands.Cog):
         self._index_guild(guild_id, hubs)
         return hubs
 
+    def effective_max_hubs(self, guild_id):
+        """This guild's EFFECTIVE hub cap (FREE unless it has Yasuho+).
+
+        See the module docstring's "PREMIUM CAPS" section. Resolved
+        defensively (:func:`tools.premium.resolve_guild_limits`): a missing
+        ``self.bot`` (a ``__new__``-built test double), a missing or raising
+        ``bot.premium``, all degrade to the FREE value, never to premium.
+        """
+        return premium.resolve_guild_limits(getattr(self, "bot", None), guild_id).max_hubs
+
+    def classify_hubs(self, hubs_in_order, max_hubs):
+        """Classify an ordered iterable of hub dicts against ``max_hubs``.
+
+        ``hubs_in_order`` must already be in creation order (oldest first) -
+        either the guild's stored hub LIST (``_load_hubs``'s own append/filter
+        order) or ``_hub_index[guild_id].values()`` (the same order, see the
+        module docstring). Each hub's ordinal POSITION in that order stands in
+        for a ``created_at`` nobody stores - see the module docstring for why
+        that is exact. Returns a :class:`tools.premium_archive.ArchivalResult`.
+        """
+        resources = [
+            {"id": hub["id"], "created_at": index}
+            for index, hub in enumerate(hubs_in_order)
+        ]
+        return classify_archival(resources, max_hubs)
+
     # ------------------------------------------------------------------
     # Add / edit / remove (called from the panel/modals)
     # ------------------------------------------------------------------
@@ -482,10 +538,11 @@ class TemporaryRooms(commands.Cog):
         cannot report, because from this side that call simply failed.
         """
         hubs = await self._load_hubs(guild.id)
-        if not can_add_hub(hubs):
+        max_hubs = self.effective_max_hubs(guild.id)
+        if not can_add_hub(hubs, max_hubs):
             return HubCreation(
                 message=_("You already have the maximum of {max_hubs} hubs.").format(
-                    max_hubs=MAX_HUBS
+                    max_hubs=max_hubs
                 )
             )
         if len(guild.categories) >= MAX_CATEGORIES:
@@ -757,6 +814,26 @@ class TemporaryRooms(commands.Cog):
         if hub is None:
             return
 
+        # Archived (M4a-3): this hub is past the guild's CURRENT effective
+        # max_hubs (a downgrade left it over the cap). No new room, and
+        # deliberately SILENT - the plan's own "no message spam" rule: the
+        # member joining sees exactly what they would see if the hub did not
+        # exist. Classified from ``hubs`` (this guild's already-loaded
+        # {hub_channel_id: hub} map - zero extra I/O, see the module
+        # docstring) against the resolver's synchronous lookup, so this costs
+        # no await beyond what the listener already pays.
+        max_hubs = self.effective_max_hubs(member.guild.id)
+        if not self.classify_hubs(hubs.values(), max_hubs).is_active(hub["id"]):
+            log.debug(
+                "autoroom: hub %s in guild %s is archived (over %s); no room "
+                "spawned for %s",
+                hub["id"],
+                member.guild.id,
+                max_hubs,
+                member.id,
+            )
+            return
+
         # Per-user cooldown to kill join/leave spam.
         key = (member.guild.id, member.id)
         if self._cooldowns.is_active(key):
@@ -1002,14 +1079,24 @@ class TemporaryRooms(commands.Cog):
             await ctx.send(_("There are no autoroom hubs set up in this server."))
             return
 
+        # Archived marking (M4a-3): classified from these SAME rows - already
+        # in creation order (see the module docstring) - so no second query.
+        max_hubs = self.effective_max_hubs(ctx.guild.id)
+        archival = self.classify_hubs(hubs, max_hubs)
+
         embed = discord.Embed(
             title=_("Autoroom hubs"), colour=discord.Colour.blurple()
         )
         for hub in hubs:
             channel = ctx.guild.get_channel(hub.get("hub_channel_id"))
             location = channel.mention if channel else _("channel missing")
+            name = hub.get("label") or DEFAULT_LABEL
+            if archival.is_archived(hub["id"]):
+                # Marked, not hushed - stays listed and deletable, but no
+                # member joining it gets a new room until the cap rises again.
+                name += " " + _("(archived)")
             embed.add_field(
-                name=hub.get("label") or DEFAULT_LABEL,
+                name=name,
                 value=_("{location}\n{summary}").format(
                     location=location, summary=summarise_hub(hub)
                 ),

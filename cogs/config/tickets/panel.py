@@ -58,7 +58,7 @@ from discord.ext import commands
 
 from . import guild_config, preflight
 from .open import TicketPanelView
-from tools import i18n, interactions
+from tools import i18n, interactions, premium
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -303,9 +303,15 @@ def _reset_option(label):
 
 
 class _MaxOpenSelect(discord.ui.Select):
-    """How many tickets one member may have open at once (1..5, or default)."""
+    """How many tickets one member may have open at once (1..ceiling, or default).
 
-    def __init__(self, panel, current, configured):
+    ``ceiling`` is the guild's EFFECTIVE hard ceiling (M4a-3: FREE 5, Yasuho+
+    10 - see ``guild_config.max_open_per_user``'s own docstring), not always
+    :data:`guild_config.MAX_OPEN_PER_USER` - a Yasuho+ guild is offered the
+    full 1..10 range here.
+    """
+
+    def __init__(self, panel, current, configured, ceiling=guild_config.MAX_OPEN_PER_USER):
         self.panel = panel
         options = [
             _reset_option(
@@ -315,9 +321,7 @@ class _MaxOpenSelect(discord.ui.Select):
             )
         ]
         options[0].default = not configured
-        for count in range(
-            guild_config.MIN_OPEN_PER_USER, guild_config.MAX_OPEN_PER_USER + 1
-        ):
+        for count in range(guild_config.MIN_OPEN_PER_USER, ceiling + 1):
             options.append(
                 discord.SelectOption(
                     label=_("{count} at a time").format(count=count),
@@ -454,6 +458,13 @@ class TicketConfigPanel(AuthorLayoutView):
         super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
+        # EFFECTIVE ceiling (M4a-3: FREE unless this guild has Yasuho+),
+        # resolved once here and re-resolved on every redraw (_write below) so
+        # a subscription change while the panel is open is reflected on the
+        # next click - same defensive resolver as the open-ticket flow.
+        self.ceiling = premium.resolve_guild_limits(
+            self.cog.bot, guild.id
+        ).max_tickets_open_per_user
         self._load_state(raw)
         self._build()
 
@@ -461,7 +472,7 @@ class TicketConfigPanel(AuthorLayoutView):
     def _load_state(self, raw):
         """Adopt a raw key map: keep it AND its coerced view side by side."""
         self.raw = dict(raw) if isinstance(raw, dict) else {}
-        self.state = guild_config.resolve(self.raw)
+        self.state = guild_config.resolve(self.raw, ceiling=self.ceiling)
 
     def _is_set(self, key):
         """Did this guild actually write ``key``? (absent -> the bot default)"""
@@ -558,6 +569,7 @@ class TicketConfigPanel(AuthorLayoutView):
                     self,
                     state["max_open"],
                     self._is_set(guild_config.KEY_MAX_OPEN_PER_USER),
+                    ceiling=self.ceiling,
                 )
             )
         )
@@ -631,6 +643,11 @@ class TicketConfigPanel(AuthorLayoutView):
             return await interactions.notify_failure(
                 interaction, _("Something went wrong saving that setting.")
             )
+        # Re-resolved (not just re-used): a subscription can lapse or renew
+        # while this panel sits open.
+        self.ceiling = premium.resolve_guild_limits(
+            self.cog.bot, self.guild.id
+        ).max_tickets_open_per_user
         # Echo the write first so the redraw is right even if the read below is
         # not, then RE-READ: a second panel, `/ticket setup` or the dashboard may
         # have moved another key since this one was opened. A read that fails
@@ -638,7 +655,7 @@ class TicketConfigPanel(AuthorLayoutView):
         # is dropped and the echo stands - the same posture the profile
         # visibility panel takes.
         self.raw[key] = value
-        self.state = guild_config.resolve(self.raw)
+        self.state = guild_config.resolve(self.raw, ceiling=self.ceiling)
         fresh = await guild_config.read_raw(pool, self.guild.id)
         if fresh is not None:
             self._load_state(fresh)
@@ -707,7 +724,11 @@ class TicketConfigPanel(AuthorLayoutView):
         if key == guild_config.KEY_MAX_OPEN_PER_USER:
             bounds = (
                 guild_config.MIN_OPEN_PER_USER,
-                guild_config.MAX_OPEN_PER_USER,
+                # The EFFECTIVE ceiling, not the FREE constant: a Yasuho+
+                # guild's select offers 1..10, and a value from that select
+                # must clamp against the SAME ceiling, not silently fall back
+                # to 5.
+                self.ceiling,
                 guild_config.DEFAULT_MAX_OPEN_PER_USER,
             )
         else:
@@ -761,8 +782,11 @@ class Tickets(commands.Cog):
 
     async def _read_config(self, guild_id):
         """Everything ``/ticket status`` shows, in one settings blob read."""
+        ceiling = premium.resolve_guild_limits(
+            self.bot, guild_id
+        ).max_tickets_open_per_user
         return guild_config.resolve(
-            await guild_config.read_raw(self.bot.db_pool, guild_id)
+            await guild_config.read_raw(self.bot.db_pool, guild_id), ceiling=ceiling
         )
 
     @commands.hybrid_group(name="ticket")

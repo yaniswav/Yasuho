@@ -1415,3 +1415,37 @@ class EntitlementCache:
 # reconciliation loop added in M3b (cogs/system/premium.py) read and write
 # that bot-owned instance, never this module-level one.
 premium_limits = EntitlementCache()
+
+
+# ---------------------------------------------------------------------------
+# Defensive resolver (M4a-3) - the one guard every hot-path caller shares.
+# ---------------------------------------------------------------------------
+
+
+def resolve_guild_limits(bot, guild_id):
+    """The effective :class:`GuildLimits` for ``guild_id``, resolved defensively.
+
+    Mirrors the guard ``cogs/music/player.py``'s own premium lookup already
+    uses: a ``bot`` with no ``premium`` attribute (a test double, a script, or
+    a cog running before ``core.py``'s ``setup_hook`` has attached one), a
+    ``guild_id`` that cannot be read, or :meth:`EntitlementCache.for_guild`
+    itself raising, all degrade to :data:`GUILD_FREE` rather than raising or -
+    worse - resolving premium by accident. A premium lookup must never crash,
+    or silently widen, a caller's hot path.
+
+    Safe to call on every event: :meth:`EntitlementCache.for_guild` does no
+    I/O (a handful of dict lookups and datetime comparisons - see that
+    class's own "SCALE STORY" paragraph), so this adds no await and no query
+    for the role-menu component callback, the autoroom voice-state listener or
+    the ticket-open button to pay on every single event.
+    """
+    resolver = getattr(bot, "premium", None)
+    if resolver is None or guild_id is None:
+        return GUILD_FREE
+    try:
+        return resolver.for_guild(guild_id)
+    except Exception:
+        log.exception(
+            "Failed to resolve the premium guild limits; using the free default"
+        )
+        return GUILD_FREE
