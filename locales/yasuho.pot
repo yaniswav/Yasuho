@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 23:04+0000\n"
+"POT-Creation-Date: 2026-10-06 23:06+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -72,7 +72,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr ""
 
 #: cogs/anilist/account.py:273 cogs/anilist/account.py:668
-#: cogs/anilist/feed.py:2280
+#: cogs/anilist/feed.py:2579
 msgid "Could not resolve your AniList account."
 msgstr ""
 
@@ -141,7 +141,7 @@ msgstr ""
 #: cogs/anilist/airing.py:328 cogs/anilist/airing.py:374
 #: cogs/anilist/airing.py:379 cogs/anilist/chapters.py:543
 #: cogs/anilist/chapters.py:589 cogs/anilist/chapters.py:594
-#: cogs/anilist/feed.py:1658 cogs/anilist/feed_delivery.py:434
+#: cogs/anilist/feed.py:1933 cogs/anilist/feed_delivery.py:434
 #: cogs/anilist/feed_delivery.py:556 cogs/anilist/feed_delivery.py:600
 #: cogs/anilist/feed_delivery.py:605 cogs/anilist/feed_delivery.py:706
 msgid "I could not reach AniList - try again shortly."
@@ -193,7 +193,7 @@ msgid ""
 msgstr ""
 
 #: cogs/anilist/airing.py:550 cogs/anilist/chapters.py:783
-#: cogs/anilist/feed.py:2271 cogs/anilist/feed_delivery.py:379
+#: cogs/anilist/feed.py:2570 cogs/anilist/feed_delivery.py:379
 #: cogs/anilist/schedule.py:642
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr ""
@@ -428,15 +428,15 @@ msgid "Filter by status..."
 msgstr ""
 
 #: cogs/anilist/collection.py:110 cogs/anilist/collection.py:359
-#: cogs/anilist/feed_views.py:140 cogs/anilist/feed_views.py:321
-#: cogs/anilist/feed_views.py:487 cogs/anilist/feed_views.py:608
+#: cogs/anilist/feed_views.py:141 cogs/anilist/feed_views.py:326
+#: cogs/anilist/feed_views.py:492 cogs/anilist/feed_views.py:625
 #: cogs/anilist/hub.py:55
 msgid "Anime"
 msgstr ""
 
 #: cogs/anilist/collection.py:110 cogs/anilist/collection.py:359
-#: cogs/anilist/feed_views.py:141 cogs/anilist/feed_views.py:321
-#: cogs/anilist/feed_views.py:487 cogs/anilist/feed_views.py:608
+#: cogs/anilist/feed_views.py:142 cogs/anilist/feed_views.py:326
+#: cogs/anilist/feed_views.py:492 cogs/anilist/feed_views.py:625
 #: cogs/anilist/hub.py:56
 msgid "Manga"
 msgstr ""
@@ -457,7 +457,7 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
-#: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1204
+#: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1258
 #: cogs/anilist/hub.py:285 cogs/community/usersettings.py:447
 #: cogs/config/rooms_config.py:464 tools/views.py:80
 msgid "This panel isn't for you."
@@ -555,7 +555,7 @@ msgstr ""
 msgid "Keep current status"
 msgstr ""
 
-#: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1296
+#: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1359
 #: cogs/anilist/media_view.py:396 cogs/config/twitch.py:439
 #: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
@@ -619,108 +619,115 @@ msgstr ""
 msgid "Pick which one to update..."
 msgstr ""
 
-#: cogs/anilist/feed.py:1260 cogs/anilist/feed.py:1309
-#: cogs/anilist/feed.py:1999
+#: cogs/anilist/feed.py:1422
+msgid ""
+"This feed is archived - this server is over its current feed limit. It "
+"can be deleted, but not edited. See /premium for options."
+msgstr ""
+
+#: cogs/anilist/feed.py:1463 cogs/anilist/feed.py:1524
+#: cogs/anilist/feed.py:2298
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:1268
+#: cogs/anilist/feed.py:1474
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1321
+#: cogs/anilist/feed.py:1536
 msgid "That feed no longer exists."
 msgstr ""
 
-#: cogs/anilist/feed.py:1426 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:1676 tests/cogs/test_anilist_feed_subs.py:14
+#: tests/cogs/test_anilist_premium_archival.py:819
 msgid "I couldn't read that title - try searching again."
 msgstr ""
 
-#: cogs/anilist/feed.py:1438 cogs/anilist/feed_views.py:469
+#: cogs/anilist/feed.py:1697 cogs/anilist/feed_views.py:474
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1619
+#: cogs/anilist/feed.py:1894
 msgid "Give me an AniList username to follow."
 msgstr ""
 
-#: cogs/anilist/feed.py:1636 cogs/anilist/feed.py:1649
+#: cogs/anilist/feed.py:1911 cogs/anilist/feed.py:1924
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr ""
 
-#: cogs/anilist/feed.py:1667
+#: cogs/anilist/feed.py:1942
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:1716 cogs/anilist/feed_views.py:1100
+#: cogs/anilist/feed.py:1997 cogs/anilist/feed_views.py:1143
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr ""
 
-#: cogs/anilist/feed.py:1842
+#: cogs/anilist/feed.py:2139
 #, python-brace-format
 msgid "This feed already mutes the maximum of {max} users."
 msgstr ""
 
-#: cogs/anilist/feed.py:1917
+#: cogs/anilist/feed.py:2214
 msgid ""
 "This server has no active AniList feed. Create or re-enable one with "
 "`/anilistfeed set` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1928
+#: cogs/anilist/feed.py:2225
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr ""
 
-#: cogs/anilist/feed.py:1975
+#: cogs/anilist/feed.py:2275
 #, python-brace-format
 msgid ""
 "This server already has the maximum of {max} feeds. Remove one with "
 "`/anilistfeed remove` first."
 msgstr ""
 
-#: cogs/anilist/feed.py:1985
+#: cogs/anilist/feed.py:2285
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr ""
 
-#: cogs/anilist/feed.py:1995
+#: cogs/anilist/feed.py:2294
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr ""
 
-#: cogs/anilist/feed.py:2003
+#: cogs/anilist/feed.py:2302
 msgid "AniList feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:2029
+#: cogs/anilist/feed.py:2328
 msgid "User"
 msgstr ""
 
-#: cogs/anilist/feed.py:2029
+#: cogs/anilist/feed.py:2328
 msgid "Feed"
 msgstr ""
 
-#: cogs/anilist/feed.py:2031
+#: cogs/anilist/feed.py:2330
 msgid "Now following"
 msgstr ""
 
-#: cogs/anilist/feed.py:2051 cogs/anilist/feed.py:2061
+#: cogs/anilist/feed.py:2350 cogs/anilist/feed.py:2360
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:2064
+#: cogs/anilist/feed.py:2363
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed.py:2085
+#: cogs/anilist/feed.py:2384
 #, python-brace-format
 msgid ""
 "This feed is not following **{name}**, so there is nothing to mute. "
@@ -728,93 +735,100 @@ msgid ""
 "list`."
 msgstr ""
 
-#: cogs/anilist/feed.py:2098
+#: cogs/anilist/feed.py:2397
 #, python-brace-format
 msgid ""
 "**{name}** stays followed, but their activity is no longer posted in "
 "<#{channel}>. Other feeds following them are unaffected."
 msgstr ""
 
-#: cogs/anilist/feed.py:2101
+#: cogs/anilist/feed.py:2400
 msgid "Muted here"
 msgstr ""
 
-#: cogs/anilist/feed.py:2127
+#: cogs/anilist/feed.py:2426
 #, python-brace-format
 msgid "**{name}** is not muted in this feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:2131
+#: cogs/anilist/feed.py:2430
 #, python-brace-format
 msgid "Unmuted **{name}** - their activity is posted here again."
 msgstr ""
 
-#: cogs/anilist/feed.py:2240 cogs/anilist/feed.py:2296
+#: cogs/anilist/feed.py:2539 cogs/anilist/feed.py:2595
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:2253
+#: cogs/anilist/feed.py:2552
 msgid ""
 "This feed does not let members join themselves. Ask a moderator to turn "
 "on **Members can join** in `/anilistfeed`."
 msgstr ""
 
-#: cogs/anilist/feed.py:2261 cogs/anilist/feed_delivery.py:361
+#: cogs/anilist/feed.py:2560 cogs/anilist/feed_delivery.py:361
 msgid "AniList actions are unavailable right now."
 msgstr ""
 
-#: cogs/anilist/feed.py:2266
+#: cogs/anilist/feed.py:2565
 msgid "Link your AniList account first with `/anilist login`."
 msgstr ""
 
-#: cogs/anilist/feed.py:2304
+#: cogs/anilist/feed.py:2614
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr ""
 
-#: cogs/anilist/feed.py:2307
+#: cogs/anilist/feed.py:2617
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr ""
 
-#: cogs/anilist/feed.py:2315
+#: cogs/anilist/feed.py:2625
 msgid ""
 "A moderator has hidden your activity in that channel, so nothing of yours"
 " is posted there until they unhide it."
 msgstr ""
 
-#: cogs/anilist/feed.py:2333
+#: cogs/anilist/feed.py:2643
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr ""
 
-#: cogs/anilist/feed.py:2368
+#: cogs/anilist/feed.py:2683 cogs/anilist/feed_views.py:632
+#: cogs/anilist/feed_views.py:923 cogs/anilist/feed_views.py:1299
+#: cogs/anilist/feed_views.py:1349 cogs/config/rooms.py:1115
+#: cogs/config/rooms_config.py:405 cogs/music/playlists_shared.py:312
+msgid "(archived)"
+msgstr ""
+
+#: cogs/anilist/feed.py:2685
 msgid "none"
 msgstr ""
 
-#: cogs/anilist/feed.py:2369 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2686 cogs/moderation/automod.py:231
 msgid "enabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:2369 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2686 cogs/moderation/automod.py:231
 msgid "disabled"
 msgstr ""
 
-#: cogs/anilist/feed.py:2376 cogs/anilist/feed_views.py:1340
+#: cogs/anilist/feed.py:2693 cogs/anilist/feed_views.py:1403
 msgid "no one yet"
 msgstr ""
 
-#: cogs/anilist/feed.py:2384
+#: cogs/anilist/feed.py:2701
 #, python-brace-format
 msgid "{names} ({count} user hidden here, still followed)"
 msgid_plural "{names} ({count} users hidden here, still followed)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed.py:2389
+#: cogs/anilist/feed.py:2706
 msgid "no one"
 msgstr ""
 
-#: cogs/anilist/feed.py:2396
+#: cogs/anilist/feed.py:2713
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -822,26 +836,26 @@ msgid ""
 "Following: {names}"
 msgstr ""
 
-#: cogs/anilist/feed.py:2398
+#: cogs/anilist/feed.py:2715
 #, python-brace-format
 msgid "Muted: {muted}"
 msgstr ""
 
-#: cogs/anilist/feed.py:2401
+#: cogs/anilist/feed.py:2718
 msgid "AniList feeds"
 msgstr ""
 
-#: cogs/anilist/feed.py:2421
+#: cogs/anilist/feed.py:2738
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr ""
 
-#: cogs/anilist/feed.py:2426
+#: cogs/anilist/feed.py:2743
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr ""
 
-#: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:324
+#: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:329
 #: cogs/music/music.py:4103 cogs/music/search.py:342 cogs/music/views.py:2196
 #: cogs/music/views.py:2352 cogs/music/views.py:2479 cogs/music/views.py:2576
 msgid "Unknown title"
@@ -1043,39 +1057,39 @@ msgid_plural "+{count} others"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed_views.py:142
+#: cogs/anilist/feed_views.py:143
 msgid "Posts"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:162
+#: cogs/anilist/feed_views.py:163
 msgid "Switch feed..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:197
+#: cogs/anilist/feed_views.py:198
 msgid "Move this feed to..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:199
+#: cogs/anilist/feed_views.py:200
 msgid "Pick a channel to create a feed..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:250
+#: cogs/anilist/feed_views.py:251
 msgid "At least one activity type must stay enabled."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:272
+#: cogs/anilist/feed_views.py:275
 #, python-brace-format
 msgid "Members can join: {state}"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:273 cogs/config/welcome.py:152
+#: cogs/anilist/feed_views.py:276 cogs/config/welcome.py:152
 #: cogs/config/welcome.py:450 cogs/config/welcome.py:452
 #: cogs/config/welcome.py:454 cogs/config/welcome.py:566
 #: cogs/config/welcome.py:568 cogs/config/welcome.py:570
 msgid "On"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:273 cogs/config/welcome.py:152
+#: cogs/anilist/feed_views.py:276 cogs/config/welcome.py:152
 #: cogs/config/welcome.py:450 cogs/config/welcome.py:452
 #: cogs/config/welcome.py:454 cogs/config/welcome.py:566
 #: cogs/config/welcome.py:568 cogs/config/welcome.py:570
@@ -1083,117 +1097,117 @@ msgstr ""
 msgid "Off"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:335
+#: cogs/anilist/feed_views.py:340
 msgid "Pick the title to track..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:355 cogs/music/views.py:668
+#: cogs/anilist/feed_views.py:360 cogs/music/views.py:668
 msgid "Back"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:388 cogs/anilist/feed_views.py:436
-#: cogs/anilist/feed_views.py:461
+#: cogs/anilist/feed_views.py:393 cogs/anilist/feed_views.py:441
+#: cogs/anilist/feed_views.py:466
 msgid "Track a title"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:390
+#: cogs/anilist/feed_views.py:395
 msgid "Pick the exact title to track:"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:397 cogs/anilist/feed_views.py:641
-#: cogs/anilist/feed_views.py:919 cogs/anilist/feed_views.py:1271
-#: cogs/anilist/feed_views.py:1361 cogs/anilist/hub.py:333
+#: cogs/anilist/feed_views.py:402 cogs/anilist/feed_views.py:664
+#: cogs/anilist/feed_views.py:959 cogs/anilist/feed_views.py:1330
+#: cogs/anilist/feed_views.py:1424 cogs/anilist/hub.py:333
 #: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:242
 msgid "Only you can use these controls."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:404
+#: cogs/anilist/feed_views.py:409
 msgid "I couldn't read that selection - try again."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:416
+#: cogs/anilist/feed_views.py:421
 #, python-brace-format
 msgid "Now tracking **{title}** in this feed."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:439
+#: cogs/anilist/feed_views.py:444
 msgid "Title to search"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:497
+#: cogs/anilist/feed_views.py:502
 msgid "Stop tracking a title..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:531 cogs/anilist/feed_views.py:788
+#: cogs/anilist/feed_views.py:536 cogs/anilist/feed_views.py:811
 #: cogs/community/leveling/leveling.py:248
 #: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:601
 #: cogs/music/views.py:1605 cogs/music/views.py:2038 cogs/music/views.py:2402
 msgid "Next"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:531 cogs/anilist/feed_views.py:788
+#: cogs/anilist/feed_views.py:536 cogs/anilist/feed_views.py:811
 msgid "Previous"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:592
+#: cogs/anilist/feed_views.py:609
 msgid "Tracked releases"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:599
+#: cogs/anilist/feed_views.py:616
 #, python-brace-format
 msgid ""
 "New episodes (anime) and chapters (manga) of these titles are posted in "
 "{channel}, independently of any DM alerts. Up to {max} titles per feed."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:611
+#: cogs/anilist/feed_views.py:634
 msgid "No titles tracked yet."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:614
+#: cogs/anilist/feed_views.py:637
 #, python-brace-format
 msgid "Tracking {count}/{max}"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:662
+#: cogs/anilist/feed_views.py:685
 #, python-brace-format
 msgid "No AniList match for **{query}**."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:693
+#: cogs/anilist/feed_views.py:716
 #, python-brace-format
 msgid "Tracked releases ({count})"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:731
+#: cogs/anilist/feed_views.py:754
 msgid "Muted here - pick to unmute"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:733
+#: cogs/anilist/feed_views.py:756
 msgid "Posted here - pick to mute"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:739
+#: cogs/anilist/feed_views.py:762
 msgid "Mute or unmute a followed user..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:754
+#: cogs/anilist/feed_views.py:777
 #, python-brace-format
 msgid "**{name}** is posted in this feed again."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:762
+#: cogs/anilist/feed_views.py:785
 #, python-brace-format
 msgid ""
 "**{name}** is hidden here. They stay followed, so other feeds still "
 "receive them."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:865
+#: cogs/anilist/feed_views.py:900
 msgid "Muted users"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:872
+#: cogs/anilist/feed_views.py:907
 #, python-brace-format
 msgid ""
 "A muted user is still followed and still polled - their activity is "
@@ -1201,108 +1215,108 @@ msgid ""
 "receiving everything."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:883
+#: cogs/anilist/feed_views.py:918
 msgid "muted here"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:883
+#: cogs/anilist/feed_views.py:918
 msgid "posted"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:885
+#: cogs/anilist/feed_views.py:925
 msgid "This feed follows no one yet."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:890
+#: cogs/anilist/feed_views.py:930
 #, python-brace-format
 msgid "{count} muted user out of {total} followed"
 msgid_plural "{count} muted users out of {total} followed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/anilist/feed_views.py:936
+#: cogs/anilist/feed_views.py:976
 #, python-brace-format
 msgid "Muted here ({count})"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:963 cogs/config/twitch.py:321
+#: cogs/anilist/feed_views.py:1003 cogs/config/twitch.py:321
 #: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:963 cogs/config/twitch.py:321
+#: cogs/anilist/feed_views.py:1003 cogs/config/twitch.py:321
 #: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:989
+#: cogs/anilist/feed_views.py:1031
 msgid "Delete"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:990 cogs/community/leveling/level_admin.py:68
+#: cogs/anilist/feed_views.py:1032 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:327
 #: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:994
+#: cogs/anilist/feed_views.py:1036
 msgid "Delete this feed?"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:996
+#: cogs/anilist/feed_views.py:1038
 #, python-brace-format
 msgid ""
 "This permanently deletes the AniList feed in {channel} and everyone it "
 "follows. This cannot be undone."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1011
+#: cogs/anilist/feed_views.py:1053
 msgid "Feed deleted."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1024 cogs/moderation/moderation.py:1144
+#: cogs/anilist/feed_views.py:1066 cogs/moderation/moderation.py:1144
 #: cogs/moderation/moderation.py:1217 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1034
+#: cogs/anilist/feed_views.py:1076
 msgid "Delete feed"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1052
+#: cogs/anilist/feed_views.py:1094
 msgid "Add a follow"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1055
+#: cogs/anilist/feed_views.py:1097
 msgid "AniList username"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1083
+#: cogs/anilist/feed_views.py:1125
 #, python-brace-format
 msgid "Now following **{name}**."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1093
+#: cogs/anilist/feed_views.py:1135
 msgid "Add follow"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1123
+#: cogs/anilist/feed_views.py:1166
 msgid "Remove a follow..."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1260 cogs/anilist/feed_views.py:1288
+#: cogs/anilist/feed_views.py:1319 cogs/anilist/feed_views.py:1351
 msgid "AniList activity feed"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1263
+#: cogs/anilist/feed_views.py:1322
 #, python-brace-format
 msgid ""
 "This server has no AniList feed yet. Pick a channel below to create one "
 "(up to {max} per server)."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
+#: cogs/anilist/feed_views.py:1341 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:498
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
@@ -1310,7 +1324,7 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1282 cogs/config/settings.py:53
+#: cogs/anilist/feed_views.py:1341 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:500
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
@@ -1318,18 +1332,18 @@ msgstr ""
 msgid "Disabled"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1284
+#: cogs/anilist/feed_views.py:1343
 #, python-brace-format
 msgid "{status} ({count} recent failures)"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1290
+#: cogs/anilist/feed_views.py:1353
 msgid ""
 "Configure how AniList activity is mirrored into this server. Every change"
 " saves instantly."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1294 cogs/config/announcements.py:268
+#: cogs/anilist/feed_views.py:1357 cogs/config/announcements.py:268
 #: cogs/config/rolemenus.py:667 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:560 cogs/config/welcome.py:780
@@ -1337,15 +1351,15 @@ msgstr ""
 msgid "Channel"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1303
+#: cogs/anilist/feed_views.py:1366
 msgid "Feeds"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1316
+#: cogs/anilist/feed_views.py:1379
 msgid "Types"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1344
+#: cogs/anilist/feed_views.py:1407
 #, python-brace-format
 msgid "Following ({count})"
 msgstr ""
@@ -5008,11 +5022,6 @@ msgstr ""
 
 #: cogs/config/rooms.py:1110
 msgid "channel missing"
-msgstr ""
-
-#: cogs/config/rooms.py:1115 cogs/config/rooms_config.py:405
-#: cogs/music/playlists_shared.py:312
-msgid "(archived)"
 msgstr ""
 
 #: cogs/config/rooms.py:1118
