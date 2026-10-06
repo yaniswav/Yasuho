@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 21:45+0000\n"
+"POT-Creation-Date: 2026-10-06 22:18+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -7527,7 +7527,7 @@ msgid "I'm not connected to a voice channel."
 msgstr "Je ne suis pas connectée à un salon vocal."
 
 #: cogs/music/music.py:1148 cogs/music/music.py:2730
-#: cogs/music/playlists_shared.py:405
+#: cogs/music/playlists_shared.py:531
 msgid "You must be in my voice channel to do that."
 msgstr "Tu dois etre dans mon salon vocal pour faire ca."
 
@@ -7590,13 +7590,13 @@ msgstr "Le lecteur est déjà actif dans {channel}."
 
 #: cogs/music/music.py:2693 cogs/music/music.py:2756 cogs/music/music.py:3035
 #: cogs/music/music.py:3928 cogs/music/music.py:4047
-#: cogs/music/playlists_shared.py:550 cogs/music/playlists_shared.py:570
+#: cogs/music/playlists_shared.py:683 cogs/music/playlists_shared.py:728
 #: cogs/music/search.py:516 cogs/music/views.py:2505
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "La musique est actuellement indisponible - aucun nœud Lavalink n'est connecté."
 
 #: cogs/music/music.py:2703 cogs/music/music.py:3030 cogs/music/music.py:3945
-#: cogs/music/playlists_shared.py:412
+#: cogs/music/playlists_shared.py:538
 msgid "You must be in a voice channel first."
 msgstr "Vous devez d'abord être dans un salon vocal."
 
@@ -7823,7 +7823,7 @@ msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "{count} piste de tes favoris ajoutée à la file."
 msgstr[1] "{count} pistes de tes favoris ajoutées à la file."
 
-#: cogs/music/music.py:4009 cogs/music/playlists_shared.py:625
+#: cogs/music/music.py:4009 cogs/music/playlists_shared.py:784
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
@@ -7863,98 +7863,112 @@ msgstr "Choisissez un nombre entre 1 et {max}."
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** retiré de vos favoris."
 
-#: cogs/music/player.py:180
+#: cogs/music/player.py:238
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "Je n'ai pas pu rejoindre votre salon vocal. Veuillez réessayer."
 
-#: cogs/music/player.py:190
+#: cogs/music/player.py:248
 msgid "I am still starting up - try again in a moment."
 msgstr "Je suis encore en train de demarrer - reessaie dans un instant."
 
-#: cogs/music/playlists_shared.py:217
+#: cogs/music/playlists_shared.py:289
 #, python-brace-format
 msgid "### 🎵 Server Playlists - {guild}"
 msgstr "### 🎵 Playlists du serveur - {guild}"
 
-#: cogs/music/playlists_shared.py:226
+#: cogs/music/playlists_shared.py:298
 #, python-brace-format
 msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count} piste - {duration}"
 msgstr[1] "**{name}** - {count} pistes - {duration}"
 
-#: cogs/music/playlists_shared.py:234
+#: cogs/music/playlists_shared.py:312
+msgid "(archived)"
+msgstr "(archivée)"
+
+#: cogs/music/playlists_shared.py:313
 #, python-brace-format
 msgid "-# by {creator} - saved {date}"
 msgstr "-# par {creator} - sauvegardée {date}"
 
-#: cogs/music/playlists_shared.py:451 cogs/music/playlists_shared.py:747
+#: cogs/music/playlists_shared.py:577 cogs/music/playlists_shared.py:943
 msgid "Give the playlist a name."
 msgstr "Donne un nom à la playlist."
 
-#: cogs/music/playlists_shared.py:455 cogs/music/playlists_shared.py:751
+#: cogs/music/playlists_shared.py:581 cogs/music/playlists_shared.py:947
 #, python-brace-format
 msgid "Keep the playlist name under {max} characters."
 msgstr "Garde un nom de playlist sous {max} caractères."
 
-#: cogs/music/playlists_shared.py:468 cogs/music/playlists_shared.py:476
+#: cogs/music/playlists_shared.py:594 cogs/music/playlists_shared.py:606
 msgid "Nothing is playing - start some music before saving a playlist."
 msgstr "Rien n'est en lecture - lance de la musique avant de sauvegarder une playlist."
 
-#: cogs/music/playlists_shared.py:482
+#: cogs/music/playlists_shared.py:612
 #, python-brace-format
 msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
 msgstr "La file est trop longue - une playlist de serveur contient jusqu'à {max} pistes. Raccourcis-la et réessaie."
 
-#: cogs/music/playlists_shared.py:491 cogs/music/playlists_shared.py:517
+#: cogs/music/playlists_shared.py:623 cogs/music/playlists_shared.py:650
 #, python-brace-format
 msgid "This server already has the maximum of {max} playlists. Delete one first."
 msgstr "Ce serveur a déjà le maximum de {max} playlists. Supprimes-en une d'abord."
 
-#: cogs/music/playlists_shared.py:508 cogs/music/playlists_shared.py:766
+#: cogs/music/playlists_shared.py:641 cogs/music/playlists_shared.py:961
 #, python-brace-format
 msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
 msgstr "Une playlist nommée **{name}** existe déjà ici. Choisis un autre nom ou supprime-la d'abord."
 
-#: cogs/music/playlists_shared.py:528
+#: cogs/music/playlists_shared.py:661
 #, python-brace-format
 msgid "Saved **{name}** with {count} track ({duration})."
 msgid_plural "Saved **{name}** with {count} tracks ({duration})."
 msgstr[0] "**{name}** sauvegardée avec {count} piste ({duration})."
 msgstr[1] "**{name}** sauvegardée avec {count} pistes ({duration})."
 
-#: cogs/music/playlists_shared.py:557 cogs/music/playlists_shared.py:690
-#: cogs/music/playlists_shared.py:730
+#: cogs/music/playlists_shared.py:691 cogs/music/playlists_shared.py:864
+#: cogs/music/playlists_shared.py:905
 #, python-brace-format
 msgid "There's no server playlist called **{name}**."
 msgstr "Il n'y a pas de playlist de serveur nommée **{name}**."
 
-#: cogs/music/playlists_shared.py:577
+#: cogs/music/playlists_shared.py:714
+#, python-brace-format
+msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not loaded. See /premium for options."
+msgstr "**{name}** est archivée - ce serveur dépasse sa limite actuelle de playlists. Tu peux la supprimer, mais pas la charger. Vois /premium pour les options."
+
+#: cogs/music/playlists_shared.py:735
 #, python-brace-format
 msgid "None of **{name}**'s tracks could be loaded right now."
 msgstr "Aucune piste de **{name}** n'a pu être chargée pour le moment."
 
-#: cogs/music/playlists_shared.py:619
+#: cogs/music/playlists_shared.py:778
 #, python-brace-format
 msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "{count} piste de **{name}** ajoutée à la file."
 msgstr[1] "{count} pistes de **{name}** ajoutées à la file."
 
-#: cogs/music/playlists_shared.py:659
+#: cogs/music/playlists_shared.py:818
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
 msgstr "Ce serveur n'a pas encore de playlist. Utilise `/serverplaylist save` pour en créer une."
 
-#: cogs/music/playlists_shared.py:700 cogs/music/playlists_shared.py:740
+#: cogs/music/playlists_shared.py:874 cogs/music/playlists_shared.py:915
 msgid "Only the playlist's creator or a moderator can do that."
 msgstr "Seul le créateur de la playlist ou un modérateur peut faire ça."
 
-#: cogs/music/playlists_shared.py:705
+#: cogs/music/playlists_shared.py:879
 #, python-brace-format
 msgid "Deleted the server playlist **{name}**."
 msgstr "Playlist de serveur **{name}** supprimée."
 
-#: cogs/music/playlists_shared.py:777
+#: cogs/music/playlists_shared.py:931
+#, python-brace-format
+msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not renamed. See /premium for options."
+msgstr "**{name}** est archivée - ce serveur dépasse sa limite actuelle de playlists. Tu peux la supprimer, mais pas la renommer. Vois /premium pour les options."
+
+#: cogs/music/playlists_shared.py:972
 #, python-brace-format
 msgid "Renamed **{old}** to **{new}**."
 msgstr "**{old}** renommée en **{new}**."

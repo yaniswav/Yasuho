@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-06 21:45+0000\n"
+"POT-Creation-Date: 2026-10-06 22:18+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -7498,7 +7498,7 @@ msgid "I'm not connected to a voice channel."
 msgstr "ボイスチャンネルに接続していません。"
 
 #: cogs/music/music.py:1148 cogs/music/music.py:2730
-#: cogs/music/playlists_shared.py:405
+#: cogs/music/playlists_shared.py:531
 msgid "You must be in my voice channel to do that."
 msgstr "それを行うには、私のボイスチャンネルにいる必要があります。"
 
@@ -7560,13 +7560,13 @@ msgstr "プレイヤーはすでに {channel} でアクティブです。"
 
 #: cogs/music/music.py:2693 cogs/music/music.py:2756 cogs/music/music.py:3035
 #: cogs/music/music.py:3928 cogs/music/music.py:4047
-#: cogs/music/playlists_shared.py:550 cogs/music/playlists_shared.py:570
+#: cogs/music/playlists_shared.py:683 cogs/music/playlists_shared.py:728
 #: cogs/music/search.py:516 cogs/music/views.py:2505
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "音楽は現在利用できません - Lavalinkノードが接続されていません。"
 
 #: cogs/music/music.py:2703 cogs/music/music.py:3030 cogs/music/music.py:3945
-#: cogs/music/playlists_shared.py:412
+#: cogs/music/playlists_shared.py:538
 msgid "You must be in a voice channel first."
 msgstr "まずボイスチャンネルに参加する必要があります。"
 
@@ -7788,7 +7788,7 @@ msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "お気に入りから{count}曲をキューに追加しました。"
 
-#: cogs/music/music.py:4009 cogs/music/playlists_shared.py:625
+#: cogs/music/music.py:4009 cogs/music/playlists_shared.py:784
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
@@ -7827,95 +7827,109 @@ msgstr "1から {max} までの数を選んでください。"
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** をお気に入りから削除しました。"
 
-#: cogs/music/player.py:180
+#: cogs/music/player.py:238
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "あなたのボイスチャンネルに参加できませんでした。もう一度お試しください。"
 
-#: cogs/music/player.py:190
+#: cogs/music/player.py:248
 msgid "I am still starting up - try again in a moment."
 msgstr "まだ起動中です。少ししてからもう一度お試しください。"
 
-#: cogs/music/playlists_shared.py:217
+#: cogs/music/playlists_shared.py:289
 #, python-brace-format
 msgid "### 🎵 Server Playlists - {guild}"
 msgstr "### 🎵 サーバープレイリスト - {guild}"
 
-#: cogs/music/playlists_shared.py:226
+#: cogs/music/playlists_shared.py:298
 #, python-brace-format
 msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count}曲 - {duration}"
 
-#: cogs/music/playlists_shared.py:234
+#: cogs/music/playlists_shared.py:312
+msgid "(archived)"
+msgstr "(アーカイブ済み)"
+
+#: cogs/music/playlists_shared.py:313
 #, python-brace-format
 msgid "-# by {creator} - saved {date}"
 msgstr "-# 作成: {creator} - 保存日 {date}"
 
-#: cogs/music/playlists_shared.py:451 cogs/music/playlists_shared.py:747
+#: cogs/music/playlists_shared.py:577 cogs/music/playlists_shared.py:943
 msgid "Give the playlist a name."
 msgstr "プレイリストに名前を付けてください。"
 
-#: cogs/music/playlists_shared.py:455 cogs/music/playlists_shared.py:751
+#: cogs/music/playlists_shared.py:581 cogs/music/playlists_shared.py:947
 #, python-brace-format
 msgid "Keep the playlist name under {max} characters."
 msgstr "プレイリスト名は {max} 文字未満にしてください。"
 
-#: cogs/music/playlists_shared.py:468 cogs/music/playlists_shared.py:476
+#: cogs/music/playlists_shared.py:594 cogs/music/playlists_shared.py:606
 msgid "Nothing is playing - start some music before saving a playlist."
 msgstr "何も再生されていません。プレイリストを保存する前に音楽を再生してください。"
 
-#: cogs/music/playlists_shared.py:482
+#: cogs/music/playlists_shared.py:612
 #, python-brace-format
 msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
 msgstr "キューが長すぎて保存できません。サーバープレイリストは最大 {max} 曲までです。減らしてからお試しください。"
 
-#: cogs/music/playlists_shared.py:491 cogs/music/playlists_shared.py:517
+#: cogs/music/playlists_shared.py:623 cogs/music/playlists_shared.py:650
 #, python-brace-format
 msgid "This server already has the maximum of {max} playlists. Delete one first."
 msgstr "このサーバーはすでに上限の {max} 件のプレイリストがあります。先に1件削除してください。"
 
-#: cogs/music/playlists_shared.py:508 cogs/music/playlists_shared.py:766
+#: cogs/music/playlists_shared.py:641 cogs/music/playlists_shared.py:961
 #, python-brace-format
 msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
 msgstr "**{name}** という名前のプレイリストはすでに存在します。別の名前にするか、先に削除してください。"
 
-#: cogs/music/playlists_shared.py:528
+#: cogs/music/playlists_shared.py:661
 #, python-brace-format
 msgid "Saved **{name}** with {count} track ({duration})."
 msgid_plural "Saved **{name}** with {count} tracks ({duration})."
 msgstr[0] "**{name}** を {count}曲で保存しました ({duration})。"
 
-#: cogs/music/playlists_shared.py:557 cogs/music/playlists_shared.py:690
-#: cogs/music/playlists_shared.py:730
+#: cogs/music/playlists_shared.py:691 cogs/music/playlists_shared.py:864
+#: cogs/music/playlists_shared.py:905
 #, python-brace-format
 msgid "There's no server playlist called **{name}**."
 msgstr "**{name}** というサーバープレイリストはありません。"
 
-#: cogs/music/playlists_shared.py:577
+#: cogs/music/playlists_shared.py:714
+#, python-brace-format
+msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not loaded. See /premium for options."
+msgstr "**{name}** はアーカイブされています - このサーバーは現在のプレイリスト上限を超えています。削除はできますが、読み込むことはできません。詳しくは /premium をご覧ください。"
+
+#: cogs/music/playlists_shared.py:735
 #, python-brace-format
 msgid "None of **{name}**'s tracks could be loaded right now."
 msgstr "**{name}** の曲は今のところ1曲も読み込めませんでした。"
 
-#: cogs/music/playlists_shared.py:619
+#: cogs/music/playlists_shared.py:778
 #, python-brace-format
 msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "**{name}** から {count}曲をキューに追加しました。"
 
-#: cogs/music/playlists_shared.py:659
+#: cogs/music/playlists_shared.py:818
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
 msgstr "このサーバーにはまだプレイリストがありません。`/serverplaylist save` で作成できます。"
 
-#: cogs/music/playlists_shared.py:700 cogs/music/playlists_shared.py:740
+#: cogs/music/playlists_shared.py:874 cogs/music/playlists_shared.py:915
 msgid "Only the playlist's creator or a moderator can do that."
 msgstr "プレイリストの作成者かモデレーターのみ実行できます。"
 
-#: cogs/music/playlists_shared.py:705
+#: cogs/music/playlists_shared.py:879
 #, python-brace-format
 msgid "Deleted the server playlist **{name}**."
 msgstr "サーバープレイリスト **{name}** を削除しました。"
 
-#: cogs/music/playlists_shared.py:777
+#: cogs/music/playlists_shared.py:931
+#, python-brace-format
+msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not renamed. See /premium for options."
+msgstr "**{name}** はアーカイブされています - このサーバーは現在のプレイリスト上限を超えています。削除はできますが、名前を変更することはできません。詳しくは /premium をご覧ください。"
+
+#: cogs/music/playlists_shared.py:972
 #, python-brace-format
 msgid "Renamed **{old}** to **{new}**."
 msgstr "**{old}** を **{new}** に名前変更しました。"
