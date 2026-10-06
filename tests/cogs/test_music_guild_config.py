@@ -21,7 +21,7 @@ import types
 
 import pytest
 
-from cogs.music import guild_config, music, sponsorblock, voteskip
+from cogs.music import always_on, guild_config, music, sponsorblock, voteskip
 from cogs.system import dashboard_music_actions, dashboard_sync
 from tools import settings, snowflake
 
@@ -335,6 +335,7 @@ class _BirthCog:
 
     def __init__(self, pool):
         self.bot = types.SimpleNamespace(db_pool=pool)
+        self.always_on = always_on.AlwaysOnStore()
 
     _settings_pool = music.Music._settings_pool
     _init_autoplay = music.Music._init_autoplay

@@ -13,6 +13,7 @@ from discord.ext import commands, tasks
 from sonolink.rest.enums import TrackSourceType
 
 from cogs.music import (
+    always_on,
     effects,
     failures,
     guild_config,
@@ -46,6 +47,7 @@ from cogs.music.player import (
 from cogs.music.playlists_shared import ServerPlaylistMixin
 from tools import i18n, music_state, premium, settings
 from tools.i18n import _, ngettext
+from tools.premium import resolve_guild_limits
 from tools.premium_archive import ArchivalResult
 from tools.premium_archive import classify as classify_archival
 from tools.quotas import QuotaRegistry
@@ -1133,6 +1135,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
         self.track_failures = failures.TrackFailureBursts()
         # Monotonic timestamp of the last quota-stats heartbeat log (see _idle_check).
         self._last_quota_log = time.monotonic()
+        # 24/7 music (Yasuho+ M4b): the stored setting + live suspension cache
+        # (cogs/music/always_on.py). Lives on the cog for the process, loaded
+        # once (see _before_idle_check and _maybe_restore).
+        self.always_on = always_on.AlwaysOnStore()
+        # Guards the reconnect-rejoin pass (see _rejoin_247_after_reconnect)
+        # against overlapping itself on a rapid run of node_ready events.
+        self._reconnect_rejoin_running = False
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -1717,7 +1726,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
         Order matters: autoplay is armed before anything can start playing, the
         volume lands before the first track, and SponsorBlock's categories PUT is
         backgrounded last so its 404-retry never delays the caller.
+
+        Also lifts a 24/7 suspension (always_on.py): this seam is shared by
+        every HUMAN-initiated fresh connect (``/play``, the vibe card's genre
+        start, the server-playlist / favourites connect) and NONE of the
+        automatic ones (cold restore, the reconnect-rejoin pass), which is
+        exactly "the next explicit /play" the suspension rule calls for.
         """
+        guild_id = playerinfo.guild_id_of(player)
+        self.always_on.lift_suspend(guild_id)
         await self._init_autoplay(player, member.id)
         await self._apply_default_volume(player)
         if await guild_config.sponsorblock_enabled(
@@ -2130,6 +2147,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if humans:
             return
 
+        if self._is_247_active(channel.guild.id):
+            # 24/7: stay put, silently, even with nobody left in the room.
+            return
+
         await asyncio.sleep(15)
 
         channel = player.channel
@@ -2181,6 +2202,31 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return True
         return False
 
+    def _is_247_active(self, guild_id: typing.Optional[int]) -> bool:
+        """Whether 24/7 (Yasuho+ M4b) should keep ``guild_id`` connected now.
+
+        Every check here is a plain cache read - :class:`always_on.AlwaysOnStore`
+        (dict/set lookups) and :func:`resolve_guild_limits` (sonolink's own
+        synchronous, defensive cache) - so this adds no ``await`` and no query
+        on either hot path that calls it (the 60s idle tick, the empty-channel
+        voice-state listener): a guild that never configured 24/7 pays one
+        dict miss, exactly like today.
+
+        A SUSPENDED guild (someone else disconnected the bot, or an explicit
+        ``/music disconnect``/``/stop``-adjacent action - see always_on.py)
+        reads as inactive here even if it is still configured and entitled:
+        that is the whole mechanism that stops an auto-rejoin loop, since the
+        idle/empty-channel paths that would otherwise leave the player alone
+        simply see "not 24/7 right now" and fall back to normal behaviour.
+        """
+        if guild_id is None:
+            return False
+        if not self.always_on.is_enabled(guild_id):
+            return False
+        if self.always_on.is_suspended(guild_id):
+            return False
+        return resolve_guild_limits(self.bot, guild_id).music_247
+
     @tasks.loop(seconds=60)
     async def _idle_check(self) -> None:
         """Disconnect players that have stayed idle longer than ``IDLE_TIMEOUT``."""
@@ -2214,7 +2260,18 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     if controller is not None:
                         pending.append((voice_client, controller))
                 if self._is_idle(voice_client):
-                    if voice_client.idle_since is None:
+                    guild_id = playerinfo.guild_id_of(voice_client)
+                    if self._is_247_active(guild_id):
+                        # 24/7: never time out for idleness or an empty
+                        # channel. Reset the clock rather than freezing it, so
+                        # a guild that loses 24/7 mid-session (expiry, a
+                        # revocation) starts a FRESH IDLE_TIMEOUT countdown
+                        # from the next tick, instead of disconnecting the
+                        # instant it stops being entitled because the clock
+                        # had already been running underneath for however
+                        # long 24/7 was masking it.
+                        voice_client.idle_since = None
+                    elif voice_client.idle_since is None:
                         voice_client.idle_since = now
                     elif now - voice_client.idle_since >= IDLE_TIMEOUT:
                         log.info(
@@ -2254,6 +2311,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
     @_idle_check.before_loop
     async def _before_idle_check(self) -> None:
         await self.bot.wait_until_ready()
+        # Warm the 24/7 cache before the very first tick can run - ensure_loaded
+        # is idempotent (one-shot internally) and also called from
+        # _maybe_restore, so whichever runs first actually hits the database.
+        try:
+            await self.always_on.ensure_loaded(self.bot.db_pool)
+        except Exception:
+            log.exception("Failed to load 24/7 settings before the idle loop started")
 
     @_idle_check.error
     async def _idle_check_error(self, error: BaseException) -> None:
@@ -2294,7 +2358,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await music_state.save_session(
             self.bot.db_pool, music_state.MUSIC_NODE_ID, event.session_id
         )
+        # Captured BEFORE _maybe_restore (which flips it True on its one run):
+        # True here means the startup restore already happened, so THIS
+        # node_ready is a genuine RECONNECT, not the first connect - see
+        # _rejoin_247_after_reconnect for why 24/7 needs its own rejoin pass
+        # for one of those and not the other.
+        was_restored = self._restored
         await self._maybe_restore()
+        if was_restored:
+            await self._rejoin_247_after_reconnect()
 
     async def _maybe_restore(self) -> None:
         """Run the one-shot startup restore from whichever trigger fires first.
@@ -2315,9 +2387,17 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         self._restored = True
         try:
+            await self.always_on.ensure_loaded(self.bot.db_pool)
+        except Exception:
+            log.exception("Failed to load 24/7 settings before the startup restore")
+        try:
             await self._restore_players()
         except Exception:
             log.exception("Music startup restore failed")
+        try:
+            await self._restore_247_bare_joins()
+        except Exception:
+            log.exception("24/7 startup bare-join pass failed")
 
     async def _restore_players(self) -> None:
         """Rejoin and resume every recently-active player, bounded-concurrently.
@@ -2364,8 +2444,16 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await self._clear(guild_id)
             return
 
-        # Nobody left to listen -> do not rejoin.
-        if not any(not m.bot for m in channel.members):
+        # Nobody left to listen -> do not rejoin. 24/7 (Yasuho+ M4b) is the
+        # one exception: the whole point of the feature is staying connected
+        # (and, at restart, rejoining) even when the room has emptied out -
+        # see always_on.py. This same check, reused unchanged, is also what
+        # the node-reconnect rejoin pass runs through (_reconnect_rejoin_one),
+        # so a 24/7 guild resumes there too even if the channel is empty right
+        # now.
+        if not any(not m.bot for m in channel.members) and not self._is_247_active(
+            guild_id
+        ):
             await self._clear(guild_id)
             return
 
@@ -2515,6 +2603,259 @@ class Music(ServerPlaylistMixin, commands.Cog):
             "text" if home_text is not None else "voice-fallback",
             "ok" if player.controller is not None else "missing",
         )
+
+    # ------------------------------------------------------------------
+    # 24/7 music (Yasuho+ M4b): restore at boot, rejoin after a Lavalink
+    # reconnect, and the shared bounded-concurrency / global-ceiling admission
+    # the two share.
+    # ------------------------------------------------------------------
+
+    async def _restore_247_bare_joins(self) -> None:
+        """Boot-time pass: silently join every entitled, non-suspended 24/7
+        guild that ``_restore_players`` above did not already reconnect.
+
+        A guild with a saved, fresh ``music_state`` row was just handled by
+        the normal cold-restore path (now 24/7-aware itself - see
+        ``_restore_one``'s empty-channel exception). This pass only picks up
+        the other two cases: a 24/7 guild with NO saved row (nothing was
+        playing when the bot went down - "one without a queue just joins",
+        per the spec), and one whose row WAS too stale to resume
+        (``RESTORE_MAX_AGE``) and got cleared. Either way, by the time this
+        runs, such a guild has no voice client yet.
+        """
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        rows = await music_state.load_all_states(self.bot.db_pool)
+        by_guild = {row["guild_id"]: row for row in rows}
+        candidates = []
+        for guild_id in self.always_on.ordered_guild_ids():
+            if not self._is_247_active(guild_id):
+                continue
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                # Soft skip, not an auto-off: at boot this is as likely to be
+                # a guild this shard has not finished chunking in yet as it
+                # is a genuine departure - a real departure is handled by
+                # on_guild_remove (always_on.py's module docstring) and the
+                # 30-day purge, never by disabling a paying guild's feature
+                # on a cache-not-ready race. The next reconnect/restart tries
+                # again.
+                continue
+            if isinstance(guild.voice_client, Player):
+                continue  # already reconnected above
+            candidates.append(guild_id)
+        await self._admit_and_join(candidates, by_guild, label="boot")
+
+    async def _rejoin_247_after_reconnect(self) -> None:
+        """After a Lavalink node RECONNECT (not the first connect), rejoin
+        every 24/7 guild whose player the node drop killed server-side.
+
+        core.py's node is created with ``resume_timeout=0`` (no cross-restart
+        OR cross-reconnect session resume), so when the node comes back every
+        in-flight player's LAVALINK-side state is gone even though the local
+        ``Player`` object is usually still sitting in ``bot.voice_clients``
+        (sonolink's own ``node.close()`` never tears a player's DISCORD voice
+        connection down - only the Lavalink-side registration is lost; see
+        ``cogs/music/always_on.py`` for the disconnect-classification this
+        pairs with). Patching that zombie object risks silently doing nothing
+        if its node-side state really is gone, so every admitted guild is
+        force-disconnected FIRST (a clean local slate - ``classify_player_
+        disconnect`` reads this as ``MANUAL``, never a suspend-worthy
+        external disconnect) and then rejoined exactly like a cold restore:
+        with its saved queue/position if ``music_state`` still has a fresh
+        row, bare otherwise.
+
+        Guarded against overlapping itself (``_reconnect_rejoin_running``) so
+        a rapid flap of node_ready events cannot run two passes at once.
+        """
+        if self._reconnect_rejoin_running:
+            return
+        self._reconnect_rejoin_running = True
+        try:
+            await self.always_on.ensure_loaded(self.bot.db_pool)
+            guild_ids = [
+                guild_id
+                for guild_id in self.always_on.ordered_guild_ids()
+                if self._is_247_active(guild_id)
+            ]
+            if not guild_ids:
+                return
+            log.info(
+                "Lavalink node reconnected; re-checking %d 24/7 guild(s)",
+                len(guild_ids),
+            )
+            rows = await music_state.load_all_states(self.bot.db_pool)
+            by_guild = {row["guild_id"]: row for row in rows}
+            for guild_id in guild_ids:
+                guild = self.bot.get_guild(guild_id)
+                existing = getattr(guild, "voice_client", None) if guild else None
+                if isinstance(existing, Player):
+                    try:
+                        await existing.disconnect(force=True)
+                    except Exception:
+                        log.exception(
+                            "Failed to clear a stale 24/7 player for guild %s",
+                            guild_id,
+                        )
+                    await self._clear(guild_id)
+            await self._admit_and_join(guild_ids, by_guild, label="reconnect")
+        finally:
+            self._reconnect_rejoin_running = False
+
+    async def _admit_and_join(
+        self,
+        guild_ids: typing.List[int],
+        by_guild: typing.Dict[int, typing.Any],
+        *,
+        label: str,
+    ) -> None:
+        """Admit ``guild_ids`` under the global 24/7 ceiling, then join them
+        bounded-concurrently (``RESTORE_CONCURRENCY``), reusing the saved
+        queue (``_restore_one``) when ``by_guild`` has a fresh row for a
+        guild, or a bare join (``_bare_join_247``) otherwise.
+
+        Oldest-enabled guilds are admitted first (``ordered_guild_ids``'s
+        order, preserved by both callers): the two-layer story is one channel
+        per guild (enforced at enable time) and this GLOBAL ceiling
+        (``MAX_247_SESSIONS``) on top, and an existing session is kept over
+        admitting a new one past the cap - the same "oldest stays" posture
+        the rest of this codebase's commercial limits already use.
+        """
+        if not guild_ids:
+            return
+        budget = max(
+            0,
+            always_on.MAX_247_SESSIONS
+            - always_on.count_active_sessions(self.bot, self.always_on),
+        )
+        admitted = guild_ids[:budget]
+        skipped = len(guild_ids) - len(admitted)
+        if skipped:
+            log.warning(
+                "MUSIC-247-CEILING skipped=%d admitted=%d max=%d label=%s",
+                skipped,
+                len(admitted),
+                always_on.MAX_247_SESSIONS,
+                label,
+            )
+        if not admitted:
+            return
+
+        semaphore = asyncio.Semaphore(RESTORE_CONCURRENCY)
+        now = datetime.now(timezone.utc)
+
+        async def _guarded(guild_id: int) -> None:
+            async with semaphore:
+                try:
+                    row = by_guild.get(guild_id)
+                    if row is not None:
+                        await self._restore_one(row, now)
+                    else:
+                        await self._bare_join_247(guild_id)
+                except Exception:
+                    log.exception(
+                        "24/7 %s rejoin failed for guild %s", label, guild_id
+                    )
+
+        await asyncio.gather(*(_guarded(guild_id) for guild_id in admitted))
+
+    async def _bare_join_247(self, guild_id: int) -> None:
+        """Silently join a 24/7 guild's configured channel with no queue."""
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            return
+        channel_id = self.always_on.channel_id(guild_id)
+        channel = guild.get_channel(channel_id) if channel_id else None
+        if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+            await self._turn_off_247(guild_id, reason="channel-deleted")
+            return
+        try:
+            player = await connect_player(channel)
+        except VoiceConnectFailed:
+            # No Lavalink node ready yet, or Discord refused the connect for
+            # a reason that already comes back worded for a human - neither
+            # is this guild's fault. Leave 24/7 configured; the next
+            # reconnect/restart trigger tries again.
+            return
+        except discord.Forbidden:
+            await self._turn_off_247(guild_id, reason="no-permission")
+            return
+        except discord.HTTPException:
+            log.warning(
+                "24/7 bare join failed for guild %s (Discord HTTP error)",
+                guild_id,
+                exc_info=True,
+            )
+            return
+        player.home = channel
+        log.info("24/7 bare-joined guild %s in channel %s", guild_id, channel_id)
+
+    async def _turn_off_247(self, guild_id: int, *, reason: str) -> None:
+        """Disable 24/7 for ``guild_id`` and log the one greppable line.
+
+        Used for the three auto-off triggers the feature can detect on its
+        own: the configured channel no longer resolves ("channel-deleted",
+        checked both when we are about to join and reactively when Discord
+        force-closes the voice call - see ``on_sonolink_player_disconnect``),
+        and a refused connect ("no-permission"). A guild that is merely not
+        entitled right now, or whose guild object is not in cache yet, is NOT
+        turned off here - see ``_is_247_active`` and ``_restore_247_bare_joins``.
+        """
+        try:
+            await self.always_on.disable(self.bot.db_pool, guild_id)
+        except Exception:
+            log.exception(
+                "Failed to persist 24/7 auto-off for guild %s (reason=%s)",
+                guild_id,
+                reason,
+            )
+            return
+        log.warning("MUSIC-247-OFF guild=%s reason=%s", guild_id, reason)
+
+    @commands.Cog.listener()
+    async def on_sonolink_player_disconnect(self, player: Player, event) -> None:
+        """Decide what a sonolink disconnect means for 24/7 - nothing else.
+
+        Every other effect of a disconnect (clearing ``music_state``,
+        dropping the controller) already happens at whichever call site
+        triggered it (our own ``/music disconnect``, the idle teardown, the
+        empty-channel auto-leave) or is simply not this listener's job (node
+        churn is recovered by ``_rejoin_247_after_reconnect`` instead). This
+        listener only reacts when :func:`always_on.classify_player_disconnect`
+        says :data:`always_on.EXTERNAL` - Discord itself ended the call, with
+        nothing our own code decided.
+        """
+        guild_id = playerinfo.guild_id_of(player)
+        if guild_id is None or not self.always_on.is_enabled(guild_id):
+            return
+        kind = always_on.classify_player_disconnect(event)
+        if kind != always_on.EXTERNAL:
+            return
+        guild = self.bot.get_guild(guild_id)
+        channel_id = self.always_on.channel_id(guild_id)
+        channel = guild.get_channel(channel_id) if guild and channel_id else None
+        if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+            await self._turn_off_247(guild_id, reason="channel-deleted")
+            return
+        if self.always_on.suspend(guild_id):
+            log.info(
+                "24/7 suspended for guild %s (disconnected by someone else)",
+                guild_id,
+            )
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """Drop a departed guild's 24/7 setting from the cache right away.
+
+        The row itself survives the usual 30-day grace purge
+        (tools/retention.py), same as every other guild-scoped table - this
+        only keeps the IN-MEMORY cache (ceiling counts, the restore/reconnect
+        candidate lists) from holding a guild we can no longer reach the
+        instant it leaves, rather than waiting on a cache that is only ever
+        reloaded at process start.
+        """
+        if self.always_on.is_enabled(guild.id):
+            self.always_on.evict(guild.id)
+            log.warning("MUSIC-247-OFF guild=%s reason=bot-removed", guild.id)
 
     # ------------------------------------------------------------------
     # Commands
@@ -3661,7 +4002,175 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return
         await player.disconnect()
         await self._clear(ctx.guild.id)
-        await ctx.send(_("Disconnected from the voice channel."))
+        # An explicit disconnect by someone with DJ rights pauses 24/7 for the
+        # rest of the session (classify_player_disconnect will read this as
+        # OUR OWN disconnect - trigger MANUAL - so this is the only place that
+        # has to say so; suspend() is a no-op, returning False, for a guild
+        # that never had 24/7 configured).
+        if self.always_on.suspend(ctx.guild.id):
+            await ctx.send(
+                _(
+                    "Disconnected from the voice channel. 24/7 is paused for "
+                    "this server until you /play again or re-enable it."
+                )
+            )
+        else:
+            await ctx.send(_("Disconnected from the voice channel."))
+
+    # ------------------------------------------------------------------
+    # 24/7 music (Yasuho+ M4b)
+    #
+    # No existing Discord-side command surface to extend: every other music
+    # config key (cogs/music/guild_config.py) is dashboard-only, written by
+    # the Node process straight into guild_settings, with no slash/prefix
+    # command of its own. 24/7 gets one, nested under /music (zero extra
+    # top-level command slots - see the module's own capacity note above),
+    # gated like every other admin-config group in this codebase
+    # (``commands.has_permissions(manage_guild=True)`` - e.g. /levelconfig,
+    # /ticket, /automod), not the DJ/mod playback gate the rest of /music
+    # uses: this changes server CONFIGURATION, not who may drive a live
+    # session.
+    # ------------------------------------------------------------------
+
+    @music.group(name="alwayson")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def alwayson(self, ctx: commands.Context) -> None:
+        """Configure 24/7 music (Yasuho+): enable, disable, status."""
+        if ctx.invoked_subcommand is None:
+            await self._send_alwayson_status(ctx)
+
+    @alwayson.command(name="enable")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(channel="The voice channel to stay connected in.")
+    async def alwayson_enable(
+        self,
+        ctx: commands.Context,
+        channel: typing.Union[discord.VoiceChannel, discord.StageChannel],
+    ) -> None:
+        """Turn on 24/7 music in a voice channel (Yasuho+)."""
+        limits = resolve_guild_limits(self.bot, ctx.guild.id)
+        if not limits.music_247:
+            await ctx.send(
+                _("24/7 music is part of Yasuho+. See /premium for options."),
+                ephemeral=True,
+            )
+            return
+
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        # A guild that is already an active 24/7 session (re-picking its
+        # channel, or re-enabling after a suspend) does not need a fresh
+        # ceiling slot - it already holds one. Only a guild NOT currently
+        # counted needs the capacity check before admission.
+        already_active = isinstance(
+            ctx.guild.voice_client, Player
+        ) and self._is_247_active(ctx.guild.id)
+        if not already_active:
+            active = always_on.count_active_sessions(self.bot, self.always_on)
+            if active >= always_on.MAX_247_SESSIONS:
+                await ctx.send(
+                    _(
+                        "Yasuho+ 24/7 is at capacity right now ({max} "
+                        "servers). Please try again later."
+                    ).format(max=always_on.MAX_247_SESSIONS),
+                    ephemeral=True,
+                )
+                return
+
+        await self.always_on.enable(self.bot.db_pool, ctx.guild.id, channel.id)
+
+        player = ctx.guild.voice_client
+        if not isinstance(player, Player):
+            try:
+                player = await connect_player(channel)
+            except VoiceConnectFailed as exc:
+                # Both refusals (Discord said no, no Lavalink node is ready
+                # yet) come back already worded - see player.connect_player.
+                # The setting itself stays configured; the restore/reconnect
+                # passes (or another /music alwayson enable) try again.
+                await ctx.send(
+                    _(
+                        "24/7 is now configured for {channel}, but I could "
+                        "not join yet: {reason}"
+                    ).format(channel=channel.mention, reason=exc.message)
+                )
+                return
+            except discord.Forbidden:
+                await self.always_on.disable(self.bot.db_pool, ctx.guild.id)
+                log.warning(
+                    "MUSIC-247-OFF guild=%s reason=no-permission", ctx.guild.id
+                )
+                await ctx.send(
+                    _(
+                        "I do not have permission to join {channel} (I need "
+                        "Connect and Speak there). 24/7 was not enabled."
+                    ).format(channel=channel.mention)
+                )
+                return
+            player.home = ctx.channel
+        await ctx.send(
+            _("24/7 is on for {channel}. I will stay connected there.").format(
+                channel=channel.mention
+            )
+        )
+
+    @alwayson.command(name="disable")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def alwayson_disable(self, ctx: commands.Context) -> None:
+        """Turn off 24/7 music for this server."""
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        if not self.always_on.is_enabled(ctx.guild.id):
+            await ctx.send(_("24/7 is already off for this server."))
+            return
+        await self.always_on.disable(self.bot.db_pool, ctx.guild.id)
+        await ctx.send(
+            _(
+                "24/7 is now off for this server. I will leave like normal "
+                "when idle or empty."
+            )
+        )
+
+    @alwayson.command(name="status")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def alwayson_status(self, ctx: commands.Context) -> None:
+        """Show this server's 24/7 configuration."""
+        await self._send_alwayson_status(ctx)
+
+    async def _send_alwayson_status(self, ctx: commands.Context) -> None:
+        """The shared body of a bare ``/music alwayson`` and its ``status``
+        subcommand - see the ``levelconfig``/``_send_overview`` precedent."""
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        channel_id = self.always_on.channel_id(ctx.guild.id)
+        if channel_id is None:
+            await ctx.send(
+                _("24/7 is off for this server. See /premium to turn it on.")
+            )
+            return
+        channel = ctx.guild.get_channel(channel_id)
+        channel_text = (
+            channel.mention if channel is not None else _("an unknown channel")
+        )
+        limits = resolve_guild_limits(self.bot, ctx.guild.id)
+        if not limits.music_247:
+            await ctx.send(
+                _(
+                    "24/7 is configured for {channel} (inactive - needs "
+                    "Yasuho+)."
+                ).format(channel=channel_text)
+            )
+            return
+        if self.always_on.is_suspended(ctx.guild.id):
+            await ctx.send(
+                _(
+                    "24/7 is configured for {channel}, but paused until the "
+                    "next /play or restart (someone disconnected me)."
+                ).format(channel=channel_text)
+            )
+            return
+        await ctx.send(_("24/7 is on for {channel}.").format(channel=channel_text))
 
     # ------------------------------------------------------------------
     # Audio effects

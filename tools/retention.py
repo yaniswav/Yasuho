@@ -135,6 +135,14 @@ GUILD_DELETE_QUERIES = (
     ),
     ("music_state", "DELETE FROM music_state WHERE guild_id = $1"),
     (
+        # 24/7 music (Yasuho+ M4b). The stored admin intent (cogs/music/
+        # always_on.py) outlives an expired subscription (read-and-archived,
+        # never deleted by expiry alone), but it does not outlive the GUILD -
+        # same rule as every other guild-scoped row here.
+        "music_247",
+        "DELETE FROM music_247 WHERE guild_id = $1",
+    ),
+    (
         "custom_commands",
         "DELETE FROM custom_commands WHERE guild_id = $1",
     ),
@@ -242,6 +250,7 @@ UNION SELECT guild_id FROM tickets
 UNION SELECT guild_id FROM button_roles
 UNION SELECT guild_id FROM guild_playlists
 UNION SELECT guild_id FROM music_state
+UNION SELECT guild_id FROM music_247
 UNION SELECT guild_id FROM custom_commands
 UNION SELECT guild_id FROM role_menus
 UNION SELECT guild_id FROM anilist_feeds

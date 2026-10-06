@@ -28,7 +28,7 @@ import types
 
 import pytest
 
-from cogs.music import music
+from cogs.music import always_on, music
 
 
 class _FakePlayer:
@@ -54,6 +54,7 @@ def _cog(bot=None, players=()):
     cog.bot = bot or types.SimpleNamespace(voice_clients=list(players))
     cog._last_quota_log = time.monotonic()
     cog.quotas = types.SimpleNamespace(stats=lambda: {})
+    cog.always_on = always_on.AlwaysOnStore()
     return cog
 
 

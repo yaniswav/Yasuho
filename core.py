@@ -526,6 +526,19 @@ class Yasuho(commands.Bot):
                 # with its own backoff - sonolink's retries only bound one
                 # burst, never the bot's lifetime.
                 retries=LAVALINK_NODE_RETRIES,
+                # Disarm sonolink's OWN built-in idle auto-disconnect
+                # (gateway/player/handlers/_inactivity.py - a 300s timer, mode
+                # ALL_BOTS, armed by default on every player this node creates).
+                # It runs independently of, and races, cogs/music/music.py's own
+                # idle-timeout loop (also 300s) - for a free guild the two just
+                # agree and nothing is visible, but 24/7 (M4b) can only keep a
+                # guild connected through code THIS bot controls; a node-level
+                # timer neither cog nor its 24/7 guard can see would silently
+                # disconnect an entitled guild's player out from under it. Our
+                # own loop is the only idle-disconnect authority from here on;
+                # music.py's IDLE_TIMEOUT is unchanged (still 300s) so a FREE
+                # guild's behaviour is byte-identical to before this.
+                inactivity_settings=sonolink.models.InactivitySettings(timeout=None),
             )
         except Exception:
             log.exception("Failed to register the Lavalink node; music disabled")

@@ -804,6 +804,22 @@ CREATE TABLE IF NOT EXISTS music_node_session (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 24/7 music (Yasuho+ M4b): one voice channel an admin picked for this guild to
+-- stay connected in. Presence of a row is the stored ADMIN INTENT, kept even
+-- while the guild is not currently entitled (M4b's "no job" expiry rule - see
+-- cogs/music/always_on.py's module docstring): the row is read-and-archived,
+-- never deleted, by a lapsed subscription. It is deleted only by an explicit
+-- disable, an auto-off (channel deleted / no permission - see
+-- cogs/music/music.py's MUSIC-247-OFF log line), or the guild's own 30-day
+-- departure purge (tools/retention.py). Suspension (a human disconnected the
+-- bot) is runtime-only and deliberately NOT a column here - see
+-- cogs/music/always_on.py.  cogs/music/always_on.py, cogs/music/music.py
+CREATE TABLE IF NOT EXISTS music_247 (
+    guild_id   BIGINT      PRIMARY KEY,
+    channel_id BIGINT      NOT NULL,
+    enabled_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
 -- ============================================================

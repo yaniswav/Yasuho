@@ -68,7 +68,7 @@ from discord.ext import commands
 
 import core
 
-from cogs.music import music
+from cogs.music import always_on, music
 from tools import music_state
 
 # ---------------------------------------------------------------------------
@@ -979,6 +979,8 @@ def _make_cog(bot):
     cog.bot = bot
     cog._restored = False
     cog.restore_calls = 0
+    cog.always_on = always_on.AlwaysOnStore()
+    cog._reconnect_rejoin_running = False
 
     async def _fake_restore_players():
         cog.restore_calls += 1

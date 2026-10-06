@@ -69,13 +69,6 @@ _GATING_CHECKS = frozenset(
 # must use the per-command EXEMPT below instead, so the privileged ones stay
 # individually visible.
 EXEMPT_GROUPS = {
-    "music": (
-        "playback surface for every listener. Control actions are authorized "
-        "IN-BODY by _require_player(control=True): the invoker must share the "
-        "bot's voice channel and be the session DJ or hold Manage Server, the "
-        "same gate the controller buttons use. A permission decorator here "
-        "would lock ordinary listeners out of their own music."
-    ),
     "playlist": "self-scoped: the caller's own saved playlists",
     "info": "read-only: public member/guild/bot information",
     "lookup": "read-only: external lookups (wiki, weather, osu, ...)",
@@ -153,6 +146,30 @@ EXEMPT = {
         "shared state, but gated IN-BODY by can_manage(author, creator_id, "
         "manage_guild): creator or moderator only"
     ),
+    # -- playback surface for every listener (music group) -------------------
+    # "music" moved OUT of EXEMPT_GROUPS (M4b): it now mixes these public
+    # playback subcommands with the privileged "alwayson" config subgroup
+    # (has_permissions(manage_guild=True), correctly gated and NOT listed
+    # here). Each one below is authorized IN-BODY by
+    # _require_player(control=True): the invoker must share the bot's voice
+    # channel and be the session DJ or hold Manage Server, the same gate the
+    # controller buttons use. A permission decorator here would lock ordinary
+    # listeners out of their own music.
+    "music search": (
+        "playback surface for every listener, gated in-body by "
+        "_require_player(control=True) same as every other music subcommand"
+    ),
+    "music previous": "playback surface for every listener, gated in-body (see above)",
+    "music seek": "playback surface for every listener, gated in-body (see above)",
+    "music shuffle": "playback surface for every listener, gated in-body (see above)",
+    "music clearqueue": "playback surface for every listener, gated in-body (see above)",
+    "music loop": "playback surface for every listener, gated in-body (see above)",
+    "music played": (
+        "read-only: what this session has already played, no control gate needed"
+    ),
+    "music disconnect": "playback surface for every listener, gated in-body (see above)",
+    "music filter": "playback surface for every listener, gated in-body (see above)",
+    "music lyrics": "playback surface for every listener, gated in-body (see above)",
     # -- public read-only ----------------------------------------------------
     "starboard top": (
         "read-only public leaderboard of messages the starboard already posts "

@@ -207,12 +207,17 @@ def _connect_callers():
 
 
 def test_every_entry_point_that_starts_a_session_handles_the_refusal():
-    """The coverage claim, spelled out: three member-facing entry points, plus
-    the cold restore (whose caller isolates each guild's failure already)."""
+    """The coverage claim, spelled out: three member-facing entry points, the
+    cold restore (whose caller isolates each guild's failure already), and
+    24/7's (Yasuho+ M4b) two join sites - the admin command and the silent
+    bare-join the restore/reconnect passes share - both of which catch the
+    refusal exactly like every other member-facing entry point."""
 
     assert _connect_callers() == {
         ("music", "_play_query"): True,
         ("music", "_start_genre"): True,
         ("music", "_restore_one"): False,
+        ("music", "alwayson_enable"): True,
+        ("music", "_bare_join_247"): True,
         ("playlists_shared", "_connect_for_playlist"): True,
     }
