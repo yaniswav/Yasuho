@@ -107,3 +107,14 @@ secrets) - copy them from the `*.template.ini` files and fill in:
 
 - [Terms of Service](TERMS.md)
 - [Privacy Policy](PRIVACY.md)
+
+## License
+
+Copyright (C) 2024-2026 Yanis (Horizon Vista).
+
+Yasuho is free software, licensed under the **GNU Affero General Public License
+v3.0** (see [LICENSE](LICENSE)): you may use, study, modify and share it, and if
+you run a modified version as a service for others, you must publish its source
+code under the same license. Versions up to commit `0ebd80f` were released under
+the MIT License and remain available under it. Third-party code is listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
