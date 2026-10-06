@@ -990,11 +990,21 @@ class _FakeEntitlementTable:
     async def execute(self, query, *args):
         self.calls.append(("execute", query, args))
         if "ON CONFLICT (entitlement_id) DO UPDATE" in query:
+            not_before = None
+            if len(args) == 11:
+                args, not_before = args[:10], args[10]
             row = self._columns(args)
+            existing = self.rows.get(row["entitlement_id"])
             if "premium_entitlements.deleted OR EXCLUDED.deleted" in query:
-                existing = self.rows.get(row["entitlement_id"])
                 if existing is not None:
                     row["deleted"] = existing["deleted"] or row["deleted"]
+            elif not_before is not None:
+                # The guarded reconciliation query's CASE: a row whose own
+                # last_synced_at is NEWER than the pass's start time was
+                # touched by something more current than this (possibly
+                # stale) listing row, so the EXISTING deleted wins.
+                if existing is not None and existing["last_synced_at"] > not_before:
+                    row["deleted"] = existing["deleted"]
             self.rows[row["entitlement_id"]] = row
             return "INSERT 0 1"
         if "SET deleted = TRUE" in query:
@@ -1008,6 +1018,14 @@ class _FakeEntitlementTable:
 
     async def fetch(self, query, *args):
         self.calls.append(("fetch", query, args))
+        if "sku_id = ANY($1::bigint[])" in query:
+            (sku_ids,) = args
+            sku_ids = {int(sku_id) for sku_id in sku_ids}
+            return [
+                {"entitlement_id": rid}
+                for rid, row in self.rows.items()
+                if not row["deleted"] and row["sku_id"] in sku_ids
+            ]
         if "SELECT entitlement_id FROM premium_entitlements" in query:
             return [
                 {"entitlement_id": rid}
@@ -1143,6 +1161,106 @@ async def test_negative_control_b_the_clobbering_upsert_would_undo_a_delete():
 
 
 # ---------------------------------------------------------------------------
+# upsert_entitlement's not_before guard: reconciliation racing a live event
+# ---------------------------------------------------------------------------
+
+
+def _seed_row(table, *, deleted, last_synced_at):
+    """Plant a row directly (bypassing a write) so its ``last_synced_at`` can
+    be set to an arbitrary value - simulating "a gateway event already
+    committed a write for this id, stamped at this moment," independent of
+    whatever the fake's own ``now()`` stand-in would otherwise pick."""
+    table.rows[1] = {
+        "entitlement_id": 1,
+        "sku_id": 111,
+        "scope_type": "guild",
+        "guild_id": 42,
+        "user_id": None,
+        "entitlement_type": 2,
+        "deleted": deleted,
+        "consumed": False,
+        "starts_at": NOW,
+        "ends_at": NOW + datetime.timedelta(days=30),
+        "last_synced_at": last_synced_at,
+    }
+
+
+async def test_upsert_entitlement_guarded_preserves_a_newer_events_delete():
+    """THE RACE this guard closes: a reconciliation pass's own page for this
+    row says "alive" (fetched before a concurrent refund committed), but by
+    the time this write runs, a gateway event has ALREADY stamped
+    last_synced_at newer than the pass's own start time with deleted=True.
+    The guarded write must not clobber that back to False."""
+    table = _FakeEntitlementTable()
+    pass_started_at = NOW - datetime.timedelta(seconds=5)
+    _seed_row(table, deleted=True, last_synced_at=NOW)  # NOW > pass_started_at
+
+    await premium.upsert_entitlement(
+        table, _remote(id=1, deleted=False), not_before=pass_started_at
+    )
+
+    assert table.rows[1]["deleted"] is True  # preserved, not resurrected
+
+
+async def test_negative_control_unguarded_upsert_would_resurrect_a_newer_delete():
+    """NEGATIVE CONTROL for the test above: the exact same race, through the
+    pre-fix call shape (no ``not_before``) - proves the scenario really was
+    a bug, not an artefact of the fixture."""
+    table = _FakeEntitlementTable()
+    _seed_row(table, deleted=True, last_synced_at=NOW)
+
+    await premium.upsert_entitlement(table, _remote(id=1, deleted=False))
+
+    assert table.rows[1]["deleted"] is False  # resurrected - the bug this guard fixes
+
+
+async def test_upsert_entitlement_guarded_still_clears_a_stale_deleted_row():
+    """Regression check: the guard must not block the LEGITIMATE case the
+    module docstring calls out - a row genuinely marked deleted by a PAST
+    pass (last_synced_at predates this pass's own start, i.e. nothing raced
+    it) that a fresh complete listing now reports alive again. That must
+    still clear back to False exactly as before this guard existed."""
+    table = _FakeEntitlementTable()
+    pass_started_at = NOW
+    stale_sync = NOW - datetime.timedelta(hours=6)  # older than the pass start
+    _seed_row(table, deleted=True, last_synced_at=stale_sync)
+
+    await premium.upsert_entitlement(
+        table, _remote(id=1, deleted=False), not_before=pass_started_at
+    )
+
+    assert table.rows[1]["deleted"] is False  # revived, as a complete listing should
+
+
+async def test_reconcile_threads_one_consistent_not_before_through_every_upsert():
+    """``reconcile`` must pass the SAME pass-start timestamp to every row it
+    upserts during one pass (not, say, a fresh ``now()`` per row, which
+    would narrow the guard's protection to nothing for every row but the
+    first)."""
+    table = _FakeEntitlementTable()
+    captured = []
+    real_upsert = premium.upsert_entitlement
+
+    async def _spy(pool, entitlement, *, not_before=None):
+        captured.append(not_before)
+        return await real_upsert(pool, entitlement, not_before=not_before)
+
+    import tools.premium as premium_module
+
+    original = premium_module.upsert_entitlement
+    premium_module.upsert_entitlement = _spy
+    try:
+        items = [_remote(id=1), _remote(id=2, guild_id=43)]
+        await premium.reconcile(table, _stream(items), application_id=APP_ID)
+    finally:
+        premium_module.upsert_entitlement = original
+
+    assert len(captured) == 2
+    assert captured[0] is not None
+    assert captured[0] == captured[1]  # one timestamp for the whole pass
+
+
+# ---------------------------------------------------------------------------
 # load_active_for_guild / load_active_for_user / load_active_entitlement_ids
 # ---------------------------------------------------------------------------
 
@@ -1264,6 +1382,63 @@ async def test_reconcile_a_failed_listing_marks_nothing_deleted():
     assert table.rows[2]["deleted"] is False
     assert table.rows[3]["deleted"] is False
     assert 4 not in table.rows  # never reached
+
+
+async def test_reconcile_with_sku_filter_leaves_a_different_skus_row_untouched():
+    """A SKU id change (or any listing narrowed to a SKU subset, which
+    production always passes - see tools.premium.reconcile's own "sku_ids"
+    docstring paragraph): a row for a sku OUTSIDE that filter must be left
+    exactly as it stood - neither upserted (it was never listed) nor marked
+    deleted (it was never "missing" from a listing that never claimed to
+    cover it) - even though a complete-for-THAT-SKU listing comes back
+    reporting nothing for it at all."""
+    table = _FakeEntitlementTable()
+    # id=1 is the OLD sku (111); id=2 is the CURRENT one (222) and the
+    # listing below reports it as still alive.
+    await premium.upsert_entitlement(table, _remote(id=1, sku_id=111))
+    await premium.upsert_entitlement(table, _remote(id=2, sku_id=222, guild_id=43))
+
+    result = await premium.reconcile(
+        table,
+        _stream([_remote(id=2, sku_id=222, guild_id=43)]),
+        application_id=APP_ID,
+        sku_ids=[222],
+    )
+
+    assert result == {"seen": 1, "upserted": 1, "missing": 0}
+    assert table.rows[1]["deleted"] is False  # untouched - outside the filter
+    assert table.rows[2]["deleted"] is False
+
+
+async def test_negative_control_reconcile_without_sku_filter_marks_the_other_skus_row_deleted():
+    """NEGATIVE CONTROL for the test above: the exact same listing, WITHOUT
+    ``sku_ids``, proves the scenario really would have been a bug - id=1's
+    row (a sku the listing never mentions) is read as "a complete listing
+    no longer reports this" and wrongly marked deleted, demonstrating the
+    fix above is what prevents it, not an artefact of the fixture."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement(table, _remote(id=1, sku_id=111))
+    await premium.upsert_entitlement(table, _remote(id=2, sku_id=222, guild_id=43))
+
+    result = await premium.reconcile(
+        table,
+        _stream([_remote(id=2, sku_id=222, guild_id=43)]),
+        application_id=APP_ID,
+    )
+
+    assert result == {"seen": 1, "upserted": 1, "missing": 1}
+    assert table.rows[1]["deleted"] is True  # the bug this fix prevents
+
+
+async def test_load_active_entitlement_ids_filters_by_sku_ids(fake_pool):
+    fake_pool.fetch_return = [{"entitlement_id": 1}]
+    ids = await premium.load_active_entitlement_ids(fake_pool, sku_ids=[111, 222])
+
+    _method, query, args = fake_pool.calls[0]
+    assert "deleted = FALSE" in query
+    assert "sku_id = ANY($1::bigint[])" in query
+    assert args == ([111, 222],)
+    assert ids == {1}
 
 
 async def test_negative_control_a_marking_missing_without_the_guard_would_downgrade_everyone():

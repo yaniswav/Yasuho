@@ -691,6 +691,53 @@ async def test_configured_skus_wraps_whichever_sku_is_set(monkeypatch):
     assert {sku.id for sku in skus} == {111, 222}
 
 
+async def test_reconcile_once_passes_the_same_sku_filter_to_reconcile(fake_pool, monkeypatch):
+    """The exact bug tools.premium.reconcile's own "sku_ids" docstring
+    paragraph warns against: ``bot.entitlements(skus=...)`` and the
+    ``sku_ids`` this cog hands to ``premium.reconcile`` for its "missing"
+    diff MUST name the same skus, or a configured SKU change would wrongly
+    mark every row still carrying the OLD sku id deleted on the very next
+    pass. Asserted here by capturing what ``_reconcile_once`` actually
+    passes, rather than trusting the two call sites stay in sync by eye."""
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium_cog.premium, "COMFORT_PACK_SKU", 222)
+    cog, bot = _m3b_cog(fake_pool)
+
+    captured = {}
+
+    async def _fake_reconcile(pool, entitlements, *, application_id, sku_ids=None):
+        captured["sku_ids"] = sku_ids
+        async for _ in entitlements:
+            pass
+        return {"seen": 0, "upserted": 0, "missing": 0}
+
+    monkeypatch.setattr(premium_cog.premium, "reconcile", _fake_reconcile)
+
+    await cog._reconcile_once()
+
+    assert set(captured["sku_ids"]) == {sku.id for sku in cog._configured_skus()}
+
+
+async def test_reconcile_once_sku_filter_is_none_when_no_sku_is_configured(fake_pool, monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium_cog.premium, "COMFORT_PACK_SKU", None)
+    cog, bot = _m3b_cog(fake_pool)
+
+    captured = {}
+
+    async def _fake_reconcile(pool, entitlements, *, application_id, sku_ids=None):
+        captured["sku_ids"] = sku_ids
+        async for _ in entitlements:
+            pass
+        return {"seen": 0, "upserted": 0, "missing": 0}
+
+    monkeypatch.setattr(premium_cog.premium, "reconcile", _fake_reconcile)
+
+    await cog._reconcile_once()
+
+    assert captured["sku_ids"] is None
+
+
 async def test_reconcile_once_skips_entirely_without_an_application_id(fake_pool):
     cog, bot = _m3b_cog(fake_pool, application_id=None)
     called = []

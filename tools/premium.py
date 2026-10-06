@@ -470,8 +470,41 @@ ON CONFLICT (entitlement_id) DO UPDATE SET
     last_synced_at = now()
 """
 
+# Same statement, guarded for the one race :func:`reconcile` cannot otherwise
+# avoid: a page of its listing was fetched BEFORE a gateway delete/refund
+# landed, but this upsert for that same row runs AFTER it - see
+# :func:`upsert_entitlement`'s ``not_before`` paragraph. Only ``deleted`` is
+# guarded (every other field stays plain last-write-wins, same as
+# :data:`_UPSERT_ENTITLEMENT`): if the row's OWN ``last_synced_at`` is newer
+# than the reconciliation pass's start time, a gateway event wrote it more
+# recently than this (possibly stale) listing snapshot was taken, so the
+# EXISTING ``deleted`` wins over whatever this stale row says; otherwise
+# (the ordinary case: nothing touched this row during the pass) this listing
+# IS the newest information, and ``EXCLUDED.deleted`` applies exactly as
+# :data:`_UPSERT_ENTITLEMENT` always did.
+_UPSERT_ENTITLEMENT_GUARDED = """
+INSERT INTO premium_entitlements
+    (entitlement_id, sku_id, scope_type, guild_id, user_id,
+     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+ON CONFLICT (entitlement_id) DO UPDATE SET
+    sku_id = EXCLUDED.sku_id,
+    scope_type = EXCLUDED.scope_type,
+    guild_id = EXCLUDED.guild_id,
+    user_id = EXCLUDED.user_id,
+    entitlement_type = EXCLUDED.entitlement_type,
+    deleted = CASE
+        WHEN premium_entitlements.last_synced_at > $11 THEN premium_entitlements.deleted
+        ELSE EXCLUDED.deleted
+    END,
+    consumed = EXCLUDED.consumed,
+    starts_at = EXCLUDED.starts_at,
+    ends_at = EXCLUDED.ends_at,
+    last_synced_at = now()
+"""
 
-async def upsert_entitlement(pool, entitlement):
+
+async def upsert_entitlement(pool, entitlement, *, not_before=None):
     """Idempotently write one entitlement into the projection.
 
     Accepts a discord.Entitlement or any test double :func:`_coerce_entitlement`
@@ -480,19 +513,45 @@ async def upsert_entitlement(pool, entitlement):
     confirmed this with Discord", not "the last time this row was touched".
 
     THE RECONCILIATION VARIANT (M3b). ``deleted`` here is assigned
-    unconditionally from ``entitlement`` - unlike :func:`upsert_entitlement_event`
-    below, this one can clear a previously-stored ``deleted = TRUE`` back to
-    ``FALSE``. That is deliberate and safe ONLY because its one caller,
-    :func:`reconcile`, only ever calls this for a row a COMPLETE Discord
-    listing just returned as alive (``exclude_deleted=True``), so ``deleted``
-    arrives as ``False`` in practice - a full resync is the one thing trusted
-    to correct a wrongly-ordered or buggy event (see the module docstring's
-    "EVENT ORDERING" section). A single gateway event must never call this
+    from ``entitlement`` rather than OR-merged - unlike
+    :func:`upsert_entitlement_event` below, this one can clear a
+    previously-stored ``deleted = TRUE`` back to ``FALSE``. That is
+    deliberate and safe because its one caller, :func:`reconcile`, only ever
+    calls this for a row a COMPLETE Discord listing just returned as alive
+    (``exclude_deleted=True``), so ``deleted`` arrives as ``False`` in
+    practice - a full resync is the one thing trusted to correct a
+    wrongly-ordered or buggy event (see the module docstring's "EVENT
+    ORDERING" section). A single gateway event must never call this
     function directly; it calls :func:`upsert_entitlement_event` instead.
+
+    ``not_before`` GUARDS AGAINST RECONCILIATION RACING A LIVE EVENT. Without
+    it, a narrow window stays open: a reconciliation pass can take long
+    enough (REST pagination across however many rows) that a row's page was
+    fetched from Discord BEFORE a refund/delete gateway event for that same
+    row landed and committed (:func:`upsert_entitlement_event`'s own
+    OR-protected write, which this function's unconditional assignment does
+    NOT share) - yet this function's own write for that row runs AFTER,
+    because asyncio only ever switches tasks at an ``await``, and the event
+    handler is free to run during any of this pass's many awaited
+    ``pool.execute``/REST calls. Unguarded, that ordering would clobber the
+    just-written ``deleted = TRUE`` straight back to ``FALSE`` - a refund or
+    delete, resurrected, for as long as it takes the NEXT reconciliation
+    pass (up to :data:`cogs.system.premium.RECONCILE_INTERVAL_HOURS`) to
+    notice Discord's listing no longer reports it at all and correct it via
+    the "missing" path instead. :func:`reconcile` always passes its own
+    pass-start timestamp here, so the guarded query
+    (:data:`_UPSERT_ENTITLEMENT_GUARDED`) only lets THIS write's ``deleted``
+    win when nothing has touched the row more recently than that timestamp;
+    a gateway event's ``last_synced_at`` (stamped at write time, inside the
+    SAME transaction as its own commit) being newer than the pass's start
+    means that event is the more current information and must not be
+    undone. ``None`` (every call outside :func:`reconcile`, including every
+    test that seeds state directly) keeps the original unconditional query -
+    there is no "pass start time" to guard against outside a reconciliation
+    pass.
     """
     row = _coerce_entitlement(entitlement)
-    await pool.execute(
-        _UPSERT_ENTITLEMENT,
+    args = (
         row["entitlement_id"],
         row["sku_id"],
         row["scope_type"],
@@ -504,6 +563,10 @@ async def upsert_entitlement(pool, entitlement):
         row["starts_at"],
         row["ends_at"],
     )
+    if not_before is None:
+        await pool.execute(_UPSERT_ENTITLEMENT, *args)
+    else:
+        await pool.execute(_UPSERT_ENTITLEMENT_GUARDED, *args, not_before)
     return row
 
 
@@ -624,20 +687,31 @@ async def load_active_for_user(pool, user_id):
     )
 
 
-async def load_active_entitlement_ids(pool):
+async def load_active_entitlement_ids(pool, *, sku_ids=None):
     """Every non-deleted ``entitlement_id`` on record, as a ``set[int]``.
 
     The diff base :func:`reconcile` subtracts a complete Discord listing
     from: whatever id is in this set but was NOT seen in that listing is an
     entitlement a complete snapshot no longer reports, and is marked deleted.
+
+    ``sku_ids``, when given, narrows that base to rows for THOSE skus only -
+    see :func:`reconcile`'s own docstring for why a caller that scoped its
+    listing to a SKU filter must scope this diff base the same way.
     """
-    rows = await pool.fetch(
-        "SELECT entitlement_id FROM premium_entitlements WHERE deleted = FALSE"
-    )
+    if sku_ids is None:
+        rows = await pool.fetch(
+            "SELECT entitlement_id FROM premium_entitlements WHERE deleted = FALSE"
+        )
+    else:
+        rows = await pool.fetch(
+            "SELECT entitlement_id FROM premium_entitlements "
+            "WHERE deleted = FALSE AND sku_id = ANY($1::bigint[])",
+            [int(sku_id) for sku_id in sku_ids],
+        )
     return {int(_get(row, "entitlement_id")) for row in rows}
 
 
-async def reconcile(pool, entitlements, *, application_id):
+async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
     """Resync ``premium_entitlements`` against a COMPLETE Discord listing.
 
     ``entitlements`` is an async iterable of discord.Entitlement-like
@@ -677,6 +751,34 @@ async def reconcile(pool, entitlements, *, application_id):
     never make this function mark one of OUR OWN entitlements deleted on
     its account either.
 
+    ``sku_ids``, when given, MUST be the exact set of SKU ids ``entitlements``
+    itself was filtered to (cogs/system/premium.py's ``_configured_skus``
+    feeds ``bot.entitlements(skus=...)`` and this parameter from the SAME
+    list, never two different ones). A caller passing a narrower listing -
+    production always does, to keep REST traffic proportional to what we
+    actually sell rather than every entitlement the application has ever
+    had - is NOT a complete listing of every stored row, only of rows for
+    those skus: step 2's "missing" diff is scoped to match
+    (:func:`load_active_entitlement_ids`'s own ``sku_ids`` filter), so a row
+    for a DIFFERENT sku - one the catalog no longer configures, including
+    one that was configured under this same product until an owner changed
+    ``[Premium] yasuho_plus_sku``/``comfort_pack_sku`` in bot.ini - is left
+    completely alone: neither upserted (it was never fetched) nor marked
+    deleted (it was never "missing" from a listing that never claimed to
+    cover it). Without this, a SKU id change would make EVERY row still
+    carrying the OLD id read as "a complete listing no longer reports this"
+    on the very next pass and get wrongly marked deleted, even though
+    nothing about those entitlements changed on Discord's side - exactly the
+    kind of silent, unraised row loss this module's own "FAIL-SAFE BY
+    CONSTRUCTION" paragraph above promises never happens. Real-time
+    deletes/refunds for such a row still arrive and are still honoured
+    (:func:`upsert_entitlement_event` is never SKU-filtered), so the only
+    thing this narrowing gives up is the periodic safety net for a sku
+    outside the current filter - acceptable, since that sku does not drive
+    any commercial decision while it stays unconfigured. ``sku_ids=None``
+    (the default, and every existing caller before this parameter existed)
+    keeps the original whole-application diff base.
+
     Returns ``{"seen": ..., "upserted": ..., "missing": ...}`` on a complete
     pass, or ``None`` when the pass was aborted - so a caller
     (cogs/system/premium.py's periodic loop) can tell the two outcomes apart
@@ -685,6 +787,14 @@ async def reconcile(pool, entitlements, *, application_id):
     reload is a plain re-read of whatever is in Postgres right now, which is
     exactly why it must only happen after a pass that left Postgres alone).
     """
+    # Captured BEFORE the listing starts, so every upsert below can tell
+    # "a gateway event touched this row more recently than this whole pass
+    # began" apart from "this pass's own data is the newest we have" - see
+    # upsert_entitlement's own "not_before" paragraph for the race this
+    # closes (a refund/delete landing on a row between when this pass's
+    # listing fetched that row's page and when this loop gets around to
+    # writing it).
+    started_at = datetime.datetime.now(datetime.timezone.utc)
     seen_ids = set()
     upserted = 0
     try:
@@ -695,7 +805,7 @@ async def reconcile(pool, entitlements, *, application_id):
                 and int(entitlement_application_id) != int(application_id)
             ):
                 continue
-            row = await upsert_entitlement(pool, entitlement)
+            row = await upsert_entitlement(pool, entitlement, not_before=started_at)
             seen_ids.add(row["entitlement_id"])
             upserted += 1
     except asyncio.CancelledError:
@@ -707,7 +817,7 @@ async def reconcile(pool, entitlements, *, application_id):
         )
         return None
 
-    stored_ids = await load_active_entitlement_ids(pool)
+    stored_ids = await load_active_entitlement_ids(pool, sku_ids=sku_ids)
     missing_ids = stored_ids - seen_ids
     for entitlement_id in missing_ids:
         await mark_deleted(pool, entitlement_id)

@@ -636,6 +636,29 @@ def invalidate_guild_caches(bot, guild_id):
     # halves (_user_skus/_user_grants) are deliberately absent here, same call
     # as bot.blacklist: they are keyed by member id, and a server leaving the
     # bot is not a reason to take away a MEMBER's own Pack Confort.
+    #
+    # KNOWN, ACCEPTED RACE (M3b): these two pops run WITHOUT
+    # EntitlementCache._lock, unlike every write inside tools/premium.py
+    # itself (load/refresh_entitlement_scope/refresh_grant_scope all take
+    # it). This function is synchronous and does no I/O, so the pop itself
+    # can never be caught mid-mutation - but a concurrent writer that is
+    # mid-await (between its own DB fetch and its dict rebind, e.g. an
+    # ENTITLEMENT_* gateway event for a guild that is leaving/being purged at
+    # the exact same moment) can still land its rebind AFTER this pop, which
+    # would leave a stale entry behind for a guild this function already
+    # decided to forget. This is deliberately NOT fixed by taking the lock
+    # here: doing so would require making this function (and both its call
+    # sites, cogs/system/events.py's on_guild_remove and
+    # cogs/system/retention.py's purge worker, both already async - but also
+    # every test that calls it synchronously, tests/test_cache_mirror_
+    # registry.py and tests/tools/test_retention.py included) async, a wide
+    # change for a window this narrow. It is accepted because it is
+    # self-healing on both sides: the next ENTITLEMENT_* event or
+    # reconciliation pass (cogs/system/premium.py, at most
+    # RECONCILE_INTERVAL_HOURS away) resolves it from the database either
+    # way, and a guild the bot has actually left can never reach
+    # is_guild_premium/for_guild through any command path regardless of what
+    # a stale entry says.
     bot.premium._guild_skus.pop(guild_id, None)
     bot.premium._guild_grants.pop(guild_id, None)
 

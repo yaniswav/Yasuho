@@ -585,14 +585,29 @@ class Premium(commands.Cog):
                 "premium: reconciliation skipped, application_id not set yet"
             )
             return
+        configured_skus = self._configured_skus()
         entitlements = self.bot.entitlements(
             limit=None,
-            skus=self._configured_skus(),
+            skus=configured_skus,
             exclude_ended=False,
             exclude_deleted=True,
         )
+        # sku_ids MUST be the same filter just handed to bot.entitlements()
+        # above - tools.premium.reconcile's own docstring ("sku_ids") spells
+        # out why a mismatch here would wrongly mark deleted every row for a
+        # sku this pass never actually listed (e.g. right after an owner
+        # changes [Premium] yasuho_plus_sku/comfort_pack_sku in bot.ini: the
+        # OLD sku's rows must be left alone, not read as "gone").
+        sku_ids = (
+            None
+            if configured_skus is None
+            else [sku.id for sku in configured_skus]
+        )
         result = await premium.reconcile(
-            self.bot.db_pool, entitlements, application_id=application_id
+            self.bot.db_pool,
+            entitlements,
+            application_id=application_id,
+            sku_ids=sku_ids,
         )
         if result is None:
             # The fail-safe path already logged inside tools.premium.reconcile.
