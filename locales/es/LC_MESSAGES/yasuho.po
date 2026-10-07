@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 01:45+0000\n"
+"POT-Creation-Date: 2026-10-07 05:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1421,7 +1421,7 @@ msgstr "No pude abrir el formulario de código."
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:513 cogs/utility/info.py:35 cogs/utility/info.py:147
+#: cogs/system/help.py:513 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Desconocido"
 
@@ -3809,7 +3809,7 @@ msgstr "{sign}{pct:.1f}% frente a la semana anterior"
 msgid "Messages"
 msgstr "Mensajes"
 
-#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:154
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
 msgid "Members"
 msgstr "Miembros"
 
@@ -4776,7 +4776,7 @@ msgid "Pick your roles"
 msgstr "Elige tus roles"
 
 #: cogs/config/rolemenus.py:718 cogs/system/dashboard_actions.py:1498
-#: cogs/utility/info.py:157
+#: cogs/utility/info.py:158
 msgid "Roles"
 msgstr "Roles"
 
@@ -8792,12 +8792,12 @@ msgid "Press **Fill in** to type the details."
 msgstr "Pulsa **Rellenar** para escribir los detalles."
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
-#: cogs/utility/info.py:47 cogs/utility/utility.py:329
+#: cogs/utility/info.py:48 cogs/utility/utility.py:329
 msgid "Yes"
 msgstr "Sí"
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
-#: cogs/utility/info.py:47 cogs/utility/utility.py:330
+#: cogs/utility/info.py:48 cogs/utility/utility.py:330
 msgid "No"
 msgstr "No"
 
@@ -9885,124 +9885,128 @@ msgstr "Invítame"
 msgid "[Click here to invite me]({url})"
 msgstr "[Haz clic aquí para invitarme]({url})"
 
-#: cogs/utility/info.py:38
+#: cogs/utility/info.py:39
 #, python-brace-format
 msgid "## {member}"
 msgstr "## {member}"
 
-#: cogs/utility/info.py:39
+#: cogs/utility/info.py:40
 #, python-brace-format
 msgid "**Display name:** {name}"
 msgstr "**Nombre visible:** {name}"
 
-#: cogs/utility/info.py:40
+#: cogs/utility/info.py:41
 #, python-brace-format
 msgid "**ID:** `{id}`"
 msgstr "**ID:** `{id}`"
 
-#: cogs/utility/info.py:41
+#: cogs/utility/info.py:42
 #, python-brace-format
 msgid "**Mention:** {mention}"
 msgstr "**Mención:** {mention}"
 
-#: cogs/utility/info.py:42
+#: cogs/utility/info.py:43
 #, python-brace-format
 msgid "**Account created:** {created}"
 msgstr "**Cuenta creada:** {created}"
 
-#: cogs/utility/info.py:43
+#: cogs/utility/info.py:44
 #, python-brace-format
 msgid "**Joined server:** {joined}"
 msgstr "**Se unió al servidor:** {joined}"
 
-#: cogs/utility/info.py:44
+#: cogs/utility/info.py:45
 #, python-brace-format
 msgid "**Top role:** {role}"
 msgstr "**Rol principal:** {role}"
 
-#: cogs/utility/info.py:45
+#: cogs/utility/info.py:46
 #, python-brace-format
 msgid "**Role count:** {count}"
 msgstr "**Número de roles:** {count}"
 
-#: cogs/utility/info.py:46
+#: cogs/utility/info.py:47
 #, python-brace-format
 msgid "**Is bot:** {value}"
 msgstr "**Es bot:** {value}"
 
-#: cogs/utility/info.py:139
+#: cogs/utility/info.py:140
 #, python-brace-format
 msgid "Server info - {guild}"
 msgstr "Información del servidor - {guild}"
 
-#: cogs/utility/info.py:143
+#: cogs/utility/info.py:144
 msgid "Name"
 msgstr "Nombre"
 
-#: cogs/utility/info.py:144
+#: cogs/utility/info.py:145
 msgid "ID"
 msgstr "ID"
 
-#: cogs/utility/info.py:146
+#: cogs/utility/info.py:147
 msgid "Owner"
 msgstr "Propietario"
 
-#: cogs/utility/info.py:150
+#: cogs/utility/info.py:151
 msgid "Created"
 msgstr "Creado"
 
-#: cogs/utility/info.py:155
+#: cogs/utility/info.py:156
 msgid "Text channels"
 msgstr "Canales de texto"
 
-#: cogs/utility/info.py:156
+#: cogs/utility/info.py:157
 msgid "Voice channels"
 msgstr "Canales de voz"
 
-#: cogs/utility/info.py:159
+#: cogs/utility/info.py:160
 msgid "Boost tier"
 msgstr "Nivel de boost"
 
-#: cogs/utility/info.py:160
+#: cogs/utility/info.py:161
 #, python-brace-format
 msgid "Tier {tier}"
 msgstr "Nivel {tier}"
 
-#: cogs/utility/info.py:162
+#: cogs/utility/info.py:163
 msgid "Boosts"
 msgstr "Mejoras"
 
-#: cogs/utility/info.py:174
+#: cogs/utility/info.py:167
+msgid "Yasuho+ server"
+msgstr "Servidor Yasuho+"
+
+#: cogs/utility/info.py:179
 #, python-brace-format
 msgid "Avatar - {member}"
 msgstr "Avatar - {member}"
 
-#: cogs/utility/info.py:186
+#: cogs/utility/info.py:191
 msgid "Pong!"
 msgstr "¡Pong!"
 
-#: cogs/utility/info.py:187
+#: cogs/utility/info.py:192
 #, python-brace-format
 msgid "Latency: **{ms} ms**"
 msgstr "Latencia: **{ms} ms**"
 
-#: cogs/utility/info.py:204
+#: cogs/utility/info.py:209
 msgid "Bot info"
 msgstr "Información del bot"
 
-#: cogs/utility/info.py:207
+#: cogs/utility/info.py:212
 msgid "Servers"
 msgstr "Servidores"
 
-#: cogs/utility/info.py:208
+#: cogs/utility/info.py:213
 msgid "Users"
 msgstr "Usuarios"
 
-#: cogs/utility/info.py:211
+#: cogs/utility/info.py:216
 msgid "Websocket latency"
 msgstr "Latencia del websocket"
 
-#: cogs/utility/info.py:212
+#: cogs/utility/info.py:217
 #, python-brace-format
 msgid "{ms} ms"
 msgstr "{ms} ms"
