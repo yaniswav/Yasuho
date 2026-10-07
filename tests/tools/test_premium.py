@@ -2116,3 +2116,27 @@ def test_classify_a_resurrection_is_nothing():
 # was then reverted by hand (no git stash/checkout/reset) and ``git diff``
 # confirmed tools/premium.py matched its pre-break state before the full
 # suite was re-run green.
+
+
+def test_a_real_discord_entitlement_type_enum_is_coerced_to_its_int():
+    """discord.EntitlementType is discord.py's own enum: int() refuses it, so
+    the first real (or test-mode) purchase crashed the write. The stored row
+    must carry the plain int value."""
+    import types as _types
+
+    import discord
+
+    entitlement = _types.SimpleNamespace(
+        id=1,
+        sku_id=2,
+        guild_id=3,
+        user_id=None,
+        type=discord.EntitlementType.test_mode_purchase,
+        deleted=False,
+        consumed=False,
+        starts_at=None,
+        ends_at=None,
+    )
+    row = premium._coerce_entitlement(entitlement)
+    assert row["entitlement_type"] == discord.EntitlementType.test_mode_purchase.value
+    assert isinstance(row["entitlement_type"], int)

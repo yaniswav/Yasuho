@@ -502,6 +502,10 @@ def _coerce_entitlement(entitlement):
             f"entitlement {entitlement_id} names neither a guild nor a user"
         )
     raw_type = _get(entitlement, "type")
+    # A real discord.Entitlement carries a discord.EntitlementType, which
+    # int() refuses (discord.py's own enum class); a stored row or a test
+    # double carries a plain int. Read .value when there is one.
+    raw_type = getattr(raw_type, "value", raw_type)
     entitlement_type = int(raw_type) if raw_type is not None else None
     return {
         "entitlement_id": entitlement_id,
