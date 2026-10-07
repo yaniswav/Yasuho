@@ -56,11 +56,15 @@ class _Member:
 
 
 class _ScriptedPool:
-    """A pool whose fetchrow answers from a script (for the prune batches)."""
+    """A pool whose fetchrow answers from a script (for the prune batches),
+    and whose fetch answers the M4d premium-ish guild lookup - empty
+    (nobody is premium-ish, i.e. every guild is free) unless ``premium_ish``
+    says otherwise."""
 
-    def __init__(self, rows):
+    def __init__(self, rows, *, premium_ish=()):
         self.rows = list(rows)
         self.calls = []
+        self.premium_ish = list(premium_ish)
 
     async def execute(self, query, *args):
         self.calls.append(("execute", query, args))
@@ -69,6 +73,10 @@ class _ScriptedPool:
     async def fetchrow(self, query, *args):
         self.calls.append(("fetchrow", query, args))
         return self.rows.pop(0) if self.rows else {"messages": 0, "days": 0}
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        return [{"guild_id": guild_id} for guild_id in self.premium_ish]
 
 
 class _BlockingPool:
@@ -494,42 +502,27 @@ async def test_a_bot_in_no_guild_at_all_never_marks_the_day(fake_pool):
     assert cog._snapshot_day is None
 
 
-async def test_prune_is_bounded_and_runs_once_per_day():
-    full = {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0}
-    pool = _ScriptedPool([full] * (serverstats_cog.PRUNE_MAX_BATCHES + 5))
-    cog = _cog(pool)
-    cog._snapshot_day = DAY
+# ---------------------------------------------------------------------------
+# M4d: the two-tier prune - unconditional 365-day delete, then the
+# 90-365-day band for non-premium-ish guilds only.
+# ---------------------------------------------------------------------------
 
-    await cog.flush(day=DAY)
 
-    prunes = [c for c in pool.calls if c[0] == "fetchrow"]
-    # Never more than the per-day ceiling, even when rows keep coming back.
-    assert len(prunes) == serverstats_cog.PRUNE_MAX_BATCHES
-    _method, query, args = prunes[0]
-    assert "LIMIT $2" in query
-    # The LIMIT must bound the rows SCANNED, not just the rows deleted. The
-    # ctid = ANY(ARRAY(...)) shape plans as a Tid Scan; the `DELETE ... USING`
-    # join it replaced seq-scanned and externally sorted the whole table on
-    # every batch (measured: 212 ms + temp spill vs 29 ms, growing with size).
-    assert query.count("ctid = ANY(ARRAY(") == 2
-    assert "USING" not in query
-    assert args == (
-        buffer.day_to_date(DAY - serverstats_cog.RETENTION_DAYS),
-        serverstats_cog.PRUNE_BATCH_SIZE,
+def _cutoffs(day=DAY):
+    return (
+        buffer.day_to_date(day - serverstats_cog.RETENTION_DAYS),
+        buffer.day_to_date(day - serverstats_cog.MAX_RETENTION_DAYS),
     )
-    assert args[0] == datetime.date(2026, 4, 29)  # DAY is 2026-07-28
-
-    pool.calls.clear()
-    await cog.flush(day=DAY)
-    assert pool.calls == []  # already pruned today
 
 
-async def test_prune_stops_early_on_a_short_batch():
+async def test_prune_runs_the_global_pass_then_the_free_band_pass_once_a_day():
+    cutoff_free, cutoff_global = _cutoffs()
     pool = _ScriptedPool(
         [
-            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 3},
-            {"messages": 12, "days": 0},
-            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0},
+            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0},  # step 1
+            {"messages": 3, "days": 0},  # step 1, short -> stop
+            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0},  # step 2
+            {"messages": 5, "days": 0},  # step 2, short -> stop
         ]
     )
     cog = _cog(pool)
@@ -537,8 +530,159 @@ async def test_prune_stops_early_on_a_short_batch():
 
     await cog.flush(day=DAY)
 
-    assert len([c for c in pool.calls if c[0] == "fetchrow"]) == 2
-    assert cog._stats["pruned"] == serverstats_cog.PRUNE_BATCH_SIZE + 3 + 12
+    fetchrows = [c for c in pool.calls if c[0] == "fetchrow"]
+    assert len(fetchrows) == 4
+
+    # Step 1: queries.PRUNE, unconditional, cutoff = today - MAX_RETENTION_DAYS.
+    for _method, query, args in fetchrows[:2]:
+        assert query == queries.PRUNE
+        # The LIMIT must bound the rows SCANNED, not just the rows deleted. The
+        # ctid = ANY(ARRAY(...)) shape plans as a Tid Scan; the `DELETE ...
+        # USING` join it replaced seq-scanned and externally sorted the whole
+        # table on every batch (measured: 212 ms + temp spill vs 29 ms,
+        # growing with size).
+        assert query.count("ctid = ANY(ARRAY(") == 2
+        assert "USING" not in query
+        assert args == (cutoff_global, serverstats_cog.PRUNE_BATCH_SIZE)
+    assert cutoff_global == datetime.date(2025, 7, 28)  # DAY is 2026-07-28
+
+    # Step 2: queries.PRUNE_EXCLUDING_GUILDS, the 90-365-day band, with an
+    # empty exclusion list (the fixture's premium-ish set is empty by
+    # default - every guild is treated as free).
+    for _method, query, args in fetchrows[2:]:
+        assert query == queries.PRUNE_EXCLUDING_GUILDS
+        assert query.count("ctid = ANY(ARRAY(") == 2
+        assert args == (
+            cutoff_free,
+            cutoff_global,
+            [],
+            serverstats_cog.PRUNE_BATCH_SIZE,
+        )
+    assert cutoff_free == datetime.date(2026, 4, 29)  # unchanged from before M4d
+
+    assert cog._stats["pruned"] == (
+        serverstats_cog.PRUNE_BATCH_SIZE + 3 + serverstats_cog.PRUNE_BATCH_SIZE + 5
+    )
+
+    pool.calls.clear()
+    await cog.flush(day=DAY)
+    assert pool.calls == []  # already pruned today
+
+
+async def test_prune_each_pass_stops_early_on_a_short_batch():
+    pool = _ScriptedPool(
+        [
+            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 3},  # step 1
+            {"messages": 12, "days": 0},  # step 1, short -> stop
+            {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0},  # step 2
+            {"messages": 7, "days": 0},  # step 2, short -> stop
+        ]
+    )
+    cog = _cog(pool)
+    cog._snapshot_day = DAY
+
+    await cog.flush(day=DAY)
+
+    assert len([c for c in pool.calls if c[0] == "fetchrow"]) == 4
+    assert cog._stats["pruned"] == (
+        serverstats_cog.PRUNE_BATCH_SIZE + 3 + 12 + serverstats_cog.PRUNE_BATCH_SIZE + 7
+    )
+
+
+async def test_prune_each_pass_is_capped_at_prune_max_batches():
+    full = {"messages": serverstats_cog.PRUNE_BATCH_SIZE, "days": 0}
+    # Every batch of BOTH passes comes back full, so each pass alone would
+    # run forever without its own cap.
+    pool = _ScriptedPool([full] * (2 * serverstats_cog.PRUNE_MAX_BATCHES + 5))
+    cog = _cog(pool)
+    cog._snapshot_day = DAY
+
+    await cog.flush(day=DAY)
+
+    fetchrows = [c for c in pool.calls if c[0] == "fetchrow"]
+    # Never more than PRUNE_MAX_BATCHES PER PASS, two passes.
+    assert len(fetchrows) == 2 * serverstats_cog.PRUNE_MAX_BATCHES
+    step1 = fetchrows[: serverstats_cog.PRUNE_MAX_BATCHES]
+    step2 = fetchrows[serverstats_cog.PRUNE_MAX_BATCHES :]
+    assert all(query == queries.PRUNE for _m, query, _a in step1)
+    assert all(query == queries.PRUNE_EXCLUDING_GUILDS for _m, query, _a in step2)
+
+
+async def test_prune_still_runs_the_global_pass_when_the_premium_lookup_fails():
+    """FAILURE PATH: the premium-ish lookup raising skips ONLY the free-tier
+    band (step 2) - the unconditional MAX_RETENTION_DAYS delete (step 1)
+    still runs, because 365 days is a hard ceiling nobody is exempt from and
+    must not wait on a flaky lookup. See cog._maybe_prune's own docstring
+    for why the band is the side that yields here (over-retaining a few
+    extra days for a free guild is recoverable; over-deleting a genuine
+    subscriber's history on a transient failure is not).
+
+    NEGATIVE CONTROL: temporarily wrapping step 1's own call in the same
+    "failure means skip" guard step 2 uses (so a premium-lookup failure
+    would ALSO skip the global delete) was run by hand during this lot: it
+    turned this test red (the global-delete assertion below found no such
+    call). The edit was reverted by hand (no git stash/checkout/reset) and
+    ``git diff`` showed a clean tree before the suite was re-run green.
+    """
+    cutoff_global = _cutoffs()[1]
+
+    class _FailingFetchPool(_ScriptedPool):
+        async def fetch(self, query, *args):
+            self.calls.append(("fetch", query, args))
+            raise RuntimeError("premium lookup is down")
+
+    pool = _FailingFetchPool([{"messages": 9, "days": 2}])
+    cog = _cog(pool)
+    cog._snapshot_day = DAY
+
+    await cog.flush(day=DAY)
+
+    fetchrows = [c for c in pool.calls if c[0] == "fetchrow"]
+    assert len(fetchrows) == 1
+    _method, query, args = fetchrows[0]
+    assert query == queries.PRUNE
+    assert args == (cutoff_global, serverstats_cog.PRUNE_BATCH_SIZE)
+    assert all(q != queries.PRUNE_EXCLUDING_GUILDS for _m, q, _a in pool.calls)
+
+    # Still marked done for the day: this is a daily best-effort pass (same
+    # posture as the flush/snapshot above it) - tomorrow's run recomputes
+    # the premium-ish set fresh rather than retrying the same failure for
+    # the rest of today.
+    assert cog._prune_day == DAY
+    assert cog._stats["pruned"] == 9 + 2  # messages + days from the one batch
+
+
+async def test_prune_band_excludes_the_resolved_premium_ish_guild_ids():
+    """The excluded-ids array passed to queries.PRUNE_EXCLUDING_GUILDS is
+    EXACTLY (sorted) what tools.premium.premium_ish_guild_ids returned -
+    the band delete leaves those guilds' 90-365-day rows alone."""
+    pool = _ScriptedPool(
+        [
+            {"messages": 0, "days": 0},  # step 1: nothing to delete
+            {"messages": 4, "days": 1},  # step 2: one short batch -> stop
+        ],
+        premium_ish=[99, 42, 42],  # a duplicate on purpose: the set dedupes
+    )
+    cog = _cog(pool)
+    cog._snapshot_day = DAY
+
+    await cog.flush(day=DAY)
+
+    fetchrows = [c for c in pool.calls if c[0] == "fetchrow"]
+    _method, query, args = fetchrows[-1]
+    assert query == queries.PRUNE_EXCLUDING_GUILDS
+    assert args[2] == [42, 99]  # sorted, deduplicated
+
+
+# NEGATIVE CONTROL (the entitled-keep). Temporarily passing an EMPTY list
+# instead of ``sorted(keep_ids)`` to queries.PRUNE_EXCLUDING_GUILDS in
+# cog._maybe_prune (i.e. "forget" to exclude the premium-ish guilds at all)
+# was run by hand during this lot: it turned
+# test_prune_band_excludes_the_resolved_premium_ish_guild_ids red (``[] !=
+# [42, 99]``), proving the exclusion list is load-bearing rather than
+# decorative. The edit was reverted by hand (no git stash/checkout/reset)
+# and ``git diff`` showed a clean tree before the full suite was re-run
+# green.
 
 
 # ---------------------------------------------------------------------------

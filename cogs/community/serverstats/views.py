@@ -53,10 +53,11 @@ from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
 
-# The overview + top-channels toggle: exactly two windows, exactly two reads
-# replayed per click (rollups.overview + rollups.top_channels) - the ST2
-# contract this card promised. Growth/activity/retention never change window
-# from the toggle; only these two sections do.
+# The overview + top-channels toggle: two windows for a free guild (three for
+# an entitled one - see _window_cycle, M4d), always exactly two reads replayed
+# per click (rollups.overview + rollups.top_channels) - the ST2 contract this
+# card promised. Growth/activity/retention never change window from the
+# toggle; only these two sections do.
 ALT_OVERVIEW_DAYS = 30
 
 # How many of the busiest channels the card shows. Small on purpose: this is a
@@ -491,22 +492,53 @@ def _render_retention(retention):
 # ---------------------------------------------------------------------------
 # The toggle button
 # ---------------------------------------------------------------------------
-def _other_window(days):
-    """The window a click on the toggle switches TO.
+def _window_cycle(max_window_days):
+    """The ordered windows the overview + top-channels toggle cycles through
+    for a card resolved to ``max_window_days``.
+
+    Exactly ``[7, 30]`` whenever ``max_window_days`` is the FREE ceiling
+    (:data:`~.rollups.MAX_WINDOW_DAYS`) or less - a free, an expired, or a
+    lookup-failed-safe-to-free guild (see cog.py's ``resolve_guild_limits``
+    guard) all resolve here, and this is BYTE-IDENTICAL to the toggle's
+    pre-M4d behaviour: same two states, same order.
+
+    A guild resolved to MORE than the free ceiling - i.e. Yasuho+ is active
+    right now (tools.premium.resolve_guild_limits) - gets a THIRD state at
+    the END of the cycle: its own resolved retention ceiling (365 days
+    today), so it can see its whole kept history from the same control it
+    already has. No disabled button and no "/premium" pointer for a free
+    guild: the plan's own sollicitation rule is additive, never a locked
+    door (see .claude/plans/monetisation/4-plan-retenu.md's "Sollicitation"
+    rule and TERMS.md) - the extra state simply does not exist for it, same
+    as it does not exist today.
+    """
+    cycle = [rollups.DEFAULT_OVERVIEW_DAYS, ALT_OVERVIEW_DAYS]
+    if max_window_days > rollups.MAX_WINDOW_DAYS:
+        cycle.append(max_window_days)
+    return cycle
+
+
+def _other_window(days, max_window_days=rollups.MAX_WINDOW_DAYS):
+    """The window a click on the toggle switches TO: the next state in
+    :func:`_window_cycle`, wrapping back to the first after the last.
 
     Single source of truth for the flip: the button's LABEL and the reload's
     TARGET have to agree, and computing it twice is how a card ends up promising
-    "Show 30 days" and then reloading 7.
+    "Show 30 days" and then reloading 7. ``days`` not being IN the cycle (it
+    cannot happen in practice - the card only ever holds a value this same
+    function already returned) defensively restarts the cycle rather than
+    raising.
     """
-    return (
-        ALT_OVERVIEW_DAYS
-        if days == rollups.DEFAULT_OVERVIEW_DAYS
-        else rollups.DEFAULT_OVERVIEW_DAYS
-    )
+    cycle = _window_cycle(max_window_days)
+    try:
+        index = cycle.index(days)
+    except ValueError:
+        return cycle[0]
+    return cycle[(index + 1) % len(cycle)]
 
 
 class _ToggleDaysButton(discord.ui.Button):
-    """Flips the overview + top-channels window between 7 and 30 days.
+    """Cycles the overview + top-channels window through :func:`_window_cycle`.
 
     Label describes the OTHER state, same convention as seasons_views.py's
     ``_AnnounceToggleButton`` - a button names the action a click performs,
@@ -515,7 +547,9 @@ class _ToggleDaysButton(discord.ui.Button):
 
     def __init__(self, card):
         super().__init__(
-            label=_("Show {days} days").format(days=_other_window(card.days)),
+            label=_("Show {days} days").format(
+                days=_other_window(card.days, card.max_window_days)
+            ),
             style=discord.ButtonStyle.secondary,
         )
         self.card = card
@@ -551,10 +585,19 @@ class ServerStatsCard(AuthorLayoutView):
         destination,
         timeout=180,
         chart_filename=None,
+        max_window_days=rollups.MAX_WINDOW_DAYS,
     ):
         super().__init__(author.id, timeout=timeout)
         self.pool = pool
         self.guild = guild
+        # M4d: this guild's resolved serverstats retention ceiling
+        # (tools.premium.resolve_guild_limits(...).serverstats_retention_days),
+        # defaulting to the free ceiling so every caller that does not pass
+        # it (every test, and any future one) keeps today's exact 7/30-day
+        # cycle - see _window_cycle. Stored, not just used once, for the
+        # same reason as ``destination``: the toggle rebuild needs it again
+        # on every click.
+        self.max_window_days = max_window_days
         # The channel this card is POSTED IN - the audience the top-channels
         # ranking is cut to (see audience_roles / _render_top_channels). Kept
         # on the card, not just used once, because the 7/30-day toggle rebuilds
@@ -604,16 +647,24 @@ class ServerStatsCard(AuthorLayoutView):
         self._build()
 
     async def _toggle_days(self, interaction):
-        """Swap the overview + top-channels window - exactly TWO reads, the
+        """Cycle the overview + top-channels window - exactly TWO reads, the
         ST2 contract this card promised (rollups.overview, rollups.top_channels;
-        nothing else is re-queried, growth/activity/retention are untouched)."""
+        nothing else is re-queried, growth/activity/retention are untouched).
+
+        ``max_days=self.max_window_days`` (M4d) is what lets an entitled
+        guild's third state (see _window_cycle) actually reach past the
+        free ceiling instead of being clamped back down to it - see
+        rollups.clamp_days.
+        """
         try:
-            new_days = _other_window(self.days)
+            new_days = _other_window(self.days, self.max_window_days)
             overview = await rollups.overview(
-                self.pool, self.guild.id, days=new_days, since=self.since
+                self.pool, self.guild.id, days=new_days, since=self.since,
+                max_days=self.max_window_days,
             )
             top_channels = await rollups.top_channels(
-                self.pool, self.guild.id, days=new_days, limit=TOP_CHANNELS_LIMIT
+                self.pool, self.guild.id, days=new_days, limit=TOP_CHANNELS_LIMIT,
+                max_days=self.max_window_days,
             )
             self.days = new_days
             self.overview = overview

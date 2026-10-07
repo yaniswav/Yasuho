@@ -1,9 +1,13 @@
 """Purpose: every SQL statement the collectors run, each one a SINGLE
 parameterized command (asyncpg's extended query protocol prepares exactly one).
 
-Three statements, no more: the batched flush, the once-a-day member-count
-snapshot, and the bounded 90-day prune. All are ADDITIVE upserts or bounded
-deletes - nothing here ever reads a row back to decide what to write.
+Four statements, no more: the batched flush, the once-a-day member-count
+snapshot, and TWO bounded prunes (M4d, cog.py's ``_maybe_prune``) - the
+unconditional 365-day ceiling (:data:`PRUNE`, every guild) and the 90-365-day
+free-tier band (:data:`PRUNE_EXCLUDING_GUILDS`, every guild that is not
+currently Yasuho+ and did not stop being Yasuho+ in the last 365 days). All
+are ADDITIVE upserts or bounded deletes - nothing here ever reads a row back
+to decide what to write.
 
 Typography rule: ASCII '-' and '...' only.
 """
@@ -59,12 +63,15 @@ SNAPSHOT_MEMBER_COUNT = """
     DO UPDATE SET member_count = EXCLUDED.member_count;
     """
 
-# Bounded 90-day prune, both tables in one command. The LIMITed ctid sub-select
-# bounds BOTH halves of the work: it caps how many rows are deleted, and - because
-# it runs as an InitPlan feeding a Tid Scan - it also caps how many rows are ever
-# LOOKED AT, so a first run over a long-neglected table can never take a
-# table-wide lock for minutes. The caller repeats the statement until a short
-# batch comes back.
+# Bounded prune #1 (M4d): UNCONDITIONALLY drop rows older than $1 for EVERY
+# guild - the hard 365-day ceiling, both tables in one command. Used with
+# cog.MAX_RETENTION_DAYS's cutoff; no guild is ever exempt from this one.
+#
+# The LIMITed ctid sub-select bounds BOTH halves of the work: it caps how many
+# rows are deleted, and - because it runs as an InitPlan feeding a Tid Scan - it
+# also caps how many rows are ever LOOKED AT, so a first run over a
+# long-neglected table can never take a table-wide lock for minutes. The caller
+# repeats the statement until a short batch comes back.
 #
 # The `ctid = ANY(ARRAY(...))` shape is LOAD BEARING, not style: the obvious
 # `DELETE ... USING stale AS s WHERE target.ctid = s.ctid` form was measured on a
@@ -72,7 +79,8 @@ SNAPSHOT_MEMBER_COUNT = """
 # external merge sort on ctid (212 ms and 5 MB of temp spill PER BATCH, growing
 # with the table). This form plans as `Tid Scan (TID Cond: ctid = ANY ($0))` with
 # no seq scan, no sort and no temp file: 29 ms on the same data, flat in table
-# size. Do not "simplify" it back to a join.
+# size. Do not "simplify" it back to a join - this note applies to
+# PRUNE_EXCLUDING_GUILDS below too, which keeps the exact same shape.
 PRUNE = """
     WITH pruned_messages AS (
         DELETE FROM server_stats_messages
@@ -84,6 +92,42 @@ PRUNE = """
         DELETE FROM server_stats_days
         WHERE ctid = ANY(ARRAY(
             SELECT ctid FROM server_stats_days WHERE day < $1 LIMIT $2
+        ))
+        RETURNING 1
+    )
+    SELECT (SELECT count(*) FROM pruned_messages) AS messages,
+           (SELECT count(*) FROM pruned_days) AS days;
+    """
+
+# Bounded prune #2 (M4d): drop rows in the $2 <= day < $1 band (RETENTION_DAYS
+# up to MAX_RETENTION_DAYS ago) EXCEPT for guilds listed in $3 - the ids
+# cog.py's _maybe_prune resolved as "premium-ish" this run
+# (tools.premium.premium_ish_guild_ids). Same bounded ctid-LIMIT shape as
+# PRUNE above, with one extra predicate: `guild_id <> ALL($3::bigint[])`.
+#
+# NO NEW INDEX: the extra predicate is a FILTER on top of the existing day
+# index (server_stats_messages_day_idx / server_stats_days_day_idx), which
+# already bounds the scan to the $2..$1 band regardless of table size - it
+# does not need a (guild_id, day) index to do that, and adding one would only
+# tax the 5-minute flush upsert for a path that runs once a day. An empty $3
+# (no guild is premium-ish right now) makes `<> ALL('{}')` vacuously true for
+# every row, i.e. this reduces to exactly PRUNE's own predicate shape - the
+# pre-M4d behaviour when no SKU/grant exists at all.
+PRUNE_EXCLUDING_GUILDS = """
+    WITH pruned_messages AS (
+        DELETE FROM server_stats_messages
+        WHERE ctid = ANY(ARRAY(
+            SELECT ctid FROM server_stats_messages
+            WHERE day < $1 AND day >= $2 AND guild_id <> ALL($3::bigint[])
+            LIMIT $4
+        ))
+        RETURNING 1
+    ), pruned_days AS (
+        DELETE FROM server_stats_days
+        WHERE ctid = ANY(ARRAY(
+            SELECT ctid FROM server_stats_days
+            WHERE day < $1 AND day >= $2 AND guild_id <> ALL($3::bigint[])
+            LIMIT $4
         ))
         RETURNING 1
     )

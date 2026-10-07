@@ -39,7 +39,7 @@ import discord
 from discord.ext import commands, tasks
 
 from . import buffer, charts, digest, queries, rollups, views
-from tools import i18n, rendering
+from tools import i18n, premium, rendering
 from tools.i18n import _
 from tools.snowflake import coerce_id
 
@@ -50,13 +50,31 @@ log = logging.getLogger(__name__)
 # interval of counters to a hard crash is acceptable for aggregates.
 FLUSH_INTERVAL = 300
 
-# How long a day of statistics is kept. Enforced by the lazy prune below, not by
-# a cron: the collector owns its own retention.
+# How long a day of statistics is DISPLAYED/kept for a FREE (or expired, or
+# never-subscribed) guild. Enforced by the lazy prune below, not by a cron:
+# the collector owns its own retention. Mirrored as
+# tools.premium.FREE_SERVERSTATS_RETENTION_DAYS (tests/tools/test_premium.py
+# ties the two together) and as rollups.MAX_WINDOW_DAYS (this module's own
+# read layer; tests/cogs/test_serverstats_rollups.py ties THAT pair
+# together) - three names for the one number, each kept honest by a test
+# rather than by hoping nobody edits one and forgets the others.
 RETENTION_DAYS = 90
 
+# M4d (.claude/plans/monetisation/4-plan-retenu.md: "chaque agregat est
+# supprime a 365 j"): the HARD ceiling - nothing survives past this many
+# days for ANY guild, Yasuho+ or not. Mirrors
+# tools.premium.GUILD_PREMIUM.serverstats_retention_days /
+# rollups.PREMIUM_MAX_WINDOW_DAYS, tied together the same way as
+# RETENTION_DAYS above (tests/tools/test_premium.py,
+# tests/cogs/test_serverstats_rollups.py).
+MAX_RETENTION_DAYS = 365
+
 # The prune deletes at most PRUNE_BATCH_SIZE rows per table per statement and
-# runs at most PRUNE_MAX_BATCHES statements per day, so its worst case is
-# bounded (100k rows/day) and its steady state is one or two short batches.
+# runs at most PRUNE_MAX_BATCHES statements per pass. _maybe_prune below runs
+# at most TWO passes a day (the unconditional MAX_RETENTION_DAYS delete, then
+# the RETENTION_DAYS..MAX_RETENTION_DAYS band delete for non-premium-ish
+# guilds), so its worst case is bounded (200k rows/day) and its steady state
+# is one or two short batches per pass.
 PRUNE_BATCH_SIZE = 5000
 PRUNE_MAX_BATCHES = 20
 
@@ -296,35 +314,121 @@ class ServerStats(commands.Cog):
         # on the next tick instead of being lost for the whole day.
         self._snapshot_day = day
 
-    async def _maybe_prune(self, day):
-        """Drop everything older than RETENTION_DAYS, once a day, in bounded batches."""
-        if self._prune_day == day:
-            return
-        cutoff = buffer.day_to_date(day - RETENTION_DAYS)
+    async def _run_prune_batches(self, query, *args):
+        """Run ``query`` up to PRUNE_MAX_BATCHES times, PRUNE_BATCH_SIZE rows
+        per batch, stopping as soon as a batch comes back short of the cap -
+        the shared loop both prune passes below use. ``args`` are the
+        query's own parameters, in order, EXCEPT the trailing batch-size one
+        (``queries.PRUNE``/``queries.PRUNE_EXCLUDING_GUILDS`` both end in
+        ``LIMIT $n``), which this appends itself.
+
+        Returns ``(deleted_messages, deleted_days)``.
+        """
         deleted_messages = 0
         deleted_days = 0
         # Never name a throwaway loop variable ``_`` in this codebase: ``_`` is
         # the gettext translation callable by house convention (tools.i18n), so
         # binding it here would shadow it for the rest of the scope.
         for _batch in range(PRUNE_MAX_BATCHES):
-            row = await self.bot.db_pool.fetchrow(
-                queries.PRUNE, cutoff, PRUNE_BATCH_SIZE
-            )
+            row = await self.bot.db_pool.fetchrow(query, *args, PRUNE_BATCH_SIZE)
             batch_messages = int(row["messages"]) if row else 0
             batch_days = int(row["days"]) if row else 0
             deleted_messages += batch_messages
             deleted_days += batch_days
             if batch_messages < PRUNE_BATCH_SIZE and batch_days < PRUNE_BATCH_SIZE:
                 break
+        return deleted_messages, deleted_days
+
+    async def _maybe_prune(self, day):
+        """Once a day, in bounded batches (M4d - see the plan's "Stats: 365 j
+        glissants pendant Yasuho+" rule):
+
+        1. UNCONDITIONALLY drop rows older than MAX_RETENTION_DAYS, for every
+           guild - the hard ceiling ("chaque agregat est supprime a 365 j"),
+           which no tier is exempt from. Never skipped - see the failure
+           path below.
+        2. Drop rows older than RETENTION_DAYS (but not yet past
+           MAX_RETENTION_DAYS) for every guild that is NOT currently
+           Yasuho+ AND did NOT stop being Yasuho+ within the last
+           MAX_RETENTION_DAYS days - exactly today's 90-day prune, merely
+           narrowed to the guilds it always applied to. A currently
+           entitled guild, or one whose subscription (or owner grant)
+           ended less than a year ago, keeps that 90-365-day band instead:
+           a returning subscriber gets their history back rather than
+           starting from zero, for as long as MAX_RETENTION_DAYS allows.
+
+        A GRANTED-THEN-REVOKED guild (``?premiumadmin revoke``) is treated
+        exactly like an ended subscription: :func:`tools.premium.
+        premium_ish_guild_ids` reads the grant's ``revoked_at`` as its true
+        end (:func:`tools.premium.is_grant_active` already treats a revoke
+        as immediate and ours to end, never a missed webhook to forgive),
+        so that guild's band is kept for MAX_RETENTION_DAYS days counted
+        from the REVOKE, not from whatever ``expires_at`` the grant
+        originally promised.
+
+        FAILURE PATH, chosen deliberately toward PRIVACY-SAFE RETENTION
+        rather than convenience: if resolving the premium-ish guild set
+        itself fails (a DB hiccup, a coding bug), step 2 is SKIPPED
+        ENTIRELY for this run - no row in the 90-365-day band is deleted on
+        an uncertain verdict - while step 1 still runs unconditionally. The
+        alternative (treat every guild as free on failure, i.e. run the
+        band delete for everyone) was rejected: it risks deleting a
+        GENUINE subscriber's 90-365-day history over a TRANSIENT failure,
+        and that loss is not recoverable (the rows are gone, not merely
+        hidden), whereas skipping the delete costs a free guild at most one
+        extra day past a 90-day promise - self-healing on TOMORROW's run,
+        which recomputes the set fresh - and MAX_RETENTION_DAYS is still
+        enforced regardless, so nothing is ever kept forever. Over-RETAINING
+        briefly is the recoverable mistake here; over-DELETING is not.
+        """
+        if self._prune_day == day:
+            return
+        cutoff_free = buffer.day_to_date(day - RETENTION_DAYS)
+        cutoff_global = buffer.day_to_date(day - MAX_RETENTION_DAYS)
+
+        # Step 1: unconditional, every guild.
+        deleted_messages, deleted_days = await self._run_prune_batches(
+            queries.PRUNE, cutoff_global
+        )
+
+        # Step 2: the free-tier band, guilds that are premium-ish excluded.
+        try:
+            keep_ids = await premium.premium_ish_guild_ids(
+                self.bot.db_pool, within_days=MAX_RETENTION_DAYS
+            )
+        except Exception:
+            log.exception(
+                "serverstats prune: could not resolve the premium-ish "
+                "guild set; skipping today's %d-%d day band delete for "
+                "free guilds (the unconditional %d-day delete above still "
+                "ran)",
+                RETENTION_DAYS,
+                MAX_RETENTION_DAYS,
+                MAX_RETENTION_DAYS,
+            )
+            keep_ids = None
+
+        if keep_ids is not None:
+            band_messages, band_days = await self._run_prune_batches(
+                queries.PRUNE_EXCLUDING_GUILDS,
+                cutoff_free,
+                cutoff_global,
+                sorted(keep_ids),
+            )
+            deleted_messages += band_messages
+            deleted_days += band_days
+
         self._prune_day = day
         self._stats["pruned"] += deleted_messages + deleted_days
         if deleted_messages or deleted_days:
             log.info(
-                "serverstats prune: removed %d message row(s) and %d day row(s) "
-                "older than %s",
+                "serverstats prune: removed %d message row(s) and %d day "
+                "row(s) (older than %s for every guild, older than %s for "
+                "non-premium-ish guilds)",
                 deleted_messages,
                 deleted_days,
-                cutoff,
+                cutoff_global,
+                cutoff_free,
             )
 
     # ------------------------------------------------------------------
@@ -773,6 +877,17 @@ class ServerStats(commands.Cog):
         pool = self.bot.db_pool
         guild = ctx.guild
 
+        # M4d: this guild's resolved serverstats retention ceiling - 90 days
+        # for free/expired/lookup-failed-safe-to-free, 365 for Yasuho+ right
+        # now (tools.premium.resolve_guild_limits never raises, see its own
+        # docstring). The INITIAL render always asks for
+        # rollups.DEFAULT_OVERVIEW_DAYS (7), well under either ceiling, so
+        # this only matters once the card's toggle is clicked - see
+        # views._window_cycle and ServerStatsCard.max_window_days.
+        max_window_days = premium.resolve_guild_limits(
+            self.bot, guild.id
+        ).serverstats_retention_days
+
         since = await rollups.data_since(pool, guild.id)
         overview = await rollups.overview(
             pool, guild.id, days=rollups.DEFAULT_OVERVIEW_DAYS, since=since
@@ -839,6 +954,7 @@ class ServerStats(commands.Cog):
             # views.audience_roles).
             destination=ctx.channel,
             chart_filename=views.CHART_FILENAME if chart_file is not None else None,
+            max_window_days=max_window_days,
         )
         send_kwargs = dict(view=view, allowed_mentions=discord.AllowedMentions.none())
         if chart_file is not None:

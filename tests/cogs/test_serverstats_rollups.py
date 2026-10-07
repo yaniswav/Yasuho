@@ -118,6 +118,45 @@ def test_clamps_keep_every_window_bounded():
     assert rollups.clamp_limit(500) == rollups.MAX_TOP_CHANNELS
     assert rollups.clamp_limit(-3) == 1
     assert rollups.clamp_limit(None) == 10
+
+
+def test_clamp_days_defaults_to_the_free_ceiling():
+    # Unchanged from before M4d: a caller that passes no max_days at all
+    # (every call site that existed before this lot) still cannot ask past
+    # the free ceiling.
+    assert rollups.clamp_days(200) == rollups.MAX_WINDOW_DAYS
+
+
+def test_clamp_days_honours_a_wider_ceiling_for_an_entitled_guild():
+    # M4d: a caller that already resolved an entitled guild's retention
+    # (tools.premium.resolve_guild_limits) passes it as max_days, and the
+    # window is no longer cut back down to the free ceiling.
+    assert rollups.clamp_days(200, max_days=rollups.PREMIUM_MAX_WINDOW_DAYS) == 200
+    assert (
+        rollups.clamp_days(9999, max_days=rollups.PREMIUM_MAX_WINDOW_DAYS)
+        == rollups.PREMIUM_MAX_WINDOW_DAYS
+    )
+
+
+def test_window_ceilings_are_tied_to_the_premium_catalog():
+    """M4d duplicate-literal guard: MAX_WINDOW_DAYS/PREMIUM_MAX_WINDOW_DAYS
+    are restated here (this pure read module must not import a cog, and
+    tools/ must not import a cog either - see both modules' own docstrings),
+    so this test is what stops the two copies from silently drifting apart.
+
+    NEGATIVE CONTROL: temporarily changing PREMIUM_MAX_WINDOW_DAYS to 364
+    while leaving tools.premium.GUILD_PREMIUM.serverstats_retention_days at
+    365 turned this test red (AssertionError: 364 != 365); the edit was
+    reverted by hand (no git stash/checkout/reset) and ``git diff`` showed a
+    clean tree before the suite was re-run green.
+    """
+    from tools import premium
+
+    assert rollups.MAX_WINDOW_DAYS == premium.FREE_SERVERSTATS_RETENTION_DAYS
+    assert (
+        rollups.PREMIUM_MAX_WINDOW_DAYS
+        == premium.GUILD_PREMIUM.serverstats_retention_days
+    )
     assert rollups.clamp_weeks(99) == rollups.MAX_RETENTION_WEEKS
     assert rollups.clamp_weeks(0) == 1
     assert rollups.clamp_weeks(None) == rollups.DEFAULT_RETENTION_WEEKS

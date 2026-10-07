@@ -235,7 +235,7 @@ def _button_labels(view):
 
 def _card(guild=None, since=TODAY - datetime.timedelta(days=30), overview=None,
           top_channels=None, growth=None, activity=None, retention=None, pool=None,
-          author=None, destination=_UNSET):
+          author=None, destination=_UNSET, max_window_days=_UNSET):
     guild = guild or _FakeGuild()
     overview = overview or _overview()
     top_channels = top_channels if top_channels is not None else []
@@ -246,6 +246,13 @@ def _card(guild=None, since=TODAY - datetime.timedelta(days=30), overview=None,
     # says nothing about its destination is posted in real life.
     if destination is _UNSET:
         destination = _FakeChannel()
+    kwargs = {}
+    # Default max_window_days: unset here too, so a test that does not pass
+    # it exercises ServerStatsCard's OWN default (the free ceiling) rather
+    # than this helper silently choosing one - that default IS the M4d
+    # byte-identical-for-free guarantee under test.
+    if max_window_days is not _UNSET:
+        kwargs["max_window_days"] = max_window_days
     return views.ServerStatsCard(
         pool,
         guild,
@@ -257,6 +264,7 @@ def _card(guild=None, since=TODAY - datetime.timedelta(days=30), overview=None,
         activity,
         retention,
         destination=destination,
+        **kwargs,
     )
 
 
@@ -828,6 +836,100 @@ def test_toggle_button_label_names_the_window_it_will_load():
     assert "Show {days} days".format(
         days=rollups.DEFAULT_OVERVIEW_DAYS
     ) in _button_labels(wide)
+
+
+# ---------------------------------------------------------------------------
+# M4d: the entitled guild's third window state
+# ---------------------------------------------------------------------------
+def test_free_cycle_is_byte_identical_to_before_m4d():
+    """A free (or expired, or lookup-failed-safe-to-free) guild's cycle is
+    EXACTLY [7, 30] - the pre-M4d toggle's only two states."""
+    assert views._window_cycle(rollups.MAX_WINDOW_DAYS) == [
+        rollups.DEFAULT_OVERVIEW_DAYS,
+        views.ALT_OVERVIEW_DAYS,
+    ]
+    # A guild resolved at or below the free ceiling (there is no tier below
+    # free today, but the rule is "> the ceiling", not "== 365") never gets
+    # the third state either.
+    assert views._window_cycle(1) == [
+        rollups.DEFAULT_OVERVIEW_DAYS,
+        views.ALT_OVERVIEW_DAYS,
+    ]
+
+
+def test_entitled_cycle_adds_the_resolved_ceiling_as_a_third_state():
+    assert views._window_cycle(rollups.PREMIUM_MAX_WINDOW_DAYS) == [
+        rollups.DEFAULT_OVERVIEW_DAYS,
+        views.ALT_OVERVIEW_DAYS,
+        rollups.PREMIUM_MAX_WINDOW_DAYS,
+    ]
+
+
+def test_other_window_cycles_through_all_three_entitled_states_and_wraps():
+    max_days = rollups.PREMIUM_MAX_WINDOW_DAYS
+    first = views._other_window(rollups.DEFAULT_OVERVIEW_DAYS, max_days)
+    assert first == views.ALT_OVERVIEW_DAYS
+    second = views._other_window(first, max_days)
+    assert second == max_days
+    third = views._other_window(second, max_days)
+    assert third == rollups.DEFAULT_OVERVIEW_DAYS  # wraps back to the start
+
+
+def test_other_window_defensively_restarts_the_cycle_on_an_unknown_value():
+    assert views._other_window(9999, rollups.PREMIUM_MAX_WINDOW_DAYS) == (
+        rollups.DEFAULT_OVERVIEW_DAYS
+    )
+
+
+def test_toggle_button_offers_the_entitled_third_state():
+    card = _card(
+        overview=_overview(days=views.ALT_OVERVIEW_DAYS),
+        max_window_days=rollups.PREMIUM_MAX_WINDOW_DAYS,
+    )
+    assert "Show {days} days".format(
+        days=rollups.PREMIUM_MAX_WINDOW_DAYS
+    ) in _button_labels(card)
+
+
+async def test_toggle_cycles_an_entitled_card_through_all_three_states(
+    fake_pool, make_interaction
+):
+    _wire_overview_and_top(fake_pool)
+    guild = _FakeGuild(channels={1: _FakeChannel()})
+    card = _card(
+        guild=guild,
+        pool=fake_pool,
+        overview=_overview(days=rollups.DEFAULT_OVERVIEW_DAYS),
+        max_window_days=rollups.PREMIUM_MAX_WINDOW_DAYS,
+    )
+    card.message = types.SimpleNamespace()
+
+    await card._toggle_days(make_interaction())
+    assert card.days == views.ALT_OVERVIEW_DAYS
+
+    await card._toggle_days(make_interaction())
+    assert card.days == rollups.PREMIUM_MAX_WINDOW_DAYS
+    # The wide window actually reached rollups.overview/top_channels
+    # uncapped - the whole point of threading max_days through. Checked by
+    # SPAN (end - start), not by an absolute date, so this does not depend
+    # on today_utc() vs this file's local-clock TODAY ever landing on the
+    # same calendar day: a 365-day-wide scan proves it was not clamped back
+    # to the free ceiling's 89-day span.
+    last_overview_call = [c for c in fake_pool.calls if c[0] == "fetchrow"][-1]
+    start, _previous_start, end = last_overview_call[2][1:4]
+    assert (end - start).days == rollups.PREMIUM_MAX_WINDOW_DAYS - 1
+
+    await card._toggle_days(make_interaction())
+    assert card.days == rollups.DEFAULT_OVERVIEW_DAYS  # wrapped back
+
+
+# NEGATIVE CONTROL (the entitled third state). Temporarily changing
+# _window_cycle's guard from ``max_window_days > rollups.MAX_WINDOW_DAYS`` to
+# ``max_window_days >= rollups.MAX_WINDOW_DAYS`` - so a FREE guild (resolved
+# at exactly rollups.MAX_WINDOW_DAYS) would ALSO get the third state - turned
+# test_free_cycle_is_byte_identical_to_before_m4d red (``[7, 30, 90] != [7,
+# 30]``). The edit was reverted by hand (no git stash/checkout/reset) and
+# ``git diff`` showed a clean tree before the suite was re-run green.
 
 
 async def test_a_failing_toggle_notifies_the_clicker(fake_pool, make_interaction, caplog):

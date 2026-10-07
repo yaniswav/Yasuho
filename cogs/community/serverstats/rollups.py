@@ -42,10 +42,23 @@ from dataclasses import dataclass
 from . import buffer
 from cogs.community.leveling.engine import iso_week_period_key
 
-# Nothing older than the collector's own retention can be asked for (see
-# cog.RETENTION_DAYS - duplicated as a literal rather than imported so this pure
-# read module never drags discord.py in through cog.py).
+# Nothing older than the collector's own FREE-tier retention can be asked for
+# by default (see cog.RETENTION_DAYS / tools.premium.FREE_SERVERSTATS_RETENTION_DAYS
+# - duplicated as a literal rather than imported so this pure read module never
+# drags discord.py in through cog.py, and tools/ must not import a cog either -
+# see tools.premium's own module docstring for the established precedent).
+# tests/cogs/test_serverstats_rollups.py ties this to tools.premium's catalog so
+# the two numbers cannot silently drift apart.
 MAX_WINDOW_DAYS = 90
+
+# The Yasuho+ ceiling (M4d, .claude/plans/monetisation/4-plan-retenu.md: "Stats:
+# 365 j glissants pendant Yasuho+"). A caller that already knows a guild is
+# entitled (cog.py's cmd_serverstats, via tools.premium.resolve_guild_limits)
+# passes THIS as the ``max_days`` of :func:`clamp_days`/:func:`overview`/
+# :func:`top_channels` instead of the default above, so an entitled guild's
+# requested window is never cut back down to the free ceiling. Same
+# duplicate-literal-tied-by-test precedent as MAX_WINDOW_DAYS.
+PREMIUM_MAX_WINDOW_DAYS = 365
 
 # Default windows: the card offers 7 or 30 days for the overview, 30 for the
 # series, 8 weeks for the retention block.
@@ -382,13 +395,19 @@ def today_utc():
     return buffer.day_to_date(buffer.utc_day())
 
 
-def clamp_days(days, default=DEFAULT_SERIES_DAYS):
-    """Force a window into 1..MAX_WINDOW_DAYS (the collector's retention)."""
+def clamp_days(days, default=DEFAULT_SERIES_DAYS, max_days=MAX_WINDOW_DAYS):
+    """Force a window into 1..``max_days`` (the collector's retention).
+
+    ``max_days`` defaults to the FREE ceiling (:data:`MAX_WINDOW_DAYS`) so
+    every EXISTING caller is unaffected; a caller that already resolved an
+    entitled guild's wider retention (:data:`PREMIUM_MAX_WINDOW_DAYS`, via
+    tools.premium.resolve_guild_limits) passes it explicitly instead.
+    """
     try:
         value = int(days)
     except (TypeError, ValueError):
         return default
-    return max(1, min(value, MAX_WINDOW_DAYS))
+    return max(1, min(value, max_days))
 
 
 def clamp_limit(limit, maximum=MAX_TOP_CHANNELS, default=10):
@@ -489,7 +508,7 @@ def _available_days(first_day, start, end):
 # ---------------------------------------------------------------------------
 
 
-def shape_overview(row, today, days, since=None):
+def shape_overview(row, today, days, since=None, max_days=MAX_WINDOW_DAYS):
     """Turn the OVERVIEW row into an honest :class:`Overview`.
 
     Both windows are runs of COMPLETE days ending yesterday (see
@@ -507,8 +526,11 @@ def shape_overview(row, today, days, since=None):
     weeks": both look like an empty scan. With ``since`` the silent guild gets
     its full window and an honest average of 0.0 instead of "not enough
     history".
+
+    ``max_days`` (M4d) is the ceiling :func:`clamp_days` enforces - the free
+    default unless the caller already resolved a wider, entitled one.
     """
-    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS)
+    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS, max_days=max_days)
     start, previous_start, end = overview_bounds(today, days)
     first_day = since if since is not None else (
         row["first_day"] if row is not None else None
@@ -710,7 +732,8 @@ def shape_retention(net_rows, activity_rows, keys, leveling=False, since=None):
 
 
 async def overview(
-    pool, guild_id, days=DEFAULT_OVERVIEW_DAYS, today=None, since=None
+    pool, guild_id, days=DEFAULT_OVERVIEW_DAYS, today=None, since=None,
+    max_days=MAX_WINDOW_DAYS,
 ):
     """Total messages, honest daily average and the delta against the window
     before it. ONE query, bounded to twice the window.
@@ -722,24 +745,33 @@ async def overview(
     Pass ``since`` (from :func:`data_since`, which the card asks once for the
     whole page) so a guild that is merely SILENT is not reported as a guild
     without history - see :func:`shape_overview`.
+
+    ``max_days`` (M4d) defaults to the FREE ceiling; a caller that already
+    resolved an entitled guild's wider retention passes
+    :data:`PREMIUM_MAX_WINDOW_DAYS` (or the resolved
+    ``GuildLimits.serverstats_retention_days``) instead, so ``days`` is
+    never clamped back down for that guild.
     """
-    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS)
+    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS, max_days=max_days)
     today = today or today_utc()
     start, previous_start, end = overview_bounds(today, days)
     row = await pool.fetchrow(OVERVIEW, guild_id, start, previous_start, end)
-    return shape_overview(row, today, days, since)
+    return shape_overview(row, today, days, since, max_days=max_days)
 
 
 async def top_channels(
-    pool, guild_id, days=DEFAULT_OVERVIEW_DAYS, limit=10, today=None
+    pool, guild_id, days=DEFAULT_OVERVIEW_DAYS, limit=10, today=None,
+    max_days=MAX_WINDOW_DAYS,
 ):
     """The busiest channels of the window, ids only - ONE query.
 
     A RANKING, not a comparison: the window includes today, because the day in
     progress can only add messages to a channel already in the running order and
     nothing here is divided by an elapsed-time denominator.
+
+    ``max_days`` (M4d): same ceiling override as :func:`overview`.
     """
-    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS)
+    days = clamp_days(days, DEFAULT_OVERVIEW_DAYS, max_days=max_days)
     limit = clamp_limit(limit)
     today = today or today_utc()
     start, _previous_start = window_bounds(today, days)

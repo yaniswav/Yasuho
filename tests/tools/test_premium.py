@@ -139,6 +139,14 @@ def test_free_guild_values_match_their_owning_cog_constants():
         == tickets_guild_config.MAX_OPEN_PER_USER
     )
     assert premium.FREE_SERVERSTATS_RETENTION_DAYS == serverstats_cog.RETENTION_DAYS
+    # M4d: the Yasuho+ ceiling (cog.MAX_RETENTION_DAYS, the daily purge's
+    # hard "nothing survives past here" cutoff for every tier) must equal
+    # the catalog's own Yasuho+ retention value - see rollups.
+    # PREMIUM_MAX_WINDOW_DAYS for the read-layer's own copy of this tie.
+    assert (
+        serverstats_cog.MAX_RETENTION_DAYS
+        == premium.GUILD_PREMIUM.serverstats_retention_days
+    )
     # Brand-new benefits: no cog constant exists yet because no guild has
     # either today, whatever SKUs are configured.
     assert premium.FREE_MUSIC_247 is False
@@ -647,6 +655,80 @@ async def test_load_active_selects_only_non_deleted_rows(fake_pool):
     _method, query, _args = fake_pool.calls[0]
     assert "FROM premium_entitlements" in query
     assert "WHERE deleted = FALSE" in query
+
+
+# ---------------------------------------------------------------------------
+# Bulk "premium-ish" lookup (M4d) - cogs/community/serverstats/cog.py's daily
+# purge is the only caller today. Scope here: the WRAPPER (cutoff arithmetic,
+# ONE query, int-set parsing) - the WHERE clause's own correctness
+# (entitlement ends_at/deleted/last_synced_at, grant expires_at/revoked_at)
+# is reasoned out in the query's own comment in tools/premium.py and mirrors
+# is_active/is_grant_active's established rules; this repo's tests are
+# mock-based throughout (FakePool answers a canned row set regardless of the
+# WHERE clause, see conftest.py), so it cannot exercise live SQL semantics -
+# consistent with every other query test in this suite.
+# ---------------------------------------------------------------------------
+
+
+async def test_premium_ish_guild_ids_issues_exactly_one_query(fake_pool):
+    fake_pool.fetch_return = []
+    result = await premium.premium_ish_guild_ids(fake_pool, within_days=365)
+
+    assert len(fake_pool.calls) == 1
+    method, query, _args = fake_pool.calls[0]
+    assert method == "fetch"
+    assert "premium_entitlements" in query
+    assert "premium_grants" in query
+    assert result == set()
+
+
+async def test_premium_ish_guild_ids_computes_the_cutoff_from_within_days(fake_pool):
+    fake_pool.fetch_return = []
+    now = datetime.datetime(2026, 10, 6, tzinfo=UTC)
+
+    await premium.premium_ish_guild_ids(fake_pool, within_days=365, now=now)
+
+    _method, _query, args = fake_pool.calls[0]
+    assert args == (now - datetime.timedelta(days=365),)
+
+
+async def test_premium_ish_guild_ids_defaults_now_to_the_real_clock(fake_pool):
+    fake_pool.fetch_return = []
+    before = datetime.datetime.now(UTC)
+
+    await premium.premium_ish_guild_ids(fake_pool, within_days=90)
+
+    after = datetime.datetime.now(UTC)
+    _method, _query, args = fake_pool.calls[0]
+    (cutoff,) = args
+    # cutoff = "now" - 90 days, "now" taken somewhere between the two reads
+    # above (never a frozen/stale value from import time).
+    assert before - datetime.timedelta(days=90) <= cutoff
+    assert cutoff <= after - datetime.timedelta(days=90)
+
+
+async def test_premium_ish_guild_ids_returns_a_set_of_ints(fake_pool):
+    fake_pool.fetch_return = [
+        {"guild_id": 111}, {"guild_id": "222"}, {"guild_id": 111},
+    ]
+    result = await premium.premium_ish_guild_ids(fake_pool, within_days=365)
+
+    assert result == {111, 222}
+    assert all(isinstance(guild_id, int) for guild_id in result)
+
+
+async def test_premium_ish_guild_ids_empty_rows_is_an_empty_set(fake_pool):
+    fake_pool.fetch_return = []
+    assert await premium.premium_ish_guild_ids(fake_pool, within_days=365) == set()
+
+
+# NOTE: a negative control against this function's own WHERE clause would
+# need a real PostgreSQL (every test above only reaches the wrapper - see
+# this section's header comment); the two negative controls for the M4d
+# purge this function serves are instead exercised at the call site, against
+# observable PYTHON behaviour - see tests/cogs/test_serverstats.py's
+# "NEGATIVE CONTROL" comments (the entitled-keep, and the unconditional
+# 365-day delete).
 
 
 # ---------------------------------------------------------------------------

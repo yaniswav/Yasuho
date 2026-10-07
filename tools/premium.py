@@ -979,6 +979,83 @@ async def load_active_grants(pool):
 
 
 # ---------------------------------------------------------------------------
+# Bulk "premium-ish" lookup (M4d) - built for a bounded bulk PURGE, never a
+# per-guild hot path (that is what EntitlementCache.is_guild_premium is for).
+# ---------------------------------------------------------------------------
+
+# ONE query, both sources, guild scope only. Written so "ended" collapses to
+# the SAME inequality as "active" wherever the data allows it:
+#
+#   entitlements: a row that is still active (deleted = FALSE, ends_at NULL
+#   or in the future) trivially satisfies ``ends_at IS NULL OR ends_at > $1``
+#   too, since $1 is `within_days` days in the PAST - so one clause covers
+#   both "active" and "naturally expired less than within_days days ago".
+#   A row already marked deleted (a refund, or any other delisting - "a
+#   refund follows the expiry path", see the module docstring) carries no
+#   other end timestamp, so that branch reads last_synced_at instead: it is
+#   stamped to now() by the very event that set deleted = TRUE
+#   (upsert_entitlement_event / mark_deleted), so it IS the moment this was
+#   recorded as over.
+#
+#   grants: a grant that is still active (revoked_at NULL, expires_at NULL
+#   or in the future) satisfies ``expires_at IS NULL OR expires_at > $1`` the
+#   same way. A revoked grant's real end is revoked_at, whatever expires_at
+#   still says - is_grant_active already treats a revoke as immediate and
+#   ours to end, never a missed webhook to forgive - so a revoked row is
+#   judged on revoked_at alone, not on expires_at at all.
+#
+# Both tables carry a partial index on guild_id (schema.sql) and hold only
+# as many rows as there are PAID or GIFTED guild scopes - never one row per
+# guild in the fleet - so this is a cheap scan of a small table regardless
+# of how many guilds the bot is in; nothing here is proportional to fleet
+# size.
+_PREMIUM_ISH_GUILD_IDS = """
+    SELECT guild_id FROM premium_entitlements
+    WHERE scope_type = 'guild' AND (
+        (deleted = FALSE AND (ends_at IS NULL OR ends_at > $1))
+        OR (deleted = TRUE AND last_synced_at > $1)
+    )
+    UNION
+    SELECT guild_id FROM premium_grants
+    WHERE scope_type = 'guild' AND (
+        (revoked_at IS NULL AND (expires_at IS NULL OR expires_at > $1))
+        OR (revoked_at IS NOT NULL AND revoked_at > $1)
+    );
+    """
+
+
+async def premium_ish_guild_ids(pool, *, within_days, now=None):
+    """Every guild that is Yasuho+ right now, OR whose Yasuho+ ended fewer
+    than ``within_days`` days ago - from a Discord entitlement or an owner
+    grant, either one.
+
+    Built for a BULK purge that needs to classify every guild at once (see
+    cogs/community/serverstats/cog.py's M4d daily prune) without paying one
+    query per guild: this is ONE bounded statement over the two premium
+    tables (see :data:`_PREMIUM_ISH_GUILD_IDS` for why it is cheap regardless
+    of fleet size), run ONCE per purge pass; the caller tests membership in
+    the returned ``set`` for every guild it is deciding about.
+
+    NOT ``bot.premium`` (:class:`EntitlementCache`). The cache's maps are
+    built by :func:`load_active`/:func:`load_active_grants`, which only ever
+    load NON-deleted entitlements and NON-revoked grants - exactly the rows
+    this function also has to see an ENDED one through (a refund, a
+    revocation). Reading the tables directly is not a shortcut around the
+    cache here, it is the only way to see "ended" at all - the cache was
+    built to answer "is this active right now", a different question.
+
+    Raises straight through on a pool failure - same posture as
+    :meth:`EntitlementCache.load`: a caller that wants a safe default on
+    failure (the serverstats purge does: skip the free-tier band delete for
+    this run rather than guess) wraps this itself.
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    cutoff = now - datetime.timedelta(days=within_days)
+    rows = await pool.fetch(_PREMIUM_ISH_GUILD_IDS, cutoff)
+    return {int(row["guild_id"]) for row in rows}
+
+
+# ---------------------------------------------------------------------------
 # Status detail - M3c. EntitlementCache.is_guild_premium/has_comfort_pack
 # collapse "why" into a bare bool; cogs/system/premium_panel.py's /premium
 # needs to SAY why (a Discord purchase vs an owner gift) and, for a purchase,
