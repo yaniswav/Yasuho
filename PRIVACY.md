@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: October 6, 2026_
+_Last updated: October 7, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -55,7 +55,8 @@ nothing and deletes nothing. Clearing it (`/rankcard clear`) or erasing your dat
 removes both.
 
 **Server statistics**: aggregate counters only (messages per day, joins/leaves
-per day). No message content and no per-user activity is stored.
+per day). No message content and no per-user activity is stored. They are shown
+over up to 90 days, or up to 365 days on a server with Yasuho+.
 
 **User preferences**: language, privacy toggles, and similar settings you set
 yourself.
@@ -90,6 +91,19 @@ did. We store your user ID with the time of your latest vote, your consecutive
 vote streak and your lifetime vote count, which is what lets a vote grant a
 temporary XP bonus. Nothing else about the vote is stored, and we never poll
 top.gg to find out who has voted.
+
+**Premium purchases**: premium perks (Yasuho+ for a server, Pack Confort for
+you) are bought through Discord, which tells us about each purchase. We keep a
+copy of what Discord reports: which offer, the server ID or your user ID it
+belongs to, when it starts and ends, and whether it was cancelled or refunded.
+Payment details never reach us: Discord handles billing. If the bot owner gives
+premium as a gift, we record who received it, the note the owner wrote, and
+when it starts, ends or is revoked.
+
+**Limit notes**: when you reach a limit that a premium offer would raise, the
+bot may add one line about it to its reply, at most once every 7 days per kind
+of limit. To keep that promise we store your user ID, which limit, and when the
+line was last shown.
 
 **Content you ask us to keep**: reminder texts, music favorites and playlists,
 kept until you delete them; and your AFK status message, deleted as soon as you
@@ -136,7 +150,14 @@ the same deletion schedule on restore.
 
 ## Retention
 
-- Server statistics aggregates: 90 days.
+- Server statistics aggregates: 90 days. On a server with Yasuho+, 365 days,
+  and the 90-to-365-day part is still kept for up to 365 days after Yasuho+
+  ends (shown again if it comes back, never shown while it is off). Nothing is
+  kept past 365 days.
+- Premium purchase records and premium gifts: kept while they are active, then
+  deleted 400 days after they end (the statistics rule above needs to know when
+  a server's Yasuho+ ended).
+- Limit notes: 14 days.
 - Presence aggregates: 30 days. A game you have not played for 30 days drops
   off your profile, and a whole aggregate nothing has added to for 30 days is
   emptied by the daily cleanup - so the 30 days is what we keep, not only what
@@ -164,8 +185,12 @@ the same deletion schedule on restore.
   reason was written about them.
 - `?mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
   accounts, visibility choices, collected presence data, your top.gg vote
-  record, your personal rank card, your AniList link (the stored OAuth token)
-  and your AniList / MangaDex alert opt-ins.
+  record, your personal rank card, your AniList link (the stored OAuth token),
+  your AniList / MangaDex alert opt-ins, your limit notes and our copy of your
+  own premium purchases. A purchase that is still active on Discord is copied
+  again at the next check, because the perk depends on it. A gift the bot owner
+  gave you stays in the owner's record of gifts until it is deleted on the
+  schedule above.
 - `?mydata deleteavatars` - permanently delete your avatar history and disable
   future tracking.
 - `/connections unlink` - unlink an external account (removes its data and
