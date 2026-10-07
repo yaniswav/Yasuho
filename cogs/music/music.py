@@ -990,6 +990,25 @@ def joinable_voice_channels(
     return channels
 
 
+def _bot_can_join(guild: typing.Any, channel: typing.Any) -> bool:
+    """Whether the bot itself may enter ``channel`` (view + connect).
+
+    For 24/7 (M4b): a voice join goes over the gateway and never comes back
+    "forbidden" - a missing permission only surfaces as a connect timeout - so
+    the refusal has to be read off the permissions before trying. When the bot's
+    own member or the permissions cannot be read, answers True and lets the
+    connect itself decide (never a false "no permission" auto-off).
+    """
+    me = getattr(guild, "me", None)
+    if me is None:
+        return True
+    try:
+        perms = channel.permissions_for(me)
+    except Exception:
+        return True
+    return bool(perms.view_channel and perms.connect)
+
+
 def station_select_options(
     current_key: typing.Optional[str],
 ) -> typing.List[discord.SelectOption]:
@@ -1142,6 +1161,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Guards the reconnect-rejoin pass (see _rejoin_247_after_reconnect)
         # against overlapping itself on a rapid run of node_ready events.
         self._reconnect_rejoin_running = False
+        # Set when a node_ready lands mid-pass: run one more pass after it.
+        self._reconnect_rejoin_again = False
         self._idle_check.start()
 
     def cog_unload(self) -> None:
@@ -2365,7 +2386,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # for one of those and not the other.
         was_restored = self._restored
         await self._maybe_restore()
-        if was_restored:
+        # A RESUMED session kept every player alive on the node, so there is
+        # nothing to rebuild - the rejoin pass force-disconnects first and would
+        # cut healthy 24/7 sessions. Never true with resume_timeout=0 (core.py),
+        # but the pass must not depend on that setting staying as it is.
+        if was_restored and not getattr(event, "resumed", False):
             await self._rejoin_247_after_reconnect()
 
     async def _maybe_restore(self) -> None:
@@ -2448,7 +2473,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # one exception: the whole point of the feature is staying connected
         # (and, at restart, rejoining) even when the room has emptied out -
         # see always_on.py. This same check, reused unchanged, is also what
-        # the node-reconnect rejoin pass runs through (_reconnect_rejoin_one),
+        # the node-reconnect rejoin pass runs through (_admit_and_join),
         # so a 24/7 guild resumes there too even if the channel is empty right
         # now.
         if not any(not m.bot for m in channel.members) and not self._is_247_active(
@@ -2665,41 +2690,62 @@ class Music(ServerPlaylistMixin, commands.Cog):
         row, bare otherwise.
 
         Guarded against overlapping itself (``_reconnect_rejoin_running``) so
-        a rapid flap of node_ready events cannot run two passes at once.
+        a rapid flap of node_ready events cannot run two passes at once. A
+        node_ready that lands WHILE a pass runs is not dropped: it means the
+        node changed session again, so the players this pass just built may
+        already be dead - one more pass runs right after (a flag, not a
+        queue: any number of overlapping events collapse into one rerun).
         """
         if self._reconnect_rejoin_running:
+            self._reconnect_rejoin_again = True
             return
         self._reconnect_rejoin_running = True
         try:
-            await self.always_on.ensure_loaded(self.bot.db_pool)
-            guild_ids = [
-                guild_id
-                for guild_id in self.always_on.ordered_guild_ids()
-                if self._is_247_active(guild_id)
-            ]
-            if not guild_ids:
-                return
-            log.info(
-                "Lavalink node reconnected; re-checking %d 24/7 guild(s)",
-                len(guild_ids),
-            )
-            rows = await music_state.load_all_states(self.bot.db_pool)
-            by_guild = {row["guild_id"]: row for row in rows}
-            for guild_id in guild_ids:
-                guild = self.bot.get_guild(guild_id)
-                existing = getattr(guild, "voice_client", None) if guild else None
-                if isinstance(existing, Player):
-                    try:
-                        await existing.disconnect(force=True)
-                    except Exception:
-                        log.exception(
-                            "Failed to clear a stale 24/7 player for guild %s",
-                            guild_id,
-                        )
-                    await self._clear(guild_id)
-            await self._admit_and_join(guild_ids, by_guild, label="reconnect")
+            while True:
+                self._reconnect_rejoin_again = False
+                await self._rejoin_247_pass()
+                if not self._reconnect_rejoin_again:
+                    break
         finally:
             self._reconnect_rejoin_running = False
+
+    async def _rejoin_247_pass(self) -> None:
+        """One reconnect-rejoin pass - see ``_rejoin_247_after_reconnect``."""
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        guild_ids = [
+            guild_id
+            for guild_id in self.always_on.ordered_guild_ids()
+            if self._is_247_active(guild_id)
+        ]
+        if not guild_ids:
+            return
+        log.info(
+            "Lavalink node reconnected; re-checking %d 24/7 guild(s)",
+            len(guild_ids),
+        )
+        rows = await music_state.load_all_states(self.bot.db_pool)
+        by_guild = {row["guild_id"]: row for row in rows}
+        # Where each player really was before the reset. A moderator may have
+        # moved the bot during this session, and the rule is to stay where it
+        # was put - the bare rejoin below must not drag it back to the
+        # configured channel just because the node blinked.
+        current_channels: typing.Dict[int, typing.Any] = {}
+        for guild_id in guild_ids:
+            guild = self.bot.get_guild(guild_id)
+            existing = getattr(guild, "voice_client", None) if guild else None
+            if isinstance(existing, Player):
+                current_channels[guild_id] = getattr(existing, "channel", None)
+                try:
+                    await existing.disconnect(force=True)
+                except Exception:
+                    log.exception(
+                        "Failed to clear a stale 24/7 player for guild %s",
+                        guild_id,
+                    )
+                await self._clear(guild_id)
+        await self._admit_and_join(
+            guild_ids, by_guild, label="reconnect", channels=current_channels
+        )
 
     async def _admit_and_join(
         self,
@@ -2707,11 +2753,21 @@ class Music(ServerPlaylistMixin, commands.Cog):
         by_guild: typing.Dict[int, typing.Any],
         *,
         label: str,
+        channels: typing.Optional[typing.Dict[int, typing.Any]] = None,
     ) -> None:
         """Admit ``guild_ids`` under the global 24/7 ceiling, then join them
         bounded-concurrently (``RESTORE_CONCURRENCY``), reusing the saved
         queue (``_restore_one``) when ``by_guild`` has a fresh row for a
         guild, or a bare join (``_bare_join_247``) otherwise.
+
+        The bare join is ALSO the fallback when a saved row exists but
+        ``_restore_one`` gave up on it (row older than ``RESTORE_MAX_AGE`` -
+        the common case for an idle 24/7 server whose queue ended a while
+        ago, since a natural queue end never clears the row - an undecodable
+        track, a deleted channel in the row): a 24/7 server rejoins with or
+        without something to resume. ``channels`` optionally maps a guild to
+        the voice channel the bot was in a moment ago (see
+        ``_rejoin_247_pass``), preferred over the configured one.
 
         Oldest-enabled guilds are admitted first (``ordered_guild_ids``'s
         order, preserved by both callers): the two-layer story is one channel
@@ -2749,8 +2805,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     row = by_guild.get(guild_id)
                     if row is not None:
                         await self._restore_one(row, now)
-                    else:
-                        await self._bare_join_247(guild_id)
+                    guild = self.bot.get_guild(guild_id)
+                    if not isinstance(
+                        getattr(guild, "voice_client", None), Player
+                    ) and self._is_247_active(guild_id):
+                        await self._bare_join_247(
+                            guild_id, channel=(channels or {}).get(guild_id)
+                        )
                 except Exception:
                     log.exception(
                         "24/7 %s rejoin failed for guild %s", label, guild_id
@@ -2758,18 +2819,44 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         await asyncio.gather(*(_guarded(guild_id) for guild_id in admitted))
 
-    async def _bare_join_247(self, guild_id: int) -> None:
-        """Silently join a 24/7 guild's configured channel with no queue."""
+    async def _bare_join_247(
+        self, guild_id: int, *, channel: typing.Any = None
+    ) -> None:
+        """Silently join a 24/7 guild's configured channel with no queue.
+
+        ``channel`` (the room the bot was just in, see ``_rejoin_247_pass``)
+        wins over the configured one while it still resolves in this guild.
+        """
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             return
-        channel_id = self.always_on.channel_id(guild_id)
-        channel = guild.get_channel(channel_id) if channel_id else None
-        if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
-            await self._turn_off_247(guild_id, reason="channel-deleted")
+        voice_types = (discord.VoiceChannel, discord.StageChannel)
+        if not (
+            isinstance(channel, voice_types)
+            and guild.get_channel(channel.id) is channel
+        ):
+            channel_id = self.always_on.channel_id(guild_id)
+            channel = guild.get_channel(channel_id) if channel_id else None
+            if not isinstance(channel, voice_types):
+                await self._turn_off_247(guild_id, reason="channel-deleted")
+                return
+        channel_id = channel.id
+        # discord.py joins over the GATEWAY (change_voice_state), which never
+        # answers "forbidden": a missing Connect just times out 10 s later, so
+        # the Forbidden branch below can never see this case. Ask first.
+        if not _bot_can_join(guild, channel):
+            await self._turn_off_247(guild_id, reason="no-permission")
             return
         try:
             player = await connect_player(channel)
+        except ConnectionError:
+            # sonolink's own connect timeout (handlers/_lifecycle.py raises a
+            # bare ConnectionError). Not this guild's fault either; retried on
+            # the next trigger like a refusal.
+            log.warning(
+                "24/7 bare join timed out for guild %s", guild_id, exc_info=True
+            )
+            return
         except VoiceConnectFailed:
             # No Lavalink node ready yet, or Discord refused the connect for
             # a reason that already comes back worded for a human - neither
@@ -4007,7 +4094,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # OUR OWN disconnect - trigger MANUAL - so this is the only place that
         # has to say so; suspend() is a no-op, returning False, for a guild
         # that never had 24/7 configured).
-        if self.always_on.suspend(ctx.guild.id):
+        # Only mention the pause when 24/7 was actually keeping the bot here: a
+        # server whose Yasuho+ lapsed (row kept, feature inactive) or that is
+        # already paused gets the plain message, like any free server.
+        was_247 = self._is_247_active(ctx.guild.id)
+        self.always_on.suspend(ctx.guild.id)
+        if was_247:
             await ctx.send(
                 _(
                     "Disconnected from the voice channel. 24/7 is paused for "
@@ -4058,6 +4150,18 @@ class Music(ServerPlaylistMixin, commands.Cog):
             )
             return
 
+        if not _bot_can_join(ctx.guild, channel):
+            # Checked BEFORE anything is stored: the join itself would only
+            # time out (see _bot_can_join), leaving a setting that can never
+            # connect.
+            await ctx.send(
+                _(
+                    "I do not have permission to join {channel} (I need "
+                    "Connect and Speak there). 24/7 was not enabled."
+                ).format(channel=channel.mention)
+            )
+            return
+
         await self.always_on.ensure_loaded(self.bot.db_pool)
         # A guild that is already an active 24/7 session (re-picking its
         # channel, or re-enabling after a suspend) does not need a fresh
@@ -4094,6 +4198,27 @@ class Music(ServerPlaylistMixin, commands.Cog):
                         "24/7 is now configured for {channel}, but I could "
                         "not join yet: {reason}"
                     ).format(channel=channel.mention, reason=exc.message)
+                )
+                return
+            except ConnectionError:
+                # sonolink's own connect timeout (a bare ConnectionError, not a
+                # VoiceConnectFailed). Same answer as a refusal: the setting
+                # stays, the next restore/reconnect pass retries.
+                log.warning(
+                    "24/7 enable: voice connect timed out for guild %s",
+                    ctx.guild.id,
+                    exc_info=True,
+                )
+                await ctx.send(
+                    _(
+                        "24/7 is now configured for {channel}, but I could "
+                        "not join yet: {reason}"
+                    ).format(
+                        channel=channel.mention,
+                        reason=_(
+                            "I was unable to join your voice channel. Please try again."
+                        ),
+                    )
                 )
                 return
             except discord.Forbidden:

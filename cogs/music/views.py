@@ -1138,6 +1138,12 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
             await self.player.disconnect()
             if guild is not None:
                 await self.cog._clear(guild.id)
+                # Same rule as /music disconnect: an explicit disconnect pauses
+                # 24/7 (M4b) for the session, so a Lavalink reconnect pass does
+                # not pull the bot back in. A no-op without 24/7 configured.
+                always_on = getattr(self.cog, "always_on", None)
+                if always_on is not None:
+                    always_on.suspend(guild.id)
             self.stop()
         except Exception:
             log.exception("Controller disconnect failed")

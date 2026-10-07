@@ -668,9 +668,12 @@ async def test_admit_and_join_skips_guilds_past_the_ceiling(fake_pool, monkeypat
     bot.voice_clients = []
     monkeypatch.setattr(ao, "MAX_247_SESSIONS", 1)
 
+    for guild_id in (1, 2, 3):
+        await c.always_on.enable(fake_pool, guild_id, 10)
+
     joined = []
 
-    async def _fake_bare_join(guild_id):
+    async def _fake_bare_join(guild_id, **_kw):
         joined.append(guild_id)
 
     monkeypatch.setattr(c, "_bare_join_247", _fake_bare_join)
@@ -690,9 +693,12 @@ async def test_admit_and_join_admits_everything_under_the_ceiling(fake_pool, mon
     bot.voice_clients = []
     monkeypatch.setattr(ao, "MAX_247_SESSIONS", 300)
 
+    for guild_id in (1, 2, 3):
+        await c.always_on.enable(fake_pool, guild_id, 10)
+
     joined = []
 
-    async def _fake_bare_join(guild_id):
+    async def _fake_bare_join(guild_id, **_kw):
         joined.append(guild_id)
 
     monkeypatch.setattr(c, "_bare_join_247", _fake_bare_join)
@@ -957,3 +963,400 @@ def test_retention_stored_guild_ids_includes_music_247():
 def test_premium_catalog_still_has_the_expected_free_and_premium_values():
     assert premium.GUILD_FREE.music_247 is False
     assert premium.GUILD_PREMIUM.music_247 is True
+
+
+# ---------------------------------------------------------------------------
+# Review fixes (M4b fresh review): the reconnect pass, permissions, messages
+# ---------------------------------------------------------------------------
+
+
+class _LeavingPlayer(_FakePlayer):
+    """A player whose disconnect really leaves, like sonolink's does (its
+    cleanup() drops the voice client, so guild.voice_client reads None)."""
+
+    def __init__(self, *, guild, **kwargs):
+        super().__init__(**kwargs)
+        self._guild_ref = guild
+
+    async def disconnect(self, *, force=False):
+        self.disconnect_calls += 1
+        self._guild_ref.voice_client = None
+
+
+def _perms(*, view=True, connect=True):
+    return types.SimpleNamespace(view_channel=view, connect=connect)
+
+
+def _reconnect_setup(fake_pool, monkeypatch, *, rows, player_channel_id=10):
+    """24/7 guild 1 configured on channel 10, currently connected (to
+    ``player_channel_id``), entitled. Returns (cog, guild, player, connects)."""
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    bot.voice_clients = []
+    c = _make_cog(bot)
+    configured = _RealVoiceChannel(10)
+    moved = _RealVoiceChannel(20)
+    guild = _FakeGuild(1, channels={10: configured, 20: moved})
+    configured.guild = moved.guild = guild
+    bot._guilds = {1: guild}
+    player = _LeavingPlayer(
+        guild=guild, channel=guild.get_channel(player_channel_id)
+    )
+    guild.voice_client = player
+
+    async def _rows(_pool):
+        return rows
+
+    monkeypatch.setattr(music_mod.music_state, "load_all_states", _rows)
+
+    connects = []
+
+    async def _connect(channel):
+        connects.append(channel.id)
+        joined = _FakePlayer(channel=channel)
+        guild.voice_client = joined
+        return joined
+
+    monkeypatch.setattr(music_mod, "connect_player", _connect)
+    return c, guild, player, connects
+
+
+async def test_reconnect_pass_bare_joins_when_the_saved_row_is_stale(
+    fake_pool, monkeypatch
+):
+    # THE common 24/7 case: the queue ended long ago, a natural queue end
+    # never clears music_state, so the row is older than RESTORE_MAX_AGE.
+    # _restore_one gives up on it - the pass must still bring the bot back,
+    # it has just force-disconnected it.
+    row = _restore_row(1, 10)
+    row["updated_at"] = datetime(2000, 1, 1, tzinfo=UTC)
+    c, guild, player, connects = _reconnect_setup(
+        fake_pool, monkeypatch, rows=[row]
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await c._rejoin_247_after_reconnect()
+
+    assert player.disconnect_calls == 1
+    assert connects == [10]
+    assert isinstance(guild.voice_client, Player)
+
+
+async def test_reconnect_pass_without_a_row_bare_joins(fake_pool, monkeypatch):
+    # NEGATIVE CONTROL for the fallback: no row at all takes the plain bare
+    # join path - one connect, not two (the fallback never doubles a join).
+    c, guild, player, connects = _reconnect_setup(fake_pool, monkeypatch, rows=[])
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await c._rejoin_247_after_reconnect()
+
+    assert connects == [10]
+
+
+async def test_reconnect_pass_does_not_rejoin_a_non_247_guild(fake_pool, monkeypatch):
+    # NEGATIVE CONTROL: the same connected guild without 24/7 is not touched.
+    c, guild, player, connects = _reconnect_setup(fake_pool, monkeypatch, rows=[])
+
+    await c._rejoin_247_after_reconnect()
+
+    assert player.disconnect_calls == 0
+    assert connects == []
+
+
+async def test_reconnect_pass_keeps_a_moved_bot_where_it_was_put(
+    fake_pool, monkeypatch
+):
+    # A moderator moved the bot from 10 to 20 this session. A node blink must
+    # not drag it back to the configured channel.
+    c, guild, player, connects = _reconnect_setup(
+        fake_pool, monkeypatch, rows=[], player_channel_id=20
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await c._rejoin_247_after_reconnect()
+
+    assert connects == [20]
+
+
+async def test_reconnect_pass_falls_back_to_configured_if_moved_room_is_gone(
+    fake_pool, monkeypatch
+):
+    # NEGATIVE CONTROL: the room it was moved to no longer resolves - the
+    # configured channel is used, not an auto-off.
+    c, guild, player, connects = _reconnect_setup(
+        fake_pool, monkeypatch, rows=[], player_channel_id=20
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+    del guild._channels[20]
+
+    await c._rejoin_247_after_reconnect()
+
+    assert connects == [10]
+    assert c.always_on.is_enabled(1)
+
+
+async def test_reconnect_pass_reruns_when_node_ready_lands_mid_pass(
+    fake_pool, monkeypatch
+):
+    c, guild, player, connects = _reconnect_setup(fake_pool, monkeypatch, rows=[])
+    await c.always_on.enable(fake_pool, 1, 10)
+    passes = []
+
+    async def _pass():
+        passes.append(1)
+        if len(passes) == 1:
+            # A second node_ready arrives while the first pass is running.
+            await c._rejoin_247_after_reconnect()
+
+    monkeypatch.setattr(c, "_rejoin_247_pass", _pass)
+
+    await c._rejoin_247_after_reconnect()
+
+    assert len(passes) == 2
+    assert c._reconnect_rejoin_running is False
+
+
+async def test_reconnect_pass_runs_once_without_an_overlapping_event(
+    fake_pool, monkeypatch
+):
+    # NEGATIVE CONTROL for the rerun: no overlapping event, exactly one pass.
+    c, guild, player, connects = _reconnect_setup(fake_pool, monkeypatch, rows=[])
+    passes = []
+
+    async def _pass():
+        passes.append(1)
+
+    monkeypatch.setattr(c, "_rejoin_247_pass", _pass)
+
+    await c._rejoin_247_after_reconnect()
+
+    assert len(passes) == 1
+
+
+async def test_node_ready_with_a_resumed_session_skips_the_rejoin_pass(
+    fake_pool, monkeypatch
+):
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    c._restored = True  # the startup restore already ran: this is a reconnect
+    calls = []
+
+    async def _noop(*_a, **_kw):
+        return None
+
+    async def _rejoin():
+        calls.append(1)
+
+    monkeypatch.setattr(music_mod.music_state, "save_session", _noop)
+    monkeypatch.setattr(c, "_maybe_restore", _noop)
+    monkeypatch.setattr(c, "_rejoin_247_after_reconnect", _rejoin)
+
+    await c.on_sonolink_node_ready(types.SimpleNamespace(session_id="s", resumed=True))
+    assert calls == []
+
+    # NEGATIVE CONTROL: a fresh (non-resumed) session does run the pass.
+    await c.on_sonolink_node_ready(types.SimpleNamespace(session_id="s", resumed=False))
+    assert calls == [1]
+
+
+async def test_bare_join_turns_off_when_the_bot_cannot_connect(
+    fake_pool, caplog, monkeypatch
+):
+    # discord.py joins over the gateway: a missing Connect never raises
+    # Forbidden, it only times out. The permission must be read up front.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+    channel = _RealVoiceChannel(10)
+    channel.permissions_for = lambda _member: _perms(connect=False)
+    guild = _FakeGuild(1, channels={10: channel})
+    guild.me = object()
+    bot._guilds = {1: guild}
+
+    async def _connect(_channel):
+        raise AssertionError("must not try a join that can only time out")
+
+    monkeypatch.setattr(music_mod, "connect_player", _connect)
+
+    with caplog.at_level("WARNING"):
+        await c._bare_join_247(1)
+
+    assert not c.always_on.is_enabled(1)
+    assert "MUSIC-247-OFF guild=1 reason=no-permission" in caplog.text
+
+
+async def test_bare_join_proceeds_when_the_bot_can_connect(fake_pool, monkeypatch):
+    # NEGATIVE CONTROL: same setup with Connect granted - the join happens.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+    channel = _RealVoiceChannel(10)
+    channel.permissions_for = lambda _member: _perms()
+    guild = _FakeGuild(1, channels={10: channel})
+    guild.me = object()
+    bot._guilds = {1: guild}
+    connects = []
+
+    async def _connect(ch):
+        connects.append(ch.id)
+        return _FakePlayer(channel=ch)
+
+    monkeypatch.setattr(music_mod, "connect_player", _connect)
+
+    await c._bare_join_247(1)
+
+    assert connects == [10]
+    assert c.always_on.is_enabled(1)
+
+
+async def test_bare_join_keeps_247_on_a_connect_timeout(fake_pool, monkeypatch):
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+    channel = _RealVoiceChannel(10)
+    guild = _FakeGuild(1, channels={10: channel})
+    bot._guilds = {1: guild}
+
+    async def _timeout(_channel):
+        raise ConnectionError("Connecting exceeded the 10.00 seconds timeout")
+
+    monkeypatch.setattr(music_mod, "connect_player", _timeout)
+
+    await c._bare_join_247(1)  # must not raise
+
+    assert c.always_on.is_enabled(1)
+
+
+async def test_enable_refuses_without_connect_and_stores_nothing(
+    fake_pool, monkeypatch
+):
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    bot.voice_clients = []
+    c = _make_cog(bot)
+    guild = _FakeGuild(1)
+    guild.me = object()
+    ctx = _FakeCtx(guild)
+    channel = _RealVoiceChannel(10, guild=guild)
+    channel.permissions_for = lambda _member: _perms(connect=False)
+
+    async def _connect(_channel):
+        raise AssertionError("must not try a join that can only time out")
+
+    monkeypatch.setattr(music_mod, "connect_player", _connect)
+
+    await music_mod.Music.alwayson_enable.callback(c, ctx, channel)
+
+    assert not c.always_on.is_enabled(1)
+    assert "permission" in ctx.last_text()
+    assert not any(
+        "music_247" in call[1] for call in fake_pool.calls if call[0] == "execute"
+    )
+
+
+async def test_enable_answers_a_connect_timeout_and_keeps_the_setting(
+    fake_pool, monkeypatch
+):
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    bot.voice_clients = []
+    c = _make_cog(bot)
+    guild = _FakeGuild(1)
+    ctx = _FakeCtx(guild)
+    channel = _RealVoiceChannel(10, guild=guild)
+
+    async def _timeout(_channel):
+        raise ConnectionError("Connecting exceeded the 10.00 seconds timeout")
+
+    monkeypatch.setattr(music_mod, "connect_player", _timeout)
+
+    await music_mod.Music.alwayson_enable.callback(c, ctx, channel)
+
+    assert c.always_on.is_enabled(1)
+    assert "could not join yet" in ctx.last_text()
+
+
+async def _run_disconnect(c, guild, monkeypatch):
+    player = _FakePlayer(channel=_FakeChannel(guild=guild, members=[]))
+
+    async def _require(_ctx, **_kw):
+        return player
+
+    monkeypatch.setattr(c, "_require_player", _require)
+    ctx = _FakeCtx(guild)
+    await music_mod.Music.disconnect.callback(c, ctx)
+    return ctx
+
+
+async def test_disconnect_mentions_the_pause_only_while_247_is_active(
+    fake_pool, monkeypatch
+):
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    ctx = await _run_disconnect(c, _FakeGuild(1), monkeypatch)
+
+    assert "24/7 is paused" in ctx.last_text()
+    assert c.always_on.is_suspended(1)
+
+
+async def test_disconnect_is_plain_for_a_lapsed_247_server(fake_pool, monkeypatch):
+    # NEGATIVE CONTROL: the row is kept after Yasuho+ lapsed, but 24/7 is not
+    # what kept the bot there - the free server gets the plain message.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(False))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    ctx = await _run_disconnect(c, _FakeGuild(1), monkeypatch)
+
+    assert ctx.last_text() == "Disconnected from the voice channel."
+
+
+async def _press_controller_disconnect(c, guild, monkeypatch, make_interaction):
+    from cogs.music import views
+
+    async def _allowed(*_a, **_kw):
+        return True
+
+    monkeypatch.setattr(views, "_ensure_can_control", _allowed)
+    player = _FakePlayer(channel=_FakeChannel(guild=guild, members=[]))
+    stopped = []
+
+    async def _fail(_interaction):
+        raise AssertionError("the disconnect button must not fail here")
+
+    view = types.SimpleNamespace(
+        cog=c,
+        player=player,
+        _disable_all=lambda: None,
+        stop=lambda: stopped.append(1),
+        _report_failure=_fail,
+    )
+    await views.MusicController._disconnect(view, make_interaction())
+    assert player.disconnect_calls == 1
+    assert stopped == [1]
+
+
+async def test_controller_disconnect_button_pauses_247(
+    fake_pool, monkeypatch, make_interaction
+):
+    # Same rule as /music disconnect: otherwise the next Lavalink reconnect
+    # pass would pull the bot straight back into the room it was sent out of.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await _press_controller_disconnect(c, _FakeGuild(1), monkeypatch, make_interaction)
+
+    assert c.always_on.is_suspended(1)
+    assert not c._is_247_active(1)
+
+
+async def test_controller_disconnect_button_without_247_suspends_nothing(
+    fake_pool, monkeypatch, make_interaction
+):
+    # NEGATIVE CONTROL: a free server's button press leaves no suspension.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(False))
+    c = _make_cog(bot)
+
+    await _press_controller_disconnect(c, _FakeGuild(1), monkeypatch, make_interaction)
+
+    assert not c.always_on.is_suspended(1)
