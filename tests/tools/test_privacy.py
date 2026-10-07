@@ -505,7 +505,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 13
+    assert data["export_version"] == privacy.EXPORT_VERSION == 14
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -585,13 +585,17 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
         "profile_visibility",
         "profile_connections",
         "profiles",
+        "premium_entitlements",
+        "premium_upsells",
         "topgg_votes",
         "user_rank_cards",
         "anilist_tokens",
         "anilist_airing_optins",
         "anilist_chapter_optins",
     ]
-    assert len(executed) == 9
+    assert len(executed) == 11
+    assert counts["premium_entitlements"] == 1
+    assert counts["premium_upsells"] == 1
     assert counts["topgg_votes"] == 1
     assert counts["user_rank_cards"] == 1
     assert counts["anilist_tokens"] == 1
@@ -772,6 +776,47 @@ async def test_the_export_carries_the_users_own_premium_grants():
         }
     ]
     query = next(q for q in pool.queries if "FROM premium_grants" in q)
+    assert "WHERE user_id = $1" in query
+
+
+async def test_the_export_carries_the_users_own_premium_upsells():
+    """The limit-reached throttle, from this user's side: WHERE user_id only,
+    including the '*' /premium-opened sentinel row."""
+
+    class _UpsellPool(_ExportPool):
+        async def fetch(self, query, *args):
+            self.queries.append(query)
+            if "FROM premium_upsells" in query:
+                return [
+                    {
+                        "limit_key": "guild_playlists",
+                        "shown_at": datetime.datetime(
+                            2026, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                    },
+                    {
+                        "limit_key": "*",
+                        "shown_at": datetime.datetime(
+                            2026, 1, 2, tzinfo=datetime.timezone.utc
+                        ),
+                    },
+                ]
+            return []
+
+    pool = _UpsellPool()
+    data, _avatars = await privacy.collect_user_export(pool, 42)
+
+    assert data["premium_upsells"] == [
+        {
+            "limit_key": "guild_playlists",
+            "shown_at": datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+        },
+        {
+            "limit_key": "*",
+            "shown_at": datetime.datetime(2026, 1, 2, tzinfo=datetime.timezone.utc),
+        },
+    ]
+    query = next(q for q in pool.queries if "FROM premium_upsells" in q)
     assert "WHERE user_id = $1" in query
 
 
@@ -1162,7 +1207,7 @@ async def test_the_export_carries_the_actors_own_journal_entries_only():
     pool = _AuditPool()
     data, _avatars = await privacy.collect_user_export(pool, 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 13
+    assert data["export_version"] == privacy.EXPORT_VERSION == 14
     assert data["dashboard_audit"] == [
         {
             "guild_id": 7,
@@ -1458,6 +1503,8 @@ _WIDE_ONLY_PROMPT_PHRASES = {
     "anilist_tokens": "AniList link",
     "anilist_airing_optins": "alert opt-in",
     "anilist_chapter_optins": "alert opt-in",
+    "premium_entitlements": "Pack Confort purchase record",
+    "premium_upsells": "premium offer reminder",
 }
 _WIDE_ONLY_RESULT_PHRASES = {
     "topgg_votes": "top.gg vote record is gone",
@@ -1465,6 +1512,8 @@ _WIDE_ONLY_RESULT_PHRASES = {
     "anilist_tokens": "AniList link is gone",
     "anilist_airing_optins": "alert opt-in",
     "anilist_chapter_optins": "alert opt-in",
+    "premium_entitlements": "Pack Confort purchase record",
+    "premium_upsells": "premium offer reminder",
 }
 
 

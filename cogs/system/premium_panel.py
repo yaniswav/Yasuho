@@ -57,7 +57,7 @@ from __future__ import annotations
 import discord
 from discord.ext import commands
 
-from tools import premium
+from tools import premium, premium_upsell
 from tools.formats import format_dt
 from tools.i18n import _
 from tools.views import AuthorLayoutView
@@ -327,6 +327,12 @@ class PremiumInfo(commands.Cog):
     @commands.hybrid_command(name=COMMAND_NAME)
     async def premium_info(self, ctx):
         """Show what Yasuho+ and the Pack Confort offer, your status, and buy them."""
+        # Sollicitation rule (the plan's "reset seulement si la personne ouvre
+        # /premium"): opening this panel resets every limit key's 7-day
+        # upsell throttle for this person - see tools/premium_upsell.py's
+        # '*' sentinel. Best effort: a write failure here must never block
+        # the panel itself from rendering.
+        await premium_upsell.mark_premium_opened(self.bot.db_pool, ctx.author.id)
         u_status = await premium.user_status(self.bot.db_pool, ctx.author.id)
         guild = ctx.guild
         g_status = None

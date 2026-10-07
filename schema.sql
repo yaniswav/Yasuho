@@ -1729,6 +1729,34 @@ CREATE INDEX IF NOT EXISTS premium_grants_user_idx
     ON premium_grants (user_id) WHERE user_id IS NOT NULL;
 
 -- ============================================================
+-- Premium upsell throttle (M5: the limit-reached message)
+-- ============================================================
+-- One row per (user_id, limit_key): the last time this person was shown the
+-- "Yasuho+/Pack Confort would help" line for THAT limit. tools/premium_upsell.py
+-- is the only writer and reader - see its module docstring for the 7-day rule
+-- and the sentinel row below.
+--
+-- THE '*' SENTINEL. ``limit_key = '*'`` is not a real limit: opening /premium
+-- (tools.premium_upsell.mark_premium_opened) upserts exactly this one row per
+-- person, meaning "this person just saw the whole catalog". A refusal's claim
+-- query (tools.premium_upsell._try_claim) checks BOTH the specific key's row
+-- and this sentinel and is satisfied only once the more recent of the two is
+-- over 7 days old - which is how "opening /premium resets every key" is
+-- implemented in O(1) per open rather than one row per key the person has
+-- never even hit yet (.claude/plans/monetisation/4-plan-retenu.md's
+-- "Sollicitation" rule: "reset seulement si la personne ouvre /premium").
+--
+-- Rows are purged after 14 days by tools/retention.py's daily pass
+-- (prune_stale_premium_upsells) - a week past the 7-day window itself, so the
+-- purge can never race a legitimate claim still inside its cooldown.
+CREATE TABLE IF NOT EXISTS premium_upsells (
+    user_id   BIGINT      NOT NULL,
+    limit_key TEXT        NOT NULL,
+    shown_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, limit_key)
+);
+
+-- ============================================================
 -- Guarded integrity constraints (added NOT VALID)
 -- ============================================================
 -- Every constraint below is added NOT VALID and is NEVER validated here: new

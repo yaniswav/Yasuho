@@ -59,7 +59,7 @@ from collections import defaultdict
 import discord
 from discord.ext import commands
 
-from tools import i18n, interactions, modchecks, premium, role_menus
+from tools import i18n, interactions, modchecks, premium, premium_upsell, role_menus
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.premium_archive import classify as classify_archival
@@ -258,6 +258,7 @@ class RoleMenuSelect(discord.ui.Select):
             parts.append(
                 _("I couldn't manage those roles - they may be above my highest role.")
             )
+        upsell_view = None
         if blocked:
             parts.append(
                 _(
@@ -266,12 +267,30 @@ class RoleMenuSelect(discord.ui.Select):
                     "See /premium for options."
                 )
             )
+            # Archived-menu refusals share the "role_menus" key with the
+            # creation cap itself (same limit, different symptom) - the plan's
+            # own rule for an archived-item refusal.
+            upsell = await premium_upsell.for_guild_refusal(
+                interaction.client,
+                limit_key="role_menus",
+                guild_id=guild.id,
+                person_id=member.id,
+                is_admin=premium_upsell.invoker_is_admin(member),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    interaction.client, guild.id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_menus_per_guild),
+            )
+            if upsell is not None:
+                parts.append(upsell.line)
+                upsell_view = upsell.view()
         if not parts:
             parts.append(_("No changes."))
         # followup, not response: the defer above already answered.
-        await interaction.followup.send(
-            "\n".join(parts), ephemeral=True, allowed_mentions=none
-        )
+        send_kwargs = {"ephemeral": True, "allowed_mentions": none}
+        if upsell_view is not None:
+            send_kwargs["view"] = upsell_view
+        await interaction.followup.send("\n".join(parts), **send_kwargs)
 
 
 class RoleMenuView(LocaleView):

@@ -93,7 +93,25 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # user holds. It ships here, exported but never erasable, the same posture
 # `blbot`/`dashboard_audit` already hold for the same reason (the record
 # belongs to whoever wrote it, not to its subject).
-EXPORT_VERSION = 13
+# v14 added `premium_upsells`: this user's OWN limit-reached upsell throttle
+# rows (tools/premium_upsell.py) - which limit key, and when they last saw the
+# "a higher tier would help" line for it, plus the `*` row ("the last time
+# this person opened /premium"). It is on the user erasure list too (see
+# USER_DELETE_QUERIES below): deleting it costs the user nothing but an
+# earlier-than-usual repeat of a message they can simply dismiss, so there is
+# no reason to hold it past a forget request. v14 ALSO moves
+# `premium_entitlements` from exported-but-not-yet-erasable onto the erasure
+# list - the gap the M3a module docstring (tools/premium.py) and the comment
+# that used to sit above USER_DELETE_QUERIES both deferred "to the UI lot":
+# `/premium` (cogs/system/premium_panel.py) shipped in M3c, so the
+# confirmation screen this gap was waiting on now exists, and the reasoning
+# that justified the entry (it is a PROJECTION of Discord's own ledger - a
+# resync restores it for free while the entitlement is still actually
+# granted, so deleting the local copy loses nothing real) finally has
+# somewhere to be said out loud. `premium_grants` is UNCHANGED: it stays
+# exported, never erasable - it is the OWNER's audit trail of a gift, not a
+# projection of anything, so forgetting it is not the recipient's call.
+EXPORT_VERSION = 14
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -156,21 +174,43 @@ ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 #     to read, and the structural guard in tests/tools/test_privacy.py holds
 #     every user-keyed table to that rule with no exemption spent here.
 #
-# A THIRD is exported but deliberately not on either list YET, for a different
-# reason than the two above: `premium_entitlements` (tools/premium.py) is a
-# user's own Pack Confort rows, and deleting it costs them nothing to forget
-# in principle (it is a PROJECTION of Discord's own ledger - the next resync
-# would just restore it while the entitlement is still actually granted, same
-# as a guild's rows on guild purge). The structural guard that would otherwise
-# require this
+# A THIRD used to be exported but deliberately kept off both lists, for a
+# different reason than the two above: `premium_entitlements` (tools/premium.py)
+# is a user's own Pack Confort rows, and deleting it costs them nothing to
+# forget in principle (it is a PROJECTION of Discord's own ledger - the next
+# resync would just restore it while the entitlement is still actually
+# granted, same as a guild's rows on guild purge). The structural guard that
+# otherwise requires this
 # (`tests/tools/test_privacy.py::test_the_confirmation_names_everything_it_
 # destroys`) demands that anything added to the WIDE list also be NAMED in the
 # ``?mydata deleteprofile`` confirmation screen and its result message - a
-# user-facing string, which this foundations-only lot (M3a) deliberately does
-# not add (no /premium command, no UI yet). Wiring the erasure path belongs
-# with that UI, in M3b/M3c, together with the string the guard will then
-# demand.
+# user-facing string that the foundations-only lot which first exported this
+# table (M3a) deliberately did not add (no /premium command, no UI yet). That
+# UI (`/premium`, cogs/system/premium_panel.py) shipped in M3c, so EXPORT_VERSION
+# 14 (M5) closes the gap: `premium_entitlements` is now on the list below, with
+# its phrase registered in usersettings.py's confirmation screen.
+# `premium_grants` gets NO such entry, on purpose: it is the OWNER's audit
+# trail of a gift, never a projection of anything Discord can hand back, so
+# forgetting it is not the recipient's call - see its own comment in
+# schema.sql for the full reasoning.
 USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
+    # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
+    # only, same carve-out the export query above uses, so a Yasuho+ row
+    # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
+    # outright: it is a PROJECTION of Discord's own ledger, and the next
+    # reconciliation pass (tools.premium.reconcile) restores it for free while
+    # the purchase is still actually active - see this list's own module
+    # comment above for the gap this entry closes.
+    (
+        "premium_entitlements",
+        "DELETE FROM premium_entitlements WHERE user_id = $1",
+    ),
+    # The limit-reached upsell throttle (tools/premium_upsell.py) - purely
+    # internal pacing state (which limit key, and when it was last shown, plus
+    # the `*` /premium-opened sentinel). Erasing it costs the user nothing but
+    # possibly seeing a dismissible upsell line again sooner than usual, so
+    # there is no reason to hold it past a forget request.
+    ("premium_upsells", "DELETE FROM premium_upsells WHERE user_id = $1"),
     # The top.gg vote ledger. Not "profile" data in the fields-and-visibility
     # sense, but it is a per-user record of a behaviour ("this person votes for
     # us, and last did on this date") with no other way out, so a forget that
@@ -579,6 +619,16 @@ async def collect_user_export(pool, user_id):
         "WHERE user_id = $1 ORDER BY id",
         user_id,
     )
+    # This user's OWN limit-reached upsell throttle rows (tools/premium_upsell.py):
+    # which limit key, and when they were last shown the "a higher tier would
+    # help" line for it - plus the `*` row, which just means "the last time
+    # they opened /premium". Entirely internal pacing state, never anything the
+    # user typed or that identifies anything about a limit itself.
+    premium_upsells = await pool.fetch(
+        "SELECT limit_key, shown_at FROM premium_upsells "
+        "WHERE user_id = $1 ORDER BY limit_key",
+        user_id,
+    )
 
     if social_profile is not None:
         social_profile = dict(social_profile)
@@ -645,6 +695,7 @@ async def collect_user_export(pool, user_id):
         "custom_commands_created": _records(custom_commands),
         "premium_entitlements": _records(premium_entitlements),
         "premium_grants": _records(premium_grants),
+        "premium_upsells": _records(premium_upsells),
     }
     return data, avatar_rows
 

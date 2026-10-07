@@ -58,7 +58,7 @@ import logging
 import discord
 
 from . import guild_config, lifecycle, preflight, storage
-from tools import i18n, interactions, premium
+from tools import i18n, interactions, premium, premium_upsell
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
@@ -219,7 +219,25 @@ class TicketOpenButton(discord.ui.Button):
                 interaction, _("Something went wrong, please try again.")
             )
         if already >= cap:
-            return await interactions.reply(interaction, _cap_message(cap))
+            text = _cap_message(cap)
+            # tools.interactions.reply has no view= support, so this site's
+            # upsell is text-only (no button) - the plain line still respects
+            # the 7-day throttle and the admin/member split.
+            upsell = await premium_upsell.for_guild_refusal(
+                interaction.client,
+                limit_key="tickets_open",
+                guild_id=guild.id,
+                person_id=member.id,
+                is_admin=premium_upsell.invoker_is_admin(member),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    interaction.client, guild.id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_tickets_open_per_user),
+                allow_button=False,
+            )
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+            return await interactions.reply(interaction, text)
 
         if (guild.id, member.id) in _IN_FLIGHT:
             return await interactions.reply(

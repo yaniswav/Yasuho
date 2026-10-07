@@ -63,7 +63,7 @@ from cogs.music.music import (
     station_select_options,
 )
 from cogs.music.search import truncate
-from tools import i18n, interactions, premium
+from tools import i18n, interactions, premium, premium_upsell
 from tools.config_loader import config_loader
 from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
@@ -1117,6 +1117,23 @@ class MusicController(PinnedRenderLocale, LocaleLayoutView):
                 message = _(
                     "Your favourites are full (max {max}). Remove some first."
                 ).format(max=max_favourites)
+                upsell = await premium_upsell.for_user_refusal(
+                    self.cog.bot,
+                    limit_key="favourites",
+                    person_id=interaction.user.id,
+                    already_top_tier=premium_upsell.is_user_already_top_tier(
+                        self.cog.bot, interaction.user.id
+                    ),
+                    benefit=str(premium.USER_PREMIUM.max_favourites),
+                )
+                send_kwargs = {"ephemeral": True}
+                if upsell is not None:
+                    message = message + "\n" + upsell.line
+                    view = upsell.view()
+                    if view is not None:
+                        send_kwargs["view"] = view
+                await interaction.response.send_message(message, **send_kwargs)
+                return
             else:
                 message = _("**{title}** is already in your favourites.").format(
                     title=track.title

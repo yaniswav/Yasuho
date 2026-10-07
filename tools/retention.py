@@ -472,6 +472,31 @@ async def prune_expired_export_slots(
     return affected_rows(status)
 
 
+# A week past tools.premium_upsell.UPSELL_COOLDOWN (7 days) itself, so this
+# purge can never race a legitimate claim still inside its own cooldown: a row
+# this old can no longer be the "latest" either query in that module reads
+# against, whatever happens to run first.
+PREMIUM_UPSELL_MAX_AGE_DAYS = 14
+
+
+async def prune_stale_premium_upsells(pool, max_age_days=PREMIUM_UPSELL_MAX_AGE_DAYS):
+    """Delete ``premium_upsells`` rows (including the ``'*'`` /premium-opened
+    sentinel) older than ``max_age_days``.
+
+    Keyed by user alone (schema.sql's ``premium_upsells``), so no guild purge
+    ever reaches it, and nothing else ages it out - the same shape as
+    :func:`prune_expired_export_slots` right above, for the same reason: a row
+    this old is no longer enforcing anything (tools.premium_upsell's claim
+    query only ever compares against the MOST RECENT row for a key), so
+    deleting it is pure data minimisation, never a weakening of the 7-day rule.
+    """
+    status = await pool.execute(
+        "DELETE FROM premium_upsells WHERE shown_at < now() - $1 * INTERVAL '1 day'",
+        max_age_days,
+    )
+    return affected_rows(status)
+
+
 async def prune_stale_dashboard_audit(
     pool,
     max_age_days=DASHBOARD_AUDIT_MAX_AGE_DAYS,

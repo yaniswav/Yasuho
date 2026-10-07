@@ -45,7 +45,7 @@ from cogs.music.player import (
     youtube_seed_query,  # noqa: F401
 )
 from cogs.music.playlists_shared import ServerPlaylistMixin
-from tools import i18n, music_state, premium, settings
+from tools import i18n, music_state, premium, premium_upsell, settings
 from tools.i18n import _, ngettext
 from tools.premium import resolve_guild_limits
 from tools.premium_archive import ArchivalResult
@@ -4144,10 +4144,25 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Turn on 24/7 music in a voice channel (Yasuho+)."""
         limits = resolve_guild_limits(self.bot, ctx.guild.id)
         if not limits.music_247:
-            await ctx.send(
-                _("24/7 music is part of Yasuho+. See /premium for options."),
-                ephemeral=True,
+            text = _("24/7 music is part of Yasuho+. See /premium for options.")
+            # @commands.has_permissions(manage_guild=True) above already gated
+            # entry, so the invoker always has Manage Server here - is_admin
+            # is never False on this path.
+            upsell = await premium_upsell.for_guild_refusal(
+                self.bot,
+                limit_key="music_247",
+                guild_id=ctx.guild.id,
+                person_id=ctx.author.id,
+                is_admin=True,
+                already_top_tier=False,
+                kind="unlock",
+                allow_button=premium_upsell.is_slash_context(ctx),
             )
+            view = None
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+                view = upsell.view()
+            await ctx.send(text, ephemeral=True, view=view)
             return
 
         if not _bot_can_join(ctx.guild, channel):

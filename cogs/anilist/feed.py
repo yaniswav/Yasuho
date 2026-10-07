@@ -157,7 +157,7 @@ from .feed_views import (
 from .helpers import API_URL, channel_allows_adult, resolve_guild_limits
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
-from tools import i18n
+from tools import i18n, premium, premium_upsell
 from tools.db import affected_rows
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _, ngettext
@@ -680,6 +680,41 @@ class AniListFeed(NoPingReplies, commands.Cog):
         """Effective per-guild premium limits - see :func:`resolve_guild_limits`."""
 
         return resolve_guild_limits(self.bot, guild_id)
+
+    async def _refuse_with_upsell(self, ctx, text, *, limit_key, benefit):
+        """Send a GUILD-scoped ``/anilistfeed`` refusal's ``text``, with the
+        upsell riding along - same shape as
+        :meth:`cogs.music.playlists_shared.ServerPlaylistMixin._refuse_with_upsell`
+        (these ``ctx.send`` calls are public too: no ``ephemeral=True`` passed
+        anywhere in this command tree), duplicated rather than shared because
+        the two mixins live in unrelated cogs with no common base worth adding
+        for four lines of dispatch.
+        """
+        is_slash = premium_upsell.is_slash_context(ctx)
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key=limit_key,
+            guild_id=ctx.guild.id,
+            person_id=ctx.author.id,
+            is_admin=premium_upsell.invoker_is_admin(ctx.author),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, ctx.guild.id
+            ),
+            benefit=benefit,
+            allow_button=is_slash,
+        )
+        if upsell is None:
+            await ctx.send(text)
+            return
+        if not is_slash:
+            await ctx.send(text + "\n" + upsell.line)
+            return
+        await ctx.send(text)
+        followup_kwargs = {"ephemeral": True}
+        view = upsell.view()
+        if view is not None:
+            followup_kwargs["view"] = view
+        await ctx.interaction.followup.send(upsell.line, **followup_kwargs)
 
     async def _load_feeds(self):
         """Every ENABLED feed, minus any ARCHIVED one (M4a-2).
@@ -1693,10 +1728,33 @@ class AniListFeed(NoPingReplies, commands.Cog):
             bool(already),
             max_subs,
         ):
-            return _(
+            text = _(
                 "This feed already tracks the maximum of {max} titles. Remove "
                 "one first."
             ).format(max=max_subs)
+            # Reached only from the subs panel (an interaction), never a bare
+            # ctx - no button here (the panel renders the error as plain text
+            # in a Container, with no ActionRow wired for one at this call
+            # depth), text-only upsell still respects the 7-day throttle.
+            get_guild = getattr(self.bot, "get_guild", None)
+            guild = get_guild(guild_id) if get_guild is not None else None
+            member = guild.get_member(added_by) if guild is not None else None
+            is_admin = premium_upsell.invoker_is_admin(member) if member else False
+            upsell = await premium_upsell.for_guild_refusal(
+                self.bot,
+                limit_key="anilist_subs",
+                guild_id=guild_id,
+                person_id=added_by,
+                is_admin=is_admin,
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    self.bot, guild_id
+                ),
+                benefit=str(max_subs),
+                allow_button=False,
+            )
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+            return text
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_channel_subs "
             "(guild_id, channel_id, media_id, media_type, title, added_by) "
@@ -2270,11 +2328,14 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 ctx.guild.id,
             )
             if count >= max_feeds:
-                return await ctx.send(
+                return await self._refuse_with_upsell(
+                    ctx,
                     _(
                         "This server already has the maximum of {max} feeds. "
                         "Remove one with `/anilistfeed remove` first."
-                    ).format(max=max_feeds)
+                    ).format(max=max_feeds),
+                    limit_key="anilist_feeds",
+                    benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
                 )
             await self.bot.db_pool.execute(
                 "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
@@ -2610,8 +2671,11 @@ class AniListFeed(NoPingReplies, commands.Cog):
         max_follows = self._guild_limits(ctx.guild.id).max_follows_per_feed
         count = await self._follow_count(ctx.guild.id, channel_id)
         if count >= max_follows:
-            return await ctx.send(
-                _("This feed is full right now - ask a moderator to make room.")
+            return await self._refuse_with_upsell(
+                ctx,
+                _("This feed is full right now - ask a moderator to make room."),
+                limit_key="anilist_follows",
+                benefit=str(premium.GUILD_PREMIUM.max_follows_per_feed),
             )
         await self._insert_follow(ctx.guild.id, channel_id, user_id, name, ctx.author.id)
         message = _("You have joined the AniList feed in <#{channel}>.").format(

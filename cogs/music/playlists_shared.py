@@ -64,7 +64,7 @@ from discord.ext import commands
 
 from cogs.music import safetext
 from cogs.music.player import VoiceConnectFailed, connect_player
-from tools import premium
+from tools import premium, premium_upsell
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.premium_archive import ArchivalResult
@@ -326,6 +326,44 @@ class _PlaylistListCard(LocaleLayoutView):
 
 class ServerPlaylistMixin:
     """Cog mixin: the ``/serverplaylist`` group (shared, per-guild playlists)."""
+
+    async def _refuse_with_upsell(self, ctx, text, *, limit_key, benefit, kind="raise"):
+        """Send a GUILD-scoped refusal's ``text``, with the upsell riding along.
+
+        ``serverplaylist save`` never passes ``ephemeral=True`` to ``ctx.send``
+        (the comment above the archived-playlist refusal in this same file
+        explains why: ``ctx.defer()`` already committed the interaction to a
+        PUBLIC response before any cap is even checked) - so on slash the base
+        refusal stays exactly as it is, and the upsell goes out as a SEPARATE
+        ephemeral followup; on prefix (no interaction, no followup, no
+        component support) it is appended to the one and only message instead.
+        """
+        is_slash = premium_upsell.is_slash_context(ctx)
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key=limit_key,
+            guild_id=ctx.guild.id,
+            person_id=ctx.author.id,
+            is_admin=premium_upsell.invoker_is_admin(ctx.author),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, ctx.guild.id
+            ),
+            benefit=benefit,
+            kind=kind,
+            allow_button=is_slash,
+        )
+        if upsell is None:
+            await ctx.send(text)
+            return
+        if not is_slash:
+            await ctx.send(text + "\n" + upsell.line)
+            return
+        await ctx.send(text)
+        followup_kwargs = {"ephemeral": True}
+        view = upsell.view()
+        if view is not None:
+            followup_kwargs["view"] = view
+        await ctx.interaction.followup.send(upsell.line, **followup_kwargs)
 
     # -- Database access (all bounded by the per-guild caps) ---------------
 
@@ -607,22 +645,28 @@ class ServerPlaylistMixin:
             )
             return
         if cap == "too_many":
-            await ctx.send(
+            await self._refuse_with_upsell(
+                ctx,
                 _(
                     "The queue is too long to save - a server playlist holds up "
                     "to {max} tracks. Trim it and try again."
-                ).format(max=limits.max_playlist_tracks)
+                ).format(max=limits.max_playlist_tracks),
+                limit_key="playlist_tracks",
+                benefit=str(premium.GUILD_PREMIUM.max_playlist_tracks),
             )
             return
 
         if guild_cap_reached(
             await self._guild_playlist_count(ctx.guild.id), limits.max_guild_playlists
         ):
-            await ctx.send(
+            await self._refuse_with_upsell(
+                ctx,
                 _(
                     "This server already has the maximum of {max} playlists. "
                     "Delete one first."
-                ).format(max=limits.max_guild_playlists)
+                ).format(max=limits.max_guild_playlists),
+                limit_key="guild_playlists",
+                benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
             )
             return
 
@@ -645,11 +689,14 @@ class ServerPlaylistMixin:
             )
             return
         if result == "full":
-            await ctx.send(
+            await self._refuse_with_upsell(
+                ctx,
                 _(
                     "This server already has the maximum of {max} playlists. "
                     "Delete one first."
-                ).format(max=limits.max_guild_playlists)
+                ).format(max=limits.max_guild_playlists),
+                limit_key="guild_playlists",
+                benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
             )
             return
 

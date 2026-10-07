@@ -159,6 +159,13 @@ class DataRetention(commands.Cog):
         audit_rows = await retention.prune_stale_dashboard_audit(
             self.bot.db_pool
         )
+        # The premium upsell throttle (M5). User-scoped, same reasoning as
+        # export_slots/presence_rows right above: no guild purge reaches it,
+        # and a row past tools.retention.PREMIUM_UPSELL_MAX_AGE_DAYS is no
+        # longer enforcing anything the 7-day rule cares about.
+        upsell_rows = await retention.prune_stale_premium_upsells(
+            self.bot.db_pool
+        )
 
         if (
             scheduled_guilds
@@ -168,11 +175,13 @@ class DataRetention(commands.Cog):
             or export_slots
             or presence_rows
             or audit_rows
+            or upsell_rows
         ):
             log.info(
                 "Retention pass complete: scheduled_guilds=%s guilds=%s "
                 "avatar_rows=%s avatar_bytes=%s user_actions=%s "
-                "export_slots=%s presence_rows=%s audit_rows=%s",
+                "export_slots=%s presence_rows=%s audit_rows=%s "
+                "upsell_rows=%s",
                 scheduled_guilds,
                 purged_guilds,
                 avatar_rows,
@@ -181,6 +190,7 @@ class DataRetention(commands.Cog):
                 export_slots,
                 presence_rows,
                 audit_rows,
+                upsell_rows,
             )
         return {
             "scheduled_guilds": scheduled_guilds,
@@ -191,6 +201,7 @@ class DataRetention(commands.Cog):
             "export_slots": export_slots,
             "presence_rows": presence_rows,
             "audit_rows": audit_rows,
+            "upsell_rows": upsell_rows,
         }
 
     async def _check_backups(self):

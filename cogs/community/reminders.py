@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from . import reminders_store as reminders_tool
-from tools import premium
+from tools import premium, premium_upsell
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.premium_archive import classify as classify_archival
@@ -409,17 +409,31 @@ class RemindModal(LocaleModal):
         # Confort - see tools.premium.UserLimits.max_pending_reminders/
         # max_recurring_reminders.
         limits = premium.resolve_user_limits(self.cog.bot, self.author_id)
+        already_top_tier = premium_upsell.is_user_already_top_tier(
+            self.cog.bot, self.author_id
+        )
         if (
             await self.cog._pending_reminder_count(self.author_id)
             >= limits.max_pending_reminders
         ):
-            return await interaction.response.send_message(
-                _(
-                    "You already have {count} reminders pending - wait for some "
-                    "to fire before adding more."
-                ).format(count=limits.max_pending_reminders),
-                ephemeral=True,
+            text = _(
+                "You already have {count} reminders pending - wait for some "
+                "to fire before adding more."
+            ).format(count=limits.max_pending_reminders)
+            upsell = await premium_upsell.for_user_refusal(
+                self.cog.bot,
+                limit_key="reminders_pending",
+                person_id=self.author_id,
+                already_top_tier=already_top_tier,
+                benefit=str(premium.USER_PREMIUM.max_pending_reminders),
             )
+            send_kwargs = {"ephemeral": True}
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+                view = upsell.view()
+                if view is not None:
+                    send_kwargs["view"] = view
+            return await interaction.response.send_message(text, **send_kwargs)
 
         # The recurring cap is enforced BY the insert (one locked count-and-
         # insert), not by a separate read before it, so two concurrent submits
@@ -433,10 +447,21 @@ class RemindModal(LocaleModal):
             message=message,
         )
         if created is None:
-            return await interaction.response.send_message(
-                recurring_limit_message(limits.max_recurring_reminders),
-                ephemeral=True,
+            text = recurring_limit_message(limits.max_recurring_reminders)
+            upsell = await premium_upsell.for_user_refusal(
+                self.cog.bot,
+                limit_key="reminders_recurring",
+                person_id=self.author_id,
+                already_top_tier=already_top_tier,
+                benefit=str(premium.USER_PREMIUM.max_recurring_reminders),
             )
+            send_kwargs = {"ephemeral": True}
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+                view = upsell.view()
+                if view is not None:
+                    send_kwargs["view"] = view
+            return await interaction.response.send_message(text, **send_kwargs)
 
         await interaction.response.send_message(
             reminder_confirmation(dt, message, repeat_seconds),
@@ -779,6 +804,40 @@ class Reminder(commands.Cog):
 
     async def get_tzinfo(self, user_id):
         return datetime.timezone.utc
+
+    async def _send_with_upsell(
+        self, ctx, text, *, limit_key, benefit, already_top_tier, is_slash
+    ):
+        """Send a prefix/hybrid refusal's ``text``, with the upsell line (and,
+        on slash, a button) riding along.
+
+        Prefix (``is_slash=False``): never ephemeral, so the extra line is
+        appended to the SAME plain message, and no button is ever offered -
+        the plan's own rule for a surface with no component support.
+
+        Slash: ``ctx.send`` here has no ``ephemeral=True`` (this command's
+        base refusal is PUBLIC), so the upsell cannot ride the same reply -
+        it goes out as a SEPARATE ephemeral followup instead, after the
+        public refusal, never merged into it.
+        """
+        upsell = await premium_upsell.for_user_refusal(
+            self.bot,
+            limit_key=limit_key,
+            person_id=ctx.author.id,
+            already_top_tier=already_top_tier,
+            benefit=str(benefit),
+            allow_button=is_slash,
+        )
+        if upsell is None:
+            return await ctx.send(text)
+        if not is_slash:
+            return await ctx.send(text + "\n" + upsell.line)
+        await ctx.send(text)
+        followup_kwargs = {"ephemeral": True}
+        view = upsell.view()
+        if view is not None:
+            followup_kwargs["view"] = view
+        await ctx.interaction.followup.send(upsell.line, **followup_kwargs)
 
     async def _pending_reminder_count(self, user_id):
         """How many reminders this user currently has queued."""
@@ -1663,15 +1722,25 @@ class Reminder(commands.Cog):
 
         # Effective caps (M4c): see RemindModal.on_submit's own comment.
         limits = premium.resolve_user_limits(self.bot, ctx.author.id)
+        already_top_tier = premium_upsell.is_user_already_top_tier(
+            self.bot, ctx.author.id
+        )
+        is_slash = premium_upsell.is_slash_context(ctx)
         if (
             await self._pending_reminder_count(ctx.author.id)
             >= limits.max_pending_reminders
         ):
-            return await ctx.send(
-                _(
-                    "You already have {count} reminders pending - wait for some "
-                    "to fire before adding more."
-                ).format(count=limits.max_pending_reminders)
+            text = _(
+                "You already have {count} reminders pending - wait for some "
+                "to fire before adding more."
+            ).format(count=limits.max_pending_reminders)
+            return await self._send_with_upsell(
+                ctx,
+                text,
+                limit_key="reminders_pending",
+                benefit=premium.USER_PREMIUM.max_pending_reminders,
+                already_top_tier=already_top_tier,
+                is_slash=is_slash,
             )
 
         # Same as the modal: the recurring cap lives inside the insert, so it
@@ -1685,7 +1754,15 @@ class Reminder(commands.Cog):
             message=message,
         )
         if created is None:
-            return await ctx.send(recurring_limit_message(limits.max_recurring_reminders))
+            text = recurring_limit_message(limits.max_recurring_reminders)
+            return await self._send_with_upsell(
+                ctx,
+                text,
+                limit_key="reminders_recurring",
+                benefit=premium.USER_PREMIUM.max_recurring_reminders,
+                already_top_tier=already_top_tier,
+                is_slash=is_slash,
+            )
 
         await ctx.send(reminder_confirmation(dt, message, repeat_seconds))
 

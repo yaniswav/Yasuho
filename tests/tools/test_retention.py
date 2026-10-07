@@ -427,6 +427,35 @@ async def test_the_export_slot_prune_can_never_shorten_a_live_window():
     )
 
 
+async def test_stale_premium_upsell_rows_are_pruned():
+    """A row this old is no longer the most recent either side of
+    tools.premium_upsell's claim query compares against, so deleting it cannot
+    weaken the 7-day rule - it is pure data minimisation on a table that
+    otherwise only grows (one row per person per limit key, plus the '*'
+    /premium-opened sentinel)."""
+    pool = _PrunePool(status="DELETE 5")
+
+    deleted = await retention.prune_stale_premium_upsells(pool)
+
+    assert deleted == 5
+    query, args = pool.calls[0]
+    assert args == (retention.PREMIUM_UPSELL_MAX_AGE_DAYS,)
+    assert "DELETE FROM premium_upsells" in query
+    assert "shown_at < now() - $1 * INTERVAL '1 day'" in query
+
+
+async def test_the_premium_upsell_prune_window_outlives_the_claim_cooldown():
+    """The purge window must stay strictly past the 7-day cooldown
+    tools.premium_upsell.UPSELL_COOLDOWN enforces - otherwise a daily pass
+    could delete a row still inside its own cooldown and a refusal would show
+    the upsell again early."""
+    from tools import premium_upsell
+
+    assert datetime.timedelta(
+        days=retention.PREMIUM_UPSELL_MAX_AGE_DAYS
+    ) > premium_upsell.UPSELL_COOLDOWN
+
+
 # ---------------------------------------------------------------------------
 # The dashboard journal: guild-scoped, and still unbounded without an age prune
 # ---------------------------------------------------------------------------

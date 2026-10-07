@@ -14,7 +14,7 @@ import logging
 import discord
 
 from .rooms_panels import _PanelButton
-from tools import i18n, interactions
+from tools import i18n, interactions, premium, premium_upsell
 from tools.autoroom import (
     DEFAULT_LABEL,
     DEFAULT_TEMPLATE,
@@ -497,12 +497,27 @@ class AutoroomPanel(LocaleLayoutView):
     async def _on_add(self, interaction):
         try:
             if not can_add_hub(self.hubs, self.max_hubs):
-                await interaction.response.send_message(
-                    _("You already have the maximum of {max_hubs} hubs.").format(
-                        max_hubs=self.max_hubs
-                    ),
-                    ephemeral=True,
+                text = _("You already have the maximum of {max_hubs} hubs.").format(
+                    max_hubs=self.max_hubs
                 )
+                upsell = await premium_upsell.for_guild_refusal(
+                    self.cog.bot,
+                    limit_key="voice_hubs",
+                    guild_id=self.guild_id,
+                    person_id=interaction.user.id,
+                    is_admin=premium_upsell.invoker_is_admin(interaction.user),
+                    already_top_tier=premium_upsell.is_guild_already_top_tier(
+                        self.cog.bot, self.guild_id
+                    ),
+                    benefit=str(premium.GUILD_PREMIUM.max_hubs),
+                )
+                send_kwargs = {"ephemeral": True}
+                if upsell is not None:
+                    text = text + "\n" + upsell.line
+                    view = upsell.view()
+                    if view is not None:
+                        send_kwargs["view"] = view
+                await interaction.response.send_message(text, **send_kwargs)
                 return
             await interaction.response.send_modal(AddHubModal(self.cog, self))
         except Exception:

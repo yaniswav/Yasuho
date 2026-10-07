@@ -285,6 +285,13 @@ class ProfileDeletionView(AuthorView):
                 + _(
                     "Your AniList link is gone as well, and your episode and "
                     "chapter alert opt-ins with it."
+                )
+                + "\n"
+                + _(
+                    "Your Pack Confort purchase record is gone from our "
+                    "database too (it comes back automatically if you still "
+                    "hold that purchase), and so is the note of your last "
+                    "premium offer reminder."
                 ),
                 view=self,
             )
@@ -764,6 +771,14 @@ class UserSettings(commands.Cog):
                 "And your AniList link: the stored login is deleted, so "
                 "relinking needs a fresh sign-in with AniList. Your episode "
                 "and chapter alert opt-ins go with it."
+            )
+            + "\n"
+            + _(
+                "And your Pack Confort purchase record: it comes back on its "
+                "own if you still hold that purchase, the next time we check "
+                "with Discord. Also the note of when you last saw a "
+                "premium offer reminder, so you may see one again sooner than "
+                "usual."
             ),
             view=view,
             ephemeral=ctx.interaction is not None,
