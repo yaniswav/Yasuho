@@ -353,7 +353,24 @@ async def for_guild_refusal(
     capability (music_247); ``benefit`` is then ignored. ``allow_button=False``
     forces a text-only result even with a configured SKU - the prefix-command
     path (no component support) passes this.
+
+    LIMIT-REACHED (usage measurement). Calling this function AT ALL means a
+    refusal already happened - see the module docstring's "WHAT THIS MODULE
+    IS NOT" paragraph: every caller already refused the action on its own
+    terms before reaching here. So the one ``LIMIT-REACHED`` INFO line below
+    fires unconditionally, first, before any of the early-return branches
+    (the 7-day cooldown, an already-top-tier guild, a missing pool) decide
+    whether to also show the upsell note itself - those two things answer
+    different questions (did a refusal happen vs. is it worth nagging about
+    again this week) and must not share one gate. No guild/user id, no
+    message content - just which limit, which scope, and whether this guild
+    was already premium when it hit its OWN ceiling.
     """
+    log.info(
+        "LIMIT-REACHED key=%s scope=guild premium=%d",
+        limit_key,
+        1 if already_top_tier else 0,
+    )
     if already_top_tier or guild_id is None or person_id is None:
         return None
     pool = getattr(bot, "db_pool", None)
@@ -381,7 +398,16 @@ async def for_user_refusal(
 
     Takes ``bot``, not a bare pool - see :func:`for_guild_refusal`'s own
     docstring for why.
+
+    LIMIT-REACHED (usage measurement): see :func:`for_guild_refusal`'s own
+    docstring paragraph of the same name - the same unconditional, first-thing
+    INFO line, scoped to ``user`` here.
     """
+    log.info(
+        "LIMIT-REACHED key=%s scope=user premium=%d",
+        limit_key,
+        1 if already_top_tier else 0,
+    )
     if already_top_tier or person_id is None:
         return None
     pool = getattr(bot, "db_pool", None)

@@ -89,7 +89,7 @@ import logging
 import discord
 from discord.ext import commands, tasks
 
-from tools import premium
+from tools import premium, premium_usage
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
 from tools.time import ShortTime
@@ -511,6 +511,31 @@ class Premium(commands.Cog):
             embed.add_field(name=_("Why"), value=_("Nothing active."), inline=False)
 
         await ctx.send(embed=embed, allowed_mentions=NO_MENTIONS)
+
+    # -- usage (L4: .claude/plans/monetisation/) -------------------------
+    #
+    # Owner-only diagnostic for setting limits from DATA rather than
+    # guesses: tools/premium_usage.py runs one bounded aggregate query per
+    # premium-raisable resource (percentiles computed IN SQL, never a
+    # per-row Python loop) and this just renders the result. Deliberately
+    # PLAIN ENGLISH, never tools.i18n._() - this is a fixed-width table for
+    # the owner deciding where to set a limit, not a member-facing reply
+    # (the same "owner diagnostic, plain text" posture cogs/system/admin.py's
+    # ?eval already takes - see its own command for the precedent).
+
+    @premium_group.command(name="usage")
+    @commands.is_owner()
+    async def premium_usage_report(self, ctx):
+        """Real usage of every premium-raisable limit, from the current
+        database: ?premiumadmin usage"""
+        try:
+            rows_by_key = await premium_usage.fetch_all(self.bot.db_pool)
+        except Exception:
+            log.exception("premiumadmin usage: query failed")
+            await ctx.send("Could not read usage from the database.")
+            return
+        for chunk in premium_usage.render_report(rows_by_key):
+            await ctx.send(f"```\n{chunk}\n```", allowed_mentions=NO_MENTIONS)
 
     # -- test purchases (M3c) -------------------------------------------
     #
