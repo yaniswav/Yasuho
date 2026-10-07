@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:17+0000\n"
+"POT-Creation-Date: 2026-10-07 08:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -11882,11 +11882,11 @@ msgstr "remplacer"
 
 #: locales/command_strings.py:423
 msgid "stack"
-msgstr "cumuler"
+msgstr "tout garder"
 
 #: locales/command_strings.py:424
 msgid "stack (keep every reward) or replace (latest only)."
-msgstr "cumuler (garder chaque récompense) ou remplacer (la dernière seulement)."
+msgstr "tout garder (chaque récompense) ou remplacer (la dernière seulement)."
 
 #: locales/command_strings.py:425
 msgid "steam"
