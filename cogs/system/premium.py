@@ -374,6 +374,13 @@ class Premium(commands.Cog):
         # below), the same "a DM must never block anything" posture that
         # makes every DM send fire-and-forget in the first place.
         self._pending_owner_dms = set()
+        # One lock per entitlement id while its event is handled. Discord can
+        # deliver the same entitlement event twice at the same instant
+        # (observed live 2026-10-07: create and delete both arrived twice in
+        # the same second); without this, both copies read the same "before"
+        # state, both write, and the owner got two sale DMs. Entries are
+        # dropped as soon as nobody holds or waits on them.
+        self._entitlement_locks = {}
 
     async def cog_load(self):
         # Starting the task HERE rather than in __init__ is deliberate, and
@@ -1180,6 +1187,25 @@ class Premium(commands.Cog):
             entitlement_id_int = int(entitlement_id)
         except (TypeError, ValueError):
             entitlement_id_int = None
+        lock = self._entitlement_locks.setdefault(entitlement_id_int, asyncio.Lock())
+        try:
+            async with lock:
+                await self._handle_entitlement_event_locked(
+                    entitlement,
+                    entitlement_id,
+                    entitlement_id_int,
+                    force_deleted=force_deleted,
+                    kind=kind,
+                )
+        finally:
+            if not lock.locked() and not getattr(lock, "_waiters", None):
+                self._entitlement_locks.pop(entitlement_id_int, None)
+
+    async def _handle_entitlement_event_locked(
+        self, entitlement, entitlement_id, entitlement_id_int, *, force_deleted, kind
+    ):
+        """The read-before / write / classify sequence, run under the
+        per-entitlement lock taken by :meth:`_handle_entitlement_event`."""
         previous = (
             await self._read_prior_deleted_flag(entitlement_id_int)
             if entitlement_id_int is not None

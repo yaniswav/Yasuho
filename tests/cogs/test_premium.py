@@ -1255,3 +1255,50 @@ async def test_check_shows_the_entitlement_id_testclear_needs(monkeypatch):
     text = " ".join(field.value for field in sent[0].fields)
     assert "#1557312428969033828" in text
     assert "TEST" in text
+
+
+async def test_the_same_event_delivered_twice_at_once_sends_one_dm(fake_pool, monkeypatch):
+    """Observed live 2026-10-07: Discord delivered the same entitlement
+    create (and delete) twice in the same second. Both copies read the same
+    "before" state if handled concurrently; the per-entitlement lock makes
+    the second one see the first one's write."""
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+    stored = {}
+
+    async def _read_prior(entitlement_id):
+        await asyncio.sleep(0)  # let the other copy run if nothing serialises
+        if entitlement_id not in stored:
+            return None
+        return {"deleted": stored[entitlement_id]}
+
+    async def _upsert(pool, entitlement, *, force_deleted):
+        await asyncio.sleep(0)
+        row = {
+            "entitlement_id": entitlement.id,
+            "sku_id": 111,
+            "scope_type": "guild",
+            "guild_id": 42,
+            "user_id": None,
+            "entitlement_type": 8,
+            "deleted": bool(force_deleted),
+            "consumed": False,
+            "starts_at": None,
+            "ends_at": None,
+        }
+        stored[entitlement.id] = row["deleted"]
+        return row
+
+    monkeypatch.setattr(cog, "_read_prior_deleted_flag", _read_prior)
+    monkeypatch.setattr(premium_cog.premium, "upsert_entitlement_event", _upsert)
+    monkeypatch.setattr(cog, "_refresh_cache_for", lambda *a, **k: asyncio.sleep(0), raising=False)
+
+    await asyncio.gather(
+        cog.on_entitlement_create(_remote_entitlement()),
+        cog.on_entitlement_create(_remote_entitlement()),
+    )
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert cog._entitlement_locks == {}
