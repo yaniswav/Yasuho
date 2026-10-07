@@ -1482,3 +1482,28 @@ def test_recurring_reminders_count_against_the_list_cap_like_any_other():
         if isinstance(child, discord.ui.Select)
     ]
     assert len(selects[0].options) == rem.REMINDER_PAGE_SIZE
+
+
+# ---------------------------------------------------------------------------
+# Stable archival order: the series' own creation time survives reinsertion
+# ---------------------------------------------------------------------------
+
+
+async def test_reschedule_records_the_series_creation_time_once():
+    """A series re-inserts a fresh row every time it fires; without carrying
+    its first creation time, "oldest first" would rotate the active set."""
+    row = _due_row(extra=_recurring_extra())
+    result = await _run_one_dispatch(row)
+
+    extra = json.loads(result.pool.inserts[0][2][3])
+    assert extra["series_created"] == row["created"].isoformat()
+
+
+async def test_reschedule_keeps_an_existing_series_creation_time():
+    first = "2026-01-01T00:00:00+00:00"
+    result = await _run_one_dispatch(
+        _due_row(extra=_recurring_extra(series_created=first))
+    )
+
+    extra = json.loads(result.pool.inserts[0][2][3])
+    assert extra["series_created"] == first

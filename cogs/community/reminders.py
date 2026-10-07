@@ -71,19 +71,42 @@ RECURRING_COUNT_QUERY = (
     "AND extra->>'repeat_seconds' IS NOT NULL"
 )
 
-# The rows (id + creation order), rather than a bare count, this user's
-# recurring reminders need for archival classification
-# (:meth:`Reminder._recurring_archival`). Same index and predicates as
-# RECURRING_COUNT_QUERY above (``timers_reminder_author_idx (event,
-# (extra->>'author_id'), expires)``), bounded by the ABSOLUTE safety ceiling
-# (``premium.USER_CEILINGS["max_recurring_reminders"]``) rather than the
-# user's current effective cap, so an archived excess is never hidden from
+# The rows (id + creation order + the member's own "kept" choice), rather
+# than a bare count, this user's recurring reminders need for archival
+# classification (:meth:`Reminder._recurring_archival`). Same index and
+# predicates as RECURRING_COUNT_QUERY above (``timers_reminder_author_idx
+# (event, (extra->>'author_id'), expires)``), bounded by the ABSOLUTE safety
+# ceiling (``premium.USER_CEILINGS["max_recurring_reminders"]``) rather than
+# the user's current effective cap, so an archived excess is never hidden from
 # the classification that is deciding its own fate.
+#
+# ``kept`` (owner decision, 2026-10-07: a member can choose which of their
+# OWN recurring reminders ride out a downgrade in the free slots, instead of
+# always the oldest - see :class:`_KeepSelect` / :meth:`Reminder.
+# set_recurring_kept`) is read here as plain text (``'true'``/``'false'``/
+# absent) straight off ``extra`` - no new column, no schema change - and
+# handed to :func:`tools.premium_archive.classify` unchanged from how every
+# other resource already supplies it.
 RECURRING_ROWS_QUERY = (
-    "SELECT id, created FROM timers "
+    "SELECT id, created, extra->>'kept' AS kept, "
+    "extra->>'series_created' AS series_created FROM timers "
     "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
     "AND extra->>'repeat_seconds' IS NOT NULL "
     "LIMIT $2"
+)
+
+# Author-scoped write for the member's own recurring "kept" choice (see
+# RECURRING_ROWS_QUERY's own comment above and :meth:`Reminder.
+# set_recurring_kept`). ``$3`` is the literal JSON text ``'true'``/``'false'``,
+# cast to jsonb at the database - never trusted as anything else - so the
+# same one statement serves both halves of the write. Scoped by
+# ``extra->>'author_id' = $1`` exactly like ``cancel_reminder``'s DELETE: the
+# id in ``$2`` is NEVER trusted alone, only ids that are ALSO this author's
+# own recurring reminders are ever touched.
+SET_RECURRING_KEPT_QUERY = (
+    "UPDATE timers SET extra = jsonb_set(extra, '{kept}', $3::jsonb) "
+    "WHERE event = 'reminder' AND extra->>'author_id' = $1 "
+    "AND extra->>'repeat_seconds' IS NOT NULL AND id = ANY($2::bigint[])"
 )
 
 # Advisory-lock class id for the recurring cap (see create_reminder_timer).
@@ -571,6 +594,80 @@ class _CancelSelect(discord.ui.Select):
             log.exception("Reminder cancel select failed")
 
 
+def _series_created(row):
+    """When a recurring series was first created: ``series_created`` from
+    ``extra`` when present (stable across reinsertions), else the row's own
+    ``created``. A malformed value falls back too rather than raising."""
+    raw = row.get("series_created")
+    if raw:
+        try:
+            value = datetime.datetime.fromisoformat(raw)
+        except (TypeError, ValueError):
+            value = None
+        if value is not None:
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=datetime.timezone.utc)
+            return value
+    return row["created"]
+
+
+class _KeepSelect(discord.ui.Select):
+    """Multi-select of EVERY recurring reminder, choosing which stay active.
+
+    Owner decision (2026-10-07, after a Pack Confort refund): "l'utilisateur
+    peut choisir lesquels restent actifs dans sa limite gratuite; sans choix,
+    les plus anciens restent actifs selon un ordre stable". Shown by
+    :meth:`RemindersCard._build` ONLY when the member currently has at least
+    one archived recurring reminder - a member who has never gone over their
+    cap sees no change at all (there is nothing to choose between).
+
+    Unlike :class:`_CancelSelect` this is NOT page-scoped: it lists every
+    recurring reminder the card holds, across every page, because the choice
+    is about the whole series set, not about whichever ten reminders happen
+    to be on screen. That is always <= 25 options with no truncation needed:
+    ``tools.premium.USER_CEILINGS["max_recurring_reminders"]`` (the ABSOLUTE
+    ceiling no recurring count can ever exceed - see RECURRING_ROWS_QUERY's
+    own bound) is exactly 25, Discord's own per-select option ceiling.
+
+    Pre-selects whichever reminders are currently ACTIVE (not archived), so
+    submitting with no change leaves the classification exactly as it was.
+    ``max_values`` is the member's CURRENT effective recurring cap, clamped
+    to the option count (never above it - Discord itself would reject that).
+    """
+
+    def __init__(self, card, recurring, max_recurring_reminders):
+        self._owner = card
+        self.candidate_ids = [r["id"] for r in recurring]
+        options = [
+            discord.SelectOption(
+                label=reminders_tool.truncate(
+                    r["message"], reminders_tool.SELECT_LABEL_MAX
+                )
+                or _("(no text)"),
+                value=str(r["id"]),
+                description=format_interval(r["repeat_seconds"])[
+                    : reminders_tool.SELECT_LABEL_MAX
+                ],
+                default=not r.get("archived"),
+            )
+            for r in recurring
+        ]
+        super().__init__(
+            placeholder=_("Choose which stay active..."),
+            min_values=0,
+            max_values=max(1, min(max_recurring_reminders, len(options))),
+            options=options,
+        )
+
+    async def callback(self, interaction):
+        try:
+            await self._owner._apply_kept(
+                interaction, self.values, self.candidate_ids
+            )
+        except Exception:
+            log.exception("Reminder keep-active select failed")
+
+
 class RemindersCard(AuthorLayoutView):
     """Paginated Components V2 card of a member's pending reminders.
 
@@ -660,9 +757,11 @@ class RemindersCard(AuthorLayoutView):
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.ActionRow(_CancelSelect(self, page_reminders)))
 
-        if any(
-            r.get("archived") and r.get("repeat_seconds") for r in self.reminders
-        ):
+        recurring = [r for r in self.reminders if r.get("repeat_seconds")]
+        has_archived_recurring = any(
+            r.get("archived") for r in recurring
+        )
+        if has_archived_recurring:
             # Said once, so an archived series does not look like a bug.
             container.add_item(
                 discord.ui.TextDisplay(
@@ -673,6 +772,28 @@ class RemindersCard(AuthorLayoutView):
                         "still cancel them, and they resume at their next "
                         "time if your limit goes back up."
                     )
+                )
+            )
+            # Owner decision (2026-10-07): the member picks which of their OWN
+            # recurring reminders ride out the downgrade, instead of always
+            # the oldest. Shown ONLY here - a member who has never gone over
+            # their cap has nothing to choose between, so their card stays
+            # byte-identical to before this feature existed.
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# "
+                    + _(
+                        "Picking reminders below keeps them active first if "
+                        "your limit ever drops again."
+                    )
+                )
+            )
+            limits = premium.resolve_user_limits(
+                getattr(self.cog, "bot", None), self.author_id
+            )
+            container.add_item(
+                discord.ui.ActionRow(
+                    _KeepSelect(self, recurring, limits.max_recurring_reminders)
                 )
             )
 
@@ -718,6 +839,37 @@ class RemindersCard(AuthorLayoutView):
         # Once anything is removed the remaining count is at or below the cap,
         # so the "25+" overflow marker no longer applies.
         self.capped = False
+        self._build()
+        await interaction.response.edit_message(
+            view=self, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    async def _apply_kept(self, interaction, selected_values, candidate_ids):
+        """Write the member's "kept" choice from :class:`_KeepSelect`, then
+        re-render the card from a fresh read so the (possibly changed)
+        archived marks are correct immediately - no restart, no next
+        dispatch tick, the same lazy-classification contract every other
+        reader of :meth:`Reminder._recurring_archival` already relies on.
+
+        ``selected_values`` is clamped to the member's CURRENT effective
+        recurring cap before it is written - not just trusting the
+        component's own ``max_values`` as rendered, which can have gone
+        stale if the cap dropped between opening this card and submitting
+        (a refund landing mid-interaction): the write must never honour more
+        "kept" picks than the member is entitled to right now.
+        """
+        limits = premium.resolve_user_limits(
+            getattr(self.cog, "bot", None), self.author_id
+        )
+        selected_ids = [int(v) for v in selected_values][
+            : limits.max_recurring_reminders
+        ]
+        await self.cog.set_recurring_kept(
+            self.author_id, selected_ids, candidate_ids
+        )
+        self.reminders, self.capped = await self.cog.list_pending_reminders(
+            self.author_id
+        )
         self._build()
         await interaction.response.edit_message(
             view=self, allowed_mentions=discord.AllowedMentions.none()
@@ -914,14 +1066,26 @@ class Reminder(commands.Cog):
 
         Pure classification handed to :func:`tools.premium_archive.classify`,
         keyed by the timer row's own ``id`` (the surrogate key every
-        cancel/dispatch lookup already uses), ordered oldest ``created``
-        first. Since a series re-inserts a FRESH row (a new id, a fresh
-        ``created``) every time it fires, "oldest" here means "least
-        recently fired", not "oldest series" - an accepted, documented
-        consequence of this being a LAZY, computed-at-use-time verdict with
-        no stored flag (:mod:`tools.premium_archive`'s own module docstring):
-        there is nothing to keep consistent across a reschedule because
-        nothing is ever written down.
+        cancel/dispatch lookup already uses), ordered kept-first then oldest
+        ``created`` first (:func:`tools.premium_archive.classify`'s own
+        order). ``kept`` (owner decision 2026-10-07, :class:`_KeepSelect`)
+        comes straight off ``extra->>'kept'`` - absent/anything other than
+        the literal text ``'true'`` reads as not-kept, which is also exactly
+        what every row written before this feature existed, and every row no
+        member has ever touched the picker for, already carries: the oldest-
+        first behaviour is unchanged until a member makes an explicit choice.
+        A series re-inserts a FRESH row (a new id, a fresh ``created``) every
+        time it fires, so "oldest" is read from ``extra->>'series_created'``,
+        the creation time of the series' FIRST row, carried over by
+        :meth:`_claim_and_reschedule` (falling back to ``created`` for a row
+        written before that key existed). Ordering by the row's own
+        ``created`` would rotate the active set: every firing would make its
+        series the newest and hand its slot to an archived one. ``kept`` also
+        survives that reinsertion (:meth:`_claim_and_reschedule` copies the
+        whole ``extra`` dict - ``kept`` included - onto the next occurrence's
+        row), so a member's choice keeps winning its series the active slot
+        occurrence after occurrence, not just for the one row that was
+        active when they made it.
         """
         executor = connection if connection is not None else self.bot.db_pool
         rows = await executor.fetch(
@@ -929,9 +1093,69 @@ class Reminder(commands.Cog):
             str(user_id),
             premium.USER_CEILINGS["max_recurring_reminders"],
         )
-        resources = [{"id": row["id"], "created_at": row["created"]} for row in rows]
+        resources = [
+            {
+                "id": row["id"],
+                "created_at": _series_created(row),
+                "kept": row.get("kept") == "true",
+            }
+            for row in rows
+        ]
         limits = premium.resolve_user_limits(self.bot, user_id)
         return classify_archival(resources, limits.max_recurring_reminders)
+
+    async def set_recurring_kept(self, user_id, kept_ids, candidate_ids):
+        """Write this member's own recurring "kept" choice (owner decision,
+        2026-10-07: a refunded Pack Confort member picks which of their own
+        recurring reminders ride out the downgrade; with no choice, the
+        existing oldest-first/stable order is unchanged).
+
+        ``kept_ids`` get ``kept=true``; every OTHER id in ``candidate_ids``
+        (the full set :class:`_KeepSelect` presented - never an id outside
+        it, so a stale or tampered value can only ever touch a reminder the
+        member was actually shown) gets ``kept=false`` - explicit, not
+        merely absent, so a member who UNchecks a previously-kept series
+        reliably loses that priority rather than relying on an older value
+        happening to still be absent.
+
+        AUTHOR-SCOPED, never trusting the id alone: both halves run through
+        :data:`SET_RECURRING_KEPT_QUERY`'s ``extra->>'author_id' = $1``
+        predicate (plus ``event = 'reminder'`` and a live
+        ``repeat_seconds``), the same scoping ``cancel_reminder``'s DELETE
+        already uses - another member's reminders can never be touched by
+        this call, whatever ``kept_ids``/``candidate_ids`` the caller
+        (already clamped to the caller's OWN effective cap - see
+        :class:`_KeepSelect`) hands it.
+
+        ONE transaction for both writes, so a crash between them can never
+        leave a reminder in neither state. Touches only ``extra``'s
+        ``kept`` key - never ``expires`` - so this can NEVER cause a
+        delivery burst: a series moving from archived to active simply
+        resumes at whatever future occurrence its ``expires`` already
+        pointed to (:meth:`_deliver_archived_recurring` kept it moving
+        forward the whole time it sat archived), through the ordinary
+        :meth:`_deliver_at_most_once` path, exactly like reinstatement via a
+        renewed Pack Confort already works.
+        """
+        kept_ids = {int(i) for i in kept_ids}
+        candidate_ids = [int(i) for i in candidate_ids]
+        cleared_ids = [i for i in candidate_ids if i not in kept_ids]
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                if kept_ids:
+                    await conn.execute(
+                        SET_RECURRING_KEPT_QUERY,
+                        str(user_id),
+                        list(kept_ids),
+                        "true",
+                    )
+                if cleared_ids:
+                    await conn.execute(
+                        SET_RECURRING_KEPT_QUERY,
+                        str(user_id),
+                        cleared_ids,
+                        "false",
+                    )
 
     async def list_pending_reminders(self, user_id):
         """This user's pending reminders, soonest first, bounded and parsed.
@@ -1385,6 +1609,12 @@ class Reminder(commands.Cog):
                 next_extra["occurrence"] = (
                     reminders_tool.occurrence_number(extra) + 1 + missed
                 )
+                # The series' own creation time, kept across reinsertions so
+                # archival keeps a stable "oldest first" order (see
+                # _recurring_archival). A row from before this key existed
+                # contributes its own ``created``.
+                if not extra.get("series_created") and claimed.get("created"):
+                    next_extra["series_created"] = claimed["created"].isoformat()
                 next_id = await conn.fetchval(
                     "INSERT INTO timers(event, expires, created, extra) "
                     "VALUES($1, $2, $3, $4::jsonb) RETURNING id",
