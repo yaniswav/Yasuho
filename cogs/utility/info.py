@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from tools import premium
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.views import LocaleLayoutView
@@ -160,6 +161,10 @@ class Info(commands.Cog):
             value=_("Tier {tier}").format(tier=guild.premium_tier),
         )
         embed.add_field(name=_("Boosts"), value=guild.premium_subscription_count)
+        # The Yasuho+ badge: one discreet footer line, nothing that could be
+        # mistaken for a moderation or verification mark.
+        if premium.resolve_guild_limits(self.bot, guild.id).premium_badge:
+            embed.set_footer(text=_("Yasuho+ server"))
 
         await ctx.send(embed=embed)
 
