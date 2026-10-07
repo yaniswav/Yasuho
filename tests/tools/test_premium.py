@@ -72,6 +72,55 @@ def test_no_sku_configured_in_the_real_bot_ini_today():
 
 
 # ---------------------------------------------------------------------------
+# premium_skus sync (dashboard bridge)
+# ---------------------------------------------------------------------------
+
+
+async def test_sync_premium_skus_upserts_both_products_from_the_module_constants(
+    fake_pool, monkeypatch
+):
+    """ONE source of truth: the two writes must carry exactly the module's
+    OWN already-parsed constants, never a fresh config read."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", 222)
+
+    await premium.sync_premium_skus(fake_pool)
+
+    assert len(fake_pool.calls) == 2
+    (method_a, query_a, args_a), (method_b, query_b, args_b) = fake_pool.calls
+    assert method_a == method_b == "execute"
+    assert "INSERT INTO premium_skus" in query_a
+    assert "ON CONFLICT (product) DO UPDATE" in query_a
+    assert args_a == (premium.PRODUCT_YASUHO_PLUS, 111)
+    assert args_b == (premium.PRODUCT_COMFORT_PACK, 222)
+
+
+async def test_sync_premium_skus_writes_null_for_an_unconfigured_sku(
+    fake_pool, monkeypatch
+):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+
+    await premium.sync_premium_skus(fake_pool)
+
+    args = [call[2] for call in fake_pool.calls]
+    assert (premium.PRODUCT_YASUHO_PLUS, None) in args
+    assert (premium.PRODUCT_COMFORT_PACK, None) in args
+
+
+async def test_sync_premium_skus_writes_exactly_the_two_catalog_products(
+    fake_pool, monkeypatch
+):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", 222)
+
+    await premium.sync_premium_skus(fake_pool)
+
+    products_written = {call[2][0] for call in fake_pool.calls}
+    assert products_written == set(premium.PRODUCTS)
+
+
+# ---------------------------------------------------------------------------
 # Catalog defaults: no SKU configured -> FREE everywhere
 # ---------------------------------------------------------------------------
 

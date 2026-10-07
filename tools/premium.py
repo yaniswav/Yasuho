@@ -412,6 +412,53 @@ def is_active(entitlement, *, now=None):
 # Store helpers (asyncpg pool)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# premium_skus (dashboard bridge, 2026-10-07). Mirrors this module's OWN
+# parsed [Premium] SKU config into the database, so the web dashboard - which
+# has no access to bot.ini - can read which Discord SKU each product
+# currently sells as, or learn that none is configured yet (sku_id NULL).
+# See schema.sql's own comment on the table and on the premium_status view
+# built on top of it for the full contract.
+# ---------------------------------------------------------------------------
+
+_UPSERT_PREMIUM_SKU = """
+INSERT INTO premium_skus (product, sku_id, updated_at)
+VALUES ($1, $2, now())
+ON CONFLICT (product) DO UPDATE SET
+    sku_id = EXCLUDED.sku_id,
+    updated_at = now()
+WHERE premium_skus.sku_id IS DISTINCT FROM EXCLUDED.sku_id
+"""
+
+
+async def sync_premium_skus(pool):
+    """Upsert ``premium_skus`` from :data:`YASUHO_PLUS_SKU`/:data:`COMFORT_PACK_SKU` -
+    this module's OWN already-parsed SKU config (see "[Premium] SKU
+    configuration" above). ONE source of truth: this never re-reads bot.ini,
+    it only republishes the same two module-level constants
+    :class:`EntitlementCache` itself resolves against, so the dashboard's
+    copy can never drift from what the bot actually enforces.
+
+    Idempotent, and cheap to call on every boot: the ``ON CONFLICT ...
+    WHERE`` guard in :data:`_UPSERT_PREMIUM_SKU` only rewrites a row (and
+    re-stamps ``updated_at``) when its ``sku_id`` actually changed, so a boot
+    that changes nothing leaves the table completely untouched. Both
+    :data:`PRODUCTS` rows always exist after the first successful call -
+    ``sku_id`` is ``NULL`` for whichever product has no SKU configured, the
+    same fail-closed reading :class:`EntitlementCache` already gives a
+    missing SKU elsewhere.
+
+    Called once at boot (core.py's ``_load_premium_cache``), wrapped there so
+    a failure here is logged and swallowed rather than blocking startup -
+    this table only serves the read-only dashboard bridge; nothing in
+    ``tools.premium`` itself ever reads it back.
+    """
+    for product, sku_id in (
+        (PRODUCT_YASUHO_PLUS, YASUHO_PLUS_SKU),
+        (PRODUCT_COMFORT_PACK, COMFORT_PACK_SKU),
+    ):
+        await pool.execute(_UPSERT_PREMIUM_SKU, product, sku_id)
+
 
 def _coerce_entitlement(entitlement):
     """Normalise a discord.Entitlement (or test double) into DB column values.

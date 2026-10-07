@@ -372,7 +372,22 @@ class Yasuho(commands.Bot):
         subscriber or grant recipient is served the free tier until the next
         restart or the periodic reconciliation loop (cogs/system/premium.py)
         catches up).
+
+        Also republishes ``premium_skus`` (:func:`tools.premium.sync_premium_skus`)
+        from this SAME boot's already-parsed SKU config - the dashboard
+        bridge's one source of truth for "what SKU does this product sell
+        as right now" (schema.sql's own comment on the table). Its own
+        try/except is SEPARATE from the cache load above: that table only
+        serves the read-only dashboard, so a failure to sync it must never
+        stop ``self.premium`` itself from loading, and vice versa.
         """
+        try:
+            await premium.sync_premium_skus(self.db_pool)
+        except Exception:
+            log.exception(
+                "Failed to sync premium_skus; the dashboard bridge table may "
+                "be stale, bot.premium itself is unaffected"
+            )
         try:
             await self.premium.load(self.db_pool)
         except Exception:

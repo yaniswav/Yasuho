@@ -2001,3 +2001,183 @@ BEGIN
     END IF;
 END
 $$;
+
+-- ============================================================
+-- Dashboard bridge: premium_skus + premium_status (2026-10-07)
+-- ============================================================
+-- The web dashboard has no access to bot.ini and must never read a second,
+-- independently-maintained copy of the commercial config - these two objects
+-- let it read the SAME answers tools/premium.py's EntitlementCache already
+-- enforces, from Postgres alone.
+--
+-- premium_skus mirrors tools.premium's OWN parsed [Premium] SKU config
+-- (YASUHO_PLUS_SKU / COMFORT_PACK_SKU) into the database.
+-- tools.premium.sync_premium_skus is the ONLY writer, called once at boot
+-- (core.py's _load_premium_cache) from those SAME two module-level
+-- constants - never a fresh ini read, so this table can never drift from
+-- what EntitlementCache itself resolves against. Always exactly two rows
+-- after the first successful boot (one per tools.premium.PRODUCTS entry);
+-- sku_id NULL means "configured as absent", the same fail-closed reading
+-- EntitlementCache gives a missing SKU - not "unknown".
+CREATE TABLE IF NOT EXISTS premium_skus (
+    product     TEXT        PRIMARY KEY,
+    sku_id      BIGINT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT premium_skus_product_valid
+        CHECK (product IN ('yasuho_plus', 'comfort_pack'))
+);
+
+-- premium_status: one row per (scope_type, scope_id, product) that this bot
+-- has EVER recorded an entitlement or a grant for - the dashboard's
+-- read-only view of "is this guild/user premium right now, through which
+-- source, until when". Created with CREATE OR REPLACE (see the note right
+-- above the statement).
+--
+-- THE RULES MIRROR tools.premium EXACTLY - restated here in SQL (both
+-- restatements are pinned by tests/tools/test_premium_status_view.py: a
+-- pure test that this text still carries the same 48-hour grace constant as
+-- tools.premium.GRACE, and a live-Postgres equivalence test that compares
+-- this view's `active` column against tools.premium.is_active/
+-- is_grant_active computed from the SAME rows):
+--   entitlement (tools.premium.is_active):
+--     NOT deleted AND (ends_at IS NULL OR now() < ends_at OR
+--     (last_synced_at < ends_at AND now() < ends_at + INTERVAL '48 hours'))
+--   grant (tools.premium.is_grant_active):
+--     revoked_at IS NULL AND (expires_at IS NULL OR now() < expires_at)
+--
+-- PRODUCT PINNING. A guild-scoped row only ever represents 'yasuho_plus' and
+-- a user-scoped row only ever represents 'comfort_pack' - the same
+-- PRODUCT_SCOPE mapping tools.premium.validate_grant_scope enforces for
+-- grants (and this schema's own premium_grants_product_scope_valid CHECK)
+-- and EntitlementCache.is_guild_premium / .has_comfort_pack enforce for
+-- entitlements by construction (each only ever checks its own scope's
+-- product). This view can never produce a guild/comfort_pack or a
+-- user/yasuho_plus row.
+--
+-- SKU MATCHING. An entitlement only counts toward active/source when its
+-- sku_id matches premium_skus' CURRENT row for that product - a NULL sku_id
+-- in premium_skus (no SKU configured) matches no entitlement at all (SQL
+-- NULL is never equal to anything, mirroring EntitlementCache's own
+-- "is None" short-circuit on an unconfigured SKU). An entitlement whose
+-- sku_id matches NEITHER configured product (a stale/foreign/dev-test sku)
+-- still gives its scope a row in this view - the presence test below reads
+-- the raw tables, not the sku-matched join - but never counts toward
+-- active/source, exactly how a changed [Premium] *_sku in bot.ini is meant
+-- to behave (see tools.premium.reconcile's own "sku_ids" paragraph).
+--
+-- PRECEDENCE AND ends_at. When a scope has both an active entitlement and
+-- an active grant, source = 'entitlement' (mirrors EntitlementCache
+-- checking the Discord SKU before the owner grant in both
+-- is_guild_premium and has_comfort_pack). ends_at is the CHOSEN source's
+-- own effective end: NULL means "no end" (a test-mode entitlement with
+-- ends_at NULL, or a permanent grant with expires_at NULL) and wins over
+-- any bounded value from another row of the SAME source for the same scope
+-- (one unlimited entitlement/grant makes the whole scope unlimited);
+-- otherwise it is the LATEST ends_at/expires_at among that source's own
+-- currently-active rows for this scope - the row that actually determines
+-- when coverage runs out. ends_at is NULL whenever the scope is inactive -
+-- there is no active source left to report an end for.
+--
+-- A grant's `reason`/`granted_by` are never selected here - this view must
+-- never expose them to the dashboard.
+--
+-- CREATE OR REPLACE, not DROP + CREATE: this file runs at every boot, and a
+-- DROP would fail (and stop the boot) the day anything outside the bot - the
+-- dashboard - depends on this view. PG11 only replaces a view in place when
+-- the existing columns keep their names, types and order (appending is fine),
+-- so a future reshape must be a deliberate one-off migration, never an edit
+-- of the column list here.
+CREATE OR REPLACE VIEW premium_status AS
+WITH scopes AS (
+    -- Presence: every (scope_type, scope_id, product) this bot has ANY
+    -- entitlement or grant row for, matched or not - see "SKU MATCHING"
+    -- above for why this is the raw tables, not the sku-matched join below.
+    SELECT 'guild'::text AS scope_type, guild_id AS scope_id, 'yasuho_plus'::text AS product
+        FROM premium_entitlements WHERE scope_type = 'guild'
+    UNION
+    SELECT 'user'::text, user_id, 'comfort_pack'::text
+        FROM premium_entitlements WHERE scope_type = 'user'
+    UNION
+    SELECT scope_type, guild_id, product
+        FROM premium_grants WHERE scope_type = 'guild'
+    UNION
+    SELECT scope_type, user_id, product
+        FROM premium_grants WHERE scope_type = 'user'
+),
+ent_rows AS (
+    SELECT
+        e.scope_type,
+        CASE e.scope_type WHEN 'guild' THEN e.guild_id ELSE e.user_id END AS scope_id,
+        s.product,
+        e.ends_at,
+        (
+            NOT e.deleted
+            AND (
+                e.ends_at IS NULL
+                OR now() < e.ends_at
+                OR (
+                    e.last_synced_at IS NOT NULL
+                    AND e.last_synced_at < e.ends_at
+                    AND now() < e.ends_at + INTERVAL '48 hours'
+                )
+            )
+        ) AS row_active
+    FROM premium_entitlements e
+    JOIN premium_skus s
+        ON s.sku_id = e.sku_id
+       AND s.product = CASE e.scope_type WHEN 'guild' THEN 'yasuho_plus' ELSE 'comfort_pack' END
+),
+ent_agg AS (
+    SELECT
+        scope_type, scope_id, product,
+        bool_or(row_active) AS active,
+        CASE
+            WHEN bool_or(row_active AND ends_at IS NULL) THEN NULL
+            ELSE MAX(ends_at) FILTER (WHERE row_active)
+        END AS ends_at
+    FROM ent_rows
+    GROUP BY scope_type, scope_id, product
+),
+grant_rows AS (
+    SELECT
+        g.scope_type,
+        CASE g.scope_type WHEN 'guild' THEN g.guild_id ELSE g.user_id END AS scope_id,
+        g.product,
+        g.expires_at,
+        (
+            g.revoked_at IS NULL
+            AND (g.expires_at IS NULL OR now() < g.expires_at)
+        ) AS row_active
+    FROM premium_grants g
+),
+grant_agg AS (
+    SELECT
+        scope_type, scope_id, product,
+        bool_or(row_active) AS active,
+        CASE
+            WHEN bool_or(row_active AND expires_at IS NULL) THEN NULL
+            ELSE MAX(expires_at) FILTER (WHERE row_active)
+        END AS ends_at
+    FROM grant_rows
+    GROUP BY scope_type, scope_id, product
+)
+SELECT
+    sc.scope_type,
+    sc.scope_id,
+    sc.product,
+    (COALESCE(ea.active, FALSE) OR COALESCE(ga.active, FALSE)) AS active,
+    CASE
+        WHEN COALESCE(ea.active, FALSE) THEN 'entitlement'
+        WHEN COALESCE(ga.active, FALSE) THEN 'grant'
+        ELSE NULL
+    END AS source,
+    CASE
+        WHEN COALESCE(ea.active, FALSE) THEN ea.ends_at
+        WHEN COALESCE(ga.active, FALSE) THEN ga.ends_at
+        ELSE NULL
+    END AS ends_at
+FROM scopes sc
+LEFT JOIN ent_agg ea
+    ON ea.scope_type = sc.scope_type AND ea.scope_id = sc.scope_id AND ea.product = sc.product
+LEFT JOIN grant_agg ga
+    ON ga.scope_type = sc.scope_type AND ga.scope_id = sc.scope_id AND ga.product = sc.product;

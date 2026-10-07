@@ -67,3 +67,37 @@ async def test_a_successful_load_populates_the_cache(monkeypatch):
     await bot._load_premium_cache()
 
     assert bot.premium.is_guild_premium(111) is True
+
+
+async def test_boot_also_syncs_premium_skus_and_a_failure_there_is_isolated(
+    caplog, monkeypatch
+):
+    """The premium_skus dashboard-bridge sync is its OWN try/except: it must
+    run every boot alongside the cache load, and a failure syncing it must
+    neither crash boot nor stop the cache load from succeeding."""
+    calls = []
+
+    class _SplitPool:
+        async def execute(self, query, *args):
+            calls.append(("execute", query, args))
+            raise ConnectionError("premium_skus write failed")
+
+        async def fetch(self, query, *args):
+            calls.append(("fetch", query, args))
+            return []
+
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+    bot = core.Yasuho(db_pool=_SplitPool())
+
+    with caplog.at_level(logging.ERROR, logger=core.log.name):
+        await bot._load_premium_cache()
+
+    assert any("Failed to sync premium_skus" in r.message for r in caplog.records)
+    # The first product's write raised, aborting the sync loop right there -
+    # core.py's wrapper catches it so boot continues either way.
+    execute_calls = [c for c in calls if c[0] == "execute"]
+    assert len(execute_calls) == 1
+    # The cache load (via fetch) still ran and succeeded despite the sync failure.
+    assert any(c[0] == "fetch" for c in calls)
+    assert bot.premium.is_guild_premium(1) is False
