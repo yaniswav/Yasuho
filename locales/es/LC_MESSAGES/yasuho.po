@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 06:25+0000\n"
+"POT-Creation-Date: 2026-10-07 07:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -775,7 +775,7 @@ msgstr "Este servidor todavía no tiene un feed de AniList. Crea uno con `/anili
 
 #: cogs/anilist/feed.py:2908 cogs/anilist/feed_views.py:658
 #: cogs/anilist/feed_views.py:953 cogs/anilist/feed_views.py:1349
-#: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:626
+#: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:723
 #: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
 #: cogs/music/playlists_shared.py:312 cogs/music/views.py:2431
 msgid "(archived)"
@@ -1121,7 +1121,7 @@ msgstr "Dejar de seguir un título..."
 
 #: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:702
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:823
 #: cogs/music/views.py:1631 cogs/music/views.py:2064 cogs/music/views.py:2462
 msgid "Next"
 msgstr "Sig."
@@ -1809,186 +1809,194 @@ msgstr "Idioma desconocido. Disponibles: {options}"
 msgid "Server default language set to **{lang}**."
 msgstr "Idioma predeterminado del servidor establecido en **{lang}**."
 
-#: cogs/community/reminders.py:240
+#: cogs/community/reminders.py:263
 #, python-brace-format
 msgid "every week"
 msgid_plural "every {count} weeks"
 msgstr[0] "cada semana"
 msgstr[1] "cada {count} semanas"
 
-#: cogs/community/reminders.py:242
+#: cogs/community/reminders.py:265
 #, python-brace-format
 msgid "every day"
 msgid_plural "every {count} days"
 msgstr[0] "cada día"
 msgstr[1] "cada {count} días"
 
-#: cogs/community/reminders.py:244
+#: cogs/community/reminders.py:267
 #, python-brace-format
 msgid "every hour"
 msgid_plural "every {count} hours"
 msgstr[0] "cada hora"
 msgstr[1] "cada {count} horas"
 
-#: cogs/community/reminders.py:247
+#: cogs/community/reminders.py:270
 #, python-brace-format
 msgid "every minute"
 msgid_plural "every {count} minutes"
 msgstr[0] "cada minuto"
 msgstr[1] "cada {count} minutos"
 
-#: cogs/community/reminders.py:250
+#: cogs/community/reminders.py:273
 #, python-brace-format
 msgid "every second"
 msgid_plural "every {count} seconds"
 msgstr[0] "cada segundo"
 msgstr[1] "cada {count} segundos"
 
-#: cogs/community/reminders.py:262
+#: cogs/community/reminders.py:285
 msgid "I can only repeat a reminder once an hour at most. Try `hourly` or something longer like `2d`."
 msgstr "Solo puedo repetir un recordatorio como máximo una vez por hora. Prueba `hourly` o algo más largo como `2d`."
 
-#: cogs/community/reminders.py:266
+#: cogs/community/reminders.py:289
 msgid "I can only repeat a reminder for up to a year - try `365d` or less."
 msgstr "Solo puedo repetir un recordatorio durante un año como máximo - prueba `365d` o menos."
 
-#: cogs/community/reminders.py:268
+#: cogs/community/reminders.py:291
 msgid "I couldn't understand that repeat interval. Try `hourly`, `daily`, `weekly`, or a duration like `2d` or `12h`."
 msgstr "No entendí ese intervalo de repetición. Prueba `hourly`, `daily`, `weekly`, o una duración como `2d` o `12h`."
 
-#: cogs/community/reminders.py:282
+#: cogs/community/reminders.py:305
 #, python-brace-format
 msgid "You already have {count} repeating reminders - cancel one with `/reminders` before adding another."
 msgstr "Ya tienes {count} recordatorios repetitivos - cancela uno con `/reminders` antes de añadir otro."
 
-#: cogs/community/reminders.py:296
+#: cogs/community/reminders.py:319
 #, python-brace-format
 msgid "Okay, reminding you {when}: {message}"
 msgstr "Vale, te recordaré {when}: {message}"
 
-#: cogs/community/reminders.py:299
+#: cogs/community/reminders.py:322
 #, python-brace-format
 msgid "Okay, reminding you {when} and then {interval}: {message}"
 msgstr "Vale, te recordaré {when} y luego {interval}: {message}"
 
-#: cogs/community/reminders.py:325 cogs/community/reminders.py:495
+#: cogs/community/reminders.py:348 cogs/community/reminders.py:518
 msgid "Set a reminder"
 msgstr "Crear un recordatorio"
 
-#: cogs/community/reminders.py:335 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:358 cogs/config/announcements.py:154
 msgid "When"
 msgstr "Cuándo"
 
-#: cogs/community/reminders.py:336
+#: cogs/community/reminders.py:359
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "p. ej. 10m, mañana a las 18:00, o una etiqueta <t:...>"
 
-#: cogs/community/reminders.py:344 cogs/config/reactionroles.py:226
+#: cogs/community/reminders.py:367 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
 #: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr "Mensaje"
 
-#: cogs/community/reminders.py:345
+#: cogs/community/reminders.py:368
 msgid "What should I remind you about?"
 msgstr "¿Qué quieres que te recuerde?"
 
-#: cogs/community/reminders.py:356
+#: cogs/community/reminders.py:379
 msgid "Repeat (optional)"
 msgstr "Repetir (opcional)"
 
-#: cogs/community/reminders.py:357
+#: cogs/community/reminders.py:380
 msgid "hourly, daily, weekly, or e.g. 2d - blank for once"
 msgstr "hourly, daily, weekly, o p. ej. 2d - déjalo en blanco para una sola vez"
 
-#: cogs/community/reminders.py:394
+#: cogs/community/reminders.py:417
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "No entendí esa hora. Prueba algo como `10m`, `tomorrow at 6pm` o `in 3 days`."
 
-#: cogs/community/reminders.py:404 cogs/community/reminders.py:1722
+#: cogs/community/reminders.py:427 cogs/community/reminders.py:1952
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Esa hora ya pasó. Dame un momento en el futuro."
 
-#: cogs/community/reminders.py:420 cogs/community/reminders.py:1750
+#: cogs/community/reminders.py:443 cogs/community/reminders.py:1980
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Ya tienes {count} recordatorios pendientes - espera a que salte alguno antes de añadir más."
 
-#: cogs/community/reminders.py:546 cogs/community/reminders.py:606
-#: cogs/utility/extras.py:37
+#: cogs/community/reminders.py:569 cogs/community/reminders.py:646
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:37
 msgid "(no text)"
 msgstr "(sin texto)"
 
-#: cogs/community/reminders.py:552
+#: cogs/community/reminders.py:575
 #, python-brace-format
 msgid "in {when}"
 msgstr "en {when}"
 
-#: cogs/community/reminders.py:558
+#: cogs/community/reminders.py:581
 msgid "Cancel a reminder..."
 msgstr "Cancelar un recordatorio..."
 
-#: cogs/community/reminders.py:560
+#: cogs/community/reminders.py:583
 msgid "(nothing to cancel)"
 msgstr "(nada que cancelar)"
 
-#: cogs/community/reminders.py:607
+#: cogs/community/reminders.py:656
+msgid "Choose which stay active..."
+msgstr "Elige cuáles siguen activos..."
+
+#: cogs/community/reminders.py:704
 #, python-brace-format
 msgid "{when} - {text}"
 msgstr "{when} - {text}"
 
-#: cogs/community/reminders.py:613
+#: cogs/community/reminders.py:710
 #, python-brace-format
 msgid "in <#{channel}>"
 msgstr "en <#{channel}>"
 
-#: cogs/community/reminders.py:641
+#: cogs/community/reminders.py:738
 msgid "Your reminders"
 msgstr "Tus recordatorios"
 
-#: cogs/community/reminders.py:648
+#: cogs/community/reminders.py:745
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "No tienes recordatorios. Usa `/remind` para añadir uno."
 
-#: cogs/community/reminders.py:671
+#: cogs/community/reminders.py:770
 msgid "Recurring reminders marked (archived) are over your current limit: they are paused, not deleted. You can still cancel them, and they resume at their next time if your limit goes back up."
 msgstr "Los recordatorios recurrentes marcados (archivado) superan tu límite actual: están en pausa, no eliminados. Puedes seguir cancelándolos, y se reanudan en su próxima hora si tu límite vuelve a subir."
 
-#: cogs/community/reminders.py:679
+#: cogs/community/reminders.py:786
+msgid "Pick below which recurring reminders stay active within your current limit."
+msgstr "Elige abajo qué recordatorios recurrentes siguen activos dentro de tu límite actual."
+
+#: cogs/community/reminders.py:800
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count} pendientes"
 
-#: cogs/community/reminders.py:683
+#: cogs/community/reminders.py:804
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Página {page}/{pages} - {count} pendientes"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:695
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:816
 #: cogs/music/views.py:1624 cogs/music/views.py:2057 cogs/music/views.py:2455
 msgid "Prev"
 msgstr "Ant."
 
-#: cogs/community/reminders.py:1493
+#: cogs/community/reminders.py:1723
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "Estaba desconectada, así que se perdió {count} repetición."
 msgstr[1] "Estaba desconectada, así que se perdieron {count} repeticiones."
 
-#: cogs/community/reminders.py:1506
+#: cogs/community/reminders.py:1736
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "Se repite {interval} - próximo {when}"
 
-#: cogs/community/reminders.py:1602
+#: cogs/community/reminders.py:1832
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "&lt;@{author_id}&gt;, {when}: {message}"
 
-#: cogs/community/reminders.py:1708
+#: cogs/community/reminders.py:1938
 msgid "Tap the button below to set a reminder."
 msgstr "Toca el botón de abajo para crear un recordatorio."
 
