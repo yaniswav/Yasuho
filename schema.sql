@@ -1653,6 +1653,27 @@ CREATE INDEX IF NOT EXISTS premium_entitlements_guild_idx
 CREATE INDEX IF NOT EXISTS premium_entitlements_user_idx
     ON premium_entitlements (user_id) WHERE user_id IS NOT NULL;
 
+-- M4d (fix during review): the moment a row was FIRST recorded as deleted,
+-- frozen from then on - unlike last_synced_at, which keeps advancing on every
+-- later write to the same row (a duplicate/out-of-order gateway event replayed
+-- after a reconnect - see tools/premium.py's own "EVENT ORDERING" module
+-- docstring - is a documented, expected occurrence, not a bug). A bulk "has
+-- this guild's Yasuho+ truly ended within the last N days" lookup
+-- (tools.premium.premium_ish_guild_ids, serving the serverstats purge's
+-- privacy-retention promise) needs a timestamp that means "when this ended",
+-- not "when this row was last touched" - see tools/premium.py's
+-- upsert_entitlement/upsert_entitlement_event/mark_deleted for where this is
+-- written.
+ALTER TABLE premium_entitlements ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+-- One-time backfill for rows already deleted before this column existed:
+-- last_synced_at is the best available proxy for an already-settled row (no
+-- further event has touched it since this migration runs at boot, before any
+-- new gateway event can land), and this UPDATE is a no-op on every later boot
+-- (WHERE ended_at IS NULL only matches a row this column has never been set
+-- on yet).
+UPDATE premium_entitlements SET ended_at = last_synced_at
+    WHERE deleted = TRUE AND ended_at IS NULL;
+
 -- Owner-managed gifts (tools/premium.py: create_grant/revoke_grant). THIS IS
 -- NOT A PROJECTION - unlike premium_entitlements above, nothing resyncs these
 -- rows from Discord, because Discord is not involved: its own entitlement

@@ -640,6 +640,10 @@ async def test_mark_deleted_sets_the_flag_and_restamps_sync_time(fake_pool):
     _method, query, args = fake_pool.calls[0]
     assert "SET deleted = TRUE" in query
     assert "last_synced_at = now()" in query
+    # Fix during review (P0): ended_at is set via COALESCE, so a second call
+    # on an already-ended row (should not happen in practice, but harmless
+    # if it does) cannot push the frozen end time forward.
+    assert "ended_at = COALESCE(ended_at, now())" in query
     assert args == (555,)
 
 
@@ -689,7 +693,7 @@ async def test_premium_ish_guild_ids_computes_the_cutoff_from_within_days(fake_p
     await premium.premium_ish_guild_ids(fake_pool, within_days=365, now=now)
 
     _method, _query, args = fake_pool.calls[0]
-    assert args == (now - datetime.timedelta(days=365),)
+    assert args == (now - datetime.timedelta(days=365), premium.YASUHO_PLUS_SKU)
 
 
 async def test_premium_ish_guild_ids_defaults_now_to_the_real_clock(fake_pool):
@@ -700,7 +704,7 @@ async def test_premium_ish_guild_ids_defaults_now_to_the_real_clock(fake_pool):
 
     after = datetime.datetime.now(UTC)
     _method, _query, args = fake_pool.calls[0]
-    (cutoff,) = args
+    cutoff, _sku_id = args
     # cutoff = "now" - 90 days, "now" taken somewhere between the two reads
     # above (never a frozen/stale value from import time).
     assert before - datetime.timedelta(days=90) <= cutoff
@@ -720,6 +724,61 @@ async def test_premium_ish_guild_ids_returns_a_set_of_ints(fake_pool):
 async def test_premium_ish_guild_ids_empty_rows_is_an_empty_set(fake_pool):
     fake_pool.fetch_return = []
     assert await premium.premium_ish_guild_ids(fake_pool, within_days=365) == set()
+
+
+# ---------------------------------------------------------------------------
+# Fix during review (P0): the "ended" branch must read a FROZEN timestamp,
+# never last_synced_at - a gateway reconnect can replay/duplicate a delivery
+# (this module's own "EVENT ORDERING" docstring), and every write path used
+# to re-stamp last_synced_at = now() on an ALREADY-deleted row regardless, so
+# one replayed delete/update could resurrect a long-ended guild's retention
+# window forever. Proven against a real throwaway PostgreSQL 11 during this
+# review (fixtures: a guild refunded 400 days ago, re-touched by a duplicate
+# event today, was wrongly kept premium-ish by the old `last_synced_at > $1`
+# clause and correctly excluded by `ended_at > $1`) - not re-run here since
+# this suite is mock-based throughout (see this section's header comment),
+# but guarded at the level this suite CAN reach: the exact query text never
+# regresses back to the broken column, and the cutoff/sku args stay correct.
+# ---------------------------------------------------------------------------
+
+
+def test_premium_ish_guild_ids_deleted_branch_reads_ended_at_not_last_synced_at():
+    assert "deleted = TRUE AND ended_at > $1" in premium._PREMIUM_ISH_GUILD_IDS
+    assert "last_synced_at" not in premium._PREMIUM_ISH_GUILD_IDS
+
+
+async def test_premium_ish_guild_ids_filters_entitlements_to_the_yasuho_plus_sku(
+    fake_pool, monkeypatch
+):
+    """Fix during review: scope_type = 'guild' alone is not a product filter
+    for premium_entitlements (unlike premium_grants, which schema.sql's own
+    CHECK ties to 'yasuho_plus') - this must bind YASUHO_PLUS_SKU as the
+    query's own sku filter, the same thing guild_status/is_guild_premium
+    already do."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    fake_pool.fetch_return = []
+
+    await premium.premium_ish_guild_ids(fake_pool, within_days=365)
+
+    _method, query, args = fake_pool.calls[0]
+    assert "sku_id = $2" in query
+    assert args[1] == 111
+
+
+async def test_premium_ish_guild_ids_sku_filter_is_none_when_unconfigured(
+    fake_pool, monkeypatch
+):
+    """No Yasuho+ SKU configured yet (dev/test default) must bind NULL, not
+    0 or some other sentinel that could accidentally match a real row -
+    ``sku_id = NULL`` is never true in SQL, so this correctly contributes no
+    guild through the entitlements half of the query."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    fake_pool.fetch_return = []
+
+    await premium.premium_ish_guild_ids(fake_pool, within_days=365)
+
+    _method, _query, args = fake_pool.calls[0]
+    assert args[1] is None
 
 
 # NOTE: a negative control against this function's own WHERE clause would
@@ -1040,6 +1099,17 @@ class _FakeEntitlementTable:
     def __init__(self):
         self.rows = {}  # entitlement_id -> dict of columns
         self.calls = []
+        # A monotonically advancing stand-in for the query's own now() - a
+        # FIXED NOW (the original shape) cannot distinguish "this write
+        # happened AFTER that one", which is exactly what the ended_at
+        # freeze fix (fix during review, P0) needs a test to observe: that a
+        # SECOND, later write to an already-deleted row does not move
+        # ended_at forward even though last_synced_at does.
+        self._tick = 0
+
+    def _now(self):
+        self._tick += 1
+        return NOW + datetime.timedelta(seconds=self._tick)
 
     @staticmethod
     def _columns(args):
@@ -1066,27 +1136,47 @@ class _FakeEntitlementTable:
             "consumed": consumed,
             "starts_at": starts_at,
             "ends_at": ends_at,
-            "last_synced_at": NOW,  # stands in for the query's own now()
         }
 
     async def execute(self, query, *args):
         self.calls.append(("execute", query, args))
+        now = self._now()
         if "ON CONFLICT (entitlement_id) DO UPDATE" in query:
             not_before = None
             if len(args) == 11:
                 args, not_before = args[:10], args[10]
             row = self._columns(args)
+            row["last_synced_at"] = now
             existing = self.rows.get(row["entitlement_id"])
             if "premium_entitlements.deleted OR EXCLUDED.deleted" in query:
+                # upsert_entitlement_event's OR-preserve path.
                 if existing is not None:
                     row["deleted"] = existing["deleted"] or row["deleted"]
-            elif not_before is not None:
-                # The guarded reconciliation query's CASE: a row whose own
-                # last_synced_at is NEWER than the pass's start time was
-                # touched by something more current than this (possibly
-                # stale) listing row, so the EXISTING deleted wins.
-                if existing is not None and existing["last_synced_at"] > not_before:
+                # ended_at mirrors _UPSERT_ENTITLEMENT_EVENT's own CASE:
+                # frozen once the row is ALREADY deleted, stamped fresh the
+                # moment it first transitions, NULL otherwise.
+                if existing is not None and existing["deleted"]:
+                    row["ended_at"] = existing.get("ended_at")
+                elif row["deleted"]:
+                    row["ended_at"] = now
+                else:
+                    row["ended_at"] = None
+            else:
+                # upsert_entitlement's plain/guarded (reconciliation) path.
+                guarded = (
+                    not_before is not None
+                    and existing is not None
+                    and existing["last_synced_at"] > not_before
+                )
+                if guarded:
                     row["deleted"] = existing["deleted"]
+                    row["ended_at"] = existing.get("ended_at")
+                elif not row["deleted"]:
+                    row["ended_at"] = None
+                elif existing is not None and existing["deleted"]:
+                    row["ended_at"] = existing.get("ended_at")
+                else:
+                    row["ended_at"] = now
             self.rows[row["entitlement_id"]] = row
             return "INSERT 0 1"
         if "SET deleted = TRUE" in query:
@@ -1094,7 +1184,11 @@ class _FakeEntitlementTable:
             if entitlement_id not in self.rows:
                 return "UPDATE 0"
             self.rows[entitlement_id]["deleted"] = True
-            self.rows[entitlement_id]["last_synced_at"] = NOW
+            self.rows[entitlement_id]["last_synced_at"] = now
+            # mark_deleted's COALESCE(ended_at, now()): frozen if already set.
+            self.rows[entitlement_id]["ended_at"] = (
+                self.rows[entitlement_id].get("ended_at") or now
+            )
             return "UPDATE 1"
         raise AssertionError(f"unexpected query: {query}")
 
@@ -1208,6 +1302,32 @@ async def test_event_upsert_duplicate_delete_is_a_no_op():
     await premium.upsert_entitlement_event(table, _entitlement(), force_deleted=True)
 
     assert table.rows[555]["deleted"] is True
+
+
+async def test_event_upsert_duplicate_delete_does_not_move_ended_at():
+    """Fix during review (P0): a gateway reconnect can replay a delivery
+    (this module's "EVENT ORDERING" docstring), so on_entitlement_delete can
+    fire twice for the same id. Before the fix, EVERY write re-stamped
+    last_synced_at = now() even on an already-deleted row, and
+    tools.premium.premium_ish_guild_ids read exactly that column as "when
+    this ended" - so a replayed delete kept resurrecting a long-ended
+    guild's 365-day retention window forever. ended_at must freeze on the
+    FIRST delete and stay there, no matter how many more duplicates land."""
+    table = _FakeEntitlementTable()
+    await premium.upsert_entitlement_event(table, _entitlement(), force_deleted=True)
+    first_ended_at = table.rows[555]["ended_at"]
+    first_last_synced_at = table.rows[555]["last_synced_at"]
+    assert first_ended_at is not None
+
+    await premium.upsert_entitlement_event(table, _entitlement(), force_deleted=True)
+
+    assert table.rows[555]["deleted"] is True
+    # last_synced_at legitimately advances (we DID just re-confirm with
+    # Discord)...
+    assert table.rows[555]["last_synced_at"] > first_last_synced_at
+    # ...but ended_at - the one tools.premium.premium_ish_guild_ids reads -
+    # must not: this is the exact bug the fix closes.
+    assert table.rows[555]["ended_at"] == first_ended_at
 
 
 async def test_event_upsert_refund_reported_as_update_stays_deleted():

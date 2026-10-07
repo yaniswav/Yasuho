@@ -43,12 +43,17 @@ duplicated, or out of the order they logically happened in (a gateway
 reconnect can replay or drop deliveries). Two rules keep every ordering
 converging on the same state:
 
-  1. every field OTHER than ``deleted`` is last-write-wins from whichever
-     event arrives last - acceptable because the periodic reconciliation
-     (:func:`reconcile`) is the backstop that corrects any transient
-     staleness within one cycle, and no commercial decision reads a field
-     other than ``deleted``/``ends_at`` (already covered by rule 2 and the
-     GRACE window in :func:`is_active`);
+  1. every field OTHER than ``deleted`` and ``ended_at`` is last-write-wins
+     from whichever event arrives last - acceptable because the periodic
+     reconciliation (:func:`reconcile`) is the backstop that corrects any
+     transient staleness within one cycle, and no commercial decision reads
+     a field other than ``deleted``/``ends_at`` (already covered by rule 2
+     and the GRACE window in :func:`is_active`). ``ended_at`` (fix during
+     review, M4d) follows ``deleted`` instead: frozen at whenever the row
+     FIRST went deleted, never re-stamped by a later write to the same
+     (already deleted) row - see schema.sql's own comment on the column and
+     :func:`premium_ish_guild_ids`'s docstring for why a plain last-write-wins
+     timestamp cannot serve as "when this ended";
   2. ``deleted`` can only ever go FALSE -> TRUE through a gateway event,
      never the other way: :func:`upsert_entitlement_event` ORs the
      incoming value with whatever is already stored
@@ -455,8 +460,10 @@ def _coerce_entitlement(entitlement):
 _UPSERT_ENTITLEMENT = """
 INSERT INTO premium_entitlements
     (entitlement_id, sku_id, scope_type, guild_id, user_id,
-     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at,
+     ended_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(),
+        CASE WHEN $7 THEN now() ELSE NULL END)
 ON CONFLICT (entitlement_id) DO UPDATE SET
     sku_id = EXCLUDED.sku_id,
     scope_type = EXCLUDED.scope_type,
@@ -467,26 +474,39 @@ ON CONFLICT (entitlement_id) DO UPDATE SET
     consumed = EXCLUDED.consumed,
     starts_at = EXCLUDED.starts_at,
     ends_at = EXCLUDED.ends_at,
-    last_synced_at = now()
+    last_synced_at = now(),
+    -- ended_at (fix during review): frozen at whenever THIS row first went
+    -- deleted, never re-stamped by a later write - see the column's own
+    -- comment in schema.sql. Cleared back to NULL if this (reconciliation-
+    -- trusted) write un-deletes the row, same direction `deleted` itself is
+    -- allowed to move here.
+    ended_at = CASE
+        WHEN NOT EXCLUDED.deleted THEN NULL
+        WHEN premium_entitlements.deleted THEN premium_entitlements.ended_at
+        ELSE now()
+    END
 """
 
 # Same statement, guarded for the one race :func:`reconcile` cannot otherwise
 # avoid: a page of its listing was fetched BEFORE a gateway delete/refund
 # landed, but this upsert for that same row runs AFTER it - see
-# :func:`upsert_entitlement`'s ``not_before`` paragraph. Only ``deleted`` is
-# guarded (every other field stays plain last-write-wins, same as
-# :data:`_UPSERT_ENTITLEMENT`): if the row's OWN ``last_synced_at`` is newer
-# than the reconciliation pass's start time, a gateway event wrote it more
-# recently than this (possibly stale) listing snapshot was taken, so the
-# EXISTING ``deleted`` wins over whatever this stale row says; otherwise
-# (the ordinary case: nothing touched this row during the pass) this listing
-# IS the newest information, and ``EXCLUDED.deleted`` applies exactly as
-# :data:`_UPSERT_ENTITLEMENT` always did.
+# :func:`upsert_entitlement`'s ``not_before`` paragraph. ``deleted`` and
+# ``ended_at`` are guarded together (every other field stays plain
+# last-write-wins, same as :data:`_UPSERT_ENTITLEMENT`): if the row's OWN
+# ``last_synced_at`` is newer than the reconciliation pass's start time, a
+# gateway event wrote it more recently than this (possibly stale) listing
+# snapshot was taken, so the EXISTING ``deleted``/``ended_at`` win over
+# whatever this stale row says; otherwise (the ordinary case: nothing
+# touched this row during the pass) this listing IS the newest information,
+# and the plain :data:`_UPSERT_ENTITLEMENT` rule applies (``ended_at`` frozen
+# at whenever the row first went deleted, cleared if it un-deletes).
 _UPSERT_ENTITLEMENT_GUARDED = """
 INSERT INTO premium_entitlements
     (entitlement_id, sku_id, scope_type, guild_id, user_id,
-     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at,
+     ended_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(),
+        CASE WHEN $7 THEN now() ELSE NULL END)
 ON CONFLICT (entitlement_id) DO UPDATE SET
     sku_id = EXCLUDED.sku_id,
     scope_type = EXCLUDED.scope_type,
@@ -500,7 +520,13 @@ ON CONFLICT (entitlement_id) DO UPDATE SET
     consumed = EXCLUDED.consumed,
     starts_at = EXCLUDED.starts_at,
     ends_at = EXCLUDED.ends_at,
-    last_synced_at = now()
+    last_synced_at = now(),
+    ended_at = CASE
+        WHEN premium_entitlements.last_synced_at > $11 THEN premium_entitlements.ended_at
+        WHEN NOT EXCLUDED.deleted THEN NULL
+        WHEN premium_entitlements.deleted THEN premium_entitlements.ended_at
+        ELSE now()
+    END
 """
 
 
@@ -573,8 +599,10 @@ async def upsert_entitlement(pool, entitlement, *, not_before=None):
 _UPSERT_ENTITLEMENT_EVENT = """
 INSERT INTO premium_entitlements
     (entitlement_id, sku_id, scope_type, guild_id, user_id,
-     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+     entitlement_type, deleted, consumed, starts_at, ends_at, last_synced_at,
+     ended_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(),
+        CASE WHEN $7 THEN now() ELSE NULL END)
 ON CONFLICT (entitlement_id) DO UPDATE SET
     sku_id = EXCLUDED.sku_id,
     scope_type = EXCLUDED.scope_type,
@@ -585,7 +613,19 @@ ON CONFLICT (entitlement_id) DO UPDATE SET
     consumed = EXCLUDED.consumed,
     starts_at = EXCLUDED.starts_at,
     ends_at = EXCLUDED.ends_at,
-    last_synced_at = now()
+    last_synced_at = now(),
+    -- ended_at (fix during review): frozen the FIRST time this row is seen
+    -- deleted, deliberately NOT re-stamped by a later duplicate/stale event -
+    -- see this module's "EVENT ORDERING" docstring (a gateway reconnect can
+    -- replay a delivery) and schema.sql's own comment on the column. Once
+    -- premium_entitlements.deleted is already TRUE, this row's own prior
+    -- ended_at wins over ANYTHING the new event carries, exactly mirroring
+    -- how `deleted` itself can never be cleared back through this path.
+    ended_at = CASE
+        WHEN premium_entitlements.deleted THEN premium_entitlements.ended_at
+        WHEN EXCLUDED.deleted THEN now()
+        ELSE NULL
+    END
 """
 
 
@@ -643,10 +683,14 @@ async def upsert_entitlement_event(pool, entitlement, *, force_deleted=False):
 
 
 async def mark_deleted(pool, entitlement_id):
-    """Mark one entitlement deleted (ENTITLEMENT_DELETE), re-stamping the sync time."""
+    """Mark one entitlement deleted (ENTITLEMENT_DELETE), re-stamping the sync
+    time. ``ended_at`` is set via COALESCE rather than unconditionally, so a
+    (should-not-happen, but harmless if it does) second call on an
+    already-deleted row cannot push its frozen end time forward - same
+    freeze-on-first-write posture as :data:`_UPSERT_ENTITLEMENT_EVENT`."""
     status = await pool.execute(
-        "UPDATE premium_entitlements SET deleted = TRUE, last_synced_at = now() "
-        "WHERE entitlement_id = $1",
+        "UPDATE premium_entitlements SET deleted = TRUE, last_synced_at = now(), "
+        "ended_at = COALESCE(ended_at, now()) WHERE entitlement_id = $1",
         int(entitlement_id),
     )
     return affected_rows(status) > 0
@@ -983,7 +1027,14 @@ async def load_active_grants(pool):
 # per-guild hot path (that is what EntitlementCache.is_guild_premium is for).
 # ---------------------------------------------------------------------------
 
-# ONE query, both sources, guild scope only. Written so "ended" collapses to
+# ONE query, both sources, guild scope only, Yasuho+ product only (fix during
+# review: ``scope_type = 'guild'`` alone is not a product filter - nothing in
+# this table's own schema ties a guild-scoped entitlement to the Yasuho+ SKU
+# the way schema.sql's premium_grants_product_scope_valid CHECK ties a
+# guild-scoped GRANT to 'yasuho_plus'; a guild-scoped row of some OTHER
+# product must never count here, exactly like :meth:`EntitlementCache.
+# is_guild_premium`/:func:`guild_status` already filter by sku_id/product
+# rather than trusting scope_type alone). Written so "ended" collapses to
 # the SAME inequality as "active" wherever the data allows it:
 #
 #   entitlements: a row that is still active (deleted = FALSE, ends_at NULL
@@ -992,17 +1043,26 @@ async def load_active_grants(pool):
 #   both "active" and "naturally expired less than within_days days ago".
 #   A row already marked deleted (a refund, or any other delisting - "a
 #   refund follows the expiry path", see the module docstring) carries no
-#   other end timestamp, so that branch reads last_synced_at instead: it is
-#   stamped to now() by the very event that set deleted = TRUE
-#   (upsert_entitlement_event / mark_deleted), so it IS the moment this was
-#   recorded as over.
+#   other end timestamp, so that branch reads ``ended_at`` instead - frozen
+#   the FIRST time the row was seen deleted (schema.sql's own comment, and
+#   upsert_entitlement/upsert_entitlement_event/mark_deleted above), unlike
+#   ``last_synced_at`` which a later duplicate/out-of-order gateway event (this
+#   module's own "EVENT ORDERING" docstring: a reconnect can replay a
+#   delivery) keeps advancing even once the row is already deleted - using
+#   THAT instead would let one replayed event resurrect a long-ended guild's
+#   retention window indefinitely.
 #
 #   grants: a grant that is still active (revoked_at NULL, expires_at NULL
 #   or in the future) satisfies ``expires_at IS NULL OR expires_at > $1`` the
 #   same way. A revoked grant's real end is revoked_at, whatever expires_at
 #   still says - is_grant_active already treats a revoke as immediate and
 #   ours to end, never a missed webhook to forgive - so a revoked row is
-#   judged on revoked_at alone, not on expires_at at all.
+#   judged on revoked_at alone, not on expires_at at all. No product filter
+#   needed here beyond ``scope_type = 'guild'``: schema.sql's
+#   premium_grants_product_scope_valid CHECK already makes a guild-scoped
+#   grant always 'yasuho_plus' (validate_grant_scope enforces the same thing
+#   app-side) - unlike the entitlements table above, there is no other
+#   product this could be.
 #
 # Both tables carry a partial index on guild_id (schema.sql) and hold only
 # as many rows as there are PAID or GIFTED guild scopes - never one row per
@@ -1011,9 +1071,9 @@ async def load_active_grants(pool):
 # size.
 _PREMIUM_ISH_GUILD_IDS = """
     SELECT guild_id FROM premium_entitlements
-    WHERE scope_type = 'guild' AND (
+    WHERE scope_type = 'guild' AND sku_id = $2 AND (
         (deleted = FALSE AND (ends_at IS NULL OR ends_at > $1))
-        OR (deleted = TRUE AND last_synced_at > $1)
+        OR (deleted = TRUE AND ended_at > $1)
     )
     UNION
     SELECT guild_id FROM premium_grants
@@ -1044,6 +1104,14 @@ async def premium_ish_guild_ids(pool, *, within_days, now=None):
     cache here, it is the only way to see "ended" at all - the cache was
     built to answer "is this active right now", a different question.
 
+    ``sku_id = $2`` is bound to :data:`YASUHO_PLUS_SKU`, which can be
+    ``None`` in the dev/test posture where no SKU is configured yet;
+    ``sku_id = NULL`` matches no row (NULL is never equal to anything, not
+    even itself), so this correctly makes the entitlements half of the query
+    contribute nothing - the same "nothing is configured, so nothing is
+    premium through this path" posture :func:`guild_status`/:meth:
+    `EntitlementCache.is_guild_premium` already take.
+
     Raises straight through on a pool failure - same posture as
     :meth:`EntitlementCache.load`: a caller that wants a safe default on
     failure (the serverstats purge does: skip the free-tier band delete for
@@ -1051,7 +1119,7 @@ async def premium_ish_guild_ids(pool, *, within_days, now=None):
     """
     now = now or datetime.datetime.now(datetime.timezone.utc)
     cutoff = now - datetime.timedelta(days=within_days)
-    rows = await pool.fetch(_PREMIUM_ISH_GUILD_IDS, cutoff)
+    rows = await pool.fetch(_PREMIUM_ISH_GUILD_IDS, cutoff, YASUHO_PLUS_SKU)
     return {int(row["guild_id"]) for row in rows}
 
 
