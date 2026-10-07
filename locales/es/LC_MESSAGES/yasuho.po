@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:55+0000\n"
+"POT-Creation-Date: 2026-10-07 09:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -9555,8 +9555,8 @@ msgid "Server id must be a positive number, not `{value}`."
 msgstr "El id del servidor debe ser un número positivo, no `{value}`."
 
 #: cogs/system/premium.py:462 cogs/system/premium.py:504
-#: cogs/system/premium.py:594 cogs/system/premium.py:673
-#: cogs/system/premium.py:683
+#: cogs/system/premium.py:594 cogs/system/premium.py:675
+#: cogs/system/premium.py:691
 msgid "permanent"
 msgstr "permanente"
 
@@ -9607,97 +9607,97 @@ msgstr "n.º {id} - {product} - {scope} `{scope_id}` - {until}"
 msgid "Premium status"
 msgstr "Estado premium"
 
-#: cogs/system/premium.py:666
+#: cogs/system/premium.py:668
 msgid "Effective"
 msgstr "Efectivo"
 
-#: cogs/system/premium.py:667
+#: cogs/system/premium.py:669
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:667
+#: cogs/system/premium.py:669
 msgid "Free"
 msgstr "Gratis"
 
-#: cogs/system/premium.py:674
-#, python-brace-format
-msgid "Discord entitlement, {until}"
-msgstr "Derecho de compra de Discord, {until}"
-
 #: cogs/system/premium.py:676
+#, python-brace-format
+msgid "Discord entitlement #{id}, {until}"
+msgstr "Entitlement de Discord #{id}, {until}"
+
+#: cogs/system/premium.py:684
 msgid "Entitlement"
 msgstr "Derecho de compra"
 
-#: cogs/system/premium.py:684
+#: cogs/system/premium.py:692
 msgid "(no reason given)"
 msgstr "(sin motivo)"
 
-#: cogs/system/premium.py:686
+#: cogs/system/premium.py:694
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "n.º {id} - {until} - {reason}"
 
-#: cogs/system/premium.py:691
+#: cogs/system/premium.py:699
 msgid "Owner grant(s)"
 msgstr "Concesión(es) del propietario"
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:704
 msgid "Why"
 msgstr "Por qué"
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:704
 msgid "Nothing active."
 msgstr "Nada activo."
 
-#: cogs/system/premium.py:778
+#: cogs/system/premium.py:786
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Todavía no hay `yasuho_plus_sku` configurado en `[Premium]`: no hay nada que comprar en prueba."
 
-#: cogs/system/premium.py:796 cogs/system/premium.py:857
+#: cogs/system/premium.py:804 cogs/system/premium.py:865
 #, python-brace-format
 msgid "Discord says this {scope} already has this product (error 40074). Clear the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
 msgstr "Discord indica que este {scope} ya tiene este producto (error 40074). Borra primero el entitlement de TEST: `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:815
+#: cogs/system/premium.py:823
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "Derecho de PRUEBA **Yasuho+** creado para el servidor `{guild_id}`. Su id aún no era visible: usa `?premiumadmin check server {guild_id}` en un momento."
 
-#: cogs/system/premium.py:824
+#: cogs/system/premium.py:832
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} (**Yasuho+**) creado para el servidor `{guild_id}`. Bórralo luego con `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:839
+#: cogs/system/premium.py:847
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Todavía no hay `comfort_pack_sku` configurado en `[Premium]`: no hay nada que comprar en prueba."
 
-#: cogs/system/premium.py:876
+#: cogs/system/premium.py:884
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "Derecho de PRUEBA **Pack Confort** creado para el usuario `{user_id}`. Su id aún no era visible: usa `?premiumadmin check user {user_id}` en un momento."
 
-#: cogs/system/premium.py:885
+#: cogs/system/premium.py:893
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} (**Pack Confort**) creado para el usuario `{user_id}`. Bórralo luego con `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:900
+#: cogs/system/premium.py:908
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "No existe ningún derecho n.º {entitlement_id}."
 
-#: cogs/system/premium.py:909
+#: cogs/system/premium.py:917
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "No se pudo obtener el derecho n.º {entitlement_id} de Discord."
 
-#: cogs/system/premium.py:918
+#: cogs/system/premium.py:926
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "El derecho n.º {entitlement_id} no es de PRUEBA (tipo `{type}`): me niego a borrar una compra real."
 
-#: cogs/system/premium.py:934
+#: cogs/system/premium.py:942
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} borrado. El evento ENTITLEMENT_DELETE correspondiente lo quitará de la caché."

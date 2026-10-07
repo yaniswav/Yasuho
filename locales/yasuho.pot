@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:55+0000\n"
+"POT-Creation-Date: 2026-10-07 09:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -9785,8 +9785,8 @@ msgid "Server id must be a positive number, not `{value}`."
 msgstr ""
 
 #: cogs/system/premium.py:462 cogs/system/premium.py:504
-#: cogs/system/premium.py:594 cogs/system/premium.py:673
-#: cogs/system/premium.py:683
+#: cogs/system/premium.py:594 cogs/system/premium.py:675
+#: cogs/system/premium.py:691
 msgid "permanent"
 msgstr ""
 
@@ -9841,62 +9841,62 @@ msgstr ""
 msgid "Premium status"
 msgstr ""
 
-#: cogs/system/premium.py:666
+#: cogs/system/premium.py:668
 msgid "Effective"
 msgstr ""
 
-#: cogs/system/premium.py:667
+#: cogs/system/premium.py:669
 msgid "Premium"
 msgstr ""
 
-#: cogs/system/premium.py:667
+#: cogs/system/premium.py:669
 msgid "Free"
 msgstr ""
 
-#: cogs/system/premium.py:674
-#, python-brace-format
-msgid "Discord entitlement, {until}"
-msgstr ""
-
 #: cogs/system/premium.py:676
-msgid "Entitlement"
+#, python-brace-format
+msgid "Discord entitlement #{id}, {until}"
 msgstr ""
 
 #: cogs/system/premium.py:684
+msgid "Entitlement"
+msgstr ""
+
+#: cogs/system/premium.py:692
 msgid "(no reason given)"
 msgstr ""
 
-#: cogs/system/premium.py:686
+#: cogs/system/premium.py:694
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr ""
 
-#: cogs/system/premium.py:691
+#: cogs/system/premium.py:699
 msgid "Owner grant(s)"
 msgstr ""
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:704
 msgid "Why"
 msgstr ""
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:704
 msgid "Nothing active."
 msgstr ""
 
-#: cogs/system/premium.py:778
+#: cogs/system/premium.py:786
 msgid ""
 "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing "
 "to test-buy."
 msgstr ""
 
-#: cogs/system/premium.py:796 cogs/system/premium.py:857
+#: cogs/system/premium.py:804 cogs/system/premium.py:865
 #, python-brace-format
 msgid ""
 "Discord says this {scope} already has this product (error 40074). Clear "
 "the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
 msgstr ""
 
-#: cogs/system/premium.py:815
+#: cogs/system/premium.py:823
 #, python-brace-format
 msgid ""
 "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id "
@@ -9904,7 +9904,7 @@ msgid ""
 "{guild_id}` in a moment."
 msgstr ""
 
-#: cogs/system/premium.py:824
+#: cogs/system/premium.py:832
 #, python-brace-format
 msgid ""
 "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server "
@@ -9912,13 +9912,13 @@ msgid ""
 "{entitlement_id}`."
 msgstr ""
 
-#: cogs/system/premium.py:839
+#: cogs/system/premium.py:847
 msgid ""
 "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing"
 " to test-buy."
 msgstr ""
 
-#: cogs/system/premium.py:876
+#: cogs/system/premium.py:884
 #, python-brace-format
 msgid ""
 "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id "
@@ -9926,7 +9926,7 @@ msgid ""
 "{user_id}` in a moment."
 msgstr ""
 
-#: cogs/system/premium.py:885
+#: cogs/system/premium.py:893
 #, python-brace-format
 msgid ""
 "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user "
@@ -9934,24 +9934,24 @@ msgid ""
 "{entitlement_id}`."
 msgstr ""
 
-#: cogs/system/premium.py:900
+#: cogs/system/premium.py:908
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr ""
 
-#: cogs/system/premium.py:909
+#: cogs/system/premium.py:917
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr ""
 
-#: cogs/system/premium.py:918
+#: cogs/system/premium.py:926
 #, python-brace-format
 msgid ""
 "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) -"
 " refusing to delete a real purchase."
 msgstr ""
 
-#: cogs/system/premium.py:934
+#: cogs/system/premium.py:942
 #, python-brace-format
 msgid ""
 "Deleted TEST entitlement #{entitlement_id}. The matching "
