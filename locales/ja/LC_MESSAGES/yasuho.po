@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:17+0000\n"
+"POT-Creation-Date: 2026-10-07 08:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -9501,155 +9501,160 @@ msgstr "`/help` を使うとすべてのコマンドを一覧できます。"
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "`/language` を使って、このサーバーで私が話す言語を選べます。"
 
-#: cogs/system/premium.py:179 cogs/system/premium.py:428
+#: cogs/system/premium.py:357 cogs/system/premium.py:613
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "ほか {count} 件は表示されていません。"
 
-#: cogs/system/premium.py:250
+#: cogs/system/premium.py:435
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "サーバー ID は正の数である必要があります（`{value}` は無効です）。"
 
-#: cogs/system/premium.py:277 cogs/system/premium.py:319
-#: cogs/system/premium.py:409 cogs/system/premium.py:488
-#: cogs/system/premium.py:498
+#: cogs/system/premium.py:462 cogs/system/premium.py:504
+#: cogs/system/premium.py:594 cogs/system/premium.py:673
+#: cogs/system/premium.py:683
 msgid "permanent"
 msgstr "無期限"
 
-#: cogs/system/premium.py:280
+#: cogs/system/premium.py:465
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "サーバー `{guild_id}` に **Yasuho+** を付与しました（付与 #{grant_id}、{until}）。"
 
-#: cogs/system/premium.py:292
+#: cogs/system/premium.py:477
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "ユーザー ID は正の数である必要があります（`{value}` は無効です）。"
 
-#: cogs/system/premium.py:322
+#: cogs/system/premium.py:507
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "ユーザー `{user_id}` に **Pack Confort** を付与しました（付与 #{grant_id}、{until}）。"
 
-#: cogs/system/premium.py:349
+#: cogs/system/premium.py:534
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "有効な付与 #{grant_id} は見つかりません（取り消し済み、期限切れ、または存在しません）。"
 
-#: cogs/system/premium.py:375
+#: cogs/system/premium.py:560
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "付与 #{grant_id} を取り消しました。"
 
-#: cogs/system/premium.py:387 cogs/system/premium.py:440
+#: cogs/system/premium.py:572 cogs/system/premium.py:625
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "範囲は `server` または `user` で指定してください（`{scope}` は無効です）。"
 
-#: cogs/system/premium.py:401
+#: cogs/system/premium.py:586
 msgid "Active premium grants"
 msgstr "有効なプレミアム付与"
 
-#: cogs/system/premium.py:403
+#: cogs/system/premium.py:588
 msgid "No active grant matches."
 msgstr "該当する有効な付与はありません。"
 
-#: cogs/system/premium.py:411
+#: cogs/system/premium.py:596
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "#{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:447
+#: cogs/system/premium.py:632
 msgid "Premium status"
 msgstr "プレミアムの状態"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:666
 msgid "Effective"
 msgstr "適用中"
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Premium"
 msgstr "プレミアム"
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Free"
 msgstr "無料"
 
-#: cogs/system/premium.py:489
+#: cogs/system/premium.py:674
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Discord の購入権利、{until}"
 
-#: cogs/system/premium.py:491
+#: cogs/system/premium.py:676
 msgid "Entitlement"
 msgstr "購入権利"
 
-#: cogs/system/premium.py:499
+#: cogs/system/premium.py:684
 msgid "(no reason given)"
 msgstr "（理由なし）"
 
-#: cogs/system/premium.py:501
+#: cogs/system/premium.py:686
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "#{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:506
+#: cogs/system/premium.py:691
 msgid "Owner grant(s)"
 msgstr "オーナーによる付与"
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Why"
 msgstr "理由"
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Nothing active."
 msgstr "有効なものはありません。"
 
-#: cogs/system/premium.py:593
+#: cogs/system/premium.py:778
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "`[Premium]` に `yasuho_plus_sku` がまだ設定されていないため、テスト購入できるものはありません。"
 
-#: cogs/system/premium.py:616
+#: cogs/system/premium.py:796 cogs/system/premium.py:857
+#, python-brace-format
+msgid "Discord says this {scope} already has this product (error 40074). Clear the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
+msgstr "Discordによると、この{scope}はすでにこの商品を持っています(エラー40074)。先にTESTエンタイトルメントを削除してください: `?premiumadmin testclear {entitlement_id}`。"
+
+#: cogs/system/premium.py:815
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "サーバー `{guild_id}` にテスト用の **Yasuho+** 権利を作成しました。ID はまだ確認できません。少し後に `?premiumadmin check server {guild_id}` を使ってください。"
 
-#: cogs/system/premium.py:625
+#: cogs/system/premium.py:824
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "サーバー `{guild_id}` にテスト権利 #{entitlement_id}（**Yasuho+**）を作成しました。後で `?premiumadmin testclear {entitlement_id}` で削除してください。"
 
-#: cogs/system/premium.py:640
+#: cogs/system/premium.py:839
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "`[Premium]` に `comfort_pack_sku` がまだ設定されていないため、テスト購入できるものはありません。"
 
-#: cogs/system/premium.py:663
+#: cogs/system/premium.py:876
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "ユーザー `{user_id}` にテスト用の **Pack Confort** 権利を作成しました。ID はまだ確認できません。少し後に `?premiumadmin check user {user_id}` を使ってください。"
 
-#: cogs/system/premium.py:672
+#: cogs/system/premium.py:885
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "ユーザー `{user_id}` にテスト権利 #{entitlement_id}（**Pack Confort**）を作成しました。後で `?premiumadmin testclear {entitlement_id}` で削除してください。"
 
-#: cogs/system/premium.py:687
+#: cogs/system/premium.py:900
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "権利 #{entitlement_id} は存在しません。"
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:909
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "Discord から権利 #{entitlement_id} を取得できませんでした。"
 
-#: cogs/system/premium.py:705
+#: cogs/system/premium.py:918
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "権利 #{entitlement_id} はテスト権利ではありません（種類 `{type}`）。実際の購入は削除しません。"
 
-#: cogs/system/premium.py:721
+#: cogs/system/premium.py:934
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "テスト権利 #{entitlement_id} を削除しました。対応する ENTITLEMENT_DELETE イベントでキャッシュから消えます。"

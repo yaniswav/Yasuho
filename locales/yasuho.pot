@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:22+0000\n"
+"POT-Creation-Date: 2026-10-07 08:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -9774,122 +9774,129 @@ msgstr ""
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr ""
 
-#: cogs/system/premium.py:179 cogs/system/premium.py:428
+#: cogs/system/premium.py:357 cogs/system/premium.py:613
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr ""
 
-#: cogs/system/premium.py:250
+#: cogs/system/premium.py:435
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr ""
 
-#: cogs/system/premium.py:277 cogs/system/premium.py:319
-#: cogs/system/premium.py:409 cogs/system/premium.py:488
-#: cogs/system/premium.py:498
+#: cogs/system/premium.py:462 cogs/system/premium.py:504
+#: cogs/system/premium.py:594 cogs/system/premium.py:673
+#: cogs/system/premium.py:683
 msgid "permanent"
 msgstr ""
 
-#: cogs/system/premium.py:280
+#: cogs/system/premium.py:465
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr ""
 
-#: cogs/system/premium.py:292
+#: cogs/system/premium.py:477
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr ""
 
-#: cogs/system/premium.py:322
+#: cogs/system/premium.py:507
 #, python-brace-format
 msgid ""
 "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, "
 "{until})."
 msgstr ""
 
-#: cogs/system/premium.py:349
+#: cogs/system/premium.py:534
 #, python-brace-format
 msgid ""
 "No active grant #{grant_id} found (already revoked, expired, or it never "
 "existed)."
 msgstr ""
 
-#: cogs/system/premium.py:375
+#: cogs/system/premium.py:560
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr ""
 
-#: cogs/system/premium.py:387 cogs/system/premium.py:440
+#: cogs/system/premium.py:572 cogs/system/premium.py:625
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr ""
 
-#: cogs/system/premium.py:401
+#: cogs/system/premium.py:586
 msgid "Active premium grants"
 msgstr ""
 
-#: cogs/system/premium.py:403
+#: cogs/system/premium.py:588
 msgid "No active grant matches."
 msgstr ""
 
-#: cogs/system/premium.py:411
+#: cogs/system/premium.py:596
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr ""
 
-#: cogs/system/premium.py:447
+#: cogs/system/premium.py:632
 msgid "Premium status"
 msgstr ""
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:666
 msgid "Effective"
 msgstr ""
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Premium"
 msgstr ""
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Free"
 msgstr ""
 
-#: cogs/system/premium.py:489
+#: cogs/system/premium.py:674
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr ""
 
-#: cogs/system/premium.py:491
+#: cogs/system/premium.py:676
 msgid "Entitlement"
 msgstr ""
 
-#: cogs/system/premium.py:499
+#: cogs/system/premium.py:684
 msgid "(no reason given)"
 msgstr ""
 
-#: cogs/system/premium.py:501
+#: cogs/system/premium.py:686
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr ""
 
-#: cogs/system/premium.py:506
+#: cogs/system/premium.py:691
 msgid "Owner grant(s)"
 msgstr ""
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Why"
 msgstr ""
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Nothing active."
 msgstr ""
 
-#: cogs/system/premium.py:593
+#: cogs/system/premium.py:778
 msgid ""
 "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing "
 "to test-buy."
 msgstr ""
 
-#: cogs/system/premium.py:616
+#: cogs/system/premium.py:796 cogs/system/premium.py:857
+#, python-brace-format
+msgid ""
+"Discord says this {scope} already has this product (error 40074). Clear "
+"the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
+msgstr ""
+
+#: cogs/system/premium.py:815
 #, python-brace-format
 msgid ""
 "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id "
@@ -9897,7 +9904,7 @@ msgid ""
 "{guild_id}` in a moment."
 msgstr ""
 
-#: cogs/system/premium.py:625
+#: cogs/system/premium.py:824
 #, python-brace-format
 msgid ""
 "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server "
@@ -9905,13 +9912,13 @@ msgid ""
 "{entitlement_id}`."
 msgstr ""
 
-#: cogs/system/premium.py:640
+#: cogs/system/premium.py:839
 msgid ""
 "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing"
 " to test-buy."
 msgstr ""
 
-#: cogs/system/premium.py:663
+#: cogs/system/premium.py:876
 #, python-brace-format
 msgid ""
 "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id "
@@ -9919,7 +9926,7 @@ msgid ""
 "{user_id}` in a moment."
 msgstr ""
 
-#: cogs/system/premium.py:672
+#: cogs/system/premium.py:885
 #, python-brace-format
 msgid ""
 "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user "
@@ -9927,24 +9934,24 @@ msgid ""
 "{entitlement_id}`."
 msgstr ""
 
-#: cogs/system/premium.py:687
+#: cogs/system/premium.py:900
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr ""
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:909
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr ""
 
-#: cogs/system/premium.py:705
+#: cogs/system/premium.py:918
 #, python-brace-format
 msgid ""
 "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) -"
 " refusing to delete a real purchase."
 msgstr ""
 
-#: cogs/system/premium.py:721
+#: cogs/system/premium.py:934
 #, python-brace-format
 msgid ""
 "Deleted TEST entitlement #{entitlement_id}. The matching "

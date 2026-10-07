@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 08:17+0000\n"
+"POT-Creation-Date: 2026-10-07 08:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -9544,155 +9544,160 @@ msgstr "Usa `/help` para explorar todos los comandos."
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Usa `/language` para elegir el idioma que hablo en este servidor."
 
-#: cogs/system/premium.py:179 cogs/system/premium.py:428
+#: cogs/system/premium.py:357 cogs/system/premium.py:613
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} más no mostrados."
 
-#: cogs/system/premium.py:250
+#: cogs/system/premium.py:435
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "El id del servidor debe ser un número positivo, no `{value}`."
 
-#: cogs/system/premium.py:277 cogs/system/premium.py:319
-#: cogs/system/premium.py:409 cogs/system/premium.py:488
-#: cogs/system/premium.py:498
+#: cogs/system/premium.py:462 cogs/system/premium.py:504
+#: cogs/system/premium.py:594 cogs/system/premium.py:673
+#: cogs/system/premium.py:683
 msgid "permanent"
 msgstr "permanente"
 
-#: cogs/system/premium.py:280
+#: cogs/system/premium.py:465
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "**Yasuho+** otorgado al servidor `{guild_id}` (concesión n.º {grant_id}, {until})."
 
-#: cogs/system/premium.py:292
+#: cogs/system/premium.py:477
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "El id del usuario debe ser un número positivo, no `{value}`."
 
-#: cogs/system/premium.py:322
+#: cogs/system/premium.py:507
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "**Pack Confort** otorgado al usuario `{user_id}` (concesión n.º {grant_id}, {until})."
 
-#: cogs/system/premium.py:349
+#: cogs/system/premium.py:534
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "No hay ninguna concesión activa n.º {grant_id} (ya revocada, caducada o inexistente)."
 
-#: cogs/system/premium.py:375
+#: cogs/system/premium.py:560
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Concesión n.º {grant_id} revocada."
 
-#: cogs/system/premium.py:387 cogs/system/premium.py:440
+#: cogs/system/premium.py:572 cogs/system/premium.py:625
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "El ámbito debe ser `server` o `user`, no `{scope}`."
 
-#: cogs/system/premium.py:401
+#: cogs/system/premium.py:586
 msgid "Active premium grants"
 msgstr "Concesiones premium activas"
 
-#: cogs/system/premium.py:403
+#: cogs/system/premium.py:588
 msgid "No active grant matches."
 msgstr "Ninguna concesión activa coincide."
 
-#: cogs/system/premium.py:411
+#: cogs/system/premium.py:596
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "n.º {id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:447
+#: cogs/system/premium.py:632
 msgid "Premium status"
 msgstr "Estado premium"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:666
 msgid "Effective"
 msgstr "Efectivo"
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:482
+#: cogs/system/premium.py:667
 msgid "Free"
 msgstr "Gratis"
 
-#: cogs/system/premium.py:489
+#: cogs/system/premium.py:674
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Derecho de compra de Discord, {until}"
 
-#: cogs/system/premium.py:491
+#: cogs/system/premium.py:676
 msgid "Entitlement"
 msgstr "Derecho de compra"
 
-#: cogs/system/premium.py:499
+#: cogs/system/premium.py:684
 msgid "(no reason given)"
 msgstr "(sin motivo)"
 
-#: cogs/system/premium.py:501
+#: cogs/system/premium.py:686
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "n.º {id} - {until} - {reason}"
 
-#: cogs/system/premium.py:506
+#: cogs/system/premium.py:691
 msgid "Owner grant(s)"
 msgstr "Concesión(es) del propietario"
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Why"
 msgstr "Por qué"
 
-#: cogs/system/premium.py:511
+#: cogs/system/premium.py:696
 msgid "Nothing active."
 msgstr "Nada activo."
 
-#: cogs/system/premium.py:593
+#: cogs/system/premium.py:778
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Todavía no hay `yasuho_plus_sku` configurado en `[Premium]`: no hay nada que comprar en prueba."
 
-#: cogs/system/premium.py:616
+#: cogs/system/premium.py:796 cogs/system/premium.py:857
+#, python-brace-format
+msgid "Discord says this {scope} already has this product (error 40074). Clear the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
+msgstr "Discord indica que este {scope} ya tiene este producto (error 40074). Borra primero el entitlement de TEST: `?premiumadmin testclear {entitlement_id}`."
+
+#: cogs/system/premium.py:815
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "Derecho de PRUEBA **Yasuho+** creado para el servidor `{guild_id}`. Su id aún no era visible: usa `?premiumadmin check server {guild_id}` en un momento."
 
-#: cogs/system/premium.py:625
+#: cogs/system/premium.py:824
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} (**Yasuho+**) creado para el servidor `{guild_id}`. Bórralo luego con `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:640
+#: cogs/system/premium.py:839
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Todavía no hay `comfort_pack_sku` configurado en `[Premium]`: no hay nada que comprar en prueba."
 
-#: cogs/system/premium.py:663
+#: cogs/system/premium.py:876
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "Derecho de PRUEBA **Pack Confort** creado para el usuario `{user_id}`. Su id aún no era visible: usa `?premiumadmin check user {user_id}` en un momento."
 
-#: cogs/system/premium.py:672
+#: cogs/system/premium.py:885
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} (**Pack Confort**) creado para el usuario `{user_id}`. Bórralo luego con `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:687
+#: cogs/system/premium.py:900
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "No existe ningún derecho n.º {entitlement_id}."
 
-#: cogs/system/premium.py:696
+#: cogs/system/premium.py:909
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "No se pudo obtener el derecho n.º {entitlement_id} de Discord."
 
-#: cogs/system/premium.py:705
+#: cogs/system/premium.py:918
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "El derecho n.º {entitlement_id} no es de PRUEBA (tipo `{type}`): me niego a borrar una compra real."
 
-#: cogs/system/premium.py:721
+#: cogs/system/premium.py:934
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "Derecho de PRUEBA n.º {entitlement_id} borrado. El evento ENTITLEMENT_DELETE correspondiente lo quitará de la caché."
