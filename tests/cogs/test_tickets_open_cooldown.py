@@ -267,8 +267,11 @@ async def test_an_open_that_never_happened_does_not_start_the_clock():
     must not make the member wait for a ticket they never got."""
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
     # The cap guard refuses the row after the thread already exists, which the
-    # flow compensates for by deleting the thread.
-    refusing = _Pool(ticket_number=None)
+    # flow compensates for by deleting the thread. open_count=2 (the default
+    # per-member cap, no admin override seeded) is what makes the post-hoc
+    # re-check below (cogs/config/tickets/open.py's _open_thread) correctly
+    # attribute this refusal to the MEMBER cap rather than the server one.
+    refusing = _Pool(open_count=2, ticket_number=None)
 
     refused, channel = await _open(refusing)
     assert channel.threads_created == 1
@@ -297,7 +300,8 @@ async def test_the_toctou_cap_loss_adds_the_upsell_line():
     the cap race against the guarded INSERT itself, after the thread was
     already created - did not. Closed in ``_open_thread``."""
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
-    refusing = _RaceLossPool(ticket_number=None)
+    # open_count=2: same MEMBER-cap attribution reasoning as the test above.
+    refusing = _RaceLossPool(open_count=2, ticket_number=None)
 
     refused, channel = await _open(refusing)
 

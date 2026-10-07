@@ -5,7 +5,7 @@ METADATA ONLY. Nothing in this module writes a subject, a transcript or any
 message text, and there is no column that could hold one (see schema.sql). The
 conversation lives in the Discord thread and dies with it.
 
-The one interesting statement is :data:`_OPEN_TICKET`. It does three things in a
+The one interesting statement is :data:`_OPEN_TICKET`. It does four things in a
 single round trip, and it has to, because each of them is a race the naive
 version loses:
 
@@ -15,9 +15,15 @@ version loses:
   statement (the ``guild_playlists`` precedent,
   cogs/music/playlists_shared._save_guild_playlist), so "am I under the cap" and
   "take a slot" cannot be separated by a click;
+* the per-SERVER cap (internal, never advertised - an anti-abuse backstop, not
+  a sales lever) is a second ``AND (SELECT COUNT(*) ...) < $cap`` guard in the
+  SAME statement, counting every open ticket in the guild regardless of who
+  opened it - see :data:`MAX_OPEN_PER_GUILD` and
+  cogs/config/tickets/open.py's refusal message for it;
 * a lost race is a clean answer, not an exception: the INSERT simply inserts no
   row and :func:`open_ticket` returns ``None``, which the caller renders as
-  "you already have the maximum number of tickets open".
+  "you already have the maximum number of tickets open" (member cap) or "this
+  server has too many open tickets right now" (server cap).
 
 Why that is actually atomic. Under READ COMMITTED, two simultaneous statements
 CAN both see the same ``COUNT(*)``, so the cap guard alone would not be enough.
@@ -85,6 +91,17 @@ OPEN_RETRIES = 20
 NUMBER_CONSTRAINT = "tickets_guild_id_ticket_number_key"
 THREAD_CONSTRAINT = "tickets_thread_id_key"
 
+# Internal, NEVER advertised per-SERVER cap on tickets open AT ONCE (anti-abuse
+# backstop, not a sales lever - see cogs/config/tickets/open.py's refusal
+# message, which names no /premium upsell for it). FREE default; Yasuho+
+# raises it (tools.premium.GUILD_PREMIUM.max_tickets_open_per_guild). Every
+# real caller passes the guild's EFFECTIVE value (tools.premium.
+# resolve_guild_limits(bot, guild_id).max_tickets_open_per_guild) - this
+# default only serves a caller (or a test) with no premium resolver to hand.
+# tools.premium.FREE_MAX_TICKETS_OPEN_PER_GUILD restates this constant; see
+# tests/tools/test_premium.py's drift guard.
+MAX_OPEN_PER_GUILD = 50
+
 _OPEN_TICKET = (
     "INSERT INTO tickets (guild_id, ticket_number, thread_id, opener_id) "
     "SELECT $1, "
@@ -93,12 +110,18 @@ _OPEN_TICKET = (
     "$2, $3 "
     "WHERE (SELECT COUNT(*) FROM tickets "
     "WHERE guild_id = $1 AND opener_id = $3 AND status = 'open') < $4 "
+    "AND (SELECT COUNT(*) FROM tickets "
+    "WHERE guild_id = $1 AND status = 'open') < $5 "
     "RETURNING ticket_number"
 )
 
 _COUNT_OPEN_FOR_USER = (
     "SELECT COUNT(*) FROM tickets "
     "WHERE guild_id = $1 AND opener_id = $2 AND status = 'open'"
+)
+
+_COUNT_OPEN_FOR_GUILD = (
+    "SELECT COUNT(*) FROM tickets WHERE guild_id = $1 AND status = 'open'"
 )
 
 _BY_THREAD = (
@@ -172,13 +195,19 @@ _SWEEP_CANDIDATES = (
 )
 
 
-async def open_ticket(pool, guild_id, thread_id, opener_id, max_open):
+async def open_ticket(
+    pool, guild_id, thread_id, opener_id, max_open, max_open_guild=MAX_OPEN_PER_GUILD
+):
     """Record a newly created ticket thread; return its number, or ``None``.
 
-    ``None`` means the member is AT the cap - the only non-exceptional refusal,
-    and the authoritative one: the caller's own pre-check is a courtesy that
-    keeps a capped member from ever reaching Discord, while this is what makes
-    two clicks that both passed that pre-check unable to produce a third ticket.
+    ``None`` means EITHER the member or the server is AT its cap - the only
+    non-exceptional refusal, and the authoritative one: the caller's own
+    pre-checks are a courtesy that keep a capped member/server from ever
+    reaching Discord, while this is what makes two clicks that both passed
+    those pre-checks unable to produce one ticket too many. A caller that
+    wants to tell the two refusals apart (to pick the right message) re-reads
+    :func:`count_open_for_user`/:func:`count_open_for_guild` after a ``None``
+    - see cogs/config/tickets/open.py.
 
     A caller that gets ``None`` after already creating the thread must delete it
     (see cogs/config/tickets/open.py) - the row is the record, so a thread with
@@ -188,7 +217,7 @@ async def open_ticket(pool, guild_id, thread_id, opener_id, max_open):
     for _attempt in range(OPEN_RETRIES):
         try:
             row = await pool.fetchrow(
-                _OPEN_TICKET, guild_id, thread_id, opener_id, max_open
+                _OPEN_TICKET, guild_id, thread_id, opener_id, max_open, max_open_guild
             )
             return row["ticket_number"] if row is not None else None
         except asyncpg.UniqueViolationError as exc:
@@ -210,6 +239,20 @@ async def count_open_for_user(pool, guild_id, opener_id) -> int:
     a long ticket history - closed rows are not in that index at all.
     """
     return int(await pool.fetchval(_COUNT_OPEN_FOR_USER, guild_id, opener_id) or 0)
+
+
+async def count_open_for_guild(pool, guild_id) -> int:
+    """How many tickets are open RIGHT NOW in this guild, across every member.
+
+    The per-SERVER cap's own read, for the click-time courtesy pre-check and
+    for picking the right refusal message after a guarded INSERT declines
+    (cogs/config/tickets/open.py) - the guarded INSERT itself is the
+    authority, this is never the guard. Served by the SAME partial index as
+    :func:`count_open_for_user` (``tickets_guild_open_idx`` is on ``guild_id``
+    alone, so this is a strict subset of that scan - no opener filter to
+    apply).
+    """
+    return int(await pool.fetchval(_COUNT_OPEN_FOR_GUILD, guild_id) or 0)
 
 
 async def fetch_by_thread(pool, thread_id):

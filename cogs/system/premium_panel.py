@@ -20,31 +20,40 @@ would inherit that gate and become unreachable for anyone else. This cog has
 no gate of its own: ``/premium`` is for every member, everywhere.
 
 WHAT IT SHOWS, built ONLY from the numbers the catalog
-(tools.premium.GUILD_FREE/GUILD_PREMIUM/USER_FREE/USER_PREMIUM) actually
-carries - see :func:`_catalog_text`, and its own docstring for why no number
-here is ever a literal in a format string:
+(tools.premium.GUILD_PREMIUM/USER_PREMIUM) actually carries - see
+:func:`_catalog_text`, and its own docstring for why no number here is ever a
+literal in a format string:
 
-1. a FREE vs Yasuho+ comparison (24/7 music first, per the plan), then a
-   FREE vs Pack Confort one (favourites, reminders);
-2. one commitments line (nothing free becomes paid, nothing is deleted when
+1. Yasuho+'s THREE headline benefits (24/7 music first, per the plan, then
+   the server playlists and the year of statistics), each a bold title plus
+   one short line, then ONE secondary line naming everything else it
+   includes. Tickets - per-member OR the internal per-server cap - are
+   deliberately NOT listed: the member cap is an admin setting, not a sales
+   point, and the server cap is an anti-abuse backstop nobody is meant to
+   see here;
+2. Pack Confort's own one-line pitch (favourites, reminders, recurring);
+3. one commitments line (nothing free becomes paid, nothing is deleted when
    a perk ends, Discord handles the purchase) plus a link button to
    TERMS.md;
-3. this server's Yasuho+ status (not active / active-and-why: a Discord
-   purchase or an owner gift, with the end date if any) and the invoker's
-   own Pack Confort status - :func:`tools.premium.guild_status`/
+4. this server's Yasuho+ status (not active / active-and-why: a Discord
+   purchase keeps its existing "(purchased), active until/with no end date"
+   wording; an owner gift reads "offered to this server" instead, either
+   "- permanent access" or "until {date}") and the invoker's own Pack
+   Confort status, worded the same way - :func:`tools.premium.guild_status`/
    :func:`tools.premium.user_status` (M3c, tools/premium.py) say which;
-4. a purchase button for whichever product has a SKU configured. The
+5. a purchase button for whichever product has a SKU configured. The
    Yasuho+ one only renders for a member with Manage Server in THIS guild;
    anyone else sees a line pointing them at a server admin instead. A
    product with no SKU configured yet shows a neutral "not on sale" line
-   and no button, for that product only (the two SKUs are configured
-   independently per the plan's own rollout order - Yasuho+ before Pack
-   Confort).
+   and no button, for that product only - but that line is de-duplicated
+   (:func:`PremiumPanelView._build`'s ``_add_not_on_sale``): when BOTH
+   products lack a SKU (today's posture, no ``[Premium]`` section at all),
+   the panel says it ONCE, not twice.
 
-In a DM (``ctx.guild is None``), the entire Yasuho+ block (comparison stays,
-status and button both drop) and the whole server-purchase block are
-skipped - there is no guild to show a status for or to buy for. The Pack
-Confort block (comparison, status, button) always shows: it is a personal
+In a DM (``ctx.guild is None``), the Yasuho+ pitch text still shows (it is
+the same catalog text for everyone), but its status line and its purchase
+button both drop - there is no guild to show a status for or to buy for. The
+Pack Confort block (pitch, status, button) always shows: it is a personal
 purchase, not guild-scoped.
 
 Ephemeral by design (one more line in the plan: ``/premium`` must never spam
@@ -76,108 +85,73 @@ PANEL_COLOUR = 0xF5A623
 TERMS_URL = "https://github.com/yaniswav/Yasuho/blob/main/TERMS.md"
 
 
-def _yesno(value):
-    return _("yes") if value else _("no")
+def _catalog_text(guild_plus, user_plus):
+    """The Yasuho+ / Pack Confort pitch text.
 
-
-def _catalog_text(guild_free, guild_plus, user_free, user_plus):
-    """The FREE vs Yasuho+ / Pack Confort comparison text.
-
-    Every NUMBER in here is read off ``guild_free``/``guild_plus``
-    (:class:`tools.premium.GuildLimits`) and ``user_free``/``user_plus``
+    Every NUMBER in here is read off ``guild_plus``
+    (:class:`tools.premium.GuildLimits`) and ``user_plus``
     (:class:`tools.premium.UserLimits`) - never a literal - so a catalog
     change in tools/premium.py (a new tier, a raised ceiling after measuring
     load, ...) shows up here with no edit to this function at all. Kept pure
     and parameterised (rather than reaching for the module-level
-    ``premium.GUILD_FREE`` etc. directly) so a test can hand it synthetic,
+    ``premium.GUILD_PREMIUM`` etc. directly) so a test can hand it synthetic,
     distinctive values and assert they land in the output verbatim - see
     tests/cogs/test_premium_panel.py's catalog test and its negative control
     (a hardcoded number in this function fails that control, since the
     synthetic value would then never appear).
 
-    24/7 music is listed FIRST per the plan's own "argument principal:
-    musique 24/7"; AniList is worded "per feed" (follows and titles are a
-    PER-FEED cap, not a total) per the plan's own table.
+    THREE headline benefits, per the plan's own "argument principal: musique
+    24/7" plus the two next most tangible ones (server playlists, a year of
+    history on /serverstats), each a bold title and one short, concrete line
+    - no "Free: x | Yasuho+: y" table. Everything else Yasuho+ adds (Previous
+    history, AniList feeds, role menus, voice hubs, the badge) is ONE
+    secondary line. Tickets - per-member and the internal per-server cap -
+    are deliberately absent from both: the member cap is an admin setting,
+    not a sales point, and the server cap must never be advertised at all
+    (see cogs/config/tickets/open.py's own docstring).
     """
     lines = [
         _("## Yasuho+"),
+        "",
+        _("**24/7 music**"),
         _(
-            "A paid upgrade for a whole server. Nothing free is removed - "
-            "here is what Yasuho+ adds:"
+            "Yasuho stays in your voice channel, even when the queue is "
+            "empty."
         ),
         "",
-        _("**24/7 music** - Free: {free} | Yasuho+: {plus}").format(
-            free=_yesno(guild_free.music_247), plus=_yesno(guild_plus.music_247)
+        _("**Extended server playlists**"),
+        _("Up to {count} playlists of {tracks} tracks.").format(
+            count=guild_plus.max_guild_playlists,
+            tracks=guild_plus.max_playlist_tracks,
         ),
+        "",
+        _("**A year of statistics**"),
+        _("See your server's activity over the last {days} days.").format(
+            days=guild_plus.serverstats_retention_days
+        ),
+        "",
         _(
-            "**Server playlists** - Free: {free_count} x {free_tracks} "
-            "tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
+            "Also includes: a {history}-track Previous history, {feeds} "
+            "AniList feeds, {menus} role menus, {hubs} voice hubs and the "
+            "Yasuho+ badge."
         ).format(
-            free_count=guild_free.max_guild_playlists,
-            free_tracks=guild_free.max_playlist_tracks,
-            plus_count=guild_plus.max_guild_playlists,
-            plus_tracks=guild_plus.max_playlist_tracks,
-        ),
-        _(
-            "**Previous history** - Free: {free} tracks | Yasuho+: {plus} "
-            "tracks"
-        ).format(
-            free=guild_free.history_max_items, plus=guild_plus.history_max_items
-        ),
-        _(
-            "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} "
-            "accounts and {free_titles} titles per feed | Yasuho+: "
-            "{plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} "
-            "titles per feed"
-        ).format(
-            free_feeds=guild_free.max_feeds_per_guild,
-            free_accounts=guild_free.max_follows_per_feed,
-            free_titles=guild_free.max_subs_per_feed,
-            plus_feeds=guild_plus.max_feeds_per_guild,
-            plus_accounts=guild_plus.max_follows_per_feed,
-            plus_titles=guild_plus.max_subs_per_feed,
-        ),
-        _(
-            "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
-        ).format(
-            free=guild_free.serverstats_retention_days,
-            plus=guild_plus.serverstats_retention_days,
-        ),
-        _("**Role menus** - Free: {free} | Yasuho+: {plus}").format(
-            free=guild_free.max_menus_per_guild, plus=guild_plus.max_menus_per_guild
-        ),
-        _("**Auto voice hubs** - Free: {free} | Yasuho+: {plus}").format(
-            free=guild_free.max_hubs, plus=guild_plus.max_hubs
-        ),
-        _(
-            "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
-        ).format(
-            free=guild_free.max_tickets_open_per_user,
-            plus=guild_plus.max_tickets_open_per_user,
-        ),
-        _("**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}").format(
-            free=_yesno(guild_free.premium_badge),
-            plus=_yesno(guild_plus.premium_badge),
+            history=guild_plus.history_max_items,
+            feeds=guild_plus.max_feeds_per_guild,
+            menus=guild_plus.max_menus_per_guild,
+            hubs=guild_plus.max_hubs,
         ),
         "",
         _("## Pack Confort"),
-        _(
-            "A one-time purchase for you personally. No "
-            "subscription, no expiry while the service and your account "
-            "exist."
-        ),
         "",
-        _("**Favourites** - Free: {free} | Pack Confort: {plus}").format(
-            free=user_free.max_favourites, plus=user_plus.max_favourites
-        ),
         _(
-            "**Reminders** - Free: {free} ({free_recurring} recurring) | "
-            "Pack Confort: {plus} ({plus_recurring} recurring)"
+            "A one-time purchase, tied to your Discord account and valid "
+            "for the lifetime of the Yasuho service: {favourites} "
+            "favourites, {reminders} reminders including {recurring} "
+            "recurring."
         ).format(
-            free=user_free.max_pending_reminders,
-            free_recurring=user_free.max_recurring_reminders,
-            plus=user_plus.max_pending_reminders,
-            plus_recurring=user_plus.max_recurring_reminders,
+            favourites=user_plus.max_favourites,
+            reminders=user_plus.max_pending_reminders,
+            recurring=user_plus.max_recurring_reminders,
         ),
     ]
     return "\n".join(lines)
@@ -190,36 +164,46 @@ def _commitments_text():
     )
 
 
-def _source_label(source):
-    return _("purchased") if source == "purchase" else _("gifted")
-
-
 def _guild_status_text(status):
-    """Render :func:`tools.premium.guild_status`'s result as one sentence."""
+    """Render :func:`tools.premium.guild_status`'s result as one sentence.
+
+    A GIFT (owner grant, ``source == "gift"``) gets its OWN wording - "offered
+    to this server", permanent or until a date - rather than the purchase
+    phrasing with "(gifted)" bolted on: a gift is not a sale, so it should
+    not read like one. A PURCHASE keeps today's exact wording.
+    """
     if not status["active"]:
         return _("This server does not have **Yasuho+**.")
-    source = _source_label(status["source"])
+    if status["source"] == "gift":
+        if status["ends_at"] is not None:
+            return _("Yasuho+ is offered to this server until {until}.").format(
+                until=format_dt(status["ends_at"])
+            )
+        return _("Yasuho+ is offered to this server - permanent access.")
     if status["ends_at"] is not None:
         return _(
-            "This server has **Yasuho+** ({source}), active until {until}."
-        ).format(source=source, until=format_dt(status["ends_at"]))
-    return _("This server has **Yasuho+** ({source}), with no end date.").format(
-        source=source
-    )
+            "This server has **Yasuho+** (purchased), active until {until}."
+        ).format(until=format_dt(status["ends_at"]))
+    return _("This server has **Yasuho+** (purchased), with no end date.")
 
 
 def _user_status_text(status):
-    """Render :func:`tools.premium.user_status`'s result as one sentence."""
+    """Render :func:`tools.premium.user_status`'s result as one sentence.
+
+    Same gift-vs-purchase split as :func:`_guild_status_text`."""
     if not status["active"]:
         return _("You do not have the **Pack Confort**.")
-    source = _source_label(status["source"])
+    if status["source"] == "gift":
+        if status["ends_at"] is not None:
+            return _("The Pack Confort is offered to you until {until}.").format(
+                until=format_dt(status["ends_at"])
+            )
+        return _("The Pack Confort is offered to you - permanent access.")
     if status["ends_at"] is not None:
         return _(
-            "You have the **Pack Confort** ({source}), active until {until}."
-        ).format(source=source, until=format_dt(status["ends_at"]))
-    return _(
-        "You have the **Pack Confort** ({source}), with no end date."
-    ).format(source=source)
+            "You have the **Pack Confort** (purchased), active until {until}."
+        ).format(until=format_dt(status["ends_at"]))
+    return _("You have the **Pack Confort** (purchased), with no end date.")
 
 
 def _not_on_sale_text():
@@ -267,12 +251,7 @@ class PremiumPanelView(AuthorLayoutView):
 
         container.add_item(
             discord.ui.TextDisplay(
-                _catalog_text(
-                    premium.GUILD_FREE,
-                    premium.GUILD_PREMIUM,
-                    premium.USER_FREE,
-                    premium.USER_PREMIUM,
-                )
+                _catalog_text(premium.GUILD_PREMIUM, premium.USER_PREMIUM)
             )
         )
         container.add_item(discord.ui.Separator())
@@ -294,9 +273,20 @@ class PremiumPanelView(AuthorLayoutView):
         container.add_item(discord.ui.TextDisplay("\n".join(status_lines)))
         container.add_item(discord.ui.Separator())
 
+        # "Premium is not on sale yet" appears AT MOST ONCE, even on today's
+        # posture where NEITHER SKU is configured and both product blocks
+        # below would otherwise each add their own copy of the same line.
+        not_on_sale_shown = False
+
+        def _add_not_on_sale():
+            nonlocal not_on_sale_shown
+            if not not_on_sale_shown:
+                container.add_item(discord.ui.TextDisplay(_not_on_sale_text()))
+                not_on_sale_shown = True
+
         if guild is not None:
             if premium.YASUHO_PLUS_SKU is None:
-                container.add_item(discord.ui.TextDisplay(_not_on_sale_text()))
+                _add_not_on_sale()
             elif can_manage_guild:
                 container.add_item(
                     discord.ui.ActionRow(
@@ -307,7 +297,7 @@ class PremiumPanelView(AuthorLayoutView):
                 container.add_item(discord.ui.TextDisplay(_admin_only_text()))
 
         if premium.COMFORT_PACK_SKU is None:
-            container.add_item(discord.ui.TextDisplay(_not_on_sale_text()))
+            _add_not_on_sale()
         else:
             container.add_item(
                 discord.ui.ActionRow(

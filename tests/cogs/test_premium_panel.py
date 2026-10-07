@@ -1,4 +1,5 @@
-"""``/premium`` (cogs/system/premium_panel.py, M3c).
+"""``/premium`` (cogs/system/premium_panel.py, M3c, redesigned 2026-10-07 - L2
+of the premium adjustments).
 
 No network, DB or Discord gateway: :class:`PremiumPanelView` is built
 directly with plain Python stand-ins (a status dict is exactly what
@@ -9,12 +10,16 @@ into Container/ActionRow and expose ``TextDisplay.content`` /
 ``Button.sku_id`` / ``Button.url``).
 
 Covers:
-1. the catalog comparison text is read ENTIRELY from the GuildLimits/
-   UserLimits passed in, never a hardcoded number - with the mandated
-   negative control proving that check is not vacuous;
+1. the pitch text is read ENTIRELY from the GuildLimits/UserLimits passed
+   in, never a hardcoded number - with the mandated negative control proving
+   that check is not vacuous; the three headline benefits are present and
+   the ticket caps (per-member AND the internal per-server one) are not;
 2. the purchase buttons: shown only for a configured SKU, the guild one
    gated to Manage Server, the DM variant (no guild block at all);
-3. status line wording for purchase / gift / free, both scopes.
+3. "Premium is not on sale yet" appears AT MOST ONCE, even when both
+   products lack a SKU;
+4. status line wording: purchase / free keep their existing shape, a GIFT
+   gets its own "offered to this server/you" wording (permanent vs dated).
 """
 
 from __future__ import annotations
@@ -60,123 +65,95 @@ def _has_number(text, value):
 
 
 # ---------------------------------------------------------------------------
-# 1. The catalog comparison - built ONLY from the limits passed in
+# 1. The pitch text - built ONLY from the limits passed in
 # ---------------------------------------------------------------------------
 
 
-def _synthetic_guild_limits(premium_tier):
-    """Distinctive, ceiling-safe values - see tools.premium.GUILD_CEILINGS.
-
-    GLOBALLY unique across every field of both tiers (not merely "far from
-    the real catalog"): with :func:`_has_number`'s word-boundary matching,
-    the only way a wrong field's number could pass is a plain DUPLICATE
-    value elsewhere in the set, so every one of the 20 guild + 6 user
-    numbers this module hands out is distinct from all the others - see
-    test_negative_control_a_hardcoded_number_fails_the_catalog_check, which
-    would not actually prove anything with a repeated number in the mix.
-    """
-    if premium_tier:
-        return premium.GuildLimits(
-            max_guild_playlists=93,
-            max_playlist_tracks=921,
-            history_max_items=321,
-            max_feeds_per_guild=11,
-            max_follows_per_feed=81,
-            max_subs_per_feed=181,
-            max_menus_per_guild=71,
-            max_hubs=17,
-            max_tickets_open_per_user=19,
-            serverstats_retention_days=365,
-            music_247=True,
-            premium_badge=True,
-        )
+def _synthetic_guild_plus():
+    """Distinctive, ceiling-safe values (tools.premium.GUILD_CEILINGS) - every
+    field used by :func:`pp._catalog_text` is globally unique, so
+    :func:`_has_number`'s word-boundary matching cannot pass by accident on
+    a wrong field (see test_negative_control_a_hardcoded_number_fails_the_catalog_check,
+    which would not actually prove anything with a repeated number in the
+    mix)."""
     return premium.GuildLimits(
-        max_guild_playlists=21,
-        max_playlist_tracks=521,
-        history_max_items=121,
-        max_feeds_per_guild=3,
-        max_follows_per_feed=41,
-        max_subs_per_feed=141,
-        max_menus_per_guild=51,
-        max_hubs=5,
-        max_tickets_open_per_user=9,
-        serverstats_retention_days=161,
-        music_247=False,
-        premium_badge=False,
+        max_guild_playlists=93,
+        max_playlist_tracks=921,
+        history_max_items=321,
+        max_feeds_per_guild=11,
+        max_follows_per_feed=81,
+        max_subs_per_feed=181,
+        max_menus_per_guild=71,
+        max_hubs=17,
+        max_tickets_open_per_user=19,
+        max_tickets_open_per_guild=219,
+        serverstats_retention_days=365,
+        music_247=True,
+        premium_badge=True,
     )
 
 
-def _synthetic_user_limits(premium_tier):
-    if premium_tier:
-        return premium.UserLimits(
-            max_favourites=329, max_pending_reminders=59, max_recurring_reminders=13
-        )
+def _synthetic_user_plus():
     return premium.UserLimits(
-        max_favourites=29, max_pending_reminders=39, max_recurring_reminders=7
+        max_favourites=329, max_pending_reminders=59, max_recurring_reminders=13
     )
 
 
-def test_catalog_text_reads_every_number_from_the_limits_given():
-    guild_free = _synthetic_guild_limits(False)
-    guild_plus = _synthetic_guild_limits(True)
-    user_free = _synthetic_user_limits(False)
-    user_plus = _synthetic_user_limits(True)
-    text = pp._catalog_text(guild_free, guild_plus, user_free, user_plus)
+def test_catalog_text_reads_the_headline_numbers_from_the_limits_given():
+    guild_plus = _synthetic_guild_plus()
+    user_plus = _synthetic_user_plus()
+    text = pp._catalog_text(guild_plus, user_plus)
 
-    for limits in (guild_free, guild_plus):
-        for field in (
-            "max_guild_playlists",
-            "max_playlist_tracks",
-            "history_max_items",
-            "max_feeds_per_guild",
-            "max_follows_per_feed",
-            "max_subs_per_feed",
-            "max_menus_per_guild",
-            "max_hubs",
-            "max_tickets_open_per_user",
-            "serverstats_retention_days",
-        ):
-            assert _has_number(text, getattr(limits, field)), field
-    for limits in (user_free, user_plus):
-        for field in ("max_favourites", "max_pending_reminders", "max_recurring_reminders"):
-            assert _has_number(text, getattr(limits, field)), field
+    for field in (
+        "max_guild_playlists",
+        "max_playlist_tracks",
+        "history_max_items",
+        "max_feeds_per_guild",
+        "max_menus_per_guild",
+        "max_hubs",
+        "serverstats_retention_days",
+    ):
+        assert _has_number(text, getattr(guild_plus, field)), field
+    for field in ("max_favourites", "max_pending_reminders", "max_recurring_reminders"):
+        assert _has_number(text, getattr(user_plus, field)), field
 
-    # AniList is worded "per feed" (the plan's own requirement), not as a
-    # bare total that could be misread as server-wide.
-    assert "per feed" in text
-    # 24/7 music is the first comparison line (plan: "argument principal").
-    assert text.index("24/7 music") < text.index("Server playlists")
+    # 24/7 music is the first headline benefit (plan: "argument principal").
+    assert text.index("24/7 music") < text.index("Extended server playlists")
+    assert text.index("Extended server playlists") < text.index("A year of statistics")
     # Yasuho+ before Pack Confort, in that order.
     assert text.index("Yasuho+") < text.index("Pack Confort")
 
 
-def _catalog_text_with_hardcoded_playlist_count(guild_free, guild_plus, user_free, user_plus):
-    """A deliberately-broken clone of :func:`pp._catalog_text`'s first
-    numeric line: "Server playlists" hardcodes the real production catalog's
-    free-tier number (25) instead of reading ``guild_free.max_guild_playlists``
-    - the exact defect class the positive test above exists to catch.
-    Everything else is unchanged (delegates to the real function and only
-    patches this one line), so this is a faithful stand-in for "someone
-    hardcoded one number" rather than a wholesale rewrite.
+def test_catalog_text_never_mentions_either_ticket_cap():
+    """Neither the per-member cap NOR the internal per-server cap may ever
+    appear on this panel - the member one is an admin setting, not a sales
+    point, and the server one must never be advertised at all."""
+    guild_plus = _synthetic_guild_plus()
+    user_plus = _synthetic_user_plus()
+    text = pp._catalog_text(guild_plus, user_plus)
+
+    assert not _has_number(text, guild_plus.max_tickets_open_per_user)
+    assert not _has_number(text, guild_plus.max_tickets_open_per_guild)
+    assert "ticket" not in text.lower()
+
+
+def _catalog_text_with_hardcoded_playlist_count(guild_plus, user_plus):
+    """A deliberately-broken clone of :func:`pp._catalog_text`'s playlist
+    line: it hardcodes the real production catalog's Yasuho+ number (75)
+    instead of reading ``guild_plus.max_guild_playlists`` - the exact defect
+    class the positive test above exists to catch. Everything else is
+    unchanged (delegates to the real function and only patches this one
+    line), so this is a faithful stand-in for "someone hardcoded one
+    number" rather than a wholesale rewrite.
     """
-    text = pp._catalog_text(guild_free, guild_plus, user_free, user_plus)
-    correct_line = pp._(
-        "**Server playlists** - Free: {free_count} x {free_tracks} "
-        "tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
-    ).format(
-        free_count=guild_free.max_guild_playlists,
-        free_tracks=guild_free.max_playlist_tracks,
-        plus_count=guild_plus.max_guild_playlists,
-        plus_tracks=guild_plus.max_playlist_tracks,
+    text = pp._catalog_text(guild_plus, user_plus)
+    correct_line = pp._("Up to {count} playlists of {tracks} tracks.").format(
+        count=guild_plus.max_guild_playlists,
+        tracks=guild_plus.max_playlist_tracks,
     )
-    broken_line = pp._(
-        "**Server playlists** - Free: {free_count} x {free_tracks} "
-        "tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
-    ).format(
-        free_count=25,  # HARDCODED - the bug
-        free_tracks=guild_free.max_playlist_tracks,
-        plus_count=guild_plus.max_guild_playlists,
-        plus_tracks=guild_plus.max_playlist_tracks,
+    broken_line = pp._("Up to {count} playlists of {tracks} tracks.").format(
+        count=75,  # HARDCODED - the bug
+        tracks=guild_plus.max_playlist_tracks,
     )
     assert correct_line in text, "fixture drifted from pp._catalog_text's own wording"
     return text.replace(correct_line, broken_line)
@@ -185,22 +162,18 @@ def _catalog_text_with_hardcoded_playlist_count(guild_free, guild_plus, user_fre
 def test_negative_control_a_hardcoded_number_fails_the_catalog_check():
     """Prove the check above is not vacuous: against the broken clone, the
     exact same assertion the positive test makes for this field now fails."""
-    guild_free = _synthetic_guild_limits(False)
-    guild_plus = _synthetic_guild_limits(True)
-    user_free = _synthetic_user_limits(False)
-    user_plus = _synthetic_user_limits(True)
-    broken_text = _catalog_text_with_hardcoded_playlist_count(
-        guild_free, guild_plus, user_free, user_plus
-    )
+    guild_plus = _synthetic_guild_plus()
+    user_plus = _synthetic_user_plus()
+    broken_text = _catalog_text_with_hardcoded_playlist_count(guild_plus, user_plus)
 
     with pytest.raises(AssertionError):
-        assert _has_number(broken_text, guild_free.max_guild_playlists)
+        assert _has_number(broken_text, guild_plus.max_guild_playlists)
 
 
 def test_view_renders_the_real_module_catalog():
-    """The command's own wiring (_build) reads premium.GUILD_FREE etc., not
-    some other source - catch a view that silently stopped using the live
-    catalog."""
+    """The command's own wiring (_build) reads premium.GUILD_PREMIUM etc.,
+    not some other source - catch a view that silently stopped using the
+    live catalog."""
     view = pp.PremiumPanelView(
         _author(),
         guild=None,
@@ -209,9 +182,7 @@ def test_view_renders_the_real_module_catalog():
         can_manage_guild=False,
     )
     text = "\n".join(_text_displays(view))
-    assert _has_number(text, premium.GUILD_FREE.max_guild_playlists)
     assert _has_number(text, premium.GUILD_PREMIUM.max_guild_playlists)
-    assert _has_number(text, premium.USER_FREE.max_favourites)
     assert _has_number(text, premium.USER_PREMIUM.max_favourites)
 
 
@@ -316,6 +287,59 @@ def test_terms_link_button_is_present_and_points_at_terms_md():
 
 
 # ---------------------------------------------------------------------------
+# 3. "Premium is not on sale yet" appears AT MOST ONCE
+# ---------------------------------------------------------------------------
+
+
+def test_not_on_sale_appears_exactly_once_when_neither_sku_is_configured(
+    monkeypatch,
+):
+    """The bug this lot fixes: with NEITHER [Premium] SKU configured (today's
+    actual posture - no section in bot.ini at all), the panel used to add
+    the same sentence twice, once per product block."""
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", None)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+    view = pp.PremiumPanelView(
+        _author(),
+        guild=object(),
+        guild_status=FREE_STATUS,
+        user_status=FREE_STATUS,
+        can_manage_guild=True,
+    )
+    texts = _text_displays(view)
+    occurrences = sum(1 for t in texts if "not on sale yet" in t)
+    assert occurrences == 1
+
+
+def test_not_on_sale_still_appears_once_with_only_one_sku_missing(monkeypatch):
+    monkeypatch.setattr(premium, "YASUHO_PLUS_SKU", 111)
+    monkeypatch.setattr(premium, "COMFORT_PACK_SKU", None)
+    view = pp.PremiumPanelView(
+        _author(),
+        guild=object(),
+        guild_status=FREE_STATUS,
+        user_status=FREE_STATUS,
+        can_manage_guild=True,
+    )
+    texts = _text_displays(view)
+    occurrences = sum(1 for t in texts if "not on sale yet" in t)
+    assert occurrences == 1
+
+
+# --- Negative control: without the dedup guard, the line appears twice ----
+#
+# Verified by hand during this lot: removing the ``if not not_on_sale_shown``
+# guard from PremiumPanelView._build (calling ``container.add_item(...)``
+# unconditionally in both branches instead of through ``_add_not_on_sale``)
+# turned test_not_on_sale_appears_exactly_once_when_neither_sku_is_configured
+# red - two TextDisplay items containing "not on sale yet" instead of one.
+# Restored immediately after by editing the file back (never git
+# stash/checkout/reset), and the full panel test suite was re-run green. See
+# this report's "negative controls" section for the exact edit and the
+# failure it produced.
+
+
+# ---------------------------------------------------------------------------
 # DM variant - guild=None drops the WHOLE guild block (status + button)
 # ---------------------------------------------------------------------------
 
@@ -352,7 +376,7 @@ def test_guild_variant_shows_both_status_lines(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# 3. Status line wording - purchase / gift / free, both scopes
+# 4. Status line wording - purchase / gift / free, both scopes
 # ---------------------------------------------------------------------------
 
 
@@ -361,17 +385,35 @@ def test_guild_status_text_not_active():
 
 
 def test_guild_status_text_purchase_with_end_date():
+    """Purchase wording is UNCHANGED by this lot."""
     status = {"active": True, "source": "purchase", "ends_at": NOW}
     text = pp._guild_status_text(status)
     assert "purchased" in text
     assert "until" in text
 
 
-def test_guild_status_text_gift_with_no_end_date():
+def test_guild_status_text_purchase_with_no_end_date():
+    status = {"active": True, "source": "purchase", "ends_at": None}
+    text = pp._guild_status_text(status)
+    assert "purchased" in text
+    assert "no end date" in text
+
+
+def test_guild_status_text_gift_with_no_end_date_reads_permanent():
+    """L2's new gift wording: 'offered to this server', not '(gifted)'."""
     status = {"active": True, "source": "gift", "ends_at": None}
     text = pp._guild_status_text(status)
-    assert "gifted" in text
-    assert "no end date" in text
+    assert "offered to this server" in text
+    assert "permanent" in text
+    assert "gifted" not in text
+
+
+def test_guild_status_text_gift_with_an_end_date_names_it():
+    status = {"active": True, "source": "gift", "ends_at": NOW}
+    text = pp._guild_status_text(status)
+    assert "offered to this server" in text
+    assert "until" in text
+    assert "permanent" not in text
 
 
 def test_user_status_text_not_active():
@@ -385,8 +427,17 @@ def test_user_status_text_purchase_with_end_date():
     assert "until" in text
 
 
-def test_user_status_text_gift_with_no_end_date():
+def test_user_status_text_gift_with_no_end_date_reads_permanent():
     status = {"active": True, "source": "gift", "ends_at": None}
     text = pp._user_status_text(status)
-    assert "gifted" in text
-    assert "no end date" in text
+    assert "offered to you" in text
+    assert "permanent" in text
+    assert "gifted" not in text
+
+
+def test_user_status_text_gift_with_an_end_date_names_it():
+    status = {"active": True, "source": "gift", "ends_at": NOW}
+    text = pp._user_status_text(status)
+    assert "offered to you" in text
+    assert "until" in text
+    assert "permanent" not in text

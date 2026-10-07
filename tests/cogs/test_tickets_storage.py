@@ -66,7 +66,9 @@ async def test_the_number_is_max_plus_one_computed_inside_the_insert():
     assert "INSERT INTO tickets" in query
     assert "COALESCE(MAX(ticket_number), 0) + 1" in query
     assert "RETURNING ticket_number" in query
-    assert args == (GUILD_ID, 555, OPENER_ID, 2)
+    # The 5th arg is the per-SERVER cap, defaulted to MAX_OPEN_PER_GUILD when
+    # the caller (like this one) does not pass one explicitly.
+    assert args == (GUILD_ID, 555, OPENER_ID, 2, storage.MAX_OPEN_PER_GUILD)
 
 
 async def test_the_cap_is_guarded_in_the_same_statement_as_the_insert():
@@ -79,6 +81,57 @@ async def test_the_cap_is_guarded_in_the_same_statement_as_the_insert():
     query, _args = pool.calls[0]
     assert "WHERE (SELECT COUNT(*) FROM tickets" in query
     assert "opener_id = $3 AND status = 'open') < $4" in query
+
+
+# ---------------------------------------------------------------------------
+# The per-SERVER cap: guarded in the SAME statement, alongside the per-user one
+# ---------------------------------------------------------------------------
+
+
+async def test_the_server_cap_is_guarded_in_the_same_statement_too():
+    """The whole point of this lot: BOTH caps live in the one guarded INSERT,
+    so neither "am I under my cap" nor "is the server under its cap" can be
+    separated from "take a slot" by a click."""
+    pool = _ScriptedPool([{"ticket_number": 1}])
+
+    await storage.open_ticket(pool, GUILD_ID, 555, OPENER_ID, 2, 50)
+
+    query, args = pool.calls[0]
+    assert "WHERE (SELECT COUNT(*) FROM tickets" in query
+    assert "opener_id = $3 AND status = 'open') < $4" in query
+    assert "AND (SELECT COUNT(*) FROM tickets" in query
+    # The server-wide count has NO opener filter - every open ticket counts,
+    # regardless of who opened it.
+    assert "WHERE guild_id = $1 AND status = 'open') < $5" in query
+    assert args == (GUILD_ID, 555, OPENER_ID, 2, 50)
+
+
+async def test_a_server_at_its_cap_gets_none_rather_than_an_error():
+    # Same clean-refusal shape as the member cap: the guarded INSERT simply
+    # inserts no row.
+    pool = _ScriptedPool([None])
+    assert await storage.open_ticket(pool, GUILD_ID, 555, OPENER_ID, 2, 50) is None
+    assert len(pool.calls) == 1
+
+
+async def test_a_server_well_under_its_cap_is_unaffected():
+    """FREE byte-identical up to the cap: a guild nowhere near its 50-ticket
+    ceiling (the FREE catalog value) opens exactly as it did before this
+    lot."""
+    pool = _ScriptedPool([{"ticket_number": 7}])
+    assert await storage.open_ticket(pool, GUILD_ID, 555, OPENER_ID, 2, 50) == 7
+
+
+# --- Negative control: break the server cap in the guarded INSERT ----------
+#
+# Verified by hand during this lot: removing the second ``AND (SELECT
+# COUNT(*) ...) < $5`` clause from storage._OPEN_TICKET (leaving only the
+# per-member guard) turned test_the_server_cap_is_guarded_in_the_same_statement_too
+# red (the "AND (SELECT COUNT(*)" and "< $5" assertions both failed - the
+# clause was simply gone). Restored immediately after by editing the file
+# back (never git stash/checkout/reset), and the full ticket test suite was
+# re-run green - see this report's "negative control" section for the exact
+# edit and the failure it produced.
 
 
 async def test_the_open_statement_never_writes_any_content():
@@ -195,6 +248,27 @@ async def test_the_open_count_is_scoped_to_guild_user_and_open_status(fake_pool)
 async def test_the_open_count_reads_a_missing_value_as_zero(fake_pool):
     fake_pool.fetchval_return = None
     assert await storage.count_open_for_user(fake_pool, GUILD_ID, OPENER_ID) == 0
+
+
+async def test_the_guild_open_count_is_scoped_to_guild_and_open_status_only(
+    fake_pool,
+):
+    """Unlike count_open_for_user, there is NO opener filter - every open
+    ticket in the guild counts, whoever opened it."""
+    fake_pool.fetchval_return = 41
+
+    assert await storage.count_open_for_guild(fake_pool, GUILD_ID) == 41
+
+    _method, query, args = fake_pool.calls[0]
+    assert "SELECT COUNT(*) FROM tickets" in query
+    assert "WHERE guild_id = $1 AND status = 'open'" in query
+    assert "opener_id" not in query
+    assert args == (GUILD_ID,)
+
+
+async def test_the_guild_open_count_reads_a_missing_value_as_zero(fake_pool):
+    fake_pool.fetchval_return = None
+    assert await storage.count_open_for_guild(fake_pool, GUILD_ID) == 0
 
 
 async def test_fetch_by_thread_is_keyed_on_the_thread_alone(fake_pool):

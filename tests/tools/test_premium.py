@@ -171,6 +171,7 @@ def test_free_guild_values_match_their_owning_cog_constants():
     from cogs.community.serverstats import cog as serverstats_cog
     from cogs.config import rolemenus
     from cogs.config.tickets import guild_config as tickets_guild_config
+    from cogs.config.tickets import storage as tickets_storage
     from cogs.music import player as music_player
     from cogs.music import playlists_shared
     from tools.autoroom import MAX_HUBS
@@ -186,6 +187,13 @@ def test_free_guild_values_match_their_owning_cog_constants():
     assert (
         premium.FREE_MAX_TICKETS_OPEN_PER_USER
         == tickets_guild_config.MAX_OPEN_PER_USER
+    )
+    # The internal, never-advertised per-SERVER ticket cap (anti-abuse, not a
+    # sales lever - see cogs/config/tickets/open.py). Mirrors
+    # cogs/config/tickets/storage.MAX_OPEN_PER_GUILD, the module that
+    # actually enforces it in the guarded INSERT.
+    assert (
+        premium.FREE_MAX_TICKETS_OPEN_PER_GUILD == tickets_storage.MAX_OPEN_PER_GUILD
     )
     assert premium.FREE_SERVERSTATS_RETENTION_DAYS == serverstats_cog.RETENTION_DAYS
     # M4d: the Yasuho+ ceiling (cog.MAX_RETENTION_DAYS, the daily purge's
@@ -222,6 +230,7 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         max_menus_per_guild=premium.FREE_MAX_MENUS_PER_GUILD,
         max_hubs=premium.FREE_MAX_HUBS,
         max_tickets_open_per_user=premium.FREE_MAX_TICKETS_OPEN_PER_USER,
+        max_tickets_open_per_guild=premium.FREE_MAX_TICKETS_OPEN_PER_GUILD,
         serverstats_retention_days=premium.FREE_SERVERSTATS_RETENTION_DAYS,
         music_247=premium.FREE_MUSIC_247,
         premium_badge=premium.FREE_PREMIUM_BADGE,
@@ -275,6 +284,7 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         max_menus_per_guild=1,
         max_hubs=1,
         max_tickets_open_per_user=1,
+        max_tickets_open_per_guild=1,
         serverstats_retention_days=1,
         music_247=False,
         premium_badge=False,
@@ -298,6 +308,29 @@ def test_limits_dataclasses_are_frozen():
     except dataclasses.FrozenInstanceError as error:
         with_error = error
     assert with_error is not None
+
+
+# ---------------------------------------------------------------------------
+# L1 premium adjustments (2026-10-07): history raised to 500, new per-server
+# ticket cap.
+# ---------------------------------------------------------------------------
+
+
+def test_guild_premium_history_cap_is_500_and_within_its_ceiling():
+    """The Previous-history raise (L1a): 200 -> 500, pinned exactly at the
+    ceiling (tests/cogs/test_music_history_cap.py exercises the resolution
+    path; this is the catalog literal)."""
+    assert premium.GUILD_PREMIUM.history_max_items == 500
+    assert premium.GUILD_CEILINGS["history_max_items"] == 500
+
+
+def test_guild_ticket_cap_per_guild_values():
+    """L1b: the internal, never-advertised per-SERVER ticket cap - FREE 50,
+    Yasuho+ 200, ceiling 500 (far above either, room to raise after
+    measuring load like every other ceiling in this module)."""
+    assert premium.GUILD_FREE.max_tickets_open_per_guild == 50
+    assert premium.GUILD_PREMIUM.max_tickets_open_per_guild == 200
+    assert premium.GUILD_CEILINGS["max_tickets_open_per_guild"] == 500
 
 
 # ---------------------------------------------------------------------------

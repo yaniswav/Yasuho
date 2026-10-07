@@ -198,6 +198,15 @@ FREE_MAX_MENUS_PER_GUILD = 25  # cogs/config/rolemenus.MAX_MENUS_PER_GUILD
 # (cogs/config/tickets/guild_config.MAX_OPEN_PER_USER); Yasuho+ raises the
 # ceiling itself, which is why it belongs in the commercial catalog at all.
 FREE_MAX_TICKETS_OPEN_PER_USER = 5
+# Internal, NEVER advertised, per-SERVER cap on tickets open AT ONCE - an
+# anti-abuse backstop, not a sales lever: it is never shown on /premium and
+# never wired to the upsell helper (see cogs/config/tickets/open.py). Unlike
+# the per-member cap above, it is not admin-configurable at all - it is
+# exactly the resolved catalog value (FREE here, GUILD_PREMIUM.
+# max_tickets_open_per_guild for Yasuho+), restated from
+# cogs/config/tickets/storage.MAX_OPEN_PER_GUILD, the module that actually
+# enforces it in the guarded INSERT.
+FREE_MAX_TICKETS_OPEN_PER_GUILD = 50
 FREE_SERVERSTATS_RETENTION_DAYS = 90  # cogs/community/serverstats/cog.RETENTION_DAYS
 # Brand-new benefits (M4a/M4b): there is no FREE constant to mirror because
 # today NO guild has either, whatever SKUs exist - these two are the
@@ -242,6 +251,7 @@ GUILD_CEILINGS = {
     "max_menus_per_guild": 100,
     "max_hubs": 20,
     "max_tickets_open_per_user": 20,
+    "max_tickets_open_per_guild": 500,
     "serverstats_retention_days": 365,
 }
 
@@ -265,6 +275,7 @@ class GuildLimits:
     max_menus_per_guild: int
     max_hubs: int
     max_tickets_open_per_user: int
+    max_tickets_open_per_guild: int
     serverstats_retention_days: int
     music_247: bool
     premium_badge: bool
@@ -303,6 +314,7 @@ GUILD_FREE = GuildLimits(
     max_menus_per_guild=FREE_MAX_MENUS_PER_GUILD,
     max_hubs=FREE_MAX_HUBS,
     max_tickets_open_per_user=FREE_MAX_TICKETS_OPEN_PER_USER,
+    max_tickets_open_per_guild=FREE_MAX_TICKETS_OPEN_PER_GUILD,
     serverstats_retention_days=FREE_SERVERSTATS_RETENTION_DAYS,
     music_247=FREE_MUSIC_247,
     premium_badge=FREE_PREMIUM_BADGE,
@@ -313,13 +325,14 @@ GUILD_FREE = GuildLimits(
 GUILD_PREMIUM = GuildLimits(
     max_guild_playlists=75,
     max_playlist_tracks=500,
-    history_max_items=200,
+    history_max_items=500,
     max_feeds_per_guild=6,
     max_follows_per_feed=50,
     max_subs_per_feed=100,
     max_menus_per_guild=50,
     max_hubs=10,
     max_tickets_open_per_user=10,
+    max_tickets_open_per_guild=200,
     serverstats_retention_days=365,
     music_247=True,
     premium_badge=True,

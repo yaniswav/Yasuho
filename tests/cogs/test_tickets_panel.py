@@ -920,9 +920,10 @@ async def test_a_subject_cannot_smuggle_an_everyone_ping():
 
 async def test_losing_the_cap_race_deletes_the_thread_that_never_became_a_ticket():
     # The guarded INSERT declined, so there is no row - and a thread with no row
-    # is not a ticket.
+    # is not a ticket. open_count=2 (the default per-member cap) is what makes
+    # the post-hoc re-check in _open_thread attribute this to the MEMBER cap.
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
-    interaction, channel = _submit_context(_Pool(insert_result=None))
+    interaction, channel = _submit_context(_Pool(open_count=2, insert_result=None))
 
     await ticket_open._create_ticket(interaction, "hi")
 

@@ -48,6 +48,16 @@ close. The window is therefore enforced by Discord, not by a timer of ours, and
 it is read HERE - at open time - like every other configuration value in this
 flow.
 
+Two caps, one guarded INSERT. Besides the per-MEMBER cap (admin-configurable,
+clamped to the resolved premium ceiling), :func:`storage.open_ticket` also
+enforces a per-SERVER cap on tickets open at once - internal, never shown on
+``/premium`` and never routed through ``tools.premium_upsell`` (see
+:func:`_guild_cap_message`): it exists purely to bound a guild's worst case,
+not to sell anything. Both caps live in the SAME statement for the same reason
+the member one does alone today - "am I under the cap" and "take a slot" must
+never be separated by a click - and a refusal from either is compensated the
+same way (the thread is deleted).
+
 Typography rule: ASCII '-' and '...' only.
 """
 
@@ -207,10 +217,11 @@ class TicketOpenButton(discord.ui.Button):
         # tools.premium.resolve_guild_limits and guild_config.max_open_per_user's
         # own docstring for what "ceiling" means here (it bounds the admin's
         # own setting, it does not bypass it).
-        ceiling = premium.resolve_guild_limits(
-            interaction.client, guild.id
-        ).max_tickets_open_per_user
-        cap = await guild_config.max_open_per_user(pool, guild.id, ceiling=ceiling)
+        limits = premium.resolve_guild_limits(interaction.client, guild.id)
+        cap = await guild_config.max_open_per_user(
+            pool, guild.id, ceiling=limits.max_tickets_open_per_user
+        )
+        guild_cap = limits.max_tickets_open_per_guild
         try:
             already = await storage.count_open_for_user(pool, guild.id, member.id)
         except Exception:
@@ -239,6 +250,22 @@ class TicketOpenButton(discord.ui.Button):
                 text = text + "\n" + upsell.line
             return await interactions.reply(interaction, text)
 
+        # The per-SERVER cap's own courtesy pre-check. NOT the guard (same
+        # posture as the member cap above) - that is the second clause of the
+        # guarded INSERT in storage.open_ticket. Deliberately NO premium_upsell
+        # call: this is an anti-abuse backstop, not a sales lever.
+        try:
+            already_guild = await storage.count_open_for_guild(pool, guild.id)
+        except Exception:
+            log.exception("tickets: guild open-count check failed")
+            return await interactions.reply(
+                interaction, _("Something went wrong, please try again.")
+            )
+        if already_guild >= guild_cap:
+            return await interactions.reply(
+                interaction, _guild_cap_message(guild_cap)
+            )
+
         if (guild.id, member.id) in _IN_FLIGHT:
             return await interactions.reply(
                 interaction, _("I am already opening a ticket for you - one moment.")
@@ -262,6 +289,17 @@ def _cap_message(cap):
         "You already have {count} tickets open here. Close one before opening another.",
         cap,
     ).format(count=cap)
+
+
+def _guild_cap_message(cap):
+    """The per-SERVER cap's refusal. Deliberately NOT a sales moment: this is
+    an anti-abuse backstop (cogs/config/tickets/storage.MAX_OPEN_PER_GUILD),
+    never advertised and never routed through premium_upsell - no /premium
+    mention here, ever."""
+    return _(
+        "This server has too many open tickets right now ({max}). Please "
+        "wait for staff to close some."
+    ).format(max=cap)
 
 
 async def _create_ticket(interaction, subject):
@@ -340,12 +378,13 @@ async def _open_thread(interaction, guild, member, channel, subject, pool):
     # Re-resolved here rather than carried from the click, like every other
     # configuration value in this flow (the modal may have been open for
     # minutes) - same EFFECTIVE-ceiling reasoning as the courtesy pre-check
-    # above, and the SAME value :func:`storage.open_ticket`'s guarded INSERT
+    # above, and the SAME values :func:`storage.open_ticket`'s guarded INSERT
     # below actually enforces.
-    ceiling = premium.resolve_guild_limits(
-        interaction.client, guild.id
-    ).max_tickets_open_per_user
-    cap = await guild_config.max_open_per_user(pool, guild.id, ceiling=ceiling)
+    limits = premium.resolve_guild_limits(interaction.client, guild.id)
+    cap = await guild_config.max_open_per_user(
+        pool, guild.id, ceiling=limits.max_tickets_open_per_user
+    )
+    guild_cap = limits.max_tickets_open_per_guild
     # The guild's inactivity window IS the thread's auto-archive duration: that
     # is what makes the setting real. Discord then enforces it for free, the
     # archive it fires is what lifecycle.py turns into a close, and no ticket
@@ -369,7 +408,9 @@ async def _open_thread(interaction, guild, member, channel, subject, pool):
         )
 
     try:
-        number = await storage.open_ticket(pool, guild.id, thread.id, member.id, cap)
+        number = await storage.open_ticket(
+            pool, guild.id, thread.id, member.id, cap, guild_cap
+        )
     except Exception:
         log.exception("tickets: recording the ticket failed in guild %s", guild.id)
         await _discard_thread(thread)
@@ -378,28 +419,40 @@ async def _open_thread(interaction, guild, member, channel, subject, pool):
         )
 
     if number is None:
-        # Lost the cap race against another click of our own. The thread is not
-        # a ticket (no row), so it must not survive.
+        # Lost a cap race against another click of our own. The thread is not
+        # a ticket (no row), so it must not survive. The guarded INSERT above
+        # already decided the refusal; these re-reads are best-effort only,
+        # to pick the right message - never a second guard.
         await _discard_thread(thread)
-        text = _cap_message(cap)
-        # The OTHER Discord-facing "tickets_open" refusal site besides the
-        # courtesy pre-check in TicketOpenButton.callback - reached only on
-        # this race loss, but just as real a refusal. Same text-only shape:
-        # tools.interactions.reply has no view= support.
-        upsell = await premium_upsell.for_guild_refusal(
-            interaction.client,
-            limit_key="tickets_open",
-            guild_id=guild.id,
-            person_id=member.id,
-            is_admin=premium_upsell.invoker_is_admin(member),
-            already_top_tier=premium_upsell.is_guild_already_top_tier(
-                interaction.client, guild.id
-            ),
-            benefit=str(premium.GUILD_PREMIUM.max_tickets_open_per_user),
-            allow_button=False,
-        )
-        if upsell is not None:
-            text = text + "\n" + upsell.line
+        try:
+            already = await storage.count_open_for_user(pool, guild.id, member.id)
+        except Exception:
+            log.exception("tickets: open-count re-check failed")
+            already = cap  # default to the member-cap message below
+        if already >= cap:
+            text = _cap_message(cap)
+            # The OTHER Discord-facing "tickets_open" refusal site besides the
+            # courtesy pre-check in TicketOpenButton.callback - reached only on
+            # this race loss, but just as real a refusal. Same text-only shape:
+            # tools.interactions.reply has no view= support.
+            upsell = await premium_upsell.for_guild_refusal(
+                interaction.client,
+                limit_key="tickets_open",
+                guild_id=guild.id,
+                person_id=member.id,
+                is_admin=premium_upsell.invoker_is_admin(member),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    interaction.client, guild.id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_tickets_open_per_user),
+                allow_button=False,
+            )
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+        else:
+            # The server cap refused this one instead. No upsell: anti-abuse,
+            # not a sales lever.
+            text = _guild_cap_message(guild_cap)
         return await interactions.reply(interaction, text)
 
     # The clock starts HERE: on the committed row, not on the click. A member

@@ -31,7 +31,7 @@ import pytest
 
 from cogs.config.tickets import guild_config, storage
 from cogs.config.tickets import open as ticket_open
-from tools import premium, settings
+from tools import premium, premium_upsell, settings
 
 GUILD_ID = 51515
 CHANNEL_ID = 606060
@@ -179,6 +179,37 @@ def _click(pool, *, open_count, premium_resolver=None, guild_id=GUILD_ID, member
     return _Interaction(guild, _Member(member_id), bot)
 
 
+class _DualCountPool:
+    """Answers the click's TWO open-count reads independently: the per-member
+    one (``storage.count_open_for_user``, whose query names ``opener_id``)
+    and the per-SERVER one (``storage.count_open_for_guild``, which does
+    not)."""
+
+    def __init__(self, *, member_count, guild_count):
+        self.member_count = member_count
+        self.guild_count = guild_count
+
+    async def fetchval(self, query, *args):
+        return self.member_count if "opener_id" in query else self.guild_count
+
+
+def _click_with_counts(
+    *,
+    member_count,
+    guild_count,
+    premium_resolver=None,
+    guild_id=GUILD_ID,
+    member_id=MEMBER_ID,
+):
+    channel = _TextChannel()
+    guild = _Guild(channels=[channel], guild_id=guild_id)
+    bot = _Bot(
+        _DualCountPool(member_count=member_count, guild_count=guild_count),
+        premium_resolver=premium_resolver,
+    )
+    return _Interaction(guild, _Member(member_id), bot)
+
+
 # ---------------------------------------------------------------------------
 # guild_config.max_open_per_user / resolve: ceiling resolution
 # ---------------------------------------------------------------------------
@@ -311,6 +342,82 @@ async def test_click_with_a_raising_resolver_resolves_the_free_ceiling():
 # by editing the file back (never git stash/checkout/reset), and the full
 # ticket test suite was re-run green. See this report's "negative controls"
 # section for the exact edit and the failure it produced.
+
+
+# ---------------------------------------------------------------------------
+# L1b: the internal, never-advertised per-SERVER ticket cap - the click's
+# own courtesy pre-check (storage.open_ticket's guarded INSERT is the
+# authority; tests/cogs/test_tickets_storage.py covers that statement
+# directly). Anti-abuse only: no /premium mention, no premium_upsell call.
+# ---------------------------------------------------------------------------
+
+
+async def test_click_is_refused_at_the_server_cap_with_the_anti_abuse_message():
+    """Well under the per-MEMBER cap, but the SERVER itself is full - the
+    refusal names the cap, suggests waiting, and mentions no upgrade."""
+    _seed_with_admin_cap()
+    interaction = _click_with_counts(
+        member_count=0, guild_count=premium.FREE_MAX_TICKETS_OPEN_PER_GUILD
+    )
+
+    await ticket_open.TicketOpenButton().callback(interaction)
+
+    assert interaction.modals == []
+    text = interaction.replies[0]
+    assert str(premium.FREE_MAX_TICKETS_OPEN_PER_GUILD) in text
+    assert "wait" in text.lower()
+    # Anti-abuse backstop, not a sales lever: never a /premium mention here.
+    assert "premium" not in text.lower()
+
+
+async def test_click_is_not_refused_below_the_server_cap():
+    """FREE byte-identical up to the cap: a guild nowhere near its 50-ticket
+    ceiling opens the modal exactly as it did before this lot existed."""
+    _seed_with_admin_cap()
+    interaction = _click_with_counts(member_count=0, guild_count=5)
+
+    await ticket_open.TicketOpenButton().callback(interaction)
+
+    assert len(interaction.modals) == 1
+    assert interaction.replies == []
+
+
+async def test_click_is_refused_at_the_premium_server_ceiling_not_the_free_one():
+    """A premium guild's server cap is 200, not 50 - the SAME count (50)
+    that refuses a free guild must not refuse a premium one."""
+    _seed_with_admin_cap()
+    interaction = _click_with_counts(
+        member_count=0,
+        guild_count=premium.FREE_MAX_TICKETS_OPEN_PER_GUILD,  # 50
+        premium_resolver=_Resolver(premium.GUILD_PREMIUM),
+    )
+
+    await ticket_open.TicketOpenButton().callback(interaction)
+
+    assert len(interaction.modals) == 1  # not refused - premium raises to 200
+    assert interaction.replies == []
+
+
+async def test_server_cap_refusal_never_calls_the_premium_upsell_helper(monkeypatch):
+    """Explicitly NOT wired: unlike the member cap's refusal, this one must
+    never touch tools.premium_upsell at all."""
+    called = False
+
+    async def _fail_if_called(*args, **kwargs):
+        nonlocal called
+        called = True
+        return None
+
+    monkeypatch.setattr(premium_upsell, "for_guild_refusal", _fail_if_called)
+    _seed_with_admin_cap()
+    interaction = _click_with_counts(
+        member_count=0, guild_count=premium.FREE_MAX_TICKETS_OPEN_PER_GUILD
+    )
+
+    await ticket_open.TicketOpenButton().callback(interaction)
+
+    assert called is False
+    assert interaction.modals == []  # the refusal still happened
 
 
 # ---------------------------------------------------------------------------
