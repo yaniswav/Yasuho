@@ -60,6 +60,23 @@ log = logging.getLogger(__name__)
 # an empty queue, or is alone in its voice channel. See the idle-timeout loop.
 IDLE_TIMEOUT = 300
 
+# How long (in seconds) a 24/7 (Yasuho+ M4b) player may keep STREAMING to an
+# empty voice channel before it is paused to stop paying for an audience of
+# nobody - see _apply_no_listener_stop. 24/7 never disconnects for an empty
+# channel (that is the whole feature), but a player left actively playing -
+# a long queue, autoplay radio - still has Lavalink decoding and Discord
+# carrying audio the whole time, which is the feature's real resource cost
+# (CPU, and roughly 31 GB/month of egress per continuously-streamed session).
+#
+# 15 minutes, three times IDLE_TIMEOUT: a 24/7 guild explicitly opted into
+# "stay connected, do not act like a normal idle session", so the bar for
+# this one intervention is deliberately higher than the free-tier timeout -
+# long enough that stepping out of the room for a bathroom break or a round
+# of a game never triggers it, short enough that a room left empty overnight
+# (the common 24/7 case: nobody turned it off before logging off) stops
+# costing real bandwidth well before morning.
+NO_LISTENER_STOP_SECONDS = 15 * 60
+
 # Only resume a persisted player younger than this (seconds). Scopes the
 # survive-restart behaviour to a quick restart, so the bot never rejoins a
 # channel and starts blasting music after a long downtime.
@@ -2248,6 +2265,74 @@ class Music(ServerPlaylistMixin, commands.Cog):
             return False
         return resolve_guild_limits(self.bot, guild_id).music_247
 
+    async def _apply_no_listener_stop(
+        self, player: Player, guild_id: typing.Optional[int], now: float
+    ) -> None:
+        """24/7's one resource guard: pause a player nobody is around to hear.
+
+        24/7 (Yasuho+ M4b) never disconnects for an empty channel or for
+        being idle - callers already short-circuit that above. But a 24/7
+        guild whose queue (or autoplay) keeps a track ACTUALLY PLAYING while
+        the voice channel has sat empty of humans for
+        ``NO_LISTENER_STOP_SECONDS`` is still paying Lavalink's full
+        decode/encode cost and Discord's full voice egress for an audience
+        of nobody - the real resource bill 24/7 asks for, which the empty-
+        channel exception alone does not address.
+
+        The intervention is a PAUSE, not a stop or a disconnect: it changes
+        nothing else (current track, position, queue and autoplay lane all
+        survive untouched - exactly as if a human had pressed the controller's
+        own Pause button), and it never auto-resumes. A human who returns
+        sees the panel's existing "Paused" status and presses Resume
+        themselves - the same control surface pause/resume already had, not
+        a new one. This also means ``_is_idle`` (which already treats a
+        paused player as idle) and the 24/7 branch above keep working
+        unchanged: a player this pauses is simply idle like any other paused
+        24/7 session, clock reset, never torn down.
+
+        ``no_listener_since`` is this tick's ONLY mutation point for that
+        clock (no voice-state listener involved - a once-a-minute read of
+        who is in the channel is resolution enough for a 15-minute bar), and
+        it is reset to None, not just left alone, the moment there is
+        nothing to time: a listener is present, nothing is playing, or the
+        player is already paused (by this guard or by a human) - so a guild
+        that regains a listener gets a FRESH window if it is ever abandoned
+        again, never a clock that kept running underneath.
+        """
+        channel = player.channel
+        has_listener = channel is not None and any(
+            not member.bot for member in channel.members
+        )
+        if has_listener or player.current is None or player.paused:
+            player.no_listener_since = None
+            return
+        if player.no_listener_since is None:
+            player.no_listener_since = now
+            return
+        if now - player.no_listener_since < NO_LISTENER_STOP_SECONDS:
+            return
+        try:
+            await player.pause()
+        except Exception:
+            log.exception("Failed to pause an unattended 24/7 player")
+            return
+        player.no_listener_since = None
+        log.info(
+            "MUSIC-247-IDLE-STOP guild=%s after=%ss",
+            guild_id,
+            NO_LISTENER_STOP_SECONDS,
+        )
+        # Make it visible right away rather than waiting on refresh_progress's
+        # own change-key heuristic, which compares POSITION/duration and can
+        # easily see no change on the very tick that just froze them - the
+        # controller must show "Paused" the moment this guard acts, not
+        # whenever the progress bar next happens to redraw. One edit to the
+        # EXISTING message, no new message, no ping (allowed_mentions.none()
+        # on every controller edit).
+        controller = getattr(player, "controller", None)
+        if controller is not None:
+            await controller._rerender()
+
     @tasks.loop(seconds=60)
     async def _idle_check(self) -> None:
         """Disconnect players that have stayed idle longer than ``IDLE_TIMEOUT``."""
@@ -2280,19 +2365,25 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     controller = getattr(voice_client, "controller", None)
                     if controller is not None:
                         pending.append((voice_client, controller))
+                guild_id = playerinfo.guild_id_of(voice_client)
+                if self._is_247_active(guild_id):
+                    # 24/7: never time out for idleness or an empty channel -
+                    # that is the whole feature. Reset the clock rather than
+                    # freezing it, so a guild that loses 24/7 mid-session
+                    # (expiry, a revocation) starts a FRESH IDLE_TIMEOUT
+                    # countdown from the next tick, instead of disconnecting
+                    # the instant it stops being entitled because the clock
+                    # had already been running underneath for however long
+                    # 24/7 was masking it.
+                    voice_client.idle_since = None
+                    # The one thing 24/7 does NOT get a pass on: an actively
+                    # STREAMING player nobody is around to hear. See the
+                    # method's own docstring for why this is a separate
+                    # check from _is_idle above.
+                    await self._apply_no_listener_stop(voice_client, guild_id, now)
+                    continue
                 if self._is_idle(voice_client):
-                    guild_id = playerinfo.guild_id_of(voice_client)
-                    if self._is_247_active(guild_id):
-                        # 24/7: never time out for idleness or an empty
-                        # channel. Reset the clock rather than freezing it, so
-                        # a guild that loses 24/7 mid-session (expiry, a
-                        # revocation) starts a FRESH IDLE_TIMEOUT countdown
-                        # from the next tick, instead of disconnecting the
-                        # instant it stops being entitled because the clock
-                        # had already been running underneath for however
-                        # long 24/7 was masking it.
-                        voice_client.idle_since = None
-                    elif voice_client.idle_since is None:
+                    if voice_client.idle_since is None:
                         voice_client.idle_since = now
                     elif now - voice_client.idle_since >= IDLE_TIMEOUT:
                         log.info(
@@ -2454,7 +2545,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Cold-restore a single guild's playback, or forget a stale/unusable row.
 
         Rejoins the voice channel and replays the saved track at the
-        extrapolated position, leaving exactly one fresh, working controller.
+        extrapolated position, leaving exactly one fresh, working controller -
+        PAUSED rather than actually playing when the voice channel is empty
+        (24/7's own case; see the ``restore_paused`` local below), so a
+        restart of a 24/7 fleet never comes back streaming to empty rooms.
         """
         guild_id = row["guild_id"]
 
@@ -2476,9 +2570,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # the node-reconnect rejoin pass runs through (_admit_and_join),
         # so a 24/7 guild resumes there too even if the channel is empty right
         # now.
-        if not any(not m.bot for m in channel.members) and not self._is_247_active(
-            guild_id
-        ):
+        channel_has_listener = any(not m.bot for m in channel.members)
+        if not channel_has_listener and not self._is_247_active(guild_id):
             await self._clear(guild_id)
             return
 
@@ -2587,10 +2680,26 @@ class Music(ServerPlaylistMixin, commands.Cog):
             paused=row["paused"],
             length_ms=getattr(current, "length", None),
         )
+        # An empty-channel restore only gets here because 24/7 is active (the
+        # gate above already refused one for any other guild). Rejoining is
+        # right - that is the feature - but STARTING the restored track is
+        # exactly the no-listener-stop gap this lot closes: a cold restart
+        # must not come back blasting audio into an empty room any more than
+        # a live session is allowed to keep doing it (_apply_no_listener_stop).
+        # The position above is still extrapolated from the row's OWN paused
+        # flag (whether it was really playing when it was last saved) - this
+        # only overrides whether playback STARTS now, so Resume lands at the
+        # correct spot whichever reason it was held back for.
+        restore_paused = bool(row["paused"]) or not channel_has_listener
+        if restore_paused and not row["paused"]:
+            log.info(
+                "24/7 restore for guild %s started paused: voice channel is empty",
+                guild_id,
+            )
         await player.play(
             current,
             start=position,
-            paused=bool(row["paused"]),
+            paused=restore_paused,
             # None-check, not "or 100": volume 0 is legitimate (muted) and must
             # not come back at full blast after a restart.
             volume=100 if row["volume"] is None else int(row["volume"]),

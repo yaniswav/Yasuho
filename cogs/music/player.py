@@ -136,6 +136,16 @@ class Player(sonolink.Player):
         # Monotonic timestamp of when this player first became idle, or None
         # while it is active. Maintained by the cog's idle-timeout loop.
         self.idle_since: typing.Optional[float] = None
+        # Monotonic timestamp of when a 24/7 (Yasuho+ M4b) player was last
+        # seen with a non-bot member in its voice channel while actually
+        # playing, or None while a listener is present (or nothing is
+        # playing to listen to). Maintained by the cog's idle-timeout loop -
+        # see Music._apply_no_listener_stop. Deliberately a SEPARATE clock
+        # from idle_since: idle_since is unconditionally reset to None for
+        # every 24/7 player (24/7 never times out for idleness), so it
+        # cannot also carry this duration without losing the ability to
+        # un-mask it the moment entitlement lapses mid-session.
+        self.no_listener_since: typing.Optional[float] = None
         # Radio-mode session state. ``radio_genre`` is the active station's genre
         # key (None outside radio mode); every genre pick sets it and playing an
         # explicit query clears it. ``played_ids`` is the bounded set the refill

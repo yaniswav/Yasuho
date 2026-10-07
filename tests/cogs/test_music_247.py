@@ -130,11 +130,22 @@ class _FakePlayer(Player):
         self.home = channel
         self.controller = None
         self.idle_since = None
+        self.no_listener_since = None
         self.dj = None
         self.disconnect_calls = 0
+        self.pause_calls = 0
+        self.resume_calls = 0
 
     async def disconnect(self, *, force=False):
         self.disconnect_calls += 1
+
+    async def pause(self):
+        self.pause_calls += 1
+        self._paused = True
+
+    async def resume(self):
+        self.resume_calls += 1
+        self._paused = False
 
 
 class _FakeBot:
@@ -473,6 +484,178 @@ async def test_idle_sweep_resumes_normal_timeout_after_expiry(fake_pool):
 
 
 # ---------------------------------------------------------------------------
+# The idle sweeper's 24/7 resource guard: pause a player nobody can hear
+# (_apply_no_listener_stop)
+# ---------------------------------------------------------------------------
+
+
+async def _noop_snapshot(*_args, **_kwargs):
+    """Stand-in for ``Music._snapshot`` - these tests are about the pause
+    decision, not the persisted-state write it would otherwise attempt
+    against a track stub that only models what the pause check itself reads."""
+    return None
+
+
+class _StubController:
+    def __init__(self):
+        self.rerender_calls = 0
+
+    async def _rerender(self):
+        self.rerender_calls += 1
+
+    async def refresh_progress(self):
+        # Also walked by the same tick's refresh_progress_bars (the player
+        # is "current is not None", so it is collected into that batch too) -
+        # a no-op here keeps this test about the pause decision only.
+        return False
+
+
+def _playing_247_setup(fake_pool, *, members, no_listener_since):
+    """A 24/7-active guild 1 whose player has a track CURRENTLY PLAYING."""
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    c._snapshot = _noop_snapshot
+    guild = types.SimpleNamespace(id=1)
+    channel = _FakeChannel(guild=guild, members=members)
+    player = _FakePlayer(channel=channel, current=types.SimpleNamespace(title="T"))
+    player.no_listener_since = no_listener_since
+    bot.voice_clients = [player]
+    return c, player
+
+
+async def test_no_listener_stop_pauses_past_the_threshold(fake_pool, caplog):
+    c, player = _playing_247_setup(
+        fake_pool,
+        members=[_FakeMember(1, bot=True)],  # empty of humans
+        no_listener_since=time.monotonic() - music_mod.NO_LISTENER_STOP_SECONDS - 1,
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+    controller = _StubController()
+    player.controller = controller
+
+    with caplog.at_level("INFO"):
+        await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 1
+    assert player.paused is True
+    assert player.disconnect_calls == 0  # paused, NOT disconnected - still connected
+    assert player.no_listener_since is None  # consumed, not left stale
+    assert controller.rerender_calls == 1  # one quiet edit, no new message
+    assert (
+        "MUSIC-247-IDLE-STOP guild=1 after={0}s".format(
+            music_mod.NO_LISTENER_STOP_SECONDS
+        )
+        in caplog.text
+    )
+
+
+async def test_no_listener_stop_leaves_a_fresh_absence_untouched(fake_pool):
+    # Under the threshold: the clock keeps running, nothing happens yet.
+    c, player = _playing_247_setup(
+        fake_pool,
+        members=[_FakeMember(1, bot=True)],
+        no_listener_since=time.monotonic() - 10,
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+    started_at = player.no_listener_since
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 0
+    assert player.paused is False
+    assert player.no_listener_since == started_at  # unchanged, still ticking
+
+
+async def test_no_listener_stop_resets_the_clock_when_a_human_is_present(fake_pool):
+    # NEGATIVE CONTROL: the exact same stale clock as the first test, but a
+    # human is in the room - proving the guard is about presence, not just
+    # "enough time has passed".
+    c, player = _playing_247_setup(
+        fake_pool,
+        members=[_FakeMember(1, bot=False)],  # a human
+        no_listener_since=time.monotonic() - music_mod.NO_LISTENER_STOP_SECONDS - 1,
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 0
+    assert player.paused is False
+    assert player.no_listener_since is None  # reset, a fresh window next time
+
+
+async def test_no_listener_stop_never_auto_resumes_when_a_human_returns(fake_pool):
+    # A player this guard already paused, now with a human back in the room:
+    # nothing in this codepath ever calls resume() - the human has to press
+    # the controller's own Resume button themselves.
+    c, player = _playing_247_setup(
+        fake_pool,
+        members=[_FakeMember(1, bot=False)],  # a human, back already
+        no_listener_since=None,
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+    player._paused = True  # this is what the earlier auto-pause left behind
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.resume_calls == 0
+    assert player.paused is True  # still paused - no surprise audio
+
+
+async def test_no_listener_stop_skips_a_player_with_nothing_playing(fake_pool):
+    # NEGATIVE CONTROL: nothing current to stream - there is nothing to pause,
+    # so the guard must not touch it even past the threshold.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+    await c.always_on.enable(fake_pool, 1, 10)
+    guild = types.SimpleNamespace(id=1)
+    channel = _FakeChannel(guild=guild, members=[_FakeMember(1, bot=True)])
+    player = _FakePlayer(channel=channel, current=None)
+    player.no_listener_since = time.monotonic() - music_mod.NO_LISTENER_STOP_SECONDS - 1
+    bot.voice_clients = [player]
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 0
+    assert player.no_listener_since is None
+
+
+async def test_no_listener_stop_skips_an_already_paused_player(fake_pool):
+    # NEGATIVE CONTROL: already paused (by a human, or by a previous tick of
+    # this very guard) - nothing left to pause, and no re-log.
+    c, player = _playing_247_setup(
+        fake_pool,
+        members=[_FakeMember(1, bot=True)],
+        no_listener_since=time.monotonic() - music_mod.NO_LISTENER_STOP_SECONDS - 1,
+    )
+    player._paused = True
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 0
+    assert player.no_listener_since is None
+
+
+async def test_no_listener_stop_never_runs_for_a_non_247_guild(fake_pool):
+    # NEGATIVE CONTROL for the whole feature: the free-guild path is
+    # untouched - a non-247 guild never even reaches _apply_no_listener_stop,
+    # it falls straight through to the existing idle/empty-channel teardown.
+    bot = _FakeBot(pool=fake_pool, premium_resolver=_StubPremium(False))
+    c = _make_cog(bot)
+    c._snapshot = _noop_snapshot
+    guild = types.SimpleNamespace(id=1)
+    channel = _FakeChannel(guild=guild, members=[_FakeMember(1, bot=True)])
+    player = _FakePlayer(channel=channel, current=types.SimpleNamespace(title="T"))
+    player.no_listener_since = time.monotonic() - music_mod.NO_LISTENER_STOP_SECONDS - 1
+    bot.voice_clients = [player]
+
+    await music_mod.Music._idle_check.coro(c)
+
+    assert player.pause_calls == 0  # the pause guard never ran for this guild
+
+
+# ---------------------------------------------------------------------------
 # The empty-channel auto-leave (on_voice_state_update) skips a 24/7 guild
 # ---------------------------------------------------------------------------
 
@@ -594,6 +777,151 @@ async def test_restore_one_clears_an_empty_channel_when_not_247(fake_pool):
     await c._restore_one(row, now)
 
     assert bot.decode_calls == 0  # blocked at the empty-channel gate
+
+
+# ---------------------------------------------------------------------------
+# _restore_one starts an empty-channel 24/7 restore PAUSED (never blasts
+# audio to nobody right after a restart)
+# ---------------------------------------------------------------------------
+
+
+class _RestoreQueue:
+    def __init__(self):
+        self._items = []
+        self.mode = None
+        self.current_track = None
+
+    @property
+    def tracks(self):
+        return list(self._items)
+
+    @property
+    def autoplay_tracks(self):
+        return []
+
+    def put(self, item):
+        if isinstance(item, list):
+            self._items.extend(item)
+        else:
+            self._items.append(item)
+
+
+class _RestorePlayer(Player):
+    """Enough of a Player to drive ``_restore_one``'s ``play()`` call with no
+    node or gateway connection - ``autoplay``/``controller`` are redeclared as
+    plain class attributes to shadow the real sonolink descriptors, mirroring
+    ``tests/cogs/test_music_queue_cap.py``'s own ``_RestorePlayer``."""
+
+    autoplay = None
+    controller = None
+
+    def __init__(self, *, channel):
+        self.channel = channel
+        self.home = None
+        self.dj = None
+        self.radio_genre = None
+        self.played_ids = types.SimpleNamespace(add=lambda *a, **k: None)
+        self._queue = _RestoreQueue()
+        self.play_calls = []
+
+    @property
+    def queue(self):
+        return self._queue
+
+    @property
+    def current(self):
+        return self._queue.current_track
+
+    async def play(self, track, **kwargs):
+        self.play_calls.append((track, kwargs))
+        self._queue.current_track = track
+
+
+class _RestoreTrack:
+    def __init__(self, encoded):
+        self.encoded = encoded
+        self.length = 100000
+        self.title = "Track"
+        self.author = "Artist"
+
+
+class _DecodingBot(_FakeBot):
+    """A ``_FakeBot`` whose ``decode_tracks`` hands back real (fake) tracks
+    instead of ``[None]``, so ``_restore_one`` runs all the way to
+    ``player.play()`` instead of stopping at the "could not decode" gate."""
+
+    async def _decode_tracks(self, *args):
+        self.decode_calls += 1
+        return [_RestoreTrack(a) for a in args]
+
+
+async def _no_sponsorblock(*_args, **_kwargs):
+    return False
+
+
+def _restore_cog_for_play(fake_pool, monkeypatch, *, members):
+    """A cog + already-connected player ready to run ``_restore_one`` all the
+    way through, for guild 1's channel 10 with the given voice members."""
+    monkeypatch.setattr(
+        music_mod.guild_config, "sponsorblock_enabled", _no_sponsorblock
+    )
+    bot = _DecodingBot(pool=fake_pool, premium_resolver=_StubPremium(True))
+    c = _make_cog(bot)
+
+    async def _send_controller(player, *, dedupe=False):
+        pass
+
+    c._send_controller = _send_controller
+
+    channel = _RealVoiceChannel(10, members=members)
+    player = _RestorePlayer(channel=channel)
+    guild = _FakeGuild(1, channels={10: channel}, voice_client=player)
+    channel.guild = guild
+    bot._guilds = {1: guild}
+    return c, player
+
+
+async def test_restore_one_forces_paused_when_the_channel_is_empty(
+    fake_pool, monkeypatch
+):
+    c, player = _restore_cog_for_play(
+        fake_pool, monkeypatch, members=[_FakeMember(1, bot=True)]
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    row = _restore_row(1, 10)
+    row["updated_at"] = now
+    row["paused"] = False  # was genuinely playing when it was saved
+
+    await c._restore_one(row, now)
+
+    assert len(player.play_calls) == 1
+    _, kwargs = player.play_calls[0]
+    assert kwargs["paused"] is True  # forced - nobody is in the room
+
+
+async def test_restore_one_does_not_force_paused_with_a_human_present(
+    fake_pool, monkeypatch
+):
+    # NEGATIVE CONTROL: identical restore, but a human is already in the
+    # channel - proving the forced pause is about the empty room, not a
+    # blanket override of every 24/7 restore.
+    c, player = _restore_cog_for_play(
+        fake_pool, monkeypatch, members=[_FakeMember(1, bot=False)]
+    )
+    await c.always_on.enable(fake_pool, 1, 10)
+
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    row = _restore_row(1, 10)
+    row["updated_at"] = now
+    row["paused"] = False
+
+    await c._restore_one(row, now)
+
+    assert len(player.play_calls) == 1
+    _, kwargs = player.play_calls[0]
+    assert kwargs["paused"] is False  # not forced - someone is listening
 
 
 # ---------------------------------------------------------------------------
