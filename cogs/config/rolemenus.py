@@ -965,6 +965,43 @@ class RoleMenus(commands.Cog):
         resources = [{"id": mid, "created_at": mid} for mid in ids]
         return classify_archival(resources, max_menus).is_archived(message_id)
 
+    async def _refuse_creation_with_upsell(self, ctx, text):
+        """Send the ``/rolemenu`` CREATION cap's refusal, with the upsell
+        riding along - same shape as the many ``_refuse_with_upsell`` twins
+        elsewhere (``cogs.music.playlists_shared.ServerPlaylistMixin``'s is the
+        canonical one): this ``ctx.send`` is public (no ``ephemeral=True``), so
+        on slash the upsell goes out as a separate ephemeral followup instead
+        of being merged into the public refusal; on prefix it is appended to
+        the one and only message. Shares the "role_menus" limit key with the
+        archived-menu refusal in :class:`RoleMenuSelect` above - same limit,
+        different symptom.
+        """
+        is_slash = premium_upsell.is_slash_context(ctx)
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key="role_menus",
+            guild_id=ctx.guild.id,
+            person_id=ctx.author.id,
+            is_admin=premium_upsell.invoker_is_admin(ctx.author),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, ctx.guild.id
+            ),
+            benefit=str(premium.GUILD_PREMIUM.max_menus_per_guild),
+            allow_button=is_slash,
+        )
+        if upsell is None:
+            await ctx.send(text)
+            return
+        if not is_slash:
+            await ctx.send(text + "\n" + upsell.line)
+            return
+        await ctx.send(text)
+        followup_kwargs = {"ephemeral": True}
+        view = upsell.view()
+        if view is not None:
+            followup_kwargs["view"] = view
+        await ctx.interaction.followup.send(upsell.line, **followup_kwargs)
+
     @commands.hybrid_command(name="rolemenu", aliases=["selfroles", "rolemenus"])
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
@@ -973,10 +1010,11 @@ class RoleMenus(commands.Cog):
         """Open the self-role menu builder."""
         max_menus = self.effective_max_menus(ctx.guild.id)
         if await self._menu_count(ctx.guild.id) >= max_menus:
-            return await ctx.send(
+            return await self._refuse_creation_with_upsell(
+                ctx,
                 _("This server already has the maximum of {n} role menus.").format(
                     n=max_menus
-                )
+                ),
             )
         draft = {
             "title": _("Pick your roles"),

@@ -561,7 +561,8 @@ class TemporaryRooms(commands.Cog):
             return HubCreation(
                 message=_("You already have the maximum of {max_hubs} hubs.").format(
                     max_hubs=max_hubs
-                )
+                ),
+                cap_reached=True,
             )
         if len(guild.categories) >= MAX_CATEGORIES:
             return HubCreation(

@@ -526,3 +526,126 @@ def test_is_slash_context_reads_ctx_dot_interaction():
 
 def test_is_slash_context_false_on_a_ctx_double_with_no_attribute():
     assert premium_upsell.is_slash_context(types.SimpleNamespace()) is False
+
+
+# ---------------------------------------------------------------------------
+# The real SQL text (M5 review): two defects a Python-level double can never
+# catch, because the double re-implements the RULE in Python rather than
+# running the actual statement - confirmed live on a throwaway Postgres 11
+# container, not reasoned about in the abstract:
+#
+# 1. ``'-infinity'::timestamptz`` as the "never shown before" floor made
+#    Postgres refuse ``now() - '-infinity'`` outright ("cannot subtract
+#    infinite timestamps"), which is the FIRST claim ever made for any
+#    (user, key) pair - i.e. the overwhelmingly common case. ``_try_claim``
+#    caught the exception and failed closed, so no refusal would EVER have
+#    shown an upsell against a real database. Fixed by using
+#    ``'epoch'::timestamptz`` instead - ordinary arithmetic, decades in the
+#    past either way.
+# 2. The claim was not actually atomic: ``ON CONFLICT (...) DO UPDATE SET
+#    shown_at = now()`` with no ``WHERE`` of its own always applies once a
+#    conflict is detected, regardless of what the pre-conflict snapshot's
+#    cooldown check found - so two refusals landing at the same instant for
+#    the SAME (user, key) BOTH got a ``RETURNING`` row (both would have shown
+#    the upsell). Fixed by giving the ``DO UPDATE`` its OWN ``WHERE``, which
+#    Postgres re-evaluates against the fresh, just-committed row after
+#    waiting on the other transaction's lock.
+# ---------------------------------------------------------------------------
+
+
+def test_claim_sql_never_subtracts_from_infinity():
+    """Regression pin for defect 1 above: Postgres raises on
+    ``now() - '-infinity'::timestamptz``, so the "never shown" floor must
+    never be the infinite sentinel."""
+    assert "-infinity" not in premium_upsell._CLAIM_SQL
+
+
+def test_claim_sql_floor_is_ordinary_arithmetic():
+    assert "'epoch'::timestamptz" in premium_upsell._CLAIM_SQL
+
+
+def test_claim_sql_do_update_has_its_own_cooldown_check():
+    """Regression pin for defect 2 above: the conflict-resolution branch must
+    re-check the cooldown itself (not just inherit the pre-conflict snapshot's
+    verdict), or two racing claims for the same key both succeed."""
+    do_update = premium_upsell._CLAIM_SQL.split("DO UPDATE", 1)[1]
+    assert "WHERE" in do_update
+    assert "shown_at" in do_update
+
+
+# ---------------------------------------------------------------------------
+# Translation hygiene (M5 review): _() must run at CALL time, not import time
+# ---------------------------------------------------------------------------
+#
+# THE BUG THIS GUARDS. An earlier version of this file wrote
+# ``_ADMIN_RAISE = _("...")`` at MODULE level - tools.i18n.mark's own
+# docstring names this exact mistake ("strings stored in module-level
+# constants... evaluated at import, outside any command task"). Because
+# import happens once at boot, before any command ever sets the per-
+# invocation locale ContextVar, every upsell line would have been frozen in
+# whatever the DEFAULT locale's catalog said at that moment - forever, for
+# every person, regardless of their own /language setting. Fixed by storing
+# the five lines as ``N_(...)`` (tools.i18n's no-op extraction marker) and
+# calling ``_()`` on the stored marker inside ``_guild_line``/``_user_line``
+# instead - translated once per refusal, against whoever is being refused.
+
+
+def test_the_five_stored_lines_are_untranslated_markers():
+    """``N_`` is an identity function (tools.i18n.mark): the module-level
+    constants must come back out exactly as written, never pre-resolved
+    against some import-time locale."""
+    assert premium_upsell._ADMIN_RAISE == (
+        "Yasuho+ raises this limit to {benefit}. See /premium."
+    )
+    assert premium_upsell._ADMIN_UNLOCK == "Yasuho+ unlocks this. See /premium."
+    assert premium_upsell._MEMBER_RAISE == (
+        "A server admin can raise this limit with /premium."
+    )
+    assert premium_upsell._MEMBER_UNLOCK == (
+        "A server admin can unlock this with /premium."
+    )
+    assert premium_upsell._USER_RAISE == (
+        "Pack Confort raises this limit to {benefit}. See /premium."
+    )
+
+
+def test_guild_line_and_user_line_translate_at_call_time(monkeypatch):
+    """Regression pin for the mechanism itself: ``_guild_line``/``_user_line``
+    must call ``tools.premium_upsell._`` (the module's own bound name) EVERY
+    time they run, feeding it the stored marker - not read a value that was
+    already resolved once and cached. A spy swapped in for ``_`` proves each
+    of the four wordings is actually routed through translation at the call
+    site, not just returned verbatim from the module constant."""
+    calls = []
+
+    def _spy(message):
+        calls.append(message)
+        return "[[" + message + "]]"
+
+    monkeypatch.setattr(premium_upsell, "_", _spy)
+
+    admin_raise = premium_upsell._guild_line(is_admin=True, kind="raise", benefit="75")
+    admin_unlock = premium_upsell._guild_line(is_admin=True, kind="unlock", benefit=None)
+    member_raise = premium_upsell._guild_line(is_admin=False, kind="raise", benefit="75")
+    member_unlock = premium_upsell._guild_line(is_admin=False, kind="unlock", benefit=None)
+    user_raise = premium_upsell._user_line(benefit="300")
+
+    assert calls == [
+        premium_upsell._ADMIN_RAISE,
+        premium_upsell._ADMIN_UNLOCK,
+        premium_upsell._MEMBER_RAISE,
+        premium_upsell._MEMBER_UNLOCK,
+        premium_upsell._USER_RAISE,
+    ]
+    # And the spy's own output made it through the .format() call untouched -
+    # proving translation happens BEFORE formatting, not on an already-
+    # formatted (or already-cached) string.
+    assert admin_raise == "[[Yasuho+ raises this limit to {benefit}. See /premium.]]".format(
+        benefit="75"
+    )
+    assert admin_unlock == "[[Yasuho+ unlocks this. See /premium.]]"
+    assert member_raise == "[[A server admin can raise this limit with /premium.]]"
+    assert member_unlock == "[[A server admin can unlock this with /premium.]]"
+    assert user_raise == "[[Pack Confort raises this limit to {benefit}. See /premium.]]".format(
+        benefit="300"
+    )

@@ -2565,14 +2565,29 @@ class FavouritesCard(AuthorLayoutView):
             # verdict on every call (see the card's own _archived_ids), not a
             # cached one from when the card was built.
             if row["identifier"] in self._archived_ids():
-                await interaction.followup.send(
-                    _(
-                        "That favourite is archived - you are over your "
-                        "current favourites limit. It can be removed, but "
-                        "not played. See /premium for options."
-                    ),
-                    ephemeral=True,
+                text = _(
+                    "That favourite is archived - you are over your "
+                    "current favourites limit. It can be removed, but "
+                    "not played. See /premium for options."
                 )
+                # Shares the "favourites" key with the favourites-full
+                # refusals above - same limit, the archived symptom of it.
+                upsell = await premium_upsell.for_user_refusal(
+                    self.cog.bot,
+                    limit_key="favourites",
+                    person_id=interaction.user.id,
+                    already_top_tier=premium_upsell.is_user_already_top_tier(
+                        self.cog.bot, interaction.user.id
+                    ),
+                    benefit=str(premium.USER_PREMIUM.max_favourites),
+                )
+                send_kwargs = {"ephemeral": True}
+                if upsell is not None:
+                    text = text + "\n" + upsell.line
+                    view = upsell.view()
+                    if view is not None:
+                        send_kwargs["view"] = view
+                await interaction.followup.send(text, **send_kwargs)
                 return False
 
             if not self.cog._nodes_available():

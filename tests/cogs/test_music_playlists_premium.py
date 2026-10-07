@@ -306,6 +306,62 @@ async def test_play_refuses_an_over_long_playlist_without_truncating_it(fake_poo
     assert not any(call[0] in ("execute",) for call in fake_pool.calls)
 
 
+class _DispatchingPool:
+    """Routes ``fetchrow`` by SQL text: the playlist row for the real query,
+    and the real ``tools.premium_upsell`` claim semantics for its own query -
+    unlike the shared ``fake_pool`` fixture (one ``fetchrow_return`` for
+    every call), which would make the upsell's OWN claim read back the
+    playlist row as a truthy "already claimed" sentinel, silently hiding
+    whatever the upsell wiring actually does."""
+
+    def __init__(self, playlist_row, archival_rows):
+        self._playlist_row = playlist_row
+        self._archival_rows = archival_rows
+        self.calls = []
+
+    async def fetchrow(self, query, *args):
+        self.calls.append(("fetchrow", query, args))
+        if "premium_upsells" in query:
+            return {"shown_at": None}  # claim always granted - never shown yet
+        return self._playlist_row
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        return self._archival_rows
+
+    async def execute(self, *args):
+        return "INSERT 0 1"
+
+
+@pytest.mark.asyncio
+async def test_play_refuses_an_archived_playlist_with_the_upsell_line():
+    """ITEM A (M5 review): the archived-playlist PLAY refusal never got the
+    upsell wired at all (only the count/track caps above it did). Closed by
+    routing through ``ServerPlaylistMixin._refuse_with_upsell``."""
+    row = {
+        "name": "c",
+        "creator_id": 10,
+        "tracks": ["enc1", "enc2"],
+        "track_count": 2,
+        "total_ms": 2000,
+        "created_at": _ts(20),
+    }
+    pool = _DispatchingPool(row, _three_playlists_over_cap("c"))
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("decode_tracks must never run for an archived playlist")
+
+    cog = _Cog(pool, _StubLimits(2, 200), manage_guild=True)
+    cog.bot.sl_client = types.SimpleNamespace(decode_tracks=_boom)
+    ctx = _Ctx(author_id=10)
+    ctx.author.guild_permissions = types.SimpleNamespace(manage_guild=True)
+    await ps.ServerPlaylistMixin.serverplaylist_play.callback(cog, ctx, name="c")
+    text = ctx.last_text()
+    assert "archived" in text.lower()
+    assert "Yasuho+ raises this limit to" in text
+    assert str(premium.GUILD_PREMIUM.max_guild_playlists) in text
+
+
 @pytest.mark.asyncio
 async def test_rename_refuses_an_archived_playlist_ephemeral_on_slash(fake_pool):
     fake_pool.fetchrow_return = {
@@ -326,6 +382,35 @@ async def test_rename_refuses_an_archived_playlist_ephemeral_on_slash(fake_pool)
     assert kwargs.get("ephemeral") is True
     # No UPDATE happened.
     assert not any(call[0] == "execute" for call in fake_pool.calls)
+
+
+@pytest.mark.asyncio
+async def test_rename_refuses_an_archived_playlist_with_the_upsell_line():
+    """ITEM A (M5 review): same gap as the PLAY refusal above - the archived-
+    playlist RENAME refusal never got the upsell wired either. This command
+    never defers, so (unlike PLAY) the base refusal is already ephemeral on
+    slash - the upsell rides the SAME message rather than a separate
+    followup."""
+    row = {
+        "name": "c",
+        "creator_id": 10,
+        "track_count": 1,
+        "total_ms": 1000,
+        "created_at": _ts(20),
+    }
+    pool = _DispatchingPool(row, _three_playlists_over_cap("c"))
+    cog = _Cog(pool, _StubLimits(2, 200), manage_guild=True)
+    ctx = _Ctx(author_id=10, interaction=types.SimpleNamespace())  # slash
+    ctx.author.guild_permissions = types.SimpleNamespace(manage_guild=True)
+    await ps.ServerPlaylistMixin.serverplaylist_rename.callback(
+        cog, ctx, old="c", new="renamed"
+    )
+    text = ctx.last_text()
+    assert "archived" in text.lower()
+    assert "Yasuho+ raises this limit to" in text
+    _, kwargs = ctx.sent[-1]
+    assert kwargs.get("ephemeral") is True
+    assert not any(call[0] == "execute" for call in pool.calls)
 
 
 @pytest.mark.asyncio

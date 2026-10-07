@@ -269,10 +269,18 @@ class HubCreation:
     established by the caller from the SAVED hub list, never from this record -
     only the created path appends and saves, and the dashboard executor's
     before/after diff is also what tells it WHICH hub it just created.
+
+    ``cap_reached`` is set True ONLY on the ``can_add_hub`` refusal path (M5):
+    it lets a Discord-facing caller (the Add modal's ``on_submit`` - a TOCTOU
+    race against the panel's own pre-check, or a concurrent dashboard add) know
+    WHY ``message`` refused, so it can offer the premium upsell without
+    string-matching a translated sentence. The dashboard executor ignores this
+    field entirely (no interaction to reply on).
     """
 
     message: str
     orphan_category_id: int | None = None
+    cap_reached: bool = False
 
 
 @dataclass(frozen=True)

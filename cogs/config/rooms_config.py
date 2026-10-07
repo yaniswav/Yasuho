@@ -165,7 +165,32 @@ class AddHubModal(LocaleModal):
             template=(self.template_input.value or "").strip() or DEFAULT_TEMPLATE,
             user_limit=_parse_int(limit_values[0], 0) if limit_values else 0,
         )
-        await interaction.followup.send(outcome.message, ephemeral=True)
+        message = outcome.message
+        send_kwargs = {"ephemeral": True}
+        # M5: a TOCTOU loss against the panel's own _on_add pre-check (another
+        # admin's concurrent add, or the dashboard, slipped in between the
+        # click and this submit) - the ONLY other Discord-facing site that can
+        # still hit the "voice_hubs" cap after _on_add already let this modal
+        # open. Ephemeral followup already in play here, so the button can
+        # ride the same message.
+        if outcome.cap_reached:
+            upsell = await premium_upsell.for_guild_refusal(
+                self.cog.bot,
+                limit_key="voice_hubs",
+                guild_id=interaction.guild.id,
+                person_id=interaction.user.id,
+                is_admin=premium_upsell.invoker_is_admin(interaction.user),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    self.cog.bot, interaction.guild.id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_hubs),
+            )
+            if upsell is not None:
+                message = message + "\n" + upsell.line
+                view = upsell.view()
+                if view is not None:
+                    send_kwargs["view"] = view
+        await interaction.followup.send(message, **send_kwargs)
         await self.panel._rerender()
 
 

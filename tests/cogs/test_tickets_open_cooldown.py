@@ -278,6 +278,36 @@ async def test_an_open_that_never_happened_does_not_start_the_clock():
     assert channel_two.threads_created == 1  # not made to wait
 
 
+class _RaceLossPool(_Pool):
+    """Same TOCTOU-loss shape as ``_Pool(ticket_number=None)``, but routes
+    ``fetchrow`` by query text so the premium_upsell claim query (a
+    DIFFERENT statement, against a different table) does not read back the
+    guarded INSERT's own "declined" sentinel - proving the upsell wiring
+    itself, not an accident of one stub answering two unrelated callers."""
+
+    async def fetchrow(self, query, *args):
+        if "premium_upsells" in query:
+            return {"shown_at": None}  # the claim succeeds
+        return await super().fetchrow(query, *args)
+
+
+async def test_the_toctou_cap_loss_adds_the_upsell_line():
+    """ITEM A (M5 review): the courtesy pre-check (TicketOpenButton.callback)
+    got the upsell wired, but this OTHER "tickets_open" refusal site - losing
+    the cap race against the guarded INSERT itself, after the thread was
+    already created - did not. Closed in ``_open_thread``."""
+    _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
+    refusing = _RaceLossPool(ticket_number=None)
+
+    refused, channel = await _open(refusing)
+
+    assert channel.threads_created == 1
+    text = refused.replies[0]
+    assert "already have" in text
+    assert "/premium" in text
+    assert "raises this limit" in text or "can raise this limit" in text
+
+
 async def test_a_thread_that_could_not_be_created_does_not_start_the_clock():
     _seed({guild_config.KEY_PANEL_CHANNEL: CHANNEL_ID})
     interaction, channel = _context(_Pool())

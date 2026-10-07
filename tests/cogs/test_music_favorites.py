@@ -39,8 +39,10 @@ import types
 
 import discord
 import pytest
+import sonolink
 
 from cogs.music import music, views
+from tools import premium
 
 # A fixed reference instant for rows that do not care about their own
 # ordering (every pre-M4c test here) - only archival-specific tests below
@@ -1006,6 +1008,37 @@ def _text_of(view):
     )
 
 
+async def test_playlist_add_command_adds_the_upsell_at_a_full_list(fake_pool):
+    """ITEM A (M5 review): the controller's quick-favourite button got the
+    upsell wired, but ``/playlist add`` - the OTHER Discord-facing site for
+    the same "favourites" cap - did not. Closed in ``Music.playlist_add``."""
+    cog = _premium_cog(fake_pool, 100)
+    fake_pool.execute_return = "INSERT 0 0"  # the cap guard skipped the insert
+    fake_pool.fetchval_return = None  # and no existing row either -> "full"
+    fake_pool.fetchrow_return = {"shown_at": None}  # the upsell claim succeeds
+
+    class _FakePlayer(sonolink.Player):
+        """A real ``sonolink.Player`` subclass (``playlist_add`` isinstance-
+        checks it), built with no node/gateway, just a current track."""
+
+        def __init__(self, track):
+            self._current = track
+
+        @property
+        def current(self):
+            return self._current
+
+    ctx = _fav_ctx(voice_client=_FakePlayer(_Track("Song")))
+
+    await music.Music.playlist_add.callback(cog, ctx)
+
+    assert len(ctx.sends) == 1
+    text = ctx.sends[0][0][0]
+    assert "favourites are full" in text
+    assert "Pack Confort raises this limit to" in text
+    assert str(100) in text
+
+
 async def test_add_favourite_uses_the_effective_cap_not_the_free_constant(fake_pool):
     """Pack Confort (300) must reach the INSERT guard, not MAX_FAVOURITES (100)."""
     cog = _premium_cog(fake_pool, 300)
@@ -1112,6 +1145,30 @@ async def test_card_play_refuses_an_archived_favourite_pointing_to_premium(
 
     assert played is False
     assert "/premium" in interaction.followups[0][0][0]
+
+
+async def test_card_play_on_an_archived_favourite_adds_the_upsell_line(
+    fake_pool, make_interaction
+):
+    """ITEM A (M5 review): the archived-favourite PLAY refusal pointed to
+    /premium but never actually wired the upsell helper - unlike the
+    favourites-FULL refusals, which did. Closed in
+    ``FavouritesCard._play_one``."""
+    fake_pool.fetchrow_return = {"shown_at": None}  # the upsell claim succeeds
+    cog = _premium_cog(fake_pool, 1)
+    rows = [_row("oldest", added_at=_EPOCH), _row("newest", added_at=_LATER)]
+    card = views.FavouritesCard(cog, 7, _member(7), rows)
+    interaction = _interaction(make_interaction, user_id=7)
+
+    played = await card._play_one(interaction, rows[1])  # "newest": archived
+
+    assert played is False
+    text = interaction.followups[0][0][0]
+    assert "Pack Confort raises this limit to" in text
+    # The catalog's Pack Confort VALUE (what buying it gets you), same as the
+    # already-wired favourites-full refusal above - not this test's own
+    # effective cap of 1.
+    assert str(premium.USER_PREMIUM.max_favourites) in text
 
 
 async def test_card_play_still_works_for_the_active_favourite(

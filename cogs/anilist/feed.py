@@ -1421,10 +1421,24 @@ class AniListFeed(NoPingReplies, commands.Cog):
         ]
         return classify_archival(resources, max_feeds)
 
-    async def _refuse_if_feed_archived(self, guild_id, channel_id):
+    async def _refuse_if_feed_archived(
+        self, guild_id, channel_id, *, person_id=None, is_admin=True
+    ):
         """The standard refusal message when ``channel_id``'s feed is itself
         ARCHIVED over its guild's effective ``max_feeds_per_guild`` (M4a-2),
         else ``None``.
+
+        ``person_id=None`` (the default) preserves the pre-M5 behaviour
+        exactly - no upsell, just the plain text - for any caller (direct or
+        through a test) that has no acting person to attribute a 7-day claim
+        to. Every REAL Discord-facing caller below passes its own
+        ``person_id``; ``is_admin`` defaults to True because every one of
+        them except ``/anilistfeed me``'s own direct call is manage_guild-
+        gated (the panel can only be opened by an admin; every other edit
+        helper this refusal guards is itself behind
+        ``@commands.has_permissions(manage_guild=True)`` or reached only from
+        that same admin panel) - ``/anilistfeed me`` computes its own
+        ``is_admin`` instead of relying on this default.
 
         AN ARCHIVED FEED IS NON-MODIFIABLE (the plan's own rule - see this
         module's docstring): this is the ONE check every entry point that adds
@@ -1453,11 +1467,33 @@ class AniListFeed(NoPingReplies, commands.Cog):
         archival = await self._feed_archival(guild_id)
         if archival.is_active(channel_id):
             return None
-        return _(
+        text = _(
             "This feed is archived - this server is over its current feed "
             "limit. It can be deleted, but not edited. See /premium for "
             "options."
         )
+        if person_id is None:
+            return text
+        # Text-only: this is a shared helper returning a plain string to
+        # callers at several different depths, several of which (the panel's
+        # select/button callbacks) have no easy way to thread a view back
+        # through. "anilist_feeds" is the cap that caused the archival in the
+        # first place.
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key="anilist_feeds",
+            guild_id=guild_id,
+            person_id=person_id,
+            is_admin=is_admin,
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, guild_id
+            ),
+            benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
+            allow_button=False,
+        )
+        if upsell is not None:
+            text = text + "\n" + upsell.line
+        return text
 
     async def _follows_for_feed(self, guild_id, channel_id):
         return await self.bot.db_pool.fetch(
@@ -1486,7 +1522,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
         ]
         return classify_archival(resources, max_follows)
 
-    async def _create_feed(self, guild_id, channel_id):
+    async def _create_feed(self, guild_id, channel_id, person_id=None):
         """Create a feed on ``channel_id``. Returns an error string, else None."""
 
         exists = await self.bot.db_pool.fetchval(
@@ -1505,10 +1541,32 @@ class AniListFeed(NoPingReplies, commands.Cog):
             "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;", guild_id
         )
         if count >= max_feeds:
-            return _(
+            text = _(
                 "This server already has the maximum of {max} feeds. Delete "
                 "one first."
             ).format(max=max_feeds)
+            if person_id is not None:
+                # The panel's only caller (feed_views.py's creation/move
+                # ChannelSelect) is admin-only (the panel requires
+                # manage_guild to open) - same "anilist_feeds" key
+                # `/anilistfeed set` already wires. Text-only:
+                # interactions.reply (the panel's reply surface) has no
+                # view= support.
+                upsell = await premium_upsell.for_guild_refusal(
+                    self.bot,
+                    limit_key="anilist_feeds",
+                    guild_id=guild_id,
+                    person_id=person_id,
+                    is_admin=True,
+                    already_top_tier=premium_upsell.is_guild_already_top_tier(
+                        self.bot, guild_id
+                    ),
+                    benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
+                    allow_button=False,
+                )
+                if upsell is not None:
+                    text = text + "\n" + upsell.line
+            return text
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
             guild_id,
@@ -1516,7 +1574,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
         )
         return None
 
-    async def _move_feed(self, guild_id, old_channel_id, new_channel_id):
+    async def _move_feed(self, guild_id, old_channel_id, new_channel_id, person_id=None):
         """Move a feed (and its follows) to a new channel, in one transaction.
 
         ``channel_id`` is part of the primary key on every table, so a move is
@@ -1546,7 +1604,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
         # or the cap rises again. Checked before the "already a feed"
         # lookup below, cheapest-first.
         archived_error = await self._refuse_if_feed_archived(
-            guild_id, old_channel_id
+            guild_id, old_channel_id, person_id=person_id
         )
         if archived_error:
             return archived_error
@@ -1611,12 +1669,14 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 )
         return None
 
-    async def _set_types(self, guild_id, channel_id, types):
+    async def _set_types(self, guild_id, channel_id, types, person_id=None):
         """Set a feed's activity types. Returns an error string when the
         feed is ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
         ``None`` after the update."""
 
-        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=person_id
+        )
         if error:
             return error
         ordered = sorted(types, key=af.ALLOWED_TYPES.index)
@@ -1629,12 +1689,14 @@ class AniListFeed(NoPingReplies, commands.Cog):
         )
         return None
 
-    async def _toggle_self_add(self, guild_id, channel_id):
+    async def _toggle_self_add(self, guild_id, channel_id, person_id=None):
         """Flip a feed's self-add flag. Returns an error string when the
         feed is ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
         ``None`` after the update."""
 
-        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=person_id
+        )
         if error:
             return error
         await self.bot.db_pool.execute(
@@ -1712,7 +1774,9 @@ class AniListFeed(NoPingReplies, commands.Cog):
         # M4a-2: a title cannot be tracked on an ARCHIVED feed (checked after
         # the input validation above, so a bad title/type is still reported
         # as such rather than masked by the archived message).
-        archived_error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        archived_error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=added_by
+        )
         if archived_error:
             return archived_error
         already = await self.bot.db_pool.fetchval(
@@ -1881,7 +1945,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
             view.message = await interaction.original_response()
         return view
 
-    async def _set_enabled(self, guild_id, channel_id, enabled):
+    async def _set_enabled(self, guild_id, channel_id, enabled, person_id=None):
         """Enable or disable a feed. Returns an error string when the feed is
         ARCHIVED (M4a-2 - see :meth:`_refuse_if_feed_archived`), else
         ``None`` after the update.
@@ -1894,7 +1958,9 @@ class AniListFeed(NoPingReplies, commands.Cog):
         prevent.
         """
 
-        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=person_id
+        )
         if error:
             return error
         await self.bot.db_pool.execute(
@@ -2035,25 +2101,62 @@ class AniListFeed(NoPingReplies, commands.Cog):
             added_by,
         )
 
-    async def _add_follow(self, guild_id, channel_id, user_id, name, added_by):
+    async def _add_follow(
+        self, guild_id, channel_id, user_id, name, added_by, *, offer_upsell=True
+    ):
         """Insert/refresh a follow, enforcing the per-feed cap.
 
         Returns an error string when the FEED itself is ARCHIVED (M4a-2 -
         see :meth:`_refuse_if_feed_archived`) or already at the guild's
         CURRENT effective ``max_follows_per_feed`` (the FREE value is
         :data:`af.MAX_FOLLOWS_PER_FEED`), else None.
+
+        ``offer_upsell=False`` (the moderator ``/anilistfeed follow`` command
+        passes this) skips embedding the upsell into the returned text
+        entirely: that command's ``ctx.send`` is PUBLIC, and this method
+        cannot tell its caller WHICH of the two refusal reasons fired without
+        a second return channel, so there is no safe way to route a "merge
+        into the public text" caller through the usual separate-ephemeral-
+        followup pattern from inside here. The panel's ``AddFollowModal``
+        (``offer_upsell=True``, the default) replies through
+        ``tools.interactions.reply``, which IS ephemeral by default, so
+        merging is safe there.
         """
 
-        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=added_by if offer_upsell else None
+        )
         if error:
             return error
         if not await self._follow_exists(guild_id, channel_id, user_id):
             max_follows = self._guild_limits(guild_id).max_follows_per_feed
             count = await self._follow_count(guild_id, channel_id)
             if count >= max_follows:
-                return _(
+                text = _(
                     "This feed already follows the maximum of {max} users."
                 ).format(max=max_follows)
+                if offer_upsell:
+                    # The two callers (the moderator `/anilistfeed follow`
+                    # command and the panel's AddFollowModal, same as
+                    # _AddFollowButton's own pre-check above) are both
+                    # manage_guild-gated - is_admin is never False on this
+                    # path. Text-only: this method returns a plain string, no
+                    # caller-specific view to attach it to.
+                    upsell = await premium_upsell.for_guild_refusal(
+                        self.bot,
+                        limit_key="anilist_follows",
+                        guild_id=guild_id,
+                        person_id=added_by,
+                        is_admin=True,
+                        already_top_tier=premium_upsell.is_guild_already_top_tier(
+                            self.bot, guild_id
+                        ),
+                        benefit=str(premium.GUILD_PREMIUM.max_follows_per_feed),
+                        allow_button=False,
+                    )
+                    if upsell is not None:
+                        text = text + "\n" + upsell.line
+                return text
         await self._insert_follow(guild_id, channel_id, user_id, name, added_by)
         return None
 
@@ -2157,7 +2260,7 @@ class AniListFeed(NoPingReplies, commands.Cog):
             username,
         )
 
-    async def _add_mute(self, guild_id, channel_id, user_id, name):
+    async def _add_mute(self, guild_id, channel_id, user_id, name, person_id=None):
         """Insert/refresh a mute, enforcing the per-feed cap.
 
         The cap is the guild's CURRENT effective ``max_follows_per_feed``
@@ -2179,7 +2282,9 @@ class AniListFeed(NoPingReplies, commands.Cog):
         per the plan's "archived = non-modifiable" rule.
         """
 
-        error = await self._refuse_if_feed_archived(guild_id, channel_id)
+        error = await self._refuse_if_feed_archived(
+            guild_id, channel_id, person_id=person_id
+        )
         if error:
             return error
         already = await self.bot.db_pool.fetchval(
@@ -2193,9 +2298,29 @@ class AniListFeed(NoPingReplies, commands.Cog):
             max_follows = self._guild_limits(guild_id).max_follows_per_feed
             count = await self._mute_count(guild_id, channel_id)
             if count >= max_follows:
-                return _(
+                text = _(
                     "This feed already mutes the maximum of {max} users."
                 ).format(max=max_follows)
+                if person_id is not None:
+                    # Derived from the same "anilist_follows" cap a feed can
+                    # never mute more than it follows - both callers
+                    # (the moderator `/anilistfeed mute` command and the
+                    # panel's mute manager) are manage_guild-gated.
+                    upsell = await premium_upsell.for_guild_refusal(
+                        self.bot,
+                        limit_key="anilist_follows",
+                        guild_id=guild_id,
+                        person_id=person_id,
+                        is_admin=True,
+                        already_top_tier=premium_upsell.is_guild_already_top_tier(
+                            self.bot, guild_id
+                        ),
+                        benefit=str(premium.GUILD_PREMIUM.max_follows_per_feed),
+                        allow_button=False,
+                    )
+                    if upsell is not None:
+                        text = text + "\n" + upsell.line
+                return text
         await self.bot.db_pool.execute(
             "INSERT INTO anilist_feed_mutes "
             "(guild_id, channel_id, anilist_user_id, anilist_username) "
@@ -2349,9 +2474,24 @@ class AniListFeed(NoPingReplies, commands.Cog):
         elif not row["enabled"]:
             # M4a-2: re-enabling is an edit too, refused the same way the
             # panel's Enable/Disable button is (_set_enabled).
+            #
+            # No ``person_id`` passed to ``_set_enabled`` here: this command's
+            # ``ctx.send`` is PUBLIC (no ``ephemeral=True`` anywhere in this
+            # command tree, like ``_refuse_with_upsell``'s own docstring says),
+            # so embedding the upsell into the returned text would put it in
+            # a public message on slash - the plan requires EPHEMERE. Routed
+            # through ``_refuse_with_upsell`` instead, which keeps the base
+            # refusal public and sends the upsell as a separate ephemeral
+            # followup (or appends it on prefix, where there is no ephemeral
+            # concept at all).
             error = await self._set_enabled(ctx.guild.id, target.id, True)
             if error:
-                return await ctx.send(error)
+                return await self._refuse_with_upsell(
+                    ctx,
+                    error,
+                    limit_key="anilist_feeds",
+                    benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
+                )
             message = _("AniList feed re-enabled in {channel}.").format(
                 channel=target.mention
             )
@@ -2378,8 +2518,14 @@ class AniListFeed(NoPingReplies, commands.Cog):
         if error:
             return await ctx.send(error)
 
+        # offer_upsell=False: this command's ctx.send is PUBLIC (see
+        # _add_follow's own docstring) - the upsell must never ride a public
+        # slash reply, and this call site cannot tell archived from
+        # cap-exceeded without a second return channel to safely split the
+        # two into a separate ephemeral followup. Left unwired rather than
+        # risking a public leak; the panel's AddFollowModal still offers it.
         error = await self._add_follow(
-            ctx.guild.id, channel_id, user_id, name, ctx.author.id
+            ctx.guild.id, channel_id, user_id, name, ctx.author.id, offer_upsell=False
         )
         if error:
             return await ctx.send(error)
@@ -2448,8 +2594,14 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 ).format(name=name)
             )
 
+        # No person_id here, same reasoning as anilistfeed_follow just above:
+        # this command's ctx.send is PUBLIC, and the upsell must never ride a
+        # public slash reply. The panel's mute manager still offers it.
         error = await self._add_mute(
-            ctx.guild.id, channel_id, row["anilist_user_id"], row["anilist_username"]
+            ctx.guild.id,
+            channel_id,
+            row["anilist_user_id"],
+            row["anilist_username"],
         )
         if error:
             return await ctx.send(error)
@@ -2662,11 +2814,20 @@ class AniListFeed(NoPingReplies, commands.Cog):
         # exactly like a moderator's own `/anilistfeed follow` - but only
         # reached here, AFTER both leave branches above, so leaving an
         # archived feed always keeps working.
-        archived_error = await self._refuse_if_feed_archived(
-            ctx.guild.id, channel_id
-        )
+        #
+        # No ``person_id`` here either, same reasoning as anilistfeed_set's
+        # re-enable branch above: this command's ``ctx.send`` is PUBLIC (see
+        # the follows-cap refusal right below, which already goes through
+        # ``_refuse_with_upsell`` for exactly this reason) - routed the same
+        # way rather than risking the upsell in a public slash message.
+        archived_error = await self._refuse_if_feed_archived(ctx.guild.id, channel_id)
         if archived_error:
-            return await ctx.send(archived_error)
+            return await self._refuse_with_upsell(
+                ctx,
+                archived_error,
+                limit_key="anilist_feeds",
+                benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
+            )
 
         max_follows = self._guild_limits(ctx.guild.id).max_follows_per_feed
         count = await self._follow_count(ctx.guild.id, channel_id)

@@ -21,13 +21,31 @@ THE 7-DAY CLAIM, AS ONE ATOMIC UPSERT. There is no separate "check" then
 a ``WHERE`` clause comparing against the most recent of the specific key's own
 row and the ``'*'`` sentinel (see schema.sql's ``premium_upsells`` for why the
 sentinel implements "opening /premium resets every key" without needing one
-row per key up front). This is deliberately a plain indexed round trip, not an
-in-memory LRU: showing an upsell only happens on a refusal, and a refusal is
-by definition rare (the guild/user is already failing a cap check it usually
-passes) - an LRU would need no eviction logic worth the complexity for
-something this infrequent, and a DB-backed claim is naturally correct across
-a restart (no "forgot it already nagged this week" after a redeploy) with no
-separate cache-invalidation path to keep in sync with ``/premium`` opening.
+row per key up front). Two refusals racing for the SAME (user, key) are
+resolved by Postgres itself, not by this clause alone: the loser of a
+concurrent INSERT is routed through ``ON CONFLICT ... DO UPDATE``, whose OWN
+``WHERE`` re-reads the conflicting row (and the sentinel, via a fresh
+subquery) AFTER waiting on the winner's row lock - so the loser's claim is
+re-checked against what the winner just committed, not against the stale
+snapshot the statement started with. Without that second ``WHERE`` (an
+earlier version of this query had none), two refusals landing in the same
+instant both got ``RETURNING`` a row - both shown the upsell - because
+``ON CONFLICT DO UPDATE`` with no ``WHERE`` of its own always applies,
+whatever the pre-conflict snapshot said; confirmed on a throwaway Postgres 11
+container and closed by moving the cooldown check onto the conflict action
+itself. (The sentinel comparison also used ``'-infinity'::timestamptz`` as
+its "never shown" floor at first, which Postgres refuses to subtract ``now()``
+from at all - ``cannot subtract infinite timestamps`` - meaning the very
+FIRST claim for any (user, key) pair, the overwhelmingly common case, always
+raised and fell through to "show nothing". ``'epoch'::timestamptz`` is ordinary
+arithmetic and was the fix.) This is deliberately a plain indexed round trip,
+not an in-memory LRU: showing an upsell only happens on a refusal, and a
+refusal is by definition rare (the guild/user is already failing a cap check
+it usually passes) - an LRU would need no eviction logic worth the complexity
+for something this infrequent, and a DB-backed claim is naturally correct
+across a restart (no "forgot it already nagged this week" after a redeploy)
+with no separate cache-invalidation path to keep in sync with ``/premium``
+opening.
 
 FAIL CLOSED ON NAGGING. If the claim write raises (pool unavailable, a
 transient error), :func:`_try_claim` logs and returns ``False`` - the caller
@@ -68,7 +86,7 @@ import logging
 import discord
 
 from tools import premium
-from tools.i18n import _
+from tools.i18n import N_, _
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +124,7 @@ class Upsell:
 
 _CLAIM_SQL = """
 WITH latest AS (
-    SELECT COALESCE(MAX(shown_at), '-infinity'::timestamptz) AS last_shown
+    SELECT COALESCE(MAX(shown_at), 'epoch'::timestamptz) AS last_shown
     FROM premium_upsells
     WHERE user_id = $1 AND limit_key IN ($2, $4)
 )
@@ -114,7 +132,14 @@ INSERT INTO premium_upsells (user_id, limit_key, shown_at)
 SELECT $1, $2, now()
 FROM latest
 WHERE now() - latest.last_shown >= $3
-ON CONFLICT (user_id, limit_key) DO UPDATE SET shown_at = now()
+ON CONFLICT (user_id, limit_key) DO UPDATE
+    SET shown_at = now()
+    WHERE now() - GREATEST(
+        premium_upsells.shown_at,
+        (SELECT COALESCE(MAX(p2.shown_at), 'epoch'::timestamptz)
+         FROM premium_upsells p2
+         WHERE p2.user_id = $1 AND p2.limit_key = $4)
+    ) >= $3
 RETURNING shown_at
 """
 
@@ -175,26 +200,40 @@ async def mark_premium_opened(pool, user_id):
 # {benefit}"); "unlock" is for a binary capability with no number to show
 # (music_247 today - Yasuho+ does not raise a 24/7 ceiling, it turns the
 # feature on at all).
+#
+# N_ (not _): these five live in MODULE-LEVEL constants, evaluated once at
+# import - exactly the case tools.i18n.mark's own docstring warns about
+# ("strings stored in module-level constants... evaluated at import, outside
+# any command task"). A fresh review (M5) caught an earlier version of this
+# file calling ``_()`` here instead: that froze every upsell line in
+# whatever locale was active at IMPORT time (the default locale, since
+# import happens at boot, before any command ever sets the per-invocation
+# ContextVar) - every /language user would have seen the SAME English text
+# forever, the one translation call this module never gets to redo per
+# invocation. ``_guild_line``/``_user_line`` below translate the stored
+# marker at the actual call site instead, inside the task that is handling
+# one specific person's refusal - the same seam every other cog's N_-marked
+# constant already uses.
 
-_ADMIN_RAISE = _("Yasuho+ raises this limit to {benefit}. See /premium.")
-_ADMIN_UNLOCK = _("Yasuho+ unlocks this. See /premium.")
-_MEMBER_RAISE = _("A server admin can raise this limit with /premium.")
-_MEMBER_UNLOCK = _("A server admin can unlock this with /premium.")
-_USER_RAISE = _("Pack Confort raises this limit to {benefit}. See /premium.")
+_ADMIN_RAISE = N_("Yasuho+ raises this limit to {benefit}. See /premium.")
+_ADMIN_UNLOCK = N_("Yasuho+ unlocks this. See /premium.")
+_MEMBER_RAISE = N_("A server admin can raise this limit with /premium.")
+_MEMBER_UNLOCK = N_("A server admin can unlock this with /premium.")
+_USER_RAISE = N_("Pack Confort raises this limit to {benefit}. See /premium.")
 
 
 def _guild_line(*, is_admin, kind, benefit):
     if is_admin:
         if kind == "unlock":
-            return _ADMIN_UNLOCK
-        return _ADMIN_RAISE.format(benefit=benefit)
+            return _(_ADMIN_UNLOCK)
+        return _(_ADMIN_RAISE).format(benefit=benefit)
     if kind == "unlock":
-        return _MEMBER_UNLOCK
-    return _MEMBER_RAISE
+        return _(_MEMBER_UNLOCK)
+    return _(_MEMBER_RAISE)
 
 
 def _user_line(*, benefit):
-    return _USER_RAISE.format(benefit=benefit)
+    return _(_USER_RAISE).format(benefit=benefit)
 
 
 def _button(sku_id):

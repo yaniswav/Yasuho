@@ -381,7 +381,26 @@ async def _open_thread(interaction, guild, member, channel, subject, pool):
         # Lost the cap race against another click of our own. The thread is not
         # a ticket (no row), so it must not survive.
         await _discard_thread(thread)
-        return await interactions.reply(interaction, _cap_message(cap))
+        text = _cap_message(cap)
+        # The OTHER Discord-facing "tickets_open" refusal site besides the
+        # courtesy pre-check in TicketOpenButton.callback - reached only on
+        # this race loss, but just as real a refusal. Same text-only shape:
+        # tools.interactions.reply has no view= support.
+        upsell = await premium_upsell.for_guild_refusal(
+            interaction.client,
+            limit_key="tickets_open",
+            guild_id=guild.id,
+            person_id=member.id,
+            is_admin=premium_upsell.invoker_is_admin(member),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                interaction.client, guild.id
+            ),
+            benefit=str(premium.GUILD_PREMIUM.max_tickets_open_per_user),
+            allow_button=False,
+        )
+        if upsell is not None:
+            text = text + "\n" + upsell.line
+        return await interactions.reply(interaction, text)
 
     # The clock starts HERE: on the committed row, not on the click. A member
     # whose open was refused by the cap, failed on permissions, or died on a

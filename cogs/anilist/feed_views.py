@@ -17,7 +17,7 @@ import discord
 
 from . import feed_policy as af
 from .feed_delivery import _run_add, _run_like, _run_reply
-from tools import i18n, interactions
+from tools import i18n, interactions, premium, premium_upsell
 from tools.i18n import N_, _, ngettext
 from tools.premium_archive import classify as classify_archival
 from tools.views import (
@@ -212,10 +212,15 @@ class _FeedChannelSelect(discord.ui.ChannelSelect):
             target = self.values[0]
             cog = self._owner.cog
             if self._owner.selected_channel_id is None:
-                error = await cog._create_feed(self._owner.guild.id, target.id)
+                error = await cog._create_feed(
+                    self._owner.guild.id, target.id, person_id=interaction.user.id
+                )
             else:
                 error = await cog._move_feed(
-                    self._owner.guild.id, self._owner.selected_channel_id, target.id
+                    self._owner.guild.id,
+                    self._owner.selected_channel_id,
+                    target.id,
+                    person_id=interaction.user.id,
                 )
             if error:
                 return await interactions.reply(interaction, error)
@@ -255,7 +260,10 @@ class _TypeToggleButton(discord.ui.Button):
             else:
                 types.add(self.type_key)
             error = await self._owner.cog._set_types(
-                self._owner.guild.id, self._owner.selected_channel_id, types
+                self._owner.guild.id,
+                self._owner.selected_channel_id,
+                types,
+                person_id=interaction.user.id,
             )
             if error:
                 return await interactions.reply(interaction, error)
@@ -283,7 +291,9 @@ class _SelfAddToggleButton(discord.ui.Button):
     async def callback(self, interaction):
         try:
             error = await self._owner.cog._toggle_self_add(
-                self._owner.guild.id, self._owner.selected_channel_id
+                self._owner.guild.id,
+                self._owner.selected_channel_id,
+                person_id=interaction.user.id,
             )
             if error:
                 return await interactions.reply(interaction, error)
@@ -468,13 +478,29 @@ class _TrackTitleButton(discord.ui.Button):
     async def callback(self, interaction):
         try:
             if self._manager.at_cap:
-                return await interactions.reply(
-                    interaction,
-                    _(
-                        "This feed already tracks the maximum of {max} titles. "
-                        "Remove one first."
-                    ).format(max=self._manager.max_subs),
+                text = _(
+                    "This feed already tracks the maximum of {max} titles. "
+                    "Remove one first."
+                ).format(max=self._manager.max_subs)
+                # Same "anilist_subs" key `_add_channel_sub`'s own cap check
+                # uses - this is just the panel's pre-check before opening the
+                # search modal. The panel is admin-only (manage_guild to
+                # open), and tools.interactions.reply has no view= support.
+                upsell = await premium_upsell.for_guild_refusal(
+                    self._manager.cog.bot,
+                    limit_key="anilist_subs",
+                    guild_id=self._manager.guild.id,
+                    person_id=interaction.user.id,
+                    is_admin=True,
+                    already_top_tier=premium_upsell.is_guild_already_top_tier(
+                        self._manager.cog.bot, self._manager.guild.id
+                    ),
+                    benefit=str(premium.GUILD_PREMIUM.max_subs_per_feed),
+                    allow_button=False,
                 )
+                if upsell is not None:
+                    text = text + "\n" + upsell.line
+                return await interactions.reply(interaction, text)
             await interaction.response.send_modal(_TrackTitleModal(self._manager))
         except Exception:
             log.exception("AniList feed panel track-title launch failed")
@@ -779,7 +805,11 @@ class _MuteToggleSelect(discord.ui.Select):
                 )
             else:
                 error = await manager.cog._add_mute(
-                    manager.guild.id, manager.channel_id, user_id, name
+                    manager.guild.id,
+                    manager.channel_id,
+                    user_id,
+                    name,
+                    person_id=interaction.user.id,
                 )
                 note = error or _(
                     "**{name}** is hidden here. They stay followed, so other "
@@ -1010,7 +1040,10 @@ class _EnableButton(discord.ui.Button):
         try:
             enabled = bool(self._owner.selected_feed["enabled"])
             error = await self._owner.cog._set_enabled(
-                self._owner.guild.id, self._owner.selected_channel_id, not enabled
+                self._owner.guild.id,
+                self._owner.selected_channel_id,
+                not enabled,
+                person_id=interaction.user.id,
             )
             if error:
                 return await interactions.reply(interaction, error)
@@ -1138,12 +1171,29 @@ class _AddFollowButton(discord.ui.Button):
         try:
             max_follows = self._owner.limits.max_follows_per_feed
             if len(self._owner.follows) >= max_follows:
-                return await interactions.reply(
-                    interaction,
-                    _("This feed already follows the maximum of {max} users.").format(
-                        max=max_follows
+                text = _(
+                    "This feed already follows the maximum of {max} users."
+                ).format(max=max_follows)
+                # The panel is admin-only (opening it requires manage_guild -
+                # see AniListFeedPanel's own docstring), so is_admin is never
+                # False on this path. tools.interactions.reply has no view=
+                # support, so this site's upsell is text-only, same as every
+                # other reply()-shaped refusal in this cog's panel.
+                upsell = await premium_upsell.for_guild_refusal(
+                    self._owner.cog.bot,
+                    limit_key="anilist_follows",
+                    guild_id=self._owner.guild.id,
+                    person_id=interaction.user.id,
+                    is_admin=True,
+                    already_top_tier=premium_upsell.is_guild_already_top_tier(
+                        self._owner.cog.bot, self._owner.guild.id
                     ),
+                    benefit=str(premium.GUILD_PREMIUM.max_follows_per_feed),
+                    allow_button=False,
                 )
+                if upsell is not None:
+                    text = text + "\n" + upsell.line
+                return await interactions.reply(interaction, text)
             await interaction.response.send_modal(AddFollowModal(self._owner))
         except Exception:
             log.exception("AniList feed panel add-follow launch failed")

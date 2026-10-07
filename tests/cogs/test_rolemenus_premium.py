@@ -16,6 +16,7 @@ Typography rule: ASCII '-' and '...' only.
 
 from __future__ import annotations
 
+import datetime
 import types
 from unittest import mock
 
@@ -74,7 +75,11 @@ async def test_rolemenu_command_refuses_at_the_free_cap_and_names_it(fake_pool):
     fake_pool.fetchval_return = premium.FREE_MAX_MENUS_PER_GUILD
     cog = RoleMenus(_bot(fake_pool))
     ctx = types.SimpleNamespace(
-        guild=types.SimpleNamespace(id=1), channel=types.SimpleNamespace(id=2)
+        guild=types.SimpleNamespace(id=1),
+        channel=types.SimpleNamespace(id=2),
+        author=types.SimpleNamespace(
+            id=99, guild_permissions=types.SimpleNamespace(manage_guild=True)
+        ),
     )
     sent = []
 
@@ -109,7 +114,11 @@ async def test_rolemenu_command_refuses_at_the_premium_cap_and_names_it(fake_poo
     fake_pool.fetchval_return = premium.GUILD_PREMIUM.max_menus_per_guild
     cog = RoleMenus(_bot(fake_pool, _Resolver(premium.GUILD_PREMIUM)))
     ctx = types.SimpleNamespace(
-        guild=types.SimpleNamespace(id=1), channel=types.SimpleNamespace(id=2)
+        guild=types.SimpleNamespace(id=1),
+        channel=types.SimpleNamespace(id=2),
+        author=types.SimpleNamespace(
+            id=99, guild_permissions=types.SimpleNamespace(manage_guild=True)
+        ),
     )
     sent = []
 
@@ -121,6 +130,69 @@ async def test_rolemenu_command_refuses_at_the_premium_cap_and_names_it(fake_poo
     await cog.rolemenu.callback(cog, ctx)
 
     assert len(sent) == 1
+    assert str(premium.GUILD_PREMIUM.max_menus_per_guild) in sent[0]
+
+
+class _WorkingUpsellPool:
+    """A ``fake_pool``-shaped double whose ``fetchrow``/``execute`` implement
+    the REAL semantics of ``tools.premium_upsell``'s claim query (not just a
+    configurable return), so a test can prove the upsell line actually gets
+    appended - the generic ``fake_pool`` fixture's ``fetchrow_return=None``
+    default makes every upsell silently no-op, which proves nothing about the
+    happy path (see tests/cogs/test_reminders_upsell.py's own module
+    docstring for the same point)."""
+
+    def __init__(self):
+        self.fetchval_return = None
+        self._rows = {}
+
+    async def fetchval(self, query, *args):
+        return self.fetchval_return
+
+    async def fetchrow(self, query, user_id, limit_key, cooldown, sentinel):
+        now = datetime.datetime(2026, 1, 8, tzinfo=datetime.timezone.utc)
+        candidates = [
+            self._rows[k] for k in ((user_id, limit_key), (user_id, sentinel)) if k in self._rows
+        ]
+        last_shown = max(candidates) if candidates else datetime.datetime.min.replace(
+            tzinfo=datetime.timezone.utc
+        )
+        if now - last_shown < cooldown:
+            return None
+        self._rows[(user_id, limit_key)] = now
+        return {"shown_at": now}
+
+    async def execute(self, *args):
+        return "INSERT 0 1"
+
+
+async def test_rolemenu_command_adds_the_upsell_line_at_the_cap():
+    """ITEM A (M5 review): the implementer wired the archived-menu grant
+    refusal in RoleMenuSelect but missed the CREATION cap itself - the
+    ``/rolemenu`` command's own refusal never got the upsell. Closed by
+    ``RoleMenus._refuse_creation_with_upsell``; this proves the line actually
+    rides along, not just that the call does not crash."""
+    pool = _WorkingUpsellPool()
+    pool.fetchval_return = premium.FREE_MAX_MENUS_PER_GUILD
+    cog = RoleMenus(_bot(pool))
+    ctx = types.SimpleNamespace(
+        guild=types.SimpleNamespace(id=1),
+        channel=types.SimpleNamespace(id=2),
+        author=types.SimpleNamespace(
+            id=99, guild_permissions=types.SimpleNamespace(manage_guild=True)
+        ),
+    )
+    sent = []
+
+    async def _send(*args, **kwargs):
+        sent.append(args[0] if args else None)
+
+    ctx.send = _send
+
+    await cog.rolemenu.callback(cog, ctx)
+
+    assert len(sent) == 1
+    assert "Yasuho+ raises this limit to" in sent[0]
     assert str(premium.GUILD_PREMIUM.max_menus_per_guild) in sent[0]
 
 

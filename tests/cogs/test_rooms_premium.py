@@ -129,6 +129,25 @@ async def test_add_hub_refuses_at_the_free_cap_and_names_it():
 
     assert str(MAX_HUBS) in outcome.message
     assert outcome.orphan_category_id is None
+    assert outcome.cap_reached is True
+
+
+async def test_add_hub_below_the_cap_never_sets_cap_reached():
+    """``cap_reached`` must stay False on every OTHER refusal (Discord's own
+    category/channel-budget limits) - it exists only to let a Discord-facing
+    caller (M5's AddHubModal.on_submit) distinguish the premium-raisable
+    "voice_hubs" refusal from one an upsell can never help with."""
+    cog = _cog([])
+    guild = types.SimpleNamespace(
+        id=GUILD_ID, categories=[object()] * 50, channels=[]
+    )
+
+    outcome = await cog._add_hub(
+        guild, label="New", category_name="cat", hub_name="hub",
+        template="{user}", user_limit=0,
+    )
+
+    assert outcome.cap_reached is False
 
 
 def test_premium_guild_is_not_capped_at_the_free_hub_count():

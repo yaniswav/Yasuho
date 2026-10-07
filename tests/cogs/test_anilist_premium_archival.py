@@ -78,9 +78,10 @@ class _FakePool:
     written.
     """
 
-    def __init__(self, fetch_results=None, fetchval_results=None):
+    def __init__(self, fetch_results=None, fetchval_results=None, fetchrow_results=None):
         self._fetch_results = fetch_results or []
         self._fetchval_results = fetchval_results or []
+        self._fetchrow_results = fetchrow_results or []
         self.executes = []
 
     async def fetch(self, sql, *args):
@@ -96,6 +97,9 @@ class _FakePool:
         return 0
 
     async def fetchrow(self, sql, *args):
+        for substring, value in self._fetchrow_results:
+            if substring in sql:
+                return value
         return None
 
     async def execute(self, sql, *args):
@@ -242,6 +246,43 @@ async def test_create_feed_accepted_just_under_the_premium_cap():
     assert any("INSERT INTO anilist_feeds" in sql for sql, _args in pool.executes)
 
 
+async def test_create_feed_at_the_cap_adds_the_upsell_when_given_a_person_id():
+    """ITEM A (M5 review): the panel's own feed-creation path (the
+    ChannelSelect shown when no feed exists yet) shares ``_create_feed``
+    with no caller ever offering the upsell. Closed by threading the
+    panel's ``interaction.user.id`` through as ``person_id``."""
+    pool = _FakePool(
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_feeds", None),
+            ("SELECT COUNT(*) FROM anilist_feeds", af.MAX_FEEDS_PER_GUILD),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool)
+
+    error = await cog._create_feed(GUILD, 100, person_id=9)
+
+    assert error is not None
+    assert "Yasuho+ raises this limit to" in error
+    assert str(premium.GUILD_PREMIUM.max_feeds_per_guild) in error
+
+
+async def test_create_feed_at_the_cap_with_no_person_id_shows_no_upsell():
+    pool = _FakePool(
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_feeds", None),
+            ("SELECT COUNT(*) FROM anilist_feeds", af.MAX_FEEDS_PER_GUILD),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool)
+
+    error = await cog._create_feed(GUILD, 100)
+
+    assert error is not None
+    assert "Yasuho+" not in error
+
+
 async def test_add_follow_refused_shows_the_premium_number():
     pool = _FakePool(
         fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
@@ -299,6 +340,162 @@ async def test_add_channel_sub_refused_shows_the_premium_number():
 
     assert error is not None
     assert str(premium.GUILD_PREMIUM.max_subs_per_feed) in error
+
+
+async def test_add_follow_at_the_cap_adds_the_upsell_by_default():
+    """ITEM A (M5 review): ``_add_follow``'s own cap-exceeded refusal never
+    offered the upsell at all. Closed for the panel's ``AddFollowModal``
+    (``offer_upsell`` defaults True, and that surface replies ephemeral)."""
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_follows", None),
+            (
+                "SELECT COUNT(*) FROM anilist_follows",
+                premium.GUILD_PREMIUM.max_follows_per_feed,
+            ),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool, premium_resolver=_FakeResolver(premium.GUILD_PREMIUM))
+
+    error = await cog._add_follow(GUILD, 100, 7, "reader", 9)
+
+    assert error is not None
+    assert "Yasuho+ raises this limit to" in error
+    assert str(premium.GUILD_PREMIUM.max_follows_per_feed) in error
+
+
+async def test_add_follow_offer_upsell_false_never_embeds_it():
+    """``/anilistfeed follow`` (the moderator command) passes
+    ``offer_upsell=False``: its own ``ctx.send`` is PUBLIC, and embedding the
+    upsell into this method's plain-string return would put it in a public
+    slash message - the plan requires EPHEMERE. Fresh review finding (M5):
+    the first version of this fix embedded it unconditionally here, which
+    would have leaked it; this pins the safe default instead."""
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_follows", None),
+            (
+                "SELECT COUNT(*) FROM anilist_follows",
+                premium.GUILD_PREMIUM.max_follows_per_feed,
+            ),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool, premium_resolver=_FakeResolver(premium.GUILD_PREMIUM))
+
+    error = await cog._add_follow(GUILD, 100, 7, "reader", 9, offer_upsell=False)
+
+    assert error is not None
+    assert "Yasuho+" not in error
+
+
+async def test_add_follow_offer_upsell_false_also_suppresses_the_archived_upsell():
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool)  # FREE - keeps the fixture's archival verdict intact
+
+    error = await cog._add_follow(GUILD, 100, 7, "reader", 9, offer_upsell=False)
+
+    assert error is not None
+    assert "archived" in error
+    assert "Yasuho+" not in error
+
+
+async def test_add_mute_at_the_cap_adds_the_upsell_when_given_a_person_id():
+    """ITEM A (M5 review): same gap as ``_add_follow`` above, for the mute
+    cap (derived from the same max_follows_per_feed limit)."""
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_feed_mutes", None),
+            (
+                "COUNT(*) FROM anilist_feed_mutes",
+                premium.GUILD_PREMIUM.max_follows_per_feed,
+            ),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool, premium_resolver=_FakeResolver(premium.GUILD_PREMIUM))
+
+    error = await cog._add_mute(GUILD, 100, 7, "reader", person_id=9)
+
+    assert error is not None
+    assert "Yasuho+ raises this limit to" in error
+    assert str(premium.GUILD_PREMIUM.max_follows_per_feed) in error
+
+
+async def test_add_mute_at_the_cap_with_no_person_id_shows_no_upsell():
+    """The default (no ``person_id``) must preserve the exact pre-M5
+    behaviour - every caller this file already pinned without passing one."""
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ONE_ACTIVE_FEED)],
+        fetchval_results=[
+            ("SELECT 1 FROM anilist_feed_mutes", None),
+            (
+                "COUNT(*) FROM anilist_feed_mutes",
+                premium.GUILD_PREMIUM.max_follows_per_feed,
+            ),
+        ],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool, premium_resolver=_FakeResolver(premium.GUILD_PREMIUM))
+
+    error = await cog._add_mute(GUILD, 100, 7, "reader")
+
+    assert error is not None
+    assert "Yasuho+" not in error
+
+
+async def test_set_enabled_refused_on_an_archived_feed_adds_the_upsell():
+    """ITEM A (M5 review): the shared ``_refuse_if_feed_archived`` helper
+    (guarding _move_feed/_set_types/_toggle_self_add/_add_channel_sub/
+    _set_enabled/_add_mute/_add_follow) never offered the upsell on ANY of
+    its callers. Closed by threading ``person_id`` through each one; this
+    exercises it via ``_set_enabled``, the panel's Enable/Disable button."""
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool)  # FREE - keeps the fixture's archival verdict intact
+
+    error = await cog._set_enabled(GUILD, 100, True, person_id=9)
+
+    assert error is not None
+    assert "archived" in error
+    assert "Yasuho+ raises this limit to" in error
+    assert str(premium.GUILD_PREMIUM.max_feeds_per_guild) in error
+
+
+async def test_move_feed_refused_on_an_archived_feed_adds_the_upsell():
+    pool = _FakePool(
+        fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)],
+        fetchrow_results=[("premium_upsells", {"shown_at": None})],
+    )
+    cog = _cog(pool)  # FREE - keeps the fixture's archival verdict intact
+
+    error = await cog._move_feed(GUILD, 100, 999, person_id=9)
+
+    assert error is not None
+    assert "Yasuho+ raises this limit to" in error
+
+
+async def test_set_types_and_toggle_self_add_with_no_person_id_show_no_upsell():
+    """Negative control for the generic wiring: the DEFAULT (what every
+    caller gets unless it explicitly passes a person_id) must stay exactly
+    the plain pre-M5 text."""
+    pool = _FakePool(fetch_results=[("FROM anilist_feeds", _ARCHIVED_FEED_SET)])
+    cog = _cog(pool)
+
+    types_error = await cog._set_types(GUILD, 100, {"TEXT"})
+    toggle_error = await cog._toggle_self_add(GUILD, 100)
+
+    assert "Yasuho+" not in types_error
+    assert "Yasuho+" not in toggle_error
 
 
 async def test_add_follow_never_touches_the_global_cursor():

@@ -57,6 +57,10 @@ _ALLOWED_IMPORTERS = {
     "cogs/config/rooms_config.py",
     "cogs/config/tickets/open.py",
     "cogs/anilist/feed.py",
+    # M5 coverage-gap fixes: the panel's own follow-add pre-check and the
+    # move/create-feed ChannelSelect both show the upsell themselves now
+    # (cog helpers return a plain error string the panel already relays).
+    "cogs/anilist/feed_views.py",
 }
 
 

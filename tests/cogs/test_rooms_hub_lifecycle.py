@@ -641,5 +641,58 @@ async def test_panel_add_sends_the_message_of_the_creation_record():
     assert rerendered == [True]
 
 
+class _ClaimingPool:
+    """A minimal ``db_pool`` whose ``fetchrow`` grants exactly one premium
+    upsell claim (the real tools.premium_upsell._try_claim semantics, not a
+    hardcoded True/False - see tests/tools/test_premium_upsell.py's own
+    _FakeStore for the canonical version of this double)."""
+
+    def __init__(self):
+        self._claimed = set()
+
+    async def fetchrow(self, query, user_id, limit_key, cooldown, sentinel):
+        key = (user_id, limit_key)
+        if key in self._claimed:
+            return None
+        self._claimed.add(key)
+        return {"shown_at": None}
+
+    async def execute(self, *args):
+        return "INSERT 0 1"
+
+
+async def test_add_hub_modal_adds_the_upsell_at_a_toctou_cap_loss():
+    """ITEM A (M5 review): _on_add's own pre-check (already wired) only
+    covers the click that OPENS the modal - a concurrent add (another admin,
+    or the dashboard) between that click and this submit can still lose the
+    race here, and that loss went unwired. Closed in AddHubModal.on_submit by
+    reading HubCreation.cap_reached."""
+    hubs = [_hub(hub_id="h%d" % i) for i in range(autoroom.MAX_HUBS)]
+    cog = _cog(hubs)
+    cog.bot = types.SimpleNamespace(db_pool=_ClaimingPool(), premium=None)
+    guild = _Guild(guild_id=100)
+    interaction = _Interaction(guild)
+    interaction.user = types.SimpleNamespace(
+        id=42, guild_permissions=types.SimpleNamespace(manage_guild=True)
+    )
+    rerendered = []
+    modal = types.SimpleNamespace(
+        cog=cog,
+        panel=types.SimpleNamespace(_rerender=lambda: _record(rerendered)),
+        label_input=types.SimpleNamespace(value="Ranked"),
+        category_input=types.SimpleNamespace(value="RANKED"),
+        hub_input=types.SimpleNamespace(value="Join to create"),
+        template_input=types.SimpleNamespace(value="{user}'s room"),
+        limit_select=types.SimpleNamespace(values=["0"]),
+    )
+
+    await rooms_config.AddHubModal.on_submit(modal, interaction)
+
+    sent = interaction.followup.sent[0]
+    assert "maximum" in sent
+    assert "Yasuho+ raises this limit to" in sent
+    assert guild.created == []  # refused before any Discord call
+
+
 async def _record(sink):
     sink.append(True)

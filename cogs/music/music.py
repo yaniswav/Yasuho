@@ -4777,11 +4777,37 @@ class Music(ServerPlaylistMixin, commands.Cog):
             max_favourites = premium.resolve_user_limits(
                 self.bot, ctx.author.id
             ).max_favourites
-            await ctx.send(
-                _("Your favourites are full (max {max}). Remove some first.").format(
-                    max=max_favourites
-                )
+            text = _(
+                "Your favourites are full (max {max}). Remove some first."
+            ).format(max=max_favourites)
+            # Same "favourites" key the controller's star button already
+            # wires - this is the OTHER Discord-facing site for the same cap
+            # (``/playlist add``). ``ctx.send`` here is public (no
+            # ``ephemeral=True``), so on slash the upsell rides a separate
+            # ephemeral followup instead of being merged into it; on prefix
+            # it is appended to the one and only message.
+            is_slash = premium_upsell.is_slash_context(ctx)
+            upsell = await premium_upsell.for_user_refusal(
+                self.bot,
+                limit_key="favourites",
+                person_id=ctx.author.id,
+                already_top_tier=premium_upsell.is_user_already_top_tier(
+                    self.bot, ctx.author.id
+                ),
+                benefit=str(premium.USER_PREMIUM.max_favourites),
+                allow_button=is_slash,
             )
+            if upsell is None:
+                await ctx.send(text)
+            elif not is_slash:
+                await ctx.send(text + "\n" + upsell.line)
+            else:
+                await ctx.send(text)
+                followup_kwargs = {"ephemeral": True}
+                view = upsell.view()
+                if view is not None:
+                    followup_kwargs["view"] = view
+                await ctx.interaction.followup.send(upsell.line, **followup_kwargs)
         else:
             await ctx.send(
                 _("**{title}** is already in your favourites.").format(

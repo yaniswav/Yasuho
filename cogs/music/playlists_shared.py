@@ -327,7 +327,9 @@ class _PlaylistListCard(LocaleLayoutView):
 class ServerPlaylistMixin:
     """Cog mixin: the ``/serverplaylist`` group (shared, per-guild playlists)."""
 
-    async def _refuse_with_upsell(self, ctx, text, *, limit_key, benefit, kind="raise"):
+    async def _refuse_with_upsell(
+        self, ctx, text, *, limit_key, benefit, kind="raise", allowed_mentions=None
+    ):
         """Send a GUILD-scoped refusal's ``text``, with the upsell riding along.
 
         ``serverplaylist save`` never passes ``ephemeral=True`` to ``ctx.send``
@@ -337,6 +339,14 @@ class ServerPlaylistMixin:
         refusal stays exactly as it is, and the upsell goes out as a SEPARATE
         ephemeral followup; on prefix (no interaction, no followup, no
         component support) it is appended to the one and only message instead.
+
+        ``allowed_mentions`` rides straight through to every ``ctx.send(text,
+        ...)`` call (never onto the upsell's own followup, whose ``.line`` is
+        always a translated static sentence, never third-party text): a
+        caller whose ``text`` quotes a user-supplied name (a playlist's) must
+        still pass ``NO_PINGS`` here exactly as it would on a plain
+        ``ctx.send``, or the ping-injection guard this module's ``echo_name``
+        exists for would quietly stop applying on this one path.
         """
         is_slash = premium_upsell.is_slash_context(ctx)
         upsell = await premium_upsell.for_guild_refusal(
@@ -352,13 +362,16 @@ class ServerPlaylistMixin:
             kind=kind,
             allow_button=is_slash,
         )
+        send_kwargs = {}
+        if allowed_mentions is not None:
+            send_kwargs["allowed_mentions"] = allowed_mentions
         if upsell is None:
-            await ctx.send(text)
+            await ctx.send(text, **send_kwargs)
             return
         if not is_slash:
-            await ctx.send(text + "\n" + upsell.line)
+            await ctx.send(text + "\n" + upsell.line, **send_kwargs)
             return
-        await ctx.send(text)
+        await ctx.send(text, **send_kwargs)
         followup_kwargs = {"ephemeral": True}
         view = upsell.view()
         if view is not None:
@@ -756,12 +769,19 @@ class ServerPlaylistMixin:
         if playlist_is_archived(
             row["track_count"], limits.max_playlist_tracks, archival.is_active(norm)
         ):
-            await ctx.send(
+            # Shares the "guild_playlists" key with the count/track-count caps
+            # above - same limit, the archived symptom of it (the plan's own
+            # rule for an archived-item refusal; see rolemenus.py's
+            # archived-menu refusal for the same choice).
+            await self._refuse_with_upsell(
+                ctx,
                 _(
                     "**{name}** is archived - this server is over its current "
                     "playlist limit. It can be deleted, but not loaded. See "
                     "/premium for options."
                 ).format(name=echo_name(row["name"])),
+                limit_key="guild_playlists",
+                benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
                 allowed_mentions=NO_PINGS,
             )
             return
@@ -973,15 +993,39 @@ class ServerPlaylistMixin:
         if playlist_is_archived(
             row["track_count"], limits.max_playlist_tracks, archival.is_active(old_norm)
         ):
-            await ctx.send(
-                _(
-                    "**{name}** is archived - this server is over its current "
-                    "playlist limit. It can be deleted, but not renamed. See "
-                    "/premium for options."
-                ).format(name=echo_name(row["name"])),
-                ephemeral=ctx.interaction is not None,
-                allowed_mentions=NO_PINGS,
+            text = _(
+                "**{name}** is archived - this server is over its current "
+                "playlist limit. It can be deleted, but not renamed. See "
+                "/premium for options."
+            ).format(name=echo_name(row["name"]))
+            # Same "guild_playlists" key as the serverplaylist_play archived
+            # refusal - this command never defers, so (unlike that one) the
+            # base refusal IS already ephemeral on slash, which means the
+            # upsell (and its button) can ride the SAME message instead of a
+            # separate followup.
+            is_slash = premium_upsell.is_slash_context(ctx)
+            upsell = await premium_upsell.for_guild_refusal(
+                self.bot,
+                limit_key="guild_playlists",
+                guild_id=ctx.guild.id,
+                person_id=ctx.author.id,
+                is_admin=premium_upsell.invoker_is_admin(ctx.author),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    self.bot, ctx.guild.id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
+                allow_button=is_slash,
             )
+            send_kwargs = {
+                "ephemeral": ctx.interaction is not None,
+                "allowed_mentions": NO_PINGS,
+            }
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+                view = upsell.view()
+                if view is not None:
+                    send_kwargs["view"] = view
+            await ctx.send(text, **send_kwargs)
             return
 
         new_display = clean_name(new)
