@@ -660,6 +660,22 @@ class RemindersCard(AuthorLayoutView):
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.ActionRow(_CancelSelect(self, page_reminders)))
 
+        if any(
+            r.get("archived") and r.get("repeat_seconds") for r in self.reminders
+        ):
+            # Said once, so an archived series does not look like a bug.
+            container.add_item(
+                discord.ui.TextDisplay(
+                    "-# "
+                    + _(
+                        "Recurring reminders marked (archived) are over your "
+                        "current limit: they are paused, not deleted. You can "
+                        "still cancel them, and they resume at their next "
+                        "time if your limit goes back up."
+                    )
+                )
+            )
+
         footer = _("-# {count} pending").format(
             count=reminders_tool.format_count(total, self.capped)
         )

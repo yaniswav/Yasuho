@@ -1168,6 +1168,26 @@ def test_card_marks_an_archived_recurring_reminder_m4c():
     assert rem.REPEAT_GLYPH in body  # the interval is still shown alongside it
 
 
+def test_card_explains_paused_reminders_once_when_one_is_archived():
+    """An archived series must not look like a bug: one note, once per card."""
+    view = RemindersCard(
+        None,
+        1,
+        [
+            _listed(repeat_seconds=DAY, archived=True),
+            _listed(repeat_seconds=WEEK, archived=True),
+        ],
+        False,
+    )
+    body = _card_lines(view)
+    assert body.count("they are paused, not deleted") == 1
+
+
+def test_card_has_no_paused_note_without_an_archived_reminder():
+    view = RemindersCard(None, 1, [_listed(repeat_seconds=DAY)], False)
+    assert "they are paused, not deleted" not in _card_lines(view)
+
+
 def test_card_never_marks_a_one_shot_reminder_as_archived():
     """OWNER DECISION: a one-shot is never archived - there is nothing to mark,
     whatever ``archived`` happens to carry on the dict."""
