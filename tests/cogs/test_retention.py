@@ -31,6 +31,9 @@ def _stub_user_prunes(monkeypatch):
     monkeypatch.setattr(
         retention_cog.retention, "prune_stale_premium_upsells", _none
     )
+    monkeypatch.setattr(
+        retention_cog.retention, "prune_ended_premium_records", _none
+    )
 
 
 def _cog(bot):
@@ -256,6 +259,7 @@ async def test_avatar_cleanup_stops_after_short_batch(monkeypatch):
         "presence_rows": 0,
         "audit_rows": 0,
         "upsell_rows": 0,
+        "premium_rows": 0,
     }
 
 

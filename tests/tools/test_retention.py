@@ -456,6 +456,32 @@ async def test_the_premium_upsell_prune_window_outlives_the_claim_cooldown():
     ) > premium_upsell.UPSELL_COOLDOWN
 
 
+async def test_ended_premium_records_are_pruned_and_active_ones_kept():
+    """Both premium tables are pruned on their END date only: a row with no
+    end (an active subscription or a permanent grant) never matches."""
+    pool = _PrunePool(status="DELETE 2")
+
+    deleted = await retention.prune_ended_premium_records(pool)
+
+    assert deleted == 4
+    (ent_query, ent_args), (grant_query, grant_args) = pool.calls
+    assert ent_args == grant_args == (retention.PREMIUM_RECORD_MAX_AGE_DAYS,)
+    assert "DELETE FROM premium_entitlements" in ent_query
+    assert "deleted = TRUE AND ended_at < now()" in ent_query
+    assert "deleted = FALSE AND ends_at < now()" in ent_query
+    assert "last_synced_at" not in ent_query
+    assert "DELETE FROM premium_grants" in grant_query
+    assert "revoked_at IS NOT NULL AND revoked_at < now()" in grant_query
+    assert "revoked_at IS NULL AND expires_at < now()" in grant_query
+
+
+def test_the_premium_record_window_outlives_the_stats_lookback():
+    """The serverstats purge keeps a server's 90-365 day band while its
+    Yasuho+ ended less than 365 days ago; pruning the record sooner would make
+    that server look free too early and delete its history."""
+    assert retention.PREMIUM_RECORD_MAX_AGE_DAYS > 365
+
+
 # ---------------------------------------------------------------------------
 # The dashboard journal: guild-scoped, and still unbounded without an age prune
 # ---------------------------------------------------------------------------

@@ -497,6 +497,42 @@ async def prune_stale_premium_upsells(pool, max_age_days=PREMIUM_UPSELL_MAX_AGE_
     return affected_rows(status)
 
 
+# Ended premium records (premium_entitlements, premium_grants) are kept this
+# long after they END: past the 365 days the serverstats purge looks back over
+# (tools.premium.premium_ish_guild_ids), with a margin. Active records are
+# never touched.
+PREMIUM_RECORD_MAX_AGE_DAYS = 400
+
+
+async def prune_ended_premium_records(pool, max_age_days=PREMIUM_RECORD_MAX_AGE_DAYS):
+    """Delete premium records that ended more than ``max_age_days`` ago.
+
+    An entitlement has ended when it is deleted (refund, revocation: dated by
+    ``ended_at``, which is set once) or when its ``ends_at`` has passed. A
+    grant has ended when it was revoked (``revoked_at``) or expired
+    (``expires_at``). Nothing that can still be active is deleted: a row with
+    no end date is kept. Both tables only hold paid or gifted scopes, so this
+    is two small statements a day.
+    """
+    entitlements = await pool.execute(
+        """
+        DELETE FROM premium_entitlements
+        WHERE (deleted = TRUE AND ended_at < now() - $1 * INTERVAL '1 day')
+           OR (deleted = FALSE AND ends_at < now() - $1 * INTERVAL '1 day')
+        """,
+        max_age_days,
+    )
+    grants = await pool.execute(
+        """
+        DELETE FROM premium_grants
+        WHERE (revoked_at IS NOT NULL AND revoked_at < now() - $1 * INTERVAL '1 day')
+           OR (revoked_at IS NULL AND expires_at < now() - $1 * INTERVAL '1 day')
+        """,
+        max_age_days,
+    )
+    return affected_rows(entitlements) + affected_rows(grants)
+
+
 async def prune_stale_dashboard_audit(
     pool,
     max_age_days=DASHBOARD_AUDIT_MAX_AGE_DAYS,

@@ -166,6 +166,11 @@ class DataRetention(commands.Cog):
         upsell_rows = await retention.prune_stale_premium_upsells(
             self.bot.db_pool
         )
+        # Ended premium records (entitlements and owner grants), kept 400 days
+        # after they end so the 365-day stats rule can still see them.
+        premium_rows = await retention.prune_ended_premium_records(
+            self.bot.db_pool
+        )
 
         if (
             scheduled_guilds
@@ -176,12 +181,13 @@ class DataRetention(commands.Cog):
             or presence_rows
             or audit_rows
             or upsell_rows
+            or premium_rows
         ):
             log.info(
                 "Retention pass complete: scheduled_guilds=%s guilds=%s "
                 "avatar_rows=%s avatar_bytes=%s user_actions=%s "
                 "export_slots=%s presence_rows=%s audit_rows=%s "
-                "upsell_rows=%s",
+                "upsell_rows=%s premium_rows=%s",
                 scheduled_guilds,
                 purged_guilds,
                 avatar_rows,
@@ -191,6 +197,7 @@ class DataRetention(commands.Cog):
                 presence_rows,
                 audit_rows,
                 upsell_rows,
+                premium_rows,
             )
         return {
             "scheduled_guilds": scheduled_guilds,
@@ -202,6 +209,7 @@ class DataRetention(commands.Cog):
             "presence_rows": presence_rows,
             "audit_rows": audit_rows,
             "upsell_rows": upsell_rows,
+            "premium_rows": premium_rows,
         }
 
     async def _check_backups(self):
