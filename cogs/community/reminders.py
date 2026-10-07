@@ -783,8 +783,8 @@ class RemindersCard(AuthorLayoutView):
                 discord.ui.TextDisplay(
                     "-# "
                     + _(
-                        "Picking reminders below keeps them active first if "
-                        "your limit ever drops again."
+                        "Pick below which recurring reminders stay active "
+                        "within your current limit."
                     )
                 )
             )
