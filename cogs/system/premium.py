@@ -634,7 +634,8 @@ class Premium(commands.Cog):
         if scope_type == "guild":
             is_premium = self.bot.premium.is_guild_premium(target_id)
             entitlement_rows = await self.bot.db_pool.fetch(
-                "SELECT sku_id, ends_at FROM premium_entitlements "
+                "SELECT entitlement_id, sku_id, entitlement_type, starts_at, ends_at "
+                "FROM premium_entitlements "
                 "WHERE guild_id = $1 AND deleted = FALSE",
                 target_id,
             )
@@ -645,7 +646,8 @@ class Premium(commands.Cog):
         else:
             is_premium = self.bot.premium.has_comfort_pack(target_id)
             entitlement_rows = await self.bot.db_pool.fetch(
-                "SELECT sku_id, ends_at FROM premium_entitlements "
+                "SELECT entitlement_id, sku_id, entitlement_type, starts_at, ends_at "
+                "FROM premium_entitlements "
                 "WHERE user_id = $1 AND deleted = FALSE",
                 target_id,
             )
@@ -671,7 +673,13 @@ class Premium(commands.Cog):
             lines = []
             for row in active_entitlements:
                 until = format_dt(row["ends_at"]) if row["ends_at"] else _("permanent")
-                lines.append(_("Discord entitlement, {until}").format(until=until))
+                line = _("Discord entitlement #{id}, {until}").format(
+                    id=row["entitlement_id"], until=until
+                )
+                # The id is what ?premiumadmin testclear takes.
+                if _is_test_entitlement(row["entitlement_type"], row["starts_at"]):
+                    line += " - TEST"
+                lines.append(line)
             embed.add_field(
                 name=_("Entitlement"),
                 value=_join_within_budget(lines, _FIELD_BUDGET),

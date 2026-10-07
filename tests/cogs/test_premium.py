@@ -1216,3 +1216,42 @@ def test_an_api_test_entitlement_is_labelled_test_by_its_missing_start():
         discord.EntitlementType.test_mode_purchase,
         datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc),
     )
+
+
+async def test_check_shows_the_entitlement_id_testclear_needs(monkeypatch):
+    """?premiumadmin check must give the id ?premiumadmin testclear takes,
+    and say TEST for a test entitlement."""
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+
+    class _Pool:
+        async def fetch(self, query, *args):
+            if "FROM premium_entitlements" in query:
+                return [
+                    {
+                        "entitlement_id": 1557312428969033828,
+                        "sku_id": 111,
+                        "entitlement_type": 8,
+                        "starts_at": None,
+                        "ends_at": None,
+                        "deleted": False,
+                        "last_synced_at": None,
+                    }
+                ]
+            return []
+
+    bot = types.SimpleNamespace(
+        db_pool=_Pool(),
+        premium=types.SimpleNamespace(is_guild_premium=lambda _gid: True),
+    )
+    cog = premium_cog.Premium(bot)
+    sent = []
+
+    async def _send(*args, **kwargs):
+        sent.append(kwargs["embed"])
+
+    ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=1), send=_send)
+    await cog.premium_check.callback(cog, ctx, "server", 42)
+
+    text = " ".join(field.value for field in sent[0].fields)
+    assert "#1557312428969033828" in text
+    assert "TEST" in text
