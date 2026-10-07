@@ -97,14 +97,11 @@ def test_every_resource_spec_key_is_unique():
     assert len(keys) == len(set(keys))
 
 
-def test_context_only_resource_has_no_field_and_is_never_flagged():
-    """tickets_open_per_guild claims no GuildLimits field on purpose (see the
-    module docstring) - it must never be counted as "mapped" for some OTHER
-    field by accident."""
+def test_open_tickets_per_guild_maps_to_the_internal_server_cap():
     spec = next(
         s for s in premium_usage.RESOURCE_SPECS if s.key == "tickets_open_per_guild"
     )
-    assert spec.field is None
+    assert spec.field == "max_tickets_open_per_guild"
 
 
 # ---------------------------------------------------------------------------
@@ -171,12 +168,17 @@ def test_free_and_premium_values_match_the_catalog():
     )
 
 
-def test_context_only_resource_has_no_free_or_premium_value():
+def test_open_tickets_per_guild_reports_the_free_and_premium_caps():
+    from tools import premium
+
     spec = next(
         s for s in premium_usage.RESOURCE_SPECS if s.key == "tickets_open_per_guild"
     )
-    assert premium_usage.free_value(spec) is None
-    assert premium_usage.premium_value(spec) is None
+    assert premium_usage.free_value(spec) == premium.GUILD_FREE.max_tickets_open_per_guild
+    assert (
+        premium_usage.premium_value(spec)
+        == premium.GUILD_PREMIUM.max_tickets_open_per_guild
+    )
 
 
 # ---------------------------------------------------------------------------

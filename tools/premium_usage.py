@@ -52,13 +52,9 @@ hardcodes "the current field list": it reads ``dataclasses.fields(...)``
 itself, so a field RENAME or VALUE change in tools/premium.py (another lot's
 own work) needs no edit here - only a genuinely NEW, unmapped field does.
 
-TWO FIELDS ARE DELIBERATELY NOT "ONE QUERY = ONE FIELD":
-``tickets_open_per_guild`` has no ``field`` of its own (nothing in
-GuildLimits caps "open tickets in this guild" directly - the cap is
-per-member, ``max_tickets_open_per_user``) and exists purely as the
-context the plan's "per member (and per guild)" ask wants; it is never
-counted by :func:`missing_resource_mappings` because it never claims a
-field. ``max_guild_playlists``/``max_playlist_tracks`` map to the two
+``tickets_open_per_guild`` maps to ``max_tickets_open_per_guild``, the
+internal anti-abuse cap on open tickets per server (not advertised).
+``max_guild_playlists``/``max_playlist_tracks`` map to the two
 HALVES of "server playlists per guild (and tracks per playlist)" - two
 separate scopes (a guild; a playlist), two separate :data:`RESOURCE_SPECS`
 entries, each claiming its own field.
@@ -229,7 +225,7 @@ RESOURCE_SPECS = [
         key="tickets_open_per_guild",
         label="open tickets / guild",
         scope="guild",
-        field=None,  # context only - see module docstring
+        field="max_tickets_open_per_guild",
         query=_query(_TICKETS_OPEN_PER_GUILD_SQL),
     ),
     ResourceSpec(
@@ -347,9 +343,8 @@ async def fetch_one(pool, spec):
     """Run ``spec``'s own query and return a plain dict of its one row.
 
     ``free_value(spec)`` feeds :func:`thresholds` for the ``$1``/``$2``
-    parameters (0/0 for the context-only ``tickets_open_per_guild``, which
-    has no field and so no FREE value either - still a valid, if
-    uninformative, pair of thresholds: see :func:`thresholds`'s own
+    parameters (0/0 for a spec with no field and so no FREE value - still
+    a valid, if uninformative, pair of thresholds: see :func:`thresholds`'s own
     ``free_limit <= 0`` branch).
     """
     free = free_value(spec)
