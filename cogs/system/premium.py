@@ -191,6 +191,24 @@ _ENTITLEMENT_TYPE_LABELS = {
 }
 
 
+# Discord's "An entitlement has already been granted for this resource".
+_ALREADY_GRANTED = 40074
+
+
+def _is_test_entitlement(entitlement_type, starts_at):
+    """True for a Discord TEST entitlement. A test-mode purchase says so in
+    its type, but a test entitlement created through the API
+    (?premiumadmin testbuy) carries the SKU's ordinary type (e.g.
+    application subscription); what marks it is the missing start date -
+    discord.py documents starts_at as "not present when using test
+    entitlements". Accepts the enum or its int value."""
+    entitlement_type = getattr(entitlement_type, "value", entitlement_type)
+    return (
+        entitlement_type == discord.EntitlementType.test_mode_purchase.value
+        or starts_at is None
+    )
+
+
 def _entitlement_type_label(entitlement_type):
     return _ENTITLEMENT_TYPE_LABELS.get(entitlement_type, f"type {entitlement_type}")
 
@@ -254,7 +272,7 @@ def _build_sale_dm(bot, kind, row, *, found_by_reconciliation=False):
             f"Type: {_entitlement_type_label(entitlement_type)}",
         ]
     text = "\n".join(lines)
-    if entitlement_type == discord.EntitlementType.test_mode_purchase.value:
+    if _is_test_entitlement(entitlement_type, row.get("starts_at")):
         text = "TEST - " + text
     return text
 
@@ -743,7 +761,7 @@ class Premium(commands.Cog):
             kwargs["user"] = discord.Object(id=user_id)
         best_id = None
         async for entitlement in self.bot.entitlements(**kwargs):
-            if entitlement.type != discord.EntitlementType.test_mode_purchase:
+            if not _is_test_entitlement(entitlement.type, entitlement.starts_at):
                 continue
             if best_id is None or entitlement.id > best_id:
                 best_id = entitlement.id
@@ -763,11 +781,25 @@ class Premium(commands.Cog):
                 allowed_mentions=NO_MENTIONS,
             )
             return
-        await self.bot.create_entitlement(
-            discord.Object(id=sku_id),
-            discord.Object(id=guild_id),
-            discord.EntitlementOwnerType.guild,
-        )
+        try:
+            await self.bot.create_entitlement(
+                discord.Object(id=sku_id),
+                discord.Object(id=guild_id),
+                discord.EntitlementOwnerType.guild,
+            )
+        except discord.HTTPException as error:
+            if error.code != _ALREADY_GRANTED:
+                raise
+            existing = await self._find_new_test_entitlement(sku_id, guild_id=guild_id)
+            await ctx.send(
+                _(
+                    "Discord says this {scope} already has this product "
+                    "(error 40074). Clear the TEST entitlement first: "
+                    "`?premiumadmin testclear {entitlement_id}`."
+                ).format(scope="server", entitlement_id=existing or "<id>"),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
         log.info(
             "PREMIUM-TESTBUY sku=%s scope=guild scope_id=%s by=%s",
             sku_id,
@@ -810,11 +842,25 @@ class Premium(commands.Cog):
                 allowed_mentions=NO_MENTIONS,
             )
             return
-        await self.bot.create_entitlement(
-            discord.Object(id=sku_id),
-            discord.Object(id=user_id),
-            discord.EntitlementOwnerType.user,
-        )
+        try:
+            await self.bot.create_entitlement(
+                discord.Object(id=sku_id),
+                discord.Object(id=user_id),
+                discord.EntitlementOwnerType.user,
+            )
+        except discord.HTTPException as error:
+            if error.code != _ALREADY_GRANTED:
+                raise
+            existing = await self._find_new_test_entitlement(sku_id, user_id=user_id)
+            await ctx.send(
+                _(
+                    "Discord says this {scope} already has this product "
+                    "(error 40074). Clear the TEST entitlement first: "
+                    "`?premiumadmin testclear {entitlement_id}`."
+                ).format(scope="user", entitlement_id=existing or "<id>"),
+                allowed_mentions=NO_MENTIONS,
+            )
+            return
         log.info(
             "PREMIUM-TESTBUY sku=%s scope=user scope_id=%s by=%s",
             sku_id,
@@ -866,7 +912,7 @@ class Premium(commands.Cog):
                 allowed_mentions=NO_MENTIONS,
             )
             return
-        if entitlement.type != discord.EntitlementType.test_mode_purchase:
+        if not _is_test_entitlement(entitlement.type, entitlement.starts_at):
             await ctx.send(
                 _(
                     "Entitlement #{entitlement_id} is not a TEST entitlement "

@@ -498,7 +498,9 @@ def _remote_entitlement(**overrides):
         type=2,
         deleted=False,
         consumed=False,
-        starts_at=None,
+        # A real purchase always has a start date; a missing one marks a
+        # TEST entitlement (see _is_test_entitlement).
+        starts_at=datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc),
         ends_at=None,
         application_id=APPLICATION_ID,
     )
@@ -1132,7 +1134,7 @@ def _seeded_row(entitlement_id, **overrides):
         entitlement_type=2,
         deleted=False,
         consumed=False,
-        starts_at=None,
+        starts_at=datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc),
         ends_at=None,
     )
     row.update(overrides)
@@ -1189,3 +1191,28 @@ async def test_reconciliation_storm_collapses_to_one_summary_dm():
     assert len(owner.sent) == 1
     assert f"{many} changes" in owner.sent[0]
     assert "one per transition" not in owner.sent[0]  # sanity: not an accidental echo
+
+
+
+def test_an_api_test_entitlement_is_labelled_test_by_its_missing_start():
+    """?premiumadmin testbuy creates an entitlement with the SKU's ordinary
+    type (here application subscription) and no starts_at: the DM must still
+    say TEST."""
+    row = {
+        "sku_id": 111,
+        "scope_type": "guild",
+        "guild_id": 42,
+        "user_id": None,
+        "entitlement_type": discord.EntitlementType.application_subscription.value,
+        "starts_at": None,
+        "ends_at": None,
+    }
+    assert premium_cog._is_test_entitlement(row["entitlement_type"], None)
+    assert not premium_cog._is_test_entitlement(
+        row["entitlement_type"],
+        datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc),
+    )
+    assert premium_cog._is_test_entitlement(
+        discord.EntitlementType.test_mode_purchase,
+        datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc),
+    )

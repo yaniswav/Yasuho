@@ -21,6 +21,7 @@ Covers:
 
 from __future__ import annotations
 
+import datetime
 import types
 
 import discord
@@ -46,10 +47,15 @@ def _empty_stream(**_kwargs):
     return _gen()
 
 
+_REAL_START = datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc)
+
+
 class _FakeEntitlement:
-    def __init__(self, *, type_, entitlement_id=777):
+    def __init__(self, *, type_, entitlement_id=777, starts_at=_REAL_START):
         self.id = entitlement_id
         self.type = type_
+        # A real purchase has a start date; an API test entitlement has none.
+        self.starts_at = starts_at
         self.delete_calls = 0
 
     async def delete(self):
@@ -220,8 +226,12 @@ async def test_testbuy_reports_the_new_entitlement_id_when_the_listing_shows_it(
 
     def _stream(**kwargs):
         async def _gen():
+            # What Discord really returns for an API test entitlement: the
+            # SKU's ordinary type and no start date.
             yield types.SimpleNamespace(
-                id=888, type=discord.EntitlementType.test_mode_purchase
+                id=888,
+                type=discord.EntitlementType.application_subscription,
+                starts_at=None,
             )
 
         return _gen()
@@ -350,3 +360,62 @@ async def test_testclear_deletes_a_real_test_entitlement_and_logs(fake_pool, cap
         "PREMIUM-TESTCLEAR" in r.message and "entitlement=777" in r.message
         for r in caplog.records
     )
+
+
+
+async def test_testclear_deletes_an_api_test_entitlement_without_a_start_date(
+    fake_pool,
+):
+    """?premiumadmin testbuy creates an entitlement with the SKU's ordinary
+    type and no starts_at; testclear must accept it as TEST."""
+    entitlement = _FakeEntitlement(
+        type_=discord.EntitlementType.application_subscription, starts_at=None
+    )
+
+    async def fetch_entitlement(entitlement_id):
+        return entitlement
+
+    cog, _bot_obj = _cog(fake_pool, fetch_entitlement=fetch_entitlement)
+
+    async def _send(*args, **kwargs):
+        pass
+
+    ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=1), send=_send)
+    await cog.premium_testclear.callback(cog, ctx, 777)
+
+    assert entitlement.delete_calls == 1
+
+
+async def test_testbuy_explains_an_already_granted_product(fake_pool, monkeypatch):
+    """Discord refuses a second entitlement for the same product (40074): the
+    owner gets the id to clear instead of a generic command error."""
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    cog, bot = _cog(fake_pool)
+
+    async def create_entitlement(sku, owner, owner_type):
+        raise discord.HTTPException(
+            types.SimpleNamespace(status=400, reason="Bad Request"),
+            {"code": 40074, "message": "An entitlement has already been granted"},
+        )
+
+    bot.create_entitlement = create_entitlement
+    existing = _FakeEntitlement(
+        type_=discord.EntitlementType.application_subscription,
+        entitlement_id=555,
+        starts_at=None,
+    )
+
+    async def _stream(**kwargs):
+        yield existing
+
+    bot.entitlements = _stream
+    sent = []
+
+    async def _send(*args, **kwargs):
+        sent.append(args[0])
+
+    ctx = types.SimpleNamespace(author=types.SimpleNamespace(id=1), send=_send)
+    await cog.premium_testbuy_server.callback(cog, ctx, 42)
+
+    assert len(sent) == 1
+    assert "testclear 555" in sent[0]
