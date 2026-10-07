@@ -150,7 +150,7 @@ ID, no server ID.
 All data is stored in a private PostgreSQL database on a privately owned
 server located in France (no cloud hosting provider), with access limited to
 the bot process and its operator. The web dashboard runs on a second privately
-owned machine on the same private network; it has no database of its own, does
+owned machine, also in France, on the same private network; it has no database of its own, does
 not keep your Discord login token (it is used once to sign you in, then
 discarded), and keeps your session only in a signed cookie in your browser. The
 database itself is not encrypted at rest (the server's disk is not encrypted);
@@ -188,8 +188,8 @@ We do not sell data. Apart from the operator, data only reaches:
 Several of these services are based outside the European Union, mostly in the
 United States. Data sent to them is transferred there under their own
 safeguards (for example the EU-US Data Privacy Framework or standard
-contractual clauses, depending on the service). The bot's own database stays
-in France.
+contractual clauses, depending on the service). The bot, its database and the
+dashboard all stay in France.
 
 ## Retention
 
