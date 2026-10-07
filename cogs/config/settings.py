@@ -566,14 +566,14 @@ class Settings(commands.Cog):
 
         return state
 
-    @commands.hybrid_group(name="config", aliases=["setup"])
+    # A plain command, not a group: it has no subcommands, and a hybrid group
+    # without any is registered on Discord as a plain command, so every slash
+    # /config failed locally with CommandSignatureMismatch.
+    @commands.hybrid_command(name="config", aliases=["setup"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def config(self, ctx):
         """Open the interactive server-settings panel (also: setup)."""
-
-        if ctx.invoked_subcommand is not None:
-            return
 
         state = await self._config_state(ctx.guild)
         view = ConfigPanel(self, ctx.author.id, ctx.guild, state)
