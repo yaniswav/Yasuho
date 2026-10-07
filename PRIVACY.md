@@ -148,8 +148,8 @@ ID, no server ID.
 ## Where data lives
 
 All data is stored in a private PostgreSQL database on a privately owned
-server located in France (no cloud hosting provider), with access limited to
-the bot process and its operator. The web dashboard runs on a second privately
+server in France, housed by Planet Service SARL (Paris), with no cloud hosting
+provider. Access to the data is limited to the bot process and its operator. The web dashboard runs on a second privately
 owned machine, also in France, on the same private network; it has no database of its own, does
 not keep your Discord login token (it is used once to sign you in, then
 discarded), and keeps your session only in a signed cookie in your browser. The
