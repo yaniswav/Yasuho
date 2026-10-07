@@ -7,6 +7,12 @@ the bot processes, what it stores, for how long, and how you can see or delete
 it. We collect the minimum needed for each feature, and several features are
 strictly opt-in.
 
+## Who is responsible
+
+The data controller is **Horizon Vista**, the trade name of Yanis, a sole
+proprietor (entrepreneur individuel) in France. Contact for any privacy
+question or request: **azellaxmc@gmail.com**.
+
 ## What we store
 
 **Server configuration** (per server, controlled by server managers): prefixes,
@@ -141,12 +147,46 @@ ID, no server ID.
 
 ## Where data lives
 
-All data is stored in a private PostgreSQL database on a server operated by the
-bot owner, with access limited to the bot process and its operator. The
+All data is stored in a private PostgreSQL database on a privately owned
+server located in France (no cloud hosting provider), with access limited to
+the bot process and its operator. The
 database itself is not encrypted at rest (the server's disk is not encrypted);
 database backups are encrypted (GPG), and OAuth tokens are additionally
 encrypted at the application level. Backups are kept for disaster recovery and are subject to
 the same deletion schedule on restore.
+
+## Why we use it (legal bases)
+
+- **To provide the features you or your server ask for** (commands, music,
+  reminders, leveling, profiles, tickets, premium perks you bought): necessary
+  to provide the service described in our Terms of Service.
+- **Server configuration and moderation records**: the legitimate interest of
+  each server's managers in running and moderating their community, and ours
+  in operating the bot.
+- **Opt-in features** (presence / "recently played", AniList and MangaDex
+  alerts): your consent, which you can withdraw at any time with the commands
+  listed below; withdrawing does not affect what was done before.
+- **Security and abuse prevention** (rate limits, anti-abuse checks, technical
+  logs without message text): our legitimate interest in keeping the service
+  safe and available.
+
+## Who receives data
+
+We do not sell data. Apart from the operator, data only reaches:
+
+- **Discord** (Discord Inc., United States), which runs the platform the bot
+  lives on: everything the bot shows you goes through Discord, and premium
+  purchases are processed by Discord. Discord acts under its own privacy policy.
+- **The external services you use through a feature**, listed in "What we do
+  NOT do" above (AniList, MangaDex, Steam, osu!, Last.fm, Backloggd, top.gg,
+  music sources): each receives only what that feature needs and acts under its
+  own privacy policy.
+
+Several of these services are based outside the European Union, mostly in the
+United States. Data sent to them is transferred there under their own
+safeguards (for example the EU-US Data Privacy Framework or standard
+contractual clauses, depending on the service). The bot's own database stays
+in France.
 
 ## Retention
 
@@ -177,6 +217,14 @@ the same deletion schedule on restore.
 
 ## Your rights
 
+Under the GDPR you have the right to access your data, to have it corrected or
+erased, to restrict or object to its use, to receive it in a portable format,
+and to withdraw a consent you gave. Most of this is available directly through
+the commands below; for anything else, write to azellaxmc@gmail.com. We answer
+within one month. If you think your rights are not respected, you can lodge a
+complaint with the French data protection authority, the CNIL
+(https://www.cnil.fr).
+
 - `?mydata export` - receive a complete machine-readable export of everything
   the bot holds about you (rate-limited to once per hour). Also available from
   the web dashboard. Records that involve someone else are limited to your own
@@ -201,8 +249,9 @@ the same deletion schedule on restore.
 
 ## Contact
 
-Questions or requests: open an issue at
-https://github.com/yaniswav/Yasuho/issues or contact the owner through the
-bot's support server listed on its Discord profile.
+Privacy questions or requests: **azellaxmc@gmail.com**. Do not post personal
+data in a public issue. For anything else, open an issue at
+https://github.com/yaniswav/Yasuho/issues or reach the owner through the bot's
+support server listed on its Discord profile.
 
 Changes to this policy will be published at this same address.

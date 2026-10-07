@@ -1,6 +1,6 @@
 # Yasuho - Terms of Service
 
-_Last updated: October 6, 2026_
+_Last updated: October 7, 2026_
 
 These terms govern your use of Yasuho ("the bot"), a Discord community bot, and
 of its web dashboard. Yasuho is operated by **Horizon Vista**, a sole
@@ -105,6 +105,6 @@ through the bot's support server.
 These terms are governed by French law, without prejudice to the mandatory
 protections of the consumer law of your country of residence.
 
-Questions or requests: open an issue at
-https://github.com/yaniswav/Yasuho/issues or contact us through the bot's
+Questions or requests: write to azellaxmc@gmail.com, open an issue at
+https://github.com/yaniswav/Yasuho/issues, or contact us through the bot's
 support server listed on its Discord profile.
