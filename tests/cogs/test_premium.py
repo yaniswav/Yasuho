@@ -34,9 +34,11 @@ conftest.py.
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import types
 
+import discord
 import pytest
 from discord.ext import commands
 
@@ -812,7 +814,14 @@ async def test_reconcile_once_aborted_pass_never_reloads_the_cache(monkeypatch):
             self.calls.append(("execute", query, args))
             return "INSERT 0 1"
 
-        async def fetch(self, *args, **kwargs):
+        async def fetch(self, query, *args, **kwargs):
+            self.calls.append(("fetch", query, args))
+            # M5's "has this id ever been recorded" read happens BEFORE the
+            # listing loop even starts - harmless regardless of how the pass
+            # later goes, unlike the "missing" diff query below, which really
+            # must never run after an abort.
+            if query == "SELECT entitlement_id FROM premium_entitlements":
+                return []
             raise AssertionError("must not be reached after an aborted pass")
 
     cog, bot = _m3b_cog(_Table(), stream_factory=_stream)
@@ -867,3 +876,316 @@ def test_cog_unload_before_cog_load_is_a_safe_no_op(fake_pool):
     regardless of whether cog_load's task was ever started."""
     cog, _bot = _m3b_cog(fake_pool)
     cog.cog_unload()  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# M5: DM the bot owner on a sale/refund.
+#
+# A richer bot stand-in than _m3b_bot: a resolved owner (``owner_id`` set, so
+# _resolve_owner_ids never needs application_info), a fake "owner user" whose
+# .send() records every text (or raises, for the failure tests), and
+# get_guild always missing (so DM text falls back to a bare id - the cache-
+# miss branch _sale_scope_desc takes). Delivery is a fire-and-forget
+# background task (Premium._dispatch_sale_dm): every test here calls
+# _flush_owner_dms(cog) right after the write, to await whatever task(s) that
+# write scheduled before asserting on the result.
+# ---------------------------------------------------------------------------
+
+
+class _FakeOwnerUser:
+    def __init__(self, user_id, *, send_raises=None):
+        self.id = user_id
+        self.sent = []
+        self._send_raises = send_raises
+
+    async def send(self, text):
+        if self._send_raises is not None:
+            raise self._send_raises
+        self.sent.append(text)
+
+
+def _dm_bot(pool, *, application_id=APPLICATION_ID, stream_factory=None, owner_id=1, send_raises=None):
+    bot = _m3b_bot(
+        pool, application_id=application_id, stream_factory=stream_factory, owner_id=owner_id
+    )
+    owner_user = _FakeOwnerUser(owner_id, send_raises=send_raises)
+    bot.owner_id = owner_id
+    bot.get_user = lambda uid: owner_user if uid == owner_id else None
+
+    async def fetch_user(uid):
+        return owner_user
+
+    bot.fetch_user = fetch_user
+    bot.get_guild = lambda guild_id: None  # always a cache miss - the id-only DM branch
+    return bot, owner_user
+
+
+def _dm_cog(pool, **kwargs):
+    bot, owner_user = _dm_bot(pool, **kwargs)
+    return premium_cog.Premium(bot), bot, owner_user
+
+
+async def _flush_owner_dms(cog):
+    """Await every owner-DM background task in flight right now (M5's
+    fire-and-forget dispatch), so a test can assert on the result
+    deterministically instead of racing the event loop."""
+    pending = list(cog._pending_owner_dms)
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
+async def test_new_entitlement_create_sends_exactly_one_owner_dm(fake_pool, monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    fake_pool.fetchrow_return = None  # no prior row - genuinely new
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+
+    await cog.on_entitlement_create(_remote_entitlement())
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert owner.sent[0].startswith("New sale: Yasuho+ for server 42 (42)")
+
+
+async def test_the_same_create_event_processed_twice_sends_only_one_dm(fake_pool):
+    """The event arrives, then (a gateway reconnect replay, or Discord
+    simply delivering it twice) arrives again: the SECOND call's own
+    before/after read now finds the row this module's own write already
+    made durable the first time, so classify_entitlement_transition reads
+    "not new" and sends nothing - no in-memory de-dup needed, the database
+    IS the de-dup."""
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+
+    fake_pool.fetchrow_return = None  # first delivery: no prior row
+    await cog.on_entitlement_create(_remote_entitlement())
+    await _flush_owner_dms(cog)
+
+    fake_pool.fetchrow_return = {"deleted": False}  # second delivery: now it exists
+    await cog.on_entitlement_create(_remote_entitlement())
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+
+
+async def test_refund_sends_one_ended_dm_then_a_replayed_delete_sends_none(fake_pool, monkeypatch):
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", 111)
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+
+    fake_pool.fetchrow_return = {"deleted": False}  # it existed, active
+    await cog.on_entitlement_update(_remote_entitlement(deleted=True))  # the refund
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert owner.sent[0].startswith("Ended (refund or cancellation): Yasuho+")
+
+    fake_pool.fetchrow_return = {"deleted": True}  # already deleted - the replay
+    await cog.on_entitlement_delete(_remote_entitlement())
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1  # unchanged - no second DM
+
+
+async def test_out_of_order_delete_before_its_create_sends_no_dm(fake_pool):
+    """classify_entitlement_transition's own "never granted" case: the
+    DELETE lands first (no row yet), then the late CREATE still carries
+    deleted=True (the OR-preserving write) - at no point does the owner see
+    an entitlement that was ever actually active, so no DM at any point."""
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+
+    fake_pool.fetchrow_return = None  # no row yet
+    await cog.on_entitlement_delete(_remote_entitlement())
+    await _flush_owner_dms(cog)
+
+    fake_pool.fetchrow_return = {"deleted": True}  # the late create's own prior read
+    await cog.on_entitlement_create(_remote_entitlement(deleted=False))
+    await _flush_owner_dms(cog)
+
+    assert owner.sent == []
+
+
+async def test_test_mode_entitlement_dm_is_labelled_test(fake_pool):
+    fake_pool.fetchrow_return = None
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool)
+
+    await cog.on_entitlement_create(
+        _remote_entitlement(type=discord.EntitlementType.test_mode_purchase.value)
+    )
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert owner.sent[0].startswith("TEST - New sale")
+
+
+async def test_a_grant_never_dispatches_an_owner_dm(fake_pool, make_context):
+    """?premiumadmin grant never touches premium_entitlements at all, so no
+    transition is ever derived for it - confirmed here by checking the
+    cog's own in-flight-DM set stays empty across a real grant write."""
+    fake_pool.fetchrow_return = {"id": 9}
+    fake_pool.fetch_return = []
+    cog, _bot = _cog(fake_pool)
+    ctx = make_context(author_id=1)
+
+    await cog.premium_grant_server.callback(cog, ctx, 123, rest="")
+
+    assert cog._pending_owner_dms == set()
+
+
+async def test_dm_send_failure_is_logged_and_swallowed_not_raised(fake_pool, caplog):
+    fake_pool.fetchrow_return = None
+    fake_pool.fetch_return = []
+    resp = types.SimpleNamespace(status=403, reason="Forbidden")
+    cog, bot, owner = _dm_cog(
+        fake_pool, send_raises=discord.Forbidden(resp, "Cannot send messages to this user")
+    )
+
+    with caplog.at_level("WARNING", logger=premium_cog.log.name):
+        await cog.on_entitlement_create(_remote_entitlement())  # must not raise
+        await _flush_owner_dms(cog)
+
+    assert owner.sent == []
+    assert any(
+        "PREMIUM-OWNER-DM-FAILED reason=forbidden" in r.message for r in caplog.records
+    )
+
+
+async def test_an_unexpected_send_error_is_also_logged_and_swallowed(fake_pool, caplog):
+    fake_pool.fetchrow_return = None
+    fake_pool.fetch_return = []
+    cog, bot, owner = _dm_cog(fake_pool, send_raises=RuntimeError("network is down"))
+
+    with caplog.at_level("ERROR", logger=premium_cog.log.name):
+        await cog.on_entitlement_create(_remote_entitlement())  # must not raise
+        await _flush_owner_dms(cog)
+
+    assert owner.sent == []
+    assert any(
+        "PREMIUM-OWNER-DM-FAILED reason=unexpected" in r.message for r in caplog.records
+    )
+
+
+# -- reconciliation-driven DMs: found-by-reconciliation / no DM on a re-read
+# / storm collapse ------------------------------------------------------
+
+
+class _ReconcileTable:
+    """A minimal fake premium_entitlements store, just enough for
+    ``tools.premium.reconcile`` plus ``bot.premium.load`` afterwards - the
+    M5 reconciliation-DM tests only need write-then-read-back consistency,
+    not the ordering/race guarantees tests/tools/test_premium.py's own
+    ``_FakeEntitlementTable`` proves elsewhere."""
+
+    def __init__(self, seed_rows=()):
+        self.rows = {row["entitlement_id"]: dict(row) for row in seed_rows}
+        self.calls = []
+
+    async def execute(self, query, *args):
+        self.calls.append(("execute", query, args))
+        if "SET deleted = TRUE" in query:
+            (entitlement_id,) = args
+            if entitlement_id not in self.rows:
+                return "UPDATE 0"
+            self.rows[entitlement_id]["deleted"] = True
+            return "UPDATE 1"
+        if len(args) == 11:
+            args = args[:10]
+        (
+            entitlement_id, sku_id, scope_type, guild_id, user_id,
+            entitlement_type, deleted, consumed, starts_at, ends_at,
+        ) = args
+        self.rows[entitlement_id] = {
+            "entitlement_id": entitlement_id,
+            "sku_id": sku_id,
+            "scope_type": scope_type,
+            "guild_id": guild_id,
+            "user_id": user_id,
+            "entitlement_type": entitlement_type,
+            "deleted": deleted,
+            "consumed": consumed,
+            "starts_at": starts_at,
+            "ends_at": ends_at,
+            "last_synced_at": None,
+        }
+        return "INSERT 0 1"
+
+    async def fetch(self, query, *args):
+        self.calls.append(("fetch", query, args))
+        if query == "SELECT entitlement_id FROM premium_entitlements":
+            return [{"entitlement_id": rid} for rid in self.rows]
+        if "FROM premium_grants" in query:
+            return []
+        if "FROM premium_entitlements" in query and "WHERE deleted = FALSE" in query:
+            return [dict(row) for row in self.rows.values() if not row["deleted"]]
+        raise AssertionError(f"unexpected query: {query}")
+
+
+def _seeded_row(entitlement_id, **overrides):
+    row = dict(
+        entitlement_id=entitlement_id,
+        sku_id=111,
+        scope_type="guild",
+        guild_id=entitlement_id * 10,
+        user_id=None,
+        entitlement_type=2,
+        deleted=False,
+        consumed=False,
+        starts_at=None,
+        ends_at=None,
+    )
+    row.update(overrides)
+    return row
+
+
+async def test_reconciliation_rereading_an_existing_row_sends_no_dm():
+    table = _ReconcileTable(seed_rows=[_seeded_row(1)])
+
+    async def _stream(**kwargs):
+        yield _remote_entitlement(id=1, guild_id=10)
+
+    cog, bot, owner = _dm_cog(table, stream_factory=_stream)
+
+    await cog._reconcile_once()
+    await _flush_owner_dms(cog)
+
+    assert owner.sent == []
+
+
+async def test_reconciliation_finds_a_missed_purchase_and_sends_one_labelled_dm():
+    """A row this pass has NEVER recorded before - the "missed gateway
+    event" scenario - is one DM, clearly labelled so the owner knows it
+    came from the safety net, not the real-time path."""
+    table = _ReconcileTable()  # empty - this id was never recorded
+
+    async def _stream(**kwargs):
+        yield _remote_entitlement(id=1, guild_id=10)
+
+    cog, bot, owner = _dm_cog(table, stream_factory=_stream)
+
+    await cog._reconcile_once()
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert "(found by reconciliation)" in owner.sent[0]
+
+
+async def test_reconciliation_storm_collapses_to_one_summary_dm():
+    """More than RECONCILE_DM_STORM_THRESHOLD transitions in one pass (here:
+    every one of them brand new) - ONE summary DM, never one per row."""
+    table = _ReconcileTable()
+    many = premium_cog.RECONCILE_DM_STORM_THRESHOLD + 1
+
+    async def _stream(**kwargs):
+        for index in range(many):
+            yield _remote_entitlement(id=index + 1, guild_id=(index + 1) * 10)
+
+    cog, bot, owner = _dm_cog(table, stream_factory=_stream)
+
+    await cog._reconcile_once()
+    await _flush_owner_dms(cog)
+
+    assert len(owner.sent) == 1
+    assert f"{many} changes" in owner.sent[0]
+    assert "one per transition" not in owner.sent[0]  # sanity: not an accidental echo

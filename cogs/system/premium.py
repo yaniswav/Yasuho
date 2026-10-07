@@ -80,10 +80,69 @@ leaf is the real gate - ``cog_check`` is a second, cog-wide layer on top, the
 same belt-and-suspenders cogs/system/admin.py and cogs/system/retention.py
 already use. The gateway listeners and the reconciliation loop need no such
 gate - nothing about them is a user-invoked command.
+
+M5 (this lot) DMs the bot owner (Team-aware: every admin/developer Team
+member if the application is Team-owned, same resolution
+``discord.ext.commands.Bot.is_owner`` itself uses - see
+:meth:`Premium._resolve_owner_ids`) one short, plain-English message for
+every genuine sale-relevant transition, EXACTLY ONCE:
+
+* a NEW entitlement (:meth:`Premium._handle_entitlement_event`'s own
+  before/after read, or :func:`tools.premium.reconcile`'s ``new_rows`` when
+  the gateway event that should have announced it was missed - labelled
+  "(found by reconciliation)");
+* an entitlement ENDING (a refund or a cancellation - the same event/
+  reconciliation split, via ``tools.premium.reconcile``'s ``ended_rows``).
+
+Both are derived from a DATABASE TRANSITION (a before/after snapshot of the
+one row, never from "an event arrived") by
+:func:`tools.premium.classify_entitlement_transition` - see that function's
+own docstring for the exact rule and why it makes a replayed/duplicated
+event, or reconciliation re-reading a row it already knew about, a no-op
+rather than a second DM. An owner grant (``?premiumadmin grant``) is
+deliberately NOT one of these - it never touches ``premium_entitlements``
+at all, so no transition is ever derived for it, and no DM is ever sent.
+
+RENEWALS ARE DELIBERATELY NOT HANDLED - VERDICT AND SOURCES. Discord does
+not surface a successful subscription renewal as any kind of entitlement
+event: per Discord's own "Entitlement Update Events" and "Implementing App
+Subscriptions" documentation (docs.discord.com/developers/events/gateway-
+events and .../monetization/implementing-app-subscriptions, both read
+2026-10-07), a subscription entitlement is granted with ``ends_at`` left
+``NULL`` for as long as it keeps renewing, and ``ENTITLEMENT_UPDATE`` fires
+ONLY once, when the subscription actually ends (carrying the ``ends_at``
+that marks when it stopped) - as of the October 1, 2024 change, there is no
+longer even an ``ENTITLEMENT_UPDATE`` on a successful renewal. The only
+Discord-side signal for a renewal is ``SUBSCRIPTION_UPDATE`` (a DIFFERENT
+resource - ``discord.Subscription``, current_period_start/current_period_end
+- confirmed present as ``on_subscription_create/update/delete`` in this
+repo's installed discord.py, ``discord/state.py``'s
+``parse_subscription_*``), which this cog does not listen for: wiring it up
+would mean standing up an entirely separate event family and its own
+period-tracking state for a label ("renewed") the owner did not ask for and
+that carries no entitlement/cache consequence of its own - out of scope for
+this lot. Per this lot's own brief ("if they cannot be detected reliably,
+say so and skip renewals"), renewals are skipped outright rather than
+guessed at from ``ends_at`` moving (it never does, while a subscription is
+actively renewing).
+
+Delivery (:meth:`Premium._dispatch_sale_dm`/:meth:`Premium._deliver_sale_dm`)
+is always a background task, fire-and-forget from the gateway listener's or
+the reconciliation loop's point of view: a slow or failing DM (closed DMs,
+``Forbidden``, any other ``HTTPException``) is caught, logged as a single
+``PREMIUM-OWNER-DM-FAILED reason=...`` line, and never raised - it must
+never slow down or break the write path that found the transition. A
+successful send logs ``PREMIUM-OWNER-DM kind=new|ended|reconcile-summary``.
+A single reconciliation pass finding more than
+:data:`RECONCILE_DM_STORM_THRESHOLD` transitions at once (a long outage, or
+the very first pass ever run against an existing customer base) collapses
+to ONE summary DM instead of one per transition - see
+:meth:`Premium._notify_reconcile_transitions`.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import discord
@@ -97,6 +156,107 @@ from tools.time import ShortTime
 log = logging.getLogger(__name__)
 
 NO_MENTIONS = discord.AllowedMentions.none()
+
+# Sentinel for "the pre-write read of an entitlement's prior state failed" -
+# see _read_prior_deleted_flag below. Deliberately distinct from both `None`
+# (confirmed: no row existed yet) and a real row (confirmed: it existed),
+# since a caller that cannot tell which of those two is true must skip the
+# sale notification for this one event rather than guess - a false "new
+# sale" DM, or a missed one, are both worse than silence here, and a
+# genuinely missed one still self-heals via the next reconciliation pass's
+# own "(found by reconciliation)" label.
+_UNKNOWN_PRIOR_STATE = object()
+
+# M5 (owner-DM-on-sale): if a single reconciliation pass finds more than
+# this many sale-relevant transitions at once (a long gap since the last
+# successful pass, or the very first pass ever run against an existing
+# customer base), send ONE summary DM instead of one per transition - see
+# Premium._notify_reconcile_transitions.
+RECONCILE_DM_STORM_THRESHOLD = 5
+
+# discord.EntitlementType -> a short, plain-English label for the owner DM
+# (M5). Keyed by the enum's own int VALUE (not the enum itself) because the
+# stored/returned row carries entitlement_type as a plain int (see
+# tools.premium._coerce_entitlement) - never re-wrapped back into the enum
+# on the way out, so this module must not assume it is one either.
+_ENTITLEMENT_TYPE_LABELS = {
+    discord.EntitlementType.purchase.value: "purchase",
+    discord.EntitlementType.premium_subscription.value: "premium subscription",
+    discord.EntitlementType.developer_gift.value: "developer gift",
+    discord.EntitlementType.test_mode_purchase.value: "test-mode purchase",
+    discord.EntitlementType.free_purchase.value: "free purchase",
+    discord.EntitlementType.user_gift.value: "user gift",
+    discord.EntitlementType.premium_purchase.value: "premium purchase",
+    discord.EntitlementType.application_subscription.value: "application subscription",
+}
+
+
+def _entitlement_type_label(entitlement_type):
+    return _ENTITLEMENT_TYPE_LABELS.get(entitlement_type, f"type {entitlement_type}")
+
+
+def _sale_product_name(sku_id):
+    """"Yasuho+"/"Pack Confort" for whichever product's SKU this is, from
+    this module's OWN already-parsed [Premium] config - never re-reads
+    bot.ini (see tools.premium's own "[Premium] SKU configuration" section).
+    Falls back to a bare SKU id for a row naming neither (should not happen
+    in production - reconcile/the gateway handlers both narrow to the
+    configured catalog - but a DM must never crash over a fallback label)."""
+    if sku_id == premium.YASUHO_PLUS_SKU:
+        return "Yasuho+"
+    if sku_id == premium.COMFORT_PACK_SKU:
+        return "Pack Confort"
+    return f"SKU {sku_id}"
+
+
+def _sale_scope_desc(bot, scope_type, guild_id, user_id):
+    """"server <name> (<id>)" from the bot's OWN guild cache if it has the
+    guild, else just "<id>" (never an await, never a fetch - a cache miss is
+    not worth delaying a fire-and-forget DM for); "<mention> (<id>)" for a
+    user scope, no fetch needed since a mention never requires the user's
+    name to resolve correctly client-side."""
+    if scope_type == "guild":
+        guild = bot.get_guild(guild_id) if guild_id is not None else None
+        name = guild.name if guild is not None else str(guild_id)
+        return f"server {name} ({guild_id})"
+    return f"<@{user_id}> ({user_id})"
+
+
+def _build_sale_dm(bot, kind, row, *, found_by_reconciliation=False):
+    """Plain-English (never tools.i18n._()) owner DM text for one
+    sale-relevant transition - ``kind`` is ``"new"`` or ``"ended"``, ``row``
+    is whatever tools.premium.upsert_entitlement_event/upsert_entitlement/
+    load_active_entitlement_rows returned (a plain dict or an asyncpg.Record
+    - both support the same ``row["column"]`` reads used below).
+
+    Deliberately plain text, not an embed and not wrapped in tools.i18n._():
+    this is a technical notification for the bot owner ALONE, the same
+    "owner diagnostic, plain text" posture ?premiumadmin usage already takes
+    above, never a member-facing string that would need translating.
+    """
+    product = _sale_product_name(row["sku_id"])
+    scope_desc = _sale_scope_desc(bot, row["scope_type"], row["guild_id"], row["user_id"])
+    entitlement_type = row["entitlement_type"]
+    if kind == "new":
+        head = "New sale"
+        if found_by_reconciliation:
+            head += " (found by reconciliation)"
+        ends_at = row["ends_at"]
+        ends_str = format_dt(ends_at) if ends_at else "never"
+        lines = [
+            f"{head}: {product} for {scope_desc}",
+            f"Type: {_entitlement_type_label(entitlement_type)}",
+            f"Ends: {ends_str}",
+        ]
+    else:
+        lines = [
+            f"Ended (refund or cancellation): {product} for {scope_desc}",
+            f"Type: {_entitlement_type_label(entitlement_type)}",
+        ]
+    text = "\n".join(lines)
+    if entitlement_type == discord.EntitlementType.test_mode_purchase.value:
+        text = "TEST - " + text
+    return text
 
 # The two scope keywords ?premiumadmin list/check accept, mapped to
 # tools.premium's scope_type strings.
@@ -189,6 +349,13 @@ class Premium(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # Strong references to in-flight owner-DM background tasks (M5), so
+        # they are never garbage-collected mid-flight - discarded by their
+        # own done callback once finished. A plain set, never awaited on
+        # unload: cog_unload only cancels the reconciliation loop (see
+        # below), the same "a DM must never block anything" posture that
+        # makes every DM send fire-and-forget in the first place.
+        self._pending_owner_dms = set()
 
     async def cog_load(self):
         # Starting the task HERE rather than in __init__ is deliberate, and
@@ -724,6 +891,174 @@ class Premium(commands.Cog):
             allowed_mentions=NO_MENTIONS,
         )
 
+    # -- owner DM on sale/refund (M5) ------------------------------------
+    #
+    # See the module docstring's own "M5" paragraph for the feature and the
+    # sourced renewal verdict. Everything here is additive: it reads a
+    # before/after snapshot the write paths below already make durable, and
+    # a failure anywhere in this section is caught and logged, never raised
+    # - a DM must never slow down or break the gateway listener or the
+    # reconciliation loop that found the transition.
+
+    async def _read_prior_deleted_flag(self, entitlement_id):
+        """The stored ``deleted`` flag for ``entitlement_id`` BEFORE this
+        event's own write - ``None`` if no row exists yet (a genuinely new
+        id), a row if one does, or :data:`_UNKNOWN_PRIOR_STATE` if the read
+        itself failed. The caller skips any sale notification for this one
+        event on that last case rather than guess - see the sentinel's own
+        comment for why that is the safe direction.
+        """
+        try:
+            return await self.bot.db_pool.fetchrow(
+                "SELECT deleted FROM premium_entitlements WHERE entitlement_id = $1",
+                entitlement_id,
+            )
+        except Exception:
+            log.exception(
+                "premium: failed to read entitlement %s's prior state; sale "
+                "notification skipped for this event (self-heals via the "
+                "next reconciliation pass if it was genuinely new)",
+                entitlement_id,
+            )
+            return _UNKNOWN_PRIOR_STATE
+
+    async def _resolve_owner_ids(self):
+        """Every id this bot currently resolves as an owner - mirrors
+        ``discord.ext.commands.Bot.is_owner`` exactly (``discord/ext/
+        commands/bot.py``): the bot owner alone, or every admin/developer
+        Team member if the application is Team-owned, with no ``user`` to
+        check against since this is resolving the SET, not answering "is
+        this one person an owner". Caches onto ``bot.owner_id``/
+        ``bot.owner_ids`` exactly like ``is_owner`` itself does (the same
+        attributes, the same shape), so this - or any later
+        ``?premiumadmin`` command's own owner check - never re-fetches
+        ``application_info`` once either is set.
+        """
+        owner_id = getattr(self.bot, "owner_id", None)
+        if owner_id:
+            return {owner_id}
+        owner_ids = getattr(self.bot, "owner_ids", None)
+        if owner_ids:
+            return set(owner_ids)
+        application_info = getattr(self.bot, "application_info", None)
+        if application_info is None:
+            return set()
+        app = await application_info()
+        if app.team:
+            ids = {
+                member.id
+                for member in app.team.members
+                if member.role
+                in (discord.TeamMemberRole.admin, discord.TeamMemberRole.developer)
+            }
+            self.bot.owner_ids = ids
+            return ids
+        self.bot.owner_id = app.owner.id
+        return {app.owner.id}
+
+    async def _send_one_owner_dm(self, owner_id, text, *, kind):
+        try:
+            user = self.bot.get_user(owner_id)
+            if user is None:
+                user = await self.bot.fetch_user(owner_id)
+            await user.send(text)
+        except discord.Forbidden:
+            log.warning(
+                "PREMIUM-OWNER-DM-FAILED reason=forbidden owner=%s", owner_id
+            )
+            return
+        except discord.HTTPException as error:
+            log.warning(
+                "PREMIUM-OWNER-DM-FAILED reason=http-%s owner=%s",
+                error.status,
+                owner_id,
+            )
+            return
+        except Exception:
+            log.exception(
+                "PREMIUM-OWNER-DM-FAILED reason=unexpected owner=%s", owner_id
+            )
+            return
+        log.info("PREMIUM-OWNER-DM kind=%s", kind)
+
+    async def _deliver_owner_dm(self, text, *, kind):
+        """The background task body for an already-built DM (the
+        reconciliation storm summary below) - resolve the owner(s), then
+        send to each, one failure never stopping delivery to the others."""
+        try:
+            owner_ids = await self._resolve_owner_ids()
+        except Exception:
+            log.exception("PREMIUM-OWNER-DM-FAILED reason=owner-resolve-error")
+            return
+        if not owner_ids:
+            log.warning("PREMIUM-OWNER-DM-FAILED reason=no-owner-resolved")
+            return
+        for owner_id in owner_ids:
+            await self._send_one_owner_dm(owner_id, text, kind=kind)
+
+    async def _deliver_sale_dm(self, kind, row, *, found_by_reconciliation=False):
+        """The background task body :meth:`_dispatch_sale_dm` schedules.
+
+        Builds the DM text INSIDE the task (never synchronously in the
+        caller) and catches a build failure the exact same way a send
+        failure is caught - a malformed row, or a bot stand-in missing an
+        attribute :func:`_build_sale_dm` reads (``get_guild`` and similar),
+        must never propagate out of the gateway listener or the
+        reconciliation loop that found this transition any more than a
+        closed-DMs ``Forbidden`` would.
+        """
+        try:
+            text = _build_sale_dm(
+                self.bot, kind, row, found_by_reconciliation=found_by_reconciliation
+            )
+        except Exception:
+            log.exception("PREMIUM-OWNER-DM-FAILED reason=build-error")
+            return
+        await self._deliver_owner_dm(text, kind=kind)
+
+    def _dispatch_sale_dm(self, kind, row, *, found_by_reconciliation=False):
+        """Send one sale-relevant DM in a background task - fire-and-forget
+        from the caller's point of view (the gateway listener below, or the
+        reconciliation loop), so a slow or failing DM never delays or
+        breaks the write path that found this transition.
+        ``self._pending_owner_dms`` holds a strong reference while the task
+        is in flight (never garbage-collected mid-send) and discards it the
+        moment the task finishes, success or not.
+        """
+        task = asyncio.ensure_future(
+            self._deliver_sale_dm(
+                kind, row, found_by_reconciliation=found_by_reconciliation
+            )
+        )
+        self._pending_owner_dms.add(task)
+        task.add_done_callback(self._pending_owner_dms.discard)
+
+    def _notify_reconcile_transitions(self, new_rows, ended_rows):
+        """One DM per transition :func:`tools.premium.reconcile`'s own pass
+        found - unless there are more than :data:`RECONCILE_DM_STORM_THRESHOLD`
+        of them, in which case this sends ONE summary DM instead (a long
+        outage, or the very first pass ever run against an existing
+        customer base, must not flood the owner with one DM per row)."""
+        total = len(new_rows) + len(ended_rows)
+        if total == 0:
+            return
+        if total > RECONCILE_DM_STORM_THRESHOLD:
+            text = (
+                f"Premium reconciliation found {total} changes: "
+                f"{len(new_rows)} new sale(s), {len(ended_rows)} ended. "
+                "See the PREMIUM-RECONCILE log line for detail."
+            )
+            task = asyncio.ensure_future(
+                self._deliver_owner_dm(text, kind="reconcile-summary")
+            )
+            self._pending_owner_dms.add(task)
+            task.add_done_callback(self._pending_owner_dms.discard)
+            return
+        for row in new_rows:
+            self._dispatch_sale_dm("new", row, found_by_reconciliation=True)
+        for row in ended_rows:
+            self._dispatch_sale_dm("ended", row)
+
     # -- ENTITLEMENT_* gateway handlers (M3b) ---------------------------
     #
     # Real-time path for a purchase/renewal/cancellation/refund. The
@@ -779,6 +1114,23 @@ class Premium(commands.Cog):
                 entitlement_id,
             )
             return
+        # Read BEFORE the write below - see tools.premium.classify_entitlement_
+        # transition's own docstring for why a before/after snapshot (not the
+        # event's own create/update/delete kind) is what decides "new sale"/
+        # "ended" for the owner DM (M5): a replayed/duplicated event reads the
+        # exact same before/after pair and converges to the same verdict
+        # (None, every time after the first). A read failure here never
+        # blocks the write - it only means this one event skips the sale
+        # notification (see _read_prior_deleted_flag's own docstring).
+        try:
+            entitlement_id_int = int(entitlement_id)
+        except (TypeError, ValueError):
+            entitlement_id_int = None
+        previous = (
+            await self._read_prior_deleted_flag(entitlement_id_int)
+            if entitlement_id_int is not None
+            else _UNKNOWN_PRIOR_STATE
+        )
         try:
             row = await premium.upsert_entitlement_event(
                 self.bot.db_pool, entitlement, force_deleted=force_deleted
@@ -802,6 +1154,14 @@ class Premium(commands.Cog):
             row["scope_type"],
             row["guild_id"] if row["scope_type"] == "guild" else row["user_id"],
         )
+        if previous is not _UNKNOWN_PRIOR_STATE:
+            transition = premium.classify_entitlement_transition(
+                is_new=previous is None,
+                prev_deleted=bool(previous["deleted"]) if previous is not None else False,
+                now_deleted=row["deleted"],
+            )
+            if transition is not None:
+                self._dispatch_sale_dm(transition, row)
         try:
             if row["scope_type"] == "guild":
                 await self.bot.premium.refresh_entitlement_scope(
@@ -935,6 +1295,14 @@ class Premium(commands.Cog):
             result["seen"],
             result["upserted"],
             result["missing"],
+        )
+        # M5: .get(..., []) rather than result[...] - a test double standing
+        # in for tools.premium.reconcile (several already exist above this
+        # cog's own test suite) may return the bare three-key dict reconcile
+        # had before this lot; treated as "nothing to announce", never a
+        # KeyError.
+        self._notify_reconcile_transitions(
+            result.get("new_rows", []), result.get("ended_rows", [])
         )
 
     @tasks.loop(hours=RECONCILE_INTERVAL_HOURS)

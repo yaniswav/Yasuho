@@ -1276,6 +1276,19 @@ class _FakeEntitlementTable:
 
     async def fetch(self, query, *args):
         self.calls.append(("fetch", query, args))
+        # M5: load_active_entitlement_rows - full columns, checked FIRST so
+        # its own "sku_id = ANY(...)" variant is not swallowed by the older,
+        # ids-only branch of the same substring below.
+        if "entitlement_id, sku_id, scope_type, guild_id, user_id, entitlement_type, ends_at" in query:
+            if "sku_id = ANY($1::bigint[])" in query:
+                (sku_ids,) = args
+                sku_ids = {int(sku_id) for sku_id in sku_ids}
+                return [
+                    dict(row)
+                    for row in self.rows.values()
+                    if not row["deleted"] and row["sku_id"] in sku_ids
+                ]
+            return [dict(row) for row in self.rows.values() if not row["deleted"]]
         if "sku_id = ANY($1::bigint[])" in query:
             (sku_ids,) = args
             sku_ids = {int(sku_id) for sku_id in sku_ids}
@@ -1284,7 +1297,13 @@ class _FakeEntitlementTable:
                 for rid, row in self.rows.items()
                 if not row["deleted"] and row["sku_id"] in sku_ids
             ]
-        if "SELECT entitlement_id FROM premium_entitlements" in query:
+        # M5: load_all_entitlement_ids - EVERY id ever recorded, deleted or
+        # not. Checked before the (longer, WHERE-qualified) ids-only branch
+        # below so the two never collide: this one is the bare query with no
+        # WHERE clause at all.
+        if query == "SELECT entitlement_id FROM premium_entitlements":
+            return [{"entitlement_id": rid} for rid in self.rows]
+        if "SELECT entitlement_id FROM premium_entitlements WHERE deleted = FALSE" in query:
             return [
                 {"entitlement_id": rid}
                 for rid, row in self.rows.items()
@@ -1605,7 +1624,12 @@ async def test_reconcile_upserts_every_row_the_listing_returns():
 
     result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
 
-    assert result == {"seen": 2, "upserted": 2, "missing": 0}
+    assert result["seen"] == 2
+    assert result["upserted"] == 2
+    assert result["missing"] == 0
+    # M5: both ids are brand new - never recorded before this pass.
+    assert {row["entitlement_id"] for row in result["new_rows"]} == {1, 2}
+    assert result["ended_rows"] == []
     assert set(table.rows) == {1, 2}
 
 
@@ -1618,7 +1642,13 @@ async def test_reconcile_marks_a_row_missing_from_a_complete_listing_as_deleted(
     # This COMPLETE listing only reports id=1 - id=2 is gone from Discord.
     result = await premium.reconcile(table, _stream([_remote(id=1)]), application_id=APP_ID)
 
-    assert result == {"seen": 1, "upserted": 1, "missing": 1}
+    assert result["seen"] == 1
+    assert result["upserted"] == 1
+    assert result["missing"] == 1
+    # Both ids pre-existed (seeded above, before this pass) - id=1 is not
+    # new, id=2 is the "ended" transition (missing from a complete listing).
+    assert result["new_rows"] == []
+    assert {row["entitlement_id"] for row in result["ended_rows"]} == {2}
     assert table.rows[1]["deleted"] is False
     assert table.rows[2]["deleted"] is True
 
@@ -1629,7 +1659,11 @@ async def test_reconcile_ignores_rows_of_a_different_application():
 
     result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
 
-    assert result == {"seen": 1, "upserted": 1, "missing": 0}
+    assert result["seen"] == 1
+    assert result["upserted"] == 1
+    assert result["missing"] == 0
+    assert {row["entitlement_id"] for row in result["new_rows"]} == {1}
+    assert result["ended_rows"] == []
     assert set(table.rows) == {1}  # the foreign row was never written
 
 
@@ -1642,7 +1676,11 @@ async def test_reconcile_handles_a_large_multi_page_stream_without_truncation():
 
     result = await premium.reconcile(table, _stream(items), application_id=APP_ID)
 
-    assert result == {"seen": 250, "upserted": 250, "missing": 0}
+    assert result["seen"] == 250
+    assert result["upserted"] == 250
+    assert result["missing"] == 0
+    assert len(result["new_rows"]) == 250  # the storm-collapse is a cog-level decision
+    assert result["ended_rows"] == []
     assert len(table.rows) == 250
 
 
@@ -1689,7 +1727,13 @@ async def test_reconcile_with_sku_filter_leaves_a_different_skus_row_untouched()
         sku_ids=[222],
     )
 
-    assert result == {"seen": 1, "upserted": 1, "missing": 0}
+    assert result["seen"] == 1
+    assert result["upserted"] == 1
+    assert result["missing"] == 0
+    # id=2 pre-existed - not new; id=1's OTHER sku is outside the filter so
+    # it is neither upserted nor counted as "ended".
+    assert result["new_rows"] == []
+    assert result["ended_rows"] == []
     assert table.rows[1]["deleted"] is False  # untouched - outside the filter
     assert table.rows[2]["deleted"] is False
 
@@ -1710,7 +1754,11 @@ async def test_negative_control_reconcile_without_sku_filter_marks_the_other_sku
         application_id=APP_ID,
     )
 
-    assert result == {"seen": 1, "upserted": 1, "missing": 1}
+    assert result["seen"] == 1
+    assert result["upserted"] == 1
+    assert result["missing"] == 1
+    assert result["new_rows"] == []  # id=2 pre-existed
+    assert {row["entitlement_id"] for row in result["ended_rows"]} == {1}
     assert table.rows[1]["deleted"] is True  # the bug this fix prevents
 
 
@@ -1968,6 +2016,93 @@ def test_resolve_user_limits_resolves_premium_for_a_pack_confort_user(monkeypatc
     )
     bot = types.SimpleNamespace(premium=cache)
     assert premium.resolve_user_limits(bot, 42) == premium.USER_PREMIUM
+
+
+# ---------------------------------------------------------------------------
+# M5: classify_entitlement_transition - the pure "new"/"ended"/None rule a
+# before/after snapshot of ONE entitlement_id reduces to (see
+# cogs/system/premium.py for the before/after reads that feed it, and that
+# module's own docstring for the sourced verdict on why a renewal is never
+# one of these three outcomes at all).
+# ---------------------------------------------------------------------------
+
+
+def test_classify_a_never_seen_active_row_is_new():
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=True, prev_deleted=False, now_deleted=False
+        )
+        == "new"
+    )
+
+
+def test_classify_a_never_seen_already_deleted_row_is_nothing():
+    """The out-of-order DELETE-before-its-own-CREATE case: it was never
+    actually granted, so there is nothing to announce."""
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=True, prev_deleted=False, now_deleted=True
+        )
+        is None
+    )
+
+
+def test_classify_an_existing_active_row_going_deleted_is_ended():
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=False, prev_deleted=False, now_deleted=True
+        )
+        == "ended"
+    )
+
+
+def test_classify_an_existing_row_already_deleted_staying_deleted_is_nothing():
+    """The replayed-delete / reconciliation-re-reads-a-known-row case - the
+    database transition already happened once; a second identical read
+    must not announce it again."""
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=False, prev_deleted=True, now_deleted=True
+        )
+        is None
+    )
+
+
+def test_classify_a_plain_field_update_on_an_active_row_is_nothing():
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=False, prev_deleted=False, now_deleted=False
+        )
+        is None
+    )
+
+
+def test_classify_a_resurrection_is_nothing():
+    """deleted True -> False only ever happens through reconcile's own
+    "clobbering" upsert, never through this classifier's event path - and is
+    not one of the two sale-relevant outcomes this lot DMs for either way."""
+    assert (
+        premium.classify_entitlement_transition(
+            is_new=False, prev_deleted=True, now_deleted=False
+        )
+        is None
+    )
+
+
+# --- Negative control: without a correct is_new check, every event would
+# read as "new" forever, breaking the "duplicate event sends only one DM"
+# promise -----------------------------------------------------------------
+#
+# Actually run during this lot (not just asserted by comment): temporarily
+# replacing classify_entitlement_transition's body with
+# ``return None if now_deleted else "new"`` (dropping the ``if is_new:``
+# branch entirely, i.e. "new" no matter what the prior state was) made
+# tests/cogs/test_premium.py::test_the_same_create_event_processed_twice_sends_only_one_dm
+# FAIL (``assert len(owner.sent) == 1`` saw 2) - proving that test actually
+# depends on classify_entitlement_transition's is_new check, not on some
+# incidental property of the fixture. The edit was then reverted by hand (no
+# git stash/checkout/reset) and ``git diff`` confirmed tools/premium.py
+# matched its pre-break state before the full suite was re-run green.
 
 
 # --- Negative control: without the getattr guard, a missing attribute raises -

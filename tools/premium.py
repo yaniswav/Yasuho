@@ -815,6 +815,59 @@ async def load_active_entitlement_ids(pool, *, sku_ids=None):
     return {int(_get(row, "entitlement_id")) for row in rows}
 
 
+async def load_all_entitlement_ids(pool):
+    """Every ``entitlement_id`` EVER recorded, deleted or not, as a ``set[int]``.
+
+    The "have we truly never seen this id before, at all" base
+    :func:`reconcile` reads BEFORE its listing loop starts, so a sale-
+    notification caller (cogs/system/premium.py) can tell a genuinely NEW
+    entitlement apart from a RESURRECTION (the already-deleted row coming
+    back alive - :func:`upsert_entitlement`'s own "clobbering" paragraph: an
+    exceedingly rare dispute reversal, not a sale). Unlike
+    :func:`load_active_entitlement_ids`, deliberately UNFILTERED by
+    ``deleted`` - that is the entire point of this function existing
+    alongside it rather than being the same query.
+    """
+    rows = await pool.fetch("SELECT entitlement_id FROM premium_entitlements")
+    return {int(_get(row, "entitlement_id")) for row in rows}
+
+
+# Column list :func:`load_active_entitlement_rows` selects - shared so the
+# SELECT and the (optional) sku-filtered variant below can never drift apart.
+_ACTIVE_ENTITLEMENT_ROW_COLUMNS = (
+    "entitlement_id, sku_id, scope_type, guild_id, user_id, "
+    "entitlement_type, ends_at"
+)
+
+
+async def load_active_entitlement_rows(pool, *, sku_ids=None):
+    """The row-returning twin of :func:`load_active_entitlement_ids`: every
+    non-deleted entitlement's ``entitlement_id``/``sku_id``/``scope_type``/
+    ``guild_id``/``user_id``/``entitlement_type``/``ends_at``, optionally
+    narrowed to ``sku_ids`` (same contract as :func:`load_active_entitlement_ids` -
+    see its own docstring for why a caller that scoped its listing to a SKU
+    filter must scope this the same way).
+
+    :func:`reconcile` reads this INSTEAD of :func:`load_active_entitlement_ids`
+    for its "missing from a complete listing" diff, so a row a complete
+    listing no longer reports can be labelled ("ended: refund or
+    cancellation, for THIS product/scope") in a DM without a second,
+    separate per-row query after :func:`mark_deleted` runs.
+    """
+    if sku_ids is None:
+        rows = await pool.fetch(
+            f"SELECT {_ACTIVE_ENTITLEMENT_ROW_COLUMNS} FROM premium_entitlements "
+            "WHERE deleted = FALSE"
+        )
+    else:
+        rows = await pool.fetch(
+            f"SELECT {_ACTIVE_ENTITLEMENT_ROW_COLUMNS} FROM premium_entitlements "
+            "WHERE deleted = FALSE AND sku_id = ANY($1::bigint[])",
+            [int(sku_id) for sku_id in sku_ids],
+        )
+    return rows
+
+
 async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
     """Resync ``premium_entitlements`` against a COMPLETE Discord listing.
 
@@ -883,13 +936,26 @@ async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
     (the default, and every existing caller before this parameter existed)
     keeps the original whole-application diff base.
 
-    Returns ``{"seen": ..., "upserted": ..., "missing": ...}`` on a complete
-    pass, or ``None`` when the pass was aborted - so a caller
-    (cogs/system/premium.py's periodic loop) can tell the two outcomes apart
-    without parsing logs, and in particular knows NOT to reload
-    :class:`EntitlementCache` from the database after an aborted pass (that
-    reload is a plain re-read of whatever is in Postgres right now, which is
-    exactly why it must only happen after a pass that left Postgres alone).
+    Returns ``{"seen": ..., "upserted": ..., "missing": ..., "new_rows": ...,
+    "ended_rows": ...}`` on a complete pass, or ``None`` when the pass was
+    aborted - so a caller (cogs/system/premium.py's periodic loop) can tell
+    the two outcomes apart without parsing logs, and in particular knows NOT
+    to reload :class:`EntitlementCache` from the database after an aborted
+    pass (that reload is a plain re-read of whatever is in Postgres right
+    now, which is exactly why it must only happen after a pass that left
+    Postgres alone).
+
+    ``new_rows``/``ended_rows`` (M5: the owner-DM-on-sale lot) are the
+    sale-relevant transitions THIS pass itself discovered - a row whose
+    ``entitlement_id`` :func:`load_all_entitlement_ids` had never recorded
+    before this pass started (a missed CREATE event, now "found by
+    reconciliation"), and a row a complete listing no longer reports (a
+    refund/cancellation this pass is the one to notice). Both are plain
+    lists of row dicts, never DMed from here - this function stays Discord-
+    notification-free, same as every other store helper in this module; the
+    caller (cogs/system/premium.py's ``_reconcile_once``) decides whether
+    and how to tell the owner, including the "more than N -> one summary
+    DM" storm guard.
     """
     # Captured BEFORE the listing starts, so every upsert below can tell
     # "a gateway event touched this row more recently than this whole pass
@@ -897,10 +963,15 @@ async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
     # upsert_entitlement's own "not_before" paragraph for the race this
     # closes (a refund/delete landing on a row between when this pass's
     # listing fetched that row's page and when this loop gets around to
-    # writing it).
+    # writing it). The SAME "before this pass" snapshot also answers "has
+    # this entitlement_id EVER been recorded" for new_rows below - read once,
+    # here, rather than per-row, since reconciliation is a periodic bulk
+    # pass, not a hot path.
     started_at = datetime.datetime.now(datetime.timezone.utc)
+    known_ids_before = await load_all_entitlement_ids(pool)
     seen_ids = set()
     upserted = 0
+    new_rows = []
     try:
         async for entitlement in entitlements:
             entitlement_application_id = _get(entitlement, "application_id")
@@ -912,6 +983,15 @@ async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
             row = await upsert_entitlement(pool, entitlement, not_before=started_at)
             seen_ids.add(row["entitlement_id"])
             upserted += 1
+            # exclude_deleted=True on every production listing means `row`
+            # arrives non-deleted in practice (see this function's own
+            # production caller) - the `not row["deleted"]` guard is still
+            # checked explicitly, never assumed, mirroring
+            # classify_entitlement_transition's own symmetric rule that an
+            # entitlement first seen already deleted was never actually
+            # granted and is not a sale to announce.
+            if row["entitlement_id"] not in known_ids_before and not row["deleted"]:
+                new_rows.append(row)
     except asyncio.CancelledError:
         raise
     except Exception:
@@ -921,8 +1001,12 @@ async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
         )
         return None
 
-    stored_ids = await load_active_entitlement_ids(pool, sku_ids=sku_ids)
+    stored_rows = await load_active_entitlement_rows(pool, sku_ids=sku_ids)
+    stored_ids = {int(_get(row, "entitlement_id")) for row in stored_rows}
     missing_ids = stored_ids - seen_ids
+    ended_rows = [
+        row for row in stored_rows if int(_get(row, "entitlement_id")) in missing_ids
+    ]
     for entitlement_id in missing_ids:
         await mark_deleted(pool, entitlement_id)
 
@@ -930,7 +1014,60 @@ async def reconcile(pool, entitlements, *, application_id, sku_ids=None):
         "seen": len(seen_ids),
         "upserted": upserted,
         "missing": len(missing_ids),
+        "new_rows": new_rows,
+        "ended_rows": ended_rows,
     }
+
+
+# ---------------------------------------------------------------------------
+# Sale-relevant transitions (M5: DM the bot owner on a sale/refund). See
+# cogs/system/premium.py's module docstring for the full feature and the
+# verdict on why a subscription RENEWAL is never one of these.
+# ---------------------------------------------------------------------------
+
+
+def classify_entitlement_transition(*, is_new, prev_deleted, now_deleted):
+    """One sale-relevant label - ``"new"``, ``"ended"``, or ``None`` - from a
+    before/after snapshot of ONE entitlement_id.
+
+    Pure and side-effect-free on purpose: EVERY caller (the ENTITLEMENT_*
+    gateway handlers, the reconciliation loop above) derives ``is_new``/
+    ``prev_deleted`` from its OWN before/after read of the database - never
+    from "an event arrived" - so a replayed or duplicated delivery reads the
+    exact same before/after pair and converges to the exact same verdict
+    (``None``, every time after the first), which is what makes "the same
+    event twice" or "reconciliation re-reading an existing row" a no-op
+    rather than a second DM.
+
+      * ``is_new`` and not ``now_deleted`` -> ``"new"``: an entitlement_id
+        the database had never recorded before, now active - a real
+        purchase, a test-mode purchase, or a developer gift, whichever
+        ``entitlement_type`` says (the caller's job to label, not this
+        function's).
+      * ``is_new`` and ``now_deleted`` -> ``None``: an out-of-order DELETE
+        that arrived before its own CREATE (this module's "EVENT ORDERING"
+        docstring) inserts an already-deleted row - it was never actually
+        granted, so there is nothing to announce.
+      * not ``is_new``, ``prev_deleted`` is False, ``now_deleted`` is True ->
+        ``"ended"``: a refund, a cancellation, or - via :func:`reconcile`'s
+        "missing" diff - a subscription a complete listing no longer
+        reports.
+      * every other combination (a plain field update, a duplicate
+        create/update, an already-deleted row touched again, a resurrection)
+        -> ``None``: not one of the two sale-relevant transitions worth a DM.
+
+    Subscription RENEWALS are deliberately not a case here at all - see
+    cogs/system/premium.py's module docstring for the sourced verdict: a
+    renewing entitlement simply keeps existing with ``ends_at`` still NULL
+    (Discord stopped sending an ENTITLEMENT_UPDATE on renewal in October
+    2024), so no before/after snapshot this function could ever be handed
+    would tell it "that was a renewal" in the first place.
+    """
+    if is_new:
+        return None if now_deleted else "new"
+    if not prev_deleted and now_deleted:
+        return "ended"
+    return None
 
 
 # ---------------------------------------------------------------------------
