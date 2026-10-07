@@ -2,7 +2,9 @@ import asyncio
 import logging
 import logging.handlers
 import os
+import re
 import sys
+import time
 
 import aiohttp
 import asyncpg
@@ -846,22 +848,50 @@ async def get_prefix(bot: Yasuho, message: discord.Message):
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
+# Technical logs are kept LOG_RETENTION_DAYS days (PRIVACY.md, Retention): one
+# file per day, rotated at midnight, the oldest deleted by the handler itself.
+LOG_RETENTION_DAYS = 30
+
+
+def _prune_legacy_logs(log_dir, max_age_days=LOG_RETENTION_DAYS, now=None):
+    """Delete the old size-rotated files (yasuho.log.1 .. .9) once they are
+    older than the retention window. The daily handler only manages its own
+    dated files, so without this the files written before the switch would
+    stay for ever."""
+    now = time.time() if now is None else now
+    removed = 0
+    for name in os.listdir(log_dir):
+        if not re.fullmatch(r"yasuho\.log\.\d", name):
+            continue
+        path = os.path.join(log_dir, name)
+        try:
+            if now - os.path.getmtime(path) > max_age_days * 86400:
+                os.remove(path)
+                removed += 1
+        except OSError:
+            continue
+    return removed
+
+
 def _attach_file_logging():
-    """Add a rotating file handler to the root logger, alongside stderr.
+    """Add a daily rotating file handler to the root logger, alongside stderr.
 
     Everything (discord.*, our cogs, aiohttp.access) also lands in
     logs/yasuho.log so the terminal output stays as-is but there is a durable
-    on-disk trail. This is bootstrap code: any failure here (permissions, disk)
-    must never stop the bot from starting, so it degrades to terminal-only
-    logging with a one-line warning.
+    on-disk trail. The file rotates at midnight into yasuho.log.YYYY-MM-DD and
+    only LOG_RETENTION_DAYS of them are kept (grep logs/yasuho.log* to search
+    the whole window). This is bootstrap code: any failure here (permissions,
+    disk) must never stop the bot from starting, so it degrades to
+    terminal-only logging with a one-line warning.
     """
     try:
         log_dir = os.path.join(os.path.dirname(__file__), "logs")
         os.makedirs(log_dir, exist_ok=True)
-        handler = logging.handlers.RotatingFileHandler(
+        _prune_legacy_logs(log_dir)
+        handler = logging.handlers.TimedRotatingFileHandler(
             os.path.join(log_dir, "yasuho.log"),
-            maxBytes=10 * 1024 * 1024,
-            backupCount=5,
+            when="midnight",
+            backupCount=LOG_RETENTION_DAYS,
             encoding="utf-8",
         )
         handler.setFormatter(

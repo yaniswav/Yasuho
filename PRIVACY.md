@@ -149,7 +149,10 @@ ID, no server ID.
 
 All data is stored in a private PostgreSQL database on a privately owned
 server located in France (no cloud hosting provider), with access limited to
-the bot process and its operator. The
+the bot process and its operator. The web dashboard runs on a second privately
+owned machine on the same private network; it has no database of its own, does
+not keep your Discord login token (it is used once to sign you in, then
+discarded), and keeps your session only in a signed cookie in your browser. The
 database itself is not encrypted at rest (the server's disk is not encrypted);
 database backups are encrypted (GPG), and OAuth tokens are additionally
 encrypted at the application level. Backups are kept for disaster recovery and are subject to
@@ -208,6 +211,10 @@ in France.
   dashboard): 90 days, and purged in full when the bot is removed from the
   server.
 - Anonymous command-usage aggregates: 400 days.
+- Technical logs: the bot's logs and the dashboard's service logs, 30 days; the
+  dashboard's web access logs (IP address, browser user-agent, requested page,
+  date), 15 days. Logs never contain message text, and Discord IDs appear in
+  them only to trace an error.
 - Top.gg vote record: kept until you delete it. There is no automatic window,
   because the record IS the streak and the lifetime count it exists to show;
   ageing it out would quietly take a reward away. One row per voter, deleted in
