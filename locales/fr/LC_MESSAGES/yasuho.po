@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 07:31+0000\n"
+"POT-Creation-Date: 2026-10-07 08:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -839,7 +839,7 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "Flux AniList supprimé dans {channel}."
 
 #: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:339
-#: cogs/music/music.py:4844 cogs/music/search.py:342 cogs/music/views.py:2222
+#: cogs/music/music.py:4953 cogs/music/search.py:342 cogs/music/views.py:2222
 #: cogs/music/views.py:2405 cogs/music/views.py:2539 cogs/music/views.py:2667
 msgid "Unknown title"
 msgstr "Titre inconnu"
@@ -5655,8 +5655,9 @@ msgid "I can't give you that role: it carries permissions I won't hand out autom
 msgstr "Je ne peux pas te donner ce rôle : il comporte des permissions que je n'attribue pas automatiquement. Préviens un admin du serveur."
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
-#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:219
-#: cogs/config/tickets/open.py:377 cogs/config/verification.py:83
+#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:230
+#: cogs/config/tickets/open.py:262 cogs/config/tickets/open.py:418
+#: cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "Une erreur est survenue, veuillez réessayer."
 
@@ -5837,7 +5838,7 @@ msgid "The ticket stays open."
 msgstr "Le ticket reste ouvert."
 
 #: cogs/config/tickets/lifecycle.py:358 cogs/config/tickets/lifecycle.py:453
-#: cogs/config/tickets/open.py:177 cogs/config/tickets/open.py:278
+#: cogs/config/tickets/open.py:187 cogs/config/tickets/open.py:316
 msgid "Tickets only work inside a server."
 msgstr "Les tickets ne fonctionnent que dans un serveur."
 
@@ -5986,70 +5987,75 @@ msgstr "Pas de transcription : je ne peux pas joindre de fichiers dans ce salon.
 msgid "No transcript: I could not read the thread."
 msgstr "Pas de transcription : je n'ai pas pu lire le fil."
 
-#: cogs/config/tickets/open.py:127
+#: cogs/config/tickets/open.py:137
 msgid "You have just opened a ticket. Please wait a moment before opening another one."
 msgstr "Tu viens d'ouvrir un ticket. Patiente un instant avant d'en ouvrir un autre."
 
-#: cogs/config/tickets/open.py:141 cogs/config/tickets/open.py:165
+#: cogs/config/tickets/open.py:151 cogs/config/tickets/open.py:175
 msgid "Open a ticket"
 msgstr "Ouvrir un ticket"
 
-#: cogs/config/tickets/open.py:143
+#: cogs/config/tickets/open.py:153
 msgid "What do you need help with?"
 msgstr "De quoi as-tu besoin ?"
 
-#: cogs/config/tickets/open.py:144
+#: cogs/config/tickets/open.py:154
 msgid "A short summary - staff will read it first."
 msgstr "Un court résumé - l'équipe le consultera en premier."
 
-#: cogs/config/tickets/open.py:186 cogs/config/tickets/open.py:287
+#: cogs/config/tickets/open.py:196 cogs/config/tickets/open.py:325
 msgid "You cannot use this."
 msgstr "Tu ne peux pas utiliser ceci."
 
-#: cogs/config/tickets/open.py:193 cogs/config/tickets/open.py:305
+#: cogs/config/tickets/open.py:203 cogs/config/tickets/open.py:343
 msgid "Tickets are not set up here."
 msgstr "Les tickets ne sont pas configurés ici."
 
-#: cogs/config/tickets/open.py:244 cogs/config/tickets/open.py:329
+#: cogs/config/tickets/open.py:271 cogs/config/tickets/open.py:367
 msgid "I am already opening a ticket for you - one moment."
 msgstr "Je suis déjà en train d'ouvrir un ticket pour toi - un instant."
 
-#: cogs/config/tickets/open.py:261
+#: cogs/config/tickets/open.py:288
 #, python-brace-format
 msgid "You already have {count} ticket open here. Close it before opening another."
 msgid_plural "You already have {count} tickets open here. Close one before opening another."
 msgstr[0] "Tu as déjà {count} ticket ouvert ici. Ferme-le avant d'en ouvrir un autre."
 msgstr[1] "Tu as déjà {count} tickets ouverts ici. Fermes-en un avant d'en ouvrir un autre."
 
-#: cogs/config/tickets/open.py:321
+#: cogs/config/tickets/open.py:300
+#, python-brace-format
+msgid "This server has too many open tickets right now ({max}). Please wait for staff to close some."
+msgstr "Ce serveur a trop de tickets ouverts en ce moment ({max}). Attends que le staff en ferme quelques-uns."
+
+#: cogs/config/tickets/open.py:359
 #, python-brace-format
 msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
 msgstr "Il me manque des permissions dans {channel} ({permissions}), donc je ne peux pas ouvrir de ticket. Merci de prévenir un admin du serveur."
 
-#: cogs/config/tickets/open.py:368
+#: cogs/config/tickets/open.py:407
 msgid "I could not create the ticket, please try again."
 msgstr "Je n'ai pas pu créer le ticket, réessaie s'il te plaît."
 
-#: cogs/config/tickets/open.py:425
+#: cogs/config/tickets/open.py:478
 #, python-brace-format
 msgid "Ticket #{number} opened: {thread}"
 msgstr "Ticket #{number} ouvert : {thread}"
 
-#: cogs/config/tickets/open.py:450
+#: cogs/config/tickets/open.py:503
 #, python-brace-format
 msgid "Ticket #{number}"
 msgstr "Ticket #{number}"
 
-#: cogs/config/tickets/open.py:451
+#: cogs/config/tickets/open.py:504
 msgid "*No subject given.*"
 msgstr "*Aucun sujet indiqué.*"
 
-#: cogs/config/tickets/open.py:455
+#: cogs/config/tickets/open.py:508
 #, python-brace-format
 msgid "Opened by {user}"
 msgstr "Ouvert par {user}"
 
-#: cogs/config/tickets/open.py:498
+#: cogs/config/tickets/open.py:551
 #, python-brace-format
 msgid "Ticket #{number} - use the buttons below to claim or close it."
 msgstr "Ticket #{number} - utilise les boutons ci-dessous pour le revendiquer ou le fermer."
@@ -7547,49 +7553,49 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "Stop"
 
-#: cogs/music/music.py:710
+#: cogs/music/music.py:727
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "La file est pleine ({cap} pistes). Passe ou retire quelques pistes d'abord."
 
-#: cogs/music/music.py:726
+#: cogs/music/music.py:743
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " {dropped} piste n'a pas été ajoutée - la file est pleine à {cap}."
 msgstr[1] " {dropped} pistes n'ont pas été ajoutées - la file est pleine à {cap}."
 
-#: cogs/music/music.py:1213
+#: cogs/music/music.py:1230
 msgid "I'm not connected to a voice channel."
 msgstr "Je ne suis pas connectée à un salon vocal."
 
-#: cogs/music/music.py:1216 cogs/music/music.py:3212
+#: cogs/music/music.py:1233 cogs/music/music.py:3321
 #: cogs/music/playlists_shared.py:582
 msgid "You must be in my voice channel to do that."
 msgstr "Tu dois etre dans mon salon vocal pour faire ca."
 
-#: cogs/music/music.py:1226 cogs/music/views.py:218
+#: cogs/music/music.py:1243 cogs/music/views.py:218
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "Seul le DJ ({dj}) ou un modérateur peut contrôler la lecture."
 
-#: cogs/music/music.py:1272
+#: cogs/music/music.py:1289
 msgid "I can only play public links - I can't reach that one."
 msgstr "Je ne peux lire que des liens publics - celui-ci m'est inaccessible."
 
-#: cogs/music/music.py:2007
+#: cogs/music/music.py:2024
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Un problème est survenu lors de la lecture de **{title}**, on la passe."
 
-#: cogs/music/music.py:2026
+#: cogs/music/music.py:2043
 #, python-brace-format
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "{count} autre piste n'a pas pu etre lue, je la passe."
 msgstr[1] "{count} autres pistes n'ont pas pu etre lues, je les passe."
 
-#: cogs/music/music.py:2978
+#: cogs/music/music.py:3087
 #, python-brace-format
 msgid ""
 "Secondary music controls (the everyday ones - play, queue, skip, pause, resume, stop, volume, nowplaying - stay on their own):\n"
@@ -7616,354 +7622,354 @@ msgstr ""
 "- `{p}music filter <preset>` - appliquer un effet audio\n"
 "- `{p}music disconnect` - quitter le salon vocal"
 
-#: cogs/music/music.py:3094
+#: cogs/music/music.py:3203
 msgid "Here is the player."
 msgstr "Voici le lecteur."
 
-#: cogs/music/music.py:3097 cogs/music/music.py:3219
+#: cogs/music/music.py:3206 cogs/music/music.py:3328
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "Le lecteur est déjà actif dans {channel}."
 
-#: cogs/music/music.py:3175 cogs/music/music.py:3238 cogs/music/music.py:3517
-#: cogs/music/music.py:4631 cogs/music/music.py:4759
+#: cogs/music/music.py:3284 cogs/music/music.py:3347 cogs/music/music.py:3626
+#: cogs/music/music.py:4740 cogs/music/music.py:4868
 #: cogs/music/playlists_shared.py:743 cogs/music/playlists_shared.py:795
 #: cogs/music/search.py:516 cogs/music/views.py:2596
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "La musique est actuellement indisponible - aucun nœud Lavalink n'est connecté."
 
-#: cogs/music/music.py:3185 cogs/music/music.py:3512 cogs/music/music.py:4657
+#: cogs/music/music.py:3294 cogs/music/music.py:3621 cogs/music/music.py:4766
 #: cogs/music/playlists_shared.py:589
 msgid "You must be in a voice channel first."
 msgstr "Vous devez d'abord être dans un salon vocal."
 
-#: cogs/music/music.py:3243 cogs/music/music.py:4765
+#: cogs/music/music.py:3352 cogs/music/music.py:4874
 msgid "Could not find any tracks for that query."
 msgstr "Aucune piste trouvée pour cette recherche."
 
-#: cogs/music/music.py:3267
+#: cogs/music/music.py:3376
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "Playlist **{name}** ajoutée à la file ({count} piste)."
 msgstr[1] "Playlist **{name}** ajoutée à la file ({count} pistes)."
 
-#: cogs/music/music.py:3283
+#: cogs/music/music.py:3392
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "**{title}** par `{author}` ajouté à la file d'attente."
 
-#: cogs/music/music.py:3552 cogs/music/views.py:1209
+#: cogs/music/music.py:3661 cogs/music/views.py:1209
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "Seul le DJ ({dj}) peut changer de station."
 
-#: cogs/music/music.py:3569 cogs/music/views.py:1229
+#: cogs/music/music.py:3678 cogs/music/views.py:1229
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "Je n'ai trouvé aucune piste {genre} pour le moment."
 
-#: cogs/music/music.py:3578 cogs/music/views.py:1236
+#: cogs/music/music.py:3687 cogs/music/views.py:1236
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "Station {genre} lancée ({count} piste(s))."
 
-#: cogs/music/music.py:3585
+#: cogs/music/music.py:3694
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "Lancement d'une session {genre} avec {count} piste(s). Profite bien !"
 
-#: cogs/music/music.py:3627
+#: cogs/music/music.py:3736
 msgid "The player is already paused."
 msgstr "Le lecteur est déjà en pause."
 
-#: cogs/music/music.py:3632
+#: cogs/music/music.py:3741
 msgid "Paused the player."
 msgstr "Lecteur mis en pause."
 
-#: cogs/music/music.py:3642
+#: cogs/music/music.py:3751
 msgid "The player is not paused."
 msgstr "Le lecteur n'est pas en pause."
 
-#: cogs/music/music.py:3647
+#: cogs/music/music.py:3756
 msgid "Resumed the player."
 msgstr "Lecture du lecteur reprise."
 
-#: cogs/music/music.py:3827 cogs/music/voteskip.py:168
+#: cogs/music/music.py:3936 cogs/music/voteskip.py:168
 msgid "There are no more tracks in the queue to skip to."
 msgstr "Il n'y a plus de pistes dans la file vers lesquelles passer."
 
-#: cogs/music/music.py:3830
+#: cogs/music/music.py:3939
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Passé à **{title}** par `{author}`."
 
-#: cogs/music/music.py:3836
+#: cogs/music/music.py:3945
 msgid "Skipped. The queue is now empty."
 msgstr "Passé. La file d'attente est maintenant vide."
 
-#: cogs/music/music.py:3899 cogs/music/views.py:961
+#: cogs/music/music.py:4008 cogs/music/views.py:961
 msgid "There's no previous track to go back to."
 msgstr "Il n'y a pas de piste précédente où revenir."
 
-#: cogs/music/music.py:3904 cogs/music/views.py:967
+#: cogs/music/music.py:4013 cogs/music/views.py:967
 msgid "I can't go back - the previous track is no longer available."
 msgstr "Je ne peux pas revenir en arrière - la piste précédente n'est plus disponible."
 
-#: cogs/music/music.py:3908 cogs/music/views.py:972
+#: cogs/music/music.py:4017 cogs/music/views.py:972
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "Retour à **{title}** par `{author}`."
 
-#: cogs/music/music.py:3926 cogs/music/music.py:4442
+#: cogs/music/music.py:4035 cogs/music/music.py:4551
 msgid "There's nothing playing right now."
 msgstr "Rien n'est en cours de lecture pour le moment."
 
-#: cogs/music/music.py:3929
+#: cogs/music/music.py:4038
 msgid "I can't seek within a live stream."
 msgstr "Je ne peux pas me déplacer dans un stream en direct."
 
-#: cogs/music/music.py:3934
+#: cogs/music/music.py:4043
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "Je n'ai pas compris cette position. Essaie `1:23`, `90` ou `+30`."
 
-#: cogs/music/music.py:3946
+#: cogs/music/music.py:4055
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "Sauté à {position}."
 
-#: cogs/music/music.py:3958
+#: cogs/music/music.py:4067
 msgid "Stopped playback and cleared the queue."
 msgstr "Lecture arrêtée et file d'attente vidée."
 
-#: cogs/music/music.py:3971
+#: cogs/music/music.py:4080
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Volume réglé sur {volume}%."
 
-#: cogs/music/music.py:3981
+#: cogs/music/music.py:4090
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Ajoutez quelques pistes supplémentaires à la file avant de mélanger."
 
-#: cogs/music/music.py:3984 cogs/music/views.py:1071 cogs/music/views.py:1891
+#: cogs/music/music.py:4093 cogs/music/views.py:1071 cogs/music/views.py:1891
 msgid "Shuffled the queue."
 msgstr "File d'attente mélangée."
 
-#: cogs/music/music.py:3995 cogs/music/views.py:1908
+#: cogs/music/music.py:4104 cogs/music/views.py:1908
 msgid "The queue is already empty."
 msgstr "La file d'attente est déjà vide."
 
-#: cogs/music/music.py:4005 cogs/music/views.py:1916
+#: cogs/music/music.py:4114 cogs/music/views.py:1916
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "{count} piste(s) retirée(s) de la file d'attente."
 
-#: cogs/music/music.py:4026
+#: cogs/music/music.py:4135
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Mode de boucle réglé sur `{mode}`."
 
-#: cogs/music/music.py:4061 cogs/music/views.py:2025
+#: cogs/music/music.py:4170 cogs/music/views.py:2025
 msgid "Nothing has played yet in this session."
 msgstr "Rien n'a encore été joué dans cette session."
 
-#: cogs/music/music.py:4075 cogs/music/views.py:454
+#: cogs/music/music.py:4184 cogs/music/views.py:454
 msgid "Nothing is playing right now."
 msgstr "Rien n'est en lecture pour le moment."
 
-#: cogs/music/music.py:4105
+#: cogs/music/music.py:4214
 msgid "Disconnected from the voice channel. 24/7 is paused for this server until you /play again or re-enable it."
 msgstr "Déconnecté du salon vocal. Le 24/7 est en pause sur ce serveur jusqu'à ton prochain /play ou sa réactivation."
 
-#: cogs/music/music.py:4110
+#: cogs/music/music.py:4219
 msgid "Disconnected from the voice channel."
 msgstr "Déconnectée du salon vocal."
 
-#: cogs/music/music.py:4147
+#: cogs/music/music.py:4256
 msgid "24/7 music is part of Yasuho+. See /premium for options."
 msgstr "La musique 24/7 fait partie de Yasuho+. Vois /premium pour les options."
 
-#: cogs/music/music.py:4174 cogs/music/music.py:4246
+#: cogs/music/music.py:4283 cogs/music/music.py:4355
 #, python-brace-format
 msgid "I do not have permission to join {channel} (I need Connect and Speak there). 24/7 was not enabled."
 msgstr "Je n'ai pas la permission de rejoindre {channel} (il me faut Se connecter et Parler). Le 24/7 n'a pas été activé."
 
-#: cogs/music/music.py:4193
+#: cogs/music/music.py:4302
 #, python-brace-format
 msgid "Yasuho+ 24/7 is at capacity right now ({max} servers). Please try again later."
 msgstr "Le 24/7 de Yasuho+ est complet pour le moment ({max} serveurs). Réessaie plus tard."
 
-#: cogs/music/music.py:4213 cogs/music/music.py:4229
+#: cogs/music/music.py:4322 cogs/music/music.py:4338
 #, python-brace-format
 msgid "24/7 is now configured for {channel}, but I could not join yet: {reason}"
 msgstr "Le 24/7 est maintenant configuré pour {channel}, mais je n'ai pas encore pu rejoindre : {reason}"
 
-#: cogs/music/music.py:4234 cogs/music/player.py:238
+#: cogs/music/music.py:4343 cogs/music/player.py:248
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "Je n'ai pas pu rejoindre votre salon vocal. Veuillez réessayer."
 
-#: cogs/music/music.py:4253
+#: cogs/music/music.py:4362
 #, python-brace-format
 msgid "24/7 is on for {channel}. I will stay connected there."
 msgstr "Le 24/7 est activé pour {channel}. Je resterai connecté là-bas."
 
-#: cogs/music/music.py:4265
+#: cogs/music/music.py:4374
 msgid "24/7 is already off for this server."
 msgstr "Le 24/7 est déjà désactivé sur ce serveur."
 
-#: cogs/music/music.py:4270
+#: cogs/music/music.py:4379
 msgid "24/7 is now off for this server. I will leave like normal when idle or empty."
 msgstr "Le 24/7 est maintenant désactivé sur ce serveur. Je partirai normalement en cas d'inactivité ou de salon vide."
 
-#: cogs/music/music.py:4289
+#: cogs/music/music.py:4398
 msgid "24/7 is off for this server. See /premium to turn it on."
 msgstr "Le 24/7 est désactivé sur ce serveur. Vois /premium pour l'activer."
 
-#: cogs/music/music.py:4294
+#: cogs/music/music.py:4403
 msgid "an unknown channel"
 msgstr "un salon inconnu"
 
-#: cogs/music/music.py:4300
+#: cogs/music/music.py:4409
 #, python-brace-format
 msgid "24/7 is configured for {channel} (inactive - needs Yasuho+)."
 msgstr "Le 24/7 est configuré pour {channel} (inactif - nécessite Yasuho+)."
 
-#: cogs/music/music.py:4308
+#: cogs/music/music.py:4417
 #, python-brace-format
 msgid "24/7 is configured for {channel}, but paused until the next /play or restart (someone disconnected me)."
 msgstr "Le 24/7 est configuré pour {channel}, mais en pause jusqu'au prochain /play ou redémarrage (quelqu'un m'a déconnecté)."
 
-#: cogs/music/music.py:4313
+#: cogs/music/music.py:4422
 #, python-brace-format
 msgid "24/7 is on for {channel}."
 msgstr "Le 24/7 est activé pour {channel}."
 
-#: cogs/music/music.py:4332
+#: cogs/music/music.py:4441
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} seconde"
 msgstr[1] "{count} secondes"
 
-#: cogs/music/music.py:4336
+#: cogs/music/music.py:4445
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count} minute"
 msgstr[1] "{count} minutes"
 
-#: cogs/music/music.py:4360
+#: cogs/music/music.py:4469
 msgid "That effect isn't available."
 msgstr "Cet effet n'est pas disponible."
 
-#: cogs/music/music.py:4369
+#: cogs/music/music.py:4478
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "Tu changes d'effet trop vite. Réessaie dans {delay}."
 
-#: cogs/music/music.py:4374
+#: cogs/music/music.py:4483
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "Beaucoup de serveurs utilisent les effets en ce moment - réessaie dans un instant."
 
-#: cogs/music/music.py:4377
+#: cogs/music/music.py:4486
 msgid "Something went wrong applying that effect."
 msgstr "Un problème est survenu en appliquant cet effet."
 
-#: cogs/music/music.py:4386
+#: cogs/music/music.py:4495
 msgid "Effects cleared."
 msgstr "Effets retirés."
 
-#: cogs/music/music.py:4387
+#: cogs/music/music.py:4496
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "Effet réglé sur {emoji} {label}."
 
-#: cogs/music/music.py:4457
+#: cogs/music/music.py:4566
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "Tu as consulté trop de paroles. Réessaie dans {delay}."
 
-#: cogs/music/music.py:4468
+#: cogs/music/music.py:4577
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "Ce serveur a consulté trop de paroles. Réessaie dans {delay}."
 
-#: cogs/music/music.py:4482
+#: cogs/music/music.py:4591
 msgid "I couldn't find any lyrics for this track."
 msgstr "Je n'ai trouvé aucune parole pour cette piste."
 
-#: cogs/music/music.py:4590 cogs/music/views.py:2396
+#: cogs/music/music.py:4699 cogs/music/views.py:2396
 msgid "You have no saved favourites yet."
 msgstr "Vous n'avez pas encore de favoris enregistrés."
 
-#: cogs/music/music.py:4593
+#: cogs/music/music.py:4702
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} n'a pas encore de favoris enregistrés."
 
-#: cogs/music/music.py:4646
+#: cogs/music/music.py:4755
 msgid "You have no saved favourites to play."
 msgstr "Vous n'avez aucun favori enregistré à lire."
 
-#: cogs/music/music.py:4672
+#: cogs/music/music.py:4781
 msgid "None of your favourites could be loaded right now."
 msgstr "Aucun de vos favoris n'a pu être chargé pour le moment."
 
-#: cogs/music/music.py:4678 cogs/music/music.py:4730
+#: cogs/music/music.py:4787 cogs/music/music.py:4839
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " {deferred} ancien favori attend encore - relance la commande pour l'ajouter."
 msgstr[1] " {deferred} anciens favoris attendent encore - relance la commande pour les ajouter."
 
-#: cogs/music/music.py:4713
+#: cogs/music/music.py:4822
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "{count} piste de tes favoris ajoutée à la file."
 msgstr[1] "{count} pistes de tes favoris ajoutées à la file."
 
-#: cogs/music/music.py:4721 cogs/music/playlists_shared.py:851
+#: cogs/music/music.py:4830 cogs/music/playlists_shared.py:851
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped} piste a été ignorée - impossible de la charger."
 msgstr[1] " {skipped} pistes ont été ignorées - impossible de les charger."
 
-#: cogs/music/music.py:4752
+#: cogs/music/music.py:4861
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "Rien n'est en lecture - donnez-moi un nom de chanson ou une URL à enregistrer."
 
-#: cogs/music/music.py:4771
+#: cogs/music/music.py:4880
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "**{title}** par `{author}` ajouté à vos favoris."
 
-#: cogs/music/music.py:4781 cogs/music/views.py:1118
+#: cogs/music/music.py:4890 cogs/music/views.py:1118
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "Vos favoris sont complets (max {max}). Retirez-en quelques-uns d'abord."
 
-#: cogs/music/music.py:4813 cogs/music/views.py:1138
+#: cogs/music/music.py:4922 cogs/music/views.py:1138
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** est déjà dans vos favoris."
 
-#: cogs/music/music.py:4831
+#: cogs/music/music.py:4940
 msgid "You have no saved favourites to remove."
 msgstr "Vous n'avez aucun favori enregistré à retirer."
 
-#: cogs/music/music.py:4835
+#: cogs/music/music.py:4944
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Choisissez un nombre entre 1 et {max}."
 
-#: cogs/music/music.py:4842 cogs/music/views.py:2669
+#: cogs/music/music.py:4951 cogs/music/views.py:2669
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** retiré de vos favoris."
 
-#: cogs/music/player.py:248
+#: cogs/music/player.py:258
 msgid "I am still starting up - try again in a moment."
 msgstr "Je suis encore en train de demarrer - reessaie dans un instant."
 
@@ -9538,289 +9544,262 @@ msgstr "Utilisez `/help` pour parcourir toutes les commandes."
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Utilisez `/language` pour choisir la langue que je parle sur ce serveur."
 
-#: cogs/system/premium.py:179 cogs/system/premium.py:427
+#: cogs/system/premium.py:179 cogs/system/premium.py:428
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} de plus non affichés."
 
-#: cogs/system/premium.py:249
+#: cogs/system/premium.py:250
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "L'identifiant du serveur doit être un nombre positif, pas `{value}`."
 
-#: cogs/system/premium.py:276 cogs/system/premium.py:318
-#: cogs/system/premium.py:408 cogs/system/premium.py:487
-#: cogs/system/premium.py:497
+#: cogs/system/premium.py:277 cogs/system/premium.py:319
+#: cogs/system/premium.py:409 cogs/system/premium.py:488
+#: cogs/system/premium.py:498
 msgid "permanent"
 msgstr "permanent"
 
-#: cogs/system/premium.py:279
+#: cogs/system/premium.py:280
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "**Yasuho+** attribué au serveur `{guild_id}` (attribution n°{grant_id}, {until})."
 
-#: cogs/system/premium.py:291
+#: cogs/system/premium.py:292
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "L'identifiant de l'utilisateur doit être un nombre positif, pas `{value}`."
 
-#: cogs/system/premium.py:321
+#: cogs/system/premium.py:322
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "**Pack Confort** attribué à l'utilisateur `{user_id}` (attribution n°{grant_id}, {until})."
 
-#: cogs/system/premium.py:348
+#: cogs/system/premium.py:349
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "Aucune attribution active n°{grant_id} (déjà révoquée, expirée, ou inexistante)."
 
-#: cogs/system/premium.py:374
+#: cogs/system/premium.py:375
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Attribution n°{grant_id} révoquée."
 
-#: cogs/system/premium.py:386 cogs/system/premium.py:439
+#: cogs/system/premium.py:387 cogs/system/premium.py:440
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "La portée doit être `server` ou `user`, pas `{scope}`."
 
-#: cogs/system/premium.py:400
+#: cogs/system/premium.py:401
 msgid "Active premium grants"
 msgstr "Attributions premium actives"
 
-#: cogs/system/premium.py:402
+#: cogs/system/premium.py:403
 msgid "No active grant matches."
 msgstr "Aucune attribution active ne correspond."
 
-#: cogs/system/premium.py:410
+#: cogs/system/premium.py:411
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "n°{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:446
+#: cogs/system/premium.py:447
 msgid "Premium status"
 msgstr "Statut premium"
 
-#: cogs/system/premium.py:480
+#: cogs/system/premium.py:481
 msgid "Effective"
 msgstr "Effectif"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:482
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:482
 msgid "Free"
 msgstr "Gratuit"
 
-#: cogs/system/premium.py:488
+#: cogs/system/premium.py:489
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Droit d'achat Discord, {until}"
 
-#: cogs/system/premium.py:490
+#: cogs/system/premium.py:491
 msgid "Entitlement"
 msgstr "Droit d'achat"
 
-#: cogs/system/premium.py:498
+#: cogs/system/premium.py:499
 msgid "(no reason given)"
 msgstr "(aucune raison donnée)"
 
-#: cogs/system/premium.py:500
+#: cogs/system/premium.py:501
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "n°{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:505
+#: cogs/system/premium.py:506
 msgid "Owner grant(s)"
 msgstr "Attribution(s) du propriétaire"
 
-#: cogs/system/premium.py:510
+#: cogs/system/premium.py:511
 msgid "Why"
 msgstr "Pourquoi"
 
-#: cogs/system/premium.py:510
+#: cogs/system/premium.py:511
 msgid "Nothing active."
 msgstr "Rien d'actif."
 
-#: cogs/system/premium.py:567
+#: cogs/system/premium.py:593
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Aucun `yasuho_plus_sku` n'est configuré dans `[Premium]` - rien à acheter en test."
 
-#: cogs/system/premium.py:590
+#: cogs/system/premium.py:616
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "Droit de TEST **Yasuho+** créé pour le serveur `{guild_id}`. Son identifiant n'était pas encore visible - utilise `?premiumadmin check server {guild_id}` dans un instant."
 
-#: cogs/system/premium.py:599
+#: cogs/system/premium.py:625
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Droit de TEST n°{entitlement_id} (**Yasuho+**) créé pour le serveur `{guild_id}`. Supprime-le plus tard avec `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:614
+#: cogs/system/premium.py:640
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Aucun `comfort_pack_sku` n'est configuré dans `[Premium]` - rien à acheter en test."
 
-#: cogs/system/premium.py:637
+#: cogs/system/premium.py:663
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "Droit de TEST **Pack Confort** créé pour l'utilisateur `{user_id}`. Son identifiant n'était pas encore visible - utilise `?premiumadmin check user {user_id}` dans un instant."
 
-#: cogs/system/premium.py:646
+#: cogs/system/premium.py:672
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Droit de TEST n°{entitlement_id} (**Pack Confort**) créé pour l'utilisateur `{user_id}`. Supprime-le plus tard avec `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:661
+#: cogs/system/premium.py:687
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "Aucun droit n°{entitlement_id} n'existe."
 
-#: cogs/system/premium.py:670
+#: cogs/system/premium.py:696
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "Impossible de récupérer le droit n°{entitlement_id} auprès de Discord."
 
-#: cogs/system/premium.py:679
+#: cogs/system/premium.py:705
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "Le droit n°{entitlement_id} n'est pas un droit de TEST (type `{type}`) - je refuse de supprimer un vrai achat."
 
-#: cogs/system/premium.py:695
+#: cogs/system/premium.py:721
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "Droit de TEST n°{entitlement_id} supprimé. L'événement ENTITLEMENT_DELETE correspondant le retirera du cache."
 
-#: cogs/system/premium_panel.py:80
-msgid "yes"
-msgstr "oui"
-
-#: cogs/system/premium_panel.py:80
-msgid "no"
-msgstr "non"
-
-#: cogs/system/premium_panel.py:103
+#: cogs/system/premium_panel.py:114
 msgid "## Yasuho+"
 msgstr "## Yasuho+"
 
-#: cogs/system/premium_panel.py:105
-msgid "A paid upgrade for a whole server. Nothing free is removed - here is what Yasuho+ adds:"
-msgstr "Une option payante pour tout un serveur. Rien de gratuit n'est retiré - voici ce que Yasuho+ ajoute :"
+#: cogs/system/premium_panel.py:116
+msgid "**24/7 music**"
+msgstr "**Musique 24/7**"
 
-#: cogs/system/premium_panel.py:109
-#, python-brace-format
-msgid "**24/7 music** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Musique 24/7** - Gratuit : {free} | Yasuho+ : {plus}"
-
-#: cogs/system/premium_panel.py:113 tests/cogs/test_premium_panel.py:164
-#: tests/cogs/test_premium_panel.py:173
-#, python-brace-format
-msgid "**Server playlists** - Free: {free_count} x {free_tracks} tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
-msgstr "**Playlists du serveur** - Gratuit : {free_count} x {free_tracks} morceaux | Yasuho+ : {plus_count} x {plus_tracks} morceaux"
+#: cogs/system/premium_panel.py:118
+msgid "Yasuho stays in your voice channel, even when the queue is empty."
+msgstr "Yasuho reste dans ton salon vocal, même quand la file est vide."
 
 #: cogs/system/premium_panel.py:122
+msgid "**Extended server playlists**"
+msgstr "**Playlists serveur étendues**"
+
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:150
+#: tests/cogs/test_premium_panel.py:154
 #, python-brace-format
-msgid "**Previous history** - Free: {free} tracks | Yasuho+: {plus} tracks"
-msgstr "**Historique « Précédent »** - Gratuit : {free} morceaux | Yasuho+ : {plus} morceaux"
+msgid "Up to {count} playlists of {tracks} tracks."
+msgstr "Jusqu'à {count} playlists de {tracks} morceaux."
 
 #: cogs/system/premium_panel.py:128
-#, python-brace-format
-msgid "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} accounts and {free_titles} titles per feed | Yasuho+: {plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} titles per feed"
-msgstr "**Fils AniList** - Gratuit : {free_feeds} fils, {free_accounts} comptes et {free_titles} titres par fil | Yasuho+ : {plus_feeds} fils, {plus_accounts} comptes et {plus_titles} titres par fil"
+msgid "**A year of statistics**"
+msgstr "**Une année de statistiques**"
 
-#: cogs/system/premium_panel.py:141
+#: cogs/system/premium_panel.py:129
 #, python-brace-format
-msgid "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
-msgstr "**Stats du serveur** - Gratuit : {free} jours | Yasuho+ : {plus} jours"
+msgid "See your server's activity over the last {days} days."
+msgstr "Consulte l'activité de ton serveur sur les {days} derniers jours."
 
-#: cogs/system/premium_panel.py:146
+#: cogs/system/premium_panel.py:134
 #, python-brace-format
-msgid "**Role menus** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Menus de rôles** - Gratuit : {free} | Yasuho+ : {plus}"
+msgid "Also includes: a {history}-track Previous history, {feeds} AniList feeds, {menus} role menus, {hubs} voice hubs and the Yasuho+ badge."
+msgstr "Inclut aussi : un historique Précédent de {history} morceaux, {feeds} flux AniList, {menus} menus de rôles, {hubs} hubs vocaux et le badge Yasuho+."
 
-#: cogs/system/premium_panel.py:149
-#, python-brace-format
-msgid "**Auto voice hubs** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Hubs vocaux auto** - Gratuit : {free} | Yasuho+ : {plus}"
-
-#: cogs/system/premium_panel.py:153
-#, python-brace-format
-msgid "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Tickets ouverts par membre** - Gratuit : {free} | Yasuho+ : {plus}"
-
-#: cogs/system/premium_panel.py:158
-#, python-brace-format
-msgid "**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Badge Yasuho+** - Gratuit : {free} | Yasuho+ : {plus}"
-
-#: cogs/system/premium_panel.py:163
+#: cogs/system/premium_panel.py:144
 msgid "## Pack Confort"
 msgstr "## Pack Confort"
 
-#: cogs/system/premium_panel.py:165
-msgid "A one-time purchase for you personally. No subscription, no expiry while the service and your account exist."
-msgstr "Un achat unique, rien que pour toi. Pas d'abonnement, pas d'expiration tant que le service et ton compte existent."
-
-#: cogs/system/premium_panel.py:170
+#: cogs/system/premium_panel.py:147
 #, python-brace-format
-msgid "**Favourites** - Free: {free} | Pack Confort: {plus}"
-msgstr "**Favoris** - Gratuit : {free} | Pack Confort : {plus}"
+msgid "A one-time purchase, tied to your Discord account and valid for the lifetime of the Yasuho service: {favourites} favourites, {reminders} reminders including {recurring} recurring."
+msgstr "Un achat unique, lié à ton compte Discord et valable pendant toute la durée du service Yasuho : {favourites} favoris, {reminders} rappels dont {recurring} récurrents."
 
-#: cogs/system/premium_panel.py:174
-#, python-brace-format
-msgid "**Reminders** - Free: {free} ({free_recurring} recurring) | Pack Confort: {plus} ({plus_recurring} recurring)"
-msgstr "**Rappels** - Gratuit : {free} ({free_recurring} récurrents) | Pack Confort : {plus} ({plus_recurring} récurrents)"
-
-#: cogs/system/premium_panel.py:188
+#: cogs/system/premium_panel.py:162
 msgid "Nothing free becomes paid, nothing is deleted when a perk ends, and purchases are handled by Discord."
 msgstr "Rien de gratuit ne devient payant, rien n'est supprimé quand un avantage prend fin, et les achats sont gérés par Discord."
 
-#: cogs/system/premium_panel.py:194
-msgid "purchased"
-msgstr "acheté"
-
-#: cogs/system/premium_panel.py:194
-msgid "gifted"
-msgstr "offert"
-
-#: cogs/system/premium_panel.py:200
+#: cogs/system/premium_panel.py:176
 msgid "This server does not have **Yasuho+**."
 msgstr "Ce serveur n'a pas **Yasuho+**."
 
-#: cogs/system/premium_panel.py:204
+#: cogs/system/premium_panel.py:179
 #, python-brace-format
-msgid "This server has **Yasuho+** ({source}), active until {until}."
-msgstr "Ce serveur a **Yasuho+** ({source}), actif jusqu'au {until}."
+msgid "Yasuho+ is offered to this server until {until}."
+msgstr "Yasuho+ est offert à ce serveur jusqu'au {until}."
 
-#: cogs/system/premium_panel.py:206
+#: cogs/system/premium_panel.py:182
+msgid "Yasuho+ is offered to this server - permanent access."
+msgstr "Yasuho+ est offert à ce serveur - accès permanent."
+
+#: cogs/system/premium_panel.py:185
 #, python-brace-format
-msgid "This server has **Yasuho+** ({source}), with no end date."
-msgstr "Ce serveur a **Yasuho+** ({source}), sans date de fin."
+msgid "This server has **Yasuho+** (purchased), active until {until}."
+msgstr "Ce serveur a **Yasuho+** (acheté), actif jusqu'au {until}."
 
-#: cogs/system/premium_panel.py:214
+#: cogs/system/premium_panel.py:187
+msgid "This server has **Yasuho+** (purchased), with no end date."
+msgstr "Ce serveur a **Yasuho+** (acheté), sans date de fin."
+
+#: cogs/system/premium_panel.py:195
 msgid "You do not have the **Pack Confort**."
 msgstr "Tu n'as pas le **Pack Confort**."
 
-#: cogs/system/premium_panel.py:218
+#: cogs/system/premium_panel.py:198
 #, python-brace-format
-msgid "You have the **Pack Confort** ({source}), active until {until}."
-msgstr "Tu as le **Pack Confort** ({source}), actif jusqu'au {until}."
+msgid "The Pack Confort is offered to you until {until}."
+msgstr "Le Pack Confort t'est offert jusqu'au {until}."
 
-#: cogs/system/premium_panel.py:221
+#: cogs/system/premium_panel.py:201
+msgid "The Pack Confort is offered to you - permanent access."
+msgstr "Le Pack Confort t'est offert - accès permanent."
+
+#: cogs/system/premium_panel.py:204
 #, python-brace-format
-msgid "You have the **Pack Confort** ({source}), with no end date."
-msgstr "Tu as le **Pack Confort** ({source}), sans date de fin."
+msgid "You have the **Pack Confort** (purchased), active until {until}."
+msgstr "Tu as le **Pack Confort** (acheté), actif jusqu'au {until}."
 
-#: cogs/system/premium_panel.py:226
+#: cogs/system/premium_panel.py:206
+msgid "You have the **Pack Confort** (purchased), with no end date."
+msgstr "Tu as le **Pack Confort** (acheté), sans date de fin."
+
+#: cogs/system/premium_panel.py:210
 msgid "Premium is not on sale yet."
 msgstr "Le premium n'est pas encore en vente."
 
-#: cogs/system/premium_panel.py:230
+#: cogs/system/premium_panel.py:214
 #, python-brace-format
 msgid "A server admin can manage this with `/{command}`."
 msgstr "Un admin du serveur peut gérer ça avec `/{command}`."
 
-#: cogs/system/premium_panel.py:284
+#: cogs/system/premium_panel.py:263
 msgid "Terms"
 msgstr "CGU"
 

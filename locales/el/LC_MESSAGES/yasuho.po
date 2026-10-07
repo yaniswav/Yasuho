@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 07:31+0000\n"
+"POT-Creation-Date: 2026-10-07 08:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -839,7 +839,7 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
 
 #: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:339
-#: cogs/music/music.py:4844 cogs/music/search.py:342 cogs/music/views.py:2222
+#: cogs/music/music.py:4953 cogs/music/search.py:342 cogs/music/views.py:2222
 #: cogs/music/views.py:2405 cogs/music/views.py:2539 cogs/music/views.py:2667
 msgid "Unknown title"
 msgstr "Άγνωστος τίτλος"
@@ -5655,8 +5655,9 @@ msgid "I can't give you that role: it carries permissions I won't hand out autom
 msgstr "Δεν μπορώ να σου δώσω αυτόν τον ρόλο: έχει δικαιώματα που δεν δίνω αυτόματα. Ενημέρωσε έναν διαχειριστή του διακομιστή."
 
 #: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
-#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:219
-#: cogs/config/tickets/open.py:377 cogs/config/verification.py:83
+#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:230
+#: cogs/config/tickets/open.py:262 cogs/config/tickets/open.py:418
+#: cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "Κάτι πήγε στραβά, δοκίμασε ξανά."
 
@@ -5837,7 +5838,7 @@ msgid "The ticket stays open."
 msgstr "Το εισιτήριο παραμένει ανοιχτό."
 
 #: cogs/config/tickets/lifecycle.py:358 cogs/config/tickets/lifecycle.py:453
-#: cogs/config/tickets/open.py:177 cogs/config/tickets/open.py:278
+#: cogs/config/tickets/open.py:187 cogs/config/tickets/open.py:316
 msgid "Tickets only work inside a server."
 msgstr "Τα εισιτήρια λειτουργούν μόνο μέσα σε server."
 
@@ -5986,70 +5987,75 @@ msgstr "Χωρίς μεταγραφή: δεν μπορώ να επισυνάψω
 msgid "No transcript: I could not read the thread."
 msgstr "Χωρίς μεταγραφή: δεν μπόρεσα να διαβάσω το νήμα."
 
-#: cogs/config/tickets/open.py:127
+#: cogs/config/tickets/open.py:137
 msgid "You have just opened a ticket. Please wait a moment before opening another one."
 msgstr "Μόλις άνοιξες ένα αίτημα. Περίμενε λίγο πριν ανοίξεις άλλο."
 
-#: cogs/config/tickets/open.py:141 cogs/config/tickets/open.py:165
+#: cogs/config/tickets/open.py:151 cogs/config/tickets/open.py:175
 msgid "Open a ticket"
 msgstr "Άνοιγμα εισιτηρίου"
 
-#: cogs/config/tickets/open.py:143
+#: cogs/config/tickets/open.py:153
 msgid "What do you need help with?"
 msgstr "Με τι χρειάζεσαι βοήθεια;"
 
-#: cogs/config/tickets/open.py:144
+#: cogs/config/tickets/open.py:154
 msgid "A short summary - staff will read it first."
 msgstr "Μια σύντομη περίληψη - το προσωπικό θα τη διαβάσει πρώτα."
 
-#: cogs/config/tickets/open.py:186 cogs/config/tickets/open.py:287
+#: cogs/config/tickets/open.py:196 cogs/config/tickets/open.py:325
 msgid "You cannot use this."
 msgstr "Δεν μπορείς να το χρησιμοποιήσεις αυτό."
 
-#: cogs/config/tickets/open.py:193 cogs/config/tickets/open.py:305
+#: cogs/config/tickets/open.py:203 cogs/config/tickets/open.py:343
 msgid "Tickets are not set up here."
 msgstr "Τα εισιτήρια δεν έχουν ρυθμιστεί εδώ."
 
-#: cogs/config/tickets/open.py:244 cogs/config/tickets/open.py:329
+#: cogs/config/tickets/open.py:271 cogs/config/tickets/open.py:367
 msgid "I am already opening a ticket for you - one moment."
 msgstr "Σου ανοίγω ήδη ένα εισιτήριο - μια στιγμή."
 
-#: cogs/config/tickets/open.py:261
+#: cogs/config/tickets/open.py:288
 #, python-brace-format
 msgid "You already have {count} ticket open here. Close it before opening another."
 msgid_plural "You already have {count} tickets open here. Close one before opening another."
 msgstr[0] "Έχεις ήδη {count} ανοιχτό ticket εδώ. Κλείσε το πριν ανοίξεις άλλο."
 msgstr[1] "Έχεις ήδη {count} ανοιχτά tickets εδώ. Κλείσε ένα πριν ανοίξεις άλλο."
 
-#: cogs/config/tickets/open.py:321
+#: cogs/config/tickets/open.py:300
+#, python-brace-format
+msgid "This server has too many open tickets right now ({max}). Please wait for staff to close some."
+msgstr "Αυτός ο διακομιστής έχει πάρα πολλά ανοιχτά tickets αυτή τη στιγμή ({max}). Περίμενε να κλείσει μερικά το staff."
+
+#: cogs/config/tickets/open.py:359
 #, python-brace-format
 msgid "I am missing permissions in {channel} ({permissions}), so I cannot open a ticket. Please tell a server admin."
 msgstr "Μου λείπουν δικαιώματα στο {channel} ({permissions}), οπότε δεν μπορώ να ανοίξω εισιτήριο. Ενημέρωσε έναν διαχειριστή του server."
 
-#: cogs/config/tickets/open.py:368
+#: cogs/config/tickets/open.py:407
 msgid "I could not create the ticket, please try again."
 msgstr "Δεν μπόρεσα να δημιουργήσω το εισιτήριο, δοκίμασε ξανά."
 
-#: cogs/config/tickets/open.py:425
+#: cogs/config/tickets/open.py:478
 #, python-brace-format
 msgid "Ticket #{number} opened: {thread}"
 msgstr "Το εισιτήριο #{number} ανοίχτηκε: {thread}"
 
-#: cogs/config/tickets/open.py:450
+#: cogs/config/tickets/open.py:503
 #, python-brace-format
 msgid "Ticket #{number}"
 msgstr "Εισιτήριο #{number}"
 
-#: cogs/config/tickets/open.py:451
+#: cogs/config/tickets/open.py:504
 msgid "*No subject given.*"
 msgstr "*Δεν δόθηκε θέμα.*"
 
-#: cogs/config/tickets/open.py:455
+#: cogs/config/tickets/open.py:508
 #, python-brace-format
 msgid "Opened by {user}"
 msgstr "Ανοίχτηκε από {user}"
 
-#: cogs/config/tickets/open.py:498
+#: cogs/config/tickets/open.py:551
 #, python-brace-format
 msgid "Ticket #{number} - use the buttons below to claim or close it."
 msgstr "Εισιτήριο #{number} - χρησιμοποίησε τα παρακάτω κουμπιά για να το διεκδικήσεις ή να το κλείσεις."
@@ -7547,49 +7553,49 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "Διακοπή"
 
-#: cogs/music/music.py:710
+#: cogs/music/music.py:727
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "Η ουρά είναι γεμάτη ({cap} κομμάτια). Παράλειψε ή αφαίρεσε μερικά πρώτα."
 
-#: cogs/music/music.py:726
+#: cogs/music/music.py:743
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
 msgstr[0] " {dropped} κομμάτι δεν προστέθηκε - η ουρά είναι γεμάτη στα {cap}."
 msgstr[1] " {dropped} κομμάτια δεν προστέθηκαν - η ουρά είναι γεμάτη στα {cap}."
 
-#: cogs/music/music.py:1213
+#: cogs/music/music.py:1230
 msgid "I'm not connected to a voice channel."
 msgstr "Δεν είμαι συνδεδεμένος σε φωνητικό κανάλι."
 
-#: cogs/music/music.py:1216 cogs/music/music.py:3212
+#: cogs/music/music.py:1233 cogs/music/music.py:3321
 #: cogs/music/playlists_shared.py:582
 msgid "You must be in my voice channel to do that."
 msgstr "Πρέπει να είσαι στο φωνητικό μου κανάλι για να το κάνεις αυτό."
 
-#: cogs/music/music.py:1226 cogs/music/views.py:218
+#: cogs/music/music.py:1243 cogs/music/views.py:218
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "Μόνο ο DJ ({dj}) ή ένας συντονιστής μπορεί να ελέγξει την αναπαραγωγή."
 
-#: cogs/music/music.py:1272
+#: cogs/music/music.py:1289
 msgid "I can only play public links - I can't reach that one."
 msgstr "Μπορώ να παίξω μόνο δημόσιους συνδέσμους - σε αυτόν δεν έχω πρόσβαση."
 
-#: cogs/music/music.py:2007
+#: cogs/music/music.py:2024
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "Υπήρξε πρόβλημα στην αναπαραγωγή του **{title}**, παραλείπεται."
 
-#: cogs/music/music.py:2026
+#: cogs/music/music.py:2043
 #, python-brace-format
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "{count} ακόμη κομμάτι δεν μπόρεσε να παιχτεί, το παραλείπω."
 msgstr[1] "{count} ακόμη κομμάτια δεν μπόρεσαν να παιχτούν, τα παραλείπω."
 
-#: cogs/music/music.py:2978
+#: cogs/music/music.py:3087
 #, python-brace-format
 msgid ""
 "Secondary music controls (the everyday ones - play, queue, skip, pause, resume, stop, volume, nowplaying - stay on their own):\n"
@@ -7616,354 +7622,354 @@ msgstr ""
 "- `{p}music filter <preset>` - εφαρμογη ηχητικου εφε\n"
 "- `{p}music disconnect` - αποχωρηση απο το φωνητικο καναλι"
 
-#: cogs/music/music.py:3094
+#: cogs/music/music.py:3203
 msgid "Here is the player."
 msgstr "Ορίστε ο player."
 
-#: cogs/music/music.py:3097 cogs/music/music.py:3219
+#: cogs/music/music.py:3206 cogs/music/music.py:3328
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "Ο player είναι ήδη ενεργός στο {channel}."
 
-#: cogs/music/music.py:3175 cogs/music/music.py:3238 cogs/music/music.py:3517
-#: cogs/music/music.py:4631 cogs/music/music.py:4759
+#: cogs/music/music.py:3284 cogs/music/music.py:3347 cogs/music/music.py:3626
+#: cogs/music/music.py:4740 cogs/music/music.py:4868
 #: cogs/music/playlists_shared.py:743 cogs/music/playlists_shared.py:795
 #: cogs/music/search.py:516 cogs/music/views.py:2596
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "Η μουσική δεν είναι διαθέσιμη αυτή τη στιγμή - κανένας κόμβος Lavalink δεν είναι συνδεδεμένος."
 
-#: cogs/music/music.py:3185 cogs/music/music.py:3512 cogs/music/music.py:4657
+#: cogs/music/music.py:3294 cogs/music/music.py:3621 cogs/music/music.py:4766
 #: cogs/music/playlists_shared.py:589
 msgid "You must be in a voice channel first."
 msgstr "Πρέπει πρώτα να είσαι σε ένα φωνητικό κανάλι."
 
-#: cogs/music/music.py:3243 cogs/music/music.py:4765
+#: cogs/music/music.py:3352 cogs/music/music.py:4874
 msgid "Could not find any tracks for that query."
 msgstr "Δεν βρέθηκαν κομμάτια για αυτό το ερώτημα."
 
-#: cogs/music/music.py:3267
+#: cogs/music/music.py:3376
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτι)."
 msgstr[1] "Η playlist **{name}** προστέθηκε στην ουρά ({count} κομμάτια)."
 
-#: cogs/music/music.py:3283
+#: cogs/music/music.py:3392
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "Το **{title}** από `{author}` προστέθηκε στην ουρά."
 
-#: cogs/music/music.py:3552 cogs/music/views.py:1209
+#: cogs/music/music.py:3661 cogs/music/views.py:1209
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "Μόνο ο DJ ({dj}) μπορεί να αλλάξει σταθμό."
 
-#: cogs/music/music.py:3569 cogs/music/views.py:1229
+#: cogs/music/music.py:3678 cogs/music/views.py:1229
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "Δεν βρήκα κανένα κομμάτι {genre} αυτή τη στιγμή."
 
-#: cogs/music/music.py:3578 cogs/music/views.py:1236
+#: cogs/music/music.py:3687 cogs/music/views.py:1236
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "Άλλαξα στον σταθμό {genre} ({count} κομμάτι(α))."
 
-#: cogs/music/music.py:3585
+#: cogs/music/music.py:3694
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "Ξεκινάει μια συνεδρία {genre} με {count} κομμάτι/α. Καλή διασκέδαση!"
 
-#: cogs/music/music.py:3627
+#: cogs/music/music.py:3736
 msgid "The player is already paused."
 msgstr "Ο player είναι ήδη σε παύση."
 
-#: cogs/music/music.py:3632
+#: cogs/music/music.py:3741
 msgid "Paused the player."
 msgstr "Ο player τέθηκε σε παύση."
 
-#: cogs/music/music.py:3642
+#: cogs/music/music.py:3751
 msgid "The player is not paused."
 msgstr "Ο player δεν είναι σε παύση."
 
-#: cogs/music/music.py:3647
+#: cogs/music/music.py:3756
 msgid "Resumed the player."
 msgstr "Ο player συνεχίστηκε."
 
-#: cogs/music/music.py:3827 cogs/music/voteskip.py:168
+#: cogs/music/music.py:3936 cogs/music/voteskip.py:168
 msgid "There are no more tracks in the queue to skip to."
 msgstr "Δεν υπάρχουν άλλα κομμάτια στην ουρά για παράλειψη."
 
-#: cogs/music/music.py:3830
+#: cogs/music/music.py:3939
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "Παράλειψη στο **{title}** από `{author}`."
 
-#: cogs/music/music.py:3836
+#: cogs/music/music.py:3945
 msgid "Skipped. The queue is now empty."
 msgstr "Παραλείφθηκε. Η ουρά είναι πλέον κενή."
 
-#: cogs/music/music.py:3899 cogs/music/views.py:961
+#: cogs/music/music.py:4008 cogs/music/views.py:961
 msgid "There's no previous track to go back to."
 msgstr "Δεν υπάρχει προηγούμενο κομμάτι για να επιστρέψω."
 
-#: cogs/music/music.py:3904 cogs/music/views.py:967
+#: cogs/music/music.py:4013 cogs/music/views.py:967
 msgid "I can't go back - the previous track is no longer available."
 msgstr "Δεν μπορώ να γυρίσω πίσω - το προηγούμενο κομμάτι δεν είναι πια διαθέσιμο."
 
-#: cogs/music/music.py:3908 cogs/music/views.py:972
+#: cogs/music/music.py:4017 cogs/music/views.py:972
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "Επέστρεψα στο **{title}** από `{author}`."
 
-#: cogs/music/music.py:3926 cogs/music/music.py:4442
+#: cogs/music/music.py:4035 cogs/music/music.py:4551
 msgid "There's nothing playing right now."
 msgstr "Δεν παίζει τίποτα αυτή τη στιγμή."
 
-#: cogs/music/music.py:3929
+#: cogs/music/music.py:4038
 msgid "I can't seek within a live stream."
 msgstr "Δεν μπορώ να μετακινηθώ μέσα σε ζωντανή ροή."
 
-#: cogs/music/music.py:3934
+#: cogs/music/music.py:4043
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "Δεν κατάλαβα αυτή τη θέση. Δοκίμασε `1:23`, `90` ή `+30`."
 
-#: cogs/music/music.py:3946
+#: cogs/music/music.py:4055
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "Μεταπήδησα στο {position}."
 
-#: cogs/music/music.py:3958
+#: cogs/music/music.py:4067
 msgid "Stopped playback and cleared the queue."
 msgstr "Η αναπαραγωγή σταμάτησε και η ουρά εκκαθαρίστηκε."
 
-#: cogs/music/music.py:3971
+#: cogs/music/music.py:4080
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "Η ένταση ορίστηκε σε {volume}%."
 
-#: cogs/music/music.py:3981
+#: cogs/music/music.py:4090
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "Πρόσθεσε μερικά ακόμη κομμάτια στην ουρά πριν το ανακάτεμα."
 
-#: cogs/music/music.py:3984 cogs/music/views.py:1071 cogs/music/views.py:1891
+#: cogs/music/music.py:4093 cogs/music/views.py:1071 cogs/music/views.py:1891
 msgid "Shuffled the queue."
 msgstr "Η ουρά ανακατεύτηκε."
 
-#: cogs/music/music.py:3995 cogs/music/views.py:1908
+#: cogs/music/music.py:4104 cogs/music/views.py:1908
 msgid "The queue is already empty."
 msgstr "Η ουρά είναι ήδη άδεια."
 
-#: cogs/music/music.py:4005 cogs/music/views.py:1916
+#: cogs/music/music.py:4114 cogs/music/views.py:1916
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "Αφαίρεσα {count} κομμάτι(α) από την ουρά."
 
-#: cogs/music/music.py:4026
+#: cogs/music/music.py:4135
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "Η λειτουργία επανάληψης ορίστηκε σε `{mode}`."
 
-#: cogs/music/music.py:4061 cogs/music/views.py:2025
+#: cogs/music/music.py:4170 cogs/music/views.py:2025
 msgid "Nothing has played yet in this session."
 msgstr "Δεν έχει παίξει τίποτα ακόμα σε αυτή τη συνεδρία."
 
-#: cogs/music/music.py:4075 cogs/music/views.py:454
+#: cogs/music/music.py:4184 cogs/music/views.py:454
 msgid "Nothing is playing right now."
 msgstr "Δεν παίζει τίποτα αυτή τη στιγμή."
 
-#: cogs/music/music.py:4105
+#: cogs/music/music.py:4214
 msgid "Disconnected from the voice channel. 24/7 is paused for this server until you /play again or re-enable it."
 msgstr "Αποσυνδέθηκα από το φωνητικό κανάλι. Το 24/7 είναι σε παύση σε αυτόν τον διακομιστή μέχρι το επόμενο /play σου ή την επανενεργοποίησή του."
 
-#: cogs/music/music.py:4110
+#: cogs/music/music.py:4219
 msgid "Disconnected from the voice channel."
 msgstr "Αποσυνδέθηκε από το φωνητικό κανάλι."
 
-#: cogs/music/music.py:4147
+#: cogs/music/music.py:4256
 msgid "24/7 music is part of Yasuho+. See /premium for options."
 msgstr "Η μουσική 24/7 είναι μέρος του Yasuho+. Δες το /premium για επιλογές."
 
-#: cogs/music/music.py:4174 cogs/music/music.py:4246
+#: cogs/music/music.py:4283 cogs/music/music.py:4355
 #, python-brace-format
 msgid "I do not have permission to join {channel} (I need Connect and Speak there). 24/7 was not enabled."
 msgstr "Δεν έχω άδεια να συνδεθώ στο {channel} (χρειάζομαι Σύνδεση και Ομιλία εκεί). Το 24/7 δεν ενεργοποιήθηκε."
 
-#: cogs/music/music.py:4193
+#: cogs/music/music.py:4302
 #, python-brace-format
 msgid "Yasuho+ 24/7 is at capacity right now ({max} servers). Please try again later."
 msgstr "Το 24/7 του Yasuho+ είναι γεμάτο αυτή τη στιγμή ({max} διακομιστές). Δοκίμασε ξανά αργότερα."
 
-#: cogs/music/music.py:4213 cogs/music/music.py:4229
+#: cogs/music/music.py:4322 cogs/music/music.py:4338
 #, python-brace-format
 msgid "24/7 is now configured for {channel}, but I could not join yet: {reason}"
 msgstr "Το 24/7 ρυθμίστηκε για το {channel}, αλλά δεν μπόρεσα να συνδεθώ ακόμα: {reason}"
 
-#: cogs/music/music.py:4234 cogs/music/player.py:238
+#: cogs/music/music.py:4343 cogs/music/player.py:248
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "Δεν μπόρεσα να μπω στο φωνητικό σου κανάλι. Δοκίμασε ξανά."
 
-#: cogs/music/music.py:4253
+#: cogs/music/music.py:4362
 #, python-brace-format
 msgid "24/7 is on for {channel}. I will stay connected there."
 msgstr "Το 24/7 είναι ενεργό για το {channel}. Θα μείνω συνδεδεμένο εκεί."
 
-#: cogs/music/music.py:4265
+#: cogs/music/music.py:4374
 msgid "24/7 is already off for this server."
 msgstr "Το 24/7 είναι ήδη απενεργοποιημένο σε αυτόν τον διακομιστή."
 
-#: cogs/music/music.py:4270
+#: cogs/music/music.py:4379
 msgid "24/7 is now off for this server. I will leave like normal when idle or empty."
 msgstr "Το 24/7 απενεργοποιήθηκε σε αυτόν τον διακομιστή. Θα φεύγω κανονικά όταν δεν υπάρχει δραστηριότητα ή το κανάλι είναι άδειο."
 
-#: cogs/music/music.py:4289
+#: cogs/music/music.py:4398
 msgid "24/7 is off for this server. See /premium to turn it on."
 msgstr "Το 24/7 είναι απενεργοποιημένο σε αυτόν τον διακομιστή. Δες το /premium για να το ενεργοποιήσεις."
 
-#: cogs/music/music.py:4294
+#: cogs/music/music.py:4403
 msgid "an unknown channel"
 msgstr "ένα άγνωστο κανάλι"
 
-#: cogs/music/music.py:4300
+#: cogs/music/music.py:4409
 #, python-brace-format
 msgid "24/7 is configured for {channel} (inactive - needs Yasuho+)."
 msgstr "Το 24/7 έχει ρυθμιστεί για το {channel} (ανενεργό - χρειάζεται Yasuho+)."
 
-#: cogs/music/music.py:4308
+#: cogs/music/music.py:4417
 #, python-brace-format
 msgid "24/7 is configured for {channel}, but paused until the next /play or restart (someone disconnected me)."
 msgstr "Το 24/7 έχει ρυθμιστεί για το {channel}, αλλά είναι σε παύση μέχρι το επόμενο /play ή την επανεκκίνηση (κάποιος με αποσύνδεσε)."
 
-#: cogs/music/music.py:4313
+#: cogs/music/music.py:4422
 #, python-brace-format
 msgid "24/7 is on for {channel}."
 msgstr "Το 24/7 είναι ενεργό για το {channel}."
 
-#: cogs/music/music.py:4332
+#: cogs/music/music.py:4441
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} δευτερόλεπτο"
 msgstr[1] "{count} δευτερόλεπτα"
 
-#: cogs/music/music.py:4336
+#: cogs/music/music.py:4445
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count} λεπτό"
 msgstr[1] "{count} λεπτά"
 
-#: cogs/music/music.py:4360
+#: cogs/music/music.py:4469
 msgid "That effect isn't available."
 msgstr "Αυτό το εφέ δεν είναι διαθέσιμο."
 
-#: cogs/music/music.py:4369
+#: cogs/music/music.py:4478
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "Αλλάζεις εφέ πολύ γρήγορα. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:4374
+#: cogs/music/music.py:4483
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "Πολλοί διακομιστές χρησιμοποιούν εφέ αυτή τη στιγμή - δοκίμασε ξανά σε λίγο."
 
-#: cogs/music/music.py:4377
+#: cogs/music/music.py:4486
 msgid "Something went wrong applying that effect."
 msgstr "Κάτι πήγε στραβά κατά την εφαρμογή του εφέ."
 
-#: cogs/music/music.py:4386
+#: cogs/music/music.py:4495
 msgid "Effects cleared."
 msgstr "Τα εφέ αφαιρέθηκαν."
 
-#: cogs/music/music.py:4387
+#: cogs/music/music.py:4496
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "Το εφέ ορίστηκε σε {emoji} {label}."
 
-#: cogs/music/music.py:4457
+#: cogs/music/music.py:4566
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "Αναζήτησες στίχους πάρα πολλές φορές. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:4468
+#: cogs/music/music.py:4577
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "Αυτός ο διακομιστής αναζήτησε πάρα πολλούς στίχους. Δοκίμασε ξανά σε {delay}."
 
-#: cogs/music/music.py:4482
+#: cogs/music/music.py:4591
 msgid "I couldn't find any lyrics for this track."
 msgstr "Δεν βρήκα στίχους για αυτό το κομμάτι."
 
-#: cogs/music/music.py:4590 cogs/music/views.py:2396
+#: cogs/music/music.py:4699 cogs/music/views.py:2396
 msgid "You have no saved favourites yet."
 msgstr "Δεν έχεις ακόμη αποθηκευμένα αγαπημένα."
 
-#: cogs/music/music.py:4593
+#: cogs/music/music.py:4702
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "Ο/Η {name} δεν έχει ακόμη αποθηκευμένα αγαπημένα."
 
-#: cogs/music/music.py:4646
+#: cogs/music/music.py:4755
 msgid "You have no saved favourites to play."
 msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αναπαραγωγή."
 
-#: cogs/music/music.py:4672
+#: cogs/music/music.py:4781
 msgid "None of your favourites could be loaded right now."
 msgstr "Κανένα από τα αγαπημένα σου δεν μπόρεσε να φορτωθεί αυτή τη στιγμή."
 
-#: cogs/music/music.py:4678 cogs/music/music.py:4730
+#: cogs/music/music.py:4787 cogs/music/music.py:4839
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " {deferred} παλιό αγαπημένο περιμένει ακόμα - τρέξε ξανά την εντολή για να το προσθέσεις."
 msgstr[1] " {deferred} παλιά αγαπημένα περιμένουν ακόμα - τρέξε ξανά την εντολή για να τα προσθέσεις."
 
-#: cogs/music/music.py:4713
+#: cogs/music/music.py:4822
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "Προστέθηκε {count} κομμάτι από τα αγαπημένα σου στην ουρά."
 msgstr[1] "Προστέθηκαν {count} κομμάτια από τα αγαπημένα σου στην ουρά."
 
-#: cogs/music/music.py:4721 cogs/music/playlists_shared.py:851
+#: cogs/music/music.py:4830 cogs/music/playlists_shared.py:851
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped} κομμάτι παραλείφθηκε - δεν μπόρεσε να φορτωθεί."
 msgstr[1] " {skipped} κομμάτια παραλείφθηκαν - δεν μπόρεσαν να φορτωθούν."
 
-#: cogs/music/music.py:4752
+#: cogs/music/music.py:4861
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "Δεν παίζει τίποτα - δώσε μου ένα όνομα τραγουδιού ή URL για αποθήκευση."
 
-#: cogs/music/music.py:4771
+#: cogs/music/music.py:4880
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "Το **{title}** από `{author}` προστέθηκε στα αγαπημένα σου."
 
-#: cogs/music/music.py:4781 cogs/music/views.py:1118
+#: cogs/music/music.py:4890 cogs/music/views.py:1118
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "Τα αγαπημένα σου είναι γεμάτα (μέγιστο {max}). Αφαίρεσε μερικά πρώτα."
 
-#: cogs/music/music.py:4813 cogs/music/views.py:1138
+#: cogs/music/music.py:4922 cogs/music/views.py:1138
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "Το **{title}** είναι ήδη στα αγαπημένα σου."
 
-#: cogs/music/music.py:4831
+#: cogs/music/music.py:4940
 msgid "You have no saved favourites to remove."
 msgstr "Δεν έχεις αποθηκευμένα αγαπημένα για αφαίρεση."
 
-#: cogs/music/music.py:4835
+#: cogs/music/music.py:4944
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "Διάλεξε έναν αριθμό μεταξύ 1 και {max}."
 
-#: cogs/music/music.py:4842 cogs/music/views.py:2669
+#: cogs/music/music.py:4951 cogs/music/views.py:2669
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "Το **{title}** αφαιρέθηκε από τα αγαπημένα σου."
 
-#: cogs/music/player.py:248
+#: cogs/music/player.py:258
 msgid "I am still starting up - try again in a moment."
 msgstr "Ξεκινάω ακόμη - δοκίμασε ξανά σε λίγο."
 
@@ -9538,289 +9544,262 @@ msgstr "Χρησιμοποίησε `/help` για να δεις όλες τις 
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Χρησιμοποίησε `/language` για να επιλέξεις τη γλώσσα που μιλάω σε αυτόν τον server."
 
-#: cogs/system/premium.py:179 cogs/system/premium.py:427
+#: cogs/system/premium.py:179 cogs/system/premium.py:428
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} ακόμη δεν εμφανίζονται."
 
-#: cogs/system/premium.py:249
+#: cogs/system/premium.py:250
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "Το id του διακομιστή πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:276 cogs/system/premium.py:318
-#: cogs/system/premium.py:408 cogs/system/premium.py:487
-#: cogs/system/premium.py:497
+#: cogs/system/premium.py:277 cogs/system/premium.py:319
+#: cogs/system/premium.py:409 cogs/system/premium.py:488
+#: cogs/system/premium.py:498
 msgid "permanent"
 msgstr "μόνιμο"
 
-#: cogs/system/premium.py:279
+#: cogs/system/premium.py:280
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Yasuho+** στον διακομιστή `{guild_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:291
+#: cogs/system/premium.py:292
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "Το id του χρήστη πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:321
+#: cogs/system/premium.py:322
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Pack Confort** στον χρήστη `{user_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:348
+#: cogs/system/premium.py:349
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "Δεν βρέθηκε ενεργή παραχώρηση #{grant_id} (έχει ήδη ανακληθεί, έχει λήξει ή δεν υπήρξε ποτέ)."
 
-#: cogs/system/premium.py:374
+#: cogs/system/premium.py:375
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Η παραχώρηση #{grant_id} ανακλήθηκε."
 
-#: cogs/system/premium.py:386 cogs/system/premium.py:439
+#: cogs/system/premium.py:387 cogs/system/premium.py:440
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "Το εύρος πρέπει να είναι `server` ή `user`, όχι `{scope}`."
 
-#: cogs/system/premium.py:400
+#: cogs/system/premium.py:401
 msgid "Active premium grants"
 msgstr "Ενεργές παραχωρήσεις premium"
 
-#: cogs/system/premium.py:402
+#: cogs/system/premium.py:403
 msgid "No active grant matches."
 msgstr "Καμία ενεργή παραχώρηση δεν ταιριάζει."
 
-#: cogs/system/premium.py:410
+#: cogs/system/premium.py:411
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "#{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:446
+#: cogs/system/premium.py:447
 msgid "Premium status"
 msgstr "Κατάσταση premium"
 
-#: cogs/system/premium.py:480
+#: cogs/system/premium.py:481
 msgid "Effective"
 msgstr "Ισχύον"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:482
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:481
+#: cogs/system/premium.py:482
 msgid "Free"
 msgstr "Δωρεάν"
 
-#: cogs/system/premium.py:488
+#: cogs/system/premium.py:489
 #, python-brace-format
 msgid "Discord entitlement, {until}"
 msgstr "Δικαίωμα αγοράς Discord, {until}"
 
-#: cogs/system/premium.py:490
+#: cogs/system/premium.py:491
 msgid "Entitlement"
 msgstr "Δικαίωμα αγοράς"
 
-#: cogs/system/premium.py:498
+#: cogs/system/premium.py:499
 msgid "(no reason given)"
 msgstr "(δεν δόθηκε λόγος)"
 
-#: cogs/system/premium.py:500
+#: cogs/system/premium.py:501
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "#{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:505
+#: cogs/system/premium.py:506
 msgid "Owner grant(s)"
 msgstr "Παραχώρηση(-εις) του ιδιοκτήτη"
 
-#: cogs/system/premium.py:510
+#: cogs/system/premium.py:511
 msgid "Why"
 msgstr "Γιατί"
 
-#: cogs/system/premium.py:510
+#: cogs/system/premium.py:511
 msgid "Nothing active."
 msgstr "Τίποτα ενεργό."
 
-#: cogs/system/premium.py:567
+#: cogs/system/premium.py:593
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Δεν έχει οριστεί ακόμη `yasuho_plus_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
 
-#: cogs/system/premium.py:590
+#: cogs/system/premium.py:616
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Yasuho+** για τον διακομιστή `{guild_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check server {guild_id}` σε λίγο."
 
-#: cogs/system/premium.py:599
+#: cogs/system/premium.py:625
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Yasuho+**) για τον διακομιστή `{guild_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:614
+#: cogs/system/premium.py:640
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Δεν έχει οριστεί ακόμη `comfort_pack_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
 
-#: cogs/system/premium.py:637
+#: cogs/system/premium.py:663
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Pack Confort** για τον χρήστη `{user_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check user {user_id}` σε λίγο."
 
-#: cogs/system/premium.py:646
+#: cogs/system/premium.py:672
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Pack Confort**) για τον χρήστη `{user_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:661
+#: cogs/system/premium.py:687
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "Δεν υπάρχει δικαίωμα #{entitlement_id}."
 
-#: cogs/system/premium.py:670
+#: cogs/system/premium.py:696
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "Δεν ήταν δυνατή η λήψη του δικαιώματος #{entitlement_id} από το Discord."
 
-#: cogs/system/premium.py:679
+#: cogs/system/premium.py:705
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "Το δικαίωμα #{entitlement_id} δεν είναι ΔΟΚΙΜΑΣΤΙΚΟ (τύπος `{type}`) - αρνούμαι να διαγράψω πραγματική αγορά."
 
-#: cogs/system/premium.py:695
+#: cogs/system/premium.py:721
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "Το ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} διαγράφηκε. Το αντίστοιχο συμβάν ENTITLEMENT_DELETE θα το αφαιρέσει από την προσωρινή μνήμη."
 
-#: cogs/system/premium_panel.py:80
-msgid "yes"
-msgstr "ναι"
-
-#: cogs/system/premium_panel.py:80
-msgid "no"
-msgstr "όχι"
-
-#: cogs/system/premium_panel.py:103
+#: cogs/system/premium_panel.py:114
 msgid "## Yasuho+"
 msgstr "## Yasuho+"
 
-#: cogs/system/premium_panel.py:105
-msgid "A paid upgrade for a whole server. Nothing free is removed - here is what Yasuho+ adds:"
-msgstr "Μια επί πληρωμή αναβάθμιση για ολόκληρο τον διακομιστή. Τίποτα δωρεάν δεν αφαιρείται - να τι προσθέτει το Yasuho+:"
+#: cogs/system/premium_panel.py:116
+msgid "**24/7 music**"
+msgstr "**Μουσική 24/7**"
 
-#: cogs/system/premium_panel.py:109
-#, python-brace-format
-msgid "**24/7 music** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Μουσική 24/7** - Δωρεάν: {free} | Yasuho+: {plus}"
-
-#: cogs/system/premium_panel.py:113 tests/cogs/test_premium_panel.py:164
-#: tests/cogs/test_premium_panel.py:173
-#, python-brace-format
-msgid "**Server playlists** - Free: {free_count} x {free_tracks} tracks | Yasuho+: {plus_count} x {plus_tracks} tracks"
-msgstr "**Λίστες διακομιστή** - Δωρεάν: {free_count} x {free_tracks} κομμάτια | Yasuho+: {plus_count} x {plus_tracks} κομμάτια"
+#: cogs/system/premium_panel.py:118
+msgid "Yasuho stays in your voice channel, even when the queue is empty."
+msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακόμα κι όταν η ουρά είναι άδεια."
 
 #: cogs/system/premium_panel.py:122
+msgid "**Extended server playlists**"
+msgstr "**Εκτεταμένες λίστες διακομιστή**"
+
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:150
+#: tests/cogs/test_premium_panel.py:154
 #, python-brace-format
-msgid "**Previous history** - Free: {free} tracks | Yasuho+: {plus} tracks"
-msgstr "**Ιστορικό «Προηγούμενο»** - Δωρεάν: {free} κομμάτια | Yasuho+: {plus} κομμάτια"
+msgid "Up to {count} playlists of {tracks} tracks."
+msgstr "Έως {count} λίστες των {tracks} κομματιών."
 
 #: cogs/system/premium_panel.py:128
-#, python-brace-format
-msgid "**AniList feeds** - Free: {free_feeds} feeds, {free_accounts} accounts and {free_titles} titles per feed | Yasuho+: {plus_feeds} feeds, {plus_accounts} accounts and {plus_titles} titles per feed"
-msgstr "**Ροές AniList** - Δωρεάν: {free_feeds} ροές, {free_accounts} λογαριασμοί και {free_titles} τίτλοι ανά ροή | Yasuho+: {plus_feeds} ροές, {plus_accounts} λογαριασμοί και {plus_titles} τίτλοι ανά ροή"
+msgid "**A year of statistics**"
+msgstr "**Ένας χρόνος στατιστικών**"
 
-#: cogs/system/premium_panel.py:141
+#: cogs/system/premium_panel.py:129
 #, python-brace-format
-msgid "**Server stats** - Free: {free} days | Yasuho+: {plus} days"
-msgstr "**Στατιστικά διακομιστή** - Δωρεάν: {free} ημέρες | Yasuho+: {plus} ημέρες"
+msgid "See your server's activity over the last {days} days."
+msgstr "Δες τη δραστηριότητα του διακομιστή σου τις τελευταίες {days} ημέρες."
 
-#: cogs/system/premium_panel.py:146
+#: cogs/system/premium_panel.py:134
 #, python-brace-format
-msgid "**Role menus** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Μενού ρόλων** - Δωρεάν: {free} | Yasuho+: {plus}"
+msgid "Also includes: a {history}-track Previous history, {feeds} AniList feeds, {menus} role menus, {hubs} voice hubs and the Yasuho+ badge."
+msgstr "Περιλαμβάνει επίσης: ιστορικό Προηγούμενου {history} κομματιών, {feeds} ροές AniList, {menus} μενού ρόλων, {hubs} φωνητικά hubs και το σήμα Yasuho+."
 
-#: cogs/system/premium_panel.py:149
-#, python-brace-format
-msgid "**Auto voice hubs** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Αυτόματοι κόμβοι φωνής** - Δωρεάν: {free} | Yasuho+: {plus}"
-
-#: cogs/system/premium_panel.py:153
-#, python-brace-format
-msgid "**Open tickets per member** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Ανοιχτά tickets ανά μέλος** - Δωρεάν: {free} | Yasuho+: {plus}"
-
-#: cogs/system/premium_panel.py:158
-#, python-brace-format
-msgid "**Yasuho+ badge** - Free: {free} | Yasuho+: {plus}"
-msgstr "**Σήμα Yasuho+** - Δωρεάν: {free} | Yasuho+: {plus}"
-
-#: cogs/system/premium_panel.py:163
+#: cogs/system/premium_panel.py:144
 msgid "## Pack Confort"
 msgstr "## Pack Confort"
 
-#: cogs/system/premium_panel.py:165
-msgid "A one-time purchase for you personally. No subscription, no expiry while the service and your account exist."
-msgstr "Μια εφάπαξ αγορά μόνο για σένα. Χωρίς συνδρομή, χωρίς λήξη όσο υπάρχουν η υπηρεσία και ο λογαριασμός σου."
-
-#: cogs/system/premium_panel.py:170
+#: cogs/system/premium_panel.py:147
 #, python-brace-format
-msgid "**Favourites** - Free: {free} | Pack Confort: {plus}"
-msgstr "**Αγαπημένα** - Δωρεάν: {free} | Pack Confort: {plus}"
+msgid "A one-time purchase, tied to your Discord account and valid for the lifetime of the Yasuho service: {favourites} favourites, {reminders} reminders including {recurring} recurring."
+msgstr "Μια εφάπαξ αγορά, συνδεδεμένη με τον λογαριασμό σου στο Discord και έγκυρη για όσο υπάρχει η υπηρεσία Yasuho: {favourites} αγαπημένα, {reminders} υπενθυμίσεις, από τις οποίες {recurring} επαναλαμβανόμενες."
 
-#: cogs/system/premium_panel.py:174
-#, python-brace-format
-msgid "**Reminders** - Free: {free} ({free_recurring} recurring) | Pack Confort: {plus} ({plus_recurring} recurring)"
-msgstr "**Υπενθυμίσεις** - Δωρεάν: {free} ({free_recurring} επαναλαμβανόμενες) | Pack Confort: {plus} ({plus_recurring} επαναλαμβανόμενες)"
-
-#: cogs/system/premium_panel.py:188
+#: cogs/system/premium_panel.py:162
 msgid "Nothing free becomes paid, nothing is deleted when a perk ends, and purchases are handled by Discord."
 msgstr "Τίποτα δωρεάν δεν γίνεται επί πληρωμή, τίποτα δεν διαγράφεται όταν λήγει ένα προνόμιο, και τις αγορές τις διαχειρίζεται το Discord."
 
-#: cogs/system/premium_panel.py:194
-msgid "purchased"
-msgstr "αγορά"
-
-#: cogs/system/premium_panel.py:194
-msgid "gifted"
-msgstr "δώρο"
-
-#: cogs/system/premium_panel.py:200
+#: cogs/system/premium_panel.py:176
 msgid "This server does not have **Yasuho+**."
 msgstr "Αυτός ο διακομιστής δεν έχει **Yasuho+**."
 
-#: cogs/system/premium_panel.py:204
+#: cogs/system/premium_panel.py:179
 #, python-brace-format
-msgid "This server has **Yasuho+** ({source}), active until {until}."
-msgstr "Αυτός ο διακομιστής έχει **Yasuho+** ({source}), ενεργό έως {until}."
+msgid "Yasuho+ is offered to this server until {until}."
+msgstr "Το Yasuho+ προσφέρεται σε αυτόν τον διακομιστή έως {until}."
 
-#: cogs/system/premium_panel.py:206
+#: cogs/system/premium_panel.py:182
+msgid "Yasuho+ is offered to this server - permanent access."
+msgstr "Το Yasuho+ προσφέρεται σε αυτόν τον διακομιστή - μόνιμη πρόσβαση."
+
+#: cogs/system/premium_panel.py:185
 #, python-brace-format
-msgid "This server has **Yasuho+** ({source}), with no end date."
-msgstr "Αυτός ο διακομιστής έχει **Yasuho+** ({source}), χωρίς ημερομηνία λήξης."
+msgid "This server has **Yasuho+** (purchased), active until {until}."
+msgstr "Αυτός ο διακομιστής έχει **Yasuho+** (αγορά), ενεργό έως {until}."
 
-#: cogs/system/premium_panel.py:214
+#: cogs/system/premium_panel.py:187
+msgid "This server has **Yasuho+** (purchased), with no end date."
+msgstr "Αυτός ο διακομιστής έχει **Yasuho+** (αγορά), χωρίς ημερομηνία λήξης."
+
+#: cogs/system/premium_panel.py:195
 msgid "You do not have the **Pack Confort**."
 msgstr "Δεν έχεις το **Pack Confort**."
 
-#: cogs/system/premium_panel.py:218
+#: cogs/system/premium_panel.py:198
 #, python-brace-format
-msgid "You have the **Pack Confort** ({source}), active until {until}."
-msgstr "Έχεις το **Pack Confort** ({source}), ενεργό έως {until}."
+msgid "The Pack Confort is offered to you until {until}."
+msgstr "Το Pack Confort σου προσφέρεται έως {until}."
 
-#: cogs/system/premium_panel.py:221
+#: cogs/system/premium_panel.py:201
+msgid "The Pack Confort is offered to you - permanent access."
+msgstr "Το Pack Confort σου προσφέρεται - μόνιμη πρόσβαση."
+
+#: cogs/system/premium_panel.py:204
 #, python-brace-format
-msgid "You have the **Pack Confort** ({source}), with no end date."
-msgstr "Έχεις το **Pack Confort** ({source}), χωρίς ημερομηνία λήξης."
+msgid "You have the **Pack Confort** (purchased), active until {until}."
+msgstr "Έχεις το **Pack Confort** (αγορά), ενεργό έως {until}."
 
-#: cogs/system/premium_panel.py:226
+#: cogs/system/premium_panel.py:206
+msgid "You have the **Pack Confort** (purchased), with no end date."
+msgstr "Έχεις το **Pack Confort** (αγορά), χωρίς ημερομηνία λήξης."
+
+#: cogs/system/premium_panel.py:210
 msgid "Premium is not on sale yet."
 msgstr "Το premium δεν πωλείται ακόμη."
 
-#: cogs/system/premium_panel.py:230
+#: cogs/system/premium_panel.py:214
 #, python-brace-format
 msgid "A server admin can manage this with `/{command}`."
 msgstr "Ένας διαχειριστής του διακομιστή μπορεί να το διαχειριστεί με `/{command}`."
 
-#: cogs/system/premium_panel.py:284
+#: cogs/system/premium_panel.py:263
 msgid "Terms"
 msgstr "Όροι"
 
