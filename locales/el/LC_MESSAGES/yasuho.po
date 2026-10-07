@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 05:21+0000\n"
+"POT-Creation-Date: 2026-10-07 06:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -779,7 +779,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 #: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
 #: cogs/music/playlists_shared.py:312 cogs/music/views.py:2431
 msgid "(archived)"
-msgstr "(αρχειοθετημένη)"
+msgstr "(αρχειοθετημένο)"
 
 #: cogs/anilist/feed.py:2910
 msgid "none"
@@ -1121,7 +1121,7 @@ msgstr "Διακοπή παρακολούθησης τίτλου..."
 
 #: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:686
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:702
 #: cogs/music/views.py:1631 cogs/music/views.py:2064 cogs/music/views.py:2462
 msgid "Next"
 msgstr "Επόμ."
@@ -1905,12 +1905,12 @@ msgstr "hourly, daily, weekly, ή π.χ. 2d - κενό για μία φορά"
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `10m`, `tomorrow at 6pm` ή `in 3 days`."
 
-#: cogs/community/reminders.py:404 cogs/community/reminders.py:1706
+#: cogs/community/reminders.py:404 cogs/community/reminders.py:1722
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Αυτός ο χρόνος είναι στο παρελθόν. Δώσε μου μια στιγμή στο μέλλον."
 
-#: cogs/community/reminders.py:420 cogs/community/reminders.py:1734
+#: cogs/community/reminders.py:420 cogs/community/reminders.py:1750
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Έχεις ήδη {count} εκκρεμείς υπενθυμίσεις - περίμενε να ενεργοποιηθούν κάποιες πριν προσθέσεις κι άλλες."
@@ -1951,40 +1951,44 @@ msgstr "Οι υπενθυμίσεις σου"
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "Δεν έχεις υπενθυμίσεις. Χρησιμοποίησε το `/remind` για να προσθέσεις μία."
 
-#: cogs/community/reminders.py:663
+#: cogs/community/reminders.py:671
+msgid "Recurring reminders marked (archived) are over your current limit: they are paused, not deleted. You can still cancel them, and they resume at their next time if your limit goes back up."
+msgstr "Οι επαναλαμβανόμενες υπενθυμίσεις με την ένδειξη (αρχειοθετημένο) ξεπερνούν το τρέχον όριό σου: είναι σε παύση, όχι διαγραμμένες. Μπορείς ακόμα να τις ακυρώσεις, και συνεχίζουν στην επόμενη ώρα τους αν το όριό σου ανέβει ξανά."
+
+#: cogs/community/reminders.py:679
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count} σε εκκρεμότητα"
 
-#: cogs/community/reminders.py:667
+#: cogs/community/reminders.py:683
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:679
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:695
 #: cogs/music/views.py:1624 cogs/music/views.py:2057 cogs/music/views.py:2455
 msgid "Prev"
 msgstr "Προηγ."
 
-#: cogs/community/reminders.py:1477
+#: cogs/community/reminders.py:1493
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "Ήμουν εκτός σύνδεσης, οπότε χάθηκε {count} επανάληψη."
 msgstr[1] "Ήμουν εκτός σύνδεσης, οπότε χάθηκαν {count} επαναλήψεις."
 
-#: cogs/community/reminders.py:1490
+#: cogs/community/reminders.py:1506
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "Επαναλαμβάνεται {interval} - επόμενη {when}"
 
-#: cogs/community/reminders.py:1586
+#: cogs/community/reminders.py:1602
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>, {when}: {message}"
 
-#: cogs/community/reminders.py:1692
+#: cogs/community/reminders.py:1708
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 

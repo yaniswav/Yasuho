@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 05:21+0000\n"
+"POT-Creation-Date: 2026-10-07 06:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1141,7 +1141,7 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:686
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:702
 #: cogs/music/views.py:1631 cogs/music/views.py:2064 cogs/music/views.py:2462
 msgid "Next"
 msgstr ""
@@ -1956,12 +1956,12 @@ msgid ""
 "6pm`, or `in 3 days`."
 msgstr ""
 
-#: cogs/community/reminders.py:404 cogs/community/reminders.py:1706
+#: cogs/community/reminders.py:404 cogs/community/reminders.py:1722
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr ""
 
-#: cogs/community/reminders.py:420 cogs/community/reminders.py:1734
+#: cogs/community/reminders.py:420 cogs/community/reminders.py:1750
 #, python-brace-format
 msgid ""
 "You already have {count} reminders pending - wait for some to fire before"
@@ -2004,40 +2004,47 @@ msgstr ""
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr ""
 
-#: cogs/community/reminders.py:663
+#: cogs/community/reminders.py:671
+msgid ""
+"Recurring reminders marked (archived) are over your current limit: they "
+"are paused, not deleted. You can still cancel them, and they resume at "
+"their next time if your limit goes back up."
+msgstr ""
+
+#: cogs/community/reminders.py:679
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr ""
 
-#: cogs/community/reminders.py:667
+#: cogs/community/reminders.py:683
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr ""
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:679
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:695
 #: cogs/music/views.py:1624 cogs/music/views.py:2057 cogs/music/views.py:2455
 msgid "Prev"
 msgstr ""
 
-#: cogs/community/reminders.py:1477
+#: cogs/community/reminders.py:1493
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/community/reminders.py:1490
+#: cogs/community/reminders.py:1506
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr ""
 
-#: cogs/community/reminders.py:1586
+#: cogs/community/reminders.py:1602
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr ""
 
-#: cogs/community/reminders.py:1692
+#: cogs/community/reminders.py:1708
 msgid "Tap the button below to set a reminder."
 msgstr ""
 

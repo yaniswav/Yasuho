@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 05:21+0000\n"
+"POT-Creation-Date: 2026-10-07 06:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1108,7 +1108,7 @@ msgstr "追跡を解除するタイトルを選択..."
 
 #: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
 #: cogs/community/leveling/leveling.py:248
-#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:686
+#: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:702
 #: cogs/music/views.py:1631 cogs/music/views.py:2064 cogs/music/views.py:2462
 msgid "Next"
 msgstr "次へ"
@@ -1885,12 +1885,12 @@ msgstr "hourly、daily、weekly、または 2d のような指定 - 1回だけ�
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "その時間を理解できませんでした。`10m`、`tomorrow at 6pm`、`in 3 days` のように入力してみてください。"
 
-#: cogs/community/reminders.py:404 cogs/community/reminders.py:1706
+#: cogs/community/reminders.py:404 cogs/community/reminders.py:1722
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "その時間は過去です。未来の時刻を指定してください。"
 
-#: cogs/community/reminders.py:420 cogs/community/reminders.py:1734
+#: cogs/community/reminders.py:420 cogs/community/reminders.py:1750
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
@@ -1931,39 +1931,43 @@ msgstr "あなたのリマインダー"
 msgid "You have no reminders set. Use `/remind` to add one."
 msgstr "リマインダーはありません。`/remind` で追加できます。"
 
-#: cogs/community/reminders.py:663
+#: cogs/community/reminders.py:671
+msgid "Recurring reminders marked (archived) are over your current limit: they are paused, not deleted. You can still cancel them, and they resume at their next time if your limit goes back up."
+msgstr "(アーカイブ済み)と表示された繰り返しリマインダーは現在の上限を超えています。削除ではなく一時停止中です。キャンセルはいつでもでき、上限が戻れば次の予定時刻から再開します。"
+
+#: cogs/community/reminders.py:679
 #, python-brace-format
 msgid "-# {count} pending"
 msgstr "-# {count}件保留中"
 
-#: cogs/community/reminders.py:667
+#: cogs/community/reminders.py:683
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# ページ {page}/{pages} - {count}件保留中"
 
 #: cogs/community/leveling/leveling.py:241
-#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:679
+#: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:695
 #: cogs/music/views.py:1624 cogs/music/views.py:2057 cogs/music/views.py:2455
 msgid "Prev"
 msgstr "前へ"
 
-#: cogs/community/reminders.py:1477
+#: cogs/community/reminders.py:1493
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "オフラインだったため、{count}回の実行が飛ばされました。"
 
-#: cogs/community/reminders.py:1490
+#: cogs/community/reminders.py:1506
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "{interval} ごとに繰り返し - 次回 {when}"
 
-#: cogs/community/reminders.py:1586
+#: cogs/community/reminders.py:1602
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>、{when}: {message}"
 
-#: cogs/community/reminders.py:1692
+#: cogs/community/reminders.py:1708
 msgid "Tap the button below to set a reminder."
 msgstr "下のボタンを押してリマインダーを設定してください。"
 
