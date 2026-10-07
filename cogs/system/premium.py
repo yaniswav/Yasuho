@@ -227,6 +227,7 @@ class Premium(commands.Cog):
     @premium_group.group(name="grant", invoke_without_command=True)
     @commands.is_owner()
     async def premium_grant(self, ctx):
+        """Gift a perk: ?premiumadmin grant server <guild_id> or grant user <user_id>"""
         await ctx.send_help(ctx.command)
 
     @premium_grant.command(name="server")
