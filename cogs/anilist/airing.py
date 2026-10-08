@@ -65,6 +65,7 @@ from .feed import (
 from .helpers import API_URL, filter_active_channel_subs
 from .queries import SAVE_ENTRY_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
+from .throttle import note_response, recorder_for
 from tools import i18n, interactions
 from tools import round_robin as rr
 from tools.http import TIMEOUT, get_session
@@ -684,6 +685,7 @@ class AniListAiring(NoPingReplies, commands.Cog):
             async with get_session(self.bot).post(
                 API_URL, json=payload, headers=headers, timeout=TIMEOUT
             ) as r:
+                note_response(recorder_for(self.bot), "airing", r.headers, r.status)
                 if r.status == 429:
                     raise _RateLimited(
                         _parse_retry_after(r.headers.get("Retry-After"))

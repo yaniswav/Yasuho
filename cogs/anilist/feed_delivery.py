@@ -20,6 +20,7 @@ import discord
 from .edit_forms import EditEntryModal
 from .helpers import API_URL
 from .queries import SAVE_ENTRY_QUERY
+from .throttle import note_response, recorder_for
 from tools import i18n, interactions
 from tools.cooldowns import Cooldowns
 from tools.http import TIMEOUT, get_session
@@ -238,6 +239,7 @@ async def _authed_graphql(bot, token, query, variables):
             API_URL, json=payload, headers=headers, timeout=TIMEOUT
         ) as r:
             status = r.status
+            note_response(recorder_for(bot), "list_action", r.headers, status)
             if status == 429:
                 # Record and log on the SAME shared counter / WARNING level the
                 # lookup path (AniListBase._graphql) uses, so the operator can

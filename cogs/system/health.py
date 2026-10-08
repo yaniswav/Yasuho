@@ -143,13 +143,18 @@ class Health(commands.Cog):
     def _anilist_stats(self):
         """AniList pressure counters, or None when nothing AniList has loaded.
 
-        Two independent subsystems land in one ``anilist=`` segment because an
+        Three independent subsystems land in one ``anilist=`` segment because an
         operator reads them together:
 
         * the INTERACTIVE throttle
           (:attr:`~cogs.anilist.throttle.AniListThrottle.throttled_count`,
           lifetime 429s, plus the process-wide window's hits/rejections against
           ``GLOBAL_LIMIT``) - "AniList is throttling us";
+        * the 429 diagnostic recorder
+          (:class:`~cogs.anilist.throttle.AniListCallRecorder`) -
+          ``anilist_60s`` is the bot's own request volume, from every source,
+          in the trailing 60s, the number to compare against the degraded
+          30/min limit whenever an ``ANILIST-429`` line shows up in the logs;
         * the POLLER circuit breaker (:mod:`cogs.anilist.breaker`) -
           ``breaker=open`` is "AniList is DOWN and every poller is off the
           network", the state that otherwise showed up only as a wall of
@@ -157,9 +162,9 @@ class Health(commands.Cog):
           ``breaker_skipped`` keep the trace after it heals, so an outage that
           started and ended overnight is still legible in the morning.
 
-        Each half degrades on its own: the throttle lives on the ``AniList``
-        cog, the breaker on the bot, and either can be missing without taking
-        the other (or the line) down.
+        Each piece degrades on its own: the throttle and the recorder live on
+        the ``AniList`` cog, the breaker on the bot, and any one of them can be
+        missing without taking the others (or the line) down.
         """
         stats = {}
         anilist = self.bot.get_cog("AniList")
@@ -169,6 +174,15 @@ class Health(commands.Cog):
             stats["throttled_429"] = throttle.throttled_count
             stats["global_hits"] = global_stats["hits"]
             stats["global_rejections"] = global_stats["rejections"]
+        # The 429 diagnostic recorder (2026-10-08): how many AniList requests the
+        # bot itself sent, from EVERY source (pollers and interactive alike), in
+        # the last 60s - the number an operator compares against the degraded
+        # 30/min limit when an ANILIST-429 line shows up. Independent of the
+        # throttle above (and of whether the AniList cog's interactive half is
+        # even wired), so it is read defensively on its own.
+        recorder = getattr(anilist, "_call_recorder", None)
+        if recorder is not None:
+            stats["anilist_60s"] = recorder.snapshot()["total_60s"]
         # Imported here rather than at module scope: see the note at the top of
         # this module - an AniList import fault must not also kill the LOAD
         # line. And caught rather than raised, for the same reason the throttle

@@ -31,7 +31,13 @@ from .queries import (
     SEARCH_QUERY,
     VIEWER_QUERY,
 )
-from .throttle import GLOBAL_LIMIT, GLOBAL_WINDOW, AniListThrottle
+from .throttle import (
+    GLOBAL_LIMIT,
+    GLOBAL_WINDOW,
+    AniListCallRecorder,
+    AniListThrottle,
+    note_response,
+)
 from tools import crypto
 from tools.config_loader import config_loader
 from tools.http import TIMEOUT, get_session
@@ -88,6 +94,12 @@ class AniListBase:
         # they never call this _graphql, so a burst here cannot starve them.
         self._throttle = AniListThrottle()
 
+        # The ONE process-wide 429 diagnostic recorder (audit 2026-10-08): every
+        # AniList call site - this cog's own lookups/oauth AND the pollers/feed
+        # actions, which reach it via throttle.recorder_for(bot) - reports here,
+        # so a 429 WARNING can say how much of the last 60s was OUR volume.
+        self._call_recorder = AniListCallRecorder()
+
         try:
             self.client_id = config_loader.get("AniList", "clientId")
         except Exception:
@@ -137,6 +149,7 @@ class AniListBase:
                 headers=headers,
                 timeout=TIMEOUT,
             ) as r:
+                note_response(self._call_recorder, "lookup", r.headers, r.status)
                 if r.status == 429:
                     self._throttle.note_throttled()
                     log.warning(
@@ -279,6 +292,7 @@ class AniListBase:
             async with get_session(self.bot).post(
                 TOKEN_URL, json=payload, timeout=TIMEOUT
             ) as r:
+                note_response(self._call_recorder, "oauth", r.headers, r.status)
                 data = await r.json()
         except Exception:
             log.exception("AniList token exchange failed")
