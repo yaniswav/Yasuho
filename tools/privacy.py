@@ -111,7 +111,8 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # somewhere to be said out loud. `premium_grants` is UNCHANGED: it stays
 # exported, never erasable - it is the OWNER's audit trail of a gift, not a
 # projection of anything, so forgetting it is not the recipient's call.
-EXPORT_VERSION = 14
+# v15 adds authored scheduled announcements, erased with their pending timers.
+EXPORT_VERSION = 15
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -194,6 +195,8 @@ ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 # forgetting it is not the recipient's call - see its own comment in
 # schema.sql for the full reasoning.
 USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
+    # The foreign-key cascade cancels pending deliveries in the same transaction.
+    ("scheduled_announcements", "DELETE FROM scheduled_announcements WHERE author_id = $1"),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -560,6 +563,10 @@ async def collect_user_export(pool, user_id):
         "closed_at FROM tickets WHERE opener_id = $1 ORDER BY opened_at",
         user_id,
     )
+    announcements = await pool.fetch(
+        "SELECT * FROM scheduled_announcements WHERE author_id = $1 ORDER BY id",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -690,6 +697,10 @@ async def collect_user_export(pool, user_id):
         "moderation_cases_as_target": _records(cases),
         "moderation_cases_as_moderator": _records(moderated_cases),
         "tickets_opened": _records(tickets),
+        "scheduled_announcements": [
+            {**dict(row), "embed": _json_value(row["embed"], None)}
+            for row in announcements
+        ],
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

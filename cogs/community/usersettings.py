@@ -278,6 +278,8 @@ class ProfileDeletionView(AuthorView):
                     "visibility choice."
                 )
                 + "\n"
+                + _("Your scheduled announcements and their pending deliveries are gone.")
+                + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
                 + _("So is your personal rank card.")
@@ -760,6 +762,10 @@ class UserSettings(commands.Cog):
             + _(
                 "It also deletes your top.gg vote record: your vote streak and "
                 "your lifetime vote count start over from zero."
+            )
+            + "\n"
+            + _(
+                "Your scheduled announcements and their pending deliveries will be deleted."
             )
             + "\n"
             + _(

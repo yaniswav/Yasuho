@@ -94,6 +94,55 @@ CREATE TABLE IF NOT EXISTS timers (
 ALTER TABLE timers ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE timers ADD COLUMN IF NOT EXISTS last_error TEXT;
 ALTER TABLE timers ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
+-- Local datetime anchors the first date, wall-clock time and original month day.
+CREATE TABLE IF NOT EXISTS scheduled_announcements (
+    id BIGSERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    author_id BIGINT NOT NULL,
+    content TEXT CHECK (char_length(content) <= 2000),
+    embed JSONB CHECK (
+        embed IS NULL OR (
+            jsonb_typeof(embed) = 'object'
+            AND embed - 'title' - 'description' - 'color' = '{}'::jsonb
+            AND (NOT embed ? 'title' OR jsonb_typeof(embed->'title') = 'string')
+            AND (NOT embed ? 'description' OR jsonb_typeof(embed->'description') = 'string')
+            AND char_length(COALESCE(embed->>'title', '')) <= 256
+            AND char_length(COALESCE(embed->>'description', '')) <= 4096
+            AND (btrim(COALESCE(embed->>'title', '')) <> ''
+                OR btrim(COALESCE(embed->>'description', '')) <> '')
+            AND (NOT embed ? 'color' OR (
+                jsonb_typeof(embed->'color') = 'number'
+                AND (embed->>'color') ~ '^[0-9]+$'
+                AND (embed->>'color')::numeric BETWEEN 0 AND 16777215
+            ))
+        )
+    ),
+    role_id BIGINT,
+    timezone TEXT NOT NULL,
+    local_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    recurrence TEXT NOT NULL CHECK (recurrence IN ('none', 'daily', 'weekly', 'monthly')),
+    next_run_at TIMESTAMPTZ,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    failures INTEGER NOT NULL DEFAULT 0 CHECK (failures >= 0),
+    last_error TEXT,
+    revision BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (NULLIF(btrim(content), '') IS NOT NULL OR embed IS NOT NULL),
+    CHECK (NOT enabled OR next_run_at IS NOT NULL),
+    -- The @everyone role shares the guild's id: never a valid role ping.
+    CHECK (role_id IS NULL OR role_id <> guild_id),
+    CHECK (role_id IS NULL OR char_length(COALESCE(content, ''))
+        + char_length(role_id::text) + 4 + CASE WHEN content IS NULL OR content = '' THEN 0 ELSE 1 END <= 2000)
+);
+CREATE INDEX IF NOT EXISTS scheduled_announcements_guild_idx
+    ON scheduled_announcements (guild_id, id);
+-- Parent deletion (UI, guild purge or user erasure) also cancels its timer.
+ALTER TABLE timers ADD COLUMN IF NOT EXISTS announcement_id BIGINT
+    REFERENCES scheduled_announcements(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS timers_announcement_idx ON timers (announcement_id)
+    WHERE announcement_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS timers_expires_idx ON timers (expires);
 CREATE INDEX IF NOT EXISTS timers_pending_expires_idx
     ON timers (expires) WHERE claimed_at IS NULL;

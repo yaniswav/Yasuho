@@ -1440,9 +1440,9 @@ class Reminder(commands.Cog):
 
         A recurring reminder takes the same claim, wrapped in a transaction that
         also enqueues its next occurrence (see :meth:`_claim_and_reschedule`).
-        Every other row - every non-``reminder`` event, and every reminder
-        without a valid ``repeat_seconds`` - takes the untouched single-statement
-        path below.
+        Announcements use their store's calendar claim/reschedule transaction
+        before the generic event dispatch. Other events and reminders without
+        a valid ``repeat_seconds`` use the single-statement claim below.
 
         ARCHIVED RECURRING REMINDERS (M4c) are the one exception to "claim
         then deliver": a series over its author's effective recurring cap
@@ -1452,6 +1452,22 @@ class Reminder(commands.Cog):
         :meth:`call_timer` is never invoked - see :meth:`_deliver_archived_recurring`
         for why this is what stops it from hot-looping the dispatcher.
         """
+        if row["event"] == "announcement" and row.get("announcement_id") is not None:
+            engine = self.bot.get_cog("ScheduledAnnouncements")
+            if engine is None:
+                # Raising here would retry this same earliest row every 5 s and
+                # stall every other timer behind it; push it back instead.
+                log.warning("ANNOUNCE-POSTPONED timer=%s reason=engine-unloaded", row["id"])
+                await self.bot.db_pool.execute(
+                    "UPDATE timers SET expires = now() + interval '5 minutes' "
+                    "WHERE id = $1 AND claimed_at IS NULL",
+                    row["id"],
+                )
+                return
+            claimed = await engine.store.claim_and_reschedule(row)
+            if claimed is not None:
+                await self.call_timer(claimed)
+            return
         repeat_seconds = None
         next_id = None
         if row["event"] == "reminder":

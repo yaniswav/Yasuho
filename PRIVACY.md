@@ -113,7 +113,10 @@ line was last shown.
 
 **Content you ask us to keep**: reminder texts, music favorites and playlists,
 kept until you delete them; and your AFK status message, deleted as soon as you
-are back.
+are back. Scheduled announcements written by server managers (the text, the
+channel, an optional role to mention, the timezone and the schedule) are kept
+until a manager deletes them or the server's data is purged, and are erased with
+the data of the manager who created them.
 
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
@@ -124,8 +127,8 @@ ID, no server ID.
   commands, automod filtering, custom command triggers, mini-games) and
   discarded. The only text we keep is text explicitly given to a command for
   that purpose, all listed above: reminder texts, AFK status messages,
-  moderation case reasons, and custom command replies written by server
-  managers. A deleted message is held in memory for at most 15 minutes so
+  moderation case reasons, and custom command replies and scheduled
+  announcements written by server managers. A deleted message is held in memory for at most 15 minutes so
   moderators can use the snipe command, and is never written to disk. Our logs
   never contain message text.
 - We do not use any data to train machine learning or AI models.

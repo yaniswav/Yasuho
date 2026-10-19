@@ -65,6 +65,7 @@ DASHBOARD_AUDIT_PRUNE_MAX_BATCHES = 20
 # Deletion order matters for the foreign keys installed by migration 0002.
 # Every query is static: no table or column name comes from user input.
 GUILD_DELETE_QUERIES = (
+    ("scheduled_announcements", "DELETE FROM scheduled_announcements WHERE guild_id = $1"),
     (
         "anilist_channel_subs",
         "DELETE FROM anilist_channel_subs WHERE guild_id = $1",
@@ -222,7 +223,8 @@ GUILD_DELETE_QUERIES = (
 )
 
 STORED_GUILD_IDS_QUERY = """
-SELECT guild_id FROM prefixes
+SELECT guild_id FROM scheduled_announcements
+UNION SELECT guild_id FROM prefixes
 UNION SELECT guild_id FROM autorole
 UNION SELECT guild_id FROM muterole
 UNION SELECT mguild_id FROM mutedmembers

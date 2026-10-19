@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-07 09:03+0000\n"
+"POT-Creation-Date: 2026-10-19 20:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -76,8 +76,8 @@ msgstr ""
 msgid "No AniList user found."
 msgstr "Δεν βρέθηκε χρήστης AniList."
 
-#: cogs/anilist/account.py:267 cogs/anilist/base.py:438
-#: cogs/anilist/base.py:492 cogs/anilist/base.py:560
+#: cogs/anilist/account.py:267 cogs/anilist/base.py:452
+#: cogs/anilist/base.py:506 cogs/anilist/base.py:574
 #: cogs/anilist/collection.py:591 cogs/anilist/collection.py:648
 #: cogs/anilist/collection.py:707 cogs/anilist/collection.py:802
 #: cogs/anilist/edit_forms.py:251
@@ -85,7 +85,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου με `/anilist login`."
 
 #: cogs/anilist/account.py:273 cogs/anilist/account.py:668
-#: cogs/anilist/feed.py:2792
+#: cogs/anilist/feed.py:2794
 msgid "Could not resolve your AniList account."
 msgstr "Δεν ήταν δυνατός ο εντοπισμός του λογαριασμού σου AniList."
 
@@ -127,94 +127,94 @@ msgstr "Δώσε ένα όνομα ή σύνδεσε τον λογαριασμό
 msgid "Media type must be `anime` or `manga`."
 msgstr "Ο τύπος πρέπει να είναι `anime` ή `manga`."
 
-#: cogs/anilist/airing.py:312 cogs/anilist/airing.py:358
-#: cogs/anilist/chapters.py:527 cogs/anilist/chapters.py:573
-#: cogs/anilist/feed_delivery.py:418 cogs/anilist/feed_delivery.py:540
-#: cogs/anilist/feed_delivery.py:584 cogs/anilist/feed_delivery.py:690
+#: cogs/anilist/airing.py:313 cogs/anilist/airing.py:359
+#: cogs/anilist/chapters.py:528 cogs/anilist/chapters.py:574
+#: cogs/anilist/feed_delivery.py:420 cogs/anilist/feed_delivery.py:542
+#: cogs/anilist/feed_delivery.py:586 cogs/anilist/feed_delivery.py:692
 msgid "AniList is rate limiting me right now - try again shortly."
 msgstr "Το AniList με περιορίζει αυτή τη στιγμή - δοκίμασε ξανά σύντομα."
 
-#: cogs/anilist/airing.py:318 cogs/anilist/airing.py:364
-#: cogs/anilist/chapters.py:533 cogs/anilist/chapters.py:579
-#: cogs/anilist/feed_delivery.py:424 cogs/anilist/feed_delivery.py:546
-#: cogs/anilist/feed_delivery.py:590 cogs/anilist/feed_delivery.py:696
+#: cogs/anilist/airing.py:319 cogs/anilist/airing.py:365
+#: cogs/anilist/chapters.py:534 cogs/anilist/chapters.py:580
+#: cogs/anilist/feed_delivery.py:426 cogs/anilist/feed_delivery.py:548
+#: cogs/anilist/feed_delivery.py:592 cogs/anilist/feed_delivery.py:698
 msgid "Your AniList link seems invalid now - re-link it with `/anilist login`."
 msgstr "Η σύνδεση του AniList σου φαίνεται άκυρη τώρα - επανασύνδεσέ τη με `/anilist login`."
 
-#: cogs/anilist/airing.py:324 cogs/anilist/airing.py:334
-#: cogs/anilist/airing.py:370 cogs/anilist/chapters.py:539
-#: cogs/anilist/chapters.py:549 cogs/anilist/chapters.py:585
-#: cogs/anilist/feed_delivery.py:552 cogs/anilist/feed_delivery.py:562
-#: cogs/anilist/feed_delivery.py:596
+#: cogs/anilist/airing.py:325 cogs/anilist/airing.py:335
+#: cogs/anilist/airing.py:371 cogs/anilist/chapters.py:540
+#: cogs/anilist/chapters.py:550 cogs/anilist/chapters.py:586
+#: cogs/anilist/feed_delivery.py:554 cogs/anilist/feed_delivery.py:564
+#: cogs/anilist/feed_delivery.py:598
 msgid "I couldn't find that title on AniList anymore."
 msgstr "Δεν μπόρεσα να ξαναβρώ αυτόν τον τίτλο στο AniList."
 
-#: cogs/anilist/airing.py:328 cogs/anilist/airing.py:374
-#: cogs/anilist/airing.py:379 cogs/anilist/chapters.py:543
-#: cogs/anilist/chapters.py:589 cogs/anilist/chapters.py:594
-#: cogs/anilist/feed.py:2057 cogs/anilist/feed_delivery.py:434
-#: cogs/anilist/feed_delivery.py:556 cogs/anilist/feed_delivery.py:600
-#: cogs/anilist/feed_delivery.py:605 cogs/anilist/feed_delivery.py:706
+#: cogs/anilist/airing.py:329 cogs/anilist/airing.py:375
+#: cogs/anilist/airing.py:380 cogs/anilist/chapters.py:544
+#: cogs/anilist/chapters.py:590 cogs/anilist/chapters.py:595
+#: cogs/anilist/feed.py:2059 cogs/anilist/feed_delivery.py:436
+#: cogs/anilist/feed_delivery.py:558 cogs/anilist/feed_delivery.py:602
+#: cogs/anilist/feed_delivery.py:607 cogs/anilist/feed_delivery.py:708
 msgid "I could not reach AniList - try again shortly."
 msgstr "Δεν μπόρεσα να συνδεθώ με το AniList - δοκίμασε ξανά σύντομα."
 
-#: cogs/anilist/airing.py:342
+#: cogs/anilist/airing.py:343
 #, python-brace-format
 msgid "You are already at episode {progress} of **{title}**."
 msgstr "Είσαι ήδη στο επεισόδιο {progress} του **{title}**."
 
-#: cogs/anilist/airing.py:383
+#: cogs/anilist/airing.py:384
 #, python-brace-format
 msgid "Marked **{title}** as watched up to episode {episode}."
 msgstr "Το **{title}** σημειώθηκε ως παρακολουθημένο μέχρι το επεισόδιο {episode}."
 
-#: cogs/anilist/airing.py:407
+#: cogs/anilist/airing.py:408
 msgid "Seen"
 msgstr "Το είδα"
 
-#: cogs/anilist/airing.py:445
+#: cogs/anilist/airing.py:446
 msgid "A new episode just aired."
 msgstr "Μόλις κυκλοφόρησε ένα νέο επεισόδιο."
 
-#: cogs/anilist/airing.py:456
+#: cogs/anilist/airing.py:457
 #, python-brace-format
 msgid "Episode {episode} of **{title}** just aired."
 msgstr "Το επεισόδιο {episode} του **{title}** μόλις κυκλοφόρησε."
 
-#: cogs/anilist/airing.py:460
+#: cogs/anilist/airing.py:461
 msgid "New episode"
 msgstr "Νέο επεισόδιο"
 
-#: cogs/anilist/airing.py:487 cogs/anilist/feed_render.py:275
+#: cogs/anilist/airing.py:488 cogs/anilist/feed_render.py:275
 #: cogs/anilist/hub.py:317 cogs/anilist/lookup.py:68 cogs/anilist/lookup.py:120
 #: cogs/community/profile/registry.py:256
 msgid "AniList"
 msgstr "AniList"
 
-#: cogs/anilist/airing.py:531
+#: cogs/anilist/airing.py:532
 msgid "Airing alerts are now **off**. I will not DM you about new episodes anymore - run this again to turn them back on."
 msgstr "Οι ειδοποιήσεις προβολής είναι τώρα **απενεργοποιημένες**. Δεν θα σου στέλνω πια προσωπικό μήνυμα για νέα επεισόδια - τρέξε ξανά αυτή την εντολή για να τις ενεργοποιήσεις ξανά."
 
-#: cogs/anilist/airing.py:542
+#: cogs/anilist/airing.py:543
 msgid "Link your AniList account first with `/anilist login`, then run this again to turn on airing alerts."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά τρέξε ξανά αυτή την εντολή για να ενεργοποιήσεις τις ειδοποιήσεις προβολής."
 
-#: cogs/anilist/airing.py:550 cogs/anilist/chapters.py:783
-#: cogs/anilist/feed.py:2783 cogs/anilist/feed_delivery.py:379
+#: cogs/anilist/airing.py:551 cogs/anilist/chapters.py:784
+#: cogs/anilist/feed.py:2785 cogs/anilist/feed_delivery.py:381
 #: cogs/anilist/schedule.py:642
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Η σύνδεση του AniList σου δεν ισχύει πια - επανασύνδεσέ τη με `/anilist login`."
 
-#: cogs/anilist/airing.py:561 cogs/anilist/chapters.py:794
+#: cogs/anilist/airing.py:562 cogs/anilist/chapters.py:795
 #: cogs/anilist/schedule.py:651
 msgid "Could not resolve your AniList account - try again shortly."
 msgstr "Δεν ήταν δυνατός ο εντοπισμός του λογαριασμού σου AniList - δοκίμασε ξανά σύντομα."
 
-#: cogs/anilist/airing.py:588
+#: cogs/anilist/airing.py:589
 msgid "-# Heads up: I could not see any titles on your Watching list. Make sure your AniList anime list is set to public."
 msgstr "-# Προσοχή: δεν είδα κανέναν τίτλο στη λίστα Παρακολούθηση σου. Βεβαιώσου ότι η λίστα anime σου στο AniList είναι δημόσια."
 
-#: cogs/anilist/airing.py:594
+#: cogs/anilist/airing.py:595
 msgid ""
 "Airing alerts are now **on**. I will DM you when a new episode of a title on your **Watching** anime list airs, with a one-click Seen button.\n"
 "-# Your AniList anime list must be public for this to work."
@@ -222,152 +222,152 @@ msgstr ""
 "Οι ειδοποιήσεις προβολής είναι τώρα **ενεργοποιημένες**. Θα σου στέλνω προσωπικό μήνυμα όταν κυκλοφορεί νέο επεισόδιο ενός τίτλου από τη λίστα anime **Παρακολούθηση** σου, με ένα κουμπί Το είδα με ένα κλικ.\n"
 "-# Η λίστα anime σου στο AniList πρέπει να είναι δημόσια για να λειτουργήσει αυτό."
 
-#: cogs/anilist/base.py:302
+#: cogs/anilist/base.py:316
 msgid "AniList user"
 msgstr "Χρήστης AniList"
 
-#: cogs/anilist/base.py:443 cogs/anilist/collection.py:659
+#: cogs/anilist/base.py:457 cogs/anilist/collection.py:659
 #: cogs/anilist/collection.py:716 cogs/anilist/edit_forms.py:262
 msgid "Could not update that entry."
 msgstr "Δεν ήταν δυνατή η ενημέρωση αυτής της καταχώρισης."
 
-#: cogs/anilist/base.py:451
+#: cogs/anilist/base.py:465
 #, python-brace-format
 msgid "Set **{name}** to {unit} {progress} ({status})."
 msgstr "Ορίστηκε το **{name}** σε {unit} {progress} ({status})."
 
-#: cogs/anilist/base.py:458
+#: cogs/anilist/base.py:472
 #, python-brace-format
 msgid "Set **{name}** to {status}."
 msgstr "Ορίστηκε το **{name}** σε {status}."
 
-#: cogs/anilist/base.py:465
+#: cogs/anilist/base.py:479
 #, python-brace-format
 msgid "Completed **{name}** ({progress} {unit})."
 msgstr "Ολοκληρώθηκε το **{name}** ({progress} {unit})."
 
-#: cogs/anilist/base.py:469
+#: cogs/anilist/base.py:483
 #, python-brace-format
 msgid "Marked **{name}** as completed."
 msgstr "Το **{name}** σημειώθηκε ως ολοκληρωμένο."
 
-#: cogs/anilist/base.py:475
+#: cogs/anilist/base.py:489
 #, python-brace-format
 msgid "Scored **{name}** {score}."
 msgstr "Βαθμολογήθηκε το **{name}** με {score}."
 
-#: cogs/anilist/base.py:501 cogs/anilist/base.py:537
+#: cogs/anilist/base.py:515 cogs/anilist/base.py:551
 #: cogs/anilist/edit_forms.py:106 cogs/anilist/edit_forms.py:375
 #: cogs/anilist/edit_forms.py:463 cogs/anilist/media_view.py:105
 msgid "Could not load that title."
 msgstr "Δεν ήταν δυνατή η φόρτωση αυτού του τίτλου."
 
-#: cogs/anilist/base.py:509 cogs/anilist/base.py:574
+#: cogs/anilist/base.py:523 cogs/anilist/base.py:588
 #, python-brace-format
 msgid "No result for **{title}**."
 msgstr "Κανένα αποτέλεσμα για **{title}**."
 
-#: cogs/anilist/base.py:520
+#: cogs/anilist/base.py:534
 #, python-brace-format
 msgid "Multiple matches for **{title}** - pick the right one:"
 msgstr "Πολλαπλά αποτελέσματα για **{title}** - διάλεξε το σωστό:"
 
-#: cogs/anilist/base.py:591
+#: cogs/anilist/base.py:605
 #, python-brace-format
 msgid "You track several titles matching **{title}** - which one?"
 msgstr "Παρακολουθείς πολλούς τίτλους που ταιριάζουν με **{title}** - ποιον;"
 
-#: cogs/anilist/base.py:613
+#: cogs/anilist/base.py:627
 #, python-brace-format
 msgid "**{title}** - is it an anime or a manga?"
 msgstr "**{title}** - είναι anime ή manga;"
 
-#: cogs/anilist/base.py:623 cogs/anilist/edit_forms.py:322
+#: cogs/anilist/base.py:637 cogs/anilist/edit_forms.py:322
 msgid "Pick the exact title to update:"
 msgstr "Διάλεξε τον ακριβή τίτλο για ενημέρωση:"
 
-#: cogs/anilist/base.py:660 cogs/anilist/base.py:669 cogs/anilist/base.py:715
+#: cogs/anilist/base.py:674 cogs/anilist/base.py:683 cogs/anilist/base.py:729
 #: cogs/anilist/hub.py:66
 msgid "No result."
 msgstr "Κανένα αποτέλεσμα."
 
-#: cogs/anilist/base.py:681
+#: cogs/anilist/base.py:695
 #, python-brace-format
 msgid "Found {count} results for **{search}** - pick one:"
 msgstr "Βρέθηκαν {count} αποτελέσματα για **{search}** - διάλεξε ένα:"
 
-#: cogs/anilist/base.py:719
+#: cogs/anilist/base.py:733
 #, python-brace-format
 msgid "**{label}** - pick one for details:"
 msgstr "**{label}** - διάλεξε ένα για λεπτομέρειες:"
 
-#: cogs/anilist/base.py:761 cogs/anilist/media_view.py:185
+#: cogs/anilist/base.py:775 cogs/anilist/media_view.py:185
 #, python-brace-format
 msgid "No anime found for {season} {year}."
 msgstr "Δεν βρέθηκαν anime για {season} {year}."
 
-#: cogs/anilist/base.py:769 cogs/anilist/media_view.py:194
+#: cogs/anilist/base.py:783 cogs/anilist/media_view.py:194
 #, python-brace-format
 msgid "**{season} {year} anime** - pick one for details:"
 msgstr "**anime {season} {year}** - διάλεξε ένα για λεπτομέρειες:"
 
-#: cogs/anilist/chapters.py:512
+#: cogs/anilist/chapters.py:513
 msgid "I couldn't read that chapter number."
 msgstr "Δεν μπόρεσα να διαβάσω αυτόν τον αριθμό κεφαλαίου."
 
-#: cogs/anilist/chapters.py:557
+#: cogs/anilist/chapters.py:558
 #, python-brace-format
 msgid "You are already at chapter {progress} of **{title}**."
 msgstr "Είσαι ήδη στο κεφάλαιο {progress} του **{title}**."
 
-#: cogs/anilist/chapters.py:598
+#: cogs/anilist/chapters.py:599
 #, python-brace-format
 msgid "Marked **{title}** as read up to chapter {chapter}."
 msgstr "Σημείωσα το **{title}** ως διαβασμένο μέχρι το κεφάλαιο {chapter}."
 
-#: cogs/anilist/chapters.py:624
+#: cogs/anilist/chapters.py:625
 msgid "Read"
 msgstr "Ανάγνωση"
 
-#: cogs/anilist/chapters.py:670
+#: cogs/anilist/chapters.py:671
 msgid "A new chapter is out."
 msgstr "Κυκλοφόρησε νέο κεφάλαιο."
 
-#: cogs/anilist/chapters.py:681
+#: cogs/anilist/chapters.py:682
 #, python-brace-format
 msgid "Chapter {chapter} of **{title}** is out."
 msgstr "Κυκλοφόρησε το κεφάλαιο {chapter} του **{title}**."
 
-#: cogs/anilist/chapters.py:685
+#: cogs/anilist/chapters.py:686
 msgid "New chapter"
 msgstr "Νέο κεφάλαιο"
 
-#: cogs/anilist/chapters.py:690
+#: cogs/anilist/chapters.py:691
 #, python-brace-format
 msgid "Vol. {volume}"
 msgstr "Τόμ. {volume}"
 
-#: cogs/anilist/chapters.py:716
+#: cogs/anilist/chapters.py:717
 msgid "Official site"
 msgstr "Επίσημη σελίδα"
 
-#: cogs/anilist/chapters.py:716
+#: cogs/anilist/chapters.py:717
 msgid "MangaDex"
 msgstr "MangaDex"
 
-#: cogs/anilist/chapters.py:764
+#: cogs/anilist/chapters.py:765
 msgid "Chapter alerts are now **off**. I will not DM you about new chapters anymore - run this again to turn them back on."
 msgstr "Οι ειδοποιήσεις κεφαλαίων είναι τώρα **ανενεργές**. Δεν θα σου στέλνω πια μηνύματα για νέα κεφάλαια - τρέξε το ξανά για να τις ενεργοποιήσεις πάλι."
 
-#: cogs/anilist/chapters.py:775
+#: cogs/anilist/chapters.py:776
 msgid "Link your AniList account first with `/anilist login`, then run this again to turn on chapter alerts."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου στο AniList με `/anilist login`, και μετά τρέξε το ξανά για να ενεργοποιήσεις τις ειδοποιήσεις κεφαλαίων."
 
-#: cogs/anilist/chapters.py:821
+#: cogs/anilist/chapters.py:822
 msgid "-# Heads up: I could not see any titles on your Reading list. Make sure your AniList manga list is set to public."
 msgstr "-# Προσοχή: δεν είδα κανέναν τίτλο στη λίστα Reading σου. Βεβαιώσου ότι η λίστα manga σου στο AniList είναι δημόσια."
 
-#: cogs/anilist/chapters.py:827
+#: cogs/anilist/chapters.py:828
 msgid ""
 "Chapter alerts are now **on**. I will DM you when a new chapter of a title on your **Reading** manga list drops, with a one-click Read button.\n"
 "-# Your AniList manga list must be public for this to work."
@@ -382,42 +382,42 @@ msgid "Reading"
 msgstr "Ανάγνωση"
 
 #: cogs/anilist/collection.py:55 cogs/anilist/collection.py:365
-#: cogs/anilist/edit_forms.py:154 cogs/anilist/feed_delivery.py:162
+#: cogs/anilist/edit_forms.py:154 cogs/anilist/feed_delivery.py:163
 #: cogs/anilist/media_view.py:228 cogs/anilist/media_view.py:494
 #: cogs/anilist/media_view.py:622
 msgid "Watching"
 msgstr "Παρακολούθηση"
 
 #: cogs/anilist/collection.py:63 cogs/anilist/collection.py:367
-#: cogs/anilist/edit_forms.py:158 cogs/anilist/feed_delivery.py:163
+#: cogs/anilist/edit_forms.py:158 cogs/anilist/feed_delivery.py:164
 #: cogs/anilist/media_view.py:232 cogs/anilist/media_view.py:498
 #: cogs/anilist/media_view.py:623
 msgid "Planning"
 msgstr "Σε σχεδιασμό"
 
 #: cogs/anilist/collection.py:67 cogs/anilist/collection.py:368
-#: cogs/anilist/edit_forms.py:159 cogs/anilist/feed_delivery.py:164
+#: cogs/anilist/edit_forms.py:159 cogs/anilist/feed_delivery.py:165
 #: cogs/anilist/media_view.py:231 cogs/anilist/media_view.py:499
 #: cogs/anilist/media_view.py:624
 msgid "Completed"
 msgstr "Ολοκληρωμένα"
 
 #: cogs/anilist/collection.py:71 cogs/anilist/collection.py:369
-#: cogs/anilist/edit_forms.py:161 cogs/anilist/feed_delivery.py:166
+#: cogs/anilist/edit_forms.py:161 cogs/anilist/feed_delivery.py:167
 #: cogs/anilist/media_view.py:233 cogs/anilist/media_view.py:501
 #: cogs/anilist/media_view.py:626
 msgid "Paused"
 msgstr "Σε παύση"
 
 #: cogs/anilist/collection.py:75 cogs/anilist/collection.py:370
-#: cogs/anilist/edit_forms.py:162 cogs/anilist/feed_delivery.py:165
+#: cogs/anilist/edit_forms.py:162 cogs/anilist/feed_delivery.py:166
 #: cogs/anilist/media_view.py:234 cogs/anilist/media_view.py:500
 #: cogs/anilist/media_view.py:625
 msgid "Dropped"
 msgstr "Εγκαταλειμμένα"
 
 #: cogs/anilist/collection.py:79 cogs/anilist/collection.py:371
-#: cogs/anilist/edit_forms.py:160 cogs/anilist/feed_delivery.py:167
+#: cogs/anilist/edit_forms.py:160 cogs/anilist/feed_delivery.py:168
 #: cogs/anilist/media_view.py:235 cogs/anilist/media_view.py:502
 #: cogs/anilist/media_view.py:627
 msgid "Repeating"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:454
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:456
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -521,7 +521,7 @@ msgstr "Αυτό ήταν το τελευταίο {unit} - να σημειωθε
 msgid "Could not reach your AniList account."
 msgstr "Δεν ήταν δυνατή η πρόσβαση στον λογαριασμό σου AniList."
 
-#: cogs/anilist/edit_forms.py:64 cogs/anilist/feed_delivery.py:342
+#: cogs/anilist/edit_forms.py:64 cogs/anilist/feed_delivery.py:344
 msgid "Slow down a little - too many AniList requests right now. Give it a few seconds and try again."
 msgstr "Πιο αργά - πάρα πολλά αιτήματα AniList αυτή τη στιγμή. Περίμενε λίγα δευτερόλεπτα και δοκίμασε ξανά."
 
@@ -613,167 +613,167 @@ msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του επ�
 msgid "Pick which one to update..."
 msgstr "Διάλεξε ποιο να ενημερωθεί..."
 
-#: cogs/anilist/feed.py:1471
+#: cogs/anilist/feed.py:1473
 msgid "This feed is archived - this server is over its current feed limit. It can be deleted, but not edited. See /premium for options."
 msgstr "Αυτή η ροή είναι αρχειοθετημένη - αυτός ο διακομιστής ξεπερνά το τρέχον όριο ροών. Μπορείς να τη διαγράψεις, αλλά όχι να την επεξεργαστείς. Δες το /premium για επιλογές."
 
-#: cogs/anilist/feed.py:1534 cogs/anilist/feed.py:1617
-#: cogs/anilist/feed.py:2499
+#: cogs/anilist/feed.py:1536 cogs/anilist/feed.py:1619
+#: cogs/anilist/feed.py:2501
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "Το {channel} είναι ήδη ροή AniList."
 
-#: cogs/anilist/feed.py:1545
+#: cogs/anilist/feed.py:1547
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Διάγραψε μία πρώτα."
 
-#: cogs/anilist/feed.py:1629
+#: cogs/anilist/feed.py:1631
 msgid "That feed no longer exists."
 msgstr "Αυτή η ροή δεν υπάρχει πια."
 
-#: cogs/anilist/feed.py:1773 tests/cogs/test_anilist_feed_subs.py:14
+#: cogs/anilist/feed.py:1775 tests/cogs/test_anilist_feed_subs.py:14
 #: tests/cogs/test_anilist_premium_archival.py:1016
 msgid "I couldn't read that title - try searching again."
 msgstr "Δεν μπόρεσα να διαβάσω αυτόν τον τίτλο - δοκίμασε να ψάξεις ξανά."
 
-#: cogs/anilist/feed.py:1796 cogs/anilist/feed_views.py:482
+#: cogs/anilist/feed.py:1798 cogs/anilist/feed_views.py:482
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr "Αυτή η ροή παρακολουθεί ήδη το μέγιστο των {max} τίτλων. Αφαίρεσε έναν πρώτα."
 
-#: cogs/anilist/feed.py:2018
+#: cogs/anilist/feed.py:2020
 msgid "Give me an AniList username to follow."
 msgstr "Δώσε μου ένα όνομα χρήστη AniList για να ακολουθήσω."
 
-#: cogs/anilist/feed.py:2035 cogs/anilist/feed.py:2048
+#: cogs/anilist/feed.py:2037 cogs/anilist/feed.py:2050
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "Το AniList με περιορίζει αυτή τη στιγμή - δοκίμασε ξανά σε ένα λεπτό."
 
-#: cogs/anilist/feed.py:2066
+#: cogs/anilist/feed.py:2068
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "Δεν βρήκα κανέναν χρήστη AniList με το όνομα **{name}**."
 
-#: cogs/anilist/feed.py:2136 cogs/anilist/feed_views.py:1175
+#: cogs/anilist/feed.py:2138 cogs/anilist/feed_views.py:1175
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr "Αυτή η ροή ακολουθεί ήδη το μέγιστο των {max} χρηστών."
 
-#: cogs/anilist/feed.py:2302
+#: cogs/anilist/feed.py:2304
 #, python-brace-format
 msgid "This feed already mutes the maximum of {max} users."
 msgstr "Αυτή η ροή έχει ήδη σε σίγαση το μέγιστο των {max} χρηστών."
 
-#: cogs/anilist/feed.py:2397
+#: cogs/anilist/feed.py:2399
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "Αυτός ο διακομιστής δεν έχει ενεργή ροή AniList. Δημιούργησε ή ενεργοποίησε ξανά μία με `/anilistfeed set` πρώτα."
 
-#: cogs/anilist/feed.py:2408
+#: cogs/anilist/feed.py:2410
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "Αυτός ο διακομιστής έχει πολλές ροές. Εκτέλεσε αυτό σε ένα κανάλι ροής ({channels})."
 
-#: cogs/anilist/feed.py:2459
+#: cogs/anilist/feed.py:2461
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Αφαίρεσε μία με `/anilistfeed remove` πρώτα."
 
-#: cogs/anilist/feed.py:2471
+#: cogs/anilist/feed.py:2473
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "Η ροή AniList δημιουργήθηκε στο {channel}. Πρόσθεσε χρήστες με `/anilistfeed follow`."
 
-#: cogs/anilist/feed.py:2495
+#: cogs/anilist/feed.py:2497
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "Η ροή AniList ενεργοποιήθηκε ξανά στο {channel}."
 
-#: cogs/anilist/feed.py:2503
+#: cogs/anilist/feed.py:2505
 msgid "AniList feed"
 msgstr "Ροή AniList"
 
-#: cogs/anilist/feed.py:2535
+#: cogs/anilist/feed.py:2537
 msgid "User"
 msgstr "Χρήστης"
 
-#: cogs/anilist/feed.py:2535
+#: cogs/anilist/feed.py:2537
 msgid "Feed"
 msgstr "Ροή"
 
-#: cogs/anilist/feed.py:2537
+#: cogs/anilist/feed.py:2539
 msgid "Now following"
 msgstr "Ακολουθεί πλέον"
 
-#: cogs/anilist/feed.py:2557 cogs/anilist/feed.py:2567
+#: cogs/anilist/feed.py:2559 cogs/anilist/feed.py:2569
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "Αυτή η ροή δεν ακολουθεί **{name}**."
 
-#: cogs/anilist/feed.py:2570
+#: cogs/anilist/feed.py:2572
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "Δεν ακολουθεί πλέον **{name}**."
 
-#: cogs/anilist/feed.py:2591
+#: cogs/anilist/feed.py:2593
 #, python-brace-format
 msgid "This feed is not following **{name}**, so there is nothing to mute. Muting only hides someone the feed already follows - see `/anilistfeed list`."
 msgstr "Αυτή η ροή δεν ακολουθεί τον/την **{name}**, οπότε δεν υπάρχει τίποτα να σιγήσεις. Η σίγαση κρύβει μόνο κάποιον που η ροή ήδη ακολουθεί - δες το `/anilistfeed list`."
 
-#: cogs/anilist/feed.py:2610
+#: cogs/anilist/feed.py:2612
 #, python-brace-format
 msgid "**{name}** stays followed, but their activity is no longer posted in <#{channel}>. Other feeds following them are unaffected."
 msgstr "Ο/Η **{name}** παραμένει ακολουθούμενος/η, αλλά η δραστηριότητά του/της δεν δημοσιεύεται πια στο <#{channel}>. Άλλες ροές που τον/την ακολουθούν δεν επηρεάζονται."
 
-#: cogs/anilist/feed.py:2613
+#: cogs/anilist/feed.py:2615
 msgid "Muted here"
 msgstr "Σε σίγαση εδώ"
 
-#: cogs/anilist/feed.py:2639
+#: cogs/anilist/feed.py:2641
 #, python-brace-format
 msgid "**{name}** is not muted in this feed."
 msgstr "Ο/Η **{name}** δεν είναι σε σίγαση σε αυτή τη ροή."
 
-#: cogs/anilist/feed.py:2643
+#: cogs/anilist/feed.py:2645
 #, python-brace-format
 msgid "Unmuted **{name}** - their activity is posted here again."
 msgstr "Κατάργησα τη σίγαση του/της **{name}** - η δραστηριότητά του/της δημοσιεύεται ξανά εδώ."
 
-#: cogs/anilist/feed.py:2752 cogs/anilist/feed.py:2808
+#: cogs/anilist/feed.py:2754 cogs/anilist/feed.py:2810
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "Έφυγες από τη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:2765
+#: cogs/anilist/feed.py:2767
 msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
 msgstr "Αυτή η ροή δεν επιτρέπει στα μέλη να μπουν μόνα τους. Ζήτησε από έναν συντονιστή να ενεργοποιήσει το **Τα μέλη μπορούν να μπουν** στο `/anilistfeed`."
 
-#: cogs/anilist/feed.py:2773 cogs/anilist/feed_delivery.py:361
+#: cogs/anilist/feed.py:2775 cogs/anilist/feed_delivery.py:363
 msgid "AniList actions are unavailable right now."
 msgstr "Οι ενέργειες AniList δεν είναι διαθέσιμες αυτή τη στιγμή."
 
-#: cogs/anilist/feed.py:2778
+#: cogs/anilist/feed.py:2780
 msgid "Link your AniList account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`."
 
-#: cogs/anilist/feed.py:2837
+#: cogs/anilist/feed.py:2839
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "Αυτή η ροή είναι γεμάτη αυτή τη στιγμή - ζήτησε από έναν συντονιστή να κάνει χώρο."
 
-#: cogs/anilist/feed.py:2842
+#: cogs/anilist/feed.py:2844
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "Μπήκες στη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:2850
+#: cogs/anilist/feed.py:2852
 msgid "A moderator has hidden your activity in that channel, so nothing of yours is posted there until they unhide it."
 msgstr "Ένας συντονιστής έκρυψε τη δραστηριότητά σου σε εκείνο το κανάλι, οπότε τίποτα δικό σου δεν δημοσιεύεται εκεί μέχρι να την επαναφέρει."
 
-#: cogs/anilist/feed.py:2868
+#: cogs/anilist/feed.py:2870
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Δημιούργησε μία με `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:2908 cogs/anilist/feed_views.py:658
+#: cogs/anilist/feed.py:2910 cogs/anilist/feed_views.py:658
 #: cogs/anilist/feed_views.py:953 cogs/anilist/feed_views.py:1349
 #: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:723
 #: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
@@ -781,34 +781,34 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 msgid "(archived)"
 msgstr "(αρχειοθετημένο)"
 
-#: cogs/anilist/feed.py:2910
+#: cogs/anilist/feed.py:2912
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:2911 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2911 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2918 cogs/anilist/feed_views.py:1453
+#: cogs/anilist/feed.py:2920 cogs/anilist/feed_views.py:1453
 msgid "no one yet"
 msgstr "κανείς ακόμα"
 
-#: cogs/anilist/feed.py:2926
+#: cogs/anilist/feed.py:2928
 #, python-brace-format
 msgid "{names} ({count} user hidden here, still followed)"
 msgid_plural "{names} ({count} users hidden here, still followed)"
 msgstr[0] "{names} ({count} χρήστης κρυμμένος εδώ, ακόμα ακολουθείται)"
 msgstr[1] "{names} ({count} χρήστες κρυμμένοι εδώ, ακόμα ακολουθούνται)"
 
-#: cogs/anilist/feed.py:2931
+#: cogs/anilist/feed.py:2933
 msgid "no one"
 msgstr "κανείς"
 
-#: cogs/anilist/feed.py:2938
+#: cogs/anilist/feed.py:2940
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -819,93 +819,93 @@ msgstr ""
 "Τύποι: {types}\n"
 "Ακολουθεί: {names}"
 
-#: cogs/anilist/feed.py:2940
+#: cogs/anilist/feed.py:2942
 #, python-brace-format
 msgid "Muted: {muted}"
 msgstr "Σε σίγαση: {muted}"
 
-#: cogs/anilist/feed.py:2943
+#: cogs/anilist/feed.py:2945
 msgid "AniList feeds"
 msgstr "Ροές AniList"
 
-#: cogs/anilist/feed.py:2963
+#: cogs/anilist/feed.py:2965
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "Το {channel} δεν είναι ροή AniList."
 
-#: cogs/anilist/feed.py:2968
+#: cogs/anilist/feed.py:2970
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
 
-#: cogs/anilist/feed_delivery.py:99 cogs/anilist/feed_views.py:339
+#: cogs/anilist/feed_delivery.py:100 cogs/anilist/feed_views.py:339
 #: cogs/music/music.py:4953 cogs/music/search.py:342 cogs/music/views.py:2222
 #: cogs/music/views.py:2405 cogs/music/views.py:2539 cogs/music/views.py:2667
 msgid "Unknown title"
 msgstr "Άγνωστος τίτλος"
 
-#: cogs/anilist/feed_delivery.py:310
+#: cogs/anilist/feed_delivery.py:312
 #: cogs/community/leveling/level_config_ui.py:696
 msgid "You are clicking too fast - give it a moment."
 msgstr "Κάνεις κλικ πολύ γρήγορα - περίμενε λίγο."
 
-#: cogs/anilist/feed_delivery.py:370
+#: cogs/anilist/feed_delivery.py:372
 msgid "Link your AniList account first with `/anilist login`, then you can like and reply straight from the feed."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά θα μπορείς να κάνεις like και να απαντάς απευθείας από τη ροή."
 
-#: cogs/anilist/feed_delivery.py:430 cogs/anilist/feed_delivery.py:702
+#: cogs/anilist/feed_delivery.py:432 cogs/anilist/feed_delivery.py:704
 msgid "This activity no longer exists on AniList."
 msgstr "Αυτή η δραστηριότητα δεν υπάρχει πια στο AniList."
 
-#: cogs/anilist/feed_delivery.py:442
+#: cogs/anilist/feed_delivery.py:444
 #, python-brace-format
 msgid "Liked - this activity now has {n} like."
 msgid_plural "Liked - this activity now has {n} likes."
 msgstr[0] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
 msgstr[1] "Έγινε like - αυτή η δραστηριότητα έχει τώρα {n} like."
 
-#: cogs/anilist/feed_delivery.py:448
+#: cogs/anilist/feed_delivery.py:450
 #, python-brace-format
 msgid "Like removed - this activity now has {n} like."
 msgid_plural "Like removed - this activity now has {n} likes."
 msgstr[0] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
 msgstr[1] "Το like αφαιρέθηκε - αυτή η δραστηριότητα έχει τώρα {n} like."
 
-#: cogs/anilist/feed_delivery.py:472
+#: cogs/anilist/feed_delivery.py:474
 msgid "Set progress / score"
 msgstr "Πρόοδος / βαθμολογία"
 
-#: cogs/anilist/feed_delivery.py:569
+#: cogs/anilist/feed_delivery.py:571
 #, python-brace-format
 msgid "**{title}** is already on your list ({status})."
 msgstr "Το **{title}** βρίσκεται ήδη στη λίστα σου ({status})."
 
-#: cogs/anilist/feed_delivery.py:617
+#: cogs/anilist/feed_delivery.py:619
 #, python-brace-format
 msgid "Added **{title}** to your planning."
 msgstr "Το **{title}** προστέθηκε στη λίστα «Σε σχεδιασμό» σου."
 
-#: cogs/anilist/feed_delivery.py:650
+#: cogs/anilist/feed_delivery.py:652
 msgid "Reply on AniList"
 msgstr "Απάντηση στο AniList"
 
-#: cogs/anilist/feed_delivery.py:656
+#: cogs/anilist/feed_delivery.py:658
 msgid "Write your reply..."
 msgstr "Γράψε την απάντησή σου..."
 
-#: cogs/anilist/feed_delivery.py:659
+#: cogs/anilist/feed_delivery.py:661
 msgid "Your reply"
 msgstr "Η απάντησή σου"
 
-#: cogs/anilist/feed_delivery.py:677
+#: cogs/anilist/feed_delivery.py:679
 msgid "Your reply was empty - nothing was posted."
 msgstr "Η απάντησή σου ήταν κενή - δεν δημοσιεύτηκε τίποτα."
 
-#: cogs/anilist/feed_delivery.py:712
+#: cogs/anilist/feed_delivery.py:714
 msgid "AniList did not accept that reply - try again shortly."
 msgstr "Το AniList δεν δέχτηκε αυτή την απάντηση - δοκίμασε ξανά σύντομα."
 
-#: cogs/anilist/feed_delivery.py:716
+#: cogs/anilist/feed_delivery.py:718
 #, python-brace-format
 msgid "Your reply was posted. [See it on AniList]({url})"
 msgstr "Η απάντησή σου δημοσιεύτηκε. [Δες τη στο AniList]({url})"
@@ -1229,7 +1229,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:334
+#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:336
 #: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "Ακύρωση"
@@ -1905,12 +1905,12 @@ msgstr "hourly, daily, weekly, ή π.χ. 2d - κενό για μία φορά"
 msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6pm`, or `in 3 days`."
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `10m`, `tomorrow at 6pm` ή `in 3 days`."
 
-#: cogs/community/reminders.py:427 cogs/community/reminders.py:1952
+#: cogs/community/reminders.py:427 cogs/community/reminders.py:1968
 #: cogs/config/announcements.py:191
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Αυτός ο χρόνος είναι στο παρελθόν. Δώσε μου μια στιγμή στο μέλλον."
 
-#: cogs/community/reminders.py:443 cogs/community/reminders.py:1980
+#: cogs/community/reminders.py:443 cogs/community/reminders.py:1996
 #, python-brace-format
 msgid "You already have {count} reminders pending - wait for some to fire before adding more."
 msgstr "Έχεις ήδη {count} εκκρεμείς υπενθυμίσεις - περίμενε να ενεργοποιηθούν κάποιες πριν προσθέσεις κι άλλες."
@@ -1979,24 +1979,24 @@ msgstr "-# Σελίδα {page}/{pages} - {count} σε εκκρεμότητα"
 msgid "Prev"
 msgstr "Προηγ."
 
-#: cogs/community/reminders.py:1723
+#: cogs/community/reminders.py:1739
 #, python-brace-format
 msgid "I was offline, so {count} occurrence was missed."
 msgid_plural "I was offline, so {count} occurrences were missed."
 msgstr[0] "Ήμουν εκτός σύνδεσης, οπότε χάθηκε {count} επανάληψη."
 msgstr[1] "Ήμουν εκτός σύνδεσης, οπότε χάθηκαν {count} επαναλήψεις."
 
-#: cogs/community/reminders.py:1736
+#: cogs/community/reminders.py:1752
 #, python-brace-format
 msgid "Repeats {interval} - next {when}"
 msgstr "Επαναλαμβάνεται {interval} - επόμενη {when}"
 
-#: cogs/community/reminders.py:1832
+#: cogs/community/reminders.py:1848
 #, python-brace-format
 msgid "<@{author_id}>, {when}: {message}"
 msgstr "<@{author_id}>, {when}: {message}"
 
-#: cogs/community/reminders.py:1938
+#: cogs/community/reminders.py:1954
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 
@@ -2077,61 +2077,65 @@ msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Το προφίλ σου έχει εξαφανιστεί: πεδία, gaming IDs και κάθε επιλογή ορατότητας."
 
 #: cogs/community/usersettings.py:281
+msgid "Your scheduled announcements and their pending deliveries are gone."
+msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους διαγράφηκαν."
+
+#: cogs/community/usersettings.py:283
 msgid "Your top.gg vote record is gone too."
 msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
 
-#: cogs/community/usersettings.py:283
+#: cogs/community/usersettings.py:285
 msgid "So is your personal rank card."
 msgstr "Το ίδιο και η προσωπική σου κάρτα rank."
 
-#: cogs/community/usersettings.py:286
+#: cogs/community/usersettings.py:288
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ο σύνδεσμός σου με το AniList διαγράφηκε επίσης, και μαζί του οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων."
 
-#: cogs/community/usersettings.py:291
+#: cogs/community/usersettings.py:293
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Η καταγραφή της αγοράς σου Pack Confort διαγράφηκε κι αυτή από τη βάση μας (επιστρέφει αυτόματα αν έχεις ακόμα αυτή την αγορά), όπως και η σημείωση της τελευταίας υπενθύμισης premium προσφοράς."
 
-#: cogs/community/usersettings.py:302
+#: cogs/community/usersettings.py:304
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:314
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:335
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:354
+#: cogs/community/usersettings.py:356
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:365
+#: cogs/community/usersettings.py:367
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:375
+#: cogs/community/usersettings.py:377
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:390
+#: cogs/community/usersettings.py:392
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:390
+#: cogs/community/usersettings.py:392
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:474
+#: cogs/community/usersettings.py:476
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:478
+#: cogs/community/usersettings.py:480
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2139,15 +2143,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:488
+#: cogs/community/usersettings.py:490
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:488
+#: cogs/community/usersettings.py:490
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:489
+#: cogs/community/usersettings.py:491
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2156,7 +2160,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:511
+#: cogs/community/usersettings.py:513
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2165,54 +2169,58 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:525
+#: cogs/community/usersettings.py:527
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:551 cogs/community/usersettings.py:571
-#: cogs/community/usersettings.py:591
+#: cogs/community/usersettings.py:553 cogs/community/usersettings.py:573
+#: cogs/community/usersettings.py:593
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:650
+#: cogs/community/usersettings.py:652
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:723
+#: cogs/community/usersettings.py:725
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:727
+#: cogs/community/usersettings.py:729
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:732
+#: cogs/community/usersettings.py:734
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:755
+#: cogs/community/usersettings.py:757
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:761
+#: cogs/community/usersettings.py:763
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
 
-#: cogs/community/usersettings.py:766
+#: cogs/community/usersettings.py:768
+msgid "Your scheduled announcements and their pending deliveries will be deleted."
+msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους θα διαγραφούν."
+
+#: cogs/community/usersettings.py:772
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Και η προσωπική σου κάρτα rank: η εικόνα φόντου που ανέβασες και το χρώμα έμφασης που διάλεξες."
 
-#: cogs/community/usersettings.py:771
+#: cogs/community/usersettings.py:777
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Και ο σύνδεσμός σου με το AniList: η αποθηκευμένη σύνδεση διαγράφεται, οπότε η επανασύνδεση απαιτεί νέα είσοδο στο AniList. Οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων φεύγουν μαζί."
 
-#: cogs/community/usersettings.py:777
+#: cogs/community/usersettings.py:783
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Και η καταγραφή της αγοράς σου Pack Confort: επιστρέφει μόνη της στον επόμενο έλεγχο με το Discord αν έχεις ακόμα αυτή την αγορά. Επίσης η σημείωση για το πότε είδες τελευταία φορά μια υπενθύμιση premium προσφοράς, οπότε μπορεί να δεις μία ξανά νωρίτερα από το συνηθισμένο."
 
-#: cogs/community/usersettings.py:794
+#: cogs/community/usersettings.py:800
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
 
@@ -9544,160 +9552,160 @@ msgstr "Χρησιμοποίησε `/help` για να δεις όλες τις 
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Χρησιμοποίησε `/language` για να επιλέξεις τη γλώσσα που μιλάω σε αυτόν τον server."
 
-#: cogs/system/premium.py:357 cogs/system/premium.py:613
+#: cogs/system/premium.py:357 cogs/system/premium.py:620
 #, python-brace-format
 msgid "{count} more not shown."
 msgstr "{count} ακόμη δεν εμφανίζονται."
 
-#: cogs/system/premium.py:435
+#: cogs/system/premium.py:442
 #, python-brace-format
 msgid "Server id must be a positive number, not `{value}`."
 msgstr "Το id του διακομιστή πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:462 cogs/system/premium.py:504
-#: cogs/system/premium.py:594 cogs/system/premium.py:675
-#: cogs/system/premium.py:691
+#: cogs/system/premium.py:469 cogs/system/premium.py:511
+#: cogs/system/premium.py:601 cogs/system/premium.py:682
+#: cogs/system/premium.py:698
 msgid "permanent"
 msgstr "μόνιμο"
 
-#: cogs/system/premium.py:465
+#: cogs/system/premium.py:472
 #, python-brace-format
 msgid "Granted **Yasuho+** to server `{guild_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Yasuho+** στον διακομιστή `{guild_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:477
+#: cogs/system/premium.py:484
 #, python-brace-format
 msgid "User id must be a positive number, not `{value}`."
 msgstr "Το id του χρήστη πρέπει να είναι θετικός αριθμός, όχι `{value}`."
 
-#: cogs/system/premium.py:507
+#: cogs/system/premium.py:514
 #, python-brace-format
 msgid "Granted the **Pack Confort** to user `{user_id}` (grant #{grant_id}, {until})."
 msgstr "Δόθηκε το **Pack Confort** στον χρήστη `{user_id}` (παραχώρηση #{grant_id}, {until})."
 
-#: cogs/system/premium.py:534
+#: cogs/system/premium.py:541
 #, python-brace-format
 msgid "No active grant #{grant_id} found (already revoked, expired, or it never existed)."
 msgstr "Δεν βρέθηκε ενεργή παραχώρηση #{grant_id} (έχει ήδη ανακληθεί, έχει λήξει ή δεν υπήρξε ποτέ)."
 
-#: cogs/system/premium.py:560
+#: cogs/system/premium.py:567
 #, python-brace-format
 msgid "Revoked grant #{grant_id}."
 msgstr "Η παραχώρηση #{grant_id} ανακλήθηκε."
 
-#: cogs/system/premium.py:572 cogs/system/premium.py:625
+#: cogs/system/premium.py:579 cogs/system/premium.py:632
 #, python-brace-format
 msgid "Scope must be `server` or `user`, not `{scope}`."
 msgstr "Το εύρος πρέπει να είναι `server` ή `user`, όχι `{scope}`."
 
-#: cogs/system/premium.py:586
+#: cogs/system/premium.py:593
 msgid "Active premium grants"
 msgstr "Ενεργές παραχωρήσεις premium"
 
-#: cogs/system/premium.py:588
+#: cogs/system/premium.py:595
 msgid "No active grant matches."
 msgstr "Καμία ενεργή παραχώρηση δεν ταιριάζει."
 
-#: cogs/system/premium.py:596
+#: cogs/system/premium.py:603
 #, python-brace-format
 msgid "#{id} - {product} - {scope} `{scope_id}` - {until}"
 msgstr "#{id} - {product} - {scope} `{scope_id}` - {until}"
 
-#: cogs/system/premium.py:632
+#: cogs/system/premium.py:639
 msgid "Premium status"
 msgstr "Κατάσταση premium"
 
-#: cogs/system/premium.py:668
+#: cogs/system/premium.py:675
 msgid "Effective"
 msgstr "Ισχύον"
 
-#: cogs/system/premium.py:669
+#: cogs/system/premium.py:676
 msgid "Premium"
 msgstr "Premium"
 
-#: cogs/system/premium.py:669
+#: cogs/system/premium.py:676
 msgid "Free"
 msgstr "Δωρεάν"
 
-#: cogs/system/premium.py:676
+#: cogs/system/premium.py:683
 #, python-brace-format
 msgid "Discord entitlement #{id}, {until}"
 msgstr "Entitlement Discord #{id}, {until}"
 
-#: cogs/system/premium.py:684
+#: cogs/system/premium.py:691
 msgid "Entitlement"
 msgstr "Δικαίωμα αγοράς"
 
-#: cogs/system/premium.py:692
+#: cogs/system/premium.py:699
 msgid "(no reason given)"
 msgstr "(δεν δόθηκε λόγος)"
 
-#: cogs/system/premium.py:694
+#: cogs/system/premium.py:701
 #, python-brace-format
 msgid "#{id} - {until} - {reason}"
 msgstr "#{id} - {until} - {reason}"
 
-#: cogs/system/premium.py:699
+#: cogs/system/premium.py:706
 msgid "Owner grant(s)"
 msgstr "Παραχώρηση(-εις) του ιδιοκτήτη"
 
-#: cogs/system/premium.py:704
+#: cogs/system/premium.py:711
 msgid "Why"
 msgstr "Γιατί"
 
-#: cogs/system/premium.py:704
+#: cogs/system/premium.py:711
 msgid "Nothing active."
 msgstr "Τίποτα ενεργό."
 
-#: cogs/system/premium.py:786
+#: cogs/system/premium.py:793
 msgid "No `yasuho_plus_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Δεν έχει οριστεί ακόμη `yasuho_plus_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
 
-#: cogs/system/premium.py:804 cogs/system/premium.py:865
+#: cogs/system/premium.py:811 cogs/system/premium.py:872
 #, python-brace-format
 msgid "Discord says this {scope} already has this product (error 40074). Clear the TEST entitlement first: `?premiumadmin testclear {entitlement_id}`."
 msgstr "Το Discord λέει ότι αυτό το {scope} έχει ήδη αυτό το προϊόν (σφάλμα 40074). Διάγραψε πρώτα το entitlement TEST: `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:823
+#: cogs/system/premium.py:830
 #, python-brace-format
 msgid "Created a TEST **Yasuho+** entitlement for server `{guild_id}`. Its id was not visible yet when I checked - use `?premiumadmin check server {guild_id}` in a moment."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Yasuho+** για τον διακομιστή `{guild_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check server {guild_id}` σε λίγο."
 
-#: cogs/system/premium.py:832
+#: cogs/system/premium.py:839
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Yasuho+**) for server `{guild_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Yasuho+**) για τον διακομιστή `{guild_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:847
+#: cogs/system/premium.py:854
 msgid "No `comfort_pack_sku` is configured in `[Premium]` yet - there is nothing to test-buy."
 msgstr "Δεν έχει οριστεί ακόμη `comfort_pack_sku` στο `[Premium]` - δεν υπάρχει τίποτα για δοκιμαστική αγορά."
 
-#: cogs/system/premium.py:884
+#: cogs/system/premium.py:891
 #, python-brace-format
 msgid "Created a TEST **Pack Confort** entitlement for user `{user_id}`. Its id was not visible yet when I checked - use `?premiumadmin check user {user_id}` in a moment."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα **Pack Confort** για τον χρήστη `{user_id}`. Το id του δεν ήταν ακόμη ορατό - χρησιμοποίησε `?premiumadmin check user {user_id}` σε λίγο."
 
-#: cogs/system/premium.py:893
+#: cogs/system/premium.py:900
 #, python-brace-format
 msgid "Created TEST entitlement #{entitlement_id} (**Pack Confort**) for user `{user_id}`. Clear it later with `?premiumadmin testclear {entitlement_id}`."
 msgstr "Δημιουργήθηκε ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} (**Pack Confort**) για τον χρήστη `{user_id}`. Διάγραψέ το αργότερα με `?premiumadmin testclear {entitlement_id}`."
 
-#: cogs/system/premium.py:908
+#: cogs/system/premium.py:915
 #, python-brace-format
 msgid "No entitlement #{entitlement_id} exists."
 msgstr "Δεν υπάρχει δικαίωμα #{entitlement_id}."
 
-#: cogs/system/premium.py:917
+#: cogs/system/premium.py:924
 #, python-brace-format
 msgid "Could not fetch entitlement #{entitlement_id} from Discord."
 msgstr "Δεν ήταν δυνατή η λήψη του δικαιώματος #{entitlement_id} από το Discord."
 
-#: cogs/system/premium.py:926
+#: cogs/system/premium.py:933
 #, python-brace-format
 msgid "Entitlement #{entitlement_id} is not a TEST entitlement (type `{type}`) - refusing to delete a real purchase."
 msgstr "Το δικαίωμα #{entitlement_id} δεν είναι ΔΟΚΙΜΑΣΤΙΚΟ (τύπος `{type}`) - αρνούμαι να διαγράψω πραγματική αγορά."
 
-#: cogs/system/premium.py:942
+#: cogs/system/premium.py:949
 #, python-brace-format
 msgid "Deleted TEST entitlement #{entitlement_id}. The matching ENTITLEMENT_DELETE event will clear it from the cache."
 msgstr "Το ΔΟΚΙΜΑΣΤΙΚΟ δικαίωμα #{entitlement_id} διαγράφηκε. Το αντίστοιχο συμβάν ENTITLEMENT_DELETE θα το αφαιρέσει από την προσωρινή μνήμη."
