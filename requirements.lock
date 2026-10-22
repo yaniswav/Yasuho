@@ -4,7 +4,7 @@
 #   Exact, transitively-resolved pins of every package the bot imports at
 #   runtime - the full dependency closure of requirements.txt (including the
 #   sonolink[speed] extra). It exists for reproducibility and as an audit
-#   record; the security floors that motivated this file are Pillow >= 12.3.0
+#   record; the security floors that motivated this file are Pillow >= 13.0.0
 #   and PyNaCl >= 1.6.2.
 #
 # How it is used:
@@ -36,7 +36,7 @@
 # Resolved for: CPython 3.13 on Linux x86_64.
 aiodns==4.0.4
 aiohappyeyeballs==2.7.1
-aiohttp==3.14.3
+aiohttp==3.14.4
 aiosignal==1.4.0
 async-timeout==5.0.1
 asyncpg==0.31.0
@@ -44,7 +44,7 @@ attrs==26.1.0
 audioop-lts==0.2.2
 babel==2.18.0
 beautifulsoup4==4.15.0
-certifi==2026.7.22
+certifi==2026.10.19
 cffi==2.1.1
 charset-normalizer==3.5.2
 cryptography==50.0.2
@@ -57,7 +57,7 @@ msgspec==0.22.0
 multidict==6.9.1
 packaging==26.3
 parsedatetime==2.6
-pillow==12.3.0
+pillow==13.0.0
 propcache==0.5.4
 pycares==5.0.1
 pycparser==3.0
