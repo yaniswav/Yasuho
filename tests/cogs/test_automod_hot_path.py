@@ -200,7 +200,7 @@ async def test_a_bot_or_dm_message_still_leaves_before_anything(monkeypatch):
 
 
 async def test_a_feature_being_on_does_check_permissions(monkeypatch):
-    cog = _cog(monkeypatch, antilink=True)
+    cog = _cog(monkeypatch, antispam=True)
     author = _Author()
     exempt_calls = []
 
@@ -219,7 +219,7 @@ async def test_a_feature_being_on_does_check_permissions(monkeypatch):
 
 async def test_a_moderator_is_still_never_auto_moderated(monkeypatch):
     """The bypass moved AFTER the gate; it must still bypass."""
-    cog = _cog(monkeypatch, antilink=True)
+    cog = _cog(monkeypatch, antispam=True)
     author = _Author(manage_messages=True)
     violations = []
 
@@ -238,19 +238,24 @@ async def test_a_moderator_is_still_never_auto_moderated(monkeypatch):
     assert violations == []
 
 
-async def test_antiinvite_alone_is_enough_to_open_the_gate(monkeypatch):
-    """The invite toggle lives in a DIFFERENT store than antilink/antispam."""
-    cog = _cog(monkeypatch, antiinvite=True)
+@pytest.mark.parametrize("toggle", ["antilink", "antiinvite"])
+async def test_link_and_invite_filters_no_longer_touch_the_message_path(
+    monkeypatch, toggle
+):
+    """Links and invites are native rules now: with only those on, a message
+    is never read, folded or judged by the bot - not even one carrying a link."""
+    cog = _cog(monkeypatch, **{toggle: True})
     author = _Author()
 
-    async def _is_exempt(_message):
-        return True
+    async def _never(*_args, **_kwargs):  # pragma: no cover - must not run
+        raise AssertionError("the message path must stop at the gate")
 
-    cog._is_exempt = _is_exempt
+    cog._is_exempt = _never
+    cog._handle_violation = _never
 
-    await cog.on_message(_message(author))
+    await cog.on_message(_message(author, content="https://discord.gg/abc"))
 
-    assert author.permission_reads == 1
+    assert author.permission_reads == 0
 
 
 # ---------------------------------------------------------------------------
@@ -309,17 +314,10 @@ async def test_an_all_off_guild_now_decides_without_entering_one_coroutine(
     assert author.permission_reads == 0
 
 
-async def test_the_edit_listener_gate_is_free_on_an_all_off_guild(monkeypatch):
-    """on_raw_message_edit is the other hot listener behind the same gate."""
-    cog = _cog(monkeypatch)
-    after = _message(_Author(), content="edited")
-    after.edited_timestamp = object()
-    payload = types.SimpleNamespace(message=after, cached_message=None)
-
-    with CoroutineCounter() as counted:
-        await cog.on_raw_message_edit(payload)
-
-    assert counted.names == ["on_raw_message_edit"]
+def test_there_is_no_message_edit_listener_any_more():
+    """Edits used to be re-scanned for links; native rules cover edits now."""
+    assert not hasattr(automod.AutoMod, "on_raw_message_edit")
+    assert not hasattr(automod.AutoMod, "on_message_edit")
 
 
 async def test_a_cold_cache_still_reads_through_and_the_counter_sees_it():

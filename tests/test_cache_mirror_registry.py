@@ -467,8 +467,13 @@ NOT_MIRRORED = {
         "the top.gg ledger; not guild data."
     ),
     ("AutoMod", "_scanned"): (
-        "BoundedLRU of message ids already scanned, to keep an edit from "
-        "re-punishing. Message-keyed and self-bounding."
+        "BoundedLRU of message ids already actioned, to keep a second event "
+        "for the same message from re-punishing. Message-keyed and "
+        "self-bounding."
+    ),
+    ("AutoMod", "_sync_locks"): (
+        "guild_id -> asyncio.Lock serialising the native filter sync. A lock, "
+        "not data: nothing to mirror, nothing stale to resync."
     ),
     ("ModLog", "_logged_edits"): (
         "BoundedLRU of message_id -> edited_timestamp of edits already posted, "

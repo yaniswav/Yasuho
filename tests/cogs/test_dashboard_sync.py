@@ -232,6 +232,12 @@ class FakeBot:
             self._cogs["CustomCommands"] = custom_commands
         if rooms is not None:
             self._cogs["TemporaryRooms"] = rooms
+        # guild_id -> guild; the AutoMod invalidator pushes native rules for
+        # guilds the bot is in (none by default).
+        self.guilds_by_id = {}
+
+    def get_guild(self, guild_id):
+        return self.guilds_by_id.get(guild_id)
 
     def get_cog(self, name):
         return self._cogs.get(name)

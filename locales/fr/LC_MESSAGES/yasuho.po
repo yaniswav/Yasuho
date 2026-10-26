@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:44+0000\n"
+"POT-Creation-Date: 2026-10-26 10:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -785,11 +785,11 @@ msgstr "(archivé)"
 msgid "none"
 msgstr "aucun"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "enabled"
 msgstr "activé"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "disabled"
 msgstr "désactivé"
 
@@ -2602,7 +2602,7 @@ msgstr "Styles de carte des membres"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Vous seul pouvez utiliser ces commandes"
 
@@ -2611,7 +2611,7 @@ msgstr "Vous seul pouvez utiliser ces commandes"
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expire après 3 min"
 
@@ -3323,7 +3323,7 @@ msgstr "Annonce de saison"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Une erreur est survenue lors de la mise à jour du panneau."
 
@@ -4073,7 +4073,7 @@ msgid "Ping"
 msgstr "Mention"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:319 cogs/moderation/automod_panel.py:321
+#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
 msgid "None"
 msgstr "Aucun"
 
@@ -5286,7 +5286,7 @@ msgid "Role granted to new members"
 msgstr "Rôle attribué aux nouveaux membres"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:229
+#: cogs/moderation/automod.py:270
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6540,34 +6540,38 @@ msgstr "Tu as 60 secondes. Appuie sur le bouton et tape-la !"
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "Temps écoulé ! Personne n'a réussi à terminer la phrase à temps."
 
-#: cogs/moderation/automod.py:230
+#: cogs/moderation/automod.py:260
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "{feature} est maintenant {state}."
 
-#: cogs/moderation/automod.py:245
+#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
+msgstr "Enregistré, mais la règle Discord n'a pas pu être mise à jour : Yasuho a besoin de la permission **Gérer le serveur**, et le serveur peut avoir au plus 6 règles de mots-clés (ou 20 rôles exemptés)."
+
+#: cogs/moderation/automod.py:284
 msgid "Link filtering"
 msgstr "Filtrage des liens"
 
-#: cogs/moderation/automod.py:256
+#: cogs/moderation/automod.py:297
 msgid "Invite filtering"
 msgstr "Filtrage des invitations"
 
-#: cogs/moderation/automod.py:267
+#: cogs/moderation/automod.py:310
 msgid "Spam filtering"
 msgstr "Filtrage du spam"
 
-#: cogs/moderation/automod.py:653
+#: cogs/moderation/automod.py:663
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} les liens d'invitation Discord ne sont pas autorisés ici."
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:668
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} les liens ne sont pas autorisés ici."
 
-#: cogs/moderation/automod.py:744
+#: cogs/moderation/automod.py:943
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} doucement - tu envoies des messages trop vite."
@@ -6673,60 +6677,60 @@ msgstr "Action quand un filtre se déclenche..."
 msgid "Exempt roles (select to replace)..."
 msgstr "Rôles exemptés (sélectionnez pour remplacer)..."
 
-#: cogs/moderation/automod_panel.py:205
+#: cogs/moderation/automod_panel.py:206
 msgid "Exempt channels (select to replace)..."
 msgstr "Salons exemptés (sélectionnez pour remplacer)..."
 
-#: cogs/moderation/automod_panel.py:285
+#: cogs/moderation/automod_panel.py:286
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:288
+#: cogs/moderation/automod_panel.py:289
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "Pour garder le serveur propre : Yasuho analyse chaque message pour les filtres de contenu, tandis que les filtres natifs de Discord bloquent les correspondances avant même leur publication."
 
-#: cogs/moderation/automod_panel.py:299
+#: cogs/moderation/automod_panel.py:300
 msgid "Content filters"
 msgstr "Filtres de contenu"
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:301
 msgid "Checked by Yasuho on every message."
 msgstr "Vérifiés par Yasuho sur chaque message."
 
-#: cogs/moderation/automod_panel.py:309
+#: cogs/moderation/automod_panel.py:310
 msgid "Native filters (Discord)"
 msgstr "Filtres natifs (Discord)"
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:311
 msgid "Enforced by Discord before a message is posted."
 msgstr "Appliqués par Discord avant même que le message soit posté."
 
-#: cogs/moderation/automod_panel.py:329
+#: cogs/moderation/automod_panel.py:330
 msgid "When a content filter trips"
 msgstr "Quand un filtre de contenu se déclenche"
 
-#: cogs/moderation/automod_panel.py:331
+#: cogs/moderation/automod_panel.py:332
 msgid "Action"
 msgstr "Action"
 
-#: cogs/moderation/automod_panel.py:333
+#: cogs/moderation/automod_panel.py:334
 msgid "Exempt roles"
 msgstr "Rôles exemptés"
 
-#: cogs/moderation/automod_panel.py:335
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt channels"
 msgstr "Salons exemptés"
 
-#: cogs/moderation/automod_panel.py:339
+#: cogs/moderation/automod_panel.py:340
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "Les membres ayant un rôle exempté, et les messages dans un salon exempté, échappent totalement aux filtres de contenu."
 
-#: cogs/moderation/automod_panel.py:389
+#: cogs/moderation/automod_panel.py:390
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Les filtres natifs exigent que Yasuho ait la permission Gérer le serveur."
 
-#: cogs/moderation/automod_panel.py:429
+#: cogs/moderation/automod_panel.py:443
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Yasuho a besoin de la permission **Gérer le serveur** pour modifier les filtres natifs de Discord."
 

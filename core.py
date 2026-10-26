@@ -197,6 +197,9 @@ class Yasuho(commands.Bot):
         intents.messages = True
         intents.reactions = True
         intents.message_content = True
+        # Not privileged: lets AutoMod apply its escalation when one of its
+        # native link / invite rules blocks a message (on_automod_action).
+        intents.auto_moderation_execution = True
 
         super().__init__(
             command_prefix=get_prefix,

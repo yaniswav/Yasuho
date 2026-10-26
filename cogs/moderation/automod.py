@@ -1,8 +1,9 @@
 """Hybrid auto-moderation engine + command group.
 
-This module is the ENGINE half of the AutoMod feature: message scanning (links /
-invites / spam), Discord native-rule management, the settings cache, and the
-``/automod`` command group. The Components V2 control panel and its display
+This module is the ENGINE half of the AutoMod feature: Discord native-rule
+management (link / invite filters included - the bot never reads message text
+for them), the spam rate check, the settings cache, and the ``/automod`` command
+group. The Components V2 control panel and its display
 catalog live in the sibling ``automod_panel.py`` (the presentation concern,
 mirroring the music.py -> views.py split); this module imports the panel and the
 action catalog from there, and the panel calls back into this cog - a one-way
@@ -12,6 +13,7 @@ Typography rule: ASCII '-' and '...' only. No em dashes, en dashes, or the fancy
 ellipsis anywhere in this file.
 """
 
+import asyncio
 import datetime
 import logging
 import re
@@ -169,7 +171,9 @@ class _SettingsCache(dict):
 class AutoMod(commands.Cog):
     """Hybrid auto-moderation: Yasuho's message scanning plus Discord's native AutoMod."""
 
-    # Generic links (kept for backward compatibility) and Discord invites.
+    # Generic links and Discord invites. Enforcement uses the native patterns
+    # in FILTER_PATTERNS; these Python twins stay the reference cogs/fun/fun.py
+    # mirrors (and tests compare against).
     url_re = re.compile(r"https?://\S+|discord\.gg/\S+", re.IGNORECASE)
     invite_re = re.compile(
         r"(?:https?://)?(?:www\.)?"
@@ -185,6 +189,28 @@ class AutoMod(commands.Cog):
         "nmention": "Yasuho - Mention Spam",
     }
 
+    # The link / invite filters are ONE native keyword rule: Discord blocks
+    # the message before anyone sees it, and the bot never reads message text
+    # for them (the Message Content intent is requested for moderation logging
+    # only). One rule, not two, so a message matching both filters is one
+    # execution and one punishment, and it costs one of the guild's six keyword
+    # rule slots. The server's escalation (warn / mute / kick, cases) runs from
+    # the AUTO_MODERATION_ACTION_EXECUTION event - see on_automod_action.
+    # Patterns are Discord's Rust regex flavour.
+    FILTER_RULE_NAME = "Yasuho - Links & Invites"
+    FILTER_PATTERNS = {
+        "invite": [
+            r"(?i)(discord(\.gg|app\.com/invite|\.com/invite)|discord\.me|discord\.io)/[\w-]+",
+        ],
+        "link": [r"(?i)https?://\S+", r"(?i)discord\.gg/\S+"],
+    }
+    # guild_settings key holding the managed rule's id: ownership is by id, so
+    # an admin renaming the rule neither orphans it nor makes us create a twin.
+    FILTER_RULE_KEY = "automod_native_filter_rule"
+    # Discord caps a rule's exemptions.
+    _NATIVE_MAX_EXEMPT_ROLES = 20
+    _NATIVE_MAX_EXEMPT_CHANNELS = 50
+
     def __init__(self, bot):
         self.bot = bot
         self._spam = {}
@@ -193,6 +219,14 @@ class AutoMod(commands.Cog):
         # (guild_id, member_id) -> last time this member's violation was
         # RECORDED and ANNOUNCED. Never gates a deletion or a punishment.
         self._violation_log = Cooldowns(_VIOLATION_LOG_WINDOW)
+        # rule_id -> custom key ("link" / "invite") or None for a rule that is
+        # not one of our filters; filled when we create, edit or first see one.
+        # guild_id -> asyncio.Lock: one native filter sync at a time per guild,
+        # or two concurrent syncs could both create the rule.
+        self._sync_locks = {}
+        self._migrated = False
+        self._reconcile_task = None
+        self._reconcile_again = False
 
     # ------------------------------------------------------------------
     # Command group
@@ -222,15 +256,20 @@ class AutoMod(commands.Cog):
         view = AutoModPanel(self, ctx.guild, ctx.author.id, state)
         view.message = await ctx.send(view=view)
 
-    def _toggle_embed(self, feature, on):
+    def _toggle_embed(self, feature, on, *, synced=True):
         """A consistent one-shot confirmation for the single-filter commands."""
 
+        description = _("{feature} is now {state}.").format(
+            feature=feature, state=_("enabled") if on else _("disabled")
+        )
+        if not synced:
+            description += "\n" + _(
+                "Saved, but Discord's rule could not be updated: Yasuho needs "
+                "the **Manage Server** permission, and the server can have at "
+                "most 6 keyword rules (or 20 exempt roles)."
+            )
         return discord.Embed(
-            title=_("AutoMod"),
-            description=_("{feature} is now {state}.").format(
-                feature=feature, state=_("enabled") if on else _("disabled")
-            ),
-            colour=random_colour(),
+            title=_("AutoMod"), description=description, colour=random_colour()
         )
 
     @automod.command(name="links", aliases=["antilink"])
@@ -240,9 +279,11 @@ class AutoMod(commands.Cog):
     async def automod_links(self, ctx, state: Literal["on", "off"]):
         """Turn link filtering on or off for this server."""
 
+        # Link / invite toggles sync a native rule over REST first.
+        await ctx.defer()
         on = state == "on"
-        await self.set_custom_rule(ctx.guild.id, "link", on)
-        await ctx.send(embed=self._toggle_embed(_("Link filtering"), on))
+        ok = await self.set_custom_rule(ctx.guild.id, "link", on)
+        await ctx.send(embed=self._toggle_embed(_("Link filtering"), on, synced=ok))
 
     @automod.command(name="invites", aliases=["antiinvite"])
     @commands.guild_only()
@@ -251,9 +292,11 @@ class AutoMod(commands.Cog):
     async def automod_invites(self, ctx, state: Literal["on", "off"]):
         """Turn Discord-invite filtering on or off for this server."""
 
+        # Link / invite toggles sync a native rule over REST first.
+        await ctx.defer()
         on = state == "on"
-        await self.set_custom_rule(ctx.guild.id, "invite", on)
-        await ctx.send(embed=self._toggle_embed(_("Invite filtering"), on))
+        ok = await self.set_custom_rule(ctx.guild.id, "invite", on)
+        await ctx.send(embed=self._toggle_embed(_("Invite filtering"), on, synced=ok))
 
     @automod.command(name="spam", aliases=["antispam"])
     @commands.guild_only()
@@ -262,6 +305,8 @@ class AutoMod(commands.Cog):
     async def automod_spam(self, ctx, state: Literal["on", "off"]):
         """Turn spam filtering on or off for this server."""
 
+        # Link / invite toggles sync a native rule over REST first.
+        await ctx.defer()
         on = state == "on"
         await self.set_custom_rule(ctx.guild.id, "spam", on)
         await ctx.send(embed=self._toggle_embed(_("Spam filtering"), on))
@@ -305,19 +350,29 @@ class AutoMod(commands.Cog):
         self._settings[guild_id] = data
 
     async def set_custom_rule(self, guild_id, key, value):
-        """Persist a custom-rule toggle (link / invite / spam filtering)."""
+        """Persist a custom-rule toggle (link / invite / spam filtering).
+
+        Link and invite filtering are enforced by native rules, so their toggle
+        also syncs those rules. Returns False when that sync could not reach
+        Discord (the bot lacks Manage Server): the setting is saved either way
+        and is applied by the next successful sync.
+        """
 
         if key == "invite":
             await settings.set_guild(
                 self.bot.db_pool, guild_id, "antiinvite", value
             )
-            return
+        else:
+            column = "antilink" if key == "link" else "antispam"
+            await db.upsert_guild_value(
+                self.bot.db_pool, "automod", column, guild_id, value
+            )
+            self._update_cache(guild_id, **{column: value})
 
-        column = "antilink" if key == "link" else "antispam"
-        await db.upsert_guild_value(
-            self.bot.db_pool, "automod", column, guild_id, value
-        )
-        self._update_cache(guild_id, **{column: value})
+        if key in self.FILTER_PATTERNS:
+            guild = self.bot.get_guild(guild_id)
+            return guild is not None and await self.sync_native_filters(guild)
+        return True
 
     async def _panel_state(self, guild):
         pool = self.bot.db_pool
@@ -429,8 +484,237 @@ class AutoMod(commands.Cog):
             log.exception("AutoMod native rule update failed")
             return False, None
 
+    async def _exemptions(self, guild):
+        """Native exemptions: the saved lists, plus every role that grants
+        Manage Messages - moderators were never filtered before the move to
+        native rules, and Discord only exempts Manage Server / Administrator.
+        Returns (roles, channels, complete); complete is False when Discord's
+        caps forced entries out."""
+        pool = self.bot.db_pool
+        saved_roles = coerce_ids(
+            await settings.get_guild(pool, guild.id, "automod_exempt_roles", [])
+        )
+        channels = coerce_ids(
+            await settings.get_guild(pool, guild.id, "automod_exempt_channels", [])
+        )
+        moderator_roles = [
+            role.id
+            for role in getattr(guild, "roles", ())
+            if not role.is_default()
+            and (role.permissions.manage_messages or role.permissions.administrator)
+        ]
+        roles = list(dict.fromkeys([*saved_roles, *moderator_roles]))
+        complete = (
+            len(roles) <= self._NATIVE_MAX_EXEMPT_ROLES
+            and len(channels) <= self._NATIVE_MAX_EXEMPT_CHANNELS
+        )
+        return (
+            roles[: self._NATIVE_MAX_EXEMPT_ROLES],
+            channels[: self._NATIVE_MAX_EXEMPT_CHANNELS],
+            complete,
+        )
+
+    async def sync_native_filters(self, guild):
+        """Make the managed native rule match the saved settings.
+
+        Serialised per guild. Finds the rule by its stored id (adopting one by
+        name only when no id is stored), creates it only when a filter is on,
+        and otherwise edits it back to the full intended shape: patterns, block
+        action, enabled flag, exemptions. Returns False when Discord refused or
+        failed (permission, the six-keyword-rule limit) or an exemption list
+        had to be cut to Discord's caps; the settings stay saved either way.
+        """
+        lock = self._sync_locks.setdefault(guild.id, asyncio.Lock())
+        async with lock:
+            return await self._sync_native_filters(guild)
+
+    async def _sync_native_filters(self, guild):
+        pool = self.bot.db_pool
+        antilink, _antispam, antiinvite = await self._enabled(guild.id)
+        patterns = []
+        if antiinvite:
+            patterns += self.FILTER_PATTERNS["invite"]
+        if antilink:
+            patterns += self.FILTER_PATTERNS["link"]
+        roles, channels, complete = await self._exemptions(guild)
+        stored = await settings.get_guild(pool, guild.id, self.FILTER_RULE_KEY)
+        shape = dict(
+            trigger=discord.AutoModTrigger(
+                type=discord.AutoModRuleTriggerType.keyword,
+                # A disabled rule still needs a valid trigger.
+                regex_patterns=patterns or self.FILTER_PATTERNS["invite"],
+            ),
+            actions=[
+                discord.AutoModRuleAction(
+                    type=discord.AutoModRuleActionType.block_message
+                )
+            ],
+            enabled=bool(patterns),
+            exempt_roles=[discord.Object(id=i) for i in roles],
+            exempt_channels=[discord.Object(id=i) for i in channels],
+            reason="Yasuho AutoMod",
+        )
+        try:
+            rules = await guild.fetch_automod_rules()
+            if stored is not None:
+                # Ours by id. If an admin deleted it, a rule that merely bears
+                # the name is NOT adopted: a replacement is created instead.
+                rule = discord.utils.get(rules, id=int(stored))
+            else:
+                rule = discord.utils.get(rules, name=self.FILTER_RULE_NAME)
+            if rule is None:
+                if not patterns:
+                    return True
+                rule = await guild.create_automod_rule(
+                    name=self.FILTER_RULE_NAME,
+                    event_type=discord.AutoModRuleEventType.message_send,
+                    **shape,
+                )
+            else:
+                await rule.edit(**shape)
+        except discord.Forbidden:
+            log.warning("AUTOMOD-NATIVE-REFUSED guild=%s (no Manage Server)", guild.id)
+            return False
+        except discord.HTTPException:
+            log.exception("AUTOMOD-NATIVE-FAILED guild=%s", guild.id)
+            return False
+        if stored is None or int(stored) != rule.id:
+            await settings.set_guild(pool, guild.id, self.FILTER_RULE_KEY, rule.id)
+        if not complete:
+            log.warning("AUTOMOD-EXEMPT-TRUNCATED guild=%s", guild.id)
+        return complete
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Once per process: reconcile every guild that has a managed rule or a
+        filter on (servers set up before the filters went native, a sync that
+        failed, a dashboard change missed while disconnected)."""
+
+        if self._migrated:
+            return
+        self._migrated = True
+        self.request_reconcile()
+
+    def request_reconcile(self):
+        """Run :meth:`reconcile_all` in this cog's ONE background task. A
+        request while a pass is running queues exactly one more pass (so a
+        change missed mid-pass is still picked up), never a parallel sweep."""
+        if self._reconcile_task is not None and not self._reconcile_task.done():
+            self._reconcile_again = True
+            return
+        self._reconcile_task = asyncio.get_running_loop().create_task(
+            self._reconcile_loop()
+        )
+
+    async def _reconcile_loop(self):
+        while True:
+            self._reconcile_again = False
+            try:
+                await self.reconcile_all()
+            except Exception:
+                log.exception("AutoMod native reconciliation pass failed")
+            if not self._reconcile_again:
+                return
+
+    async def cog_unload(self):
+        if self._reconcile_task is not None:
+            self._reconcile_task.cancel()
+
+    async def reconcile_all(self):
+        """Sync every guild that has the filter on or owns a managed rule.
+        Sequential and paced: a handful of REST calls per guild; one guild's
+        failure is logged and the pass goes on."""
+        try:
+            rows = await self.bot.db_pool.fetch(
+                "SELECT guild_id FROM automod WHERE antilink "
+                "UNION SELECT guild_id FROM guild_settings "
+                "WHERE (settings->>'antiinvite')::boolean "
+                "OR settings ? $1",
+                self.FILTER_RULE_KEY,
+            )
+        except Exception:
+            log.exception("AutoMod native reconciliation query failed")
+            return
+        synced = failed = 0
+        for row in rows:
+            guild = self.bot.get_guild(row["guild_id"])
+            if guild is None:
+                continue
+            try:
+                ok = await self.sync_native_filters(guild)
+            except Exception:
+                log.exception("AUTOMOD-NATIVE-FAILED guild=%s", guild.id)
+                ok = False
+            if ok:
+                synced += 1
+            else:
+                failed += 1
+            await asyncio.sleep(1)
+        log.info("AUTOMOD-NATIVE-SYNC synced=%s failed=%s", synced, failed)
+
+    @staticmethod
+    def _moderates(role):
+        return role.permissions.manage_messages or role.permissions.administrator
+
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before, after):
+        """A role gaining or losing Manage Messages changes the exemptions."""
+        if self._moderates(before) != self._moderates(after):
+            await self._resync_if_managed(after.guild)
+
+    @commands.Cog.listener()
+    async def on_guild_role_create(self, role):
+        """A role born with Manage Messages is a moderator role to exempt."""
+        if self._moderates(role):
+            await self._resync_if_managed(role.guild)
+
+    async def _resync_if_managed(self, guild):
+        stored = await settings.get_guild(
+            self.bot.db_pool, guild.id, self.FILTER_RULE_KEY
+        )
+        if stored is not None:
+            await self.sync_native_filters(guild)
+
+    @commands.Cog.listener()
+    async def on_automod_action(self, execution):
+        """Apply the server's escalation when our native filter blocks a message.
+
+        Discord already blocked the message; this only does what the native
+        action cannot: warn / mute / kick, the case, the short notice. It reads
+        the member, the rule and the matched PATTERN, never the message text.
+        """
+        if execution.action.type != discord.AutoModRuleActionType.block_message:
+            return
+        guild = execution.guild
+        pool = self.bot.db_pool
+        stored = await settings.get_guild(pool, guild.id, self.FILTER_RULE_KEY)
+        if stored is None or int(stored) != execution.rule_id:
+            return
+        antilink, _antispam, antiinvite = await self._enabled(guild.id)
+        if not (antilink or antiinvite):
+            return
+        member = execution.member
+        if member is None:
+            try:
+                member = await guild.fetch_member(execution.user_id)
+            except discord.HTTPException:
+                return
+        if member.bot or member.guild_permissions.manage_messages:
+            return
+        if execution.matched_keyword in self.FILTER_PATTERNS["invite"]:
+            notice = _("{user} Discord invite links aren't allowed here.").format(
+                user=member.mention
+            )
+            reason = "Posted a Discord invite link"
+        else:
+            notice = _("{user} links aren't allowed here.").format(user=member.mention)
+            reason = "Posted a disallowed link"
+        await self._punish(
+            guild, member, execution.channel, notice=notice, reason=reason
+        )
+
     # ------------------------------------------------------------------
-    # Custom message scanning
+    # Spam (message metadata only: who posted when, never what)
     # ------------------------------------------------------------------
     async def _is_exempt(self, message):
         pool = self.bot.db_pool
@@ -485,27 +769,39 @@ class AutoMod(commands.Cog):
         await modactions.funnel_action(self.bot, guild, embed)
 
     async def _handle_violation(self, message, *, kind, notice, reason):
-        """Delete the message, apply the configured action, and log a case.
+        """Delete a spam message, then punish its author (see :meth:`_punish`)."""
+
+        # Marked BEFORE the first await, so a second event for this same
+        # message cannot land a second warn/kick/timeout while this one is
+        # still deleting and writing its case.
+        self._scanned[message.id] = True
+
+        # The offending message always goes, whatever the escalation level.
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass
+        except discord.HTTPException:
+            log.exception("AutoMod failed to delete %s message", kind)
+
+        await self._punish(
+            message.guild, message.author, message.channel,
+            notice=notice, reason=reason,
+        )
+
+    async def _punish(self, guild, member, channel, *, notice, reason):
+        """Apply the configured action, and record and announce it.
 
         WHAT IS THROTTLED AND WHAT IS NOT. A member can trip this hundreds of
         times in seconds, so the RECORD and the ANNOUNCEMENT are coalesced to one
         per member per ``_VIOLATION_LOG_WINDOW``: the case AutoMod opens on its
         own, the mod-log post, and the short in-channel notice. Everything that
         actually moderates runs on EVERY violation and is gated by nothing - the
-        message is always deleted, the timeout / kick is always applied, and a
-        warn is always recorded and always feeds the escalation counter (that
-        row is the punishment, not the paperwork). 200 invites therefore still
-        cost the spammer 200 deletions and 200 warns; they just stop costing the
-        server 200 permanent rows and 200 mod-log embeds.
+        timeout / kick is always applied, and a warn is always recorded and
+        always feeds the escalation counter (that row is the punishment, not the
+        paperwork). 200 invites therefore still cost the spammer 200 warns; they
+        just stop costing the server 200 permanent rows and 200 mod-log embeds.
         """
-
-        # Marked BEFORE the first await, so a second MESSAGE_UPDATE for this same
-        # message cannot land a second warn/kick/timeout while this one is still
-        # deleting and writing its case.
-        self._scanned[message.id] = True
-
-        guild = message.guild
-        member = message.author
 
         # Checked and armed with no await in between, so two violations racing
         # through this coroutine cannot both believe they are the first one.
@@ -519,14 +815,6 @@ class AutoMod(commands.Cog):
         if action not in VALID_ACTIONS:
             action = DEFAULT_ACTION
         warn_case_number = None
-
-        # The offending message always goes, whatever the escalation level.
-        try:
-            await message.delete()
-        except discord.Forbidden:
-            pass
-        except discord.HTTPException:
-            log.exception("AutoMod failed to delete %s message", kind)
 
         if action == "mute":
             try:
@@ -566,10 +854,11 @@ class AutoMod(commands.Cog):
         if not announce:
             return
 
-        try:
-            await message.channel.send(notice, delete_after=5)
-        except discord.HTTPException:
-            pass
+        if channel is not None:
+            try:
+                await channel.send(notice, delete_after=5)
+            except discord.HTTPException:
+                pass
 
         await self._log_case(
             guild,
@@ -637,52 +926,6 @@ class AutoMod(commands.Cog):
         )
         return antilink, antispam, antiinvite
 
-    async def _scan_content(self, message, *, antilink, antiinvite):
-        """Run the content filters on ``message``; True if one of them acted.
-
-        The invite/link half of the pipeline, shared verbatim by the send and the
-        edit path - editing a message must be judged by exactly the rules that
-        would have judged it on send, or the edit is just a slower way to post
-        the same invite.
-        """
-        if antiinvite and self.invite_re.search(message.content):
-            await self._handle_violation(
-                message,
-                kind="invite",
-                notice=_(
-                    "{user} Discord invite links aren't allowed here."
-                ).format(user=message.author.mention),
-                reason="Posted a Discord invite link",
-            )
-            return True
-
-        if antilink and self.url_re.search(message.content):
-            await self._handle_violation(
-                message,
-                kind="link",
-                notice=_("{user} links aren't allowed here.").format(
-                    user=message.author.mention
-                ),
-                reason="Posted a disallowed link",
-            )
-            return True
-
-        return False
-
-    def _claim_scan(self, message_id):
-        """Claim a message for scanning; False if it is already claimed/actioned.
-
-        Check-and-set with NO await in between, so it is atomic against every
-        other listener callback: two MESSAGE_UPDATEs for the same message cannot
-        both win it, and an id already marked by :meth:`_handle_violation` is
-        never re-judged. The claim is released again by the caller when the scan
-        finds nothing, so a member's later edits are still scanned.
-        """
-        if message_id in self._scanned:
-            return False
-        self._scanned[message_id] = True
-        return True
-
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or message.guild is None:
@@ -703,9 +946,12 @@ class AutoMod(commands.Cog):
         gate = self._enabled_cached(message.guild.id)
         if gate is None:
             gate = await self._enabled(message.guild.id)
-        antilink, antispam, antiinvite = gate
+        _antilink, antispam, _antiinvite = gate
 
-        if not (antilink or antispam or antiinvite):
+        # Links and invites are native rules now (sync_native_filters); the
+        # only thing left on the message hot path is the spam rate, which needs
+        # who-posted-when and never the text.
+        if not antispam:
             return
 
         # Moderators are never auto-moderated; checked here, once we know at
@@ -714,11 +960,6 @@ class AutoMod(commands.Cog):
             return
 
         if await self._is_exempt(message):
-            return
-
-        if await self._scan_content(
-            message, antilink=antilink, antiinvite=antiinvite
-        ):
             return
 
         if antispam:
@@ -745,101 +986,6 @@ class AutoMod(commands.Cog):
                     ).format(user=message.author.mention),
                     reason="Spamming messages",
                 )
-
-    @commands.Cog.listener()
-    async def on_raw_message_edit(self, payload):
-        """Re-scan an edited message: posting clean and editing the invite in.
-
-        AutoMod used to see NEW messages only, which made every content filter
-        opt-out: post "hello", edit it into a discord.gg link, and nothing ever
-        looked at it again. The filters run here on exactly the same content
-        pipeline as on send (:meth:`_scan_content`) - a message must not become
-        legal by arriving in two steps.
-
-        WHY RAW AND NOT ``on_message_edit``. discord.py dispatches
-        ``message_edit`` only when the message is still in ``ConnectionState``'s
-        message cache, and this bot never passes ``max_messages``, so that cache
-        is the default 1000 entries BOT-WIDE, across every guild. At the scale
-        this project designs for (1000+ guilds) that deque turns over in seconds,
-        so the "edit it in later" bypass survived the fix for anything but the
-        last few hundred messages the bot happened to see - which is to say, for
-        the common case. ``raw_message_edit`` is dispatched on EVERY
-        MESSAGE_UPDATE, cached or not, and since discord.py 2.5 it carries a
-        fully built ``payload.message``, so nothing has to be fetched.
-
-        ORDERING (this is a hot listener - MESSAGE_UPDATE also fires when
-        Discord attaches a link preview to somebody else's message, on its own,
-        seconds after the fact, and now we see those for every guild):
-
-        1. bot/DM guard, free;
-        2. the content-changed gate, free and SYNCHRONOUS. With the message
-           cached it is the exact comparison it always was
-           (``payload.cached_message.content``). Without it, an unfurl is told
-           apart by ``edited_timestamp``: Discord sets that only when the AUTHOR
-           edits, never when it attaches an embed or flips a flag, so an
-           unfurl on an uncached message still costs nothing;
-        3. only then the enabled gate, keeping the house rule that no permission
-           folding happens for a guild with automod off - and, like on_message,
-           taking it from :meth:`_enabled_cached` with no await whenever both of
-           its caches are warm;
-        4. the permission fold, the scan claim, the exemption check, the scan.
-
-        Spam is deliberately NOT re-evaluated here: the sliding window counts
-        messages SENT, and feeding edits into it would let an edit burst trip a
-        spam action on a single message (and double-count the one it belongs to).
-        """
-        after = getattr(payload, "message", None)
-        if after is None:
-            return
-        if after.author.bot or after.guild is None:
-            return
-
-        before = getattr(payload, "cached_message", None)
-        if before is not None:
-            if before.content == after.content:
-                return
-        elif getattr(after, "edited_timestamp", None) is None:
-            return
-
-        gate = self._enabled_cached(after.guild.id)
-        if gate is None:
-            gate = await self._enabled(after.guild.id)
-        antilink, _antispam, antiinvite = gate
-
-        # antispam alone does not open this gate: an edit is not a send.
-        if not (antilink or antiinvite):
-            return
-
-        # The author of a RAW payload is a Member whenever the gateway sent the
-        # `member` field (it does for a guild message) or the member is cached;
-        # if neither held, permissions cannot be folded off a bare User, so the
-        # guild cache gets one more chance and then the check is skipped rather
-        # than crashed. Skipping means the message IS scanned, which is the safe
-        # direction: the alternative would let anyone who can suppress that field
-        # opt out of automod entirely.
-        author = after.author
-        if not isinstance(author, discord.Member):
-            author = after.guild.get_member(author.id) or author
-        permissions = getattr(author, "guild_permissions", None)
-        if permissions is not None and permissions.manage_messages:
-            return
-
-        if not self._claim_scan(after.id):
-            return
-
-        acted = False
-        try:
-            if await self._is_exempt(after):
-                return
-            acted = await self._scan_content(
-                after, antilink=antilink, antiinvite=antiinvite
-            )
-        finally:
-            # A clean (or exempt, or failed) scan releases the claim, so the next
-            # edit of this message is judged on its own merits. Only a message
-            # that was actually actioned stays marked.
-            if not acted:
-                self._scanned.discard(after.id)
 
 
 async def setup(bot):

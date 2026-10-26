@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:44+0000\n"
+"POT-Creation-Date: 2026-10-26 10:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -783,11 +783,11 @@ msgstr "(アーカイブ済み)"
 msgid "none"
 msgstr "なし"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "enabled"
 msgstr "有効"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "disabled"
 msgstr "無効"
 
@@ -2580,7 +2580,7 @@ msgstr "メンバーのカードスタイル"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
 
@@ -2589,7 +2589,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
 
@@ -3300,7 +3300,7 @@ msgstr "シーズン告知"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "パネルの更新中に問題が発生しました。"
 
@@ -4049,7 +4049,7 @@ msgid "Ping"
 msgstr "メンション"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:319 cogs/moderation/automod_panel.py:321
+#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
 msgid "None"
 msgstr "なし"
 
@@ -5261,7 +5261,7 @@ msgid "Role granted to new members"
 msgstr "新しいメンバーに付与されるロール"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:229
+#: cogs/moderation/automod.py:270
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6514,34 +6514,38 @@ msgstr "制限時間は60秒。ボタンを押して入力しよう！"
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "時間切れ! 誰も時間内に文章を完成させられませんでした。"
 
-#: cogs/moderation/automod.py:230
+#: cogs/moderation/automod.py:260
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "{feature}は{state}になりました。"
 
-#: cogs/moderation/automod.py:245
+#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
+msgstr "保存しましたが、Discord のルールを更新できませんでした: Yasuho には **サーバー管理** 権限が必要で、サーバーに設定できるキーワードルールは最大 6 個（除外ロールは最大 20 個）です。"
+
+#: cogs/moderation/automod.py:284
 msgid "Link filtering"
 msgstr "リンクのフィルタリング"
 
-#: cogs/moderation/automod.py:256
+#: cogs/moderation/automod.py:297
 msgid "Invite filtering"
 msgstr "招待リンクのフィルタリング"
 
-#: cogs/moderation/automod.py:267
+#: cogs/moderation/automod.py:310
 msgid "Spam filtering"
 msgstr "スパムのフィルタリング"
 
-#: cogs/moderation/automod.py:653
+#: cogs/moderation/automod.py:663
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} ここではDiscordの招待リンクは許可されていません。"
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:668
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} ここではリンクは許可されていません。"
 
-#: cogs/moderation/automod.py:744
+#: cogs/moderation/automod.py:943
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} 落ち着いて - メッセージの送信が速すぎます。"
@@ -6647,60 +6651,60 @@ msgstr "フィルター発動時のアクション..."
 msgid "Exempt roles (select to replace)..."
 msgstr "除外ロール (選択して置き換え)..."
 
-#: cogs/moderation/automod_panel.py:205
+#: cogs/moderation/automod_panel.py:206
 msgid "Exempt channels (select to replace)..."
 msgstr "除外チャンネル (選択して置き換え)..."
 
-#: cogs/moderation/automod_panel.py:285
+#: cogs/moderation/automod_panel.py:286
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:288
+#: cogs/moderation/automod_panel.py:289
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "サーバーを綺麗に保つために、Yasuhoがコンテンツフィルターで各メッセージをスキャンし、Discordのネイティブフィルターは投稿前にブロックします。"
 
-#: cogs/moderation/automod_panel.py:299
+#: cogs/moderation/automod_panel.py:300
 msgid "Content filters"
 msgstr "コンテンツフィルター"
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:301
 msgid "Checked by Yasuho on every message."
 msgstr "Yasuhoがすべてのメッセージをチェックします。"
 
-#: cogs/moderation/automod_panel.py:309
+#: cogs/moderation/automod_panel.py:310
 msgid "Native filters (Discord)"
 msgstr "ネイティブフィルター (Discord)"
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:311
 msgid "Enforced by Discord before a message is posted."
 msgstr "メッセージが投稿される前にDiscordが適用します。"
 
-#: cogs/moderation/automod_panel.py:329
+#: cogs/moderation/automod_panel.py:330
 msgid "When a content filter trips"
 msgstr "コンテンツフィルター発動時"
 
-#: cogs/moderation/automod_panel.py:331
+#: cogs/moderation/automod_panel.py:332
 msgid "Action"
 msgstr "アクション"
 
-#: cogs/moderation/automod_panel.py:333
+#: cogs/moderation/automod_panel.py:334
 msgid "Exempt roles"
 msgstr "除外ロール"
 
-#: cogs/moderation/automod_panel.py:335
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt channels"
 msgstr "除外チャンネル"
 
-#: cogs/moderation/automod_panel.py:339
+#: cogs/moderation/automod_panel.py:340
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "除外ロールを持つメンバーと除外チャンネルのメッセージは、コンテンツフィルターの対象外です。"
 
-#: cogs/moderation/automod_panel.py:389
+#: cogs/moderation/automod_panel.py:390
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "ネイティブフィルターにはYasuhoにサーバー管理権限が必要です。"
 
-#: cogs/moderation/automod_panel.py:429
+#: cogs/moderation/automod_panel.py:443
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Discordのネイティブフィルターを変更するには、Yasuhoに**サーバー管理**権限が必要です。"
 

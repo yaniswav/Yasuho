@@ -47,7 +47,13 @@ class _FakeGuild:
 
     async def fetch_automod_rules(self):
         # No managed native rules -> native_state resolves every key to False.
-        return []
+        return list(getattr(self, "created_rules", []))
+
+    async def create_automod_rule(self, **kwargs):
+        # Link / invite filters are native rules: record what the sync created.
+        rule = types.SimpleNamespace(id=len(getattr(self, "created_rules", [])) + 1, **kwargs)
+        self.created_rules = [*getattr(self, "created_rules", []), rule]
+        return rule
 
 
 class _Ctx:
@@ -61,9 +67,17 @@ class _Ctx:
         self.sends.append((args, kwargs))
         return types.SimpleNamespace(id=999)
 
+    async def defer(self, *args, **kwargs):
+        return None
+
 
 def _make_cog(fake_pool):
-    bot = types.SimpleNamespace(db_pool=fake_pool, user=types.SimpleNamespace(id=7))
+    guilds = {}
+    bot = types.SimpleNamespace(
+        db_pool=fake_pool,
+        user=types.SimpleNamespace(id=7),
+        get_guild=lambda gid: guilds.setdefault(gid, _FakeGuild(guild_id=gid)),
+    )
     return AutoMod(bot)
 
 
@@ -233,14 +247,22 @@ def test_filter_toggle_reflects_state(fake_pool):
 async def test_custom_toggle_writes_and_rerenders(fake_pool, make_interaction):
     cog = _make_cog(fake_pool)
     panel = AutoModPanel(cog, _FakeGuild(guild_id=3), 1, _default_state())
-    panel.message = types.SimpleNamespace()
+    message_edits = []
+
+    async def _edit(**kwargs):
+        message_edits.append(kwargs)
+
+    panel.message = types.SimpleNamespace(edit=_edit)
     interaction = make_interaction()
 
     await panel.toggle(interaction, "link", native=False)
 
     assert panel.state["link"] is True
     assert any("INSERT INTO automod" in c[1] for c in fake_pool.calls)
-    assert len(interaction.edits) == 1  # view=-only in-place refresh
+    # Acknowledged FIRST (the link toggle syncs a native rule over REST), so
+    # the refresh then edits the stored panel message, view=-only.
+    assert interaction.response.is_done()
+    assert len(message_edits) == 1 and set(message_edits[0]) == {"view"}
 
 
 async def test_native_toggle_refuses_without_permission(fake_pool, make_interaction):
@@ -344,5 +366,5 @@ def test_action_select_preselects_current_action(fake_pool):
 def test_exempt_selects_construct(fake_pool):
     cog = _make_cog(fake_pool)
     panel = AutoModPanel(cog, _FakeGuild(), 1, _default_state())
-    assert _ExemptRoleSelect(panel, defaults=[]).max_values == 25
+    assert _ExemptRoleSelect(panel, defaults=[]).max_values == 20  # Discord's native cap
     assert _ExemptChannelSelect(panel, defaults=[]).max_values == 25

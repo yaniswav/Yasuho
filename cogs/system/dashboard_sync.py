@@ -460,6 +460,12 @@ async def _invalidate_automod(bot, gid):
         "SELECT antilink, antispam FROM automod WHERE guild_id = $1", gid
     )
     cache[gid] = row
+    # Link / invite filtering and the exemptions live in native rules: push
+    # the dashboard's change to Discord too.
+    guild = bot.get_guild(gid)
+    sync = getattr(cog, "sync_native_filters", None)
+    if guild is not None and sync is not None:
+        await sync(guild)
 
 
 async def _invalidate_leveling(bot, gid):
@@ -766,6 +772,12 @@ async def _resync_automod(bot):
     cache = getattr(cog, "_settings", None)
     if isinstance(cache, dict):
         cache.clear()
+    # Dashboard writes missed while disconnected never reached the native
+    # link / invite rule: reconcile them in AutoMod's own background task
+    # (paced REST, coalesced, cancelled with the cog).
+    request = getattr(cog, "request_reconcile", None)
+    if request is not None:
+        request()
 
 
 async def _resync_twitch(bot):

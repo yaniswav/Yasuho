@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:44+0000\n"
+"POT-Creation-Date: 2026-10-26 10:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -785,11 +785,11 @@ msgstr "(αρχειοθετημένο)"
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:231
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
@@ -2602,7 +2602,7 @@ msgstr "Στιλ κάρτας μελών"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
 
@@ -2611,7 +2611,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
 
@@ -3323,7 +3323,7 @@ msgstr "Ανακοίνωση σεζόν"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:415 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
 
@@ -4073,7 +4073,7 @@ msgid "Ping"
 msgstr "Ping"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:319 cogs/moderation/automod_panel.py:321
+#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
 msgid "None"
 msgstr "Κανένα"
 
@@ -5286,7 +5286,7 @@ msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:229
+#: cogs/moderation/automod.py:270
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6540,34 +6540,38 @@ msgstr "Έχεις 60 δευτερόλεπτα. Πάτα το κουμπί κα�
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "Τελείωσε ο χρόνος! Κανείς δεν κατάφερε να ολοκληρώσει την πρόταση εγκαίρως."
 
-#: cogs/moderation/automod.py:230
+#: cogs/moderation/automod.py:260
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "Το {feature} είναι τώρα {state}."
 
-#: cogs/moderation/automod.py:245
+#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
+msgstr "Αποθηκεύτηκε, αλλά ο κανόνας του Discord δεν ενημερώθηκε: το Yasuho χρειάζεται την άδεια **Διαχείριση διακομιστή**, και ο διακομιστής μπορεί να έχει το πολύ 6 κανόνες λέξεων-κλειδιών (ή 20 εξαιρούμενους ρόλους)."
+
+#: cogs/moderation/automod.py:284
 msgid "Link filtering"
 msgstr "Φιλτράρισμα συνδέσμων"
 
-#: cogs/moderation/automod.py:256
+#: cogs/moderation/automod.py:297
 msgid "Invite filtering"
 msgstr "Φιλτράρισμα προσκλήσεων"
 
-#: cogs/moderation/automod.py:267
+#: cogs/moderation/automod.py:310
 msgid "Spam filtering"
 msgstr "Φιλτράρισμα spam"
 
-#: cogs/moderation/automod.py:653
+#: cogs/moderation/automod.py:663
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι πρόσκλησης Discord δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:668
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:744
+#: cogs/moderation/automod.py:943
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} πιο αργά - στέλνεις μηνύματα πολύ γρήγορα."
@@ -6673,60 +6677,60 @@ msgstr "Ενέργεια όταν ενεργοποιηθεί ένα φίλτρο
 msgid "Exempt roles (select to replace)..."
 msgstr "Εξαιρούμενοι ρόλοι (επίλεξε για αντικατάσταση)..."
 
-#: cogs/moderation/automod_panel.py:205
+#: cogs/moderation/automod_panel.py:206
 msgid "Exempt channels (select to replace)..."
 msgstr "Εξαιρούμενα κανάλια (επίλεξε για αντικατάσταση)..."
 
-#: cogs/moderation/automod_panel.py:285
+#: cogs/moderation/automod_panel.py:286
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:288
+#: cogs/moderation/automod_panel.py:289
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "Για να μένει ο διακομιστής τακτοποιημένος: η Yasuho σαρώνει κάθε μήνυμα για τα φίλτρα περιεχομένου, ενώ τα εγγενή φίλτρα του Discord μπλοκάρουν τα ευρήματα πριν καν δημοσιευτούν."
 
-#: cogs/moderation/automod_panel.py:299
+#: cogs/moderation/automod_panel.py:300
 msgid "Content filters"
 msgstr "Φίλτρα περιεχομένου"
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:301
 msgid "Checked by Yasuho on every message."
 msgstr "Ελέγχονται από τη Yasuho σε κάθε μήνυμα."
 
-#: cogs/moderation/automod_panel.py:309
+#: cogs/moderation/automod_panel.py:310
 msgid "Native filters (Discord)"
 msgstr "Εγγενή φίλτρα (Discord)"
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:311
 msgid "Enforced by Discord before a message is posted."
 msgstr "Επιβάλλονται από το Discord πριν καν δημοσιευτεί το μήνυμα."
 
-#: cogs/moderation/automod_panel.py:329
+#: cogs/moderation/automod_panel.py:330
 msgid "When a content filter trips"
 msgstr "Όταν ενεργοποιηθεί ένα φίλτρο περιεχομένου"
 
-#: cogs/moderation/automod_panel.py:331
+#: cogs/moderation/automod_panel.py:332
 msgid "Action"
 msgstr "Ενέργεια"
 
-#: cogs/moderation/automod_panel.py:333
+#: cogs/moderation/automod_panel.py:334
 msgid "Exempt roles"
 msgstr "Εξαιρούμενοι ρόλοι"
 
-#: cogs/moderation/automod_panel.py:335
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt channels"
 msgstr "Εξαιρούμενα κανάλια"
 
-#: cogs/moderation/automod_panel.py:339
+#: cogs/moderation/automod_panel.py:340
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "Τα μέλη με εξαιρούμενο ρόλο, και τα μηνύματα σε εξαιρούμενο κανάλι, παρακάμπτουν εντελώς τα φίλτρα περιεχομένου."
 
-#: cogs/moderation/automod_panel.py:389
+#: cogs/moderation/automod_panel.py:390
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Τα εγγενή φίλτρα απαιτούν η Yasuho να έχει το δικαίωμα Διαχείρισης διακομιστή."
 
-#: cogs/moderation/automod_panel.py:429
+#: cogs/moderation/automod_panel.py:443
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Η Yasuho χρειάζεται το δικαίωμα **Διαχείριση διακομιστή** για να αλλάξει τα εγγενή φίλτρα του Discord."
 

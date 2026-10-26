@@ -186,8 +186,11 @@ class _ExemptRoleSelect(discord.ui.RoleSelect):
         super().__init__(
             placeholder=_("Exempt roles (select to replace)..."),
             min_values=0,
-            max_values=25,
-            default_values=defaults,
+            # Discord's native rules hold at most 20 exempt roles. Older saved
+            # lists may be longer: show the first 20 (a select refuses more
+            # defaults than its max), the saved list stays until replaced.
+            max_values=20,
+            default_values=defaults[:20],
         )
 
     async def callback(self, interaction):
@@ -410,6 +413,19 @@ class AutoModPanel(AuthorLayoutView):
         self.stop()
         await _refresh_layout(interaction, self.message, new)
 
+    async def _native_warning(self, interaction):
+        try:
+            await interaction.followup.send(
+                _(
+                    "Saved, but Discord's rule could not be updated: Yasuho needs "
+                    "the **Manage Server** permission, and the server can have at "
+                    "most 6 keyword rules (or 20 exempt roles)."
+                ),
+                ephemeral=True,
+            )
+        except discord.HTTPException:
+            pass
+
     async def _safe_fail(self, interaction):
         await interactions.notify_failure(
             interaction, _("Something went wrong updating the panel.")
@@ -433,8 +449,15 @@ class AutoModPanel(AuthorLayoutView):
                     )
                 self.state[key] = new_state
             else:
-                await self.cog.set_custom_rule(self.guild.id, key, target)
+                # Link / invite toggles sync a native rule over REST first:
+                # acknowledge before that, the rerender edits in place after.
+                await interactions.defer(interaction, surface="automod panel")
+                ok = await self.cog.set_custom_rule(self.guild.id, key, target)
                 self.state[key] = target
+                await self._rerender(interaction)
+                if not ok:
+                    await self._native_warning(interaction)
+                return
             await self._rerender(interaction)
         except Exception:
             log.exception("AutoMod panel toggle failed")
@@ -464,6 +487,11 @@ class AutoModPanel(AuthorLayoutView):
             )
             self.state[state_key] = ids
             await self._rerender(interaction)
+            # The native link / invite rule carries the exemptions itself;
+            # synced after the panel answered, so the REST calls never eat the
+            # interaction window.
+            if not await self.cog.sync_native_filters(self.guild):
+                await self._native_warning(interaction)
         except Exception:
             log.exception("AutoMod panel exemption update failed")
             await self._safe_fail(interaction)
