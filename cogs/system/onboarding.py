@@ -181,10 +181,11 @@ class OnboardingCardView(LocaleLayoutView):
         start_lines = [
             "**" + _("Getting started") + "**",
             _(
-                "Use `/config` to set up prefixes, autorole, leveling, "
+                "Use `/config` to set up autorole, leveling, "
                 "starboard, automod, mod-log, and welcome messages in one place."
             ),
             _("Use `/help` to browse every command."),
+            _("Right-click a message, then **Apps > Quote**, to quote it."),
             _("Use `/language` to pick the language I speak in this server."),
         ]
         container.add_item(discord.ui.TextDisplay("\n".join(start_lines)))

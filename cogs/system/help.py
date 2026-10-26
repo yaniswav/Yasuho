@@ -516,11 +516,11 @@ class HelpView(AuthorLayoutView):
                 + _("🏠 Server")
                 + "**\n"
                 + _(
-                    "Prefix: `{prefix}`\n"
+                    "Commands: `/` or `@{bot} <command>`\n"
                     "Members: **{members}**\n"
                     "Leveling: {leveling}"
                 ).format(
-                    prefix=prefix,
+                    bot=bot.user.name,
                     members=f"{guild.member_count:,}",
                     leveling=leveling,
                 )

@@ -22,7 +22,7 @@ their responses, role menus. This data belongs to the server, not to a user.
 **Moderation records** (per server): warnings and moderation cases created by
 that server's moderators (user ID, moderator ID, reason, timestamp). These exist
 so that server moderation works. There is no automatic expiry: a warning is kept
-until a moderator removes it (`?delwarn`, or the remove button on the warn
+until a moderator removes it (`/delwarn`, or the remove button on the warn
 list), and every moderation record is kept until the server removes the bot,
 after which that server's data is purged on the schedule below.
 
@@ -45,9 +45,10 @@ the bot uploads a plain-text transcript of the thread to **that server's own
 channel** when the ticket closes, so the staff team keeps a record of what was
 agreed. The file is built in memory, sent once, and never stored by the bot;
 from then on it lives in that Discord channel, under that server's control, and
-it outlives the thread. It contains what was said in the ticket, so a server
-should point that setting at a staff-only channel - the bot warns when the
-channel it is pointed at is readable by everyone. A server with no ticket log
+it outlives the thread. Because it contains what was said in the ticket, the
+bot only ever uploads it to a **staff-only** channel: if everyone in the server
+can read the ticket log channel (or the bot cannot check), the ticket is logged
+there without its transcript, and the bot says so. A server with no ticket log
 channel gets no transcript at all. The closing message in the thread tells you
 which of the two happened, every time: that no transcript was saved, or that
 one was just saved to that server's ticket log.
@@ -78,7 +79,7 @@ alerts (`/anilist airing`) or new-chapter alerts (`/anilist chapters`), we store
 your Discord user ID, your AniList numeric user ID and the date you opted in,
 which is what lets the alert poller read your PUBLIC list without using your
 token. Turning an alert off stops the DMs and keeps the row so you can turn it
-back on later; `?mydata deleteprofile` deletes the row itself.
+back on later; `/mydata deleteprofile` deletes the row itself.
 
 **Presence / "recently played"** (strictly OPT-IN): if - and only if - you
 enable it (`/profile presence gaming on`), the bot stores aggregate play data:
@@ -89,7 +90,7 @@ displayed live from Discord and never stored. Turning the feature off deletes
 the collected aggregates immediately.
 
 **Avatar history** (opt-out): past avatars can be listed by an avatar-history
-command; `?mydata deleteavatars` permanently deletes yours and disables future
+command; `/mydata deleteavatars` permanently deletes yours and disables future
 tracking for you.
 
 **Top.gg votes**: if you vote for the bot on top.gg, top.gg tells us that you
@@ -123,14 +124,20 @@ ID, no server ID.
 
 ## What we do NOT do
 
-- We do not store your conversations. Messages are processed in memory (prefix
-  commands, automod filtering, custom command triggers, mini-games) and
-  discarded. The only text we keep is text explicitly given to a command for
-  that purpose, all listed above: reminder texts, AFK status messages,
-  moderation case reasons, and custom command replies and scheduled
-  announcements written by server managers. A deleted message is held in memory for at most 15 minutes so
-  moderators can use the snipe command, and is never written to disk. Our logs
-  never contain message text.
+- We do not store your conversations. The bot reads message text only where
+  it is needed: commands addressed to it (a slash command, or a message that
+  mentions the bot) and moderation. Moderation means the mod log, which, when a
+  server enables it, copies the text of edited and deleted messages into the
+  log channel that server chose - only if that channel is staff-only - and the
+  moderator-only snipe command, which keeps the last deleted message of a
+  channel in memory for at most 15 minutes and never writes it to disk. Link
+  and invite filtering is done by Discord's own AutoMod rules, which the bot
+  configures without reading messages. The only text we keep is text
+  explicitly given to a command for that purpose, all listed above: reminder
+  texts, AFK status messages, moderation case reasons, and custom command
+  replies and scheduled announcements written by server managers. Our own
+  technical logs never contain message text; mod-log and ticket-log channels
+  are Discord channels that belong to the server, not logs we keep.
 - We do not use any data to train machine learning or AI models.
 - We do not sell or share data with third parties. External services are only
   contacted to render a feature you asked for, and only with what that feature
@@ -221,7 +228,7 @@ dashboard all stay in France.
 - Top.gg vote record: kept until you delete it. There is no automatic window,
   because the record IS the streak and the lifetime count it exists to show;
   ageing it out would quietly take a reward away. One row per voter, deleted in
-  full by `?mydata deleteprofile`.
+  full by `/mydata deleteprofile`.
 - Server-scoped data (configuration, moderation records, leveling) is purged on
   a retention schedule after the bot is removed from a server.
 
@@ -235,13 +242,13 @@ within one month. If you think your rights are not respected, you can lodge a
 complaint with the French data protection authority, the CNIL
 (https://www.cnil.fr).
 
-- `?mydata export` - receive a complete machine-readable export of everything
+- `/mydata export` - receive a complete machine-readable export of everything
   the bot holds about you (rate-limited to once per hour). Also available from
   the web dashboard. Records that involve someone else are limited to your own
   half of them: if you moderated a member, the export states which server, which
   case number, what action you took and when, never who the member was or what
   reason was written about them.
-- `?mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
+- `/mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
   accounts, visibility choices, collected presence data, your top.gg vote
   record, your personal rank card, your AniList link (the stored OAuth token),
   your AniList / MangaDex alert opt-ins, your limit notes and our copy of your
@@ -249,11 +256,11 @@ complaint with the French data protection authority, the CNIL
   again at the next check, because the perk depends on it. A gift the bot owner
   gave you stays in the owner's record of gifts until it is deleted on the
   schedule above.
-- `?mydata deleteavatars` - permanently delete your avatar history and disable
+- `/mydata deleteavatars` - permanently delete your avatar history and disable
   future tracking.
 - `/connections unlink` - unlink an external account (removes its data and
   visibility immediately).
-- `?anilist logout` - unlink your AniList account on its own: the stored OAuth
+- `/anilist logout` - unlink your AniList account on its own: the stored OAuth
   token is deleted immediately.
 - `/profile presence gaming off` - stop and forget presence collection.
 

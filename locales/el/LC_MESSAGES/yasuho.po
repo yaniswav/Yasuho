@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:47+0000\n"
+"POT-Creation-Date: 2026-10-26 11:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -785,11 +785,11 @@ msgstr "(αρχειοθετημένο)"
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
@@ -2602,7 +2602,7 @@ msgstr "Στιλ κάρτας μελών"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
 
@@ -2611,7 +2611,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
 
@@ -3323,7 +3323,7 @@ msgstr "Ανακοίνωση σεζόν"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:431 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση του πάνελ."
 
@@ -4073,7 +4073,7 @@ msgid "Ping"
 msgstr "Ping"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
+#: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
 msgid "None"
 msgstr "Κανένα"
 
@@ -4454,11 +4454,11 @@ msgstr "Σύνοψη προεπισκόπησης"
 msgid "Saved the `{name}` command."
 msgstr "Αποθηκεύτηκε η εντολή `{name}`."
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "text"
 msgstr "κείμενο"
 
@@ -4500,75 +4500,75 @@ msgid "Custom commands"
 msgstr "Προσαρμοσμένες εντολές"
 
 #: cogs/config/customcommands.py:538
-msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
-msgstr "Εντολές που εκτελούν τα μέλη με το πρόθεμα του διακομιστή. Πρόσθεσε μια απάντηση κειμένου ή embed, ή διάλεξε μία για έλεγχο και διαγραφή."
+msgid "Commands members run with `/custom` or by mentioning me (`@me name`). Add a text or embed reply, or pick one to inspect and delete."
+msgstr "Εντολές που τα μέλη εκτελούν με `/custom` ή κάνοντάς μου mention (`@εγώ όνομα`). Πρόσθεσε απάντηση κειμένου ή embed, ή διάλεξε μία για έλεγχο και διαγραφή."
 
-#: cogs/config/customcommands.py:545
+#: cogs/config/customcommands.py:546
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:552
+#: cogs/config/customcommands.py:553
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} εντολή/ές"
 
-#: cogs/config/customcommands.py:558
+#: cogs/config/customcommands.py:559
 msgid "None yet"
 msgstr "Καμία ακόμη"
 
-#: cogs/config/customcommands.py:559
+#: cogs/config/customcommands.py:560
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Χρησιμοποίησε **Προσθήκη κειμένου** ή **Προσθήκη embed** για να δημιουργήσεις μία."
 
-#: cogs/config/customcommands.py:566
+#: cogs/config/customcommands.py:567
 msgid "An embed reply."
 msgstr "Μια απάντηση embed."
 
-#: cogs/config/customcommands.py:569
+#: cogs/config/customcommands.py:570
 msgid "*empty*"
 msgstr "*κενό*"
 
-#: cogs/config/customcommands.py:573
+#: cogs/config/customcommands.py:574
 #, python-brace-format
 msgid "used {count}x"
 msgstr "χρησιμοποιήθηκε {count}x"
 
-#: cogs/config/customcommands.py:577
+#: cogs/config/customcommands.py:578
 #, python-brace-format
 msgid "aliases: {list}"
 msgstr "συνώνυμα: {list}"
 
-#: cogs/config/customcommands.py:583
+#: cogs/config/customcommands.py:584
 #, python-brace-format
 msgid "cooldown: {sec}s"
 msgstr "cooldown: {sec}s"
 
-#: cogs/config/customcommands.py:587
+#: cogs/config/customcommands.py:588
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Επιλέχθηκε: {name}"
 
-#: cogs/config/customcommands.py:591
+#: cogs/config/customcommands.py:592
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Placeholders: {placeholders}"
 
-#: cogs/config/customcommands.py:669
+#: cogs/config/customcommands.py:670
 #, python-brace-format
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "Το συνώνυμο `{alias}` δεν μπορεί να χρησιμοποιηθεί: {why}"
 
-#: cogs/config/customcommands.py:748
+#: cogs/config/customcommands.py:749
 #, python-brace-format
 msgid "This server has no custom command called `{name}`."
 msgstr "Αυτός ο διακομιστής δεν έχει προσαρμοσμένη εντολή με όνομα `{name}`."
 
-#: cogs/config/customcommands.py:756
+#: cogs/config/customcommands.py:757
 msgid "That command is on cooldown, try again in a moment."
 msgstr "Αυτή η εντολή είναι σε αναμονή, δοκίμασε ξανά σε λίγο."
 
-#: cogs/config/customcommands.py:762
+#: cogs/config/customcommands.py:763
 msgid "That command has nothing to say."
 msgstr "Αυτή η εντολή δεν έχει τίποτα να πει."
 
@@ -5286,7 +5286,7 @@ msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:270
+#: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6540,38 +6540,38 @@ msgstr "Έχεις 60 δευτερόλεπτα. Πάτα το κουμπί κα�
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "Τελείωσε ο χρόνος! Κανείς δεν κατάφερε να ολοκληρώσει την πρόταση εγκαίρως."
 
-#: cogs/moderation/automod.py:260
+#: cogs/moderation/automod.py:262
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "Το {feature} είναι τώρα {state}."
 
-#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+#: cogs/moderation/automod.py:267 cogs/moderation/automod_panel.py:420
 msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
 msgstr "Αποθηκεύτηκε, αλλά ο κανόνας του Discord δεν ενημερώθηκε: το Yasuho χρειάζεται την άδεια **Διαχείριση διακομιστή**, και ο διακομιστής μπορεί να έχει το πολύ 6 κανόνες λέξεων-κλειδιών (ή 20 εξαιρούμενους ρόλους)."
 
-#: cogs/moderation/automod.py:284
+#: cogs/moderation/automod.py:286
 msgid "Link filtering"
 msgstr "Φιλτράρισμα συνδέσμων"
 
-#: cogs/moderation/automod.py:297
+#: cogs/moderation/automod.py:299
 msgid "Invite filtering"
 msgstr "Φιλτράρισμα προσκλήσεων"
 
-#: cogs/moderation/automod.py:310
+#: cogs/moderation/automod.py:312
 msgid "Spam filtering"
 msgstr "Φιλτράρισμα spam"
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:705
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι πρόσκλησης Discord δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:668
+#: cogs/moderation/automod.py:710
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} οι σύνδεσμοι δεν επιτρέπονται εδώ."
 
-#: cogs/moderation/automod.py:943
+#: cogs/moderation/automod.py:985
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} πιο αργά - στέλνεις μηνύματα πολύ γρήγορα."
@@ -6677,60 +6677,60 @@ msgstr "Ενέργεια όταν ενεργοποιηθεί ένα φίλτρο
 msgid "Exempt roles (select to replace)..."
 msgstr "Εξαιρούμενοι ρόλοι (επίλεξε για αντικατάσταση)..."
 
-#: cogs/moderation/automod_panel.py:206
+#: cogs/moderation/automod_panel.py:208
 msgid "Exempt channels (select to replace)..."
 msgstr "Εξαιρούμενα κανάλια (επίλεξε για αντικατάσταση)..."
 
-#: cogs/moderation/automod_panel.py:286
+#: cogs/moderation/automod_panel.py:288
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:289
+#: cogs/moderation/automod_panel.py:291
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "Για να μένει ο διακομιστής τακτοποιημένος: η Yasuho σαρώνει κάθε μήνυμα για τα φίλτρα περιεχομένου, ενώ τα εγγενή φίλτρα του Discord μπλοκάρουν τα ευρήματα πριν καν δημοσιευτούν."
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:302
 msgid "Content filters"
 msgstr "Φίλτρα περιεχομένου"
 
-#: cogs/moderation/automod_panel.py:301
+#: cogs/moderation/automod_panel.py:303
 msgid "Checked by Yasuho on every message."
 msgstr "Ελέγχονται από τη Yasuho σε κάθε μήνυμα."
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:312
 msgid "Native filters (Discord)"
 msgstr "Εγγενή φίλτρα (Discord)"
 
-#: cogs/moderation/automod_panel.py:311
+#: cogs/moderation/automod_panel.py:313
 msgid "Enforced by Discord before a message is posted."
 msgstr "Επιβάλλονται από το Discord πριν καν δημοσιευτεί το μήνυμα."
 
-#: cogs/moderation/automod_panel.py:330
+#: cogs/moderation/automod_panel.py:332
 msgid "When a content filter trips"
 msgstr "Όταν ενεργοποιηθεί ένα φίλτρο περιεχομένου"
 
-#: cogs/moderation/automod_panel.py:332
+#: cogs/moderation/automod_panel.py:334
 msgid "Action"
 msgstr "Ενέργεια"
 
-#: cogs/moderation/automod_panel.py:334
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt roles"
 msgstr "Εξαιρούμενοι ρόλοι"
 
-#: cogs/moderation/automod_panel.py:336
+#: cogs/moderation/automod_panel.py:338
 msgid "Exempt channels"
 msgstr "Εξαιρούμενα κανάλια"
 
-#: cogs/moderation/automod_panel.py:340
+#: cogs/moderation/automod_panel.py:342
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "Τα μέλη με εξαιρούμενο ρόλο, και τα μηνύματα σε εξαιρούμενο κανάλι, παρακάμπτουν εντελώς τα φίλτρα περιεχομένου."
 
-#: cogs/moderation/automod_panel.py:390
+#: cogs/moderation/automod_panel.py:392
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Τα εγγενή φίλτρα απαιτούν η Yasuho να έχει το δικαίωμα Διαχείρισης διακομιστή."
 
-#: cogs/moderation/automod_panel.py:443
+#: cogs/moderation/automod_panel.py:445
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Η Yasuho χρειάζεται το δικαίωμα **Διαχείριση διακομιστή** για να αλλάξει τα εγγενή φίλτρα του Discord."
 
@@ -7054,7 +7054,7 @@ msgstr "Δεν μπορείς να μετακινήσεις έναν ρόλο σ
 msgid "{role} moved."
 msgstr "Ο ρόλος {role} μετακινήθηκε."
 
-#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:686
 msgid "You do not have permission to do that"
 msgstr "Δεν έχεις δικαίωμα να το κάνεις αυτό"
 
@@ -9268,11 +9268,11 @@ msgstr "Ορίστε η εξαγωγή των προσωπικών σου δεδ
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ":information_source: Χρήση εντολής: `{prefix}{command} {signature}`"
 
-#: cogs/system/errors.py:59
+#: cogs/system/errors.py:60
 msgid "**Seems like something went wrong while executing command:**"
 msgstr "**Φαίνεται ότι κάτι πήγε στραβά κατά την εκτέλεση της εντολής:**"
 
-#: cogs/system/errors.py:61
+#: cogs/system/errors.py:62
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
@@ -9281,16 +9281,16 @@ msgstr ""
 ":question: Τι να κάνεις: `Ανέφερε αυτό το αναγνωριστικό σφάλματος στον ιδιοκτήτη του bot`: `{error_id}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:510
+#: cogs/system/errors.py:511
 msgid "**Invalid command entered. Did you mean:**"
 msgstr "**Εισήχθη μη έγκυρη εντολή. Μήπως εννοούσες:**"
 
-#: cogs/system/errors.py:534
+#: cogs/system/errors.py:535
 msgid "**Seems like you're missing a required argument:**"
 msgstr "**Φαίνεται ότι σου λείπει ένα απαιτούμενο όρισμα:**"
 
-#: cogs/system/errors.py:535 cogs/system/errors.py:548
-#: cogs/system/errors.py:630 cogs/system/errors.py:670
+#: cogs/system/errors.py:536 cogs/system/errors.py:549
+#: cogs/system/errors.py:631 cogs/system/errors.py:671
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -9299,15 +9299,15 @@ msgstr ""
 ":warning: Σφάλμα: `{error}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:547
+#: cogs/system/errors.py:548
 msgid "**Seems like you gave me a bad argument:**"
 msgstr "**Φαίνεται ότι μου έδωσες ένα λάθος όρισμα:**"
 
-#: cogs/system/errors.py:561
+#: cogs/system/errors.py:562
 msgid "**Seems like you are on cooldown:**"
 msgstr "**Φαίνεται ότι είσαι σε cooldown:**"
 
-#: cogs/system/errors.py:562
+#: cogs/system/errors.py:563
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
@@ -9316,15 +9316,15 @@ msgstr ""
 ":hourglass: Υπολειπόμενος χρόνος: `{time}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:574
+#: cogs/system/errors.py:575
 msgid "I need more permissions!"
 msgstr "Χρειάζομαι περισσότερα δικαιώματα!"
 
-#: cogs/system/errors.py:584
+#: cogs/system/errors.py:585
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr "**Φαίνεται ότι δεν μπορείς να χρησιμοποιήσεις αυτή την εντολή σε προσωπικά μηνύματα:**"
 
-#: cogs/system/errors.py:586
+#: cogs/system/errors.py:587
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
@@ -9332,11 +9332,11 @@ msgstr ""
 "Πήγαινε σε έναν διακομιστή όπου βρίσκομαι ή προσκάλεσέ με στον διακομιστή σου\n"
 "invite.yasuho.xyz"
 
-#: cogs/system/errors.py:601
+#: cogs/system/errors.py:602
 msgid "**Seems like you gave me too many arguments:**"
 msgstr "**Φαίνεται ότι μου έδωσες πάρα πολλά ορίσματα:**"
 
-#: cogs/system/errors.py:603 cogs/system/errors.py:617
+#: cogs/system/errors.py:604 cogs/system/errors.py:618
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`\n"
@@ -9345,15 +9345,15 @@ msgstr ""
 ":question: Τι να κάνεις: `δες το {prefix}help και προσπάθησε να είσαι πιο συγκεκριμένος`\n"
 "{usage}"
 
-#: cogs/system/errors.py:615
+#: cogs/system/errors.py:616
 msgid "**Seems like you did something wrong:**"
 msgstr "**Φαίνεται ότι έκανες κάτι λάθος:**"
 
-#: cogs/system/errors.py:629
+#: cogs/system/errors.py:630
 msgid "**Seems like you are missing permissions:**"
 msgstr "**Φαίνεται ότι σου λείπουν δικαιώματα:**"
 
-#: cogs/system/errors.py:669
+#: cogs/system/errors.py:670
 msgid "**Seems like I am missing permissions:**"
 msgstr "**Φαίνεται ότι μου λείπουν δικαιώματα:**"
 
@@ -9468,11 +9468,11 @@ msgstr "🏠 Διακομιστής"
 #: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
-"Prefix: `{prefix}`\n"
+"Commands: `/` or `@{bot} <command>`\n"
 "Members: **{members}**\n"
 "Leveling: {leveling}"
 msgstr ""
-"Πρόθεμα: `{prefix}`\n"
+"Εντολές: `/` ή `@{bot} <εντολή>`\n"
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
@@ -9574,14 +9574,18 @@ msgid "Getting started"
 msgstr "Ξεκινώντας"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Χρησιμοποίησε `/config` για να ρυθμίσεις prefixes, autorole, επίπεδα, starboard, automod, mod-log και μηνύματα καλωσορίσματος σε ένα μέρος."
+msgid "Use `/config` to set up autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "Χρησιμοποίησε το `/config` για να ρυθμίσεις autorole, επίπεδα, starboard, automod, mod-log και μηνύματα καλωσορίσματος σε ένα σημείο."
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
 msgstr "Χρησιμοποίησε `/help` για να δεις όλες τις εντολές."
 
 #: cogs/system/onboarding.py:188
+msgid "Right-click a message, then **Apps > Quote**, to quote it."
+msgstr "Κάνε δεξί κλικ σε ένα μήνυμα και μετά **Apps > Quote** για να το παραθέσεις."
+
+#: cogs/system/onboarding.py:189
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Χρησιμοποίησε `/language` για να επιλέξεις τη γλώσσα που μιλάω σε αυτόν τον server."
 

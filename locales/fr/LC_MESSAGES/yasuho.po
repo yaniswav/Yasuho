@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:47+0000\n"
+"POT-Creation-Date: 2026-10-26 11:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -785,11 +785,11 @@ msgstr "(archivé)"
 msgid "none"
 msgstr "aucun"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "enabled"
 msgstr "activé"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "disabled"
 msgstr "désactivé"
 
@@ -2602,7 +2602,7 @@ msgstr "Styles de carte des membres"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Vous seul pouvez utiliser ces commandes"
 
@@ -2611,7 +2611,7 @@ msgstr "Vous seul pouvez utiliser ces commandes"
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expire après 3 min"
 
@@ -3323,7 +3323,7 @@ msgstr "Annonce de saison"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:431 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "Une erreur est survenue lors de la mise à jour du panneau."
 
@@ -4073,7 +4073,7 @@ msgid "Ping"
 msgstr "Mention"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
+#: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
 msgid "None"
 msgstr "Aucun"
 
@@ -4454,11 +4454,11 @@ msgstr "Resume de l'apercu"
 msgid "Saved the `{name}` command."
 msgstr "Commande `{name}` enregistree."
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "text"
 msgstr "texte"
 
@@ -4500,75 +4500,75 @@ msgid "Custom commands"
 msgstr "Commandes personnalisees"
 
 #: cogs/config/customcommands.py:538
-msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
-msgstr "Commandes que les membres lancent avec le prefixe du serveur. Ajoute une reponse texte ou embed, ou selectionnes-en une pour l'inspecter et la supprimer."
+msgid "Commands members run with `/custom` or by mentioning me (`@me name`). Add a text or embed reply, or pick one to inspect and delete."
+msgstr "Commandes que les membres lancent avec `/custom` ou en me mentionnant (`@moi nom`). Ajoute une réponse texte ou embed, ou choisis-en une pour l'inspecter et la supprimer."
 
-#: cogs/config/customcommands.py:545
+#: cogs/config/customcommands.py:546
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:552
+#: cogs/config/customcommands.py:553
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} commande(s)"
 
-#: cogs/config/customcommands.py:558
+#: cogs/config/customcommands.py:559
 msgid "None yet"
 msgstr "Aucune pour l'instant"
 
-#: cogs/config/customcommands.py:559
+#: cogs/config/customcommands.py:560
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Utilise **Ajouter un texte** ou **Ajouter un embed** pour en creer une."
 
-#: cogs/config/customcommands.py:566
+#: cogs/config/customcommands.py:567
 msgid "An embed reply."
 msgstr "Une reponse embed."
 
-#: cogs/config/customcommands.py:569
+#: cogs/config/customcommands.py:570
 msgid "*empty*"
 msgstr "*vide*"
 
-#: cogs/config/customcommands.py:573
+#: cogs/config/customcommands.py:574
 #, python-brace-format
 msgid "used {count}x"
 msgstr "utilisée {count}x"
 
-#: cogs/config/customcommands.py:577
+#: cogs/config/customcommands.py:578
 #, python-brace-format
 msgid "aliases: {list}"
 msgstr "alias : {list}"
 
-#: cogs/config/customcommands.py:583
+#: cogs/config/customcommands.py:584
 #, python-brace-format
 msgid "cooldown: {sec}s"
 msgstr "recharge : {sec}s"
 
-#: cogs/config/customcommands.py:587
+#: cogs/config/customcommands.py:588
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Selectionne : {name}"
 
-#: cogs/config/customcommands.py:591
+#: cogs/config/customcommands.py:592
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Variables : {placeholders}"
 
-#: cogs/config/customcommands.py:669
+#: cogs/config/customcommands.py:670
 #, python-brace-format
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "L'alias `{alias}` n'est pas utilisable : {why}"
 
-#: cogs/config/customcommands.py:748
+#: cogs/config/customcommands.py:749
 #, python-brace-format
 msgid "This server has no custom command called `{name}`."
 msgstr "Ce serveur n'a pas de commande perso appelée `{name}`."
 
-#: cogs/config/customcommands.py:756
+#: cogs/config/customcommands.py:757
 msgid "That command is on cooldown, try again in a moment."
 msgstr "Cette commande est en recharge, réessaie dans un instant."
 
-#: cogs/config/customcommands.py:762
+#: cogs/config/customcommands.py:763
 msgid "That command has nothing to say."
 msgstr "Cette commande n'a rien à dire."
 
@@ -5286,7 +5286,7 @@ msgid "Role granted to new members"
 msgstr "Rôle attribué aux nouveaux membres"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:270
+#: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6540,38 +6540,38 @@ msgstr "Tu as 60 secondes. Appuie sur le bouton et tape-la !"
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "Temps écoulé ! Personne n'a réussi à terminer la phrase à temps."
 
-#: cogs/moderation/automod.py:260
+#: cogs/moderation/automod.py:262
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "{feature} est maintenant {state}."
 
-#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+#: cogs/moderation/automod.py:267 cogs/moderation/automod_panel.py:420
 msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
 msgstr "Enregistré, mais la règle Discord n'a pas pu être mise à jour : Yasuho a besoin de la permission **Gérer le serveur**, et le serveur peut avoir au plus 6 règles de mots-clés (ou 20 rôles exemptés)."
 
-#: cogs/moderation/automod.py:284
+#: cogs/moderation/automod.py:286
 msgid "Link filtering"
 msgstr "Filtrage des liens"
 
-#: cogs/moderation/automod.py:297
+#: cogs/moderation/automod.py:299
 msgid "Invite filtering"
 msgstr "Filtrage des invitations"
 
-#: cogs/moderation/automod.py:310
+#: cogs/moderation/automod.py:312
 msgid "Spam filtering"
 msgstr "Filtrage du spam"
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:705
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} les liens d'invitation Discord ne sont pas autorisés ici."
 
-#: cogs/moderation/automod.py:668
+#: cogs/moderation/automod.py:710
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} les liens ne sont pas autorisés ici."
 
-#: cogs/moderation/automod.py:943
+#: cogs/moderation/automod.py:985
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} doucement - tu envoies des messages trop vite."
@@ -6677,60 +6677,60 @@ msgstr "Action quand un filtre se déclenche..."
 msgid "Exempt roles (select to replace)..."
 msgstr "Rôles exemptés (sélectionnez pour remplacer)..."
 
-#: cogs/moderation/automod_panel.py:206
+#: cogs/moderation/automod_panel.py:208
 msgid "Exempt channels (select to replace)..."
 msgstr "Salons exemptés (sélectionnez pour remplacer)..."
 
-#: cogs/moderation/automod_panel.py:286
+#: cogs/moderation/automod_panel.py:288
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:289
+#: cogs/moderation/automod_panel.py:291
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "Pour garder le serveur propre : Yasuho analyse chaque message pour les filtres de contenu, tandis que les filtres natifs de Discord bloquent les correspondances avant même leur publication."
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:302
 msgid "Content filters"
 msgstr "Filtres de contenu"
 
-#: cogs/moderation/automod_panel.py:301
+#: cogs/moderation/automod_panel.py:303
 msgid "Checked by Yasuho on every message."
 msgstr "Vérifiés par Yasuho sur chaque message."
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:312
 msgid "Native filters (Discord)"
 msgstr "Filtres natifs (Discord)"
 
-#: cogs/moderation/automod_panel.py:311
+#: cogs/moderation/automod_panel.py:313
 msgid "Enforced by Discord before a message is posted."
 msgstr "Appliqués par Discord avant même que le message soit posté."
 
-#: cogs/moderation/automod_panel.py:330
+#: cogs/moderation/automod_panel.py:332
 msgid "When a content filter trips"
 msgstr "Quand un filtre de contenu se déclenche"
 
-#: cogs/moderation/automod_panel.py:332
+#: cogs/moderation/automod_panel.py:334
 msgid "Action"
 msgstr "Action"
 
-#: cogs/moderation/automod_panel.py:334
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt roles"
 msgstr "Rôles exemptés"
 
-#: cogs/moderation/automod_panel.py:336
+#: cogs/moderation/automod_panel.py:338
 msgid "Exempt channels"
 msgstr "Salons exemptés"
 
-#: cogs/moderation/automod_panel.py:340
+#: cogs/moderation/automod_panel.py:342
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "Les membres ayant un rôle exempté, et les messages dans un salon exempté, échappent totalement aux filtres de contenu."
 
-#: cogs/moderation/automod_panel.py:390
+#: cogs/moderation/automod_panel.py:392
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "Les filtres natifs exigent que Yasuho ait la permission Gérer le serveur."
 
-#: cogs/moderation/automod_panel.py:443
+#: cogs/moderation/automod_panel.py:445
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Yasuho a besoin de la permission **Gérer le serveur** pour modifier les filtres natifs de Discord."
 
@@ -7054,7 +7054,7 @@ msgstr "Tu ne peux pas déplacer un rôle au niveau ou au-dessus de mon rôle le
 msgid "{role} moved."
 msgstr "{role} déplacé."
 
-#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:686
 msgid "You do not have permission to do that"
 msgstr "Vous n'avez pas la permission de faire cela"
 
@@ -9268,11 +9268,11 @@ msgstr "Voici l'export de tes données personnelles demandé depuis le dashboard
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ":information_source: Utilisation de la commande : `{prefix}{command} {signature}`"
 
-#: cogs/system/errors.py:59
+#: cogs/system/errors.py:60
 msgid "**Seems like something went wrong while executing command:**"
 msgstr "**Il semble qu'une erreur soit survenue lors de l'exécution de la commande :**"
 
-#: cogs/system/errors.py:61
+#: cogs/system/errors.py:62
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
@@ -9281,16 +9281,16 @@ msgstr ""
 ":question: Que faire : `Signale cet identifiant d'erreur au propriétaire du bot` : `{error_id}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:510
+#: cogs/system/errors.py:511
 msgid "**Invalid command entered. Did you mean:**"
 msgstr "**Commande invalide saisie. Vouliez-vous dire :**"
 
-#: cogs/system/errors.py:534
+#: cogs/system/errors.py:535
 msgid "**Seems like you're missing a required argument:**"
 msgstr "**Il semble qu'il vous manque un argument requis :**"
 
-#: cogs/system/errors.py:535 cogs/system/errors.py:548
-#: cogs/system/errors.py:630 cogs/system/errors.py:670
+#: cogs/system/errors.py:536 cogs/system/errors.py:549
+#: cogs/system/errors.py:631 cogs/system/errors.py:671
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -9299,15 +9299,15 @@ msgstr ""
 ":warning: Erreur : `{error}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:547
+#: cogs/system/errors.py:548
 msgid "**Seems like you gave me a bad argument:**"
 msgstr "**Il semble que vous m'ayez donné un mauvais argument :**"
 
-#: cogs/system/errors.py:561
+#: cogs/system/errors.py:562
 msgid "**Seems like you are on cooldown:**"
 msgstr "**Il semble que vous soyez en temps de recharge :**"
 
-#: cogs/system/errors.py:562
+#: cogs/system/errors.py:563
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
@@ -9316,15 +9316,15 @@ msgstr ""
 ":hourglass: Temps restant : `{time}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:574
+#: cogs/system/errors.py:575
 msgid "I need more permissions!"
 msgstr "J'ai besoin de plus de permissions !"
 
-#: cogs/system/errors.py:584
+#: cogs/system/errors.py:585
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr "**Il semble que vous ne puissiez pas utiliser cette commande en messages privés :**"
 
-#: cogs/system/errors.py:586
+#: cogs/system/errors.py:587
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
@@ -9332,11 +9332,11 @@ msgstr ""
 "Rendez-vous dans un serveur où je suis présent ou invitez-moi sur votre serveur\n"
 "invite.yasuho.xyz"
 
-#: cogs/system/errors.py:601
+#: cogs/system/errors.py:602
 msgid "**Seems like you gave me too many arguments:**"
 msgstr "**Il semble que vous m'ayez donné trop d'arguments :**"
 
-#: cogs/system/errors.py:603 cogs/system/errors.py:617
+#: cogs/system/errors.py:604 cogs/system/errors.py:618
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`\n"
@@ -9345,15 +9345,15 @@ msgstr ""
 ":question: Que faire : `consultez {prefix}help et essayez d'être plus précis`\n"
 "{usage}"
 
-#: cogs/system/errors.py:615
+#: cogs/system/errors.py:616
 msgid "**Seems like you did something wrong:**"
 msgstr "**Il semble que vous ayez fait quelque chose de travers :**"
 
-#: cogs/system/errors.py:629
+#: cogs/system/errors.py:630
 msgid "**Seems like you are missing permissions:**"
 msgstr "**Il semble qu'il vous manque des permissions :**"
 
-#: cogs/system/errors.py:669
+#: cogs/system/errors.py:670
 msgid "**Seems like I am missing permissions:**"
 msgstr "**Il semble qu'il me manque des permissions :**"
 
@@ -9468,11 +9468,11 @@ msgstr "🏠 Serveur"
 #: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
-"Prefix: `{prefix}`\n"
+"Commands: `/` or `@{bot} <command>`\n"
 "Members: **{members}**\n"
 "Leveling: {leveling}"
 msgstr ""
-"Préfixe : `{prefix}`\n"
+"Commandes : `/` ou `@{bot} <commande>`\n"
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
@@ -9574,14 +9574,18 @@ msgid "Getting started"
 msgstr "Pour commencer"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Utilisez `/config` pour configurer préfixes, autorole, niveaux, starboard, automod, mod-log et messages de bienvenue en un seul endroit."
+msgid "Use `/config` to set up autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "Utilise `/config` pour configurer l'autorôle, les niveaux, le starboard, l'automod, le mod-log et les messages de bienvenue au même endroit."
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
 msgstr "Utilisez `/help` pour parcourir toutes les commandes."
 
 #: cogs/system/onboarding.py:188
+msgid "Right-click a message, then **Apps > Quote**, to quote it."
+msgstr "Clic droit sur un message, puis **Applications > Quote**, pour le citer."
+
+#: cogs/system/onboarding.py:189
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Utilisez `/language` pour choisir la langue que je parle sur ce serveur."
 

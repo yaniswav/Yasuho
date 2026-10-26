@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:47+0000\n"
+"POT-Creation-Date: 2026-10-26 11:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -783,11 +783,11 @@ msgstr "(アーカイブ済み)"
 msgid "none"
 msgstr "なし"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "enabled"
 msgstr "有効"
 
-#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:261
+#: cogs/anilist/feed.py:2913 cogs/moderation/automod.py:263
 msgid "disabled"
 msgstr "無効"
 
@@ -2580,7 +2580,7 @@ msgstr "メンバーのカードスタイル"
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
 #: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
-#: cogs/moderation/automod_panel.py:399 cogs/moderation/warn_config.py:437
+#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
 
@@ -2589,7 +2589,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
 #: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
-#: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:439
+#: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
 
@@ -3300,7 +3300,7 @@ msgstr "シーズン告知"
 #: cogs/community/leveling/seasons_views.py:462
 #: cogs/community/leveling/seasons_views.py:474
 #: cogs/community/leveling/seasons_views.py:499
-#: cogs/moderation/automod_panel.py:429 cogs/moderation/warn_config.py:456
+#: cogs/moderation/automod_panel.py:431 cogs/moderation/warn_config.py:456
 msgid "Something went wrong updating the panel."
 msgstr "パネルの更新中に問題が発生しました。"
 
@@ -4049,7 +4049,7 @@ msgid "Ping"
 msgstr "メンション"
 
 #: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:320 cogs/moderation/automod_panel.py:322
+#: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
 msgid "None"
 msgstr "なし"
 
@@ -4430,11 +4430,11 @@ msgstr "プレビューの概要"
 msgid "Saved the `{name}` command."
 msgstr "`{name}` コマンドを保存しました。"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "embed"
 msgstr "埋め込み"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:547
+#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
 msgid "text"
 msgstr "テキスト"
 
@@ -4476,75 +4476,75 @@ msgid "Custom commands"
 msgstr "カスタムコマンド"
 
 #: cogs/config/customcommands.py:538
-msgid "Commands members run with the server prefix. Add a text or embed reply, or pick one to inspect and delete."
-msgstr "メンバーがサーバープレフィックスで実行するコマンドです。テキストまたは埋め込みの返信を追加するか、1つ選んで確認・削除してください。"
+msgid "Commands members run with `/custom` or by mentioning me (`@me name`). Add a text or embed reply, or pick one to inspect and delete."
+msgstr "メンバーが `/custom` またはメンション（`@私 名前`）で実行するコマンドです。テキストか埋め込みの返信を追加するか、確認・削除するものを選んでください。"
 
-#: cogs/config/customcommands.py:545
+#: cogs/config/customcommands.py:546
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:552
+#: cogs/config/customcommands.py:553
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} 個のコマンド"
 
-#: cogs/config/customcommands.py:558
+#: cogs/config/customcommands.py:559
 msgid "None yet"
 msgstr "まだありません"
 
-#: cogs/config/customcommands.py:559
+#: cogs/config/customcommands.py:560
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "**Add text** または **Add embed** を使って作成してください。"
 
-#: cogs/config/customcommands.py:566
+#: cogs/config/customcommands.py:567
 msgid "An embed reply."
 msgstr "埋め込みの返信です。"
 
-#: cogs/config/customcommands.py:569
+#: cogs/config/customcommands.py:570
 msgid "*empty*"
 msgstr "*空*"
 
-#: cogs/config/customcommands.py:573
+#: cogs/config/customcommands.py:574
 #, python-brace-format
 msgid "used {count}x"
 msgstr "{count}回使用"
 
-#: cogs/config/customcommands.py:577
+#: cogs/config/customcommands.py:578
 #, python-brace-format
 msgid "aliases: {list}"
 msgstr "エイリアス: {list}"
 
-#: cogs/config/customcommands.py:583
+#: cogs/config/customcommands.py:584
 #, python-brace-format
 msgid "cooldown: {sec}s"
 msgstr "クールダウン: {sec}s"
 
-#: cogs/config/customcommands.py:587
+#: cogs/config/customcommands.py:588
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "選択中: {name}"
 
-#: cogs/config/customcommands.py:591
+#: cogs/config/customcommands.py:592
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "プレースホルダー: {placeholders}"
 
-#: cogs/config/customcommands.py:669
+#: cogs/config/customcommands.py:670
 #, python-brace-format
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "エイリアス `{alias}` は使用できません: {why}"
 
-#: cogs/config/customcommands.py:748
+#: cogs/config/customcommands.py:749
 #, python-brace-format
 msgid "This server has no custom command called `{name}`."
 msgstr "このサーバーには `{name}` という名前のカスタムコマンドはありません。"
 
-#: cogs/config/customcommands.py:756
+#: cogs/config/customcommands.py:757
 msgid "That command is on cooldown, try again in a moment."
 msgstr "このコマンドはクールダウン中です。少し待ってからもう一度お試しください。"
 
-#: cogs/config/customcommands.py:762
+#: cogs/config/customcommands.py:763
 msgid "That command has nothing to say."
 msgstr "このコマンドには表示する内容がありません。"
 
@@ -5261,7 +5261,7 @@ msgid "Role granted to new members"
 msgstr "新しいメンバーに付与されるロール"
 
 #: cogs/config/settings.py:97 cogs/config/settings.py:211
-#: cogs/moderation/automod.py:270
+#: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
@@ -6514,38 +6514,38 @@ msgstr "制限時間は60秒。ボタンを押して入力しよう！"
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "時間切れ! 誰も時間内に文章を完成させられませんでした。"
 
-#: cogs/moderation/automod.py:260
+#: cogs/moderation/automod.py:262
 #, python-brace-format
 msgid "{feature} is now {state}."
 msgstr "{feature}は{state}になりました。"
 
-#: cogs/moderation/automod.py:265 cogs/moderation/automod_panel.py:418
+#: cogs/moderation/automod.py:267 cogs/moderation/automod_panel.py:420
 msgid "Saved, but Discord's rule could not be updated: Yasuho needs the **Manage Server** permission, and the server can have at most 6 keyword rules (or 20 exempt roles)."
 msgstr "保存しましたが、Discord のルールを更新できませんでした: Yasuho には **サーバー管理** 権限が必要で、サーバーに設定できるキーワードルールは最大 6 個（除外ロールは最大 20 個）です。"
 
-#: cogs/moderation/automod.py:284
+#: cogs/moderation/automod.py:286
 msgid "Link filtering"
 msgstr "リンクのフィルタリング"
 
-#: cogs/moderation/automod.py:297
+#: cogs/moderation/automod.py:299
 msgid "Invite filtering"
 msgstr "招待リンクのフィルタリング"
 
-#: cogs/moderation/automod.py:310
+#: cogs/moderation/automod.py:312
 msgid "Spam filtering"
 msgstr "スパムのフィルタリング"
 
-#: cogs/moderation/automod.py:663
+#: cogs/moderation/automod.py:705
 #, python-brace-format
 msgid "{user} Discord invite links aren't allowed here."
 msgstr "{user} ここではDiscordの招待リンクは許可されていません。"
 
-#: cogs/moderation/automod.py:668
+#: cogs/moderation/automod.py:710
 #, python-brace-format
 msgid "{user} links aren't allowed here."
 msgstr "{user} ここではリンクは許可されていません。"
 
-#: cogs/moderation/automod.py:943
+#: cogs/moderation/automod.py:985
 #, python-brace-format
 msgid "{user} slow down - you're sending messages too fast."
 msgstr "{user} 落ち着いて - メッセージの送信が速すぎます。"
@@ -6651,60 +6651,60 @@ msgstr "フィルター発動時のアクション..."
 msgid "Exempt roles (select to replace)..."
 msgstr "除外ロール (選択して置き換え)..."
 
-#: cogs/moderation/automod_panel.py:206
+#: cogs/moderation/automod_panel.py:208
 msgid "Exempt channels (select to replace)..."
 msgstr "除外チャンネル (選択して置き換え)..."
 
-#: cogs/moderation/automod_panel.py:286
+#: cogs/moderation/automod_panel.py:288
 #, python-brace-format
 msgid "AutoMod - {guild}"
 msgstr "AutoMod - {guild}"
 
-#: cogs/moderation/automod_panel.py:289
+#: cogs/moderation/automod_panel.py:291
 msgid "Keeping the server tidy: Yasuho scans each message for the content filters, while Discord's native filters block matches before they are ever posted."
 msgstr "サーバーを綺麗に保つために、Yasuhoがコンテンツフィルターで各メッセージをスキャンし、Discordのネイティブフィルターは投稿前にブロックします。"
 
-#: cogs/moderation/automod_panel.py:300
+#: cogs/moderation/automod_panel.py:302
 msgid "Content filters"
 msgstr "コンテンツフィルター"
 
-#: cogs/moderation/automod_panel.py:301
+#: cogs/moderation/automod_panel.py:303
 msgid "Checked by Yasuho on every message."
 msgstr "Yasuhoがすべてのメッセージをチェックします。"
 
-#: cogs/moderation/automod_panel.py:310
+#: cogs/moderation/automod_panel.py:312
 msgid "Native filters (Discord)"
 msgstr "ネイティブフィルター (Discord)"
 
-#: cogs/moderation/automod_panel.py:311
+#: cogs/moderation/automod_panel.py:313
 msgid "Enforced by Discord before a message is posted."
 msgstr "メッセージが投稿される前にDiscordが適用します。"
 
-#: cogs/moderation/automod_panel.py:330
+#: cogs/moderation/automod_panel.py:332
 msgid "When a content filter trips"
 msgstr "コンテンツフィルター発動時"
 
-#: cogs/moderation/automod_panel.py:332
+#: cogs/moderation/automod_panel.py:334
 msgid "Action"
 msgstr "アクション"
 
-#: cogs/moderation/automod_panel.py:334
+#: cogs/moderation/automod_panel.py:336
 msgid "Exempt roles"
 msgstr "除外ロール"
 
-#: cogs/moderation/automod_panel.py:336
+#: cogs/moderation/automod_panel.py:338
 msgid "Exempt channels"
 msgstr "除外チャンネル"
 
-#: cogs/moderation/automod_panel.py:340
+#: cogs/moderation/automod_panel.py:342
 msgid "Members with an exempt role, and messages in an exempt channel, skip the content filters entirely."
 msgstr "除外ロールを持つメンバーと除外チャンネルのメッセージは、コンテンツフィルターの対象外です。"
 
-#: cogs/moderation/automod_panel.py:390
+#: cogs/moderation/automod_panel.py:392
 msgid "Native filters need Yasuho to have the Manage Server permission."
 msgstr "ネイティブフィルターにはYasuhoにサーバー管理権限が必要です。"
 
-#: cogs/moderation/automod_panel.py:443
+#: cogs/moderation/automod_panel.py:445
 msgid "Yasuho needs the **Manage Server** permission to change Discord's native filters."
 msgstr "Discordのネイティブフィルターを変更するには、Yasuhoに**サーバー管理**権限が必要です。"
 
@@ -7026,7 +7026,7 @@ msgstr "私の最上位ロール以上の位置にロールを移動すること
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:685
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:686
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
@@ -9228,11 +9228,11 @@ msgstr "ダッシュボードからリクエストされた個人データのエ
 msgid ":information_source: Command usage: `{prefix}{command} {signature}`"
 msgstr ":information_source: コマンドの使い方: `{prefix}{command} {signature}`"
 
-#: cogs/system/errors.py:59
+#: cogs/system/errors.py:60
 msgid "**Seems like something went wrong while executing command:**"
 msgstr "**コマンドの実行中に問題が発生したようです:**"
 
-#: cogs/system/errors.py:61
+#: cogs/system/errors.py:62
 #, python-brace-format
 msgid ""
 ":question: What to do: `Report this error identifier to the bot owner`: `{error_id}`\n"
@@ -9241,16 +9241,16 @@ msgstr ""
 ":question: 対処法: `このエラーIDをボットの所有者に報告してください`: `{error_id}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:510
+#: cogs/system/errors.py:511
 msgid "**Invalid command entered. Did you mean:**"
 msgstr "**無効なコマンドが入力されました。もしかして:**"
 
-#: cogs/system/errors.py:534
+#: cogs/system/errors.py:535
 msgid "**Seems like you're missing a required argument:**"
 msgstr "**必須の引数が不足しているようです:**"
 
-#: cogs/system/errors.py:535 cogs/system/errors.py:548
-#: cogs/system/errors.py:630 cogs/system/errors.py:670
+#: cogs/system/errors.py:536 cogs/system/errors.py:549
+#: cogs/system/errors.py:631 cogs/system/errors.py:671
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -9259,15 +9259,15 @@ msgstr ""
 ":warning: エラー: `{error}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:547
+#: cogs/system/errors.py:548
 msgid "**Seems like you gave me a bad argument:**"
 msgstr "**不正な引数が指定されたようです:**"
 
-#: cogs/system/errors.py:561
+#: cogs/system/errors.py:562
 msgid "**Seems like you are on cooldown:**"
 msgstr "**クールダウン中のようです:**"
 
-#: cogs/system/errors.py:562
+#: cogs/system/errors.py:563
 #, python-brace-format
 msgid ""
 ":hourglass: Remaining time: `{time}`\n"
@@ -9276,15 +9276,15 @@ msgstr ""
 ":hourglass: 残り時間: `{time}`\n"
 "{usage}"
 
-#: cogs/system/errors.py:574
+#: cogs/system/errors.py:575
 msgid "I need more permissions!"
 msgstr "もっと権限が必要です!"
 
-#: cogs/system/errors.py:584
+#: cogs/system/errors.py:585
 msgid "**Seems like you can't use this command in private messages:**"
 msgstr "**このコマンドはプライベートメッセージでは使用できないようです:**"
 
-#: cogs/system/errors.py:586
+#: cogs/system/errors.py:587
 msgid ""
 "Go in a guild where I am or invite me in your server\n"
 "invite.yasuho.xyz"
@@ -9292,11 +9292,11 @@ msgstr ""
 "私がいるサーバーに移動するか、あなたのサーバーに私を招待してください\n"
 "invite.yasuho.xyz"
 
-#: cogs/system/errors.py:601
+#: cogs/system/errors.py:602
 msgid "**Seems like you gave me too many arguments:**"
 msgstr "**引数が多すぎるようです:**"
 
-#: cogs/system/errors.py:603 cogs/system/errors.py:617
+#: cogs/system/errors.py:604 cogs/system/errors.py:618
 #, python-brace-format
 msgid ""
 ":question: What to do: `look at {prefix}help and try being more specific`\n"
@@ -9305,15 +9305,15 @@ msgstr ""
 ":question: 対処法: `{prefix}help を見て、もっと具体的に指定してみてください`\n"
 "{usage}"
 
-#: cogs/system/errors.py:615
+#: cogs/system/errors.py:616
 msgid "**Seems like you did something wrong:**"
 msgstr "**何か間違ったことをしたようです:**"
 
-#: cogs/system/errors.py:629
+#: cogs/system/errors.py:630
 msgid "**Seems like you are missing permissions:**"
 msgstr "**権限が不足しているようです:**"
 
-#: cogs/system/errors.py:669
+#: cogs/system/errors.py:670
 msgid "**Seems like I am missing permissions:**"
 msgstr "**私の権限が不足しているようです:**"
 
@@ -9426,13 +9426,13 @@ msgstr "🏠 サーバー"
 #: cogs/system/help.py:519
 #, python-brace-format
 msgid ""
-"Prefix: `{prefix}`\n"
+"Commands: `/` or `@{bot} <command>`\n"
 "Members: **{members}**\n"
 "Leveling: {leveling}"
 msgstr ""
-"プレフィックス: `{prefix}`\n"
+"コマンド: `/` または `@{bot} <コマンド>`\n"
 "メンバー: **{members}**\n"
-"レベリング: {leveling}"
+"レベル: {leveling}"
 
 #: cogs/system/help.py:531
 msgid "🏠 Direct Messages"
@@ -9531,14 +9531,18 @@ msgid "Getting started"
 msgstr "はじめに"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "`/config` を使うと、プレフィックス、オートロール、レベル、starboard、自動モデレーション、mod-log、ウェルカムメッセージを一か所で設定できます。"
+msgid "Use `/config` to set up autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "`/config` で自動ロール、レベル、スターボード、オートモッド、モッドログ、ウェルカムメッセージをまとめて設定できます。"
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
 msgstr "`/help` を使うとすべてのコマンドを一覧できます。"
 
 #: cogs/system/onboarding.py:188
+msgid "Right-click a message, then **Apps > Quote**, to quote it."
+msgstr "メッセージを右クリックして **アプリ > Quote** で引用できます。"
+
+#: cogs/system/onboarding.py:189
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "`/language` を使って、このサーバーで私が話す言語を選べます。"
 

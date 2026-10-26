@@ -39,7 +39,8 @@ def _usage(ctx):
     return (
         _(":information_source: Command usage: `{prefix}{command} {signature}`")
         .format(
-            prefix=ctx.prefix,
+            # clean_prefix: a mention prefix renders as @Name, not <@id>.
+            prefix=ctx.clean_prefix,
             command=ctx.command,
             signature=ctx.command.signature,
         )
@@ -602,7 +603,7 @@ class Errors(commands.Cog):
                     _(
                         ":question: What to do: `look at {prefix}help and try being "
                         "more specific`\n{usage}"
-                    ).format(prefix=ctx.prefix, usage=_usage(ctx)),
+                    ).format(prefix=ctx.clean_prefix, usage=_usage(ctx)),
                 ),
                 surface="too-many-arguments",
             )
@@ -616,7 +617,7 @@ class Errors(commands.Cog):
                     _(
                         ":question: What to do: `look at {prefix}help and try being "
                         "more specific`\n{usage}"
-                    ).format(prefix=ctx.prefix, usage=_usage(ctx)),
+                    ).format(prefix=ctx.clean_prefix, usage=_usage(ctx)),
                 ),
                 surface="user-input-error",
             )

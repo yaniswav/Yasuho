@@ -613,6 +613,7 @@ def _handler_ctx(**kwargs):
     ctx.cog = None
     ctx.bot = bot
     ctx.prefix = "/"
+    ctx.clean_prefix = "/"
     ctx.me = types.SimpleNamespace(mention="<@1>")
     ctx.invoked_with = "login"
     ctx.message = types.SimpleNamespace(created_at=discord.utils.utcnow())

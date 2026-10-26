@@ -31,8 +31,8 @@ You can add the bot to your server using this [invite link](https://invite.yasuh
   small form (role / channel / member menus + a modal) to fill them in, instead
   of just printing a usage line.
 
-Commands work as both **prefix** (`y!`) and **slash** (`/`) where possible.
-Type `y!help` to browse.
+Commands work as **slash** commands (`/`), or by mentioning the bot before the
+command name (`@Yasuho help`). Type `/help` to browse.
 
 ## Localization 🌍
 

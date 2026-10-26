@@ -535,8 +535,9 @@ class CustomCommandsPanel(AuthorView):
         embed = discord.Embed(
             title=_("Custom commands"),
             description=_(
-                "Commands members run with the server prefix. Add a text or "
-                "embed reply, or pick one to inspect and delete."
+                "Commands members run with `/custom` or by mentioning me "
+                "(`@me name`). Add a text or embed reply, or pick one to "
+                "inspect and delete."
             ),
             colour=random_colour(),
         )
