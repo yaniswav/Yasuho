@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:08+0000\n"
+"POT-Creation-Date: 2026-10-26 10:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1916,7 +1916,7 @@ msgid "You already have {count} reminders pending - wait for some to fire before
 msgstr "Ya tienes {count} recordatorios pendientes - espera a que salte alguno antes de añadir más."
 
 #: cogs/community/reminders.py:569 cogs/community/reminders.py:646
-#: cogs/community/reminders.py:703 cogs/utility/extras.py:50
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:54
 msgid "(no text)"
 msgstr "(sin texto)"
 
@@ -2348,7 +2348,7 @@ msgid "Level down"
 msgstr "Bajada de nivel"
 
 #: cogs/community/leveling/level_admin.py:294
-#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:282
+#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:291
 msgid "Level"
 msgstr "Nivel"
 
@@ -3108,7 +3108,7 @@ msgstr "¡{user} alcanzó el nivel **{level}**!"
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:279
+#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:288
 msgid "Rank"
 msgstr "Rango"
 
@@ -5434,7 +5434,7 @@ msgid "No starred messages yet."
 msgstr "Aún no hay mensajes destacados."
 
 #: cogs/config/starboard.py:424 cogs/config/starboard.py:561
-#: cogs/utility/extras.py:60
+#: cogs/utility/extras.py:64
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[Ir]({url})"
@@ -6260,7 +6260,7 @@ msgstr "Gestionar hilos"
 msgid "Read Message History"
 msgstr "Ver historial de mensajes"
 
-#: cogs/fun/fun.py:121 cogs/fun/games.py:75
+#: cogs/fun/fun.py:121 cogs/fun/games.py:74
 msgid "Something went wrong with that move."
 msgstr "Algo salió mal con ese movimiento."
 
@@ -6442,35 +6442,82 @@ msgstr "¡Elige tu jugada abajo: Piedra, Papel o Tijera!"
 msgid "I'm waiting for you!"
 msgstr "¡Te estoy esperando!"
 
-#: cogs/fun/games.py:65
+#: cogs/fun/games.py:64
 msgid "Tic-Tac-Toe: you win! ❌"
 msgstr "Tres en raya: ¡has ganado! ❌"
 
-#: cogs/fun/games.py:67
+#: cogs/fun/games.py:66
 msgid "Tic-Tac-Toe: I win! ⭕ Better luck next time."
 msgstr "Tres en raya: ¡He ganado! ⭕ Mejor suerte la próxima vez."
 
-#: cogs/fun/games.py:69
+#: cogs/fun/games.py:68
 msgid "Tic-Tac-Toe: it's a draw!"
 msgstr "Tres en raya: ¡es un empate!"
 
-#: cogs/fun/games.py:170
+#: cogs/fun/games.py:169
 msgid "Tic-Tac-Toe: time's up, game over!"
 msgstr "Tres en raya: se acabó el tiempo, ¡fin de la partida!"
 
-#: cogs/fun/games.py:201
+#: cogs/fun/games.py:182
+msgid "Sentence Race"
+msgstr "Carrera de frases"
+
+#: cogs/fun/games.py:185
+msgid "Type the sentence"
+msgstr "Escribe la frase"
+
+#: cogs/fun/games.py:205
+msgid "Type it"
+msgstr "Escribir"
+
+#: cogs/fun/games.py:213 cogs/fun/games.py:220
+msgid "Too late, this race is already won."
+msgstr "Demasiado tarde, esta carrera ya tiene ganador."
+
+#: cogs/fun/games.py:224
+msgid "Not quite - check it and try again."
+msgstr "No del todo - revísala e inténtalo de nuevo."
+
+#: cogs/fun/games.py:240
+msgid "We have a winner!"
+msgstr "¡Tenemos un ganador!"
+
+#: cogs/fun/games.py:241
+#, python-brace-format
+msgid "{winner} finished the sentence first!"
+msgstr "¡{winner} terminó la frase primero!"
+
+#: cogs/fun/games.py:247
+msgid "Time"
+msgstr "Tiempo"
+
+#: cogs/fun/games.py:248
+#, python-brace-format
+msgid "{seconds:.2f} seconds"
+msgstr "{seconds:.2f} segundos"
+
+#: cogs/fun/games.py:252
+msgid "Speed"
+msgstr "Velocidad"
+
+#: cogs/fun/games.py:252
+#, python-brace-format
+msgid "~{wpm:.0f} WPM"
+msgstr "~{wpm:.0f} PPM"
+
+#: cogs/fun/games.py:281
 msgid "The sentence list is unavailable right now."
 msgstr "La lista de frases no está disponible en este momento."
 
-#: cogs/fun/games.py:204
+#: cogs/fun/games.py:284
 msgid "There are no sentences configured to race with."
 msgstr "No hay frases configuradas para la carrera."
 
-#: cogs/fun/games.py:209
+#: cogs/fun/games.py:289
 msgid "Sentence Race!"
 msgstr "¡Carrera de frases!"
 
-#: cogs/fun/games.py:210
+#: cogs/fun/games.py:290
 #, python-brace-format
 msgid ""
 "Be the first to type out the following sentence:\n"
@@ -6481,40 +6528,13 @@ msgstr ""
 "\n"
 "{sentence}"
 
-#: cogs/fun/games.py:215
-msgid "You have 60 seconds. No copy-pasting cheaters!"
-msgstr "Tienes 60 segundos. ¡Nada de tramposos que copian y pegan!"
+#: cogs/fun/games.py:295
+msgid "You have 60 seconds. Press the button and type it out!"
+msgstr "Tienes 60 segundos. ¡Pulsa el botón y escríbela!"
 
-#: cogs/fun/games.py:233
+#: cogs/fun/games.py:306
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "¡Se acabó el tiempo! Nadie logró terminar la frase a tiempo."
-
-#: cogs/fun/games.py:241
-msgid "We have a winner!"
-msgstr "¡Tenemos un ganador!"
-
-#: cogs/fun/games.py:242
-#, python-brace-format
-msgid "{winner} finished the sentence first!"
-msgstr "¡{winner} terminó la frase primero!"
-
-#: cogs/fun/games.py:248
-msgid "Time"
-msgstr "Tiempo"
-
-#: cogs/fun/games.py:249
-#, python-brace-format
-msgid "{seconds:.2f} seconds"
-msgstr "{seconds:.2f} segundos"
-
-#: cogs/fun/games.py:253
-msgid "Speed"
-msgstr "Velocidad"
-
-#: cogs/fun/games.py:253
-#, python-brace-format
-msgid "~{wpm:.0f} WPM"
-msgstr "~{wpm:.0f} PPM"
 
 #: cogs/moderation/automod.py:230
 #, python-brace-format
@@ -7138,7 +7158,7 @@ msgid "Content"
 msgstr "Contenido"
 
 #: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
-#: cogs/utility/extras.py:59
+#: cogs/utility/extras.py:63
 msgid "Jump"
 msgstr "Ir"
 
@@ -9811,11 +9831,11 @@ msgstr "Un administrador del servidor puede gestionarlo con `/{command}`."
 msgid "Terms"
 msgstr "Términos"
 
-#: cogs/utility/extras.py:46
+#: cogs/utility/extras.py:50
 msgid "I can only quote messages from this server."
 msgstr "Solo puedo citar mensajes de este servidor."
 
-#: cogs/utility/extras.py:89
+#: cogs/utility/extras.py:93
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
@@ -9824,7 +9844,7 @@ msgstr ""
 "Aquí tienes tu contraseña:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:95
+#: cogs/utility/extras.py:99
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
@@ -9833,49 +9853,49 @@ msgstr ""
 "No pude enviarte un mensaje privado, aquí lo tienes en su lugar:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:100
+#: cogs/utility/extras.py:104
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr "No pude enviarte un mensaje directo - por favor, activa los mensajes directos e inténtalo de nuevo."
 
-#: cogs/utility/extras.py:105
+#: cogs/utility/extras.py:109
 msgid "Something went wrong while generating your password."
 msgstr "Algo salió mal al generar tu contraseña."
 
-#: cogs/utility/extras.py:109
+#: cogs/utility/extras.py:113
 msgid "Sent you a DM"
 msgstr "Te envié un mensaje directo"
 
-#: cogs/utility/extras.py:126
+#: cogs/utility/extras.py:130
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr "{member} no está escuchando Spotify."
 
-#: cogs/utility/extras.py:136
+#: cogs/utility/extras.py:140
 msgid "Artist"
 msgstr "Artista"
 
-#: cogs/utility/extras.py:137
+#: cogs/utility/extras.py:141
 msgid "Album"
 msgstr "Álbum"
 
-#: cogs/utility/extras.py:139
+#: cogs/utility/extras.py:143
 msgid "Duration"
 msgstr "Duración"
 
-#: cogs/utility/extras.py:151
+#: cogs/utility/extras.py:155
 msgid "Uptime"
 msgstr "Tiempo activo"
 
-#: cogs/utility/extras.py:167 cogs/utility/extras.py:183
+#: cogs/utility/extras.py:171 cogs/utility/extras.py:187
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr "Permisos de {member}"
 
-#: cogs/utility/extras.py:220
+#: cogs/utility/extras.py:224
 msgid "Invite me"
 msgstr "Invítame"
 
-#: cogs/utility/extras.py:221
+#: cogs/utility/extras.py:225
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr "[Haz clic aquí para invitarme]({url})"
@@ -10102,66 +10122,66 @@ msgstr "Las busquedas de Wikipedia estan saturadas ahora mismo, intentalo de nue
 msgid "Something went wrong while searching Wikipedia."
 msgstr "Algo salió mal al buscar en Wikipedia."
 
-#: cogs/utility/searchweb.py:235
+#: cogs/utility/searchweb.py:244
 msgid "Provide an image URL or attach an image."
 msgstr "Proporciona una URL de imagen o adjunta una imagen."
 
-#: cogs/utility/searchweb.py:241
+#: cogs/utility/searchweb.py:250
 msgid "Reverse image search"
 msgstr "Búsqueda inversa de imágenes"
 
-#: cogs/utility/searchweb.py:242
+#: cogs/utility/searchweb.py:251
 #, python-brace-format
 msgid "[Click here to search for the source]({link})"
 msgstr "[Haz clic aquí para buscar la fuente]({link})"
 
-#: cogs/utility/searchweb.py:258
+#: cogs/utility/searchweb.py:267
 msgid "osu! is not configured."
 msgstr "osu! no está configurado."
 
-#: cogs/utility/searchweb.py:270
+#: cogs/utility/searchweb.py:279
 msgid "No osu! user found."
 msgstr "No se encontró ningún usuario de osu!."
 
-#: cogs/utility/searchweb.py:274
+#: cogs/utility/searchweb.py:283
 #, python-brace-format
 msgid "osu! stats for {username}"
 msgstr "Estadísticas de osu! de {username}"
 
-#: cogs/utility/searchweb.py:280
+#: cogs/utility/searchweb.py:289
 msgid "PP"
 msgstr "PP"
 
-#: cogs/utility/searchweb.py:281
+#: cogs/utility/searchweb.py:290
 msgid "Accuracy"
 msgstr "Precisión"
 
-#: cogs/utility/searchweb.py:283
+#: cogs/utility/searchweb.py:292
 msgid "Playcount"
 msgstr "Reproducciones"
 
-#: cogs/utility/searchweb.py:284
+#: cogs/utility/searchweb.py:293
 msgid "Country"
 msgstr "País"
 
-#: cogs/utility/searchweb.py:290
+#: cogs/utility/searchweb.py:299
 msgid "Something went wrong while fetching osu! data."
 msgstr "Algo salió mal al obtener datos de osu!."
 
-#: cogs/utility/searchweb.py:306
+#: cogs/utility/searchweb.py:315
 msgid "No such Minecraft account."
 msgstr "No existe esa cuenta de Minecraft."
 
-#: cogs/utility/searchweb.py:311
+#: cogs/utility/searchweb.py:320
 #, python-brace-format
 msgid "Minecraft account: {name}"
 msgstr "Cuenta de Minecraft: {name}"
 
-#: cogs/utility/searchweb.py:314
+#: cogs/utility/searchweb.py:323
 msgid "UUID"
 msgstr "UUID"
 
-#: cogs/utility/searchweb.py:323
+#: cogs/utility/searchweb.py:332
 msgid "Something went wrong while fetching Minecraft data."
 msgstr "Algo salió mal al obtener los datos de Minecraft."
 

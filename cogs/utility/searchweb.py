@@ -224,11 +224,20 @@ class SearchWeb(commands.Cog):
 
     @lookup.command(name="imagesource")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    @discord.app_commands.describe(url="The image URL (omit to use your attached image).")
-    async def lookup_imagesource(self, ctx, url: str = None):
+    @discord.app_commands.describe(
+        url="The image URL (or attach an image instead).",
+        image="An image to search for (used when no URL is given).",
+    )
+    async def lookup_imagesource(
+        self, ctx, url: str = None, image: discord.Attachment = None
+    ):
         """Build a Google reverse image search link for an image URL or attachment."""
 
-        if url is None and ctx.message.attachments:
+        # Slash passes the upload as an option; a mention invocation carries its
+        # attachments because messages that mention the bot keep their content.
+        if url is None and image is not None:
+            url = image.url
+        if url is None and ctx.interaction is None and ctx.message.attachments:
             url = ctx.message.attachments[0].url
 
         if not url:

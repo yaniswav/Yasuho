@@ -178,3 +178,34 @@ def test_cog_unload_retires_the_pool():
     cog, _ = _make_cog()
     cog.cog_unload()
     assert cog._wiki_pool._shutdown is True
+
+
+class _ImageCtx:
+    def __init__(self, *, interaction=None, attachments=()):
+        self.interaction = interaction
+        self.message = types.SimpleNamespace(attachments=list(attachments))
+        self.sent = []
+
+    async def send(self, *args, **kwargs):
+        self.sent.append((args, kwargs))
+
+
+def _imagesource():
+    cog = object.__new__(searchweb.SearchWeb)
+    return cog, searchweb.SearchWeb.lookup_imagesource.callback
+
+
+async def test_imagesource_takes_the_slash_attachment_option():
+    cog, callback = _imagesource()
+    ctx = _ImageCtx(interaction=object())
+    image = types.SimpleNamespace(url="https://cdn.example/i.png")
+    await callback(cog, ctx, None, image)
+    embed = ctx.sent[0][1]["embed"]
+    assert embed.thumbnail.url == "https://cdn.example/i.png"
+
+
+async def test_imagesource_mention_path_reads_the_message_attachment():
+    cog, callback = _imagesource()
+    ctx = _ImageCtx(attachments=[types.SimpleNamespace(url="https://cdn.example/m.png")])
+    await callback(cog, ctx, None, None)
+    assert ctx.sent[0][1]["embed"].thumbnail.url == "https://cdn.example/m.png"

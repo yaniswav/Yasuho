@@ -553,6 +553,17 @@ _VALID_CATEGORIES = {
 #: category means and the file header's audit note for the two accepted
 #: residuals. File:line citations below point at this worktree.
 CLASSIFIED: dict[str, tuple[str, str]] = {
+    # ---- Fun -------------------------------------------------------------
+    "cogs.fun.games.SentenceRaceView": (
+        "PUBLIC",
+        "A chat race open to everyone in the channel by design; the button only "
+        "opens the answer modal, and the first exact answer wins.",
+    ),
+    "cogs.fun.games._RaceAnswer": (
+        "PUBLIC",
+        "The race answer box: any member may submit, submit() compares the text "
+        "to the sentence and refuses once the race is won.",
+    ),
     # ---- AniList ----------------------------------------------------------
     "cogs.anilist.account.AniListProfileView": (
         "DISPLAY_ONLY",

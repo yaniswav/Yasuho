@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 import time
@@ -10,7 +9,7 @@ from tools import interactions
 from tools.config_loader import config_loader
 from tools.formats import random_colour
 from tools.i18n import _
-from tools.views import AuthorView
+from tools.views import AuthorView, LocaleModal, LocaleView
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +174,87 @@ class TicTacToeView(AuthorView):
                 log.exception("unexpected error editing timed-out tic-tac-toe message")
 
 
+class _RaceAnswer(LocaleModal):
+    """The answer box: a modal submission is delivered with its text, unlike
+    a plain chat message (the Message Content intent is for moderation only)."""
+
+    def __init__(self, race):
+        super().__init__(title=_("Sentence Race"))
+        self.race = race
+        self.answer = discord.ui.TextInput(
+            label=_("Type the sentence"),
+            style=discord.TextStyle.paragraph,
+            max_length=min(4000, len(race.sentence) + 50),
+        )
+        self.add_item(self.answer)
+
+    async def on_submit(self, interaction):
+        await self.race.submit(interaction, self.answer.value)
+
+
+class SentenceRaceView(LocaleView):
+    """One race: anyone may answer, the first exact answer wins."""
+
+    def __init__(self, sentence, *, timeout=60):
+        super().__init__(timeout=timeout)
+        self.sentence = sentence
+        self.start = time.monotonic()
+        self.winner = None
+        self.message = None
+        button = discord.ui.Button(
+            label=_("Type it"), style=discord.ButtonStyle.primary, emoji="\u2328\ufe0f"
+        )
+        button.callback = self._open
+        self.add_item(button)
+
+    async def _open(self, interaction):
+        if self.winner is not None:
+            return await interaction.response.send_message(
+                _("Too late, this race is already won."), ephemeral=True
+            )
+        await interaction.response.send_modal(_RaceAnswer(self))
+
+    async def submit(self, interaction, text):
+        if self.winner is not None:
+            return await interaction.response.send_message(
+                _("Too late, this race is already won."), ephemeral=True
+            )
+        if text.strip() != self.sentence:
+            return await interaction.response.send_message(
+                _("Not quite - check it and try again."), ephemeral=True
+            )
+        # No await between the check above and this line: the first exact
+        # submission processed wins, the rest see winner set.
+        self.winner = interaction.user
+        elapsed = time.monotonic() - self.start
+        await interaction.response.send_message(
+            embed=_race_result(self.sentence, interaction.user, elapsed)
+        )
+        self.stop()
+
+
+def _race_result(sentence, winner, elapsed):
+    word_count = len(sentence.split())
+    wpm = word_count / (elapsed / 60) if elapsed > 0 else 0
+    result = discord.Embed(
+        title=_("We have a winner!"),
+        description=_("{winner} finished the sentence first!").format(
+            winner=winner.mention
+        ),
+        colour=random_colour(),
+    )
+    result.add_field(
+        name=_("Time"),
+        value=_("{seconds:.2f} seconds").format(seconds=elapsed),
+        inline=True,
+    )
+    result.add_field(
+        name=_("Speed"), value=_("~{wpm:.0f} WPM").format(wpm=wpm), inline=True
+    )
+    result.set_thumbnail(url=winner.display_avatar.url)
+    return result
+
+
 class Games(commands.Cog):
     """Mini-games to play in chat, such as Tic-Tac-Toe and Sentence Race."""
 
@@ -212,48 +292,19 @@ class Games(commands.Cog):
             ),
             colour=random_colour(),
         )
-        embed.set_footer(text=_("You have 60 seconds. No copy-pasting cheaters!"))
-        await ctx.send(embed=embed)
+        embed.set_footer(text=_("You have 60 seconds. Press the button and type it out!"))
+        view = SentenceRaceView(sentence)
+        view.message = await ctx.send(embed=embed, view=view)
 
-        start = time.monotonic()
-
-        def check(message: discord.Message) -> bool:
-            return (
-                message.channel == ctx.channel
-                and not message.author.bot
-                and message.content == sentence
-            )
-
+        timed_out = await view.wait()
         try:
-            winner_message = await self.bot.wait_for(
-                "message", timeout=60, check=check
-            )
-        except asyncio.TimeoutError:
-            return await ctx.send(
+            await view.message.edit(view=None)
+        except discord.HTTPException:
+            pass
+        if timed_out and view.winner is None:
+            await ctx.send(
                 _("Time's up! Nobody managed to finish the sentence in time.")
             )
-
-        elapsed = time.monotonic() - start
-        word_count = len(sentence.split())
-        wpm = word_count / (elapsed / 60) if elapsed > 0 else 0
-
-        result = discord.Embed(
-            title=_("We have a winner!"),
-            description=_("{winner} finished the sentence first!").format(
-                winner=winner_message.author.mention
-            ),
-            colour=random_colour(),
-        )
-        result.add_field(
-            name=_("Time"),
-            value=_("{seconds:.2f} seconds").format(seconds=elapsed),
-            inline=True,
-        )
-        result.add_field(
-            name=_("Speed"), value=_("~{wpm:.0f} WPM").format(wpm=wpm), inline=True
-        )
-        result.set_thumbnail(url=winner_message.author.display_avatar.url)
-        await ctx.send(embed=result)
 
 
 async def setup(bot):

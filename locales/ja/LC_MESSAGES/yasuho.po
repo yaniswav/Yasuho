@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:08+0000\n"
+"POT-Creation-Date: 2026-10-26 10:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1896,7 +1896,7 @@ msgid "You already have {count} reminders pending - wait for some to fire before
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
 #: cogs/community/reminders.py:569 cogs/community/reminders.py:646
-#: cogs/community/reminders.py:703 cogs/utility/extras.py:50
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:54
 msgid "(no text)"
 msgstr "(テキストなし)"
 
@@ -2326,7 +2326,7 @@ msgid "Level down"
 msgstr "レベルダウン"
 
 #: cogs/community/leveling/level_admin.py:294
-#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:282
+#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:291
 msgid "Level"
 msgstr "レベル"
 
@@ -3085,7 +3085,7 @@ msgstr "{user} がレベル **{level}** に到達しました!"
 msgid "Rank | {name}"
 msgstr "ランク | {name}"
 
-#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:279
+#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:288
 msgid "Rank"
 msgstr "ランク"
 
@@ -5409,7 +5409,7 @@ msgid "No starred messages yet."
 msgstr "まだスターが付いたメッセージはありません。"
 
 #: cogs/config/starboard.py:424 cogs/config/starboard.py:561
-#: cogs/utility/extras.py:60
+#: cogs/utility/extras.py:64
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[ジャンプ]({url})"
@@ -6234,7 +6234,7 @@ msgstr "スレッドの管理"
 msgid "Read Message History"
 msgstr "メッセージ履歴を読む"
 
-#: cogs/fun/fun.py:121 cogs/fun/games.py:75
+#: cogs/fun/fun.py:121 cogs/fun/games.py:74
 msgid "Something went wrong with that move."
 msgstr "その手で問題が発生しました。"
 
@@ -6416,35 +6416,82 @@ msgstr "下から手を選んでください: グー、パー、チョキ!"
 msgid "I'm waiting for you!"
 msgstr "あなたを待っています!"
 
-#: cogs/fun/games.py:65
+#: cogs/fun/games.py:64
 msgid "Tic-Tac-Toe: you win! ❌"
 msgstr "三目並べ: あなたの勝ち! ❌"
 
-#: cogs/fun/games.py:67
+#: cogs/fun/games.py:66
 msgid "Tic-Tac-Toe: I win! ⭕ Better luck next time."
 msgstr "三目並べ: 私の勝ち! ⭕ 次回に期待しましょう。"
 
-#: cogs/fun/games.py:69
+#: cogs/fun/games.py:68
 msgid "Tic-Tac-Toe: it's a draw!"
 msgstr "三目並べ: 引き分けです!"
 
-#: cogs/fun/games.py:170
+#: cogs/fun/games.py:169
 msgid "Tic-Tac-Toe: time's up, game over!"
 msgstr "三目並べ: 時間切れ、ゲームオーバー!"
 
-#: cogs/fun/games.py:201
+#: cogs/fun/games.py:182
+msgid "Sentence Race"
+msgstr "タイピングレース"
+
+#: cogs/fun/games.py:185
+msgid "Type the sentence"
+msgstr "文を入力"
+
+#: cogs/fun/games.py:205
+msgid "Type it"
+msgstr "入力する"
+
+#: cogs/fun/games.py:213 cogs/fun/games.py:220
+msgid "Too late, this race is already won."
+msgstr "遅すぎました。このレースはもう勝者が決まっています。"
+
+#: cogs/fun/games.py:224
+msgid "Not quite - check it and try again."
+msgstr "惜しい - 確認してもう一度試してください。"
+
+#: cogs/fun/games.py:240
+msgid "We have a winner!"
+msgstr "勝者が決まりました!"
+
+#: cogs/fun/games.py:241
+#, python-brace-format
+msgid "{winner} finished the sentence first!"
+msgstr "{winner} が最初に文章を完成させました!"
+
+#: cogs/fun/games.py:247
+msgid "Time"
+msgstr "時間"
+
+#: cogs/fun/games.py:248
+#, python-brace-format
+msgid "{seconds:.2f} seconds"
+msgstr "{seconds:.2f} 秒"
+
+#: cogs/fun/games.py:252
+msgid "Speed"
+msgstr "速度"
+
+#: cogs/fun/games.py:252
+#, python-brace-format
+msgid "~{wpm:.0f} WPM"
+msgstr "~{wpm:.0f} WPM"
+
+#: cogs/fun/games.py:281
 msgid "The sentence list is unavailable right now."
 msgstr "文章リストは現在利用できません。"
 
-#: cogs/fun/games.py:204
+#: cogs/fun/games.py:284
 msgid "There are no sentences configured to race with."
 msgstr "レースに使用する文章が設定されていません。"
 
-#: cogs/fun/games.py:209
+#: cogs/fun/games.py:289
 msgid "Sentence Race!"
 msgstr "センテンスレース!"
 
-#: cogs/fun/games.py:210
+#: cogs/fun/games.py:290
 #, python-brace-format
 msgid ""
 "Be the first to type out the following sentence:\n"
@@ -6455,40 +6502,13 @@ msgstr ""
 "\n"
 "{sentence}"
 
-#: cogs/fun/games.py:215
-msgid "You have 60 seconds. No copy-pasting cheaters!"
-msgstr "制限時間は60秒です。コピペは禁止です!"
+#: cogs/fun/games.py:295
+msgid "You have 60 seconds. Press the button and type it out!"
+msgstr "制限時間は60秒。ボタンを押して入力しよう！"
 
-#: cogs/fun/games.py:233
+#: cogs/fun/games.py:306
 msgid "Time's up! Nobody managed to finish the sentence in time."
 msgstr "時間切れ! 誰も時間内に文章を完成させられませんでした。"
-
-#: cogs/fun/games.py:241
-msgid "We have a winner!"
-msgstr "勝者が決まりました!"
-
-#: cogs/fun/games.py:242
-#, python-brace-format
-msgid "{winner} finished the sentence first!"
-msgstr "{winner} が最初に文章を完成させました!"
-
-#: cogs/fun/games.py:248
-msgid "Time"
-msgstr "時間"
-
-#: cogs/fun/games.py:249
-#, python-brace-format
-msgid "{seconds:.2f} seconds"
-msgstr "{seconds:.2f} 秒"
-
-#: cogs/fun/games.py:253
-msgid "Speed"
-msgstr "速度"
-
-#: cogs/fun/games.py:253
-#, python-brace-format
-msgid "~{wpm:.0f} WPM"
-msgstr "~{wpm:.0f} WPM"
 
 #: cogs/moderation/automod.py:230
 #, python-brace-format
@@ -7110,7 +7130,7 @@ msgid "Content"
 msgstr "内容"
 
 #: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
-#: cogs/utility/extras.py:59
+#: cogs/utility/extras.py:63
 msgid "Jump"
 msgstr "ジャンプ"
 
@@ -9768,11 +9788,11 @@ msgstr "サーバーの管理者が `/{command}` で管理できます。"
 msgid "Terms"
 msgstr "利用規約"
 
-#: cogs/utility/extras.py:46
+#: cogs/utility/extras.py:50
 msgid "I can only quote messages from this server."
 msgstr "このサーバーのメッセージのみ引用できます。"
 
-#: cogs/utility/extras.py:89
+#: cogs/utility/extras.py:93
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
@@ -9781,7 +9801,7 @@ msgstr ""
 "あなたのパスワードはこちらです:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:95
+#: cogs/utility/extras.py:99
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
@@ -9790,49 +9810,49 @@ msgstr ""
 "DMを送れなかったので、代わりにこちらに表示します:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:100
+#: cogs/utility/extras.py:104
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr "DMを送れませんでした - ダイレクトメッセージを有効にしてもう一度お試しください。"
 
-#: cogs/utility/extras.py:105
+#: cogs/utility/extras.py:109
 msgid "Something went wrong while generating your password."
 msgstr "パスワードの生成中に問題が発生しました。"
 
-#: cogs/utility/extras.py:109
+#: cogs/utility/extras.py:113
 msgid "Sent you a DM"
 msgstr "DMを送信しました"
 
-#: cogs/utility/extras.py:126
+#: cogs/utility/extras.py:130
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr "{member} はSpotifyを聴いていません。"
 
-#: cogs/utility/extras.py:136
+#: cogs/utility/extras.py:140
 msgid "Artist"
 msgstr "アーティスト"
 
-#: cogs/utility/extras.py:137
+#: cogs/utility/extras.py:141
 msgid "Album"
 msgstr "アルバム"
 
-#: cogs/utility/extras.py:139
+#: cogs/utility/extras.py:143
 msgid "Duration"
 msgstr "再生時間"
 
-#: cogs/utility/extras.py:151
+#: cogs/utility/extras.py:155
 msgid "Uptime"
 msgstr "稼働時間"
 
-#: cogs/utility/extras.py:167 cogs/utility/extras.py:183
+#: cogs/utility/extras.py:171 cogs/utility/extras.py:187
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr "{member} の権限"
 
-#: cogs/utility/extras.py:220
+#: cogs/utility/extras.py:224
 msgid "Invite me"
 msgstr "私を招待"
 
-#: cogs/utility/extras.py:221
+#: cogs/utility/extras.py:225
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr "[ここをクリックして私を招待]({url})"
@@ -10059,66 +10079,66 @@ msgstr "Wikipedia の検索が混み合っています。少ししてからも�
 msgid "Something went wrong while searching Wikipedia."
 msgstr "Wikipediaの検索中に問題が発生しました。"
 
-#: cogs/utility/searchweb.py:235
+#: cogs/utility/searchweb.py:244
 msgid "Provide an image URL or attach an image."
 msgstr "画像のURLを指定するか、画像を添付してください。"
 
-#: cogs/utility/searchweb.py:241
+#: cogs/utility/searchweb.py:250
 msgid "Reverse image search"
 msgstr "画像逆検索"
 
-#: cogs/utility/searchweb.py:242
+#: cogs/utility/searchweb.py:251
 #, python-brace-format
 msgid "[Click here to search for the source]({link})"
 msgstr "[ここをクリックしてソースを検索]({link})"
 
-#: cogs/utility/searchweb.py:258
+#: cogs/utility/searchweb.py:267
 msgid "osu! is not configured."
 msgstr "osu! は設定されていません。"
 
-#: cogs/utility/searchweb.py:270
+#: cogs/utility/searchweb.py:279
 msgid "No osu! user found."
 msgstr "osu! ユーザーが見つかりませんでした。"
 
-#: cogs/utility/searchweb.py:274
+#: cogs/utility/searchweb.py:283
 #, python-brace-format
 msgid "osu! stats for {username}"
 msgstr "{username} の osu! 統計"
 
-#: cogs/utility/searchweb.py:280
+#: cogs/utility/searchweb.py:289
 msgid "PP"
 msgstr "PP"
 
-#: cogs/utility/searchweb.py:281
+#: cogs/utility/searchweb.py:290
 msgid "Accuracy"
 msgstr "精度"
 
-#: cogs/utility/searchweb.py:283
+#: cogs/utility/searchweb.py:292
 msgid "Playcount"
 msgstr "プレイ回数"
 
-#: cogs/utility/searchweb.py:284
+#: cogs/utility/searchweb.py:293
 msgid "Country"
 msgstr "国"
 
-#: cogs/utility/searchweb.py:290
+#: cogs/utility/searchweb.py:299
 msgid "Something went wrong while fetching osu! data."
 msgstr "osu! データの取得中に問題が発生しました。"
 
-#: cogs/utility/searchweb.py:306
+#: cogs/utility/searchweb.py:315
 msgid "No such Minecraft account."
 msgstr "そのようなMinecraftアカウントはありません。"
 
-#: cogs/utility/searchweb.py:311
+#: cogs/utility/searchweb.py:320
 #, python-brace-format
 msgid "Minecraft account: {name}"
 msgstr "Minecraftアカウント: {name}"
 
-#: cogs/utility/searchweb.py:314
+#: cogs/utility/searchweb.py:323
 msgid "UUID"
 msgstr "UUID"
 
-#: cogs/utility/searchweb.py:323
+#: cogs/utility/searchweb.py:332
 msgid "Something went wrong while fetching Minecraft data."
 msgstr "Minecraftデータの取得中に問題が発生しました。"
 
