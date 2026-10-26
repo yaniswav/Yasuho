@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 11:00+0000\n"
+"POT-Creation-Date: 2026-10-26 11:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -593,7 +593,7 @@ msgstr "Δεν υπάρχουν τίτλοι αυτού του τύπου που
 #: cogs/community/leveling/level_rewards.py:106
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
-#: cogs/community/serverstats/views.py:678 cogs/config/announcements.py:298
+#: cogs/community/serverstats/views.py:678 cogs/config/announcements.py:319
 #: cogs/config/rolemenus.py:732 cogs/config/welcome.py:109
 #: cogs/config/welcome.py:264 cogs/config/welcome.py:518
 #: cogs/system/botstats.py:1358
@@ -1223,7 +1223,7 @@ msgstr "Απενεργοποίηση"
 msgid "Enable"
 msgstr "Ενεργοποίηση"
 
-#: cogs/anilist/feed_views.py:1064
+#: cogs/anilist/feed_views.py:1064 cogs/config/announcements.py:532
 msgid "Delete"
 msgstr "Διαγραφή"
 
@@ -1311,7 +1311,7 @@ msgstr "{status} ({count} πρόσφατες αποτυχίες)"
 msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
 msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικατοπτρίζεται σε αυτόν τον διακομιστή. Κάθε αλλαγή αποθηκεύεται αμέσως."
 
-#: cogs/anilist/feed_views.py:1407 cogs/config/announcements.py:268
+#: cogs/anilist/feed_views.py:1407 cogs/config/announcements.py:289
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:560 cogs/config/welcome.py:780
@@ -1875,7 +1875,7 @@ msgstr "Εντάξει, θα σου υπενθυμίσω {when} και μετά 
 msgid "Set a reminder"
 msgstr "Όρισε υπενθύμιση"
 
-#: cogs/community/reminders.py:358 cogs/config/announcements.py:154
+#: cogs/community/reminders.py:358 cogs/config/announcements.py:151
 msgid "When"
 msgstr "Πότε"
 
@@ -1906,7 +1906,7 @@ msgid "I couldn't understand that time. Try something like `10m`, `tomorrow at 6
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `10m`, `tomorrow at 6pm` ή `in 3 days`."
 
 #: cogs/community/reminders.py:427 cogs/community/reminders.py:1968
-#: cogs/config/announcements.py:191
+#: cogs/config/announcements.py:211
 msgid "That time is in the past. Give me a moment in the future."
 msgstr "Αυτός ο χρόνος είναι στο παρελθόν. Δώσε μου μια στιγμή στο μέλλον."
 
@@ -3995,71 +3995,104 @@ msgstr "Δραστηριότητα ({days} ημέρες)"
 msgid "Retention ({weeks} weeks)"
 msgstr "Διατήρηση ({weeks} εβδομάδες)"
 
-#: cogs/config/announcements.py:68
+#: cogs/config/announcements.py:55
 msgid "Target channel..."
 msgstr "Κανάλι προορισμού..."
 
-#: cogs/config/announcements.py:96
+#: cogs/config/announcements.py:83
 msgid "Ping a role (optional)..."
 msgstr "Ping σε έναν ρόλο (προαιρετικό)..."
 
-#: cogs/config/announcements.py:115 cogs/config/twitch.py:303
+#: cogs/config/announcements.py:102 cogs/config/twitch.py:303
 #: cogs/config/welcome.py:189
 msgid "Preview"
 msgstr "Προεπισκόπηση"
 
-#: cogs/config/announcements.py:122 cogs/config/announcements.py:321
+#: cogs/config/announcements.py:109 cogs/config/announcements.py:342
 #: cogs/config/customcommands.py:364
 msgid "Add some content to the embed first."
 msgstr "Πρόσθεσε πρώτα κάποιο περιεχόμενο στο embed."
 
-#: cogs/config/announcements.py:128 cogs/config/twitch.py:312
+#: cogs/config/announcements.py:115 cogs/config/twitch.py:312
 #: cogs/config/welcome.py:198
 msgid "Could not render the preview."
 msgstr "Δεν ήταν δυνατή η εμφάνιση της προεπισκόπησης."
 
-#: cogs/config/announcements.py:135
+#: cogs/config/announcements.py:122
 msgid "Send"
 msgstr "Αποστολή"
 
-#: cogs/config/announcements.py:143
+#: cogs/config/announcements.py:130
 msgid "Could not send the announcement."
 msgstr "Δεν ήταν δυνατή η αποστολή της ανακοίνωσης."
 
-#: cogs/config/announcements.py:151
+#: cogs/config/announcements.py:135
+msgid "Once"
+msgstr "Μία φορά"
+
+#: cogs/config/announcements.py:136
+msgid "Every day"
+msgstr "Κάθε μέρα"
+
+#: cogs/config/announcements.py:137
+msgid "Every week"
+msgstr "Κάθε εβδομάδα"
+
+#: cogs/config/announcements.py:138
+msgid "Every month"
+msgstr "Κάθε μήνα"
+
+#: cogs/config/announcements.py:148
 msgid "Schedule the announcement"
 msgstr "Προγραμμάτισε την ανακοίνωση"
 
-#: cogs/config/announcements.py:155
+#: cogs/config/announcements.py:152
 msgid "e.g. 2h, tomorrow at 9am, or a <t:...> tag"
 msgstr "π.χ. 2h, αύριο στις 9:00, ή μια ετικέτα <t:...>"
 
-#: cogs/config/announcements.py:182
+#: cogs/config/announcements.py:165
+msgid "Time zone"
+msgstr "Ζώνη ώρας"
+
+#: cogs/config/announcements.py:166
+msgid "e.g. Europe/Paris, America/New_York"
+msgstr "π.χ. Europe/Paris, America/New_York"
+
+#: cogs/config/announcements.py:172
+msgid "Repeat"
+msgstr "Επανάληψη"
+
+#: cogs/config/announcements.py:183
+#, python-brace-format
+msgid "I don't know the time zone `{tz}`. Use a name like `Europe/Paris` or `UTC`."
+msgstr "Δεν γνωρίζω τη ζώνη ώρας `{tz}`. Χρησιμοποίησε ένα όνομα όπως `Europe/Paris` ή `UTC`."
+
+#: cogs/config/announcements.py:201
 msgid "I couldn't understand that time. Try something like `2h`, `tomorrow at 9am`, or `in 3 days`."
 msgstr "Δεν κατάλαβα αυτόν τον χρόνο. Δοκίμασε κάτι σαν `2h`, `tomorrow at 9am` ή `in 3 days`."
 
-#: cogs/config/announcements.py:200
+#: cogs/config/announcements.py:221
 msgid "Schedule"
 msgstr "Προγραμματισμός"
 
-#: cogs/config/announcements.py:227
+#: cogs/config/announcements.py:248
 msgid "Edit the announcement embed..."
 msgstr "Επεξεργασία του embed της ανακοίνωσης..."
 
-#: cogs/config/announcements.py:234 cogs/config/customcommands.py:329
+#: cogs/config/announcements.py:255 cogs/config/customcommands.py:329
 #: cogs/config/twitch.py:278
 msgid "Placeholders"
 msgstr "Placeholders"
 
-#: cogs/config/announcements.py:258
+#: cogs/config/announcements.py:279
 msgid "Announcement builder"
 msgstr "Δημιουργός ανακοινώσεων"
 
-#: cogs/config/announcements.py:260
+#: cogs/config/announcements.py:281
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κανάλι (και προαιρετικά έναν ρόλο για ping) και μετά πάτησε **Αποστολή**. Η προεπισκόπηση το δείχνει μόνο σε εσένα."
 
-#: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
+#: cogs/config/announcements.py:290 cogs/config/buttonroles.py:550
 #: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:157
 #: cogs/config/twitch.py:420 cogs/config/verification.py:118
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
@@ -4067,54 +4100,109 @@ msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κ
 msgid "*Not set.*"
 msgstr "*Δεν έχει οριστεί.*"
 
-#: cogs/config/announcements.py:273 cogs/config/welcome.py:453
+#: cogs/config/announcements.py:294 cogs/config/welcome.py:453
 #: cogs/config/welcome.py:479 cogs/config/welcome.py:569
 msgid "Ping"
 msgstr "Ping"
 
-#: cogs/config/announcements.py:274 cogs/config/customcommands.py:34
+#: cogs/config/announcements.py:295 cogs/config/customcommands.py:34
 #: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
 msgid "None"
 msgstr "Κανένα"
 
-#: cogs/config/announcements.py:278 cogs/config/buttonroles.py:543
+#: cogs/config/announcements.py:299 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:428 cogs/config/twitch.py:471
 #: cogs/config/welcome.py:462 cogs/config/welcome.py:583
 msgid "Embed"
 msgstr "Embed"
 
-#: cogs/config/announcements.py:283
+#: cogs/config/announcements.py:304
 #, python-brace-format
 msgid "Only you can use this. Placeholders: {placeholders}"
 msgstr "Μόνο εσύ μπορείς να το χρησιμοποιήσεις αυτό. Placeholders: {placeholders}"
 
-#: cogs/config/announcements.py:310
+#: cogs/config/announcements.py:331
 msgid "Pick a target channel first."
 msgstr "Διάλεξε πρώτα ένα κανάλι προορισμού."
 
-#: cogs/config/announcements.py:315 cogs/config/buttonroles.py:675
+#: cogs/config/announcements.py:336 cogs/config/buttonroles.py:675
 #: cogs/config/rolemenus.py:751 cogs/config/verification.py:197
 #, python-brace-format
 msgid "I can't send messages in {channel}."
 msgstr "Δεν μπορώ να στείλω μηνύματα στο {channel}."
 
-#: cogs/config/announcements.py:348
+#: cogs/config/announcements.py:369
 msgid "Sending failed, please try again."
 msgstr "Η αποστολή απέτυχε, δοκίμασε ξανά."
 
-#: cogs/config/announcements.py:350
+#: cogs/config/announcements.py:371
 #, python-brace-format
 msgid "Announcement sent to {channel}."
 msgstr "Η ανακοίνωση στάλθηκε στο {channel}."
 
-#: cogs/config/announcements.py:361 cogs/moderation/moderation.py:587
+#: cogs/config/announcements.py:382 cogs/config/announcements.py:630
+#: cogs/moderation/moderation.py:587
 msgid "Scheduling is unavailable right now."
 msgstr "Ο προγραμματισμός δεν είναι διαθέσιμος αυτή τη στιγμή."
 
-#: cogs/config/announcements.py:374
+#: cogs/config/announcements.py:404
+msgid "I couldn't schedule that: check the time, and that this server has fewer than 50 scheduled announcements."
+msgstr "Δεν μπόρεσα να το προγραμματίσω: έλεγξε την ώρα και ότι ο διακομιστής έχει λιγότερες από 50 προγραμματισμένες ανακοινώσεις."
+
+#: cogs/config/announcements.py:410
 #, python-brace-format
 msgid "Scheduled for {when} in {channel}."
 msgstr "Προγραμματίστηκε για {when} στο {channel}."
+
+#: cogs/config/announcements.py:416
+#, python-brace-format
+msgid "Repeats: {repeat}. Manage it with `/announcements`."
+msgstr "Επανάληψη: {repeat}. Διαχειρίσου τη με `/announcements`."
+
+#: cogs/config/announcements.py:426
+#, python-brace-format
+msgid "{role} is not mentionable and I can't mention every role here, so it won't be pinged."
+msgstr "Ο ρόλος {role} δεν επιτρέπει mention και δεν μπορώ να κάνω mention σε όλους τους ρόλους εδώ, οπότε δεν θα ειδοποιηθεί."
+
+#: cogs/config/announcements.py:468
+msgid "stopped after repeated failures"
+msgstr "σταμάτησε μετά από επανειλημμένες αποτυχίες"
+
+#: cogs/config/announcements.py:470 cogs/config/announcements.py:507
+msgid "paused"
+msgstr "σε παύση"
+
+#: cogs/config/announcements.py:495
+msgid "Pick a scheduled announcement..."
+msgstr "Διάλεξε μια προγραμματισμένη ανακοίνωση..."
+
+#: cogs/config/announcements.py:507
+msgid "active"
+msgstr "ενεργή"
+
+#: cogs/config/announcements.py:525
+msgid "Resume"
+msgstr "Συνέχεια"
+
+#: cogs/config/announcements.py:525
+msgid "Pause"
+msgstr "Παύση"
+
+#: cogs/config/announcements.py:545
+msgid "Scheduled announcements"
+msgstr "Προγραμματισμένες ανακοινώσεις"
+
+#: cogs/config/announcements.py:548
+msgid "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
+msgstr "Τίποτα προγραμματισμένο. Φτιάξε μία με `/announce` και πάτα **Προγραμματισμός**."
+
+#: cogs/config/announcements.py:563
+msgid "You need the Manage Server permission for this."
+msgstr "Χρειάζεσαι την άδεια Διαχείριση διακομιστή για αυτό."
+
+#: cogs/config/announcements.py:592
+msgid "That one-time announcement is already past. Delete it and schedule a new one."
+msgstr "Αυτή η μοναδική ανακοίνωση έχει ήδη περάσει. Διάγραψέ τη και προγραμμάτισε μια νέα."
 
 #: cogs/config/buttonroles.py:109
 msgid "Roles can only be toggled inside a server."
@@ -4680,11 +4768,11 @@ msgstr "Καμία αλλαγή."
 msgid "Menu header"
 msgstr "Επικεφαλίδα μενού"
 
-#: cogs/config/rolemenus.py:314 tools/embed_creator.py:411
+#: cogs/config/rolemenus.py:314 tools/embed_creator.py:431
 msgid "Title"
 msgstr "Τίτλος"
 
-#: cogs/config/rolemenus.py:320 tools/embed_creator.py:435
+#: cogs/config/rolemenus.py:320 tools/embed_creator.py:455
 msgid "Description"
 msgstr "Περιγραφή"
 
@@ -11987,140 +12075,140 @@ msgstr "🥁 Bass Boost"
 msgid "This menu isn't for you."
 msgstr "Αυτό το μενού δεν είναι για εσένα."
 
-#: tools/embed_creator.py:283
+#: tools/embed_creator.py:303
 msgid "default"
 msgstr "προεπιλογή"
 
-#: tools/embed_creator.py:285
+#: tools/embed_creator.py:305
 #, python-brace-format
 msgid "**Title:** {title}"
 msgstr "**Τίτλος:** {title}"
 
-#: tools/embed_creator.py:286
+#: tools/embed_creator.py:306
 #, python-brace-format
 msgid "**Description:** {description}"
 msgstr "**Περιγραφή:** {description}"
 
-#: tools/embed_creator.py:287
+#: tools/embed_creator.py:307
 #, python-brace-format
 msgid "**Colour:** {colour}"
 msgstr "**Χρώμα:** {colour}"
 
-#: tools/embed_creator.py:288
+#: tools/embed_creator.py:308
 #, python-brace-format
 msgid "**Fields:** {count}"
 msgstr "**Πεδία:** {count}"
 
-#: tools/embed_creator.py:292
+#: tools/embed_creator.py:312
 #, python-brace-format
 msgid "**Author:** {name}"
 msgstr "**Συγγραφέας:** {name}"
 
-#: tools/embed_creator.py:295
+#: tools/embed_creator.py:315
 #, python-brace-format
 msgid "**Footer:** {text}"
 msgstr "**Υποσέλιδο:** {text}"
 
-#: tools/embed_creator.py:297
+#: tools/embed_creator.py:317
 msgid "**Thumbnail:** set"
 msgstr "**Thumbnail:** ορίστηκε"
 
-#: tools/embed_creator.py:299
+#: tools/embed_creator.py:319
 msgid "**Image:** set"
 msgstr "**Εικόνα:** ορίστηκε"
 
-#: tools/embed_creator.py:349
+#: tools/embed_creator.py:369
 msgid "Tokens"
 msgstr "Tokens"
 
-#: tools/embed_creator.py:409
+#: tools/embed_creator.py:429
 msgid "Edit title"
 msgstr "Επεξεργασία τίτλου"
 
-#: tools/embed_creator.py:433
+#: tools/embed_creator.py:453
 msgid "Edit description"
 msgstr "Επεξεργασία περιγραφής"
 
-#: tools/embed_creator.py:469
+#: tools/embed_creator.py:489
 msgid "Edit colour"
 msgstr "Επεξεργασία χρώματος"
 
-#: tools/embed_creator.py:477
+#: tools/embed_creator.py:497
 msgid "Quick colour (optional)"
 msgstr "Γρήγορο χρώμα (προαιρετικό)"
 
-#: tools/embed_creator.py:479
+#: tools/embed_creator.py:499
 msgid "Pick one, or edit the box below. Empty both to clear."
 msgstr "Διάλεξε ένα ή επεξεργάσου το πλαίσιο παρακάτω. Άδειασε και τα δύο για εκκαθάριση."
 
-#: tools/embed_creator.py:491
+#: tools/embed_creator.py:511
 msgid "Custom colour (hex or name)"
 msgstr "Προσαρμοσμένο χρώμα (hex ή όνομα)"
 
-#: tools/embed_creator.py:506
+#: tools/embed_creator.py:526
 msgid "That colour wasn't recognised. Use #rrggbb or a name like 'blurple'."
 msgstr "Αυτό το χρώμα δεν αναγνωρίστηκε. Χρησιμοποίησε #rrggbb ή ένα όνομα όπως 'blurple'."
 
-#: tools/embed_creator.py:525
+#: tools/embed_creator.py:545
 msgid "Edit author"
 msgstr "Επεξεργασία συγγραφέα"
 
-#: tools/embed_creator.py:528
+#: tools/embed_creator.py:548
 msgid "Author name"
 msgstr "Όνομα συγγραφέα"
 
-#: tools/embed_creator.py:535
+#: tools/embed_creator.py:555
 msgid "Author icon URL"
 msgstr "URL εικονιδίου συγγραφέα"
 
-#: tools/embed_creator.py:560
+#: tools/embed_creator.py:580
 msgid "Edit footer"
 msgstr "Επεξεργασία υποσέλιδου"
 
-#: tools/embed_creator.py:563
+#: tools/embed_creator.py:583
 msgid "Footer text"
 msgstr "Κείμενο υποσέλιδου"
 
-#: tools/embed_creator.py:570
+#: tools/embed_creator.py:590
 msgid "Footer icon URL"
 msgstr "URL εικονιδίου υποσέλιδου"
 
-#: tools/embed_creator.py:595
+#: tools/embed_creator.py:615
 #, python-brace-format
 msgid "Edit {label}"
 msgstr "Επεξεργασία {label}"
 
-#: tools/embed_creator.py:598
+#: tools/embed_creator.py:618
 #, python-brace-format
 msgid "{label} URL"
 msgstr "URL {label}"
 
-#: tools/embed_creator.py:619
+#: tools/embed_creator.py:639
 msgid "Add a field"
 msgstr "Πρόσθεσε ένα πεδίο"
 
-#: tools/embed_creator.py:621
+#: tools/embed_creator.py:641
 msgid "Field name"
 msgstr "Όνομα πεδίου"
 
-#: tools/embed_creator.py:627
+#: tools/embed_creator.py:647
 msgid "Field value"
 msgstr "Τιμή πεδίου"
 
-#: tools/embed_creator.py:638
+#: tools/embed_creator.py:658
 msgid "Inline field"
 msgstr "Πεδίο inline"
 
-#: tools/embed_creator.py:641
+#: tools/embed_creator.py:661
 msgid "Place it beside other fields instead of on its own row."
 msgstr "Τοποθέτησέ το δίπλα σε άλλα πεδία αντί σε δική του σειρά."
 
-#: tools/embed_creator.py:651
+#: tools/embed_creator.py:671
 #, python-brace-format
 msgid "An embed can have at most {limit} fields."
 msgstr "Ένα embed μπορεί να έχει το πολύ {limit} πεδία."
 
-#: tools/embed_creator.py:769
+#: tools/embed_creator.py:789
 msgid "Could not open the guide."
 msgstr "Δεν ήταν δυνατό το άνοιγμα του οδηγού."
 

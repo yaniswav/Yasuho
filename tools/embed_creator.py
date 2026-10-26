@@ -190,6 +190,26 @@ def _substitute(substitute, text) -> str:
     return text
 
 
+def server_substitution(guild, channel):
+    """Return the {server} / {members} / {channel} resolver for :func:`render`.
+
+    Pure and side-effect free (takes plain values), so it is unit-testable.
+    """
+    members = f"{guild.member_count:,}" if guild and guild.member_count else "0"
+    replacements = {
+        "{server}": guild.name if guild else "",
+        "{members}": members,
+        "{channel}": channel.mention if channel else "",
+    }
+
+    def substitute(text):
+        for key, value in replacements.items():
+            text = text.replace(key, value)
+        return text
+
+    return substitute
+
+
 def render(
     config: dict, substitute: Optional[Callable[[str], str]] = None
 ) -> discord.Embed:

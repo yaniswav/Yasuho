@@ -91,10 +91,11 @@ def test_recurrence_requires_aware_boundary_and_naive_anchor():
 @pytest.mark.parametrize("changes", [
     {"timezone": "Not/AZone"}, {"content": "", "embed": None},
     {"content": "  "}, {"content": "x" * 2001}, {"recurrence": "hourly"},
-    {"embed": {}}, {"embed": {"title": "x" * 257}},
-    {"embed": {"description": "x" * 4097}}, {"embed": {"color": -1, "title": "x"}},
-    {"embed": {"color": True, "title": "x"}}, {"embed": {"title": "x", "url": "https://x"}},
-    {"embed": {"title": None}}, {"local_time": NOW}, {"role_id": 0},
+    # The embed is an embed_creator config: it must render something and stay
+    # under the stored size cap.
+    {"embed": {}}, {"embed": ["not", "a", "dict"]},
+    {"embed": {"description": "x" * 17000}},
+    {"local_time": NOW}, {"role_id": 0},
     {"enabled": "yes"}, {"channel_id": False},
 ])
 def test_write_validation(changes):
@@ -256,11 +257,13 @@ class Pool:
 
 def engine(pool):
     channel = SimpleNamespace(
-        id=9, guild=SimpleNamespace(id=3), type=discord.ChannelType.text,
+        id=9, mention="<#9>", guild=SimpleNamespace(id=3), type=discord.ChannelType.text,
         permissions_for=lambda me: discord.Permissions(view_channel=True, send_messages=True, embed_links=True),
         send=AsyncMock(),
     )
-    guild = SimpleNamespace(id=3, me=object(), get_channel=lambda cid: channel)
+    guild = SimpleNamespace(
+        id=3, name="Guild", member_count=10, me=object(), get_channel=lambda cid: channel
+    )
     bot = SimpleNamespace(
         db_pool=pool, get_guild=lambda gid: guild,
         fetch_channel=AsyncMock(return_value=channel),
@@ -551,7 +554,7 @@ def test_everyone_role_is_never_a_valid_ping():
 def _missing_schema_guards(ddl):
     required = (
         "CREATE TABLE IF NOT EXISTS scheduled_announcements",
-        "char_length(content) <= 2000", "<= 256", "<= 4096",
+        "char_length(content) <= 2000", "octet_length(embed::text) <= 16384",
         "'none', 'daily', 'weekly', 'monthly'",
         "NULLIF(btrim(content), '') IS NOT NULL OR embed IS NOT NULL",
         "REFERENCES scheduled_announcements(id) ON DELETE CASCADE",

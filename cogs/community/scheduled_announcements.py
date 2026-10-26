@@ -43,7 +43,7 @@ class ScheduledAnnouncements(commands.Cog):
             permissions = channel.permissions_for(guild.me)
             if not permissions.view_channel or not permissions.send_messages:
                 raise ValueError("Missing channel send permissions")
-            content, embed, mentions = self.store.render(row)
+            content, embed, mentions = self.store.render(row, guild, channel)
             if embed is not None and not permissions.embed_links:
                 raise ValueError("Missing embed_links permission")
             await channel.send(content, embed=embed, allowed_mentions=mentions)

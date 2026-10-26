@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import discord
 
 from .announcements_schedule import RECURRENCES, next_occurrence
+from tools import embed_creator
 
 UTC = datetime.timezone.utc
 log = logging.getLogger(__name__)
@@ -43,17 +44,13 @@ def validate(values):
     if isinstance(embed, str):
         embed = json.loads(embed)
     if embed is not None:
-        if not isinstance(embed, dict) or set(embed) - {"title", "description", "color"}:
-            raise ValueError("Invalid embed fields")
-        for key, limit in (("title", 256), ("description", 4096)):
-            value = embed.get(key, "")
-            if not isinstance(value, str) or len(value) > limit:
-                raise ValueError(f"Invalid embed {key}")
-        color = embed.get("color", 0)
-        if type(color) is not int or not 0 <= color <= 0xFFFFFF:
-            raise ValueError("Invalid embed color")
-        if not (embed.get("title", "").strip() or embed.get("description", "").strip()):
-            raise ValueError("Embed needs a title or description")
+        # An embed_creator config: rendered here once to prove it shows
+        # something, and again at fire time with the live placeholders.
+        if not isinstance(embed, dict) or len(json.dumps(embed)) > 16384:
+            raise ValueError("Invalid embed")
+        rendered = render_embed(embed)
+        if not embed_creator.embed_has_content(rendered):
+            raise ValueError("Embed has no content")
     if not (content and content.strip()) and embed is None:
         raise ValueError("An announcement needs content or an embed")
     data["embed"] = embed
@@ -71,12 +68,36 @@ def validate(values):
     return data
 
 
-def render(row):
-    """Return Discord delivery arguments with exactly one optional role ping."""
+def render_embed(config, substitute=None):
+    """Render a stored embed config, or raise ValueError.
+
+    The config is JSON the database only checks for shape, so a malformed
+    nested value (an author that is not an object, a non-string title) is a
+    ValueError here - a recorded delivery failure, never a crash - and so is
+    an embed over Discord's 6000-character total, checked AFTER the live
+    placeholders are substituted.
+    """
+    try:
+        embed = embed_creator.render(config, substitute=substitute)
+    except (AttributeError, TypeError, ValueError, KeyError) as exc:
+        raise ValueError("Invalid embed") from exc
+    if len(embed) > 6000:
+        raise ValueError("Embed exceeds 6000 characters")
+    return embed
+
+
+def render(row, guild=None, channel=None):
+    """Return Discord delivery arguments with exactly one optional role ping.
+
+    ``guild`` / ``channel`` feed the {server} / {members} / {channel} tokens;
+    without them (write-time validation) the tokens render empty.
+    """
     data = row["embed"]
     if isinstance(data, str):
         data = json.loads(data)
-    embed = discord.Embed.from_dict(data) if data is not None else None
+    embed = None
+    if data is not None:
+        embed = render_embed(data, embed_creator.server_substitution(guild, channel))
     role_id = row["role_id"]
     content = row["content"]
     if role_id is not None:

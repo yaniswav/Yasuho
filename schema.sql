@@ -101,21 +101,11 @@ CREATE TABLE IF NOT EXISTS scheduled_announcements (
     channel_id BIGINT NOT NULL,
     author_id BIGINT NOT NULL,
     content TEXT CHECK (char_length(content) <= 2000),
+    -- An embed_creator config (the /announce builder's draft), rendered at
+    -- fire time so {members} and friends are current; validated by the bot.
     embed JSONB CHECK (
         embed IS NULL OR (
-            jsonb_typeof(embed) = 'object'
-            AND embed - 'title' - 'description' - 'color' = '{}'::jsonb
-            AND (NOT embed ? 'title' OR jsonb_typeof(embed->'title') = 'string')
-            AND (NOT embed ? 'description' OR jsonb_typeof(embed->'description') = 'string')
-            AND char_length(COALESCE(embed->>'title', '')) <= 256
-            AND char_length(COALESCE(embed->>'description', '')) <= 4096
-            AND (btrim(COALESCE(embed->>'title', '')) <> ''
-                OR btrim(COALESCE(embed->>'description', '')) <> '')
-            AND (NOT embed ? 'color' OR (
-                jsonb_typeof(embed->'color') = 'number'
-                AND (embed->>'color') ~ '^[0-9]+$'
-                AND (embed->>'color')::numeric BETWEEN 0 AND 16777215
-            ))
+            jsonb_typeof(embed) = 'object' AND octet_length(embed::text) <= 16384
         )
     ),
     role_id BIGINT,

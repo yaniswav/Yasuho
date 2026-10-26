@@ -10,14 +10,16 @@ fancy ellipsis anywhere in this file (code, comments, docstrings, or strings).
 """
 
 import datetime
+import json
 import logging
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
 from discord.ext import commands
 
-from tools import embed_creator
+from tools import embed_creator, interactions
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import N_, _
 from tools.time import FutureTime, ShortTime, parse_timestamp_token
 from tools.views import AuthorView, LocaleModal
 
@@ -32,24 +34,9 @@ PLACEHOLDERS = [
 PLACEHOLDER_HINT = "{server} {members} {channel}"
 
 
-def build_substitution(guild, channel):
-    """Return the token resolver passed to embed_creator.render.
-
-    Pure and side-effect free (takes plain values), so it is unit-testable.
-    """
-    members = f"{guild.member_count:,}" if guild and guild.member_count else "0"
-    replacements = {
-        "{server}": guild.name if guild else "",
-        "{members}": members,
-        "{channel}": channel.mention if channel else "",
-    }
-
-    def substitute(text):
-        for key, value in replacements.items():
-            text = text.replace(key, value)
-        return text
-
-    return substitute
+# Kept under its old name: the builder preview, the legacy timer listener and
+# the scheduled-announcement engine all resolve the same tokens.
+build_substitution = embed_creator.server_substitution
 
 
 class _TargetChannelSelect(discord.ui.ChannelSelect):
@@ -144,8 +131,18 @@ class _SendButton(discord.ui.Button):
             )
 
 
+REPEAT_CHOICES = (
+    ("none", N_("Once")),
+    ("daily", N_("Every day")),
+    ("weekly", N_("Every week")),
+    ("monthly", N_("Every month")),
+)
+
+
 class ScheduleModal(LocaleModal):
-    """Ask when to post the announcement, then queue it as a timer."""
+    """Ask when (and how often) to post the announcement, then hand it to the
+    scheduled-announcement engine, which posts it exactly once per occurrence
+    even across a restart."""
 
     def __init__(self, panel):
         super().__init__(title=_("Schedule the announcement"))
@@ -156,19 +153,41 @@ class ScheduleModal(LocaleModal):
             max_length=100,
             required=True,
         )
+        self.repeat_select = discord.ui.Select(
+            options=[
+                discord.SelectOption(label=_(label), value=value, default=value == "none")
+                for value, label in REPEAT_CHOICES
+            ],
+            min_values=1,
+            max_values=1,
+        )
+        self.tz_field = discord.ui.TextInput(
+            label=_("Time zone"),
+            placeholder=_("e.g. Europe/Paris, America/New_York"),
+            default="UTC",
+            max_length=64,
+            required=True,
+        )
         self.add_item(self.when_field)
+        self.add_item(discord.ui.Label(text=_("Repeat"), component=self.repeat_select))
+        self.add_item(self.tz_field)
 
     async def on_submit(self, interaction):
         raw = (self.when_field.value or "").strip()
-        reminder = self.panel.cog.bot.get_cog("Reminder")
-        tzinfo = (
-            await reminder.get_tzinfo(interaction.user.id)
-            if reminder is not None
-            else datetime.timezone.utc
-        )
+        tz_name = (self.tz_field.value or "").strip() or "UTC"
+        try:
+            tzinfo = ZoneInfo(tz_name)
+        except (ZoneInfoNotFoundError, ValueError):
+            return await interaction.response.send_message(
+                _(
+                    "I don't know the time zone `{tz}`. Use a name like "
+                    "`Europe/Paris` or `UTC`."
+                ).format(tz=discord.utils.escape_markdown(tz_name[:64])),
+                ephemeral=True,
+            )
         now = interaction.created_at.astimezone(tzinfo)
-        # A pasted Discord timestamp token wins outright (UTC); otherwise fall
-        # back to the existing ShortTime -> FutureTime natural-language parsing.
+        # A pasted Discord timestamp token wins outright; otherwise fall back to
+        # the ShortTime -> FutureTime natural-language parsing, in that zone.
         dt = parse_timestamp_token(raw)
         if dt is None:
             try:
@@ -184,14 +203,16 @@ class ScheduleModal(LocaleModal):
                         ),
                         ephemeral=True,
                     )
-        else:
-            dt = dt.astimezone(tzinfo)
-        if dt <= now:
+        dt = dt.astimezone(tzinfo)
+        # Instants, not wall times: two datetimes sharing a ZoneInfo compare
+        # by wall clock, which is wrong inside a DST fold.
+        if dt.astimezone(datetime.timezone.utc) <= interaction.created_at:
             return await interaction.response.send_message(
                 _("That time is in the past. Give me a moment in the future."),
                 ephemeral=True,
             )
-        await self.panel.schedule(interaction, dt)
+        repeat = (self.repeat_select.values or ["none"])[0]
+        await self.panel.schedule(interaction, dt, repeat, tz_name)
 
 
 class _ScheduleButton(discord.ui.Button):
@@ -351,30 +372,65 @@ class AnnouncePanel(AuthorView):
             channel=channel.mention
         ))
 
-    async def schedule(self, interaction, when):
+    async def schedule(self, interaction, when, repeat="none", tz_name="UTC"):
         channel = await self._validated(interaction)
         if channel is None:
             return
-        reminder = self.cog.bot.get_cog("Reminder")
-        if reminder is None:
+        engine = self.cog.bot.get_cog("ScheduledAnnouncements")
+        if engine is None:
             return await interaction.response.send_message(
                 _("Scheduling is unavailable right now."), ephemeral=True
             )
-        # The embed blob is stored raw and re-rendered at fire time, so
+        # Acknowledge before the database write: a slow pool must not expire
+        # the modal after the schedule committed (a retry would double it).
+        await interactions.defer(interaction, ephemeral=True, surface="announce schedule")
+        # The embed config is stored raw and rendered at fire time, so
         # {members} and friends reflect the moment it actually posts.
-        await reminder.create_timer(
-            when,
-            "announcement",
-            guild_id=self.guild.id,
-            channel_id=channel.id,
-            role_id=self.draft.get("role_id"),
-            embed=self.draft.get("embed"),
-        )
-        await interaction.response.send_message(
+        try:
+            await engine.store.create(
+                self.guild.id,
+                channel.id,
+                interaction.user.id,
+                local_time=when.replace(tzinfo=None),
+                timezone=tz_name,
+                recurrence=repeat,
+                embed=self.draft.get("embed"),
+                role_id=self.draft.get("role_id"),
+            )
+        except ValueError:
+            log.info("Announcement schedule refused", exc_info=True)
+            return await interaction.followup.send(
+                _(
+                    "I couldn't schedule that: check the time, and that this "
+                    "server has fewer than 50 scheduled announcements."
+                ),
+                ephemeral=True,
+            )
+        lines = [
             _("Scheduled for {when} in {channel}.").format(
                 when=discord.utils.format_dt(when, "F"), channel=channel.mention
-            ),
+            )
+        ]
+        if repeat != "none":
+            lines.append(
+                _("Repeats: {repeat}. Manage it with `/announcements`.").format(
+                    repeat=_(dict(REPEAT_CHOICES)[repeat])
+                )
+            )
+        role = self.guild.get_role(self.draft.get("role_id") or 0)
+        if role is not None and not role.mentionable and not channel.permissions_for(
+            self.guild.me
+        ).mention_everyone:
+            lines.append(
+                _(
+                    "{role} is not mentionable and I can't mention every role "
+                    "here, so it won't be pinged."
+                ).format(role=role.mention)
+            )
+        await interaction.followup.send(
+            "\n".join(lines),
             ephemeral=True,
+            allowed_mentions=discord.AllowedMentions.none(),
         )
         # Freeze the builder so Send / Schedule can't double-fire the same draft.
         for child in self.children:
@@ -397,6 +453,157 @@ class AnnouncePanel(AuthorView):
         await interaction.followup.send(message, ephemeral=True)
 
 
+def _summary(row):
+    """One line per scheduled announcement for the manager panel."""
+    embed = row["embed"]
+    if isinstance(embed, str):
+        embed = json.loads(embed)
+    embed = embed if isinstance(embed, dict) else {}
+    title = embed.get("title") or embed.get("description") or ""
+    title = (title if isinstance(title, str) else "")[:40]
+    repeat = _(dict(REPEAT_CHOICES).get(row["recurrence"], REPEAT_CHOICES[0][1]))
+    if row["enabled"] and row["next_run_at"] is not None:
+        when = discord.utils.format_dt(row["next_run_at"], "R")
+    elif row["failures"] >= 3:
+        when = _("stopped after repeated failures")
+    else:
+        when = _("paused")
+    return "`#{id}` <#{channel}> - {repeat}, {when}{title}".format(
+        id=row["id"],
+        channel=row["channel_id"],
+        repeat=repeat,
+        when=when,
+        title=" - " + discord.utils.escape_markdown(title) if title else "",
+    )
+
+
+class _ScheduledSelect(discord.ui.Select):
+    def __init__(self, panel, start=0):
+        self._owner = panel
+        options = [
+            discord.SelectOption(
+                label="#{0}".format(row["id"]),
+                value=str(row["id"]),
+                description=_summary_plain(row),
+                default=row["id"] == panel.selected,
+            )
+            for row in panel.rows[start:start + 25]
+        ]
+        # A select holds 25 options and a server up to 50 schedules: a second
+        # select carries the rest.
+        super().__init__(
+            placeholder=_("Pick a scheduled announcement..."),
+            options=options,
+            row=start // 25,
+        )
+
+    async def callback(self, interaction):
+        self._owner.selected = int(self.values[0])
+        await self._owner.rerender(interaction)
+
+
+def _summary_plain(row):
+    repeat = _(dict(REPEAT_CHOICES).get(row["recurrence"], REPEAT_CHOICES[0][1]))
+    state = _("active") if row["enabled"] else _("paused")
+    return "{repeat} - {state}".format(repeat=repeat, state=state)[:100]
+
+
+class ScheduledPanel(AuthorView):
+    """List this server's scheduled announcements; pause, resume or delete one."""
+
+    def __init__(self, cog, guild, author_id, rows, selected=None):
+        super().__init__(author_id, deny_message="This panel isn't for you.")
+        self.cog = cog
+        self.guild = guild
+        self.rows = list(rows)
+        self.selected = selected
+        if self.rows:
+            for start in range(0, min(len(self.rows), 50), 25):
+                self.add_item(_ScheduledSelect(self, start))
+            row = self._selected_row()
+            toggle = discord.ui.Button(
+                label=_("Resume") if row is not None and not row["enabled"] else _("Pause"),
+                style=discord.ButtonStyle.secondary,
+                disabled=row is None,
+                row=2,
+            )
+            toggle.callback = self._toggle
+            delete = discord.ui.Button(
+                label=_("Delete"),
+                style=discord.ButtonStyle.danger,
+                disabled=row is None,
+                row=2,
+            )
+            delete.callback = self._delete
+            self.add_item(toggle)
+            self.add_item(delete)
+
+    def _selected_row(self):
+        return next((r for r in self.rows if r["id"] == self.selected), None)
+
+    def build_embed(self):
+        embed = discord.Embed(title=_("Scheduled announcements"), colour=random_colour())
+        if not self.rows:
+            embed.description = _(
+                "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
+            )
+        else:
+            text = "\n".join(_summary(r) for r in self.rows[:50])
+            embed.description = text if len(text) <= 4000 else text[:3997] + "..."
+        return embed
+
+    async def interaction_check(self, interaction):
+        # Authority is re-checked on every click, not only when /announcements
+        # opened the panel: a manager who lost Manage Server loses the panel.
+        if not await super().interaction_check(interaction):
+            return False
+        perms = getattr(interaction.user, "guild_permissions", None)
+        if perms is None or not perms.manage_guild:
+            await interaction.response.send_message(
+                _("You need the Manage Server permission for this."), ephemeral=True
+            )
+            return False
+        return True
+
+    @property
+    def store(self):
+        engine = self.cog.bot.get_cog("ScheduledAnnouncements")
+        return engine.store if engine is not None else None
+
+    async def rerender(self, interaction):
+        store = self.store
+        rows = await store.list_for_guild(self.guild.id) if store is not None else []
+        new = ScheduledPanel(self.cog, self.guild, self.author_id, rows, self.selected)
+        new.message = self.message
+        self.stop()
+        await embed_creator.refresh_in_place(
+            interaction, self.message, embed=new.build_embed(), view=new
+        )
+
+    async def _toggle(self, interaction):
+        row, store = self._selected_row(), self.store
+        if row is None or store is None:
+            return await self.rerender(interaction)
+        try:
+            await store.set_enabled(self.guild.id, row["id"], not row["enabled"])
+        except ValueError:
+            return await interaction.response.send_message(
+                _(
+                    "That one-time announcement is already past. Delete it and "
+                    "schedule a new one."
+                ),
+                ephemeral=True,
+            )
+        await self.rerender(interaction)
+
+    async def _delete(self, interaction):
+        row, store = self._selected_row(), self.store
+        if row is not None and store is not None:
+            await store.delete(self.guild.id, row["id"])
+            self.selected = None
+        await self.rerender(interaction)
+
+
 class Announcements(commands.Cog):
     """Build and send rich announcement embeds interactively."""
 
@@ -411,6 +618,18 @@ class Announcements(commands.Cog):
         """Open the announcement builder."""
         draft = {"embed": embed_creator.default_embed(), "channel_id": None, "role_id": None}
         view = AnnouncePanel(self, ctx.guild, ctx.author.id, draft)
+        view.message = await ctx.send(embed=view.build_embed(), view=view)
+
+    @commands.hybrid_command(name="announcements")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def announcements(self, ctx):
+        """List, pause, resume or delete this server's scheduled announcements."""
+        engine = self.bot.get_cog("ScheduledAnnouncements")
+        if engine is None:
+            return await ctx.send(_("Scheduling is unavailable right now."))
+        rows = await engine.store.list_for_guild(ctx.guild.id)
+        view = ScheduledPanel(self, ctx.guild, ctx.author.id, rows)
         view.message = await ctx.send(embed=view.build_embed(), view=view)
 
     @commands.Cog.listener()
