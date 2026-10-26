@@ -186,8 +186,13 @@ class _LogChannel(discord.TextChannel):
         self.sends = []
         self.send_error = None
         self._perms = perms if perms is not None else _Perms()
+        self.public = False
 
-    def permissions_for(self, _obj):
+    def permissions_for(self, obj):
+        # A staff-only log channel unless a test opens it to @everyone: the
+        # transcript only ever goes where @everyone cannot read.
+        if obj is not None and obj is getattr(self.guild, "default_role", None):
+            return _Perms(view_channel=self.public)
         return self._perms
 
     async def send(self, *args, **kwargs):
@@ -202,6 +207,7 @@ class _Guild:
         self.id = GUILD_ID
         self.name = "Server"
         self.me = object()
+        self.default_role = object()
         # Real ``discord.Guild`` attribute: True for the stub parse_ready
         # re-adds on a re-IDENTIFY, whose thread cache is empty.
         self.unavailable = unavailable
@@ -1313,3 +1319,21 @@ async def test_cancelling_the_prompt_leaves_the_ticket_alone():
 
     assert world.pool.calls == []
     assert "stays open" in interaction.edits[0]["content"]
+
+
+async def test_a_public_log_channel_gets_no_transcript_and_says_why():
+    """The transcript is staff evidence: never posted where @everyone reads."""
+    _configured()
+    world = _world(thread_messages=[_message("hello")],
+                   pool_kwargs={"by_thread": _row()})
+    world.channel.public = True
+
+    await lifecycle.perform_close(
+        world.bot, world.guild, world.thread, _row(),
+        closed_by=_Member(OPENER_ID), reason=lifecycle.REASON_MANUAL,
+    )
+
+    assert "history" not in world.journal  # the thread was never read
+    args, kwargs = world.channel.sends[0]
+    assert "file" not in kwargs or kwargs["file"] is None
+    assert "everyone can read" in kwargs["embed"].footer.text

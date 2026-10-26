@@ -61,6 +61,7 @@ from .open import TicketPanelView
 from tools import i18n, interactions, premium
 from tools.formats import random_colour
 from tools.i18n import _
+from tools.modchecks import everyone_can_read
 from tools.snowflake import coerce_id
 from tools.views import AuthorLayoutView, LocaleLayoutView, LocaleModal
 
@@ -157,22 +158,12 @@ def _render(obj, raw_id):
 
 
 def _is_public(channel):
-    """Can @everyone read this channel? Defensive - unknown answers ``False``.
+    """Can @everyone read this channel? Advice only - unknown answers ``False``.
 
-    Asked of the LOG channel, because a ticket transcript posted there is the
-    conversation of a private thread: in a public channel that publishes it to
-    the whole server. Anything this cannot evaluate (a partial channel, no
-    guild, a permissions lookup that raises) answers "not public": the caution
-    it feeds is advice, and advice nobody can verify is noise.
+    See :func:`tools.modchecks.everyone_can_read`; the close path asks the same
+    question with ``unknown=True`` before it writes a transcript.
     """
-    guild = getattr(channel, "guild", None)
-    everyone = getattr(guild, "default_role", None)
-    if channel is None or everyone is None:
-        return False
-    try:
-        return bool(channel.permissions_for(everyone).view_channel)
-    except Exception:  # pragma: no cover - a fake or a partial channel
-        return False
+    return everyone_can_read(channel, unknown=False)
 
 
 def _log_caution(channel):
@@ -185,9 +176,9 @@ def _log_caution(channel):
     if not _is_public(channel):
         return None
     return _(
-        "Heads up: everyone can read {channel}, and a closed ticket is logged "
-        "there with the full transcript of its thread. Pick a staff-only "
-        "channel if that is not what you want."
+        "Heads up: everyone can read {channel}, so closed tickets are logged "
+        "there WITHOUT their transcript. Pick a staff-only channel to keep "
+        "transcripts."
     ).format(channel=channel.mention)
 
 

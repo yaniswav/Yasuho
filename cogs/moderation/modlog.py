@@ -8,6 +8,7 @@ from discord.ext import commands
 from tools import db, embed_creator, interactions, settings
 from tools.i18n import _
 from tools.lru_cache import BoundedLRU
+from tools.modchecks import everyone_can_read
 from tools.views import AuthorLayoutView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
@@ -311,6 +312,21 @@ class ModLogStatusView(LocaleLayoutView):
         self.add_item(container)
 
 
+def _logged_text(channel, text, limit):
+    """The message text for a mod-log field, or a notice when it is withheld.
+
+    Copied message text is moderation evidence, the one use the Message
+    Content intent is requested for: it only goes into a log channel that
+    @everyone cannot read (an unverifiable channel counts as readable).
+    """
+    if everyone_can_read(channel, unknown=True):
+        return _(
+            "*Hidden: everyone can read this log channel. Make it staff-only "
+            "to see message text here.*"
+        )
+    return text[:limit] or "\u200b"
+
+
 class ModLog(commands.Cog):
     """Logs moderation actions and server events to a configured channel."""
 
@@ -407,11 +423,17 @@ class ModLog(commands.Cog):
         """Set the channel where moderation logs are sent."""
 
         await self._set_channel(ctx.guild.id, channel.id)
+        description = _("Mod-log channel set to {channel}.").format(
+            channel=channel.mention
+        )
+        if everyone_can_read(channel, unknown=False):
+            description += "\n" + _(
+                "Heads up: everyone can read {channel}, so edited and deleted "
+                "message text is hidden there. Make it staff-only to see it."
+            ).format(channel=channel.mention)
         embed = discord.Embed(
             title=_("Mod log"),
-            description=_("Mod-log channel set to {channel}.").format(
-                channel=channel.mention
-            ),
+            description=description,
             colour=EVENT_COLOURS["join"],
         )
         await ctx.send(embed=embed)
@@ -563,6 +585,10 @@ class ModLog(commands.Cog):
         if not await self._enabled(message.guild.id, "message_delete"):
             return
 
+        channel = await self.get_log_channel(message.guild)
+        if channel is None:
+            return
+
         embed = discord.Embed(
             title=_("Message Deleted"),
             colour=EVENT_COLOURS["message_delete"],
@@ -574,7 +600,9 @@ class ModLog(commands.Cog):
         )
         embed.add_field(name=_("Channel"), value=message.channel.mention)
         embed.add_field(
-            name=_("Content"), value=message.content[:1024], inline=False
+            name=_("Content"),
+            value=_logged_text(channel, message.content, 1024),
+            inline=False,
         )
         jump = getattr(message, "jump_url", None)
         if jump:
@@ -672,7 +700,7 @@ class ModLog(commands.Cog):
             self._logged_edits[after.id] = edited_at
 
         if before is not None:
-            before_value = before.content[:512] or "​"
+            before_value = _logged_text(channel, before.content, 512)
         else:
             before_value = _(
                 "*Not in the bot's cache - previous content unknown.*"
@@ -690,7 +718,9 @@ class ModLog(commands.Cog):
         embed.add_field(name=_("Channel"), value=after.channel.mention)
         embed.add_field(name=_("Before"), value=before_value, inline=False)
         embed.add_field(
-            name=_("After"), value=(after.content[:512] or "​"), inline=False
+            name=_("After"),
+            value=_logged_text(channel, after.content, 512),
+            inline=False,
         )
         jump = getattr(after, "jump_url", None)
         if jump:

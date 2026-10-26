@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:16+0000\n"
+"POT-Creation-Date: 2026-10-26 10:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1085,7 +1085,7 @@ msgstr "追跡する正確なタイトルを選んでください:"
 #: cogs/anilist/feed_views.py:412 cogs/anilist/feed_views.py:690
 #: cogs/anilist/feed_views.py:989 cogs/anilist/feed_views.py:1380
 #: cogs/anilist/feed_views.py:1474 cogs/anilist/hub.py:333
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:242
+#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:243
 msgid "Only you can use these controls."
 msgstr "これらの操作はあなただけが使用できます。"
 
@@ -1216,7 +1216,7 @@ msgstr "削除"
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:245 cogs/community/usersettings.py:336
-#: cogs/config/tickets/lifecycle.py:279 cogs/system/arg_completion.py:286
+#: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -1273,18 +1273,18 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:49
-#: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:498
+#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:275
+#: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "有効"
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:49
-#: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:500
+#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:277
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "無効"
 
@@ -1301,7 +1301,7 @@ msgstr "このサーバーへのAniListアクティビティの反映方法を�
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
 #: cogs/config/welcome.py:560 cogs/config/welcome.py:780
-#: cogs/moderation/modlog.py:575 cogs/moderation/modlog.py:690
+#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "チャンネル"
 
@@ -2474,7 +2474,7 @@ msgstr "サーバー全体: **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:896
 #: cogs/community/leveling/level_config_ui.py:902
-#: cogs/config/tickets/panel.py:155 cogs/config/verification.py:116
+#: cogs/config/tickets/panel.py:156 cogs/config/verification.py:116
 msgid "(deleted)"
 msgstr "(削除済み)"
 
@@ -2579,7 +2579,7 @@ msgstr "メンバーのカードスタイル"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:252 cogs/config/tickets/panel.py:612
+#: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
@@ -2588,7 +2588,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:254 cogs/config/tickets/panel.py:614
+#: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
@@ -3751,8 +3751,8 @@ msgstr "{count}本のゲームを所有"
 msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
 msgstr "{channel} で週間サマリーを予約するには、あなた自身に次の権限が必要です: {permissions}。"
 
-#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:684
-#: cogs/config/tickets/panel.py:828
+#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:675
+#: cogs/config/tickets/panel.py:819
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "まず {channel} で次の権限が必要です: {permissions}"
@@ -4036,10 +4036,10 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** を押してください。プレビューはあなたにのみ表示されます。"
 
 #: cogs/config/announcements.py:269 cogs/config/buttonroles.py:550
-#: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:156
+#: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:157
 #: cogs/config/twitch.py:420 cogs/config/verification.py:118
 #: cogs/config/welcome.py:422 cogs/config/welcome.py:543
-#: cogs/moderation/modlog.py:273
+#: cogs/moderation/modlog.py:274
 msgid "*Not set.*"
 msgstr "*未設定。*"
 
@@ -5106,7 +5106,7 @@ msgstr "オーナーを譲渡"
 msgid "Bump to top"
 msgstr "最上部に移動"
 
-#: cogs/config/rooms_panels.py:351 cogs/config/tickets/lifecycle.py:228
+#: cogs/config/rooms_panels.py:351 cogs/config/tickets/lifecycle.py:229
 msgid "Claim"
 msgstr "取得"
 
@@ -5632,8 +5632,8 @@ msgstr "そのロールを付与できません - 私の最上位ロールより
 msgid "I can't give you that role: it carries permissions I won't hand out automatically. Please tell a server admin."
 msgstr "そのロールは付与できません。自動では付与しない権限が含まれています。サーバーの管理者にお知らせください。"
 
-#: cogs/config/tickets/lifecycle.py:372 cogs/config/tickets/lifecycle.py:462
-#: cogs/config/tickets/lifecycle.py:519 cogs/config/tickets/open.py:230
+#: cogs/config/tickets/lifecycle.py:373 cogs/config/tickets/lifecycle.py:463
+#: cogs/config/tickets/lifecycle.py:520 cogs/config/tickets/open.py:230
 #: cogs/config/tickets/open.py:262 cogs/config/tickets/open.py:418
 #: cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
@@ -5802,166 +5802,170 @@ msgstr "ウェルカムメッセージをオフにしました。"
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
 
-#: cogs/config/tickets/lifecycle.py:203 cogs/config/tickets/lifecycle.py:275
+#: cogs/config/tickets/lifecycle.py:204 cogs/config/tickets/lifecycle.py:276
 msgid "Close ticket"
 msgstr "チケットを閉じる"
 
-#: cogs/config/tickets/lifecycle.py:292
+#: cogs/config/tickets/lifecycle.py:293
 #, python-brace-format
 msgid "Closing ticket #{number}..."
 msgstr "チケット #{number} を閉じています..."
 
-#: cogs/config/tickets/lifecycle.py:303
+#: cogs/config/tickets/lifecycle.py:304
 msgid "The ticket stays open."
 msgstr "チケットは開いたままです。"
 
-#: cogs/config/tickets/lifecycle.py:358 cogs/config/tickets/lifecycle.py:453
+#: cogs/config/tickets/lifecycle.py:359 cogs/config/tickets/lifecycle.py:454
 #: cogs/config/tickets/open.py:187 cogs/config/tickets/open.py:316
 msgid "Tickets only work inside a server."
 msgstr "チケットはサーバー内でのみ利用できます。"
 
-#: cogs/config/tickets/lifecycle.py:364
+#: cogs/config/tickets/lifecycle.py:365
 msgid "Only the support team can claim a ticket."
 msgstr "チケットを取得できるのはサポートチームのみです。"
 
-#: cogs/config/tickets/lifecycle.py:377 cogs/config/tickets/lifecycle.py:467
+#: cogs/config/tickets/lifecycle.py:378 cogs/config/tickets/lifecycle.py:468
 msgid "This thread is not a ticket."
 msgstr "このスレッドはチケットではありません。"
 
-#: cogs/config/tickets/lifecycle.py:386 cogs/config/tickets/lifecycle.py:472
+#: cogs/config/tickets/lifecycle.py:387 cogs/config/tickets/lifecycle.py:473
 #, python-brace-format
 msgid "Ticket #{number} is already closed."
 msgstr "チケット #{number} はすでに閉じられています。"
 
-#: cogs/config/tickets/lifecycle.py:393
+#: cogs/config/tickets/lifecycle.py:394
 #, python-brace-format
 msgid "Ticket #{number} is already claimed by {user}."
 msgstr "チケット #{number} はすでに {user} が取得しています。"
 
-#: cogs/config/tickets/lifecycle.py:398
+#: cogs/config/tickets/lifecycle.py:399
 msgid "You cannot claim your own ticket."
 msgstr "自分のチケットを取得することはできません。"
 
-#: cogs/config/tickets/lifecycle.py:409
+#: cogs/config/tickets/lifecycle.py:410
 #, python-brace-format
 msgid "Ticket #{number} is yours."
 msgstr "チケット #{number} はあなたが取得しました。"
 
-#: cogs/config/tickets/lifecycle.py:417
+#: cogs/config/tickets/lifecycle.py:418
 #, python-brace-format
 msgid "{user} is taking care of this ticket."
 msgstr "{user} がこのチケットを担当しています。"
 
-#: cogs/config/tickets/lifecycle.py:481
+#: cogs/config/tickets/lifecycle.py:482
 msgid "Only the member who opened this ticket, or the support team, can close it."
 msgstr "このチケットを閉じられるのは、開いた本人かサポートチームだけです。"
 
-#: cogs/config/tickets/lifecycle.py:497
+#: cogs/config/tickets/lifecycle.py:498
 #, python-brace-format
 msgid "Close ticket #{number}? The thread will be archived and locked."
 msgstr "チケット #{number} を閉じますか？スレッドはアーカイブされ、ロックされます。"
 
-#: cogs/config/tickets/lifecycle.py:523 cogs/config/tickets/lifecycle.py:544
+#: cogs/config/tickets/lifecycle.py:524 cogs/config/tickets/lifecycle.py:545
 msgid "This ticket is already closed."
 msgstr "このチケットはすでに閉じられています。"
 
-#: cogs/config/tickets/lifecycle.py:538
+#: cogs/config/tickets/lifecycle.py:539
 #, python-brace-format
 msgid "I could not close ticket #{number}. Nothing has changed, so please try again."
 msgstr "チケット #{number} を閉じられませんでした。何も変更されていないので、もう一度お試しください。"
 
-#: cogs/config/tickets/lifecycle.py:548
+#: cogs/config/tickets/lifecycle.py:549
 #, python-brace-format
 msgid "Ticket #{number} is closed."
 msgstr "チケット #{number} は閉じられました。"
 
-#: cogs/config/tickets/lifecycle.py:670
+#: cogs/config/tickets/lifecycle.py:678
 #, python-brace-format
 msgid "Ticket #{number} is closed. Thanks for reaching out."
 msgstr "チケット #{number} は閉じられました。お問い合わせありがとうございました。"
 
-#: cogs/config/tickets/lifecycle.py:675
+#: cogs/config/tickets/lifecycle.py:683
 msgid "This server has no ticket log channel, so no transcript was saved."
 msgstr "このサーバーにはチケットログチャンネルが設定されていないため、会話記録は保存されませんでした。"
 
-#: cogs/config/tickets/lifecycle.py:684
+#: cogs/config/tickets/lifecycle.py:692
 msgid "A transcript of this conversation was saved to this server's ticket log channel, where its staff team keeps it."
 msgstr "この会話の記録がサーバーのチケットログチャンネルに保存され、スタッフが確認できます。"
 
-#: cogs/config/tickets/lifecycle.py:704
+#: cogs/config/tickets/lifecycle.py:712
 #, python-brace-format
 msgid "Transcript of ticket #{number}"
 msgstr "チケット #{number} の会話記録"
 
-#: cogs/config/tickets/lifecycle.py:705
+#: cogs/config/tickets/lifecycle.py:713
 #, python-brace-format
 msgid "Server: {guild}"
 msgstr "サーバー: {guild}"
 
-#: cogs/config/tickets/lifecycle.py:706
+#: cogs/config/tickets/lifecycle.py:714
 #, python-brace-format
 msgid "Opened by {user} on {date}"
 msgstr "{date} に {user} が開始"
 
-#: cogs/config/tickets/lifecycle.py:710
+#: cogs/config/tickets/lifecycle.py:718
 #, python-brace-format
 msgid "Taken on {date}"
 msgstr "{date} に取得"
 
-#: cogs/config/tickets/lifecycle.py:713
+#: cogs/config/tickets/lifecycle.py:721
 msgid "Attachment links are Discord CDN links and stop working after a while."
 msgstr "添付ファイルのリンクはDiscordのCDNリンクであり、しばらくすると無効になります。"
 
-#: cogs/config/tickets/lifecycle.py:762
+#: cogs/config/tickets/lifecycle.py:770
 #, python-brace-format
 msgid "Ticket #{number} closed"
 msgstr "チケット #{number} 終了"
 
-#: cogs/config/tickets/lifecycle.py:766
+#: cogs/config/tickets/lifecycle.py:774
 msgid "Opened by"
 msgstr "開始者"
 
-#: cogs/config/tickets/lifecycle.py:769
+#: cogs/config/tickets/lifecycle.py:777
 msgid "Claimed by"
 msgstr "取得者"
 
-#: cogs/config/tickets/lifecycle.py:773
+#: cogs/config/tickets/lifecycle.py:781
 msgid "Nobody"
 msgstr "なし"
 
-#: cogs/config/tickets/lifecycle.py:777
+#: cogs/config/tickets/lifecycle.py:785
 msgid "Ended by"
 msgstr "終了者"
 
-#: cogs/config/tickets/lifecycle.py:779
+#: cogs/config/tickets/lifecycle.py:787
 msgid "Opened"
 msgstr "開始"
 
-#: cogs/config/tickets/lifecycle.py:782
+#: cogs/config/tickets/lifecycle.py:790
 msgid "Closed"
 msgstr "終了"
 
-#: cogs/config/tickets/lifecycle.py:795
+#: cogs/config/tickets/lifecycle.py:809
 msgid "Transcript attached: what was said in the ticket thread. It stays in this channel."
 msgstr "会話記録を添付: チケットスレッドでのやり取りです。このチャンネルに保存されます。"
 
-#: cogs/config/tickets/lifecycle.py:819
+#: cogs/config/tickets/lifecycle.py:833
 msgid "The thread was deleted."
 msgstr "スレッドは削除されました。"
 
-#: cogs/config/tickets/lifecycle.py:822
+#: cogs/config/tickets/lifecycle.py:836
 msgid "Auto-closed after inactivity."
 msgstr "非アクティブのため自動終了。"
 
-#: cogs/config/tickets/lifecycle.py:836
+#: cogs/config/tickets/lifecycle.py:850
 msgid "No transcript: the thread was already gone."
 msgstr "会話記録なし: スレッドはすでに削除されていました。"
 
-#: cogs/config/tickets/lifecycle.py:838
+#: cogs/config/tickets/lifecycle.py:853
+msgid "No transcript: everyone can read this channel. Use a staff-only log channel to keep transcripts."
+msgstr "トランスクリプトなし: このチャンネルは全員が閲覧できます。トランスクリプトを残すにはスタッフ専用のログチャンネルを使ってください。"
+
+#: cogs/config/tickets/lifecycle.py:857
 msgid "No transcript: I cannot attach files in this channel."
 msgstr "会話記録なし: このチャンネルではファイルを添付できません。"
 
-#: cogs/config/tickets/lifecycle.py:840
+#: cogs/config/tickets/lifecycle.py:859
 msgid "No transcript: I could not read the thread."
 msgstr "会話記録なし: スレッドを読み取れませんでした。"
 
@@ -6037,12 +6041,12 @@ msgstr "{user} が開きました"
 msgid "Ticket #{number} - use the buttons below to claim or close it."
 msgstr "チケット #{number} - 下のボタンで取得または終了できます。"
 
-#: cogs/config/tickets/panel.py:99
+#: cogs/config/tickets/panel.py:100
 #, python-brace-format
 msgid "Support tickets | {guild}"
 msgstr "サポートチケット | {guild}"
 
-#: cogs/config/tickets/panel.py:106
+#: cogs/config/tickets/panel.py:107
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -6059,85 +6063,85 @@ msgstr ""
 "**メンバーごとの上限:** {cap}\n"
 "**非アクティブ期間:** {hours}時間"
 
-#: cogs/config/tickets/panel.py:125 cogs/config/tickets/panel.py:943
+#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:934
 #, python-brace-format
 msgid "Closed tickets are logged in {channel}, transcript attached."
 msgstr "終了したチケットは {channel} に記録され、会話記録が添付されます。"
 
-#: cogs/config/tickets/panel.py:132
+#: cogs/config/tickets/panel.py:133
 msgid "Use `/ticket setup` to turn tickets on."
 msgstr "`/ticket setup` でチケットを有効にしてください。"
 
-#: cogs/config/tickets/panel.py:188
+#: cogs/config/tickets/panel.py:179
 #, python-brace-format
-msgid "Heads up: everyone can read {channel}, and a closed ticket is logged there with the full transcript of its thread. Pick a staff-only channel if that is not what you want."
-msgstr "ご注意: {channel} は誰でも閲覧できます。チケットを終了すると、そのスレッドの会話記録全文がそこに記録されます。それを望まない場合は、スタッフ専用のチャンネルを選んでください。"
+msgid "Heads up: everyone can read {channel}, so closed tickets are logged there WITHOUT their transcript. Pick a staff-only channel to keep transcripts."
+msgstr "注意: {channel} は全員が閲覧できるため、クローズしたチケットはトランスクリプトなしで記録されます。トランスクリプトを残すにはスタッフ専用のチャンネルを選んでください。"
 
-#: cogs/config/tickets/panel.py:238
+#: cogs/config/tickets/panel.py:229
 msgid "Panel channel (clear to turn tickets off)..."
 msgstr "パネルチャンネル（クリアでチケットをオフ）..."
 
-#: cogs/config/tickets/panel.py:256
+#: cogs/config/tickets/panel.py:247
 msgid "Support role (clear for none)..."
 msgstr "サポートロール（クリアでなし）..."
 
-#: cogs/config/tickets/panel.py:284
+#: cogs/config/tickets/panel.py:275
 msgid "Log channel: closed tickets + transcripts..."
 msgstr "ログチャンネル: 終了したチケット + 会話記録..."
 
-#: cogs/config/tickets/panel.py:301
+#: cogs/config/tickets/panel.py:292
 msgid "Clears the setting and follows the bot default."
 msgstr "設定をクリアし、Botのデフォルトに従います。"
 
-#: cogs/config/tickets/panel.py:318
+#: cogs/config/tickets/panel.py:309
 #, python-brace-format
 msgid "Default ({count})"
 msgstr "デフォルト（{count}）"
 
-#: cogs/config/tickets/panel.py:327
+#: cogs/config/tickets/panel.py:318
 #, python-brace-format
 msgid "{count} at a time"
 msgstr "同時に{count}件"
 
-#: cogs/config/tickets/panel.py:333
+#: cogs/config/tickets/panel.py:324
 msgid "Open tickets per member..."
 msgstr "メンバーごとの同時オープン数..."
 
-#: cogs/config/tickets/panel.py:352
+#: cogs/config/tickets/panel.py:343
 #, python-brace-format
 msgid "Default ({hours}h)"
 msgstr "デフォルト（{hours}時間）"
 
-#: cogs/config/tickets/panel.py:361 cogs/config/tickets/panel.py:509
+#: cogs/config/tickets/panel.py:352 cogs/config/tickets/panel.py:500
 #, python-brace-format
 msgid "{hours}h"
 msgstr "{hours}時間"
 
-#: cogs/config/tickets/panel.py:367
+#: cogs/config/tickets/panel.py:358
 msgid "Close a ticket after this much silence..."
 msgstr "この期間沈黙が続いたらチケットを終了..."
 
-#: cogs/config/tickets/panel.py:383
+#: cogs/config/tickets/panel.py:374
 msgid "Panel message"
 msgstr "パネルメッセージ"
 
-#: cogs/config/tickets/panel.py:386
+#: cogs/config/tickets/panel.py:377
 msgid "Shown above the ticket button"
 msgstr "チケットボタンの上に表示されます"
 
-#: cogs/config/tickets/panel.py:391
+#: cogs/config/tickets/panel.py:382
 msgid "Leave empty to use the default wording."
 msgstr "空欄にするとデフォルトの文言が使用されます。"
 
-#: cogs/config/tickets/panel.py:402
+#: cogs/config/tickets/panel.py:393
 msgid "Edit panel message"
 msgstr "パネルメッセージを編集"
 
-#: cogs/config/tickets/panel.py:413
+#: cogs/config/tickets/panel.py:404
 msgid "Reset message"
 msgstr "メッセージをリセット"
 
-#: cogs/config/tickets/panel.py:489
+#: cogs/config/tickets/panel.py:480
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -6156,65 +6160,65 @@ msgstr ""
 "**非アクティブ期間:** {hours}\n"
 "**パネルメッセージ:** {message}"
 
-#: cogs/config/tickets/panel.py:513
+#: cogs/config/tickets/panel.py:504
 msgid "*Default wording.*"
 msgstr "*デフォルトの文言。*"
 
-#: cogs/config/tickets/panel.py:521
+#: cogs/config/tickets/panel.py:512
 #, python-brace-format
 msgid "{value} (default)"
 msgstr "{value}（デフォルト）"
 
-#: cogs/config/tickets/panel.py:531
+#: cogs/config/tickets/panel.py:522
 #, python-brace-format
 msgid "Support tickets - {guild}"
 msgstr "サポートチケット - {guild}"
 
-#: cogs/config/tickets/panel.py:534
+#: cogs/config/tickets/panel.py:525
 msgid "Every setting below is optional: clear a picker, or choose Default, and Yasuho goes back to her own default for it."
 msgstr "以下の設定はすべて任意です。項目をクリアするか「デフォルト」を選ぶと、Yasuhoは自分のデフォルト設定に戻ります。"
 
-#: cogs/config/tickets/panel.py:597
+#: cogs/config/tickets/panel.py:588
 msgid "Changing the panel channel here does not post a panel there - run `/ticket setup` for that."
 msgstr "ここでパネルチャンネルを変更しても、そこにパネルが投稿されるわけではありません。投稿するには `/ticket setup` を実行してください。"
 
-#: cogs/config/tickets/panel.py:601
+#: cogs/config/tickets/panel.py:592
 msgid "A closed ticket is logged with the full transcript of its thread; with no log channel, no transcript is kept at all."
 msgstr "チケットを終了すると、そのスレッドの会話記録全文が記録されます。ログチャンネルがない場合、会話記録はまったく保存されません。"
 
-#: cogs/config/tickets/panel.py:644
+#: cogs/config/tickets/panel.py:635
 msgid "Something went wrong saving that setting."
 msgstr "その設定の保存中に問題が発生しました。"
 
-#: cogs/config/tickets/panel.py:884
+#: cogs/config/tickets/panel.py:875
 msgid "Support tickets"
 msgstr "サポートチケット"
 
-#: cogs/config/tickets/panel.py:888
+#: cogs/config/tickets/panel.py:879
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "お困りですか？下のボタンを押すと、あなたとスタッフだけのプライベートスレッドを開きます。"
 
-#: cogs/config/tickets/panel.py:900
+#: cogs/config/tickets/panel.py:891
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "{channel} にパネルを投稿できませんでした。"
 
-#: cogs/config/tickets/panel.py:906
+#: cogs/config/tickets/panel.py:897
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "チケットがオンになりました。パネルは {channel} にあります。{jump}"
 
-#: cogs/config/tickets/panel.py:936
+#: cogs/config/tickets/panel.py:927
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "サポートロール: {role} | ログチャンネル: {log} | setup では指定したオプションのみ変更されます。"
 
-#: cogs/config/tickets/panel.py:958
+#: cogs/config/tickets/panel.py:949
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "ご注意: {role} には {channel} で {permissions} がありません。チケットはプライベートスレッドのため、そのチャンネルで「スレッドの管理」権限がないとスタッフは閲覧できません。この権限がないと、開けないチケットにメンションされてしまいます。"
 
-#: cogs/config/tickets/panel.py:1010
+#: cogs/config/tickets/panel.py:1001
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "チケットはオフになりました。すでに開いているスレッドはそのまま残り、パネルのボタンには「チケットが設定されていません」と表示されます。"
 
@@ -7048,46 +7052,46 @@ msgstr "記録されているケースはありません。"
 msgid "No reason"
 msgstr "理由なし"
 
-#: cogs/moderation/modlog.py:84 cogs/moderation/modlog.py:586
-#: cogs/moderation/modlog.py:702
+#: cogs/moderation/modlog.py:85 cogs/moderation/modlog.py:614
+#: cogs/moderation/modlog.py:732
 #, python-brace-format
 msgid "ID: {id}"
 msgstr "ID: {id}"
 
-#: cogs/moderation/modlog.py:98
+#: cogs/moderation/modlog.py:99
 msgid "Select the log channel..."
 msgstr "ログチャンネルを選択..."
 
-#: cogs/moderation/modlog.py:129
+#: cogs/moderation/modlog.py:130
 msgid "Choose which events to log..."
 msgstr "ログに記録するイベントを選択..."
 
-#: cogs/moderation/modlog.py:209
+#: cogs/moderation/modlog.py:210
 msgid "*Not set - logging is off.*"
 msgstr "*未設定 - ログは無効です。*"
 
-#: cogs/moderation/modlog.py:218
+#: cogs/moderation/modlog.py:219
 msgid "Mod-log settings"
 msgstr "モッドログ設定"
 
-#: cogs/moderation/modlog.py:220
+#: cogs/moderation/modlog.py:221
 msgid "Choose where server events are logged and which events to record. Changes apply instantly."
 msgstr "サーバーイベントをどこに記録するか、どのイベントを記録するかを選んでください。変更は即座に適用されます。"
 
-#: cogs/moderation/modlog.py:228
+#: cogs/moderation/modlog.py:229
 msgid "Log channel"
 msgstr "ログチャンネル"
 
-#: cogs/moderation/modlog.py:233 cogs/moderation/modlog.py:301
+#: cogs/moderation/modlog.py:234 cogs/moderation/modlog.py:302
 msgid "Events"
 msgstr "イベント"
 
-#: cogs/moderation/modlog.py:287
+#: cogs/moderation/modlog.py:288
 #, python-brace-format
 msgid "Mod-log | {guild}"
 msgstr "モデレーションログ | {guild}"
 
-#: cogs/moderation/modlog.py:293
+#: cogs/moderation/modlog.py:294
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7096,67 +7100,77 @@ msgstr ""
 "**状態:** {status}\n"
 "**ログチャンネル:** {channel}"
 
-#: cogs/moderation/modlog.py:308
+#: cogs/moderation/modlog.py:309
 msgid "Use `/modlog set` to choose a log channel."
 msgstr "`/modlog set` でログチャンネルを選択できます。"
 
-#: cogs/moderation/modlog.py:411 cogs/moderation/modlog.py:427
-msgid "Mod log"
-msgstr "モッドログ"
+#: cogs/moderation/modlog.py:324
+msgid "*Hidden: everyone can read this log channel. Make it staff-only to see message text here.*"
+msgstr "*非表示: このログチャンネルは全員が閲覧できます。メッセージの本文をここで見るには、スタッフ専用にしてください。*"
 
-#: cogs/moderation/modlog.py:412
+#: cogs/moderation/modlog.py:426
 #, python-brace-format
 msgid "Mod-log channel set to {channel}."
 msgstr "モッドログチャンネルを {channel} に設定しました。"
 
-#: cogs/moderation/modlog.py:428
+#: cogs/moderation/modlog.py:431
+#, python-brace-format
+msgid "Heads up: everyone can read {channel}, so edited and deleted message text is hidden there. Make it staff-only to see it."
+msgstr "注意: {channel} は全員が閲覧できるため、編集・削除されたメッセージの本文はそこでは非表示になります。見るにはスタッフ専用にしてください。"
+
+#: cogs/moderation/modlog.py:435 cogs/moderation/modlog.py:449
+msgid "Mod log"
+msgstr "モッドログ"
+
+#: cogs/moderation/modlog.py:450
 msgid "Mod-log has been disabled for this guild."
 msgstr "このサーバーのモッドログを無効にしました。"
 
-#: cogs/moderation/modlog.py:538
+#: cogs/moderation/modlog.py:560
 msgid "Account created"
 msgstr "アカウント作成日"
 
-#: cogs/moderation/modlog.py:567
+#: cogs/moderation/modlog.py:593
 msgid "Message Deleted"
 msgstr "メッセージ削除"
 
-#: cogs/moderation/modlog.py:573 cogs/moderation/modlog.py:688
+#: cogs/moderation/modlog.py:599 cogs/moderation/modlog.py:716
 msgid "Author"
 msgstr "投稿者"
 
-#: cogs/moderation/modlog.py:577
+#: cogs/moderation/modlog.py:603
 msgid "Content"
 msgstr "内容"
 
-#: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
+#: cogs/moderation/modlog.py:610 cogs/moderation/modlog.py:728
 #: cogs/utility/extras.py:63
 msgid "Jump"
 msgstr "ジャンプ"
 
-#: cogs/moderation/modlog.py:583
+#: cogs/moderation/modlog.py:611
 #, python-brace-format
 msgid "[Go to location]({url})"
 msgstr "[場所へ移動]({url})"
 
-#: cogs/moderation/modlog.py:678
+#: cogs/moderation/modlog.py:706
 msgid "*Not in the bot's cache - previous content unknown.*"
 msgstr "*ボットのキャッシュにありません - 以前の内容は不明です。*"
 
-#: cogs/moderation/modlog.py:682
+#: cogs/moderation/modlog.py:710
 msgid "Message Edited"
 msgstr "メッセージ編集"
 
-#: cogs/moderation/modlog.py:691 tests/cogs/test_modlog.py:245
-#: tests/cogs/test_modlog.py:287
+#: cogs/moderation/modlog.py:719 tests/cogs/test_modlog.py:253
+#: tests/cogs/test_modlog.py:295
 msgid "Before"
 msgstr "編集前"
 
-#: cogs/moderation/modlog.py:693 tests/cogs/test_modlog.py:246
+#: cogs/moderation/modlog.py:721 tests/cogs/test_modlog.py:254
+#: tests/cogs/test_modlog.py:555
 msgid "After"
 msgstr "編集後"
 
-#: cogs/moderation/modlog.py:699
+#: cogs/moderation/modlog.py:729
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[メッセージへ移動]({url})"

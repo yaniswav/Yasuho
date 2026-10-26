@@ -262,3 +262,22 @@ def self_assignable_role_error(author, guild, role):
         )
 
     return None
+
+
+def everyone_can_read(channel, *, unknown):
+    """Can @everyone read ``channel``? ``unknown`` answers a channel that
+    cannot be evaluated (partial, no guild, a lookup that raises).
+
+    Callers that only ADVISE pass ``unknown=False`` (a warning nobody can
+    verify is noise); callers that decide whether to copy message text - the
+    mod log, ticket transcripts - pass ``unknown=True``, so an unverifiable
+    channel never receives somebody's words.
+    """
+    guild = getattr(channel, "guild", None)
+    everyone = getattr(guild, "default_role", None)
+    if channel is None or everyone is None:
+        return unknown
+    try:
+        return bool(channel.permissions_for(everyone).view_channel)
+    except Exception:
+        return unknown

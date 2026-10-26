@@ -174,10 +174,18 @@ class _EditAuthor:
 
 
 class _EditChannel:
-    def __init__(self, cid=99):
+    """A staff-only log channel: @everyone cannot view it, so copied message
+    text is allowed in (see modlog._logged_text)."""
+
+    def __init__(self, cid=99, *, public=False):
         self.id = cid
         self.mention = f"<#{cid}>"
         self.sent = []
+        self.public = public
+        self.guild = types.SimpleNamespace(default_role=object())
+
+    def permissions_for(self, _target):
+        return types.SimpleNamespace(view_channel=self.public)
 
     async def send(self, *args, **kwargs):
         self.sent.append(kwargs.get("embed"))
@@ -529,3 +537,20 @@ async def test_negative_control_removing_the_freshness_gate_breaks_the_stale_tes
         assert modlog_path.read_text() == original, (
             "failed to restore cogs/moderation/modlog.py to its original content"
         )
+
+
+async def test_a_public_log_channel_never_receives_edited_text(monkeypatch):
+    """Copied message text is moderator evidence: hidden where @everyone reads."""
+    channel = _EditChannel(public=True)
+    cog = _edit_cog(monkeypatch, channel_id=channel.id, events=None)
+    guild = _EditGuild(channel=channel)
+    after = _EditMessage(
+        _EditAuthor(), "secret words", guild=guild, channel=channel, edited=_fresh()
+    )
+
+    await cog.on_raw_message_edit(_EditPayload(after, cached=None))
+
+    embed = channel.sent[0]
+    assert all("secret words" not in (f.value or "") for f in embed.fields)
+    after_field = next(f for f in embed.fields if f.name == _("After"))
+    assert "staff-only" in after_field.value

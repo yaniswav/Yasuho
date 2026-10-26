@@ -125,6 +125,7 @@ from . import guild_config, storage, transcripts
 from tools import i18n, interactions
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
+from tools.modchecks import everyone_can_read
 from tools.views import AuthorView, LocaleDynamicItem, LocaleView
 
 log = logging.getLogger(__name__)
@@ -595,7 +596,14 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
     # only at the send for two reasons - a channel that refuses files costs no
     # history pages at all, and the closing notice below can then state whether
     # a transcript was saved without ever claiming one that could not land.
-    can_attach = channel is not None and _can_attach(channel)
+    # The transcript is moderation evidence for staff: never into a channel
+    # @everyone can read (or that cannot be checked). The ticket is still
+    # logged there, without the file - and the room is told none was saved.
+    can_attach = (
+        channel is not None
+        and _can_attach(channel)
+        and not everyone_can_read(channel, unknown=True)
+    )
     transcript = None
     if thread is not None and can_attach:
         with i18n.locale(locale_code):
@@ -784,7 +792,13 @@ async def _post_log_summary(
 
     file = transcript if (transcript is not None and can_attach) else None
     if file is None:
-        embed.set_footer(text=_no_transcript_note(had_thread, can_attach))
+        embed.set_footer(
+            text=_no_transcript_note(
+                had_thread,
+                can_attach,
+                public=everyone_can_read(channel, unknown=True),
+            )
+        )
     else:
         # Say what the attachment IS, on every close. A server that configured a
         # log channel is not asked again, so this line is the notice: the file
@@ -822,7 +836,7 @@ def _ending(closed_by, reason):
     return _("Auto-closed after inactivity.")
 
 
-def _no_transcript_note(had_thread, can_attach):
+def _no_transcript_note(had_thread, can_attach, *, public=False):
     """Why the embed has no file attached - never silence.
 
     Two facts decide it and the transcript itself is not one of them, which is
@@ -834,6 +848,11 @@ def _no_transcript_note(had_thread, can_attach):
     """
     if not had_thread:
         return _("No transcript: the thread was already gone.")
+    if public:
+        return _(
+            "No transcript: everyone can read this channel. Use a staff-only "
+            "log channel to keep transcripts."
+        )
     if not can_attach:
         return _("No transcript: I cannot attach files in this channel.")
     # The only case left: a thread we could open a file for and failed to read.
