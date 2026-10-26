@@ -256,6 +256,12 @@ import asyncpg
 import discord
 from discord.ext import commands
 
+from cogs.system.dashboard_announcement_actions import (
+    ACTOR_KINDS as _ANNOUNCEMENT_ACTOR_KINDS,
+)
+from cogs.system.dashboard_announcement_actions import (
+    EXECUTORS as _ANNOUNCEMENT_EXECUTORS,
+)
 from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
 from cogs.system.dashboard_user_actions import EXECUTORS as _USER_EXECUTORS
 from tools import autoroom, i18n, modchecks, premium, role_menus, settings
@@ -1907,6 +1913,9 @@ _EXECUTORS = {
     # one registry, one dispatch path. What differs is only which id they are
     # handed - see _USER_KINDS right below.
     **_USER_EXECUTORS,
+    # Scheduled announcements (cogs/system/dashboard_announcement_actions.py):
+    # every write goes through the bot's AnnouncementStore.
+    **_ANNOUNCEMENT_EXECUTORS,
 }
 
 # The kinds whose scope is a USER rather than a guild: they are dispatched with
@@ -1953,6 +1962,8 @@ _ACTOR_KINDS = frozenset(
         "button_panel_edit",
         "role_menu_post",
     }
+    # Announcements can make the bot ping a role: the actor must be able to.
+    | _ANNOUNCEMENT_ACTOR_KINDS
 )
 
 

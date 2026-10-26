@@ -4428,6 +4428,9 @@ def test_actor_kinds_are_exactly_the_executors_that_take_an_actor():
         "button_panel_post",
         "button_panel_edit",
         "role_menu_post",
+        # Can make the bot ping a role (cogs/system/dashboard_announcement_actions.py).
+        "announcement_create",
+        "announcement_update",
     }
 
 
