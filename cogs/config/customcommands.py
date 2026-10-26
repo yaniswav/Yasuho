@@ -1,4 +1,4 @@
-"""Per-guild custom (canned) commands, invoked by the guild prefix.
+"""Per-guild custom (canned) commands, run by mention or `/custom`.
 
 Admins build commands through an author-restricted Components V2 panel
 (`/customcommands`); each command answers with either plain text or a rich
@@ -607,7 +607,7 @@ class CustomCommandsPanel(AuthorView):
 # Cog
 # ----------------------------------------------------------------------
 class CustomCommands(commands.Cog):
-    """Per-guild canned commands invoked by the server prefix."""
+    """Per-guild canned commands run by mention or `/custom`."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -734,8 +734,55 @@ class CustomCommands(commands.Cog):
         view = CustomCommandsPanel(self, ctx.guild, ctx.author.id, dict(commands_map))
         view.message = await ctx.send(embed=view.build_embed(), view=view)
 
+    @commands.hybrid_command(name="custom")
+    @commands.guild_only()
+    @discord.app_commands.describe(name="The custom command (or alias) to run.")
+    async def custom(self, ctx, *, name: str = None):
+        """Run one of this server's custom commands."""
+        # A bare `@bot custom` keeps reaching a stored command (or alias) that
+        # was named "custom" before this command existed.
+        name = name or ctx.invoked_with or ""
+        resolved, response = await self._resolve(ctx.guild.id, name.strip().lower())
+        if response is None:
+            await ctx.send(
+                _("This server has no custom command called `{name}`.").format(
+                    name=discord.utils.escape_markdown(name[:32])
+                ),
+                ephemeral=True,
+            )
+            return
+        if self._cooling(ctx.guild.id, resolved, ctx.author.id, response):
+            await ctx.send(
+                _("That command is on cooldown, try again in a moment."),
+                ephemeral=True,
+            )
+            return
+        payload = self._payload(response, ctx.author, ctx.guild)
+        if payload is None:
+            await ctx.send(_("That command has nothing to say."), ephemeral=True)
+            return
+        try:
+            await ctx.send(**payload)
+        except discord.HTTPException:
+            log.exception("Custom command send failed")
+            return
+        await self._bump_uses(ctx.guild.id, resolved)
+
+    @custom.autocomplete("name")
+    async def _custom_autocomplete(self, interaction, current):
+        """Suggest this server's command names; served from the per-guild cache."""
+        if interaction.guild is None:
+            return []
+        current = (current or "").strip().lower()
+        names = await self.get_custom_commands(interaction.guild.id)
+        return [
+            discord.app_commands.Choice(name=n, value=n)
+            for n in sorted(names)
+            if current in n
+        ][:25]
+
     async def handle_unknown(self, ctx):
-        """Dispatch a custom command for an unknown prefix command.
+        """Dispatch a custom command for an unknown mention command.
 
         Called by the Errors cog from its CommandNotFound branch (a single
         dispatch point, so a custom command and the "did you mean" suggestion
@@ -752,47 +799,58 @@ class CustomCommands(commands.Cog):
         if response is None:
             return False
 
-        # Per-user cooldown, if the command sets one. On cooldown we swallow it
-        # (return True) so nothing is sent and the "did you mean" stays quiet.
-        cooldown = int(response.get("cooldown") or 0)
-        if cooldown > 0:
-            key = (ctx.guild.id, name, ctx.author.id)
-            now = time.monotonic()
-            if self._cd.get(key, 0.0) > now:
-                return True
-            self._cd[key] = now + cooldown
-            if len(self._cd) > 5000:
-                self._cd = {k: v for k, v in self._cd.items() if v > now}
+        # On cooldown we swallow it (return True) so nothing is sent and the
+        # "did you mean" stays quiet.
+        if self._cooling(ctx.guild.id, name, ctx.author.id, response):
+            return True
 
         await self._run(ctx.message, name, response)
         return True
 
+    def _cooling(self, guild_id, name, user_id, response):
+        """True if this user is on the command's cooldown; otherwise start it."""
+        # Per-user cooldown, if the command sets one.
+        cooldown = int(response.get("cooldown") or 0)
+        if cooldown <= 0:
+            return False
+        key = (guild_id, name, user_id)
+        now = time.monotonic()
+        if self._cd.get(key, 0.0) > now:
+            return True
+        self._cd[key] = now + cooldown
+        if len(self._cd) > 5000:
+            self._cd = {k: v for k, v in self._cd.items() if v > now}
+        return False
+
+    @staticmethod
+    def _payload(response, member, guild):
+        """Build the send kwargs for a response, or None when it renders empty."""
+        substitute = build_substitution(member, guild)
+        if response.get("type") == "embed":
+            embed = embed_creator.render(
+                response.get("embed") or {}, substitute=substitute
+            )
+            return {"embed": embed} if embed_creator.embed_has_content(embed) else None
+        content = substitute(response.get("content") or "")
+        if not content:
+            return None
+        # The text is admin-written and stored, but ANY member can trigger it -
+        # the client default allowed_mentions (users and roles both True) would
+        # let that stored text ping whoever it names. Only the member who ran
+        # the command may be pinged by their own invocation.
+        return {
+            "content": content[: cc.MAX_TEXT_LENGTH],
+            "allowed_mentions": discord.AllowedMentions(
+                everyone=False, roles=False, users=[member], replied_user=False,
+            ),
+        }
+
     async def _run(self, message, name, response):
-        substitute = build_substitution(message.author, message.guild)
+        payload = self._payload(response, message.author, message.guild)
+        if payload is None:
+            return
         try:
-            if response.get("type") == "embed":
-                embed = embed_creator.render(
-                    response.get("embed") or {}, substitute=substitute
-                )
-                if embed_creator.embed_has_content(embed):
-                    await message.channel.send(embed=embed)
-            else:
-                content = substitute(response.get("content") or "")
-                if content:
-                    # The text is admin-written and stored, but ANY member can
-                    # trigger it - the client default allowed_mentions (users
-                    # and roles both True) would let that stored text ping
-                    # whoever it names. Only the member who typed the trigger
-                    # may be pinged by their own invocation.
-                    await message.channel.send(
-                        content[: cc.MAX_TEXT_LENGTH],
-                        allowed_mentions=discord.AllowedMentions(
-                            everyone=False,
-                            roles=False,
-                            users=[message.author],
-                            replied_user=False,
-                        ),
-                    )
+            await message.channel.send(**payload)
         except discord.HTTPException:
             log.exception("Custom command send failed")
             return

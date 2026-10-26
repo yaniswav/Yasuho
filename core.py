@@ -840,12 +840,14 @@ class Yasuho(commands.Bot):
 
 async def get_prefix(bot: Yasuho, message: discord.Message):
     if not message.guild:
+        # DMs always carry their content, so the text prefix keeps working there.
         return DEFAULT_PREFIX
 
-    # The DB only stores custom prefixes (overrides); everything else falls back
-    # to DEFAULT_PREFIX so changing the default later applies everywhere at once.
-    prefix = bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX
-    return commands.when_mentioned_or(prefix)(bot, message)
+    # In servers the bot answers to its mention only (plus slash commands):
+    # Discord grants the Message Content intent for moderation alone, so a
+    # plain text prefix must never trigger a command - even with the intent on.
+    # Stored per-guild prefixes (bot.prefixes) are kept but no longer consulted.
+    return commands.when_mentioned(bot, message)
 
 
 # Technical logs are kept LOG_RETENTION_DAYS days (PRIVACY.md, Retention): one

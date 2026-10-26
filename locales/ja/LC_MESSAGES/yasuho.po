@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-19 20:32+0000\n"
+"POT-Creation-Date: 2026-10-26 10:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1272,7 +1272,7 @@ msgstr "AniListアクティビティフィード"
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:53
+#: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:49
 #: cogs/config/tickets/panel.py:91 cogs/config/tickets/panel.py:498
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:424 cogs/config/welcome.py:545
@@ -1280,7 +1280,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 msgid "Enabled"
 msgstr "有効"
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:53
+#: cogs/anilist/feed_views.py:1391 cogs/config/settings.py:49
 #: cogs/config/tickets/panel.py:93 cogs/config/tickets/panel.py:500
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
@@ -1404,9 +1404,9 @@ msgstr "アカウントの連携中に問題が発生しました。"
 msgid "Could not open the code form."
 msgstr "コードフォームを開けませんでした。"
 
-#: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
-#: cogs/config/settings.py:173 cogs/config/settings.py:182
-#: cogs/config/settings.py:196 cogs/config/settings.py:204
+#: cogs/anilist/lookup.py:39 cogs/config/settings.py:48
+#: cogs/config/settings.py:163 cogs/config/settings.py:172
+#: cogs/config/settings.py:186 cogs/config/settings.py:194
 #: cogs/system/help.py:513 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "不明"
@@ -2326,7 +2326,7 @@ msgid "Level down"
 msgstr "レベルダウン"
 
 #: cogs/community/leveling/level_admin.py:294
-#: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:282
+#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:282
 msgid "Level"
 msgstr "レベル"
 
@@ -2579,7 +2579,7 @@ msgstr "メンバーのカードスタイル"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:612
+#: cogs/config/settings.py:252 cogs/config/tickets/panel.py:612
 #: cogs/moderation/automod_panel.py:398 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
@@ -2588,7 +2588,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:614
+#: cogs/config/settings.py:254 cogs/config/tickets/panel.py:614
 #: cogs/moderation/automod_panel.py:400 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
@@ -2756,8 +2756,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "レベルシステムは現在読み込まれていません。"
 
-#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:89
-#: cogs/config/settings.py:215
+#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:85
+#: cogs/config/settings.py:202
 msgid "Leveling"
 msgstr "レベリング"
 
@@ -3065,68 +3065,68 @@ msgstr[0] "{count}人"
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# ページ {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1408
+#: cogs/community/leveling/leveling.py:1406
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1416
+#: cogs/community/leveling/leveling.py:1414
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} がレベル **{level}** に到達しました！ ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1423
+#: cogs/community/leveling/leveling.py:1421
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} がレベル **{level}** に到達しました!"
 
-#: cogs/community/leveling/leveling.py:1834
+#: cogs/community/leveling/leveling.py:1832
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "ランク | {name}"
 
-#: cogs/community/leveling/leveling.py:1838 cogs/utility/searchweb.py:279
+#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:279
 msgid "Rank"
 msgstr "ランク"
 
-#: cogs/community/leveling/leveling.py:1840
+#: cogs/community/leveling/leveling.py:1838
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1842
+#: cogs/community/leveling/leveling.py:1840
 msgid "XP for next level"
 msgstr "次のレベルまでのXP"
 
-#: cogs/community/leveling/leveling.py:1870
+#: cogs/community/leveling/leveling.py:1868
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "リーダーボード | {guild}"
 
-#: cogs/community/leveling/leveling.py:1875
+#: cogs/community/leveling/leveling.py:1873
 msgid "No one has earned any XP yet!"
 msgstr "まだ誰もXPを獲得していません!"
 
-#: cogs/community/leveling/leveling.py:1889
-#: cogs/community/leveling/leveling.py:1944
+#: cogs/community/leveling/leveling.py:1887
+#: cogs/community/leveling/leveling.py:1942
 #, python-brace-format
 msgid "User {uid}"
 msgstr "ユーザー {uid}"
 
-#: cogs/community/leveling/leveling.py:1923
+#: cogs/community/leveling/leveling.py:1921
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "週間ランキング | {guild}"
 
-#: cogs/community/leveling/leveling.py:1924
+#: cogs/community/leveling/leveling.py:1922
 msgid "No one has earned any XP this week yet!"
 msgstr "今週はまだ誰もXPを獲得していません！"
 
-#: cogs/community/leveling/leveling.py:1926
+#: cogs/community/leveling/leveling.py:1924
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "月間ランキング | {guild}"
 
-#: cogs/community/leveling/leveling.py:1929
+#: cogs/community/leveling/leveling.py:1927
 msgid "No one has earned any XP this month yet!"
 msgstr "今月はまだ誰もXPを獲得していません！"
 
@@ -4535,6 +4535,19 @@ msgstr "プレースホルダー: {placeholders}"
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "エイリアス `{alias}` は使用できません: {why}"
 
+#: cogs/config/customcommands.py:748
+#, python-brace-format
+msgid "This server has no custom command called `{name}`."
+msgstr "このサーバーには `{name}` という名前のカスタムコマンドはありません。"
+
+#: cogs/config/customcommands.py:756
+msgid "That command is on cooldown, try again in a moment."
+msgstr "このコマンドはクールダウン中です。少し待ってからもう一度お試しください。"
+
+#: cogs/config/customcommands.py:762
+msgid "That command has nothing to say."
+msgstr "このコマンドには表示する内容がありません。"
+
 #: cogs/config/reactionroles.py:35
 msgid "Add reaction role"
 msgstr "リアクションロールを追加"
@@ -5205,159 +5218,136 @@ msgid "Could not complete that action."
 msgstr "そのアクションを完了できませんでした。"
 
 #: cogs/config/settings.py:23
-msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
-msgstr "`/prefix set <prefix>` を使ってこのサーバーのコマンドプレフィックスを変更します。"
-
-#: cogs/config/settings.py:27
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
 msgstr "`/autorole set <role>` を使って、新しいメンバーが参加時に受け取るロールを選びます。"
 
-#: cogs/config/settings.py:31
+#: cogs/config/settings.py:27
 msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
 msgstr "`/automod` を使って、インタラクティブなAutoMod管理パネル (カスタム + ネイティブフィルター) を開きます。"
 
-#: cogs/config/settings.py:35
+#: cogs/config/settings.py:31
 msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
 msgstr "`/modlog` を使って、インタラクティブなモッドログ管理パネル (チャンネル + イベントの切り替え) を開きます。"
 
-#: cogs/config/settings.py:39
+#: cogs/config/settings.py:35
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
 msgstr "`/starboard set <channel> [threshold]` を使ってスターボードを設定します。"
 
-#: cogs/config/settings.py:42
+#: cogs/config/settings.py:38
 #, python-brace-format
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "`/welcome set <channel> <message>` を使ってウェルカムメッセージを設定します。プレースホルダー: {user}、{server}、{count}。"
 
-#: cogs/config/settings.py:81
+#: cogs/config/settings.py:77
 msgid "Current state unknown"
 msgstr "現在の状態は不明です"
 
-#: cogs/config/settings.py:83
+#: cogs/config/settings.py:79
 msgid "Currently enabled - select to disable"
 msgstr "現在有効 - 選択すると無効になります"
 
-#: cogs/config/settings.py:85
+#: cogs/config/settings.py:81
 msgid "Currently disabled - select to enable"
 msgstr "現在無効 - 選択すると有効になります"
 
-#: cogs/config/settings.py:95 cogs/config/settings.py:212
-msgid "Prefix"
-msgstr "プレフィックス"
-
-#: cogs/config/settings.py:98
-msgid "Change the command prefix"
-msgstr "コマンドプレフィックスを変更"
-
-#: cogs/config/settings.py:101 cogs/config/settings.py:218
-#: cogs/config/settings.py:455 cogs/config/settings.py:483
-#: cogs/config/settings.py:490
+#: cogs/config/settings.py:91 cogs/config/settings.py:205
+#: cogs/config/settings.py:396 cogs/config/settings.py:424
+#: cogs/config/settings.py:431
 msgid "Auto-role"
 msgstr "オートロール"
 
-#: cogs/config/settings.py:104
+#: cogs/config/settings.py:94
 msgid "Role granted to new members"
 msgstr "新しいメンバーに付与されるロール"
 
-#: cogs/config/settings.py:107 cogs/config/settings.py:224
+#: cogs/config/settings.py:97 cogs/config/settings.py:211
 #: cogs/moderation/automod.py:229
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:110
+#: cogs/config/settings.py:100
 msgid "Open the AutoMod control panel"
 msgstr "AutoMod管理パネルを開く"
 
-#: cogs/config/settings.py:113 cogs/config/settings.py:227
+#: cogs/config/settings.py:103 cogs/config/settings.py:214
 msgid "Mod-log"
 msgstr "モッドログ"
 
-#: cogs/config/settings.py:116
+#: cogs/config/settings.py:106
 msgid "Open the mod-log control panel"
 msgstr "モッドログ管理パネルを開く"
 
-#: cogs/config/settings.py:119 cogs/config/settings.py:221
+#: cogs/config/settings.py:109 cogs/config/settings.py:208
 #: cogs/config/starboard.py:283 cogs/config/starboard.py:320
 #: cogs/config/starboard.py:351 cogs/config/starboard.py:372
 msgid "Starboard"
 msgstr "スターボード"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:136
+#: cogs/config/settings.py:112 cogs/config/starboard.py:136
 #: cogs/config/starboard.py:218
 msgid "Configure the starboard"
 msgstr "スターボードを設定"
 
-#: cogs/config/settings.py:125 cogs/config/settings.py:230
+#: cogs/config/settings.py:115 cogs/config/settings.py:217
 msgid "Welcome"
 msgstr "ウェルカム"
 
-#: cogs/config/settings.py:128
+#: cogs/config/settings.py:118
 msgid "Configure welcome messages"
 msgstr "ウェルカムメッセージを設定"
 
-#: cogs/config/settings.py:132
+#: cogs/config/settings.py:122
 msgid "Configure a feature..."
 msgstr "機能を設定..."
 
-#: cogs/config/settings.py:168 cogs/config/settings.py:175
-#: cogs/config/settings.py:184 cogs/config/settings.py:200
-#: cogs/config/settings.py:208
+#: cogs/config/settings.py:158 cogs/config/settings.py:165
+#: cogs/config/settings.py:174 cogs/config/settings.py:190
+#: cogs/config/settings.py:198
 msgid "Not set up"
 msgstr "未設定"
 
-#: cogs/config/settings.py:188
+#: cogs/config/settings.py:178
 msgid "Anti-link"
 msgstr "リンク禁止"
 
-#: cogs/config/settings.py:190
+#: cogs/config/settings.py:180
 msgid "Anti-spam"
 msgstr "スパム禁止"
 
-#: cogs/config/settings.py:236
+#: cogs/config/settings.py:223
 msgid "Configuration"
 msgstr "設定"
 
-#: cogs/config/settings.py:240
+#: cogs/config/settings.py:227
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "このサーバーのすべての機能の概要です。下のメニューを使って **レベリング** を切り替えるか、機能の設定コマンドに移動してください。"
 
-#: cogs/config/settings.py:245
+#: cogs/config/settings.py:232
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "レベリングの詳細設定は `/levelconfig` にあります。"
 
-#: cogs/config/settings.py:352
-msgid "The prefix can't be blank."
-msgstr "プレフィックスを空にすることはできません。"
-
-#: cogs/config/settings.py:355
-msgid "The prefix can't be longer than 10 characters."
-msgstr "プレフィックスは10文字を超えることはできません。"
-
-#: cogs/config/settings.py:369 cogs/config/settings.py:393
+#: cogs/config/settings.py:329
 msgid "Server prefix"
 msgstr "サーバープレフィックス"
 
-#: cogs/config/settings.py:371
-msgid "Prefix has been set to:"
-msgstr "プレフィックスを次に設定しました:"
+#: cogs/config/settings.py:331
+#, python-brace-format
+msgid "Text prefixes are retired in servers. Use slash commands (type `/`) or mention me before the command, for example {example}."
+msgstr "サーバーではテキストのプレフィックスは使えなくなりました。スラッシュコマンド（`/` を入力）を使うか、コマンドの前にメンションしてください。例: {example}"
 
-#: cogs/config/settings.py:395
-msgid "Current server prefix"
-msgstr "現在のサーバープレフィックス"
-
-#: cogs/config/settings.py:432
+#: cogs/config/settings.py:373
 msgid "Auto-role role"
 msgstr "オートロールのロール"
 
-#: cogs/config/settings.py:435
+#: cogs/config/settings.py:376
 msgid "Auto-role has been set to:"
 msgstr "オートロールを次に設定しました:"
 
-#: cogs/config/settings.py:458
+#: cogs/config/settings.py:399
 msgid "Auto-role has been remove from the guild"
 msgstr "オートロールをサーバーから削除しました"
 
-#: cogs/config/settings.py:485 cogs/config/settings.py:492
+#: cogs/config/settings.py:426 cogs/config/settings.py:433
 msgid "Current auto-role"
 msgstr "現在のオートロール"
 
