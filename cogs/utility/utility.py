@@ -253,8 +253,13 @@ class Utility(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
     async def snipe(self, ctx):
-        """Show the last deleted message in this channel."""
+        """Show moderators the last deleted message in this channel."""
+
+        # Moderators only: replaying deleted text is moderation evidence, the
+        # one use the Message Content intent is requested for. On slash the
+        # answer is ephemeral, so the deleted text is not put back in the room.
 
         # Channel scoping is the cache key itself: a deletion is only ever
         # stored under the channel it happened in and only ever read back under
@@ -264,7 +269,7 @@ class Utility(commands.Cog):
         data = self._snipes.get(ctx.channel.id)
         if not data or data[3] < time.monotonic():
             self._snipes.pop(ctx.channel.id, None)
-            return await ctx.send(_("Nothing to snipe."))
+            return await ctx.send(_("Nothing to snipe."), ephemeral=True)
 
         content, author, when, _expiry = data
         embed = discord.Embed(
@@ -276,7 +281,9 @@ class Utility(commands.Cog):
         # Belt and braces on top of "embeds do not resolve mentions": the body
         # is somebody else's raw text being replayed by the bot, so nothing in
         # it may ping, whatever Discord decides to do with embed content later.
-        await ctx.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+        await ctx.send(
+            embed=embed, allowed_mentions=discord.AllowedMentions.none(), ephemeral=True
+        )
 
     # ------------------------------------------------------------------
     # /poll - the polls group.

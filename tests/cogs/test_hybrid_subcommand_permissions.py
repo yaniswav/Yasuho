@@ -32,6 +32,7 @@ from discord.ext import commands
 from cogs.config.rooms import TemporaryRooms
 from cogs.moderation.automod import AutoMod
 from cogs.moderation.modlog import ModLog
+from cogs.utility.utility import Utility
 
 # (qualified command name, the permission that must be required)
 PRIVILEGED = [
@@ -43,6 +44,7 @@ PRIVILEGED = [
     ("automod spam", "manage_guild"),
     ("automod panel", "manage_guild"),
     ("autoroom list", "manage_channels"),
+    ("snipe", "manage_messages"),
 ]
 
 
@@ -73,6 +75,7 @@ async def _bot():
     await bot.add_cog(ModLog(bot))
     await bot.add_cog(AutoMod(bot))
     await bot.add_cog(TemporaryRooms(bot))
+    await bot.add_cog(Utility(bot))
     return bot
 
 

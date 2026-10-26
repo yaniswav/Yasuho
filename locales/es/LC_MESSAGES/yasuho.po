@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:01+0000\n"
+"POT-Creation-Date: 2026-10-26 10:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1916,7 +1916,7 @@ msgid "You already have {count} reminders pending - wait for some to fire before
 msgstr "Ya tienes {count} recordatorios pendientes - espera a que salte alguno antes de añadir más."
 
 #: cogs/community/reminders.py:569 cogs/community/reminders.py:646
-#: cogs/community/reminders.py:703 cogs/utility/extras.py:37
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:50
 msgid "(no text)"
 msgstr "(sin texto)"
 
@@ -5433,13 +5433,18 @@ msgstr "Top del starboard | {guild}"
 msgid "No starred messages yet."
 msgstr "Aún no hay mensajes destacados."
 
-#: cogs/config/starboard.py:424 cogs/config/starboard.py:555
-#: cogs/utility/extras.py:47
+#: cogs/config/starboard.py:424 cogs/config/starboard.py:561
+#: cogs/utility/extras.py:60
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[Ir]({url})"
 
-#: cogs/config/starboard.py:554
+#: cogs/config/starboard.py:550
+#, python-brace-format
+msgid "A message in {channel} got starred."
+msgstr "Un mensaje en {channel} ha recibido estrellas."
+
+#: cogs/config/starboard.py:560
 msgid "Source"
 msgstr "Fuente"
 
@@ -7133,7 +7138,7 @@ msgid "Content"
 msgstr "Contenido"
 
 #: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
-#: cogs/utility/extras.py:46
+#: cogs/utility/extras.py:59
 msgid "Jump"
 msgstr "Ir"
 
@@ -8808,12 +8813,12 @@ msgid "Press **Fill in** to type the details."
 msgstr "Pulsa **Rellenar** para escribir los detalles."
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
-#: cogs/utility/info.py:48 cogs/utility/utility.py:329
+#: cogs/utility/info.py:48 cogs/utility/utility.py:336
 msgid "Yes"
 msgstr "Sí"
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
-#: cogs/utility/info.py:48 cogs/utility/utility.py:330
+#: cogs/utility/info.py:48 cogs/utility/utility.py:337
 msgid "No"
 msgstr "No"
 
@@ -9806,15 +9811,11 @@ msgstr "Un administrador del servidor puede gestionarlo con `/{command}`."
 msgid "Terms"
 msgstr "Términos"
 
-#: cogs/utility/extras.py:30
+#: cogs/utility/extras.py:46
 msgid "I can only quote messages from this server."
 msgstr "Solo puedo citar mensajes de este servidor."
 
-#: cogs/utility/extras.py:33
-msgid "You can't quote a message from a channel you can't see."
-msgstr "No puedes citar un mensaje de un canal que no puedes ver."
-
-#: cogs/utility/extras.py:74
+#: cogs/utility/extras.py:89
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
@@ -9823,7 +9824,7 @@ msgstr ""
 "Aquí tienes tu contraseña:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:80
+#: cogs/utility/extras.py:95
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
@@ -9832,49 +9833,49 @@ msgstr ""
 "No pude enviarte un mensaje privado, aquí lo tienes en su lugar:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:85
+#: cogs/utility/extras.py:100
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr "No pude enviarte un mensaje directo - por favor, activa los mensajes directos e inténtalo de nuevo."
 
-#: cogs/utility/extras.py:90
+#: cogs/utility/extras.py:105
 msgid "Something went wrong while generating your password."
 msgstr "Algo salió mal al generar tu contraseña."
 
-#: cogs/utility/extras.py:94
+#: cogs/utility/extras.py:109
 msgid "Sent you a DM"
 msgstr "Te envié un mensaje directo"
 
-#: cogs/utility/extras.py:111
+#: cogs/utility/extras.py:126
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr "{member} no está escuchando Spotify."
 
-#: cogs/utility/extras.py:121
+#: cogs/utility/extras.py:136
 msgid "Artist"
 msgstr "Artista"
 
-#: cogs/utility/extras.py:122
+#: cogs/utility/extras.py:137
 msgid "Album"
 msgstr "Álbum"
 
-#: cogs/utility/extras.py:124
+#: cogs/utility/extras.py:139
 msgid "Duration"
 msgstr "Duración"
 
-#: cogs/utility/extras.py:136
+#: cogs/utility/extras.py:151
 msgid "Uptime"
 msgstr "Tiempo activo"
 
-#: cogs/utility/extras.py:152 cogs/utility/extras.py:168
+#: cogs/utility/extras.py:167 cogs/utility/extras.py:183
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr "Permisos de {member}"
 
-#: cogs/utility/extras.py:205
+#: cogs/utility/extras.py:220
 msgid "Invite me"
 msgstr "Invítame"
 
-#: cogs/utility/extras.py:206
+#: cogs/utility/extras.py:221
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr "[Haz clic aquí para invitarme]({url})"
@@ -10196,8 +10197,8 @@ msgstr "Pregunta"
 msgid "Options (one per line, 2 to 10)"
 msgstr "Opciones (una por línea, de 2 a 10)"
 
-#: cogs/utility/utility.py:85 cogs/utility/utility.py:336
-#: cogs/utility/utility.py:366
+#: cogs/utility/utility.py:85 cogs/utility/utility.py:343
+#: cogs/utility/utility.py:373
 msgid "I could not create that poll here."
 msgstr "No pude crear esa encuesta aquí."
 
@@ -10205,11 +10206,11 @@ msgstr "No pude crear esa encuesta aquí."
 msgid "Create poll"
 msgstr "Crear encuesta"
 
-#: cogs/utility/utility.py:267
+#: cogs/utility/utility.py:272
 msgid "Nothing to snipe."
 msgstr "No hay nada que recuperar."
 
-#: cogs/utility/utility.py:307
+#: cogs/utility/utility.py:314
 #, python-brace-format
 msgid ""
 "Create a poll with one of these:\n"
@@ -10220,23 +10221,23 @@ msgstr ""
 "- `{p}poll <pregunta>` - una encuesta de si/no\n"
 "- `{p}poll multi pregunta | opcion 1 | opcion 2` - opcion multiple (sin opciones se abre un formulario)"
 
-#: cogs/utility/utility.py:322
+#: cogs/utility/utility.py:329
 msgid "Please give a question to ask."
 msgstr "Por favor, indica una pregunta para hacer."
 
-#: cogs/utility/utility.py:325
+#: cogs/utility/utility.py:332
 msgid "The poll question must be 300 characters or fewer."
 msgstr "La pregunta de la encuesta debe tener 300 caracteres o menos."
 
-#: cogs/utility/utility.py:352
+#: cogs/utility/utility.py:359
 msgid "Click the button below to build a poll."
 msgstr "Haz clic en el botón de abajo para crear una encuesta."
 
-#: cogs/utility/utility.py:400
+#: cogs/utility/utility.py:407
 msgid "auto -> en (unofficial)"
 msgstr "auto -> en (no oficial)"
 
-#: cogs/utility/utility.py:405
+#: cogs/utility/utility.py:412
 msgid "Translation failed."
 msgstr "La traducción falló."
 

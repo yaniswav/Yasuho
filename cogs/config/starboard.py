@@ -542,8 +542,14 @@ class Starboard(commands.Cog):
             )
 
     def _star_embed(self, msg, count):
+        # Author, channel, star count and a jump link - never the message text
+        # or its attachments: the bot reads message content for moderation
+        # only (the Message Content intent is requested for nothing else), so
+        # the board points at the starred message instead of copying it.
         embed = discord.Embed(
-            description=msg.content,
+            description=_("A message in {channel} got starred.").format(
+                channel=getattr(getattr(msg, "channel", None), "mention", "#?")
+            ),
             colour=0xFFAC33,  # fixed star-gold so the colour doesn't change on every edit
             timestamp=msg.created_at,
         )
@@ -554,14 +560,6 @@ class Starboard(commands.Cog):
             name=_("Source"),
             value=_("[Jump]({url})").format(url=msg.jump_url),
         )
-
-        for attachment in msg.attachments:
-            if attachment.content_type and attachment.content_type.startswith(
-                "image/"
-            ):
-                embed.set_image(url=attachment.url)
-                break
-
         embed.set_footer(text=f"{count} {STAR}")
         return embed
 

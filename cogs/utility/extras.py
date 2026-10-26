@@ -4,8 +4,10 @@ import string
 import unicodedata
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
+from tools import i18n
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.time import human_timedelta
@@ -19,18 +21,33 @@ class Extras(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.start = discord.utils.utcnow()
+        # Right-click a message > Apps > Quote. A context menu receives the
+        # target message's content without the Message Content intent, which
+        # Discord grants for moderation only - so no text command fetches it.
+        self._quote_menu = app_commands.ContextMenu(
+            name="Quote", callback=self.quote_message
+        )
+        self._quote_menu.guild_only = True
 
-    @commands.command()
-    async def quote(self, ctx, message: discord.Message):
+    async def cog_load(self):
+        self.bot.tree.add_command(self._quote_menu)
+
+    async def cog_unload(self):
+        self.bot.tree.remove_command(
+            self._quote_menu.name, type=self._quote_menu.type
+        )
+
+    async def quote_message(self, interaction, message: discord.Message):
         """Quote a message into a clean embed."""
 
-        # The Message converter resolves any message the BOT can see; only let
-        # the invoker quote one from a channel THEY can read, in this server.
-        if ctx.guild is None or message.guild != ctx.guild:
-            return await ctx.send(_("I can only quote messages from this server."))
-        if not message.channel.permissions_for(ctx.author).read_messages:
-            return await ctx.send(
-                _("You can't quote a message from a channel you can't see.")
+        # Context menus skip Yasuho.get_context, which is what installs the
+        # invoker's locale for prefix and hybrid commands.
+        await i18n.apply_interaction_locale(interaction)
+        # The menu only offers messages the member can see, but keep the
+        # server boundary explicit: never quote across guilds.
+        if interaction.guild is None or message.guild != interaction.guild:
+            return await interaction.response.send_message(
+                _("I can only quote messages from this server."), ephemeral=True
             )
 
         embed = discord.Embed(
@@ -46,7 +63,9 @@ class Extras(commands.Cog):
             name=_("Jump"),
             value=_("[Jump]({url})").format(url=message.jump_url),
         )
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(
+            embed=embed, allowed_mentions=discord.AllowedMentions.none()
+        )
 
     @commands.command()
     async def charinfo(self, ctx, *, characters: str):

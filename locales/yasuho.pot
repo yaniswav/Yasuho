@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:01+0000\n"
+"POT-Creation-Date: 2026-10-26 10:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1969,7 +1969,7 @@ msgid ""
 msgstr ""
 
 #: cogs/community/reminders.py:569 cogs/community/reminders.py:646
-#: cogs/community/reminders.py:703 cogs/utility/extras.py:37
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:50
 msgid "(no text)"
 msgstr ""
 
@@ -5609,13 +5609,18 @@ msgstr ""
 msgid "No starred messages yet."
 msgstr ""
 
-#: cogs/config/starboard.py:424 cogs/config/starboard.py:555
-#: cogs/utility/extras.py:47
+#: cogs/config/starboard.py:424 cogs/config/starboard.py:561
+#: cogs/utility/extras.py:60
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr ""
 
-#: cogs/config/starboard.py:554
+#: cogs/config/starboard.py:550
+#, python-brace-format
+msgid "A message in {channel} got starred."
+msgstr ""
+
+#: cogs/config/starboard.py:560
 msgid "Source"
 msgstr ""
 
@@ -7344,7 +7349,7 @@ msgid "Content"
 msgstr ""
 
 #: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
-#: cogs/utility/extras.py:46
+#: cogs/utility/extras.py:59
 msgid "Jump"
 msgstr ""
 
@@ -9029,12 +9034,12 @@ msgid "Press **Fill in** to type the details."
 msgstr ""
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
-#: cogs/utility/info.py:48 cogs/utility/utility.py:329
+#: cogs/utility/info.py:48 cogs/utility/utility.py:336
 msgid "Yes"
 msgstr ""
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
-#: cogs/utility/info.py:48 cogs/utility/utility.py:330
+#: cogs/utility/info.py:48 cogs/utility/utility.py:337
 msgid "No"
 msgstr ""
 
@@ -10071,71 +10076,67 @@ msgstr ""
 msgid "Terms"
 msgstr ""
 
-#: cogs/utility/extras.py:30
+#: cogs/utility/extras.py:46
 msgid "I can only quote messages from this server."
 msgstr ""
 
-#: cogs/utility/extras.py:33
-msgid "You can't quote a message from a channel you can't see."
-msgstr ""
-
-#: cogs/utility/extras.py:74
+#: cogs/utility/extras.py:89
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
 "||`{secret}`||"
 msgstr ""
 
-#: cogs/utility/extras.py:80
+#: cogs/utility/extras.py:95
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
 "||`{secret}`||"
 msgstr ""
 
-#: cogs/utility/extras.py:85
+#: cogs/utility/extras.py:100
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr ""
 
-#: cogs/utility/extras.py:90
+#: cogs/utility/extras.py:105
 msgid "Something went wrong while generating your password."
 msgstr ""
 
-#: cogs/utility/extras.py:94
+#: cogs/utility/extras.py:109
 msgid "Sent you a DM"
 msgstr ""
 
-#: cogs/utility/extras.py:111
+#: cogs/utility/extras.py:126
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr ""
 
-#: cogs/utility/extras.py:121
+#: cogs/utility/extras.py:136
 msgid "Artist"
 msgstr ""
 
-#: cogs/utility/extras.py:122
+#: cogs/utility/extras.py:137
 msgid "Album"
 msgstr ""
 
-#: cogs/utility/extras.py:124
+#: cogs/utility/extras.py:139
 msgid "Duration"
 msgstr ""
 
-#: cogs/utility/extras.py:136
+#: cogs/utility/extras.py:151
 msgid "Uptime"
 msgstr ""
 
-#: cogs/utility/extras.py:152 cogs/utility/extras.py:168
+#: cogs/utility/extras.py:167 cogs/utility/extras.py:183
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr ""
 
-#: cogs/utility/extras.py:205
+#: cogs/utility/extras.py:220
 msgid "Invite me"
 msgstr ""
 
-#: cogs/utility/extras.py:206
+#: cogs/utility/extras.py:221
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr ""
@@ -10442,8 +10443,8 @@ msgstr ""
 msgid "Options (one per line, 2 to 10)"
 msgstr ""
 
-#: cogs/utility/utility.py:85 cogs/utility/utility.py:336
-#: cogs/utility/utility.py:366
+#: cogs/utility/utility.py:85 cogs/utility/utility.py:343
+#: cogs/utility/utility.py:373
 msgid "I could not create that poll here."
 msgstr ""
 
@@ -10451,11 +10452,11 @@ msgstr ""
 msgid "Create poll"
 msgstr ""
 
-#: cogs/utility/utility.py:267
+#: cogs/utility/utility.py:272
 msgid "Nothing to snipe."
 msgstr ""
 
-#: cogs/utility/utility.py:307
+#: cogs/utility/utility.py:314
 #, python-brace-format
 msgid ""
 "Create a poll with one of these:\n"
@@ -10464,23 +10465,23 @@ msgid ""
 "options opens a form)"
 msgstr ""
 
-#: cogs/utility/utility.py:322
+#: cogs/utility/utility.py:329
 msgid "Please give a question to ask."
 msgstr ""
 
-#: cogs/utility/utility.py:325
+#: cogs/utility/utility.py:332
 msgid "The poll question must be 300 characters or fewer."
 msgstr ""
 
-#: cogs/utility/utility.py:352
+#: cogs/utility/utility.py:359
 msgid "Click the button below to build a poll."
 msgstr ""
 
-#: cogs/utility/utility.py:400
+#: cogs/utility/utility.py:407
 msgid "auto -> en (unofficial)"
 msgstr ""
 
-#: cogs/utility/utility.py:405
+#: cogs/utility/utility.py:412
 msgid "Translation failed."
 msgstr ""
 

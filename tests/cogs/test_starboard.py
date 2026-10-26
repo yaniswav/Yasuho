@@ -47,3 +47,26 @@ async def test_message_lock_distinct_messages_do_not_block():
     await asyncio.gather(worker(1, "A"), worker(2, "B"))
     assert order[0].endswith("-enter") and order[1].endswith("-enter")
     assert sb._locks == {}
+
+
+def test_star_post_never_copies_the_message_text_or_media():
+    # Message Content is requested for moderation only: the board links to the
+    # starred message instead of replaying it.
+    import types
+
+    import discord
+
+    msg = types.SimpleNamespace(
+        content="SECRET TEXT",
+        attachments=[types.SimpleNamespace(content_type="image/png", url="https://x/i.png")],
+        created_at=discord.utils.utcnow(),
+        author=types.SimpleNamespace(
+            display_name="Ann", display_avatar=types.SimpleNamespace(url="https://x/a.png")
+        ),
+        channel=types.SimpleNamespace(mention="<#5>"),
+        jump_url="https://discord.com/channels/1/5/9",
+    )
+    embed = Starboard(bot=None)._star_embed(msg, 4)
+    dumped = str(embed.to_dict())
+    assert "SECRET TEXT" not in dumped and "i.png" not in dumped
+    assert "https://discord.com/channels/1/5/9" in dumped and "<#5>" in dumped

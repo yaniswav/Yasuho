@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-26 10:01+0000\n"
+"POT-Creation-Date: 2026-10-26 10:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1896,7 +1896,7 @@ msgid "You already have {count} reminders pending - wait for some to fire before
 msgstr "すでに {count} 件のリマインダーが保留中です - いくつか通知されるまで待ってから追加してください。"
 
 #: cogs/community/reminders.py:569 cogs/community/reminders.py:646
-#: cogs/community/reminders.py:703 cogs/utility/extras.py:37
+#: cogs/community/reminders.py:703 cogs/utility/extras.py:50
 msgid "(no text)"
 msgstr "(テキストなし)"
 
@@ -5408,13 +5408,18 @@ msgstr "スターボードトップ | {guild}"
 msgid "No starred messages yet."
 msgstr "まだスターが付いたメッセージはありません。"
 
-#: cogs/config/starboard.py:424 cogs/config/starboard.py:555
-#: cogs/utility/extras.py:47
+#: cogs/config/starboard.py:424 cogs/config/starboard.py:561
+#: cogs/utility/extras.py:60
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[ジャンプ]({url})"
 
-#: cogs/config/starboard.py:554
+#: cogs/config/starboard.py:550
+#, python-brace-format
+msgid "A message in {channel} got starred."
+msgstr "{channel} のメッセージにスターが付きました。"
+
+#: cogs/config/starboard.py:560
 msgid "Source"
 msgstr "ソース"
 
@@ -7105,7 +7110,7 @@ msgid "Content"
 msgstr "内容"
 
 #: cogs/moderation/modlog.py:582 cogs/moderation/modlog.py:698
-#: cogs/utility/extras.py:46
+#: cogs/utility/extras.py:59
 msgid "Jump"
 msgstr "ジャンプ"
 
@@ -8768,12 +8773,12 @@ msgid "Press **Fill in** to type the details."
 msgstr "**Fill in** を押して詳細を入力してください。"
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:628
-#: cogs/utility/info.py:48 cogs/utility/utility.py:329
+#: cogs/utility/info.py:48 cogs/utility/utility.py:336
 msgid "Yes"
 msgstr "はい"
 
 #: cogs/system/arg_completion.py:364 cogs/system/arg_completion.py:629
-#: cogs/utility/info.py:48 cogs/utility/utility.py:330
+#: cogs/utility/info.py:48 cogs/utility/utility.py:337
 msgid "No"
 msgstr "いいえ"
 
@@ -9763,15 +9768,11 @@ msgstr "サーバーの管理者が `/{command}` で管理できます。"
 msgid "Terms"
 msgstr "利用規約"
 
-#: cogs/utility/extras.py:30
+#: cogs/utility/extras.py:46
 msgid "I can only quote messages from this server."
 msgstr "このサーバーのメッセージのみ引用できます。"
 
-#: cogs/utility/extras.py:33
-msgid "You can't quote a message from a channel you can't see."
-msgstr "見ることのできないチャンネルのメッセージは引用できません。"
-
-#: cogs/utility/extras.py:74
+#: cogs/utility/extras.py:89
 #, python-brace-format
 msgid ""
 "Here is your password:\n"
@@ -9780,7 +9781,7 @@ msgstr ""
 "あなたのパスワードはこちらです:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:80
+#: cogs/utility/extras.py:95
 #, python-brace-format
 msgid ""
 "I could not DM you, here it is instead:\n"
@@ -9789,49 +9790,49 @@ msgstr ""
 "DMを送れなかったので、代わりにこちらに表示します:\n"
 "||`{secret}`||"
 
-#: cogs/utility/extras.py:85
+#: cogs/utility/extras.py:100
 msgid "I could not DM you - please enable direct messages and try again."
 msgstr "DMを送れませんでした - ダイレクトメッセージを有効にしてもう一度お試しください。"
 
-#: cogs/utility/extras.py:90
+#: cogs/utility/extras.py:105
 msgid "Something went wrong while generating your password."
 msgstr "パスワードの生成中に問題が発生しました。"
 
-#: cogs/utility/extras.py:94
+#: cogs/utility/extras.py:109
 msgid "Sent you a DM"
 msgstr "DMを送信しました"
 
-#: cogs/utility/extras.py:111
+#: cogs/utility/extras.py:126
 #, python-brace-format
 msgid "{member} is not listening to Spotify."
 msgstr "{member} はSpotifyを聴いていません。"
 
-#: cogs/utility/extras.py:121
+#: cogs/utility/extras.py:136
 msgid "Artist"
 msgstr "アーティスト"
 
-#: cogs/utility/extras.py:122
+#: cogs/utility/extras.py:137
 msgid "Album"
 msgstr "アルバム"
 
-#: cogs/utility/extras.py:124
+#: cogs/utility/extras.py:139
 msgid "Duration"
 msgstr "再生時間"
 
-#: cogs/utility/extras.py:136
+#: cogs/utility/extras.py:151
 msgid "Uptime"
 msgstr "稼働時間"
 
-#: cogs/utility/extras.py:152 cogs/utility/extras.py:168
+#: cogs/utility/extras.py:167 cogs/utility/extras.py:183
 #, python-brace-format
 msgid "Permissions for {member}"
 msgstr "{member} の権限"
 
-#: cogs/utility/extras.py:205
+#: cogs/utility/extras.py:220
 msgid "Invite me"
 msgstr "私を招待"
 
-#: cogs/utility/extras.py:206
+#: cogs/utility/extras.py:221
 #, python-brace-format
 msgid "[Click here to invite me]({url})"
 msgstr "[ここをクリックして私を招待]({url})"
@@ -10153,8 +10154,8 @@ msgstr "質問"
 msgid "Options (one per line, 2 to 10)"
 msgstr "選択肢 (1行に1つ、2から10個)"
 
-#: cogs/utility/utility.py:85 cogs/utility/utility.py:336
-#: cogs/utility/utility.py:366
+#: cogs/utility/utility.py:85 cogs/utility/utility.py:343
+#: cogs/utility/utility.py:373
 msgid "I could not create that poll here."
 msgstr "ここでその投票を作成できませんでした。"
 
@@ -10162,11 +10163,11 @@ msgstr "ここでその投票を作成できませんでした。"
 msgid "Create poll"
 msgstr "投票を作成"
 
-#: cogs/utility/utility.py:267
+#: cogs/utility/utility.py:272
 msgid "Nothing to snipe."
 msgstr "スナイプするものがありません。"
 
-#: cogs/utility/utility.py:307
+#: cogs/utility/utility.py:314
 #, python-brace-format
 msgid ""
 "Create a poll with one of these:\n"
@@ -10177,23 +10178,23 @@ msgstr ""
 "- `{p}poll <質問>` - はい/いいえの投票\n"
 "- `{p}poll multi 質問 | 選択肢1 | 選択肢2` - 複数選択 (選択肢なしでフォームが開きます)"
 
-#: cogs/utility/utility.py:322
+#: cogs/utility/utility.py:329
 msgid "Please give a question to ask."
 msgstr "質問する内容を入力してください。"
 
-#: cogs/utility/utility.py:325
+#: cogs/utility/utility.py:332
 msgid "The poll question must be 300 characters or fewer."
 msgstr "投票の質問は300文字以内にしてください。"
 
-#: cogs/utility/utility.py:352
+#: cogs/utility/utility.py:359
 msgid "Click the button below to build a poll."
 msgstr "下のボタンをクリックして投票を作成してください。"
 
-#: cogs/utility/utility.py:400
+#: cogs/utility/utility.py:407
 msgid "auto -> en (unofficial)"
 msgstr "自動 -> en (非公式)"
 
-#: cogs/utility/utility.py:405
+#: cogs/utility/utility.py:412
 msgid "Translation failed."
 msgstr "翻訳に失敗しました。"
 
