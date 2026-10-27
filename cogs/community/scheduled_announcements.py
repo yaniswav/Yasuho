@@ -31,7 +31,7 @@ class ScheduledAnnouncements(commands.Cog):
         try:
             guild = self.bot.get_guild(row["guild_id"])
             if guild is None or guild.me is None:
-                raise ValueError("Guild unavailable")
+                raise ValueError("guild_unavailable")
             channel = guild.get_channel(row["channel_id"])
             if channel is None:
                 channel = await self.bot.fetch_channel(row["channel_id"])
@@ -39,17 +39,21 @@ class ScheduledAnnouncements(commands.Cog):
             if channel_guild is None or channel_guild.id != guild.id or channel.type not in (
                 discord.ChannelType.text, discord.ChannelType.news,
             ):
-                raise ValueError("Announcement requires a guild text channel")
+                raise ValueError("not_text_channel")
             permissions = channel.permissions_for(guild.me)
             if not permissions.view_channel or not permissions.send_messages:
-                raise ValueError("Missing channel send permissions")
-            content, embed, mentions = self.store.render(row, guild, channel)
+                raise ValueError("missing_permissions")
+            try:
+                content, embed, mentions = self.store.render(row, guild, channel)
+            except ValueError:
+                raise ValueError("invalid_embed") from None
             if embed is not None and not permissions.embed_links:
-                raise ValueError("Missing embed_links permission")
+                raise ValueError("missing_embed_links")
             await channel.send(content, embed=embed, allowed_mentions=mentions)
         except (discord.HTTPException, ValueError) as exc:
-            # Do not persist HTTP response bodies: they may contain message text.
-            error = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+            # last_error is a short code the dashboard maps; never an HTTP body,
+            # which may contain message text.
+            error = str(exc) if isinstance(exc, ValueError) else "http_" + type(exc).__name__.lower()
             result = await self.store.record_result(row, error)
             log.warning("ANNOUNCE-FAIL id=%s guild=%s reason=%s", row["id"], row["guild_id"], error)
             if result is not None and result["failures"] >= 3:

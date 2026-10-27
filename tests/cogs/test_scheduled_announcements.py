@@ -432,7 +432,11 @@ async def test_three_failures_disable_and_remove_next_timer(failure, caplog):
         await fire(cog, reminder, pool, dispatched)
         assert pool.rows[1]["failures"] == count
     assert not pool.rows[1]["enabled"] and not pool.timers
-    assert pool.rows[1]["last_error"]
+    assert pool.rows[1]["last_error"] == {
+        "gone": "http_notfound", "forbidden": "http_forbidden", "notfound": "http_notfound",
+        "permissions": "missing_permissions", "embed_links": "missing_embed_links",
+        "wrong_guild": "not_text_channel", "wrong_type": "not_text_channel",
+    }[failure]
     assert caplog.text.count("ANNOUNCE-FAIL") == 3
     assert caplog.text.count("ANNOUNCE-DISABLED") == 1
     assert "private message" not in caplog.text
@@ -494,6 +498,7 @@ async def test_enable_disable_delete_sync_and_guild_scoping():
     assert not await cog.store.delete(99, 1)
     await cog.store.set_enabled(3, 1, False)
     assert not pool.timers and not pool.rows[1]["enabled"]
+    assert pool.rows[1]["next_run_at"] is None
     await cog.store.set_enabled(3, 1, True)
     assert len(pool.timers) == 1
     old = dict(next(iter(pool.timers.values())))

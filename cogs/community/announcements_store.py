@@ -207,6 +207,8 @@ class AnnouncementStore:
                 )
                 if data["enabled"] and next_at is None:
                     raise ValueError("One-shot time must be in the future")
+                if not data["enabled"]:
+                    next_at = None  # paused: no next send to show
                 row = await conn.fetchrow(
                     "UPDATE scheduled_announcements SET channel_id=$3, author_id=$4, "
                     "content=$5, embed=$6::jsonb, role_id=$7, timezone=$8, local_time=$9, "
