@@ -688,3 +688,11 @@ def test_the_prune_window_is_the_one_the_feature_and_the_policy_state():
         os.path.join(os.path.dirname(_SCHEMA_PATH), "PRIVACY.md"), encoding="utf-8"
     ).read()
     assert "Presence aggregates: 30 days" in policy
+
+
+def test_guild_purge_covers_birthdays_and_their_daily_claim():
+    queries = dict(retention.GUILD_DELETE_QUERIES)
+    assert queries["birthdays"] == "DELETE FROM birthdays WHERE guild_id = $1"
+    assert queries["birthday_state"] == "DELETE FROM birthday_state WHERE guild_id = $1"
+    assert "FROM birthdays" in retention.STORED_GUILD_IDS_QUERY
+    assert "FROM birthday_state" in retention.STORED_GUILD_IDS_QUERY

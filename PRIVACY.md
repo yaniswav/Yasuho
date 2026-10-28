@@ -126,6 +126,14 @@ discussion thread) and your up or down votes. Other members see vote counts,
 never who voted. They are kept until the server's data is purged, or until you
 delete them with `/mydata deleteprofile`.
 
+**Birthdays** (per server, only where a server enables birthdays): if you use
+`/birthday set`, we store the day and month of your birthday - never the year -
+for that server only, so it can be celebrated there (a message mentioning you
+and, if the server set one, a role for the day). Other members of that server
+can see it in `/birthday list`. It is deleted with `/birthday remove`, when you
+leave the server, when the server's data is purged, or with
+`/mydata deleteprofile`.
+
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
 
@@ -260,11 +268,12 @@ complaint with the French data protection authority, the CNIL
   accounts, visibility choices, collected presence data, your top.gg vote
   record, your personal rank card, your AniList link (the stored OAuth token),
   your AniList / MangaDex alert opt-ins, your limit notes, your suggestions and
-  votes (with the votes cast on your suggestions) and our copy of your own
-  premium purchases. The posted suggestion messages are removed where the bot
-  can; their discussion threads hold other members' replies, so they stay,
-  renamed to the suggestion number and locked. A purchase that is still active
-  on Discord is copied again at the next check, because the perk depends on it.
+  votes (with the votes cast on your suggestions), your shared birthdays in
+  every server and our copy of your own premium purchases. The posted
+  suggestion messages are removed where the bot can; their discussion threads
+  hold other members' replies, so they stay, renamed to the suggestion number
+  and locked. A purchase that is still active on Discord is copied again at the
+  next check, because the perk depends on it.
   A gift the bot owner gave you stays in the owner's record of gifts until it is
   deleted on the schedule above.
 - `/mydata deleteavatars` - permanently delete your avatar history and disable

@@ -297,6 +297,8 @@ class ProfileDeletionView(AuthorView):
                 + "\n"
                 + _("Your suggestions and votes are gone, and I removed what I could of the posted messages.")
                 + "\n"
+                + _("Your shared birthdays are gone, in every server.")
+                + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
                 + _("So is your personal rank card.")
@@ -790,6 +792,8 @@ class UserSettings(commands.Cog):
                 "posted suggestion messages where I can. Their discussion threads "
                 "stay for the other members, renamed and locked."
             )
+            + "\n"
+            + _("It also deletes your shared birthdays, in every server.")
             + "\n"
             + _(
                 "And your personal rank card: the background image you "

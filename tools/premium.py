@@ -227,6 +227,8 @@ FREE_EVENT_REMINDERS_CUSTOM = False
 # Suggestion box (cogs/community/suggestions): custom statuses and the weekly
 # digest are Yasuho+.
 FREE_SUGGESTIONS_CUSTOM = False
+# Birthdays (cogs/community/birthdays): the custom celebration message is Yasuho+.
+FREE_BIRTHDAYS_CUSTOM = False
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -298,6 +300,7 @@ class GuildLimits:
     milestones_custom: bool
     event_reminders_custom: bool
     suggestions_custom: bool
+    birthdays_custom: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -341,6 +344,7 @@ GUILD_FREE = GuildLimits(
     milestones_custom=FREE_MILESTONES_CUSTOM,
     event_reminders_custom=FREE_EVENT_REMINDERS_CUSTOM,
     suggestions_custom=FREE_SUGGESTIONS_CUSTOM,
+    birthdays_custom=FREE_BIRTHDAYS_CUSTOM,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -363,6 +367,7 @@ GUILD_PREMIUM = GuildLimits(
     milestones_custom=True,
     event_reminders_custom=True,
     suggestions_custom=True,
+    birthdays_custom=True,
 )
 
 USER_FREE = UserLimits(

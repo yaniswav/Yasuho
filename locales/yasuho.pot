@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 10:29+0000\n"
+"POT-Creation-Date: 2026-10-28 11:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr ""
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:473
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:475
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr ""
@@ -556,7 +556,8 @@ msgid "Keep current status"
 msgstr ""
 
 #: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
-#: cogs/anilist/media_view.py:396 cogs/community/suggestions/panel.py:195
+#: cogs/anilist/media_view.py:396 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195
 #: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
 #: cogs/config/welcome.py:436 cogs/config/welcome.py:558
@@ -1242,15 +1243,17 @@ msgstr[1] ""
 msgid "Muted here ({count})"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
-#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
-#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr ""
 
@@ -1260,7 +1263,7 @@ msgstr ""
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:353
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:355
 #: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr ""
@@ -1321,22 +1324,23 @@ msgid ""
 "(up to {max} per server)."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
-#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
-#: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
-#: cogs/config/verification.py:111 cogs/config/welcome.py:424
-#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
+#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
+#: cogs/config/twitch.py:424 cogs/config/verification.py:111
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
-#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
-#: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
-#: cogs/config/verification.py:113 cogs/config/welcome.py:426
-#: cogs/config/welcome.py:547 cogs/config/welcome.py:801
-#: cogs/moderation/modlog.py:278
+#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
+#: cogs/config/twitch.py:426 cogs/config/verification.py:113
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr ""
 
@@ -1351,13 +1355,13 @@ msgid ""
 " saves instantly."
 msgstr ""
 
-#: cogs/anilist/feed_views.py:1407 cogs/community/suggestions/panel.py:197
-#: cogs/config/announcements.py:315 cogs/config/event_reminders.py:264
-#: cogs/config/milestones.py:251 cogs/config/rolemenus.py:686
-#: cogs/config/starboard.py:284 cogs/config/twitch.py:441
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:560
-#: cogs/config/welcome.py:780 cogs/moderation/modlog.py:601
-#: cogs/moderation/modlog.py:718
+#: cogs/anilist/feed_views.py:1407 cogs/community/birthdays/panel.py:172
+#: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
+#: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
+#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
+#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr ""
 
@@ -1463,7 +1467,7 @@ msgstr ""
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:516 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:517 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr ""
 
@@ -1941,10 +1945,10 @@ msgstr ""
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr ""
 
-#: cogs/community/reminders.py:367 cogs/config/milestones.py:262
-#: cogs/config/reactionroles.py:226 cogs/config/reactionroles.py:342
-#: cogs/config/twitch.py:36 cogs/config/twitch.py:458
-#: cogs/config/welcome.py:782
+#: cogs/community/birthdays/panel.py:183 cogs/community/reminders.py:367
+#: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
+#: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr ""
 
@@ -2165,105 +2169,109 @@ msgid ""
 msgstr ""
 
 #: cogs/community/usersettings.py:300
-msgid "Your top.gg vote record is gone too."
+msgid "Your shared birthdays are gone, in every server."
 msgstr ""
 
 #: cogs/community/usersettings.py:302
+msgid "Your top.gg vote record is gone too."
+msgstr ""
+
+#: cogs/community/usersettings.py:304
 msgid "So is your personal rank card."
 msgstr ""
 
-#: cogs/community/usersettings.py:305
+#: cogs/community/usersettings.py:307
 msgid ""
 "Your AniList link is gone as well, and your episode and chapter alert "
 "opt-ins with it."
 msgstr ""
 
-#: cogs/community/usersettings.py:310
+#: cogs/community/usersettings.py:312
 msgid ""
 "Your Pack Confort purchase record is gone from our database too (it comes"
 " back automatically if you still hold that purchase), and so is the note "
 "of your last premium offer reminder."
 msgstr ""
 
-#: cogs/community/usersettings.py:321
+#: cogs/community/usersettings.py:323
 msgid "Something went wrong deleting your profile."
 msgstr ""
 
-#: cogs/community/usersettings.py:331
+#: cogs/community/usersettings.py:333
 msgid "Profile deletion cancelled."
 msgstr ""
 
-#: cogs/community/usersettings.py:352
+#: cogs/community/usersettings.py:354
 msgid "Delete my avatar history"
 msgstr ""
 
-#: cogs/community/usersettings.py:373
+#: cogs/community/usersettings.py:375
 #, python-brace-format
 msgid ""
 "Deleted {count} saved image(s) ({size}). Future avatar tracking is now "
 "turned off."
 msgstr ""
 
-#: cogs/community/usersettings.py:384
+#: cogs/community/usersettings.py:386
 msgid "Something went wrong deleting your avatar history."
 msgstr ""
 
-#: cogs/community/usersettings.py:394
+#: cogs/community/usersettings.py:396
 msgid "Avatar history deletion cancelled."
 msgstr ""
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:409
+#: cogs/community/usersettings.py:411
 msgid "Turn off"
 msgstr ""
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:409
+#: cogs/community/usersettings.py:411
 msgid "Turn on"
 msgstr ""
 
-#: cogs/community/usersettings.py:493
+#: cogs/community/usersettings.py:495
 msgid "## Your preferences"
 msgstr ""
 
-#: cogs/community/usersettings.py:497
+#: cogs/community/usersettings.py:499
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
 msgstr ""
 
-#: cogs/community/usersettings.py:507
+#: cogs/community/usersettings.py:509
 msgid "ON"
 msgstr ""
 
-#: cogs/community/usersettings.py:507
+#: cogs/community/usersettings.py:509
 msgid "OFF"
 msgstr ""
 
-#: cogs/community/usersettings.py:508
+#: cogs/community/usersettings.py:510
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 msgstr ""
 
-#: cogs/community/usersettings.py:530
+#: cogs/community/usersettings.py:532
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 msgstr ""
 
-#: cogs/community/usersettings.py:544
+#: cogs/community/usersettings.py:546
 msgid "-# Only you can use these controls."
 msgstr ""
 
-#: cogs/community/usersettings.py:570 cogs/community/usersettings.py:590
-#: cogs/community/usersettings.py:610
+#: cogs/community/usersettings.py:572 cogs/community/usersettings.py:592
+#: cogs/community/usersettings.py:612
 msgid "Something went wrong updating that setting."
 msgstr ""
 
-#: cogs/community/usersettings.py:669
+#: cogs/community/usersettings.py:671
 #, python-brace-format
 msgid ""
 "Use `{prefix}mydata export` to receive your data, `{prefix}mydata "
@@ -2271,57 +2279,61 @@ msgid ""
 "to erase saved avatars."
 msgstr ""
 
-#: cogs/community/usersettings.py:742
+#: cogs/community/usersettings.py:744
 msgid "I sent your data export to you by direct message."
 msgstr ""
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:746
+#: cogs/community/usersettings.py:748
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr ""
 
-#: cogs/community/usersettings.py:751
+#: cogs/community/usersettings.py:753
 msgid "Something went wrong building your data export."
 msgstr ""
 
-#: cogs/community/usersettings.py:774
+#: cogs/community/usersettings.py:776
 msgid ""
 "This permanently deletes your bio, pronouns, accent colour, custom "
 "fields, gaming IDs and every choice you made about who could see them. "
 "This cannot be undone."
 msgstr ""
 
-#: cogs/community/usersettings.py:780
+#: cogs/community/usersettings.py:782
 msgid ""
 "It also deletes your top.gg vote record: your vote streak and your "
 "lifetime vote count start over from zero."
 msgstr ""
 
-#: cogs/community/usersettings.py:785
+#: cogs/community/usersettings.py:787
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr ""
 
-#: cogs/community/usersettings.py:789
+#: cogs/community/usersettings.py:791
 msgid ""
 "It also deletes your suggestions and your votes, and removes the posted "
 "suggestion messages where I can. Their discussion threads stay for the "
 "other members, renamed and locked."
 msgstr ""
 
-#: cogs/community/usersettings.py:795
+#: cogs/community/usersettings.py:796
+msgid "It also deletes your shared birthdays, in every server."
+msgstr ""
+
+#: cogs/community/usersettings.py:799
 msgid ""
 "And your personal rank card: the background image you uploaded and the "
 "accent colour you picked."
 msgstr ""
 
-#: cogs/community/usersettings.py:800
+#: cogs/community/usersettings.py:804
 msgid ""
 "And your AniList link: the stored login is deleted, so relinking needs a "
 "fresh sign-in with AniList. Your episode and chapter alert opt-ins go "
 "with it."
 msgstr ""
 
-#: cogs/community/usersettings.py:806
+#: cogs/community/usersettings.py:810
 msgid ""
 "And your Pack Confort purchase record: it comes back on its own if you "
 "still hold that purchase, the next time we check with Discord. Also the "
@@ -2329,7 +2341,7 @@ msgid ""
 "again sooner than usual."
 msgstr ""
 
-#: cogs/community/usersettings.py:823
+#: cogs/community/usersettings.py:827
 msgid ""
 "This permanently deletes every saved global avatar, server avatar and "
 "banner for your account. It also turns future tracking off. This cannot "
@@ -2383,6 +2395,209 @@ msgstr ""
 
 #: cogs/community/votes.py:901
 msgid "Vote on top.gg"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "January"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "February"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "March"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "April"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "May"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:45
+msgid "June"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "July"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "August"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "September"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "October"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "November"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:46
+msgid "December"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:58
+#, python-brace-format
+msgid " and {count} more"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:59
+#, python-brace-format
+msgid "Happy birthday, {users}! I hope your day is wonderful."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:108 cogs/community/birthdays/cog.py:151
+msgid "Birthdays are not set up in this server."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:126
+#, python-brace-format
+msgid "No birthdays in the next {days} days."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:130
+#, python-brace-format
+msgid "**{day} {month}** - {name}"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:137
+msgid "Upcoming birthdays"
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:148
+msgid "That date does not exist."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:154
+#, python-brace-format
+msgid "Saved. I will celebrate your birthday on {day} {month} in this server."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:167
+msgid "Your birthday is forgotten in this server."
+msgstr ""
+
+#: cogs/community/birthdays/cog.py:169
+msgid "You had not shared a birthday in this server."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:25
+msgid "Birthday channel..."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:40
+msgid "Birthday role (optional)..."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:55
+msgid "Hour of the celebration..."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:70 cogs/community/birthdays/panel.py:131
+msgid "Timezone"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:73
+msgid "IANA timezone"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:84
+msgid ""
+"That timezone is not valid. Use a name like Europe/Paris or "
+"America/New_York."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:95
+msgid "Custom message"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:98 cogs/config/milestones.py:148
+msgid "Message (empty = default)"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:133
+#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
+#: cogs/config/milestones.py:213
+msgid "Customize"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:156
+#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
+#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
+msgid "You need the Manage Server permission for this."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:164
+msgid "Birthdays"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:166
+msgid "Members share their birthday with /birthday set and I celebrate it here."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:173
+#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
+#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
+#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
+#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
+#: cogs/config/verification.py:118 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+msgid "*Not set.*"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:176
+#: cogs/community/leveling/level_config_ui.py:750
+#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:59
+#: cogs/config/reactionroles.py:228
+msgid "Role"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:177
+#: cogs/community/suggestions/panel.py:202
+#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
+msgid "*None.*"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:180 cogs/fun/games.py:247
+msgid "Time"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:183 cogs/config/milestones.py:263
+msgid "Default message"
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:185
+msgid "Yasuho+ unlocks your own message."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:211 cogs/config/event_reminders.py:305
+#: cogs/config/milestones.py:294
+msgid ""
+"I can't send messages in that channel. Give me View Channel and Send "
+"Messages there first."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:226
+msgid ""
+"I can't give that role. It must be below my highest role, not managed by "
+"an integration, without powerful permissions, and I need Manage Roles."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:238
+msgid "Pick a birthday channel first."
+msgstr ""
+
+#: cogs/community/birthdays/panel.py:263
+msgid "A custom birthday message is a Yasuho+ feature."
 msgstr ""
 
 #: cogs/community/leveling/level_admin.py:64
@@ -2750,12 +2965,6 @@ msgstr ""
 #: cogs/community/leveling/level_config_ui.py:826
 #: cogs/community/leveling/level_config_ui.py:830
 msgid "Unknown (deleted)"
-msgstr ""
-
-#: cogs/community/leveling/level_config_ui.py:750
-#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:59
-#: cogs/config/reactionroles.py:228
-msgid "Role"
 msgstr ""
 
 #: cogs/community/leveling/level_config_ui.py:760
@@ -4211,7 +4420,7 @@ msgstr ""
 msgid "Status set to {status}."
 msgstr ""
 
-#: cogs/community/suggestions/cog.py:449
+#: cogs/community/suggestions/cog.py:454
 msgid "Top suggestions this week"
 msgstr ""
 
@@ -4280,11 +4489,6 @@ msgstr ""
 msgid "Use a new label, and no more than {count} custom statuses."
 msgstr ""
 
-#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
-#: cogs/config/milestones.py:213
-msgid "Customize"
-msgstr ""
-
 #: cogs/community/suggestions/panel.py:155
 msgid "Add status"
 msgstr ""
@@ -4297,11 +4501,6 @@ msgstr ""
 msgid "Enable digest"
 msgstr ""
 
-#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
-#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
-msgid "You need the Manage Server permission for this."
-msgstr ""
-
 #: cogs/community/suggestions/panel.py:191
 msgid "Suggestion box"
 msgstr ""
@@ -4310,22 +4509,8 @@ msgstr ""
 msgid "Members post suggestions with /suggest and everyone votes on them."
 msgstr ""
 
-#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
-#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
-#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
-#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
-#: cogs/config/verification.py:118 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
-msgid "*Not set.*"
-msgstr ""
-
 #: cogs/community/suggestions/panel.py:201
 msgid "Staff role"
-msgstr ""
-
-#: cogs/community/suggestions/panel.py:202
-#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
-msgid "*None.*"
 msgstr ""
 
 #: cogs/community/suggestions/panel.py:206
@@ -5171,12 +5356,6 @@ msgstr ""
 msgid "Yasuho+ unlocks the reminder times and a role ping."
 msgstr ""
 
-#: cogs/config/event_reminders.py:305 cogs/config/milestones.py:294
-msgid ""
-"I can't send messages in that channel. Give me View Channel and Send "
-"Messages there first."
-msgstr ""
-
 #: cogs/config/event_reminders.py:322
 msgid "You can't ping that role."
 msgstr ""
@@ -5212,10 +5391,6 @@ msgstr ""
 msgid "Milestones (up to 10, empty = default)"
 msgstr ""
 
-#: cogs/config/milestones.py:148
-msgid "Message (empty = default)"
-msgstr ""
-
 #: cogs/config/milestones.py:164
 #, python-brace-format
 msgid ""
@@ -5237,10 +5412,6 @@ msgstr ""
 
 #: cogs/config/milestones.py:256
 msgid "Milestones"
-msgstr ""
-
-#: cogs/config/milestones.py:263
-msgid "Default message"
 msgstr ""
 
 #: cogs/config/milestones.py:268
@@ -7240,10 +7411,6 @@ msgstr ""
 #: cogs/fun/games.py:241
 #, python-brace-format
 msgid "{winner} finished the sentence first!"
-msgstr ""
-
-#: cogs/fun/games.py:247
-msgid "Time"
 msgstr ""
 
 #: cogs/fun/games.py:248
@@ -10177,58 +10344,58 @@ msgstr ""
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr ""
 
-#: cogs/system/help.py:139
+#: cogs/system/help.py:140
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr ""
 
-#: cogs/system/help.py:147
+#: cogs/system/help.py:148
 msgid "Anything not yet sorted into a category."
 msgstr ""
 
-#: cogs/system/help.py:249 cogs/system/help.py:296 cogs/system/help.py:309
-#: cogs/system/help.py:789
+#: cogs/system/help.py:250 cogs/system/help.py:297 cogs/system/help.py:310
+#: cogs/system/help.py:790
 msgid "No description provided."
 msgstr ""
 
-#: cogs/system/help.py:301 cogs/system/help.py:793
+#: cogs/system/help.py:302 cogs/system/help.py:794
 msgid "Aliases"
 msgstr ""
 
-#: cogs/system/help.py:314
+#: cogs/system/help.py:315
 #, python-brace-format
 msgid ""
 "This command has {count}. Toggle expansion in /preferences, or use "
 "`{prefix}help {group} <subcommand>`."
 msgstr ""
 
-#: cogs/system/help.py:319
+#: cogs/system/help.py:320
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/system/help.py:324
+#: cogs/system/help.py:325
 msgid "Subcommands"
 msgstr ""
 
-#: cogs/system/help.py:353
+#: cogs/system/help.py:354
 msgid "Jump to a category..."
 msgstr ""
 
-#: cogs/system/help.py:422 cogs/system/help.py:551 cogs/system/help.py:570
+#: cogs/system/help.py:423 cogs/system/help.py:552 cogs/system/help.py:571
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/system/help.py:483
+#: cogs/system/help.py:484
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr ""
 
-#: cogs/system/help.py:485
+#: cogs/system/help.py:486
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -10237,19 +10404,19 @@ msgid ""
 "`{prefix}help <command>` for a specific command."
 msgstr ""
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:512
 msgid "Enabled ✅"
 msgstr ""
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:512
 msgid "Disabled ❌"
 msgstr ""
 
-#: cogs/system/help.py:519
+#: cogs/system/help.py:520
 msgid "🏠 Server"
 msgstr ""
 
-#: cogs/system/help.py:522
+#: cogs/system/help.py:523
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -10257,66 +10424,66 @@ msgid ""
 "Leveling: {leveling}"
 msgstr ""
 
-#: cogs/system/help.py:534
+#: cogs/system/help.py:535
 msgid "🏠 Direct Messages"
 msgstr ""
 
-#: cogs/system/help.py:536
+#: cogs/system/help.py:537
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr ""
 
-#: cogs/system/help.py:562
+#: cogs/system/help.py:563
 msgid "📚 Categories"
 msgstr ""
 
-#: cogs/system/help.py:568
+#: cogs/system/help.py:569
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr ""
 
-#: cogs/system/help.py:574
+#: cogs/system/help.py:575
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cogs/system/help.py:583
+#: cogs/system/help.py:584
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr ""
 
-#: cogs/system/help.py:589
+#: cogs/system/help.py:590
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr ""
 
-#: cogs/system/help.py:606
+#: cogs/system/help.py:607
 msgid "No commands available."
 msgstr ""
 
-#: cogs/system/help.py:671
+#: cogs/system/help.py:672
 msgid "Something went wrong opening the help menu."
 msgstr ""
 
-#: cogs/system/help.py:740
+#: cogs/system/help.py:741
 msgid "Collapse subcommands"
 msgstr ""
 
-#: cogs/system/help.py:740
+#: cogs/system/help.py:741
 msgid "Expand subcommands"
 msgstr ""
 
-#: cogs/system/help.py:757
+#: cogs/system/help.py:758
 msgid "Something went wrong updating that preference."
 msgstr ""
 
-#: cogs/system/help.py:773 cogs/system/help.py:813
+#: cogs/system/help.py:774 cogs/system/help.py:814
 msgid "Help"
 msgstr ""
 
-#: cogs/system/help.py:775
+#: cogs/system/help.py:776
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr ""
@@ -10574,8 +10741,8 @@ msgstr ""
 msgid "**Extended server playlists**"
 msgstr ""
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:154
-#: tests/cogs/test_premium_panel.py:158
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:155
+#: tests/cogs/test_premium_panel.py:159
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr ""

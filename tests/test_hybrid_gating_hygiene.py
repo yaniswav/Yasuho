@@ -73,6 +73,7 @@ EXEMPT_GROUPS = {
     "info": "read-only: public member/guild/bot information",
     "lookup": "read-only: external lookups (wiki, weather, osu, ...)",
     "poll": "any member may open a poll by design; writes no config",
+    "birthday": "self-scoped: the caller's own birthday row, or a read-only upcoming list",
 }
 
 # Subcommands that are intentionally reachable by any member. Each entry states

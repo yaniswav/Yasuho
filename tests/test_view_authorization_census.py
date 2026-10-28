@@ -803,6 +803,17 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "Opened only from AnnouncePanel (announcements.py:206), an "
         "AuthorView; accepted revocation-only residual.",
     ),
+    "cogs.community.birthdays.panel.MessageModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from BirthdayPanel._customize, an AuthorView that re-checks "
+        "Manage Server on every click; on_submit re-checks Yasuho+ "
+        "(custom_allowed) before saving; accepted revocation-only residual.",
+    ),
+    "cogs.community.birthdays.panel.TimezoneModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from BirthdayPanel._timezone, an AuthorView that re-checks "
+        "Manage Server on every click; accepted revocation-only residual.",
+    ),
     "cogs.config.milestones.MilestoneModal": (
         "GATED_FLOW_MODAL",
         "Opened only from MilestonePanel._customize (milestones.py), an "

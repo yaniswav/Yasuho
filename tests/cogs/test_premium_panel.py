@@ -94,6 +94,7 @@ def _synthetic_guild_plus():
         milestones_custom=True,
         event_reminders_custom=True,
         suggestions_custom=True,
+        birthdays_custom=True,
     )
 
 

@@ -2266,6 +2266,34 @@ CREATE TABLE IF NOT EXISTS suggestion_votes (
 -- "every vote this user cast": the /mydata export and erasure path.
 CREATE INDEX IF NOT EXISTS suggestion_votes_user_idx ON suggestion_votes (user_id);
 
--- Per-guild timer lookups (event reminders, suggestion digest) filter on
+-- Birthdays (cogs/community/birthdays). Day and month only, NEVER a year, one row
+-- per (server, member): a birthday is only announced where it was shared. The
+-- config (channel, role, hour, timezone, message) lives in
+-- guild_settings.settings->'birthdays'. Personal data: exported and erased by
+-- tools/privacy.py, purged with the guild by tools/retention.py. Feb 29 is valid;
+-- non-leap years celebrate it on Feb 28.
+CREATE TABLE IF NOT EXISTS birthdays (
+    guild_id   BIGINT      NOT NULL,
+    user_id    BIGINT      NOT NULL,
+    month      SMALLINT    NOT NULL CHECK (month BETWEEN 1 AND 12),
+    day        SMALLINT    NOT NULL CHECK (
+        day >= 1 AND day <= CASE WHEN month = 2 THEN 29 WHEN month IN (4, 6, 9, 11) THEN 30 ELSE 31 END
+    ),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, user_id)
+);
+-- The daily "who is celebrating today" lookup.
+CREATE INDEX IF NOT EXISTS birthdays_guild_day_idx ON birthdays (guild_id, month, day);
+-- "every birthday this user shared": the /mydata export and erasure path.
+CREATE INDEX IF NOT EXISTS birthdays_user_idx ON birthdays (user_id);
+
+-- Exactly-once per local day: the last day Yasuho celebrated in a guild, claimed by
+-- one conditional upsert before posting (a changed hour/timezone cannot double post).
+CREATE TABLE IF NOT EXISTS birthday_state (
+    guild_id BIGINT PRIMARY KEY,
+    last_day DATE   NOT NULL
+);
+
+-- Per-guild timer lookups (event reminders, suggestion digest, birthdays) filter on
 -- extra->>'guild_id'; without this every write scans all rows of that event.
 CREATE INDEX IF NOT EXISTS timers_event_guild_idx ON timers (event, (extra->>'guild_id'));

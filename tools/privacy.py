@@ -115,7 +115,9 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # v16 adds the suggestion box: the suggestions this user wrote (`suggestions_authored`)
 # and the votes they cast (`suggestion_votes_cast`, by guild and number), both erased
 # on request; the posted messages are deleted best effort by the confirm view.
-EXPORT_VERSION = 16
+# v17 adds birthdays: the day and month this user shared per server
+# (`birthdays_shared`, no year is ever stored), erased on request.
+EXPORT_VERSION = 17
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -206,6 +208,8 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # read BEFORE this runs (cogs.community.suggestions.store.message_refs).
     ("suggestion_votes", "DELETE FROM suggestion_votes WHERE user_id = $1"),
     ("suggestions", "DELETE FROM suggestions WHERE author_id = $1"),
+    # Birthdays (cogs/community/birthdays): one row per server the user shared it in.
+    ("birthdays", "DELETE FROM birthdays WHERE user_id = $1"),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -588,6 +592,11 @@ async def collect_user_export(pool, user_id):
         "WHERE v.user_id = $1 ORDER BY s.guild_id, s.number",
         user_id,
     )
+    birthdays = await pool.fetch(
+        "SELECT guild_id, month, day, created_at FROM birthdays "
+        "WHERE user_id = $1 ORDER BY guild_id",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -724,6 +733,7 @@ async def collect_user_export(pool, user_id):
         ],
         "suggestions_authored": _records(suggestions),
         "suggestion_votes_cast": _records(suggestion_votes),
+        "birthdays_shared": _records(birthdays),
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

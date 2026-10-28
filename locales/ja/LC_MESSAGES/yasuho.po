@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 10:29+0000\n"
+"POT-Creation-Date: 2026-10-28 11:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "編集"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:473
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:475
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "このパネルはあなた用ではありません。"
@@ -548,7 +548,8 @@ msgid "Keep current status"
 msgstr "現在のステータスを維持"
 
 #: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
-#: cogs/anilist/media_view.py:396 cogs/community/suggestions/panel.py:195
+#: cogs/anilist/media_view.py:396 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195
 #: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
 #: cogs/config/welcome.py:436 cogs/config/welcome.py:558
@@ -1201,15 +1202,17 @@ msgstr[0] "フォロー中{total}人のうち{count}人をミュート中"
 msgid "Muted here ({count})"
 msgstr "ここでミュート中 ({count})"
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
-#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr "無効化"
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
-#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr "有効化"
 
@@ -1219,7 +1222,7 @@ msgstr "削除"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:353
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:355
 #: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1276,22 +1279,23 @@ msgstr "AniListアクティビティフィード"
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "このサーバーにはまだAniListフィードがありません。下からチャンネルを選択して作成してください (サーバーごとに最大{max}件)。"
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
-#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
-#: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
-#: cogs/config/verification.py:111 cogs/config/welcome.py:424
-#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
+#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
+#: cogs/config/twitch.py:424 cogs/config/verification.py:111
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "有効"
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
-#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
-#: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
-#: cogs/config/verification.py:113 cogs/config/welcome.py:426
-#: cogs/config/welcome.py:547 cogs/config/welcome.py:801
-#: cogs/moderation/modlog.py:278
+#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
+#: cogs/config/twitch.py:426 cogs/config/verification.py:113
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "無効"
 
@@ -1304,13 +1308,13 @@ msgstr "{status} (直近の失敗{count}件)"
 msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
 msgstr "このサーバーへのAniListアクティビティの反映方法を設定します。変更内容はすべて即座に保存されます。"
 
-#: cogs/anilist/feed_views.py:1407 cogs/community/suggestions/panel.py:197
-#: cogs/config/announcements.py:315 cogs/config/event_reminders.py:264
-#: cogs/config/milestones.py:251 cogs/config/rolemenus.py:686
-#: cogs/config/starboard.py:284 cogs/config/twitch.py:441
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:560
-#: cogs/config/welcome.py:780 cogs/moderation/modlog.py:601
-#: cogs/moderation/modlog.py:718
+#: cogs/anilist/feed_views.py:1407 cogs/community/birthdays/panel.py:172
+#: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
+#: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
+#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
+#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "チャンネル"
 
@@ -1416,7 +1420,7 @@ msgstr "コードフォームを開けませんでした。"
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:516 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:517 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "不明"
 
@@ -1872,10 +1876,10 @@ msgstr "いつ"
 msgid "e.g. 10m, tomorrow at 6pm, or a <t:...> tag"
 msgstr "例: 10m、明日18時、または <t:...> タグ"
 
-#: cogs/community/reminders.py:367 cogs/config/milestones.py:262
-#: cogs/config/reactionroles.py:226 cogs/config/reactionroles.py:342
-#: cogs/config/twitch.py:36 cogs/config/twitch.py:458
-#: cogs/config/welcome.py:782
+#: cogs/community/birthdays/panel.py:183 cogs/community/reminders.py:367
+#: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
+#: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:782
 msgid "Message"
 msgstr "メッセージ"
 
@@ -2074,61 +2078,65 @@ msgid "Your suggestions and votes are gone, and I removed what I could of the po
 msgstr "あなたの提案と投票は削除されました。投稿されたメッセージも、できる範囲で取り除きました。"
 
 #: cogs/community/usersettings.py:300
+msgid "Your shared birthdays are gone, in every server."
+msgstr "共有していた誕生日は、すべてのサーバーから削除されました。"
+
+#: cogs/community/usersettings.py:302
 msgid "Your top.gg vote record is gone too."
 msgstr "top.ggの投票記録も削除されました。"
 
-#: cogs/community/usersettings.py:302
+#: cogs/community/usersettings.py:304
 msgid "So is your personal rank card."
 msgstr "あなたの個人的なランクカードも同様です。"
 
-#: cogs/community/usersettings.py:305
+#: cogs/community/usersettings.py:307
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "AniListの連携も削除され、エピソードとチャプターのアラート登録も一緒に削除されます。"
 
-#: cogs/community/usersettings.py:310
+#: cogs/community/usersettings.py:312
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Pack Confort の購入記録もデータベースから削除されました(この購入をまだお持ちの場合は自動的に戻ります)。プレミアムのお知らせを最後に表示した記録も削除されました。"
 
-#: cogs/community/usersettings.py:321
+#: cogs/community/usersettings.py:323
 msgid "Something went wrong deleting your profile."
 msgstr "プロフィールの削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:331
+#: cogs/community/usersettings.py:333
 msgid "Profile deletion cancelled."
 msgstr "プロフィールの削除をキャンセルしました。"
 
-#: cogs/community/usersettings.py:352
+#: cogs/community/usersettings.py:354
 msgid "Delete my avatar history"
 msgstr "アバター履歴を削除する"
 
-#: cogs/community/usersettings.py:373
+#: cogs/community/usersettings.py:375
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "保存された画像 {count} 件 ({size}) を削除しました。今後のアバター記録はオフになりました。"
 
-#: cogs/community/usersettings.py:384
+#: cogs/community/usersettings.py:386
 msgid "Something went wrong deleting your avatar history."
 msgstr "アバター履歴の削除中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:394
+#: cogs/community/usersettings.py:396
 msgid "Avatar history deletion cancelled."
 msgstr "アバター履歴の削除をキャンセルしました。"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:409
+#: cogs/community/usersettings.py:411
 msgid "Turn off"
 msgstr "オフにする"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:409
+#: cogs/community/usersettings.py:411
 msgid "Turn on"
 msgstr "オンにする"
 
-#: cogs/community/usersettings.py:493
+#: cogs/community/usersettings.py:495
 msgid "## Your preferences"
 msgstr "## あなたの設定"
 
-#: cogs/community/usersettings.py:497
+#: cogs/community/usersettings.py:499
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2136,15 +2144,15 @@ msgstr ""
 "これらの設定は、私が使われるすべての場所で **あなた** にのみ影響します。\n"
 "設定の横のボタンを使ってオン/オフを切り替えてください。"
 
-#: cogs/community/usersettings.py:507
+#: cogs/community/usersettings.py:509
 msgid "ON"
 msgstr "オン"
 
-#: cogs/community/usersettings.py:507
+#: cogs/community/usersettings.py:509
 msgid "OFF"
 msgstr "オフ"
 
-#: cogs/community/usersettings.py:508
+#: cogs/community/usersettings.py:510
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2153,7 +2161,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:530
+#: cogs/community/usersettings.py:532
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2162,62 +2170,66 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:544
+#: cogs/community/usersettings.py:546
 msgid "-# Only you can use these controls."
 msgstr "-# これらの操作はあなただけが使用できます。"
 
-#: cogs/community/usersettings.py:570 cogs/community/usersettings.py:590
-#: cogs/community/usersettings.py:610
+#: cogs/community/usersettings.py:572 cogs/community/usersettings.py:592
+#: cogs/community/usersettings.py:612
 msgid "Something went wrong updating that setting."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:669
+#: cogs/community/usersettings.py:671
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "データを受け取るには `{prefix}mydata export`、プロフィールを削除するには `{prefix}mydata deleteprofile`、保存されたアバターを削除するには `{prefix}mydata deleteavatars` を使用してください。"
 
-#: cogs/community/usersettings.py:742
+#: cogs/community/usersettings.py:744
 msgid "I sent your data export to you by direct message."
 msgstr "データのエクスポートをダイレクトメッセージで送信しました。"
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:746
+#: cogs/community/usersettings.py:748
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "ダイレクトメッセージを送信できませんでした。DMを有効にしてください。"
 
-#: cogs/community/usersettings.py:751
+#: cogs/community/usersettings.py:753
 msgid "Something went wrong building your data export."
 msgstr "データのエクスポート作成中に問題が発生しました。"
 
-#: cogs/community/usersettings.py:774
+#: cogs/community/usersettings.py:776
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "これにより、あなたの自己紹介、代名詞、アクセントカラー、カスタムフィールド、ゲームID、そしてそれらを誰が見られるかについてのすべての選択が完全に削除されます。この操作は元に戻せません。"
 
-#: cogs/community/usersettings.py:780
+#: cogs/community/usersettings.py:782
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "top.ggの投票記録も削除されます: 投票の連続記録と累計回数はゼロからやり直しになります。"
 
-#: cogs/community/usersettings.py:785
+#: cogs/community/usersettings.py:787
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "予約したお知らせと送信待ちの配信も削除されます。"
 
-#: cogs/community/usersettings.py:789
+#: cogs/community/usersettings.py:791
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "あなたの提案と投票も削除し、可能な場合は投稿された提案メッセージも取り除きます。ディスカッションのスレッドは他のメンバーのために残り、名前が変更されてロックされます。"
 
-#: cogs/community/usersettings.py:795
+#: cogs/community/usersettings.py:796
+msgid "It also deletes your shared birthdays, in every server."
+msgstr "共有した誕生日もすべてのサーバーから削除されます。"
+
+#: cogs/community/usersettings.py:799
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "そして、あなたの個人的なランクカード: アップロードした背景画像と選んだアクセントカラーです。"
 
-#: cogs/community/usersettings.py:800
+#: cogs/community/usersettings.py:804
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "そしてAniListの連携: 保存されたログインが削除されるため、再連携にはAniListで再度サインインが必要です。エピソードとチャプターのアラート登録も一緒に削除されます。"
 
-#: cogs/community/usersettings.py:806
+#: cogs/community/usersettings.py:810
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Pack Confort の購入記録も削除されます。この購入をまだお持ちの場合は、次回の Discord との確認で自動的に戻ります。また、プレミアムのお知らせを最後に表示した記録も削除されるため、通常より早く再び表示されることがあります。"
 
-#: cogs/community/usersettings.py:823
+#: cogs/community/usersettings.py:827
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "これはあなたのアカウントに保存された全てのグローバルアバター、サーバーアバター、バナーを完全に削除します。今後の記録もオフになります。これは取り消せません。"
 
@@ -2265,6 +2277,203 @@ msgstr "投票すると12時間XPがx1.5になります (週末は24時間)。"
 #: cogs/community/votes.py:901
 msgid "Vote on top.gg"
 msgstr "top.ggで投票"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "January"
+msgstr "1月"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "February"
+msgstr "2月"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "March"
+msgstr "3月"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "April"
+msgstr "4月"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "May"
+msgstr "5月"
+
+#: cogs/community/birthdays/cog.py:45
+msgid "June"
+msgstr "6月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "July"
+msgstr "7月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "August"
+msgstr "8月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "September"
+msgstr "9月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "October"
+msgstr "10月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "November"
+msgstr "11月"
+
+#: cogs/community/birthdays/cog.py:46
+msgid "December"
+msgstr "12月"
+
+#: cogs/community/birthdays/cog.py:58
+#, python-brace-format
+msgid " and {count} more"
+msgstr " 他{count}件"
+
+#: cogs/community/birthdays/cog.py:59
+#, python-brace-format
+msgid "Happy birthday, {users}! I hope your day is wonderful."
+msgstr "お誕生日おめでとうございます、{users}！素敵な一日になりますように。"
+
+#: cogs/community/birthdays/cog.py:108 cogs/community/birthdays/cog.py:151
+msgid "Birthdays are not set up in this server."
+msgstr "このサーバーでは誕生日機能が設定されていません。"
+
+#: cogs/community/birthdays/cog.py:126
+#, python-brace-format
+msgid "No birthdays in the next {days} days."
+msgstr "今後{days}日間に誕生日はありません。"
+
+#: cogs/community/birthdays/cog.py:130
+#, python-brace-format
+msgid "**{day} {month}** - {name}"
+msgstr "**{month}{day}日** - {name}"
+
+#: cogs/community/birthdays/cog.py:137
+msgid "Upcoming birthdays"
+msgstr "今後の誕生日"
+
+#: cogs/community/birthdays/cog.py:148
+msgid "That date does not exist."
+msgstr "その日付は存在しません。"
+
+#: cogs/community/birthdays/cog.py:154
+#, python-brace-format
+msgid "Saved. I will celebrate your birthday on {day} {month} in this server."
+msgstr "保存しました。このサーバーで{month}{day}日に誕生日をお祝いします。"
+
+#: cogs/community/birthdays/cog.py:167
+msgid "Your birthday is forgotten in this server."
+msgstr "このサーバーからあなたの誕生日を削除しました。"
+
+#: cogs/community/birthdays/cog.py:169
+msgid "You had not shared a birthday in this server."
+msgstr "このサーバーで誕生日を共有していませんでした。"
+
+#: cogs/community/birthdays/panel.py:25
+msgid "Birthday channel..."
+msgstr "誕生日チャンネル..."
+
+#: cogs/community/birthdays/panel.py:40
+msgid "Birthday role (optional)..."
+msgstr "誕生日ロール（任意）..."
+
+#: cogs/community/birthdays/panel.py:55
+msgid "Hour of the celebration..."
+msgstr "お祝いの時刻..."
+
+#: cogs/community/birthdays/panel.py:70 cogs/community/birthdays/panel.py:131
+msgid "Timezone"
+msgstr "タイムゾーン"
+
+#: cogs/community/birthdays/panel.py:73
+msgid "IANA timezone"
+msgstr "IANA タイムゾーン"
+
+#: cogs/community/birthdays/panel.py:84
+msgid "That timezone is not valid. Use a name like Europe/Paris or America/New_York."
+msgstr "そのタイムゾーンは無効です。Europe/Paris や America/New_York のような名前を使ってください。"
+
+#: cogs/community/birthdays/panel.py:95
+msgid "Custom message"
+msgstr "カスタムメッセージ"
+
+#: cogs/community/birthdays/panel.py:98 cogs/config/milestones.py:148
+msgid "Message (empty = default)"
+msgstr "メッセージ（空欄 = デフォルト）"
+
+#: cogs/community/birthdays/panel.py:133
+#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
+#: cogs/config/milestones.py:213
+msgid "Customize"
+msgstr "カスタマイズ"
+
+#: cogs/community/birthdays/panel.py:156
+#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
+#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
+msgid "You need the Manage Server permission for this."
+msgstr "これにはサーバー管理権限が必要です。"
+
+#: cogs/community/birthdays/panel.py:164
+msgid "Birthdays"
+msgstr "誕生日"
+
+#: cogs/community/birthdays/panel.py:166
+msgid "Members share their birthday with /birthday set and I celebrate it here."
+msgstr "メンバーは /birthday set で誕生日を共有すると、ここでお祝いします。"
+
+#: cogs/community/birthdays/panel.py:173
+#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
+#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
+#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
+#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
+#: cogs/config/verification.py:118 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+msgid "*Not set.*"
+msgstr "*未設定。*"
+
+#: cogs/community/birthdays/panel.py:176
+#: cogs/community/leveling/level_config_ui.py:750
+#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:59
+#: cogs/config/reactionroles.py:228
+msgid "Role"
+msgstr "ロール"
+
+#: cogs/community/birthdays/panel.py:177
+#: cogs/community/suggestions/panel.py:202
+#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
+msgid "*None.*"
+msgstr "*なし*"
+
+#: cogs/community/birthdays/panel.py:180 cogs/fun/games.py:247
+msgid "Time"
+msgstr "時間"
+
+#: cogs/community/birthdays/panel.py:183 cogs/config/milestones.py:263
+msgid "Default message"
+msgstr "デフォルトのメッセージ"
+
+#: cogs/community/birthdays/panel.py:185
+msgid "Yasuho+ unlocks your own message."
+msgstr "Yasuho+ で自分専用のメッセージを使えます。"
+
+#: cogs/community/birthdays/panel.py:211 cogs/config/event_reminders.py:305
+#: cogs/config/milestones.py:294
+msgid "I can't send messages in that channel. Give me View Channel and Send Messages there first."
+msgstr "そのチャンネルにはメッセージを送信できません。先に「チャンネルを見る」と「メッセージを送信」の権限をください。"
+
+#: cogs/community/birthdays/panel.py:226
+msgid "I can't give that role. It must be below my highest role, not managed by an integration, without powerful permissions, and I need Manage Roles."
+msgstr "そのロールは付与できません。私の最上位ロールより下にあり、連携機能で管理されておらず、強力な権限を持っていない必要があります。また、ロールの管理権限も必要です。"
+
+#: cogs/community/birthdays/panel.py:238
+msgid "Pick a birthday channel first."
+msgstr "先に誕生日チャンネルを選んでください。"
+
+#: cogs/community/birthdays/panel.py:263
+msgid "A custom birthday message is a Yasuho+ feature."
+msgstr "カスタムの誕生日メッセージは Yasuho+ の機能です。"
 
 #: cogs/community/leveling/level_admin.py:64
 msgid "Reset XP"
@@ -2626,12 +2835,6 @@ msgstr "チャンネル/カテゴリー"
 #: cogs/community/leveling/level_config_ui.py:830
 msgid "Unknown (deleted)"
 msgstr "不明 (削除済み)"
-
-#: cogs/community/leveling/level_config_ui.py:750
-#: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:59
-#: cogs/config/reactionroles.py:228
-msgid "Role"
-msgstr "ロール"
 
 #: cogs/community/leveling/level_config_ui.py:760
 msgid "Pick a no-XP zone to remove..."
@@ -4051,7 +4254,7 @@ msgstr "そのステータスは利用できません。"
 msgid "Status set to {status}."
 msgstr "ステータスを {status} に設定しました。"
 
-#: cogs/community/suggestions/cog.py:449
+#: cogs/community/suggestions/cog.py:454
 msgid "Top suggestions this week"
 msgstr "今週の人気の提案"
 
@@ -4120,11 +4323,6 @@ msgstr "その色は無効です。#RRGGBB の形式で入力してください�
 msgid "Use a new label, and no more than {count} custom statuses."
 msgstr "新しいラベルを使い、カスタムステータスは {count} 個までにしてください。"
 
-#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
-#: cogs/config/milestones.py:213
-msgid "Customize"
-msgstr "カスタマイズ"
-
 #: cogs/community/suggestions/panel.py:155
 msgid "Add status"
 msgstr "ステータスを追加"
@@ -4137,11 +4335,6 @@ msgstr "ダイジェストを無効にする"
 msgid "Enable digest"
 msgstr "ダイジェストを有効にする"
 
-#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
-#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
-msgid "You need the Manage Server permission for this."
-msgstr "これにはサーバー管理権限が必要です。"
-
 #: cogs/community/suggestions/panel.py:191
 msgid "Suggestion box"
 msgstr "提案箱"
@@ -4150,23 +4343,9 @@ msgstr "提案箱"
 msgid "Members post suggestions with /suggest and everyone votes on them."
 msgstr "メンバーは /suggest で提案を投稿し、全員がそれに投票します。"
 
-#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
-#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
-#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
-#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
-#: cogs/config/verification.py:118 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
-msgid "*Not set.*"
-msgstr "*未設定。*"
-
 #: cogs/community/suggestions/panel.py:201
 msgid "Staff role"
 msgstr "スタッフロール"
-
-#: cogs/community/suggestions/panel.py:202
-#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
-msgid "*None.*"
-msgstr "*なし*"
 
 #: cogs/community/suggestions/panel.py:206
 msgid "Custom statuses"
@@ -4978,10 +5157,6 @@ msgstr "メンションするロール"
 msgid "Yasuho+ unlocks the reminder times and a role ping."
 msgstr "Yasuho+ ではリマインドのタイミングとロールのメンションを設定できます。"
 
-#: cogs/config/event_reminders.py:305 cogs/config/milestones.py:294
-msgid "I can't send messages in that channel. Give me View Channel and Send Messages there first."
-msgstr "そのチャンネルにはメッセージを送信できません。先に「チャンネルを見る」と「メッセージを送信」の権限をください。"
-
 #: cogs/config/event_reminders.py:322
 msgid "You can't ping that role."
 msgstr "そのロールはメンションできません。"
@@ -5015,10 +5190,6 @@ msgstr "カスタムマイルストーン"
 msgid "Milestones (up to 10, empty = default)"
 msgstr "マイルストーン（最大 10 個、空欄 = デフォルト）"
 
-#: cogs/config/milestones.py:148
-msgid "Message (empty = default)"
-msgstr "メッセージ（空欄 = デフォルト）"
-
 #: cogs/config/milestones.py:164
 #, python-brace-format
 msgid "Give up to {count} whole numbers between 1 and {maximum}, separated by commas."
@@ -5039,10 +5210,6 @@ msgstr "サーバーのメンバー数がマイルストーンに達すると、
 #: cogs/config/milestones.py:256
 msgid "Milestones"
 msgstr "マイルストーン"
-
-#: cogs/config/milestones.py:263
-msgid "Default message"
-msgstr "デフォルトのメッセージ"
 
 #: cogs/config/milestones.py:268
 msgid "Yasuho+ unlocks your own milestones and message."
@@ -6991,10 +7158,6 @@ msgstr "勝者が決まりました!"
 #, python-brace-format
 msgid "{winner} finished the sentence first!"
 msgstr "{winner} が最初に文章を完成させました!"
-
-#: cogs/fun/games.py:247
-msgid "Time"
-msgstr "時間"
 
 #: cogs/fun/games.py:248
 #, python-brace-format
@@ -9875,54 +10038,54 @@ msgstr "キック、BAN、警告、自動モデレーション、モデレーシ
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "ウェルカムメッセージ、スターボード、カスタムコマンドなど。"
 
-#: cogs/system/help.py:139
+#: cogs/system/help.py:140
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "リアクションロール、ロールメニュー、ボタンロール、認証。"
 
-#: cogs/system/help.py:147
+#: cogs/system/help.py:148
 msgid "Anything not yet sorted into a category."
 msgstr "まだカテゴリに分類されていないもの。"
 
-#: cogs/system/help.py:249 cogs/system/help.py:296 cogs/system/help.py:309
-#: cogs/system/help.py:789
+#: cogs/system/help.py:250 cogs/system/help.py:297 cogs/system/help.py:310
+#: cogs/system/help.py:790
 msgid "No description provided."
 msgstr "説明はありません。"
 
-#: cogs/system/help.py:301 cogs/system/help.py:793
+#: cogs/system/help.py:302 cogs/system/help.py:794
 msgid "Aliases"
 msgstr "エイリアス"
 
-#: cogs/system/help.py:314
+#: cogs/system/help.py:315
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "このコマンドには {count} 個あります。/preferences で展開を切り替えるか、`{prefix}help {group} <subcommand>` を使ってください。"
 
-#: cogs/system/help.py:319
+#: cogs/system/help.py:320
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} 個のサブコマンド"
 
-#: cogs/system/help.py:324
+#: cogs/system/help.py:325
 msgid "Subcommands"
 msgstr "サブコマンド"
 
-#: cogs/system/help.py:353
+#: cogs/system/help.py:354
 msgid "Jump to a category..."
 msgstr "カテゴリに移動..."
 
-#: cogs/system/help.py:422 cogs/system/help.py:551 cogs/system/help.py:570
+#: cogs/system/help.py:423 cogs/system/help.py:552 cogs/system/help.py:571
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} 個のコマンド"
 
-#: cogs/system/help.py:483
+#: cogs/system/help.py:484
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • ヘルプ"
 
-#: cogs/system/help.py:485
+#: cogs/system/help.py:486
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9933,19 +10096,19 @@ msgstr ""
 "\n"
 "メニューでカテゴリに移動したり、矢印で閲覧したり、特定のコマンドは `{prefix}help <command>` で確認してください。"
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:512
 msgid "Enabled ✅"
 msgstr "有効 ✅"
 
-#: cogs/system/help.py:511
+#: cogs/system/help.py:512
 msgid "Disabled ❌"
 msgstr "無効 ❌"
 
-#: cogs/system/help.py:519
+#: cogs/system/help.py:520
 msgid "🏠 Server"
 msgstr "🏠 サーバー"
 
-#: cogs/system/help.py:522
+#: cogs/system/help.py:523
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9956,65 +10119,65 @@ msgstr ""
 "メンバー: **{members}**\n"
 "レベリング: {leveling}"
 
-#: cogs/system/help.py:534
+#: cogs/system/help.py:535
 msgid "🏠 Direct Messages"
 msgstr "🏠 ダイレクトメッセージ"
 
-#: cogs/system/help.py:536
+#: cogs/system/help.py:537
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "デフォルトのプレフィックス: `{prefix}`"
 
-#: cogs/system/help.py:562
+#: cogs/system/help.py:563
 msgid "📚 Categories"
 msgstr "📚 カテゴリ"
 
-#: cogs/system/help.py:568
+#: cogs/system/help.py:569
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{categories} にわたる {commands} • メニューや矢印で探索してください"
 
-#: cogs/system/help.py:574
+#: cogs/system/help.py:575
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} 個のカテゴリー"
 
-#: cogs/system/help.py:583
+#: cogs/system/help.py:584
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "カテゴリ {current}/{total} • 詳細は {prefix}help <command>"
 
-#: cogs/system/help.py:589
+#: cogs/system/help.py:590
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...他にもコマンドがあります。`{prefix}help <command>` を使って確認してください。"
 
-#: cogs/system/help.py:606
+#: cogs/system/help.py:607
 msgid "No commands available."
 msgstr "利用可能なコマンドがありません。"
 
-#: cogs/system/help.py:671
+#: cogs/system/help.py:672
 msgid "Something went wrong opening the help menu."
 msgstr "ヘルプメニューを開く際に問題が発生しました。"
 
-#: cogs/system/help.py:740
+#: cogs/system/help.py:741
 msgid "Collapse subcommands"
 msgstr "サブコマンドを折りたたむ"
 
-#: cogs/system/help.py:740
+#: cogs/system/help.py:741
 msgid "Expand subcommands"
 msgstr "サブコマンドを展開する"
 
-#: cogs/system/help.py:757
+#: cogs/system/help.py:758
 msgid "Something went wrong updating that preference."
 msgstr "その設定の更新中に問題が発生しました。"
 
-#: cogs/system/help.py:773 cogs/system/help.py:813
+#: cogs/system/help.py:774 cogs/system/help.py:814
 msgid "Help"
 msgstr "ヘルプ"
 
-#: cogs/system/help.py:775
+#: cogs/system/help.py:776
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "コマンドの詳細は `{prefix}help <command>` を使ってください。"
@@ -10242,8 +10405,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:154
-#: tests/cogs/test_premium_panel.py:158
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:155
+#: tests/cogs/test_premium_panel.py:159
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"

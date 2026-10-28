@@ -58,6 +58,7 @@ _ALLOWED_IMPORTERS = {
     "cogs/config/milestones.py",
     "cogs/config/event_reminders.py",
     "cogs/community/suggestions/panel.py",
+    "cogs/community/birthdays/panel.py",
     "cogs/config/rooms_config.py",
     "cogs/config/tickets/open.py",
     "cogs/anilist/feed.py",

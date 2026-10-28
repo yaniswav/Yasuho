@@ -126,6 +126,7 @@ CATEGORIES = [
             "Milestones",
             "EventReminders",
             "Suggestions",
+            "Birthdays",
             "CustomCommands",
             "Starboard",
             "TemporaryRooms",

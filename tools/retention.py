@@ -68,6 +68,8 @@ GUILD_DELETE_QUERIES = (
     ("scheduled_announcements", "DELETE FROM scheduled_announcements WHERE guild_id = $1"),
     # Votes cascade from their suggestion (ON DELETE CASCADE).
     ("suggestions", "DELETE FROM suggestions WHERE guild_id = $1"),
+    ("birthdays", "DELETE FROM birthdays WHERE guild_id = $1"),
+    ("birthday_state", "DELETE FROM birthday_state WHERE guild_id = $1"),
     (
         "anilist_channel_subs",
         "DELETE FROM anilist_channel_subs WHERE guild_id = $1",
@@ -234,6 +236,8 @@ GUILD_DELETE_QUERIES = (
 STORED_GUILD_IDS_QUERY = """
 SELECT guild_id FROM scheduled_announcements
 UNION SELECT guild_id FROM suggestions
+UNION SELECT guild_id FROM birthdays
+UNION SELECT guild_id FROM birthday_state
 UNION SELECT guild_id FROM prefixes
 UNION SELECT guild_id FROM autorole
 UNION SELECT guild_id FROM muterole
