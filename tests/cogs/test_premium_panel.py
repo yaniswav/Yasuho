@@ -92,6 +92,7 @@ def _synthetic_guild_plus():
         premium_badge=True,
         max_scheduled_announcements=23,
         milestones_custom=True,
+        event_reminders_custom=True,
     )
 
 

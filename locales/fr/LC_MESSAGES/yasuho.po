@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 10:01+0000\n"
+"POT-Creation-Date: 2026-10-28 10:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -550,9 +550,9 @@ msgid "Keep current status"
 msgstr "Conserver le statut actuel"
 
 #: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
-#: cogs/anilist/media_view.py:396 cogs/config/milestones.py:246
-#: cogs/config/twitch.py:439 cogs/config/welcome.py:436
-#: cogs/config/welcome.py:558
+#: cogs/anilist/media_view.py:396 cogs/config/event_reminders.py:259
+#: cogs/config/milestones.py:246 cogs/config/twitch.py:439
+#: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
 msgstr "Statut"
 
@@ -1214,13 +1214,15 @@ msgstr[1] "{count} utilisateurs en sourdine sur {total} suivis"
 msgid "Muted here ({count})"
 msgstr "Masqués ici ({count})"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Disable"
 msgstr "Désactiver"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/milestones.py:201
-#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
+#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
+#: cogs/config/welcome.py:207
 msgid "Enable"
 msgstr "Activer"
 
@@ -1287,20 +1289,21 @@ msgstr "Flux d'activité AniList"
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous pour en créer un (jusqu'à {max} par serveur)."
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
-#: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
-#: cogs/config/verification.py:111 cogs/config/welcome.py:424
-#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
+#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
+#: cogs/config/twitch.py:424 cogs/config/verification.py:111
+#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "Activé"
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
-#: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
-#: cogs/config/verification.py:113 cogs/config/welcome.py:426
-#: cogs/config/welcome.py:547 cogs/config/welcome.py:801
-#: cogs/moderation/modlog.py:278
+#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
+#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
+#: cogs/config/twitch.py:426 cogs/config/verification.py:113
+#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
+#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "Désactivé"
 
@@ -1314,11 +1317,11 @@ msgid "Configure how AniList activity is mirrored into this server. Every change
 msgstr "Configure la façon dont l'activité AniList est relayée dans ce serveur. Chaque modification est enregistrée instantanément."
 
 #: cogs/anilist/feed_views.py:1407 cogs/config/announcements.py:315
-#: cogs/config/milestones.py:251 cogs/config/rolemenus.py:686
-#: cogs/config/starboard.py:284 cogs/config/twitch.py:441
-#: cogs/config/welcome.py:438 cogs/config/welcome.py:560
-#: cogs/config/welcome.py:780 cogs/moderation/modlog.py:601
-#: cogs/moderation/modlog.py:718
+#: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
+#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
+#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "Salon"
 
@@ -1424,7 +1427,7 @@ msgstr "Impossible d'ouvrir le formulaire de code."
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:514 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:515 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -4007,8 +4010,9 @@ msgstr "Salon cible..."
 msgid "Ping a role (optional)..."
 msgstr "Mentionner un role (optionnel)..."
 
-#: cogs/config/announcements.py:128 cogs/config/milestones.py:209
-#: cogs/config/twitch.py:303 cogs/config/welcome.py:189
+#: cogs/config/announcements.py:128 cogs/config/event_reminders.py:212
+#: cogs/config/milestones.py:209 cogs/config/twitch.py:303
+#: cogs/config/welcome.py:189
 msgid "Preview"
 msgstr "Aperçu"
 
@@ -4097,10 +4101,11 @@ msgid "Compose the embed with the menu, pick a channel (and optionally a role to
 msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un role a mentionner), puis **Envoyer**. L'apercu n'est visible que par toi."
 
 #: cogs/config/announcements.py:316 cogs/config/buttonroles.py:550
-#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
-#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
-#: cogs/config/verification.py:118 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+#: cogs/config/event_reminders.py:265 cogs/config/milestones.py:252
+#: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:157
+#: cogs/config/twitch.py:420 cogs/config/verification.py:118
+#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
+#: cogs/moderation/modlog.py:274
 msgid "*Not set.*"
 msgstr "*Non défini.*"
 
@@ -4209,7 +4214,8 @@ msgstr "Annonces programmées"
 msgid "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
 msgstr "Rien de programmé. Crées-en une avec `/announce`, puis appuie sur **Programmer**."
 
-#: cogs/config/announcements.py:601 cogs/config/milestones.py:231
+#: cogs/config/announcements.py:601 cogs/config/event_reminders.py:243
+#: cogs/config/milestones.py:231
 msgid "You need the Manage Server permission for this."
 msgstr "Il te faut la permission Gérer le serveur pour ça."
 
@@ -4678,6 +4684,92 @@ msgstr "Cette commande est en recharge, réessaie dans un instant."
 msgid "That command has nothing to say."
 msgstr "Cette commande n'a rien à dire."
 
+#: cogs/config/event_reminders.py:96
+msgid "24 hours before"
+msgstr "24 heures avant"
+
+#: cogs/config/event_reminders.py:98
+msgid "1 hour before"
+msgstr "1 heure avant"
+
+#: cogs/config/event_reminders.py:99
+msgid "15 minutes before"
+msgstr "15 minutes avant"
+
+#: cogs/config/event_reminders.py:125
+#, python-brace-format
+msgid "**{name}** starts <t:{stamp}:R> (<t:{stamp}:F>)."
+msgstr "**{name}** commence <t:{stamp}:R> (<t:{stamp}:F>)."
+
+#: cogs/config/event_reminders.py:132
+#, python-brace-format
+msgid "Where: {where}"
+msgstr "Où : {where}"
+
+#: cogs/config/event_reminders.py:146
+msgid "Reminder channel..."
+msgstr "Salon de rappel..."
+
+#: cogs/config/event_reminders.py:161
+msgid "When to remind..."
+msgstr "Quand rappeler..."
+
+#: cogs/config/event_reminders.py:182
+msgid "Role to ping (optional)..."
+msgstr "Rôle à mentionner (facultatif)..."
+
+#: cogs/config/event_reminders.py:216 cogs/config/milestones.py:213
+msgid "Customize"
+msgstr "Personnaliser"
+
+#: cogs/config/event_reminders.py:252
+msgid "Event reminders"
+msgstr "Rappels d'événements"
+
+#: cogs/config/event_reminders.py:254
+msgid "Yasuho reminds your members before a scheduled event starts."
+msgstr "Yasuho rappelle à tes membres qu'un événement programmé va commencer."
+
+#: cogs/config/event_reminders.py:268
+msgid "Reminders"
+msgstr "Rappels"
+
+#: cogs/config/event_reminders.py:274
+msgid "Role to ping"
+msgstr "Rôle à mentionner"
+
+#: cogs/config/event_reminders.py:275
+msgid "*None.*"
+msgstr "*Aucun.*"
+
+#: cogs/config/event_reminders.py:279
+msgid "Yasuho+ unlocks the reminder times and a role ping."
+msgstr "Yasuho+ débloque le choix des horaires de rappel et la mention d'un rôle."
+
+#: cogs/config/event_reminders.py:305 cogs/config/milestones.py:294
+msgid "I can't send messages in that channel. Give me View Channel and Send Messages there first."
+msgstr "Je ne peux pas envoyer de messages dans ce salon. Donne-moi d'abord Voir le salon et Envoyer des messages."
+
+#: cogs/config/event_reminders.py:322
+msgid "You can't ping that role."
+msgstr "Tu ne peux pas mentionner ce rôle."
+
+#: cogs/config/event_reminders.py:330
+msgid "Pick a reminder channel first."
+msgstr "Choisis d'abord un salon de rappel."
+
+#: cogs/config/event_reminders.py:339
+msgid "Movie night"
+msgstr "Soirée film"
+
+#: cogs/config/event_reminders.py:339
+msgid "Voice channel"
+msgstr "Salon vocal"
+
+#: cogs/config/event_reminders.py:366
+msgid "Custom reminder times and a role ping are a Yasuho+ feature."
+msgstr "Les horaires de rappel personnalisés et la mention d'un rôle sont une fonction Yasuho+."
+
 #: cogs/config/milestones.py:124
 #, python-brace-format
 msgid "{server} just reached {members} members! Thank you all, and welcome {user}!"
@@ -4704,10 +4796,6 @@ msgstr "Indique jusqu'à {count} nombres entiers entre 1 et {maximum}, séparés
 msgid "Celebration channel..."
 msgstr "Salon de célébration..."
 
-#: cogs/config/milestones.py:213
-msgid "Customize"
-msgstr "Personnaliser"
-
 #: cogs/config/milestones.py:239
 msgid "Member milestones"
 msgstr "Paliers de membres"
@@ -4727,10 +4815,6 @@ msgstr "Message par défaut"
 #: cogs/config/milestones.py:268
 msgid "Yasuho+ unlocks your own milestones and message."
 msgstr "Yasuho+ débloque tes propres paliers et ton propre message."
-
-#: cogs/config/milestones.py:294
-msgid "I can't send messages in that channel. Give me View Channel and Send Messages there first."
-msgstr "Je ne peux pas envoyer de messages dans ce salon. Donne-moi d'abord Voir le salon et Envoyer des messages."
 
 #: cogs/config/milestones.py:305
 msgid "Pick a celebration channel first."
@@ -9584,56 +9668,56 @@ msgstr "Expulsions, bannissements, avertissements, automod et logs de modératio
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Messages de bienvenue, starboard, commandes personnalisées et plus."
 
-#: cogs/system/help.py:137
+#: cogs/system/help.py:138
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Rôles par réaction, menus de rôles, rôles par bouton et vérification."
 
-#: cogs/system/help.py:145
+#: cogs/system/help.py:146
 msgid "Anything not yet sorted into a category."
 msgstr "Tout ce qui n'est pas encore classé dans une catégorie."
 
-#: cogs/system/help.py:247 cogs/system/help.py:294 cogs/system/help.py:307
-#: cogs/system/help.py:787
+#: cogs/system/help.py:248 cogs/system/help.py:295 cogs/system/help.py:308
+#: cogs/system/help.py:788
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:299 cogs/system/help.py:791
+#: cogs/system/help.py:300 cogs/system/help.py:792
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:312
+#: cogs/system/help.py:313
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /preferences, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:317
+#: cogs/system/help.py:318
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} sous-commande"
 msgstr[1] "{n} sous-commandes"
 
-#: cogs/system/help.py:322
+#: cogs/system/help.py:323
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:351
+#: cogs/system/help.py:352
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:420 cogs/system/help.py:549 cogs/system/help.py:568
+#: cogs/system/help.py:421 cogs/system/help.py:550 cogs/system/help.py:569
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:481
+#: cogs/system/help.py:482
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:483
+#: cogs/system/help.py:484
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9644,19 +9728,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:509
+#: cogs/system/help.py:510
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:509
+#: cogs/system/help.py:510
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:517
+#: cogs/system/help.py:518
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:520
+#: cogs/system/help.py:521
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9667,66 +9751,66 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:532
+#: cogs/system/help.py:533
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:534
+#: cogs/system/help.py:535
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:560
+#: cogs/system/help.py:561
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:566
+#: cogs/system/help.py:567
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:572
+#: cogs/system/help.py:573
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:581
+#: cogs/system/help.py:582
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:587
+#: cogs/system/help.py:588
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:604
+#: cogs/system/help.py:605
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:669
+#: cogs/system/help.py:670
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:738
+#: cogs/system/help.py:739
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:738
+#: cogs/system/help.py:739
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:755
+#: cogs/system/help.py:756
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:771 cogs/system/help.py:811
+#: cogs/system/help.py:772 cogs/system/help.py:812
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:773
+#: cogs/system/help.py:774
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."
@@ -9954,8 +10038,8 @@ msgstr "Yasuho reste dans ton salon vocal, même quand la file est vide."
 msgid "**Extended server playlists**"
 msgstr "**Playlists serveur étendues**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:152
-#: tests/cogs/test_premium_panel.py:156
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:153
+#: tests/cogs/test_premium_panel.py:157
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Jusqu'à {count} playlists de {tracks} morceaux."

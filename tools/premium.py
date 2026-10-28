@@ -220,6 +220,10 @@ FREE_MAX_SCHEDULED_ANNOUNCEMENTS = 3
 # Member milestones (cogs/config/milestones): a custom milestone list and
 # message template are a Yasuho+ capability; free uses the fixed list.
 FREE_MILESTONES_CUSTOM = False
+# Discord event reminders (cogs/config/event_reminders): free gets the single
+# 15-minute reminder with no ping; the offset choice and the role ping are
+# Yasuho+.
+FREE_EVENT_REMINDERS_CUSTOM = False
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -289,6 +293,7 @@ class GuildLimits:
     premium_badge: bool
     max_scheduled_announcements: int
     milestones_custom: bool
+    event_reminders_custom: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -330,6 +335,7 @@ GUILD_FREE = GuildLimits(
     premium_badge=FREE_PREMIUM_BADGE,
     max_scheduled_announcements=FREE_MAX_SCHEDULED_ANNOUNCEMENTS,
     milestones_custom=FREE_MILESTONES_CUSTOM,
+    event_reminders_custom=FREE_EVENT_REMINDERS_CUSTOM,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -350,6 +356,7 @@ GUILD_PREMIUM = GuildLimits(
     premium_badge=True,
     max_scheduled_announcements=25,
     milestones_custom=True,
+    event_reminders_custom=True,
 )
 
 USER_FREE = UserLimits(

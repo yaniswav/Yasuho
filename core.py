@@ -196,6 +196,9 @@ class Yasuho(commands.Bot):
         intents.presences = True
         intents.messages = True
         intents.reactions = True
+        # Not privileged: on_scheduled_event_create/update/delete feed the
+        # Discord event reminders (cogs/config/event_reminders).
+        intents.guild_scheduled_events = True
         intents.message_content = True
         # Not privileged: lets AutoMod apply its escalation when one of its
         # native link / invite rules blocks a message (on_automod_action).

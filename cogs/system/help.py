@@ -124,6 +124,7 @@ CATEGORIES = [
             "Welcome",
             "Announcements",
             "Milestones",
+            "EventReminders",
             "CustomCommands",
             "Starboard",
             "TemporaryRooms",
