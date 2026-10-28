@@ -332,9 +332,13 @@ class Suggestions(commands.Cog):
     # -- digest ---------------------------------------------------------------
 
     async def _write_timer(self, guild_id, config, *, replace):
-        """Keep one pending digest row: ``replace`` moves it to the current config."""
+        """Keep one pending digest row: ``replace`` moves it to the current config.
+
+        Returns the planned time of the next digest, or None when there is none.
+        """
         now = discord.utils.utcnow()
         wanted = config["enabled"] and config["channel_id"] and config["digest"]
+        planned = store.next_digest(now, config["digest_weekday"]) if wanted else None
         async with self.bot.db_pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
@@ -353,17 +357,18 @@ class Suggestions(commands.Cog):
                         "SELECT $1::text, $2, $3::jsonb WHERE NOT EXISTS ("
                         "SELECT 1 FROM timers WHERE event = $1 AND extra->>'guild_id' = $4)",
                         store.TIMER_EVENT,
-                        store.next_digest(now, config["digest_weekday"]),
+                        planned,
                         json.dumps({"guild_id": guild_id}),
                         str(guild_id),
                     )
         reminder = self.bot.get_cog("Reminder")
         if reminder is not None:
             reminder._have_data.set()
+        return planned
 
     async def reconcile_digest(self, guild_id):
         """After a panel save: move the pending row to the new config."""
-        await self._write_timer(guild_id, await self.config_for(guild_id), replace=True)
+        return await self._write_timer(guild_id, await self.config_for(guild_id), replace=True)
 
     @commands.Cog.listener()
     async def on_ready(self):

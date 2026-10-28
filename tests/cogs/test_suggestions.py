@@ -686,3 +686,19 @@ def test_everyone_is_never_the_staff_role():
         roles=[types.SimpleNamespace(id=1)],
     )
     assert not Suggestions.is_staff(member, {"staff_role_id": 1})
+
+
+async def test_the_dashboard_reconcile_action_returns_the_next_digest():
+    from cogs.system import dashboard_actions
+
+    pool = FakePool()
+    cog = make_cog(pool=pool)
+    run = dashboard_actions._EXECUTORS["suggestions_reconcile"]
+    cog.bot.get_guild = lambda gid: object() if gid == 1 else None
+    cog.bot.get_cog = lambda name: cog if name == "Suggestions" else None
+    cog.config_for = AsyncMock(return_value=store.normalise({**DIGEST_CONFIG}))
+    result = await run(cog.bot, 1, {})
+    assert result["ok"] is True and result["next_digest"]
+    cog.config_for = AsyncMock(return_value=store.normalise(CONFIG))  # digest off
+    assert await run(cog.bot, 1, {}) == {"ok": True, "next_digest": None}
+    assert await run(cog.bot, 2, {}) == {"ok": False, "error": "guild_unavailable"}

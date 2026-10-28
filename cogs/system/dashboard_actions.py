@@ -1907,6 +1907,21 @@ async def _exec_event_reminders_reconcile(bot, guild_id, payload):
     return {"ok": True, "scheduled": await engine.reconcile_guild(guild)}
 
 
+async def _exec_suggestions_reconcile(bot, guild_id, payload):
+    """Re-plan a guild's weekly suggestion digest after a dashboard save of
+    the ``suggestions`` settings key. Payload ``{}``, config re-read with the
+    cache dropped first. Success: ``{"ok": true, "next_digest": ISO | null}``.
+    """
+    if bot.get_guild(guild_id) is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    engine = bot.get_cog("Suggestions")
+    if engine is None:
+        return {"ok": False, "error": "engine_unavailable"}
+    settings.invalidate_guild(guild_id)
+    planned = await engine.reconcile_digest(guild_id)
+    return {"ok": True, "next_digest": planned.isoformat() if planned else None}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
     "reaction_role_add": _exec_reaction_role_add,
@@ -1933,6 +1948,7 @@ _EXECUTORS = {
     # every write goes through the bot's AnnouncementStore.
     **_ANNOUNCEMENT_EXECUTORS,
     "event_reminders_reconcile": _exec_event_reminders_reconcile,
+    "suggestions_reconcile": _exec_suggestions_reconcile,
 }
 
 # The kinds whose scope is a USER rather than a guild: they are dispatched with
