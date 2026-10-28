@@ -1,15 +1,13 @@
-"""Servers answer to the bot mention and slash commands only.
+"""Servers answer to their text prefix, the bot mention and slash commands.
 
-Discord grants the Message Content intent for moderation alone, so a plain text
-prefix (the default, or a per-guild one still stored in bot.prefixes) must
-never resolve to a command in a server - even while the intent is enabled.
-DMs keep the text prefix: their content is always delivered.
-Custom commands stay reachable by mention and through `/custom`.
+The per-guild prefix (bot.prefixes) overrides the default; the mention always
+works, including once Discord stops delivering message content. DMs keep the
+default text prefix. Custom commands are reachable by prefix, mention and
+`/custom`.
 """
 
 import types
 
-import discord
 import pytest
 
 import core
@@ -31,21 +29,11 @@ def _message(guild_id):
     return types.SimpleNamespace(guild=guild)
 
 
-async def test_guild_prefixes_are_the_mention_forms_only():
-    bot = _bot(prefixes={1: "y!"})
-    result = await core.get_prefix(bot, _message(1))
-    assert set(result) == {f"<@{BOT_ID}> ", f"<@!{BOT_ID}> "}
-    # Neither the stored per-guild prefix nor the default may slip back in.
-    assert "y!" not in result
-    assert core.DEFAULT_PREFIX not in result
-
-
-async def test_negative_control_the_old_resolver_did_include_text_prefixes():
-    # Proves the assertion above can fail: the pre-change resolver shape
-    # (when_mentioned_or) is caught by the same membership check.
-    bot = _bot(prefixes={1: "y!"})
-    old = discord.ext.commands.when_mentioned_or("y!")(bot, _message(1))
-    assert "y!" in old
+async def test_guild_prefixes_are_the_server_prefix_and_the_mentions():
+    result = await core.get_prefix(_bot(prefixes={1: "y!"}), _message(1))
+    assert set(result) == {"y!", f"<@{BOT_ID}> ", f"<@!{BOT_ID}> "}
+    default = await core.get_prefix(_bot(), _message(2))
+    assert core.DEFAULT_PREFIX in default
 
 
 async def test_dm_keeps_the_text_prefix():

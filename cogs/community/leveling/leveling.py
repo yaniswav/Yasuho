@@ -1010,14 +1010,16 @@ class Leveling(RankCardUserMixin, commands.Cog):
     def _command_prefixes(self, guild_id):
         """Prefixes that mark a message as a command in this guild.
 
-        Mirrors core.get_prefix (when_mentioned): servers have no text prefix,
-        only the two bot-mention forms, so a message that merely starts with an
-        old prefix earns XP like any other.
+        Mirrors core.get_prefix (when_mentioned_or): the guild's text prefix (or
+        the bot default) plus the two bot-mention forms. Only built for messages
+        in leveling-enabled guilds (a minority), so the small tuple allocation
+        stays off the bulk of the hot path.
         """
         if self._mention_prefixes is None and self.bot.user is not None:
             uid = self.bot.user.id
             self._mention_prefixes = (f"<@{uid}>", f"<@!{uid}>")
-        return self._mention_prefixes or ()
+        text_prefix = self.bot.prefixes.get(guild_id) or self.bot.default_prefix
+        return (text_prefix, *(self._mention_prefixes or ()))
 
     @staticmethod
     def level_for_xp(xp):

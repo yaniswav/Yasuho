@@ -294,19 +294,22 @@ async def test_direct_message_is_ignored(fake_pool):
     assert fake_pool.calls == []
 
 
-@pytest.mark.parametrize(
-    "prefixes,content",
-    [({}, "?rank"), ({1: "y!"}, "y!rank")],
-)
-async def test_retired_text_prefix_is_plain_chat_and_earns_xp(fake_pool, prefixes, content):
-    """Servers have no text prefix any more (core.get_prefix is mention-only):
-    a message starting with an old or stored custom prefix is ordinary chat."""
-    fake_pool.fetchval_return = 11000
-    cog = Leveling(_make_bot(fake_pool, default_prefix="?", prefixes=prefixes))
+async def test_command_message_grants_no_xp(fake_pool):
+    """A prefix command must not earn XP nor even start the cooldown."""
+    cog = Leveling(_make_bot(fake_pool, default_prefix="?"))
     _enable(cog, 1)
-    msg = _FakeMessage(content=content, guild_id=1, author_id=2)
+    msg = _FakeMessage(content="?rank", guild_id=1, author_id=2)
     await cog.on_message(msg)
-    assert len(_fetchval_calls(fake_pool)) == 1
+    assert fake_pool.calls == []
+    assert len(cog._cooldowns) == 0
+
+
+async def test_guild_custom_prefix_blocks_xp(fake_pool):
+    cog = Leveling(_make_bot(fake_pool, prefixes={1: "y!"}))
+    _enable(cog, 1)
+    msg = _FakeMessage(content="y!rank", guild_id=1, author_id=2)
+    await cog.on_message(msg)
+    assert fake_pool.calls == []
 
 
 async def test_bot_mention_command_grants_no_xp(fake_pool):

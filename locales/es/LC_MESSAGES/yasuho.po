@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 07:26+0000\n"
+"POT-Creation-Date: 2026-10-28 10:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -1288,7 +1288,7 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo para crear uno (hasta {max} por servidor)."
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:49 cogs/config/tickets/panel.py:92
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
 #: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
 #: cogs/config/verification.py:111 cogs/config/welcome.py:424
 #: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
@@ -1296,7 +1296,7 @@ msgid "Enabled"
 msgstr "Activado"
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:49 cogs/config/tickets/panel.py:94
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
 #: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
 #: cogs/config/verification.py:113 cogs/config/welcome.py:426
 #: cogs/config/welcome.py:547 cogs/config/welcome.py:801
@@ -1421,9 +1421,9 @@ msgstr "Algo salió mal al vincular tu cuenta."
 msgid "Could not open the code form."
 msgstr "No pude abrir el formulario de código."
 
-#: cogs/anilist/lookup.py:39 cogs/config/settings.py:48
-#: cogs/config/settings.py:163 cogs/config/settings.py:172
-#: cogs/config/settings.py:186 cogs/config/settings.py:194
+#: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
+#: cogs/config/settings.py:173 cogs/config/settings.py:182
+#: cogs/config/settings.py:196 cogs/config/settings.py:204
 #: cogs/system/help.py:514 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Desconocido"
@@ -2352,7 +2352,7 @@ msgid "Level down"
 msgstr "Bajada de nivel"
 
 #: cogs/community/leveling/level_admin.py:294
-#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:291
+#: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:291
 msgid "Level"
 msgstr "Nivel"
 
@@ -2605,7 +2605,7 @@ msgstr "Estilos de tarjeta de los miembros"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
+#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:603
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Solo tú puedes usar estos controles"
@@ -2614,7 +2614,7 @@ msgstr "Solo tú puedes usar estos controles"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
+#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:605
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expira después de 3 min"
@@ -2782,8 +2782,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "El sistema de niveles no está cargado ahora mismo."
 
-#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:85
-#: cogs/config/settings.py:202
+#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:89
+#: cogs/config/settings.py:215
 msgid "Leveling"
 msgstr "Niveles"
 
@@ -3092,68 +3092,68 @@ msgstr[1] "{count} miembros"
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Página {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1406
+#: cogs/community/leveling/leveling.py:1408
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1414
+#: cogs/community/leveling/leveling.py:1416
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "¡{user} alcanzó el nivel **{level}**! ... y ganó {roles}"
 
-#: cogs/community/leveling/leveling.py:1421
+#: cogs/community/leveling/leveling.py:1423
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "¡{user} alcanzó el nivel **{level}**!"
 
-#: cogs/community/leveling/leveling.py:1832
+#: cogs/community/leveling/leveling.py:1834
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Rango | {name}"
 
-#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:288
+#: cogs/community/leveling/leveling.py:1838 cogs/utility/searchweb.py:288
 msgid "Rank"
 msgstr "Rango"
 
-#: cogs/community/leveling/leveling.py:1838
+#: cogs/community/leveling/leveling.py:1840
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1840
+#: cogs/community/leveling/leveling.py:1842
 msgid "XP for next level"
 msgstr "XP para el siguiente nivel"
 
-#: cogs/community/leveling/leveling.py:1868
+#: cogs/community/leveling/leveling.py:1870
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Clasificación | {guild}"
 
-#: cogs/community/leveling/leveling.py:1873
+#: cogs/community/leveling/leveling.py:1875
 msgid "No one has earned any XP yet!"
 msgstr "¡Nadie ha ganado XP todavía!"
 
-#: cogs/community/leveling/leveling.py:1887
-#: cogs/community/leveling/leveling.py:1942
+#: cogs/community/leveling/leveling.py:1889
+#: cogs/community/leveling/leveling.py:1944
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Usuario {uid}"
 
-#: cogs/community/leveling/leveling.py:1921
+#: cogs/community/leveling/leveling.py:1923
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Clasificación semanal | {guild}"
 
-#: cogs/community/leveling/leveling.py:1922
+#: cogs/community/leveling/leveling.py:1924
 msgid "No one has earned any XP this week yet!"
 msgstr "¡Nadie ha ganado XP esta semana todavía!"
 
-#: cogs/community/leveling/leveling.py:1924
+#: cogs/community/leveling/leveling.py:1926
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Clasificación mensual | {guild}"
 
-#: cogs/community/leveling/leveling.py:1927
+#: cogs/community/leveling/leveling.py:1929
 msgid "No one has earned any XP this month yet!"
 msgstr "¡Nadie ha ganado XP este mes todavía!"
 
@@ -5411,136 +5411,159 @@ msgid "Could not complete that action."
 msgstr "No se pudo completar esa acción."
 
 #: cogs/config/settings.py:23
+msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
+msgstr "Usa `/prefix set <prefix>` para cambiar el prefijo de comandos de este servidor."
+
+#: cogs/config/settings.py:27
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
 msgstr "Usa `/autorole set <role>` para elegir el rol que reciben los nuevos miembros al unirse."
 
-#: cogs/config/settings.py:27
+#: cogs/config/settings.py:31
 msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
 msgstr "Usa `/automod` para abrir el panel de control interactivo de AutoMod (filtros personalizados + nativos)."
 
-#: cogs/config/settings.py:31
+#: cogs/config/settings.py:35
 msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
 msgstr "Usa `/modlog` para abrir el panel de control interactivo del registro de moderación (canal + activación de eventos)."
 
-#: cogs/config/settings.py:35
+#: cogs/config/settings.py:39
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
 msgstr "Usa `/starboard set <channel> [threshold]` para configurar el starboard."
 
-#: cogs/config/settings.py:38
+#: cogs/config/settings.py:42
 #, python-brace-format
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "Usa `/welcome set <channel> <message>` para configurar los mensajes de bienvenida. Marcadores: {user}, {server}, {count}."
 
-#: cogs/config/settings.py:77
+#: cogs/config/settings.py:81
 msgid "Current state unknown"
 msgstr "Estado actual desconocido"
 
-#: cogs/config/settings.py:79
+#: cogs/config/settings.py:83
 msgid "Currently enabled - select to disable"
 msgstr "Actualmente activado - selecciona para desactivar"
 
-#: cogs/config/settings.py:81
+#: cogs/config/settings.py:85
 msgid "Currently disabled - select to enable"
 msgstr "Actualmente desactivado - selecciona para activar"
 
-#: cogs/config/settings.py:91 cogs/config/settings.py:205
-#: cogs/config/settings.py:396 cogs/config/settings.py:424
-#: cogs/config/settings.py:431
+#: cogs/config/settings.py:95 cogs/config/settings.py:212
+msgid "Prefix"
+msgstr "Prefijo"
+
+#: cogs/config/settings.py:98
+msgid "Change the command prefix"
+msgstr "Cambiar el prefijo de comandos"
+
+#: cogs/config/settings.py:101 cogs/config/settings.py:218
+#: cogs/config/settings.py:455 cogs/config/settings.py:483
+#: cogs/config/settings.py:490
 msgid "Auto-role"
 msgstr "Auto-rol"
 
-#: cogs/config/settings.py:94
+#: cogs/config/settings.py:104
 msgid "Role granted to new members"
 msgstr "Rol otorgado a los nuevos miembros"
 
-#: cogs/config/settings.py:97 cogs/config/settings.py:211
+#: cogs/config/settings.py:107 cogs/config/settings.py:224
 #: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:100
+#: cogs/config/settings.py:110
 msgid "Open the AutoMod control panel"
 msgstr "Abrir el panel de control de AutoMod"
 
-#: cogs/config/settings.py:103 cogs/config/settings.py:214
+#: cogs/config/settings.py:113 cogs/config/settings.py:227
 msgid "Mod-log"
 msgstr "Registro de moderación"
 
-#: cogs/config/settings.py:106
+#: cogs/config/settings.py:116
 msgid "Open the mod-log control panel"
 msgstr "Abrir el panel de control del registro de moderación"
 
-#: cogs/config/settings.py:109 cogs/config/settings.py:208
+#: cogs/config/settings.py:119 cogs/config/settings.py:221
 #: cogs/config/starboard.py:283 cogs/config/starboard.py:320
 #: cogs/config/starboard.py:351 cogs/config/starboard.py:372
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:112 cogs/config/starboard.py:136
+#: cogs/config/settings.py:122 cogs/config/starboard.py:136
 #: cogs/config/starboard.py:218
 msgid "Configure the starboard"
 msgstr "Configurar el starboard"
 
-#: cogs/config/settings.py:115 cogs/config/settings.py:217
+#: cogs/config/settings.py:125 cogs/config/settings.py:230
 msgid "Welcome"
 msgstr "Bienvenida"
 
-#: cogs/config/settings.py:118
+#: cogs/config/settings.py:128
 msgid "Configure welcome messages"
 msgstr "Configurar mensajes de bienvenida"
 
-#: cogs/config/settings.py:122
+#: cogs/config/settings.py:132
 msgid "Configure a feature..."
 msgstr "Configura una función..."
 
-#: cogs/config/settings.py:158 cogs/config/settings.py:165
-#: cogs/config/settings.py:174 cogs/config/settings.py:190
-#: cogs/config/settings.py:198
+#: cogs/config/settings.py:168 cogs/config/settings.py:175
+#: cogs/config/settings.py:184 cogs/config/settings.py:200
+#: cogs/config/settings.py:208
 msgid "Not set up"
 msgstr "Sin configurar"
 
-#: cogs/config/settings.py:178
+#: cogs/config/settings.py:188
 msgid "Anti-link"
 msgstr "Anti-enlaces"
 
-#: cogs/config/settings.py:180
+#: cogs/config/settings.py:190
 msgid "Anti-spam"
 msgstr "Antispam"
 
-#: cogs/config/settings.py:223
+#: cogs/config/settings.py:236
 msgid "Configuration"
 msgstr "Configuración"
 
-#: cogs/config/settings.py:227
+#: cogs/config/settings.py:240
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "Un resumen de todas las funciones de este servidor. Usa el menú de abajo para activar o desactivar los **Niveles** o ir directamente al comando de configuración de una función."
 
-#: cogs/config/settings.py:232
+#: cogs/config/settings.py:245
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "La configuración completa de niveles vive en `/levelconfig`."
 
-#: cogs/config/settings.py:329
+#: cogs/config/settings.py:352
+msgid "The prefix can't be blank."
+msgstr "El prefijo no puede estar vacío."
+
+#: cogs/config/settings.py:355
+msgid "The prefix can't be longer than 10 characters."
+msgstr "El prefijo no puede tener más de 10 caracteres."
+
+#: cogs/config/settings.py:369 cogs/config/settings.py:393
 msgid "Server prefix"
 msgstr "Prefijo del servidor"
 
-#: cogs/config/settings.py:331
-#, python-brace-format
-msgid "Text prefixes are retired in servers. Use slash commands (type `/`) or mention me before the command, for example {example}."
-msgstr "Los prefijos de texto ya no se usan en los servidores. Usa los comandos de barra (escribe `/`) o mencióname antes del comando, por ejemplo {example}."
+#: cogs/config/settings.py:371
+msgid "Prefix has been set to:"
+msgstr "El prefijo se ha establecido en:"
 
-#: cogs/config/settings.py:373
+#: cogs/config/settings.py:395
+msgid "Current server prefix"
+msgstr "Prefijo actual del servidor"
+
+#: cogs/config/settings.py:432
 msgid "Auto-role role"
 msgstr "Rol de auto-rol"
 
-#: cogs/config/settings.py:376
+#: cogs/config/settings.py:435
 msgid "Auto-role has been set to:"
 msgstr "El auto-rol se ha configurado a:"
 
-#: cogs/config/settings.py:399
+#: cogs/config/settings.py:458
 msgid "Auto-role has been remove from the guild"
 msgstr "El auto-rol ha sido eliminado del servidor"
 
-#: cogs/config/settings.py:426 cogs/config/settings.py:433
+#: cogs/config/settings.py:485 cogs/config/settings.py:492
 msgid "Current auto-role"
 msgstr "Auto-rol actual"
 
@@ -9636,11 +9659,11 @@ msgstr "🏠 Servidor"
 #: cogs/system/help.py:520
 #, python-brace-format
 msgid ""
-"Commands: `/` or `@{bot} <command>`\n"
+"Prefix: `{prefix}`\n"
 "Members: **{members}**\n"
 "Leveling: {leveling}"
 msgstr ""
-"Comandos: `/` o `@{bot} <comando>`\n"
+"Prefijo: `{prefix}`\n"
 "Miembros: **{members}**\n"
 "Niveles: {leveling}"
 
@@ -9742,8 +9765,8 @@ msgid "Getting started"
 msgstr "Primeros pasos"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Usa `/config` para configurar el autorol, los niveles, el starboard, el automod, el mod-log y los mensajes de bienvenida en un solo lugar."
+msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "Usa `/config` para configurar prefijos, autorol, niveles, starboard, automod, mod-log y mensajes de bienvenida en un solo lugar."
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."

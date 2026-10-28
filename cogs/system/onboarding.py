@@ -181,7 +181,7 @@ class OnboardingCardView(LocaleLayoutView):
         start_lines = [
             "**" + _("Getting started") + "**",
             _(
-                "Use `/config` to set up autorole, leveling, "
+                "Use `/config` to set up prefixes, autorole, leveling, "
                 "starboard, automod, mod-log, and welcome messages in one place."
             ),
             _("Use `/help` to browse every command."),

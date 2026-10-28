@@ -19,6 +19,10 @@ _UNKNOWN = object()
 # rest each point at their dedicated setup command. Each value is N_-marked for
 # extraction and translated at the use site via _(...) (see handle_select).
 GUIDANCE = {
+    "prefix": N_(
+        "Use `/prefix set <prefix>` to change the command prefix for this "
+        "server."
+    ),
     "autorole": N_(
         "Use `/autorole set <role>` to choose the role new members receive on "
         "join."
@@ -86,6 +90,12 @@ class ConfigSelect(discord.ui.Select):
                 value="leveling",
                 emoji="📈",
                 description=lvl_desc[:100],
+            ),
+            discord.SelectOption(
+                label=_("Prefix"),
+                value="prefix",
+                emoji="💬",
+                description=_("Change the command prefix"),
             ),
             discord.SelectOption(
                 label=_("Auto-role"),
@@ -198,6 +208,9 @@ class ConfigPanel(AuthorLayoutView):
             welcome_value = "🔴 " + _("Not set up")
 
         field_lines = [
+            "**💬 {label}:** `{value}`".format(
+                label=_("Prefix"), value=state["prefix"]
+            ),
             "**📈 {label}:** {value}".format(
                 label=_("Leveling"), value=_onoff(state["leveling"])
             ),
@@ -317,20 +330,69 @@ class Settings(commands.Cog):
         if cog is not None:
             await cog.set_enabled(guild_id, bool(enabled))
 
-    @commands.hybrid_command()
+    @commands.hybrid_group()
     @commands.guild_only()
-    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
     async def prefix(self, ctx):
-        """How to run my commands now that text prefixes are retired."""
+        """Manage the command prefix: set or view it."""
 
-        # Text prefixes are retired in servers (core.get_prefix): Discord grants
-        # the Message Content intent for moderation only. The command stays so
-        # members who type the old prefix habitually learn the two new ways.
-        embed = discord.Embed(title=_("Server prefix"), colour=random_colour())
-        embed.description = _(
-            "Text prefixes are retired in servers. Use slash commands (type "
-            "`/`) or mention me before the command, for example {example}."
-        ).format(example="`@{name} help`".format(name=ctx.me.display_name))
+
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @prefix.command(name="set")
+    @commands.cooldown(1.0, 15.0, commands.BucketType.user)
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(prefix="The new command prefix (max 10 characters).")
+    async def set_prefix(self, ctx, prefix: str):
+        """Set the command prefix for your guild."""
+
+        # Reject a blank or whitespace-only prefix (which would break parsing)
+        # and cap the length; a trailing space is kept on purpose (e.g. "y ").
+        if not prefix.strip():
+            return await ctx.send(_("The prefix can't be blank."))
+        if len(prefix) > 10:
+            return await ctx.send(
+                _("The prefix can't be longer than 10 characters.")
+            )
+
+        # Under eager_cache_lock: bot.prefixes is mutated IN PLACE here while
+        # core.load_eager_caches REBINDS it to a map it fetched earlier (the
+        # dashboard resync re-runs that at runtime). Unsynchronised, a write
+        # landing inside that reload goes to the dict the rebind discards, and
+        # the guild keeps serving its old prefix although the row is correct.
+        async with self.bot.eager_cache_lock:
+            await db.upsert_guild_value(
+                self.bot.db_pool, "prefixes", "prefix", ctx.guild.id, prefix
+            )
+            self.bot.prefixes[ctx.guild.id] = prefix
+        embed = discord.Embed(
+            title=_("Server prefix"), colour=random_colour()
+        )
+        embed.add_field(name=_("Prefix has been set to:"), value=f"`{prefix}`")
+        await ctx.send(embed=embed)
+
+    @prefix.command(name="current", aliases=["list", "info"])
+    @commands.cooldown(1.0, 5.0, commands.BucketType.user)
+    @commands.has_permissions(manage_guild=True)
+    async def list_prefix(self, ctx):
+        """List the available prefixes for your guild."""
+
+        query = """
+
+            SELECT prefix FROM prefixes
+            WHERE guild_id = $1;
+
+            """
+
+        # The DB only stores *custom* prefixes now, so an unconfigured guild
+        # gets None back - fall back to the bot-wide default for display.
+        prefix = (
+            await self.bot.db_pool.fetchval(query, ctx.guild.id)
+        ) or self.bot.default_prefix
+        embed = discord.Embed(
+            title=_("Server prefix"), colour=random_colour()
+        )
+        embed.add_field(name=_("Current server prefix"), value=f"`{prefix}`")
         await ctx.send(embed=embed)
 
     @commands.hybrid_group(aliases=["auto-role"])
@@ -360,10 +422,7 @@ class Settings(commands.Cog):
             await ctx.send(err)
             return
 
-        # Under eager_cache_lock: bot.autoroles is mutated IN PLACE here while
-        # core.load_eager_caches REBINDS it to a map it fetched earlier (the
-        # dashboard resync re-runs that at runtime). Unsynchronised, a write
-        # landing inside that reload goes to the dict the rebind discards.
+        # Under eager_cache_lock, for the reason spelled out in set_prefix.
         async with self.bot.eager_cache_lock:
             await db.upsert_guild_value(
                 self.bot.db_pool, "autorole", "role_id", ctx.guild.id, role.id
@@ -386,7 +445,7 @@ class Settings(commands.Cog):
         query = """DELETE FROM autorole WHERE guild_id = $1 ;"""
 
         try:
-            # Under eager_cache_lock, for the reason spelled out in autorole_set -
+            # Under eager_cache_lock, for the reason spelled out in set_prefix -
             # a lost REMOVAL is worse than a lost set: the guild would keep
             # granting a role its row no longer names.
             async with self.bot.eager_cache_lock:
@@ -441,6 +500,7 @@ class Settings(commands.Cog):
         gid = guild.id
         state = {}
 
+        state["prefix"] = self.bot.prefixes.get(gid) or self.bot.default_prefix
         state["autorole"] = self.bot.autoroles.get(gid)
 
         try:

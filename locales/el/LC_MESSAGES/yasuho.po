@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 07:26+0000\n"
+"POT-Creation-Date: 2026-10-28 10:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1288,7 +1288,7 @@ msgid "This server has no AniList feed yet. Pick a channel below to create one (
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:49 cogs/config/tickets/panel.py:92
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
 #: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
 #: cogs/config/verification.py:111 cogs/config/welcome.py:424
 #: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
@@ -1296,7 +1296,7 @@ msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1391 cogs/config/milestones.py:247
-#: cogs/config/settings.py:49 cogs/config/tickets/panel.py:94
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
 #: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
 #: cogs/config/verification.py:113 cogs/config/welcome.py:426
 #: cogs/config/welcome.py:547 cogs/config/welcome.py:801
@@ -1421,9 +1421,9 @@ msgstr "Κάτι πήγε στραβά κατά τη σύνδεση του λο�
 msgid "Could not open the code form."
 msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κωδικού."
 
-#: cogs/anilist/lookup.py:39 cogs/config/settings.py:48
-#: cogs/config/settings.py:163 cogs/config/settings.py:172
-#: cogs/config/settings.py:186 cogs/config/settings.py:194
+#: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
+#: cogs/config/settings.py:173 cogs/config/settings.py:182
+#: cogs/config/settings.py:196 cogs/config/settings.py:204
 #: cogs/system/help.py:514 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Άγνωστο"
@@ -2352,7 +2352,7 @@ msgid "Level down"
 msgstr "Πτώση επιπέδου"
 
 #: cogs/community/leveling/level_admin.py:294
-#: cogs/community/leveling/leveling.py:1837 cogs/utility/searchweb.py:291
+#: cogs/community/leveling/leveling.py:1839 cogs/utility/searchweb.py:291
 msgid "Level"
 msgstr "Επίπεδο"
 
@@ -2605,7 +2605,7 @@ msgstr "Στιλ κάρτας μελών"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:252 cogs/config/tickets/panel.py:603
+#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:603
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
@@ -2614,7 +2614,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:254 cogs/config/tickets/panel.py:605
+#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:605
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
@@ -2782,8 +2782,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
 
-#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:85
-#: cogs/config/settings.py:202
+#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:89
+#: cogs/config/settings.py:215
 msgid "Leveling"
 msgstr "Επίπεδα"
 
@@ -3092,68 +3092,68 @@ msgstr[1] "{count} μέλη"
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# Σελίδα {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1406
+#: cogs/community/leveling/leveling.py:1408
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... και κέρδισε {roles}"
 
-#: cogs/community/leveling/leveling.py:1414
+#: cogs/community/leveling/leveling.py:1416
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**! ... και κέρδισε {roles}"
 
-#: cogs/community/leveling/leveling.py:1421
+#: cogs/community/leveling/leveling.py:1423
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "Ο/Η {user} έφτασε στο επίπεδο **{level}**!"
 
-#: cogs/community/leveling/leveling.py:1832
+#: cogs/community/leveling/leveling.py:1834
 #, python-brace-format
 msgid "Rank | {name}"
 msgstr "Κατάταξη | {name}"
 
-#: cogs/community/leveling/leveling.py:1836 cogs/utility/searchweb.py:288
+#: cogs/community/leveling/leveling.py:1838 cogs/utility/searchweb.py:288
 msgid "Rank"
 msgstr "Κατάταξη"
 
-#: cogs/community/leveling/leveling.py:1838
+#: cogs/community/leveling/leveling.py:1840
 msgid "XP"
 msgstr "XP"
 
-#: cogs/community/leveling/leveling.py:1840
+#: cogs/community/leveling/leveling.py:1842
 msgid "XP for next level"
 msgstr "XP για το επόμενο επίπεδο"
 
-#: cogs/community/leveling/leveling.py:1868
+#: cogs/community/leveling/leveling.py:1870
 #, python-brace-format
 msgid "Leaderboard | {guild}"
 msgstr "Πίνακας κατάταξης | {guild}"
 
-#: cogs/community/leveling/leveling.py:1873
+#: cogs/community/leveling/leveling.py:1875
 msgid "No one has earned any XP yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP ακόμη!"
 
-#: cogs/community/leveling/leveling.py:1887
-#: cogs/community/leveling/leveling.py:1942
+#: cogs/community/leveling/leveling.py:1889
+#: cogs/community/leveling/leveling.py:1944
 #, python-brace-format
 msgid "User {uid}"
 msgstr "Χρήστης {uid}"
 
-#: cogs/community/leveling/leveling.py:1921
+#: cogs/community/leveling/leveling.py:1923
 #, python-brace-format
 msgid "Weekly leaderboard | {guild}"
 msgstr "Εβδομαδιαία κατάταξη | {guild}"
 
-#: cogs/community/leveling/leveling.py:1922
+#: cogs/community/leveling/leveling.py:1924
 msgid "No one has earned any XP this week yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP αυτή την εβδομάδα ακόμα!"
 
-#: cogs/community/leveling/leveling.py:1924
+#: cogs/community/leveling/leveling.py:1926
 #, python-brace-format
 msgid "Monthly leaderboard | {guild}"
 msgstr "Μηνιαία κατάταξη | {guild}"
 
-#: cogs/community/leveling/leveling.py:1927
+#: cogs/community/leveling/leveling.py:1929
 msgid "No one has earned any XP this month yet!"
 msgstr "Κανείς δεν έχει κερδίσει XP αυτόν τον μήνα ακόμα!"
 
@@ -5411,136 +5411,159 @@ msgid "Could not complete that action."
 msgstr "Δεν ήταν δυνατή η ολοκλήρωση αυτής της ενέργειας."
 
 #: cogs/config/settings.py:23
+msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
+msgstr "Χρησιμοποίησε `/prefix set <prefix>` για να αλλάξεις το πρόθεμα εντολών αυτού του διακομιστή."
+
+#: cogs/config/settings.py:27
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
 msgstr "Χρησιμοποίησε `/autorole set <role>` για να επιλέξεις τον ρόλο που λαμβάνουν τα νέα μέλη κατά την είσοδο."
 
-#: cogs/config/settings.py:27
+#: cogs/config/settings.py:31
 msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
 msgstr "Χρησιμοποίησε `/automod` για να ανοίξεις το διαδραστικό πάνελ ελέγχου AutoMod (προσαρμοσμένα + εγγενή φίλτρα)."
 
-#: cogs/config/settings.py:31
+#: cogs/config/settings.py:35
 msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
 msgstr "Χρησιμοποίησε `/modlog` για να ανοίξεις το διαδραστικό πάνελ ελέγχου mod-log (κανάλι + εναλλαγές συμβάντων)."
 
-#: cogs/config/settings.py:35
+#: cogs/config/settings.py:39
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
 msgstr "Χρησιμοποίησε `/starboard set <channel> [threshold]` για να ρυθμίσεις το starboard."
 
-#: cogs/config/settings.py:38
+#: cogs/config/settings.py:42
 #, python-brace-format
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "Χρησιμοποίησε `/welcome set <channel> <message>` για να ρυθμίσεις τα μηνύματα καλωσορίσματος. Placeholders: {user}, {server}, {count}."
 
-#: cogs/config/settings.py:77
+#: cogs/config/settings.py:81
 msgid "Current state unknown"
 msgstr "Άγνωστη τρέχουσα κατάσταση"
 
-#: cogs/config/settings.py:79
+#: cogs/config/settings.py:83
 msgid "Currently enabled - select to disable"
 msgstr "Αυτή τη στιγμή ενεργοποιημένο - επίλεξε για απενεργοποίηση"
 
-#: cogs/config/settings.py:81
+#: cogs/config/settings.py:85
 msgid "Currently disabled - select to enable"
 msgstr "Αυτή τη στιγμή απενεργοποιημένο - επίλεξε για ενεργοποίηση"
 
-#: cogs/config/settings.py:91 cogs/config/settings.py:205
-#: cogs/config/settings.py:396 cogs/config/settings.py:424
-#: cogs/config/settings.py:431
+#: cogs/config/settings.py:95 cogs/config/settings.py:212
+msgid "Prefix"
+msgstr "Πρόθεμα"
+
+#: cogs/config/settings.py:98
+msgid "Change the command prefix"
+msgstr "Άλλαξε το πρόθεμα εντολών"
+
+#: cogs/config/settings.py:101 cogs/config/settings.py:218
+#: cogs/config/settings.py:455 cogs/config/settings.py:483
+#: cogs/config/settings.py:490
 msgid "Auto-role"
 msgstr "Αυτόματος ρόλος"
 
-#: cogs/config/settings.py:94
+#: cogs/config/settings.py:104
 msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
-#: cogs/config/settings.py:97 cogs/config/settings.py:211
+#: cogs/config/settings.py:107 cogs/config/settings.py:224
 #: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:100
+#: cogs/config/settings.py:110
 msgid "Open the AutoMod control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου AutoMod"
 
-#: cogs/config/settings.py:103 cogs/config/settings.py:214
+#: cogs/config/settings.py:113 cogs/config/settings.py:227
 msgid "Mod-log"
 msgstr "Mod-log"
 
-#: cogs/config/settings.py:106
+#: cogs/config/settings.py:116
 msgid "Open the mod-log control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου mod-log"
 
-#: cogs/config/settings.py:109 cogs/config/settings.py:208
+#: cogs/config/settings.py:119 cogs/config/settings.py:221
 #: cogs/config/starboard.py:283 cogs/config/starboard.py:320
 #: cogs/config/starboard.py:351 cogs/config/starboard.py:372
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:112 cogs/config/starboard.py:136
+#: cogs/config/settings.py:122 cogs/config/starboard.py:136
 #: cogs/config/starboard.py:218
 msgid "Configure the starboard"
 msgstr "Ρύθμισε το starboard"
 
-#: cogs/config/settings.py:115 cogs/config/settings.py:217
+#: cogs/config/settings.py:125 cogs/config/settings.py:230
 msgid "Welcome"
 msgstr "Καλωσόρισμα"
 
-#: cogs/config/settings.py:118
+#: cogs/config/settings.py:128
 msgid "Configure welcome messages"
 msgstr "Ρύθμισε τα μηνύματα καλωσορίσματος"
 
-#: cogs/config/settings.py:122
+#: cogs/config/settings.py:132
 msgid "Configure a feature..."
 msgstr "Ρύθμισε μια λειτουργία..."
 
-#: cogs/config/settings.py:158 cogs/config/settings.py:165
-#: cogs/config/settings.py:174 cogs/config/settings.py:190
-#: cogs/config/settings.py:198
+#: cogs/config/settings.py:168 cogs/config/settings.py:175
+#: cogs/config/settings.py:184 cogs/config/settings.py:200
+#: cogs/config/settings.py:208
 msgid "Not set up"
 msgstr "Δεν έχει ρυθμιστεί"
 
-#: cogs/config/settings.py:178
+#: cogs/config/settings.py:188
 msgid "Anti-link"
 msgstr "Anti-link"
 
-#: cogs/config/settings.py:180
+#: cogs/config/settings.py:190
 msgid "Anti-spam"
 msgstr "Anti-spam"
 
-#: cogs/config/settings.py:223
+#: cogs/config/settings.py:236
 msgid "Configuration"
 msgstr "Διαμόρφωση"
 
-#: cogs/config/settings.py:227
+#: cogs/config/settings.py:240
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "Μια επισκόπηση κάθε λειτουργίας αυτού του διακομιστή. Χρησιμοποίησε το μενού παρακάτω για να εναλλάξεις τα **Επίπεδα** ή να μεταβείς στην εντολή ρύθμισης μιας λειτουργίας."
 
-#: cogs/config/settings.py:232
+#: cogs/config/settings.py:245
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "Η πλήρης ρύθμιση του συστήματος επιπέδων βρίσκεται στο `/levelconfig`."
 
-#: cogs/config/settings.py:329
+#: cogs/config/settings.py:352
+msgid "The prefix can't be blank."
+msgstr "Το πρόθεμα δεν μπορεί να είναι κενό."
+
+#: cogs/config/settings.py:355
+msgid "The prefix can't be longer than 10 characters."
+msgstr "Το πρόθεμα δεν μπορεί να είναι μεγαλύτερο από 10 χαρακτήρες."
+
+#: cogs/config/settings.py:369 cogs/config/settings.py:393
 msgid "Server prefix"
 msgstr "Πρόθεμα διακομιστή"
 
-#: cogs/config/settings.py:331
-#, python-brace-format
-msgid "Text prefixes are retired in servers. Use slash commands (type `/`) or mention me before the command, for example {example}."
-msgstr "Τα προθέματα κειμένου δεν χρησιμοποιούνται πια στους διακομιστές. Χρησιμοποίησε τις εντολές slash (πληκτρολόγησε `/`) ή κάνε μου mention πριν από την εντολή, για παράδειγμα {example}."
+#: cogs/config/settings.py:371
+msgid "Prefix has been set to:"
+msgstr "Το πρόθεμα ορίστηκε σε:"
 
-#: cogs/config/settings.py:373
+#: cogs/config/settings.py:395
+msgid "Current server prefix"
+msgstr "Τρέχον πρόθεμα διακομιστή"
+
+#: cogs/config/settings.py:432
 msgid "Auto-role role"
 msgstr "Ρόλος αυτόματου ρόλου"
 
-#: cogs/config/settings.py:376
+#: cogs/config/settings.py:435
 msgid "Auto-role has been set to:"
 msgstr "Ο αυτόματος ρόλος ορίστηκε σε:"
 
-#: cogs/config/settings.py:399
+#: cogs/config/settings.py:458
 msgid "Auto-role has been remove from the guild"
 msgstr "Ο αυτόματος ρόλος αφαιρέθηκε από τον διακομιστή"
 
-#: cogs/config/settings.py:426 cogs/config/settings.py:433
+#: cogs/config/settings.py:485 cogs/config/settings.py:492
 msgid "Current auto-role"
 msgstr "Τρέχων αυτόματος ρόλος"
 
@@ -9636,11 +9659,11 @@ msgstr "🏠 Διακομιστής"
 #: cogs/system/help.py:520
 #, python-brace-format
 msgid ""
-"Commands: `/` or `@{bot} <command>`\n"
+"Prefix: `{prefix}`\n"
 "Members: **{members}**\n"
 "Leveling: {leveling}"
 msgstr ""
-"Εντολές: `/` ή `@{bot} <εντολή>`\n"
+"Πρόθεμα: `{prefix}`\n"
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
@@ -9742,8 +9765,8 @@ msgid "Getting started"
 msgstr "Ξεκινώντας"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Χρησιμοποίησε το `/config` για να ρυθμίσεις autorole, επίπεδα, starboard, automod, mod-log και μηνύματα καλωσορίσματος σε ένα σημείο."
+msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "Χρησιμοποίησε `/config` για να ρυθμίσεις prefixes, autorole, επίπεδα, starboard, automod, mod-log και μηνύματα καλωσορίσματος σε ένα μέρος."
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
