@@ -378,3 +378,20 @@ async def test_a_private_event_is_not_announced_in_a_public_channel(monkeypatch)
              "start_time": event.start_time.isoformat()}
     assert await cog._deliver(extra) == "skip_private"
     channel.send.assert_not_awaited()
+
+
+async def test_the_dashboard_reconcile_action_rereads_the_config_and_counts():
+    from cogs.system import dashboard_actions
+
+    events = [_event(100), _event(101, start=NOW + 5 * H)]
+    guild, _ch = _guild(events)
+    pool = Pool({1: {"event_reminders": CONFIG}})
+    cog = _cog(pool, [guild])
+    await settings.get_guild(pool, 1, "event_reminders", None)  # warm a cache...
+    pool.blobs[1]["event_reminders"] = {**CONFIG, "enabled": False}  # ...the save made stale
+    cog.bot.get_cog = lambda name: cog if name == "EventReminders" else None
+    run = dashboard_actions._EXECUTORS["event_reminders_reconcile"]
+    assert await run(cog.bot, 1, {}) == {"ok": True, "scheduled": 0}
+    pool.blobs[1]["event_reminders"] = CONFIG
+    assert await run(cog.bot, 1, {}) == {"ok": True, "scheduled": 2}
+    assert await run(cog.bot, 999, {}) == {"ok": False, "error": "guild_unavailable"}

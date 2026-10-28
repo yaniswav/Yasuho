@@ -1891,6 +1891,22 @@ async def _exec_autoroom_hub_delete(bot, guild_id, payload):
     }
 
 
+async def _exec_event_reminders_reconcile(bot, guild_id, payload):
+    """Re-plan a guild's event reminders after a dashboard save of the
+    ``event_reminders`` settings key. Payload ``{}``: the config is re-read
+    (cache dropped first, the save's NOTIFY may not have landed yet).
+    Success: ``{"ok": true, "scheduled": <future reminders now pending>}``.
+    """
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        return {"ok": False, "error": "guild_unavailable"}
+    engine = bot.get_cog("EventReminders")
+    if engine is None:
+        return {"ok": False, "error": "engine_unavailable"}
+    settings.invalidate_guild(guild_id)
+    return {"ok": True, "scheduled": await engine.reconcile_guild(guild)}
+
+
 _EXECUTORS = {
     "verify_button_post": _exec_verify_button_post,
     "reaction_role_add": _exec_reaction_role_add,
@@ -1916,6 +1932,7 @@ _EXECUTORS = {
     # Scheduled announcements (cogs/system/dashboard_announcement_actions.py):
     # every write goes through the bot's AnnouncementStore.
     **_ANNOUNCEMENT_EXECUTORS,
+    "event_reminders_reconcile": _exec_event_reminders_reconcile,
 }
 
 # The kinds whose scope is a USER rather than a guild: they are dispatched with

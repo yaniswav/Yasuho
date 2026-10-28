@@ -421,9 +421,13 @@ class EventReminders(commands.Cog):
                         rows,
                     )
         self._wake()
+        return len(rows)
 
     async def reconcile_guild(self, guild):
-        """Make the guild's pending rows match its upcoming events and config."""
+        """Make the guild's pending rows match its upcoming events and config.
+
+        Returns how many future reminders are scheduled.
+        """
 
         def build(config, now):
             upcoming = [
@@ -431,7 +435,7 @@ class EventReminders(commands.Cog):
             ][:MAX_UPCOMING]
             return [row for e in upcoming for row in timer_rows(guild.id, e, config, now)]
 
-        await self._write(guild.id, None, build)
+        return await self._write(guild.id, None, build)
 
     async def _enabled_config(self, guild_id):
         """The normalised config when the feature is on, else None (no query once cached)."""
